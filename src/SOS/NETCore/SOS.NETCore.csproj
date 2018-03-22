@@ -1,0 +1,17 @@
+﻿<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
+<Project Sdk="RoslynTools.RepoToolset">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp1.0</TargetFramework>
+    <AssemblyName>SOS.NETCore</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>;1591;1701</NoWarn>
+    <IsPackable>true</IsPackable>
+    <Description>Managed SOS Services</Description>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <PackageTags>SOS</PackageTags>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="System.Reflection.Metadata" Version="$(SystemReflectionMetadataVersion)" />
+  </ItemGroup>
+</Project>

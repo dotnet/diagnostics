@@ -1,0 +1,25 @@
+{
+  "sign": [
+    {
+      "certificate": "MicrosoftSHA2",
+      "strongName": "MsSharedLib72",
+      "values": [
+        "bin/SOS.NETCore/netcoreapp1.0/SOS.NETCore.dll",
+      ]
+    },
+    {
+      "certificate": "NuGet",
+      "strongName": null,
+      "values": [
+        "packages/*.nupkg"
+      ]
+    }
+  ],
+  "exclude": [
+    "Microsoft.FileFormats.dll",
+    "Microsoft.SymbolStore.dll",
+    "System.Collections.Immutable.dll",
+    "System.Net.Http.dll",
+    "System.Reflection.Metadata.dll",
+  ]
+}
