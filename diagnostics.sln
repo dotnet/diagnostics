@@ -1,0 +1,27 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27004.2005
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SOS.NETCore", "src\SOS\NETCore\SOS.NETCore.csproj", "{20513BA2-A156-4A17-4C70-5AC2DBD4F833}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{20513BA2-A156-4A17-4C70-5AC2DBD4F833}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20513BA2-A156-4A17-4C70-5AC2DBD4F833}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20513BA2-A156-4A17-4C70-5AC2DBD4F833}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20513BA2-A156-4A17-4C70-5AC2DBD4F833}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {46465737-C938-44FC-BE1A-4CE139EBB5E0}
+	EndGlobalSection
+EndGlobal

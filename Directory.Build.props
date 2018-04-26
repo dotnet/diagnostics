@@ -1,0 +1,12 @@
+<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
+<Project>
+  <PropertyGroup>
+    <RepositoryUrl>https://github.com/dotnet/diagnostics.git</RepositoryUrl>
+    <RepositoryRawUrl>$(RepositoryUrl)</RepositoryRawUrl>
+    <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+    <PackageLicenseUrl>http://go.microsoft.com/fwlink/?LinkId=529443</PackageLicenseUrl>
+    <PackageIconUrl>http://go.microsoft.com/fwlink/?LinkID=288859</PackageIconUrl>
+    <IsPublishable>false</IsPublishable>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+  </PropertyGroup>
+</Project>
