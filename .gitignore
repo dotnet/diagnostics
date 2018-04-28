@@ -109,3 +109,7 @@ $RECYCLE.BIN/
 
 # Mac desktop service store files
 .DS_Store
+
+# SOS stress log
+StressLog.txt
+

@@ -1,80 +1,56 @@
 // Groovy Script: http://www.groovy-lang.org/syntax.html
 // Jenkins DSL: https://github.com/jenkinsci/job-dsl-plugin/wiki
 
-import jobs.generation.Utilities;
+// Import the pipeline declaration classes.
+import org.dotnet.ci.pipelines.Pipeline
 
-static getJobName(def opsysName, def configName) {
-  return "${opsysName}_${configName}"
+// The input project name (e.g. dotnet/diagnostics)
+def project = GithubProject
+
+// The input branch name (e.g. master)
+def branch = GithubBranchName
+
+class Constants {
+
+    def static osList = [
+        'Windows_NT',
+//        'Ubuntu',
+        'Ubuntu16.04',
+//        'Ubuntu16.10',
+//        'Debian8.4',
+        'CentOS7.1',
+//        'RHEL7.2',
+//        'Fedora24'
+    ]
+
+    def static configurationList = [
+//        'Debug', 
+        'Release'
+    ]
+
+    // This is the set of architectures
+    def static architectureList = [
+//        'arm', 
+//        'arm64', 
+        'x64', 
+//        'x86'
+    ]
+
 }
 
-static addArchival(def job, def filesToArchive, def filesToExclude) {
-  def doNotFailIfNothingArchived = false
-  def archiveOnlyIfSuccessful = false
+// Create build and test pipeline job
+def pipeline = Pipeline.createPipeline(this, project, branch, 'pipeline.groovy')
 
-  Utilities.addArchival(job, filesToArchive, filesToExclude, doNotFailIfNothingArchived, archiveOnlyIfSuccessful)
-}
+Constants.osList.each { os ->
+    Constants.architectureList.each { architechure ->
+        Constants.configurationList.each { configuration ->
+            def triggerName = "${os} ${architechure} ${configuration} Build and Test"
+            def params = ['OS':os, 'Architechure':architechure, 'Configuration':configuration]
 
-static addGithubPRTriggerForBranch(def job, def branchName, def jobName) {
-  def prContext = "prtest/${jobName.replace('_', '/')}"
-  def triggerPhrase = "(?i)^\\s*(@?dotnet-bot\\s+)?(re)?test\\s+(${prContext})(\\s+please)?\\s*\$"
-  def triggerOnPhraseOnly = false
+            pipeline.triggerPipelineOnEveryPR(triggerName, params)
 
-  Utilities.addGithubPRTriggerForBranch(job, branchName, prContext, triggerPhrase, triggerOnPhraseOnly)
-}
-
-static addXUnitDotNETResults(def job, def configName) {
-  def resultFilePattern = "**/artifacts/${configName}/TestResults/*.xml"
-  def skipIfNoTestFiles = false
-    
-  Utilities.addXUnitDotNETResults(job, resultFilePattern, skipIfNoTestFiles)
-}
-
-static addBuildSteps(def job, def projectName, def os, def configName, def isPR) {
-  def buildJobName = getJobName(os, configName)
-  def buildFullJobName = Utilities.getFullJobName(projectName, buildJobName, isPR)
-
-  job.with {
-    steps {
-      if (os == "Windows_NT") {
-        batchFile(""".\\eng\\common\\CIBuild.cmd -configuration ${configName} -prepareMachine""")
-      } else {
-        shell("./eng/common/cibuild.sh --configuration ${configName} --prepareMachine")
-      }
+            // Add trigger to run on merge
+            pipeline.triggerPipelineOnPush(params)
+        }
     }
-  }
-}
-
-[true, false].each { isPR ->
-  ['Ubuntu16.04', 'Windows_NT'].each { os ->
-    ['Debug', 'Release'].each { configName ->
-      def projectName = GithubProject
-
-      def branchName = GithubBranchName
-
-      def filesToArchive = "**/artifacts/${configName}/**"
-
-      def jobName = getJobName(os, configName)
-      def fullJobName = Utilities.getFullJobName(projectName, jobName, isPR)
-      def myJob = job(fullJobName)
-
-      Utilities.standardJobSetup(myJob, projectName, isPR, "*/${branchName}")
-
-      if (isPR) {
-        addGithubPRTriggerForBranch(myJob, branchName, jobName)
-      } else {
-        Utilities.addGithubPushTrigger(myJob)
-      }
-      
-      addArchival(myJob, filesToArchive, "")
-      addXUnitDotNETResults(myJob, configName)
-
-      if (os == 'Windows_NT') {
-        Utilities.setMachineAffinity(myJob, os, 'latest-dev15-3')  
-      } else {
-        Utilities.setMachineAffinity(myJob, os, 'latest-or-auto')
-      }
-
-      addBuildSteps(myJob, projectName, os, configName, isPR)
-    }
-  }
 }
