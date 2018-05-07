@@ -5,7 +5,7 @@ This repository contains the source code for various .NET Core runtime diagnosti
 
 Another goal to make it easier to obtain a version of lldb (currently 3.9) with scripts and documentation for platforms/distros like Centos, Alpine, Fedora, etc. that by default provide really old versions. 
 
-This repo will also allow out of band development of new SOS and lldb plugin features like symbol server support and solve the source build problem having SOS.NETCore (managed portion of SOS) in the coreclr repo.
+This repo will also allow out of band development of new SOS and lldb plugin features like symbol server support for the .NET Core runtime and solve the source build problem having SOS.NETCore (managed portion of SOS) in the coreclr repo.
 
 ## Useful Links
 
