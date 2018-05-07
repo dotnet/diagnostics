@@ -13,4 +13,10 @@ while [[ -h $source ]]; do
 done
 
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
-"$scriptroot/eng/build.sh" --restore $@
+
+# build/test managed components
+"$scriptroot/common/build.sh" $@
+
+# build/test native components
+"$scriptroot/build-native.sh" $@
+
