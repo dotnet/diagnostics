@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright (c) .NET Foundation and contributors. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 source="${BASH_SOURCE[0]}"
 
@@ -13,6 +15,10 @@ while [[ -h $source ]]; do
 done
 
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
+
+# install .NET Core - setting DOTNET_INSTALL_DIR prevents build.sh from installing it
+export DOTNET_INSTALL_DIR=$scriptroot/../.dotnet
+"$scriptroot/install-dotnet.sh" $DOTNET_INSTALL_DIR 2.1.300-rc1-008673
 
 # build/test managed components
 "$scriptroot/common/build.sh" $@

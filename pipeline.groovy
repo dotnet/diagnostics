@@ -1,36 +1,58 @@
 @Library('dotnet-ci') _
 import jobs.generation.Utilities
 
-// Accepts parameters
-// OS - Windows_NT, Ubuntu, Ubuntu16.04, Ubuntu16.10, Debian8.4, CentOS7.1, RHEL7.2, Fedora24
-// Architechure - x64, x86, arm, arm64
-// Configuration - Debug or Release
+// Possible OS's
+//
+// 'Windows_NT'
+// 'Ubuntu'
+// 'Ubuntu16.04'
+// 'Ubuntu16.10'
+// 'Debian8.4'
+// 'RHEL7.2'
+// 'Fedora24'
+// 'CentOS7.1'
+// 'OSX10.12'
 
-def os = params.OS
-def architechure = params.Architechure
-def configuration = params.Configuration
+// Possible Architechures
+//
+// 'arm', 
+// 'arm64'
+// 'x86'
+// 'x64'
 
-// build and test
-simpleNode(os, 'latest') {
+def buildConfigurations = [
+    ['OS':'Windows_NT', 'Architechure':'x64', 'Configuration':'Release'],
+    ['OS':'Ubuntu16.04', 'Architechure':'x64', 'Configuration':'Release'],
+    ['OS':'CentOS7.1', 'Architechure':'x64', 'Configuration':'Release'],
+]
 
-    stage ('Checkout Source') {
-	checkout scm
-    }
-	
-    stage ('Build/Test') {
+def testConfigurations = [
+    ['OS':'Ubuntu16.04', 'Architechure':'x64', 'Configuration':'Release'],
+]
 
-        if (os == "Windows_NT") {
-            bat ".\\eng\\common\\CIBuild.cmd -configuration ${configuration} -prepareMachine"
-        } else {
-            sh "./eng/cibuild.sh --configuration ${configuration} --architechure ${architechure} --prepareMachine"
+buildConfigurations.each { config ->
+
+    simpleNode(config.OS, 'latest') {
+
+        stage ('Checkout Source') {
+	    checkout scm
         }
-    }
+	
+        stage ('Build/Test') {
 
-    stage ('Archive artifacts') {
-        def resultFilePattern = "**/artifacts/${configuration}/TestResults/*.xml"
-        Utilities.addXUnitDotNETResults(job, resultFilePattern, skipIfNoTestFiles: false)
+            if (os == "Windows_NT") {
+                bat ".\\eng\\common\\CIBuild.cmd -configuration ${config.Configuration} -prepareMachine"
+            } else {
+                sh "./eng/cibuild.sh --configuration ${config.Configuration} --architechure ${config.Architechure} --prepareMachine"
+            }
+        }
 
-	def filesToArchive = "**/artifacts/${configuration}/**"
-        archiveArtifacts allowEmptyArchive: true, artifacts: filesToArchive
+        stage ('Archive artifacts') {
+            def resultFilePattern = "**/artifacts/${config.Configuration}/TestResults/*.xml"
+            Utilities.addXUnitDotNETResults(job, resultFilePattern, skipIfNoTestFiles: false)
+
+	    def filesToArchive = "**/artifacts/${config.Configuration}/**"
+            archiveArtifacts allowEmptyArchive: true, artifacts: filesToArchive
+        }
     }
 }

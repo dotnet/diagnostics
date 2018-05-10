@@ -1,3 +1,6 @@
+# Copyright (c) .NET Foundation and contributors. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 if (CLR_CMAKE_PLATFORM_UNIX)
   # Disable frame pointer optimizations so profilers can get better call stacks
   add_compile_options(-fno-omit-frame-pointer)
