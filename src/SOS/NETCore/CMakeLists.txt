@@ -1,0 +1,8 @@
+project(SOS.NETCore)
+
+if(NOT ${CLR_MANAGED_BINARY_DIR} STREQUAL "")
+    set(MANAGED_BINDIR ${CLR_MANAGED_BINARY_DIR}/SOS.NETCore/netcoreapp1.0)
+
+    install(FILES ${MANAGED_BINDIR}/SOS.NETCore.dll DESTINATION .)
+    install(FILES ${MANAGED_BINDIR}/SOS.NETCore.pdb DESTINATION .)
+endif()

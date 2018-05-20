@@ -19,7 +19,6 @@ Abstract:
 --*/
 
 #include "pal/thread.hpp"
-#include "pal/threadsusp.hpp"
 #include "pal/palinternal.h"
 #include "pal/dbgmsg.h"
 #include "pal/misc.h"

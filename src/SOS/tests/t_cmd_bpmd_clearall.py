@@ -53,6 +53,8 @@ def runScenario(assembly, debugger, target):
     test.assertTrue(res.GetErrorSize() == 0)
 
     process.Continue()
+    process.Continue()
+
     # Process must be exited
     test.assertEqual(process.GetState(), lldb.eStateExited)
 

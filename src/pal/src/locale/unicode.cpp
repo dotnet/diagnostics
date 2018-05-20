@@ -792,7 +792,7 @@ EXIT:
     return retval;
 }
 
-extern char * g_szCoreCLRPath;
+extern char* g_szPalLibraryPath;
 
 /*++
 Function :
@@ -806,16 +806,16 @@ PALAPI
 PAL_BindResources(IN LPCSTR lpDomain)
 {
 #if HAVE_LIBINTL_H
-    _ASSERTE(g_szCoreCLRPath != NULL);
+    _ASSERTE(g_szPalLibraryPath != NULL);
     char * coreCLRDirectoryPath;
     PathCharString coreCLRDirectoryPathPS;
-    int len = strlen(g_szCoreCLRPath);
+    int len = strlen(g_szPalLibraryPath);
     coreCLRDirectoryPath = coreCLRDirectoryPathPS.OpenStringBuffer(len);
     if (NULL == coreCLRDirectoryPath)
     {
         return FALSE;
     }
-    DWORD size = FILEGetDirectoryFromFullPathA(g_szCoreCLRPath, len, coreCLRDirectoryPath);
+    DWORD size = FILEGetDirectoryFromFullPathA(g_szPalLibraryPath, len, coreCLRDirectoryPath);
     coreCLRDirectoryPathPS.CloseBuffer(size);
 
     LPCSTR boundPath = bindtextdomain(lpDomain, coreCLRDirectoryPath);

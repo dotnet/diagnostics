@@ -25,19 +25,6 @@ Abstract:
 
 SET_DEFAULT_DEBUG_CHANNEL(CRT);
 
-void
-PAL_exit(int status)
-{
-    PERF_ENTRY(exit);
-    ENTRY ("exit(status=%d)\n", status);
-
-    /* should also clean up any resources allocated by pal/cruntime, if any */
-    ExitProcess(status);
-
-    LOGEXIT ("exit returns void");
-    PERF_EXIT(exit);
-}
-
 int
 PAL_atexit(void (__cdecl *function)(void))
 {

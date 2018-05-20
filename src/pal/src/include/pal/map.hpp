@@ -70,30 +70,6 @@ extern "C"
     --*/
 
     BOOL MAPGetRegionInfo(LPVOID lpAddress, PMEMORY_BASIC_INFORMATION lpBuffer);
-
-    /*++
-        MAPMapPEFile -
-
-        Map a PE format file into memory like Windows LoadLibrary() would do.
-        Doesn't apply base relocations if the function is relocated.
-
-    Parameters:
-        IN hFile - file to map
-
-    Return value:
-        non-NULL - the base address of the mapped image
-        NULL - error, with last error set.
-    --*/
-
-    void * MAPMapPEFile(HANDLE hFile);
-
-    /*++
-    Function :
-        MAPUnmapPEFile - unmap a PE file, and remove it from the recorded list of PE files mapped
-
-        returns TRUE if successful, FALSE otherwise
-    --*/
-    BOOL MAPUnmapPEFile(LPCVOID lpAddress);
 }
 
 namespace CorUnix

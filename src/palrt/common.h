@@ -13,6 +13,8 @@
 #define _COMMON_H_
 
 #include <switches.h>
-#include <winwrap.h>
+#include <windows.h>
+#include "palclr.h"
 #include "shlwapip.h"
+
 #endif // _COMMON_H_

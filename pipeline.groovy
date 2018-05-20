@@ -41,7 +41,7 @@ buildConfigurations.each { config ->
         stage ('Build/Test') {
 
             if (os == "Windows_NT") {
-                bat ".\\eng\\common\\CIBuild.cmd -configuration ${config.Configuration} -prepareMachine"
+                bat ".\\eng\\CIBuild.cmd -configuration ${config.Configuration} -prepareMachine"
             } else {
                 sh "./eng/cibuild.sh --configuration ${config.Configuration} --architechure ${config.Architechure} --prepareMachine"
             }

@@ -23,6 +23,14 @@ Abstract:
 
 #include "palinternal.h"
 
+#ifndef static_assert_no_msg
+#define static_assert_no_msg( cond ) static_assert( cond, #cond )
+#endif // !static_assert_no_msg
+
+#ifndef _countof
+#define _countof(a) (sizeof(a) / sizeof(a[0]))
+#endif // !_countof
+
 namespace CorUnix
 {
     typedef DWORD PAL_ERROR;
@@ -1120,174 +1128,6 @@ namespace CorUnix
     };
 
     extern IPalObjectManager *g_pObjectManager;
-
-    enum ThreadWakeupReason
-    {
-        WaitSucceeded,
-        Alerted,
-        MutexAbondoned,
-        WaitTimeout,
-        WaitFailed
-    };
-
-    class IPalSynchronizationManager
-    {
-    public:
-
-        //
-        // A thread calls BlockThread to put itself to sleep after it has
-        // registered itself with the objects it is to wait on. A thread
-        // need not have registered with any objects, as would occur in
-        // the implementation of Sleep[Ex].
-        //
-        // Needless to say a thread must not be holding any PAL locks
-        // directly or implicitly (e.g., by holding a reference to a
-        // synchronization controller) when it calls this method.
-        //
-
-        virtual
-        PAL_ERROR
-        BlockThread(
-            CPalThread *pCurrentThread,
-            DWORD dwTimeout,
-            bool fAlertable,
-            bool fIsSleep,
-            ThreadWakeupReason *peWakeupReason, // OUT
-            DWORD *pdwSignaledObject       // OUT
-            ) = 0;
-
-        virtual
-        PAL_ERROR
-        AbandonObjectsOwnedByThread(
-            CPalThread *pCallingThread,
-            CPalThread *pTargetThread
-            ) = 0;
-
-        virtual
-        PAL_ERROR
-        QueueUserAPC(
-            CPalThread *pThread,
-            CPalThread *pTargetThread,
-            PAPCFUNC pfnAPC,
-            ULONG_PTR dwData
-            ) = 0;
-
-        virtual
-        bool
-        AreAPCsPending(
-            CPalThread *pThread
-            ) = 0;
-
-        virtual
-        PAL_ERROR
-        DispatchPendingAPCs(
-            CPalThread *pThread
-            ) = 0;
-
-        virtual
-        PAL_ERROR
-        SendTerminationRequestToWorkerThread() = 0;
-
-        //
-        // This routine is primarily meant for use by WaitForMultipleObjects[Ex].
-        // The caller must individually release each of the returned controller
-        // interfaces.
-        //
-
-        virtual
-        PAL_ERROR
-        GetSynchWaitControllersForObjects(
-            CPalThread *pThread,
-            IPalObject *rgObjects[],
-            DWORD dwObjectCount,
-            ISynchWaitController *rgControllers[]
-            ) = 0;
-
-        virtual
-        PAL_ERROR
-        GetSynchStateControllersForObjects(
-            CPalThread *pThread,
-            IPalObject *rgObjects[],
-            DWORD dwObjectCount,
-            ISynchStateController *rgControllers[]
-            ) = 0;
-
-        //
-        // These following routines are meant for use only by IPalObject
-        // implementations. The first two routines are used to
-        // allocate and free an object's synchronization state; the third
-        // is called during object promotion.
-        //
-
-        virtual
-        PAL_ERROR
-        AllocateObjectSynchData(
-            CObjectType *pObjectType,
-            ObjectDomain eObjectDomain,
-            VOID **ppvSynchData                 // OUT
-            ) = 0;
-
-        virtual
-        void
-        FreeObjectSynchData(
-            CObjectType *pObjectType,
-            ObjectDomain eObjectDomain,
-            VOID *pvSynchData
-            ) = 0;
-
-        virtual
-        PAL_ERROR
-        PromoteObjectSynchData(
-            CPalThread *pThread,
-            VOID *pvLocalSynchData,
-            VOID **ppvSharedSynchData           // OUT
-            ) = 0;
-
-        //
-        // The next two routines provide access to the process-wide
-        // synchronization lock
-        //
-
-        virtual
-        void
-        AcquireProcessLock(
-            CPalThread *pThread
-            ) = 0;
-
-        virtual
-        void
-        ReleaseProcessLock(
-            CPalThread *pThread
-            ) = 0;
-
-        //
-        // The final routines are used by IPalObject::GetSynchStateController
-        // and IPalObject::GetSynchWaitController
-        //
-
-        virtual
-        PAL_ERROR
-        CreateSynchStateController(
-            CPalThread *pThread,                // IN, OPTIONAL
-            CObjectType *pObjectType,
-            VOID *pvSynchData,
-            ObjectDomain eObjectDomain,
-            ISynchStateController **ppStateController       // OUT
-            ) = 0;
-
-        virtual
-        PAL_ERROR
-        CreateSynchWaitController(
-            CPalThread *pThread,                // IN, OPTIONAL
-            CObjectType *pObjectType,
-            VOID *pvSynchData,
-            ObjectDomain eObjectDomain,
-            ISynchWaitController **ppWaitController       // OUT
-            ) = 0;
-    };
-
-    extern IPalSynchronizationManager *g_pSynchronizationManager;
-
 }
 
 #endif // _CORUNIX_H

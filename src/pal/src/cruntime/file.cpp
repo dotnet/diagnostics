@@ -23,9 +23,7 @@ Abstract:
 #include "pal/dbgmsg.h"
 #include "pal/file.h"
 #include "pal/cruntime.h"
-
 #include "pal/thread.hpp"
-#include "pal/threadsusp.hpp"
 
 #include <unistd.h>
 #include <errno.h>
@@ -284,10 +282,10 @@ PAL_fopen(const char * fileName, const char * mode)
             goto done;
         }
 
-        UnixFileName = PAL__strdup(fileName);
+        UnixFileName = strdup(fileName);
         if (UnixFileName == NULL )
         {
-            ERROR("PAL__strdup() failed\n");
+            ERROR("strdup() failed\n");
             SetLastError(ERROR_NOT_ENOUGH_MEMORY);
             goto done;
         }

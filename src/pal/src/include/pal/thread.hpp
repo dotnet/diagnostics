@@ -23,20 +23,16 @@ Abstract:
 #include "corunix.hpp"
 #include "shm.hpp"
 #include "cs.hpp"
+#include "pal/threadinfo.hpp"
 
 #include <pthread.h>    
 #include <sys/syscall.h>
-#if HAVE_MACH_EXCEPTIONS
-#include <mach/mach.h>
-#endif // HAVE_MACH_EXCEPTIONS
-
-#include "threadsusp.hpp"
-#include "tls.hpp"
-#include "synchobjects.hpp"
 #include <errno.h>
 
 namespace CorUnix
 {
+    extern pthread_key_t thObjKey;
+
     enum PalThreadType
     {
         UserCreatedThread,
@@ -45,134 +41,9 @@ namespace CorUnix
     };
     
     PAL_ERROR
-    InternalCreateThread(
-        CPalThread *pThread,
-        LPSECURITY_ATTRIBUTES lpThreadAttributes,
-        DWORD dwStackSize,
-        LPTHREAD_START_ROUTINE lpStartAddress,
-        LPVOID lpParameter,
-        DWORD dwCreationFlags,
-        PalThreadType eThreadType,
-        LPDWORD lpThreadId,
-        HANDLE *phThread
-        );
-
-    PAL_ERROR
-    InternalGetThreadPriority(
-        CPalThread *pThread,
-        HANDLE hTargetThread,
-        int *piNewPriority
-        );
-
-    PAL_ERROR
-    InternalSetThreadPriority(
-        CPalThread *pThread,
-        HANDLE hTargetThread,
-        int iNewPriority
-        );
-
-    PAL_ERROR
-    InternalGetThreadDataFromHandle(
-        CPalThread *pThread,
-        HANDLE hThread,
-        DWORD dwRightsRequired,
-        CPalThread **ppTargetThread,
-        IPalObject **ppobjThread
-        );
-
-    VOID
-    InternalEndCurrentThread(
-        CPalThread *pThread
-        );
-
-    PAL_ERROR
-    InternalCreateDummyThread(
-        CPalThread *pThread,
-        LPSECURITY_ATTRIBUTES lpThreadAttributes,
-        CPalThread **ppDummyThread,
-        HANDLE *phThread
-        );
-
-    PAL_ERROR
     CreateThreadData(
         CPalThread **ppThread
         );
-
-    PAL_ERROR
-    CreateThreadObject(
-        CPalThread *pThread,
-        CPalThread *pNewThread,
-        HANDLE *phThread
-        );
-
-    PAL_ERROR
-    InitializeEndingThreadsData(
-        void
-        );
-
-    BOOL
-    GetThreadTimesInternal(
-        IN HANDLE hThread,
-        OUT LPFILETIME lpKernelTime,
-        OUT LPFILETIME lpUserTime);
-        
-#ifdef FEATURE_PAL_SXS
-#if HAVE_MACH_EXCEPTIONS
-
-    // Structure used to return data about a single handler to a caller.
-    struct MachExceptionHandler
-    {
-        exception_mask_t m_mask;
-        exception_handler_t m_handler;
-        exception_behavior_t m_behavior;
-        thread_state_flavor_t m_flavor;
-    };
-
-    // Class abstracting previously registered Mach exception handlers for a thread.
-    struct CThreadMachExceptionHandlers
-    {
-    public:
-        // Maximum number of exception ports we hook.  Must be the count
-        // of all bits set in the exception masks defined in machexception.h.
-        static const int s_nPortsMax = 6;
-
-        // Saved exception ports, exactly as returned by
-        // thread_swap_exception_ports.
-        mach_msg_type_number_t m_nPorts;
-        exception_mask_t m_masks[s_nPortsMax];
-        exception_handler_t m_handlers[s_nPortsMax];
-        exception_behavior_t m_behaviors[s_nPortsMax];
-        thread_state_flavor_t m_flavors[s_nPortsMax];
-        
-        CThreadMachExceptionHandlers() : 
-            m_nPorts(-1)
-        {
-        }
-
-        // Get handler details for a given type of exception. If successful the structure pointed at by
-        // pHandler is filled in and true is returned. Otherwise false is returned.
-        bool GetHandler(exception_type_t eException, MachExceptionHandler *pHandler);
-
-    private:
-        // Look for a handler for the given exception within the given handler node. Return its index if
-        // successful or -1 otherwise.
-        int GetIndexOfHandler(exception_mask_t bmExceptionMask);
-    };
-#endif // HAVE_MACH_EXCEPTIONS
-#endif // FEATURE_PAL_SXS
-    
-    class CThreadSEHInfo : public CThreadInfoInitializer
-    {
-    public:
-#if !HAVE_MACH_EXCEPTIONS
-        BOOL safe_state;
-        int signal_code;
-#endif // !HAVE_MACH_EXCEPTIONSG
-
-        CThreadSEHInfo()
-        {
-        };
-    };
 
     /* In the windows CRT there is a constant defined for the max width
     of a _ecvt conversion. That constant is 348. 348 for the value, plus
@@ -207,56 +78,13 @@ namespace CorUnix
     {
         friend
             PAL_ERROR
-            CorUnix::InternalCreateThread(
-                CPalThread *,
-                LPSECURITY_ATTRIBUTES,
-                DWORD,
-                LPTHREAD_START_ROUTINE,
-                LPVOID,
-                DWORD,
-                PalThreadType,
-                LPDWORD,
-                HANDLE*
-                );
-
-        friend
-            PAL_ERROR
-            InternalCreateDummyThread(
-                CPalThread *pThread,
-                LPSECURITY_ATTRIBUTES lpThreadAttributes,
-                CPalThread **ppDummyThread,
-                HANDLE *phThread
-                );
-
-        friend
-            PAL_ERROR
-            InternalSetThreadPriority(
-                CPalThread *,
-                HANDLE,
-                int
-                );
-
-        friend
-            PAL_ERROR
             CreateThreadData(
                 CPalThread **ppThread
                 );
 
-        friend
-            PAL_ERROR
-            CreateThreadObject(
-                CPalThread *pThread,
-                CPalThread *pNewThread,
-                HANDLE *phThread
-                );
-
-        friend CatchHardwareExceptionHolder;
-        
     private:
 
         CPalThread *m_pNext;
-        DWORD m_dwExitCode;
-        BOOL m_fExitCodeSet;
         CRITICAL_SECTION m_csLock;
         bool m_fLockInitialized;
         bool m_fIsDummy;
@@ -276,13 +104,6 @@ namespace CorUnix
         LONG m_lRefCount;
 
         //
-        // The IPalObject for this thread. The thread will release its reference
-        // to this object when it exits.
-        //
-
-        IPalObject *m_pThreadObject;
-
-        //
         // Thread ID info
         //
 
@@ -290,109 +111,22 @@ namespace CorUnix
         DWORD m_dwLwpId;
         pthread_t m_pthreadSelf;        
 
-#if HAVE_MACH_THREADS
-        mach_port_t m_machPortSelf;
-#endif 
-
-        // > 0 when there is an exception holder which causes h/w
-        // exceptions to be sent down the C++ exception chain.
-        int m_hardwareExceptionHolderCount;
-
-        //
-        // Start info
-        //
-
-        LPTHREAD_START_ROUTINE m_lpStartAddress;
-        LPVOID m_lpStartParameter;
-        BOOL m_bCreateSuspended;
-
-        int m_iThreadPriority;
-        PalThreadType m_eThreadType;
-
-        //
-        // pthread mutex / condition variable for gating thread startup.
-        // InternalCreateThread waits on the condition variable to determine
-        // when the new thread has reached passed all failure points in
-        // the entry routine
-        //
-
-        pthread_mutex_t m_startMutex;
-        pthread_cond_t m_startCond;
-        bool m_fStartItemsInitialized;
-        bool m_fStartStatus;
-        bool m_fStartStatusSet;
-
-        // Base address of the stack of this thread
-        void* m_stackBase;
-        // Limit address of the stack of this thread
-        void* m_stackLimit;
-
-        //
-        // The thread entry routine (called from InternalCreateThread)
-        //
-
-        static void* ThreadEntry(void * pvParam);
-        
-#ifdef FEATURE_PAL_SXS
-        //
-        // Data for PAL side-by-side support
-        //
-
-    private:
-        // This is set whenever this thread is currently executing within
-        // a region of code that depends on this instance of the PAL
-        // in the process.
-        bool m_fInPal;
-
-#if HAVE_MACH_EXCEPTIONS
-        // Record of Mach exception handlers that were already registered when we register our own CoreCLR
-        // specific handlers.
-        CThreadMachExceptionHandlers m_sMachExceptionHandlers;
-#endif // HAVE_MACH_EXCEPTIONS
-#endif // FEATURE_PAL_SXS
-
     public:
 
         //
         // Embedded information for areas owned by other subsystems
         //
 
-        CThreadSynchronizationInfo synchronizationInfo;
-        CThreadSuspensionInfo suspensionInfo;
-        CThreadSEHInfo sehInfo;
-        CThreadTLSInfo tlsInfo;
-        CThreadApcInfo apcInfo;
         CThreadCRTInfo crtInfo;
 
         CPalThread()
             :
             m_pNext(NULL),
-            m_dwExitCode(STILL_ACTIVE),
-            m_fExitCodeSet(FALSE),
             m_fLockInitialized(FALSE),
-            m_fIsDummy(FALSE),
             m_lRefCount(1),
-            m_pThreadObject(NULL),
             m_threadId(0),
             m_dwLwpId(0),
-            m_pthreadSelf(0),
-#if HAVE_MACH_THREADS
-            m_machPortSelf(0),
-#endif            
-            m_hardwareExceptionHolderCount(0),
-            m_lpStartAddress(NULL),
-            m_lpStartParameter(NULL),
-            m_bCreateSuspended(FALSE),
-            m_iThreadPriority(THREAD_PRIORITY_NORMAL),
-            m_eThreadType(UserCreatedThread),
-            m_fStartItemsInitialized(FALSE),
-            m_fStartStatus(FALSE),
-            m_fStartStatusSet(FALSE),
-            m_stackBase(NULL),
-            m_stackLimit(NULL)
-#ifdef FEATURE_PAL_SXS
-          , m_fInPal(TRUE)
-#endif // FEATURE_PAL_SXS
+            m_pthreadSelf(0)
         {
         };
 
@@ -413,24 +147,6 @@ namespace CorUnix
             void
             );
 
-        //
-        // SetStartStatus is called by THREADEntry or InternalSuspendNewThread
-        // to inform InternalCreateThread of the results of the thread's
-        // initialization. InternalCreateThread calls WaitForStartStatus to
-        // obtain this information (and will not return to its caller until
-        // the info is available).
-        //
-
-        void
-        SetStartStatus(
-            bool fStartSucceeded
-            );
-
-        bool
-        WaitForStartStatus(
-            void
-            );
-
         void
         Lock(
             CPalThread *pThread
@@ -446,35 +162,6 @@ namespace CorUnix
         {
             InternalLeaveCriticalSection(pThread, &m_csLock);
         };
-
-        //
-        // The following three methods provide access to the 
-        // native lock used to protect thread native wait data.
-        //
-
-        void
-        AcquireNativeWaitLock(
-            void
-            )
-        {
-            synchronizationInfo.AcquireNativeWaitLock();
-        }
-
-        void
-        ReleaseNativeWaitLock(
-            void
-            )
-        {
-            synchronizationInfo.ReleaseNativeWaitLock();
-        }
-
-        bool
-        TryAcquireNativeWaitLock(
-            void
-            )
-        {
-            return synchronizationInfo.TryAcquireNativeWaitLock();
-        }
 
         static void
         SetLastError(
@@ -492,24 +179,6 @@ namespace CorUnix
         {
             // Reuse errno to store last error
             return errno;
-        };
-
-        void
-        SetExitCode(
-            DWORD dwExitCode
-            )
-        {
-            m_dwExitCode = dwExitCode;
-            m_fExitCodeSet = TRUE;
-        };
-
-        BOOL
-        GetExitCode(
-            DWORD *pdwExitCode
-            )
-        {
-            *pdwExitCode = m_dwExitCode;
-            return m_fExitCodeSet;
         };
 
         SIZE_T
@@ -534,78 +203,6 @@ namespace CorUnix
             )
         {
             return m_pthreadSelf;
-        };
-
-#if HAVE_MACH_THREADS
-        mach_port_t
-        GetMachPortSelf(
-            void
-            )
-        {
-            return m_machPortSelf;
-        };
-#endif
-
-        bool 
-        IsHardwareExceptionsEnabled()
-        {
-            return m_hardwareExceptionHolderCount > 0;
-        }
-
-        LPTHREAD_START_ROUTINE
-        GetStartAddress(
-            void
-            )
-        {
-            return m_lpStartAddress;
-        };
-
-        LPVOID
-        GetStartParameter(
-            void
-            )
-        {
-            return m_lpStartParameter;
-        };
-
-        BOOL
-        GetCreateSuspended(
-            void
-            )
-        {
-            return m_bCreateSuspended;
-        };
-
-        PalThreadType
-        GetThreadType(
-            void
-            )
-        {
-            return m_eThreadType;
-        };
-
-        int
-        GetThreadPriority(
-            void
-            )
-        {
-            return m_iThreadPriority;
-        };
-
-        IPalObject *
-        GetThreadObject(
-            void
-            )
-        {
-            return m_pThreadObject;
-        }
-
-        BOOL
-        IsDummy(
-            void
-            )
-        {
-            return m_fIsDummy;
         };
 
         CPalThread*
@@ -633,86 +230,9 @@ namespace CorUnix
         ReleaseThreadReference(
             void
             );
-
-        // Get base address of the current thread's stack
-        static
-        void *
-        GetStackBase(
-            void
-            );
-
-        // Get cached base address of this thread's stack
-        // Can be called only for the current thread.
-        void *
-        GetCachedStackBase(
-            void
-            );
-
-        // Get limit address of the current thread's stack
-        static
-        void *
-        GetStackLimit(
-            void
-            );
-
-        // Get cached limit address of this thread's stack
-        // Can be called only for the current thread.
-        void *
-        GetCachedStackLimit(
-            void
-            );
-        
-#ifdef FEATURE_PAL_SXS
-        //
-        // Functions for PAL side-by-side support
-        //
-
-        // This function needs to be called on a thread when it enters
-        // a region of code that depends on this instance of the PAL
-        // in the process.
-        PAL_ERROR Enter(PAL_Boundary boundary);
-
-        // This function needs to be called on a thread when it leaves
-        // a region of code that depends on this instance of the PAL
-        // in the process.
-        PAL_ERROR Leave(PAL_Boundary boundary);
-
-        // Returns TRUE whenever this thread is executing in a region
-        // of code that depends on this instance of the PAL in the process.
-        BOOL IsInPal()
-        {
-            return m_fInPal;
-        };
-
-#if HAVE_MACH_EXCEPTIONS
-        // Hook Mach exceptions, i.e., call thread_swap_exception_ports
-        // to replace the thread's current exception ports with our own.
-        // The previously active exception ports are saved.  Called when
-        // this thread enters a region of code that depends on this PAL.
-        // Should only fail on internal errors.
-        PAL_ERROR EnableMachExceptions();
-
-        // Unhook Mach exceptions, i.e., call thread_set_exception_ports
-        // to restore the thread's exception ports with those we saved
-        // in EnableMachExceptions.  Called when this thread leaves a
-        // region of code that depends on this PAL.  Should only fail
-        // on internal errors.
-        PAL_ERROR DisableMachExceptions();
-
-        // The exception handling thread needs to be able to get at the list of handlers that installing our
-        // own handler on a thread has displaced (in case we need to forward an exception that we don't want
-        // to handle).
-        CThreadMachExceptionHandlers *GetSavedMachHandlers()
-        {
-            return &m_sMachExceptionHandlers;
-        }
-#endif // HAVE_MACH_EXCEPTIONS
-#endif // FEATURE_PAL_SXS
     };
 
-#if defined(FEATURE_PAL_SXS)
     extern "C" CPalThread *CreateCurrentThreadData();
-#endif // FEATURE_PAL_SXS
 
     inline CPalThread *GetCurrentPalThread()
     {
@@ -722,43 +242,10 @@ namespace CorUnix
     inline CPalThread *InternalGetCurrentThread()
     {
         CPalThread *pThread = GetCurrentPalThread();
-#if defined(FEATURE_PAL_SXS)
         if (pThread == nullptr)
             pThread = CreateCurrentThreadData();
-#endif // FEATURE_PAL_SXS
         return pThread;
     }
-
-/***
-
-    $$TODO: These are needed only to support cross-process thread duplication
-    
-    class CThreadImmutableData
-    {
-    public:
-        DWORD dwProcessId;
-    };
-
-    class CThreadSharedData
-    {
-    public:
-        DWORD dwThreadId;
-        DWORD dwExitCode;
-    };
-***/
-
-    //
-    // The process local information for a thread is just a pointer
-    // to the underlying CPalThread object.
-    //
-
-    class CThreadProcessLocalData
-    {
-    public:
-        CPalThread *pThread;
-    };
-
-    extern CObjectType otThread;
 }
 
 BOOL
@@ -771,15 +258,16 @@ TLSCleanup(
     void
     );
 
-VOID 
-WaitForEndingThreads(
-    void
-    );
-
 extern int free_threads_spinlock;
 
-extern PAL_ActivationFunction g_activationFunction;
-extern PAL_SafeActivationCheckFunction g_safeActivationCheckFunction;
+#define SYNCSPINLOCK_F_ASYMMETRIC  1
+
+#define SPINLOCKInit(lock) (*(lock) = 0)
+#define SPINLOCKDestroy SPINLOCKInit
+
+void SPINLOCKAcquire (LONG * lock, unsigned int flags);
+void SPINLOCKRelease (LONG * lock);
+DWORD SPINLOCKTryAcquire (LONG * lock);
 
 /*++
 Macro:

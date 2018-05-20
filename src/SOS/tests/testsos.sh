@@ -36,7 +36,13 @@ fi
 
 echo $__LLDB_Path
 
+# Turn on stress logging so the dumplog and histinit commands pass
+export COMPlus_LogFacility=0xffffffbf
+export COMPlus_LogLevel=6
+export COMPlus_StressLog=1
+export COMPlus_StressLogSize=65536
+
 cd $__ProjectRoot/src/SOS/tests/
 rm -f StressLog.txt
-python2 $__ProjectRoot/src/SOS/tests/test_libsosplugin.py --lldb $__LLDB_Path --host $__Host --plugin $__Plugin --logfiledir $__LogFileDir --assembly $__TestProgram
+python $__ProjectRoot/src/SOS/tests/test_libsosplugin.py --lldb $__LLDB_Path --host $__Host --plugin $__Plugin --logfiledir $__LogFileDir --assembly $__TestProgram
 

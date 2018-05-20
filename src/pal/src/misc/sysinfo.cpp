@@ -59,6 +59,7 @@ Revision History:
 #endif  // HAVE_MACHINE_VMPARAM_H
 
 #if defined(_TARGET_MAC64)
+#include <mach/mach.h>
 #include <mach/vm_statistics.h>
 #include <mach/mach_types.h>
 #include <mach/mach_init.h>

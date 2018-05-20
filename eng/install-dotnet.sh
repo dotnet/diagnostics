@@ -86,3 +86,6 @@ if [ ! -e "$dotnet_root" ]; then
     tar -xf "$dotnet_root/dotnet.tar"
 fi
 
+echo "Adding to current process PATH: \`$dotnet_root\`. Note: This change will be visible only when sourcing script."
+export PATH="$dotnet_root":"$PATH"
+

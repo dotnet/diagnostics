@@ -6,7 +6,7 @@ import lldb
 import re
 import testutils as test
 
-# bpmd -clearall
+# bpmd -clear
 
 
 def runScenario(assembly, debugger, target):
@@ -30,10 +30,10 @@ def runScenario(assembly, debugger, target):
 
     # Output is not empty
     # Should be at least 'Adding pending breakpoints...'
-    test.assertTrue(len(out_msg) > 0)
+    test.assertTrue(res.GetOutputSize() > 0)
 
     # Error message is empty
-    test.assertTrue(len(err_msg) == 0)
+    test.assertTrue(res.GetErrorSize() == 0)
 
     # Delete the first breakpoint
 
@@ -50,15 +50,15 @@ def runScenario(assembly, debugger, target):
     test.assertTrue(match)
 
     # Error message is empty
-    test.assertEqual(err_msg, '')
+    test.assertTrue(res.GetErrorSize() == 0)
 
     process.Continue()
     # Process must be exited
-    test.assertEqual(process.GetState(), lldb.eStateExited)
+    test.assertEqual(process.GetState(), lldb.eStateStopped)
 
     # The reason of this stop must be a breakpoint
     test.assertEqual(process.GetSelectedThread().GetStopReason(),
-                     lldb.eStopReasonNone)
+                     lldb.eStopReasonBreakpoint)
 
     #
 

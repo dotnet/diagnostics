@@ -1,3 +1,3 @@
 @echo off
-powershell -ExecutionPolicy ByPass -command "& """%~dp0eng\common\Build.ps1""" -restore -build %*"
+call %~dp0eng\Build.cmd -restore -build %*
 exit /b %ErrorLevel%

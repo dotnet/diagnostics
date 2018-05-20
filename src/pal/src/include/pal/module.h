@@ -136,51 +136,6 @@ Return
 void UnlockModuleList();
 
 /*++
-Function:
-  PAL_LOADLoadPEFile
-
-Abstract
-  Loads a PE file into memory.  Properly maps all of the sections in the PE file.  Returns a pointer to the
-  loaded base.
-
-Parameters:
-    IN hFile    - The file to load
-
-Return value:
-    A valid base address if successful.
-    0 if failure
---*/
-void * PAL_LOADLoadPEFile(HANDLE hFile);
-
-/*++
-    PAL_LOADUnloadPEFile
-
-    Unload a PE file that was loaded by PAL_LOADLoadPEFile().
-
-Parameters:
-    IN ptr - the file pointer returned by PAL_LOADLoadPEFile()
-
-Return value:
-    TRUE - success
-    FALSE - failure (incorrect ptr, etc.)
---*/
-BOOL PAL_LOADUnloadPEFile(void * ptr);
-
-/*++
-    LOADInitializeCoreCLRModule
-
-    Run the initialization methods for CoreCLR module.
-
-Parameters:
-    None
-
-Return value:
-    TRUE if successful
-    FALSE if failure
---*/
-BOOL LOADInitializeCoreCLRModule();
-
-/*++
 Function :
     LOADGetPalLibrary
 

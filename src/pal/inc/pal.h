@@ -138,15 +138,6 @@ extern "C" {
 
 /******************* Compiler-specific glue *******************************/
 
-#ifndef _MSC_VER
-#if defined(CORECLR)
-// Define this if the underlying platform supports true 2-pass EH.
-// At the same time, this enables running several PAL instances
-// side-by-side.
-#define FEATURE_PAL_SXS 1
-#endif // CORECLR
-#endif // !_MSC_VER
-
 #if defined(_MSC_VER) || defined(__llvm__)
 #define DECLSPEC_ALIGN(x)   __declspec(align(x))
 #else
@@ -339,109 +330,7 @@ typedef PTHREAD_START_ROUTINE LPTHREAD_START_ROUTINE;
 PALIMPORT
 int
 PALAPI
-PAL_Initialize(
-    int argc,
-    const char * const argv[]);
-
-PALIMPORT
-int
-PALAPI
 PAL_InitializeDLL(VOID);
-
-PALIMPORT
-DWORD
-PALAPI
-PAL_InitializeCoreCLR(
-    const char *szExePath);
-
-PALIMPORT
-DWORD_PTR
-PALAPI
-PAL_EntryPoint(
-    IN LPTHREAD_START_ROUTINE lpStartAddress,
-    IN LPVOID lpParameter);
-
-/// <summary>
-/// This function shuts down PAL WITHOUT exiting the current process.
-/// </summary>
-PALIMPORT
-void
-PALAPI
-PAL_Shutdown(
-    void);
-
-/// <summary>
-/// This function shuts down PAL and exits the current process.
-/// </summary>
-PALIMPORT
-void
-PALAPI
-PAL_Terminate(
-    void);
-
-/// <summary>
-/// This function shuts down PAL and exits the current process with
-/// the specified exit code.
-/// </summary>
-PALIMPORT
-void
-PALAPI
-PAL_TerminateEx(
-    int exitCode);
-
-typedef VOID (*PSHUTDOWN_CALLBACK)(void);
-
-PALIMPORT
-VOID
-PALAPI
-PAL_SetShutdownCallback(
-    IN PSHUTDOWN_CALLBACK callback);
-
-typedef VOID (*PPAL_STARTUP_CALLBACK)(
-    char *modulePath,
-    HMODULE hModule,
-    PVOID parameter);
-
-PALIMPORT
-DWORD
-PALAPI
-PAL_RegisterForRuntimeStartup(
-    IN DWORD dwProcessId,
-    IN PPAL_STARTUP_CALLBACK pfnCallback,
-    IN PVOID parameter,
-    OUT PVOID *ppUnregisterToken);
-
-PALIMPORT
-DWORD
-PALAPI
-PAL_UnregisterForRuntimeStartup(
-    IN PVOID pUnregisterToken);
-
-PALIMPORT
-BOOL
-PALAPI
-PAL_NotifyRuntimeStarted(VOID);
-
-static const int MAX_DEBUGGER_TRANSPORT_PIPE_NAME_LENGTH = MAX_PATH;
-
-PALIMPORT
-VOID
-PALAPI
-PAL_GetTransportPipeName(
-    OUT char *name,
-    IN DWORD id,
-    IN const char *suffix);
-
-PALIMPORT
-void
-PALAPI
-PAL_InitializeDebug(
-    void);
-
-PALIMPORT
-void
-PALAPI
-PAL_IgnoreProfileSignal(int signalNum);
 
 PALIMPORT
 HINSTANCE
@@ -461,6 +350,14 @@ PALAPI
 PAL_GetPALDirectoryW(
     OUT LPWSTR lpDirectoryName,
     IN OUT UINT* cchDirectoryName);
+
+PALIMPORT
+BOOL
+PALAPI
+PAL_GetPALDirectoryA(
+    OUT LPSTR lpDirectoryName,
+    IN OUT UINT* cchDirectoryName);
+
 #ifdef UNICODE
 #define PAL_GetPALDirectory PAL_GetPALDirectoryW
 #else
@@ -1095,149 +992,6 @@ SetCurrentDirectoryW(
 #endif
 
 PALIMPORT
-HANDLE
-PALAPI
-CreateSemaphoreW(
-         IN LPSECURITY_ATTRIBUTES lpSemaphoreAttributes,
-         IN LONG lInitialCount,
-         IN LONG lMaximumCount,
-         IN LPCWSTR lpName);
-
-PALIMPORT
-HANDLE
-PALAPI
-CreateSemaphoreExW(
-        IN LPSECURITY_ATTRIBUTES lpSemaphoreAttributes,
-        IN LONG lInitialCount,
-        IN LONG lMaximumCount,
-        IN LPCWSTR lpName,
-        IN /*_Reserved_*/  DWORD dwFlags,
-        IN DWORD dwDesiredAccess);
-
-PALIMPORT
-HANDLE
-PALAPI
-OpenSemaphoreW(
-    IN DWORD dwDesiredAccess,
-    IN BOOL bInheritHandle,
-    IN LPCWSTR lpName);
-
-#ifdef UNICODE
-#define CreateSemaphore CreateSemaphoreW
-#define CreateSemaphoreEx CreateSemaphoreExW
-#else
-#define CreateSemaphore CreateSemaphoreA
-#define CreateSemaphoreEx CreateSemaphoreExA
-#endif
-
-PALIMPORT
-BOOL
-PALAPI
-ReleaseSemaphore(
-         IN HANDLE hSemaphore,
-         IN LONG lReleaseCount,
-         OUT LPLONG lpPreviousCount);
-
-PALIMPORT
-HANDLE
-PALAPI
-CreateEventW(
-         IN LPSECURITY_ATTRIBUTES lpEventAttributes,
-         IN BOOL bManualReset,
-         IN BOOL bInitialState,
-         IN LPCWSTR lpName);
-
-PALIMPORT
-HANDLE
-PALAPI
-CreateEventExW(
-         IN LPSECURITY_ATTRIBUTES lpEventAttributes,
-         IN LPCWSTR lpName,
-         IN DWORD dwFlags,
-         IN DWORD dwDesiredAccess);
-
-// CreateEventExW: dwFlags
-#define CREATE_EVENT_MANUAL_RESET ((DWORD)0x1)
-#define CREATE_EVENT_INITIAL_SET ((DWORD)0x2)
-
-#ifdef UNICODE
-#define CreateEvent CreateEventW
-#else
-#define CreateEvent CreateEventA
-#endif
-
-PALIMPORT
-BOOL
-PALAPI
-SetEvent(
-     IN HANDLE hEvent);
-
-PALIMPORT
-BOOL
-PALAPI
-ResetEvent(
-       IN HANDLE hEvent);
-
-PALIMPORT
-HANDLE
-PALAPI
-OpenEventW(
-       IN DWORD dwDesiredAccess,
-       IN BOOL bInheritHandle,
-       IN LPCWSTR lpName);
-
-#ifdef UNICODE
-#define OpenEvent OpenEventW
-#endif
-
-PALIMPORT
-HANDLE
-PALAPI
-CreateMutexW(
-    IN LPSECURITY_ATTRIBUTES lpMutexAttributes,
-    IN BOOL bInitialOwner,
-    IN LPCWSTR lpName);
-
-PALIMPORT
-HANDLE
-PALAPI
-CreateMutexExW(
-    IN LPSECURITY_ATTRIBUTES lpMutexAttributes,
-    IN LPCWSTR lpName,
-    IN DWORD dwFlags,
-    IN DWORD dwDesiredAccess);
-
-// CreateMutexExW: dwFlags
-#define CREATE_MUTEX_INITIAL_OWNER ((DWORD)0x1)
-
-#ifdef UNICODE
-#define CreateMutex CreateMutexW
-#else
-#define CreateMutex CreateMutexA
-#endif
-
-PALIMPORT
-HANDLE
-PALAPI
-OpenMutexW(
-       IN DWORD dwDesiredAccess,
-       IN BOOL bInheritHandle,
-       IN LPCWSTR lpName);
-
-
-#ifdef UNICODE
-#define OpenMutex  OpenMutexW
-#else
-#define OpenMutex  OpenMutexA
-#endif // UNICODE
-
-PALIMPORT
-BOOL
-PALAPI
-ReleaseMutex(
-    IN HANDLE hMutex);
-
-PALIMPORT
 DWORD
 PALAPI
 GetCurrentProcessId(
@@ -1250,25 +1004,10 @@ GetCurrentSessionId(
             VOID);
 
 PALIMPORT
-HANDLE
-PALAPI
-GetCurrentProcess(
-          VOID);
-
-PALIMPORT
 DWORD
 PALAPI
 GetCurrentThreadId(
            VOID);
-
-// To work around multiply-defined symbols in the Carbon framework.
-#define GetCurrentThread PAL_GetCurrentThread
-PALIMPORT
-HANDLE
-PALAPI
-GetCurrentThread(
-         VOID);
-
 
 #define STARTF_USESTDHANDLES       0x00000100
 
@@ -1332,190 +1071,6 @@ typedef struct _PROCESS_INFORMATION {
     DWORD dwProcessId;
     DWORD dwThreadId_PAL_Undefined;
 } PROCESS_INFORMATION, *PPROCESS_INFORMATION, *LPPROCESS_INFORMATION;
-
-PALIMPORT
-BOOL
-PALAPI
-CreateProcessW(
-           IN LPCWSTR lpApplicationName,
-           IN LPWSTR lpCommandLine,
-           IN LPSECURITY_ATTRIBUTES lpProcessAttributes,
-           IN LPSECURITY_ATTRIBUTES lpThreadAttributes,
-           IN BOOL bInheritHandles,
-           IN DWORD dwCreationFlags,
-           IN LPVOID lpEnvironment,
-           IN LPCWSTR lpCurrentDirectory,
-           IN LPSTARTUPINFOW lpStartupInfo,
-           OUT LPPROCESS_INFORMATION lpProcessInformation);
-
-#ifdef UNICODE
-#define CreateProcess CreateProcessW
-#else
-#define CreateProcess CreateProcessA
-#endif
-
-PALIMPORT
-PAL_NORETURN
-VOID
-PALAPI
-ExitProcess(
-        IN UINT uExitCode);
-
-PALIMPORT
-BOOL
-PALAPI
-TerminateProcess(
-         IN HANDLE hProcess,
-         IN UINT uExitCode);
-
-PALIMPORT
-BOOL
-PALAPI
-GetExitCodeProcess(
-           IN HANDLE hProcess,
-           IN LPDWORD lpExitCode);
-
-PALIMPORT
-BOOL
-PALAPI
-GetProcessTimes(
-        IN HANDLE hProcess,
-        OUT LPFILETIME lpCreationTime,
-        OUT LPFILETIME lpExitTime,
-        OUT LPFILETIME lpKernelTime,
-        OUT LPFILETIME lpUserTime);
-
-#define MAXIMUM_WAIT_OBJECTS  64
-#define WAIT_OBJECT_0 0
-#define WAIT_ABANDONED   0x00000080
-#define WAIT_ABANDONED_0 0x00000080
-#define WAIT_TIMEOUT 258
-#define WAIT_FAILED ((DWORD)0xFFFFFFFF)
-
-#define INFINITE 0xFFFFFFFF // Infinite timeout
-
-PALIMPORT
-DWORD
-PALAPI
-WaitForSingleObject(
-            IN HANDLE hHandle,
-            IN DWORD dwMilliseconds);
-
-PALIMPORT
-DWORD
-PALAPI
-PAL_WaitForSingleObjectPrioritized(
-            IN HANDLE hHandle,
-            IN DWORD dwMilliseconds);
-
-PALIMPORT
-DWORD
-PALAPI
-WaitForSingleObjectEx(
-            IN HANDLE hHandle,
-            IN DWORD dwMilliseconds,
-            IN BOOL bAlertable);
-
-PALIMPORT
-DWORD
-PALAPI
-WaitForMultipleObjects(
-               IN DWORD nCount,
-               IN CONST HANDLE *lpHandles,
-               IN BOOL bWaitAll,
-               IN DWORD dwMilliseconds);
-
-PALIMPORT
-DWORD
-PALAPI
-WaitForMultipleObjectsEx(
-             IN DWORD nCount,
-             IN CONST HANDLE *lpHandles,
-             IN BOOL bWaitAll,
-             IN DWORD dwMilliseconds,
-             IN BOOL bAlertable);
-
-PALIMPORT
-DWORD
-PALAPI
-SignalObjectAndWait(
-    IN HANDLE hObjectToSignal,
-    IN HANDLE hObjectToWaitOn,
-    IN DWORD dwMilliseconds,
-    IN BOOL bAlertable);
-
-#define DUPLICATE_CLOSE_SOURCE      0x00000001
-#define DUPLICATE_SAME_ACCESS       0x00000002
-
-PALIMPORT
-BOOL
-PALAPI
-DuplicateHandle(
-        IN HANDLE hSourceProcessHandle,
-        IN HANDLE hSourceHandle,
-        IN HANDLE hTargetProcessHandle,
-        OUT LPHANDLE lpTargetHandle,
-        IN DWORD dwDesiredAccess,
-        IN BOOL bInheritHandle,
-        IN DWORD dwOptions);
-
-PALIMPORT
-VOID
-PALAPI
-Sleep(
-      IN DWORD dwMilliseconds);
-
-PALIMPORT
-DWORD
-PALAPI
-SleepEx(
-    IN DWORD dwMilliseconds,
-    IN BOOL bAlertable);
-
-PALIMPORT
-BOOL
-PALAPI
-SwitchToThread(
-    VOID);
-
-#define DEBUG_PROCESS                     0x00000001
-#define DEBUG_ONLY_THIS_PROCESS           0x00000002
-#define CREATE_SUSPENDED                  0x00000004
-#define STACK_SIZE_PARAM_IS_A_RESERVATION 0x00010000
-
-PALIMPORT
-HANDLE
-PALAPI
-CreateThread(
-         IN LPSECURITY_ATTRIBUTES lpThreadAttributes,
-         IN DWORD dwStackSize,
-         IN LPTHREAD_START_ROUTINE lpStartAddress,
-         IN LPVOID lpParameter,
-         IN DWORD dwCreationFlags,
-         OUT LPDWORD lpThreadId);
-
-PALIMPORT
-PAL_NORETURN
-VOID
-PALAPI
-ExitThread(
-       IN DWORD dwExitCode);
-
-PALIMPORT
-DWORD
-PALAPI
-ResumeThread(
-         IN HANDLE hThread);
-
-typedef VOID (PALAPI *PAPCFUNC)(ULONG_PTR dwParam);
-
-PALIMPORT
-DWORD
-PALAPI
-QueueUserAPC(
-         IN PAPCFUNC pfnAPC,
-         IN HANDLE hThread,
-         IN ULONG_PTR dwData);
 
 #ifdef _X86_
 
@@ -2261,49 +1816,6 @@ typedef struct _KNONVOLATILE_CONTEXT_POINTERS {
 #error Unknown architecture for defining CONTEXT.
 #endif
 
-
-PALIMPORT
-BOOL
-PALAPI
-GetThreadContext(
-         IN HANDLE hThread,
-         IN OUT LPCONTEXT lpContext);
-
-PALIMPORT
-BOOL
-PALAPI
-SetThreadContext(
-         IN HANDLE hThread,
-         IN CONST CONTEXT *lpContext);
-
-#define THREAD_BASE_PRIORITY_LOWRT    15
-#define THREAD_BASE_PRIORITY_MAX      2
-#define THREAD_BASE_PRIORITY_MIN      (-2)
-#define THREAD_BASE_PRIORITY_IDLE     (-15)
-
-#define THREAD_PRIORITY_LOWEST        THREAD_BASE_PRIORITY_MIN
-#define THREAD_PRIORITY_BELOW_NORMAL  (THREAD_PRIORITY_LOWEST+1)
-#define THREAD_PRIORITY_NORMAL        0
-#define THREAD_PRIORITY_HIGHEST       THREAD_BASE_PRIORITY_MAX
-#define THREAD_PRIORITY_ABOVE_NORMAL  (THREAD_PRIORITY_HIGHEST-1)
-#define THREAD_PRIORITY_ERROR_RETURN  (MAXLONG)
-
-#define THREAD_PRIORITY_TIME_CRITICAL THREAD_BASE_PRIORITY_LOWRT
-#define THREAD_PRIORITY_IDLE          THREAD_BASE_PRIORITY_IDLE
-
-PALIMPORT
-int
-PALAPI
-GetThreadPriority(
-          IN HANDLE hThread);
-
-PALIMPORT
-BOOL
-PALAPI
-SetThreadPriority(
-          IN HANDLE hThread,
-          IN int nPriority);
-
 PALIMPORT
 BOOL
 PALAPI
@@ -2314,76 +1826,6 @@ GetThreadTimes(
         OUT LPFILETIME lpKernelTime,
         OUT LPFILETIME lpUserTime);
     
-#define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
-
-PALIMPORT
-DWORD
-PALAPI
-TlsAlloc(
-     VOID);
-
-PALIMPORT
-LPVOID
-PALAPI
-TlsGetValue(
-        IN DWORD dwTlsIndex);
-
-PALIMPORT
-BOOL
-PALAPI
-TlsSetValue(
-        IN DWORD dwTlsIndex,
-        IN LPVOID lpTlsValue);
-
-PALIMPORT
-BOOL
-PALAPI
-TlsFree(
-    IN DWORD dwTlsIndex);
-
-PALIMPORT
-void *
-PALAPI
-PAL_GetStackBase(VOID);
-
-PALIMPORT
-void *
-PALAPI
-PAL_GetStackLimit(VOID);
-
-PALIMPORT
-DWORD
-PALAPI
-PAL_GetLogicalCpuCountFromOS(VOID);
-
-PALIMPORT
-size_t
-PALAPI
-PAL_GetRestrictedPhysicalMemoryLimit(VOID);
-
-PALIMPORT
-BOOL
-PALAPI
-PAL_GetWorkingSetSize(size_t* val);
-
-PALIMPORT
-BOOL
-PALAPI
-PAL_GetCpuLimit(UINT* val);
-
-PALIMPORT
-size_t
-PALAPI
-PAL_GetLogicalProcessorCacheSizeFromOS(VOID);
-
-typedef BOOL(*UnwindReadMemoryCallback)(PVOID address, PVOID buffer, SIZE_T size);
-
-PALIMPORT BOOL PALAPI PAL_VirtualUnwind(CONTEXT *context, KNONVOLATILE_CONTEXT_POINTERS *contextPointers);
-
-PALIMPORT BOOL PALAPI PAL_VirtualUnwindOutOfProc(CONTEXT *context, KNONVOLATILE_CONTEXT_POINTERS *contextPointers, SIZE_T baseAddress, UnwindReadMemoryCallback readMemoryCallback);
-
-#define GetLogicalProcessorCacheSizeFromOS PAL_GetLogicalProcessorCacheSizeFromOS
-
 /* PAL_CS_NATIVE_DATA_SIZE is defined as sizeof(PAL_CRITICAL_SECTION_NATIVE_DATA) */
 
 #if defined(__APPLE__) && defined(__i386__)
@@ -2535,7 +1977,6 @@ PALAPI
 UnmapViewOfFile(
         IN LPCVOID lpBaseAddress);
 
-
 PALIMPORT
 HMODULE
 PALAPI
@@ -2549,54 +1990,6 @@ LoadLibraryExW(
         IN LPCWSTR lpLibFileName,
         IN /*Reserved*/ HANDLE hFile,
         IN DWORD dwFlags);
-
-PALIMPORT
-void *
-PALAPI
-PAL_LoadLibraryDirect(
-        IN LPCWSTR lpLibFileName);
-
-PALIMPORT
-HMODULE
-PALAPI
-PAL_RegisterLibraryDirect(
-        IN void *dl_handle,
-        IN LPCWSTR lpLibFileName);
-
-/*++
-Function:
-  PAL_LOADLoadPEFile
-
-Abstract
-  Loads a PE file into memory.  Properly maps all of the sections in the PE file.  Returns a pointer to the
-  loaded base.
-
-Parameters:
-    IN hFile    - The file to load
-
-Return value:
-    A valid base address if successful.
-    0 if failure
---*/
-void *
-PALAPI
-PAL_LOADLoadPEFile(HANDLE hFile);
-
-/*++
-    PAL_LOADUnloadPEFile
-
-    Unload a PE file that was loaded by PAL_LOADLoadPEFile().
-
-Parameters:
-    IN ptr - the file pointer returned by PAL_LOADLoadPEFile()
-
-Return value:
-    TRUE - success
-    FALSE - failure (incorrect ptr, etc.)
---*/
-BOOL 
-PALAPI
-PAL_LOADUnloadPEFile(void * ptr);
 
 #ifdef UNICODE
 #define LoadLibrary LoadLibraryW
@@ -2620,14 +2013,6 @@ BOOL
 PALAPI
 FreeLibrary(
     IN OUT HMODULE hLibModule);
-
-PALIMPORT
-PAL_NORETURN
-VOID
-PALAPI
-FreeLibraryAndExitThread(
-    IN HMODULE hLibModule,
-    IN DWORD dwExitCode);
 
 PALIMPORT
 BOOL
@@ -2672,14 +2057,6 @@ PALIMPORT
 LPCSTR
 PALAPI
 PAL_GetLoadLibraryError();
-
-PALIMPORT
-LPVOID
-PALAPI
-PAL_VirtualReserveFromExecutableMemoryAllocatorWithinRange(
-    IN LPCVOID lpBeginAddress,
-    IN LPCVOID lpEndAddress,
-    IN SIZE_T dwSize);
 
 PALIMPORT
 LPVOID
@@ -2839,14 +2216,6 @@ PALAPI
 LocalFree(
       IN HLOCAL hMem);
 
-PALIMPORT
-BOOL
-PALAPI
-FlushInstructionCache(
-              IN HANDLE hProcess,
-              IN LPCVOID lpBaseAddress,
-              IN SIZE_T dwSize);
-
 #define MAX_LEADBYTES         12
 #define MAX_DEFAULTCHAR       2
 
@@ -2917,20 +2286,6 @@ WideCharToMultiByte(
             IN LPCSTR lpDefaultChar,
             OUT LPBOOL lpUsedDefaultChar);
 
-PALIMPORT
-int
-PALAPI
-PAL_GetResourceString(
-        IN LPCSTR lpDomain,
-        IN LPCSTR lpResourceStr,
-        OUT LPWSTR lpWideCharStr,
-        IN int cchWideChar);
-
-PALIMPORT
-BOOL
-PALAPI
-PAL_BindResources(IN LPCSTR lpDomain);
-
 #define EXCEPTION_NONCONTINUABLE 0x1
 #define EXCEPTION_UNWINDING 0x2
 
@@ -2974,19 +2329,6 @@ typedef struct _EXCEPTION_POINTERS {
     PCONTEXT ContextRecord;
 } EXCEPTION_POINTERS, *PEXCEPTION_POINTERS, *LPEXCEPTION_POINTERS;
 
-#ifdef FEATURE_PAL_SXS
-
-typedef LONG EXCEPTION_DISPOSITION;
-
-enum {
-    ExceptionContinueExecution,
-    ExceptionContinueSearch,
-    ExceptionNestedException,
-    ExceptionCollidedUnwind,
-};
-
-#endif // FEATURE_PAL_SXS
-
 //
 // A function table entry is generated for each frame function.
 //
@@ -3027,15 +2369,6 @@ typedef struct _RUNTIME_FUNCTION {
 #define PROCESS_SUSPEND_RESUME    (0x0800)  
 #define PROCESS_ALL_ACCESS        (STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | \
                                    0xFFF)
-
-PALIMPORT
-HANDLE
-PALAPI
-OpenProcess(
-    IN DWORD dwDesiredAccess, /* PROCESS_DUP_HANDLE or PROCESS_ALL_ACCESS */
-    IN BOOL bInheritHandle,
-    IN DWORD dwProcessId
-    );
 
 PALIMPORT
 BOOL
@@ -3147,24 +2480,6 @@ CloseHandle(
         IN OUT HANDLE hObject);
 
 PALIMPORT
-VOID
-PALAPI
-RaiseException(
-           IN DWORD dwExceptionCode,
-           IN DWORD dwExceptionFlags,
-           IN DWORD nNumberOfArguments,
-           IN CONST ULONG_PTR *lpArguments);
-
-#ifdef FEATURE_PAL_SXS
-PALIMPORT
-PAL_NORETURN
-VOID
-PALAPI
-PAL_RaiseException(
-           IN PEXCEPTION_POINTERS ExceptionPointers);
-#endif // FEATURE_PAL_SXS
-
-PALIMPORT
 DWORD
 PALAPI
 GetTickCount(
@@ -3188,13 +2503,6 @@ PALAPI
 QueryPerformanceFrequency(
     OUT LARGE_INTEGER *lpFrequency
     );
-
-PALIMPORT
-BOOL
-PALAPI
-QueryThreadCycleTime(
-    IN HANDLE ThreadHandle,
-    OUT PULONG64 CycleTime);
 
 PALIMPORT
 INT
@@ -3691,23 +2999,6 @@ YieldProcessor(
 #endif
 }
 
-PALIMPORT
-DWORD
-PALAPI
-GetCurrentProcessorNumber(VOID);
-
-/*++
-Function:
-PAL_HasGetCurrentProcessorNumber
-
-Checks if GetCurrentProcessorNumber is available in the current environment
-
---*/
-PALIMPORT
-BOOL
-PALAPI
-PAL_HasGetCurrentProcessorNumber(VOID);
-    
 #define FORMAT_MESSAGE_ALLOCATE_BUFFER 0x00000100
 #define FORMAT_MESSAGE_IGNORE_INSERTS  0x00000200
 #define FORMAT_MESSAGE_FROM_STRING     0x00000400
@@ -3743,73 +3034,6 @@ VOID
 PALAPI
 SetLastError(
          IN DWORD dwErrCode);
-
-PALIMPORT
-LPWSTR
-PALAPI
-GetCommandLineW(
-        VOID);
-
-#ifdef UNICODE
-#define GetCommandLine GetCommandLineW
-#endif
-
-PALIMPORT
-VOID 
-PALAPI 
-RtlRestoreContext(
-  IN PCONTEXT ContextRecord,
-  IN PEXCEPTION_RECORD ExceptionRecord
-);
-
-PALIMPORT
-VOID 
-PALAPI 
-RtlCaptureContext(
-  OUT PCONTEXT ContextRecord
-);
-
-PALIMPORT
-UINT 
-PALAPI 
-GetWriteWatch(
-  IN DWORD dwFlags,
-  IN PVOID lpBaseAddress,
-  IN SIZE_T dwRegionSize,
-  OUT PVOID *lpAddresses,
-  IN OUT PULONG_PTR lpdwCount,
-  OUT PULONG lpdwGranularity
-);
-
-PALIMPORT
-UINT 
-PALAPI 
-ResetWriteWatch(
-  IN LPVOID lpBaseAddress,
-  IN SIZE_T dwRegionSize
-);
-
-PALIMPORT
-VOID 
-PALAPI 
-FlushProcessWriteBuffers(VOID);
-
-typedef void (*PAL_ActivationFunction)(CONTEXT *context);
-typedef BOOL (*PAL_SafeActivationCheckFunction)(SIZE_T ip, BOOL checkingCurrentThread);
-
-PALIMPORT
-VOID
-PALAPI
-PAL_SetActivationFunction(
-    IN PAL_ActivationFunction pActivationFunction,
-    IN PAL_SafeActivationCheckFunction pSafeActivationCheckFunction);
-
-PALIMPORT
-BOOL
-PALAPI
-PAL_InjectActivation(
-    IN HANDLE hThread
-);
 
 #define VER_PLATFORM_WIN32_WINDOWS        1
 #define VER_PLATFORM_WIN32_NT        2
@@ -3915,198 +3139,16 @@ CreatePipe(
     IN DWORD nSize
     );
 
-//
-// NUMA related APIs
-//
-
-typedef enum _PROCESSOR_CACHE_TYPE { 
-  CacheUnified,
-  CacheInstruction,
-  CacheData,
-  CacheTrace
-} PROCESSOR_CACHE_TYPE;
-
-typedef struct _PROCESSOR_NUMBER {
-  WORD Group;
-  BYTE Number;
-  BYTE Reserved;
-} PROCESSOR_NUMBER, *PPROCESSOR_NUMBER;
-
-typedef enum _LOGICAL_PROCESSOR_RELATIONSHIP { 
-  RelationProcessorCore,
-  RelationNumaNode,
-  RelationCache,
-  RelationProcessorPackage,
-  RelationGroup,
-  RelationAll               = 0xffff
-} LOGICAL_PROCESSOR_RELATIONSHIP;
-
-typedef ULONG_PTR KAFFINITY;
-
-#define ANYSIZE_ARRAY 1
-
-typedef struct _GROUP_AFFINITY {
-  KAFFINITY Mask;
-  WORD      Group;
-  WORD      Reserved[3];
-} GROUP_AFFINITY, *PGROUP_AFFINITY;
-
-typedef struct _PROCESSOR_GROUP_INFO {
-  BYTE      MaximumProcessorCount;
-  BYTE      ActiveProcessorCount;
-  BYTE      Reserved[38];
-  KAFFINITY ActiveProcessorMask;
-} PROCESSOR_GROUP_INFO, *PPROCESSOR_GROUP_INFO;
-
-typedef struct _PROCESSOR_RELATIONSHIP {
-  BYTE           Flags;
-  BYTE           EfficiencyClass;
-  BYTE           Reserved[21];
-  WORD           GroupCount;
-  GROUP_AFFINITY GroupMask[ANYSIZE_ARRAY];
-} PROCESSOR_RELATIONSHIP, *PPROCESSOR_RELATIONSHIP;
-
-typedef struct _GROUP_RELATIONSHIP {
-  WORD                 MaximumGroupCount;
-  WORD                 ActiveGroupCount;
-  BYTE                 Reserved[20];
-  PROCESSOR_GROUP_INFO GroupInfo[ANYSIZE_ARRAY];
-} GROUP_RELATIONSHIP, *PGROUP_RELATIONSHIP;
-
-typedef struct _NUMA_NODE_RELATIONSHIP {
-  DWORD          NodeNumber;
-  BYTE           Reserved[20];
-  GROUP_AFFINITY GroupMask;
-} NUMA_NODE_RELATIONSHIP, *PNUMA_NODE_RELATIONSHIP;
-
-typedef struct _CACHE_RELATIONSHIP {
-  BYTE                 Level;
-  BYTE                 Associativity;
-  WORD                 LineSize;
-  DWORD                CacheSize;
-  PROCESSOR_CACHE_TYPE Type;
-  BYTE                 Reserved[20];
-  GROUP_AFFINITY       GroupMask;
-} CACHE_RELATIONSHIP, *PCACHE_RELATIONSHIP;
-
-typedef struct _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX {
-  LOGICAL_PROCESSOR_RELATIONSHIP Relationship;
-  DWORD                          Size;
-  union {
-    PROCESSOR_RELATIONSHIP Processor;
-    NUMA_NODE_RELATIONSHIP NumaNode;
-    CACHE_RELATIONSHIP     Cache;
-    GROUP_RELATIONSHIP     Group;
-  };
-} SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, *PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
-
-
-PALIMPORT
-BOOL
-PALAPI
-GetNumaHighestNodeNumber(
-  OUT PULONG HighestNodeNumber
-);
-
-PALIMPORT
-BOOL
-PALAPI
-GetNumaProcessorNodeEx(
-  IN  PPROCESSOR_NUMBER Processor,
-  OUT PUSHORT NodeNumber
-);
-
-PALIMPORT
-LPVOID
-PALAPI
-VirtualAllocExNuma(
-  IN HANDLE hProcess,
-  IN OPTIONAL LPVOID lpAddress,
-  IN SIZE_T dwSize,
-  IN DWORD flAllocationType,
-  IN DWORD flProtect,
-  IN DWORD nndPreferred
-);
-
-PALIMPORT
-BOOL
-PALAPI
-GetLogicalProcessorInformationEx(
-  IN LOGICAL_PROCESSOR_RELATIONSHIP RelationshipType,
-  OUT OPTIONAL PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX Buffer,
-  IN OUT PDWORD ReturnedLength
-);
-
-PALIMPORT
-DWORD_PTR
-PALAPI
-SetThreadAffinityMask(
-  IN HANDLE hThread,
-  IN DWORD_PTR dwThreadAffinityMask
-);
-
-PALIMPORT
-BOOL
-PALAPI
-SetThreadGroupAffinity(
-  IN HANDLE hThread,
-  IN const GROUP_AFFINITY *GroupAffinity,
-  OUT OPTIONAL PGROUP_AFFINITY PreviousGroupAffinity
-);
-
-PALIMPORT
-BOOL
-PALAPI
-GetThreadGroupAffinity(
-  IN HANDLE hThread,
-  OUT PGROUP_AFFINITY GroupAffinity
-);
-
-PALIMPORT
-VOID
-PALAPI
-GetCurrentProcessorNumberEx(
-  OUT PPROCESSOR_NUMBER ProcNumber
-);
-
-PALIMPORT
-BOOL
-PALAPI
-GetProcessAffinityMask(
-  IN HANDLE hProcess,
-  OUT PDWORD_PTR lpProcessAffinityMask,
-  OUT PDWORD_PTR lpSystemAffinityMask
-);
-
-PALIMPORT
-BOOL
-PALAPI
-SetThreadIdealProcessorEx(
-  IN HANDLE hThread,
-  IN PPROCESSOR_NUMBER lpIdealProcessor,
-  OUT PPROCESSOR_NUMBER lpPreviousIdealProcessor
-);
-
-//
-// The types of events that can be logged.
-//
-#define EVENTLOG_SUCCESS                0x0000
-#define EVENTLOG_ERROR_TYPE             0x0001
-#define EVENTLOG_WARNING_TYPE           0x0002
-#define EVENTLOG_INFORMATION_TYPE       0x0004
-#define EVENTLOG_AUDIT_SUCCESS          0x0008
-#define EVENTLOG_AUDIT_FAILURE          0x0010
-
 #if defined FEATURE_PAL_ANSI
 #include "palprivate.h"
 #endif //FEATURE_PAL_ANSI
+
 /******************* C Runtime Entrypoints *******************************/
 
 /* Some C runtime functions needs to be reimplemented by the PAL.
    To avoid name collisions, those functions have been renamed using
    defines */
 #ifndef PAL_STDCPP_COMPAT
-#define exit          PAL_exit
 #define atexit        PAL_atexit
 #define printf        PAL_printf
 #define vprintf       PAL_vprintf
@@ -4197,7 +3239,6 @@ SetThreadIdealProcessorEx(
 #define free          PAL_free
 #define mkstemp       PAL_mkstemp
 #define rename        PAL_rename
-#define _strdup       PAL__strdup
 #define _getcwd       PAL__getcwd
 #define _open         PAL__open
 #define _close        PAL__close
@@ -4212,6 +3253,8 @@ SetThreadIdealProcessorEx(
 #endif // _AMD64_
 
 #endif // !PAL_STDCPP_COMPAT
+
+#define _strdup       strdup
 
 #ifndef _CONST_RETURN
 #ifdef  __cplusplus
@@ -4494,12 +3537,11 @@ inline __int64 abs(__int64 _X) {
 }
 
 }
-#endif
+#endif // __cplusplus
 
 PALIMPORT void * __cdecl malloc(size_t);
 PALIMPORT void   __cdecl free(void *);
 PALIMPORT void * __cdecl realloc(void *, size_t);
-PALIMPORT char * __cdecl _strdup(const char *);
 
 #if defined(_MSC_VER)
 #define alloca _alloca
@@ -4647,46 +3689,6 @@ PALIMPORT int __cdecl _putenv(const char *);
 
 #define ERANGE          34
 
-/******************* PAL-specific I/O completion port *****************/
-
-typedef struct _PAL_IOCP_CPU_INFORMATION {
-    union {
-        FILETIME ftLastRecordedIdleTime;
-        FILETIME ftLastRecordedCurrentTime;
-    } LastRecordedTime;
-    FILETIME ftLastRecordedKernelTime;
-    FILETIME ftLastRecordedUserTime;
-} PAL_IOCP_CPU_INFORMATION;
-
-PALIMPORT
-INT
-PALAPI
-PAL_GetCPUBusyTime(
-    IN OUT PAL_IOCP_CPU_INFORMATION *lpPrevCPUInfo);
-
-/****************PAL Perf functions for PInvoke*********************/
-#if PAL_PERF
-PALIMPORT
-VOID
-PALAPI
-PAL_EnableProcessProfile(VOID);
-
-PALIMPORT
-VOID
-PALAPI
-PAL_DisableProcessProfile(VOID);
-
-PALIMPORT
-BOOL
-PALAPI
-PAL_IsProcessProfileEnabled(VOID);
-
-PALIMPORT
-INT64
-PALAPI
-PAL_GetCpuTickCount(VOID);
-#endif // PAL_PERF
-
 /******************* PAL functions for SIMD extensions *****************/
 
 PALIMPORT
@@ -4697,559 +3699,17 @@ void _mm_setcsr(unsigned int i);
 
 /******************* PAL functions for CPU capability detection *******/
 
-#ifdef  __cplusplus
-
-class CORJIT_FLAGS;
-
-PALIMPORT
-VOID
-PALAPI
-PAL_GetJitCpuCapabilityFlags(CORJIT_FLAGS *flags);
-
-#endif
-
-/******************* PAL side-by-side support  ************************/
-
-#ifdef FEATURE_PAL_SXS
-//
-// Some versions of the PAL support several PALs side-by-side
-// in the process.  To avoid those PALs interfering with one
-// another, they need to be told by clients when they are active
-// and when they are not.
-//
-
-// To avoid performance problems incurred by swapping thread
-// exception ports every time we leave the PAL, there's also
-// the concept of entering/leaving the PAL at its top boundary
-// (entering down/leaving up) or at the bottom boundary
-// (leaving down/entering up).
-
-typedef enum _PAL_Boundary {
-    PAL_BoundaryTop,            // closer to main()
-    PAL_BoundaryBottom,         // closer to execution
-    PAL_BoundaryEH,             // out-of-band during EH
-    
-    PAL_BoundaryMax = PAL_BoundaryEH
-} PAL_Boundary;
-
-// This function needs to be called on a thread when it enters
-// a region of code that depends on this instance of the PAL
-// in the process, and the current thread may or may not be
-// known to the PAL.  This function can fail (for something else
-// than an internal error) if this is the first time that the
-// current thread entered this PAL.  Note that PAL_Initialize
-// implies a call to this function.  Does not modify LastError.
-PALIMPORT
-DWORD
-PALAPI
-PAL_Enter(PAL_Boundary boundary);
-
-// Returns TRUE if we this thread has already entered the PAL,
-// returns FALSE if we have not entered the PAL.
-PALIMPORT
-BOOL
-PALAPI
-PAL_HasEntered(VOID);
-
-// Equivalent to PAL_Enter(PAL_BoundaryTop) and is for stub
-// code generation use.
-PALIMPORT
-DWORD
-PALAPI
-PAL_EnterTop(VOID);
-
-// This function needs to be called on a thread when it enters
-// a region of code that depends on this instance of the PAL
-// in the process, and the current thread is already known to
-// the PAL.  Does not modify LastError.
-PALIMPORT
-VOID
-PALAPI
-PAL_Reenter(PAL_Boundary boundary);
-
-// This function needs to be called on a thread when it enters
-// a region of code that depends on this instance of the PAL
-// in the process, and it is unknown whether the current thread
-// is already running in the PAL.  Returns TRUE if and only if
-// the thread was not running in the PAL previously.  Does not
-// modify LastError.
-PALIMPORT
-BOOL
-PALAPI
-PAL_ReenterForEH(VOID);
-
-// This function needs to be called on a thread when it leaves
-// a region of code that depends on this instance of the PAL
-// in the process.  Does not modify LastError.
-PALIMPORT
-VOID
-PALAPI
-PAL_Leave(PAL_Boundary boundary);
-
-// This function is equivalent to PAL_Leave(PAL_BoundaryBottom)
-// and is available to limit the creation of stub code.
-PALIMPORT
-VOID
-PALAPI
-PAL_LeaveBottom(VOID);
-
-// This function is equivalent to PAL_Leave(PAL_BoundaryTop)
-// and is available to limit the creation of stub code.
-PALIMPORT
-VOID
-PALAPI
-PAL_LeaveTop(VOID);
-
-#ifdef  __cplusplus
-//
-// A holder to enter the PAL for a specific region of code.
-// Previously, we must have been executing outside the PAL
-// (unless fEnter is set to FALSE).
-//
-class PAL_EnterHolder
-{
-private:
-    BOOL m_fEntered;
-    DWORD m_palError;
-public:
-    PAL_EnterHolder(BOOL fEnter = TRUE) : m_palError(ERROR_SUCCESS)
-    {
-        if (fEnter)
-        {
-            m_palError = PAL_Enter(PAL_BoundaryTop);
-            m_fEntered = m_palError == ERROR_SUCCESS;
-        }
-        else
-        {
-            m_fEntered = FALSE;
-        }
-    }
-
-    ~PAL_EnterHolder()
-    {
-        if (m_fEntered)
-        {
-            PAL_Leave(PAL_BoundaryTop);
-        }
-    }
-
-    DWORD GetError()
-    {
-        return m_palError;
-    }
-    
-    void SuppressRelease()
-    {
-        // Used to avoid calling PAL_Leave() when 
-        // another code path will explicitly do so.
-        m_fEntered = FALSE;
-    }
-};
-
-class PAL_LeaveHolder
-{
-public:
-    PAL_LeaveHolder()
-    {
-        PAL_Leave(PAL_BoundaryBottom);
-    }
-
-    ~PAL_LeaveHolder()
-    {
-        PAL_Reenter(PAL_BoundaryBottom);
-    }
-};
-#endif // __cplusplus
-
-#else // FEATURE_PAL_SXS
-
-#define PAL_Enter(boundary) ERROR_SUCCESS
-#define PAL_Reenter(boundary)
-#define PAL_Leave(boundary)
-
 #ifdef __cplusplus
-class PAL_EnterHolder {
-public:
-    // using constructor to suppress the "unused variable" warnings
-    PAL_EnterHolder() {}
-};
-class PAL_LeaveHolder {
-public:
-    // using constructor to suppress the "unused variable" warnings
-    PAL_LeaveHolder() {}
-};
-#endif // __cplusplus
-
-#endif // FEATURE_PAL_SXS
-
-#ifdef __cplusplus
-
-#include "pal_unwind.h"
-
-PALIMPORT
-VOID
-PALAPI
-PAL_FreeExceptionRecords(
-  IN EXCEPTION_RECORD *exceptionRecord, 
-  IN CONTEXT *contextRecord);
-
-#define EXCEPTION_CONTINUE_SEARCH   0
-#define EXCEPTION_EXECUTE_HANDLER   1
-#define EXCEPTION_CONTINUE_EXECUTION -1
-
-struct PAL_SEHException
-{
-private:
-    static const SIZE_T NoTargetFrameSp = SIZE_MAX;
-
-    void Move(PAL_SEHException& ex)
-    {
-        ExceptionPointers.ExceptionRecord = ex.ExceptionPointers.ExceptionRecord;
-        ExceptionPointers.ContextRecord = ex.ExceptionPointers.ContextRecord;
-        TargetFrameSp = ex.TargetFrameSp;
-        RecordsOnStack = ex.RecordsOnStack;
-
-        ex.Clear();
-    }
-
-    void FreeRecords()
-    {
-        if (ExceptionPointers.ExceptionRecord != NULL && !RecordsOnStack )
-        {
-            PAL_FreeExceptionRecords(ExceptionPointers.ExceptionRecord, ExceptionPointers.ContextRecord);
-            ExceptionPointers.ExceptionRecord = NULL;
-            ExceptionPointers.ContextRecord = NULL;
-        }
-    }
-
-public:
-    EXCEPTION_POINTERS ExceptionPointers;
-    // Target frame stack pointer set before the 2nd pass.
-    SIZE_T TargetFrameSp;
-    bool RecordsOnStack;
-
-    PAL_SEHException(EXCEPTION_RECORD *pExceptionRecord, CONTEXT *pContextRecord, bool onStack = false)
-    {
-        ExceptionPointers.ExceptionRecord = pExceptionRecord;
-        ExceptionPointers.ContextRecord = pContextRecord;
-        TargetFrameSp = NoTargetFrameSp;
-        RecordsOnStack = onStack;
-    }
-
-    PAL_SEHException()
-    {
-        Clear();
-    }    
-
-    // The copy constructor and copy assignment operators are deleted so that the PAL_SEHException
-    // can never be copied, only moved. This enables simple lifetime management of the exception and
-    // context records, since there is always just one PAL_SEHException instance referring to the same records.
-    PAL_SEHException(const PAL_SEHException& ex) = delete;
-    PAL_SEHException& operator=(const PAL_SEHException& ex) = delete;
-
-    PAL_SEHException(PAL_SEHException&& ex)
-    {
-        Move(ex);
-    }    
-
-    PAL_SEHException& operator=(PAL_SEHException&& ex)
-    {
-        FreeRecords();
-        Move(ex);
-        return *this;
-    }
-
-    ~PAL_SEHException()
-    {
-        FreeRecords();
-    }
-
-    void Clear()
-    {
-        ExceptionPointers.ExceptionRecord = NULL;
-        ExceptionPointers.ContextRecord = NULL;
-        TargetFrameSp = NoTargetFrameSp;
-        RecordsOnStack = false;
-    }
-
-    CONTEXT* GetContextRecord()
-    {
-        return ExceptionPointers.ContextRecord;
-    }
-
-    EXCEPTION_RECORD* GetExceptionRecord()
-    {
-        return ExceptionPointers.ExceptionRecord;
-    }
-
-    bool IsFirstPass()
-    {
-        return (TargetFrameSp == NoTargetFrameSp);
-    }
-
-    void SecondPassDone()
-    {
-        TargetFrameSp = NoTargetFrameSp;
-    }
-};
-
-typedef BOOL (*PHARDWARE_EXCEPTION_HANDLER)(PAL_SEHException* ex);
-typedef BOOL (*PHARDWARE_EXCEPTION_SAFETY_CHECK_FUNCTION)(PCONTEXT contextRecord, PEXCEPTION_RECORD exceptionRecord);
-typedef VOID (*PTERMINATION_REQUEST_HANDLER)();
-typedef DWORD (*PGET_GCMARKER_EXCEPTION_CODE)(LPVOID ip);
-
-PALIMPORT
-VOID
-PALAPI
-PAL_SetHardwareExceptionHandler(
-    IN PHARDWARE_EXCEPTION_HANDLER exceptionHandler,
-    IN PHARDWARE_EXCEPTION_SAFETY_CHECK_FUNCTION exceptionCheckFunction);
-
-PALIMPORT
-VOID
-PALAPI
-PAL_SetGetGcMarkerExceptionCode(
-    IN PGET_GCMARKER_EXCEPTION_CODE getGcMarkerExceptionCode);
-
-PALIMPORT
-VOID
-PALAPI
-PAL_ThrowExceptionFromContext(
-    IN CONTEXT* context,
-    IN PAL_SEHException* ex);
-
-PALIMPORT
-VOID
-PALAPI
-PAL_SetTerminationRequestHandler(
-    IN PTERMINATION_REQUEST_HANDLER terminationRequestHandler);
-
-//
-// This holder is used to indicate that a hardware
-// exception should be raised as a C++ exception
-// to better emulate SEH on the xplat platforms.
-//
-class CatchHardwareExceptionHolder
-{
-public:
-    CatchHardwareExceptionHolder();
-
-    ~CatchHardwareExceptionHolder();
-
-    static bool IsEnabled();
-};
-
-//
-// NOTE: Catching hardware exceptions are only enabled in the DAC and SOS 
-// builds. A hardware exception in coreclr code will fail fast/terminate
-// the process.
-//
-#ifdef FEATURE_ENABLE_HARDWARE_EXCEPTIONS
-#define HardwareExceptionHolder CatchHardwareExceptionHolder __catchHardwareException;
-#else
-#define HardwareExceptionHolder
-#endif // FEATURE_ENABLE_HARDWARE_EXCEPTIONS
-
-#ifdef FEATURE_PAL_SXS
-
-extern "C++" {
-
-//
-// This is the base class of native exception holder used to provide 
-// the filter function to the exception dispatcher. This allows the
-// filter to be called during the first pass to better emulate SEH
-// the xplat platforms that only have C++ exception support.
-//
-class NativeExceptionHolderBase
-{
-    // Save the address of the holder head so the destructor 
-    // doesn't have access the slow (on Linux) TLS value again.
-    NativeExceptionHolderBase **m_head;
-
-    // The next holder on the stack
-    NativeExceptionHolderBase *m_next;
-
-protected:
-    NativeExceptionHolderBase();
-
-    ~NativeExceptionHolderBase();
-
-public:
-    // Calls the holder's filter handler.
-    virtual EXCEPTION_DISPOSITION InvokeFilter(PAL_SEHException& ex) = 0;
-
-    // Adds the holder to the "stack" of holders. This is done explicitly instead
-    // of in the constructor was to avoid the mess of move constructors combined
-    // with return value optimization (in CreateHolder).
-    void Push();
-
-    // Given the currentHolder and locals stack range find the next holder starting with this one
-    // To find the first holder, pass nullptr as the currentHolder.
-    static NativeExceptionHolderBase *FindNextHolder(NativeExceptionHolderBase *currentHolder, void *frameLowAddress, void *frameHighAddress);
-};
-
-//
-// This is the second part of the native exception filter holder. It is
-// templated because the lambda used to wrap the exception filter is a
-// unknown type. 
-//
-template<class FilterType>
-class NativeExceptionHolder : public NativeExceptionHolderBase
-{
-    FilterType* m_exceptionFilter;
-
-public:
-    NativeExceptionHolder(FilterType* exceptionFilter)
-        : NativeExceptionHolderBase()
-    {
-        m_exceptionFilter = exceptionFilter;
-    }
-
-    virtual EXCEPTION_DISPOSITION InvokeFilter(PAL_SEHException& ex)
-    {
-        return (*m_exceptionFilter)(ex);
-    }
-};
-
-//
-// This is a native exception holder that is used when the catch catches
-// all exceptions.
-//
-class NativeExceptionHolderCatchAll : public NativeExceptionHolderBase
-{
-
-public:
-    NativeExceptionHolderCatchAll()
-        : NativeExceptionHolderBase()
-    {
-    }
-
-    virtual EXCEPTION_DISPOSITION InvokeFilter(PAL_SEHException& ex)
-    {
-        return EXCEPTION_EXECUTE_HANDLER;
-    }
-};
-
-// This is a native exception holder that doesn't catch any exceptions.
-class NativeExceptionHolderNoCatch : public NativeExceptionHolderBase
-{
-
-public:
-    NativeExceptionHolderNoCatch()
-        : NativeExceptionHolderBase()
-    {
-    }
-
-    virtual EXCEPTION_DISPOSITION InvokeFilter(PAL_SEHException& ex)
-    {
-        return EXCEPTION_CONTINUE_SEARCH;
-    }
-};
-
-//
-// This factory class for the native exception holder is necessary because
-// templated functions don't need the explicit type parameter and can infer
-// the template type from the parameter.
-//
-class NativeExceptionHolderFactory
-{
-public:
-    template<class FilterType>
-    static NativeExceptionHolder<FilterType> CreateHolder(FilterType* exceptionFilter)
-    {
-        return NativeExceptionHolder<FilterType>(exceptionFilter);
-    }
-};
-
-// Start of a try block for exceptions raised by RaiseException
-#define PAL_TRY(__ParamType, __paramDef, __paramRef)                            \
-{                                                                               \
-    __ParamType __param = __paramRef;                                           \
-    auto tryBlock = [](__ParamType __paramDef)                                  \
-    {
-
-// Start of an exception handler. If an exception raised by the RaiseException 
-// occurs in the try block and the disposition is EXCEPTION_EXECUTE_HANDLER, 
-// the handler code is executed. If the disposition is EXCEPTION_CONTINUE_SEARCH,
-// the exception is rethrown. The EXCEPTION_CONTINUE_EXECUTION disposition is
-// not supported.
-#define PAL_EXCEPT(dispositionExpression)                                       \
-    };                                                                          \
-    const bool isFinally = false;                                               \
-    auto finallyBlock = []() {};                                                \
-    EXCEPTION_DISPOSITION disposition = EXCEPTION_CONTINUE_EXECUTION;           \
-    auto exceptionFilter = [&disposition, &__param](PAL_SEHException& ex)       \
-    {                                                                           \
-        (void)__param;                                                          \
-        disposition = dispositionExpression;                                    \
-        _ASSERTE(disposition != EXCEPTION_CONTINUE_EXECUTION);                  \
-        return disposition;                                                     \
-    };                                                                          \
-    try                                                                         \
-    {                                                                           \
-        HardwareExceptionHolder                                                 \
-        auto __exceptionHolder = NativeExceptionHolderFactory::CreateHolder(&exceptionFilter); \
-        __exceptionHolder.Push();                                               \
-        tryBlock(__param);                                                      \
-    }                                                                           \
-    catch (PAL_SEHException& ex)                                                \
-    {                                                                           \
-        if (disposition == EXCEPTION_CONTINUE_EXECUTION)                        \
-        {                                                                       \
-            exceptionFilter(ex);                                                \
-        }                                                                       \
-        if (disposition == EXCEPTION_CONTINUE_SEARCH)                           \
-        {                                                                       \
-            throw;                                                              \
-        }                                                                       \
-        ex.SecondPassDone();
-
-// Start of an exception handler. It works the same way as the PAL_EXCEPT except
-// that the disposition is obtained by calling the specified filter.
-#define PAL_EXCEPT_FILTER(filter) PAL_EXCEPT(filter(&ex.ExceptionPointers, __param))
-
-// Start of a finally block. The finally block is executed both when the try block
-// finishes or when an exception is raised using the RaiseException in it.
-#define PAL_FINALLY                     \
-    };                                  \
-    const bool isFinally = true;        \
-    auto finallyBlock = [&]()           \
-    {                       
-
-// End of an except or a finally block.
-#define PAL_ENDTRY                      \
-    };                                  \
-    if (isFinally)                      \
-    {                                   \
-        try                             \
-        {                               \
-            tryBlock(__param);          \
-        }                               \
-        catch (...)                     \
-        {                               \
-            finallyBlock();             \
-            throw;                      \
-        }                               \
-        finallyBlock();                 \
-    }                                   \
-}
-
-} // extern "C++"
-
-#endif // FEATURE_PAL_SXS
 
 #define PAL_CPP_THROW(type, obj) { throw obj; }
 #define PAL_CPP_RETHROW { throw; }
-#define PAL_CPP_TRY                     try { HardwareExceptionHolder
-#define PAL_CPP_CATCH_EXCEPTION(ident)  } catch (Exception *ident) { PAL_Reenter(PAL_BoundaryBottom);
-#define PAL_CPP_CATCH_EXCEPTION_NOARG   } catch (Exception *) { PAL_Reenter(PAL_BoundaryBottom);
-#define PAL_CPP_CATCH_DERIVED(type, ident) } catch (type *ident) { PAL_Reenter(PAL_BoundaryBottom);
+#define PAL_CPP_TRY                     try {
+#define PAL_CPP_CATCH_EXCEPTION(ident)  } catch (Exception *ident) {
+#define PAL_CPP_CATCH_EXCEPTION_NOARG   } catch (Exception *) {
+#define PAL_CPP_CATCH_DERIVED(type, ident) } catch (type *ident) {
 #define PAL_CPP_CATCH_ALL               } catch (...) {                                           \
-                                            PAL_Reenter(PAL_BoundaryBottom);                      \
                                             try { throw; }                                        \
-                                            catch (PAL_SEHException& ex) { ex.SecondPassDone(); } \
                                             catch (...) {}
-
 #define PAL_CPP_ENDTRY                  }
 
 #ifdef _MSC_VER

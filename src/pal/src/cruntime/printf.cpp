@@ -24,7 +24,6 @@ Revision History:
 #include "pal/dbgmsg.h"
 #include "pal/cruntime.h"
 #include "pal/thread.hpp"
-#include "pal/threadsusp.hpp"
 #include "pal/printfcpp.hpp"
 
 /* <stdarg.h> needs to be included after "palinternal.h" to avoid name

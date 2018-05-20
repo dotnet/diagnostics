@@ -1,7 +1,9 @@
 .NET Core Diagnostics Repo
 ==========================
 
-This repository contains the source code for various .NET Core runtime diagnostic tools. It currently contains the managed portion of SOS and the lldb SOS plugin. One of goals of this repo is to build the lldb SOS plugin for the portable Linux platform (Centos 7) and the platforms not supported by the portable build (Centos 6, Alpine, eventually macOS) and to test across various indexes in a very large matrix: OSs/distros (Centos 6/7, Ubuntu, Alpine, Fedora, Debian, RHEL 7.2), architectures (x64, x86, arm, arm64), lldb versions (3.9, 4.0, 5.0, 6.0) and even .NET Core versions (1.1, 2.0.x, 2.1). 
+**Currently under construction**
+
+This repository contains the source code for various .NET Core runtime diagnostic tools. It currently contains SOS, the managed portion of SOS and the lldb SOS plugin. One of goals of this repo is to build SOS and the lldb SOS plugin for the portable Linux platform (Centos 7) and the platforms not supported by the portable build (Centos 6, Alpine, eventually macOS) and to test across various indexes in a very large matrix: OSs/distros (Centos 6/7, Ubuntu, Alpine, Fedora, Debian, RHEL 7.2), architectures (x64, x86, arm, arm64), lldb versions (3.9, 4.0, 5.0, 6.0) and even .NET Core versions (1.1, 2.0.x, 2.1). 
 
 Another goal to make it easier to obtain a version of lldb (currently 3.9) with scripts and documentation for platforms/distros like Centos, Alpine, Fedora, etc. that by default provide really old versions. 
 

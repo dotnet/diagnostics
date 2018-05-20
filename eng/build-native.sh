@@ -30,6 +30,25 @@ __UnprocessedBuildArgs=
 __Build=0
 __Test=0
 
+# resolve python-version to use
+if [ "$PYTHON" == "" ] ; then
+    if ! PYTHON=$(command -v python2.7 || command -v python2 || command -v python)
+    then
+       echo "Unable to locate build-dependency python2.x!" 1>&2
+       exit 1
+    fi
+fi
+
+# validate python-dependency
+# useful in case of explicitly set option.
+if ! command -v $PYTHON > /dev/null
+then
+   echo "Unable to locate build-dependency python2.x ($PYTHON)!" 1>&2
+   exit 1
+fi
+
+echo $PYTHON
+
 usage()
 {
     echo "Usage: $0 [options]"
@@ -37,7 +56,8 @@ usage()
     echo "--test - test native components"
     echo "--architechure <x64|x86|arm|armel|arm64>"
     echo "--configuration <debug|release>"
-    echo "--clangx.y - optional argument to build using clang version x.y."
+    echo "--clangx.y - optional argument to build using clang version x.y"
+    echo "--help - this help message"
     exit 1
 }
 
@@ -197,6 +217,7 @@ done
 __RootBinDir=$__ProjectRoot/artifacts
 __IntermediatesDir="$__RootBinDir/obj/$__BuildOS.$__BuildArch.$__BuildType"
 __LogFileDir="$__RootBinDir/log/$__BuildOS.$__BuildArch.$__BuildType"
+__ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=$__RootBinDir/$__BuildType/bin"
 
 # Specify path to be set for CMAKE_INSTALL_PREFIX.
 # This is where all built native libraries will copied to.
@@ -211,6 +232,11 @@ if [[ $__ClangMajorVersion == 0 && $__ClangMinorVersion == 0 ]]; then
        __ClangMajorVersion=3
        __ClangMinorVersion=9
    fi
+fi
+
+if [[ "$__BuildArch" == "armel" ]]; then
+    # Armel cross build is Tizen specific and does not support Portable RID build
+    __PortableBuild=0
 fi
 
 mkdir -p "$__IntermediatesDir"
@@ -260,13 +286,24 @@ initHostDistroRid()
     if [ "$__HostOS" == "Linux" ]; then
         if [ -e /etc/os-release ]; then
             source /etc/os-release
+            if [[ $ID == "rhel" ]]; then
+                # remove the last version digit
+                VERSION_ID=${VERSION_ID%.*}
+            fi
             __HostDistroRid="$ID.$VERSION_ID-$__HostArch"
+            if [[ $ID == "alpine" ]]; then
+                __HostDistroRid="linux-musl-$__HostArch"
+            fi
         elif [ -e /etc/redhat-release ]; then
             local redhatRelease=$(</etc/redhat-release)
             if [[ $redhatRelease == "CentOS release 6."* || $redhatRelease == "Red Hat Enterprise Linux Server release 6."* ]]; then
                __HostDistroRid="rhel.6-$__HostArch"
             fi
         fi
+    fi
+    if [ "$__HostOS" == "FreeBSD" ]; then
+        __freebsd_version=`sysctl -n kern.osrelease | cut -f1 -d'.'`
+        __HostDistroRid="freebsd.$__freebsd_version-$__HostArch"
     fi
 
     if [ "$__HostDistroRid" == "" ]; then
@@ -279,8 +316,13 @@ initTargetDistroRid()
     if [ $__CrossBuild == 1 ]; then
         if [ "$__BuildOS" == "Linux" ]; then
             if [ ! -e $ROOTFS_DIR/etc/os-release ]; then
-                echo "WARNING: Can not determine runtime id for current distro."
-                export __DistroRid=""
+                if [ -e $ROOTFS_DIR/android_platform ]; then
+                    source $ROOTFS_DIR/android_platform
+                    export __DistroRid="$RID"
+                else
+                    echo "WARNING: Can not determine runtime id for current distro."
+                    export __DistroRid=""
+                fi
             else
                 source $ROOTFS_DIR/etc/os-release
                 export __DistroRid="$ID.$VERSION_ID-$__BuildArch"
@@ -290,15 +332,22 @@ initTargetDistroRid()
         export __DistroRid="$__HostDistroRid"
     fi
 
+    if [ "$__BuildOS" == "OSX" ]; then
+        __PortableBuild=1
+    fi
+
     # Portable builds target the base RID
     if [ $__PortableBuild == 1 ]; then
         if [ "$__BuildOS" == "Linux" ]; then
             export __DistroRid="linux-$__BuildArch"
         elif [ "$__BuildOS" == "OSX" ]; then
             export __DistroRid="osx-$__BuildArch"
+        elif [ "$__BuildOS" == "FreeBSD" ]; then
+            export __DistroRid="freebsd-$__BuildArch"
         fi
     fi
 }
+
 
 # Init the host distro name
 initHostDistroRid
@@ -315,3 +364,6 @@ fi
 if [ $__Test == 1 ]; then
     "$__ProjectRoot/src/SOS/tests/testsos.sh" "$__ProjectRoot" "$__CMakeBinDir" "$__RootBinDir/$__BuildType/bin" "$__LogFileDir" "$__BuildArch"
 fi
+
+echo "BUILD: Repo sucessfully built."
+echo "BUILD: Product binaries are available at $__CMakeBinDir"

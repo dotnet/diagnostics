@@ -11,7 +11,7 @@
     <UsingToolXliff>false</UsingToolXliff>
 
     <!-- CoreFX -->
-    <SystemReflectionMetadataVersion>1.6.0-preview2-26406-04</SystemReflectionMetadataVersion>
+    <SystemReflectionMetadataVersion>1.5.0</SystemReflectionMetadataVersion>
   </PropertyGroup>
 
   <PropertyGroup>

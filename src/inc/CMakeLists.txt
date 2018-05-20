@@ -1,3 +1,8 @@
+if(CLR_CMAKE_PLATFORM_UNIX)
+    include_directories(${ROOT_DIR}/src/pal/inc)
+    include_directories(${ROOT_DIR}/src/pal/inc/rt)
+endif(CLR_CMAKE_PLATFORM_UNIX)
+
 set( CORGUIDS_IDL_SOURCES
   cordebug.idl
   xcordebug.idl
@@ -67,20 +72,3 @@ endif(FEATURE_JIT_PITCHING)
 
 # Compile *_i.cpp to lib
 _add_library(corguids ${CORGUIDS_SOURCES})
-
-# Binplace the inc files for packaging later.
-
-_install (FILES cfi.h
-               cor.h
-               cordebuginfo.h
-               coredistools.h
-               corhdr.h
-               corinfo.h
-               corjit.h
-               corjithost.h
-               opcode.def
-               openum.h
-               gcinfoencoder.h
-               gcinfotypes.h
-               DESTINATION inc)
-_install (TARGETS corguids DESTINATION lib)

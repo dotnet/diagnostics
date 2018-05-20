@@ -383,7 +383,7 @@ void __cdecl _invalid_parameter(const WCHAR *_Message, const WCHAR *_FunctionNam
     (_Reserved);
 #endif
     /* invoke Watson */
-    RaiseException((DWORD)STATUS_INVALID_PARAMETER, 0, 0, nullptr);
+    throw "safecrt: invalid parameter";
 }
 
 #endif

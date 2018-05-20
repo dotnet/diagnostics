@@ -58,7 +58,8 @@ Function :
 
 --*/
 BOOL 
-PAL_GetPALDirectoryW(PathWCharString& lpDirectoryName) 
+PAL_GetPALDirectoryW(
+    PathWCharString& lpDirectoryName) 
 {
     LPCWSTR lpFullPathAndName = NULL;
     LPCWSTR lpEndPoint = NULL;
@@ -108,7 +109,8 @@ EXIT:
 }
 
 BOOL
-PAL_GetPALDirectoryA(PathCharString& lpDirectoryName)
+PAL_GetPALDirectoryA(
+    PathCharString& lpDirectoryName)
 {
     BOOL bRet;
     PathWCharString directory;
@@ -161,7 +163,9 @@ See rotor_pal.doc for more details.
 PALIMPORT
 BOOL 
 PALAPI
-PAL_GetPALDirectoryW( OUT LPWSTR lpDirectoryName, IN OUT UINT* cchDirectoryName ) 
+PAL_GetPALDirectoryW(
+    OUT LPWSTR lpDirectoryName,
+    IN OUT UINT* cchDirectoryName) 
 {
     PathWCharString directory;
     BOOL bRet;
@@ -195,8 +199,8 @@ PALIMPORT
 BOOL
 PALAPI
 PAL_GetPALDirectoryA(
-             OUT LPSTR lpDirectoryName,
-             IN UINT*  cchDirectoryName)
+    OUT LPSTR lpDirectoryName,
+    IN OUT UINT* cchDirectoryName)
 {
     BOOL bRet;
     PathCharString directory;
@@ -212,15 +216,13 @@ PAL_GetPALDirectoryA(
         {
             SetLastError( ERROR_INSUFFICIENT_BUFFER );
             bRet = FALSE;
-            *cchDirectoryName = directory.GetCount();
         }
-        else if (strcpy_s(lpDirectoryName, directory.GetCount(), directory.GetString()) == SAFECRT_SUCCESS) 
-        {
-        }
-        else 
+        else if (strcpy_s(lpDirectoryName, *cchDirectoryName, directory.GetString()) != SAFECRT_SUCCESS) 
         {
             bRet = FALSE;
         }
+
+        *cchDirectoryName = directory.GetCount();
     }
 
     LOGEXIT( "PAL_GetPALDirectoryA returns BOOL %d.\n", bRet);
@@ -231,8 +233,8 @@ PAL_GetPALDirectoryA(
 VOID
 PALAPI
 PAL_Random(
-        IN OUT LPVOID lpBuffer,
-        IN DWORD dwLength)
+   IN OUT LPVOID lpBuffer,
+   IN DWORD dwLength)
 {
     int rand_des = -1;
     DWORD i;

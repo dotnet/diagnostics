@@ -26,7 +26,6 @@ SET_DEFAULT_DEBUG_CHANNEL(VIRTUAL); // some headers have code with asserts, so d
 #include "pal/cs.hpp"
 #include "pal/malloc.hpp"
 #include "pal/file.hpp"
-#include "pal/seh.hpp"
 #include "pal/virtual.h"
 #include "pal/map.h"
 #include "pal/init.h"
@@ -1234,72 +1233,6 @@ done:
         pRetVal != NULL);
 
     return pRetVal;
-}
-
-/*++
-Function:
-  PAL_VirtualReserveFromExecutableMemoryAllocatorWithinRange
-
-  This function attempts to allocate the requested amount of memory in the specified address range, from the executable memory
-  allocator. If unable to do so, the function returns nullptr and does not set the last error.
-
-  lpBeginAddress - Inclusive beginning of range
-  lpEndAddress - Exclusive end of range
-  dwSize - Number of bytes to allocate
---*/
-LPVOID
-PALAPI
-PAL_VirtualReserveFromExecutableMemoryAllocatorWithinRange(
-    IN LPCVOID lpBeginAddress,
-    IN LPCVOID lpEndAddress,
-    IN SIZE_T dwSize)
-{
-#ifdef BIT64
-    PERF_ENTRY(PAL_VirtualReserveFromExecutableMemoryAllocatorWithinRange);
-    ENTRY(
-        "PAL_VirtualReserveFromExecutableMemoryAllocatorWithinRange(lpBeginAddress = %p, lpEndAddress = %p, dwSize = %Iu)\n",
-        lpBeginAddress,
-        lpEndAddress,
-        dwSize);
-
-    _ASSERTE(lpBeginAddress <= lpEndAddress);
-
-    // Alignment to a 64 KB granularity should not be necessary (alignment to page size should be sufficient), but see
-    // ExecutableMemoryAllocator::AllocateMemory() for the reason why it is done
-    SIZE_T reservationSize = ALIGN_UP(dwSize, VIRTUAL_64KB);
-
-    CPalThread *currentThread = InternalGetCurrentThread();
-    InternalEnterCriticalSection(currentThread, &virtual_critsec);
-
-    void *address = g_executableMemoryAllocator.AllocateMemoryWithinRange(lpBeginAddress, lpEndAddress, reservationSize);
-    if (address != nullptr)
-    {
-        _ASSERTE(IS_ALIGNED(address, GetVirtualPageSize()));
-        if (!VIRTUALStoreAllocationInfo((UINT_PTR)address, reservationSize, MEM_RESERVE | MEM_RESERVE_EXECUTABLE, PAGE_NOACCESS))
-        {
-            ASSERT("Unable to store the structure in the list.\n");
-            munmap(address, reservationSize);
-            address = nullptr;
-        }
-    }
-
-    LogVaOperation(
-        VirtualMemoryLogging::VirtualOperation::ReserveFromExecutableMemoryAllocatorWithinRange,
-        nullptr,
-        dwSize,
-        MEM_RESERVE | MEM_RESERVE_EXECUTABLE,
-        PAGE_NOACCESS,
-        address,
-        TRUE);
-
-    InternalLeaveCriticalSection(currentThread, &virtual_critsec);
-
-    LOGEXIT("PAL_VirtualReserveFromExecutableMemoryAllocatorWithinRange returning %p\n", address);
-    PERF_EXIT(PAL_VirtualReserveFromExecutableMemoryAllocatorWithinRange);
-    return address;
-#else // !BIT64
-    return nullptr;
-#endif // BIT64
 }
 
 /*++

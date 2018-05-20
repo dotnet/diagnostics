@@ -26,6 +26,7 @@ Abstract:
 #if HAVE_YIELD_SYSCALL
 #include <sys/syscall.h>
 #endif  /* HAVE_YIELD_SYSCALL */
+#include <signal.h>
         
 SET_DEFAULT_DEBUG_CHANNEL(SHMEM);
 

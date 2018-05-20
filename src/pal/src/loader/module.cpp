@@ -34,7 +34,6 @@ SET_DEFAULT_DEBUG_CHANNEL(LOADER); // some headers have code with asserts, so do
 #include "pal/modulename.h"
 #include "pal/environ.h"
 #include "pal/virtual.h"
-#include "pal/map.hpp"
 #include "pal/stackstring.hpp"
 
 #include <sys/param.h>
@@ -90,7 +89,7 @@ CRITICAL_SECTION module_critsec;
 MODSTRUCT exe_module; 
 MODSTRUCT *pal_module = nullptr;
 
-char * g_szCoreCLRPath = nullptr;
+char *g_szPalLibraryPath = nullptr;
 
 int MaxWCharToAcpLength = 3;
 
@@ -403,28 +402,6 @@ FreeLibrary(
 
 /*++
 Function:
-  FreeLibraryAndExitThread
-
-See MSDN doc.
-
---*/
-PALIMPORT
-VOID
-PALAPI
-FreeLibraryAndExitThread(
-    IN HMODULE hLibModule,
-    IN DWORD dwExitCode)
-{
-    PERF_ENTRY(FreeLibraryAndExitThread);
-    ENTRY("FreeLibraryAndExitThread()\n"); 
-    FreeLibrary(hLibModule);
-    ExitThread(dwExitCode);
-    LOGEXIT("FreeLibraryAndExitThread\n");
-    PERF_EXIT(FreeLibraryAndExitThread);
-}
-
-/*++
-Function:
   GetModuleFileNameA
 
 See MSDN doc.
@@ -721,82 +698,6 @@ PAL_UnregisterModule(
 }
 
 /*++
-    PAL_LOADLoadPEFile
-
-    Map a PE format file into memory like Windows LoadLibrary() would do.
-    Doesn't apply base relocations if the function is relocated.
-
-Parameters:
-    IN hFile - file to map
-
-Return value:
-    non-NULL - the base address of the mapped image
-    NULL - error, with last error set.
---*/
-void *
-PALAPI
-PAL_LOADLoadPEFile(HANDLE hFile)
-{
-    ENTRY("PAL_LOADLoadPEFile (hFile=%p)\n", hFile);
-
-    void * loadedBase = MAPMapPEFile(hFile);
-
-#ifdef _DEBUG
-    if (loadedBase != nullptr)
-    {
-        char* envVar = EnvironGetenv("PAL_ForcePEMapFailure");
-        if (envVar)
-        {
-            if (strlen(envVar) > 0)
-            {
-                TRACE("Forcing failure of PE file map, and retry\n");
-                PAL_LOADUnloadPEFile(loadedBase); // unload it
-                loadedBase = MAPMapPEFile(hFile); // load it again
-            }
-
-            free(envVar);
-        }
-    }
-#endif // _DEBUG
-
-    LOGEXIT("PAL_LOADLoadPEFile returns %p\n", loadedBase);
-    return loadedBase;
-}
-
-/*++
-    PAL_LOADUnloadPEFile
-
-    Unload a PE file that was loaded by PAL_LOADLoadPEFile().
-
-Parameters:
-    IN ptr - the file pointer returned by PAL_LOADLoadPEFile()
-
-Return value:
-    TRUE - success
-    FALSE - failure (incorrect ptr, etc.)
---*/
-BOOL 
-PALAPI
-PAL_LOADUnloadPEFile(void * ptr)
-{
-    BOOL retval = FALSE;
-
-    ENTRY("PAL_LOADUnloadPEFile (ptr=%p)\n", ptr);
-
-    if (nullptr == ptr)
-    {
-        ERROR( "Invalid pointer value\n" );
-    }
-    else
-    {
-        retval = MAPUnmapPEFile(ptr);
-    }
-
-    LOGEXIT("PAL_LOADUnloadPEFile returns %d\n", retval);
-    return retval;
-}
-
-/*++
     PAL_GetSymbolModuleBase
 
     Get base address of the module containing a given symbol 
@@ -907,6 +808,14 @@ BOOL LOADInitializeModules()
     exe_module.pDllMain = nullptr;
     exe_module.hinstance = nullptr;
     exe_module.threadLibCalls = TRUE;
+ 
+    // Initialize g_szPalLibraryPath
+    MODSTRUCT *module = LOADGetPalLibrary();
+    if (!module)
+    {
+        ERROR("Can not load the PAL module\n");
+        return FALSE;
+    }
     return TRUE;
 }
 
@@ -1000,12 +909,6 @@ void LOADCallDllMain(DWORD dwReason, LPVOID lpReserved)
     BOOL InLoadOrder = TRUE; /* true if in load order, false for reverse */
     CPalThread *pThread;
     
-    pThread = InternalGetCurrentThread();
-    if (UserCreatedThread != pThread->GetThreadType())
-    {
-        return;
-    }
-
     /* Validate dwReason */
     switch(dwReason)
     {
@@ -1070,13 +973,6 @@ static BOOL LOADFreeLibrary(MODSTRUCT *module, BOOL fCallDllMain)
     BOOL retval = FALSE;
 
     LockModuleList();
-
-    if (terminator)
-    {
-        /* PAL shutdown is in progress - ignore FreeLibrary calls */
-        retval = TRUE;
-        goto done;
-    }
 
     if (!LOADValidateModule(module))
     {
@@ -1174,44 +1070,28 @@ static BOOL LOADCallDllMainSafe(MODSTRUCT *module, DWORD dwReason, LPVOID lpRese
     /* reset ENTRY nesting level back to zero while inside the callback... */
     int old_level = DBG_change_entrylevel(0);
 #endif /* _ENABLE_DEBUG_MESSAGES_ */
-    
-    struct Param
-    {
-        MODSTRUCT *module;
-        DWORD dwReason;
-        LPVOID lpReserved;
-        BOOL ret;
-    } param;
-    param.module = module;
-    param.dwReason = dwReason;
-    param.lpReserved = lpReserved;
-    param.ret = FALSE;
 
-    PAL_TRY(Param *, pParam, &param)
+    BOOL ret;
+    
+    PAL_CPP_TRY
     {
-        TRACE("Calling DllMain (%p) for module %S\n",
-              pParam->module->pDllMain, 
-              pParam->module->lib_name ? pParam->module->lib_name : W16_NULLSTRING);
-        
+        TRACE("Calling DllMain (%p) for module %S\n", module->pDllMain, module->lib_name ? module->lib_name : W16_NULLSTRING);
         {
-            // This module may be foreign to our PAL, so leave our PAL.
-            // If it depends on us, it will re-enter.
-            PAL_LeaveHolder holder;
-            pParam->ret = pParam->module->pDllMain(pParam->module->hinstance, pParam->dwReason, pParam->lpReserved);
+            ret = module->pDllMain(module->hinstance, dwReason, lpReserved);
         }
     }
-    PAL_EXCEPT(EXCEPTION_EXECUTE_HANDLER)
+    PAL_CPP_CATCH_ALL
     {
         WARN("Call to DllMain (%p) got an unhandled exception; ignoring.\n", module->pDllMain);
     }
-    PAL_ENDTRY
+    PAL_CPP_ENDTRY
 
 #if _ENABLE_DEBUG_MESSAGES_
     /* ...and set nesting level back to what it was */
     DBG_change_entrylevel(old_level);
 #endif /* _ENABLE_DEBUG_MESSAGES_ */
 
-    return param.ret;
+    return ret;
 }
 
 /*++
@@ -1231,13 +1111,6 @@ DisableThreadLibraryCalls(
     ENTRY("DisableThreadLibraryCalls(hLibModule=%p)\n", hLibModule);
 
     LockModuleList();
-
-    if (terminator)
-    {
-        /* PAL shutdown in progress - ignore DisableThreadLibraryCalls */
-        ret = TRUE;
-        goto done;
-    }
 
     module = (MODSTRUCT *) hLibModule;
 
@@ -1669,35 +1542,6 @@ static HMODULE LOADLoadLibrary(LPCSTR shortAsciiName, BOOL fDynamic)
 }
 
 /*++
-    LOADInitializeCoreCLRModule
-
-    Run the initialization methods for CoreCLR module (the module containing this PAL).
-
-Parameters:
-    None
-
-Return value:
-    TRUE if successful
-    FALSE if failure
---*/
-BOOL LOADInitializeCoreCLRModule()
-{
-    MODSTRUCT *module = LOADGetPalLibrary();
-    if (!module)
-    {
-        ERROR("Can not load the PAL module\n");
-        return FALSE;
-    }
-    PDLLMAIN pRuntimeDllMain = (PDLLMAIN)dlsym(module->dl_handle, "CoreDllMain");
-    if (!pRuntimeDllMain)
-    {
-        ERROR("Can not find the CoreDllMain entry point\n");
-        return FALSE;
-    }
-    return pRuntimeDllMain(module->hinstance, DLL_PROCESS_ATTACH, nullptr);
-}
-
-/*++
 Function :
     LOADGetPalLibrary
 
@@ -1714,9 +1558,7 @@ MODSTRUCT *LOADGetPalLibrary()
 {
     if (pal_module == nullptr)
     {
-        // Initialize the pal module (the module containing LOADGetPalLibrary). Assumes that 
-        // the PAL is linked into the coreclr module because we use the module name containing 
-        // this function for the coreclr path.
+        // Initialize the pal module (the module containing LOADGetPalLibrary).
         TRACE("Loading module for PAL library\n");
 
         Dl_info info;
@@ -1727,18 +1569,18 @@ MODSTRUCT *LOADGetPalLibrary()
         }
         // Stash a copy of the CoreCLR installation path in a global variable.
         // Make sure it's terminated with a slash.
-        if (g_szCoreCLRPath == nullptr)
+        if (g_szPalLibraryPath == nullptr)
         {
-            size_t  cbszCoreCLRPath = strlen(info.dli_fname) + 1;
-            g_szCoreCLRPath = (char*) InternalMalloc(cbszCoreCLRPath);
+            size_t cbPath = strlen(info.dli_fname) + 1;
+            g_szPalLibraryPath = (char*) InternalMalloc(cbPath);
 
-            if (g_szCoreCLRPath == nullptr)
+            if (g_szPalLibraryPath == nullptr)
             {
                 ERROR("LOADGetPalLibrary: InternalMalloc failed!");
                 goto exit;
             }
 
-            if (strcpy_s(g_szCoreCLRPath, cbszCoreCLRPath, info.dli_fname) != SAFECRT_SUCCESS)
+            if (strcpy_s(g_szPalLibraryPath, cbPath, info.dli_fname) != SAFECRT_SUCCESS)
             {
                 ERROR("LOADGetPalLibrary: strcpy_s failed!");
                 goto exit;

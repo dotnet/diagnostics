@@ -2,7 +2,7 @@
 <Project Sdk="RoslynTools.RepoToolset">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>netcoreapp1.0;netcoreapp2.0</TargetFrameworks>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <NoWarn>;1591;1701</NoWarn>
   </PropertyGroup>

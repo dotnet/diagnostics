@@ -23,10 +23,7 @@ Abstract:
 #include "pal/cruntime.h"
 #include "pal/dbgmsg.h"
 #include "pal/unicode_data.h"
-
 #include "pal/thread.hpp"
-#include "pal/threadsusp.hpp"
-
 
 #if HAVE_CONFIG_H
 #include "config.h"

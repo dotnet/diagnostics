@@ -142,7 +142,7 @@ MessageBoxW(
     {
         WARN("No message text\n");
 
-        if (NULL == (text = PAL__strdup("(no message text)")))
+        if (NULL == (text = strdup("(no message text)")))
         {
             ASSERT("strdup() failed\n");
             SetLastError( ERROR_INTERNAL_ERROR );
@@ -179,7 +179,7 @@ MessageBoxW(
     }
     else
     {
-        if (NULL == (caption = PAL__strdup("Error")))
+        if (NULL == (caption = strdup("Error")))
         {
             ERROR("strdup() failed\n");
             SetLastError( ERROR_NOT_ENOUGH_MEMORY );

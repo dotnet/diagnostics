@@ -21,7 +21,6 @@ Abstract:
 #include "shmobject.hpp"
 #include "pal/cs.hpp"
 #include "pal/thread.hpp"
-#include "pal/procobj.hpp"
 #include "pal/dbgmsg.h"
 
 SET_DEFAULT_DEBUG_CHANNEL(PAL);
@@ -165,7 +164,7 @@ CSharedMemoryObjectManager::AllocateObject(
 
     if (CObjectType::WaitableObject == pot->GetSynchronizationSupport())
     {
-        pshmobj = InternalNew<CSharedMemoryWaitableObject>(pot, &m_csListLock);
+        _ASSERTE(FALSE);
     }
     else
     {
@@ -1096,7 +1095,7 @@ CSharedMemoryObjectManager::ImportSharedObjectIntoProcess(
     )
 {
     PAL_ERROR palError = NO_ERROR;
-    CSharedMemoryObject *pshmobj;
+    CSharedMemoryObject *pshmobj = NULL;
     PLIST_ENTRY pleObjectList;
 
     _ASSERTE(NULL != pthr);
@@ -1120,11 +1119,7 @@ CSharedMemoryObjectManager::ImportSharedObjectIntoProcess(
     
     if (CObjectType::WaitableObject == pot->GetSynchronizationSupport())
     {
-        pshmobj = InternalNew<CSharedMemoryWaitableObject>(pot,
-                                                           &m_csListLock,
-                                                           shmSharedObjectData,
-                                                           psmod,
-                                                           fAddRefSharedData);
+        _ASSERTE(FALSE);
     }
     else
     {

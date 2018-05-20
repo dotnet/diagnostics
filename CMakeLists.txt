@@ -5,7 +5,7 @@
 cmake_minimum_required(VERSION 2.8.12)
 
 if(CMAKE_VERSION VERSION_EQUAL 3.0 OR CMAKE_VERSION VERSION_GREATER 3.0)
-    cmake_policy(SET CMP0042 NEW)
+  cmake_policy(SET CMP0042 NEW)
 endif()
 
 # Set the project name
@@ -19,10 +19,13 @@ if (WIN32)
   message(STATUS "VS_PLATFORM_NAME is ${CMAKE_VS_PLATFORM_NAME}")
 endif (WIN32)
 
+set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+#set(VERSION_FILE_PATH "${CMAKE_BINARY_DIR}/version.cpp")
+
 set(CORECLR_SET_RPATH ON)
 if(CORECLR_SET_RPATH)
-    # Enable @rpath support for shared libraries.
-    set(MACOSX_RPATH ON)
+  # Enable @rpath support for shared libraries.
+  set(MACOSX_RPATH ON)
 endif(CORECLR_SET_RPATH)
 
 OPTION(CLR_CMAKE_ENABLE_CODE_COVERAGE "Enable code coverage" OFF)
@@ -31,7 +34,7 @@ OPTION(CLR_CMAKE_WARNINGS_ARE_ERRORS "Warnings are errors" ON)
 # Ensure that python is present
 find_program(PYTHON NAMES python2.7 python2 python)
 if (PYTHON STREQUAL "PYTHON-NOTFOUND")
-    message(FATAL_ERROR "PYTHON not found: Please install Python 2.7.9 or later from https://www.python.org/downloads/")
+  message(FATAL_ERROR "PYTHON not found: Please install Python 2.7.9 or later from https://www.python.org/downloads/")
 endif()
 
 # Ensure other tools are present
@@ -450,9 +453,9 @@ endif(WIN32)
 #       ./build-native.sh cmakeargs "-DCLR_ADDITIONAL_COMPILER_OPTIONS=<...>" cmakeargs "-DCLR_ADDITIONAL_LINKER_FLAGS=<...>"
 #
 if(CLR_CMAKE_PLATFORM_UNIX)
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CLR_ADDITIONAL_LINKER_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CLR_ADDITIONAL_LINKER_FLAGS}" )
-    add_compile_options(${CLR_ADDITIONAL_COMPILER_OPTIONS})
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CLR_ADDITIONAL_LINKER_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CLR_ADDITIONAL_LINKER_FLAGS}" )
+  add_compile_options(${CLR_ADDITIONAL_COMPILER_OPTIONS})
 endif(CLR_CMAKE_PLATFORM_UNIX)
 
 if(CLR_CMAKE_PLATFORM_LINUX)
@@ -464,6 +467,7 @@ endif(CLR_CMAKE_PLATFORM_LINUX)
 #------------------------------------
 # Definitions (for platform)
 #-----------------------------------
+
 if (CLR_CMAKE_PLATFORM_ARCH_AMD64)
   add_definitions(-D_AMD64_)
   add_definitions(-D_WIN64)
@@ -538,6 +542,86 @@ elseif (CLR_CMAKE_TARGET_ARCH_I386)
 else ()
     clr_unknown_arch()
 endif ()
+
+if (CLR_CMAKE_TARGET_ARCH_AMD64)
+  if (CLR_CMAKE_PLATFORM_UNIX)
+    add_definitions(-DDBG_TARGET_AMD64_UNIX)
+  endif()
+  add_definitions(-D_TARGET_64BIT_=1)
+  add_definitions(-D_TARGET_AMD64_=1)
+  add_definitions(-DDBG_TARGET_64BIT=1)
+  add_definitions(-DDBG_TARGET_AMD64=1)
+  add_definitions(-DDBG_TARGET_WIN64=1)
+elseif (CLR_CMAKE_TARGET_ARCH_ARM64)
+  if (CLR_CMAKE_PLATFORM_UNIX)
+    add_definitions(-DDBG_TARGET_ARM64_UNIX)
+  endif()
+  add_definitions(-D_TARGET_ARM64_=1)
+  add_definitions(-D_TARGET_64BIT_=1)
+  add_definitions(-DDBG_TARGET_64BIT=1)
+  add_definitions(-DDBG_TARGET_ARM64=1)
+  add_definitions(-DDBG_TARGET_WIN64=1)
+  add_definitions(-DFEATURE_MULTIREG_RETURN)
+elseif (CLR_CMAKE_TARGET_ARCH_ARM)
+  if (CLR_CMAKE_PLATFORM_UNIX)
+    add_definitions(-DDBG_TARGET_ARM_UNIX)
+  elseif (WIN32 AND NOT DEFINED CLR_CROSS_COMPONENTS_BUILD)
+    # Set this to ensure we can use Arm SDK for Desktop binary linkage when doing native (Arm32) build
+    add_definitions(-D_ARM_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE=1)
+    add_definitions(-D_ARM_WORKAROUND_)
+  endif (CLR_CMAKE_PLATFORM_UNIX)
+  add_definitions(-D_TARGET_ARM_=1)
+  add_definitions(-D_TARGET_WIN32_=1)
+  add_definitions(-DDBG_TARGET_32BIT=1)
+  add_definitions(-DDBG_TARGET_ARM=1)
+elseif (CLR_CMAKE_TARGET_ARCH_I386)
+  add_definitions(-D_TARGET_X86_=1)
+  add_definitions(-DDBG_TARGET_32BIT=1)
+  add_definitions(-DDBG_TARGET_X86=1)
+else ()
+  clr_unknown_arch()
+endif (CLR_CMAKE_TARGET_ARCH_AMD64)
+
+if(WIN32)
+  add_definitions(-DWIN32)
+  add_definitions(-D_WIN32)
+  add_definitions(-DWINVER=0x0602)
+  add_definitions(-D_WIN32_WINNT=0x0602)
+  add_definitions(-DWIN32_LEAN_AND_MEAN=1)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif(WIN32)
+
+#--------------------------------------
+# FEATURE Defines
+#--------------------------------------
+
+add_definitions(-DFEATURE_CORESYSTEM)
+
+if(CLR_CMAKE_PLATFORM_UNIX)
+    add_definitions(-DFEATURE_PAL)
+    add_definitions(-DFEATURE_PAL_ANSI)
+endif(CLR_CMAKE_PLATFORM_UNIX)
+
+if(WIN32)
+    add_definitions(-DFEATURE_COMINTEROP)
+endif(WIN32)
+
+if(NOT CMAKE_SYSTEM_NAME STREQUAL NetBSD)
+    add_definitions(-DFEATURE_HIJACK)
+endif(NOT CMAKE_SYSTEM_NAME STREQUAL NetBSD)
+
+if(FEATURE_EVENT_TRACE)
+    add_definitions(-DFEATURE_EVENT_TRACE=1)
+    add_definitions(-DFEATURE_PERFTRACING=1)
+endif(FEATURE_EVENT_TRACE)
+
+if(CLR_CMAKE_PLATFORM_UNIX_AMD64)
+    add_definitions(-DFEATURE_MULTIREG_RETURN)
+endif (CLR_CMAKE_PLATFORM_UNIX_AMD64)
+
+if(CLR_CMAKE_PLATFORM_UNIX AND CLR_CMAKE_TARGET_ARCH_AMD64)
+    add_definitions(-DUNIX_AMD64_ABI)
+endif(CLR_CMAKE_PLATFORM_UNIX AND CLR_CMAKE_TARGET_ARCH_AMD64)
 
 #--------------------------------------
 # Compile Options

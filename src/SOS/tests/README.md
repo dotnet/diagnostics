@@ -1,23 +1,23 @@
 Testing libsosplugin
 =====================================
 
-**Test assembly**  
-Compile test assembly file using any C# compiler you have, for example:  
-- `gmcs test.cs`  
-- `corerun csc.exe /nologo /r:System.Private.CoreLib.dll test.cs`
+**Running tests**
+  
+The test.sh and testsos.sh scripts launches these tests and makes the following a lot easier.
 
 
-**Running tests**  
-Make sure that python's lldb module is accessible. To run the tests, use the following command:  
-`python2 test_libsosplugin.py --corerun=corerun --sosplugin=sosplugin --assembly=assembly --timeout=timeout`  
+Make sure that python's lldb module is accessible. To run the tests manually, use the following command:
+  
+`python2 test_libsosplugin.py --lldb <path-to-lldb> --host <path-to-host> --plugin <path-to-sosplugin> --logfiledir <path-to-logdir> --assembly <path-to-testdebuggee>`
+
 - `lldb` is a path to `lldb` to run  
-- `clrdir` is a directory with `corerun` and sosplugin  
-- `assembly` is a compiled test assembly (e.g. Test.exe)  
+- `host` is a path to .NET Core host like `corerun` or `dotnet`
+- `plugin` is the path to the lldb sos plugin
+- `logfiledir` is the path to put the log files
+- `assembly` is a compiled test assembly (e.g. TestDebuggee.dll)  
 - `timeout` is a deadline for a single test (in seconds)  
 - `regex` is a regular expression matching tests to run  
 - `repeat` is a number of passes for each test
-
-
 
 Log files for both failed and passed tests are `*.log` and `*.log.2` for standard output and error correspondingly.
 

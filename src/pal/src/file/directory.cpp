@@ -549,10 +549,10 @@ CreateDirectoryA(
         goto done;
     }
 
-    unixPathName = PAL__strdup(lpPathName);
+    unixPathName = strdup(lpPathName);
     if (unixPathName == NULL )
     {
-        ERROR("PAL__strdup() failed\n");
+        ERROR("strdup() failed\n");
         dwLastError = ERROR_NOT_ENOUGH_MEMORY;
         goto done;
     }
@@ -666,10 +666,10 @@ SetCurrentDirectoryA(
         goto done;
     }
 
-    unixPathName = PAL__strdup(lpPathName);
+    unixPathName = strdup(lpPathName);
     if (unixPathName == NULL )
     {
-        ERROR("PAL__strdup() failed\n");
+        ERROR("strdup() failed\n");
         dwLastError = ERROR_NOT_ENOUGH_MEMORY;
         goto done;
     }

@@ -23,7 +23,7 @@ public:
     {
         if (arguments[0] == NULL)
         {
-            result.Printf("Load path for sos/dac/dbi: '%s'\n", g_coreclrDirectory == NULL ? "<none>" : g_coreclrDirectory);
+            result.Printf("Load path for dac/dbi: '%s'\n", g_coreclrDirectory == NULL ? "<none>" : g_coreclrDirectory);
         }
         else {
             if (g_coreclrDirectory != NULL)
@@ -38,7 +38,7 @@ public:
             }
 
             g_coreclrDirectory = strdup(path.c_str());
-            result.Printf("Set load path for sos/dac/dbi to '%s'\n", g_coreclrDirectory);
+            result.Printf("Set load path for dac/dbi to '%s'\n", g_coreclrDirectory);
         }
         return result.Succeeded();
     }
@@ -48,6 +48,6 @@ bool
 setclrpathCommandInitialize(lldb::SBDebugger debugger)
 {
     lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
-    lldb::SBCommand command = interpreter.AddCommand("setclrpath", new setclrpathCommand(), "Set the path to load coreclr sos/dac/dbi files. setclrpath <path>");
+    lldb::SBCommand command = interpreter.AddCommand("setclrpath", new setclrpathCommand(), "Set the path to load coreclr dac/dbi files. setclrpath <path>");
     return true;
 }

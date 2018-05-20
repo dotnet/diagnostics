@@ -37,35 +37,6 @@ Function :
 extern "C" VOID 
 DBG_DebugBreak();
 
-/*++
-Function:
-  IsInDebugBreak(addr)
-
-  Returns true if the address is in DBG_DebugBreak.
-
---*/
-BOOL
-IsInDebugBreak(void *addr);
-
-/*++
-Function :
-    DBG_FlushInstructionCache
-
-    Processor-dependent implementation of FlushInstructionCache
-
-Parameters :
-    LPCVOID lpBaseAddress: start of region to flush
-    SIZE_T dwSize : length of region to flush
-
-Return value :
-    TRUE on success, FALSE on failure
-
---*/
-BOOL
-DBG_FlushInstructionCache(
-                      IN LPCVOID lpBaseAddress,
-                      IN SIZE_T dwSize);
-
 #if defined(__APPLE__)
 /*++
 Function:

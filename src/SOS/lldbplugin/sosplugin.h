@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 #include <lldb/API/LLDB.h>
+#include "mstypes.h"
 #define DEFINE_EXCEPTION_RECORD
-#include <pal.h>
 #include <lldbservices.h>
 #include <dbgtargetcontext.h>
 #include "services.h"

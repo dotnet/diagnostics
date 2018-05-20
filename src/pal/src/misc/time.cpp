@@ -29,6 +29,7 @@ Abstract:
 #include <sched.h>
 
 #if HAVE_MACH_ABSOLUTE_TIME
+#include <mach/mach.h>
 #include <mach/mach_time.h>
 static mach_timebase_info_data_t s_TimebaseInfo;
 #endif
@@ -282,44 +283,6 @@ QueryPerformanceFrequency(
 #endif // HAVE_GETHRTIME || HAVE_READ_REAL_TIME || HAVE_CLOCK_MONOTONIC 
     LOGEXIT("QueryPerformanceFrequency\n");
     PERF_EXIT(QueryPerformanceFrequency);
-    return retval;
-}
-
-/*++
-Function:
-  QueryThreadCycleTime
-
-Puts the execution time (in nanoseconds) for the thread pointed to by ThreadHandle, into the unsigned long
-pointed to by CycleTime. ThreadHandle must refer to the current thread. Returns TRUE on success, FALSE on
-failure.
---*/
-
-BOOL
-PALAPI
-QueryThreadCycleTime(
-    IN HANDLE ThreadHandle,
-    OUT PULONG64 CycleTime
-    )
-{
-
-    ULONG64 calcTime;
-    FILETIME kernelTime, userTime;
-    BOOL retval = TRUE;
-
-    if(!GetThreadTimesInternal(ThreadHandle, &kernelTime, &userTime))
-    {
-        ASSERT("Could not get cycle time for current thread");
-        retval = FALSE;
-        goto EXIT;
-    }
-
-    calcTime = ((ULONG64)kernelTime.dwHighDateTime << 32);
-    calcTime += (ULONG64)kernelTime.dwLowDateTime;
-    calcTime += ((ULONG64)userTime.dwHighDateTime << 32);
-    calcTime += (ULONG64)userTime.dwLowDateTime;
-    *CycleTime = calcTime;
-
-EXIT:
     return retval;
 }
 
