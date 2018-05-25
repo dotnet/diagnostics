@@ -11,6 +11,85 @@ function(clr_unknown_arch)
     endif()
 endfunction()
 
+# Build a list of compiler definitions by putting -D in front of each define.
+function(get_compile_definitions DefinitionName)
+    # Get the current list of definitions
+    get_directory_property(COMPILE_DEFINITIONS_LIST COMPILE_DEFINITIONS)
+
+    foreach(DEFINITION IN LISTS COMPILE_DEFINITIONS_LIST)
+        if (${DEFINITION} MATCHES "^\\$<\\$<CONFIG:([^>]+)>:([^>]+)>$")
+            # The entries that contain generator expressions must have the -D inside of the
+            # expression. So we transform e.g. $<$<CONFIG:Debug>:_DEBUG> to $<$<CONFIG:Debug>:-D_DEBUG>
+            set(DEFINITION "$<$<CONFIG:${CMAKE_MATCH_1}>:-D${CMAKE_MATCH_2}>")
+        else()
+            set(DEFINITION -D${DEFINITION})
+        endif()
+        list(APPEND DEFINITIONS ${DEFINITION})
+    endforeach()
+    set(${DefinitionName} ${DEFINITIONS} PARENT_SCOPE)
+endfunction(get_compile_definitions)
+
+# Build a list of include directories
+function(get_include_directories IncludeDirectories)
+    get_directory_property(dirs INCLUDE_DIRECTORIES)
+    foreach(dir IN LISTS dirs)
+
+      if (CLR_CMAKE_PLATFORM_ARCH_ARM AND WIN32)
+        list(APPEND INC_DIRECTORIES /I${dir})
+      else()
+        list(APPEND INC_DIRECTORIES -I${dir})
+      endif(CLR_CMAKE_PLATFORM_ARCH_ARM AND WIN32)
+
+    endforeach()
+    set(${IncludeDirectories} ${INC_DIRECTORIES} PARENT_SCOPE)
+endfunction(get_include_directories)
+
+# Set the passed in RetSources variable to the list of sources with added current source directory
+# to form absolute paths.
+# The parameters after the RetSources are the input files.
+function(convert_to_absolute_path RetSources)
+    set(Sources ${ARGN})
+    foreach(Source IN LISTS Sources)
+        list(APPEND AbsolutePathSources ${CMAKE_CURRENT_SOURCE_DIR}/${Source})
+    endforeach()
+    set(${RetSources} ${AbsolutePathSources} PARENT_SCOPE)
+endfunction(convert_to_absolute_path)
+
+#Preprocess exports definition file
+function(preprocess_def_file inputFilename outputFilename)
+  get_compile_definitions(PREPROCESS_DEFINITIONS)
+  get_include_directories(ASM_INCLUDE_DIRECTORIES)
+  add_custom_command(
+    OUTPUT ${outputFilename}
+    COMMAND ${CMAKE_CXX_COMPILER} ${ASM_INCLUDE_DIRECTORIES} /P /EP /TC ${PREPROCESS_DEFINITIONS}  /Fi${outputFilename}  ${inputFilename}
+    DEPENDS ${inputFilename}
+    COMMENT "Preprocessing ${inputFilename} - ${CMAKE_CXX_COMPILER} ${ASM_INCLUDE_DIRECTORIES} /P /EP /TC ${PREPROCESS_DEFINITIONS}  /Fi${outputFilename}  ${inputFilename}"
+  )
+
+  set_source_files_properties(${outputFilename}
+                              PROPERTIES GENERATED TRUE)
+endfunction()
+function(generate_exports_file)
+  set(INPUT_LIST ${ARGN})
+  list(GET INPUT_LIST -1 outputFilename)
+  list(REMOVE_AT INPUT_LIST -1)
+
+  if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+    set(AWK_SCRIPT eng/generateexportedsymbols.awk)
+  else()
+    set(AWK_SCRIPT eng/generateversionscript.awk)
+  endif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+
+  add_custom_command(
+    OUTPUT ${outputFilename}
+    COMMAND ${AWK} -f ${CMAKE_SOURCE_DIR}/${AWK_SCRIPT} ${INPUT_LIST} >${outputFilename}
+    DEPENDS ${INPUT_LIST} ${CMAKE_SOURCE_DIR}/${AWK_SCRIPT}
+    COMMENT "Generating exports file ${outputFilename}"
+  )
+  set_source_files_properties(${outputFilename}
+                              PROPERTIES GENERATED TRUE)
+endfunction()
+
 function(strip_symbols targetName outputFilename)
   if (CLR_CMAKE_PLATFORM_UNIX)
     if (STRIP_SYMBOLS)
@@ -69,16 +148,23 @@ function(install_clr targetName)
 
     install(PROGRAMS ${install_source_file} DESTINATION .)
     if(WIN32)
-        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/${targetName}.pdb DESTINATION PDB)
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/${targetName}.pdb DESTINATION .)
     else()
         install(FILES ${strip_destination_file} DESTINATION .)
     endif()
-    if(CLR_CMAKE_PGO_INSTRUMENT)
-        if(WIN32)
-            install(FILES ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/${targetName}.pgd DESTINATION PGD OPTIONAL)
-        endif()
-    endif()
   endif()
+endfunction()
+
+function(_add_executable)
+    if(NOT WIN32)
+      add_executable(${ARGV} ${VERSION_FILE_PATH})
+    else()
+      add_executable(${ARGV})
+    endif(NOT WIN32)
+    list(FIND CLR_CROSS_COMPONENTS_LIST ${ARGV0} INDEX)
+    if (DEFINED CLR_CROSS_COMPONENTS_LIST AND ${INDEX} EQUAL -1)
+     set_target_properties(${ARGV0} PROPERTIES EXCLUDE_FROM_ALL 1)
+    endif()
 endfunction()
 
 function(_add_library)
@@ -96,3 +182,14 @@ endfunction()
 function(add_library_clr)
     _add_library(${ARGV})
 endfunction()
+
+function(add_executable_clr)
+    _add_executable(${ARGV})
+endfunction()
+
+function(_install)
+    if(NOT DEFINED CLR_CROSS_COMPONENTS_BUILD)
+      install(${ARGV})
+    endif()
+endfunction()
+

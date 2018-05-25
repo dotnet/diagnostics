@@ -93,6 +93,9 @@ class TestSosCommands(unittest.TestCase):
     def t_cmd_bpmd_methoddesc(self):
         self.do_test('t_cmd_bpmd_methoddesc')
 
+    def t_cmd_bpmd_clear(self):
+        self.do_test('t_cmd_bpmd_clear')
+
     def t_cmd_bpmd_clearall(self):
         self.do_test('t_cmd_bpmd_clearall')
 

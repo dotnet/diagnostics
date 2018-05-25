@@ -7,12 +7,14 @@
 #include "sosplugin.h"
 #include <string.h>
 #include <string>
+#include <dlfcn.h>
 
 #define CONVERT_FROM_SIGN_EXTENDED(offset) ((ULONG_PTR)(offset))
 
 ULONG g_currentThreadIndex = -1;
 ULONG g_currentThreadSystemId = -1;
 char *g_coreclrDirectory;
+char *g_pluginModuleDirectory;
 
 LLDBServices::LLDBServices(lldb::SBDebugger &debugger, lldb::SBCommandReturnObject &returnObject, lldb::SBProcess *process, lldb::SBThread *thread) : 
     m_ref(1),
@@ -77,6 +79,21 @@ LLDBServices::Release()
 PCSTR
 LLDBServices::GetCoreClrDirectory()
 {
+    if (g_coreclrDirectory == nullptr)
+    {
+        const char *coreclrModule = MAKEDLLNAME_A("coreclr");
+        const char *directory = GetModuleDirectory(coreclrModule);
+        if (directory != nullptr)
+        {
+            std::string path(directory);
+            path.append("/");
+            g_coreclrDirectory = strdup(path.c_str());
+        }
+        else
+        {
+            Output(DEBUG_OUTPUT_WARNING, "The %s module is not loaded yet in the target process\n", coreclrModule);
+        }
+    }
     return g_coreclrDirectory;
 }
 
@@ -1744,3 +1761,32 @@ LLDBServices::GetCurrentFrame()
 
     return frame;
 }
+
+void 
+DummyFunction()
+{
+}
+
+PCSTR
+LLDBServices::GetPluginModuleDirectory()
+{
+    if (g_pluginModuleDirectory == nullptr)
+    {
+    	Dl_info info;
+    	if (dladdr((void *)&DummyFunction, &info) != 0)
+    	{
+    	    std::string path(info.dli_fname);
+
+    	    // Parse off the module name to get just the path
+    	    size_t lastSlash = path.rfind('/');
+    	    if (lastSlash != std::string::npos)
+    	    {
+        		path.erase(lastSlash);
+        		path.append("/");
+        		g_pluginModuleDirectory = strdup(path.c_str());
+    	    }
+    	}
+    }
+    return g_pluginModuleDirectory;
+}
+

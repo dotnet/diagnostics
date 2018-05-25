@@ -16,12 +16,42 @@ done
 
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
 
-# install .NET Core - setting DOTNET_INSTALL_DIR prevents build.sh from installing it
+# ReadJson [filename] [json key]
+# Result: Sets 'readjsonvalue' to the value of the provided json key
+# Note: this method may return unexpected results if there are duplicate
+# keys in the json
+function ReadJson {
+  local file=$1
+  local key=$2
+
+  local unamestr="$(uname)"
+  local sedextended='-r'
+  if [[ "$unamestr" == 'Darwin' ]]; then
+    sedextended='-E'
+  fi;
+
+  readjsonvalue="$(grep -m 1 "\"$key\"" $file | sed $sedextended 's/^ *//;s/.*: *"//;s/",?//')"
+  if [[ ! "$readjsonvalue" ]]; then
+    echo "Error: Cannot find \"$key\" in $file" >&2;
+    ExitWithExitCode 1
+  fi;
+}
+
+# install .NET Core
+ReadJson "$scriptroot/../global.json" "version"
+
+# setting DOTNET_INSTALL_DIR prevents build.sh from installing it
 export DOTNET_INSTALL_DIR=$scriptroot/../.dotnet
-"$scriptroot/install-dotnet.sh" $DOTNET_INSTALL_DIR 2.1.300-rc1-008673
+"$scriptroot/install-dotnet.sh" $DOTNET_INSTALL_DIR $readjsonvalue
+if [[ $? != 0 ]]; then
+    exit 1
+fi
 
 # build/test managed components
 "$scriptroot/common/build.sh" $@
+if [[ $? != 0 ]]; then
+    exit 1
+fi
 
 # build/test native components
 "$scriptroot/build-native.sh" $@

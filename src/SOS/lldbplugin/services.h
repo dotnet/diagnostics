@@ -271,4 +271,6 @@ public:
 
     PCSTR GetModuleDirectory(
         PCSTR name);
+
+    PCSTR GetPluginModuleDirectory();
 };

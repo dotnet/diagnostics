@@ -12,11 +12,17 @@ class sosCommand : public lldb::SBCommandPluginInterface
     const char *m_command;
     void *m_sosHandle;
 
+    // If true, use the directory that libsosplugin is in to load 
+    // libsos, otherwise (if false) use the libcoreclr module 
+    // directory (legacy behavior).
+    bool m_usePluginDirectory;
+
 public:
     sosCommand(const char *command)
     {
         m_command = command;
         m_sosHandle = NULL;
+        m_usePluginDirectory = true;
     }
 
     virtual bool
@@ -27,7 +33,7 @@ public:
         LLDBServices* services = new LLDBServices(debugger, result);
         LoadSos(services);
 
-        if (m_sosHandle)
+        if (m_sosHandle != NULL)
         {
             const char* sosCommand = m_command;
             if (sosCommand == NULL) 
@@ -74,37 +80,33 @@ public:
     {
         if (m_sosHandle == NULL)
         {
-            if (g_coreclrDirectory == NULL)
+            if (m_usePluginDirectory)
             {
-                const char *coreclrModule = MAKEDLLNAME_A("coreclr");
-                const char *directory = services->GetModuleDirectory(coreclrModule);
-                if (directory != NULL)
+                const char *loadDirectory = services->GetPluginModuleDirectory();
+                if (loadDirectory != NULL)
                 {
-                    std::string path(directory);
-                    path.append("/");
-                    g_coreclrDirectory = strdup(path.c_str());
-                }
-                else
-                {
-                    services->Output(DEBUG_OUTPUT_WARNING, "The %s module is not loaded yet in the target process\n", coreclrModule);
+                    m_sosHandle = LoadModule(services, loadDirectory, MAKEDLLNAME_A("sos"));
                 }
             }
-
-            if (g_coreclrDirectory != NULL)
+            else
             {
-                // Load the DAC module first explicitly because SOS and DBI
-                // have implicit references to the DAC's PAL.
-                LoadModule(services, MAKEDLLNAME_A("mscordaccore"));
+                const char *loadDirectory = services->GetCoreClrDirectory();
+                if (loadDirectory != NULL)
+                {
+                    // Load the DAC module first explicitly because SOS and DBI
+                    // have implicit references to the DAC's PAL.
+                    LoadModule(services, loadDirectory, MAKEDLLNAME_A("mscordaccore"));
 
-                m_sosHandle = LoadModule(services, MAKEDLLNAME_A("sos"));
+                    m_sosHandle = LoadModule(services, loadDirectory, MAKEDLLNAME_A("sos"));
+                }
             }
         }
     }
 
     void *
-    LoadModule(LLDBServices *services, const char *moduleName)
+    LoadModule(LLDBServices *services, const char *loadDirectory, const char *moduleName)
     {
-        std::string modulePath(g_coreclrDirectory);
+        std::string modulePath(loadDirectory);
         modulePath.append(moduleName);
 
         void *moduleHandle = dlopen(modulePath.c_str(), RTLD_NOW);
@@ -128,6 +130,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     interpreter.AddCommand("createdump", new sosCommand("CreateDump"), "Create a xplat minidump.");
     interpreter.AddCommand("clru", new sosCommand("u"), "Displays an annotated disassembly of a managed method.");
     interpreter.AddCommand("dumpclass", new sosCommand("DumpClass"), "Displays information about a EE class structure at the specified address.");
+    interpreter.AddCommand("dumpdomain", new sosCommand("DumpDomain"), "Displays information all the AppDomains and all assemblies within the domains.");
     interpreter.AddCommand("dumpheap", new sosCommand("DumpHeap"), "Displays info about the garbage-collected heap and collection statistics about objects.");
     interpreter.AddCommand("dumpil", new sosCommand("DumpIL"), "Displays the Microsoft intermediate language (MSIL) that is associated with a managed method.");
     interpreter.AddCommand("dumplog", new sosCommand("DumpLog"), "Writes the contents of an in-memory stress log to the specified file.");
@@ -148,6 +151,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     interpreter.AddCommand("histobj", new sosCommand("HistObj"), "Examines all stress log relocation records and displays the chain of garbage collection relocations that may have led to the address passed in as an argument.");
     interpreter.AddCommand("histobjfind", new sosCommand("HistObjFind"), "Displays all the log entries that reference an object at the specified address.");
     interpreter.AddCommand("histroot", new sosCommand("HistRoot"), "Displays information related to both promotions and relocations of the specified root.");
+    interpreter.AddCommand("sethostruntime", new sosCommand("SetHostRuntime"), "Sets or displays the .NET Core runtime directory to use to run managed code in SOS.");
     interpreter.AddCommand("soshelp", new sosCommand("Help"), "Displays all available commands when no parameter is specified, or displays detailed help information about the specified command. soshelp <command>");
     return true;
 }

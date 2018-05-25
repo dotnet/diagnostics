@@ -11,6 +11,10 @@
 #ifndef __LLDBSERVICES_H__
 #define __LLDBSERVICES_H__
 
+#include <stdarg.h>
+#include <palrt.h>
+#include <unknwn.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
