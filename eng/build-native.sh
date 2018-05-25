@@ -362,7 +362,12 @@ fi
 
 # Run native SOS/lldbplugin tests
 if [ $__Test == 1 ]; then
-    "$__ProjectRoot/src/SOS/tests/testsos.sh" "$__ProjectRoot" "$__CMakeBinDir" "$__RootBinDir/$__BuildType/bin" "$__LogFileDir" "$__BuildArch"
+    if [ "$__BuildOS" == "OSX" ]; then
+        __Plugin=$__CMakeBinDir/libsosplugin.dylib
+    else
+        __Plugin=$__CMakeBinDir/libsosplugin.so
+    fi
+    "$__ProjectRoot/src/SOS/tests/testsos.sh" "$__ProjectRoot" "$__Plugin" "$__RootBinDir/$__BuildType/bin" "$__LogFileDir" "$__BuildArch"
 fi
 
 echo "BUILD: Repo sucessfully built."

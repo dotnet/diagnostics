@@ -114,12 +114,6 @@ if [ $OS = "Linux" -o $OS = "FreeBSD" -o $OS = "OpenBSD" -o $OS = "NetBSD" -o $O
 fi
 
 cmake_extra_defines=
-if [[ -n "$LLDB_LIB_DIR" ]]; then
-    cmake_extra_defines="$cmake_extra_defines -DWITH_LLDB_LIBS=$LLDB_LIB_DIR"
-fi
-if [[ -n "$LLDB_INCLUDE_DIR" ]]; then
-    cmake_extra_defines="$cmake_extra_defines -DWITH_LLDB_INCLUDES=$LLDB_INCLUDE_DIR"
-fi
 if [[ -n "$CROSSCOMPONENT" ]]; then
     cmake_extra_defines="$cmake_extra_defines -DCLR_CROSS_COMPONENTS_BUILD=1"
 fi
