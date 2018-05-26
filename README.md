@@ -22,11 +22,11 @@ You have to be on the particular platform to build that platform.
 
 To install the platform's prerequisites:
 
- * [Windows Instructions](Documentation/building/windows-instructions.md)
- * [Linux Instructions](Documentation/building/linux-instructions.md)
- * [macOS Instructions](Documentation/building/osx-instructions.md)
- * [FreeBSD Instructions](Documentation/building/freebsd-instructions.md) 
- * [NetBSD Instructions](Documentation/building/netbsd-instructions.md)
+ * [Windows Instructions](documentation/building/windows-instructions.md)
+ * [Linux Instructions](documentation/building/linux-instructions.md)
+ * [macOS Instructions](documentation/building/osx-instructions.md)
+ * [FreeBSD Instructions](documentation/building/freebsd-instructions.md) 
+ * [NetBSD Instructions](documentation/building/netbsd-instructions.md)
 
 To build under Windows, run build.cmd from the root of the repository:
 
@@ -60,7 +60,7 @@ $ ./test.sh
 
 * [dotnet/coreclr](https://github.com/dotnet/coreclr) - Source for the .NET Core runtime.
 
-* [Debugging CoreCLR](https://github.com/dotnet/diagnostics/blob/master/Documentation/building/debugging-instructions.md) - Instructions for debugging .NET Core and the CoreCLR runtime.
+* [Debugging CoreCLR](documentation/debugging-instructions.md) - Instructions for debugging .NET Core and the CoreCLR runtime.
 
 [//]: # (Begin current test results)
 
