@@ -66,7 +66,7 @@ class TestSosCommands(unittest.TestCase):
                ("-o \"script test.summary_file = '%s'\" " % summary_file) +
                ("-o \"script test.run('%s', '%s')\" " % (assembly, command)) +
                ("-o \"quit\" ") +
-               (" -- %s %s > %s.log 2> %s.log.2" % (host, assembly, logfile, logfile)))
+               (" -- %s %s > %s.log 2>&1" % (host, assembly, logfile)))
 
         runWithTimeout(cmd)
         self.assertFalse(os.path.isfile(fail_flag))
