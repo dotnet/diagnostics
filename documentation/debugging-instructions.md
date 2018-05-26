@@ -50,50 +50,50 @@ Only lldb is supported by the SOS plugin. gdb can be used to debug the coreclr c
 
 You can combine steps 4-8 and pass everything on the lldb command line:
 
-`lldb-3.9 -o "plugin load libsosplugin.so" -o "process launch -s" -o "process handle -s false SIGUSR1 SIGUSR2" -o "breakpoint set -n LoadLibraryExW" corerun HelloWorld.exe linux`
+`lldb -o "plugin load libsosplugin.so" -o "process launch -s" -o "process handle -s false SIGUSR1 SIGUSR2" -o "breakpoint set -n LoadLibraryExW" corerun HelloWorld.exe linux`
 
-For .NET Core version 1.x and 2.0.x, libsosplugin.so is built for and will only work with version 3.6 of lldb. For .NET Core 2.1, the plugin is built for 3.9 lldb and will work with 3.8 and 3.9 lldb.
+The libsosplugin.so built in this repo will work with lldb 3.9 and greater and the plugin and SOS will work with .NET Core versions 1.x, 2.0 and 2.1.
 
 ### SOS commands ###
 
 This is the full list of commands currently supported by SOS. lldb is case-sensitive unlike windbg.
 
-	Type "soshelp <functionname>" for detailed info on that function.
+    Type "soshelp <functionname>" for detailed info on that function.
 
-	Object Inspection                  Examining code and stacks
-	-----------------------------      -----------------------------
-	DumpObj (dumpobj)                  Threads (clrthreads)
-	DumpArray                          ThreadState
-	DumpStackObjects (dso)             IP2MD (ip2md)
-	DumpHeap (dumpheap)                u (clru)
-	DumpVC                             DumpStack (dumpstack)
-	GCRoot (gcroot)                    EEStack (eestack)
-	PrintException (pe)                ClrStack (clrstack)
-	                                   GCInfo
-	                                   EHInfo
-	                                   bpmd (bpmd)
+    Object Inspection                  Examining code and stacks
+    -----------------------------      -----------------------------
+    DumpObj (dumpobj)                  Threads (clrthreads)
+    DumpArray                          ThreadState
+    DumpStackObjects (dso)             IP2MD (ip2md)
+    DumpHeap (dumpheap)                u (clru)
+    DumpVC                             DumpStack (dumpstack)
+    GCRoot (gcroot)                    EEStack (eestack)
+    PrintException (pe)                ClrStack (clrstack)
+                                        GCInfo
+                                        EHInfo
+                                        bpmd (bpmd)
 
-	Examining CLR data structures      Diagnostic Utilities
-	-----------------------------      -----------------------------
-	DumpDomain                         VerifyHeap
-	EEHeap (eeheap)                    FindAppDomain
-	Name2EE (name2ee)                  DumpLog (dumplog)
-	DumpMT (dumpmt)                    CreateDump (createdump)
-	DumpClass (dumpclass)
-	DumpMD (dumpmd)
-	Token2EE
-	DumpModule (dumpmodule)
-	DumpAssembly
-	DumpRuntimeTypes
-	DumpIL (dumpil)
-	DumpSig
-	DumpSigElem
+    Examining CLR data structures      Diagnostic Utilities
+    -----------------------------      -----------------------------
+    DumpDomain (dumpdomain)            VerifyHeap
+    EEHeap (eeheap)                    FindAppDomain
+    Name2EE (name2ee)                  DumpLog (dumplog)
+    DumpMT (dumpmt)
+    DumpClass (dumpclass)
+    DumpMD (dumpmd)
+    Token2EE
+    DumpModule (dumpmodule)
+    DumpAssembly
+    DumpRuntimeTypes
+    DumpIL (dumpil)
+    DumpSig
+    DumpSigElem
 
     Examining the GC history           Other
     -----------------------------      -----------------------------
-    HistInit (histinit)                FAQ
-    HistRoot (histroot)                Help (soshelp)
-    HistObj  (histobj)
+    HistInit (histinit)                SetHostRuntime (sethostruntime)
+    HistRoot (histroot)                FAQ
+    HistObj  (histobj)                 Help (soshelp)
     HistObjFind (histobjfind)
     HistClear (histclear)
 
@@ -102,35 +102,38 @@ This is the full list of commands currently supported by SOS. lldb is case-sensi
 By default you can reach all the SOS commands by using: _sos [command\_name]_
 However the common commands have been aliased so that you don't need the SOS prefix:
 
-    bpmd            -> sos bpmd
-    clrstack        -> sos ClrStack
-    clrthreads      -> sos Threads
-    clru            -> sos U
-    createdump      -> sos CreateDump
-	dso             -> sos DumpStackObjects
-    dumpclass       -> sos DumpClass
-    dumpheap        -> sos DumpHeap
-    dumpil          -> sos DumpIL
-    dumplog         -> sos DumpLog
-    dumpmd          -> sos DumpMD
-    dumpmodule      -> sos DumpModule
-    dumpmt          -> sos DumpMT
-    dumpobj         -> sos DumpObj
-    dumpstack       -> sos DumpStack     
-    eeheap          -> sos EEHeap
-    eestack         -> sos EEStack
-    gcroot          -> sos GCRoot
-    histinit        -> sos HistInit
-    histroot        -> sos HistRoot
-    histobj         -> sos HistObj
-    histobjfind     -> sos HistObjFind
-    histclear       -> sos HistClear
-    ip2md           -> sos IP2MD
-    name2ee         -> sos Name2EE
-    pe              -> sos PrintException
-    soshelp         -> sos Help
-
-### Debugging core dumps with lldb
+    bpmd           -- Creates a breakpoint at the specified managed method in the specified module.
+    clrstack       -- Provides a stack trace of managed code only.
+    clrthreads     -- List the managed threads running.
+    clru           -- Displays an annotated disassembly of a managed method.
+    createdump     -- Create a xplat minidump.
+    dso            -- Displays all managed objects found within the bounds of the current stack.
+    dumpclass      -- Displays information about a EE class structure at the specified address.
+    dumpdomain     -- Displays information all the AppDomains and all assemblies within the domains.
+    dumpheap       -- Displays info about the garbage-collected heap and collection statistics about objects.
+    dumpil         -- Displays the Microsoft intermediate language (MSIL) that is associated with a managed method.
+    dumplog        -- Writes the contents of an in-memory stress log to the specified file.
+    dumpmd         -- Displays information about a MethodDesc structure at the specified address.
+    dumpmodule     -- Displays information about a EE module structure at the specified address.
+    dumpmt         -- Displays information about a method table at the specified address.
+    dumpobj        -- Displays info about an object at the specified address.
+    dumpstack      -- Displays a native and managed stack trace.
+    eeheap         -- Displays info about process memory consumed by internal runtime data structures.
+    eestack        -- Runs dumpstack on all threads in the process.
+    gcroot         -- Displays info about references (or roots) to an object at the specified address.
+    histclear      -- Releases any resources used by the family of Hist commands.
+    histinit       -- Initializes the SOS structures from the stress log saved in the debuggee.
+    histobj        -- Examines all stress log relocation records and displays the chain of garbage collection relocations that may have led to the address passed in as an argument.
+    histobjfind    -- Displays all the log entries that reference an object at the specified address.
+    histroot       -- Displays information related to both promotions and relocations of the specified root.
+    ip2md          -- Displays the MethodDesc structure at the specified address in code that has been JIT-compiled.
+    name2ee        -- Displays the MethodTable structure and EEClass structure for the specified type or method in the specified module.
+    pe             -- Displays and formats fields of any object derived from the Exception class at the specified address.
+    setclrpath     -- Set the path to load coreclr dac/dbi files. setclrpath <path>
+    sethostruntime -- Sets or displays the .NET Core runtime directory to use to run managed code in SOS.
+    setsostid      -- Set the current os tid/thread index instead of using the one lldb provides. setsostid <tid> <index>
+    sos            -- Various coreclr debugging commands. See 'soshelp' for more details. sos <command-name> <args>
+    soshelp        -- Displays all available commands when no parameter is specified, or displays detailed help information about the specified command. soshelp <command>
 
 It is also possible to debug .NET Core crash dumps using lldb and SOS. In order to do this, you need all of the following:
 
