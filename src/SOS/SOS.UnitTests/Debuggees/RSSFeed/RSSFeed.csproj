@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.props))\dir.props" />
+    <PropertyGroup>
+        <CLRTestOwner>conniey</CLRTestOwner>
+        <CLRTestKind>Debuggee</CLRTestKind>
+        <OutputType>exe</OutputType>
+    </PropertyGroup>
+    <ItemGroup>
+        <Compile Include="RSSFeed.cs" />
+        <Compile Include="TestClasses.cs" />
+    </ItemGroup>
+    <ItemGroup>
+        <CLRTestContractReference Include="System.Collections" />
+        <CLRTestContractReference Include="System.Diagnostics.Debug" />
+        <CLRTestContractReference Include="System.Threading" />
+        <CLRTestContractReference Include="System.Threading.Tasks" />
+        <CLRTestContractReference Include="System.Runtime.WindowsRuntime" />
+        <CLRTestContractReference Include="System.Runtime.InteropServices.WindowsRuntime" />
+        <CLRTestWinMDReference Include="Windows" />
+    </ItemGroup>
+    <ItemGroup>
+        <CLRTestPInvokeServerReference Include="Windows.RSS.Utils\Windows.RSS.Utils.vcxproj" />
+    </ItemGroup>
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.targets))\dir.targets" />
+</Project>

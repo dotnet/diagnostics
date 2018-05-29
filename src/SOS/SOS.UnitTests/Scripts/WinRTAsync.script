@@ -1,0 +1,56 @@
+# WinRT Async debugging scenario
+# 1) load the executable
+# 2) Run the executable and wait for it to crash
+# 3) Take a dump of the executable.
+# 4) Open the dump and compare the output
+# [EXPECTED OUTPUT (DESKTOP)]
+# EXPECTED OUTPUT:
+# Exception object: <HEXVAL>
+# Exception type:   System.AggregateException
+# Message:          One or more errors occurred.
+# InnerException:   System.ArgumentException, Use !PrintException <HEXVAL> to see more.
+# StackTrace (generated):
+#    SP               IP               Function
+#    <HEXVAL> <HEXVAL> mscorlib_ni!System.Threading.Tasks.Task.Wait(Int32, System.Threading.CancellationToken)+0xd551d5
+#    <HEXVAL> <HEXVAL> mscorlib_ni!System.Threading.Tasks.Task.Wait()+0x11
+#    <HEXVAL> <HEXVAL> RSSFeed!RSSFeedTest.AsyncWinRTTest.Main()+0xce
+
+# [EXPECTED OUTPUT (PROJECTN)]
+# Exception type:   System.AggregateException
+# Message:          <Invalid Object>
+# InnerException:   System.ArgumentException, Use !PrintException (\d+) to see more.
+# StackTrace (generated):
+#     IP               Function
+#     <HEXVAL> RSSFeed_<HEXVAL>!$11_System::Threading::Tasks::Task.ThrowIfExceptional+0x50
+#     <HEXVAL> RSSFeed_<HEXVAL>!$11_System::Threading::Tasks::Task.Wait+0xd9
+#     <HEXVAL> RSSFeed_<HEXVAL>!$11_System::Threading::Tasks::Task.Wait+0x38
+#     <HEXVAL> RSSFeed_<HEXVAL>!$0_RSSFeedTest::AsyncWinRTTest.Main+0xb8
+#     <HEXVAL> RSSFeed_<HEXVAL>!$0_RSSFeedTest::AsyncWinRTTest.{ILT$Main}+0xd
+#     <HEXVAL> RSSFeed_<HEXVAL>!RHBinder__ShimExeMain+0x20
+# HResult:          80131500
+
+LOADSOS
+
+IFDEF:LIVE
+CONTINUE
+ENDIF:LIVE
+
+# B) Verifying that PrintException gives us the right exception in the format above.
+SOSCOMMAND:PrintException
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.AggregateException\s+
+VERIFY:Message:\s+<Invalid Object>\s+
+VERIFY:InnerException:\s+System\.ArgumentException, Use !PrintException <HEXVAL> to see more\.\s+
+VERIFY:StackTrace \(generated\):\s+
+VERIFY:\s+SP\s+\s+IP\s+\s+Function\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>.+System(::|\.)Threading(::|\.)Tasks(::|\.)Task\.Wait(\(\))?\+0x<HEXVAL>\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>.+RSSFeedTest(::|\.)AsyncWinRTTest\.Main(\(\))?\+0x<HEXVAL>\s+
+
+# C) Verifying the inside ArgumentException from the WinRT component.
+SOSCOMMAND:PrintException -lines <POUT>InnerException:\s+System\.ArgumentException, Use !PrintException (<HEXVAL>) to see more<POUT>
+VERIFY:Exception type:\s+System\.ArgumentException\s+
+VERIFY:Message:\s+<Invalid Object>\s+
+VERIFY:InnerException:\s+<none>\s+
+VERIFY:StackTrace \(generated\):\s+
+VERIFY:\s+SP\s+IP\s+Function\s+
+VERIFY:<HEXVAL>\s+<HEXVAL>\s+.+RSSFeedTest(::|\.)TestRSSFeed(::|\+)<ThrowFromAsyncActionWithProgress>d__7\.MoveNext(\(\))?\+0x<HEXVAL>\s*\[.+debuggees\\RSSFeed\\TestClasses\.cs @ 57\]

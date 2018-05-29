@@ -1,0 +1,18 @@
+<Project>
+  <Target Name="Build">
+  
+    <!-- List of pdb types -->
+    <ItemGroup>
+       <PdbKind Include="portable" />
+       <PdbKind Include="full" />
+    </ItemGroup>
+  
+    <!-- Invoke the build with the specified pdb kind -->
+    <MSBuild Projects="symboltestapp.csproj"
+             Properties="Configuration=$(Configuration);Platform=$(Platform);OSGroup=$(OSGroup);SkipRestore=$(SkipRestore);CoreCLR=$(CoreCLR);PdbKind=%(PdbKind.Identity)" />
+  </Target>
+  
+  <!-- Don't do any exe renaming when this is invoked, as there isn't anything to actually rename -->
+  <Target Name="CopyDllToExe" />
+
+</Project>
