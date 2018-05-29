@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskNestedException", "tasknestedexception\TaskNestedException.csproj", "{B9B58649-CEA6-4EF5-A25E-916AE8E77917}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskNestedException", "TaskNestedException\TaskNestedException.csproj", "{B9B58649-CEA6-4EF5-A25E-916AE8E77917}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RandomUserLibrary", "randomuserlibrary\RandomUserLibrary.csproj", "{FADE7D7D-107F-42B0-ABD5-36A101CD8675}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RandomUserLibrary", "RandomUserLibrary\RandomUserLibrary.csproj", "{FADE7D7D-107F-42B0-ABD5-36A101CD8675}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

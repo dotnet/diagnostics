@@ -23,10 +23,10 @@ IFDEF:PROJECTK
 SOSCOMMAND:ClrStack -f
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+symboltestapp\.(dll|exe)!SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 46\]\s*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+symboltestapp\.(dll|exe)!SymbolTestApp\.Program\.Foo2\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+symboltestapp\.(dll|exe)!SymbolTestApp\.Program\.Foo1\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 24\]\s*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+symboltestapp\.(dll|exe)!SymbolTestApp\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 46\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo2\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo1\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 24\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
 ENDIF:PROJECTK
 
 # Verify that ClrStack all option works (locals/params)
@@ -59,6 +59,9 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
 ENDIF:PROJECTK
 
+# Disable ClrStack -i until coreclr issue #17259
+IFDEF:DESKTOP
+
 # Verify that ClrStack with the ICorDebug options works
 SOSCOMMAND:ClrStack -i
 IFDEF:PROJECTK
@@ -88,6 +91,8 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] I4 SymbolTestApp\.Program\.Foo1\(.
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void SymbolTestApp\.Program\.Main\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+Stack walk complete.\s+
 ENDIF:PROJECTK
+
+ENDIF:DESKTOP
 
 # Verify DumpStackObjects works
 IFDEF:PROJECTK

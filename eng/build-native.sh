@@ -261,13 +261,17 @@ if [ "$__BuildType" == "debug" ]; then
 fi
 
 __RootBinDir=$__ProjectRoot/artifacts
-__IntermediatesDir="$__RootBinDir/obj/$__BuildOS.$__BuildArch.$__BuildType"
-__LogFileDir="$__RootBinDir/log/$__BuildOS.$__BuildArch.$__BuildType"
-__ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=$__RootBinDir/$__BuildType/bin"
+__ConfigBinDir=$__RootBinDir/$__BuildType
+__BinDir=$__ConfigBinDir/bin/$__BuildOS.$__BuildArch
+__LogDir=$__ConfigBinDir/log/$__BuildOS.$__BuildArch
+__IntermediatesDir=$__RootBinDir/obj/$__BuildOS.$__BuildArch.$__BuildType
+__ResultsDir=$__ConfigBinDir/TestResults
+__PackagesBinDir=$__ConfigBinDir/packages
+__ExtraCmakeArgs=-DCLR_MANAGED_BINARY_DIR=$__ConfigBinDir/bin
 
 # Specify path to be set for CMAKE_INSTALL_PREFIX.
 # This is where all built native libraries will copied to.
-export __CMakeBinDir="$__RootBinDir/bin/$__BuildOS.$__BuildArch.$__BuildType"
+export __CMakeBinDir="$__BinDir"
 
 # Set default clang version
 if [[ $__ClangMajorVersion == 0 && $__ClangMinorVersion == 0 ]]; then
@@ -286,7 +290,7 @@ if [[ "$__BuildArch" == "armel" ]]; then
 fi
 
 mkdir -p "$__IntermediatesDir"
-mkdir -p "$__LogFileDir"
+mkdir -p "$__LogDir"
 mkdir -p "$__CMakeBinDir"
 
 build_native()
@@ -304,7 +308,7 @@ build_native()
 
     pushd "$intermediatesForBuild"
     echo "Invoking \"$__ProjectRoot/eng/gen-buildsys-clang.sh\" \"$__ProjectRoot\" $__ClangMajorVersion $__ClangMinorVersion $platformArch $__BuildType $generator $extraCmakeArguments $__cmakeargs"
-    "$__ProjectRoot/eng/gen-buildsys-clang.sh" "$__ProjectRoot" $__ClangMajorVersion $__ClangMinorVersion $platformArch $__BuildType $generator "$extraCmakeArguments" "$__cmakeargs"
+    "$__ProjectRoot/eng/gen-buildsys-clang.sh" "$__ProjectRoot" $__ClangMajorVersion $__ClangMinorVersion $platformArch $__BuildType $generator "$extraCmakeArguments" "$__cmakeargs" | tee $__LogDir/cmake.log
     popd
 
     if [ ! -f "$intermediatesForBuild/$buildFile" ]; then
@@ -317,7 +321,7 @@ build_native()
 
     echo "Executing $buildTool install -j $__NumProc"
 
-    $buildTool install -j $__NumProc
+    $buildTool install -j $__NumProc | tee $__LogDir/make.log
     if [ $? != 0 ]; then
         echo "Failed to build."
         exit 1
@@ -449,6 +453,11 @@ if [ $__Test == 1 ]; then
         export GDB_PATH="$(which gdb 2> /dev/null)"
     fi
 
+    if [ "$__HostOS" == "Linux" ]; then
+        # This is needed on some distros like centos 7 so gdb generate-core-file creates a dump that works
+	echo 0x37 > /proc/self/coredump_filter
+    fi
+
     echo "lldb: '$LLDB_PATH' gdb: '$GDB_PATH'"
 
     # Run xunit SOS tests
@@ -463,7 +472,8 @@ if [ $__Test == 1 ]; then
         __Plugin=$__CMakeBinDir/libsosplugin.so
     fi
 
-    "$__ProjectRoot/src/SOS/tests/testsos.sh" "$__ProjectRoot" "$__Plugin" "$__RootBinDir/$__BuildType/bin" "$__LogFileDir"
+    # Run lldb python tests
+    "$__ProjectRoot/src/SOS/lldbplugin.tests/testsos.sh" "$__ProjectRoot" "$__Plugin" "$__ConfigBinDir/bin" "$__ResultsDir"
     if [ $? != 0 ]; then
         exit 1
     fi

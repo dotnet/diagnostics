@@ -6,6 +6,7 @@
     <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
     <PackageLicenseUrl>http://go.microsoft.com/fwlink/?LinkId=529443</PackageLicenseUrl>
     <PackageIconUrl>http://go.microsoft.com/fwlink/?LinkID=288859</PackageIconUrl>
+    <SourceLinkProvider>GitHub</SourceLinkProvider>
     <IsPublishable>false</IsPublishable>
     <NoPackageAnalysis>true</NoPackageAnalysis>
   </PropertyGroup>

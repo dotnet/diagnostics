@@ -5,4 +5,12 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPublishable>true</IsPublishable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AdditionalSourceCopy Include="..\TaskNestedException.sln" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RandomUserLibrary\RandomUserLibrary.csproj" />
+  </ItemGroup>
 </Project>

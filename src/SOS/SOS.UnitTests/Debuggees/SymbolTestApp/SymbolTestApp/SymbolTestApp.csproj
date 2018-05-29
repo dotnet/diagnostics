@@ -4,5 +4,14 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPublishable>true</IsPublishable>
+    <DebugType>portable</DebugType>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AdditionalSourceCopy Include="..\SymbolTestApp.sln" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SymbolTestDll\SymbolTestDll.csproj" />
+  </ItemGroup>
 </Project>

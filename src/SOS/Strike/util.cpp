@@ -25,10 +25,7 @@
 #include <mscoree.h>
 #include <tchar.h>
 #include "debugshim.h"
-
-#ifdef FEATURE_PAL
 #include "datatarget.h"
-#endif // FEATURE_PAL
 #include "gcinfo.h"
 
 #ifndef STRESS_LOG
@@ -61,6 +58,8 @@ DisposeDelegate SymbolReader::disposeDelegate;
 ResolveSequencePointDelegate SymbolReader::resolveSequencePointDelegate;
 GetLocalVariableName SymbolReader::getLocalVariableNameDelegate;
 GetLineByILOffsetDelegate SymbolReader::getLineByILOffsetDelegate;
+
+HRESULT GetCoreClrDirectory(std::string& coreClrDirectory);
 
 const char * const CorElementTypeName[ELEMENT_TYPE_MAX]=
 {
@@ -4188,26 +4187,28 @@ void ResetGlobals(void)
 //
 HRESULT LoadClrDebugDll(void)
 {
-    HRESULT hr = S_OK;
-#ifdef FEATURE_PAL
     static IXCLRDataProcess* s_clrDataProcess = NULL;
+    HRESULT hr = S_OK;
+
     if (s_clrDataProcess == NULL)
     {
+#ifdef FEATURE_PAL
         int err = PAL_InitializeDLL();
-        if(err != 0)
+        if (err != 0)
         {
             return CORDBG_E_UNSUPPORTED;
         }
-        LPCSTR coreclrDirectory = g_ExtServices->GetCoreClrDirectory();
-        if (coreclrDirectory == NULL)
+#endif // FEATURE_PAL
+        std::string dacModulePath;
+        hr = GetCoreClrDirectory(dacModulePath);
+        if (FAILED(hr))
         {
-            return E_FAIL;
+            return hr;
         }
-        ArrayHolder<char> dacModulePath = new char[MAX_LONGPATH + 1];
-        strcpy_s(dacModulePath, MAX_LONGPATH, coreclrDirectory);
-        strcat_s(dacModulePath, MAX_LONGPATH, MAKEDLLNAME_A("mscordaccore"));
+        dacModulePath.append(DIRECTORY_SEPARATOR_STR_A);
+        dacModulePath.append(MAKEDLLNAME_A("mscordaccore"));
 
-        HMODULE hdac = LoadLibraryA(dacModulePath);
+        HMODULE hdac = LoadLibraryA(dacModulePath.c_str());
         if (hdac == NULL)
         {
             return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
@@ -4233,17 +4234,7 @@ HRESULT LoadClrDebugDll(void)
     g_clrData = s_clrDataProcess;
     g_clrData->AddRef();
     g_clrData->Flush();
-#else
-    WDBGEXTS_CLR_DATA_INTERFACE Query;
 
-    Query.Iid = &__uuidof(IXCLRDataProcess);
-    if (!Ioctl(IG_GET_CLR_DATA_INTERFACE, &Query, sizeof(Query)))
-    {
-        return E_FAIL;
-    }
-
-    g_clrData = (IXCLRDataProcess*)Query.Iface;
-#endif
     hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface), (void**)&g_sos);
     if (FAILED(hr))
     {
@@ -4676,16 +4667,15 @@ public:
         BYTE * context)
     {
 #ifdef FEATURE_PAL
-        if (g_ExtSystem == NULL)
+        if (g_ExtServices == NULL)
         {
             return E_UNEXPECTED;
         }
-        return g_ExtSystem->GetThreadContextById(dwThreadOSID, contextFlags, contextSize, context);
+        return g_ExtServices->GetThreadContextById(dwThreadOSID, contextFlags, contextSize, context);
 #else
         ULONG ulThreadIDOrig;
         ULONG ulThreadIDRequested;
         HRESULT hr;
-        HRESULT hrRet;
 
         hr = g_ExtSystem->GetCurrentThreadId(&ulThreadIDOrig);
         if (FAILED(hr))
@@ -4710,13 +4700,13 @@ public:
         ((CONTEXT*) context)->ContextFlags = contextFlags;
 
         // Ok, do it!
-        hrRet = g_ExtAdvanced3->GetThreadContext((LPVOID) context, contextSize);
+        hr = g_ExtAdvanced3->GetThreadContext((LPVOID) context, contextSize);
 
         // This is cleanup; failure here doesn't mean GetThreadContext should fail
-        // (that's determined by hrRet).
+        // (that's determined by hr).
         g_ExtSystem->SetCurrentThreadId(ulThreadIDOrig);
 
-        return hrRet;
+        return hr;
 #endif // FEATURE_PAL
     }
 
@@ -6421,49 +6411,59 @@ bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutable)
 
 #endif // FEATURE_PAL
 
+HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
+{
+#ifdef FEATURE_PAL
+    LPCSTR directory = g_ExtServices->GetCoreClrDirectory();
+    if (directory == NULL)
+    {
+        ExtErr("Error: Runtime module (%s) not loaded yet", MAKEDLLNAME_A("coreclr"));
+        return E_FAIL;
+    }
+    if (!GetAbsolutePath(directory, coreClrDirectory))
+    {
+        ExtErr("Error: Failed to get coreclr absolute path\n");
+        return E_FAIL;
+    }
+#else
+    ULONG index;
+    HRESULT Status = g_ExtSymbols->GetModuleByModuleName(MAIN_CLR_MODULE_NAME_A, 0, &index, NULL);
+    if (FAILED(Status))
+    {
+        ExtErr("Error: Can't find coreclr module\n");
+        return Status;
+    }
+    ArrayHolder<char> szModuleName = new char[MAX_LONGPATH + 1];
+    Status = g_ExtSymbols->GetModuleNames(index, 0, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
+    if (FAILED(Status))
+    {
+        ExtErr("Error: Failed to get coreclr module name\n");
+        return Status;
+    }
+    coreClrDirectory = szModuleName;
+
+    // Parse off the module name to get just the path
+    size_t lastSlash = coreClrDirectory.rfind(DIRECTORY_SEPARATOR_CHAR_A);
+    if (lastSlash == std::string::npos)
+    {
+        ExtErr("Error: Failed to parse coreclr module name\n");
+        return E_FAIL;
+    }
+    coreClrDirectory.assign(coreClrDirectory, 0, lastSlash);
+#endif
+    return S_OK;
+}
+
 HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntimeDirectory)
 {
     // If the hosting runtime isn't already set, use the runtime we are debugging
     if (g_hostRuntimeDirectory == nullptr)
     {
-#ifdef FEATURE_PAL
-        LPCSTR coreClrDirectory = g_ExtServices->GetCoreClrDirectory();
-        if (coreClrDirectory == NULL)
+        HRESULT hr = GetCoreClrDirectory(hostRuntimeDirectory);
+        if (FAILED(hr))
         {
-            ExtErr("Error: Runtime module (%s) not loaded yet", MAKEDLLNAME_A("coreclr"));
-            return E_FAIL;
+            return hr;
         }
-        if (!GetAbsolutePath(coreClrDirectory, hostRuntimeDirectory))
-        {
-            ExtErr("Error: Failed to get coreclr absolute path\n");
-            return E_FAIL;
-        }
-#else
-        ULONG index;
-        HRESULT Status = g_ExtSymbols->GetModuleByModuleName(MAIN_CLR_MODULE_NAME_A, 0, &index, NULL);
-        if (FAILED(Status))
-        {
-            ExtErr("Error: Can't find coreclr module\n");
-            return Status;
-        }
-        ArrayHolder<char> szModuleName = new char[MAX_LONGPATH + 1];
-        Status = g_ExtSymbols->GetModuleNames(index, 0, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
-        if (FAILED(Status))
-        {
-            ExtErr("Error: Failed to get coreclr module name\n");
-            return Status;
-        }
-        coreClrPath = szModuleName;
-
-        // Parse off the module name to get just the path
-        size_t lastSlash = coreClrPath.rfind(DIRECTORY_SEPARATOR_CHAR_A);
-        if (lastSlash == std::string::npos)
-        {
-            ExtErr("Error: Failed to parse coreclr module name\n");
-            return E_FAIL;
-        }
-        hostRuntimeDirectory.assign(coreClrPath, 0, lastSlash);
-#endif
         g_hostRuntimeDirectory = _strdup(hostRuntimeDirectory.c_str());
     }
     hostRuntimeDirectory.assign(g_hostRuntimeDirectory);

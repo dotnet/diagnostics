@@ -1,4 +1,8 @@
-﻿using Debugger.Tests;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using Microsoft.Diagnostic.TestHelpers;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,17 +21,11 @@ public class SOS
 
     ITestOutputHelper Output { get; set; }
 
-    public static IEnumerable<object[]> Configurations
-    {
-        get
-        {
-            return TestRunConfiguration.Instance.Configurations.Select(c => new[] { c });
-        }
-    }
+    public static IEnumerable<object[]> Configurations => TestRunConfiguration.Instance.Configurations.Select(c => new[] { c });
 
     private void SkipIfArm(TestConfiguration config)
     {
-        if (config.BuildProjectRuntime == "linux-arm" || config.BuildProjectRuntime == "linux-arm64" || config.BuildProjectRuntime == "win-arm" || config.BuildProjectRuntime == "win7-arm64")
+        if (config.TargetArchitecture == "arm" || config.TargetArchitecture == "arm64")
         {
             throw new SkipTestException("SOS does not support ARM architectures");
         }
@@ -35,45 +33,38 @@ public class SOS
 
     private static bool IsCreateDumpConfig(TestConfiguration config)
     {
-        return config.DebuggeeDumpOutputRootDir != null;
+        return config.DebuggeeDumpOutputRootDir() != null;
     }
 
     private static bool IsOpenDumpConfig(TestConfiguration config)
     {
-        return config.DebuggeeDumpInputRootDir != null;
+        return config.DebuggeeDumpInputRootDir() != null;
     }
 
     private async Task CreateDump(TestConfiguration config, string testName, string debuggeeName, string debuggeeArguments)
     {
-        Directory.CreateDirectory(config.DebuggeeDumpOutputRootDir);
+        Directory.CreateDirectory(config.DebuggeeDumpOutputRootDir());
 
         using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName, debuggeeName, debuggeeArguments, loadDump: false, generateDump: true))
         {
             try
             {
                 await runner.LoadSosExtension();
-                await runner.ContinueExecution();
 
                 string command = null;
                 switch (runner.Debugger)
                 {
                     case SOSRunner.NativeDebugger.Cdb:
-                        if (config.TestProduct.Equals("desktop"))
-                        {
-                            // On desktop create triage dump
-                            command = ".dump /o /mshuRp %DUMP_NAME%";
-                        }
-                        else
-                        {
-                            // On .NET Core, create full dump
-                            command = ".dump /o /ma %DUMP_NAME%";
-                        }
+                        await runner.ContinueExecution();
+                        // On desktop create triage dump. On .NET Core, create full dump.
+                        command = config.TestProduct.Equals("desktop") ? ".dump /o /mshuRp %DUMP_NAME%" : ".dump /o /ma %DUMP_NAME%";
                         break;
                     case SOSRunner.NativeDebugger.Gdb:
                         command = "generate-core-file %DUMP_NAME%";
                         break;
                     case SOSRunner.NativeDebugger.Lldb:
-                        command = "sos CreateDump %DUMP_NAME%";
+                        await runner.ContinueExecution();
+                        command = OS.Kind == OSKind.OSX ? "process save-core %DUMP_NAME%" : "sos CreateDump %DUMP_NAME%";
                         break;
                     default:
                         throw new Exception(runner.Debugger.ToString() + " does not support creating dumps");
@@ -105,7 +96,7 @@ public class SOS
             await runner.RunScript(scriptName);
         }
 
-        // Against a crash dump
+        // Against a crash dump.
         if (IsCreateDumpConfig(config))
         {
             await CreateDump(config, testName, debuggeeName, debuggeeArguments);
@@ -120,21 +111,13 @@ public class SOS
         }
     }
 
-#if OSX_FAIL_WITH_BUG
-    [SkippableTheory(Skip = "SOS tests not working for OS X"), MemberData("Configurations")]
-#else
-    [SkippableTheory, MemberData("Configurations")]
-#endif
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task DivZero(TestConfiguration config)
     {
-        await RunTest(config, "DivZero", "SoS/DivZero.script");
+        await RunTest(config, "DivZero", "DivZero.script");
     }
 
-#if OSX_FAIL_WITH_BUG
-    [SkippableTheory(Skip = "SOS tests not working for OS X"), MemberData("Configurations")]
-#else
-    [SkippableTheory, MemberData("Configurations")]
-#endif
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task GCTests(TestConfiguration config)
     {
         const string testName = "SOS.GCTests";
@@ -144,97 +127,54 @@ public class SOS
         SkipIfArm(config);
         using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName, debuggeeName, debuggeeArguments: null))
         {
-            await runner.RunScript("SoS/GCTests.script");
+            await runner.RunScript("GCTests.script");
         }
     }
 
-#if OSX_FAIL_WITH_BUG
-    [SkippableTheory(Skip = "SOS tests not working for OS X"), MemberData("Configurations")]
-#else
-    [SkippableTheory, MemberData("Configurations")]
-#endif
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task Overflow(TestConfiguration config)
     {
-        await RunTest(config, "Overflow", "SoS/Overflow.script");
+        await RunTest(config, "Overflow", "Overflow.script");
     }
 
-#if OSX_FAIL_WITH_BUG
-    [SkippableTheory(Skip = "SOS tests not working for OS X"), MemberData("Configurations")]
-#else
-    [SkippableTheory, MemberData("Configurations")]
-#endif
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task Reflection(TestConfiguration config)
     {
-        await RunTest(config, "ReflectionTest", "SoS/Reflection.script");
+        await RunTest(config, "ReflectionTest", "Reflection.script");
     }
 
-#if OSX_FAIL_WITH_BUG
-    [SkippableTheory(Skip = "SOS tests not working for OS X"), MemberData("Configurations")]
-#else
-    [SkippableTheory, MemberData("Configurations")]
-#endif
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task SimpleThrow(TestConfiguration config)
     {
-        await RunTest(config, "SimpleThrow", "SoS/SimpleThrow.script");
+        await RunTest(config, "SimpleThrow", "SimpleThrow.script");
     }
 
-#if OSX_FAIL_WITH_BUG
-    [SkippableTheory(Skip = "SOS tests not working for OS X"), MemberData("Configurations")]
-#else
-    [SkippableTheory, MemberData("Configurations")]
-#endif
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task NestedExceptionTest(TestConfiguration config)
     {
-        await RunTest(config, "NestedExceptionTest", "SoS/NestedExceptionTest.script");
+        await RunTest(config, "NestedExceptionTest", "NestedExceptionTest.script");
     }
 
-#if OSX_FAIL_WITH_BUG
-    [SkippableTheory(Skip = "SOS tests not working for OS X"), MemberData("Configurations")]
-#else
-    [SkippableTheory, MemberData("Configurations")]
-#endif
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task TaskNestedException(TestConfiguration config)
     {
-        await RunTest(config, "TaskNestedException", "SoS/TaskNestedException.script");
+        await RunTest(config, "TaskNestedException", "TaskNestedException.script");
     }
 
-    [SkippableTheory(Skip = "Test issue: Test build system can't yet create the debuggee"), MemberData("Configurations")]
-    public async Task WinRTAsync(TestConfiguration config)
-    {
-        await RunTest(config, "RSSFeed", "SoS/WinRTAsync.script");
-    }
-
-#if OSX_FAIL_WITH_BUG
-    [SkippableTheory(Skip = "SOS tests not working for OS X"), MemberData("Configurations")]
-#else
-    [SkippableTheory, MemberData("Configurations")]
-#endif
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task StackTests(TestConfiguration config)
     {
-        if (config.BuildProjectRuntime == "linux-x64")
-        {
-            throw new SkipTestException("SOS StackTests are disabled on linux. Bug #584221");
-        }
-        await RunTest(config, "SOS.StackTests", "NestedExceptionTest", null, "SoS/StackTests.script");
+        await RunTest(config, "SOS.StackTests", "NestedExceptionTest", null, "StackTests.script");
     }
 
-#if OSX_FAIL_WITH_BUG
-    [SkippableTheory(Skip = "SOS tests not working for OS X"), MemberData("Configurations")]
-#else
-    [SkippableTheory, MemberData("Configurations")]
-#endif
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task StackAndOtherTests(TestConfiguration config)
     {
         SkipIfArm(config);
-        if (config.BuildProjectRuntime == "linux-x64")
-        {
-            throw new SkipTestException("SOS StackTests are disabled on linux. Bug #584221");
-        }
-
         foreach (TestConfiguration currentConfig in TestRunner.EnumeratePdbTypeConfigs(config))
         {
-            // This debuggee needs the directory of the exes/dlls to load the symboltestdll assembly.
-            await RunTest(currentConfig, "SOS.StackAndOtherTests", "symboltestapp", "%DEBUG_ROOT%", "SoS/StackAndOtherTests.script");
+            // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.
+            await RunTest(currentConfig, "SOS.StackAndOtherTests", "SymbolTestApp", "%DEBUG_ROOT%", "StackAndOtherTests.script");
         }
     }
 }

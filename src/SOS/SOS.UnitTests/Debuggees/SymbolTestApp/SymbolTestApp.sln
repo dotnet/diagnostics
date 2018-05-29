@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "symboltestapp", "symboltestapp\symboltestapp.csproj", "{EB291C94-C60E-4AE6-AEA0-B7EEF86F00AD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SymbolTestApp", "SymbolTestApp\SymbolTestApp.csproj", "{EB291C94-C60E-4AE6-AEA0-B7EEF86F00AD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "symboltestdll", "symboltestdll\symboltestdll.csproj", "{53E66227-71BB-4300-9BE9-56CE570B28F8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SymbolTestDll", "SymbolTestDll\SymbolTestDll.csproj", "{53E66227-71BB-4300-9BE9-56CE570B28F8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

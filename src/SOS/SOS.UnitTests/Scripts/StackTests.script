@@ -61,6 +61,9 @@ VERIFY:\s+[r|e]ax=<HEXVAL>\s+[r|e]bx=<HEXVAL>\s+[r|e]cx=<HEXVAL>\s+
 ENDIF:64BIT
 ENDIF:PROJECTK
 
+# Disable ClrStack -i until coreclr issue #17259
+IFDEF:DESKTOP
+
 # 5) Verifying that ClrStack with the ICorDebug options works
 SOSCOMMAND:ClrStack -i
 VERIFY:.*\s+Dumping managed stack and managed variables using ICorDebug.\s+
@@ -85,6 +88,8 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void NestedExceptionTest\.Program\
 VERIFY:.*\s+Stack walk complete.\s+
 ENDIF:PROJECTK
 
+ENDIF:DESKTOP
+
 # 7) Verify DumpStackObjects works
 IFDEF:PROJECTK
 SOSCOMMAND:DumpStackObjects
@@ -105,7 +110,6 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.InvalidOperationException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
 ENDIF:PROJECTK
 
-IFDEF:DESKTOP
 # 9) Verify DumpStack works
 SOSCOMMAND:DumpStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
@@ -122,4 +126,3 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+\+\s*0x<HEXVAL>\s+Ne
 SOSCOMMAND:EEStack
 VERIFY:.*Child(-SP|EBP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+\+\s*0x<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(System\.String\[\]\)\),\s+calling.*
-ENDIF:DESKTOP

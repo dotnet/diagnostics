@@ -74,7 +74,7 @@ DataTarget::GetMachineType(
     {
         return E_UNEXPECTED;
     }
-    return g_ExtControl->GetExecutingProcessorType(machine);
+    return g_ExtControl->GetExecutingProcessorType((PULONG)machine);
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -107,6 +107,14 @@ DataTarget::GetImageBase(
     {
         return E_FAIL;
     }
+#ifndef FEATURE_PAL
+    // Remove the extension on Windows/dbgeng.
+    CHAR *lp = strrchr(lpstr, '.');
+    if (lp != nullptr)
+    {
+        *lp = '\0';
+    }
+#endif
     return g_ExtSymbols->GetModuleByModuleName(lpstr, 0, NULL, base);
 }
 
@@ -121,7 +129,7 @@ DataTarget::ReadVirtual(
     {
         return E_UNEXPECTED;
     }
-    return g_ExtData->ReadVirtual(address, (PVOID)buffer, request, done);
+    return g_ExtData->ReadVirtual(address, (PVOID)buffer, request, (PULONG)done);
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -135,7 +143,7 @@ DataTarget::WriteVirtual(
     {
         return E_UNEXPECTED;
     }
-    return g_ExtData->WriteVirtual(address, (PVOID)buffer, request, done);
+    return g_ExtData->WriteVirtual(address, (PVOID)buffer, request, (PULONG)done);
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -158,13 +166,13 @@ DataTarget::SetTLSValue(
 
 HRESULT STDMETHODCALLTYPE
 DataTarget::GetCurrentThreadID(
-    /* [out] */ ULONG32* threadID)
+    /* [out] */ ULONG32 *threadID)
 {
     if (g_ExtSystem == NULL)
     {
         return E_UNEXPECTED;
     }
-    return g_ExtSystem->GetCurrentThreadSystemId(threadID);
+    return g_ExtSystem->GetCurrentThreadSystemId((PULONG)threadID);
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -174,11 +182,52 @@ DataTarget::GetThreadContext(
     /* [in] */ ULONG32 contextSize,
     /* [out, size_is(contextSize)] */ PBYTE context)
 {
-    if (g_ExtSystem == NULL)
+#ifdef FEATURE_PAL
+    if (g_ExtServices == NULL)
     {
         return E_UNEXPECTED;
     }
-    return g_ExtSystem->GetThreadContextById(threadID, contextFlags, contextSize, context);
+    return g_ExtServices->GetThreadContextById(threadID, contextFlags, contextSize, context);
+#else
+    if (g_ExtSystem == NULL || g_ExtAdvanced3 == NULL)
+    {
+        return E_UNEXPECTED;
+    }
+    ULONG ulThreadIDOrig;
+    ULONG ulThreadIDRequested;
+    HRESULT hr;
+
+    hr = g_ExtSystem->GetCurrentThreadId(&ulThreadIDOrig);
+    if (FAILED(hr))
+    {
+	return hr;
+    }
+
+    hr = g_ExtSystem->GetThreadIdBySystemId(threadID, &ulThreadIDRequested);
+    if (FAILED(hr))
+    {
+	return hr;
+    }
+
+    hr = g_ExtSystem->SetCurrentThreadId(ulThreadIDRequested);
+    if (FAILED(hr))
+    {
+	return hr;
+    }
+
+    // Prepare context structure
+    ZeroMemory(context, contextSize);
+    ((CONTEXT*) context)->ContextFlags = contextFlags;
+
+    // Ok, do it!
+    hr = g_ExtAdvanced3->GetThreadContext((LPVOID) context, contextSize);
+
+    // This is cleanup; failure here doesn't mean GetThreadContext should fail
+    // (that's determined by hr).
+    g_ExtSystem->SetCurrentThreadId(ulThreadIDOrig);
+
+    return hr;
+#endif
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -207,9 +256,13 @@ DataTarget::VirtualUnwind(
     /* [in] */ ULONG32 contextSize,
     /* [in, out, size_is(contextSize)] */ PBYTE context)
 {
+#ifdef FEATURE_PAL
     if (g_ExtServices == NULL)
     {
         return E_UNEXPECTED;
     }
     return g_ExtServices->VirtualUnwind(threadId, contextSize, context);
+#else
+    return E_NOTIMPL;
+#endif
 }

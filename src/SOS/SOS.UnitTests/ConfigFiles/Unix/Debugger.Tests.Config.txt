@@ -1,0 +1,67 @@
+<!--
+  The xunit tests in Debugger.Tests aren't truly unit tests - they depend on other stuff that may
+  not be in the same directory. This file configures the tests to find what they need. At the moment
+  this file is generated in a hardcoded way to support running from the bin directory on our git 
+  based build, but once we understand the different environments the tests will need to run in we
+  can figure out the right build and deployment strategy for each. Hopefully this configuration offers
+  enough flexibility that the tests themselves don't need to change.
+-->
+
+<Configuration>
+  <Import ConfigFile="Debugger.Tests.Common.txt" />
+
+  <TestProduct>ProjectK</TestProduct>
+  <RepoRootDir>../../../../..</RepoRootDir>
+  <ScriptRootDir>$(RepoRootDir)/src/SOS/SOS.UnitTests/Scripts</ScriptRootDir>
+  <RootBinDir>$(RepoRootDir)/artifacts</RootBinDir>
+  <InstallDir>$(RootBinDir)/$(TargetConfiguration)/bin/$(OS).$(TargetArchitecture)</InstallDir>
+  <LogDir>$(RootBinDir)/$(TargetConfiguration)/TestResults/sos.unittests_$(Timestamp)</LogDir>
+  <DumpDir>$(RootBinDir)/$(TargetConfiguration)/tmp/dumps</DumpDir>
+  
+  <DebuggeeSourceRoot>$(RepoRootDir)/src/SOS/SOS.UnitTests/Debuggees</DebuggeeSourceRoot>
+  <DebuggeeRootDir>$(RootBinDir)/Debuggees</DebuggeeRootDir>
+  <DebuggeeBuildRoot>$(DebuggeeRootDir)</DebuggeeBuildRoot>
+  <DebuggeeNativeLibRoot>$(DebuggeeBuildRoot)/native</DebuggeeNativeLibRoot>
+  <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
+
+  <BuildProjectMicrosoftNetCoreAppVersion>2.1.0</BuildProjectMicrosoftNetCoreAppVersion>
+  <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
+  <CliPath>$(RepoRootDir)/.dotnet/dotnet</CliPath>
+
+  <NuGetPackageFeeds>
+      myget.org dotnet-core=https://dotnet.myget.org/F/dotnet-core/api/v3/index.json;
+      nuget.org=https://www.nuget.org/api/v2/
+  </NuGetPackageFeeds>
+
+  <!--
+  <CliVersion>2.0.0</CliVersion>
+  <CliPath Condition="$(OS) == Linux">https://dotnetcli.blob.core.windows.net/dotnet/Sdk/$(CliVersion)/dotnet-sdk-$(CliVersion)-linux-$(TargetArchitecture).tar.gz</CliPath>
+  <CliPath Condition="$(OS) == OSX">https://dotnetcli.blob.core.windows.net/dotnet/Sdk/$(CliVersion)/dotnet-sdk-$(CliVersion)-osx-$(TargetArchitecture).tar.gz</CliPath>
+  <CliCacheRoot>$(RootBinDir)/dotnet</CliCacheRoot>
+
+  <BuildProjectMicrosoftNetCoreAppVersion>2.0.0</BuildProjectMicrosoftNetCoreAppVersion>
+  <BuildProjectFramework>netcoreapp2.0</BuildProjectFramework>
+  <BuildProjectRuntime Condition="$(OS) == Linux">linux-$(TargetArchitecture)</BuildProjectRuntime>
+  <BuildProjectRuntime Condition="$(OS) == OSX">osx-$(TargetArchitecture)</BuildProjectRuntime>
+
+  <HostExe>$(CliCacheRoot)/dotnet</HostExe>
+  <RuntimeSymbolsPath>$(CliCacheRoot)/shared/Microsoft.NETCore.App/$(BuildProjectMicrosoftNetCoreAppVersion)</RuntimeSymbolsPath>
+  -->
+
+  <HostExe>$(RepoRootDir)/.dotnet/dotnet</HostExe>
+  <RuntimeSymbolsPath>$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/$(BuildProjectMicrosoftNetCoreAppVersion)</RuntimeSymbolsPath>
+  <LLDBHelperScript>$(ScriptRootDir)/lldbhelper.py</LLDBHelperScript>
+
+  <Options>
+    <Option Condition="$(OS) == Linux">
+      <SOSPath>$(InstallDir)/libsosplugin.so</SOSPath>
+      <DebuggeeDumpOutputRootDir>$(DumpDir)/$(TestProduct)</DebuggeeDumpOutputRootDir>
+      <DebuggeeDumpInputRootDir>$(DebuggeeDumpOutputRootDir)</DebuggeeDumpInputRootDir>
+    </Option>
+    <Option Condition="$(OS) == OSX">
+      <SOSPath>$(InstallDir)/libsosplugin.dylib</SOSPath>
+      <!-- Dump testing is disabled on macOS. gdb can't run processes because it needs to be codesigned and lldb on macOS's "process save-core" is too slow -->
+    </Option>
+  </Options>
+
+</Configuration>

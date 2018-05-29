@@ -13,7 +13,7 @@ endif(WIN32)
 
 add_definitions(-D_SECURE_SCL=0)
 
-add_subdirectory(NETCore)
+add_subdirectory(SOS.NETCore)
 add_subdirectory(Strike)
 
 if(CLR_CMAKE_PLATFORM_UNIX)

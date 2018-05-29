@@ -34,9 +34,9 @@ set ghprbCommentBody=
 ::      __ProjectDir        -- default: directory of the dir.props file
 ::      __SourceDir         -- default: %__ProjectDir%\src\
 ::      __RootBinDir        -- default: %__ProjectDir%\artifacts\
-::      __BinDir            -- default: %__RootBinDir%\bin\%__BuildOS%.%__BuildArch.%__BuildType%\
 ::      __IntermediatesDir  -- default: %__RootBinDir%\obj\%__BuildOS%.%__BuildArch.%__BuildType%\
-::      __LogDir            -- default: %__RootBinDir%\log\%__BuildOS%.%__BuildArch.%__BuildType%\
+::      __BinDir            -- default: %__RootBinDir%\%__BuildType%\bin\%__BuildOS%.%__BuildArch\
+::      __LogDir            -- default: %__RootBinDir%\%__BuildType%\log\%__BuildOS%.%__BuildArch\
 ::
 :: Thus, these variables are not simply internal to this script!
 
@@ -58,9 +58,6 @@ set "__ProjectDir=%~dp0"
 if %__ProjectDir:~-1%==\ set "__ProjectDir=%__ProjectDir:~0,-1%"
 set "__ProjectDir=%__ProjectDir%\.."
 set "__SourceDir=%__ProjectDir%\src"
-set "__PackagesDir=%DotNetRestorePackagesPath%"
-if [%__PackagesDir%]==[] set "__PackagesDir=%__ProjectDir%\packages"
-set "__RootBinDir=%__ProjectDir%\artifacts"
 
 :: __UnprocessedBuildArgs are args that we pass to msbuild (e.g. /p:__BuildArch=x64)
 set "__args=%*"
@@ -118,17 +115,17 @@ if /i "%__BuildType%"=="debug" set __BuildType=Debug
 if /i "%__BuildType%"=="release" set __BuildType=Release
 
 :: Set the remaining variables based upon the determined build configuration
-set "__BinDir=%__RootBinDir%\bin\%__BuildOS%.%__BuildArch%.%__BuildType%"
+set "__RootBinDir=%__ProjectDir%\artifacts"
+set "__ConfigBinDir=%__RootBinDir%\%__BuildType%"
+set "__BinDir=%__ConfigBinDir%\bin\%__BuildOS%.%__BuildArch%"
+set "__LogDir=%__ConfigBinDir%\log\%__BuildOS%.%__BuildArch%"
 set "__IntermediatesDir=%__RootBinDir%\obj\%__BuildOS%.%__BuildArch%.%__BuildType%"
-set "__LogDir=%__RootBinDir%\log\%__BuildOS%.%__BuildArch%.%__BuildType%"
-if "%__NMakeMakefiles%"=="1" (set "__IntermediatesDir=%__RootBinDir%\nmakeobj\%__BuildOS%.%__BuildArch%.%__BuildType%")
+set "__PackagesBinDir=%__ConfigBinDir%\packages"
 
-set "__PackagesBinDir=%__BinDir%\.nuget"
 set "__CrossComponentBinDir=%__BinDir%"
 set "__CrossCompIntermediatesDir=%__IntermediatesDir%\crossgen"
-
 if NOT "%__CrossArch%" == "" set __CrossComponentBinDir=%__CrossComponentBinDir%\%__CrossArch%
-set "__CrossGenCoreLibLog=%__LogDir%\CrossgenCoreLib_%__BuildOS%__%__BuildArch%__%__BuildType%.log"
+set "__CrossGenCoreLibLog=%__LogDir%\CrossgenCoreLib_%__BuildOS%_%__BuildArch%.log"
 set "__CrossgenExe=%__CrossComponentBinDir%\crossgen.exe"
 
 :: Generate path to be set for CMAKE_INSTALL_PREFIX to contain forward slash
