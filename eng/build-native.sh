@@ -13,7 +13,7 @@ while [[ -h "$source" ]]; do
   # symlink file was located
   [[ $source != /* ]] && source="$scriptroot/$source"
 done
-__ProjectRoot="$( cd -P "$( dirname "$source" )" && pwd )/.."
+__ProjectRoot="$( cd -P "$( dirname "$source" )/.." && pwd )"
 
 __BuildOS=Linux
 __HostOS=Linux
@@ -26,9 +26,10 @@ __ClangMajorVersion=0
 __ClangMinorVersion=0
 __CrossBuild=0
 __NumProc=1
-__UnprocessedBuildArgs=
 __Build=0
 __Test=0
+__TestArgs=
+__UnprocessedBuildArgs=
 
 # resolve python-version to use
 if [ "$PYTHON" == "" ] ; then
@@ -54,11 +55,22 @@ usage()
     echo "Usage: $0 [options]"
     echo "--build - build native components"
     echo "--test - test native components"
-    echo "--architechure <x64|x86|arm|armel|arm64>"
+    echo "--architecture <x64|x86|arm|armel|arm64>"
     echo "--configuration <debug|release>"
     echo "--clangx.y - optional argument to build using clang version x.y"
+    echo "--verbosity <q[uiet]|m[inimal]|n[ormal]|d[etailed]|diag[nostic]>"
     echo "--help - this help message"
     exit 1
+}
+
+
+# args:
+# input - $1
+to_lowercase() {
+    #eval $invocation
+
+    echo "$1" | tr '[:upper:]' '[:lower:]'
+    return 0
 }
 
 # Argument types supported by this script:
@@ -145,13 +157,12 @@ case $OSName in
         ;;
 esac
 
-
 while :; do
     if [ $# -le 0 ]; then
         break
     fi
 
-    lowerI="$(echo $1 | awk '{print tolower($0)}')"
+    lowerI="$(to_lowercase "$1")"
     case $lowerI in
         -\?|-h|--help)
             usage
@@ -159,22 +170,40 @@ while :; do
             ;;
 
 	--build)
-	  __Build=1
-	  ;;
+	    __Build=1
+	    ;;
 
 	--test)
-	  __Test=1
-	  ;;
+	    __Test=1
+	    ;;
+
+        # Passed to common build script when testing
+	--ci)
+	    __TestArgs="$__TestArgs $1"
+	    ;;
+
+	--solution)
+	    __TestArgs="$__TestArgs $1 $2"
+	    ;;
+
+        --verbosity)
+	    __TestArgs="$__TestArgs $1 $2"
+            shift
+            ;;
+
+        # Ignored for a native build
+	--rebuild|--sign|--restore|--pack|--preparemachine)
+	    ;;
 
 	--configuration)
-	  __BuildType=$2
-	  shift
-	  ;;
+	    __BuildType="$(to_lowercase "$2")"
+	    shift
+	    ;;
 
-	--architechure)
-	  __BuildArch=$2
-	  shift
-	  ;;
+	--architecture)
+	    __BuildArch="$(to_lowercase "$2")"
+	    shift
+	    ;;
 
         --clang3.5)
             __ClangMajorVersion=3
@@ -206,6 +235,11 @@ while :; do
             __ClangMinorVersion=0
             ;;
 
+        --verbosity)
+	    __TestArgs="$__TestArgs --verbosity $2"
+            shift
+            ;;
+
         *)
             __UnprocessedBuildArgs="$__UnprocessedBuildArgs $1"
             ;;
@@ -213,6 +247,13 @@ while :; do
 
     shift
 done
+
+if [ "$__BuildType" == "release" ]; then
+    __BuildType=Release
+fi
+if [ "$__BuildType" == "debug" ]; then
+    __BuildType=Debug
+fi
 
 __RootBinDir=$__ProjectRoot/artifacts
 __IntermediatesDir="$__RootBinDir/obj/$__BuildOS.$__BuildArch.$__BuildType"
@@ -360,14 +401,42 @@ if [ $__Build == 1 ]; then
     build_native "$__BuildArch" "$__IntermediatesDir" "$__ExtraCmakeArgs"
 fi
 
-# Run native SOS/lldbplugin tests
+# Run SOS/lldbplugin tests
 if [ $__Test == 1 ]; then
+
+    if [ "$LLDB_PATH" = "" ]; then
+        export LLDB_PATH="$(which lldb-3.9.1 2> /dev/null)"
+	if [ "$LLDB_PATH" = "" ]; then
+	    export LLDB_PATH="$(which lldb-3.9 2> /dev/null)"
+	    if [ "$LLDB_PATH" = "" ]; then
+	        export LLDB_PATH="$(which lldb 2> /dev/null)"
+	    fi
+        fi
+    fi
+
+    if [ "$GDB_PATH" = "" ]; then
+        export GDB_PATH="$(which gdb 2> /dev/null)"
+    fi
+
+    echo "lldb: '$LLDB_PATH' gdb: '$GDB_PATH'"
+
+    # Run xunit SOS tests
+    "$__ProjectRoot/eng/common/build.sh" --test --configuration "$__BuildType" "$__TestArgs"
+    if [[ $? != 0 ]]; then
+        exit 1
+    fi
+
     if [ "$__BuildOS" == "OSX" ]; then
         __Plugin=$__CMakeBinDir/libsosplugin.dylib
     else
         __Plugin=$__CMakeBinDir/libsosplugin.so
     fi
-    "$__ProjectRoot/src/SOS/tests/testsos.sh" "$__ProjectRoot" "$__Plugin" "$__RootBinDir/$__BuildType/bin" "$__LogFileDir" "$__BuildArch"
+
+    # Run lldb python tests
+    "$__ProjectRoot/src/SOS/lldbplugin.tests/testsos.sh" "$__ProjectRoot" "$__Plugin" "$__RootBinDir/$__BuildType/bin" "$__LogFileDir"
+    if [[ $? != 0 ]]; then
+        exit 1
+    fi
 fi
 
 echo "BUILD: Repo sucessfully built."

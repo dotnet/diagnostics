@@ -10,11 +10,12 @@ while [[ -h "$source" ]]; do
   # symlink file was located
   [[ $source != /* ]] && source="$scriptroot/$source"
 done
-scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
+repo_root="$( cd -P "$( dirname "$source" )/../.." && pwd )"
 
 build=false
 ci=false
 configuration='Debug'
+architecture='<auto>'
 help=false
 pack=false
 prepare_machine=false
@@ -25,19 +26,6 @@ solution=''
 test=false
 verbosity='minimal'
 properties=''
-
-repo_root="$scriptroot/../.."
-artifacts_dir="$repo_root/artifacts"
-artifacts_configuration_dir="$artifacts_dir/$configuration"
-toolset_dir="$artifacts_dir/toolset"
-log_dir="$artifacts_configuration_dir/log"
-log="$log_dir/Build.binlog"
-toolset_restore_log="$log_dir/ToolsetRestore.binlog"
-temp_dir="$artifacts_configuration_dir/tmp"
-
-global_json_file="$repo_root/global.json"
-build_driver=""
-toolset_build_proj=""
 
 while (($# > 0)); do
   lowerI="$(echo $1 | awk '{print tolower($0)}')"
@@ -52,6 +40,10 @@ while (($# > 0)); do
       ;;
     --configuration)
       configuration=$2
+      shift 2
+      ;;
+    --architecture)
+      architecture=$2
       shift 2
       ;;
     --help)
@@ -114,6 +106,18 @@ while (($# > 0)); do
       ;;
   esac
 done
+
+artifacts_dir="$repo_root/artifacts"
+artifacts_configuration_dir="$artifacts_dir/$configuration"
+toolset_dir="$artifacts_dir/toolset"
+log_dir="$artifacts_configuration_dir/log"
+log="$log_dir/Build.binlog"
+toolset_restore_log="$log_dir/ToolsetRestore.binlog"
+temp_dir="$artifacts_configuration_dir/tmp"
+
+global_json_file="$repo_root/global.json"
+build_driver=""
+toolset_build_proj=""
 
 # ReadJson [filename] [json key]
 # Result: Sets 'readjsonvalue' to the value of the provided json key
@@ -184,7 +188,7 @@ function InstallDotNetCli {
     fi
   fi
 
-  bash "$dotnet_install_script" --version $dotnet_sdk_version --install-dir $dotnet_root
+  bash "$dotnet_install_script" --version $dotnet_sdk_version --install-dir $dotnet_root --architecture $architecture
   local lastexitcode=$?
 
   if [[ $lastexitcode != 0 ]]; then

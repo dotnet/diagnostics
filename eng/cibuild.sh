@@ -15,4 +15,4 @@ while [[ -h $source ]]; do
 done
 
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
-"$scriptroot/build.sh" --restore --build --test --sign --ci $@
+"$scriptroot/build.sh" --restore --build --test --ci $@
