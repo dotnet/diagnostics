@@ -1,5 +1,6 @@
 [CmdletBinding(PositionalBinding=$false)]
 Param(
+  [string] $architecture = "<auto>",
   [string] $configuration = "Debug",
   [string] $solution = "",
   [string] $verbosity = "minimal",
@@ -97,7 +98,7 @@ function InstallDotNetCli([string] $dotnetRoot) {
     Invoke-WebRequest "https://dot.net/v1/dotnet-install.ps1" -OutFile $installScript
   }
   
-  & $installScript -Version $GlobalJson.sdk.version -InstallDir $dotnetRoot
+  & $installScript -Version $GlobalJson.sdk.version -InstallDir $dotnetRoot -Architecture $architecture
   if ($lastExitCode -ne 0) {
     Write-Host "Failed to install dotnet cli (exit code '$lastExitCode')." -ForegroundColor Red
     exit $lastExitCode

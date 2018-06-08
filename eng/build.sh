@@ -16,43 +16,14 @@ done
 
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
 
-# ReadJson [filename] [json key]
-# Result: Sets 'readjsonvalue' to the value of the provided json key
-# Note: this method may return unexpected results if there are duplicate
-# keys in the json
-function ReadJson {
-  local file=$1
-  local key=$2
+# remove the --test option and pass it to build-native.sh
+__args="$(echo $@ | sed 's/--test//g')"
 
-  local unamestr="$(uname)"
-  local sedextended='-r'
-  if [[ "$unamestr" == 'Darwin' ]]; then
-    sedextended='-E'
-  fi;
-
-  readjsonvalue="$(grep -m 1 "\"$key\"" $file | sed $sedextended 's/^ *//;s/.*: *"//;s/",?//')"
-  if [[ ! "$readjsonvalue" ]]; then
-    echo "Error: Cannot find \"$key\" in $file" >&2;
-    ExitWithExitCode 1
-  fi;
-}
-
-# install .NET Core
-ReadJson "$scriptroot/../global.json" "version"
-
-# setting DOTNET_INSTALL_DIR prevents build.sh from installing it
-export DOTNET_INSTALL_DIR=$scriptroot/../.dotnet
-"$scriptroot/install-dotnet.sh" $DOTNET_INSTALL_DIR $readjsonvalue
+# build managed components
+"$scriptroot/common/build.sh" $__args
 if [[ $? != 0 ]]; then
     exit 1
 fi
 
-# build/test managed components
-"$scriptroot/common/build.sh" $@
-if [[ $? != 0 ]]; then
-    exit 1
-fi
-
-# build/test native components
+# build native components and test both
 "$scriptroot/build-native.sh" $@
-

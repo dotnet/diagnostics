@@ -41,11 +41,16 @@ set ghprbCommentBody=
 :: Thus, these variables are not simply internal to this script!
 
 :: Set the default arguments for build
+
 set __BuildArch=x64
+if /i "%PROCESSOR_ARCHITECTURE%" == "amd64" set __BuildArch=x64
+if /i "%PROCESSOR_ARCHITECTURE%" == "x86" set __BuildArch=x86
 set __BuildType=Debug
 set __BuildOS=Windows_NT
 set __Build=0
 set __Test=0
+set __Verbosity=minimal
+set __TestArgs=
 
 :: Set the various build properties here so that CMake and MSBuild can pick them up
 set "__ProjectDir=%~dp0"
@@ -57,8 +62,8 @@ set "__PackagesDir=%DotNetRestorePackagesPath%"
 if [%__PackagesDir%]==[] set "__PackagesDir=%__ProjectDir%\packages"
 set "__RootBinDir=%__ProjectDir%\artifacts"
 
-REM __UnprocessedBuildArgs are args that we pass to msbuild (e.g. /p:__BuildArch=x64)
-set "__args= %*"
+:: __UnprocessedBuildArgs are args that we pass to msbuild (e.g. /p:__BuildArch=x64)
+set "__args=%*"
 set processedArgs=
 set __UnprocessedBuildArgs=
 
@@ -74,12 +79,16 @@ if /i "%1" == "-build"               (set __Build=1&set processedArgs=!processed
 if /i "%1" == "-test"                (set __Test=1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-configuration"       (set __BuildType=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
 if /i "%1" == "-architecture"        (set __BuildArch=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
-rem these options are ignored for a native build
-if /i "%1" == "-restore"             (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
+if /i "%1" == "-verbosity"           (set __Verbosity=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
+:: These options are passed on to the common build script when testing
+if /i "%1" == "-ci"                  (set __TestArgs=!__TestArgs! %1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
+if /i "%1" == "-solution"            (set __TestArgs=!__TestArgs! %1 %2&set processedArgs=!processedArgs! %1&shift&shift&goto Arg_Loop)
+:: These options are ignored for a native build
+if /i "%1" == "-rebuild"             (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-sign"                (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
+if /i "%1" == "-restore"             (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-pack"                (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
-if /i "%1" == "-ci"                  (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
-if /i "%1" == "-prepareMachine"      (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
+if /i "%1" == "-preparemachine"      (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 
 if [!processedArgs!]==[] (
   set __UnprocessedBuildArgs=%__args%
@@ -92,7 +101,7 @@ if [!processedArgs!]==[] (
 
 :ArgsDone
 
-REM Determine if this is a cross-arch build
+:: Determine if this is a cross-arch build
 
 if /i "%__BuildArch%"=="arm64" (
     set __DoCrossArchBuild=1
@@ -103,6 +112,9 @@ if /i "%__BuildArch%"=="arm" (
     set __DoCrossArchBuild=1
     set __CrossArch=x64
     )
+
+if /i "%__BuildType%"=="debug" set __BuildType=Debug
+if /i "%__BuildType%"=="release" set __BuildType=Release
 
 :: Set the remaining variables based upon the determined build configuration
 set "__BinDir=%__RootBinDir%\bin\%__BuildOS%.%__BuildArch%.%__BuildType%"
@@ -157,7 +169,7 @@ REM ===
 REM =========================================================================================
 
 if %__Build% EQU 1 (
-    REM Scope environment changes start {
+    rem Scope environment changes start {
     setlocal
 
     echo %__MsgPrefix%Commencing build of native components for %__BuildOS%.%__BuildArch%.%__BuildType%
@@ -166,8 +178,8 @@ if %__Build% EQU 1 (
     if not "%__ToolsetDir%" == "" ( set __NativePlatformArgs=-useEnv )
 
     if not "%__ToolsetDir%" == "" (
-        rem arm64 builds currently use private toolset which has not been released yet
-        REM TODO, remove once the toolset is open.
+        :: arm64 builds currently use private toolset which has not been released yet
+        :: TODO, remove once the toolset is open.
         call :PrivateToolSet
         goto GenVSSolution
     )
@@ -178,7 +190,7 @@ if %__Build% EQU 1 (
     if /i "%__BuildArch%" == "arm" (
         set __VCBuildArch=x86_arm
 
-        REM Make CMake pick the highest installed version in the 10.0.* range
+        :: Make CMake pick the highest installed version in the 10.0.* range
         set ___SDKVersion="-DCMAKE_SYSTEM_VERSION=10.0"
     )
     if /i "%__BuildArch%" == "arm64" (
@@ -228,7 +240,7 @@ if %__Build% EQU 1 (
     set __MsbuildWrn=/flp1:WarningsOnly;LogFile=!__BuildWrn!
     set __MsbuildErr=/flp2:ErrorsOnly;LogFile=!__BuildErr!
 
-    msbuild.exe %__IntermediatesDir%\install.vcxproj /v:m !__MsbuildLog! !__MsbuildWrn! !__MsbuildErr! /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
+    msbuild.exe %__IntermediatesDir%\install.vcxproj /v:!__Verbosity! !__MsbuildLog! !__MsbuildWrn! !__MsbuildErr! /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
 
     if not !errorlevel! == 0 (
         echo %__MsgPrefix%Error: native component build failed. Refer to the build log files for details:
@@ -239,7 +251,7 @@ if %__Build% EQU 1 (
     )
 
 :SkipNativeBuild
-    REM } Scope environment changes end
+    rem } Scope environment changes end
     endlocal
 )
 
@@ -250,7 +262,7 @@ REM ===
 REM =========================================================================================
 
 if /i "%__DoCrossArchBuild%"=="1" (
-    REM Scope environment changes start {
+    rem Scope environment changes start {
     setlocal
 
     echo %__MsgPrefix%Commencing build of cross architecture native components for %__BuildOS%.%__BuildArch%.%__BuildType%
@@ -294,7 +306,7 @@ if /i "%__DoCrossArchBuild%"=="1" (
     set __MsbuildWrn=/flp1:WarningsOnly;LogFile=!__BuildWrn!
     set __MsbuildErr=/flp2:ErrorsOnly;LogFile=!__BuildErr!
 
-    msbuild.exe %__CrossCompIntermediatesDir%\install.vcxproj /v:m !__MsbuildLog! !__MsbuildWrn! !__MsbuildErr! /p:Configuration=%__BuildType% /p:Platform=%__CrossArch% %__UnprocessedBuildArgs%
+    msbuild.exe %__CrossCompIntermediatesDir%\install.vcxproj /v:!__Verbosity! !__MsbuildLog! !__MsbuildWrn! !__MsbuildErr! /p:Configuration=%__BuildType% /p:Platform=%__CrossArch% %__UnprocessedBuildArgs%
 
     if not !errorlevel! == 0 (
         echo %__MsgPrefix%Error: cross-arch components build failed. Refer to the build log files for details:
@@ -305,7 +317,7 @@ if /i "%__DoCrossArchBuild%"=="1" (
     )
 
 :SkipCrossCompBuild
-    REM } Scope environment changes end
+    rem } Scope environment changes end
     endlocal
 )
 
@@ -315,8 +327,14 @@ REM === All builds complete!
 REM ===
 REM =========================================================================================
 
-echo %__MsgPrefix%Repo successfully built.  Finished at %TIME%
+echo %__MsgPrefix%Repo successfully built. Finished at %TIME%
 echo %__MsgPrefix%Product binaries are available at !__BinDir!
+
+:: test components
+if %__Test% EQU 1 (
+    powershell -ExecutionPolicy ByPass -command "& """%__ProjectDir%\eng\common\Build.ps1""" -test -configuration %__BuildType% -verbosity %__Verbosity% %__TestArgs%"
+    exit /b %ERRORLEVEL
+)
 exit /b 0
 
 REM =========================================================================================
@@ -336,9 +354,10 @@ echo All arguments are optional. The options are:
 echo.
 echo.-? -h -help --help: view this message.
 echo -build - build native components
-echo -test - test native components
-echo -architechure <x64|x86|arm|arm64>
+echo -test - test components
+echo -architecture <x64|x86|arm|arm64>
 echo -configuration <debug|release>
+echo -verbosity <q[uiet]|m[inimal]|n[ormal]|d[etailed]|diag[nostic]>
 exit /b 1
 
 :PrivateToolSet

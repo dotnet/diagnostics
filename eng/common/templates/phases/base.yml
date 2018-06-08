@@ -1,0 +1,40 @@
+# base.yml
+# Description: Expands a phase object, applying telemetry, docker info, etc...
+# Parameters:
+#   agentOs: [Windows_NT (default), Linux, OSX] Used in templates to define variables which are OS specific
+#   dockerImage: If defined, specifies docker image to run build steps in
+#   enableTelemetry: send telemetry if build is not a PR or CI build
+#   phaseName: name of phase
+#   phase: defined phase object
+
+parameters:
+  agentOs: Windows_NT
+  buildReason: IndividualCI
+  dockerImage: ''
+  enableTelemetry: ''
+  phaseName: ''
+  phase: {}
+
+phases:
+- phase: ${{ parameters.phaseName }}
+  queue: ${{ parameters.phase.queue }}
+  ${{ if and(ne(parameters.phase.variables, ''), eq(parameters.dockerImage, '')) }}:
+    variables: ${{ parameters.phase.variables }}
+  ${{ if ne(parameters.dockerImage, '') }}:
+    variables:
+      _PREVIEW_VSTS_DOCKER_IMAGE: ${{ parameters.dockerImage }}
+      ${{ insert }}: ${{ parameters.phase.variables }}
+  steps:
+  - checkout: self
+    clean: true
+    fetchDepth: 5
+  - ${{ if notIn(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
+    - ${{ if eq(parameters.enableTelemetry, 'true') }}:
+      - template: /eng/common/templates/steps/telemetry.yml
+        parameters:
+          agentOs: ${{ parameters.agentOs }}
+          steps: ${{ parameters.phase.steps }}
+    - ${{ if not(eq(parameters.enableTelemetry, 'true')) }}:
+      - ${{ parameters.phase.steps }}          
+  - ${{ if in(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
+    - ${{ parameters.phase.steps }}          
