@@ -15,4 +15,26 @@ while [[ -h $source ]]; do
 done
 
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
-"$scriptroot/build.sh" --restore --build --test --ci $@
+
+# Fix any CI lab docker image problems
+
+__osname=$(uname -s)
+if [ "$__osname" == "Linux" ]; then
+    if [ -e /etc/os-release ]; then
+        source /etc/os-release
+        if [[ $ID == "ubuntu" ]]; then
+            if [[ $VERSION_ID == "18.04" ]]; then
+                # Fix the CI lab's ubuntu 18.04 docker image: install curl.
+                apt-get update
+                apt-get install -y curl
+            fi
+        fi
+    elif [ -e /etc/redhat-release ]; then
+        __redhatRelease=$(</etc/redhat-release)
+        if [[ $__redhatRelease == "CentOS release 6."* || $__redhatRelease == "Red Hat Enterprise Linux Server release 6."* ]]; then
+            source scl_source enable python27 devtoolset-2
+        fi
+    fi
+fi
+
+"$scriptroot/build.sh" --ci $@

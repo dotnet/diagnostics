@@ -1,39 +1,85 @@
 phases:
 - template: /eng/build.yml
   parameters:
+    phaseName: Windows
     agentOs: Windows_NT
     buildReason: Internal
-    queue:
-      name: DotNetCore-Build
+    queue: 
+      name: Hosted VS2017
       demands:
-      - agent.os -equals Windows_NT
+        - agent.os -equals Windows_NT
       parallel: 2
       matrix:
         Build_Debug:
           _BuildConfig: Debug
+          _BuildArch: x64
           _PublishType: none
           _SignType: test
         Build_Release:
           _BuildConfig: Release
-          _PublishType: blob
+          _BuildArch: x64
+          _PublishType: none
           _SignType: real
 
 - template: /eng/build.yml
   parameters:
+    phaseName: CentOS_7
     agentOs: Linux
     buildReason: Internal
-    dockerImage: microsoft/dotnet-buildtools-prereqs:ubuntu-14.04-cross-0cd4667-20170319080304
+    dockerImage: microsoft/dotnet-buildtools-prereqs:centos-7-d485f41-20173404063424
     queue:
-      name: DotNetCore-Test
+      name: DotNetCore-Linux
       demands:
-      - agent.os -equals Linux
+        - agent.os -equals Linux
       parallel: 2
       matrix:
         Build_Debug:
           _BuildConfig: Debug
+          _BuildArch: x64
           _PublishType: none
           _SignType: test
         Build_Release:
           _BuildConfig: Release
+          _BuildArch: x64
           _PublishType: none
           _SignType: real
+
+- template: /eng/build.yml
+  parameters:
+    phaseName: CentOS_7
+    agentOs: Linux
+    buildReason: Internal
+    dockerImage: microsoft/dotnet-buildtools-prereqs:ubuntu-14.04-cross-0cd4667-20170319080304
+    queue:
+      name: DotNetCore-Linux
+      demands:
+        - agent.os -equals Linux
+      matrix:
+        Build_Release:
+          _BuildConfig: Release
+          _BuildArch: x64
+          _PublishType: none
+          _SignType: real
+
+- template: /eng/build.yml
+  parameters:
+    phaseName: MacOS
+    agentOs: Darwin
+    buildReason: Internal
+    queue: 
+      name: Hosted macOS Preview
+      demands:
+        - agent.os -equals Darwin
+      parallel: 2
+      matrix:
+        Build_Debug:
+          _BuildConfig: Debug
+          _BuildArch: x64
+          _PublishType: none
+          _SignType: test
+        Build_Release:
+          _BuildConfig: Release
+          _BuildArch: x64
+          _PublishType: none
+          _SignType: real
+

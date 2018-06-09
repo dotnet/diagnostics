@@ -169,41 +169,41 @@ while :; do
             exit 1
             ;;
 
-	--build)
-	    __Build=1
-	    ;;
+        --build)
+            __Build=1
+            ;;
 
-	--test)
-	    __Test=1
-	    ;;
+        --test)
+            __Test=1
+            ;;
 
         # Passed to common build script when testing
-	--ci)
-	    __TestArgs="$__TestArgs $1"
-	    ;;
+        --ci)
+            __TestArgs="$__TestArgs $1"
+            ;;
 
-	--solution)
-	    __TestArgs="$__TestArgs $1 $2"
-	    ;;
+        --solution)
+            __TestArgs="$__TestArgs $1 $2"
+            ;;
 
         --verbosity)
-	    __TestArgs="$__TestArgs $1 $2"
+            __TestArgs="$__TestArgs $1 $2"
             shift
             ;;
 
         # Ignored for a native build
-	--rebuild|--sign|--restore|--pack|--preparemachine)
-	    ;;
+        --rebuild|--sign|--restore|--pack|--preparemachine)
+            ;;
 
-	--configuration)
-	    __BuildType="$(to_lowercase "$2")"
-	    shift
-	    ;;
+        --configuration)
+            __BuildType="$(to_lowercase "$2")"
+            shift
+            ;;
 
-	--architecture)
-	    __BuildArch="$(to_lowercase "$2")"
-	    shift
-	    ;;
+        --architecture)
+            __BuildArch="$(to_lowercase "$2")"
+            shift
+            ;;
 
         --clang3.5)
             __ClangMajorVersion=3
@@ -235,8 +235,13 @@ while :; do
             __ClangMinorVersion=0
             ;;
 
+        --clang5.0)
+            __ClangMajorVersion=5
+            __ClangMinorVersion=0
+            ;;
+
         --verbosity)
-	    __TestArgs="$__TestArgs --verbosity $2"
+            __TestArgs="$__TestArgs --verbosity $2"
             shift
             ;;
 
@@ -396,6 +401,26 @@ initHostDistroRid
 # Init the target distro name
 initTargetDistroRid
 
+if [ "$__HostOS" == "OSX" ]; then
+    export LLDB_H=$__ProjectRoot/src/SOS/lldbplugin/swift-4.0
+    export LLDB_LIB=/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/LLDB
+    export LLDB_PATH=/Applications/Xcode.app/Contents/Developer/usr/bin/lldb
+
+    # If Xcode 9.2 exists (like on the CI/build machines), use that. Xcode 9.3 or 
+    # greater (swift 4.1 lldb) doesn't work that well (seg faults on exit).
+    if [ -f "/Applications/Xcode_9.2.app/Contents/Developer/usr/bin/lldb" ]; then
+        if [ -f "/Applications/Xcode_9.2.app/Contents/SharedFrameworks/LLDB.framework/LLDB" ]; then
+            export LLDB_PATH=/Applications/Xcode_9.2.app/Contents/Developer/usr/bin/lldb
+            export LLDB_LIB=/Applications/Xcode_9.2.app/Contents/SharedFrameworks/LLDB.framework/LLDB
+        fi
+    fi
+
+    if [ ! -f $LLDB_LIB ]; then
+        echo "Cannot find the lldb library. Try installing Xcode."
+        exit 1
+    fi
+fi
+
 # Build native components
 if [ $__Build == 1 ]; then
     build_native "$__BuildArch" "$__IntermediatesDir" "$__ExtraCmakeArgs"
@@ -406,11 +431,17 @@ if [ $__Test == 1 ]; then
 
     if [ "$LLDB_PATH" = "" ]; then
         export LLDB_PATH="$(which lldb-3.9.1 2> /dev/null)"
-	if [ "$LLDB_PATH" = "" ]; then
-	    export LLDB_PATH="$(which lldb-3.9 2> /dev/null)"
-	    if [ "$LLDB_PATH" = "" ]; then
-	        export LLDB_PATH="$(which lldb 2> /dev/null)"
-	    fi
+        if [ "$LLDB_PATH" = "" ]; then
+            export LLDB_PATH="$(which lldb-3.9 2> /dev/null)"
+            if [ "$LLDB_PATH" = "" ]; then
+                export LLDB_PATH="$(which lldb-4.0 2> /dev/null)"
+                if [ "$LLDB_PATH" = "" ]; then
+                    export LLDB_PATH="$(which lldb-5.0 2> /dev/null)"
+                    if [ "$LLDB_PATH" = "" ]; then
+                        export LLDB_PATH="$(which lldb 2> /dev/null)"
+                    fi
+                fi
+            fi
         fi
     fi
 
@@ -422,7 +453,7 @@ if [ $__Test == 1 ]; then
 
     # Run xunit SOS tests
     "$__ProjectRoot/eng/common/build.sh" --test --configuration "$__BuildType" "$__TestArgs"
-    if [[ $? != 0 ]]; then
+    if [ $? != 0 ]; then
         exit 1
     fi
 
@@ -432,9 +463,8 @@ if [ $__Test == 1 ]; then
         __Plugin=$__CMakeBinDir/libsosplugin.so
     fi
 
-    # Run lldb python tests
-    "$__ProjectRoot/src/SOS/lldbplugin.tests/testsos.sh" "$__ProjectRoot" "$__Plugin" "$__RootBinDir/$__BuildType/bin" "$__LogFileDir"
-    if [[ $? != 0 ]]; then
+    "$__ProjectRoot/src/SOS/tests/testsos.sh" "$__ProjectRoot" "$__Plugin" "$__RootBinDir/$__BuildType/bin" "$__LogFileDir"
+    if [ $? != 0 ]; then
         exit 1
     fi
 fi

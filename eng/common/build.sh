@@ -182,9 +182,9 @@ function InstallDotNetCli {
 
     # Use curl if available, otherwise use wget
     if command -v curl > /dev/null; then
-      curl "https://dot.net/v1/dotnet-install.sh" -sSL --retry 10 --create-dirs -o "$dotnet_install_script"
+      curl "https://raw.githubusercontent.com/dotnet/cli/release/2.1.4xx/scripts/obtain/dotnet-install.sh" -sSL --retry 10 --create-dirs -o "$dotnet_install_script"
     else
-      wget -q -O "$dotnet_install_script" "https://dot.net/v1/dotnet-install.sh"
+      wget -q -O "$dotnet_install_script" "https://raw.githubusercontent.com/dotnet/cli/release/2.1.4xx/scripts/obtain/dotnet-install.sh"     
     fi
   fi
 
