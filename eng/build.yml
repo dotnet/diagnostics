@@ -8,6 +8,7 @@
 #   enableTelemetry: send telemetry if build is not a PR or CI build
 
 parameters:
+  phaseName: ''
   agentOs: Windows_NT
   buildReason: IndividualCI
   queue: {}
@@ -18,9 +19,9 @@ parameters:
 phases:
 - template: /eng/common/templates/phases/base.yml
   parameters:
+    phaseName: ${{ parameters.phaseName }}
     agentOs: ${{ parameters.agentOs }}
     buildReason: ${{ parameters.buildReason }}
-    phaseName: ${{ parameters.agentOs }}
     dockerImage: ${{ parameters.dockerImage }}
     enableTelemetry: ${{ parameters.enableTelemetry }}
     phase:
@@ -41,47 +42,51 @@ phases:
           _PublishArgs: ''
 
       steps:
-      - ${{ if notIn(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
-        - ${{ if eq(parameters.agentOs, 'Windows_NT') }}:
-          - task: ms-vseng.MicroBuildTasks.30666190-6959-11e5-9f96-f56098202fef.MicroBuildSigningPlugin@1
-            displayName: Install MicroBuild plugin
-            inputs:
-              signType: $(_SignType)
-              zipSources: false
-              esrpSigning: $(_UseEsrpSigning)
+      - template: /eng/common/templates/steps/run-on-windows.yml
+        parameters:
+          agentOs: ${{ parameters.agentOs }} 
+          steps:
+          - ${{ if notIn(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
+            - task: ms-vseng.MicroBuildTasks.30666190-6959-11e5-9f96-f56098202fef.MicroBuildSigningPlugin@1
+              displayName: Install MicroBuild plugin
+              inputs:
+                signType: $(_SignType)
+                zipSources: false
+                esrpSigning: $(_UseEsrpSigning)
+              env:
+                TeamName: $(_TeamName)
+              continueOnError: false
+              condition: and(succeeded(), in(variables._SignType, 'real', 'test'))
+            - task: AzureKeyVault@1
+              inputs:
+                azureSubscription: 'DotNet-Engineering-Services_KeyVault'
+                KeyVaultName: EngKeyVault
+                SecretsFilter: 'dotnetfeed-storage-access-key-1'
+              condition: succeeded()
+          - script: eng\cibuild.cmd
+              -configuration $(_BuildConfig) 
+              -prepareMachine
+              /p:SignType=$(_SignType)
+              $(_PublishArgs)
+            name: Build_Publish
+            displayName: Build / Test
             env:
-              TeamName: $(_TeamName)
-            continueOnError: false
-            condition: and(succeeded(), in(variables._SignType, 'real', 'test'))
-        - task: AzureKeyVault@1
-          inputs:
-            azureSubscription: 'DotNet-Engineering-Services_KeyVault'
-            KeyVaultName: EngKeyVault
-            SecretsFilter: 'dotnetfeed-storage-access-key-1'
-          condition: succeeded()
-
-      - ${{ if eq(parameters.agentOs, 'Windows_NT') }}:
-        - script: eng\cibuild.cmd
-            -configuration $(_BuildConfig) 
-            -prepareMachine
-            /p:SignType=$(_SignType)
-            $(_PublishArgs)
-          name: Build_Publish
-          displayName: Build / Publish
-          env:
-            OfficialBuildId: $(BUILD.BUILDNUMBER)
-          condition: succeeded()
-      - ${{ if ne(parameters.agentOs, 'Windows_NT') }}:
-        - script: eng/cibuild.sh
-            --configuration $(_BuildConfig) 
-            --prepareMachine
-            /p:SignType=$(_SignType)
-            $(_PublishArgs)
-          name: Build_Publish
-          displayName: Build / Publish
-          env:
-            OfficialBuildId: $(BUILD.BUILDNUMBER)
-          condition: succeeded()
+              OfficialBuildId: $(BUILD.BUILDNUMBER)
+            condition: succeeded()
+      - template: /eng/common/templates/steps/run-on-unix.yml
+        parameters:
+          agentOs: ${{ parameters.agentOs }}
+          steps:
+          - script: eng/cibuild.sh
+              --configuration $(_BuildConfig) 
+              --prepareMachine
+              /p:SignType=$(_SignType)
+              $(_PublishArgs)
+            name: Build_Publish
+            displayName: Build / Test
+            env:
+              OfficialBuildId: $(BUILD.BUILDNUMBER)
+            condition: succeeded()
 
       - ${{ if notIn(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
         - task: CopyFiles@2
@@ -96,7 +101,7 @@ phases:
           displayName: Publish Logs to VSTS
           inputs:
             PathtoPublish: '$(Build.StagingDirectory)/BuildLogs'
-            ArtifactName: $(_agentOs)_$(Agent.JobName)
+            ArtifactName: $(parameters.agentOs)_$(Agent.JobName)
             PublishLocation: Container
           continueOnError: true
           condition: succeededOrFailed()

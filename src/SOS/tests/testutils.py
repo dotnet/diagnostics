@@ -15,7 +15,6 @@ fail_flag = ''
 
 failed = False
 
-
 def assertCommon(passed, fatal):
     global failed
     with open(summary_file, 'a+') as summary:
@@ -32,7 +31,6 @@ def assertCommon(passed, fatal):
 
             if fatal:
                 exit(1)
-
 
 def assertTrue(x, fatal=True):
     passed = bool(x)
@@ -59,7 +57,9 @@ def assertNotEqual(x, y, fatal=True):
 
 
 def checkResult(res):
+    global failed
     if not res.Succeeded():
+        failed = True
         print(res.GetOutput())
         print(res.GetError())
         exit(1)
@@ -194,19 +194,13 @@ def run(assembly, module):
     debugger.SetAsync(False)
     target = lldb.target
 
-    version = debugger.GetVersionString()
-    if (re.search('^lldb version 6.*', version)):
-	debugger.HandleCommand("breakpoint set --one-shot true --name coreclr_execute_assembly")
-    else:
-	debugger.HandleCommand("breakpoint set --one-shot --name coreclr_execute_assembly")
-
+    debugger.HandleCommand("breakpoint set --name coreclr_execute_assembly")
     debugger.HandleCommand("process launch")
 
     # run the scenario
     print("starting scenario...")
     i = importlib.import_module(module)
-    scenarioResult = i.runScenario(os.path.basename(assembly), debugger,
-                                   target)
+    scenarioResult = i.runScenario(os.path.basename(assembly), debugger, target)
 
     if (target.GetProcess().GetExitStatus() == 0) and not failed:
         os.unlink(fail_flag)

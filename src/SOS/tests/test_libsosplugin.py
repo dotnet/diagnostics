@@ -25,6 +25,7 @@ timeout = 0
 regex = ''
 repeat = 0
 
+tests_failed = False
 
 def runWithTimeout(cmd):
     p = None
@@ -60,6 +61,7 @@ class TestSosCommands(unittest.TestCase):
                ("-k \"script open('%s', 'a').close()\" " % fail_flag_lldb) +
                ("-k 'quit' ") +
                ("--no-lldbinit ") +
+               ("-o \"version\" ") +
                ("-O \"plugin load %s \" " % plugin) +
                ("-o \"script import testutils as test\" ") +
                ("-o \"script test.fail_flag = '%s'\" " % fail_flag) +
@@ -69,6 +71,12 @@ class TestSosCommands(unittest.TestCase):
                (" -- %s %s > %s.log 2>&1" % (host, assembly, logfile)))
 
         runWithTimeout(cmd)
+        if not os.path.isfile(fail_flag):
+            tests_failed = True
+
+        if not os.path.isfile(fail_flag_lldb):
+            tests_failed = True
+ 
         self.assertFalse(os.path.isfile(fail_flag))
         self.assertFalse(os.path.isfile(fail_flag_lldb))
 
@@ -251,9 +259,9 @@ if __name__ == '__main__':
     timeout = int(args.timeout)
     regex = args.regex
     repeat = int(args.repeat)
-    print("lldb: %s" % lldb)
     print("host: %s" % host)
-    print("plugin: %s" % plugin)
+    print("lldb: %s" % lldb)
+    print("lldb plugin: %s" % plugin)
     print("logfiledir: %s" % logfiledir)
     print("assembly: %s" % assembly)
     print("timeout: %i" % timeout)
@@ -263,9 +271,6 @@ if __name__ == '__main__':
     if os.name != 'posix':
         print('OS not supported')
         exit(1)
-
-    print("host: %s" % host)
-    print("lldb plugin: %s" % plugin)
 
     fail_flag = os.path.join(logfiledir, 'fail_flag')
     fail_flag_lldb = os.path.join(logfiledir, 'fail_flag.lldb')
@@ -290,3 +295,7 @@ if __name__ == '__main__':
     unittest.TextTestRunner(verbosity=1).run(suite)
 
     generate_report()
+
+    if tests_failed:
+        exit(1)
+
