@@ -17,7 +17,7 @@ done
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
 
 # remove the --test option and pass it to build-native.sh
-__args="$(echo $@ | sed 's/--test//g')"
+__args="$(echo $@ | sed 's/--test//g;s/--clang[0-9]\.[0-9]//g')"
 
 # build managed components
 "$scriptroot/common/build.sh" $__args
