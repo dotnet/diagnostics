@@ -64,16 +64,12 @@ $ ./test.sh
 
 [//]: # (Begin current test results)
 
-## Daily Builds
+## Build Status
 
-|    | x64 Debug|x64 Release|
-|:--:|:--:|:--:|
-|**Windows**|[![Build Status](https://ci.dot.net/job/dotnet_diagnostics/job/master/job/Windows_NT_Debug/badge/icon)](https://ci.dot.net/job/dotnet_diagnostics/job/master/job/Windows_NT_Debug/)|[![Build Status](https://ci.dot.net/job/dotnet_diagnostics/job/master/job/Windows_NT_Release/badge/icon)](https://ci.dot.net/job/dotnet_diagnostics/job/master/job/Windows_NT_Release/)|
-|**Ubuntu 16.04**|[![Build Status](https://ci.dot.net/job/dotnet_diagnostics/job/master/job/Ubuntu16.04_Debug/badge/icon)](https://ci.dot.net/job/dotnet_diagnostics/job/master/job/Ubuntu16.04_Debug/)|[![Build Status](https://ci.dot.net/job/dotnet_diagnostics/job/master/job/Ubuntu16.04_Release/badge/icon)](https://ci.dot.net/job/dotnet_diagnostics/job/master/job/Ubuntu16.04_Release/)|
-|**CentOS 7**|[![Build Status](https://ci.dot.net/job/dotnet_diagnostics/job/master/job/CentOS7.1_Debug/badge/icon)](https://ci.dot.net/job/dotnet_diagnostics/job/master/job/CentOS7.1_Debug/)|[![Build Status](https://ci.dot.net/job/dotnet_diagnostics/job/master/job/CentOS7.1_Release/badge/icon)](https://ci.dot.net/job/dotnet_diagnostics/job/master/job/CentOS7.1_Release/)|
+[![Build Status](https://dotnet.visualstudio.com/_apis/public/build/definitions/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/72/badge
+)](https://dotnet.visualstudio.com/DotNet-Public/_build/index?definitionId=72&branchName=master)
 
 [//]: # (End current test results)
-
 
 
 ## License
