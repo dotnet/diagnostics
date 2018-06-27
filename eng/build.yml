@@ -8,6 +8,7 @@
 #   enableTelemetry: send telemetry if build is not a PR or CI build
 
 parameters:
+  phaseName: ''
   agentOs: Windows_NT
   buildReason: IndividualCI
   queue: {}
@@ -18,16 +19,16 @@ parameters:
 phases:
 - template: /eng/common/templates/phases/base.yml
   parameters:
+    phaseName: ${{ parameters.phaseName }}
     agentOs: ${{ parameters.agentOs }}
     buildReason: ${{ parameters.buildReason }}
-    phaseName: ${{ parameters.agentOs }}
-    dockerImage: ${{ parameters.dockerImage }}
     enableTelemetry: ${{ parameters.enableTelemetry }}
     phase:
       queue: ${{ parameters.queue }}
-
       variables: 
         _HelixType: build/product
+        _DockerImageName: ${{ parameters.dockerImage }}
+
         ${{ if notIn(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
           _PublishBlobFeedUrl: https://dotnetfeed.blob.core.windows.net/dotnet-tools-internal/index.json
           _TeamName: DotNetCore
@@ -36,49 +37,65 @@ phases:
           _PublishArgs: /p:PB_PublishBlobFeedKey=$(dotnetfeed-storage-access-key-1) 
             /p:PB_PublishBlobFeedUrl=$(_PublishBlobFeedUrl) 
             /p:PB_PublishType=$(_PublishType) 
+
         ${{ if in(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
           _HelixSource: pr/dotnet/arcade/$(Build.SourceBranch)
           _PublishArgs: ''
 
       steps:
-      - ${{ if notIn(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
-        - ${{ if eq(parameters.agentOs, 'Windows_NT') }}:
-          - task: ms-vseng.MicroBuildTasks.30666190-6959-11e5-9f96-f56098202fef.MicroBuildSigningPlugin@1
-            displayName: Install MicroBuild plugin
-            inputs:
-              signType: $(_SignType)
-              zipSources: false
-              esrpSigning: $(_UseEsrpSigning)
-            env:
-              TeamName: $(_TeamName)
-            continueOnError: false
-            condition: and(succeeded(), in(variables._SignType, 'real', 'test'))
-        - task: AzureKeyVault@1
-          inputs:
-            azureSubscription: 'DotNet-Engineering-Services_KeyVault'
-            KeyVaultName: EngKeyVault
-            SecretsFilter: 'dotnetfeed-storage-access-key-1'
-          condition: succeeded()
-
       - ${{ if eq(parameters.agentOs, 'Windows_NT') }}:
-        - script: eng\cibuild.cmd
-            -configuration $(_BuildConfig) 
-            -prepareMachine
+          - ${{ if notIn(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
+            - task: ms-vseng.MicroBuildTasks.30666190-6959-11e5-9f96-f56098202fef.MicroBuildSigningPlugin@1
+              displayName: Install MicroBuild plugin
+              inputs:
+                signType: $(_SignType)
+                zipSources: false
+                esrpSigning: $(_UseEsrpSigning)
+              env:
+                TeamName: $(_TeamName)
+              continueOnError: false
+              condition: and(succeeded(), in(variables._SignType, 'real', 'test'))
+
+            - task: AzureKeyVault@1
+              inputs:
+                azureSubscription: 'DotNet-Engineering-Services_KeyVault'
+                KeyVaultName: EngKeyVault
+                SecretsFilter: 'dotnetfeed-storage-access-key-1'
+              condition: succeeded()
+
+          - script: $(Build.SourcesDirectory)\eng\cibuild.cmd 
+              -configuration $(_BuildConfig) 
+              -architecture $(_BuildArch)
+              -prepareMachine 
+              /p:SignType=$(_SignType)
+            displayName: Build / Test
+            env:
+              OfficialBuildId: $(BUILD.BUILDNUMBER)
+            condition: succeeded()
+
+      - ${{ if eq(parameters.agentOs, 'Linux') }}:
+        - script: $(Build.SourcesDirectory)/eng/docker-cibuild.sh 
+            --docker-image $(_DockerImageName)
+            --source-directory $(Build.SourcesDirectory)
+            --container-name diagnostics-$(Build.BuildId)
+            --restore --build --test
+            --configuration $(_BuildConfig) 
+            --architecture $(_BuildArch)
+            --prepareMachine 
             /p:SignType=$(_SignType)
-            $(_PublishArgs)
-          name: Build_Publish
-          displayName: Build / Publish
+          displayName: Docker Build / Test
           env:
             OfficialBuildId: $(BUILD.BUILDNUMBER)
           condition: succeeded()
-      - ${{ if ne(parameters.agentOs, 'Windows_NT') }}:
-        - script: eng/cibuild.sh
+
+      - ${{ if eq(parameters.agentOs, 'Darwin') }}:
+        - script: $(Build.SourcesDirectory)/eng/cibuild.sh
+            --restore --build --test
             --configuration $(_BuildConfig) 
+            --architecture $(_BuildArch)
             --prepareMachine
             /p:SignType=$(_SignType)
-            $(_PublishArgs)
-          name: Build_Publish
-          displayName: Build / Publish
+          displayName: Build / Test
           env:
             OfficialBuildId: $(BUILD.BUILDNUMBER)
           condition: succeeded()
@@ -92,11 +109,12 @@ phases:
             TargetFolder: '$(Build.StagingDirectory)/BuildLogs'
           continueOnError: true
           condition: succeededOrFailed()
+
         - task: PublishBuildArtifacts@1
           displayName: Publish Logs to VSTS
           inputs:
             PathtoPublish: '$(Build.StagingDirectory)/BuildLogs'
-            ArtifactName: $(_agentOs)_$(Agent.JobName)
+            ArtifactName: $(parameters.agentOs)_$(Agent.JobName)
             PublishLocation: Container
           continueOnError: true
           condition: succeededOrFailed()
