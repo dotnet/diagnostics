@@ -5,7 +5,7 @@ phases:
     agentOs: Windows_NT
     buildReason: Internal
     queue: 
-      name: Hosted VS2017
+      name: DotNet-Build
       demands:
         - agent.os -equals Windows_NT
       parallel: 2
@@ -28,7 +28,7 @@ phases:
     buildReason: Internal
     dockerImage: microsoft/dotnet-buildtools-prereqs:centos-7-d485f41-20173404063424
     queue:
-      name: DotNetCore-Linux
+      name: DotNet-Build
       demands:
         - agent.os -equals Linux
       parallel: 2
@@ -51,7 +51,7 @@ phases:
     buildReason: Internal
     dockerImage: microsoft/dotnet-buildtools-prereqs:ubuntu-14.04-cross-0cd4667-20170319080304
     queue:
-      name: DotNetCore-Linux
+      name: DotNet-Build
       demands:
         - agent.os -equals Linux
       matrix:
@@ -67,7 +67,7 @@ phases:
     agentOs: Darwin
     buildReason: Internal
     queue: 
-      name: Hosted macOS Preview
+      name: DotNet-Build
       demands:
         - agent.os -equals Darwin
       parallel: 2
