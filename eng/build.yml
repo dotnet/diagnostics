@@ -19,27 +19,30 @@ parameters:
 phases:
 - template: /eng/common/templates/phases/base.yml
   parameters:
-    phaseName: ${{ parameters.phaseName }}
     agentOs: ${{ parameters.agentOs }}
     buildReason: ${{ parameters.buildReason }}
+    buildConfig: $(_BuildConfig)
+    phaseName: ${{ parameters.phaseName }}
     enableTelemetry: ${{ parameters.enableTelemetry }}
+    fetchDepth: 5
+    helixType: build/product
+    ${{ if notIn(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
+      helixSource: official/dotnet/arcade/$(Build.SourceBranch)
+    ${{ if in(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
+      helixSource: pr/dotnet/arcade/$(Build.SourceBranch)
     phase:
       queue: ${{ parameters.queue }}
       variables: 
-        _HelixType: build/product
         _DockerImageName: ${{ parameters.dockerImage }}
-
         ${{ if notIn(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
           _PublishBlobFeedUrl: https://dotnetfeed.blob.core.windows.net/dotnet-tools-internal/index.json
           _TeamName: DotNetCore
           _UseEsrpSigning: ${{ parameters.useEsrpSigning }}
-          _HelixSource: official/dotnet/arcade/$(Build.SourceBranch)
+        ${{ if notIn(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
           _PublishArgs: /p:PB_PublishBlobFeedKey=$(dotnetfeed-storage-access-key-1) 
             /p:PB_PublishBlobFeedUrl=$(_PublishBlobFeedUrl) 
             /p:PB_PublishType=$(_PublishType) 
-
         ${{ if in(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
-          _HelixSource: pr/dotnet/arcade/$(Build.SourceBranch)
           _PublishArgs: ''
 
       steps:
@@ -68,6 +71,7 @@ phases:
               -architecture $(_BuildArch)
               -prepareMachine 
               /p:SignType=$(_SignType)
+              $(_PublishArgs)
             displayName: Build / Test
             env:
               OfficialBuildId: $(BUILD.BUILDNUMBER)
@@ -83,6 +87,7 @@ phases:
             --architecture $(_BuildArch)
             --prepareMachine 
             /p:SignType=$(_SignType)
+            $(_PublishArgs)
           displayName: Docker Build / Test
           env:
             OfficialBuildId: $(BUILD.BUILDNUMBER)
@@ -95,6 +100,7 @@ phases:
             --architecture $(_BuildArch)
             --prepareMachine
             /p:SignType=$(_SignType)
+            $(_PublishArgs)
           displayName: Build / Test
           env:
             OfficialBuildId: $(BUILD.BUILDNUMBER)
@@ -114,8 +120,12 @@ phases:
           displayName: Publish Logs to VSTS
           inputs:
             PathtoPublish: '$(Build.StagingDirectory)/BuildLogs'
-            ArtifactName: $(parameters.agentOs)_$(Agent.JobName)
             PublishLocation: Container
+            # Should be able to use a single definition of ArtifactName here instead of conditioned on 
+            # agentOs once variables are available in the template evaluation context.  
+            ${{ if eq(parameters.agentOs, 'Windows_NT') }}:
+              ArtifactName: Windows_NT_$(Agent.JobName)
+            ${{ if ne(parameters.agentOs, 'Windows_NT') }}:
+              ArtifactName: Linux_$(Agent.JobName)
           continueOnError: true
           condition: succeededOrFailed()
-          

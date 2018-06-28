@@ -192,7 +192,7 @@ while :; do
             ;;
 
         # Ignored for a native build
-        --rebuild|--sign|--restore|--pack|--preparemachine)
+        --rebuild|--sign|--restore|--pack|--publish|--preparemachine)
             ;;
 
         --configuration)
