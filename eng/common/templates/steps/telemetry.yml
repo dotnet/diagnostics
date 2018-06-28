@@ -1,6 +1,9 @@
 
 parameters:
   agentOs: Windows_NT
+  helixSource: 'undefined_defaulted_in_telemetry.yml'
+  helixType: 'undefined_defaulted_in_telemetry.yml'
+  buildConfig: ''
   steps: []
 
 steps:
@@ -20,20 +23,21 @@ steps:
         displayName: Send Job Start Telemetry
         env:
           HelixApiAccessToken: $(HelixApiAccessToken)
-          Source: $(_HelixSource)
-          Type: $(_HelixType)
+          Source: ${{ parameters.helixSource }}
+          Type: ${{ parameters.helixType }}
           Build: $(Build.BuildNumber)
-          QueueId: $(Agent.OS)
+          QueueId: ${{ parameters.agentOs }}
           Attempt: 1
-          OperatingSystem: $(Agent.OS)
-          Configuration: $(_BuildConfig)
+          OperatingSystem: ${{ parameters.agentOs }}
+          Configuration: ${{ parameters.buildConfig }}
         condition: always()
       - bash: |
           /bin/bash ./telemetry/build/start.sh --build-uri "$BuildUri"
         workingDirectory: $(Build.SourcesDirectory)/eng/common
         displayName: Send Build Start Telemetry
         env:
-          BuildUri: https://devdiv.visualstudio.com/DevDiv/_build/index?buildId=$(Build.BuildId)&_a=summary
+          BuildUri: $(System.TaskDefinitionsUri)$(System.TeamProject)/_build/index?buildId=$(Build.BuildId)&_a=summary
+          # defined via VSTS variables in start-job.sh
           Helix_JobToken: $(Helix_JobToken)
         condition: always()
 
@@ -44,6 +48,7 @@ steps:
         workingDirectory: $(Build.SourcesDirectory)/eng/common
         displayName: Send Build End Telemetry
         env:
+          # defined via VSTS variables in start-job.sh
           Helix_JobToken: $(Helix_JobToken)
           Helix_WorkItemId: $(Helix_WorkItemId)
         condition: always()
@@ -66,13 +71,13 @@ steps:
         displayName: Send Job Start Telemetry
         env:
           HelixApiAccessToken: $(HelixApiAccessToken)
-          Source: $(HelixSource)
-          Type: $(HelixType)
+          Source: ${{ parameters.helixSource }}
+          Type: ${{ parameters.helixType }}
           Build: $(Build.BuildNumber)
-          QueueId: $(Agent.OS)
+          QueueId: ${{ parameters.agentOs }}
           Attempt: 1
-          OperatingSystem: $(Agent.OS)
-          Configuration: $(_BuildConfig)
+          OperatingSystem: ${{ parameters.agentOs }}
+          Configuration: ${{ parameters.buildConfig }}
         condition: always()
       - powershell: |
           ./telemetry/build/start.ps1 -BuildUri $env:BuildUri
@@ -82,7 +87,8 @@ steps:
         workingDirectory: $(Build.SourcesDirectory)/eng/common
         displayName: Send Build Start Telemetry
         env:
-          BuildUri: https://devdiv.visualstudio.com/DevDiv/_build/index?buildId=$(Build.BuildId)&_a=summary
+          BuildUri: $(System.TaskDefinitionsUri)$(System.TeamProject)/_build/index?buildId=$(Build.BuildId)&_a=summary
+          # defined via VSTS variables in start-job.ps1
           Helix_JobToken: $(Helix_JobToken)
         condition: always()
 
@@ -96,6 +102,7 @@ steps:
         workingDirectory: $(Build.SourcesDirectory)/eng/common
         displayName: Send Build End Telemetry
         env:
+          # defined via VSTS variables in start-job.ps1
           Helix_JobToken: $(Helix_JobToken)
           Helix_WorkItemId: $(Helix_WorkItemId)
         condition: always()
