@@ -26,6 +26,7 @@ ci=false
 
 projects=''
 configuration='Debug'
+architecture='<auto>'
 prepare_machine=false
 verbosity='minimal'
 properties=''
