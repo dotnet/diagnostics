@@ -17,7 +17,7 @@ done
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
 
 # remove the options that build.sh can't handle and pass it to build-native.sh
-__args="$(echo $@ | sed 's/--test//g;s/--clang[0-9]\.[0-9]//g;s/--fixdockerimage//g')"
+__args="$(echo $@ | sed 's/--test//g;s/--clang[0-9]\.[0-9]//g')"
 
 # build managed components
 "$scriptroot/common/build.sh" $__args
@@ -27,3 +27,6 @@ fi
 
 # build native components and test both
 "$scriptroot/build-native.sh" $@
+if [[ $? != 0 ]]; then
+    exit 1
+fi

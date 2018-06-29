@@ -396,16 +396,6 @@ public:
         return m_lldbservices->GetThreadIdBySystemId(sysId, threadId);
     }
 
-    HRESULT 
-    GetThreadContextById(
-        /* in */ ULONG32 threadID,
-        /* in */ ULONG32 contextFlags,
-        /* in */ ULONG32 contextSize,
-        /* out */ PBYTE context)
-    {
-        return m_lldbservices->GetThreadContextById(threadID, contextFlags, contextSize, context);
-    }
-
     //----------------------------------------------------------------------------
     // IDebugRegisters
     //----------------------------------------------------------------------------

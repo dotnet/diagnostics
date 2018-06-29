@@ -64,7 +64,11 @@ $docker_bin exec $docker_id su -c "echo '%container_SUDO_user ALL=(ALL:ALL) NOPA
 
 echo "Execute cibuild.sh $args"
 $docker_bin exec --workdir=$source_directory --user $container_user_name $docker_id $source_directory/eng/cibuild.sh $args
+lasterrorcode=$?
 
 echo "Cleanup Docker Container/Network"
 $docker_bin container stop $docker_id
 $docker_bin network rm vsts_network_$docker_container_name
+
+exit $lasterrorcode
+

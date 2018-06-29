@@ -36,7 +36,7 @@ To build under Windows, run build.cmd from the root of the repository:
 [Lots of build spew]
 
 BUILD: Repo sucessfully built.
-BUILD: Product binaries are available at c:\git\diagnostics\artifacts\bin\Windows_NT.x64.Debug	
+BUILD: Product binaries are available at c:\git\diagnostics\artifacts\Debug\bin\Windows_NT.x64
 ```
 
 To build under Linux, MacOS, FreeBSD, or NetBSD, run build.sh from the root of the repository:
@@ -47,7 +47,7 @@ $ ./build.sh
 [Lots of build spew]
 
 BUILD: Repo sucessfully built.
-BUILD: Product binaries are available at /home/mikem/diagnostics/artifacts/bin/Linux.x64.Debug
+BUILD: Product binaries are available at /home/mikem/diagnostics/artifacts/Debug/bin/Linux.x64
 ```
 
 To test the resulting SOS (and plugin if xplat):

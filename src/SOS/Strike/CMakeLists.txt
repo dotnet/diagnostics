@@ -47,6 +47,7 @@ if(WIN32)
 
   set(SOS_SOURCES
     disasm.cpp
+    datatarget.cpp
     dllsext.cpp
     eeheap.cpp
     EventCallbacks.cpp

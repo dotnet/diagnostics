@@ -1,0 +1,69 @@
+<!--
+  The xunit tests in Debugger.Tests aren't truly unit tests - they depend on other stuff that may
+  not be in the same directory. This file configures the tests to find what they need. At the moment
+  this file is generated in a hardcoded way to support running from the bin directory on our git 
+  based build, but once we understand the different environments the tests will need to run in we
+  can figure out the right build and deployment strategy for each. Hopefully this configuration offers
+  enough flexibility that the tests themselves don't need to change.
+-->
+
+<Configuration>
+  <Import ConfigFile="Debugger.Tests.Common.txt" />
+
+  <RepoRootDir>..\..\..\..\..</RepoRootDir>
+  <ScriptRootDir>$(RepoRootDir)\src\SOS\SOS.UnitTests\Scripts</ScriptRootDir>
+  <RootBinDir>$(RepoRootDir)\artifacts</RootBinDir>
+
+  <InstallDir>$(RootBinDir)\$(TargetConfiguration)\bin\Windows_NT.$(TargetArchitecture)</InstallDir>
+  <LogDir>$(RootBinDir)\$(TargetConfiguration)\TestResults\sos.unittests_$(Timestamp)</LogDir>
+  <DumpDir>$(RootBinDir)\$(TargetConfiguration)\tmp\dumps</DumpDir>
+  <CDBPath>$(NuGetPackageCacheDir)\cdb-sos\1.1.0\runtimes\win-$(TargetArchitecture)\native\cdb.exe</CDBPath>
+  
+  <DebuggeeSourceRoot>$(RepoRootDir)\src\SOS\SOS.UnitTests\Debuggees</DebuggeeSourceRoot>
+  <DebuggeeRootDir>$(RootBinDir)\Debuggees</DebuggeeRootDir>
+  <DebuggeeBuildRoot>$(DebuggeeRootDir)</DebuggeeBuildRoot>
+  <DebuggeeNativeLibRoot>$(DebuggeeBuildRoot)\native</DebuggeeNativeLibRoot>
+  <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
+
+  <BuildProjectMicrosoftNetCoreAppVersion>2.1.0</BuildProjectMicrosoftNetCoreAppVersion>
+  <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
+  <CliPath>$(RepoRootDir)\.dotnet\dotnet.exe</CliPath>
+
+  <NuGetPackageFeeds>
+      myget.org dotnet-core=https://dotnet.myget.org/F/dotnet-core/api/v3/index.json;
+      nuget.org=https://www.nuget.org/api/v2/
+  </NuGetPackageFeeds>
+
+  <Options>
+    <Option>
+      <TestProduct>ProjectK</TestProduct>
+      <!--
+      <CliVersion>2.0.0</CliVersion>
+      <CliPath>https://dotnetcli.blob.core.windows.net/dotnet/Sdk/$(CliVersion)/dotnet-sdk-$(CliVersion)-win-$(TargetArchitecture).zip</CliPath>
+      <CliCacheRoot>$(RootBinDir)\dotnet</CliCacheRoot>
+
+      <BuildProjectMicrosoftNetCoreAppVersion>2.0.0</BuildProjectMicrosoftNetCoreAppVersion>
+      <BuildProjectFramework>netcoreapp2.0</BuildProjectFramework>
+      <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
+
+      <HostExe>$(CliCacheRoot)\dotnet.exe</HostExe>
+      <RuntimeSymbolsPath>$(CliCacheRoot)\shared\Microsoft.NETCore.App\$(BuildProjectMicrosoftNetCoreAppVersion)</RuntimeSymbolsPath>
+      -->
+      <HostExe>$(RepoRootDir)\.dotnet\dotnet.exe</HostExe>
+      <RuntimeSymbolsPath>$(RepoRootDir)\.dotnet\shared\Microsoft.NETCore.App\$(BuildProjectMicrosoftNetCoreAppVersion)</RuntimeSymbolsPath>
+      <SOSPath>$(InstallDir)\sos.dll</SOSPath>
+    </Option>
+    <!--
+    <Option Condition="$(TargetArchitecture) != arm64">
+      <TestProduct>Desktop</TestProduct>
+      <FrameworkDirPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</FrameworkDirPath>
+      <FrameworkDirPath Condition="$(TargetArchitecture) != x64">$(WinDir)\Microsoft.Net\Framework\v4.0.30319\</FrameworkDirPath>
+      <RuntimeSymbolsPath>$(FrameworkDirPath)</RuntimeSymbolsPath>
+      <SOSPath>$(FrameworkDirPath)\sos.dll</SOSPath>
+    </Option>
+    -->
+  </Options>
+
+  <DebuggeeDumpOutputRootDir>$(DumpDir)\$(TestProduct)</DebuggeeDumpOutputRootDir>
+  <DebuggeeDumpInputRootDir>$(DebuggeeDumpOutputRootDir)</DebuggeeDumpInputRootDir>
+</Configuration>

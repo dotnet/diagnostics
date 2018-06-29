@@ -38,3 +38,6 @@ if [ "$__osname" == "Linux" ]; then
 fi
 
 "$scriptroot/build.sh" --ci $@
+if [[ $? != 0 ]]; then
+    exit 1
+fi

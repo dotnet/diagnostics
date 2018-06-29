@@ -1,0 +1,76 @@
+# Overflow debugging scenario
+# 1) load the executable
+# 2) load sos
+# 3) run to the exception
+# We are only verifying the main PrintException fields and for the stacktrace, source lines in the program.
+
+LOADSOS
+
+IFDEF:LIVE
+CONTINUE
+ENDIF:LIVE
+
+# 4) Verifying that !pe gives us the right exception in the format above.
+SOSCOMMAND:PrintException
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.InvalidOperationException\s+
+VERIFY:Message:\s+(<Invalid Object>|Invalid operation exception, outer)\s+
+VERIFY:InnerException:\s+System\.FormatException, Use !PrintException <HEXVAL> to see more.\s+
+VERIFY:StackTrace \(generated\):\s+
+VERIFY:\s+SP\s+IP\s+\s+Function\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Nn]ested[Ee]xception[Tt]est.*!NestedExceptionTest\.Program\.Main(\(.*\))?\+0x<HEXVAL>\s+
+VERIFY:(StackTraceString: <none>\s+)?\s+
+VERIFY:HResult:\s+80131509\s+
+VERIFY:There are nested exceptions on this thread. Run with -nested for details\s+
+
+# 5) Verifying that -nested gives us more info.
+SOSCOMMAND:PrintException -nested
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.InvalidOperationException\s+
+VERIFY:Message:\s+(<Invalid Object>|Invalid operation exception, outer)\s+
+VERIFY:InnerException:\s+System\.FormatException, Use !PrintException <HEXVAL> to see more.\s+
+VERIFY:StackTrace \(generated\):\s+
+VERIFY:\s+SP\s+IP\s+Function\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Nn]ested[Ee]xception[Tt]est.*!NestedExceptionTest\.Program\.Main(\(.*\))?\+0x<HEXVAL>\s+
+VERIFY:(StackTraceString: <none>\s+)?\s+
+VERIFY:HResult:\s+80131509\s+
+VERIFY:Nested exception\s+[\-]+\s+
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.FormatException\s+
+VERIFY:Message:\s+(<Invalid Object>|Bad format exception, inner)\s+
+VERIFY:InnerException:\s+<none>\s+
+VERIFY:StackTrace \(generated\):\s+
+VERIFY:\s+SP\s+IP\s+Function\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Nn]ested[Ee]xception[Tt]est.*!NestedExceptionTest\.Program\.Main(\(.*\))?\+0x<HEXVAL>\s+
+VERIFY:(StackTraceString: <none>\s+)?
+VERIFY:HResult:\s+80131537
+
+# 6) Verifying that the Exception Object/ID gives us the same output about the reflected exception.
+SOSCOMMAND:PrintException <POUT>InnerException:\s+System\.FormatException, Use !PrintException (<HEXVAL>) to see more<POUT>
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.FormatException\s+
+VERIFY:Message:\s+(<Invalid Object>|Bad format exception, inner)\s+
+VERIFY:InnerException:\s+<none>\s+
+VERIFY:StackTrace \(generated\):
+VERIFY:\s+SP\s+IP\s+Function\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Nn]ested[Ee]xception[Tt]est.*!NestedExceptionTest\.Program\.Main(\(.*\))?\+0x<HEXVAL>\s+
+VERIFY:(StackTraceString: <none>\s+)?
+VERIFY:HResult:\s+80131537\s+
+VERIFY:There are nested exceptions on this thread. Run with -nested for details
+
+# 7) Verifying that there is source file and line number info
+SOSCOMMAND:PrintException -lines
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.InvalidOperationException\s+
+VERIFY:Message:\s+(<Invalid Object>|Invalid operation exception, outer)\s+
+VERIFY:InnerException:\s+System\.FormatException, Use !PrintException <HEXVAL> to see more.\s+
+VERIFY:StackTrace \(generated\):
+VERIFY:\s+SP\s+IP\s+Function\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Nn]ested[Ee]xception[Tt]est.*!NestedExceptionTest\.Program\.Main(\(.*\))?\+0x<HEXVAL>\s*
+# Desktop sos has a bug that prevents the line number/source file info from being printed. Fixed in ProjectK.
+IFDEF:PROJECTK
+VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ 8\s*\]\s*
+ENDIF:PROJECTK
+VERIFY:(StackTraceString: <none>\s+)?
+VERIFY:HResult:\s+80131509\s+
+VERIFY:There are nested exceptions on this thread. Run with -nested for details

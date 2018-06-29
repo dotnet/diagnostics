@@ -1,0 +1,34 @@
+﻿<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
+<Project Sdk="RoslynTools.RepoToolset">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <NoWarn>;1591;1701</NoWarn>
+    <DefineConstants>$(DefineConstants);CORE_CLR</DefineConstants>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <Compile Remove="Debuggees\**" />
+    <EmbeddedResource Remove="Debuggees\**" />
+    <None Remove="Debuggees\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="ConfigFiles\Windows\Debugger.Tests.Config.txt" Condition="'$(OS)' == 'Windows_NT'">
+      <Link>Debugger.Tests.Config.txt</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ConfigFiles\Unix\Debugger.Tests.Config.txt" Condition="$(OS) == 'Unix'">
+      <Link>Debugger.Tests.Config.txt</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ConfigFiles\$(Configuration)\Debugger.Tests.Common.txt">
+      <Link>Debugger.Tests.Common.txt</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.Diagnostic.TestHelpers\Microsoft.Diagnostic.TestHelpers.csproj" />
+    <PackageReference Include="cdb-sos" Version="1.1.0" Condition="'$(OS)' == 'Windows_NT'" />
+  </ItemGroup>
+</Project>

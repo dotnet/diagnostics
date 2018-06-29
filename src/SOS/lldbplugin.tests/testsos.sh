@@ -2,9 +2,9 @@
 __ProjectRoot="$1"
 __Plugin="$2"
 __ManagedBinDir="$3"
-__LogFileDir="$4"
+__ResultsDir="$4"
 
-if [[ "$__ProjectRoot" = "" || "$__Plugin" = "" || "$__ManagedBinDir" = "" || "$__LogFileDir" = "" ]]; then
+if [[ "$__ProjectRoot" = "" || "$__Plugin" = "" || "$__ManagedBinDir" = "" || "$__ResultsDir" = "" ]]; then
     echo "Project root, plugin or log directory required"
     exit 1
 fi
@@ -23,12 +23,10 @@ if [[ ! -x "$LLDB_PATH" ]]; then
     exit 1
 fi
 
-cd $__ProjectRoot/src/SOS/tests/
+__LogFileDir=$__ResultsDir/lldbplugin.tests_$(date +%Y_%m_%d_%H_%M_%S)
+mkdir -p $__LogFileDir
+
+cd $__ProjectRoot/src/SOS/lldbplugin.tests/
 rm -f StressLog.txt
-python $__ProjectRoot/src/SOS/tests/test_libsosplugin.py --lldb $LLDB_PATH --host $__Host --plugin $__Plugin --logfiledir $__LogFileDir --assembly $__TestProgram
-if [ $? != 0 ]; then
-    cat $__LogFileDir/*.log
-    echo "LLDB python tests FAILED"
-    exit 1
-fi
-echo "LLDB python tests PASSED"
+python $__ProjectRoot/src/SOS/lldbplugin.tests/test_libsosplugin.py --lldb $LLDB_PATH --host $__Host --plugin $__Plugin --logfiledir $__LogFileDir --assembly $__TestProgram
+

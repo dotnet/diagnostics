@@ -17,7 +17,6 @@
 //
 // globals
 //
-EXT_API_VERSION         ApiVersion = { (VER_PRODUCTVERSION_W >> 8), (VER_PRODUCTVERSION_W & 0xff), EXT_API_VERSION_NUMBER64, 0 };
 WINDBG_EXTENSION_APIS   ExtensionApis;
 
 ULONG PageSize;
@@ -201,7 +200,7 @@ DebugExtensionInitialize(PULONG Version, PULONG Flags)
     PDEBUG_CONTROL DebugControl;
     HRESULT Hr;
 
-    *Version = DEBUG_EXTENSION_VERSION(1, 0);
+    *Version = DEBUG_EXTENSION_VERSION(2, 0);
     *Flags = 0;
 
     if (g_Initialized)

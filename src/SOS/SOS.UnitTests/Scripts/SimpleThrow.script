@@ -1,0 +1,59 @@
+# PrintException debugging scenario
+# 1) load the executable
+# 2) Run the executable and wait for it to crash
+# 3) Take a dump of the executable. (MUST BE AT SECOND CHANCE EXCEPTION!)
+# 4) Open the dump and compare the output
+# [EXPECTED OUTPUT (DESKTOP)]
+# Exception object: <HEXVAL>
+# Exception type:   System.InvalidOperationException
+# Message:          <Invalid Object>
+# InnerException:   <none>
+# StackTrace (generated):
+#    SP               IP               Function
+#    <HEXVAL> <HEXVAL> SimpleThrow!UserObject.UseObject(System.String)+0xc8
+#    <HEXVAL> <HEXVAL> SimpleThrow!Simple.Main()+0x9f
+# StackTraceString: <none>
+# HResult: 80131509
+
+# [EXPECTED OUTPUT (PROJECTN)]
+# Exception type:   System.InvalidOperationException
+# Message:          <Invalid Object>
+# InnerException:   <none>
+# StackTrace (generated):
+#    IP               Function
+#    <HEXVAL> SimpleThrow_<HEXVAL>!$0_UserObject.UseObject+0x8a
+#    <HEXVAL> SimpleThrow_<HEXVAL>!$0_Simple.Main+0x66
+#    <HEXVAL> SimpleThrow_<HEXVAL>!$0_Simple.{ILT$Main}+0xd
+#    <HEXVAL> SimpleThrow_<HEXVAL>!RHBinder__ShimExeMain+0x20
+# HResult: 80131509
+
+LOADSOS
+
+IFDEF:LIVE
+CONTINUE
+ENDIF:LIVE
+
+# B) Verifying that !pe gives us the right exception in the format above.
+# For desktop, it has an SP, so we conditionally will match it.  (ProjectN does not though.)
+SOSCOMMAND:PrintException
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.InvalidOperationException\s+
+VERIFY:Message:\s+(<Invalid Object>|Throwing an invalid operation\.\.\.\.)\s+
+VERIFY:InnerException:\s+<none>\s+
+VERIFY:StackTrace\s+\(generated\):\s+
+VERIFY:\s+SP\s+IP\s+Function\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Ss]imple[Tt]hrow.*!(\$0_)?UserObject\.UseObject.*\+0x<HEXVAL>\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Ss]imple[Tt]hrow.*!(\$0_)?Simple\.Main.*\+0x<HEXVAL>\s+
+VERIFY:HResult:\s+80131509
+
+# C) Verifying that -nested gives us the same output
+SOSCOMMAND:PrintException -nested
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.InvalidOperationException\s+
+VERIFY:Message:\s+(<Invalid Object>|Throwing an invalid operation\.\.\.\.)\s+
+VERIFY:InnerException:\s+<none>\s+
+VERIFY:StackTrace\s+\(generated\):\s+
+VERIFY:\s+SP\s+IP\s+Function\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Ss]imple[Tt]hrow.*!(\$0_)?UserObject\.UseObject.*\+0x<HEXVAL>\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Ss]imple[Tt]hrow.*!(\$0_)?Simple\.Main.*\+0x<HEXVAL>\s+
+VERIFY:HResult:\s+80131509
