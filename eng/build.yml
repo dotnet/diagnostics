@@ -126,6 +126,6 @@ phases:
             ${{ if eq(parameters.agentOs, 'Windows_NT') }}:
               ArtifactName: Windows_NT_$(Agent.JobName)
             ${{ if ne(parameters.agentOs, 'Windows_NT') }}:
-              ArtifactName: Linux_$(Agent.JobName)
+              ArtifactName: Linux_$(parameters.phaseName)_$(Agent.JobName)
           continueOnError: true
           condition: succeededOrFailed()
