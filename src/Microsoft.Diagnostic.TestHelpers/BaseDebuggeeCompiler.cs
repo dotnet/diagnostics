@@ -169,9 +169,10 @@ namespace Microsoft.Diagnostic.TestHelpers
             return Path.Combine(debuggeeBinaryDirPath, debuggeeName + ".exe");
         }
 
-        protected static string GetLogPath(TestConfiguration config, string debuggeeName)
+        protected static string GetLogPath(TestConfiguration config, string framework, string runtime, string debuggeeName)
         {
-            return Path.Combine(GetDotNetRootBuildDirPath(config), debuggeeName + ".txt");
+            string version = config.BuildProjectMicrosoftNetCoreAppVersion;
+            return Path.Combine(GetDotNetRootBuildDirPath(config), $"{framework}-{runtime ?? "any"}-{debuggeeName}.txt");
         }
 
         protected static Dictionary<string, string> GetNugetFeeds(TestConfiguration config)

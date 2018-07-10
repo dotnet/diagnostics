@@ -69,22 +69,20 @@ HistClear
 COMMAND: faq.
 >> Where can I get the right version of SOS for my build?
 
-If you are running version 1.1 or 2.0 of the CLR, SOS.DLL is installed in the 
-same directory as the main CLR dll (CLR.DLL). Newer versions of the 
-Windows Debugger provide a command to make it easy to load the right copy of 
-SOS.DLL:
+SOS.dll is installed in the same directory as the main .NET Core binaries (coreclr.dll). Newer
+versions of the Windows Debugger provide a command to make it easy to load the right copy of 
+SOS.dll:
 
-    ".loadby sos clr"
+    ".loadby sos coreclr"
 
-That will load the SOS extension DLL from the same place that CLR.DLL is 
-loaded in the process. You shouldn't attempt to use a version of SOS.DLL that 
-doesn't match the version of CLR.DLL. You can find the version of 
-CLR.DLL by running 
+That will load the SOS extension DLL from the same place that coreclr.dll is 
+loaded in the process. You shouldn't attempt to use a version of sos.dll that 
+doesn't match the version of coreclr.dll. You can find the version of 
+coreclr.dll by running 
 
-    "lmvm clr"
+    "lmvm coreclr"
 
-in the debugger.  Note that if you are running CoreCLR (e.g. Silverlight)
-then you should replace "clr" with "coreclr".
+in the debugger. 
 
 If you are using a dump file created on another machine, it is a little bit
 more complex. You need to make sure the mscordacwks.dll file that came with
@@ -96,8 +94,8 @@ that the Windows Debugger can load. If you have the correct symbol path to the
 binaries for that version of the Runtime, the Windows Debugger will load the
 correct mscordacwks.dll file.
 
->> I have a chicken and egg problem. I want to use SOS commands, but the CLR
-   isn't loaded yet. What can I do?
+>> I have a chicken and egg problem. I want to use SOS commands, but the coreclr
+isn't loaded yet. What can I do?
 
 In the debugger at startup you can type:
 
@@ -114,13 +112,13 @@ type:
 
 >> I got the following error message. Now what?
 
-	0:000> .loadby sos clr
+	0:000> .loadby sos coreclr
 	0:000> !DumpStackObjects
-	Failed to find runtime DLL (clr.dll), 0x80004005
-	Extension commands need clr.dll in order to have something to do.
+	Failed to find runtime DLL (coreclr.dll), 0x80004005
+	Extension commands need coreclr.dll in order to have something to do.
 	0:000>
 
-This means that the CLR is not loaded yet, or has been unloaded. You need to 
+This means that the coreclr is not loaded yet, or has been unloaded. You need to 
 wait until your managed program is running in order to use these commands. If 
 you have just started the program a good way to do this is to type 
 
@@ -1211,7 +1209,7 @@ method of my application. How can I do this?"
   1) If you know the full path to SOS, use this command and skip to step 6
        .load <the full path to sos.dll>
 
-  2) If you don't know the full path to sos, its usually next to clr.dll
+  2) If you don't know the full path to sos, its usually next to coreclr.dll
      You can wait for clr to load and then find it.
      Start the debugger and type: 
        sxe -c "" clrn
@@ -1639,7 +1637,7 @@ garbage collector. The most apparent difference in the debugger is that in
 "Server" mode there is one dedicated garbage collector thread per CPU.
 
 A handy supplement to this function is to also run "lm v m clr". That 
-will provide more details about the CLR, including where clr.dll is 
+will provide more details about the CLR, including where coreclr.dll is 
 loaded from.
 \\
 
@@ -2316,7 +2314,7 @@ The base address of an image can be found with the "LM" debugger command:
 	5d1d0000 5e13c000   clr     (deferred)
 	...
 
-If I wanted to save a copy of clr.dll, I could run:
+If I wanted to save a copy of coreclr.dll, I could run:
 
 	0:000> !SaveModule 5d1d0000 c:\pub\out.tmp
 	4 sections in file

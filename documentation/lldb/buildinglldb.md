@@ -46,7 +46,7 @@ Building LLDB
    There may be more prerequisites required, when building the cmake files it should let
    you know if there are any I missed.
 
-   See http://lldb.llvm.org/build.html for more details on these preliminaries.
+   See [http://lldb.llvm.org/build.html](http://lldb.llvm.org/build.html) for more details on these preliminaries.
 
 4. If building on OSX, carefully following the signing directions (before you build) 
    here: $HOME/llvm/tools/lldb/docs/code-signing.txt. Even though those build directions
@@ -87,3 +87,4 @@ Building LLDB
    export LLDB_DEBUGSERVER_PATH=$HOME/build/release/bin/debugserver
    ```
    It also seems to be necessary to run lldb as superuser e.g. `sudo -E $HOME/build/release/bin/lldb` (the -E is necessary so the above debug server environment variable is passed) if using a remote ssh, but it isn't necessary if run it in a local terminal session.
+

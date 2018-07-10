@@ -23,9 +23,6 @@
   <DebuggeeBuildRoot>$(DebuggeeRootDir)</DebuggeeBuildRoot>
   <DebuggeeNativeLibRoot>$(DebuggeeBuildRoot)/native</DebuggeeNativeLibRoot>
   <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-
-  <BuildProjectMicrosoftNetCoreAppVersion>2.1.0</BuildProjectMicrosoftNetCoreAppVersion>
-  <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
   <CliPath>$(RepoRootDir)/.dotnet/dotnet</CliPath>
 
   <NuGetPackageFeeds>
@@ -33,22 +30,25 @@
       nuget.org=https://www.nuget.org/api/v2/
   </NuGetPackageFeeds>
 
-  <!--
-  <CliVersion>2.0.0</CliVersion>
-  <CliPath Condition="$(OS) == Linux">https://dotnetcli.blob.core.windows.net/dotnet/Sdk/$(CliVersion)/dotnet-sdk-$(CliVersion)-linux-$(TargetArchitecture).tar.gz</CliPath>
-  <CliPath Condition="$(OS) == OSX">https://dotnetcli.blob.core.windows.net/dotnet/Sdk/$(CliVersion)/dotnet-sdk-$(CliVersion)-osx-$(TargetArchitecture).tar.gz</CliPath>
-  <CliCacheRoot>$(RootBinDir)/dotnet</CliCacheRoot>
-
-  <BuildProjectMicrosoftNetCoreAppVersion>2.0.0</BuildProjectMicrosoftNetCoreAppVersion>
-  <BuildProjectFramework>netcoreapp2.0</BuildProjectFramework>
-  <BuildProjectRuntime Condition="$(OS) == Linux">linux-$(TargetArchitecture)</BuildProjectRuntime>
-  <BuildProjectRuntime Condition="$(OS) == OSX">osx-$(TargetArchitecture)</BuildProjectRuntime>
-
-  <HostExe>$(CliCacheRoot)/dotnet</HostExe>
-  <RuntimeSymbolsPath>$(CliCacheRoot)/shared/Microsoft.NETCore.App/$(BuildProjectMicrosoftNetCoreAppVersion)</RuntimeSymbolsPath>
-  -->
+  <Options>
+    <Option>
+      <BuildProjectMicrosoftNetCoreAppVersion>2.1.0</BuildProjectMicrosoftNetCoreAppVersion>
+      <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
+    </Option>
+    <Option>
+      <BuildProjectMicrosoftNetCoreAppVersion>2.0.9</BuildProjectMicrosoftNetCoreAppVersion>
+      <BuildProjectFramework>netcoreapp2.0</BuildProjectFramework>
+    </Option>
+    <Option>
+      <BuildProjectMicrosoftNetCoreAppVersion>1.1.9</BuildProjectMicrosoftNetCoreAppVersion>
+      <BuildProjectFramework>netcoreapp1.1</BuildProjectFramework>
+      <!-- SOS needs at least 2.0 to run. The default without this is to use the runtime being debuggged to host SOS.NETCore -->
+      <SOSHostRuntime>$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/2.0.9</SOSHostRuntime>
+    </Option>
+  </Options>
 
   <HostExe>$(RepoRootDir)/.dotnet/dotnet</HostExe>
+  <HostArgs>--fx-version $(BuildProjectMicrosoftNetCoreAppVersion)</HostArgs>
   <RuntimeSymbolsPath>$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/$(BuildProjectMicrosoftNetCoreAppVersion)</RuntimeSymbolsPath>
   <LLDBHelperScript>$(ScriptRootDir)/lldbhelper.py</LLDBHelperScript>
 

@@ -308,7 +308,7 @@ build_native()
 
     pushd "$intermediatesForBuild"
     echo "Invoking \"$__ProjectRoot/eng/gen-buildsys-clang.sh\" \"$__ProjectRoot\" $__ClangMajorVersion $__ClangMinorVersion $platformArch $__BuildType $generator $extraCmakeArguments $__cmakeargs"
-    "$__ProjectRoot/eng/gen-buildsys-clang.sh" "$__ProjectRoot" $__ClangMajorVersion $__ClangMinorVersion $platformArch $__BuildType $generator "$extraCmakeArguments" "$__cmakeargs" | tee $__LogDir/cmake.log
+    "$__ProjectRoot/eng/gen-buildsys-clang.sh" "$__ProjectRoot" $__ClangMajorVersion $__ClangMinorVersion $platformArch $__BuildType $generator "$extraCmakeArguments" "$__cmakeargs"
     popd
 
     if [ ! -f "$intermediatesForBuild/$buildFile" ]; then
@@ -432,6 +432,9 @@ fi
 
 # Run SOS/lldbplugin tests
 if [ $__Test == 1 ]; then
+    # Install the other versions of .NET Core runtime we are going to test on (2.0.9 and 1.1.9)
+    bash "$__ProjectRoot/.dotnet/dotnet-install.sh" --version 2.0.9 --architecture "$__BuildArch" --skip-non-versioned-files --runtime dotnet --install-dir "$__ProjectRoot/.dotnet"
+    bash "$__ProjectRoot/.dotnet/dotnet-install.sh" --version 1.1.9 --architecture "$__BuildArch" --skip-non-versioned-files --runtime dotnet --install-dir "$__ProjectRoot/.dotnet"
 
     if [ "$LLDB_PATH" = "" ]; then
         export LLDB_PATH="$(which lldb-3.9.1 2> /dev/null)"

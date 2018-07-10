@@ -171,6 +171,10 @@ public class SOS
     public async Task StackAndOtherTests(TestConfiguration config)
     {
         SkipIfArm(config);
+        if (config.BuildProjectMicrosoftNetCoreAppVersion.StartsWith("1.1"))
+        {
+            throw new SkipTestException("The debuggee (SymbolTestApp) doesn't work on .NET Core 1.1");
+        }
         foreach (TestConfiguration currentConfig in TestRunner.EnumeratePdbTypeConfigs(config))
         {
             // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.

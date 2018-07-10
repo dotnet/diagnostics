@@ -1978,7 +1978,6 @@ inline BOOL IsKernelDebugger ()
 
 void    ResetGlobals(void);
 HRESULT LoadClrDebugDll(void);
-extern "C" void UnloadClrDebugDll(void);
 
 extern IMetaDataImport* MDImportForModule (DacpModuleData *pModule);
 extern IMetaDataImport* MDImportForModule (DWORD_PTR pModule);
@@ -3107,13 +3106,9 @@ private:
 // Flags defining activation policy for COM objects
 enum CIOptionsBits 
 {
-    cciLatestFx     = 0x01,     // look in the most recent .NETFx installation
-    cciMatchFx      = 0x02,     // NYI: Look in the .NETFx installation matching the debuggee's runtime
-    cciAnyFx        = 0x04,     // look in any .NETFx installation
-    cciFxMask       = 0x0f,
-    cciDbiColocated = 0x10,     // NYI: Look next to the already loaded DBI module
-    cciDacColocated = 0x20,     // Look next to the already loaded DAC module
-    cciDbgPath      = 0x40,     // Look in all folders in the debuggers symbols and binary path
+    cciDbiColocated = 0x01,     // NYI: Look next to the already loaded DBI module
+    cciDacColocated = 0x02,     // Look next to the already loaded DAC module
+    cciDbgPath      = 0x04,     // Look in all folders in the debuggers symbols and binary path
 };
 
 typedef Flags<DWORD, CIOptionsBits> CIOptions;

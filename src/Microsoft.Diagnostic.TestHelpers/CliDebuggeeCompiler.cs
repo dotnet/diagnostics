@@ -24,6 +24,7 @@ namespace Microsoft.Diagnostic.TestHelpers
         {
             Dictionary<string, string> buildProperties = new Dictionary<string, string>();
             buildProperties.Add("RuntimeFrameworkVersion", config.BuildProjectMicrosoftNetCoreAppVersion);
+            buildProperties.Add("BuildProjectFramework", config.BuildProjectFramework);
             if (runtimeIdentifier != null)
             {
                 buildProperties.Add("RuntimeIdentifier", runtimeIdentifier);
@@ -43,9 +44,9 @@ namespace Microsoft.Diagnostic.TestHelpers
             return config.BuildProjectFramework ?? "netcoreapp2.0";
         }
 
-        protected override string GetDebuggeeBinaryDirPath(string debuggeeProjectDirPath, string framework, string runtimeIdentifier)
+        protected override string GetDebuggeeBinaryDirPath(string debuggeeProjectDirPath, string framework, string runtime)
         {
-            string debuggeeBinaryDirPath = base.GetDebuggeeBinaryDirPath(debuggeeProjectDirPath, framework, runtimeIdentifier);
+            string debuggeeBinaryDirPath = base.GetDebuggeeBinaryDirPath(debuggeeProjectDirPath, framework, runtime);
             debuggeeBinaryDirPath = Path.Combine(debuggeeBinaryDirPath, "publish");
             return debuggeeBinaryDirPath;
         }
@@ -53,13 +54,15 @@ namespace Microsoft.Diagnostic.TestHelpers
         public override DotNetBuildDebuggeeTestStep ConfigureDotNetBuildDebuggeeTask(TestConfiguration config, string dotNetPath, string cliToolsVersion, string debuggeeName)
         {
             string runtimeIdentifier = GetRuntime(config);
+            string framework = GetFramework(config);
             string initialSourceDirPath = GetInitialSourceDirPath(config, debuggeeName);
             string dotNetRootBuildDirPath = GetDotNetRootBuildDirPath(config);
             string debuggeeSolutionDirPath = GetDebuggeeSolutionDirPath(dotNetRootBuildDirPath, debuggeeName);
             string debuggeeProjectDirPath = GetDebuggeeProjectDirPath(debuggeeSolutionDirPath, initialSourceDirPath, debuggeeName);
-            string debuggeeBinaryDirPath = GetDebuggeeBinaryDirPath(debuggeeProjectDirPath, GetFramework(config), runtimeIdentifier);
+            string debuggeeBinaryDirPath = GetDebuggeeBinaryDirPath(debuggeeProjectDirPath, framework, runtimeIdentifier);
             string debuggeeBinaryDllPath = GetDebuggeeBinaryDllPath(debuggeeBinaryDirPath, debuggeeName);
             string debuggeeBinaryExePath = runtimeIdentifier != null ? GetDebuggeeBinaryExePath(debuggeeBinaryDirPath, debuggeeName) : null;
+            string logPath = GetLogPath(config, framework, runtimeIdentifier, debuggeeName);
             return new CsprojBuildDebuggeeTestStep(dotNetPath,
                                                initialSourceDirPath,
                                                GetDebuggeeNativeLibDirPath(config, debuggeeName),
@@ -74,7 +77,7 @@ namespace Microsoft.Diagnostic.TestHelpers
                                                debuggeeBinaryExePath,
                                                config.NuGetPackageCacheDir,
                                                GetNugetFeeds(config),
-                                               GetLogPath(config, debuggeeName));
+                                               logPath);
         }
     }
 }

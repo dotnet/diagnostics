@@ -328,8 +328,13 @@ REM ============================================================================
 echo %__MsgPrefix%Repo successfully built. Finished at %TIME%
 echo %__MsgPrefix%Product binaries are available at !__BinDir!
 
-:: test components
+:: Test components
 if %__Test% EQU 1 (
+    :: Install the other versions of .NET Core runtime we are going to test on (2.0.9 and 1.1.9)
+    powershell -ExecutionPolicy ByPass -command "& """%__ProjectDir%\.dotnet\dotnet-install.ps1""" -Version 2.0.9 -Architecture %__BuildArch% -SkipNonVersionedFiles -Runtime dotnet -InstallDir %__ProjectDir%\.dotnet"
+    powershell -ExecutionPolicy ByPass -command "& """%__ProjectDir%\.dotnet\dotnet-install.ps1""" -Version 1.1.9 -Architecture %__BuildArch% -SkipNonVersionedFiles -Runtime dotnet -InstallDir %__ProjectDir%\.dotnet"
+
+    :: Run the xunit tests
     powershell -ExecutionPolicy ByPass -command "& """%__ProjectDir%\eng\common\Build.ps1""" -test -configuration %__BuildType% -verbosity %__Verbosity% %__TestArgs%"
     exit /b %ERRORLEVEL
 )

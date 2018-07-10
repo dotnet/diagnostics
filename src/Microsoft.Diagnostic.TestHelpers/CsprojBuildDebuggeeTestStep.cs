@@ -70,10 +70,14 @@ namespace Microsoft.Diagnostic.TestHelpers
 
         protected override async Task Restore(ITestOutputHelper output)
         {
-            string extraArgs = null;
+            string extraArgs = "";
             if (RuntimeIdentifier != null)
             {
                 extraArgs = " --runtime " + RuntimeIdentifier;
+            }
+            foreach (var prop in BuildProperties)
+            {
+                extraArgs += $" /p:{prop.Key}={prop.Value}";
             }
             await Restore(extraArgs, output);
         }
@@ -81,6 +85,10 @@ namespace Microsoft.Diagnostic.TestHelpers
         protected override async Task Build(ITestOutputHelper output)
         {
             string publishArgs = "publish";
+            if (RuntimeIdentifier != null)
+            {
+                publishArgs += " --runtime " + RuntimeIdentifier;
+            }
             foreach (var prop in BuildProperties)
             {
                 publishArgs += $" /p:{prop.Key}={prop.Value}";
@@ -90,16 +98,16 @@ namespace Microsoft.Diagnostic.TestHelpers
 
         protected override void ExpandProjectTemplate(string filePath, string destDirPath, ITestOutputHelper output)
         {
-            ConvertCsprojTemplate(filePath, Path.Combine(destDirPath, DebuggeeName + ".csproj"), output);
+            ConvertCsprojTemplate(filePath, Path.Combine(destDirPath, DebuggeeName + ".csproj"));
         }
 
-        private void ConvertCsprojTemplate(string csprojTemplatePath, string csprojOutPath, ITestOutputHelper output)
+        private void ConvertCsprojTemplate(string csprojTemplatePath, string csprojOutPath)
         {
             var xdoc = XDocument.Load(csprojTemplatePath);
             var ns = xdoc.Root.GetDefaultNamespace();
             if (LinkerPackageVersion != null)
             {
-                AddLinkerPackageReference(xdoc, ns, LinkerPackageVersion, output);
+                AddLinkerPackageReference(xdoc, ns, LinkerPackageVersion);
             }
             using (var fs = new FileStream(csprojOutPath, FileMode.Create))
             {
@@ -107,7 +115,7 @@ namespace Microsoft.Diagnostic.TestHelpers
             }
         }
 
-        private static void AddLinkerPackageReference(XDocument xdoc, XNamespace ns, string linkerPackageVersion, ITestOutputHelper output)
+        private static void AddLinkerPackageReference(XDocument xdoc, XNamespace ns, string linkerPackageVersion)
         {
             xdoc.Root.Add(new XElement(ns + "ItemGroup",
                                        new XElement(ns + "PackageReference",
