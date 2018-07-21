@@ -153,24 +153,27 @@ public class SOSRunner : IDisposable
                     }
                     else
                     {
-                        initialCommands.Add($@"target create ""{config.HostExe}""");
+                        var sb = new StringBuilder("settings set -- target.run-args");
                         if (!string.IsNullOrWhiteSpace(config.HostArgs))
                         {
                             string[] args = ReplaceVariables(variables, config.HostArgs).Trim().Split(' ');
                             foreach (string arg in args)
                             {
-                                initialCommands.Add($@"settings append target.run-args ""{arg}""");
+                                sb.AppendFormat(@" ""{0}""", arg);
                             }
                         }
-                        initialCommands.Add($@"settings append target.run-args ""{debuggeeConfig.BinaryExePath}""");
+                        sb.AppendFormat(@" ""{0}""", debuggeeConfig.BinaryExePath);
                         if (!string.IsNullOrWhiteSpace(debuggeeArguments))
                         {
                             string[] args = ReplaceVariables(variables, debuggeeArguments).Trim().Split(' ');
                             foreach (string arg in args)
                             {
-                                initialCommands.Add($@"settings append target.run-args ""{arg}""");
+                                sb.AppendFormat(@" ""{0}""", arg);
                             }
                         }
+                        initialCommands.Add($@"target create ""{config.HostExe}""");
+                        initialCommands.Add(sb.ToString());
+
                         initialCommands.Add("process launch -s");
                         initialCommands.Add("process handle -s false -n false -p true SIGFPE");
                         initialCommands.Add("process handle -s false -n false -p true SIGSEGV");

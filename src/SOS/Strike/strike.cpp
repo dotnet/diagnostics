@@ -2029,17 +2029,24 @@ DECLARE_API(DumpObj)
         return Status;
     }
 
-    Status = PrintObj(p_Object, !bNoFields);
+    try {
+        Status = PrintObj(p_Object, !bNoFields);
     
-    if (SUCCEEDED(Status) && bRefs)
-    {
-        ExtOut("GC Refs:\n");
-        TableOutput out(2, POINTERSIZE_HEX, AlignRight, 4);
-        out.WriteRow("offset", "object");
-        for (sos::RefIterator itr(TO_TADDR(p_Object)); itr; ++itr)
-            out.WriteRow(Hex(itr.GetOffset()), ObjectPtr(*itr));
+        if (SUCCEEDED(Status) && bRefs)
+        {
+            ExtOut("GC Refs:\n");
+            TableOutput out(2, POINTERSIZE_HEX, AlignRight, 4);
+            out.WriteRow("offset", "object");
+            for (sos::RefIterator itr(TO_TADDR(p_Object)); itr; ++itr)
+                out.WriteRow(Hex(itr.GetOffset()), ObjectPtr(*itr));
+        }
     }
-    
+    catch(const sos::Exception &e)
+    {
+        ExtOut("%s\n", e.what());
+        return E_FAIL;
+    }
+
     return Status;
 }
 
