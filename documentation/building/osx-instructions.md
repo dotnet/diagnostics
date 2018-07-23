@@ -6,9 +6,7 @@ These instructions will lead you through preparing to build the diagnostics repo
 Environment
 ===========
 
-These instructions were validated on macOS 10.12. Sierra.
-
-If your machine has Command Line Tools for XCode 6.3 installed, you'll need to update them to the 6.3.1 version or higher in order to successfully build. There was an issue with the headers that shipped with version 6.3 that was subsequently fixed in 6.3.1.
+These instructions were validated on macOS 10.12.6 (Sierra) and Xcode 9.2.
 
 Git Setup
 ---------
@@ -18,7 +16,6 @@ Clone the diagnostics repository (either upstream or a fork).
 ```sh
 $ git clone https://github.com/dotnet/diagnostics
 ```
-
 
 CMake
 -----
@@ -30,3 +27,18 @@ Alternatively, you can install CMake from [Homebrew](http://brew.sh/).
 ```sh
 brew install cmake
 ```
+
+
+Building
+--------
+
+In the root of the diagnostics repo run:
+
+```sh
+./build.sh
+```
+
+This will build SOS, the tests and the SOS plugin (libsosplugin.dylib) for the Xcode (9.2) version of lldb (swift 4.0) on the device.
+
+For later versions of macOS/Xcode/lldb is TBD.
+

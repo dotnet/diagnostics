@@ -9,7 +9,7 @@ if [[ "$__ProjectRoot" = "" || "$__Plugin" = "" || "$__ManagedBinDir" = "" || "$
     exit 1
 fi
 
-__Host=$__ProjectRoot/.dotnet/dotnet
+__Host="$__ProjectRoot/.dotnet/dotnet --fx-version 2.1.0"
 __TestProgram=$__ManagedBinDir/TestDebuggee/netcoreapp2.0/TestDebuggee.dll
 
 # Turn on stress logging so the dumplog and histinit commands pass
@@ -28,5 +28,5 @@ mkdir -p $__LogFileDir
 
 cd $__ProjectRoot/src/SOS/lldbplugin.tests/
 rm -f StressLog.txt
-python $__ProjectRoot/src/SOS/lldbplugin.tests/test_libsosplugin.py --lldb $LLDB_PATH --host $__Host --plugin $__Plugin --logfiledir $__LogFileDir --assembly $__TestProgram
+python $__ProjectRoot/src/SOS/lldbplugin.tests/test_libsosplugin.py --lldb $LLDB_PATH --host "$__Host" --plugin $__Plugin --logfiledir $__LogFileDir --assembly $__TestProgram
 

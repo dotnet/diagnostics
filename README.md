@@ -31,12 +31,18 @@ To install the platform's prerequisites:
 To build under Windows, run build.cmd from the root of the repository:
 
 ```bat
-.\build.cmd 
+> build.cmd 
 
 [Lots of build spew]
 
 BUILD: Repo sucessfully built.
 BUILD: Product binaries are available at c:\git\diagnostics\artifacts\Debug\bin\Windows_NT.x64
+```
+
+To test the resulting SOS:
+
+```bat
+> test.cmd
 ```
 
 To build under Linux, MacOS, FreeBSD, or NetBSD, run build.sh from the root of the repository:
@@ -50,17 +56,40 @@ BUILD: Repo sucessfully built.
 BUILD: Product binaries are available at /home/mikem/diagnostics/artifacts/Debug/bin/Linux.x64
 ```
 
-To test the resulting SOS (and plugin if xplat):
+To test the resulting SOS and plugin:
 
 ```sh
 $ ./test.sh
 ```
 
+## Getting lldb 
+
+Getting a version of lldb that works for your platform can be a problem sometimes. The version has to be at least 3.9 or greater because of a bug running SOS on a core dump that was fixed. Some Linux distros like Ubuntu it is easy as `sudo apt-get install lldb-3.9 python-lldb-3.9`. On other distros, you will need to build lldb. The directions below should give you some guidance.
+
+### [Linux Instructions](documentation/lldb/linux-instructions.md)
+
+### FreeBSD Instructions (10.1)
+ 
+```sh
+% sudo pkg install llvm39 gettext python27
+```
+
+### NetBSD/OpenBSD Instructions
+
+TBD
+
+### macOS (Sierra 10.12.6) Instructions
+
+The version of lldb that comes with Xcode 9.2 will now work with SOS. We no longer have to build lldb locally.
+
+Later versions of macOS/Xcode TBD. 
+
 ## Useful Links
 
-* [dotnet/coreclr](https://github.com/dotnet/coreclr) - Source for the .NET Core runtime.
-
+* [The LLDB Debugger](http://lldb.llvm.org/index.html) - More information about lldb.
 * [Debugging CoreCLR](documentation/debugging-instructions.md) - Instructions for debugging .NET Core and the CoreCLR runtime.
+* [SOS](https://msdn.microsoft.com/en-us/library/bb190764(v=vs.110).aspx) - More information about SOS.
+* [dotnet/coreclr](https://github.com/dotnet/coreclr) - Source for the .NET Core runtime.
 
 [//]: # (Begin current test results)
 

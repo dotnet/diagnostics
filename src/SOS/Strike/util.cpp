@@ -127,26 +127,18 @@ namespace com_activation
                             LPCWSTR  dllName,
                             CIOptions cciOptions,
                             void** ppItf);
-    HRESULT ClrCreateInstance(
-                            REFCLSID clsid, 
-                            REFIID iid, 
-                            LPCWSTR dllName,
-                            CIOptions cciOptions, 
-                            void** ppItf);
+
     HRESULT CreateInstanceFromPath(
                             REFCLSID clsid, 
                             REFIID iid, 
                             LPCWSTR path, 
                             void** ppItf);
+
     BOOL GetPathFromModule(
                             HMODULE hModule, 
                             __in_ecount(cFqPath) LPWSTR fqPath,
                             DWORD  cFqPath);
-    HRESULT PickClrRuntimeInfo(
-                            ICLRMetaHost *pMetaHost,
-                            CIOptions cciOptions,
-                            ICLRRuntimeInfo** ppClr);
-    QWORD VerString2Qword(LPCWSTR vStr);
+
     void CleanupClsidHmodMap();
 
     // Helper structures for defining the CLSID -> HMODULE hash table we
@@ -205,16 +197,6 @@ HRESULT CreateInstanceCustomImpl(
         return E_POINTER;
 
     WCHAR wszClsid[64] = W("<CLSID>");
-
-    // Step 1: Attempt activation using an installed runtime
-    if ((cciOptions & cciFxMask) != 0)
-    {
-        CIOptions opt = cciOptions & cciFxMask;
-        if (SUCCEEDED(ClrCreateInstance(clsid, iid, dllName, opt, ppItf)))
-            return S_OK;
-
-        ExtDbgOut("Failed to instantiate {%ls} from installed .NET framework locations.\n", wszClsid);
-    }
 
     if ((cciOptions & cciDbiColocated) != 0)
     {
@@ -312,104 +294,6 @@ HRESULT CreateInstanceCustomImpl(
 }
 
 
-#ifdef _MSC_VER
-// SOS is essentially single-threaded. ignore "construction of local static object is not thread-safe"
-#pragma warning(push)
-#pragma warning(disable:4640)
-#endif // _MSC_VER
-
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-* ClrCreateInstance() attempts to activate a COM object using an       *
-* installed framework:                                                 *
-*    a. If the debugger machine has a V4+ shell shim use the shim to   *
-*        activate the object                                           *
-*    b. Otherwise simply call CoCreateInstance                         *
-\**********************************************************************/
-HRESULT ClrCreateInstance(
-                        REFCLSID clsid, 
-                        REFIID iid,
-                        LPCWSTR dllName,
-                        CIOptions cciOptions, 
-                        void** ppItf)
-{
-    _ASSERTE((cciOptions & ~cciFxMask) == 0 && (cciOptions & cciFxMask) != 0);
-    HRESULT Status = S_OK;
-
-    static CIOptions prevOpt = 0;
-    static HRESULT   prevHr = S_OK;
-
-    // if we already tried to use NetFx install and failed don't try it again
-    if (prevOpt == cciOptions && FAILED(prevHr))
-    {
-        return prevHr;
-    }
-
-    prevOpt = cciOptions;
-
-    // first try usig the metahost API:
-    HRESULT (__stdcall *pfnCLRCreateInstance)(REFCLSID  clsid, REFIID riid, LPVOID * ppInterface) = NULL;
-    HMODULE hMscoree = NULL;
-
-    // if there's a v4+ shim on the debugger machine
-    if (GetProcAddressT("CLRCreateInstance", W("mscoree.dll"), &pfnCLRCreateInstance, &hMscoree))
-    {
-        // attempt to create an ICLRMetaHost instance
-        ToRelease<ICLRMetaHost> spMH;
-        Status = pfnCLRCreateInstance(CLSID_CLRMetaHost, IID_ICLRMetaHost, (void**)&spMH);
-        if (Status == E_NOTIMPL)
-        {
-            // E_NOTIMPL means we have a v4 aware mscoree but no v4+ framework
-            IfFailGo( CoCreateInstance(clsid, NULL, CLSCTX_INPROC_SERVER, iid, ppItf) );
-        }
-        else
-        {
-            IfFailGo( Status );
-
-            // pick a runtime according to cciOptions
-            ToRelease<ICLRRuntimeInfo> spClr;
-            IfFailGo( PickClrRuntimeInfo(spMH, cciOptions, &spClr) );
-
-            // activate the COM object
-            Status = spClr->GetInterface(clsid, iid, ppItf);
-
-            if (FAILED(Status) && dllName)
-            {
-                // if we have a v4+ runtime that does not have the fix to activate the requested CLSID
-                // try activating with the path
-                WCHAR clrDir[MAX_LONGPATH]; 
-                DWORD cchClrDir = _countof(clrDir);
-                IfFailGo( spClr->GetRuntimeDirectory(clrDir, &cchClrDir) );
-                IfFailGo( wcscat_s(clrDir, dllName) == 0 ? S_OK : E_FAIL  );
-                IfFailGo( CreateInstanceFromPath(clsid, iid, clrDir, ppItf) );
-            }
-        }
-    }
-    else
-    {
-        // otherwise fallback to regular COM activation
-        IfFailGo( CoCreateInstance(clsid, NULL, CLSCTX_INPROC_SERVER, iid, ppItf) );
-    }
-
-Error:
-    if (hMscoree != NULL)
-    {
-        FreeLibrary(hMscoree);
-    }
-
-    // remember if we succeeded or failed
-    prevHr = Status;
-
-    return Status;
-}
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif // _MSC_VER
-
-
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -486,123 +370,6 @@ void CleanupClsidHmodMap()
         delete g_pClsidHmodMap;
         g_pClsidHmodMap = NULL;
     }
-}
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-* PickClrRuntimeInfo() selects on CLR runtime from the ones installed  *
-* on the debugger machine. If cciFxAny is specified in cciOptions it   *
-* simply returns the first runtime enumerated by the metahost          *
-* interface. If cciLatestFx is specified we pick the runtime with the  *
-* highest version (parsing the string returned from                    *
-* ICLRRuntimeInfo::GetVersionString().                                 *
-\**********************************************************************/
-HRESULT PickClrRuntimeInfo(
-                        ICLRMetaHost *pMetaHost,
-                        CIOptions cciOptions,
-                        ICLRRuntimeInfo** ppClr)
-{
-    if (ppClr == NULL)
-        return E_POINTER;
-
-    // only support "Any framework" and "latest framework"
-    if (cciOptions != cciAnyFx && cciOptions != cciLatestFx)
-        return E_INVALIDARG;
-
-    HRESULT Status = S_OK;
-    *ppClr = NULL;
-
-    // get the CLRRuntime enumerator
-    ToRelease<IEnumUnknown> spClrsEnum;
-    IfFailRet(pMetaHost->EnumerateInstalledRuntimes(&spClrsEnum));
-
-    ToRelease<ICLRRuntimeInfo> spChosenClr;
-    QWORD verMax = 0;
-
-    int cntClr = 0;
-    while (1)
-    {
-        // retrieve the next ICLRRuntimeInfo
-        ULONG cnt;
-        ToRelease<IUnknown> spClrUnk;
-        if (spClrsEnum->Next(1, &spClrUnk, &cnt) != S_OK || cnt != 1)
-            break;
-
-        ToRelease<ICLRRuntimeInfo> spClr;
-        BOOL bLoadable = FALSE;
-        // ignore un-loadable runtimes
-        if (FAILED(spClrUnk->QueryInterface(IID_ICLRRuntimeInfo, (void**)&spClr))
-            || FAILED(spClr->IsLoadable(&bLoadable))
-            || !bLoadable)
-        {
-            continue;
-        }
-
-        WCHAR vStr[128];
-        DWORD cStr = _countof(vStr);
-        if (FAILED(spClr->GetVersionString(vStr, &cStr)))
-            continue;
-
-        ++cntClr;
-
-        if ((cciOptions & cciAnyFx) != 0)
-        {
-            spChosenClr = spClr.Detach();
-            break;
-        }
-
-        QWORD ver = VerString2Qword(vStr);
-        if ((cciOptions & cciLatestFx) != 0)
-        {
-            if (ver > verMax)
-            {
-                verMax = ver;
-                spChosenClr = spClr.Detach();
-            }
-        }
-    }
-
-    if (cntClr == 0 || spChosenClr == NULL)
-    {
-        *ppClr = NULL;
-        return E_NOINTERFACE;
-    }
-    else
-    {
-        *ppClr = spChosenClr.Detach();
-        return S_OK;
-    }
-}
-
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-* VerString2Qword() parses a string as returned from                   *
-* ICLRRuntimeInfo::GetVersionString() into a QWORD, assuming every     *
-* numeric element is a WORD portion in the QWORD.                      *
-\**********************************************************************/
-QWORD VerString2Qword(LPCWSTR vStr)
-{
-    _ASSERTE(vStr[0] == L'v' || vStr[0] == L'V');
-    QWORD result = 0;
-
-    DWORD v1, v2, v3;
-    if (swscanf_s(vStr+1, W("%d.%d.%d"), &v1, &v2, &v3) == 3)
-    {
-        result = ((QWORD)v1 << 48) | ((QWORD)v2 << 32) | ((QWORD)v3 << 16);
-    }
-    else if (swscanf_s(vStr+1, W("%d.%d"), &v1, &v2) == 2)
-    {
-        result = ((QWORD)v1 << 48) | ((QWORD)v2 << 32);
-    }
-    else if (swscanf_s(vStr+1, W("%d"), &v1) == 1)
-    {
-        result = ((QWORD)v1 << 48);
-    }
-
-    return result;
 }
 
 
@@ -6196,7 +5963,7 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
     if (FAILED(Status = CreateInstanceCustom(CLSID_CorSymBinder_SxS, 
                         IID_ISymUnmanagedBinder3, 
                         NATIVE_SYMBOL_READER_DLL,
-                        cciLatestFx|cciDacColocated|cciDbgPath, 
+                        cciDacColocated|cciDbgPath, 
                         (void**)&pSymBinder)))
     {
         ExtOut("SOS Error: Unable to CoCreateInstance class=CLSID_CorSymBinder_SxS, interface=IID_ISymUnmanagedBinder3, hr=0x%x\n", Status);

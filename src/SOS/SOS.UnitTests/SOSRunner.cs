@@ -149,20 +149,31 @@ public class SOSRunner : IDisposable
                     // Load the dump or launch the debuggee process
                     if (loadDump)
                     {
-                        initialCommands.Add(string.Format(@"target create --core ""%DUMP_NAME%"" ""{0}""", config.HostExe));
+                        initialCommands.Add($@"target create --core ""%DUMP_NAME%"" ""{config.HostExe}""");
                     }
                     else
                     {
-                        initialCommands.Add(string.Format(@"target create ""{0}""", config.HostExe));
+                        var sb = new StringBuilder("settings set -- target.run-args");
                         if (!string.IsNullOrWhiteSpace(config.HostArgs))
                         {
-                            initialCommands.Add(string.Format(@"settings append target.run-args ""{0}""", ReplaceVariables(variables, config.HostArgs)));
+                            string[] args = ReplaceVariables(variables, config.HostArgs).Trim().Split(' ');
+                            foreach (string arg in args)
+                            {
+                                sb.AppendFormat(@" ""{0}""", arg);
+                            }
                         }
-                        initialCommands.Add(string.Format(@"settings append target.run-args ""{0}""", debuggeeConfig.BinaryExePath));
+                        sb.AppendFormat(@" ""{0}""", debuggeeConfig.BinaryExePath);
                         if (!string.IsNullOrWhiteSpace(debuggeeArguments))
                         {
-                            initialCommands.Add(string.Format(@"settings append target.run-args ""{0}""", ReplaceVariables(variables, debuggeeArguments)));
+                            string[] args = ReplaceVariables(variables, debuggeeArguments).Trim().Split(' ');
+                            foreach (string arg in args)
+                            {
+                                sb.AppendFormat(@" ""{0}""", arg);
+                            }
                         }
+                        initialCommands.Add($@"target create ""{config.HostExe}""");
+                        initialCommands.Add(sb.ToString());
+
                         initialCommands.Add("process launch -s");
                         initialCommands.Add("process handle -s false -n false -p true SIGFPE");
                         initialCommands.Add("process handle -s false -n false -p true SIGSEGV");
@@ -313,15 +324,25 @@ public class SOSRunner : IDisposable
 
     public async Task LoadSosExtension()
     {
+        string sosHostRuntime = _config.SOSHostRuntime();
+        string sosPath = _config.SOSPath();
         List<string> commands = new List<string>();
         switch (Debugger)
         {
             case NativeDebugger.Cdb:
-                commands.Add(".load " + _config.SOSPath());
+                commands.Add($".load {sosPath}");
                 commands.Add(".lines; .reload");
+                if (sosHostRuntime != null)
+                {
+                    commands.Add($"!SetHostRuntime {sosHostRuntime}");
+                }
                 break;
             case NativeDebugger.Lldb:
-                commands.Add("plugin load " + _config.SOSPath());
+                commands.Add($"plugin load {sosPath}");
+                if (sosHostRuntime != null)
+                {
+                    commands.Add($"sos SetHostRuntime {sosHostRuntime}");
+                }
                 if (_isDump)
                 {
                     // lldb doesn't load dump with the initial thread set to one with
@@ -333,7 +354,7 @@ public class SOSRunner : IDisposable
             case NativeDebugger.Gdb:
                 break;
             default:
-                throw new Exception(DebuggerToString + " cannot load sos extension");
+                throw new Exception($"{DebuggerToString} cannot load sos extension");
         }
         await RunCommands(commands);
     }
@@ -814,6 +835,11 @@ public static class TestConfigurationExtensions
     public static string SOSPath(this TestConfiguration config)
     {
         return TestConfiguration.MakeCanonicalPath(config.GetValue("SOSPath"));
+    }
+
+    public static string SOSHostRuntime(this TestConfiguration config)
+    {
+        return TestConfiguration.MakeCanonicalPath(config.GetValue("SOSHostRuntime"));
     }
 
     public static bool GenerateDumpWithLLDB(this TestConfiguration config)
