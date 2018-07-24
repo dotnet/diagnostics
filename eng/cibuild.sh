@@ -25,8 +25,8 @@ if [ "$__osname" == "Linux" ]; then
         if [[ $ID == "ubuntu" ]]; then
             if [[ $VERSION_ID == "18.04" ]]; then
                 # Fix the CI lab's ubuntu 18.04 docker image: install curl.
-                apt-get update
-                apt-get install -y curl
+                sudo apt-get update
+                sudo apt-get install -y curl
             fi
         fi
     elif [ -e /etc/redhat-release ]; then

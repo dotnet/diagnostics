@@ -34,6 +34,7 @@ phases:
       queue: ${{ parameters.queue }}
       variables: 
         _DockerImageName: ${{ parameters.dockerImage }}
+        _PhaseName : ${{ parameters.phaseName }}
         ${{ if notIn(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
           _PublishBlobFeedUrl: https://dotnetfeed.blob.core.windows.net/dotnet-tools-internal/index.json
           _TeamName: DotNetCore
@@ -114,7 +115,7 @@ phases:
             Contents: '**/*log'
             TargetFolder: '$(Build.StagingDirectory)/BuildLogs'
           continueOnError: true
-          condition: succeededOrFailed()
+          condition: always()
 
         - task: PublishBuildArtifacts@1
           displayName: Publish Logs to VSTS
@@ -126,6 +127,6 @@ phases:
             ${{ if eq(parameters.agentOs, 'Windows_NT') }}:
               ArtifactName: Windows_NT_$(Agent.JobName)
             ${{ if ne(parameters.agentOs, 'Windows_NT') }}:
-              ArtifactName: Linux_$(parameters.phaseName)_$(Agent.JobName)
+              ArtifactName: Linux_$(_PhaseName)_$(Agent.JobName)
           continueOnError: true
-          condition: succeededOrFailed()
+          condition: always()

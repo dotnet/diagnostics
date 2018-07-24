@@ -61,11 +61,12 @@
       <FrameworkDirPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</FrameworkDirPath>
       <FrameworkDirPath Condition="$(TargetArchitecture) != x64">$(WinDir)\Microsoft.Net\Framework\v4.0.30319\</FrameworkDirPath>
       <RuntimeSymbolsPath>$(FrameworkDirPath)</RuntimeSymbolsPath>
+      <BuildProjectFramework>net45</BuildProjectFramework>
       <SOSPath>$(FrameworkDirPath)\sos.dll</SOSPath>
     </Option>
     -->
   </Options>
 
-  <DebuggeeDumpOutputRootDir>$(DumpDir)\$(TestProduct)</DebuggeeDumpOutputRootDir>
+  <DebuggeeDumpOutputRootDir>$(DumpDir)\$(TestProduct)\$(BuildProjectMicrosoftNetCoreAppVersion)\$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>
   <DebuggeeDumpInputRootDir>$(DebuggeeDumpOutputRootDir)</DebuggeeDumpInputRootDir>
 </Configuration>

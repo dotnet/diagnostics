@@ -3,9 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostic.TestHelpers;
-using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
@@ -41,52 +39,12 @@ public class SOS
         return config.DebuggeeDumpInputRootDir() != null;
     }
 
-    private async Task CreateDump(TestConfiguration config, string testName, string debuggeeName, string debuggeeArguments)
+    private Task RunTest(TestConfiguration config, string debuggeeName, string scriptName, bool useCreateDump = true)
     {
-        Directory.CreateDirectory(config.DebuggeeDumpOutputRootDir());
-
-        using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName, debuggeeName, debuggeeArguments, loadDump: false, generateDump: true))
-        {
-            try
-            {
-                await runner.LoadSosExtension();
-
-                string command = null;
-                switch (runner.Debugger)
-                {
-                    case SOSRunner.NativeDebugger.Cdb:
-                        await runner.ContinueExecution();
-                        // On desktop create triage dump. On .NET Core, create full dump.
-                        command = config.TestProduct.Equals("desktop") ? ".dump /o /mshuRp %DUMP_NAME%" : ".dump /o /ma %DUMP_NAME%";
-                        break;
-                    case SOSRunner.NativeDebugger.Gdb:
-                        command = "generate-core-file %DUMP_NAME%";
-                        break;
-                    case SOSRunner.NativeDebugger.Lldb:
-                        await runner.ContinueExecution();
-                        command = OS.Kind == OSKind.OSX ? "process save-core %DUMP_NAME%" : "sos CreateDump %DUMP_NAME%";
-                        break;
-                    default:
-                        throw new Exception(runner.Debugger.ToString() + " does not support creating dumps");
-                }
-
-                await runner.RunCommand(command);
-                await runner.QuitDebugger();
-            }
-            catch (Exception ex)
-            {
-                runner.WriteLine(ex.ToString());
-                throw;
-            }
-        }
+        return RunTest(config, "SOS." + debuggeeName, debuggeeName, scriptName, useCreateDump: useCreateDump);
     }
 
-    private Task RunTest(TestConfiguration config, string debuggeeName, string scriptName)
-    {
-        return RunTest(config, "SOS." + debuggeeName, debuggeeName, null, scriptName);
-    }
-
-    private async Task RunTest(TestConfiguration config, string testName, string debuggeeName, string debuggeeArguments, string scriptName)
+    private async Task RunTest(TestConfiguration config, string testName, string debuggeeName, string scriptName, string debuggeeArguments = null, bool useCreateDump = true)
     {
         SkipIfArm(config);
 
@@ -99,7 +57,7 @@ public class SOS
         // Against a crash dump.
         if (IsCreateDumpConfig(config))
         {
-            await CreateDump(config, testName, debuggeeName, debuggeeArguments);
+            await SOSRunner.CreateDump(config, Output, testName, debuggeeName, debuggeeArguments, useCreateDump);
         }
 
         if (IsOpenDumpConfig(config))
@@ -120,12 +78,9 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task GCTests(TestConfiguration config)
     {
-        const string testName = "SOS.GCTests";
-        const string debuggeeName = "GCWhere";
-
         // Live only
         SkipIfArm(config);
-        using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName, debuggeeName, debuggeeArguments: null))
+        using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName: "SOS.GCTests", debuggeeName: "GCWhere"))
         {
             await runner.RunScript("GCTests.script");
         }
@@ -134,7 +89,8 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task Overflow(TestConfiguration config)
     {
-        await RunTest(config, "Overflow", "Overflow.script");
+        // The .NET Core createdump facility doesn't catch stack overflow so use gdb to generate dump
+        await RunTest(config, "Overflow", "Overflow.script", useCreateDump: false);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
@@ -164,7 +120,7 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task StackTests(TestConfiguration config)
     {
-        await RunTest(config, "SOS.StackTests", "NestedExceptionTest", null, "StackTests.script");
+        await RunTest(config, "SOS.StackTests", "NestedExceptionTest", "StackTests.script");
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
@@ -178,7 +134,7 @@ public class SOS
         foreach (TestConfiguration currentConfig in TestRunner.EnumeratePdbTypeConfigs(config))
         {
             // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.
-            await RunTest(currentConfig, "SOS.StackAndOtherTests", "SymbolTestApp", "%DEBUG_ROOT%", "StackAndOtherTests.script");
+            await RunTest(currentConfig, "SOS.StackAndOtherTests", "SymbolTestApp", "StackAndOtherTests.script", debuggeeArguments: "%DEBUG_ROOT%");
         }
     }
 }

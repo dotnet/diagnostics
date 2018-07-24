@@ -60,6 +60,7 @@ echo "container user name: $container_user_name"
 $docker_bin exec $docker_id useradd -m -u $user_id $container_user_name
 $docker_bin exec $docker_id groupadd container_SUDO_user
 $docker_bin exec $docker_id usermod -a -G container_SUDO_user $container_user_name
+$docker_bin exec $docker_id su -c "$source_directory/eng/docker-init.sh"
 $docker_bin exec $docker_id su -c "echo '%container_SUDO_user ALL=(ALL:ALL) NOPASSWD:ALL' >> /etc/sudoers"
 
 echo "Execute cibuild.sh $args"

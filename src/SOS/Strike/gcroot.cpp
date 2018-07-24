@@ -792,7 +792,7 @@ int GCRootImpl::PrintRootsOnHandleTable(int gen)
         hr = pEnum->Next(_countof(handles), handles, &fetched);
         if (FAILED(hr))
         {
-            ExtOut("Failed to request more handles.");
+            ExtOut("Failed to request more handles.\n");
             return total;
         }
 
@@ -1144,9 +1144,9 @@ GCRootImpl::MTInfo *GCRootImpl::GetMTInfo(TADDR mt)
     {
         int nEntries;
 
-        if (FAILED(MOVE(nEntries, mt-sizeof(TADDR))))
+        if (FAILED(MOVE(nEntries, mt - sizeof(TADDR))))
         {
-            ExtOut("Failed to request number of entries.");
+            ExtOut("Failed to request number of entries for MethodTable %p.\n", SOS_PTR(mt));
             delete curr;
             return NULL;
         }

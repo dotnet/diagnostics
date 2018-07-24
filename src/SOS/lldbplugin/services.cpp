@@ -788,7 +788,7 @@ exit:
     {
         *bytesRead = read;
     }
-    return error.Success() ? S_OK : E_FAIL;
+    return error.Success() || (read != 0) ? S_OK : E_FAIL;
 }
 
 HRESULT 
@@ -817,7 +817,7 @@ exit:
     {
         *bytesWritten = written;
     }
-    return error.Success() ? S_OK : E_FAIL;
+    return error.Success() || (written != 0) ? S_OK : E_FAIL;
 }
 
 //----------------------------------------------------------------------------

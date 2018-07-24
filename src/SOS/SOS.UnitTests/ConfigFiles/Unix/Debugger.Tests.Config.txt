@@ -39,9 +39,11 @@
       <BuildProjectMicrosoftNetCoreAppVersion>2.0.9</BuildProjectMicrosoftNetCoreAppVersion>
       <BuildProjectFramework>netcoreapp2.0</BuildProjectFramework>
     </Option>
-    <Option>
+    <Option Condition="Exists('$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/1.1.9')">
       <BuildProjectMicrosoftNetCoreAppVersion>1.1.9</BuildProjectMicrosoftNetCoreAppVersion>
       <BuildProjectFramework>netcoreapp1.1</BuildProjectFramework>
+      <!-- createdump doesn't exists in 1.1 -->
+      <GenerateDumpWithGDB>true</GenerateDumpWithGDB>
       <!-- SOS needs at least 2.0 to run. The default without this is to use the runtime being debuggged to host SOS.NETCore -->
       <SOSHostRuntime>$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/2.0.9</SOSHostRuntime>
     </Option>
@@ -55,7 +57,7 @@
   <Options>
     <Option Condition="$(OS) == Linux">
       <SOSPath>$(InstallDir)/libsosplugin.so</SOSPath>
-      <DebuggeeDumpOutputRootDir>$(DumpDir)/$(TestProduct)</DebuggeeDumpOutputRootDir>
+      <DebuggeeDumpOutputRootDir>$(DumpDir)/$(TestProduct)/$(BuildProjectMicrosoftNetCoreAppVersion)/$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>
       <DebuggeeDumpInputRootDir>$(DebuggeeDumpOutputRootDir)</DebuggeeDumpInputRootDir>
     </Option>
     <Option Condition="$(OS) == OSX">

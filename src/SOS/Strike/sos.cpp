@@ -471,8 +471,10 @@ namespace sos
         {
             int entries = 0;
             
-            if (FAILED(MOVE(entries, mt-sizeof(TADDR))))
+            if (FAILED(MOVE(entries, mt - sizeof(TADDR))))
+            {
                 Throw<DataRead>("Failed to request number of entries.");
+            }
             
             // array of vc?
             if (entries < 0)

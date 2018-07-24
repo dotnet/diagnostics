@@ -1,28 +1,6 @@
 phases:
 - template: /eng/build.yml
   parameters:
-    phaseName: Windows
-    agentOs: Windows_NT
-    buildReason: Internal
-    queue: 
-      name: DotNetCore-Build
-      demands:
-        - agent.os -equals Windows_NT
-      parallel: 2
-      matrix:
-        Build_Debug:
-          _BuildConfig: Debug
-          _BuildArch: x64
-          _PublishType: none
-          _SignType: test
-        Build_Release:
-          _BuildConfig: Release
-          _BuildArch: x64
-          _PublishType: none
-          _SignType: real
-
-- template: /eng/build.yml
-  parameters:
     phaseName: CentOS_7
     agentOs: Linux
     buildReason: Internal
@@ -46,7 +24,160 @@ phases:
 
 - template: /eng/build.yml
   parameters:
+    phaseName: Debian_Stretch
+    agentOs: Linux
+    buildReason: Internal
+    dockerImage: microsoft/dotnet-buildtools-prereqs:debian-stretch-c103199-20180628122423
+    queue:
+      name: DotNet-Build
+      demands:
+        - agent.os -equals Linux
+      matrix:
+        Build_Debug:
+          _BuildConfig: Debug
+          _BuildArch: x64
+          _PublishType: none
+          _SignType: test
+
+- template: /eng/build.yml
+  parameters:
+    phaseName: Fedora_24
+    agentOs: Linux
+    buildReason: Internal
+    dockerImage: microsoft/dotnet-buildtools-prereqs:fedora-24-c103199-20180628122443
+    queue:
+      name: DotNet-Build
+      demands:
+        - agent.os -equals Linux
+      matrix:
+        Build_Debug:
+          _BuildConfig: Debug
+          _BuildArch: x64
+          _PublishType: none
+          _SignType: test
+
+- template: /eng/build.yml
+  parameters:
+    phaseName: Fedora_27
+    agentOs: Linux
+    buildReason: Internal
+    dockerImage: microsoft/dotnet-buildtools-prereqs:fedora-27-c103199-20180628122443
+    queue:
+      name: DotNet-Build
+      demands:
+        - agent.os -equals Linux
+      matrix:
+        Build_Debug:
+          _BuildConfig: Debug
+          _BuildArch: x64
+          _PublishType: none
+          _SignType: test
+
+- template: /eng/build.yml
+  parameters:
+    phaseName: Fedora_28
+    agentOs: Linux
+    buildReason: Internal
+    dockerImage: microsoft/dotnet-buildtools-prereqs:fedora-28-c103199-20180628122443
+    queue:
+      name: DotNet-Build
+      demands:
+        - agent.os -equals Linux
+      matrix:
+        Build_Debug:
+          _BuildConfig: Debug
+          _BuildArch: x64
+          _PublishType: none
+          _SignType: test
+
+- template: /eng/build.yml
+  parameters:
+    phaseName: OpenSuse_42_1
+    agentOs: Linux
+    buildReason: Internal
+    dockerImage: microsoft/dotnet-buildtools-prereqs:opensuse-42.1-c103199-20180628122439
+    queue:
+      name: DotNet-Build
+      demands:
+        - agent.os -equals Linux
+      matrix:
+        Build_Debug:
+          _BuildConfig: Debug
+          _BuildArch: x64
+          _PublishType: none
+          _SignType: real
+
+- template: /eng/build.yml
+  parameters:
+    phaseName: OpenSuse_42_3
+    agentOs: Linux
+    buildReason: Internal
+    dockerImage: microsoft/dotnet-buildtools-prereqs:opensuse-42.3-c103199-20180628122439
+    queue:
+      name: DotNet-Build
+      demands:
+        - agent.os -equals Linux
+      matrix:
+        Build_Debug:
+          _BuildConfig: Debug
+          _BuildArch: x64
+          _PublishType: none
+          _SignType: test
+
+- template: /eng/build.yml
+  parameters:
     phaseName: Ubuntu_14_04
+    agentOs: Linux
+    buildReason: Internal
+    dockerImage: microsoft/dotnet-buildtools-prereqs:ubuntu-14.04-c103199-20180628134413
+    queue:
+      name: DotNet-Build
+      demands:
+        - agent.os -equals Linux
+      matrix:
+        Build_Debug:
+          _BuildConfig: Debug
+          _BuildArch: x64
+          _PublishType: none
+          _SignType: test
+
+- template: /eng/build.yml
+  parameters:
+    phaseName: Ubuntu_16_04
+    agentOs: Linux
+    buildReason: Internal
+    dockerImage: microsoft/dotnet-buildtools-prereqs:ubuntu-16.04-c103199-20180628134544
+    queue:
+      name: DotNet-Build
+      demands:
+        - agent.os -equals Linux
+      matrix:
+        Build_Debug:
+          _BuildConfig: Debug
+          _BuildArch: x64
+          _PublishType: none
+          _SignType: test
+
+- template: /eng/build.yml
+  parameters:
+    phaseName: Ubuntu_17_10
+    agentOs: Linux
+    buildReason: Internal
+    dockerImage: microsoft/dotnet-buildtools-prereqs:ubuntu-17.10-c103199-20180628134544
+    queue:
+      name: DotNet-Build
+      demands:
+        - agent.os -equals Linux
+      matrix:
+        Build_Debug:
+          _BuildConfig: Debug
+          _BuildArch: x64
+          _PublishType: none
+          _SignType: test
+
+- template: /eng/build.yml
+  parameters:
+    phaseName: Ubuntu_18_04
     agentOs: Linux
     buildReason: Internal
     dockerImage: microsoft/dotnet-buildtools-prereqs:ubuntu-18.04-c103199-20180628134610
@@ -55,11 +186,11 @@ phases:
       demands:
         - agent.os -equals Linux
       matrix:
-        Build_Release:
-          _BuildConfig: Release
+        Build_Debug:
+          _BuildConfig: Debug
           _BuildArch: x64
           _PublishType: none
-          _SignType: real
+          _SignType: test
 
 - template: /eng/build.yml
   parameters:
@@ -67,7 +198,7 @@ phases:
     agentOs: Darwin
     buildReason: Internal
     queue: 
-      name: DotNetCore-Build
+      name: Hosted macOS Preview
       demands:
         - agent.os -equals Darwin
       parallel: 2
@@ -80,6 +211,33 @@ phases:
         Build_Release:
           _BuildConfig: Release
           _BuildArch: x64
+          _PublishType: none
+          _SignType: real
+
+- template: /eng/build.yml
+  parameters:
+    phaseName: Windows
+    agentOs: Windows_NT
+    buildReason: Internal
+    queue: 
+      name: DotNetCore-Build
+      demands:
+        - agent.os -equals Windows_NT
+      parallel: 3
+      matrix:
+        Build_Debug:
+          _BuildConfig: Debug
+          _BuildArch: x64
+          _PublishType: none
+          _SignType: test
+        Build_Release:
+          _BuildConfig: Release
+          _BuildArch: x64
+          _PublishType: none
+          _SignType: real
+        Build_Release_x86:
+          _BuildConfig: Release
+          _BuildArch: x86
           _PublishType: none
           _SignType: real
 

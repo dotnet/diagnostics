@@ -77,6 +77,10 @@ namespace Microsoft.Diagnostic.TestHelpers
                 ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
                 ["NuGetPackageCacheDir"] = nugetPackages
             };
+            if (OS.Kind == OSKind.Windows)
+            {
+                initialConfig["WinDir"] = Path.GetFullPath(Environment.GetEnvironmentVariable("WINDIR"));
+            }
             IEnumerable<Dictionary<string, string>> configs = ParseConfigFile(path, new Dictionary<string, string>[] { initialConfig });
             Configurations = configs.Select(c => new TestConfiguration(c));
         }
@@ -168,30 +172,45 @@ namespace Microsoft.Diagnostic.TestHelpers
             {
                 string conditionText = attr.Value;
 
-                // Only equals and not equals are supported
-                string[] parts = conditionText.Split("==");
-                bool equal;
-
-                if (parts.Length == 2)
+                // Check if Exists('<directory or file>')
+                const string existsKeyword = "Exists('";
+                int existsStartIndex = conditionText.IndexOf(existsKeyword);
+                if (existsStartIndex != -1)
                 {
-                    equal = true;
+                    bool not = (existsStartIndex > 0) && (conditionText[existsStartIndex - 1] == '!');
+
+                    existsStartIndex += existsKeyword.Length;
+                    int existsEndIndex = conditionText.IndexOf("')", existsStartIndex);
+                    Assert.NotEqual(-1, existsEndIndex);
+
+                    string path = conditionText.Substring(existsStartIndex, existsEndIndex - existsStartIndex);
+                    path = Path.GetFullPath(ResolveProperties(config, path));
+                    bool exists = Directory.Exists(path) || File.Exists(path);
+                    return not ? !exists : exists;
                 }
                 else
                 {
-                    parts = conditionText.Split("!=");
-                    if (parts.Length != 2)
+                    // Check if equals and not equals
+                    string[] parts = conditionText.Split("==");
+                    bool equal;
+
+                    if (parts.Length == 2)
                     {
-                        throw new ArgumentException("Invalid Condition attribute {0}", attr.Value);
+                        equal = true;
                     }
-                    equal = false;
+                    else
+                    {
+                        parts = conditionText.Split("!=");
+                        Assert.NotEqual(2, parts.Length);
+                        equal = false;
+                    }
+                    // Resolve any config values in the condition
+                    string leftValue = ResolveProperties(config, parts[0]).Trim();
+                    string rightValue = ResolveProperties(config, parts[1]).Trim();
+
+                    // Now do the simple string comparsion of the left/right sides of the condition
+                    return equal ? leftValue == rightValue : leftValue != rightValue;
                 }
-
-                // Resolve any config values in the condition
-                string leftValue = ResolveProperties(config, parts[0]).Trim();
-                string rightValue = ResolveProperties(config, parts[1]).Trim();
-
-                // Now do the simple string comparsion of the left/right sides of the condition
-                return equal ? leftValue == rightValue : leftValue != rightValue;
             }
             return true;
         }
@@ -218,19 +237,14 @@ namespace Microsoft.Diagnostic.TestHelpers
                     {
                         resolvedValue.Append(rawNodeValue.Substring(i, propStartIndex - i));
                     }
-                    resolvedValue.Append(ResolveProperty(config, rawNodeValue.Substring(propStartIndex+2, propEndIndex - propStartIndex-2)));
+                    // Now resolve the property name from the config dictionary
+                    string propertyName = rawNodeValue.Substring(propStartIndex + 2, propEndIndex - propStartIndex - 2);
+                    resolvedValue.Append(config.GetValueOrDefault(propertyName, ""));
                     i = propEndIndex + 1;
                 }
             }
 
             return resolvedValue.ToString();
-        }
-
-        private string ResolveProperty(Dictionary<string, string> config, string propName)
-        {
-            return propName.Equals("WinDir", StringComparison.OrdinalIgnoreCase)
-                ? Path.GetFullPath(Environment.ExpandEnvironmentVariables("%WINDIR%"))
-                : config[propName] ?? "";
         }
 
         public void Dispose()
@@ -408,7 +422,7 @@ namespace Microsoft.Diagnostic.TestHelpers
         }
 
         /// <summary>
-        /// The version of the Microsoft.NETCore.App package to reference when building the debuggee.
+        /// The version of the Microsoft.NETCore.App package to reference when building or running the debuggee.
         /// </summary>
         public string BuildProjectMicrosoftNetCoreAppVersion
         {
@@ -579,15 +593,15 @@ namespace Microsoft.Diagnostic.TestHelpers
         static OS()
         {
 #if CORE_CLR // Only core build can run on different OSes
-            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 Kind = OSKind.Linux;
             }
-            else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 Kind = OSKind.OSX;
             }
-            else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 Kind = OSKind.Windows;
             }
@@ -610,6 +624,6 @@ namespace Microsoft.Diagnostic.TestHelpers
         /// <summary>
         /// The architecture the tests are running.  We are assuming that the test runner, the debugger and the debugger's target are all the same architecture.
         /// </summary>
-        public static Architecture TargetArchitecture { get { return System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture; } }
+        public static Architecture TargetArchitecture { get { return RuntimeInformation.ProcessArchitecture; } }
     }
 }
