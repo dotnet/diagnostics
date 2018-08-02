@@ -34,14 +34,17 @@
     <Option>
       <BuildProjectMicrosoftNetCoreAppVersion>2.1.0</BuildProjectMicrosoftNetCoreAppVersion>
       <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
+      <RuntimeFrameworkVersion>2.1.0</RuntimeFrameworkVersion>
     </Option>
     <Option>
       <BuildProjectMicrosoftNetCoreAppVersion>2.0.9</BuildProjectMicrosoftNetCoreAppVersion>
       <BuildProjectFramework>netcoreapp2.0</BuildProjectFramework>
+      <RuntimeFrameworkVersion>2.0.9</RuntimeFrameworkVersion>
     </Option>
     <Option Condition="Exists('$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/1.1.9')">
       <BuildProjectMicrosoftNetCoreAppVersion>1.1.9</BuildProjectMicrosoftNetCoreAppVersion>
       <BuildProjectFramework>netcoreapp1.1</BuildProjectFramework>
+      <RuntimeFrameworkVersion>1.1.9</RuntimeFrameworkVersion>
       <!-- createdump doesn't exists in 1.1 -->
       <GenerateDumpWithGDB>true</GenerateDumpWithGDB>
       <!-- SOS needs at least 2.0 to run. The default without this is to use the runtime being debuggged to host SOS.NETCore -->
@@ -50,14 +53,14 @@
   </Options>
 
   <HostExe>$(RepoRootDir)/.dotnet/dotnet</HostExe>
-  <HostArgs>--fx-version $(BuildProjectMicrosoftNetCoreAppVersion)</HostArgs>
-  <RuntimeSymbolsPath>$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/$(BuildProjectMicrosoftNetCoreAppVersion)</RuntimeSymbolsPath>
+  <HostArgs>--fx-version $(RuntimeFrameworkVersion)</HostArgs>
+  <RuntimeSymbolsPath>$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
   <LLDBHelperScript>$(ScriptRootDir)/lldbhelper.py</LLDBHelperScript>
 
   <Options>
     <Option Condition="$(OS) == Linux">
       <SOSPath>$(InstallDir)/libsosplugin.so</SOSPath>
-      <DebuggeeDumpOutputRootDir>$(DumpDir)/$(TestProduct)/$(BuildProjectMicrosoftNetCoreAppVersion)/$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>
+      <DebuggeeDumpOutputRootDir>$(DumpDir)/$(TestProduct)/$(RuntimeFrameworkVersion)/$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>
       <DebuggeeDumpInputRootDir>$(DebuggeeDumpOutputRootDir)</DebuggeeDumpInputRootDir>
     </Option>
     <Option Condition="$(OS) == OSX">

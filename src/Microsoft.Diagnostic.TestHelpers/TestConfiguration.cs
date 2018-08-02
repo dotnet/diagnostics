@@ -251,7 +251,7 @@ namespace Microsoft.Diagnostic.TestHelpers
         {
         }
     }
-    
+
     /// <summary>
     /// Represents the current test configuration
     /// </summary>
@@ -269,7 +269,7 @@ namespace Microsoft.Diagnostic.TestHelpers
             _settings = new Dictionary<string, string>();
         }
 
-        public TestConfiguration(Dictionary<string,string> initialSettings)
+        public TestConfiguration(Dictionary<string, string> initialSettings)
         {
             _settings = new Dictionary<string, string>(initialSettings);
         }
@@ -283,7 +283,7 @@ namespace Microsoft.Diagnostic.TestHelpers
         {
             Debug.Assert(!string.IsNullOrWhiteSpace(pdbType));
 
-            var currentSettings = new Dictionary<string,string>(_settings);
+            var currentSettings = new Dictionary<string, string>(_settings);
 
             // Set or replace if the pdb debug type
             currentSettings[DebugTypeKey] = pdbType;
@@ -310,6 +310,22 @@ namespace Microsoft.Diagnostic.TestHelpers
         public string TestProduct
         {
             get { return GetValue("TestProduct").ToLowerInvariant(); }
+        }
+
+        /// <summary>
+        /// Returns true if running on .NET Core (based on TestProduct).
+        /// </summary>
+        public bool IsNETCore
+        {
+            get { return TestProduct.Equals("projectk"); }
+        }
+
+        /// <summary>
+        /// Returns true if running on desktop framework (based on TestProduct).
+        /// </summary>
+        public bool IsDesktop
+        {
+            get { return TestProduct.Equals("desktop"); }
         }
 
         /// <summary>
@@ -422,7 +438,7 @@ namespace Microsoft.Diagnostic.TestHelpers
         }
 
         /// <summary>
-        /// The version of the Microsoft.NETCore.App package to reference when building or running the debuggee.
+        /// The version of the Microsoft.NETCore.App package to reference when building the debuggee.
         /// </summary>
         public string BuildProjectMicrosoftNetCoreAppVersion
         {
@@ -445,6 +461,15 @@ namespace Microsoft.Diagnostic.TestHelpers
         public string BuildProjectRuntime
         {
             get { return GetValue("BuildProjectRuntime"); }
+        }
+
+        /// <summary>
+        /// The version of the Microsoft.NETCore.App package to reference when running the debuggee (i.e. 
+        /// using the dotnet cli --fx-version option).
+        /// </summary>
+        public string RuntimeFrameworkVersion 
+        {
+            get { return GetValue("RuntimeFrameworkVersion"); }
         }
 
         /// <summary>
@@ -518,6 +543,34 @@ namespace Microsoft.Diagnostic.TestHelpers
         {
             get { return GetValue("LinkerPackageVersion"); }
         }
+
+        #region Runtime Features properties
+
+        /// <summary>
+        /// Returns true if the "createdump" facility exists.
+        /// </summary>
+        public bool CreateDumpExists
+        {
+            get { return OS.Kind == OSKind.Linux && IsNETCore && !RuntimeFrameworkVersion.StartsWith("1."); }
+        }
+
+        /// <summary>
+        /// Returns true if a stack overflow causes dump to be generated with createdump. Currently no .NET Core version does.
+        /// </summary>
+        public bool StackOverflowCreatesDump
+        {
+            get { return false; }
+        }
+
+        /// <summary>
+        /// Returns true if a stack overflow causes a SIGSEGV exception instead of aborting.
+        /// </summary>
+        public bool StackOverflowSIGSEGV
+        {
+            get { return OS.Kind == OSKind.Linux && IsNETCore && RuntimeFrameworkVersion.StartsWith("1."); }
+        }
+
+        #endregion
 
         /// <summary>
         /// Returns the configuration value for the key or null.

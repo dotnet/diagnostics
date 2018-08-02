@@ -104,7 +104,7 @@ namespace Microsoft.Diagnostic.TestHelpers
 
             if (OS.Kind == OSKind.Windows)
             {
-                if (config.TestProduct.Equals("projectk"))
+                if (config.IsNETCore)
                 {
                     // Enabled after an official dotnet cli supports "embedded" PDBs - issue #244
                     // pdbTypes = new string[] { "portable", "full", "embedded" };

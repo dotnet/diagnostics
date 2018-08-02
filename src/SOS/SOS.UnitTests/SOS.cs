@@ -89,8 +89,8 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task Overflow(TestConfiguration config)
     {
-        // The .NET Core createdump facility doesn't catch stack overflow so use gdb to generate dump
-        await RunTest(config, "Overflow", "Overflow.script", useCreateDump: false);
+        // The .NET Core createdump facility may not catch stack overflow so use gdb to generate dump
+        await RunTest(config, "Overflow", "Overflow.script", useCreateDump: config.StackOverflowCreatesDump);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
@@ -127,9 +127,9 @@ public class SOS
     public async Task StackAndOtherTests(TestConfiguration config)
     {
         SkipIfArm(config);
-        if (config.BuildProjectMicrosoftNetCoreAppVersion.StartsWith("1.1"))
+        if (config.RuntimeFrameworkVersion.StartsWith("1.1"))
         {
-            throw new SkipTestException("The debuggee (SymbolTestApp) doesn't work on .NET Core 1.1");
+            throw new SkipTestException("The debuggee (SymbolTestApp) doesn't work on .NET Core 1.1 because of a AssemblyLoadContext problem");
         }
         foreach (TestConfiguration currentConfig in TestRunner.EnumeratePdbTypeConfigs(config))
         {

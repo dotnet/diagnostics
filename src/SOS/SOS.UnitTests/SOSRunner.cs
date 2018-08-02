@@ -69,7 +69,7 @@ public class SOSRunner : IDisposable
     {
         Directory.CreateDirectory(config.DebuggeeDumpOutputRootDir());
 
-        if (OS.Kind == OSKind.Windows || config.GenerateDumpWithLLDB() || config.GenerateDumpWithGDB() || !useCreateDump)
+        if (!config.CreateDumpExists || !useCreateDump || config.GenerateDumpWithLLDB() || config.GenerateDumpWithGDB())
         {
             using (SOSRunner runner = await SOSRunner.StartDebugger(config, output, testName, debuggeeName, debuggeeArguments, loadDump: false, generateDump: true))
             {
@@ -83,7 +83,7 @@ public class SOSRunner : IDisposable
                         case SOSRunner.NativeDebugger.Cdb:
                             await runner.ContinueExecution();
                             // On desktop create triage dump. On .NET Core, create full dump.
-                            command = config.TestProduct.Equals("desktop") ? ".dump /o /mshuRp %DUMP_NAME%" : ".dump /o /ma %DUMP_NAME%";
+                            command = config.IsDesktop ? ".dump /o /mshuRp %DUMP_NAME%" : ".dump /o /ma %DUMP_NAME%";
                             break;
                         case SOSRunner.NativeDebugger.Gdb:
                             command = "generate-core-file %DUMP_NAME%";
@@ -237,7 +237,6 @@ public class SOSRunner : IDisposable
             }
 
             // Get the debugger arguments and commands to run initially
-            string runtimeVersion = config.BuildProjectMicrosoftNetCoreAppVersion;
             List<string> initialCommands = new List<string>();
             string arguments = null;
 
@@ -306,8 +305,8 @@ public class SOSRunner : IDisposable
                         initialCommands.Add(sb.ToString());
                         initialCommands.Add("process launch -s");
 
-                        // .NET Core 1.1 or less don't catch stack overflow and abort, need to catch SEGSEGV 
-                        if (runtimeVersion.StartsWith("1.1") || runtimeVersion.StartsWith("1.0"))
+                        // .NET Core 1.1 or less don't catch stack overflow and abort so need to catch SIGSEGV 
+                        if (config.StackOverflowSIGSEGV)
                         {
                             initialCommands.Add("process handle -s true -n true -p true SIGSEGV");
                         }
@@ -326,8 +325,8 @@ public class SOSRunner : IDisposable
                     }
                     arguments = "--args " + debuggeeCommandLine;
 
-                    // .NET Core 1.1 or less don't catch stack overflow and abort, need to catch SEGSEGV 
-                    if (runtimeVersion.StartsWith("1.1") || runtimeVersion.StartsWith("1.0"))
+                    // .NET Core 1.1 or less don't catch stack overflow and abort so need to catch SIGSEGV 
+                    if (config.StackOverflowSIGSEGV)
                     {
                         initialCommands.Add("handle SIGSEGV stop print");
                     }
