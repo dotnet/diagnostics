@@ -1,0 +1,71 @@
+<Project>
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    Default to including all *.props and *.targets files
+    from the project directory into the NuGet package root
+  -->
+  <ItemGroup Condition="'$(EnableDefaultItems)' != 'false'">
+    <None Condition="'$(EnableDefaultNoneItems)' != 'false'"
+          Include="**/*.props;**/*.targets" Pack="true">
+      <PackagePath>%(RecursiveDir)%(Filename)%(Extension)</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(RepoRoot)LICENSE.txt" PackagePath="LICENSE.txt" Pack="true"/>
+    <None Include="$(RepoRoot)THIRD-PARTY-NOTICES.txt" PackagePath="THIRD-PARTY-NOTICES.txt" Pack="true"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Update all PackageReference and ProjectReference Items to have
+      PrivateAssets="All" and default Publish to true
+      This removes the dependency nodes from the generated nuspec and
+      forces the publish output to contain the dlls.
+     -->
+    <PackageReference Update="@(PackageReference)">
+      <PrivateAssets>All</PrivateAssets>
+      <Publish Condition=" '%(PackageReference.Publish)' != 'false' ">true</Publish>
+      <ExcludeAssets Condition=" '%(PackageReference.Publish)' == 'false' ">runtime</ExcludeAssets>
+    </PackageReference>
+    <ProjectReference Update="@(ProjectReference)">
+      <PrivateAssets>All</PrivateAssets>
+      <Publish Condition=" '%(ProjectReference.Publish)' != 'false' ">true</Publish>
+    </ProjectReference>
+    <!--
+      Update all Reference items to have Pack="false"
+      This removes the frameworkDependency nodes from the generated nuspec
+    -->
+    <Reference Update="@(Reference)">
+      <Pack>false</Pack>
+    </Reference>
+  </ItemGroup>
+
+  <!--
+    if $(IncludePublishOutput) it not 'false' add Publish as a dependency to Pack
+    and include TfmSpecificPackageFile items for all published files
+  -->
+  <PropertyGroup Condition="'$(IncludePublishOutput)' != 'false'">
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);CollectAssets</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+  <Target Name="CollectAssets" DependsOnTargets="Publish">
+    <RemoveDuplicates Inputs="@(ResolvedFileToPublish)">
+      <Output TaskParameter="Filtered" ItemName="FilteredFileToPublish"/>
+    </RemoveDuplicates>
+    <ItemGroup>
+      <TfmSpecificPackageFile
+        Include="@(FilteredFileToPublish->'$([MSBuild]::NormalizeDirectory($(PublishDir)))%(RelativePath)')"
+        Condition="'%(FilteredFileToPublish.AssetType)' != 'resources'">
+        <PackagePath>tools/$(TargetFramework)/%(FilteredFileToPublish.RelativePath)</PackagePath>
+      </TfmSpecificPackageFile>
+    </ItemGroup>
+  </Target>
+</Project>

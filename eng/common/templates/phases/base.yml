@@ -13,8 +13,8 @@
 
 parameters:
   agentOs: Windows_NT
-  buildReason: IndividualCI
   buildConfig: ''
+  clean: true
   dockerImage: ''
   enableTelemetry: ''
   fetchDepth: ''
@@ -34,19 +34,25 @@ phases:
       ${{ insert }}: ${{ parameters.phase.variables }}
   steps:
   - checkout: self
-    clean: true
+    clean: ${{ parameters.clean }}
     ${{ if ne(parameters.fetchDepth, '') }}:
       fetchDepth: ${{ parameters.fetchDepth }}
-  - ${{ if notIn(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
-    - ${{ if eq(parameters.enableTelemetry, 'true') }}:
-      - template: /eng/common/templates/steps/telemetry.yml
-        parameters:
-          agentOs: ${{ parameters.agentOs }}
-          buildConfig: ${{ parameters.buildConfig }}
-          helixSource: ${{ parameters.helixSource }}
-          helixType: ${{ parameters.helixType }}
-          steps: ${{ parameters.phase.steps }}
-    - ${{ if not(eq(parameters.enableTelemetry, 'true')) }}:
+  - template: /eng/common/templates/steps/build-reason.yml
+    parameters:
+      conditions: not IndividualCI,BatchedCI,PullRequest
+      steps:
+      - ${{ if eq(parameters.enableTelemetry, 'true') }}:
+        - template: /eng/common/templates/steps/telemetry.yml
+          parameters:
+            agentOs: ${{ parameters.agentOs }}
+            buildConfig: ${{ parameters.buildConfig }}
+            helixSource: ${{ parameters.helixSource }}
+            helixType: ${{ parameters.helixType }}
+            steps: ${{ parameters.phase.steps }}
+      - ${{ if not(eq(parameters.enableTelemetry, 'true')) }}:
+        - ${{ parameters.phase.steps }}
+  - template: /eng/common/templates/steps/build-reason.yml
+    parameters:
+      conditions: IndividualCI,BatchedCI,PullRequest
+      steps:
       - ${{ parameters.phase.steps }}
-  - ${{ if in(parameters.buildReason, 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
-    - ${{ parameters.phase.steps }}
