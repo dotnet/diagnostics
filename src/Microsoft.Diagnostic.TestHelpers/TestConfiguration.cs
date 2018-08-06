@@ -77,6 +77,10 @@ namespace Microsoft.Diagnostic.TestHelpers
                 ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
                 ["NuGetPackageCacheDir"] = nugetPackages
             };
+            if (OS.Kind == OSKind.Windows)
+            {
+                initialConfig["WinDir"] = Path.GetFullPath(Environment.GetEnvironmentVariable("WINDIR"));
+            }
             IEnumerable<Dictionary<string, string>> configs = ParseConfigFile(path, new Dictionary<string, string>[] { initialConfig });
             Configurations = configs.Select(c => new TestConfiguration(c));
         }
@@ -168,30 +172,45 @@ namespace Microsoft.Diagnostic.TestHelpers
             {
                 string conditionText = attr.Value;
 
-                // Only equals and not equals are supported
-                string[] parts = conditionText.Split("==");
-                bool equal;
-
-                if (parts.Length == 2)
+                // Check if Exists('<directory or file>')
+                const string existsKeyword = "Exists('";
+                int existsStartIndex = conditionText.IndexOf(existsKeyword);
+                if (existsStartIndex != -1)
                 {
-                    equal = true;
+                    bool not = (existsStartIndex > 0) && (conditionText[existsStartIndex - 1] == '!');
+
+                    existsStartIndex += existsKeyword.Length;
+                    int existsEndIndex = conditionText.IndexOf("')", existsStartIndex);
+                    Assert.NotEqual(-1, existsEndIndex);
+
+                    string path = conditionText.Substring(existsStartIndex, existsEndIndex - existsStartIndex);
+                    path = Path.GetFullPath(ResolveProperties(config, path));
+                    bool exists = Directory.Exists(path) || File.Exists(path);
+                    return not ? !exists : exists;
                 }
                 else
                 {
-                    parts = conditionText.Split("!=");
-                    if (parts.Length != 2)
+                    // Check if equals and not equals
+                    string[] parts = conditionText.Split("==");
+                    bool equal;
+
+                    if (parts.Length == 2)
                     {
-                        throw new ArgumentException("Invalid Condition attribute {0}", attr.Value);
+                        equal = true;
                     }
-                    equal = false;
+                    else
+                    {
+                        parts = conditionText.Split("!=");
+                        Assert.NotEqual(2, parts.Length);
+                        equal = false;
+                    }
+                    // Resolve any config values in the condition
+                    string leftValue = ResolveProperties(config, parts[0]).Trim();
+                    string rightValue = ResolveProperties(config, parts[1]).Trim();
+
+                    // Now do the simple string comparsion of the left/right sides of the condition
+                    return equal ? leftValue == rightValue : leftValue != rightValue;
                 }
-
-                // Resolve any config values in the condition
-                string leftValue = ResolveProperties(config, parts[0]).Trim();
-                string rightValue = ResolveProperties(config, parts[1]).Trim();
-
-                // Now do the simple string comparsion of the left/right sides of the condition
-                return equal ? leftValue == rightValue : leftValue != rightValue;
             }
             return true;
         }
@@ -218,7 +237,9 @@ namespace Microsoft.Diagnostic.TestHelpers
                     {
                         resolvedValue.Append(rawNodeValue.Substring(i, propStartIndex - i));
                     }
-                    resolvedValue.Append(ResolveProperty(config, rawNodeValue.Substring(propStartIndex+2, propEndIndex - propStartIndex-2)));
+                    // Now resolve the property name from the config dictionary
+                    string propertyName = rawNodeValue.Substring(propStartIndex + 2, propEndIndex - propStartIndex - 2);
+                    resolvedValue.Append(config.GetValueOrDefault(propertyName, ""));
                     i = propEndIndex + 1;
                 }
             }
@@ -226,18 +247,11 @@ namespace Microsoft.Diagnostic.TestHelpers
             return resolvedValue.ToString();
         }
 
-        private string ResolveProperty(Dictionary<string, string> config, string propName)
-        {
-            return propName.Equals("WinDir", StringComparison.OrdinalIgnoreCase)
-                ? Path.GetFullPath(Environment.ExpandEnvironmentVariables("%WINDIR%"))
-                : config[propName] ?? "";
-        }
-
         public void Dispose()
         {
         }
     }
-    
+
     /// <summary>
     /// Represents the current test configuration
     /// </summary>
@@ -255,7 +269,7 @@ namespace Microsoft.Diagnostic.TestHelpers
             _settings = new Dictionary<string, string>();
         }
 
-        public TestConfiguration(Dictionary<string,string> initialSettings)
+        public TestConfiguration(Dictionary<string, string> initialSettings)
         {
             _settings = new Dictionary<string, string>(initialSettings);
         }
@@ -269,7 +283,7 @@ namespace Microsoft.Diagnostic.TestHelpers
         {
             Debug.Assert(!string.IsNullOrWhiteSpace(pdbType));
 
-            var currentSettings = new Dictionary<string,string>(_settings);
+            var currentSettings = new Dictionary<string, string>(_settings);
 
             // Set or replace if the pdb debug type
             currentSettings[DebugTypeKey] = pdbType;
@@ -296,6 +310,22 @@ namespace Microsoft.Diagnostic.TestHelpers
         public string TestProduct
         {
             get { return GetValue("TestProduct").ToLowerInvariant(); }
+        }
+
+        /// <summary>
+        /// Returns true if running on .NET Core (based on TestProduct).
+        /// </summary>
+        public bool IsNETCore
+        {
+            get { return TestProduct.Equals("projectk"); }
+        }
+
+        /// <summary>
+        /// Returns true if running on desktop framework (based on TestProduct).
+        /// </summary>
+        public bool IsDesktop
+        {
+            get { return TestProduct.Equals("desktop"); }
         }
 
         /// <summary>
@@ -434,6 +464,15 @@ namespace Microsoft.Diagnostic.TestHelpers
         }
 
         /// <summary>
+        /// The version of the Microsoft.NETCore.App package to reference when running the debuggee (i.e. 
+        /// using the dotnet cli --fx-version option).
+        /// </summary>
+        public string RuntimeFrameworkVersion 
+        {
+            get { return GetValue("RuntimeFrameworkVersion"); }
+        }
+
+        /// <summary>
         /// The type of PDB: "full" (Windows PDB) or "portable".
         /// </summary>
         public string DebugType
@@ -504,6 +543,34 @@ namespace Microsoft.Diagnostic.TestHelpers
         {
             get { return GetValue("LinkerPackageVersion"); }
         }
+
+        #region Runtime Features properties
+
+        /// <summary>
+        /// Returns true if the "createdump" facility exists.
+        /// </summary>
+        public bool CreateDumpExists
+        {
+            get { return OS.Kind == OSKind.Linux && IsNETCore && !RuntimeFrameworkVersion.StartsWith("1."); }
+        }
+
+        /// <summary>
+        /// Returns true if a stack overflow causes dump to be generated with createdump. Currently no .NET Core version does.
+        /// </summary>
+        public bool StackOverflowCreatesDump
+        {
+            get { return false; }
+        }
+
+        /// <summary>
+        /// Returns true if a stack overflow causes a SIGSEGV exception instead of aborting.
+        /// </summary>
+        public bool StackOverflowSIGSEGV
+        {
+            get { return OS.Kind == OSKind.Linux && IsNETCore && RuntimeFrameworkVersion.StartsWith("1."); }
+        }
+
+        #endregion
 
         /// <summary>
         /// Returns the configuration value for the key or null.
@@ -579,15 +646,15 @@ namespace Microsoft.Diagnostic.TestHelpers
         static OS()
         {
 #if CORE_CLR // Only core build can run on different OSes
-            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 Kind = OSKind.Linux;
             }
-            else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 Kind = OSKind.OSX;
             }
-            else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 Kind = OSKind.Windows;
             }
@@ -610,6 +677,6 @@ namespace Microsoft.Diagnostic.TestHelpers
         /// <summary>
         /// The architecture the tests are running.  We are assuming that the test runner, the debugger and the debugger's target are all the same architecture.
         /// </summary>
-        public static Architecture TargetArchitecture { get { return System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture; } }
+        public static Architecture TargetArchitecture { get { return RuntimeInformation.ProcessArchitecture; } }
     }
 }

@@ -456,11 +456,6 @@ if [ $__Test == 1 ]; then
         export GDB_PATH="$(which gdb 2> /dev/null)"
     fi
 
-    if [ "$__HostOS" == "Linux" ]; then
-        # This is needed on some distros like centos 7 so gdb generate-core-file creates a dump that works
-	echo 0x37 > /proc/self/coredump_filter
-    fi
-
     echo "lldb: '$LLDB_PATH' gdb: '$GDB_PATH'"
 
     # Run xunit SOS tests

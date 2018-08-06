@@ -104,7 +104,7 @@ namespace Microsoft.Diagnostic.TestHelpers
 
             if (OS.Kind == OSKind.Windows)
             {
-                if (config.TestProduct.Equals("projectk"))
+                if (config.IsNETCore)
                 {
                     // Enabled after an official dotnet cli supports "embedded" PDBs - issue #244
                     // pdbTypes = new string[] { "portable", "full", "embedded" };
@@ -143,7 +143,7 @@ namespace Microsoft.Diagnostic.TestHelpers
             ConsoleTestOutputHelper consoleLogger = null;
             if (!string.IsNullOrEmpty(config.LogDirPath))
             {
-                string logFileName = testName + "." + config.ToString() + ".txt";
+                string logFileName = testName + "." + config.ToString() + ".log";
                 string logPath = Path.Combine(config.LogDirPath, logFileName);
                 fileLogger = new FileTestOutputHelper(logPath, FileMode.Append);
             }
@@ -190,7 +190,7 @@ namespace Microsoft.Diagnostic.TestHelpers
             }
         }
 
-        class TestLogger : TestOutputProcessLogger
+        public class TestLogger : TestOutputProcessLogger
         {
             readonly StringBuilder _standardOutput;
             readonly StringBuilder _standardError;
