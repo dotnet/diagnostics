@@ -1,3 +1,3 @@
 @echo off
-call %~dp0Build.cmd -restore -build -test -sign -pack -publish -ci %*
+call %~dp0Build.cmd -restore -build -test -publish -sign -pack -ci %*
 exit /b %ErrorLevel%

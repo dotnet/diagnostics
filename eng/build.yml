@@ -68,7 +68,7 @@ phases:
                   KeyVaultName: EngKeyVault
                   SecretsFilter: 'dotnetfeed-storage-access-key-1'
                 condition: succeeded()
-          - script: eng\common\cibuild.cmd
+          - script: $(Build.SourcesDirectory)\eng\cibuild.cmd
               -configuration $(_BuildConfig) 
               -architecture $(_BuildArch)
               -prepareMachine 
@@ -85,7 +85,6 @@ phases:
             --docker-image $(_DockerImageName)
             --source-directory $(Build.SourcesDirectory)
             --container-name diagnostics-$(Build.BuildId)
-            --restore --build --publish --test --pack
             --configuration $(_BuildConfig) 
             --architecture $(_BuildArch)
             --prepareMachine 
@@ -99,7 +98,6 @@ phases:
 
       - ${{ if eq(parameters.agentOs, 'Darwin') }}:
         - script: $(Build.SourcesDirectory)/eng/cibuild.sh
-            --restore --build --publish --test --pack
             --configuration $(_BuildConfig) 
             --architecture $(_BuildArch)
             --prepareMachine
