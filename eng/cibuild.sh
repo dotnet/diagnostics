@@ -37,7 +37,7 @@ if [ "$__osname" == "Linux" ]; then
     fi
 fi
 
-"$scriptroot/build.sh" --ci $@
+"$scriptroot/build.sh" --restore --build --test --publish --pack --ci $@
 if [[ $? != 0 ]]; then
     exit 1
 fi

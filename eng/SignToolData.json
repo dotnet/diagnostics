@@ -5,13 +5,14 @@
       "strongName": "MsSharedLib72",
       "values": [
         "bin/SOS.NETCore/netcoreapp1.0/SOS.NETCore.dll",
+        "bin/Microsoft.Diagnostic.TestHelpers/netcoreapp2.0/Microsoft.Diagnostic.TestHelpers.dll"
       ]
     },
     {
       "certificate": "NuGet",
       "strongName": null,
       "values": [
-        "packages/*.nupkg"
+        "packages/Shipping/*.nupkg"
       ]
     }
   ],
@@ -20,6 +21,6 @@
     "Microsoft.SymbolStore.dll",
     "System.Collections.Immutable.dll",
     "System.Net.Http.dll",
-    "System.Reflection.Metadata.dll",
+    "System.Reflection.Metadata.dll"
   ]
 }

@@ -7,6 +7,8 @@
     <VersionPrefix>1.0.0</VersionPrefix>
     <PreReleaseVersionLabel>beta</PreReleaseVersionLabel>
   
+    <RoslynToolsSignToolVersion>1.0.0-beta2-63127-01</RoslynToolsSignToolVersion>
+    <MicrosoftNetCompilersVersion>2.8.0-beta6-62830-08</MicrosoftNetCompilersVersion>
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
     <UsingToolXliff>false</UsingToolXliff>
 
@@ -17,8 +19,6 @@
   <PropertyGroup>
     <RestoreSources>
       $(RestoreSources);
-      https://dotnet.myget.org/F/symstore/api/v3/index.json;
-      https://dotnet.myget.org/F/roslyn-tools/api/v3/index.json;
       https://dotnet.myget.org/F/dotnet-core/api/v3/index.json;
       https://dotnet.myget.org/F/dotnet-buildtools/api/v3/index.json
     </RestoreSources>
