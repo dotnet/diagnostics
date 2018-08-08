@@ -1,0 +1,35 @@
+parameters:
+  agentOs: Windows_NT
+  helixSource: 'undefined_defaulted_in_telemetry.yml'
+  helixType: 'undefined_defaulted_in_telemetry.yml'
+
+steps:
+- template: /eng/common/templates/steps/run-on-unix.yml
+  parameters:
+    agentOs: ${{ parameters.agentOs }}
+    steps:
+      - bash: |
+          /bin/bash ./telemetry/build/end.sh
+        workingDirectory: $(Build.SourcesDirectory)/eng/common
+        displayName: Send Build End Telemetry
+        env:
+          # defined via VSTS variables in start-job.sh
+          Helix_JobToken: $(Helix_JobToken)
+          Helix_WorkItemId: $(Helix_WorkItemId)
+        condition: always()
+- template: /eng/common/templates/steps/run-on-windows.yml
+  parameters:
+    agentOs: ${{ parameters.agentOs }}
+    steps:
+      - powershell: |
+          ./telemetry/build/end.ps1
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+        workingDirectory: $(Build.SourcesDirectory)/eng/common
+        displayName: Send Build End Telemetry
+        env:
+          # defined via VSTS variables in start-job.ps1
+          Helix_JobToken: $(Helix_JobToken)
+          Helix_WorkItemId: $(Helix_WorkItemId)
+        condition: always()

@@ -7,6 +7,7 @@
     <VersionPrefix>1.0.0</VersionPrefix>
     <PreReleaseVersionLabel>beta</PreReleaseVersionLabel>
   
+    <MicrosoftDotNetBuildToolsVersion>2.2.0-preview1-03108-01</MicrosoftDotNetBuildToolsVersion>
     <RoslynToolsSignToolVersion>1.0.0-beta2-63127-01</RoslynToolsSignToolVersion>
     <MicrosoftNetCompilersVersion>2.8.0-beta6-62830-08</MicrosoftNetCompilersVersion>
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>

@@ -28,36 +28,19 @@ __CrossBuild=0
 __NumProc=1
 __Build=0
 __Test=0
+__CI=0
 __TestArgs=
 __UnprocessedBuildArgs=
-
-# resolve python-version to use
-if [ "$PYTHON" == "" ] ; then
-    if ! PYTHON=$(command -v python2.7 || command -v python2 || command -v python)
-    then
-       echo "Unable to locate build-dependency python2.x!" 1>&2
-       exit 1
-    fi
-fi
-
-# validate python-dependency
-# useful in case of explicitly set option.
-if ! command -v $PYTHON > /dev/null
-then
-   echo "Unable to locate build-dependency python2.x ($PYTHON)!" 1>&2
-   exit 1
-fi
-
-echo $PYTHON
 
 usage()
 {
     echo "Usage: $0 [options]"
-    echo "--build - build native components"
+    echo "--build-native - build native components"
     echo "--test - test native components"
     echo "--architecture <x64|x86|arm|armel|arm64>"
     echo "--configuration <debug|release>"
     echo "--clangx.y - optional argument to build using clang version x.y"
+    echo "--ci - CI lab build"
     echo "--verbosity <q[uiet]|m[inimal]|n[ormal]|d[etailed]|diag[nostic]>"
     echo "--help - this help message"
     exit 1
@@ -169,30 +152,28 @@ while :; do
             exit 1
             ;;
 
-        --build)
+        --build-native)
             __Build=1
             ;;
 
+        # Passed to common build script when testing
         --test)
             __Test=1
             ;;
 
-        # Passed to common build script when testing
         --ci)
+            __CI=1
             __TestArgs="$__TestArgs $1"
             ;;
 
         --solution)
             __TestArgs="$__TestArgs $1 $2"
+            shift
             ;;
 
         --verbosity)
             __TestArgs="$__TestArgs $1 $2"
             shift
-            ;;
-
-        # Ignored for a native build
-        --rebuild|--sign|--restore|--pack|--publish|--preparemachine)
             ;;
 
         --configuration)
@@ -245,6 +226,10 @@ while :; do
             shift
             ;;
 
+        # Ignored for a native build
+        --build|--rebuild|--sign|--restore|--pack|--publish|--preparemachine)
+            ;;
+
         *)
             __UnprocessedBuildArgs="$__UnprocessedBuildArgs $1"
             ;;
@@ -260,6 +245,33 @@ if [ "$__BuildType" == "debug" ]; then
     __BuildType=Debug
 fi
 
+# Needs to be set for generate version source file/msbuild
+if [[ -z $NUGET_PACKAGES ]]; then
+    if [[ $__CI ]]; then
+        export NUGET_PACKAGES="$__ProjectRoot/.packages"
+    else
+        export NUGET_PACKAGES="$HOME/.nuget/packages"
+    fi
+fi
+
+# Resolve python-version to use
+if [ "$PYTHON" == "" ] ; then
+    if ! PYTHON=$(command -v python2.7 || command -v python2 || command -v python)
+    then
+       echo "Unable to locate build-dependency python2.x!" 1>&2
+       exit 1
+    fi
+fi
+
+# Validate python-dependency. Useful in case of explicitly set option.
+if ! command -v $PYTHON > /dev/null
+then
+   echo "Unable to locate build-dependency python2.x ($PYTHON)!" 1>&2
+   exit 1
+fi
+
+echo $PYTHON
+
 __RootBinDir=$__ProjectRoot/artifacts
 __ConfigBinDir=$__RootBinDir/$__BuildType
 __BinDir=$__ConfigBinDir/bin/$__BuildOS.$__BuildArch
@@ -268,6 +280,17 @@ __IntermediatesDir=$__RootBinDir/obj/$__BuildOS.$__BuildArch.$__BuildType
 __ResultsDir=$__ConfigBinDir/TestResults
 __PackagesBinDir=$__ConfigBinDir/packages
 __ExtraCmakeArgs=-DCLR_MANAGED_BINARY_DIR=$__ConfigBinDir/bin
+__DotNetCli=$__ProjectRoot/.dotnet/dotnet
+__MSBuildPath=$__ProjectRoot/.dotnet/sdk/2.1.300/MSBuild.dll
+
+if [ ! -e $__DotNetCli ]; then
+   echo "dotnet cli not installed $__DotNetCli"
+   exit 1
+fi
+if [ ! -e $__MSBuildPath ]; then
+   echo "dotnet cli sdk not installed $__MSBuildPath"
+   exit 1
+fi
 
 # Specify path to be set for CMAKE_INSTALL_PREFIX.
 # This is where all built native libraries will copied to.
@@ -427,6 +450,14 @@ fi
 
 # Build native components
 if [ $__Build == 1 ]; then
+    echo "Generating Version Source File"
+    __GenerateVersionLog="$__LogDir/GenerateVersion.binlog"
+    $__DotNetCli $__MSBuildPath $__ProjectRoot/eng/CreateVersionFile.csproj /noconlog /bl:$__GenerateVersionLog /t:GenerateVersionSourceFile2 /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
+    if [ $? != 0 ]; then
+        echo "Generating Version Source File FAILED"
+        exit 1
+    fi
+
     build_native "$__BuildArch" "$__IntermediatesDir" "$__ExtraCmakeArgs"
 fi
 

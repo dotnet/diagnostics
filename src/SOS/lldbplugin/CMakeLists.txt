@@ -118,7 +118,7 @@ set(SOURCES
     services.cpp
 )
 
-_add_library(sosplugin SHARED ${SOURCES})
+add_library_clr(sosplugin SHARED ${SOURCES})
 
 if(NOT ${LLDB_LIB} STREQUAL "")
    target_link_libraries(sosplugin ${LLDB_LIB})

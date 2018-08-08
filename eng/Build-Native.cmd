@@ -72,7 +72,7 @@ if /i "%1" == "-h"    goto Usage
 if /i "%1" == "-help" goto Usage
 if /i "%1" == "--help" goto Usage
 
-if /i "%1" == "-build"               (set __Build=1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
+if /i "%1" == "-build-native"        (set __Build=1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-test"                (set __Test=1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-configuration"       (set __BuildType=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
 if /i "%1" == "-architecture"        (set __BuildArch=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
@@ -81,6 +81,7 @@ if /i "%1" == "-verbosity"           (set __Verbosity=%2&set processedArgs=!proc
 if /i "%1" == "-ci"                  (set __TestArgs=!__TestArgs! %1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-solution"            (set __TestArgs=!__TestArgs! %1 %2&set processedArgs=!processedArgs! %1&shift&shift&goto Arg_Loop)
 :: These options are ignored for a native build
+if /i "%1" == "-build"               (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-rebuild"             (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-sign"                (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-restore"             (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
@@ -152,13 +153,17 @@ REM ============================================================================
 
 @if defined _echo @echo on
 
-REM Parse the optdata package versions out of msbuild so that we can pass them on to CMake
+:: Parse the optdata package versions out of msbuild so that we can pass them on to CMake
 set DotNetCli=%__ProjectDir%\.dotnet\dotnet.exe
 if not exist "%DotNetCli%" (
-    echo %__MsgPrefix%Assertion failed: dotnet.exe not found at path "%DotNetCli%"
+    echo %__MsgPrefix%Assertion failed: dotnet cli not found at path "%DotNetCli%"
     exit /b 1
 )
-set MSBuildPath=%__ProjectDir%\.dotnet\sdk\2.1.300-rc1-008673\msbuild.dll
+set MSBuildPath=%__ProjectDir%\.dotnet\sdk\2.1.300\MSBuild.dll
+if not exist "%MSBuildPath%" (
+    echo %__MsgPrefix%Assertion failed: dotnet cli sdk not found at path "%MSBuildPath%"
+    exit /b 1
+)
 
 REM =========================================================================================
 REM ===
@@ -209,6 +214,14 @@ if %__Build% EQU 1 (
     if not exist "!VSINSTALLDIR!DIA SDK" goto NoDIA
 
 :GenVSSolution
+    echo Generating Version Header
+    set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
+    %DotNetCli% %MSBuildPath% %__ProjectDir%\eng\CreateVersionFile.csproj /v:!__Verbosity! /bl:!__GenerateVersionLog! /t:GenerateVersionHeader2 /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
+    if not !errorlevel! == 0 (
+        echo Generate Version Header FAILED
+        exit /b 1
+    )
+
     if defined __SkipConfigure goto SkipConfigure
 
     echo %__MsgPrefix%Regenerating the Visual Studio solution
@@ -229,22 +242,14 @@ if %__Build% EQU 1 (
         echo %__MsgPrefix%Error: failed to generate native component build project!
         exit /b 1
     )
+    set __BuildLog="%__LogDir%\Native.Build.binlog"
 
-    set __BuildLogRootName=Native
-    set __BuildLog="%__LogDir%\!__BuildLogRootName!.log"
-    set __BuildWrn="%__LogDir%\!__BuildLogRootName!.wrn"
-    set __BuildErr="%__LogDir%\!__BuildLogRootName!.err"
-    set __MsbuildLog=/flp:Verbosity=normal;LogFile=!__BuildLog!
-    set __MsbuildWrn=/flp1:WarningsOnly;LogFile=!__BuildWrn!
-    set __MsbuildErr=/flp2:ErrorsOnly;LogFile=!__BuildErr!
+    :: For some currently unknown reason, "%DotNetCli% msbuild" fails because VCTargetsPath isn't defined.
+    msbuild.exe %__IntermediatesDir%\install.vcxproj /v:!__Verbosity! /bl:!__BuildLog! /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
 
-    msbuild.exe %__IntermediatesDir%\install.vcxproj /v:!__Verbosity! !__MsbuildLog! !__MsbuildWrn! !__MsbuildErr! /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
-
-    if not !errorlevel! == 0 (
+    if not !ERRORLEVEL! == 0 (
         echo %__MsgPrefix%Error: native component build failed. Refer to the build log files for details:
         echo     !__BuildLog!
-        echo     !__BuildWrn!
-        echo     !__BuildErr!
         exit /b 1
     )
 
@@ -293,24 +298,16 @@ if /i "%__DoCrossArchBuild%"=="1" (
         echo %__MsgPrefix%Error: failed to generate cross-arch components build project!
         exit /b 1
     )
-
     if defined __ConfigureOnly goto SkipCrossCompBuild
 
-    set __BuildLogRootName=Native.Cross
-    set __BuildLog="%__LogDir%\!__BuildLogRootName!.log"
-    set __BuildWrn="%__LogDir%\!__BuildLogRootName!.wrn"
-    set __BuildErr="%__LogDir%\!__BuildLogRootName!.err"
-    set __MsbuildLog=/flp:Verbosity=normal;LogFile=!__BuildLog!
-    set __MsbuildWrn=/flp1:WarningsOnly;LogFile=!__BuildWrn!
-    set __MsbuildErr=/flp2:ErrorsOnly;LogFile=!__BuildErr!
+    set __BuildLog="%__LogDir%\Cross.Build.binlog"
 
-    msbuild.exe %__CrossCompIntermediatesDir%\install.vcxproj /v:!__Verbosity! !__MsbuildLog! !__MsbuildWrn! !__MsbuildErr! /p:Configuration=%__BuildType% /p:Platform=%__CrossArch% %__UnprocessedBuildArgs%
+    :: For some currently unknown reason, "%DotNetCli% msbuild" fails because VCTargetsPath isn't defined.
+    msbuild.exe %__CrossCompIntermediatesDir%\install.vcxproj /v:!__Verbosity! /bl:!__BuildLog! /p:Configuration=%__BuildType% /p:Platform=%__CrossArch% %__UnprocessedBuildArgs%
 
-    if not !errorlevel! == 0 (
+    if not !ERRORLEVEL! == 0 (
         echo %__MsgPrefix%Error: cross-arch components build failed. Refer to the build log files for details:
         echo     !__BuildLog!
-        echo     !__BuildWrn!
-        echo     !__BuildErr!
         exit /b 1
     )
 
@@ -336,7 +333,7 @@ if %__Test% EQU 1 (
 
     :: Run the xunit tests
     powershell -ExecutionPolicy ByPass -NoProfile -command "& """%__ProjectDir%\eng\common\Build.ps1""" -test -configuration %__BuildType% -verbosity %__Verbosity% %__TestArgs%"
-    exit /b %ERRORLEVEL
+    exit /b !ERRORLEVEL!
 )
 exit /b 0
 
@@ -356,7 +353,7 @@ echo.
 echo All arguments are optional. The options are:
 echo.
 echo.-? -h -help --help: view this message.
-echo -build - build native components
+echo -build-native - build native components
 echo -test - test components
 echo -architecture <x64|x86|arm|arm64>
 echo -configuration <debug|release>

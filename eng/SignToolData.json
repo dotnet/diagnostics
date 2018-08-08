@@ -4,8 +4,15 @@
       "certificate": "MicrosoftSHA2",
       "strongName": "MsSharedLib72",
       "values": [
+        "bin/Microsoft.Diagnostic.TestHelpers/netcoreapp2.0/Microsoft.Diagnostic.TestHelpers.dll",
         "bin/SOS.NETCore/netcoreapp1.0/SOS.NETCore.dll",
-        "bin/Microsoft.Diagnostic.TestHelpers/netcoreapp2.0/Microsoft.Diagnostic.TestHelpers.dll"
+      ]
+    },
+    {
+      "certificate": "MicrosoftSHA2",
+      "values": [
+        "bin/Windows_NT.x64/sos.dll",
+        "bin/Windows_NT.x86/sos.dll"
       ]
     },
     {
@@ -13,6 +20,13 @@
       "strongName": null,
       "values": [
         "packages/Shipping/*.nupkg"
+      ]
+    },
+    {
+      "certificate": null,
+      "strongName": null,
+      "values": [
+        "*.zip"
       ]
     }
   ],

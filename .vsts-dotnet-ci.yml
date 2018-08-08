@@ -3,7 +3,6 @@ phases:
   parameters:
     phaseName: Windows
     agentOs: Windows_NT
-    buildReason: IndividualCI
     queue: 
       name: Hosted VS2017
       demands:
@@ -13,19 +12,14 @@ phases:
         Build_Debug:
           _BuildConfig: Debug
           _BuildArch: x64
-          _PublishType: none
-          _SignType: test
         Build_Release:
           _BuildConfig: Release
           _BuildArch: x64
-          _PublishType: none
-          _SignType: test
 
 - template: /eng/build.yml
   parameters:
     phaseName: CentOS_7
     agentOs: Linux
-    buildReason: IndividualCI
     dockerImage: microsoft/dotnet-buildtools-prereqs:centos-7-c103199-20180628120549
     queue:
       name: DotNetCore-Linux
@@ -36,19 +30,14 @@ phases:
         Build_Debug:
           _BuildConfig: Debug
           _BuildArch: x64
-          _PublishType: none
-          _SignType: test
         Build_Release:
           _BuildConfig: Release
           _BuildArch: x64
-          _PublishType: none
-          _SignType: test
 
 - template: /eng/build.yml
   parameters:
     phaseName: MacOS
     agentOs: Darwin
-    buildReason: IndividualCI
     queue: 
       name: Hosted macOS Preview
       demands:
@@ -58,11 +47,7 @@ phases:
         Build_Debug:
           _BuildConfig: Debug
           _BuildArch: x64
-          _PublishType: none
-          _SignType: test
         Build_Release:
           _BuildConfig: Release
           _BuildArch: x64
-          _PublishType: none
-          _SignType: test
 
