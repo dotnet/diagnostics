@@ -6,12 +6,68 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>;1591;1701</NoWarn>
     <IsPackable>true</IsPackable>
-    <Description>Managed SOS Services</Description>
+    <Description>.NET Core SOS</Description>
+    <PackageId>SOS</PackageId>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <PackageTags>SOS</PackageTags>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
   </PropertyGroup>
   
   <ItemGroup>
     <PackageReference Include="System.Reflection.Metadata" Version="$(SystemReflectionMetadataVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <_PackageFiles Include="$(ArtifactsBinDir)\SOS.NETCore\netcoreapp1.0\SOS.NETCore.dll">
+      <BuildAction>None</BuildAction>
+      <PackagePath>tools/win-x64</PackagePath>
+    </_PackageFiles>
+    <_PackageFiles Include="$(ArtifactsBinDir)\Windows_NT.x64\sos.dll">
+      <BuildAction>None</BuildAction>
+      <PackagePath>tools/win-x64</PackagePath>
+    </_PackageFiles>
+
+    <_PackageFiles Include="$(ArtifactsBinDir)\SOS.NETCore\netcoreapp1.0\SOS.NETCore.dll">
+      <BuildAction>None</BuildAction>
+      <PackagePath>tools/win-x86</PackagePath>
+    </_PackageFiles>
+    <_PackageFiles Include="$(ArtifactsBinDir)\Windows_NT.x86\sos.dll">
+      <BuildAction>None</BuildAction>
+      <PackagePath>tools/win-x86</PackagePath>
+    </_PackageFiles>
+
+    <_PackageFiles Include="$(ArtifactsBinDir)\SOS.NETCore\netcoreapp1.0\SOS.NETCore.dll">
+      <BuildAction>None</BuildAction>
+      <PackagePath>tools/linux-x64</PackagePath>
+    </_PackageFiles>
+    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64\libsosplugin.so">
+      <BuildAction>None</BuildAction>
+      <PackagePath>tools/linux-x64</PackagePath>
+    </_PackageFiles>
+    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64\libsos.so">
+      <BuildAction>None</BuildAction>
+      <PackagePath>tools/linux-x64</PackagePath>
+    </_PackageFiles>
+    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64\sosdocsunix.txt">
+      <BuildAction>None</BuildAction>
+      <PackagePath>tools/linux-x64</PackagePath>
+    </_PackageFiles>
+
+    <_PackageFiles Include="$(ArtifactsBinDir)\SOS.NETCore\netcoreapp1.0\SOS.NETCore.dll">
+      <BuildAction>None</BuildAction>
+      <PackagePath>tools/osx-x64</PackagePath>
+    </_PackageFiles>
+    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64\libsosplugin.dylib">
+      <BuildAction>None</BuildAction>
+      <PackagePath>tools/osx-x64</PackagePath>
+    </_PackageFiles>
+    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64\libsos.dylib">
+      <BuildAction>None</BuildAction>
+      <PackagePath>tools/osx-x64</PackagePath>
+    </_PackageFiles>
+    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64\sosdocsunix.txt">
+      <BuildAction>None</BuildAction>
+      <PackagePath>tools/osx-x64</PackagePath>
+    </_PackageFiles>
   </ItemGroup>
 </Project>

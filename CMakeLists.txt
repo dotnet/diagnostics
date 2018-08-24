@@ -20,7 +20,14 @@ if (WIN32)
 endif (WIN32)
 
 set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-#set(VERSION_FILE_PATH "${CMAKE_BINARY_DIR}/version.cpp")
+
+# Where the version source file for xplat is generated
+set(VERSION_FILE_PATH "${CMAKE_BINARY_DIR}/version.cpp")
+
+# Where _version.h for Windows is generated
+if (WIN32)
+include_directories("${CMAKE_BINARY_DIR}")
+endif (WIN32)
 
 set(CORECLR_SET_RPATH ON)
 if(CORECLR_SET_RPATH)

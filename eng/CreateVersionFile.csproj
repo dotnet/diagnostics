@@ -1,0 +1,58 @@
+<Project Sdk="RoslynTools.RepoToolset" >
+
+  <PropertyGroup>
+    <OfficialBuildId Condition="'$(OfficialBuildId)' == ''">$(BUILD_BUILDNUMBER)</OfficialBuildId>
+  </PropertyGroup>
+
+  <Import Project="$(ArtifactsDir)\BuildTools\Build.Common.props" />
+  <Import Project="$(ArtifactsDir)\BuildTools\versioning.targets" />
+
+  <PropertyGroup>
+    <BuildVersionFileOverride>$(BuildVersionFilePath)BuildVersion2-$(TodayTimeStamp).props</BuildVersionFileOverride>
+    <ShouldCreateVersionFileOverride Condition="!Exists('$(BuildVersionFileOverride)')">true</ShouldCreateVersionFileOverride>
+  </PropertyGroup>
+
+  <Import Condition="Exists('$(BuildVersionFileOverride)')" Project="$(BuildVersionFileOverride)" />
+
+  <Target Name="GenerateVersionHeader2" DependsOnTargets="CreateVersionFileOverride;GenerateVersionHeader"/>
+
+  <Target Name="GenerateVersionSourceFile2" DependsOnTargets="CreateVersionFileOverride;GenerateVersionSourceFile"/>
+
+  <Target Name="CreateVersionFileOverride" 
+          Condition="'$(SkipVersionGeneration)' != 'true' AND '$(ShouldCreateVersionFileOverride)' == 'true'"
+          DependsOnTargets="CreateVersionFileDuringBuild">
+    <!--
+      All of this is to override the BuildTools version major/minor to what RoslynTools.RepoToolSet does.
+    -->
+    <PropertyGroup>
+      <FileVersion Condition="'$(_BuildNumberFiveDigitDateStamp)' != ''">$(MajorVersion).$(MinorVersion).$(_BuildNumberFiveDigitDateStamp).$(_BuildNumberBuildOfTheDayPadded)</FileVersion>
+      <BuildNumberMajor Condition="'$(_BuildNumberFiveDigitDateStamp)' != ''">$(_BuildNumberFiveDigitDateStamp)</BuildNumberMajor>
+      <BuildNumberMinor Condition="'$(_BuildNumberBuildOfTheDayPadded)' != ''">$(_BuildNumberBuildOfTheDayPadded)</BuildNumberMinor>
+
+      <VersionFileOverrideContent>
+        <![CDATA[<?xml version="1.0" encoding="utf-8"?>
+<!-- This is a generated file. -->
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <FileVersion>$(FileVersion)</FileVersion>
+    <BuildNumberMajor>$(BuildNumberMajor)</BuildNumberMajor>
+    <BuildNumberMinor>$(BuildNumberMinor)</BuildNumberMinor>
+  </PropertyGroup>
+</Project>
+]]>
+      </VersionFileOverrideContent>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(BuildVersionFilePath)" />
+
+    <WriteLinesToFile
+      ContinueOnError="WarnAndContinue"
+      Condition="!Exists('$(BuildVersionFileOverride)')"
+      File="$(BuildVersionFileOverride)"
+      Lines="$(VersionFileOverrideContent)"
+      Overwrite="true" />
+
+    <Message Importance="High" Text="Created version override file $(BuildVersionFileOverride)" />
+  </Target>
+
+</Project>

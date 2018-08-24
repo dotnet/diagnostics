@@ -200,7 +200,7 @@ set(SOURCES
   thread/thread.cpp
 )
 
-add_library(coreclrpal
+_add_library(coreclrpal
   STATIC
   ${SOURCES}
   ${ARCH_SOURCES}

@@ -23,7 +23,7 @@ Type "!help <functionname>" for detailed info on that function.
 
 Object Inspection                  Examining code and stacks
 -----------------------------      -----------------------------
-DumpObj (do)                       Threads
+DumpObj (do)                       Threads (clrthreads)
 DumpArray (da)                     ThreadState
 DumpAsync                          IP2MD
 DumpStackObjects (dso)             U
@@ -399,6 +399,7 @@ The arguments in detail:
 
 \\
 
+COMMAND: dso.
 COMMAND: dumpstackobjects.
 !DumpStackObjects [-verify] [top stack [bottom stack]]
 
@@ -719,6 +720,7 @@ The arguments in detail:
           the finalizer thread when it gets a chance to run.
 \\
 
+COMMAND: pe.
 COMMAND: printexception.
 !PrintException [-nested] [-lines] [-ccw] [<Exception object address>] [<CCW pointer>]
 
@@ -850,6 +852,7 @@ Possible thread states:
     Failed to Start
     Detached
 \\
+COMMAND: clrthreads.
 COMMAND: threads.
 !Threads [-live] [-special] 
 

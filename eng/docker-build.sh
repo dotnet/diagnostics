@@ -63,8 +63,8 @@ $docker_bin exec $docker_id usermod -a -G container_SUDO_user $container_user_na
 $docker_bin exec $docker_id su -c "$source_directory/eng/docker-init.sh"
 $docker_bin exec $docker_id su -c "echo '%container_SUDO_user ALL=(ALL:ALL) NOPASSWD:ALL' >> /etc/sudoers"
 
-echo "Execute cibuild.sh $args"
-$docker_bin exec --workdir=$source_directory --user $container_user_name $docker_id $source_directory/eng/cibuild.sh $args
+echo "Execute $args"
+$docker_bin exec --workdir=$source_directory --user $container_user_name $docker_id $args
 lasterrorcode=$?
 
 echo "Cleanup Docker Container/Network"

@@ -37,7 +37,8 @@ if [ "$__osname" == "Linux" ]; then
     fi
 fi
 
-"$scriptroot/build.sh" --restore --build --build-native --test --publish --ci $@
+# Restore and build just the managed components (test infrastructure)
+"$scriptroot/build.sh" --restore --build --test --ci $@
 if [[ $? != 0 ]]; then
     exit 1
 fi
