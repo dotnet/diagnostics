@@ -60,8 +60,8 @@ namespace Microsoft.Diagnostic.TestHelpers
             string debuggeeSolutionDirPath = GetDebuggeeSolutionDirPath(dotNetRootBuildDirPath, debuggeeName);
             string debuggeeProjectDirPath = GetDebuggeeProjectDirPath(debuggeeSolutionDirPath, initialSourceDirPath, debuggeeName);
             string debuggeeBinaryDirPath = GetDebuggeeBinaryDirPath(debuggeeProjectDirPath, framework, runtimeIdentifier);
-            string debuggeeBinaryDllPath = GetDebuggeeBinaryDllPath(debuggeeBinaryDirPath, debuggeeName);
-            string debuggeeBinaryExePath = runtimeIdentifier != null ? GetDebuggeeBinaryExePath(debuggeeBinaryDirPath, debuggeeName) : null;
+            string debuggeeBinaryDllPath = config.IsNETCore ? GetDebuggeeBinaryDllPath(debuggeeBinaryDirPath, debuggeeName) : null;
+            string debuggeeBinaryExePath = config.IsDesktop ? GetDebuggeeBinaryExePath(debuggeeBinaryDirPath, debuggeeName) : null;
             string logPath = GetLogPath(config, framework, runtimeIdentifier, debuggeeName);
             return new CsprojBuildDebuggeeTestStep(dotNetPath,
                                                initialSourceDirPath,

@@ -201,7 +201,7 @@ namespace Microsoft.Diagnostic.TestHelpers
                     else
                     {
                         parts = conditionText.Split("!=");
-                        Assert.NotEqual(2, parts.Length);
+                        Assert.Equal(2, parts.Length);
                         equal = false;
                     }
                     // Resolve any config values in the condition

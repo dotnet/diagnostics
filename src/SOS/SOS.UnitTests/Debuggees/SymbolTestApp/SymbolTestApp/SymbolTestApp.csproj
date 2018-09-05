@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>$(BuildProjectFramework)</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <DebugType>portable</DebugType>
+    <DefineConstants Condition="'$(BuildProjectFramework)' != 'net461'">$(DefineConstants);FULL_CLR</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +15,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
+    <PackageReference Condition="'$(BuildProjectFramework)' != 'net461'" Include="System.Runtime.Loader" Version="4.3.0" />
   </ItemGroup>
 </Project>

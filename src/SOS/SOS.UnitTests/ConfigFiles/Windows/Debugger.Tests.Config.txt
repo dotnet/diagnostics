@@ -58,16 +58,15 @@
       <RuntimeSymbolsPath>$(RepoRootDir)\.dotnet\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
       <SOSPath>$(InstallDir)\sos.dll</SOSPath>
     </Option>
-    <!--
     <Option Condition="$(TargetArchitecture) != arm64">
       <TestProduct>Desktop</TestProduct>
+      <DebugType>full</DebugType>
       <FrameworkDirPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</FrameworkDirPath>
       <FrameworkDirPath Condition="$(TargetArchitecture) != x64">$(WinDir)\Microsoft.Net\Framework\v4.0.30319\</FrameworkDirPath>
       <RuntimeSymbolsPath>$(FrameworkDirPath)</RuntimeSymbolsPath>
-      <BuildProjectFramework>net45</BuildProjectFramework>
+      <BuildProjectFramework>net462</BuildProjectFramework>
       <SOSPath>$(FrameworkDirPath)\sos.dll</SOSPath>
     </Option>
-    -->
   </Options>
 
   <DebuggeeDumpOutputRootDir>$(DumpDir)\$(TestProduct)\$(RuntimeFrameworkVersion)\$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>

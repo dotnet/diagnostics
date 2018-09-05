@@ -127,7 +127,7 @@ public class SOS
     public async Task StackAndOtherTests(TestConfiguration config)
     {
         SkipIfArm(config);
-        if (config.RuntimeFrameworkVersion.StartsWith("1.1"))
+        if (config.RuntimeFrameworkVersion != null && config.RuntimeFrameworkVersion.StartsWith("1.1"))
         {
             throw new SkipTestException("The debuggee (SymbolTestApp) doesn't work on .NET Core 1.1 because of a AssemblyLoadContext problem");
         }

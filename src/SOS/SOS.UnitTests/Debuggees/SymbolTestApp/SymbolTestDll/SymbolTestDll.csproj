@@ -3,6 +3,5 @@
     <OutputType>Library</OutputType>
     <TargetFramework>$(BuildProjectFramework)</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <DebugType>portable</DebugType>
   </PropertyGroup>
 </Project>
