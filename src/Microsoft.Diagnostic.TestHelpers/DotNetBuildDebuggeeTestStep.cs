@@ -145,7 +145,6 @@ namespace Microsoft.Diagnostic.TestHelpers
             PrepareProjectSolution(output);
             await Restore(output);
             await Build(output);
-            RenameDebuggeeDllToExe(output);
             CopyNativeDependencies(output);
         }
 
@@ -221,20 +220,6 @@ namespace Microsoft.Diagnostic.TestHelpers
             await Restore(null, output);
         }
 
-        void RenameDebuggeeDllToExe(ITestOutputHelper output)
-        {
-            if (DebuggeeBinaryDllPath == null || DebuggeeBinaryExePath == null)
-            {
-                return;
-            }
-            AssertDebuggeeDllExists(output);
-
-            output.WriteLine("Copying: " + DebuggeeBinaryDllPath + " -> " + DebuggeeBinaryExePath);
-            File.Copy(DebuggeeBinaryDllPath, DebuggeeBinaryExePath, true);
-
-            AssertDebuggeeExeExists(output);
-        }
-
         protected async Task Build(string dotnetArgs, ITestOutputHelper output)
         {
             AssertDebuggeeSolutionDirExists(output);
@@ -265,13 +250,13 @@ namespace Microsoft.Diagnostic.TestHelpers
 
             await runner.Run();
 
-            if (DebuggeeBinaryDllPath != null)
+            if (DebuggeeBinaryExePath != null)
             {
-                AssertDebuggeeDllExists(output);
+                AssertDebuggeeExeExists(output);
             }
             else
             {
-                AssertDebuggeeExeExists(output);
+                AssertDebuggeeDllExists(output);
             }
         }
 
