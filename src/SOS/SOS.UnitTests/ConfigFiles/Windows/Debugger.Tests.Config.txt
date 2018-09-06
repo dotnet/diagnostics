@@ -60,6 +60,7 @@
     </Option>
     <Option Condition="$(TargetArchitecture) != arm64">
       <TestProduct>Desktop</TestProduct>
+      <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
       <DebugType>full</DebugType>
       <FrameworkDirPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</FrameworkDirPath>
       <FrameworkDirPath Condition="$(TargetArchitecture) != x64">$(WinDir)\Microsoft.Net\Framework\v4.0.30319\</FrameworkDirPath>
