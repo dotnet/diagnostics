@@ -28,6 +28,7 @@ __CrossBuild=0
 __NumProc=1
 __Build=0
 __Test=0
+__DailyTest=
 __CI=0
 __TestArgs=
 __UnprocessedBuildArgs=
@@ -37,6 +38,7 @@ usage()
     echo "Usage: $0 [options]"
     echo "--build-native - build native components"
     echo "--test - test native components"
+    echo "--daily-test - test native components for daily build job"
     echo "--architecture <x64|x86|arm|armel|arm64>"
     echo "--configuration <debug|release>"
     echo "--clangx.y - optional argument to build using clang version x.y"
@@ -159,6 +161,10 @@ while :; do
         # Passed to common build script when testing
         --test)
             __Test=1
+            ;;
+
+        --daily-test)
+            __DailyTest="--daily-test"
             ;;
 
         --ci)
@@ -463,9 +469,8 @@ fi
 
 # Run SOS/lldbplugin tests
 if [ $__Test == 1 ]; then
-    # Install the other versions of .NET Core runtime we are going to test on (2.0.9 and 1.1.9)
-    bash "$__ProjectRoot/.dotnet/dotnet-install.sh" --version 2.0.9 --architecture "$__BuildArch" --skip-non-versioned-files --runtime dotnet --install-dir "$__ProjectRoot/.dotnet"
-    bash "$__ProjectRoot/.dotnet/dotnet-install.sh" --version 1.1.9 --architecture "$__BuildArch" --skip-non-versioned-files --runtime dotnet --install-dir "$__ProjectRoot/.dotnet"
+    # Install the other versions of .NET Core runtime we are going to test on
+    "$__ProjectRoot/eng/install-test-runtimes.sh" --dotnet-directory "$__ProjectRoot/.dotnet" --temp-directory "$__IntermediatesDir" --architecture "$__BuildArch" $__DailyTest
 
     if [ "$LLDB_PATH" = "" ]; then
         export LLDB_PATH="$(which lldb-3.9.1 2> /dev/null)"

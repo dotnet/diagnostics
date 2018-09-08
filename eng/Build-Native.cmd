@@ -49,6 +49,7 @@ set __BuildType=Debug
 set __BuildOS=Windows_NT
 set __Build=0
 set __Test=0
+set __DailyTest=
 set __Verbosity=minimal
 set __TestArgs=
 
@@ -74,6 +75,7 @@ if /i "%1" == "--help" goto Usage
 
 if /i "%1" == "-build-native"        (set __Build=1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-test"                (set __Test=1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
+if /i "%1" == "-daily-test"          (set __DailyTest=-DailyTest&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-configuration"       (set __BuildType=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
 if /i "%1" == "-architecture"        (set __BuildArch=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
 if /i "%1" == "-verbosity"           (set __Verbosity=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
@@ -327,9 +329,8 @@ echo %__MsgPrefix%Product binaries are available at !__BinDir!
 
 :: Test components
 if %__Test% EQU 1 (
-    :: Install the other versions of .NET Core runtime we are going to test on (2.0.9 and 1.1.9)
-    powershell -ExecutionPolicy ByPass -NoProfile -command "& """%__ProjectDir%\.dotnet\dotnet-install.ps1""" -Version 2.0.9 -Architecture %__BuildArch% -SkipNonVersionedFiles -Runtime dotnet -InstallDir %__ProjectDir%\.dotnet"
-    powershell -ExecutionPolicy ByPass -NoProfile -command "& """%__ProjectDir%\.dotnet\dotnet-install.ps1""" -Version 1.1.9 -Architecture %__BuildArch% -SkipNonVersionedFiles -Runtime dotnet -InstallDir %__ProjectDir%\.dotnet"
+    :: Install the other versions of .NET Core runtime we are going to test on
+    powershell -ExecutionPolicy ByPass -NoProfile -command "& """%__ProjectDir%\eng\install-test-runtimes.ps1""" -DotNetDir %__ProjectDir%\.dotnet -TempDir %__IntermediatesDir% -BuildArch %__BuildArch%" %__DailyTest%
 
     :: Run the xunit tests
     powershell -ExecutionPolicy ByPass -NoProfile -command "& """%__ProjectDir%\eng\common\Build.ps1""" -test -configuration %__BuildType% -verbosity %__Verbosity% %__TestArgs%"
@@ -355,6 +356,7 @@ echo.
 echo.-? -h -help --help: view this message.
 echo -build-native - build native components
 echo -test - test components
+echo -daily-test - test components for daily build job
 echo -architecture <x64|x86|arm|arm64>
 echo -configuration <debug|release>
 echo -verbosity <q[uiet]|m[inimal]|n[ormal]|d[etailed]|diag[nostic]>
