@@ -3,8 +3,9 @@ setlocal
 
 :: remove the -test and -build-native options and pass it to build-native.cmd
 set __args="%*"
-set __args=%__args:-test=%
 set __args=%__args:-build-native=%
+set __args=%__args:-daily-test=%
+set __args=%__args:-test=%
 if %__args% == "" set __args=
 
 :: build managed components

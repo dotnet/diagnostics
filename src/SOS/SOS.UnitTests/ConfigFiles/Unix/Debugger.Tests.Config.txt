@@ -8,10 +8,11 @@
 -->
 
 <Configuration>
+  <RepoRootDir>../../../../..</RepoRootDir>
   <Import ConfigFile="Debugger.Tests.Common.txt" />
+  <Import ConfigFile="$(RepoRootDir)/.dotnet/Debugger.Tests.Versions.txt" />
 
   <TestProduct>ProjectK</TestProduct>
-  <RepoRootDir>../../../../..</RepoRootDir>
   <ScriptRootDir>$(RepoRootDir)/src/SOS/SOS.UnitTests/Scripts</ScriptRootDir>
   <RootBinDir>$(RepoRootDir)/artifacts</RootBinDir>
   <InstallDir>$(RootBinDir)/$(TargetConfiguration)/bin/$(OS).$(TargetArchitecture)</InstallDir>
@@ -32,23 +33,29 @@
 
   <Options>
     <Option>
-      <BuildProjectMicrosoftNetCoreAppVersion>2.1.0</BuildProjectMicrosoftNetCoreAppVersion>
+      <!-- Build the debuggee for 2.1 but run it on latest -->
+      <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion21)</BuildProjectMicrosoftNetCoreAppVersion>
       <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-      <RuntimeFrameworkVersion>2.1.0</RuntimeFrameworkVersion>
+      <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
     </Option>
-    <Option>
-      <BuildProjectMicrosoftNetCoreAppVersion>2.0.9</BuildProjectMicrosoftNetCoreAppVersion>
+    <Option Condition="'$(DailyTest)' != 'true'">
+      <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion21)</BuildProjectMicrosoftNetCoreAppVersion>
+      <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
+      <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
+    </Option>
+    <Option Condition="'$(DailyTest)' != 'true'">
+      <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion20)</BuildProjectMicrosoftNetCoreAppVersion>
       <BuildProjectFramework>netcoreapp2.0</BuildProjectFramework>
-      <RuntimeFrameworkVersion>2.0.9</RuntimeFrameworkVersion>
+      <RuntimeFrameworkVersion>$(RuntimeVersion20)</RuntimeFrameworkVersion>
     </Option>
-    <Option Condition="Exists('$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/1.1.9')">
-      <BuildProjectMicrosoftNetCoreAppVersion>1.1.9</BuildProjectMicrosoftNetCoreAppVersion>
+    <Option Condition="Exists('$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/$(RuntimeVersion11)')">
+      <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion11)</BuildProjectMicrosoftNetCoreAppVersion>
       <BuildProjectFramework>netcoreapp1.1</BuildProjectFramework>
-      <RuntimeFrameworkVersion>1.1.9</RuntimeFrameworkVersion>
+      <RuntimeFrameworkVersion>$(RuntimeVersion11)</RuntimeFrameworkVersion>
       <!-- createdump doesn't exists in 1.1 -->
       <GenerateDumpWithGDB>true</GenerateDumpWithGDB>
       <!-- SOS needs at least 2.0 to run. The default without this is to use the runtime being debuggged to host SOS.NETCore -->
-      <SOSHostRuntime>$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/2.0.9</SOSHostRuntime>
+      <SOSHostRuntime>$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/$(RuntimeVersion20)</SOSHostRuntime>
     </Option>
   </Options>
 

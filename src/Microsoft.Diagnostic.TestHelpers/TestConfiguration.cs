@@ -145,7 +145,11 @@ namespace Microsoft.Diagnostic.TestHelpers
                     {
                         foreach (XAttribute attr in node.Attributes("ConfigFile"))
                         {
-                            string file = Path.Combine(TestConfiguration.BaseDir, attr.Value);
+                            string file = ResolveProperties(currentTemplate, attr.Value).Trim();
+                            if (!Path.IsPathRooted(file))
+                            {
+                                file = Path.Combine(TestConfiguration.BaseDir, file);
+                            }
                             templates = ParseConfigFile(file, templates);
                         }
                     }
