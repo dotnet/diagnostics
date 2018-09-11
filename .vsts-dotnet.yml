@@ -208,6 +208,7 @@ phases:
   - Windows
   - CentOS_7
   - MacOS
+  condition: ne(variables['Build.Reason'], 'Schedule')
   queue:
     name: DotNetCore-Build
     demands:
