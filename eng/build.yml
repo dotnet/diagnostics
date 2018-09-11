@@ -34,15 +34,21 @@ phases:
       _PhaseName : ${{ parameters.phaseName }}
       _HelixType: build/product
       _HelixBuildConfig: $(_BuildConfig)
-      ${{ if notIn(variables['Build.Reason'], 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
+      ${{ if ne(variables['System.TeamProject'], 'public') }}:
         _HelixSource: official/dotnet/arcade/$(Build.SourceBranch)
-        ${{ if eq(parameters.testOnly, 'true') }}:
-          _LinuxScript: $(Build.SourcesDirectory)/eng/citest.sh
-        ${{ if ne(parameters.testOnly, 'true') }}:
-          _LinuxScript: $(Build.SourcesDirectory)/eng/cibuild.sh
-      ${{ if in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
+      ${{ if eq(variables['System.TeamProject'], 'public') }}:
         _HelixSource: pr/dotnet/arcade/$(Build.SourceBranch)
+      ${{ if eq(parameters.testOnly, 'true') }}:
+        _LinuxScript: $(Build.SourcesDirectory)/eng/citest.sh
+      ${{ if ne(parameters.testOnly, 'true') }}:
         _LinuxScript: $(Build.SourcesDirectory)/eng/cibuild.sh
+      ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
+        ${{ if eq(parameters.agentOs, 'Windows_NT') }}:
+          _DailyTest: -daily-test
+        ${{ if ne(parameters.agentOs, 'Windows_NT') }}:
+          _DailyTest: --daily-test
+      ${{ if ne(variables['Build.Reason'], 'Schedule') }}:
+        _DailyTest: ''
 
     steps:
     # Internal only build steps
@@ -50,7 +56,7 @@ phases:
       parameters:
         agentOs: ${{ parameters.agentOs }} 
         steps:
-        - script: $(Build.SourcesDirectory)\eng\cibuild.cmd
+        - script: $(Build.SourcesDirectory)\eng\cibuild.cmd $(_DailyTest)
             -configuration $(_BuildConfig) 
             -architecture $(_BuildArch)
             -prepareMachine 
@@ -79,7 +85,7 @@ phases:
           --docker-image $(_DockerImageName)
           --source-directory $(Build.SourcesDirectory)
           --container-name diagnostics-$(Build.BuildId)
-          $(_LinuxScript)
+          $(_LinuxScript) $(_DailyTest)
           --configuration $(_BuildConfig) 
           --architecture $(_BuildArch)
           --prepareMachine 
@@ -90,7 +96,7 @@ phases:
         condition: succeeded()
 
     - ${{ if eq(parameters.agentOs, 'Darwin') }}:
-      - script: $(Build.SourcesDirectory)/eng/cibuild.sh
+      - script: $(Build.SourcesDirectory)/eng/cibuild.sh $(_DailyTest)
           --configuration $(_BuildConfig) 
           --architecture $(_BuildArch)
           --prepareMachine
@@ -100,37 +106,34 @@ phases:
         condition: succeeded()
  
     # Internal only build steps (until publishing artifacts in public CI is supported)
-    - template: /eng/common/templates/steps/build-reason.yml
-      parameters:
-        conditions: not IndividualCI,BatchedCI,PullRequest
-        steps:
-        - task: PublishBuildArtifacts@1
-          displayName: Upload Artifacts
-          inputs:
-            pathtoPublish: '$(Build.SourcesDirectory)/artifacts/$(_BuildConfig)/$(_PublishArtifacts)'
-            artifactName: $(_PhaseName)_$(Agent.JobName)
-          condition: and(succeeded(), ne(variables['_PublishArtifacts'], ''))
+    - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+      - task: PublishBuildArtifacts@1
+        displayName: Upload Artifacts
+        inputs:
+          pathtoPublish: '$(Build.SourcesDirectory)/artifacts/$(_BuildConfig)/$(_PublishArtifacts)'
+          artifactName: $(_PhaseName)_$(Agent.JobName)
+        condition: and(succeeded(), ne(variables['_PublishArtifacts'], ''))
 
-        - task: CopyFiles@2
-          displayName: Gather Build Logs
-          inputs:
-            sourceFolder: '$(Build.SourcesDirectory)/artifacts/$(_BuildConfig)/log'
-            targetFolder: '$(Build.StagingDirectory)/BuildLogs'
-          continueOnError: true
-          condition: always()
+      - task: CopyFiles@2
+        displayName: Gather Build Logs
+        inputs:
+          sourceFolder: '$(Build.SourcesDirectory)/artifacts/$(_BuildConfig)/log'
+          targetFolder: '$(Build.StagingDirectory)/BuildLogs'
+        continueOnError: true
+        condition: always()
 
-        - task: CopyFiles@2
-          displayName: Gather Test Logs
-          inputs:
-            sourceFolder: '$(Build.SourcesDirectory)/artifacts/$(_BuildConfig)/TestResults'
-            targetFolder: '$(Build.StagingDirectory)/BuildLogs'
-          continueOnError: true
-          condition: always()
+      - task: CopyFiles@2
+        displayName: Gather Test Logs
+        inputs:
+          sourceFolder: '$(Build.SourcesDirectory)/artifacts/$(_BuildConfig)/TestResults'
+          targetFolder: '$(Build.StagingDirectory)/BuildLogs'
+        continueOnError: true
+        condition: always()
 
-        - task: PublishBuildArtifacts@1
-          displayName: Publish Logs to VSTS
-          inputs:
-            pathtoPublish: '$(Build.StagingDirectory)/BuildLogs'
-            artifactName: Logs_$(_PhaseName)_$(Agent.JobName)
-          continueOnError: true
-          condition: always()
+      - task: PublishBuildArtifacts@1
+        displayName: Publish Logs to VSTS
+        inputs:
+          pathtoPublish: '$(Build.StagingDirectory)/BuildLogs'
+          artifactName: Logs_$(_PhaseName)_$(Agent.JobName)
+        continueOnError: true
+        condition: always()
