@@ -22,11 +22,8 @@ parameters:
 
   ## Telemetry variables
 
-  # Required: determines whether to run cmd or sh telemetry files
-  agentOs: Windows_NT
-
   # Optional: enable sending telemetry
-  #           if enabled, these "variables" must be specified in the variables object
+  #           if 'true', these "variables" must be specified in the variables object or as part of the queue matrix
   #             _HelixBuildConfig - differentiate between Debug, Release, other
   #             _HelixSource - Example: build/product
   #             _HelixType - Example: official/dotnet/arcade/$(Build.SourceBranch)
@@ -49,23 +46,26 @@ phases:
       fetchDepth: ${{ parameters.fetchDepth }}
 
   - ${{ if eq(parameters.enableTelemetry, 'true') }}:
-    # Remove this condition once telemetry can be sent from public CI
-    - ${{ if notIn(variables['Build.Reason'], 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
-      - template: /eng/common/templates/steps/telemetry-start.yml
-        parameters:
-          agentOs: ${{ parameters.agentOs }}
-          buildConfig: ${{ parameters.variables._HelixBuildConfig }}
-          helixSource: ${{ parameters.variables._HelixSource }}
-          helixType: ${{ parameters.variables._HelixType }}
+    - template: /eng/common/templates/steps/telemetry-start.yml
+      parameters:
+        buildConfig: $(_HelixBuildConfig)
+        helixSource: $(_HelixSource)
+        helixType: $(_HelixType)
 
   # Run provided build steps
   - ${{ parameters.steps }}
 
+  - ${{ if eq(parameters.enableMicrobuild, 'true') }}:
+    # Internal only resources
+    - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+      - task: MicroBuildCleanup@1
+        displayName: Execute Microbuild cleanup tasks  
+        condition: and(always(), in(variables['_SignType'], 'real', 'test'), eq(variables['Agent.Os'], 'Windows_NT'))
+        env:
+          TeamName: $(_TeamName)
+
   - ${{ if eq(parameters.enableTelemetry, 'true') }}:
-    # Remove this condition once telemetry can be sent from public CI
-    - ${{ if notIn(variables['Build.Reason'], 'IndividualCI', 'BatchedCI', 'PullRequest') }}:
-      - template: /eng/common/templates/steps/telemetry-end.yml
-        parameters:
-          agentOs: ${{ parameters.agentOs }}
-          helixSource: ${{ parameters.variables._HelixSource }}
-          helixType: ${{ parameters.variables._HelixType }}
+    - template: /eng/common/templates/steps/telemetry-end.yml
+      parameters:
+        helixSource: $(_HelixSource)
+        helixType: $(_HelixType)
