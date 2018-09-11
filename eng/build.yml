@@ -43,9 +43,9 @@ phases:
       ${{ if ne(parameters.testOnly, 'true') }}:
         _LinuxScript: $(Build.SourcesDirectory)/eng/cibuild.sh
       ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
-        - ${{ if eq(parameters.agentOs, 'Windows_NT') }}:
+        ${{ if eq(parameters.agentOs, 'Windows_NT') }}:
           _DailyTest: -daily-test
-        - ${{ if ne(parameters.agentOs, 'Windows_NT') }}:
+        ${{ if ne(parameters.agentOs, 'Windows_NT') }}:
           _DailyTest: --daily-test
       ${{ if ne(variables['Build.Reason'], 'Schedule') }}:
         _DailyTest: ''
@@ -106,7 +106,7 @@ phases:
         condition: succeeded()
  
     # Internal only build steps (until publishing artifacts in public CI is supported)
-    ${{ if ne(variables['System.TeamProject'], 'public') }}:
+    - ${{ if ne(variables['System.TeamProject'], 'public') }}:
       - task: PublishBuildArtifacts@1
         displayName: Upload Artifacts
         inputs:
