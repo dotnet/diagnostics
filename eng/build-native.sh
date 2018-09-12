@@ -24,12 +24,12 @@ __PortableBuild=1
 __ExtraCmakeArgs=""
 __ClangMajorVersion=0
 __ClangMinorVersion=0
-__CrossBuild=0
+__CrossBuild=false
 __NumProc=1
-__Build=0
-__Test=0
+__Build=false
+__Test=false
 __DailyTest=
-__CI=0
+__CI=false
 __TestArgs=
 __UnprocessedBuildArgs=
 
@@ -155,12 +155,12 @@ while :; do
             ;;
 
         --build-native)
-            __Build=1
+            __Build=true
             ;;
 
         # Passed to common build script when testing
         --test)
-            __Test=1
+            __Test=true
             ;;
 
         --daily-test)
@@ -168,7 +168,7 @@ while :; do
             ;;
 
         --ci)
-            __CI=1
+            __CI=true
             __TestArgs="$__TestArgs $1"
             ;;
 
@@ -253,12 +253,14 @@ fi
 
 # Needs to be set for generate version source file/msbuild
 if [[ -z $NUGET_PACKAGES ]]; then
-    if [[ $__CI ]]; then
+    if [[ $__CI == true ]]; then
         export NUGET_PACKAGES="$__ProjectRoot/.packages"
     else
         export NUGET_PACKAGES="$HOME/.nuget/packages"
     fi
 fi
+
+echo $NUGET_PACKAGES
 
 # Resolve python-version to use
 if [ "$PYTHON" == "" ] ; then
@@ -392,7 +394,7 @@ initHostDistroRid()
 
 initTargetDistroRid()
 {
-    if [ $__CrossBuild == 1 ]; then
+    if [ $__CrossBuild == true ]; then
         if [ "$__BuildOS" == "Linux" ]; then
             if [ ! -e $ROOTFS_DIR/etc/os-release ]; then
                 if [ -e $ROOTFS_DIR/android_platform ]; then
@@ -455,20 +457,25 @@ if [ "$__HostOS" == "OSX" ]; then
 fi
 
 # Build native components
-if [ $__Build == 1 ]; then
-    echo "Generating Version Source File"
-    __GenerateVersionLog="$__LogDir/GenerateVersion.binlog"
-    $__DotNetCli $__MSBuildPath $__ProjectRoot/eng/CreateVersionFile.csproj /noconlog /bl:$__GenerateVersionLog /t:GenerateVersionSourceFile2 /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
-    if [ $? != 0 ]; then
-        echo "Generating Version Source File FAILED"
-        exit 1
+if [ $__Build == true ]; then
+    if [[ $__CI == true ]]; then
+        echo "Generating Version Source File"
+        __GenerateVersionLog="$__LogDir/GenerateVersion.binlog"
+        $__DotNetCli $__MSBuildPath $__ProjectRoot/eng/CreateVersionFile.csproj /noconlog /bl:$__GenerateVersionLog /t:GenerateVersionFiles /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
+        if [ $? != 0 ]; then
+            echo "Generating Version Source File FAILED"
+            exit 1
+        fi
+    else
+        echo "Generating Empty Version Source File"
+       echo "" > "$__IntermediatesDir/version.cpp"
     fi
 
     build_native "$__BuildArch" "$__IntermediatesDir" "$__ExtraCmakeArgs"
 fi
 
 # Run SOS/lldbplugin tests
-if [ $__Test == 1 ]; then
+if [ $__Test == true ]; then
     # Install the other versions of .NET Core runtime we are going to test on
     "$__ProjectRoot/eng/install-test-runtimes.sh" --dotnet-directory "$__ProjectRoot/.dotnet" --temp-directory "$__IntermediatesDir" --architecture "$__BuildArch" $__DailyTest
 

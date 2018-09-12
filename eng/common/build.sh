@@ -323,7 +323,7 @@ function Main {
   fi
 
   if [[ -z $NUGET_PACKAGES ]]; then
-    if [[ $ci ]]; then
+    if [[ $ci == true ]]; then
       export NUGET_PACKAGES="$repo_root/.packages"
     else
       export NUGET_PACKAGES="$HOME/.nuget/packages"
@@ -333,7 +333,7 @@ function Main {
   mkdir -p "$toolset_dir"
   mkdir -p "$log_dir"
   
-  if [[ $ci ]]; then
+  if [[ $ci == true ]]; then
     mkdir -p "$temp_dir"
     export TEMP="$temp_dir"
     export TMP="$temp_dir"

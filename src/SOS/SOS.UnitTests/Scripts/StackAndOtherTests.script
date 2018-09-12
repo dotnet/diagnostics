@@ -13,7 +13,7 @@ ENDIF:LIVE
 SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 46\]\s*
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 54\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 24\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
@@ -23,7 +23,7 @@ IFDEF:PROJECTK
 SOSCOMMAND:ClrStack -f
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 46\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 54\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo2\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo1\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 24\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
@@ -34,7 +34,7 @@ IFDEF:PROJECTK
 SOSCOMMAND:ClrStack -a
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 46\]\s*
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 54\]\s*
 VERIFY:\s+PARAMETERS:\s+
 VERIFY:\s+dllPath \(0x<HEXVAL>\) = 0x<HEXVAL>\s+
 VERIFY:.*\s+LOCALS:\s+
@@ -49,7 +49,7 @@ IFDEF:PROJECTK
 SOSCOMMAND:ClrStack -r
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 46\]\s*
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 54\]\s*
 VERIFY:\s+[r|e]sp=<HEXVAL>\s+[r|e]bp=<HEXVAL>\s+[r|e]ip=<HEXVAL>\s+
 VERIFY:\s+|r|e]ax=<HEXVAL>\s+[r|e]bx=<HEXVAL>\s+[r|e]cx=<HEXVAL>\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
@@ -139,7 +139,7 @@ ENDIF:PROJECTK
 SOSCOMMAND:ClrStack
 SOSCOMMAND:IP2MD <POUT>.*\s+(<HEXVAL>)\s+SymbolTestApp\.Program\.Foo4.*\s+<POUT>
 VERIFY:.*\s+Method Name:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
-VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 46\s+
+VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 54\s+
 
 # Verify that "u" works (depends on the IP2MD right above)
 IFDEF:PROJECTK
@@ -147,7 +147,7 @@ SOSCOMMAND:u <POUT>\s*MethodDesc:\s+(<HEXVAL>)\s*<POUT>
 VERIFY:\s*Normal JIT generated code\s+
 VERIFY:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:\s+Begin\s+<HEXVAL>,\s+size\s+<HEXVAL>\s+
-VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 46:\s+
+VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 54:\s+
 ENDIF:PROJECTK
 
 # Verify that "u" with no line info works
@@ -164,7 +164,7 @@ SOSCOMMAND:u -o <PREVPOUT>
 VERIFY:\s*Normal JIT generated code\s+
 VERIFY:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:\s+Begin\s+<HEXVAL>,\s+size\s+<HEXVAL>\s+
-VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 46:\s+
+VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 54:\s+
 ENDIF:PROJECTK
 
 # Verify that Name2EE works

@@ -34,11 +34,19 @@ namespace SymbolTestApp
         {
 #if FULL_CLR
             byte[] dll = File.ReadAllBytes(Path.Combine(dllPath, @"SymbolTestDll.dll"));
-            byte[] pdb = File.ReadAllBytes(Path.Combine(dllPath, @"SymbolTestDll.pdb"));
+            byte[] pdb = null;
+            string pdbFile = Path.Combine(dllPath, @"SymbolTestDll.pdb");
+            if (File.Exists(pdbFile)) {
+                pdb = File.ReadAllBytes(pdbFile);
+            }
             Assembly assembly = Assembly.Load(dll, pdb);
 #else
             Stream dll = File.OpenRead(Path.Combine(dllPath, @"SymbolTestDll.dll"));
-            Stream pdb = File.OpenRead(Path.Combine(dllPath, @"SymbolTestDll.pdb"));
+            Stream pdb = null;
+            string pdbFile = Path.Combine(dllPath, @"SymbolTestDll.pdb");
+            if (File.Exists(pdbFile)) {
+                pdb = File.OpenRead(pdbFile);
+            }
             Assembly assembly = AssemblyLoadContext.Default.LoadFromStream(dll, pdb);
 #endif
             Type dllType = assembly.GetType("SymbolTestDll.TestClass");

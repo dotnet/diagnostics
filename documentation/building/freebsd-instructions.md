@@ -27,5 +27,5 @@ Install the following packages for the toolchain:
 To install the packages you need:
 
 ```sh
-% sudo pkg install bash cmake llvm39 gettext python27
+sudo pkg install bash cmake llvm39 gettext python27
 ```

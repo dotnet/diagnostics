@@ -31,7 +31,7 @@ To install the platform's prerequisites:
 To build under Windows, run build.cmd from the root of the repository:
 
 ```bat
-> build.cmd 
+build.cmd 
 
 [Lots of build spew]
 
@@ -42,19 +42,19 @@ BUILD: Product binaries are available at c:\git\diagnostics\artifacts\Debug\bin\
 To build for x86:
 
 ```bat
-> build.cmd -architecture x86
+build.cmd -architecture x86
 ```
 
 To test the resulting SOS:
 
 ```bat
-> test.cmd
+test.cmd
 ```
 
 To build under Linux, MacOS, FreeBSD, or NetBSD, run build.sh from the root of the repository:
 
 ```sh
-$ ./build.sh
+./build.sh
 
 [Lots of build spew]
 
@@ -65,30 +65,17 @@ BUILD: Product binaries are available at /home/mikem/diagnostics/artifacts/Debug
 To test the resulting SOS and plugin:
 
 ```sh
-$ ./test.sh
+./test.sh
 ```
 
 ## Getting lldb 
 
 Getting a version of lldb that works for your platform can be a problem sometimes. The version has to be at least 3.9 or greater because of a bug running SOS on a core dump that was fixed. Some Linux distros like Ubuntu it is easy as `sudo apt-get install lldb-3.9 python-lldb-3.9`. On other distros, you will need to build lldb. The directions below should give you some guidance.
 
-### [Linux Instructions](documentation/lldb/linux-instructions.md)
-
-### FreeBSD Instructions (10.1)
- 
-```sh
-% sudo pkg install llvm39 gettext python27
-```
-
-### NetBSD/OpenBSD Instructions
-
-TBD
-
-### macOS (Sierra 10.12.6) Instructions
-
-The version of lldb that comes with Xcode 9.2 will now work with SOS. We no longer have to build lldb locally.
-
-Later versions of macOS/Xcode TBD. 
+ * [Linux Instructions](documentation/lldb/linux-instructions.md)
+ * [macOS Instructions](documentation/lldb/osx-instructions.md)
+ * [FreeBSD Instructions](documentation/lldb/freebsd-instructions.md) 
+ * [NetBSD Instructions](documentation/lldb/netbsd-instructions.md)
 
 ## Useful Links
 

@@ -477,6 +477,25 @@ namespace Microsoft.Diagnostic.TestHelpers
         }
 
         /// <summary>
+        /// The major portion of the runtime framework version
+        /// </summary>
+        public int RuntimeFrameworkVersionMajor
+        {
+            get {
+                string version = RuntimeFrameworkVersion;
+                if (version != null) {
+                    string[] parts = version.Split('.');
+                    if (parts.Length > 0) {
+                        if (int.TryParse(parts[0], out int major)) {
+                            return major;
+                        }
+                    }
+                }
+                return 0;
+            }
+        }
+
+        /// <summary>
         /// The type of PDB: "full" (Windows PDB) or "portable".
         /// </summary>
         public string DebugType
@@ -555,15 +574,16 @@ namespace Microsoft.Diagnostic.TestHelpers
         /// </summary>
         public bool CreateDumpExists
         {
-            get { return OS.Kind == OSKind.Linux && IsNETCore && !RuntimeFrameworkVersion.StartsWith("1."); }
+            get { return OS.Kind == OSKind.Linux && IsNETCore && RuntimeFrameworkVersionMajor > 1; }
         }
 
         /// <summary>
-        /// Returns true if a stack overflow causes dump to be generated with createdump. Currently no .NET Core version does.
+        /// Returns true if a stack overflow causes dump to be generated with createdump. 3.x has now started to
+        /// create dumps on stack overflow.
         /// </summary>
         public bool StackOverflowCreatesDump
         {
-            get { return false; }
+            get { return IsNETCore && RuntimeFrameworkVersionMajor >= 3; }
         }
 
         /// <summary>
@@ -571,7 +591,7 @@ namespace Microsoft.Diagnostic.TestHelpers
         /// </summary>
         public bool StackOverflowSIGSEGV
         {
-            get { return OS.Kind == OSKind.Linux && IsNETCore && RuntimeFrameworkVersion.StartsWith("1."); }
+            get { return OS.Kind == OSKind.Linux && IsNETCore && RuntimeFrameworkVersionMajor == 1; }
         }
 
         #endregion

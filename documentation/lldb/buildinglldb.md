@@ -1,5 +1,7 @@
-Building LLDB
-=============
+Building LLDB from the LLVM repos
+=================================
+
+These instructions have been replace with better and more through documentation. See [Getting lldb](../../../README.md#getting-lldb) in the main readme.
 
 1. Clone the llvm, clang, and lldb repos like this:
 

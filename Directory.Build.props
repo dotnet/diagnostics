@@ -5,5 +5,11 @@
     <PackageLicenseUrl>http://go.microsoft.com/fwlink/?LinkId=529443</PackageLicenseUrl>
     <PackageIconUrl>http://go.microsoft.com/fwlink/?LinkID=288859</PackageIconUrl>
     <NoPackageAnalysis>true</NoPackageAnalysis>
+
+    <!-- Disable source link until issue https://github.com/dotnet/roslyn/issues/29289#issuecomment-413294637 is fixed -->
+    <EnableSourceLink>false</EnableSourceLink>
+    <DeterministicSourcePaths>false</DeterministicSourcePaths>
+    <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
+    <RepositoryUrl>https://github.com/dotnet/diagnostics.git</RepositoryUrl>
   </PropertyGroup>
 </Project>
