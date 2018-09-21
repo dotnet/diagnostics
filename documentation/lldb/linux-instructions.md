@@ -1,90 +1,189 @@
-Linux Prerequisites 
-===================
+Installing LLDB on Linux
+========================
 
-These instructions will lead you through preparing to build the diagnostics repo on Linux. We'll start by showing how to set up your environment from scratch.
+These instructions will lead you through installing or building the best version of lldb for your distro to use with SOS. If you have already followed the diagnostics repo build [prerequisites](../building/linux-instructions.md) and built the diagnostics repo, then the best version of lldb is already installed.
 
-Environment
-===========
+SOS needs at least lldb 3.9 or greater. Some distros only have older versions available by default so there are directions and scripts to build lldb 3.9 for that platform. These instructions assume that you have dotnet cli and its prerequisites installed.
 
-These instructions are written assuming the Ubuntu 14.04 LTS, since that's the distro the team uses. Pull Requests are welcome to address other environments as long as they don't break the ability to use Ubuntu 14.04 LTS.
+The libsosplugin.so built for lldb 3.9 does work with lldb 4.0, 5.0 and 6.0 but most of the testing has been on lldb 3.9.
 
-There have been reports of issues when using other distros or versions of Ubuntu (e.g. [Issue 95](https://github.com/dotnet/coreclr/issues/95)). If you're on another distribution, consider using docker's `ubuntu:14.04` image.
+#### Ubuntu 14.04 ####
 
-Minimum RAM required to build is 1GB. The build is known to fail on 512 MB VMs ([Issue 536](https://github.com/dotnet/coreclr/issues/536)).
+In order to get lldb-3.9, we need to add additional package sources (see [http://llvm.org/apt/](http://llvm.org/apt/) for the other Ubuntu versions not listed here):
 
-Toolchain Setup
----------------
+    sudo apt-get update
+    sudo apt-get install wget
+    echo "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty main" | sudo tee /etc/apt/sources.list.d/llvm.list
+    echo "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.9 main" | sudo tee -a /etc/apt/sources.list.d/llvm.list
+    wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
+    sudo apt-get update
 
-#### Ubuntu (14.04, 16.04, 16.10, 17.10, 18.04) ####
+Install the lldb packages:
 
-Install the following packages: 
+    sudo apt-get install lldb-3.9 python-lldb-3.9
 
-- cmake
-- make 
-- llvm-3.9
-- clang-3.9
-- lldb-3.9
-- liblldb-3.9-dev
-- wget
-- gettext
-- python27
+To launch lldb:
 
-In order to get clang-3.9, llvm-3.9 and lldb-3.9 on Ubuntu 14.04 (see [http://llvm.org/apt/](http://llvm.org/apt/) for the other versions), we need to add an additional package source:
+    lldb-3.9
 
-    ~$ echo "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.9 main" | sudo tee /etc/apt/sources.list.d/llvm.list
-    ~$ wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
-    ~$ sudo apt-get update
+#### Ubuntu 16.04 ####
 
-Note: arm clang has a known issue with CompareExchange (#15074), so for arm you have to use clang-4.0 or higher, the official build uses clang-5.0.
-    
-For other version of Debian/Ubuntu, please visit http://apt.llvm.org/.
+Add the additional package sources:
 
-Then install the packages you need:
+    sudo apt-get update
+    sudo apt-get install wget
+    echo "deb http://llvm.org/apt/xenial/ llvm-toolchain-xenial main" | sudo tee /etc/apt/sources.list.d/llvm.list
+    echo "deb http://llvm.org/apt/xenial/ llvm-toolchain-xenial-3.9 main" | sudo tee -a /etc/apt/sources.list.d/llvm.list
+    wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
+    sudo apt-get update
 
-    ~$ sudo apt-get install make wget cmake llvm-3.9 clang-3.9 lldb-3.9 liblldb-3.9-dev gettext
+Install the lldb packages:
 
-The lldb 3.9 package needs a lib file symbolic link fixed:
+    sudo apt-get install lldb-3.9 python-lldb-3.9
 
-    cd /usr/lib/llvm-3.9/lib
-    sudo ln -s ../../x86_64-linux-gnu/liblldb-3.9.so.1 liblldb-3.9.so.1
+To launch lldb:
 
-You now have all the required components.
+    lldb-3.9
 
-#### Alpine (3.6) ####
+#### Ubuntu 17.10 ####
 
+Add the additional package sources:
 
-```sh
-~$ sudo apk add clang clang-dev cmake coreutils gcc gettext-dev linux-headers llvm lldb-dev make python
+    sudo apt-get update
+    sudo apt-get install wget
+    echo "deb http://llvm.org/apt/artful/ llvm-toolchain-artful main" | sudo tee /etc/apt/sources.list.d/llvm.list
+    echo "deb http://llvm.org/apt/artful/ llvm-toolchain-artful-3.9 main" | sudo tee -a /etc/apt/sources.list.d/llvm.list
+    wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
+    sudo apt-get update
 
-```
+Install the lldb packages:
 
-#### CentOS (6, 7) ####
+    sudo apt-get install lldb-3.9 python-lldb-3.9
 
-llvm, clang and lldb 3.9 will have to be built for this distro ([TBD] add instructions).
+To launch lldb:
 
-```sh
-~$ sudo yum install centos-release-SCL epel-release
-~$ sudo yum install which wget make cmake cmake3 gcc gcc-c++ python27 python-argparse python-devel
+    lldb-3.9
 
-```
+#### Ubuntu 18.04 ####
 
-#### Debian (8.2) ####
+To install the lldb packages:
+
+    sudo apt-get update
+    sudo apt-get install lldb-3.9 llvm-3.9 python-lldb-3.9
+
+To launch lldb:
+
+    lldb-3.9
+
+#### Alpine 3.6 ####
+
+Currently there is no lldb that works on Alpine.
+
+Issue https://github.com/dotnet/diagnostics/issues/73
+
+#### CentOS 6 ####
 
 [TBD]
 
-#### Fedora (23, 24, 27, 28) ####
+#### CentOS 7 ####
 
-```sh
-~$ sudo dnf install which wget cmake make clang llvm-devel lldb-devel python27 
+lldb 3.9 will have to be built for this distro.
 
-```
+First the prerequisites:
 
-#### OpenSuse (42.1, 42.3) ####
+    sudo yum install centos-release-SCL epel-release
+    sudo yum install cmake cmake3 gcc gcc-c++ git libicu libunwind make python27 tar wget which zip
+
+Now build and install llvm/lldb 3.9 using the script provided here: [build-install-lldb.sh](../lldb/centos7/build-install-lldb.sh).
+
+WARNING: this script installs llvm and lldb and may overwrite any previously installed versions.
+
+    cd $HOME
+    git clone https://github.com/dotnet/diagnostics.git
+    $HOME/diagnostics/documentation/lldb/centos7/build-install-lldb.sh
+
+This will take some time to complete.
+
+To launch lldb:
+
+    lldb-3.9.1
+
+#### Debian 8.2/8.7 ####
+
+In order to get lldb-5.0 (3.9 doesn't seem to work that well), we need to add additional package sources:
+
+    sudo apt-get update
+    sudo apt-get install wget
+    echo "deb http://llvm.org/apt/jessie/ llvm-toolchain-jessie main" | sudo tee /etc/apt/sources.list.d/llvm.list
+    echo "deb http://llvm.org/apt/jessie/ llvm-toolchain-jessie-5.0 main" | sudo tee -a /etc/apt/sources.list.d/llvm.list
+    wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
+    sudo apt-get update
+
+Install the lldb packages:
+
+    sudo apt-get install lldb-5.0 python-lldb-5.0
+
+To launch lldb:
+
+    lldb-3.9
+
+#### Debian 9 (Stretch) ####
+
+    sudo apt-get install lldb-3.9 python-lldb-3.9
+
+To launch lldb:
+
+    lldb-3.9
+
+#### Fedora 24 ####
+
+    sudo dnf install clang cmake findutils git libicu libunwind make python tar wget which zip
+
+Now build and install llvm/lldb 3.9 using the script provided here: [build-install-lldb.sh](../lldb/fedora24/build-install-lldb.sh).
+
+WARNING: this script installs llvm and lldb and may overwrite any previously installed versions.
+
+    cd $HOME
+    git clone https://github.com/dotnet/diagnostics.git
+    $HOME/diagnostics/documentation/lldb/fedora24/build-install-lldb.sh
+
+This will take some time to complete.
+
+To launch lldb:
+
+    lldb
+
+#### Fedora 27, 28 ####
+
+    sudo dnf install lldb python2-lldb
+
+To launch lldb:
+
+    lldb
+
+#### OpenSuse 42.1, 42.3 ####
+
+    sudo zypper install cmake gcc-c++ git hostname libicu libunwind lldb-devel llvm-clang llvm-devel make python python-xml tar wget which zip
+    ln -s /usr/bin/clang++ /usr/bin/clang++-3.5
+
+Now build and install llvm/lldb 3.9 using the script provided here: [build-install-lldb.sh](../lldb/opensuse/build-install-lldb.sh).
+
+WARNING: this script installs llvm and lldb and may overwrite any previously installed versions.
+
+    cd $HOME
+    git clone https://github.com/dotnet/diagnostics.git
+    $HOME/diagnostics/documentation/lldb/opensuse/build-install-lldb.sh
+
+This will take some time to complete.
+
+To launch lldb:
+
+    lldb-3.9.1
+
+#### RHEL 7.5 ####
 
 [TBD]
 
-Set the maximum number of file-handles
---------------------------------------
+#### SLES ####
 
-To ensure that your system can allocate enough file-handles for the corefx build run `sysctl fs.file-max`. If it is less than 100000, add `fs.file-max = 100000` to `/etc/sysctl.conf`, and then run `sudo sysctl -p`.
-
+[TBD]

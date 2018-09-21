@@ -9,7 +9,7 @@ echo %__MsgPrefix%Starting Build at %TIME%
 set __ThisScriptFull="%~f0"
 set __ThisScriptDir="%~dp0"
 
-call "%__ThisScriptDir%"\setup_vs_tools.cmd
+call "%__ThisScriptDir%"\setup-vs-tools.cmd
 if NOT '%ERRORLEVEL%' == '0' exit /b 1
 
 if defined VS150COMNTOOLS (
@@ -218,7 +218,7 @@ if %__Build% EQU 1 (
 :GenVSSolution
     echo Generating Version Header
     set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    %DotNetCli% %MSBuildPath% %__ProjectDir%\eng\CreateVersionFile.csproj /v:!__Verbosity! /bl:!__GenerateVersionLog! /t:GenerateVersionHeader2 /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
+    %DotNetCli% %MSBuildPath% %__ProjectDir%\eng\CreateVersionFile.csproj /v:!__Verbosity! /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
         exit /b 1

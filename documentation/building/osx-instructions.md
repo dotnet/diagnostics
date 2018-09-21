@@ -14,7 +14,7 @@ Git Setup
 Clone the diagnostics repository (either upstream or a fork).
 
 ```sh
-$ git clone https://github.com/dotnet/diagnostics
+git clone https://github.com/dotnet/diagnostics
 ```
 
 CMake

@@ -98,17 +98,13 @@ namespace Microsoft.Diagnostic.TestHelpers
         /// <returns>new configs for each supported PDB type</returns>
         public static IEnumerable<TestConfiguration> EnumeratePdbTypeConfigs(TestConfiguration config)
         {
-            // Enabled after an official dotnet cli supports "embedded" PDBs - issue #244
-            // string[] pdbTypes = { "portable", "embedded" };
-            string[] pdbTypes = { "portable" };
+            string[] pdbTypes = { "portable", "embedded" };
 
             if (OS.Kind == OSKind.Windows)
             {
                 if (config.IsNETCore)
                 {
-                    // Enabled after an official dotnet cli supports "embedded" PDBs - issue #244
-                    // pdbTypes = new string[] { "portable", "full", "embedded" };
-                    pdbTypes = new string[] { "portable", "full" };
+                    pdbTypes = new string[] { "portable", "full", "embedded" };
                 }
                 else
                 {

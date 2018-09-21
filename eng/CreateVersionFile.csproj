@@ -14,9 +14,11 @@
 
   <Import Condition="Exists('$(BuildVersionFileOverride)')" Project="$(BuildVersionFileOverride)" />
 
-  <Target Name="GenerateVersionHeader2" DependsOnTargets="CreateVersionFileOverride;GenerateVersionHeader"/>
+  <Target Name="GenerateVersionFiles" DependsOnTargets="CreateVersionFileOverride;GenerateVersionFileInternal;GenerateVersionSourceFileInternal"/>
 
-  <Target Name="GenerateVersionSourceFile2" DependsOnTargets="CreateVersionFileOverride;GenerateVersionSourceFile"/>
+  <Target Name="GenerateVersionFileInternal" Condition="'$(GenerateVersionHeader)' == 'true'" DependsOnTargets="GenerateVersionHeader"/>
+
+  <Target Name="GenerateVersionSourceFileInternal" Condition="'$(GenerateVersionSourceFile)' == 'true'" DependsOnTargets="GenerateVersionSourceFile"/>
 
   <Target Name="CreateVersionFileOverride" 
           Condition="'$(SkipVersionGeneration)' != 'true' AND '$(ShouldCreateVersionFileOverride)' == 'true'"
