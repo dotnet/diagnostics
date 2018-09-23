@@ -9,6 +9,8 @@ endif(CLR_CMAKE_PLATFORM_UNIX)
 if(WIN32)
   add_compile_options(/FIWarningControl.h) # force include of WarningControl.h
   add_compile_options(/Zl) # omit default library name in .OBJ
+
+  add_subdirectory(runcommand)
 endif(WIN32)
 
 add_definitions(-D_SECURE_SCL=0)

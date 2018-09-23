@@ -238,25 +238,33 @@ public class SOSRunner : IDisposable
 
             // Get the debugger arguments and commands to run initially
             List<string> initialCommands = new List<string>();
-            string arguments = null;
+            var arguments = new StringBuilder();
 
             switch (debugger)
             {
                 case NativeDebugger.Cdb:
-                    initialCommands.Add(".sympath %DEBUG_ROOT%");
-                    initialCommands.Add(".extpath " + Path.GetDirectoryName(config.SOSPath()));
+                    string helperExtension = config.CDBHelperExtension();
+                    if (string.IsNullOrWhiteSpace(helperExtension) || !File.Exists(helperExtension))
+                    {
+                        throw new Exception($"CDB helper script path not set or does not exist: {helperExtension}");
+                    }
+                    arguments.AppendFormat(@"-c "".load {0}""", helperExtension);
+
                     if (loadDump)
                     {
-                        arguments = "-z %DUMP_NAME%";
+                        arguments.Append(" -z %DUMP_NAME%");
                     }
                     else
                     {
-                        arguments = "-Gsins " + debuggeeCommandLine;
+                        arguments.AppendFormat(" -Gsins {0}", debuggeeCommandLine);
 
                         // disable stopping on integer divide-by-zero and integer overflow exceptions
                         initialCommands.Add("sxd dz");  
                         initialCommands.Add("sxd iov");  
                     }
+                    initialCommands.Add(".sympath %DEBUG_ROOT%");
+                    initialCommands.Add(".extpath " + Path.GetDirectoryName(config.SOSPath()));
+
                     // Add the path to runtime so cdb/sos can find mscordbi.
                     string runtimeSymbolsPath = config.RuntimeSymbolsPath;
                     if (runtimeSymbolsPath != null)
@@ -274,7 +282,7 @@ public class SOSRunner : IDisposable
                     {
                         throw new Exception("LLDB helper script path not set or does not exist: " + lldbHelperScript);
                     }
-                    arguments = string.Format(@"--no-lldbinit -o ""settings set interpreter.prompt-on-quit false"" -o ""command script import {0}"" -o ""version""", lldbHelperScript);
+                    arguments.AppendFormat(@"--no-lldbinit -o ""settings set interpreter.prompt-on-quit false"" -o ""command script import {0}"" -o ""version""", lldbHelperScript);
 
                     // Load the dump or launch the debuggee process
                     if (loadDump)
@@ -323,7 +331,7 @@ public class SOSRunner : IDisposable
                     {
                         throw new Exception("GDB not meant for loading core dumps");
                     }
-                    arguments = "--args " + debuggeeCommandLine;
+                    arguments.AppendFormat("--args {0}", debuggeeCommandLine);
 
                     // .NET Core 1.1 or less don't catch stack overflow and abort so need to catch SIGSEGV 
                     if (config.StackOverflowSIGSEGV)
@@ -343,7 +351,7 @@ public class SOSRunner : IDisposable
             }
 
             // Create the native debugger process running
-            ProcessRunner processRunner = new ProcessRunner(debuggerPath, ReplaceVariables(variables, arguments)).
+            ProcessRunner processRunner = new ProcessRunner(debuggerPath, ReplaceVariables(variables, arguments.ToString())).
                 WithLog(scriptLogger).
                 WithTimeout(TimeSpan.FromMinutes(10));
 
@@ -492,7 +500,8 @@ public class SOSRunner : IDisposable
         {
             case NativeDebugger.Cdb:
                 commands.Add($".load {sosPath}");
-                commands.Add(".lines; .reload");
+                commands.Add(".lines");
+                commands.Add(".reload");
                 if (sosHostRuntime != null)
                 {
                     commands.Add($"!SetHostRuntime {sosHostRuntime}");
@@ -523,10 +532,14 @@ public class SOSRunner : IDisposable
     public async Task ContinueExecution()
     {
         string command = null;
+        bool addPrefix = true;
         switch (Debugger)
         {
             case NativeDebugger.Cdb:
                 command = "g";
+                // Don't add the !runcommand prefix because it gets printed when cdb stops
+                // again because the helper extension used .pcmd to set a stop command.
+                addPrefix = false;
                 break;
             case NativeDebugger.Lldb:
                 command = "process continue";
@@ -535,7 +548,7 @@ public class SOSRunner : IDisposable
                 command = "continue";
                 break;
         }
-        if (!await RunCommand(command))
+        if (!await RunCommand(command, addPrefix))
         {
             throw new Exception($"'{command}' FAILED");
         }
@@ -568,13 +581,13 @@ public class SOSRunner : IDisposable
         }
     }
 
-    public async Task<bool> RunCommand(string command)
+    public async Task<bool> RunCommand(string command, bool addPrefix = true)
     {
         if (string.IsNullOrWhiteSpace(command))
         {
             throw new Exception("Debugger command empty or null");
         }
-        return await HandleCommand(command);
+        return await HandleCommand(command, addPrefix);
     }
 
     public async Task QuitDebugger()
@@ -680,7 +693,7 @@ public class SOSRunner : IDisposable
         return null;
     }
 
-    private async Task<bool> HandleCommand(string input)
+    private async Task<bool> HandleCommand(string input, bool addPrefix)
     {
         if (!await _scriptLogger.WaitForCommandPrompt())
         {
@@ -736,7 +749,12 @@ public class SOSRunner : IDisposable
                 input = input.Substring(0, firstPOUT) + poutMatchResult + input.Substring(secondPOUT + poutTag.Length);
             }
         }
-        _processRunner.StandardInputWriteLine(_scriptLogger.ProcessCommand(ReplaceVariables(input)));
+        string command = ReplaceVariables(input);
+        if (addPrefix)
+        {
+            command = _scriptLogger.ProcessCommand(command);
+        }
+        _processRunner.StandardInputWriteLine(command);
 
         ScriptLogger.CommandResult result = await _scriptLogger.WaitForCommandOutput();
         _lastCommandOutput = result.CommandOutput;
@@ -905,9 +923,15 @@ public class SOSRunner : IDisposable
 
         public string ProcessCommand(string command)
         {
-            if (_debugger == NativeDebugger.Lldb)
+            switch (_debugger)
             {
-                command = string.Format("runcommand {0}", command);
+                case NativeDebugger.Cdb:
+                    command = string.Format("!runcommand {0}", command);
+                    break;
+
+                case NativeDebugger.Lldb:
+                    command = string.Format("runcommand {0}", command);
+                    break;
             }
             return command;
         }
@@ -928,15 +952,6 @@ public class SOSRunner : IDisposable
                     switch (_debugger)
                     {
                         case NativeDebugger.Cdb:
-                            // Some commands like DumpStack have ===> or -> in the output that looks 
-                            // like the cdb prompt. Using a regex here to better match the cdb prompt
-                            // is way to slow. 
-                            if (lastCommandOutput.EndsWith("=> ") || lastCommandOutput.EndsWith("-> "))
-                            {
-                                return;
-                            }
-                            commandEnd = lastCommandOutput.EndsWith("> ");
-                            break;
                         case NativeDebugger.Lldb:
                             commandError = lastCommandOutput.EndsWith("<END_COMMAND_ERROR>");
                             commandEnd = commandError || lastCommandOutput.EndsWith("<END_COMMAND_OUTPUT>");
@@ -989,6 +1004,11 @@ public static class TestConfigurationExtensions
     public static string CDBPath(this TestConfiguration config)
     {
         return TestConfiguration.MakeCanonicalExePath(config.GetValue("CDBPath"));
+    }
+
+    public static string CDBHelperExtension(this TestConfiguration config)
+    {
+        return TestConfiguration.MakeCanonicalPath(config.GetValue("CDBHelperExtension"));
     }
 
     public static string LLDBHelperScript(this TestConfiguration config)
