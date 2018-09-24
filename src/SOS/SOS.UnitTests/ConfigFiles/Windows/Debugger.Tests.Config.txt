@@ -18,6 +18,7 @@
   <LogDir>$(RootBinDir)\$(TargetConfiguration)\TestResults\sos.unittests_$(Timestamp)</LogDir>
   <DumpDir>$(RootBinDir)\$(TargetConfiguration)\tmp\dumps</DumpDir>
   <CDBPath>$(NuGetPackageCacheDir)\cdb-sos\1.1.0\runtimes\win-$(TargetArchitecture)\native\cdb.exe</CDBPath>
+  <CDBHelperExtension>$(InstallDir)\runcommand.dll</CDBHelperExtension>
   
   <DebuggeeSourceRoot>$(RepoRootDir)\src\SOS\SOS.UnitTests\Debuggees</DebuggeeSourceRoot>
   <DebuggeeRootDir>$(RootBinDir)\Debuggees</DebuggeeRootDir>
