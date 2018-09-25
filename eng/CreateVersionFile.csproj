@@ -1,4 +1,5 @@
-<Project Sdk="RoslynTools.RepoToolset" >
+﻿<!-- All Rights Reserved. Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
+<Project Sdk="Microsoft.DotNet.Arcade.Sdk">
 
   <PropertyGroup>
     <OfficialBuildId Condition="'$(OfficialBuildId)' == ''">$(BUILD_BUILDNUMBER)</OfficialBuildId>
@@ -23,13 +24,26 @@
   <Target Name="CreateVersionFileOverride" 
           Condition="'$(SkipVersionGeneration)' != 'true' AND '$(ShouldCreateVersionFileOverride)' == 'true'"
           DependsOnTargets="CreateVersionFileDuringBuild">
+
     <!--
-      All of this is to override the BuildTools version major/minor to what RoslynTools.RepoToolSet does.
+      All of this is to override the BuildTools version major/minor to what the Arcade SDK does.
     -->
     <PropertyGroup>
-      <FileVersion Condition="'$(_BuildNumberFiveDigitDateStamp)' != ''">$(MajorVersion).$(MinorVersion).$(_BuildNumberFiveDigitDateStamp).$(_BuildNumberBuildOfTheDayPadded)</FileVersion>
-      <BuildNumberMajor Condition="'$(_BuildNumberFiveDigitDateStamp)' != ''">$(_BuildNumberFiveDigitDateStamp)</BuildNumberMajor>
-      <BuildNumberMinor Condition="'$(_BuildNumberBuildOfTheDayPadded)' != ''">$(_BuildNumberBuildOfTheDayPadded)</BuildNumberMinor>
+      <_FileMajor>$(VersionPrefix.Split($([System.Convert]::ToString(".").ToCharArray())).GetValue($([System.Convert]::ToInt32(0))))</_FileMajor>
+      <_FileMinor>$(VersionPrefix.Split($([System.Convert]::ToString(".").ToCharArray())).GetValue($([System.Convert]::ToInt32(1))))</_FileMinor>
+
+      <!-- patch * 100 + yy -->
+      <_FilePatch>$(VersionPrefix.Split($([System.Convert]::ToString(".").ToCharArray())).GetValue($([System.Convert]::ToInt32(2))))</_FilePatch>
+      <_FilePatch>$([MSBuild]::Add($([MSBuild]::Multiply($([System.Convert]::ToInt32($(_FilePatch))),$([System.Convert]::ToInt32(100)))), $([System.Convert]::ToInt32($(_BuildNumberYY)))))</_FilePatch>
+
+      <!-- mm * 5000 + dd * 100 + r -->
+      <_FileRevision>$([MSBuild]::Add($([MSBuild]::Add($([MSBuild]::Multiply($([System.Convert]::ToInt32($(_BuildNumberMM))), $([System.Convert]::ToInt32(5000)))), $([MSBuild]::Multiply($([System.Convert]::ToInt32($(_BuildNumberDD))), $([System.Convert]::ToInt32(100)))))), $([System.Convert]::ToInt32($(_BuildNumberR)))))</_FileRevision>
+
+      <FileVersion>$(_FileMajor).$(_FileMinor).$(_FilePatch).$(_FileRevision)</FileVersion>
+      <MajorVersion>$(_FileMajor)</MajorVersion>
+      <MinorVersion>$(_FileMinor)</MinorVersion>
+      <BuildNumberMajor>$(_FilePatch)</BuildNumberMajor>
+      <BuildNumberMinor>$(_FileRevision)</BuildNumberMinor>
 
       <VersionFileOverrideContent>
         <![CDATA[<?xml version="1.0" encoding="utf-8"?>
@@ -37,6 +51,8 @@
 <Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <FileVersion>$(FileVersion)</FileVersion>
+    <MajorVersion>$(MajorVersion)</MajorVersion>
+    <MinorVersion>$(MinorVersion)</MinorVersion>
     <BuildNumberMajor>$(BuildNumberMajor)</BuildNumberMajor>
     <BuildNumberMinor>$(BuildNumberMinor)</BuildNumberMinor>
   </PropertyGroup>

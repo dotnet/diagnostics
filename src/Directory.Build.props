@@ -1,9 +1,30 @@
 <!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
 <Project>
-  <Import Project="..\Directory.Build.props"/>
+  <PropertyGroup>
+    <ImportNetSdkFromRepoToolset>false</ImportNetSdkFromRepoToolset>
+  </PropertyGroup>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
   <PropertyGroup>
     <LangVersion>Latest</LangVersion>
+
+    <!--
+      Tools and packages produced by this repository support infrastructure and are not shipping on NuGet or via any other official channel.
+    -->
+    <IsShipping>false</IsShipping>
+
+    <!-- Common package related properties -->
+    <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+    <PackageLicenseUrl>http://go.microsoft.com/fwlink/?LinkId=529443</PackageLicenseUrl>
+    <PackageIconUrl>http://go.microsoft.com/fwlink/?LinkID=288859</PackageIconUrl>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+
+    <!-- Disable source link until issue https://github.com/dotnet/roslyn/issues/29289#issuecomment-413294637 is fixed -->
+    <EnableSourceLink>false</EnableSourceLink>
+    <DeterministicSourcePaths>false</DeterministicSourcePaths>
+    <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
+    <RepositoryUrl>https://github.com/dotnet/diagnostics.git</RepositoryUrl>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">

@@ -9,34 +9,51 @@
 #   variables YAML object - https://github.com/Microsoft/vsts-agent/blob/master/docs/preview/yamlgettingstarted-schema.md#phase
 
 parameters:
-  phaseName: ''
+  name: ''
   agentOs: Windows_NT
   dockerImage: ''
   testOnly: false
   dependsOn: ''
+  # send telemetry
   enableTelemetry: true
+  # install Microbuild plugin if not a public build
+  enableMicrobuild: true
+  # queue YAML object - https://github.com/Microsoft/vsts-agent/blob/master/docs/preview/yamlgettingstarted-schema.md#queue
   queue: {}
+  # variables YAML object - https://github.com/Microsoft/vsts-agent/blob/master/docs/preview/yamlgettingstarted-schema.md#phase
   variables: {}
+
+# Common conditionals:  There are a number of common conditionals that are useful.  Generally these are used to decide what resources can be accessed,
+#                       or what logic should be applied based on the context the build is being run in.
+#   - eq/ne(variables['Agent.Os'], 'Windows_NT') - Running/not running on a windows machine
+#   - eq/ne(variables['System.TeamProject'], 'public') - Running/not running on the dotnet public VSTS project 
+#   - and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest') - Not running in public and not a pull request.
+#   - or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest') - Running in public or a pull request.
 
 phases:
 - template: /eng/common/templates/phases/base.yml
   parameters:
-    name: ${{ parameters.phaseName }}
+    enableTelemetry: ${{ parameters.enableTelemetry }}
+
+    enableMicrobuild: ${{ parameters.enableMicrobuild }}
+
+    name: ${{ parameters.name }}
     agentOs: ${{ parameters.agentOs }}
     dependsOn: ${{ parameters.dependsOn }}
-    enableTelemetry: ${{ parameters.enableTelemetry }}
     queue: ${{ parameters.queue }}
 
     variables: 
       ${{ insert }}: ${{ parameters.variables }}
       _PortableLinuxBuild: CentOS_7_Build_$(_BuildConfig)
       _DockerImageName: ${{ parameters.dockerImage }}
-      _PhaseName : ${{ parameters.phaseName }}
+      _PhaseName : ${{ parameters.name }}
       _HelixType: build/product
       _HelixBuildConfig: $(_BuildConfig)
-      ${{ if ne(variables['System.TeamProject'], 'public') }}:
+      # Only enable publishing in non-public, non PR scenarios.
+      ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
         _HelixSource: official/dotnet/arcade/$(Build.SourceBranch)
-      ${{ if eq(variables['System.TeamProject'], 'public') }}:
+      # else
+      ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
         _HelixSource: pr/dotnet/arcade/$(Build.SourceBranch)
       ${{ if eq(parameters.testOnly, 'true') }}:
         _LinuxScript: $(Build.SourcesDirectory)/eng/citest.sh
@@ -51,6 +68,13 @@ phases:
         _DailyTest: ''
 
     steps:
+    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+        - task: AzureKeyVault@1
+          inputs:
+            azureSubscription: 'DncEng-VSTS'
+            KeyVaultName: EngKeyVault
+            SecretsFilter: 'dotnetfeed-storage-access-key-1,microsoft-symbol-server-pat,symweb-symbol-server-pat'
+
     # Internal only build steps
     - template: /eng/common/templates/steps/run-on-windows.yml
       parameters:
@@ -60,9 +84,8 @@ phases:
             -configuration $(_BuildConfig) 
             -architecture $(_BuildArch)
             -prepareMachine 
+            /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
           displayName: Build / Test
-          env:
-            OfficialBuildId: $(BUILD.BUILDNUMBER)
           condition: succeeded()
 
     - ${{ if eq(parameters.agentOs, 'Linux') }}:
@@ -78,7 +101,7 @@ phases:
           displayName: Place Linux-x64 Artifacts
           inputs:
             sourceFolder: '$(System.ArtifactsDirectory)/$(_PortableLinuxBuild)'
-            targetFolder: '$(Build.SourcesDirectory)/artifacts/$(_BuildConfig)/bin/Linux.x64'
+            targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Linux.x64.$(_BuildConfig)'
           condition: succeeded()
 
       - script: $(Build.SourcesDirectory)/eng/docker-build.sh 
@@ -89,10 +112,9 @@ phases:
           --configuration $(_BuildConfig) 
           --architecture $(_BuildArch)
           --prepareMachine 
+          /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
           /p:BUILD_BUILDNUMBER=$(BUILD.BUILDNUMBER)
         displayName: Docker Build / Test
-        env:
-          OfficialBuildId: $(BUILD.BUILDNUMBER)
         condition: succeeded()
 
     - ${{ if eq(parameters.agentOs, 'Darwin') }}:
@@ -100,9 +122,8 @@ phases:
           --configuration $(_BuildConfig) 
           --architecture $(_BuildArch)
           --prepareMachine
+          /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
         displayName: Build / Test
-        env:
-          OfficialBuildId: $(BUILD.BUILDNUMBER)
         condition: succeeded()
  
     # Internal only build steps (until publishing artifacts in public CI is supported)
@@ -110,22 +131,15 @@ phases:
       - task: PublishBuildArtifacts@1
         displayName: Upload Artifacts
         inputs:
-          pathtoPublish: '$(Build.SourcesDirectory)/artifacts/$(_BuildConfig)/$(_PublishArtifacts)'
+          pathtoPublish: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
           artifactName: $(_PhaseName)_$(Agent.JobName)
         condition: and(succeeded(), ne(variables['_PublishArtifacts'], ''))
 
       - task: CopyFiles@2
         displayName: Gather Build Logs
         inputs:
-          sourceFolder: '$(Build.SourcesDirectory)/artifacts/$(_BuildConfig)/log'
-          targetFolder: '$(Build.StagingDirectory)/BuildLogs'
-        continueOnError: true
-        condition: always()
-
-      - task: CopyFiles@2
-        displayName: Gather Test Logs
-        inputs:
-          sourceFolder: '$(Build.SourcesDirectory)/artifacts/$(_BuildConfig)/TestResults'
+          sourceFolder: '$(Build.SourcesDirectory)/artifacts'
+          contents: '?(log|TestResults)/**'
           targetFolder: '$(Build.StagingDirectory)/BuildLogs'
         continueOnError: true
         condition: always()
@@ -133,7 +147,8 @@ phases:
       - task: PublishBuildArtifacts@1
         displayName: Publish Logs to VSTS
         inputs:
-          pathtoPublish: '$(Build.StagingDirectory)/BuildLogs'
-          artifactName: Logs_$(_PhaseName)_$(Agent.JobName)
+          PathtoPublish: '$(Build.StagingDirectory)/BuildLogs'
+          PublishLocation: Container
+          ArtifactName: Logs_$(_PhaseName)_$(Agent.JobName)
         continueOnError: true
         condition: always()

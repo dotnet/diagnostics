@@ -14,9 +14,9 @@
 
   <ScriptRootDir>$(RepoRootDir)\src\SOS\SOS.UnitTests\Scripts</ScriptRootDir>
   <RootBinDir>$(RepoRootDir)\artifacts</RootBinDir>
-  <InstallDir>$(RootBinDir)\$(TargetConfiguration)\bin\Windows_NT.$(TargetArchitecture)</InstallDir>
-  <LogDir>$(RootBinDir)\$(TargetConfiguration)\TestResults\sos.unittests_$(Timestamp)</LogDir>
-  <DumpDir>$(RootBinDir)\$(TargetConfiguration)\tmp\dumps</DumpDir>
+  <InstallDir>$(RootBinDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
+  <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\sos.unittests_$(Timestamp)</LogDir>
+  <DumpDir>$(RootBinDir)\tmp\$(TargetConfiguration)\dumps</DumpDir>
   <CDBPath>$(NuGetPackageCacheDir)\cdb-sos\1.1.0\runtimes\win-$(TargetArchitecture)\native\cdb.exe</CDBPath>
   <CDBHelperExtension>$(InstallDir)\runcommand.dll</CDBHelperExtension>
   

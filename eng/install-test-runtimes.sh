@@ -9,12 +9,20 @@ daily_test=0
 branch="master"
 uncached_feed="https://dotnetcli.blob.core.windows.net/dotnet"
 
+runtime_version_11="1.1.9"
+runtime_version_20="2.0.9"
+runtime_version_21=
+
 while [ $# -ne 0 ]; do
     name=$1
     case $name in
         --dotnet-directory)
             shift
             dotnet_dir=$1
+            ;;
+        --runtime-version-21)
+            shift
+            runtime_version_21=$1
             ;;
         --temp-directory)
             shift
@@ -38,9 +46,6 @@ while [ $# -ne 0 ]; do
     shift
 done
 
-runtime_version_11="1.1.9"
-runtime_version_20="2.0.9"
-runtime_version_21="2.1.0"
 daily_test_text="true"
 
 # Install the other versions of .NET Core runtime we are going to test. 1.1.x, 2.0.x, 2.1.x (installed with the CLI)

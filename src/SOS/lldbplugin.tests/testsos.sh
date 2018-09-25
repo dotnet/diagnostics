@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-__ProjectRoot="$1"
-__Plugin="$2"
-__ManagedBinDir="$3"
-__ResultsDir="$4"
+project_root="$1"
+plugin="$2"
+host_version="$3"
+test_program="$4"
+results_dir="$5"
 
-if [[ "$__ProjectRoot" = "" || "$__Plugin" = "" || "$__ManagedBinDir" = "" || "$__ResultsDir" = "" ]]; then
+if [[ "$project_root" = "" || "$plugin" = "" || "$test_program" = "" || "$results_dir" = "" ]]; then
     echo "Project root, plugin or log directory required"
     exit 1
 fi
 
-__Host="$__ProjectRoot/.dotnet/dotnet --fx-version 2.1.0"
-__TestProgram=$__ManagedBinDir/TestDebuggee/netcoreapp2.0/TestDebuggee.dll
+host="$project_root/.dotnet/dotnet --fx-version $host_version"
 
 # Turn on stress logging so the dumplog and histinit commands pass
 export COMPlus_LogFacility=0xffffffbf
@@ -23,10 +23,10 @@ if [[ ! -x "$LLDB_PATH" ]]; then
     exit 1
 fi
 
-__LogFileDir=$__ResultsDir/lldbplugin.tests_$(date +%Y_%m_%d_%H_%M_%S)
-mkdir -p $__LogFileDir
+log_dir=$results_dir/lldbplugin.tests_$(date +%Y_%m_%d_%H_%M_%S)
+mkdir -p $log_dir
 
-cd $__ProjectRoot/src/SOS/lldbplugin.tests/
+cd $project_root/src/SOS/lldbplugin.tests/
 rm -f StressLog.txt
-python $__ProjectRoot/src/SOS/lldbplugin.tests/test_libsosplugin.py --lldb $LLDB_PATH --host "$__Host" --plugin $__Plugin --logfiledir $__LogFileDir --assembly $__TestProgram
+python $project_root/src/SOS/lldbplugin.tests/test_libsosplugin.py --lldb $LLDB_PATH --host "$host" --plugin $plugin --logfiledir $log_dir --assembly $test_program
 
