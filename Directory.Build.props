@@ -1,0 +1,10 @@
+<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
+<Project>
+  <!-- Disable source link until issue https://github.com/dotnet/roslyn/issues/29289#issuecomment-413294637 is fixed -->
+  <PropertyGroup Condition="'$(OS)' == 'Unix'">
+    <EnableSourceLink>false</EnableSourceLink>
+    <DeterministicSourcePaths>false</DeterministicSourcePaths>
+    <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
+    <RepositoryUrl>https://github.com/dotnet/diagnostics.git</RepositoryUrl>
+  </PropertyGroup>
+</Project>

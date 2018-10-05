@@ -57,7 +57,7 @@ BEGIN
             VALUE "LegalCopyright",  VER_LEGALCOPYRIGHT_STR
             VALUE "OriginalFilename",VER_ORIGINALFILENAME_STR
             VALUE "ProductName",     VER_PRODUCTNAME_STR
-            VALUE "ProductVersion",  VER_FILEVERSION_STR
+            VALUE "ProductVersion",  VER_PRODUCTVERSION_STR
 #ifdef VER_OLESELFREGISTER
             VALUE "OleSelfRegister", "\0"
 #endif
@@ -82,7 +82,7 @@ BEGIN
             VALUE "LegalCopyright",  VER_LEGALCOPYRIGHT_STR
             VALUE "OriginalFilename",VER_ORIGINALFILENAME_STR
             VALUE "ProductName",     VER_PRODUCTNAME_STR
-            VALUE "ProductVersion",  VER_FILEVERSION_STR
+            VALUE "ProductVersion",  VER_PRODUCTVERSION_STR
 #ifdef VER_OLESELFREGISTER
             VALUE "OleSelfRegister", "\0"
 #endif

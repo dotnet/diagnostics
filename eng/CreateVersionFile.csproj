@@ -1,76 +1,88 @@
 ﻿<!-- All Rights Reserved. Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
-<Project Sdk="Microsoft.DotNet.Arcade.Sdk">
+<Project>
+  <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
   <PropertyGroup>
-    <OfficialBuildId Condition="'$(OfficialBuildId)' == ''">$(BUILD_BUILDNUMBER)</OfficialBuildId>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
 
-  <Import Project="$(ArtifactsDir)\BuildTools\Build.Common.props" />
-  <Import Project="$(ArtifactsDir)\BuildTools\versioning.targets" />
+  <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
-  <PropertyGroup>
-    <BuildVersionFileOverride>$(BuildVersionFilePath)BuildVersion2-$(TodayTimeStamp).props</BuildVersionFileOverride>
-    <ShouldCreateVersionFileOverride Condition="!Exists('$(BuildVersionFileOverride)')">true</ShouldCreateVersionFileOverride>
-  </PropertyGroup>
+  <Target Name="Build" />
 
-  <Import Condition="Exists('$(BuildVersionFileOverride)')" Project="$(BuildVersionFileOverride)" />
+  <Target Name="GenerateVersionFiles" DependsOnTargets="GenerateVersionHeader;GenerateVersionSourceFile" />
 
-  <Target Name="GenerateVersionFiles" DependsOnTargets="CreateVersionFileOverride;GenerateVersionFileInternal;GenerateVersionSourceFileInternal"/>
+  <Target Name="GenerateVersionHeader" DependsOnTargets="GetAssemblyVersion;AddSourceRevisionToInformationalVersion" Condition="'$(NativeVersionHeaderFile)' != '' and '$(GenerateVersionHeader)' == 'true' and !Exists($(NativeVersionHeaderFile))">
 
-  <Target Name="GenerateVersionFileInternal" Condition="'$(GenerateVersionHeader)' == 'true'" DependsOnTargets="GenerateVersionHeader"/>
+    <ItemGroup>
+      <!-- Defining versioning variables -->
+      <NativeVersionLines Include="#undef VER_FILEVERSION" />
+      <NativeVersionLines Include="#define VER_FILEVERSION             $(_FileMajor),$(_FileMinor),$(_FilePatch),$(_FileRevision)" />
 
-  <Target Name="GenerateVersionSourceFileInternal" Condition="'$(GenerateVersionSourceFile)' == 'true'" DependsOnTargets="GenerateVersionSourceFile"/>
+      <NativeVersionLines Include="#undef VER_FILEVERSION_STR" />
+      <NativeVersionLines Include="#define VER_FILEVERSION_STR         &quot;$(FileVersion)&quot;" />
 
-  <Target Name="CreateVersionFileOverride" 
-          Condition="'$(SkipVersionGeneration)' != 'true' AND '$(ShouldCreateVersionFileOverride)' == 'true'"
-          DependsOnTargets="CreateVersionFileDuringBuild">
+      <NativeVersionLines Include="#undef VER_PRODUCTVERSION" />
+      <NativeVersionLines Include="#define VER_PRODUCTVERSION          $(_FileMajor),$(_FileMinor),$(VersionSuffixDateStamp),$(VersionSuffixBuildOfTheDay)" />
 
-    <!--
-      All of this is to override the BuildTools version major/minor to what the Arcade SDK does.
-    -->
+      <NativeVersionLines Include="#undef VER_PRODUCTVERSION_STR" />
+      <NativeVersionLines Include="#define VER_PRODUCTVERSION_STR      &quot;$(InformationalVersion)&quot;" />
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(NativeVersionHeaderFile)" Lines="@(NativeVersionLines)" Overwrite="true" />
+
+    <ItemGroup>
+      <FileWrites Include="$(NativeVersionHeaderFile)" />
+    </ItemGroup>
+
+    <Message Importance="High" Text="Created version file $(NativeVersionHeaderFile)" />
+  </Target>
+
+  <!-- Non Windows versioning requires to generate a source file and include it on the compilation. -->
+  <Target Name="GenerateVersionSourceFile" DependsOnTargets="GetAssemblyVersion;AddSourceRevisionToInformationalVersion" Condition="'$(NativeVersionSourceFile)' != '' and '$(GenerateVersionSourceFile)' == 'true' and !Exists($(NativeVersionHeaderFile))">
+
+    <!-- Get Username -->
     <PropertyGroup>
-      <_FileMajor>$(VersionPrefix.Split($([System.Convert]::ToString(".").ToCharArray())).GetValue($([System.Convert]::ToInt32(0))))</_FileMajor>
-      <_FileMinor>$(VersionPrefix.Split($([System.Convert]::ToString(".").ToCharArray())).GetValue($([System.Convert]::ToInt32(1))))</_FileMinor>
-
-      <!-- patch * 100 + yy -->
-      <_FilePatch>$(VersionPrefix.Split($([System.Convert]::ToString(".").ToCharArray())).GetValue($([System.Convert]::ToInt32(2))))</_FilePatch>
-      <_FilePatch>$([MSBuild]::Add($([MSBuild]::Multiply($([System.Convert]::ToInt32($(_FilePatch))),$([System.Convert]::ToInt32(100)))), $([System.Convert]::ToInt32($(_BuildNumberYY)))))</_FilePatch>
-
-      <!-- mm * 5000 + dd * 100 + r -->
-      <_FileRevision>$([MSBuild]::Add($([MSBuild]::Add($([MSBuild]::Multiply($([System.Convert]::ToInt32($(_BuildNumberMM))), $([System.Convert]::ToInt32(5000)))), $([MSBuild]::Multiply($([System.Convert]::ToInt32($(_BuildNumberDD))), $([System.Convert]::ToInt32(100)))))), $([System.Convert]::ToInt32($(_BuildNumberR)))))</_FileRevision>
-
-      <FileVersion>$(_FileMajor).$(_FileMinor).$(_FilePatch).$(_FileRevision)</FileVersion>
-      <MajorVersion>$(_FileMajor)</MajorVersion>
-      <MinorVersion>$(_FileMinor)</MinorVersion>
-      <BuildNumberMajor>$(_FilePatch)</BuildNumberMajor>
-      <BuildNumberMinor>$(_FileRevision)</BuildNumberMinor>
-
-      <VersionFileOverrideContent>
-        <![CDATA[<?xml version="1.0" encoding="utf-8"?>
-<!-- This is a generated file. -->
-<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <PropertyGroup>
-    <FileVersion>$(FileVersion)</FileVersion>
-    <MajorVersion>$(MajorVersion)</MajorVersion>
-    <MinorVersion>$(MinorVersion)</MinorVersion>
-    <BuildNumberMajor>$(BuildNumberMajor)</BuildNumberMajor>
-    <BuildNumberMinor>$(BuildNumberMinor)</BuildNumberMinor>
-  </PropertyGroup>
-</Project>
-]]>
-      </VersionFileOverrideContent>
+      <VersionUserName Condition="'$(VersionUserName)' == ''">$(USERNAME)</VersionUserName>
     </PropertyGroup>
 
-    <MakeDir Directories="$(BuildVersionFilePath)" />
+    <Exec Command="whoami" Condition="'$(VersionUserName)' == ''" StandardOutputImportance="Low" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="VersionUserName" />
+    </Exec>
 
-    <WriteLinesToFile
-      ContinueOnError="WarnAndContinue"
-      Condition="!Exists('$(BuildVersionFileOverride)')"
-      File="$(BuildVersionFileOverride)"
-      Lines="$(VersionFileOverrideContent)"
-      Overwrite="true" />
+    <!-- Get Hostname -->
+    <PropertyGroup>
+      <VersionHostName Condition="'$(VersionHostName)' == ''">$(COMPUTERNAME)</VersionHostName>
+    </PropertyGroup>
 
-    <Message Importance="High" Text="Created version override file $(BuildVersionFileOverride)" />
+    <Exec Command="hostname" Condition="'$(RunningOnUnix)'=='true' AND '$(VersionHostName)'==''" StandardOutputImportance="Low" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="VersionHostName" />
+    </Exec>
+
+    <PropertyGroup>
+      <BuiltByString Condition="'$(VersionUserName)' != '' AND '$(VersionHostName)' != ''">$(BuiltByString) %40BuiltBy: $(VersionUserName)-$(VersionHostName)</BuiltByString>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <SourceFileLines />
+      <SourceFileLines Include="static char sccsid%5B%5D %5F%5Fattribute%5F%5F%28%28used%29%29 %3D %22%40%28%23%29Version $(InformationalVersion)$(BuiltByString)%22%3B" />
+      <!-- Since this is a source file, compiler will complain if there is no new line at end of file, so adding one bellow. -->
+      <SourceFileLines Include=" " />
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(NativeVersionSourceFile)" Lines="@(SourceFileLines)" Overwrite="true" />
+
+    <ItemGroup>
+      <FileWrites Include="$(NativeVersionSourceFile)" />
+    </ItemGroup>
+
+    <Message Importance="High" Text="Created version file $(NativeVersionSourceFile)" />
   </Target>
+
+  <ItemGroup>
+    <Compile Remove="**" />
+    <EmbeddedResource Remove="**" />
+    <None Remove="**" />
+  </ItemGroup>
 
 </Project>

@@ -80,7 +80,7 @@ if /i "%1" == "-configuration"       (set __BuildType=%2&set processedArgs=!proc
 if /i "%1" == "-architecture"        (set __BuildArch=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
 if /i "%1" == "-verbosity"           (set __Verbosity=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
 :: These options are passed on to the common build script when testing
-if /i "%1" == "-ci"                  (set __TestArgs=!__TestArgs! %1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
+if /i "%1" == "-ci"                  (set __CI=1&set __TestArgs=!__TestArgs! %1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-solution"            (set __TestArgs=!__TestArgs! %1 %2&set processedArgs=!processedArgs! %1&shift&shift&goto Arg_Loop)
 :: These options are ignored for a native build
 if /i "%1" == "-build"               (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
@@ -91,7 +91,7 @@ if /i "%1" == "-pack"                (set processedArgs=!processedArgs! %1&shift
 if /i "%1" == "-publish"             (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-preparemachine"      (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 
-if [!processedArgs!]==[] (
+if [!processedArgs!] == [] (
   set __UnprocessedBuildArgs=%__args%
 ) else (
   set __UnprocessedBuildArgs=%__args%
@@ -104,18 +104,28 @@ if [!processedArgs!]==[] (
 
 :: Determine if this is a cross-arch build
 
-if /i "%__BuildArch%"=="arm64" (
+if /i "%__BuildArch%" == "arm64" (
     set __DoCrossArchBuild=1
     set __CrossArch=x86
-    )
+)
 
-if /i "%__BuildArch%"=="arm" (
+if /i "%__BuildArch%" == "arm" (
     set __DoCrossArchBuild=1
     set __CrossArch=x64
-    )
+)
 
-if /i "%__BuildType%"=="debug" set __BuildType=Debug
-if /i "%__BuildType%"=="release" set __BuildType=Release
+if /i "%__BuildType%" == "debug" set __BuildType=Debug
+if /i "%__BuildType%" == "release" set __BuildType=Release
+
+if "%NUGET_PACKAGES%" == "" (
+    if %__CI% EQU 1 (
+        set "NUGET_PACKAGES=%__ProjectDir%\.packages"
+    ) else (
+        set "NUGET_PACKAGES=%UserProfile%\.nuget\packages"
+    )
+)
+
+echo %NUGET_PACKAGES%
 
 :: Set the remaining variables based upon the determined build configuration
 set "__RootBinDir=%__ProjectDir%\artifacts"

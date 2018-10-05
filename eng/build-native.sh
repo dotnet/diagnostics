@@ -30,6 +30,7 @@ __Build=false
 __Test=false
 __DailyTest=
 __CI=false
+__Verbosity=minimal
 __TestArgs=
 __UnprocessedBuildArgs=
 
@@ -178,6 +179,7 @@ while :; do
             ;;
 
         --verbosity)
+            __Verbosity=$2
             __TestArgs="$__TestArgs $1 $2"
             shift
             ;;
@@ -225,11 +227,6 @@ while :; do
         --clang5.0)
             __ClangMajorVersion=5
             __ClangMinorVersion=0
-            ;;
-
-        --verbosity)
-            __TestArgs="$__TestArgs --verbosity $2"
-            shift
             ;;
 
         # Ignored for a native build
@@ -461,7 +458,7 @@ if [ $__Build == true ]; then
     if [[ $__CI == true ]]; then
         echo "Generating Version Source File"
         __GenerateVersionLog="$__LogDir/GenerateVersion.binlog"
-        $__DotNetCli $__MSBuildPath $__ProjectRoot/eng/CreateVersionFile.csproj /noconlog /bl:$__GenerateVersionLog /t:GenerateVersionFiles /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
+        $__DotNetCli $__MSBuildPath $__ProjectRoot/eng/CreateVersionFile.csproj /v:$__Verbosity /bl:$__GenerateVersionLog /t:GenerateVersionFiles /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
         if [ $? != 0 ]; then
             echo "Generating Version Source File FAILED"
             exit 1
