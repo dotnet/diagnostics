@@ -13097,6 +13097,8 @@ DECLARE_API( VMMap )
     return Status;
 }   // DECLARE_API( vmmap )
 
+#endif // FEATURE_PAL
+
 DECLARE_API( SOSFlush )
 {
     INIT_API();
@@ -13105,6 +13107,8 @@ DECLARE_API( SOSFlush )
     
     return Status;
 }   // DECLARE_API( SOSFlush )
+
+#ifndef FEATURE_PAL
 
 DECLARE_API( VMStat )
 {

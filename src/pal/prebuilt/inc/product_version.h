@@ -7,13 +7,6 @@
    // See the LICENSE file in the project root for more information.
 #endif 
 
-#include <version.h>
-#ifdef USE_CLR20_VERSION
-#include <asm_version20.h>
-#else
-#include <asm_version.h>
-#endif
-
 #ifdef CLR_MAJOR_VERSION
 #undef CLR_MAJOR_VERSION
 #endif

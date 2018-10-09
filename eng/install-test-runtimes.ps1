@@ -1,6 +1,7 @@
 [cmdletbinding()]
 param(
    [string]$DotNetDir,
+   [string]$RuntimeVersion21,
    [string]$TempDir,
    [string]$BuildArch,
    [switch]$DailyTest,
@@ -13,7 +14,6 @@ $ErrorActionPreference="Stop"
 
 $RuntimeVersion11="1.1.9"
 $RuntimeVersion20="2.0.9"
-$RuntimeVersion21="2.1.0"
 $DailyTestText="true"
 
 # Install the other versions of .NET Core runtime we are going to test. 1.1.x, 2.0.x, 2.1.x (installed with the CLI)

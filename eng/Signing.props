@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ItemsToSign Include="$(ArtifactsPackagesDir)**\*.zip"/>
+  </ItemGroup>
+</Project>

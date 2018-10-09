@@ -54,8 +54,8 @@ Examining the GC history           Other
 -----------------------------      -----------------------------
 HistInit (histinit)                SetHostRuntime (sethostruntime)
 HistRoot (histroot)                FAQ
-HistObj  (histobj)                 Help (soshelp)
-HistObjFind (histobjfind)
+HistObj  (histobj)                 SOSFlush
+HistObjFind (histobjfind)          Help (soshelp)
 HistClear (histclear)
 \\
 
@@ -202,12 +202,12 @@ The arguments in detail:
 \\
 
 COMMAND: dumpasync.
-!DumpAsync [-mt <MethodTable address>] 
-           [-type <partial type name>]
-           [-waiting]
-           [-roots]]
+DumpAsync [-mt <MethodTable address>] 
+          [-type <partial type name>]
+          [-waiting]
+          [-roots]
 
-!DumpAsync traverses the garbage collected heap, looking for objects representing
+DumpAsync traverses the garbage collected heap, looking for objects representing
 async state machines as created when an async method's state is transferred to the
 heap.  This command recognizes async state machines defined as "async void", "async Task",
 "async Task<T>", "async ValueTask", and "async ValueTask<T>".

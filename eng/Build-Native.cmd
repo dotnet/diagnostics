@@ -35,8 +35,8 @@ set ghprbCommentBody=
 ::      __SourceDir         -- default: %__ProjectDir%\src\
 ::      __RootBinDir        -- default: %__ProjectDir%\artifacts\
 ::      __IntermediatesDir  -- default: %__RootBinDir%\obj\%__BuildOS%.%__BuildArch.%__BuildType%\
-::      __BinDir            -- default: %__RootBinDir%\%__BuildType%\bin\%__BuildOS%.%__BuildArch\
-::      __LogDir            -- default: %__RootBinDir%\%__BuildType%\log\%__BuildOS%.%__BuildArch\
+::      __BinDir            -- default: %__RootBinDir%\bin\%__BuildOS%.%__BuildArch.%__BuildType%\
+::      __LogDir            -- default: %__RootBinDir%\log\%__BuildOS%.%__BuildArch.%__BuildType%\
 ::
 :: Thus, these variables are not simply internal to this script!
 
@@ -80,7 +80,7 @@ if /i "%1" == "-configuration"       (set __BuildType=%2&set processedArgs=!proc
 if /i "%1" == "-architecture"        (set __BuildArch=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
 if /i "%1" == "-verbosity"           (set __Verbosity=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
 :: These options are passed on to the common build script when testing
-if /i "%1" == "-ci"                  (set __TestArgs=!__TestArgs! %1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
+if /i "%1" == "-ci"                  (set __CI=1&set __TestArgs=!__TestArgs! %1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-solution"            (set __TestArgs=!__TestArgs! %1 %2&set processedArgs=!processedArgs! %1&shift&shift&goto Arg_Loop)
 :: These options are ignored for a native build
 if /i "%1" == "-build"               (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
@@ -91,7 +91,7 @@ if /i "%1" == "-pack"                (set processedArgs=!processedArgs! %1&shift
 if /i "%1" == "-publish"             (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-preparemachine"      (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 
-if [!processedArgs!]==[] (
+if [!processedArgs!] == [] (
   set __UnprocessedBuildArgs=%__args%
 ) else (
   set __UnprocessedBuildArgs=%__args%
@@ -104,26 +104,35 @@ if [!processedArgs!]==[] (
 
 :: Determine if this is a cross-arch build
 
-if /i "%__BuildArch%"=="arm64" (
+if /i "%__BuildArch%" == "arm64" (
     set __DoCrossArchBuild=1
     set __CrossArch=x86
-    )
+)
 
-if /i "%__BuildArch%"=="arm" (
+if /i "%__BuildArch%" == "arm" (
     set __DoCrossArchBuild=1
     set __CrossArch=x64
-    )
+)
 
-if /i "%__BuildType%"=="debug" set __BuildType=Debug
-if /i "%__BuildType%"=="release" set __BuildType=Release
+if /i "%__BuildType%" == "debug" set __BuildType=Debug
+if /i "%__BuildType%" == "release" set __BuildType=Release
+
+if "%NUGET_PACKAGES%" == "" (
+    if %__CI% EQU 1 (
+        set "NUGET_PACKAGES=%__ProjectDir%\.packages"
+    ) else (
+        set "NUGET_PACKAGES=%UserProfile%\.nuget\packages"
+    )
+)
+
+echo %NUGET_PACKAGES%
 
 :: Set the remaining variables based upon the determined build configuration
 set "__RootBinDir=%__ProjectDir%\artifacts"
-set "__ConfigBinDir=%__RootBinDir%\%__BuildType%"
-set "__BinDir=%__ConfigBinDir%\bin\%__BuildOS%.%__BuildArch%"
-set "__LogDir=%__ConfigBinDir%\log\%__BuildOS%.%__BuildArch%"
+set "__BinDir=%__RootBinDir%\bin\%__BuildOS%.%__BuildArch%.%__BuildType%"
+set "__LogDir=%__RootBinDir%\log\%__BuildOS%.%__BuildArch%.%__BuildType%"
 set "__IntermediatesDir=%__RootBinDir%\obj\%__BuildOS%.%__BuildArch%.%__BuildType%"
-set "__PackagesBinDir=%__ConfigBinDir%\packages"
+set "__PackagesBinDir=%__RootBinDir%\packages\%__BuildType%\Shipping"
 
 set "__CrossComponentBinDir=%__BinDir%"
 set "__CrossCompIntermediatesDir=%__IntermediatesDir%\crossgen"
@@ -156,16 +165,18 @@ REM ============================================================================
 @if defined _echo @echo on
 
 :: Parse the optdata package versions out of msbuild so that we can pass them on to CMake
-set DotNetCli=%__ProjectDir%\.dotnet\dotnet.exe
-if not exist "%DotNetCli%" (
-    echo %__MsgPrefix%Assertion failed: dotnet cli not found at path "%DotNetCli%"
+set __DotNetCli=%__ProjectDir%\.dotnet\dotnet.exe
+if not exist "%__DotNetCli%" (
+    echo %__MsgPrefix%Assertion failed: dotnet cli not found at path "%__DotNetCli%"
     exit /b 1
 )
-set MSBuildPath=%__ProjectDir%\.dotnet\sdk\2.1.300\MSBuild.dll
-if not exist "%MSBuildPath%" (
-    echo %__MsgPrefix%Assertion failed: dotnet cli sdk not found at path "%MSBuildPath%"
+set __MSBuildPath=%__ProjectDir%\.dotnet\sdk\2.1.401\MSBuild.dll
+if not exist "%__MSBuildPath%" (
+    echo %__MsgPrefix%Assertion failed: dotnet cli sdk not found at path "%__MSBuildPath%"
     exit /b 1
 )
+
+set __DotNetRuntimeVersion=2.1.3
 
 REM =========================================================================================
 REM ===
@@ -218,7 +229,7 @@ if %__Build% EQU 1 (
 :GenVSSolution
     echo Generating Version Header
     set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    %DotNetCli% %MSBuildPath% %__ProjectDir%\eng\CreateVersionFile.csproj /v:!__Verbosity! /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
+    %__DotNetCli% %__MSBuildPath% %__ProjectDir%\eng\CreateVersionFile.csproj /v:!__Verbosity! /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
         exit /b 1
@@ -228,9 +239,9 @@ if %__Build% EQU 1 (
 
     echo %__MsgPrefix%Regenerating the Visual Studio solution
 
-    set "__ManagedBinaryDir=%__RootBinDir%\%__BuildType%\bin"
+    set "__ManagedBinaryDir=%__RootBinDir%\bin"
     set "__ManagedBinaryDir=!__ManagedBinaryDir:\=/!"
-    set __ExtraCmakeArgs=!___SDKVersion! "-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!"
+    set __ExtraCmakeArgs=!___SDKVersion! "-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=!__BuildType!"
 
     pushd "%__IntermediatesDir%"
     call "%__ProjectDir%\eng\gen-buildsys-win.bat" "%__ProjectDir%" %__VSVersion% %__BuildArch% !__ExtraCmakeArgs!
@@ -246,7 +257,7 @@ if %__Build% EQU 1 (
     )
     set __BuildLog="%__LogDir%\Native.Build.binlog"
 
-    :: For some currently unknown reason, "%DotNetCli% msbuild" fails because VCTargetsPath isn't defined.
+    :: For some currently unknown reason, "%__DotNetCli% msbuild" fails because VCTargetsPath isn't defined.
     msbuild.exe %__IntermediatesDir%\install.vcxproj /v:!__Verbosity! /bl:!__BuildLog! /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
 
     if not !ERRORLEVEL! == 0 (
@@ -288,7 +299,7 @@ if /i "%__DoCrossArchBuild%"=="1" (
 
     set "__ManagedBinaryDir=%__RootBinDir%\%__BuildType%\bin"
     set "__ManagedBinaryDir=!__ManagedBinaryDir:\=/!"
-    set __ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_CROSS_COMPONENTS_BUILD=1" "-DCLR_CMAKE_TARGET_ARCH=%__BuildArch%" "-DCMAKE_SYSTEM_VERSION=10.0"
+    set __ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=!__BuildType!" "-DCLR_CROSS_COMPONENTS_BUILD=1" "-DCLR_CMAKE_TARGET_ARCH=%__BuildArch%" "-DCMAKE_SYSTEM_VERSION=10.0"
 
     pushd "%__CrossCompIntermediatesDir%"
     call "%__ProjectDir%\eng\gen-buildsys-win.bat" "%__ProjectDir%" %__VSVersion% %__CrossArch% !__ExtraCmakeArgs!
@@ -304,7 +315,7 @@ if /i "%__DoCrossArchBuild%"=="1" (
 
     set __BuildLog="%__LogDir%\Cross.Build.binlog"
 
-    :: For some currently unknown reason, "%DotNetCli% msbuild" fails because VCTargetsPath isn't defined.
+    :: For some currently unknown reason, "%__DotNetCli% msbuild" fails because VCTargetsPath isn't defined.
     msbuild.exe %__CrossCompIntermediatesDir%\install.vcxproj /v:!__Verbosity! /bl:!__BuildLog! /p:Configuration=%__BuildType% /p:Platform=%__CrossArch% %__UnprocessedBuildArgs%
 
     if not !ERRORLEVEL! == 0 (
@@ -330,7 +341,7 @@ echo %__MsgPrefix%Product binaries are available at !__BinDir!
 :: Test components
 if %__Test% EQU 1 (
     :: Install the other versions of .NET Core runtime we are going to test on
-    powershell -ExecutionPolicy ByPass -NoProfile -command "& """%__ProjectDir%\eng\install-test-runtimes.ps1""" -DotNetDir %__ProjectDir%\.dotnet -TempDir %__IntermediatesDir% -BuildArch %__BuildArch%" %__DailyTest%
+    powershell -ExecutionPolicy ByPass -NoProfile -command "& """%__ProjectDir%\eng\install-test-runtimes.ps1""" -DotNetDir %__ProjectDir%\.dotnet -RuntimeVersion21 %__DotNetRuntimeVersion% -TempDir %__IntermediatesDir% -BuildArch %__BuildArch%" %__DailyTest%
 
     :: Run the xunit tests
     powershell -ExecutionPolicy ByPass -NoProfile -command "& """%__ProjectDir%\eng\common\Build.ps1""" -test -configuration %__BuildType% -verbosity %__Verbosity% %__TestArgs%"

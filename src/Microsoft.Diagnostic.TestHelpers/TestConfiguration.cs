@@ -43,10 +43,10 @@ namespace Microsoft.Diagnostic.TestHelpers
             string nugetPackages = Environment.GetEnvironmentVariable("NUGET_PACKAGES");
             if (nugetPackages == null)
             {
-                // If not already set, the RoslynTools RepoToolSet scripts/build system sets 
-                // NUGET_PACKAGES to the UserProfile or HOME nuget cache directories if building
-                // locally (for speed) or to the repo root/.packages in CI builds (to isolate 
-                // global machine dependences).
+                // If not already set, the arcade SDK scripts/build system sets NUGET_PACKAGES 
+                // to the UserProfile or HOME nuget cache directories if building locally (for 
+                // speed) or to the repo root/.packages in CI builds (to isolate global machine 
+                // dependences).
                 //
                 // This emulates that logic so the VS Test Explorer can still run the tests for
                 // config files that don't set the NugetPackagesCacheDir value (like the SOS unit

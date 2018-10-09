@@ -30,6 +30,7 @@ __Build=false
 __Test=false
 __DailyTest=
 __CI=false
+__Verbosity=minimal
 __TestArgs=
 __UnprocessedBuildArgs=
 
@@ -178,6 +179,7 @@ while :; do
             ;;
 
         --verbosity)
+            __Verbosity=$2
             __TestArgs="$__TestArgs $1 $2"
             shift
             ;;
@@ -225,11 +227,6 @@ while :; do
         --clang5.0)
             __ClangMajorVersion=5
             __ClangMinorVersion=0
-            ;;
-
-        --verbosity)
-            __TestArgs="$__TestArgs --verbosity $2"
-            shift
             ;;
 
         # Ignored for a native build
@@ -281,15 +278,15 @@ fi
 echo $PYTHON
 
 __RootBinDir=$__ProjectRoot/artifacts
-__ConfigBinDir=$__RootBinDir/$__BuildType
-__BinDir=$__ConfigBinDir/bin/$__BuildOS.$__BuildArch
-__LogDir=$__ConfigBinDir/log/$__BuildOS.$__BuildArch
+__BinDir=$__RootBinDir/bin/$__BuildOS.$__BuildArch.$__BuildType
+__LogDir=$__RootBinDir/log/$__BuildOS.$__BuildArch.$__BuildType
 __IntermediatesDir=$__RootBinDir/obj/$__BuildOS.$__BuildArch.$__BuildType
-__ResultsDir=$__ConfigBinDir/TestResults
-__PackagesBinDir=$__ConfigBinDir/packages
-__ExtraCmakeArgs=-DCLR_MANAGED_BINARY_DIR=$__ConfigBinDir/bin
+__ResultsDir=$__RootBinDir/TestResults/$__BuildType
+__PackagesBinDir=$__RootBinDir/packages/$__BuildType/Shipping
+__ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=$__RootBinDir/bin -DCLR_BUILD_TYPE=$__BuildType"
 __DotNetCli=$__ProjectRoot/.dotnet/dotnet
-__MSBuildPath=$__ProjectRoot/.dotnet/sdk/2.1.300/MSBuild.dll
+__MSBuildPath=$__ProjectRoot/.dotnet/sdk/2.1.401/MSBuild.dll
+__DotNetRuntimeVersion=2.1.3
 
 if [ ! -e $__DotNetCli ]; then
    echo "dotnet cli not installed $__DotNetCli"
@@ -461,7 +458,7 @@ if [ $__Build == true ]; then
     if [[ $__CI == true ]]; then
         echo "Generating Version Source File"
         __GenerateVersionLog="$__LogDir/GenerateVersion.binlog"
-        $__DotNetCli $__MSBuildPath $__ProjectRoot/eng/CreateVersionFile.csproj /noconlog /bl:$__GenerateVersionLog /t:GenerateVersionFiles /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
+        $__DotNetCli $__MSBuildPath $__ProjectRoot/eng/CreateVersionFile.csproj /v:$__Verbosity /bl:$__GenerateVersionLog /t:GenerateVersionFiles /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
         if [ $? != 0 ]; then
             echo "Generating Version Source File FAILED"
             exit 1
@@ -477,7 +474,7 @@ fi
 # Run SOS/lldbplugin tests
 if [ $__Test == true ]; then
     # Install the other versions of .NET Core runtime we are going to test on
-    "$__ProjectRoot/eng/install-test-runtimes.sh" --dotnet-directory "$__ProjectRoot/.dotnet" --temp-directory "$__IntermediatesDir" --architecture "$__BuildArch" $__DailyTest
+    "$__ProjectRoot/eng/install-test-runtimes.sh" --dotnet-directory "$__ProjectRoot/.dotnet" --runtime-version-21 "$__DotNetRuntimeVersion" --temp-directory "$__IntermediatesDir" --architecture "$__BuildArch" $__DailyTest
 
     if [ "$LLDB_PATH" = "" ]; then
         export LLDB_PATH="$(which lldb-3.9.1 2> /dev/null)"
@@ -514,7 +511,7 @@ if [ $__Test == true ]; then
     fi
 
     # Run lldb python tests
-    "$__ProjectRoot/src/SOS/lldbplugin.tests/testsos.sh" "$__ProjectRoot" "$__Plugin" "$__ConfigBinDir/bin" "$__ResultsDir"
+    "$__ProjectRoot/src/SOS/lldbplugin.tests/testsos.sh" "$__ProjectRoot" "$__Plugin" "$__DotNetRuntimeVersion" "$__RootBinDir/bin/TestDebuggee/$__BuildType/netcoreapp2.0/TestDebuggee.dll" "$__ResultsDir"
     if [ $? != 0 ]; then
         exit 1
     fi

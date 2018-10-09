@@ -1,5 +1,5 @@
 ﻿<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
-<Project Sdk="RoslynTools.RepoToolset">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp1.0</TargetFramework>
     <AssemblyName>SOS.NETCore</AssemblyName>
@@ -11,6 +11,7 @@
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <PackageTags>SOS</PackageTags>
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SOSNETCorePath>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netcoreapp1.0\SOS.NETCore.dll</SOSNETCorePath>
   </PropertyGroup>
   
   <ItemGroup>
@@ -18,54 +19,54 @@
   </ItemGroup>
 
   <ItemGroup>
-    <_PackageFiles Include="$(ArtifactsBinDir)\SOS.NETCore\netcoreapp1.0\SOS.NETCore.dll">
+    <_PackageFiles Include="$(SOSNETCorePath)">
       <BuildAction>None</BuildAction>
       <PackagePath>tools/win-x64</PackagePath>
     </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Windows_NT.x64\sos.dll">
+    <_PackageFiles Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\sos.dll">
       <BuildAction>None</BuildAction>
       <PackagePath>tools/win-x64</PackagePath>
     </_PackageFiles>
 
-    <_PackageFiles Include="$(ArtifactsBinDir)\SOS.NETCore\netcoreapp1.0\SOS.NETCore.dll">
+    <_PackageFiles Include="$(SOSNETCorePath)">
       <BuildAction>None</BuildAction>
       <PackagePath>tools/win-x86</PackagePath>
     </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Windows_NT.x86\sos.dll">
+    <_PackageFiles Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\sos.dll">
       <BuildAction>None</BuildAction>
       <PackagePath>tools/win-x86</PackagePath>
     </_PackageFiles>
 
-    <_PackageFiles Include="$(ArtifactsBinDir)\SOS.NETCore\netcoreapp1.0\SOS.NETCore.dll">
+    <_PackageFiles Include="$(SOSNETCorePath)">
       <BuildAction>None</BuildAction>
       <PackagePath>tools/linux-x64</PackagePath>
     </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64\libsosplugin.so">
+    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsosplugin.so">
       <BuildAction>None</BuildAction>
       <PackagePath>tools/linux-x64</PackagePath>
     </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64\libsos.so">
+    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsos.so">
       <BuildAction>None</BuildAction>
       <PackagePath>tools/linux-x64</PackagePath>
     </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64\sosdocsunix.txt">
+    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\sosdocsunix.txt">
       <BuildAction>None</BuildAction>
       <PackagePath>tools/linux-x64</PackagePath>
     </_PackageFiles>
 
-    <_PackageFiles Include="$(ArtifactsBinDir)\SOS.NETCore\netcoreapp1.0\SOS.NETCore.dll">
+    <_PackageFiles Include="$(SOSNETCorePath)">
       <BuildAction>None</BuildAction>
       <PackagePath>tools/osx-x64</PackagePath>
     </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64\libsosplugin.dylib">
+    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib">
       <BuildAction>None</BuildAction>
       <PackagePath>tools/osx-x64</PackagePath>
     </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64\libsos.dylib">
+    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsos.dylib">
       <BuildAction>None</BuildAction>
       <PackagePath>tools/osx-x64</PackagePath>
     </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64\sosdocsunix.txt">
+    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\sosdocsunix.txt">
       <BuildAction>None</BuildAction>
       <PackagePath>tools/osx-x64</PackagePath>
     </_PackageFiles>

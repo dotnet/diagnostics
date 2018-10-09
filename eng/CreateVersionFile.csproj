@@ -1,60 +1,88 @@
-<Project Sdk="RoslynTools.RepoToolset" >
+﻿<!-- All Rights Reserved. Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
+<Project>
+  <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
   <PropertyGroup>
-    <OfficialBuildId Condition="'$(OfficialBuildId)' == ''">$(BUILD_BUILDNUMBER)</OfficialBuildId>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
 
-  <Import Project="$(ArtifactsDir)\BuildTools\Build.Common.props" />
-  <Import Project="$(ArtifactsDir)\BuildTools\versioning.targets" />
+  <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
-  <PropertyGroup>
-    <BuildVersionFileOverride>$(BuildVersionFilePath)BuildVersion2-$(TodayTimeStamp).props</BuildVersionFileOverride>
-    <ShouldCreateVersionFileOverride Condition="!Exists('$(BuildVersionFileOverride)')">true</ShouldCreateVersionFileOverride>
-  </PropertyGroup>
+  <Target Name="Build" />
 
-  <Import Condition="Exists('$(BuildVersionFileOverride)')" Project="$(BuildVersionFileOverride)" />
+  <Target Name="GenerateVersionFiles" DependsOnTargets="GenerateVersionHeader;GenerateVersionSourceFile" />
 
-  <Target Name="GenerateVersionFiles" DependsOnTargets="CreateVersionFileOverride;GenerateVersionFileInternal;GenerateVersionSourceFileInternal"/>
+  <Target Name="GenerateVersionHeader" DependsOnTargets="GetAssemblyVersion;AddSourceRevisionToInformationalVersion" Condition="'$(NativeVersionHeaderFile)' != '' and '$(GenerateVersionHeader)' == 'true' and !Exists($(NativeVersionHeaderFile))">
 
-  <Target Name="GenerateVersionFileInternal" Condition="'$(GenerateVersionHeader)' == 'true'" DependsOnTargets="GenerateVersionHeader"/>
+    <ItemGroup>
+      <!-- Defining versioning variables -->
+      <NativeVersionLines Include="#undef VER_FILEVERSION" />
+      <NativeVersionLines Include="#define VER_FILEVERSION             $(_FileMajor),$(_FileMinor),$(_FilePatch),$(_FileRevision)" />
 
-  <Target Name="GenerateVersionSourceFileInternal" Condition="'$(GenerateVersionSourceFile)' == 'true'" DependsOnTargets="GenerateVersionSourceFile"/>
+      <NativeVersionLines Include="#undef VER_FILEVERSION_STR" />
+      <NativeVersionLines Include="#define VER_FILEVERSION_STR         &quot;$(FileVersion)&quot;" />
 
-  <Target Name="CreateVersionFileOverride" 
-          Condition="'$(SkipVersionGeneration)' != 'true' AND '$(ShouldCreateVersionFileOverride)' == 'true'"
-          DependsOnTargets="CreateVersionFileDuringBuild">
-    <!--
-      All of this is to override the BuildTools version major/minor to what RoslynTools.RepoToolSet does.
-    -->
+      <NativeVersionLines Include="#undef VER_PRODUCTVERSION" />
+      <NativeVersionLines Include="#define VER_PRODUCTVERSION          $(_FileMajor),$(_FileMinor),$(VersionSuffixDateStamp),$(VersionSuffixBuildOfTheDay)" />
+
+      <NativeVersionLines Include="#undef VER_PRODUCTVERSION_STR" />
+      <NativeVersionLines Include="#define VER_PRODUCTVERSION_STR      &quot;$(InformationalVersion)&quot;" />
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(NativeVersionHeaderFile)" Lines="@(NativeVersionLines)" Overwrite="true" />
+
+    <ItemGroup>
+      <FileWrites Include="$(NativeVersionHeaderFile)" />
+    </ItemGroup>
+
+    <Message Importance="High" Text="Created version file $(NativeVersionHeaderFile)" />
+  </Target>
+
+  <!-- Non Windows versioning requires to generate a source file and include it on the compilation. -->
+  <Target Name="GenerateVersionSourceFile" DependsOnTargets="GetAssemblyVersion;AddSourceRevisionToInformationalVersion" Condition="'$(NativeVersionSourceFile)' != '' and '$(GenerateVersionSourceFile)' == 'true' and !Exists($(NativeVersionHeaderFile))">
+
+    <!-- Get Username -->
     <PropertyGroup>
-      <FileVersion Condition="'$(_BuildNumberFiveDigitDateStamp)' != ''">$(MajorVersion).$(MinorVersion).$(_BuildNumberFiveDigitDateStamp).$(_BuildNumberBuildOfTheDayPadded)</FileVersion>
-      <BuildNumberMajor Condition="'$(_BuildNumberFiveDigitDateStamp)' != ''">$(_BuildNumberFiveDigitDateStamp)</BuildNumberMajor>
-      <BuildNumberMinor Condition="'$(_BuildNumberBuildOfTheDayPadded)' != ''">$(_BuildNumberBuildOfTheDayPadded)</BuildNumberMinor>
-
-      <VersionFileOverrideContent>
-        <![CDATA[<?xml version="1.0" encoding="utf-8"?>
-<!-- This is a generated file. -->
-<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <PropertyGroup>
-    <FileVersion>$(FileVersion)</FileVersion>
-    <BuildNumberMajor>$(BuildNumberMajor)</BuildNumberMajor>
-    <BuildNumberMinor>$(BuildNumberMinor)</BuildNumberMinor>
-  </PropertyGroup>
-</Project>
-]]>
-      </VersionFileOverrideContent>
+      <VersionUserName Condition="'$(VersionUserName)' == ''">$(USERNAME)</VersionUserName>
     </PropertyGroup>
 
-    <MakeDir Directories="$(BuildVersionFilePath)" />
+    <Exec Command="whoami" Condition="'$(VersionUserName)' == ''" StandardOutputImportance="Low" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="VersionUserName" />
+    </Exec>
 
-    <WriteLinesToFile
-      ContinueOnError="WarnAndContinue"
-      Condition="!Exists('$(BuildVersionFileOverride)')"
-      File="$(BuildVersionFileOverride)"
-      Lines="$(VersionFileOverrideContent)"
-      Overwrite="true" />
+    <!-- Get Hostname -->
+    <PropertyGroup>
+      <VersionHostName Condition="'$(VersionHostName)' == ''">$(COMPUTERNAME)</VersionHostName>
+    </PropertyGroup>
 
-    <Message Importance="High" Text="Created version override file $(BuildVersionFileOverride)" />
+    <Exec Command="hostname" Condition="'$(RunningOnUnix)'=='true' AND '$(VersionHostName)'==''" StandardOutputImportance="Low" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="VersionHostName" />
+    </Exec>
+
+    <PropertyGroup>
+      <BuiltByString Condition="'$(VersionUserName)' != '' AND '$(VersionHostName)' != ''">$(BuiltByString) %40BuiltBy: $(VersionUserName)-$(VersionHostName)</BuiltByString>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <SourceFileLines />
+      <SourceFileLines Include="static char sccsid%5B%5D %5F%5Fattribute%5F%5F%28%28used%29%29 %3D %22%40%28%23%29Version $(InformationalVersion)$(BuiltByString)%22%3B" />
+      <!-- Since this is a source file, compiler will complain if there is no new line at end of file, so adding one bellow. -->
+      <SourceFileLines Include=" " />
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(NativeVersionSourceFile)" Lines="@(SourceFileLines)" Overwrite="true" />
+
+    <ItemGroup>
+      <FileWrites Include="$(NativeVersionSourceFile)" />
+    </ItemGroup>
+
+    <Message Importance="High" Text="Created version file $(NativeVersionSourceFile)" />
   </Target>
+
+  <ItemGroup>
+    <Compile Remove="**" />
+    <EmbeddedResource Remove="**" />
+    <None Remove="**" />
+  </ItemGroup>
 
 </Project>

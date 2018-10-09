@@ -15,9 +15,9 @@
   <TestProduct>ProjectK</TestProduct>
   <ScriptRootDir>$(RepoRootDir)/src/SOS/SOS.UnitTests/Scripts</ScriptRootDir>
   <RootBinDir>$(RepoRootDir)/artifacts</RootBinDir>
-  <InstallDir>$(RootBinDir)/$(TargetConfiguration)/bin/$(OS).$(TargetArchitecture)</InstallDir>
-  <LogDir>$(RootBinDir)/$(TargetConfiguration)/TestResults/sos.unittests_$(Timestamp)</LogDir>
-  <DumpDir>$(RootBinDir)/$(TargetConfiguration)/tmp/dumps</DumpDir>
+  <InstallDir>$(RootBinDir)/bin/$(OS).$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
+  <LogDir>$(RootBinDir)/TestResults/$(TargetConfiguration)/sos.unittests_$(Timestamp)</LogDir>
+  <DumpDir>$(RootBinDir)/tmp/$(TargetConfiguration)\dumps</DumpDir>
   
   <DebuggeeSourceRoot>$(RepoRootDir)/src/SOS/SOS.UnitTests/Debuggees</DebuggeeSourceRoot>
   <DebuggeeRootDir>$(RootBinDir)/Debuggees</DebuggeeRootDir>

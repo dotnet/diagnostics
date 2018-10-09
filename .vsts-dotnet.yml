@@ -1,7 +1,7 @@
 phases:
 - template: /eng/build.yml
   parameters:
-    phaseName: Windows
+    name: Windows
     agentOs: Windows_NT
     queue: 
       name: DotNetCore-Build
@@ -19,11 +19,11 @@ phases:
         Build_Release_x86:
           _BuildConfig: Release
           _BuildArch: x86
-          _PublishArtifacts: bin/Windows_NT.x86
+          _PublishArtifacts: bin/Windows_NT.x86.Release
 
 - template: /eng/build.yml
   parameters:
-    phaseName: CentOS_7
+    name: CentOS_7
     agentOs: Linux
     dockerImage: microsoft/dotnet-buildtools-prereqs:centos-7-c103199-20180628120549
     queue:
@@ -35,15 +35,15 @@ phases:
         Build_Debug:
           _BuildConfig: Debug
           _BuildArch: x64
-          _PublishArtifacts: bin/Linux.x64
+          _PublishArtifacts: bin/Linux.x64.Debug
         Build_Release:
           _BuildConfig: Release
           _BuildArch: x64
-          _PublishArtifacts: bin/Linux.x64
+          _PublishArtifacts: bin/Linux.x64.Release
 
 - template: /eng/build.yml
   parameters:
-    phaseName: MacOS
+    name: MacOS
     agentOs: Darwin
     queue: 
       name: Hosted macOS Preview
@@ -57,11 +57,11 @@ phases:
         Build_Release:
           _BuildConfig: Release
           _BuildArch: x64
-          _PublishArtifacts: bin/OSX.x64
+          _PublishArtifacts: bin/OSX.x64.Release
 
 - template: /eng/build.yml
   parameters:
-    phaseName: Debian_Stretch
+    name: Debian_Stretch
     agentOs: Linux
     dockerImage: microsoft/dotnet-buildtools-prereqs:debian-stretch-c103199-20180628122423
     dependsOn: CentOS_7
@@ -77,7 +77,7 @@ phases:
 
 - template: /eng/build.yml
   parameters:
-    phaseName: Fedora_27
+    name: Fedora_27
     agentOs: Linux
     dockerImage: microsoft/dotnet-buildtools-prereqs:fedora-27-c103199-20180628122443
     dependsOn: CentOS_7
@@ -93,7 +93,7 @@ phases:
 
 - template: /eng/build.yml
   parameters:
-    phaseName: Fedora_28
+    name: Fedora_28
     agentOs: Linux
     dockerImage: microsoft/dotnet-buildtools-prereqs:fedora-28-c103199-20180628122443
     dependsOn: CentOS_7
@@ -109,7 +109,7 @@ phases:
 
 - template: /eng/build.yml
   parameters:
-    phaseName: OpenSuse_42_1
+    name: OpenSuse_42_1
     agentOs: Linux
     dockerImage: microsoft/dotnet-buildtools-prereqs:opensuse-42.1-c103199-20180628122439
     dependsOn: CentOS_7
@@ -125,7 +125,7 @@ phases:
 
 - template: /eng/build.yml
   parameters:
-    phaseName: OpenSuse_42_3
+    name: OpenSuse_42_3
     agentOs: Linux
     dockerImage: microsoft/dotnet-buildtools-prereqs:opensuse-42.3-c103199-20180628122439
     dependsOn: CentOS_7
@@ -141,7 +141,7 @@ phases:
 
 - template: /eng/build.yml
   parameters:
-    phaseName: Ubuntu_14_04
+    name: Ubuntu_14_04
     agentOs: Linux
     dockerImage: microsoft/dotnet-buildtools-prereqs:ubuntu-14.04-c103199-20180628134413
     dependsOn: CentOS_7
@@ -157,7 +157,7 @@ phases:
 
 - template: /eng/build.yml
   parameters:
-    phaseName: Ubuntu_16_04
+    name: Ubuntu_16_04
     agentOs: Linux
     dockerImage: microsoft/dotnet-buildtools-prereqs:ubuntu-16.04-c103199-20180628134544
     dependsOn: CentOS_7
@@ -173,7 +173,7 @@ phases:
 
 - template: /eng/build.yml
   parameters:
-    phaseName: Ubuntu_17_10
+    name: Ubuntu_17_10
     agentOs: Linux
     dockerImage: microsoft/dotnet-buildtools-prereqs:ubuntu-17.10-c103199-20180628134544
     dependsOn: CentOS_7
@@ -189,7 +189,7 @@ phases:
 
 - template: /eng/build.yml
   parameters:
-    phaseName: Ubuntu_18_04
+    name: Ubuntu_18_04
     agentOs: Linux
     dockerImage: microsoft/dotnet-buildtools-prereqs:ubuntu-18.04-c103199-20180628134610
     dependsOn: CentOS_7
@@ -213,23 +213,28 @@ phases:
     name: DotNetCore-Build
     demands:
       - agent.os -equals Windows_NT
+  variables: 
+    _PublishBlobFeedUrl: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
+    _SOSNETCorePath: $(Build.SourcesDirectory)/artifacts/bin/SOS.NETCore/Release/netcoreapp1.0
+    _TeamName: DotNetCore
+
   steps: 
   - task: ms-vseng.MicroBuildTasks.30666190-6959-11e5-9f96-f56098202fef.MicroBuildSigningPlugin@1
     displayName: Install MicroBuild plugin
     inputs:
-      signType: real
-      zipSources: false
+      signType: $(SignType)
       esrpSigning: true
+      zipSources: false
     env:
-      TeamName: DotNetCore
+      TeamName: $(_TeamName)
     continueOnError: false
     condition: succeeded()
 
   - task: AzureKeyVault@1
     inputs:
-      azureSubscription: 'DotNet-Engineering-Services_KeyVault'
-      KeyVaultName: EngKeyVault
-      SecretsFilter: 'dotnetfeed-storage-access-key-1'
+      azureSubscription: 'DncEng-VSTS'
+      keyVaultName: EngKeyVault
+      secretsFilter: 'dotnetfeed-storage-access-key-1,microsoft-symbol-server-pat,symweb-symbol-server-pat'
     condition: succeeded()
 
   # Windows x64 download, copy and archive. Everything under "bin" is published for the Windows x64 build.
@@ -245,7 +250,24 @@ phases:
     displayName: Copy Windows Artifacts
     inputs:
       sourceFolder: '$(System.ArtifactsDirectory)/Windows_Build_Release'
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/Release/bin'
+      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin'
+    condition: succeeded()
+
+  - task: CopyFiles@2
+    displayName: Copy Windows x64 Artifacts
+    inputs:
+      sourceFolder: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.x64.Release'
+      contents: 'sos.dll'
+      targetFolder: '$(Build.SourcesDirectory)/artifacts/Windows_NT.x64.Release'
+    condition: succeeded()
+
+  - task: CopyFiles@2
+    displayName: Copy Windows x64 Artifacts
+    inputs:
+      sourceFolder: '$(_SOSNETCorePath)'
+      contents: 'SOS.NETCore.dll'
+      overWrite: true
+      targetFolder: '$(Build.SourcesDirectory)/artifacts/Windows_NT.x64.Release'
     condition: succeeded()
 
   - task: ArchiveFiles@2
@@ -253,8 +275,8 @@ phases:
     inputs:
       archiveType: zip
       includeRootFolder: false
-      rootFolderOrFile: '$(Build.SourcesDirectory)/artifacts/Release/bin/Windows_NT.x64'
-      archiveFile: '$(Build.SourcesDirectory)/artifacts/Release/sos-win-x64.zip'
+      rootFolderOrFile: '$(Build.SourcesDirectory)/artifacts/Windows_NT.x64.Release'
+      archiveFile: '$(Build.SourcesDirectory)/artifacts/packages/Release/sos-win-x64.zip'
     condition: succeeded()
 
   # Windows x86 download, copy and archive.
@@ -270,16 +292,17 @@ phases:
     displayName: Copy Windows x86 Artifacts
     inputs:
       sourceFolder: '$(System.ArtifactsDirectory)/Windows_Build_Release_x86'
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/Release/bin/Windows_NT.x86'
+      contents: 'sos.dll'
+      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.x86.Release'
     condition: succeeded()
 
   - task: CopyFiles@2
     displayName: Copy Windows x86 Artifacts
     inputs:
-      sourceFolder: '$(Build.SourcesDirectory)/artifacts/Release/bin/SOS.NETCore/netcoreapp1.0'
+      sourceFolder: '$(_SOSNETCorePath)'
       contents: 'SOS.NETCore.dll'
       overWrite: true
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/Release/bin/Windows_NT.x86'
+      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.x86.Release'
     condition: succeeded()
 
   - task: ArchiveFiles@2
@@ -287,8 +310,8 @@ phases:
     inputs:
       archiveType: zip
       includeRootFolder: false
-      rootFolderOrFile: '$(Build.SourcesDirectory)/artifacts/Release/bin/Windows_NT.x86'
-      archiveFile: '$(Build.SourcesDirectory)/artifacts/Release/sos-win-x86.zip'
+      rootFolderOrFile: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.x86.Release'
+      archiveFile: '$(Build.SourcesDirectory)/artifacts/packages/Release/sos-win-x86.zip'
     condition: succeeded()
   
   # Copy and archive the files for windbg extension gallery.
@@ -296,35 +319,35 @@ phases:
   - task: CopyFiles@2
     displayName: Copy Extension Gallery Files
     inputs:
-      sourceFolder: '$(Build.SourcesDirectory)/artifacts/Release/bin/Windows_NT.x64'
+      sourceFolder: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.x64.Release'
       contents: 'sos.dll'
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/Release/gallery/x64'
+      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/gallery/x64'
     condition: succeeded()
 
   - task: CopyFiles@2
     displayName: Copy Extension Gallery Files
     inputs:
-      sourceFolder: '$(Build.SourcesDirectory)/artifacts/Release/bin/SOS.NETCore/netcoreapp1.0'
+      sourceFolder: '$(_SOSNETCorePath)'
       contents: 'SOS.NETCore.dll'
       overWrite: true
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/Release/gallery/x64'
+      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/gallery/x64'
     condition: succeeded()
 
   - task: CopyFiles@2
     displayName: Copy Extension Gallery Files
     inputs:
-      sourceFolder: '$(Build.SourcesDirectory)/artifacts/Release/bin/Windows_NT.x86'
+      sourceFolder: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.x86.Release'
       contents: 'sos.dll'
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/Release/gallery/x86'
+      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/gallery/x86'
     condition: succeeded()
 
   - task: CopyFiles@2
     displayName: Copy Extension Gallery Files
     inputs:
-      sourceFolder: '$(Build.SourcesDirectory)/artifacts/Release/bin/SOS.NETCore/netcoreapp1.0'
+      sourceFolder: '$(_SOSNETCorePath)'
       contents: 'SOS.NETCore.dll'
       overWrite: true
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/Release/gallery/x86'
+      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/gallery/x86'
     condition: succeeded()
 
   - task: CopyFiles@2
@@ -332,7 +355,7 @@ phases:
     inputs:
       sourceFolder: '$(Build.SourcesDirectory)/eng'
       contents: 'GalleryManifest.xml'
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/Release/gallery'
+      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/gallery'
     condition: succeeded()
 
   - task: ArchiveFiles@2
@@ -340,8 +363,8 @@ phases:
     inputs:
       archiveType: zip
       includeRootFolder: false
-      rootFolderOrFile: '$(Build.SourcesDirectory)/artifacts/Release/gallery'
-      archiveFile: '$(Build.SourcesDirectory)/artifacts/Release/sos-gallery.zip'
+      rootFolderOrFile: '$(Build.SourcesDirectory)/artifacts/bin/gallery'
+      archiveFile: '$(Build.SourcesDirectory)/artifacts/packages/Release/sos-gallery.zip'
     condition: succeeded()
 
   # Linux download, copy and archive
@@ -357,26 +380,26 @@ phases:
     displayName: Copy Linux Artifacts
     inputs:
       sourceFolder: '$(System.ArtifactsDirectory)/CentOS_7_Build_Release'
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/Release/bin/Linux.x64'
+      contents: ?(libsos.so|libsosplugin.so|sosdocsunix.txt)
+      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Linux.x64.Release'
     condition: succeeded()
 
   - task: CopyFiles@2
     displayName: Copy Linux Artifacts
     inputs:
-      sourceFolder: '$(Build.SourcesDirectory)/artifacts/Release/bin/SOS.NETCore/netcoreapp1.0'
+      sourceFolder: '$(_SOSNETCorePath)'
       contents: 'SOS.NETCore.dll'
       overWrite: true
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/Release/bin/Linux.x64'
+      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Linux.x64.Release'
     condition: succeeded()
 
   - task: ArchiveFiles@2
     displayName: Archive Linux Artifacts
     inputs:
-      archiveType: tar
+      archiveType: zip
       includeRootFolder: false
-      tarCompression: gz
-      rootFolderOrFile: '$(Build.SourcesDirectory)/artifacts/Release/bin/Linux.x64'
-      archiveFile: '$(Build.SourcesDirectory)/artifacts/Release/sos-linux-x64.tar.gz'
+      rootFolderOrFile: '$(Build.SourcesDirectory)/artifacts/bin/Linux.x64.Release'
+      archiveFile: '$(Build.SourcesDirectory)/artifacts/packages/Release/sos-linux-x64.zip'
     condition: succeeded()
 
   # MacOS download, copy and archive
@@ -392,26 +415,26 @@ phases:
     displayName: Copy MacOS Artifacts
     inputs:
       sourceFolder: '$(System.ArtifactsDirectory)/MacOS_Build_Release'
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/Release/bin/OSX.x64'
+      contents: ?(libsos.dylib|libsosplugin.dylib|sosdocsunix.txt)
+      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/OSX.x64.Release'
     condition: succeeded()
 
   - task: CopyFiles@2
     displayName: Copy MacOS Artifacts
     inputs:
-      sourceFolder: '$(Build.SourcesDirectory)/artifacts/Release/bin/SOS.NETCore/netcoreapp1.0'
+      sourceFolder: '$(_SOSNETCorePath)'
       contents: 'SOS.NETCore.dll'
       overWrite: true
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/Release/bin/OSX.x64'
+      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/OSX.x64.Release'
     condition: succeeded()
 
   - task: ArchiveFiles@2
     displayName: Archive MacOS Artifacts
     inputs:
-      archiveType: tar
+      archiveType: zip
       includeRootFolder: false
-      tarCompression: gz
-      rootFolderOrFile: '$(Build.SourcesDirectory)/artifacts/Release/bin/OSX.x64'
-      archiveFile: '$(Build.SourcesDirectory)/artifacts/Release/sos-osx-x64.tar.gz'
+      rootFolderOrFile: '$(Build.SourcesDirectory)/artifacts/bin/OSX.x64.Release'
+      archiveFile: '$(Build.SourcesDirectory)/artifacts/packages/Release/sos-osx-x64.zip'
     condition: succeeded()
 
   # Create nuget package and sign binaries
@@ -419,33 +442,52 @@ phases:
   - script: $(Build.SourcesDirectory)\eng\cipack.cmd
       -configuration Release
       -prepareMachine 
-      /p:SignType=$(SignType)
-      /p:PB_PublishBlobFeedKey=$(dotnetfeed-storage-access-key-1) 
-      /p:PB_PublishBlobFeedUrl=https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
-      /p:PB_PublishType=$(PublishType)
+      /p:TeamName=$(_TeamName)
+      /p:DotNetSignType=$(SignType) 
+      /p:DotNetPublishBlobFeedKey=$(dotnetfeed-storage-access-key-1) 
+      /p:DotNetPublishBlobFeedUrl=$(_PublishBlobFeedUrl)
+      /p:DotNetPublishToBlobFeed=false
+      /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
+      /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
+      /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
     displayName: Sign / Package
-    env:
-      OfficialBuildId: $(BUILD.BUILDNUMBER)
     continueOnError: true
     condition: succeeded()
 
   # Optionally drop the artifacts on a share
 
   - task: PublishBuildArtifacts@1
-    displayName: Drop Artifacts
+    displayName: Drop Binaries
     inputs:
       publishLocation: FilePath
-      pathtoPublish: '$(Build.SourcesDirectory)\artifacts\Release'
-      artifactName: '$(Build.BuildNumber)'
-      targetPath: '$(DropRoot)\DotNetCore\$(Build.DefinitionName)'
+      pathtoPublish: '$(Build.SourcesDirectory)\artifacts\bin'
+      artifactName: bin
+      targetPath: '$(DropRoot)\DotNetCore\$(Build.DefinitionName)\$(Build.BuildNumber)'
     condition: and(succeeded(), eq(variables['DropArtifacts'], 'true'))
 
-  # Optionally publish the packages to a myget feed
+  - task: PublishBuildArtifacts@1
+    displayName: Drop Packages
+    inputs:
+      publishLocation: FilePath
+      pathtoPublish: '$(Build.SourcesDirectory)\artifacts\packages'
+      artifactName: packages
+      targetPath: '$(DropRoot)\DotNetCore\$(Build.DefinitionName)\$(Build.BuildNumber)'
+    condition: and(succeeded(), eq(variables['DropArtifacts'], 'true'))
+
+  # Optionally publish the packages to a blob feed
 
   - task: NuGetCommand@2
     displayName: Publish TestHelpers to MyGet dotnet-buildtools feed
     inputs:
       command: custom
-      arguments: 'push $(Build.SourcesDirectory)\artifacts\Release\packages\Shipping\Microsoft.Diagnostic.TestHelpers.*.nupkg -ApiKey $(dotnet-myget-org-api-key) -Source $(MyGetBuildToolsFeed)'
+      arguments: 'push $(Build.SourcesDirectory)\artifacts\packages\Release\NonShipping\Microsoft.Diagnostic.TestHelpers.*.nupkg -ApiKey $(dotnetfeed-storage-access-key-1) -Source $(_PublishBlobFeedUrl)'
     condition: and(succeeded(), eq(variables['PushPackages'], 'true'))
 
+  - task: PublishBuildArtifacts@1
+    displayName: Publish Logs to VSTS
+    inputs:
+      pathtoPublish: '$(Build.SourcesDirectory)/artifacts/log'
+      publishLocation: Container
+      artifactName: Logs_Packaging_Signing
+    continueOnError: true
+    condition: always()

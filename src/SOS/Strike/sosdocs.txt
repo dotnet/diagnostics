@@ -61,8 +61,8 @@ Examining the GC history           Other
 -----------------------------      -----------------------------
 HistInit                           SetHostRuntime (sethostruntime)
 HistRoot                           FAQ
-HistObj                            soshelp
-HistObjFind
+HistObj                            SOSFlush
+HistObjFind                        Help (soshelp)
 HistClear
 \\
 
