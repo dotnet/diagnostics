@@ -14,6 +14,15 @@
 
   <Target Name="GenerateVersionHeader" DependsOnTargets="GetAssemblyVersion;AddSourceRevisionToInformationalVersion" Condition="'$(NativeVersionHeaderFile)' != '' and '$(GenerateVersionHeader)' == 'true' and !Exists($(NativeVersionHeaderFile))">
 
+    <PropertyGroup Condition="'$(VersionSuffixDateStamp)' == ''">
+      <_FileMajor>42</_FileMajor>
+      <_FileMinor>42</_FileMinor>
+      <_FilePatch>42</_FilePatch>
+      <_FileRevision>42424</_FileRevision>
+      <VersionSuffixDateStamp>42</VersionSuffixDateStamp>
+      <VersionSuffixBuildOfTheDay>42424</VersionSuffixBuildOfTheDay>
+    </PropertyGroup>
+
     <ItemGroup>
       <!-- Defining versioning variables -->
       <NativeVersionLines Include="#undef VER_FILEVERSION" />

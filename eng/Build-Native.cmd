@@ -49,6 +49,7 @@ set __BuildType=Debug
 set __BuildOS=Windows_NT
 set __Build=0
 set __Test=0
+set __CI=0
 set __DailyTest=
 set __Verbosity=minimal
 set __TestArgs=
