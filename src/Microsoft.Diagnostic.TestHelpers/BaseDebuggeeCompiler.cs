@@ -212,18 +212,6 @@ namespace Microsoft.Diagnostic.TestHelpers
         //DebuggeeBinaryExe:    <DebuggeeBuildRoot>/<DebuggeeName>[/<DebuggeeName>]/bin/Debug/<framework>/[<runtime>]/<DebuggeeName>.exe
         //LogPath:              <DebuggeeBuildRoot>/<DebuggeeName>.txt
 
-        // As seen above the project directory has two forms. In most cases it is identical with the solution
-        // directory for solutions that only build one managed binary. For a few cases where we need to build
-        // multiple binaries the project directory is nested one additional level. Siblings of the project directory
-        // are used for the referenced assemblies' project directories. For example:
-        //<DebuggeeBuildRoot>/MyApp/global.json
-        //<DebuggeeBuildRoot>/MyApp/MyApp/project.json
-        //<DebuggeeBuildRoot>/MyApp/MyHelperLib/project.json
-
-        // some combinations of dotnet + project.json seem to produce a runtime directory after the framework and some don't.
-        // I don't yet understand what exact factors drive this choice though I assume it has to do with shared runtime support.
-        // The logic works for the current default configuration but may not correctly handle others.
-        //
         // When the runtime directory is present it will have a native host exe in it that has been renamed to the debugee
         // name. It also has a managed dll in it which functions as a managed exe when renamed.
         // When the runtime directory is missing, the framework directory will have a managed dll in it that functions if it

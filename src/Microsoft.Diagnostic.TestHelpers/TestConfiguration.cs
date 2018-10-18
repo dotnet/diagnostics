@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Xml.Linq;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Microsoft.Diagnostic.TestHelpers
 {
@@ -309,6 +310,14 @@ namespace Microsoft.Diagnostic.TestHelpers
         }
 
         /// <summary>
+        /// Built for "Debug" or "Release". Can be null.
+        /// </summary>
+        public string TargetConfiguration
+        {
+            get { return GetValue("TargetConfiguration"); }
+        }
+
+        /// <summary>
         /// The product "projectk" (.NET Core) or "desktop".
         /// </summary>
         public string TestProduct
@@ -402,14 +411,6 @@ namespace Microsoft.Diagnostic.TestHelpers
         }
 
         /// <summary>
-        /// The root of the debuggees (managed and native)
-        /// </summary>
-        public string DebuggeeRootDir
-        {
-            get { return MakeCanonicalPath(GetValue("DebuggeeRootDir")); }
-        }
-
-        /// <summary>
         /// How the debuggees are built: "prebuilt" or "cli" (builds the debuggee during the test run with build and cli configuration).
         /// </summary>
         public string DebuggeeBuildProcess
@@ -491,7 +492,7 @@ namespace Microsoft.Diagnostic.TestHelpers
                         }
                     }
                 }
-                return 0;
+                throw new SkipTestException("RuntimeFrameworkVersion (major) is not valid");
             }
         }
 
@@ -669,7 +670,6 @@ namespace Microsoft.Diagnostic.TestHelpers
     {
         static OS()
         {
-#if CORE_CLR // Only core build can run on different OSes
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 Kind = OSKind.Linux;
@@ -687,10 +687,6 @@ namespace Microsoft.Diagnostic.TestHelpers
                 // Default to Unknown
                 Kind = OSKind.Unknown;
             }
-
-#else   // For everything else there's Windows 
-            _kind = OSKind.Windows; 
-#endif
         }
 
         /// <summary>
