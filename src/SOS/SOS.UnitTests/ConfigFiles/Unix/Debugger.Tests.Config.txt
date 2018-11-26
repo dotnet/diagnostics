@@ -20,8 +20,7 @@
   <DumpDir>$(RootBinDir)/tmp/$(TargetConfiguration)\dumps</DumpDir>
   
   <DebuggeeSourceRoot>$(RepoRootDir)/src/SOS/SOS.UnitTests/Debuggees</DebuggeeSourceRoot>
-  <DebuggeeRootDir>$(RootBinDir)/Debuggees</DebuggeeRootDir>
-  <DebuggeeBuildRoot>$(DebuggeeRootDir)</DebuggeeBuildRoot>
+  <DebuggeeBuildRoot>$(RootBinDir)/Debuggees</DebuggeeBuildRoot>
   <DebuggeeNativeLibRoot>$(DebuggeeBuildRoot)/native</DebuggeeNativeLibRoot>
   <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
   <CliPath>$(RepoRootDir)/.dotnet/dotnet</CliPath>

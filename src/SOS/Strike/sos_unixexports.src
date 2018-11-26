@@ -9,6 +9,7 @@ DumpArray
 DumpAssembly
 DumpAsync
 DumpClass
+DumpDelegate
 DumpDomain
 DumpGCData
 DumpHeap
@@ -43,6 +44,8 @@ Name2EE
 PrintException
 StopOnCatch
 SetHostRuntime
+SOSFlush
+SyncBlk
 Threads
 ThreadState
 Token2EE

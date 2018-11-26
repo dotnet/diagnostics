@@ -230,7 +230,7 @@ while :; do
             ;;
 
         # Ignored for a native build
-        --build|--rebuild|--sign|--restore|--pack|--publish|--preparemachine)
+        --build|--rebuild|--sign|--restore|--pack|--publish|--preparemachine|--projects|--solution)
             ;;
 
         *)

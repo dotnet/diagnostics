@@ -12,7 +12,6 @@
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
 
     <!-- Build tools -->
-    <MicrosoftDotNetBuildToolsVersion>2.2.0-preview1-03108-01</MicrosoftDotNetBuildToolsVersion>
     <MicrosoftNetCompilersVersion>2.8.0-beta6-62830-08</MicrosoftNetCompilersVersion>
 
     <!-- CoreFX -->
