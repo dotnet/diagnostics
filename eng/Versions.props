@@ -15,14 +15,19 @@
     <MicrosoftNetCompilersVersion>2.8.0-beta6-62830-08</MicrosoftNetCompilersVersion>
 
     <!-- CoreFX -->
-    <SystemReflectionMetadataVersion>1.5.0</SystemReflectionMetadataVersion>
+    <SystemReflectionMetadataVersion>1.6.0</SystemReflectionMetadataVersion>
+    <SystemCollectionsImmutableVersion>1.5.0</SystemCollectionsImmutableVersion>
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
+
+    <!-- Other libs -->
+    <MicrosoftSymbolStoreVersion>1.0.0-dev-63604-01</MicrosoftSymbolStoreVersion>
   </PropertyGroup>
 
   <PropertyGroup>
     <RestoreSources>
       $(RestoreSources);
       https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json;
+      https://dotnet.myget.org/F/symstore/api/v3/index.json;
       https://dotnet.myget.org/F/dotnet-core/api/v3/index.json;
       https://dotnet.myget.org/F/dotnet-buildtools/api/v3/index.json
     </RestoreSources>

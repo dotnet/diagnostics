@@ -200,19 +200,19 @@ DataTarget::GetThreadContext(
     hr = g_ExtSystem->GetCurrentThreadId(&ulThreadIDOrig);
     if (FAILED(hr))
     {
-	return hr;
+        return hr;
     }
 
     hr = g_ExtSystem->GetThreadIdBySystemId(threadID, &ulThreadIDRequested);
     if (FAILED(hr))
     {
-	return hr;
+        return hr;
     }
 
     hr = g_ExtSystem->SetCurrentThreadId(ulThreadIDRequested);
     if (FAILED(hr))
     {
-	return hr;
+        return hr;
     }
 
     // Prepare context structure

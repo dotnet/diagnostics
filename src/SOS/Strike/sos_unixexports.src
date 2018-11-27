@@ -44,6 +44,7 @@ Name2EE
 PrintException
 StopOnCatch
 SetHostRuntime
+SetSymbolServer
 SOSFlush
 SyncBlk
 Threads
@@ -51,10 +52,5 @@ ThreadState
 Token2EE
 u
 VerifyHeap
-VerifyStackTrace
-    
-_EFN_GetManagedExcepStack
-_EFN_GetManagedExcepStackW
-_EFN_GetManagedObjectFieldInfo    
-_EFN_GetManagedObjectName
-_EFN_StackTrace
+
+InitializeSymbolReaderCallbacks

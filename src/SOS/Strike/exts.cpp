@@ -42,6 +42,7 @@ PDEBUG_CLIENT         g_pCallbacksClient;
 
 DebugClient*          g_DebugClient;
 ILLDBServices*        g_ExtServices;    
+bool                  g_palInitialized = false;
 
 #endif // FEATURE_PAL
 
@@ -72,6 +73,15 @@ ExtQuery(PDEBUG_CLIENT client)
 extern "C" HRESULT
 ExtQuery(ILLDBServices* services)
 {
+    // Initialize the PAL in one place and only once.
+    if (!g_palInitialized)
+    {
+        if (PAL_InitializeDLL() != 0)
+        {
+            return E_FAIL;
+        }
+        g_palInitialized = true;
+    }
     g_ExtServices = services;
     DebugClient* client = new DebugClient(services);
     g_DebugClient = client;

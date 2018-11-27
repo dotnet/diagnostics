@@ -36,6 +36,7 @@ inline void RestoreSOToleranceState() {}
 
 #include "cordebug.h"
 #include "static_assert.h"
+#include "hostcoreclr.h"
 
 typedef LPCSTR  LPCUTF8;
 typedef LPSTR   LPUTF8;
@@ -2279,76 +2280,6 @@ private:
 };
 
 #endif // !FEATURE_PAL
-
-static const char *SymbolReaderDllName = "SOS.NETCore";
-static const char *SymbolReaderClassName = "SOS.SymbolReader";
-
-typedef  int (*ReadMemoryDelegate)(ULONG64, char *, int);
-typedef  PVOID (*LoadSymbolsForModuleDelegate)(const char*, BOOL, ULONG64, int, ULONG64, int, ReadMemoryDelegate);
-typedef  void (*DisposeDelegate)(PVOID);
-typedef  BOOL (*ResolveSequencePointDelegate)(PVOID, const char*, unsigned int, unsigned int*, unsigned int*);
-typedef  BOOL (*GetLocalVariableName)(PVOID, int, int, BSTR*);
-typedef  BOOL (*GetLineByILOffsetDelegate)(PVOID, mdMethodDef, ULONG64, ULONG *, BSTR*);
-
-class SymbolReader
-{
-private:
-#ifndef FEATURE_PAL
-    ISymUnmanagedReader* m_pSymReader;
-#endif
-    PVOID m_symbolReaderHandle;
-
-    static LoadSymbolsForModuleDelegate loadSymbolsForModuleDelegate;
-    static DisposeDelegate disposeDelegate;
-    static ResolveSequencePointDelegate resolveSequencePointDelegate;
-    static GetLocalVariableName getLocalVariableNameDelegate;
-    static GetLineByILOffsetDelegate getLineByILOffsetDelegate;
-    static HRESULT PrepareSymbolReader();
-
-    HRESULT GetNamedLocalVariable(___in ISymUnmanagedScope* pScope, ___in ICorDebugILFrame* pILFrame, ___in mdMethodDef methodToken, ___in ULONG localIndex, 
-        __out_ecount(paramNameLen) WCHAR* paramName, ___in ULONG paramNameLen, ___out ICorDebugValue** ppValue);
-    HRESULT LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in ULONG64 peAddress, __in_z WCHAR* pModuleName, ___in BOOL isFileLayout);
-    HRESULT LoadSymbolsForPortablePDB(__in_z WCHAR* pModuleName, ___in BOOL isInMemory, ___in BOOL isFileLayout, ___in ULONG64 peAddress, ___in ULONG64 peSize, 
-        ___in ULONG64 inMemoryPdbAddress, ___in ULONG64 inMemoryPdbSize);
-
-public:
-    SymbolReader()
-    {
-#ifndef FEATURE_PAL
-        m_pSymReader = NULL;
-#endif
-        m_symbolReaderHandle = 0;
-    }
-
-    ~SymbolReader()
-    {
-#ifndef FEATURE_PAL
-        if(m_pSymReader != NULL)
-        {
-            m_pSymReader->Release();
-            m_pSymReader = NULL;
-        }
-#endif
-        if (m_symbolReaderHandle != 0)
-        {
-            disposeDelegate(m_symbolReaderHandle);
-            m_symbolReaderHandle = 0;
-        }
-    }
-
-    HRESULT LoadSymbols(___in IMetaDataImport* pMD, ___in ICorDebugModule* pModule);
-    HRESULT LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataModule* pModule);
-    HRESULT GetLineByILOffset(___in mdMethodDef MethodToken, ___in ULONG64 IlOffset, ___out ULONG *pLinenum, __out_ecount(cchFileName) WCHAR* pwszFileName, ___in ULONG cchFileName);
-    HRESULT GetNamedLocalVariable(___in ICorDebugFrame * pFrame, ___in ULONG localIndex, __out_ecount(paramNameLen) WCHAR* paramName, ___in ULONG paramNameLen, ___out ICorDebugValue** ppValue);
-    HRESULT ResolveSequencePoint(__in_z WCHAR* pFilename, ___in ULONG32 lineNumber, ___in TADDR mod, ___out mdMethodDef* ___out pToken, ___out ULONG32* pIlOffset);
-};
-
-HRESULT
-GetLineByOffset(
-        ___in ULONG64 IP,
-        ___out ULONG *pLinenum,
-        __out_ecount(cchFileName) WCHAR* pwszFileName,
-        ___in ULONG cchFileName);
 
 /// X86 Context
 #define X86_SIZE_OF_80387_REGISTERS      80

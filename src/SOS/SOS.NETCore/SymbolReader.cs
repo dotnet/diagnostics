@@ -2,14 +2,21 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.FileFormats.PE;
+using Microsoft.SymbolStore;
+using Microsoft.SymbolStore.KeyGenerators;
+using Microsoft.SymbolStore.SymbolStores;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
 
 namespace SOS
 {
@@ -38,14 +45,7 @@ namespace SOS
             public int size;
             public IntPtr locals;
             public int localsSize;
-
         }
-
-        /// <summary>
-        /// Read memory callback
-        /// </summary>
-        /// <returns>number of bytes read or 0 for error</returns>
-        internal unsafe delegate int ReadMemoryDelegate(ulong address, byte* buffer, int count);
 
         private sealed class OpenedReader : IDisposable
         {
@@ -97,7 +97,7 @@ namespace SOS
                 {
                     fixed (byte* p = &buffer[offset])
                     {
-                        int read  = _readMemory(_address + (ulong)Position, p, count);
+                        int read = _readMemory(_address + (ulong)Position, p, count);
                         Position += read;
                         return read;
                     }
@@ -137,16 +137,223 @@ namespace SOS
         }
 
         /// <summary>
-        /// Quick fix for Path.GetFileName which incorrectly handles Windows-style paths on Linux
+        /// Symbol server URLs
         /// </summary>
-        /// <param name="pathName"> File path to be processed </param>
-        /// <returns>Last component of path</returns>
-        private static string GetFileName(string pathName)
+        const string MsdlsymbolServer = "http://msdl.microsoft.com/download/symbols/";
+        const string SymwebSymbolService = "http://symweb.corp.microsoft.com/";
+
+        /// <summary>
+        /// Read memory callback
+        /// </summary>
+        /// <returns>number of bytes read or 0 for error</returns>
+        internal unsafe delegate int ReadMemoryDelegate(ulong address, byte* buffer, int count);
+
+        /// <summary>
+        /// Writeline delegate for symbol store logging
+        /// </summary>
+        /// <param name="message"></param>
+        internal delegate void WriteLine([MarshalAs(UnmanagedType.LPStr)] string message);
+
+        static bool s_symbolCacheAdded = false;
+        static SymbolStore s_symbolStore = null;
+        static ITracer s_tracer = null;
+
+        /// <summary>
+        /// Initializes symbol loading. Adds the symbol server and/or the cache path (if not null) to the list of
+        /// symbol servers. This API can be called more than once to add more servers to search.
+        /// </summary>
+        /// <param name="output">output callback delegate (not used currently)</param>
+        /// <param name="msdl">if true, use the public microsoft server</param>
+        /// <param name="symweb">if true, use symweb internal server and protocol (file.ptr)</param>
+        /// <param name="symbolServerPath">symbol server url (optional)</param>
+        /// <param name="symbolCachePath">symbol cache directory path (optional)</param>
+        /// <param name="windowsSymbolPath">windows symbol path (optional)</param>
+        /// <returns></returns>
+        internal static bool InitializeSymbolStore(WriteLine output, bool msdl, bool symweb, string symbolServerPath, string symbolCachePath, string windowsSymbolPath)
         {
-            int pos = pathName.LastIndexOfAny(new char[] { '/', '\\'});
-            if (pos < 0)
-                return pathName;
-            return pathName.Substring(pos + 1);
+            if (s_tracer == null)
+            {
+                s_tracer = new Tracer(enabled: true, enabledVerbose: true, output);
+            }
+            SymbolStore store = s_symbolStore;
+
+            // Build the symbol stores
+            if (windowsSymbolPath != null)
+            {
+                // Parse the Windows symbol path syntax (srv*, cache*, etc)
+                if (!ParseSymbolPath(ref store, windowsSymbolPath))
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                // Build the symbol stores using the other parameters
+                if (!GetServerSymbolStore(ref store, msdl, symweb, symbolServerPath, symbolCachePath))
+                {
+                    return false;
+                }
+            }
+
+            s_symbolStore = store;
+            return true;
+        }
+
+        /// <summary>
+        /// Parses the Windows debugger symbol path (srv*, cache*, etc.).
+        /// </summary>
+        /// <param name="store">symbol store to chain</param>
+        /// <param name="symbolPath">Windows symbol path</param>
+        /// <returns>if false, error parsing symbol path</returns>
+        private static bool ParseSymbolPath(ref SymbolStore store, string symbolPath)
+        {
+            string[] paths = symbolPath.Split(";", StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (string path in paths.Reverse())
+            {
+                string[] parts = path.Split("*", StringSplitOptions.RemoveEmptyEntries);
+
+                // UNC or directory paths are ignored (paths not prefixed with srv* or cache*).
+                if (parts.Length > 0)
+                {
+                    string symbolServerPath = null;
+                    string symbolCachePath = null;
+                    bool msdl = false;
+
+                    switch (parts[0].ToLowerInvariant())
+                    {
+                        case "srv":
+                            switch (parts.Length)
+                            { 
+                                case 1:
+                                    msdl = true;
+                                    break;
+                                case 2:
+                                    symbolServerPath = parts[1];
+                                    break;
+                                case 3:
+                                    symbolCachePath = parts[1];
+                                    symbolServerPath = parts[2];
+                                    break;
+                                default:
+                                    return false;
+                            }
+                            break;
+
+                        case "cache":
+                            switch (parts.Length)
+                            { 
+                                case 1:
+                                    symbolCachePath = GetDefaultSymbolCache();
+                                    break;
+                                case 2:
+                                    symbolCachePath = parts[1];
+                                    break;
+                                default:
+                                    return false;
+                            }
+                            break;
+
+                        default:
+                            return false;
+                    }
+
+                    // Add the symbol stores to the chain
+                    if (!GetServerSymbolStore(ref store, msdl, false, symbolServerPath, symbolCachePath))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static bool GetServerSymbolStore(ref SymbolStore store, bool msdl, bool symweb, string symbolServerPath, string symbolCachePath)
+        {
+            bool internalServer = false;
+
+            // Add symbol server URL if exists
+            if (symbolServerPath == null)
+            {
+                if (msdl)
+                {
+                    symbolServerPath = MsdlsymbolServer;
+                }
+                else if (symweb)
+                {
+                    symbolServerPath = SymwebSymbolService;
+                    internalServer = true;
+                }
+            }
+            else
+            {
+                // Use the internal symbol store for symweb
+                internalServer = symbolServerPath.Contains("symweb");
+
+                // Make sure the server Uri ends with "/"
+                symbolServerPath = symbolServerPath.TrimEnd('/') + '/';
+            }
+
+            if (symbolServerPath != null)
+            {
+                if (!Uri.TryCreate(symbolServerPath, UriKind.Absolute, out Uri uri) || uri.IsFile)
+                {
+                    return false;
+                }
+
+                // Create symbol server store
+                if (internalServer)
+                {
+                    store = new SymwebHttpSymbolStore(s_tracer, store, uri);
+                }
+                else
+                {
+                    store = new HttpSymbolStore(s_tracer, store, uri);
+                }
+            }
+
+            if (symbolCachePath != null)
+            {
+                store = new CacheSymbolStore(s_tracer, store, symbolCachePath);
+
+                // Don't add the default cache later
+                s_symbolCacheAdded = true;
+            }
+
+            return true;
+        }
+
+        private static string GetDefaultSymbolCache()
+        {
+            var sb = new StringBuilder();
+
+            string environmentVar;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                environmentVar = "ProgramData";
+            }
+            else
+            {
+                environmentVar = "HOME";
+            }
+            string userPath = Environment.GetEnvironmentVariable(environmentVar);
+            sb.Append(userPath);
+            sb.Append(Path.DirectorySeparatorChar);
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                sb.Append("dbg");
+                sb.Append(Path.DirectorySeparatorChar);
+                sb.Append("sym");
+            }
+            else
+            {
+                sb.Append(".sos");
+                sb.Append(Path.DirectorySeparatorChar);
+                sb.Append("symbolcache");
+            }
+            return sb.ToString();
         }
 
         /// <summary>
@@ -171,7 +378,7 @@ namespace SOS
             try
             {
                 TargetStream peStream = null;
-                if (assemblyPath == null && loadedPeAddress != 0)
+                if (loadedPeAddress != 0)
                 {
                     peStream = new TargetStream(loadedPeAddress, loadedPeSize, readMemory);
                 }
@@ -366,7 +573,7 @@ namespace SOS
         /// <param name="localIndex">local variable index</param>
         /// <param name="localVarName">local variable name return</param>
         /// <returns>true if name has been found</returns>
-        internal static bool GetLocalVariableByIndex(IntPtr symbolReaderHandle, int methodToken, int localIndex, out string localVarName)
+        private static bool GetLocalVariableByIndex(IntPtr symbolReaderHandle, int methodToken, int localIndex, out string localVarName)
         {
             Debug.Assert(symbolReaderHandle != IntPtr.Zero);
             localVarName = null;
@@ -405,7 +612,8 @@ namespace SOS
             }
             return false;
         }
-        internal static bool GetLocalsInfoForMethod(string assemblyPath, int methodToken, out List<LocalVarInfo> locals)
+
+        private static bool GetLocalsInfoForMethod(string assemblyPath, int methodToken, out List<LocalVarInfo> locals)
         {
             locals = null;
 
@@ -451,8 +659,9 @@ namespace SOS
             return true;
 
         }
+
         /// <summary>
-        /// Returns source name, line numbers and IL offsets for given method token.
+        /// Returns source name, line numbers and IL offsets for given method token. Used by the GDBJIT support.
         /// </summary>
         /// <param name="assemblyPath">file path of the assembly</param>
         /// <param name="methodToken">method token</param>
@@ -557,7 +766,7 @@ namespace SOS
         /// </summary>
         /// <param name="assemblyPath">file path of the assembly or null if the module is in-memory or dynamic</param>
         /// <param name="isFileLayout">type of in-memory PE layout, if true, file based layout otherwise, loaded layout</param>
-        /// <param name="peStream">optional in-memory PE stream</param>
+        /// <param name="peStream">in-memory PE stream</param>
         /// <param name="pdbStream">optional in-memory PDB stream</param>
         /// <returns>reader/provider wrapper instance</returns>
         /// <remarks>
@@ -629,8 +838,7 @@ namespace SOS
             {
                 using (var peReader = new PEReader(peStream, options))
                 {
-                    DebugDirectoryEntry codeViewEntry, embeddedPdbEntry;
-                    ReadPortableDebugTableEntries(peReader, out codeViewEntry, out embeddedPdbEntry);
+                    ReadPortableDebugTableEntries(peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry);
 
                     // First try .pdb file specified in CodeView data (we prefer .pdb file on disk over embedded PDB
                     // since embedded PDB needs decompression which is less efficient than memory-mapping the file).
@@ -662,19 +870,17 @@ namespace SOS
         {
             // See spec: https://github.com/dotnet/corefx/blob/master/src/System.Reflection.Metadata/specs/PE-COFF.md
 
-            codeViewEntry = default(DebugDirectoryEntry);
-            embeddedPdbEntry = default(DebugDirectoryEntry);
+            codeViewEntry = default;
+            embeddedPdbEntry = default;
 
             foreach (DebugDirectoryEntry entry in peReader.ReadDebugDirectory())
             {
                 if (entry.Type == DebugDirectoryEntryType.CodeView)
                 {
-                    const ushort PortableCodeViewVersionMagic = 0x504d;
-                    if (entry.MinorVersion != PortableCodeViewVersionMagic)
+                    if (entry.MinorVersion != ImageDebugDirectory.PortablePDBMinorVersion)
                     {
                         continue;
                     }
-
                     codeViewEntry = entry;
                 }
                 else if (entry.Type == DebugDirectoryEntryType.EmbeddedPortablePdb)
@@ -690,10 +896,11 @@ namespace SOS
             MetadataReaderProvider provider = null;
             try
             {
-                var data = peReader.ReadCodeViewDebugDirectoryData(codeViewEntry);
-
+                CodeViewDebugDirectoryData data = peReader.ReadCodeViewDebugDirectoryData(codeViewEntry);
                 string pdbPath = data.Path;
-                if (assemblyPath != null)
+                Stream pdbStream = null;
+
+                if (assemblyPath != null) 
                 {
                     try
                     {
@@ -704,16 +911,35 @@ namespace SOS
                         // invalid characters in CodeView path
                         return null;
                     }
+                    pdbStream = TryOpenFile(pdbPath);
                 }
 
-                var pdbStream = TryOpenFile(pdbPath);
                 if (pdbStream == null)
                 {
-                    return null;
+                    if (s_symbolStore == null)
+                    {
+                        return null;
+                    }
+                    Debug.Assert(codeViewEntry.MinorVersion == ImageDebugDirectory.PortablePDBMinorVersion);
+                    SymbolStoreKey key = PortablePDBFileKeyGenerator.GetKey(pdbPath, data.Guid);
+
+                    // Add the default symbol cache if it hasn't already been added
+                    if (!s_symbolCacheAdded)
+                    {
+                        s_symbolStore = new CacheSymbolStore(s_tracer, s_symbolStore, GetDefaultSymbolCache());
+                        s_symbolCacheAdded = true;
+                    }
+
+                    SymbolStoreFile symbolStoreFile = s_symbolStore.GetFile(key, CancellationToken.None).GetAwaiter().GetResult();
+                    if (symbolStoreFile == null)
+                    {
+                        return null;
+                    }
+                    pdbStream = symbolStoreFile.Stream;
                 }
 
                 provider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
-                var reader = provider.GetMetadataReader();
+                MetadataReader reader = provider.GetMetadataReader();
 
                 // Validate that the PDB matches the assembly version
                 if (data.Age == 1 && new BlobContentId(reader.DebugMetadataHeader.Id) == new BlobContentId(data.Guid, codeViewEntry.Stamp))
@@ -777,6 +1003,19 @@ namespace SOS
             {
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Quick fix for Path.GetFileName which incorrectly handles Windows-style paths on Linux
+        /// </summary>
+        /// <param name="pathName"> File path to be processed </param>
+        /// <returns>Last component of path</returns>
+        private static string GetFileName(string pathName)
+        {
+            int pos = pathName.LastIndexOfAny(new char[] { '/', '\\'});
+            if (pos < 0)
+                return pathName;
+            return pathName.Substring(pos + 1);
         }
     }
 }

@@ -14,6 +14,7 @@
 #include <unknwn.h>
 #include <rpc.h>
 #include <lldbservices.h>
+#include <arrayholder.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,7 +73,7 @@ public:
     {
         va_list args;
         va_start (args, format);
-        HRESULT result = m_lldbservices->OutputVaList(mask, format, args);
+        HRESULT result = OutputVaList(mask, format, args);
         va_end (args);
         return result;
     }
@@ -83,11 +84,11 @@ public:
         PCSTR format,
         va_list args)
     {
-        char str[4096];
-        int length = _vsnprintf_s(str, sizeof(str), _TRUNCATE, format, args);
+        ArrayHolder<char> str = new char[8192];
+        int length = _vsnprintf_s(str, 8192, _TRUNCATE, format, args);
         if (length > 0)
         {
-            return Output(mask, "%s", str);
+            return m_lldbservices->OutputVaList(mask, str, args);
         }
         return E_FAIL;
     }

@@ -1,25 +1,27 @@
 ﻿<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp1.0</TargetFramework>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
     <AssemblyName>SOS.NETCore</AssemblyName>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>;1591;1701</NoWarn>
     <IsPackable>true</IsPackable>
+    <IsPublishable>true</IsPublishable>
     <Description>.NET Core SOS</Description>
     <PackageId>SOS</PackageId>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <PackageTags>SOS</PackageTags>
     <IncludeBuildOutput>false</IncludeBuildOutput>
-    <SOSNETCorePath>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netcoreapp1.0\SOS.NETCore.dll</SOSNETCorePath>
+    <SOSNETCoreBinaries>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netcoreapp2.0\publish\*.dll</SOSNETCoreBinaries>
   </PropertyGroup>
   
   <ItemGroup>
     <PackageReference Include="System.Reflection.Metadata" Version="$(SystemReflectionMetadataVersion)" />
+    <PackageReference Include="Microsoft.SymbolStore" Version="$(MicrosoftSymbolStoreVersion)" />
   </ItemGroup>
 
   <ItemGroup>
-    <_PackageFiles Include="$(SOSNETCorePath)">
+    <_PackageFiles Include="$(SOSNETCoreBinaries)">
       <BuildAction>None</BuildAction>
       <PackagePath>tools/win-x64</PackagePath>
     </_PackageFiles>
@@ -28,7 +30,7 @@
       <PackagePath>tools/win-x64</PackagePath>
     </_PackageFiles>
 
-    <_PackageFiles Include="$(SOSNETCorePath)">
+    <_PackageFiles Include="$(SOSNETCoreBinaries)">
       <BuildAction>None</BuildAction>
       <PackagePath>tools/win-x86</PackagePath>
     </_PackageFiles>
@@ -37,7 +39,7 @@
       <PackagePath>tools/win-x86</PackagePath>
     </_PackageFiles>
 
-    <_PackageFiles Include="$(SOSNETCorePath)">
+    <_PackageFiles Include="$(SOSNETCoreBinaries)">
       <BuildAction>None</BuildAction>
       <PackagePath>tools/linux-x64</PackagePath>
     </_PackageFiles>
@@ -54,7 +56,7 @@
       <PackagePath>tools/linux-x64</PackagePath>
     </_PackageFiles>
 
-    <_PackageFiles Include="$(SOSNETCorePath)">
+    <_PackageFiles Include="$(SOSNETCoreBinaries)">
       <BuildAction>None</BuildAction>
       <PackagePath>tools/osx-x64</PackagePath>
     </_PackageFiles>

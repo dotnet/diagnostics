@@ -14112,6 +14112,8 @@ static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp,
 #undef DOAPPEND
 }
 
+#ifndef FEATURE_PAL
+
 BOOL AppendContext(LPVOID pTransitionContexts, size_t maxCount, size_t *pcurCount, size_t uiSizeOfContext,
     CROSS_PLATFORM_CONTEXT *context)
 {
@@ -14421,12 +14423,6 @@ Exit:
     return Status;
 }
 
-#ifdef FEATURE_PAL
-#define PAL_TRY_NAKED PAL_CPP_TRY
-#define PAL_EXCEPT_NAKED(disp) PAL_CPP_CATCH_ALL
-#define PAL_ENDTRY_NAKED PAL_CPP_ENDTRY
-#endif
-
 // TODO: Convert PAL_TRY_NAKED to something that works on the Mac.
 HRESULT CALLBACK ImplementEFNStackTraceTry(
     PDEBUG_CLIENT client,
@@ -14471,7 +14467,6 @@ HRESULT CALLBACK _EFN_StackTrace(
 
     return Status;
 }
-
 
 BOOL FormatFromRemoteString(DWORD_PTR strObjPointer, __out_ecount(cchString) PWSTR wszBuffer, ULONG cchString)
 {
@@ -14743,6 +14738,7 @@ HRESULT ImplementEFNGetManagedExcepStack(
     return Status;
 }
 
+
 // TODO: Enable this when ImplementEFNStackTraceTry is fixed.
 // This function, like VerifyDAC, exists for the purpose of testing
 // hard-to-get-to SOS APIs.
@@ -14949,8 +14945,6 @@ DECLARE_API(VerifyStackTrace)
     return Status;
 }
 
-#ifndef FEATURE_PAL
-
 // This is an internal-only Apollo extension to de-optimize the code
 DECLARE_API(SuppressJitOptimization)
 {
@@ -15140,6 +15134,8 @@ DECLARE_API(StopOnCatch)
     return S_OK;
 }
 
+#ifndef FEATURE_PAL
+
 // This is an undocumented SOS extension command intended to help test SOS
 // It causes the Dml output to be printed to the console uninterpretted so
 // that a test script can read the commands which are hidden in the markup
@@ -15281,6 +15277,8 @@ _EFN_GetManagedObjectFieldInfo(
     return S_OK;
 }
 
+#endif // FEATURE_PAL
+
 #ifdef FEATURE_PAL
 
 #ifdef CREATE_DUMP_SUPPORTED
@@ -15361,8 +15359,6 @@ DECLARE_API(CreateDump)
 
 #endif // FEATURE_PAL
 
-extern LPCSTR g_hostRuntimeDirectory;
-
 //
 // Sets the .NET Core runtime path to use to run the managed code within SOS/native debugger.
 //
@@ -15382,20 +15378,91 @@ DECLARE_API(SetHostRuntime)
     }
     if (narg > 0)
     {
+        if (IsHostingInitialized()) 
+        {
+            ExtErr("Runtime hosting already initialized %s\n", g_hostRuntimeDirectory);
+            return E_FAIL;
+        }
         if (g_hostRuntimeDirectory != nullptr)
         {
             free((void*)g_hostRuntimeDirectory);
         }
         g_hostRuntimeDirectory = _strdup(hostRuntimeDirectory.data);
     }
-    else 
+    if (g_hostRuntimeDirectory != nullptr)
     {
-        if (g_hostRuntimeDirectory != nullptr)
-        {
-            ExtOut("%s\n", g_hostRuntimeDirectory);
-        }
+        ExtOut("Host runtime path: %s\n", g_hostRuntimeDirectory);
     }
     return S_OK;
+}
+
+//
+// Sets the symbol server path.
+//
+DECLARE_API(SetSymbolServer)
+{
+    INIT_API_EXT();
+
+    StringHolder symbolCache;
+    BOOL msdl = FALSE;
+    BOOL symweb = FALSE;
+    CMDOption option[] =
+    {   // name, vptr, type, hasValue
+        {"-cache",  &symbolCache.data, COSTRING, FALSE},
+        {"-ms",   &msdl, COBOOL, FALSE},
+#ifndef FEATURE_PAL
+        {"-mi", &symweb, COBOOL, FALSE},
+#endif
+    };
+    StringHolder symbolServer;
+    CMDValue arg[] =
+    {
+        {&symbolServer.data, COSTRING},
+    };
+    size_t narg;
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &narg))
+    {
+        return E_FAIL;
+    }
+
+    if (msdl && symweb)
+    {
+        ExtErr("Cannot have both -ms and -mi options\n");
+        return E_FAIL;
+    }
+
+    if ((msdl || symweb) && symbolServer.data != nullptr)
+    {
+        ExtErr("Cannot have -ms or -mi option and a symbol server path\n");
+        return E_FAIL;
+    }
+
+    if (msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr)
+    {
+        Status = InitializeSymbolStore(msdl, symweb, symbolServer.data, symbolCache.data);
+        if (FAILED(Status))
+        {
+            return Status;
+        }
+        if (msdl)
+        {
+            ExtOut("Added Microsoft public symbol server\n");
+        }
+        if (symweb)
+        {
+            ExtOut("Added internal symweb symbol server\n");
+        }
+        if (symbolServer.data != nullptr)
+        {
+            ExtOut("Added symbol server: %s\n", symbolServer.data);
+        }
+        if (symbolCache.data != nullptr)
+        {
+            ExtOut("Symbol cache path: %s\n", symbolCache.data);
+        }
+    }
+    
+    return Status;
 }
 
 void PrintHelp (__in_z LPCSTR pszCmdName)
@@ -15414,13 +15481,6 @@ void PrintHelp (__in_z LPCSTR pszCmdName)
             return;
         }
 #else
-        int err = PAL_InitializeDLL();
-        if(err != 0)
-        {
-            ExtErr("Error initializing PAL\n");
-            return;
-        }
-
         ArrayHolder<char> szSOSModulePath = new char[MAX_LONGPATH + 1];
         UINT cch = MAX_LONGPATH;
         if (!PAL_GetPALDirectoryA(szSOSModulePath, &cch)) {

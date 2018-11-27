@@ -199,7 +199,6 @@ The arguments in detail:
 	    5b9a628c  4000001        0         System.Int32   instance        4 x
 	    5b9a628c  4000002        4         System.Int32   instance        8 y
 	    5b9a628c  4000003        8         System.Int32   instance       12 z
-
 \\
 
 COMMAND: dumpasync.
@@ -242,7 +241,7 @@ DumpDelegate finds and outputs the one or more method descriptors associated wit
 
 For example:
 
-	0:000> !dumpdelegate
+    (lldb) dumpdelegate
     Target           Method           Name
     000001461bacb0d8 00007ffc5c894b80 ConsoleApp16.Program.InstanceMethod()
     000001461bacb098 00007ffc5c894b68 ConsoleApp16.Program.StaticMethod()

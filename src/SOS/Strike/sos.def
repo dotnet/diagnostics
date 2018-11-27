@@ -126,6 +126,8 @@ EXPORTS
     savemodule=SaveModule
     SetHostRuntime
     sethostruntime=SetHostRuntime
+    SetSymbolServer
+    setsymbolserver=SetSymbolServer
     SOSFlush
     sosflush=SOSFlush
     StopOnException
@@ -231,3 +233,5 @@ EXPORTS
     TraceToCode
     tracetocode=TraceToCode
 #endif
+
+    InitializeSymbolReaderCallbacks
