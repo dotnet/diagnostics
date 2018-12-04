@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+
+    <!-- Target .NET Core 2.1 so it will run on LTS -->
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+
+    <RootNamespace>Microsoft.Diagnostics.Tools.Analyze</RootNamespace>
+
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Common\ConsoleCancellation.cs" Link="ConsoleCancellation.cs" />
+    <Compile Include="..\Common\DebugUtil.cs" Link="DebugUtil.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="2.2.5" />
+    <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="1.0.0" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.30" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0-preview3-35497" />
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+  </ItemGroup>
+
+</Project>
