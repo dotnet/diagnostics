@@ -1,53 +1,53 @@
-*******************************************************************************
-# Appendix/Raw Ideas.
+# Appendix/Raw Ideas
 
-Everything after this is really not meant for consumption at this time.  It represents working notes.   
+Everything after this is really not meant for consumption at this time.  It represents working notes.
 
 ## New Features
 
 * Decouple Diagnostic information from its presentation.
-    * We need tools that work in a highly integrated environment (which probably have
-      a number of prerequisites (e.g. App Insights) as well as in a 'dev startup' 
-      scenario where trivial setup and works everywhere (no dependencies), is valuable.
-      We do this by making the data available as a standard REST API, and have 
-      'minimal' tooling make a UI over that REST API (probably in JavaScript (just like VSCode))
-      These minimal tools will be open sourced and community driven, but along side them
-      we can have full featured/integrated tools (e.g. AppInsights)
-    * Use JavaScript/HTML Electron for cross platform UI for these presentation tools.  (Alternatively maybe Blazor (Web Assembly))
+  * We need tools that work in a highly integrated environment (which probably have
+    a number of prerequisites (e.g. App Insights) as well as in a 'dev startup'
+    scenario where trivial setup and works everywhere (no dependencies), is valuable.
+    We do this by making the data available as a standard REST API, and have
+    'minimal' tooling make a UI over that REST API (probably in JavaScript (just like VSCode))
+    These minimal tools will be open sourced and community driven, but along side them
+    we can have full featured/integrated tools (e.g. AppInsights)
+  * Use JavaScript/HTML Electron for cross platform UI for these presentation tools.  (Alternatively maybe Blazor (Web Assembly))
 
 * Standard compliance can be done with a doc driven approach.
-    * If we pick a demo with a 3rd party that is committed to implementing their side
-      of the correlation standards, we can write up the demo that drives the features
-      needed to make that end-to-end scenario work.
+  * If we pick a demo with a 3rd party that is committed to implementing their side
+    of the correlation standards, we can write up the demo that drives the features
+    needed to make that end-to-end scenario work.
 
 * 'dotnet profile' - local machine ETW tracing.  Definitely useful.
 
 * 'dotnet monitor' - logs monitoring information.  Ideally creates a format that other tools will just us
       thus it is really more of a format converter than anything else.  Not a lot of work, but also useful
-      for people 
+      for people
 
-* Currently Azure Monitor Metrics does track some performance counters 
+* Currently Azure Monitor Metrics does track some performance counters
 
-* If we care about supporting existing Application Performance Monitoring solutions, the issue of how to have 
+* If we care about supporting existing Application Performance Monitoring solutions, the issue of how to have
   multiple .NET Profilers connected to the same .NET Core runtime needs to be addressed.
 
 ## WORK-IN-PROGRESS
 
 Elements of plan
+
 * Well Instrumented Runtime
-* Good Documentation on diagnostics / monitoring / profiling at https://docs.microsoft.com
+* Good Documentation on diagnostics / monitoring / profiling at [Microsoft Docs](https://docs.microsoft.com)
 * Good support for Async (with Docs)
 * Good support for Multi-Machine and/or MicroServices
 * Works on all platforms / Architectures
 * Monitoring costs very little, but you have the data you need
-    * This requires sampling of REQUESTS (causality flow) Event across tiers, Azure Functions, Service Fabric. Containers
+  * This requires sampling of REQUESTS (causality flow) Event across tiers, Azure Functions, Service Fabric. Containers
 
 Plan
+
 1. EventPipe (No ETW) Works on Linux, Can do counters, all inst
 2. EventCounter instrumentation in the Framework.
 3. Named Pipe / HTTP REST API for accessing EventPipe information for monitoring.
 4. Good Causality Instrumentation (so that Async -> Sync transformation works well)
-
 
 [Geneva and One DS](https://microsoft.sharepoint.com/teams/MSWHub/_layouts/15/search.aspx?k=One%20DS&q=OneDS&t=y&v=search)
 
@@ -64,16 +64,18 @@ Plan
 
 [One Data Strategy 1DS](https://microsoft.sharepoint.com/teams/WAG/EngSys/Shared%20Documents/Forms/AllItems.aspx?id=%2Fteams%2FWAG%2FEngSys%2FShared%20Documents%2FTelemetry%20Collaboration%2F1DS%2F1DS%20Vision%20and%20Strategy%20(2018).docx&parent=%2Fteams%2FWAG%2FEngSys%2FShared%20Documents%2FTelemetry%20Collaboration%2F1DS&embed=%7B%22o%22%3A%22https%3A%2F%2Fmicrosoft.sharepoint.com%22%2C%22id%22%3A%222079771a-df5c-4f23-8f38-f91963fda137%22%2C%22af%22%3Atrue%7D)
 
-https://aria.microsoft.com/  https://www.aria.ms/?ref=vc_banner
+[Aria](https://aria.microsoft.com/)
 
-https://aria.microsoft.com/developer/downloads/downloads/telemetry-sdks
+[Aria Event Analytics](https://www.aria.ms/?ref=vc_banner)
 
-https://azure.microsoft.com/en-us/pricing/details/data-explorer/ is a public version of the Kusto which is suplanting Geneva (Asimov, Aria)
+[Aria Telemetry SDKs](https://aria.microsoft.com/developer/downloads/downloads/telemetry-sdks)
 
+[Azure Data Explorer](https://azure.microsoft.com/en-us/pricing/details/data-explorer/) is a public version of the Kusto which is suplanting Geneva (Asimov, Aria)
 
 Things I think we can improve
-* Making it easy to instrument 
-* Sampling of requests 
+
+* Making it easy to instrument
+* Sampling of requests
 * Harmonize System.Activity and EventSource concept of Activity.
 * Guidance on how to do instrumentation.
 
@@ -93,13 +95,12 @@ Version 3.0 work
 8. Extract a Heap Snapshot from a Crash Dump.
 9. Diagnose Async starvation from Crash dump.  (VS)
 
-
 Work
+
 1. Activity ID support for Application Insights
 2. Creating a 'REST-LIKE' interface for EventPipe
 3. Making EventPipe Multi-session
 4. Test/Validate/Fix Causality View for Async
-
 
 *******************
 
@@ -114,53 +115,43 @@ In particular this one
 
 *******************
 
-Work items in https://github.com/dotnet/diagnostics/issues 
+Work items in [Issues](https://github.com/dotnet/diagnostics/issues)
 
+[Migrate DotNetDiagnostics from to AspLabs to this repo](https://github.com/dotnet/diagnostics/issues/92)
 
-Migrate DotNetDiagnostics from to AspLabs to this repo
-#92 opened 5 days ago by shirhatti 
- 1
-User Story: Stream logs to a console UI in the local machine scenario
-#91 opened 5 days ago by shirhatti 
- 1
-User Story: Enable diagnosing common Async problems
-#90 opened 5 days ago by tommcdon 0 of 2
-  v3.0
- 3
-User Story: Heap investigation from a crash dump on a different machine Priority 2
-#89 opened 5 days ago by tommcdon  v3.0
-User Story: Enable local crash dump analysis with a standalone tool
-#88 opened 5 days ago by tommcdon 0 of 2
-  v3.0
- 1
-User Story: Enable ad-hoc memory leak investigation in VS
-#87 opened 5 days ago by tommcdon 
- 1
-User Story: Enable ad-hoc perf trace collection in VS
-#86 opened 5 days ago by tommcdon  v3.0
- 1
-User Story: Expose .NET Perf Counters in the local machine scenario
-#85 opened 5 days ago by tommcdon  v3.0
- 2
-User Story: Expose .NET Core Perf Counters for App Insights Live Metrics page
-#84 opened 5 days ago by tommcdon 
-Provide managed APIs for our canonical set of runtime performance counters
-#83 opened 5 days ago by tommcdon 
- 2
-Add docs for .Net Core diagnostic scenarios 
-#81 opened 5 days ago by tommcdon
+[User Story: Stream logs to a console UI in the local machine scenario](https://github.com/dotnet/diagnostics/issues/91)
 
-**************************************************
+[User Story: Enable diagnosing common Async problems](https://github.com/dotnet/diagnostics/issues/90)
+
+[User Story: Heap investigation from a crash dump on a different machine Priority 2](https://github.com/dotnet/diagnostics/issues/89)
+
+[User Story: Enable local crash dump analysis with a standalone tool](https://github.com/dotnet/diagnostics/issues/88)
+
+[User Story: Enable ad-hoc memory leak investigation in VS](https://github.com/dotnet/diagnostics/issues/87)
+
+[User Story: Enable ad-hoc perf trace collection in VS](https://github.com/dotnet/diagnostics/issues/86)
+
+[User Story: Expose .NET Perf Counters in the local machine scenario](https://github.com/dotnet/diagnostics/issues/85)
+
+[User Story: Expose .NET Core Perf Counters for App Insights Live Metrics page](https://github.com/dotnet/diagnostics/issues/84)
+
+[Provide managed APIs for our canonical set of runtime performance counters](https://github.com/dotnet/diagnostics/issues/83)
+
+[Add docs for .Net Core diagnostic scenarios](https://github.com/dotnet/diagnostics/issues/81)
+
+*******************
+
 [All .NET Core Diagnostics](https://github.com/dotnet/diagnostics/issues)
 
-
 Damian Edwards, Tom McDonald, Sourabh Shirhatti
-******************
+
+*******************
 
 [DumpAsync work item](https://github.com/dotnet/diagnostics/issues/90)
 
-DumpAsync 
+DumpAsync
 
+```log
 !DumpAsync [-addr <Object Address>]
            [-mt <MethodTable address>]
            [-type <partial type name>]
@@ -169,13 +160,15 @@ DumpAsync
            [-fields]
            [-stacks]
            [-roots]
+```
 
-!DumpAsync traverses the garbage collected heap, looking for objects representing
+`!DumpAsync` traverses the garbage collected heap, looking for objects representing
 async state machines as created when an async method's state is transferred to the
-heap.  This command recognizes async state machines defined as "async void", "async Task",
-"async Task<T>", "async ValueTask", and "async ValueTask<T>".  It also optionally supports
+heap.  This command recognizes async state machines defined as `async void`, `async Task`,
+`async Task<T>`, `async ValueTask`, and `async ValueTask<T>`.  It also optionally supports
 any other tasks.
 
+```log
 "Usage: DumpAsync [-addr ObjectAddr] [-mt MethodTableAddr] [-type TypeName] [-tasks] [-completed] [-fields] [-stacks] [-roots]\n"
   "[-addr ObjectAddr]    => Only display the async object at the specified address.\n"
   "[-mt MethodTableAddr] => Only display top-level async objects with the specified method table address.\n"
@@ -185,9 +178,8 @@ any other tasks.
   "[-fields]             => Show the fields of state machines.\n"
   "[-stacks]             => Gather, output, and consolidate based on continuation chains / async stacks for discovered async objects.\n"
   "[-roots]              => Perform a gcroot on each rendered async object.\n"
-
+```
 
 [Stephen's Async working group slides](https://microsoft-my.sharepoint.com/:p:/p/stoub/EfbGD3TCYlFMkR1jG6XlXFkBx9UJ_Wr1y458IZUJ_fJ9Zg?e=Q8CXrg)
 
 [Notes from the 10/23/18 working group meeting](https://microsoft-my.sharepoint.com/personal/stoub_microsoft_com/_layouts/15/WopiFrame.aspx?sourcedoc={934d02da-ac53-4dc3-8a64-33921d886c04}&action=edit&wd=target%28Untitled%20Section.one%7C709eb0e8-9290-4071-98a7-23c752b25f99%2FOct%205%2C%202018%7C6341db20-85e9-4468-8446-b13fe50da646%2F%29&wdorigin=703)
-
