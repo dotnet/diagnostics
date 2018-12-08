@@ -76,8 +76,8 @@ ENDIF:WINDOWS
 SOSCOMMAND:EEHeap
 VERIFY:\s*Loader Heap:\s+
 VERIFY:\s+System Domain:\s+<HEXVAL>\s+
-VERIFY:\s+LowFrequencyHeap:\s+<HEXVAL>.*bytes\.\s+
-VERIFY:\s+HighFrequencyHeap:\s+<HEXVAL>.*bytes\.\s+
+VERIFY:\s+LowFrequencyHeap:\s+<HEXVAL>.*bytes.*\s+
+VERIFY:\s+HighFrequencyHeap:\s+<HEXVAL>.*bytes.*\s+
 VERIFY:\s+Total size:\s+Size:\s+0x<HEXVAL>\s+\(<DECVAL>|lu\)\s+bytes\.\s+
 VERIFY:\s+Jit code heap:\s+
 VERIFY:\s+LoaderCodeHeap:\s+<HEXVAL>.*bytes\.\s+
