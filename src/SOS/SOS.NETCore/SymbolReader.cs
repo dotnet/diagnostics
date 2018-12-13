@@ -173,7 +173,7 @@ namespace SOS
         {
             if (s_tracer == null)
             {
-                s_tracer = new Tracer(enabled: true, enabledVerbose: true, output);
+                s_tracer = new Tracer(enabled: true, enabledVerbose: false, output);
             }
             SymbolStore store = s_symbolStore;
 
