@@ -483,18 +483,26 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in ICorDebugMod
 
 HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataModule* pModule)
 {
+    ULONG32 flags;
+    HRESULT hr = pModule->GetFlags(&flags);
+    if (FAILED(hr)) 
+    {
+        ExtOut("LoadSymbols IXCLRDataModule->GetFlags FAILED 0x%08x\n", hr);
+        return hr;
+    }
+
+    if (flags & CLRDATA_MODULE_IS_DYNAMIC)
+    {
+        ExtWarn("SOS Warning: Loading symbols for dynamic assemblies is not yet supported\n");
+        return E_FAIL;
+    }
+
     DacpGetModuleData moduleData;
-    HRESULT hr = moduleData.Request(pModule);
+    hr = moduleData.Request(pModule);
     if (FAILED(hr))
     {
         ExtOut("LoadSymbols moduleData.Request FAILED 0x%08x\n", hr);
         return hr;
-    }
-
-    if (moduleData.IsDynamic)
-    {
-        ExtWarn("SOS Warning: Loading symbols for dynamic assemblies is not yet supported\n");
-        return E_FAIL;
     }
 
     ArrayHolder<WCHAR> pModuleName = new WCHAR[MAX_LONGPATH + 1];
