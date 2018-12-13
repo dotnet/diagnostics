@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
   <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+
+  <Target Name="_PublishPackageReferences"
+          AfterTargets="PostBuildEvent"
+          Condition="$(IsPublishable) == 'true'"
+          DependsOnTargets="$(_BeforePublishNoBuildTargets);$(_CorePublishTargets)" />
 </Project>

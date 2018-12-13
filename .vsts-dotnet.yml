@@ -215,7 +215,7 @@ phases:
       - agent.os -equals Windows_NT
   variables: 
     _PublishBlobFeedUrl: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
-    _SOSNETCorePath: $(Build.SourcesDirectory)/artifacts/bin/SOS.NETCore/Release/netcoreapp1.0
+    _SOSNETCorePath: $(Build.SourcesDirectory)/artifacts/bin/SOS.NETCore/Release/netcoreapp2.0/publish
     _TeamName: DotNetCore
 
   steps: 
@@ -265,7 +265,7 @@ phases:
     displayName: Copy Windows x64 Artifacts
     inputs:
       sourceFolder: '$(_SOSNETCorePath)'
-      contents: 'SOS.NETCore.dll'
+      contents: '*.dll'
       overWrite: true
       targetFolder: '$(Build.SourcesDirectory)/artifacts/Windows_NT.x64.Release'
     condition: succeeded()
@@ -300,7 +300,7 @@ phases:
     displayName: Copy Windows x86 Artifacts
     inputs:
       sourceFolder: '$(_SOSNETCorePath)'
-      contents: 'SOS.NETCore.dll'
+      contents: '*.dll'
       overWrite: true
       targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.x86.Release'
     condition: succeeded()
@@ -328,7 +328,7 @@ phases:
     displayName: Copy Extension Gallery Files
     inputs:
       sourceFolder: '$(_SOSNETCorePath)'
-      contents: 'SOS.NETCore.dll'
+      contents: '*.dll'
       overWrite: true
       targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/gallery/x64'
     condition: succeeded()
@@ -345,7 +345,7 @@ phases:
     displayName: Copy Extension Gallery Files
     inputs:
       sourceFolder: '$(_SOSNETCorePath)'
-      contents: 'SOS.NETCore.dll'
+      contents: '*.dll'
       overWrite: true
       targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/gallery/x86'
     condition: succeeded()
@@ -388,7 +388,7 @@ phases:
     displayName: Copy Linux Artifacts
     inputs:
       sourceFolder: '$(_SOSNETCorePath)'
-      contents: 'SOS.NETCore.dll'
+      contents: '*.dll'
       overWrite: true
       targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Linux.x64.Release'
     condition: succeeded()
@@ -423,7 +423,7 @@ phases:
     displayName: Copy MacOS Artifacts
     inputs:
       sourceFolder: '$(_SOSNETCorePath)'
-      contents: 'SOS.NETCore.dll'
+      contents: '*.dll'
       overWrite: true
       targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/OSX.x64.Release'
     condition: succeeded()

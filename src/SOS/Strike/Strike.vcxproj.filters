@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="disasm.cpp" />
+    <ClCompile Include="datatarget.cpp" />
+    <ClCompile Include="dllsext.cpp" />
+    <ClCompile Include="eeheap.cpp" />
+    <ClCompile Include="EventCallbacks.cpp" />
+    <ClCompile Include="ExpressionNode.cpp" />
+    <ClCompile Include="exts.cpp" />
+    <ClCompile Include="gchist.cpp" />
+    <ClCompile Include="gcroot.cpp" />
+    <ClCompile Include="metadata.cpp" />
+    <ClCompile Include="sildasm.cpp" />
+    <ClCompile Include="sos.cpp" />
+    <ClCompile Include="stressLogDump.cpp" />
+    <ClCompile Include="strike.cpp" />
+    <ClCompile Include="util.cpp" />
+    <ClCompile Include="vm.cpp" />
+    <ClCompile Include="WatchCmd.cpp" />
+    <ClCompile Include="disasmX86.cpp" />
+    <ClCompile Include="disasmARM64.cpp" />
+    <ClCompile Include="hostcoreclr.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="data.h" />
+    <ClInclude Include="datatarget.h" />
+    <ClInclude Include="disasm.h" />
+    <ClInclude Include="EventCallbacks.h" />
+    <ClInclude Include="ExpressionNode.h" />
+    <ClInclude Include="exts.h" />
+    <ClInclude Include="ntinfo.h" />
+    <ClInclude Include="platformspecific.h" />
+    <ClInclude Include="sos.h" />
+    <ClInclude Include="sos_md.h" />
+    <ClInclude Include="sos_stacktrace.h" />
+    <ClInclude Include="strike.h" />
+    <ClInclude Include="util.h" />
+    <ClInclude Include="UtilCode.h" />
+    <ClInclude Include="WatchCmd.h" />
+    <ClInclude Include="xplat\dbgeng.h">
+      <Filter>xplat</Filter>
+    </ClInclude>
+    <ClInclude Include="xplat\dbghelp.h">
+      <Filter>xplat</Filter>
+    </ClInclude>
+    <ClInclude Include="xplat\wdbgexts.h">
+      <Filter>xplat</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\dbgeng.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\dbghelp.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\wdbgexts.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="hostcoreclr.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Native.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="sos_unixexports.src" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="xplat">
+      <UniqueIdentifier>{b766b3f8-a753-4134-bf7f-50c4f05b59b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="inc">
+      <UniqueIdentifier>{406edc67-c8c4-4f19-ad39-c799a63f4c2a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+    <Text Include="sosdocs.txt" />
+    <Text Include="sosdocsunix.txt" />
+  </ItemGroup>
+</Project>

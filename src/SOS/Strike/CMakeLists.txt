@@ -55,6 +55,7 @@ if(WIN32)
     exts.cpp
     gchist.cpp
     gcroot.cpp
+    hostcoreclr.cpp
     metadata.cpp
     sildasm.cpp
     sos.cpp
@@ -109,6 +110,7 @@ else(WIN32)
     exts.cpp
     gchist.cpp
     gcroot.cpp
+    hostcoreclr.cpp
     metadata.cpp
     sildasm.cpp
     stressLogDump.cpp
