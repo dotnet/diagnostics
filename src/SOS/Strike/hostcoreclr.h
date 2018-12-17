@@ -14,10 +14,12 @@ static const char *SymbolReaderDllName = "SOS.NETCore";
 static const char *SymbolReaderClassName = "SOS.SymbolReader";
 
 typedef void (*OutputDelegate)(const char*);
-typedef  int (*ReadMemoryDelegate)(ULONG64, char *, int);
+typedef  int (*ReadMemoryDelegate)(ULONG64, uint8_t*, int);
+typedef void (*SymbolFileCallbackDelegate)(void*, const char* moduleFileName, const char* symbolFileName);
 
-typedef void (*SymbolReaderInitialize)();
-typedef  BOOL (*InitializeSymbolStoreDelegate)(OutputDelegate, BOOL, BOOL, const char*, const char*, const char*);
+typedef  BOOL (*InitializeSymbolStoreDelegate)(BOOL, BOOL, BOOL, const char*, const char*, const char*);
+typedef  void (*DisableSymbolStoreDelegate)();
+typedef  void (*LoadNativeSymbolsDelegate)(SymbolFileCallbackDelegate, void*, const char*, const char*, ULONG64, int, ReadMemoryDelegate);
 typedef  PVOID (*LoadSymbolsForModuleDelegate)(const char*, BOOL, ULONG64, int, ULONG64, int, ReadMemoryDelegate);
 typedef  void (*DisposeDelegate)(PVOID);
 typedef  BOOL (*ResolveSequencePointDelegate)(PVOID, const char*, unsigned int, unsigned int*, unsigned int*);
@@ -27,6 +29,8 @@ typedef  BOOL (*GetLineByILOffsetDelegate)(PVOID, mdMethodDef, ULONG64, ULONG *,
 struct SOSNetCoreCallbacks
 {
     InitializeSymbolStoreDelegate InitializeSymbolStoreDelegate;
+    DisableSymbolStoreDelegate DisableSymbolStoreDelegate;
+    LoadNativeSymbolsDelegate LoadNativeSymbolsDelegate;
     LoadSymbolsForModuleDelegate LoadSymbolsForModuleDelegate;
     DisposeDelegate DisposeDelegate;
     ResolveSequencePointDelegate ResolveSequencePointDelegate;
@@ -38,9 +42,13 @@ extern HMODULE g_hInstance;
 extern LPCSTR g_hostRuntimeDirectory;
 extern SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
 
+extern LPCSTR GetDacFilePath();
+extern LPCSTR GetDbiFilePath();
 extern BOOL IsHostingInitialized();
 extern HRESULT InitializeHosting();
-extern HRESULT InitializeSymbolStore(BOOL, BOOL, const char*, const char*);
+extern HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* symbolServer, const char* cacheDirectory);
+extern HRESULT LoadNativeSymbols();
+extern void DisableSymbolStore();
 
 class SymbolReader
 {

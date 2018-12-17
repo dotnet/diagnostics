@@ -150,7 +150,7 @@ This will take some time to complete, but after it is finished all the required 
     ./build.sh
     ./test.sh
 
-#### Fedora 27, 28 ####
+#### Fedora 27, 28, 29 ####
 
     sudo dnf install clang cmake compat-openssl10 findutils gdb git libicu libunwind lldb-devel llvm-devel make python python2-lldb tar wget which zip
 

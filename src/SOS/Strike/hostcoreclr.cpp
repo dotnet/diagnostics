@@ -25,6 +25,7 @@
 #ifdef FEATURE_PAL
 #include <sys/stat.h>
 #include <dlfcn.h>
+#include <unistd.h>
 #endif // !FEATURE_PAL
 
 #include <coreclrhost.h>
@@ -42,6 +43,8 @@
 static bool g_hostingInitialized = false;
 static bool g_symbolStoreInitialized = false;
 LPCSTR g_hostRuntimeDirectory = nullptr;
+LPCSTR g_dacFilePath = nullptr;
+LPCSTR g_dbiFilePath = nullptr;
 SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
 
 #ifdef FEATURE_PAL
@@ -279,6 +282,47 @@ HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntimeDirecto
     return S_OK;
 }
 
+LPCSTR GetDacFilePath()
+{
+    // If the DAC path hasn't been set by the symbol download support, use the one in the runtime directory.
+    if (g_dacFilePath == nullptr)
+    {
+        std::string dacModulePath;
+        HRESULT hr = GetCoreClrDirectory(dacModulePath);
+        if (SUCCEEDED(hr))
+        {
+            dacModulePath.append(DIRECTORY_SEPARATOR_STR_A);
+            dacModulePath.append(MAKEDLLNAME_A("mscordaccore"));
+#ifdef FEATURE_PAL
+            // if DAC file exists
+            if (access(dacModulePath.c_str(), F_OK) == 0)
+#endif
+                g_dacFilePath = _strdup(dacModulePath.c_str());
+        }
+    }
+    return g_dacFilePath;
+}
+
+LPCSTR GetDbiFilePath()
+{
+    if (g_dbiFilePath == nullptr)
+    {
+        std::string dbiModulePath;
+        HRESULT hr = GetCoreClrDirectory(dbiModulePath);
+        if (SUCCEEDED(hr))
+        {
+            dbiModulePath.append(DIRECTORY_SEPARATOR_STR_A);
+            dbiModulePath.append(MAKEDLLNAME_A("mscordbi"));
+#ifdef FEATURE_PAL
+            // if DBI file exists
+            if (access(dbiModulePath.c_str(), F_OK) == 0)
+#endif
+                g_dbiFilePath = _strdup(dbiModulePath.c_str());
+        }
+    }
+    return g_dbiFilePath;
+}
+
 BOOL IsHostingInitialized()
 {
     return g_hostingInitialized;
@@ -397,11 +441,9 @@ HRESULT InitializeHosting()
         return Status;
     }
 
-    //SymbolReaderInitialize initialize;
-    //IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "Initialize", (void **)&initialize));
-    //initialize();
-
     IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "InitializeSymbolStore", (void **)&g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate));
+    IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "DisableSymbolStore", (void **)&g_SOSNetCoreCallbacks.DisableSymbolStoreDelegate));
+    IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "LoadNativeSymbols", (void **)&g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "LoadSymbolsForModule", (void **)&g_SOSNetCoreCallbacks.LoadSymbolsForModuleDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "Dispose", (void **)&g_SOSNetCoreCallbacks.DisposeDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "ResolveSequencePoint", (void **)&g_SOSNetCoreCallbacks.ResolveSequencePointDelegate));
@@ -418,34 +460,97 @@ extern "C" void InitializeSymbolReaderCallbacks(SOSNetCoreCallbacks sosNetCoreCa
     g_hostingInitialized = true;
 }
 
-static void WriteLineForSymbolStore(const char* message)
+//
+// Pass to managed helper code to read in-memory PEs/PDBs
+// Returns the number of bytes read.
+//
+static int ReadMemoryForSymbols(ULONG64 address, uint8_t *buffer, int cb)
 {
-    ExtOut(message);
-    ExtOut("\n");
+    ULONG read;
+    if (SafeReadMemory(TO_TADDR(address), (PVOID)buffer, cb, &read))
+    {
+        return read;
+    }
+    return 0;
 }
 
-HRESULT InitializeSymbolStore(BOOL msdl, BOOL symweb, const char* symbolServer, const char* cacheDirectory)
+#ifdef FEATURE_PAL
+
+static void SymbolFileCallback(void* param, const char* moduleFileName, const char* symbolFileName)
+{
+    if (strcmp(moduleFileName, MAIN_CLR_DLL_NAME_A) == 0) {
+        return;
+    }
+    if (strcmp(moduleFileName, MAKEDLLNAME_A("mscordaccore")) == 0) {
+        if (g_dacFilePath == nullptr) {
+            g_dacFilePath = _strdup(symbolFileName);
+        }
+        return;
+    }
+    if (strcmp(moduleFileName, MAKEDLLNAME_A("mscordbi")) == 0) {
+        if (g_dbiFilePath == nullptr) {
+            g_dbiFilePath = _strdup(symbolFileName);
+        }
+        return;
+    }
+    ToRelease<ISOSHostServices> sosHostServices(NULL);
+    HRESULT Status = g_ExtServices->QueryInterface(__uuidof(ISOSHostServices), (void**)&sosHostServices);
+    if (SUCCEEDED(Status))
+    {
+        sosHostServices->AddModuleSymbol(param, symbolFileName);
+    }
+}
+
+static void LoadNativeSymbolsCallback(void* param, const char* moduleDirectory, const char* moduleFileName, ULONG64 moduleAddress, int moduleSize)
+{
+    _ASSERTE(g_hostingInitialized);
+    _ASSERTE(g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate != nullptr);
+    g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(SymbolFileCallback, param, moduleDirectory, moduleFileName, moduleAddress, moduleSize, ReadMemoryForSymbols);
+}
+
+#endif
+
+HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* symbolServer, const char* cacheDirectory)
 {
     HRESULT Status = S_OK;
-
     IfFailRet(InitializeHosting());
-
     _ASSERTE(g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate != nullptr);
 
-    // Only pass the output delegate on Linux (lldb) because on Windows under dbgeng, output from the symbol stores
-    // can deadlock because it can happen on a thread other than the dbgeng main thread.
-    OutputDelegate writeLine = nullptr;
-#ifdef FEATURE_PAL
-    writeLine = WriteLineForSymbolStore;
-#endif
-    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(writeLine, msdl, symweb, symbolServer, cacheDirectory, nullptr))
+    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(logging, msdl, symweb, symbolServer, cacheDirectory, nullptr))
     {
         ExtErr("Error initializing symbol server support\n");
         return E_FAIL;
     }
-
     g_symbolStoreInitialized = true;
     return S_OK;
+}
+
+HRESULT LoadNativeSymbols()
+{
+    HRESULT Status = S_OK;
+#ifdef FEATURE_PAL
+    if (g_symbolStoreInitialized)
+    {
+        ToRelease<ISOSHostServices> sosHostServices(NULL);
+        Status = g_ExtServices->QueryInterface(__uuidof(ISOSHostServices), (void**)&sosHostServices);
+        if (SUCCEEDED(Status))
+        {
+            Status = sosHostServices->LoadNativeSymbols(LoadNativeSymbolsCallback);
+        }
+    }
+#endif
+    return Status;
+}
+
+void DisableSymbolStore()
+{
+    if (g_symbolStoreInitialized)
+    {
+        g_symbolStoreInitialized = false;
+
+        _ASSERTE(g_SOSNetCoreCallbacks.DisableSymbolStoreDelegate != nullptr);
+        g_SOSNetCoreCallbacks.DisableSymbolStoreDelegate();
+    }
 }
 
 HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in ICorDebugModule* pModule)
@@ -606,20 +711,6 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
 
 #endif // FEATURE_PAL
 
-//
-// Pass to managed helper code to read in-memory PEs/PDBs
-// Returns the number of bytes read.
-//
-int ReadMemoryForSymbols(ULONG64 address, char *buffer, int cb)
-{
-    ULONG read;
-    if (SafeReadMemory(TO_TADDR(address), (PVOID)buffer, cb, &read))
-    {
-        return read;
-    }
-    return 0;
-}
-
 HRESULT SymbolReader::LoadSymbolsForPortablePDB(__in_z WCHAR* pModuleName, ___in BOOL isInMemory, ___in BOOL isFileLayout,
     ___in ULONG64 peAddress, ___in ULONG64 peSize, ___in ULONG64 inMemoryPdbAddress, ___in ULONG64 inMemoryPdbSize)
 {
@@ -640,7 +731,7 @@ HRESULT SymbolReader::LoadSymbolsForPortablePDB(__in_z WCHAR* pModuleName, ___in
         {
             if (strlen(symbolPath) > 0)
             {
-                if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(nullptr, false, false, nullptr, nullptr, symbolPath))
+                if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(false, false, false, nullptr, nullptr, symbolPath))
                 {
                     ExtErr("Windows symbol path parsing FAILED\n");
                 }

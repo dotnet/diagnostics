@@ -153,7 +153,7 @@ To launch lldb:
 
     lldb
 
-#### Fedora 27, 28 ####
+#### Fedora 27, 28, 29 ####
 
     sudo dnf install lldb python2-lldb
 

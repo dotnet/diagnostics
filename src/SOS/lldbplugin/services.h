@@ -4,7 +4,7 @@
 
 #include <cstdarg>
 
-class LLDBServices : public ILLDBServices
+class LLDBServices : public ILLDBServices, public ISOSHostServices
 {
 private:
     LONG m_ref;
@@ -266,6 +266,17 @@ public:
         PULONG64 offset);
 
     //----------------------------------------------------------------------------
+    // ISOSHostServices
+    //----------------------------------------------------------------------------
+
+    HRESULT LoadNativeSymbols(
+        PFN_MODULE_LOAD_CALLBACK callback);
+
+    HRESULT AddModuleSymbol(
+        void* param, 
+        const char* symbolFileName);
+
+    //----------------------------------------------------------------------------
     // LLDBServices (internal)
     //----------------------------------------------------------------------------
 
@@ -273,4 +284,6 @@ public:
         PCSTR name);
 
     PCSTR GetPluginModuleDirectory();
+
+    int StartListenerThread();
 };

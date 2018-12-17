@@ -34,7 +34,7 @@ namespace SOS
         {
             if (m_enabled)
             {
-                m_output?.Invoke(message);
+                WriteLine(message);
             }
         }
 
@@ -64,12 +64,18 @@ namespace SOS
 
         public void Error(string message)
         {
-            WriteLine("ERROR: " + message);
+            if (m_enabled) 
+            {
+                WriteLine("ERROR: " + message);
+            }
         }
 
         public void Error(string format, params object[] arguments)
         {
-            WriteLine("ERROR: " + format, arguments);
+            if (m_enabled)
+            {
+                WriteLine("ERROR: " + format, arguments);
+            }
         }
 
         public void Verbose(string message)

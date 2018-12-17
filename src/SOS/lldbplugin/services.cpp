@@ -8,13 +8,14 @@
 #include <string.h>
 #include <string>
 #include <dlfcn.h>
+#include <pthread.h>
 
 #define CONVERT_FROM_SIGN_EXTENDED(offset) ((ULONG_PTR)(offset))
 
 ULONG g_currentThreadIndex = -1;
 ULONG g_currentThreadSystemId = -1;
-char *g_coreclrDirectory;
-char *g_pluginModuleDirectory;
+char *g_coreclrDirectory = nullptr;
+char *g_pluginModuleDirectory = nullptr;
 
 LLDBServices::LLDBServices(lldb::SBDebugger &debugger, lldb::SBCommandReturnObject &returnObject, lldb::SBProcess *process, lldb::SBThread *thread) : 
     m_ref(1),
@@ -44,6 +45,12 @@ LLDBServices::QueryInterface(
         InterfaceId == __uuidof(ILLDBServices))
     {
         *Interface = (ILLDBServices*)this;
+        AddRef();
+        return S_OK;
+    }
+    else if (InterfaceId == __uuidof(ISOSHostServices))
+    {
+        *Interface = (ISOSHostServices*)this;
         AddRef();
         return S_OK;
     }
@@ -1339,6 +1346,13 @@ LLDBServices::GetModuleBase(
         }
     }
 
+    lldb::SBAddress headerAddress = module.GetObjectFileHeaderAddress();
+    lldb::addr_t moduleAddress = headerAddress.GetLoadAddress(target);
+    if (moduleAddress != 0)
+    {
+        return moduleAddress;
+    }
+
     return UINT64_MAX;
 }
 
@@ -1703,6 +1717,72 @@ LLDBServices::GetFrameOffset(
 }
 
 //----------------------------------------------------------------------------
+// ISOSHostServices
+//----------------------------------------------------------------------------
+
+HRESULT 
+LLDBServices::LoadNativeSymbols(
+    PFN_MODULE_LOAD_CALLBACK callback)
+{
+    uint32_t numTargets = m_debugger.GetNumTargets();
+    for (int ti = 0; ti < numTargets; ti++)
+    {
+        lldb::SBTarget target = m_debugger.GetTargetAtIndex(ti);
+        if (target.IsValid())
+        {
+            uint32_t numModules = target.GetNumModules();
+            for (int mi = 0; mi < numModules; mi++)
+            {
+                lldb::SBModule module = target.GetModuleAtIndex(mi);
+                if (module.IsValid())
+                {
+                    const char* directory = nullptr;
+                    const char* filename = nullptr;
+
+                    lldb::SBFileSpec symbolFileSpec = module.GetSymbolFileSpec();
+                    if (symbolFileSpec.IsValid())
+                    {
+                        directory = symbolFileSpec.GetDirectory();
+                        filename = symbolFileSpec.GetFilename();
+                    }
+                    else {
+                        lldb::SBFileSpec fileSpec = module.GetFileSpec();
+                        if (fileSpec.IsValid())
+                        {
+                            directory = fileSpec.GetDirectory();
+                            filename = fileSpec.GetFilename();
+                        }
+                    }
+
+                    if (directory != nullptr && filename != nullptr)
+                    {
+                        ULONG64 moduleAddress = GetModuleBase(target, module);
+                        int moduleSize = INT32_MAX;
+                        if (moduleAddress != UINT64_MAX)
+                        {
+                            callback(&module, directory, filename, moduleAddress, moduleSize);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return S_OK;
+}
+
+HRESULT 
+LLDBServices::AddModuleSymbol(
+    void* param,
+    const char* symbolFileName)
+{
+    std::string command;
+    command.append("target symbols add ");
+    command.append(symbolFileName);
+
+    return Execute(DEBUG_EXECUTE_NOT_LOGGED, command.c_str(), 0);
+}
+
+//----------------------------------------------------------------------------
 // Helper functions
 //----------------------------------------------------------------------------
 
@@ -1772,21 +1852,20 @@ LLDBServices::GetPluginModuleDirectory()
 {
     if (g_pluginModuleDirectory == nullptr)
     {
-    	Dl_info info;
-    	if (dladdr((void *)&DummyFunction, &info) != 0)
-    	{
-    	    std::string path(info.dli_fname);
+        Dl_info info;
+        if (dladdr((void *)&DummyFunction, &info) != 0)
+        {
+            std::string path(info.dli_fname);
 
-    	    // Parse off the module name to get just the path
-    	    size_t lastSlash = path.rfind('/');
-    	    if (lastSlash != std::string::npos)
-    	    {
-        		path.erase(lastSlash);
-        		path.append("/");
-        		g_pluginModuleDirectory = strdup(path.c_str());
-    	    }
-    	}
+            // Parse off the module name to get just the path
+            size_t lastSlash = path.rfind('/');
+            if (lastSlash != std::string::npos)
+            {
+                path.erase(lastSlash);
+                path.append("/");
+                g_pluginModuleDirectory = strdup(path.c_str());
+            }
+        }
     }
     return g_pluginModuleDirectory;
 }
-

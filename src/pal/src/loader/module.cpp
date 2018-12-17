@@ -1276,6 +1276,7 @@ static void *LOADLoadLibraryDirect(LPCSTR libraryNameOrPath)
     void *dl_handle = dlopen(libraryNameOrPath, RTLD_LAZY);
     if (dl_handle == nullptr)
     {
+        ERROR("dlopen(%s) failed! %s\n", libraryNameOrPath, dlerror());
         SetLastError(ERROR_MOD_NOT_FOUND);
     }
     else

@@ -21,7 +21,7 @@ public:
         char** arguments,
         lldb::SBCommandReturnObject &result)
     {
-        if (arguments[0] == NULL)
+        if (arguments == nullptr || arguments[0] == nullptr)
         {
             if (g_currentThreadSystemId == -1 || g_currentThreadIndex == -1)
             {
@@ -37,16 +37,16 @@ public:
             g_currentThreadSystemId = -1;
             result.Printf("Cleared sos OS tid/index\n");
         }
-        else if (arguments[1] == NULL)
+        else if (arguments[1] == nullptr)
         {
-            result.Printf("Need thread index parameter that maps to the OS tid\n");
+            result.Printf("Need thread index parameter that maps to the OS tid. setsostid <tid> <index>\n");
         }
         else
         {
-            ULONG tid = strtoul(arguments[0], NULL, 16);
+            ULONG tid = strtoul(arguments[0], nullptr, 16);
             g_currentThreadSystemId = tid;
 
-            ULONG index = strtoul(arguments[1], NULL, 16);
+            ULONG index = strtoul(arguments[1], nullptr, 16);
             g_currentThreadIndex = index;
 
             result.Printf("Mapped sos OS tid 0x%x to lldb thread index %d\n", tid, index);
