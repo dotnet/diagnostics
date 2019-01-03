@@ -218,7 +218,7 @@ monitoring or diagnostics.
 * Formatted Text Logging (ILogger)
 	* Microsoft.Extensions.Logging.ILogger - Assumes the ASP.NET Dependency Injection Framework.  Not suitable for general framework use because of this.  Definitely relevant.
 	* System.Diagnostics.TraceSource - Arguably only here for compatibility.  Probably not relevant.
-	* System.Diagnostics.Trace - Not expected to be used in production scenarios.  Ultra-simple developement-time logging.  Probably not relevant.
+	* System.Diagnostics.Trace - Not expected to be used in production scenarios.  Ultra-simple development-time logging.  Probably not relevant.
 
 * Structured loggers
     * System.Diagnostics.DiagnosticSource - Designed specifically for the in-process case (listener sees true objects).  Relatively new, meant to be used by in-proc monitors, or feed into EventSource.  Definitely relevant.
@@ -248,7 +248,7 @@ Azure knows how much CPU and Memory your VM instances are taking.  Azure's MA (M
 
 * Intellitrace - TODO
 
-## Inventory of Competitors in for Application Performance Monitoring
+## Inventory of Vendors in for Application Performance Monitoring
 
   * NuRelic
   * AppDynamics
@@ -267,7 +267,7 @@ Feedback on Application Insights as an APM tool
 
 ### What do other Runtime environments do.
 
-There is data 
+TODO 
 
 ## Elements of the Plan for Diagnostics/Monitoring.
 
@@ -325,7 +325,7 @@ There is data
 * Is having a single machine toy monitor (e.g. dotnet monitor) worthwhile?
     * Having the ability to collect traces locally 'by hand' is useful and should be supported.
     * Ability to locally display monitoring stats is not that useful.  It is most likely
-      a testing capability (when new instrumenation is added).  We should only invest minimally.
+      a testing capability (when new instrumentation is added).  We should only invest minimally.
 
 ### End-to-End Scenario
 
@@ -343,14 +343,14 @@ Noah Falk has done customer research to act as input to planning 3.0 which he ca
 [.NET Core Framing Document](https://na01.safelinks.protection.outlook.com/?url=https%3A%2F%2Fmicrosoft.sharepoint.com%2F%3Aw%3A%2Ft%2FDNFPlanning%2FEYlvkars0C1EhhPlHXgTnnkB8dWyVesla7Gau10LW49A8A%3Fe%3DNRcH4O&data=02%7C01%7Cvancem%40microsoft.com%7C9ad662619d0d45250cb008d648e0c898%7C72f988bf86f141af91ab2d7cd011db47%7C1%7C0%7C636776527605907620&sdata=C7gW4FCNdb0BlwbRs1MWE0oxq0SUY6ZZh7ESWFPTlu8%3D&reserved=0).
 
 The main summary of this doc is 5 scenarios to improve
-  1. .NET Core documentation on Diagnostics is almost non-existent (especially compared to competitors).
+  1. .NET Core documentation on Diagnostics is almost non-existent (especially compared to offerings from other vendors).
   2. Async programming is error-prone and difficult to diagnose.
   3. It is difficult/impossible to do a performance investigation if using Linux/Containers.
   4. It is difficult/impossible to do a crash dump investigations, and in particular memory investigations.
   5. No 'easy on ramp' to monitor performance of a deployed app.
 
 Based on this, a V3.0 plan was written up [.NET Core V3.0 Diagnostics Plan](https://microsoft.sharepoint.com/:w:/t/DNFPlanning/ES28ZR8LCmFEn4JjXQmMM_gBrrvnWOLOhH_rswCRviBYgw?rtime=3kgIi-5T1kg)
-that layed out the user stories.
+that laid out some user stories, however that should just be consider a rough first draft.  
 
 This was then turned into User Stories / work items that will be tracked on Github here [Github .NET Core 3.0 Diagnostics Project](https://github.com/orgs/dotnet/projects/9).
 
