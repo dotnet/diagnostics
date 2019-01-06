@@ -4215,7 +4215,7 @@ public:
                 (PVOID)&callbackData))
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                ExtErr("SymFindFileInPath failed for %S. hr=0x%x.\nPlease ensure that %S is on your symbol path.", pwszFileName, hr, pwszFileName);
+                ExtErr("SymFindFileInPath failed for %S. hr=0x%x.\nPlease ensure that %S is on your symbol path.\n", pwszFileName, hr, pwszFileName);
                 return hr;
             }
             if (ppResolvedModulePath != NULL)
