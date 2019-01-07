@@ -9,7 +9,7 @@
 #include <dbgtargetcontext.h>
 #include "services.h"
 
-typedef HRESULT (*CommandFunc)(ILLDBServices* services, const char *args);
+typedef HRESULT (*CommandFunc)(ILLDBServices* services, const char* args);
 
 extern char *g_coreclrDirectory;
 extern ULONG g_currentThreadIndex;

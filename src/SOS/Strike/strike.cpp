@@ -15404,13 +15404,20 @@ DECLARE_API(SetSymbolServer)
     INIT_API_EXT();
 
     StringHolder symbolCache;
+    BOOL disable = FALSE;
+    BOOL loadNative = FALSE;
     BOOL msdl = FALSE;
     BOOL symweb = FALSE;
+    BOOL logging = FALSE;
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-        {"-cache",  &symbolCache.data, COSTRING, FALSE},
-        {"-ms",   &msdl, COBOOL, FALSE},
-#ifndef FEATURE_PAL
+        {"-disable", &disable, COBOOL, FALSE},
+        {"-cache", &symbolCache.data, COSTRING, FALSE},
+        {"-ms", &msdl, COBOOL, FALSE},
+        {"-log", &logging, COBOOL, FALSE},
+#ifdef FEATURE_PAL
+        {"-loadsymbols", &loadNative, COBOOL, FALSE},
+#else
         {"-mi", &symweb, COBOOL, FALSE},
 #endif
     };
@@ -15423,6 +15430,11 @@ DECLARE_API(SetSymbolServer)
     if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &narg))
     {
         return E_FAIL;
+    }
+
+    if (disable) {
+        DisableSymbolStore();
+        return S_OK;
     }
 
     if (msdl && symweb)
@@ -15439,7 +15451,7 @@ DECLARE_API(SetSymbolServer)
 
     if (msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr)
     {
-        Status = InitializeSymbolStore(msdl, symweb, symbolServer.data, symbolCache.data);
+        Status = InitializeSymbolStore(logging, msdl, symweb, symbolServer.data, symbolCache.data);
         if (FAILED(Status))
         {
             return Status;
@@ -15461,7 +15473,14 @@ DECLARE_API(SetSymbolServer)
             ExtOut("Symbol cache path: %s\n", symbolCache.data);
         }
     }
-    
+
+#ifdef FEATURE_PAL
+    if (loadNative)
+    {
+        Status = LoadNativeSymbols();
+    }
+#endif
+
     return Status;
 }
 

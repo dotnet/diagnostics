@@ -52,9 +52,6 @@ PIMAGEHLP_SYMBOL sym = (PIMAGEHLP_SYMBOL) symBuffer;
 #include <mach-o/dyld.h>
 #endif
 
-HRESULT InitializeHosting();
-HRESULT GetCoreClrDirectory(std::string& coreClrDirectory);
-
 const char * const CorElementTypeName[ELEMENT_TYPE_MAX]=
 {
 #define TYPEINFO(e,ns,c,s,g,ia,ip,if,im,gv)    c,
@@ -3942,21 +3939,17 @@ void ResetGlobals(void)
 //
 HRESULT LoadClrDebugDll(void)
 {
-    static IXCLRDataProcess* s_clrDataProcess = NULL;
+    static IXCLRDataProcess* clrDataProcess = NULL;
     HRESULT hr = S_OK;
 
-    if (s_clrDataProcess == NULL)
+    if (clrDataProcess == NULL)
     {
-        std::string dacModulePath;
-        hr = GetCoreClrDirectory(dacModulePath);
-        if (FAILED(hr))
+        LPCSTR dacFilePath = GetDacFilePath();
+        if (dacFilePath == nullptr)
         {
-            return hr;
+            return E_FAIL;
         }
-        dacModulePath.append(DIRECTORY_SEPARATOR_STR_A);
-        dacModulePath.append(MAKEDLLNAME_A("mscordaccore"));
-
-        HMODULE hdac = LoadLibraryA(dacModulePath.c_str());
+        HMODULE hdac = LoadLibraryA(dacFilePath);
         if (hdac == NULL)
         {
             return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
@@ -3968,18 +3961,18 @@ HRESULT LoadClrDebugDll(void)
             return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
         }
         ICLRDataTarget *target = new DataTarget();
-        hr = pfnCLRDataCreateInstance(__uuidof(IXCLRDataProcess), target, (void**)&s_clrDataProcess);
+        hr = pfnCLRDataCreateInstance(__uuidof(IXCLRDataProcess), target, (void**)&clrDataProcess);
         if (FAILED(hr))
         {
-            s_clrDataProcess = NULL;
+            clrDataProcess = NULL;
             return hr;
         }
         ULONG32 flags = 0;
-        s_clrDataProcess->GetOtherNotificationFlags(&flags);
+        clrDataProcess->GetOtherNotificationFlags(&flags);
         flags |= (CLRDATA_NOTIFY_ON_MODULE_LOAD | CLRDATA_NOTIFY_ON_MODULE_UNLOAD | CLRDATA_NOTIFY_ON_EXCEPTION);
-        s_clrDataProcess->SetOtherNotificationFlags(flags);
+        clrDataProcess->SetOtherNotificationFlags(flags);
     }
-    g_clrData = s_clrDataProcess;
+    g_clrData = clrDataProcess;
     g_clrData->AddRef();
     g_clrData->Flush();
 
@@ -4159,7 +4152,7 @@ public:
         callbackData.filesize = dwSizeOfImage;
 
         // if we are looking for the DAC, just load the one windbg already found
-        if (_wcsncmp(pwszFileName, W("mscordac"), _wcslen(W("mscordac"))) == 0)
+        if (_wcsncmp(pwszFileName, MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W), _wcslen(MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W))) == 0)
         {
             HMODULE dacModule;
             if (g_sos == NULL)
@@ -4222,7 +4215,7 @@ public:
                 (PVOID)&callbackData))
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                ExtErr("SymFindFileInPath failed for %S. hr=0x%x.\nPlease ensure that %S is on your symbol path.", pwszFileName, hr, pwszFileName);
+                ExtErr("SymFindFileInPath failed for %S. hr=0x%x.\nPlease ensure that %S is on your symbol path.\n", pwszFileName, hr, pwszFileName);
                 return hr;
             }
             if (ppResolvedModulePath != NULL)
@@ -4237,21 +4230,45 @@ public:
         return S_OK;
 #else
         _ASSERTE(phModule == NULL);
+        const char* filePath = nullptr;
 
-        LPCSTR coreclrDirectory = g_ExtServices->GetCoreClrDirectory();
-        if (coreclrDirectory == NULL)
+        if (_wcsncmp(pwszFileName, MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W), _wcslen(MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W))) == 0)
         {
-            ExtErr("Runtime module (%s) not loaded yet\n", MAKEDLLNAME_A("coreclr"));
-            return E_FAIL;
+            filePath = GetDacFilePath();
         }
+        else if (_wcsncmp(pwszFileName, MAKEDLLNAME_W(MAIN_DBI_MODULE_NAME_W), _wcslen(MAKEDLLNAME_W(MAIN_DBI_MODULE_NAME_W))) == 0)
+        {
+            filePath = GetDbiFilePath();
+        }
+
         ArrayHolder<WCHAR> modulePath = new WCHAR[MAX_LONGPATH + 1];
-        int length = MultiByteToWideChar(CP_ACP, 0, coreclrDirectory, -1, modulePath, MAX_LONGPATH);
-        if (0 >= length)
+        if (filePath != nullptr)
         {
-            ExtErr("MultiByteToWideChar(coreclrDirectory) failed. Last error = 0x%x\n", GetLastError());
-            return E_FAIL;
+            int length = MultiByteToWideChar(CP_ACP, 0, filePath, -1, modulePath, MAX_LONGPATH);
+            if (0 >= length)
+            {
+                ExtErr("MultiByteToWideChar(filePath) failed. Last error = 0x%x\n", GetLastError());
+                return E_FAIL;
+            }
         }
-        wcscat_s(modulePath, MAX_LONGPATH, pwszFileName);
+        else
+        {
+            LPCSTR coreclrDirectory = g_ExtServices->GetCoreClrDirectory();
+            if (coreclrDirectory == NULL)
+            {
+                ExtErr("Runtime module (%s) not loaded yet\n", MAKEDLLNAME_A("coreclr"));
+                return E_FAIL;
+            }
+            int length = MultiByteToWideChar(CP_ACP, 0, coreclrDirectory, -1, modulePath, MAX_LONGPATH);
+            if (0 >= length)
+            {
+                ExtErr("MultiByteToWideChar(coreclrDirectory) failed. Last error = 0x%x\n", GetLastError());
+                return E_FAIL;
+            }
+            wcscat_s(modulePath, MAX_LONGPATH, pwszFileName);
+        }
+
+        ExtOut("Loaded %S\n", modulePath.GetPtr());
 
         if (ppResolvedModulePath != NULL)
         {
@@ -4304,10 +4321,7 @@ protected:
 // Data target for the debugged process.   Provided to OpenVirtualProcess in order to
 // get an ICorDebugProcess back
 // 
-class SOSDataTarget : public ICorDebugMutableDataTarget
-#ifdef FEATURE_PAL
-, public ICorDebugDataTarget4
-#endif
+class SOSDataTarget : public ICorDebugMutableDataTarget, public ICorDebugMetaDataLocator, public ICorDebugDataTarget4
 {
 public:
     SOSDataTarget() : m_ref(0)
@@ -4332,12 +4346,14 @@ public:
         {
             *pInterface = static_cast<ICorDebugMutableDataTarget *>(this);
         }
-#ifdef FEATURE_PAL
+        else if (InterfaceId == IID_ICorDebugMetaDataLocator)
+        {
+            *pInterface = static_cast<ICorDebugMetaDataLocator *>(this);
+        }
         else if (InterfaceId == IID_ICorDebugDataTarget4)
         {
             *pInterface = static_cast<ICorDebugDataTarget4 *>(this);
         }
-#endif
         else
         {
             *pInterface = NULL;
@@ -4461,6 +4477,7 @@ public:
     //
     // ICorDebugMutableDataTarget.
     //
+
     virtual HRESULT STDMETHODCALLTYPE WriteVirtual(CORDB_ADDRESS address,
                                                    const BYTE * pBuffer,
                                                    ULONG32 bytesRequested)
@@ -4485,20 +4502,38 @@ public:
         return E_NOTIMPL;
     }
 
-#ifdef FEATURE_PAL
+    //
+    // ICorDebugMetaDataLocator.
+    //
+
+    virtual HRESULT STDMETHODCALLTYPE GetMetaData(
+        /* [in] */ LPCWSTR wszImagePath,
+        /* [in] */ DWORD dwImageTimeStamp,
+        /* [in] */ DWORD dwImageSize,
+        /* [in] */ ULONG32 cchPathBuffer,
+        /* [annotation][out] */ 
+        _Out_ ULONG32 *pcchPathBuffer,
+        /* [annotation][length_is][size_is][out] */ 
+        _Out_writes_to_(cchPathBuffer, *pcchPathBuffer) WCHAR wszPathBuffer[])
+    {
+        return E_NOTIMPL;
+    }
+
     //
     // ICorDebugDataTarget4
     //
     virtual HRESULT STDMETHODCALLTYPE VirtualUnwind(DWORD threadId, ULONG32 contextSize, PBYTE context)
     {
+#ifdef FEATURE_PAL
         if (g_ExtServices == NULL)
         {
             return E_UNEXPECTED;
         }
         return g_ExtServices->VirtualUnwind(threadId, contextSize, context);
-
+#else 
+        return E_NOTIMPL;
+#endif
     }
-#endif // FEATURE_PAL
 
 protected:
     LONG m_ref;

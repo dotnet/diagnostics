@@ -24,7 +24,7 @@ To install the platform's prerequisites:
 
  * [Windows Instructions](documentation/building/windows-instructions.md)
  * [Linux Instructions](documentation/building/linux-instructions.md)
- * [macOS Instructions](documentation/building/osx-instructions.md)
+ * [MacOS Instructions](documentation/building/osx-instructions.md)
  * [FreeBSD Instructions](documentation/building/freebsd-instructions.md) 
  * [NetBSD Instructions](documentation/building/netbsd-instructions.md)
 
@@ -72,16 +72,28 @@ To test the resulting SOS and plugin:
 
 Getting a version of lldb that works for your platform can be a problem sometimes. The version has to be at least 3.9 or greater because of a bug running SOS on a core dump that was fixed. Some Linux distros like Ubuntu it is easy as `sudo apt-get install lldb-3.9 python-lldb-3.9`. On other distros, you will need to build lldb. The directions below should give you some guidance.
 
- * [Linux Instructions](documentation/lldb/linux-instructions.md)
- * [macOS Instructions](documentation/lldb/osx-instructions.md)
- * [FreeBSD Instructions](documentation/lldb/freebsd-instructions.md) 
- * [NetBSD Instructions](documentation/lldb/netbsd-instructions.md)
+* [Linux Instructions](documentation/lldb/linux-instructions.md)
+* [MacOS Instructions](documentation/lldb/osx-instructions.md)
+* [FreeBSD Instructions](documentation/lldb/freebsd-instructions.md) 
+* [NetBSD Instructions](documentation/lldb/netbsd-instructions.md)
+
+## Using SOS
+
+* [SOS debugging for Linux/MacOS](documentation/sos-debugging-extension.md)
+* [SOS debugging for Windows](documentation/sos-debugging-extension-windows.md)
+* [Debugging a core dump](documentation/debugging-coredump.md)
+
+## New Features
+
+Symbol server support - The `setsymbolserver` command enables downloading the symbol files (portable PDBs) for managed assemblies during commands like `clrstack`, etc. See `soshelp setsymbolserver` for more details.
+    
+    (lldb) setsymbolserver -ms
 
 ## Useful Links
 
 * [The LLDB Debugger](http://lldb.llvm.org/index.html) - More information about lldb.
-* [Debugging CoreCLR](documentation/debugging-instructions.md) - Instructions for debugging .NET Core and the CoreCLR runtime.
 * [SOS](https://msdn.microsoft.com/en-us/library/bb190764(v=vs.110).aspx) - More information about SOS.
+* [Debugging CoreCLR](https://github.com/dotnet/coreclr/blob/master/Documentation/building/debugging-instructions.md) - Instructions for debugging .NET Core and the CoreCLR runtime.
 * [dotnet/coreclr](https://github.com/dotnet/coreclr) - Source for the .NET Core runtime.
 
 [//]: # (Begin current test results)

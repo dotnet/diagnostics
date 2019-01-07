@@ -61,10 +61,10 @@ DumpCCW
 Examining the GC history           Other
 -----------------------------      -----------------------------
 HistInit                           SetHostRuntime (sethostruntime)
-HistRoot                           FAQ
-HistObj                            SOSFlush
-HistObjFind                        Help (soshelp)
-HistClear
+HistRoot                           SetSymbolServer (setsymbolserver)
+HistObj                            FAQ
+HistObjFind                        SOSFlush
+HistClear                          Help (soshelp)
 \\
 
 COMMAND: faq.
@@ -2608,4 +2608,29 @@ needs to be single-quoted (').
 The default is to use the same runtime (coreclr.dll) being debugged. Use this
 command when the runtime being debugged isn't working to run the SOS code or
 if the version is less than 2.0.0.
+
+If you received the following error message when running a SOS command, use
+this command to set the path to 2.0.0 or greater .NET Core runtime.
+
+    0:000> !clrstack
+    Error: Fail to initialize CoreCLR 80004005
+    ClrStack  failed
+
+    0:000> sethostruntime "C:\Program Files\dotnet\shared\Microsoft.NETCore.App\2.1.6"
+
+You can use the "dotnet --info" in a command shell to find the path of an installed
+.NET Core runtime.
 \\
+
+COMMAND: setsymbolserver.
+SetSymbolServer [-ms] [-mi] [-disable] [-log] [-cache <cache-path>] [<symbol-server-URL>]
+
+-ms - Use the public Microsoft symbol server.
+-mi - Use the internal symweb symbol server.
+-disable - Disable symbol download support.
+-cache - Specific a symbol cache directory. The default is $HOME/.sos/symbolcache if not specified.
+-log - Enable symbol download logging.
+<symbol-server-URL> - Symbol server URL.
+
+This commands enables symbol server support for portable PDBs in SOS. If the .sympath is set, this
+symbol server support is automatically enabled.

@@ -21,12 +21,12 @@ public:
                char** arguments,
                lldb::SBCommandReturnObject &result)
     {
-        if (arguments[0] == NULL)
+        if (arguments == nullptr || arguments[0] == nullptr)
         {
-            result.Printf("Load path for dac/dbi: '%s'\n", g_coreclrDirectory == NULL ? "<none>" : g_coreclrDirectory);
+            result.Printf("Load path for dac/dbi: '%s'\n", g_coreclrDirectory == nullptr ? "<none>" : g_coreclrDirectory);
         }
         else {
-            if (g_coreclrDirectory != NULL)
+            if (g_coreclrDirectory != nullptr)
             {
                 free(g_coreclrDirectory);
             }

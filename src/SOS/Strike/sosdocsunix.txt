@@ -54,10 +54,10 @@ DumpSigElem
 Examining the GC history           Other
 -----------------------------      -----------------------------
 HistInit (histinit)                SetHostRuntime (sethostruntime)
-HistRoot (histroot)                FAQ
-HistObj  (histobj)                 SOSFlush
-HistObjFind (histobjfind)          Help (soshelp)
-HistClear (histclear)
+HistRoot (histroot)                SetSymbolServer (setsymbolserver, loadsymbols)
+HistObj  (histobj)                 FAQ
+HistObjFind (histobjfind)          SOSFlush
+HistClear (histclear)              Help (soshelp)
 \\
 
 COMMAND: faq.
@@ -1822,7 +1822,7 @@ cleanup the previous resources.
 \\
 
 COMMAND: sethostruntime.
-!SetHostRuntime <runtime-directory>
+SetHostRuntime <runtime-directory>
 
 This command sets the path to the .NET Core runtime to use to host the managed
 code that runs as part of SOS in the debugger (lldb). The runtime needs
@@ -1830,6 +1830,59 @@ to be at least version 2.0.0 or greater. If there are spaces in directory, it
 needs to be single-quoted (').
 
 The default is to use the same runtime (libcoreclr) being debugged. Use this
-command when the runtime being debugged isn't working to run the SOS code or
-if the version is less than 2.0.0.
+command when the runtime being debugged isn't working enough to run the SOS 
+code or if the version is less than 2.0.0.
+
+If you received the following error message when running a SOS command, use
+this command to set the path to 2.0.0 or greater .NET Core runtime.
+
+    (lldb) clrstack
+    Error: Fail to initialize CoreCLR 80004005
+    ClrStack  failed
+
+    (lldb) sethostruntime /usr/share/dotnet/shared/Microsoft.NETCore.App/2.1.6
+
+You can use the "dotnet --info" in a command shell to find the path of an installed
+.NET Core runtime.
 \\
+
+COMMAND: setsymbolserver.
+COMMAND: loadsymbols.
+SetSymbolServer [-ms] [-disable] [-log] [-cache <cache-path>] [-loadsymbols] [<symbol-server-URL>]
+
+-ms - Use the public Microsoft symbol server.
+-disable - Disable symbol download support.
+-cache - Specific a symbol cache directory. The default is $HOME/.sos/symbolcache if not specified.
+-log - Enable symbol download logging.
+-loadsymbols - Attempts to download the native .NET Core symbols for the runtime
+<symbol-server-URL> - Symbol server URL.
+
+This commands enables symbol server support in SOS. The portable PDBs for managed assemblies
+and .NET Core native symbol files are downloaded.
+
+To enable downloading symbols from the Microsoft symbol server:
+
+    (lldb) setsymbolserver -ms
+
+This command may take some time without any output while it attempts to download the symbol files. 
+
+To disable download:
+
+    (lldb) setsymbolserver -disable
+
+To clear the default cache run "rm -r $HOME/.dotnet/symbolcache" in a command shell.
+
+If you receive an error like the one below on a core dump, you need to set the .NET Core
+runtime with the "sethostruntime" command. Type "soshelp sethostruntime" for more details.
+
+    (lldb) setsymbolserver -ms
+    Error: Fail to initialize CoreCLR 80004005
+    SetSymbolServer -ms  failed
+
+The "-loadsymbols" option and the "loadsymbol" command alias attempts to download the native .NET
+Core symbol files. It is only useful for live sessions and not core dumps. This command needs to 
+be run before the lldb "bt" (stack trace) or the "clrstack -f" (dumps both managed and native
+stack frames).
+
+    (lldb) loadsymbols
+    (lldb) bt

@@ -2,6 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
 using Microsoft.FileFormats.PE;
 using Microsoft.SymbolStore;
 using Microsoft.SymbolStore.KeyGenerators;
@@ -89,14 +92,11 @@ namespace SOS
 
             public override int Read(byte[] buffer, int offset, int count)
             {
-                if (Position + count > Length)
-                {
+                if (Position + count > Length) {
                     throw new ArgumentOutOfRangeException();
                 }
-                unsafe
-                {
-                    fixed (byte* p = &buffer[offset])
-                    {
+                unsafe {
+                    fixed (byte* p = &buffer[offset]) {
                         int read = _readMemory(_address + (ulong)Position, p, count);
                         Position += read;
                         return read;
@@ -106,8 +106,7 @@ namespace SOS
 
             public override long Seek(long offset, SeekOrigin origin)
             {
-                switch (origin)
-                {
+                switch (origin) {
                     case SeekOrigin.Begin:
                         Position = offset;
                         break;
@@ -154,43 +153,49 @@ namespace SOS
         /// <param name="message"></param>
         internal delegate void WriteLine([MarshalAs(UnmanagedType.LPStr)] string message);
 
-        static bool s_symbolCacheAdded = false;
+        /// <summary>
+        /// The LoadNativeSymbols callback
+        /// </summary>
+        /// <param name="moduleFileName">module file name</param>
+        /// <param name="symbolFileName">symbol file name and path</param>
+        internal delegate void SymbolFileCallback(
+            IntPtr parameter,
+            [MarshalAs(UnmanagedType.LPStr)] string moduleFileName, 
+            [MarshalAs(UnmanagedType.LPStr)] string symbolFileName);
+
         static SymbolStore s_symbolStore = null;
+        static bool s_symbolCacheAdded = false;
+        static string s_tempDirectory = null;
         static ITracer s_tracer = null;
 
         /// <summary>
         /// Initializes symbol loading. Adds the symbol server and/or the cache path (if not null) to the list of
         /// symbol servers. This API can be called more than once to add more servers to search.
         /// </summary>
-        /// <param name="output">output callback delegate (not used currently)</param>
+        /// <param name="logging">if true, logging diagnostics to console</param>
         /// <param name="msdl">if true, use the public microsoft server</param>
         /// <param name="symweb">if true, use symweb internal server and protocol (file.ptr)</param>
         /// <param name="symbolServerPath">symbol server url (optional)</param>
         /// <param name="symbolCachePath">symbol cache directory path (optional)</param>
         /// <param name="windowsSymbolPath">windows symbol path (optional)</param>
         /// <returns></returns>
-        internal static bool InitializeSymbolStore(WriteLine output, bool msdl, bool symweb, string symbolServerPath, string symbolCachePath, string windowsSymbolPath)
+        internal static bool InitializeSymbolStore(bool logging, bool msdl, bool symweb, string symbolServerPath, string symbolCachePath, string windowsSymbolPath)
         {
-            if (s_tracer == null)
-            {
-                s_tracer = new Tracer(enabled: true, enabledVerbose: false, output);
+            if (s_tracer == null) {
+                s_tracer = new Tracer(enabled: logging, enabledVerbose: logging, Console.WriteLine);
             }
             SymbolStore store = s_symbolStore;
 
             // Build the symbol stores
-            if (windowsSymbolPath != null)
-            {
+            if (windowsSymbolPath != null) {
                 // Parse the Windows symbol path syntax (srv*, cache*, etc)
-                if (!ParseSymbolPath(ref store, windowsSymbolPath))
-                {
+                if (!ParseSymbolPath(ref store, windowsSymbolPath)) {
                     return false;
                 }
             }
-            else
-            {
+            else {
                 // Build the symbol stores using the other parameters
-                if (!GetServerSymbolStore(ref store, msdl, symweb, symbolServerPath, symbolCachePath))
-                {
+                if (!GetServerSymbolStore(ref store, msdl, symweb, symbolServerPath, symbolCachePath)) {
                     return false;
                 }
             }
@@ -200,160 +205,91 @@ namespace SOS
         }
 
         /// <summary>
-        /// Parses the Windows debugger symbol path (srv*, cache*, etc.).
+        /// This function disables any symbol downloading support.
         /// </summary>
-        /// <param name="store">symbol store to chain</param>
-        /// <param name="symbolPath">Windows symbol path</param>
-        /// <returns>if false, error parsing symbol path</returns>
-        private static bool ParseSymbolPath(ref SymbolStore store, string symbolPath)
+        internal static void DisableSymbolStore()
         {
-            string[] paths = symbolPath.Split(";", StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (string path in paths.Reverse())
-            {
-                string[] parts = path.Split("*", StringSplitOptions.RemoveEmptyEntries);
-
-                // UNC or directory paths are ignored (paths not prefixed with srv* or cache*).
-                if (parts.Length > 0)
-                {
-                    string symbolServerPath = null;
-                    string symbolCachePath = null;
-                    bool msdl = false;
-
-                    switch (parts[0].ToLowerInvariant())
-                    {
-                        case "srv":
-                            switch (parts.Length)
-                            { 
-                                case 1:
-                                    msdl = true;
-                                    break;
-                                case 2:
-                                    symbolServerPath = parts[1];
-                                    break;
-                                case 3:
-                                    symbolCachePath = parts[1];
-                                    symbolServerPath = parts[2];
-                                    break;
-                                default:
-                                    return false;
-                            }
-                            break;
-
-                        case "cache":
-                            switch (parts.Length)
-                            { 
-                                case 1:
-                                    symbolCachePath = GetDefaultSymbolCache();
-                                    break;
-                                case 2:
-                                    symbolCachePath = parts[1];
-                                    break;
-                                default:
-                                    return false;
-                            }
-                            break;
-
-                        default:
-                            return false;
-                    }
-
-                    // Add the symbol stores to the chain
-                    if (!GetServerSymbolStore(ref store, msdl, false, symbolServerPath, symbolCachePath))
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
+            s_tracer = null;
+            s_symbolStore = null;
+            s_symbolCacheAdded = false;
         }
 
-        private static bool GetServerSymbolStore(ref SymbolStore store, bool msdl, bool symweb, string symbolServerPath, string symbolCachePath)
+        /// <summary>
+        /// Load native symbols and modules (i.e. dac, dbi).
+        /// </summary>
+        /// <param name="callback">called back for each symbol file loaded</param>
+        /// <param name="parameter">callback parameter</param>
+        /// <param name="moduleDirectory">module path</param>
+        /// <param name="moduleFileName">module file name</param>
+        /// <param name="address">module base address</param>
+        /// <param name="size">module size</param>
+        /// <param name="readMemory">read memory callback delegate</param>
+        internal static void LoadNativeSymbols(SymbolFileCallback callback, IntPtr parameter, string moduleDirectory, string moduleFileName, 
+            ulong address, int size, ReadMemoryDelegate readMemory)
         {
-            bool internalServer = false;
-
-            // Add symbol server URL if exists
-            if (symbolServerPath == null)
+            if (s_symbolStore != null)
             {
-                if (msdl)
-                {
-                    symbolServerPath = MsdlsymbolServer;
-                }
-                else if (symweb)
-                {
-                    symbolServerPath = SymwebSymbolService;
-                    internalServer = true;
-                }
-            }
-            else
-            {
-                // Use the internal symbol store for symweb
-                internalServer = symbolServerPath.Contains("symweb");
+                Debug.Assert(s_tracer != null);
+                string path = Path.Combine(moduleDirectory, moduleFileName);
+                Stream stream = new TargetStream(address, size, readMemory);
+                KeyTypeFlags flags = KeyTypeFlags.SymbolKey | KeyTypeFlags.ClrKeys;
+                KeyGenerator generator = null;
 
-                // Make sure the server Uri ends with "/"
-                symbolServerPath = symbolServerPath.TrimEnd('/') + '/';
-            }
-
-            if (symbolServerPath != null)
-            {
-                if (!Uri.TryCreate(symbolServerPath, UriKind.Absolute, out Uri uri) || uri.IsFile)
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    return false;
+                    var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
+                    generator = new ELFFileKeyGenerator(s_tracer, elfFile, path);
                 }
-
-                // Create symbol server store
-                if (internalServer)
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
-                    store = new SymwebHttpSymbolStore(s_tracer, store, uri);
+                    var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
+                    generator = new MachOFileKeyGenerator(s_tracer, machOFile, path);
                 }
                 else
                 {
-                    store = new HttpSymbolStore(s_tracer, store, uri);
+                    return;
+                }
+
+                try
+                {
+                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(flags);
+                    foreach (SymbolStoreKey key in keys)
+                    {
+                        string symbolFileName = Path.GetFileName(key.FullPathName);
+                        s_tracer.Verbose("{0} {1}", key.FullPathName, key.Index);
+
+                        // Don't download the sos binaries that come with the runtime
+                        if (symbolFileName != "SOS.NETCore.dll" && !symbolFileName.StartsWith("libsos."))
+                        {
+                            using (SymbolStoreFile file = GetSymbolStoreFile(key))
+                            {
+                                if (file != null)
+                                {
+                                    string downloadFileName = file.FileName;
+
+                                    // If the downloaded doesn't already exists on disk in the cache, then write it to a temporary location.
+                                    if (!File.Exists(downloadFileName))
+                                    {
+                                        downloadFileName = Path.Combine(GetTempDirectory(), symbolFileName);
+
+                                        using (Stream destinationStream = File.OpenWrite(downloadFileName))
+                                        {
+                                            file.Stream.CopyTo(destinationStream);
+                                        }
+                                        s_tracer.WriteLine("Downloaded symbol file {0}", key.FullPathName);
+                                    }
+                                    s_tracer.Information("{0}: {1}", symbolFileName, downloadFileName);
+                                    callback(parameter, symbolFileName, downloadFileName);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException)
+                {
+                    s_tracer.Error("Exception: {0}/{1}: {2:X16}", moduleDirectory, moduleFileName, address);
                 }
             }
-
-            if (symbolCachePath != null)
-            {
-                store = new CacheSymbolStore(s_tracer, store, symbolCachePath);
-
-                // Don't add the default cache later
-                s_symbolCacheAdded = true;
-            }
-
-            return true;
-        }
-
-        private static string GetDefaultSymbolCache()
-        {
-            var sb = new StringBuilder();
-
-            string environmentVar;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                environmentVar = "ProgramData";
-            }
-            else
-            {
-                environmentVar = "HOME";
-            }
-            string userPath = Environment.GetEnvironmentVariable(environmentVar);
-            sb.Append(userPath);
-            sb.Append(Path.DirectorySeparatorChar);
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                sb.Append("dbg");
-                sb.Append(Path.DirectorySeparatorChar);
-                sb.Append("sym");
-            }
-            else
-            {
-                sb.Append(".sos");
-                sb.Append(Path.DirectorySeparatorChar);
-                sb.Append("symbolcache");
-            }
-            return sb.ToString();
         }
 
         /// <summary>
@@ -922,20 +858,7 @@ namespace SOS
                     }
                     Debug.Assert(codeViewEntry.MinorVersion == ImageDebugDirectory.PortablePDBMinorVersion);
                     SymbolStoreKey key = PortablePDBFileKeyGenerator.GetKey(pdbPath, data.Guid);
-
-                    // Add the default symbol cache if it hasn't already been added
-                    if (!s_symbolCacheAdded)
-                    {
-                        s_symbolStore = new CacheSymbolStore(s_tracer, s_symbolStore, GetDefaultSymbolCache());
-                        s_symbolCacheAdded = true;
-                    }
-
-                    SymbolStoreFile symbolStoreFile = s_symbolStore.GetFile(key, CancellationToken.None).GetAwaiter().GetResult();
-                    if (symbolStoreFile == null)
-                    {
-                        return null;
-                    }
-                    pdbStream = symbolStoreFile.Stream;
+                    pdbStream = GetSymbolStoreFile(key)?.Stream;
                 }
 
                 provider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
@@ -989,6 +912,183 @@ namespace SOS
             return result;
         }
 
+        /// <summary>
+        /// Attempts to download/retrieve from cache the key.
+        /// </summary>
+        /// <param name="key">index of the file to retrieve</param>
+        /// <returns>stream or null</returns>
+        private static SymbolStoreFile GetSymbolStoreFile(SymbolStoreKey key)
+        {
+            // Add the default symbol cache if it hasn't already been added
+            if (!s_symbolCacheAdded) {
+                s_symbolStore = new CacheSymbolStore(s_tracer, s_symbolStore, GetDefaultSymbolCache());
+                s_symbolCacheAdded = true;
+            }
+            return s_symbolStore.GetFile(key, CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Parses the Windows debugger symbol path (srv*, cache*, etc.).
+        /// </summary>
+        /// <param name="store">symbol store to chain</param>
+        /// <param name="symbolPath">Windows symbol path</param>
+        /// <returns>if false, error parsing symbol path</returns>
+        private static bool ParseSymbolPath(ref SymbolStore store, string symbolPath)
+        {
+            string[] paths = symbolPath.Split(";", StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (string path in paths.Reverse())
+            {
+                string[] parts = path.Split("*", StringSplitOptions.RemoveEmptyEntries);
+
+                // UNC or directory paths are ignored (paths not prefixed with srv* or cache*).
+                if (parts.Length > 0)
+                {
+                    string symbolServerPath = null;
+                    string symbolCachePath = null;
+                    bool msdl = false;
+
+                    switch (parts[0].ToLowerInvariant())
+                    {
+                        case "srv":
+                            switch (parts.Length)
+                            { 
+                                case 1:
+                                    msdl = true;
+                                    break;
+                                case 2:
+                                    symbolServerPath = parts[1];
+                                    break;
+                                case 3:
+                                    symbolCachePath = parts[1];
+                                    symbolServerPath = parts[2];
+                                    break;
+                                default:
+                                    return false;
+                            }
+                            break;
+
+                        case "cache":
+                            switch (parts.Length)
+                            { 
+                                case 1:
+                                    symbolCachePath = GetDefaultSymbolCache();
+                                    break;
+                                case 2:
+                                    symbolCachePath = parts[1];
+                                    break;
+                                default:
+                                    return false;
+                            }
+                            break;
+
+                        default:
+                            return false;
+                    }
+
+                    // Add the symbol stores to the chain
+                    if (!GetServerSymbolStore(ref store, msdl, false, symbolServerPath, symbolCachePath))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static bool GetServerSymbolStore(ref SymbolStore store, bool msdl, bool symweb, string symbolServerPath, string symbolCachePath)
+        {
+            bool internalServer = false;
+
+            // Add symbol server URL if exists
+            if (symbolServerPath == null)
+            {
+                if (msdl)
+                {
+                    symbolServerPath = MsdlsymbolServer;
+                }
+                else if (symweb)
+                {
+                    symbolServerPath = SymwebSymbolService;
+                    internalServer = true;
+                }
+            }
+            else
+            {
+                // Use the internal symbol store for symweb
+                internalServer = symbolServerPath.Contains("symweb");
+
+                // Make sure the server Uri ends with "/"
+                symbolServerPath = symbolServerPath.TrimEnd('/') + '/';
+            }
+
+            if (symbolServerPath != null)
+            {
+                if (!Uri.TryCreate(symbolServerPath, UriKind.Absolute, out Uri uri) || uri.IsFile)
+                {
+                    return false;
+                }
+
+                // Create symbol server store
+                if (internalServer)
+                {
+                    store = new SymwebHttpSymbolStore(s_tracer, store, uri);
+                }
+                else
+                {
+                    store = new HttpSymbolStore(s_tracer, store, uri);
+                }
+            }
+
+            if (symbolCachePath != null)
+            {
+                store = new CacheSymbolStore(s_tracer, store, symbolCachePath);
+
+                // Don't add the default cache later
+                s_symbolCacheAdded = true;
+            }
+
+            return true;
+        }
+
+        private static string GetDefaultSymbolCache()
+        {
+            var sb = new StringBuilder();
+
+            string environmentVar;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                environmentVar = "ProgramData";
+            }
+            else
+            {
+                environmentVar = "HOME";
+            }
+            string userPath = Environment.GetEnvironmentVariable(environmentVar);
+            sb.Append(userPath);
+            sb.Append(Path.DirectorySeparatorChar);
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                sb.Append("dbg");
+                sb.Append(Path.DirectorySeparatorChar);
+                sb.Append("sym");
+            }
+            else
+            {
+                sb.Append(".dotnet");
+                sb.Append(Path.DirectorySeparatorChar);
+                sb.Append("symbolcache");
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Attempt to open a file stream.
+        /// </summary>
+        /// <param name="path">file path</param>
+        /// <returns>stream or null if doesn't exist or error</returns>
         private static Stream TryOpenFile(string path)
         {
             if (!File.Exists(path))
@@ -1006,6 +1106,19 @@ namespace SOS
         }
 
         /// <summary>
+        /// Create/return a temporary directory.
+        /// </summary>
+        private static string GetTempDirectory()
+        {
+            if (s_tempDirectory == null)
+            {
+                s_tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+                Directory.CreateDirectory(s_tempDirectory);
+            }
+            return s_tempDirectory;
+        }
+
+        /// <summary>
         /// Quick fix for Path.GetFileName which incorrectly handles Windows-style paths on Linux
         /// </summary>
         /// <param name="pathName"> File path to be processed </param>
@@ -1014,7 +1127,9 @@ namespace SOS
         {
             int pos = pathName.LastIndexOfAny(new char[] { '/', '\\'});
             if (pos < 0)
+            {
                 return pathName;
+            }
             return pathName.Substring(pos + 1);
         }
     }

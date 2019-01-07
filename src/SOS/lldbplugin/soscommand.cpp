@@ -7,22 +7,23 @@
 #include <string.h>
 #include <string>
 
+void *g_sosHandle = nullptr;
+
+// If true, use the directory that libsosplugin is in to load 
+// libsos, otherwise (if false) use the libcoreclr module 
+// directory (legacy behavior).
+bool g_usePluginDirectory = true;
+
 class sosCommand : public lldb::SBCommandPluginInterface
 {
     const char *m_command;
-    void *m_sosHandle;
-
-    // If true, use the directory that libsosplugin is in to load 
-    // libsos, otherwise (if false) use the libcoreclr module 
-    // directory (legacy behavior).
-    bool m_usePluginDirectory;
+    const char *m_arguments;
 
 public:
-    sosCommand(const char *command)
+    sosCommand(const char* command, const char* arguments = nullptr)
     {
         m_command = command;
-        m_sosHandle = NULL;
-        m_usePluginDirectory = true;
+        m_arguments = arguments;
     }
 
     virtual bool
@@ -33,12 +34,12 @@ public:
         LLDBServices* services = new LLDBServices(debugger, result);
         LoadSos(services);
 
-        if (m_sosHandle != NULL)
+        if (g_sosHandle != nullptr)
         {
             const char* sosCommand = m_command;
-            if (sosCommand == NULL) 
+            if (sosCommand == nullptr) 
             {
-                if (arguments == NULL || *arguments == NULL) {
+                if (arguments == nullptr || *arguments == nullptr) {
                     sosCommand = "Help";
                 }
                 else
@@ -46,11 +47,16 @@ public:
                     sosCommand = *arguments++;
                 }
             }
-            CommandFunc commandFunc = (CommandFunc)dlsym(m_sosHandle, sosCommand);
+            CommandFunc commandFunc = (CommandFunc)dlsym(g_sosHandle, sosCommand);
             if (commandFunc)
             {
                 std::string str;
-                if (arguments != NULL)
+                if (m_arguments)
+                {
+                    str.append(m_arguments);
+                    str.append(" ");
+                }
+                if (arguments != nullptr)
                 {
                     for (const char* arg = *arguments; arg; arg = *(++arguments))
                     {
@@ -78,26 +84,26 @@ public:
     void
     LoadSos(LLDBServices *services)
     {
-        if (m_sosHandle == NULL)
+        if (g_sosHandle == nullptr)
         {
-            if (m_usePluginDirectory)
+            if (g_usePluginDirectory)
             {
                 const char *loadDirectory = services->GetPluginModuleDirectory();
-                if (loadDirectory != NULL)
+                if (loadDirectory != nullptr)
                 {
-                    m_sosHandle = LoadModule(services, loadDirectory, MAKEDLLNAME_A("sos"));
+                    g_sosHandle = LoadModule(services, loadDirectory, MAKEDLLNAME_A("sos"));
                 }
             }
             else
             {
                 const char *loadDirectory = services->GetCoreClrDirectory();
-                if (loadDirectory != NULL)
+                if (loadDirectory != nullptr)
                 {
                     // Load the DAC module first explicitly because SOS and DBI
                     // have implicit references to the DAC's PAL.
                     LoadModule(services, loadDirectory, MAKEDLLNAME_A("mscordaccore"));
 
-                    m_sosHandle = LoadModule(services, loadDirectory, MAKEDLLNAME_A("sos"));
+                    g_sosHandle = LoadModule(services, loadDirectory, MAKEDLLNAME_A("sos"));
                 }
             }
         }
@@ -110,9 +116,9 @@ public:
         modulePath.append(moduleName);
 
         void *moduleHandle = dlopen(modulePath.c_str(), RTLD_NOW);
-        if (moduleHandle == NULL)
+        if (moduleHandle == nullptr)
         {
-            services->Output(DEBUG_OUTPUT_ERROR, "dlopen(%s) failed %s\n", modulePath.c_str(), dlerror());
+            services->Output(DEBUG_OUTPUT_ERROR, "Could not load '%s' - %s\n", modulePath.c_str(), dlerror());
         }
 
         return moduleHandle;
@@ -123,11 +129,10 @@ bool
 sosCommandInitialize(lldb::SBDebugger debugger)
 {
     lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
-    interpreter.AddCommand("sos", new sosCommand(NULL), "Various coreclr debugging commands. See 'soshelp' for more details. sos <command-name> <args>");
+    interpreter.AddCommand("sos", new sosCommand(nullptr), "Various coreclr debugging commands. See 'soshelp' for more details. sos <command-name> <args>");
     interpreter.AddCommand("bpmd", new sosCommand("bpmd"), "Creates a breakpoint at the specified managed method in the specified module.");
     interpreter.AddCommand("clrstack", new sosCommand("ClrStack"), "Provides a stack trace of managed code only.");
     interpreter.AddCommand("clrthreads", new sosCommand("Threads"), "List the managed threads running.");
-    interpreter.AddCommand("createdump", new sosCommand("CreateDump"), "Create a xplat minidump.");
     interpreter.AddCommand("clru", new sosCommand("u"), "Displays an annotated disassembly of a managed method.");
     interpreter.AddCommand("dumpasync", new sosCommand("DumpAsync"), "Displays info about async state machines on the garbage-collected heap.");
     interpreter.AddCommand("dumpclass", new sosCommand("DumpClass"), "Displays information about a EE class structure at the specified address.");
@@ -146,6 +151,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     interpreter.AddCommand("eestack", new sosCommand("EEStack"), "Runs dumpstack on all threads in the process.");
     interpreter.AddCommand("gcroot", new sosCommand("GCRoot"), "Displays info about references (or roots) to an object at the specified address.");
     interpreter.AddCommand("ip2md", new sosCommand("IP2MD"), "Displays the MethodDesc structure at the specified address in code that has been JIT-compiled.");
+    interpreter.AddCommand("loadsymbols", new sosCommand("SetSymbolServer", "-loadsymbols"), "Load the .NET Core native module symbols.");
     interpreter.AddCommand("name2ee", new sosCommand("Name2EE"), "Displays the MethodTable structure and EEClass structure for the specified type or method in the specified module.");
     interpreter.AddCommand("pe", new sosCommand("PrintException"), "Displays and formats fields of any object derived from the Exception class at the specified address.");
     interpreter.AddCommand("syncblk", new sosCommand("SyncBlk"), "Displays the SyncBlock holder info.");
