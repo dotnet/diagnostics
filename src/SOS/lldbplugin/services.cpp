@@ -48,9 +48,9 @@ LLDBServices::QueryInterface(
         AddRef();
         return S_OK;
     }
-    else if (InterfaceId == __uuidof(ISOSHostServices))
+    else if (InterfaceId == __uuidof(ILLDBServices2))
     {
-        *Interface = (ISOSHostServices*)this;
+        *Interface = (ILLDBServices2*)this;
         AddRef();
         return S_OK;
     }
@@ -1717,7 +1717,7 @@ LLDBServices::GetFrameOffset(
 }
 
 //----------------------------------------------------------------------------
-// ISOSHostServices
+// ILLDBServices2
 //----------------------------------------------------------------------------
 
 HRESULT 

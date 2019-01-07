@@ -5660,8 +5660,6 @@ DECLARE_API(SyncBlk)
     return Status;
 }
 
-#ifndef FEATURE_PAL
-
 #ifdef FEATURE_COMINTEROP
 struct VisitRcwArgs
 {
@@ -5746,7 +5744,6 @@ DECLARE_API(RCWCleanupList)
     return Status;
 }
 #endif // FEATURE_COMINTEROP
-
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -5889,8 +5886,6 @@ DECLARE_API(FinalizeQueue)
 
     return Status;
 }
-
-#endif // FEATURE_PAL
 
 enum {
     // These are the values set in m_dwTransientFlags.
