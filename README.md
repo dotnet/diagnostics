@@ -100,8 +100,7 @@ Symbol server support - The `setsymbolserver` command enables downloading the sy
 
 ## Build Status
 
-[![Build Status](https://dotnet.visualstudio.com/_apis/public/build/definitions/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/72/badge
-)](https://dotnet.visualstudio.com/DotNet-Public/_build/index?definitionId=72&branchName=master)
+[![Build Status](https://dnceng.visualstudio.com/public/_apis/build/status/dotnet/diagnostics/public-ci?branchName=master)](https://dnceng.visualstudio.com/public/_build/latest?definitionId=72?branchName=master)
 
 [//]: # (End current test results)
 
