@@ -493,11 +493,11 @@ static void SymbolFileCallback(void* param, const char* moduleFileName, const ch
         }
         return;
     }
-    ToRelease<ISOSHostServices> sosHostServices(NULL);
-    HRESULT Status = g_ExtServices->QueryInterface(__uuidof(ISOSHostServices), (void**)&sosHostServices);
+    ToRelease<ILLDBServices2> services2(NULL);
+    HRESULT Status = g_ExtServices->QueryInterface(__uuidof(ILLDBServices2), (void**)&services2);
     if (SUCCEEDED(Status))
     {
-        sosHostServices->AddModuleSymbol(param, symbolFileName);
+        services2->AddModuleSymbol(param, symbolFileName);
     }
 }
 
@@ -531,11 +531,11 @@ HRESULT LoadNativeSymbols()
 #ifdef FEATURE_PAL
     if (g_symbolStoreInitialized)
     {
-        ToRelease<ISOSHostServices> sosHostServices(NULL);
-        Status = g_ExtServices->QueryInterface(__uuidof(ISOSHostServices), (void**)&sosHostServices);
+        ToRelease<ILLDBServices2> services2(NULL);
+        Status = g_ExtServices->QueryInterface(__uuidof(ILLDBServices2), (void**)&services2);
         if (SUCCEEDED(Status))
         {
-            Status = sosHostServices->LoadNativeSymbols(LoadNativeSymbolsCallback);
+            Status = services2->LoadNativeSymbols(LoadNativeSymbolsCallback);
         }
     }
 #endif

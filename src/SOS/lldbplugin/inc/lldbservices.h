@@ -545,11 +545,11 @@ public:
 typedef void (*PFN_MODULE_LOAD_CALLBACK)(void* param, const char* moduleName, const char* moduleDirectory, ULONG64 moduleAddress, int moduleSize);
 
 MIDL_INTERFACE("012F32F0-33BA-4E8E-BC01-037D382D8A5E")
-ISOSHostServices : public IUnknown
+ILLDBServices2: public IUnknown
 {
 public:
     //----------------------------------------------------------------------------
-    // ISOSHostServices
+    // ILLDBServices2
     //----------------------------------------------------------------------------
 
     virtual HRESULT LoadNativeSymbols(

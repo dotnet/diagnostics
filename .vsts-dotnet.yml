@@ -316,55 +316,8 @@ phases:
   
   # Copy and archive the files for windbg extension gallery.
 
-  - task: CopyFiles@2
-    displayName: Copy Extension Gallery Files
-    inputs:
-      sourceFolder: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.x64.Release'
-      contents: 'sos.dll'
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/gallery/x64'
-    condition: succeeded()
-
-  - task: CopyFiles@2
-    displayName: Copy Extension Gallery Files
-    inputs:
-      sourceFolder: '$(_SOSNETCorePath)'
-      contents: '*.dll'
-      overWrite: true
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/gallery/x64'
-    condition: succeeded()
-
-  - task: CopyFiles@2
-    displayName: Copy Extension Gallery Files
-    inputs:
-      sourceFolder: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.x86.Release'
-      contents: 'sos.dll'
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/gallery/x86'
-    condition: succeeded()
-
-  - task: CopyFiles@2
-    displayName: Copy Extension Gallery Files
-    inputs:
-      sourceFolder: '$(_SOSNETCorePath)'
-      contents: '*.dll'
-      overWrite: true
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/gallery/x86'
-    condition: succeeded()
-
-  - task: CopyFiles@2
-    displayName: Copy Extension Gallery Files
-    inputs:
-      sourceFolder: '$(Build.SourcesDirectory)/eng'
-      contents: 'GalleryManifest.xml'
-      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/gallery'
-    condition: succeeded()
-
-  - task: ArchiveFiles@2
-    displayName: Archive Extension Gallery Files
-    inputs:
-      archiveType: zip
-      includeRootFolder: false
-      rootFolderOrFile: '$(Build.SourcesDirectory)/artifacts/bin/gallery'
-      archiveFile: '$(Build.SourcesDirectory)/artifacts/packages/Release/sos-gallery.zip'
+  - powershell: $(Build.SourcesDirectory)\eng\create-gallery-zip.ps1 $(Build.SourcesDirectory)
+    displayName: Create Extension Gallery Zip File
     condition: succeeded()
 
   # Linux download, copy and archive

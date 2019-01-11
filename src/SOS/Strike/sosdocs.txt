@@ -68,32 +68,12 @@ HistClear                          Help (soshelp)
 \\
 
 COMMAND: faq.
->> Where can I get the right version of SOS for my build?
+>> How to install or update SOS? SOS is in the extension gallery and is automatically
+loaded when the coreclr.dll is loaded in the target process. If the SOS isn't loaded
+or a old version is loaded execute:
 
-SOS.dll is installed in the same directory as the main .NET Core binaries (coreclr.dll). Newer
-versions of the Windows Debugger provide a command to make it easy to load the right copy of 
-SOS.dll:
-
-    ".loadby sos coreclr"
-
-That will load the SOS extension DLL from the same place that coreclr.dll is 
-loaded in the process. You shouldn't attempt to use a version of sos.dll that 
-doesn't match the version of coreclr.dll. You can find the version of 
-coreclr.dll by running 
-
-    "lmvm coreclr"
-
-in the debugger. 
-
-If you are using a dump file created on another machine, it is a little bit
-more complex. You need to make sure the mscordacwks.dll file that came with
-that install is on your symbol path, and you need to load the corresponding
-version of sos.dll (typing .load <full path to sos.dll> rather than using the
-.loadby shortcut). Within the Microsoft corpnet, we keep tagged versions 
-of mscordacwks.dll, with names like mscordacwks_<architecture>_<version>.dll
-that the Windows Debugger can load. If you have the correct symbol path to the
-binaries for that version of the Runtime, the Windows Debugger will load the
-correct mscordacwks.dll file.
+    ".update sos"
+    ".load sos"
 
 >> I have a chicken and egg problem. I want to use SOS commands, but the coreclr
 isn't loaded yet. What can I do?

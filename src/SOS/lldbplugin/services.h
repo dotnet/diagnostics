@@ -4,7 +4,7 @@
 
 #include <cstdarg>
 
-class LLDBServices : public ILLDBServices, public ISOSHostServices
+class LLDBServices : public ILLDBServices, public ILLDBServices2
 {
 private:
     LONG m_ref;
@@ -266,7 +266,7 @@ public:
         PULONG64 offset);
 
     //----------------------------------------------------------------------------
-    // ISOSHostServices
+    // ILLDBServices2
     //----------------------------------------------------------------------------
 
     HRESULT LoadNativeSymbols(

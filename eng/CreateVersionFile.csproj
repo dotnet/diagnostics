@@ -10,7 +10,14 @@
 
   <Target Name="Build" />
 
-  <Target Name="GenerateVersionFiles" DependsOnTargets="GenerateVersionHeader;GenerateVersionSourceFile" />
+  <Target Name="GenerateVersionFiles" DependsOnTargets="GenerateVersionPrefixFile;GenerateVersionHeader;GenerateVersionSourceFile" />
+
+  <Target Name="GenerateVersionPrefixFile" Condition="'$(VersionPrefixFile)' != ''" >
+    <ItemGroup>
+      <VersionPrefixLines Include="$(VersionPrefix)" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(VersionPrefixFile)" Lines="@(VersionPrefixLines)" Overwrite="true" />
+  </Target>
 
   <Target Name="GenerateVersionHeader" DependsOnTargets="GetAssemblyVersion;AddSourceRevisionToInformationalVersion" Condition="'$(NativeVersionHeaderFile)' != '' and '$(GenerateVersionHeader)' == 'true' and !Exists($(NativeVersionHeaderFile))">
 

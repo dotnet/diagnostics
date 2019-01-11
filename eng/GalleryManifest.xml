@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ExtensionPackage>
     <Name>SOS</Name>
-    <Version>1.0.0.0</Version> 
+    <Version>X.X.X.X</Version> 
     <Description>Debugging aid for .NET Core programs and runtimes</Description>
     <Components>
         <BinaryComponent Name="sos" Type="Engine">
