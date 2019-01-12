@@ -2585,9 +2585,11 @@ code that runs as part of SOS in the debugger (cdb/windbg). The runtime needs
 to be at least version 2.0.0 or greater. If there are spaces in directory, it
 needs to be single-quoted (').
 
-The default is to use the same runtime (coreclr.dll) being debugged. Use this
-command when the runtime being debugged isn't working to run the SOS code or
-if the version is less than 2.0.0.
+Normally, SOS attempts to find an installed .NET Core runtime to run its
+managed code automatically but this command is available if it fails. The
+default is to use the same runtime (coreclr.dll) being debugged. Use this
+command if the default runtime being debugged isn't working enough to run
+the SOS code or if the version is less than 2.0.0.
 
 If you received the following error message when running a SOS command, use
 this command to set the path to 2.0.0 or greater .NET Core runtime.
@@ -2608,7 +2610,7 @@ SetSymbolServer [-ms] [-mi] [-disable] [-log] [-cache <cache-path>] [<symbol-ser
 -ms - Use the public Microsoft symbol server.
 -mi - Use the internal symweb symbol server.
 -disable - Disable symbol download support.
--cache - Specific a symbol cache directory. The default is $HOME/.sos/symbolcache if not specified.
+-cache - Specific a symbol cache directory. The default is %TEMP%\SymbolCache if not specified.
 -log - Enable symbol download logging.
 <symbol-server-URL> - Symbol server URL.
 

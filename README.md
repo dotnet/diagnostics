@@ -89,6 +89,10 @@ Symbol server support - The `setsymbolserver` command enables downloading the sy
     
     (lldb) setsymbolserver -ms
 
+Before executing the "bt" command to dump native frames to load the native symbols (for live debugging only):
+
+    (lldb) loadsymbols
+
 ## Useful Links
 
 * [The LLDB Debugger](http://lldb.llvm.org/index.html) - More information about lldb.
@@ -100,7 +104,7 @@ Symbol server support - The `setsymbolserver` command enables downloading the sy
 
 ## Build Status
 
-[![Build Status](https://dnceng.visualstudio.com/public/_apis/build/status/dotnet/diagnostics/public-ci?branchName=master)](https://dnceng.visualstudio.com/public/_build/latest?definitionId=72&branchName=master)
+[![Build Status](https://dnceng.visualstudio.com/public/_apis/build/status/dotnet/diagnostics/diagnostics-public-ci?branchName=master)](https://dnceng.visualstudio.com/public/_build/latest?definitionId=72&branchName=master)
 
 [//]: # (End current test results)
 

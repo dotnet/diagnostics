@@ -135,20 +135,20 @@ phases:
           artifactName: $(_PhaseName)_$(Agent.JobName)
         condition: and(succeeded(), ne(variables['_PublishArtifacts'], ''))
 
-      - task: CopyFiles@2
-        displayName: Gather Build Logs
-        inputs:
-          sourceFolder: '$(Build.SourcesDirectory)/artifacts'
-          contents: '?(log|TestResults)/**'
-          targetFolder: '$(Build.StagingDirectory)/BuildLogs'
-        continueOnError: true
-        condition: always()
+    - task: CopyFiles@2
+      displayName: Gather Build Logs
+      inputs:
+        sourceFolder: '$(Build.SourcesDirectory)/artifacts'
+        contents: '?(log|TestResults)/**'
+        targetFolder: '$(Build.StagingDirectory)/BuildLogs'
+      continueOnError: true
+      condition: always()
 
-      - task: PublishBuildArtifacts@1
-        displayName: Publish Logs to VSTS
-        inputs:
-          PathtoPublish: '$(Build.StagingDirectory)/BuildLogs'
-          PublishLocation: Container
-          ArtifactName: Logs_$(_PhaseName)_$(Agent.JobName)
-        continueOnError: true
-        condition: always()
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Logs to VSTS
+      inputs:
+        PathtoPublish: '$(Build.StagingDirectory)/BuildLogs'
+        PublishLocation: Container
+        ArtifactName: Logs_$(_PhaseName)_$(Agent.JobName)
+      continueOnError: true
+      condition: always()

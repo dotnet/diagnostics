@@ -7152,7 +7152,7 @@ public:
 
         mdMethodDef methodDef;
         ULONG32 ilOffset;
-        if(FAILED(Status = pSymbolReader->ResolveSequencePoint(pFilename, lineNumber, mod, &methodDef, &ilOffset)))
+        if(FAILED(Status = pSymbolReader->ResolveSequencePoint(pFilename, lineNumber, &methodDef, &ilOffset)))
         {
             return S_FALSE; // not binding in a module is typical
         }
@@ -7992,7 +7992,7 @@ DECLARE_API(bpmd)
                     // if we have symbols then get the function name so we can lookup the MethodDescs
                     mdMethodDef methodDefToken;
                     ULONG32 ilOffset;
-                    if(SUCCEEDED(symbolReader.ResolveSequencePoint(Filename, lineNumber, moduleList[iModule], &methodDefToken, &ilOffset)))
+                    if(SUCCEEDED(symbolReader.ResolveSequencePoint(Filename, lineNumber, &methodDefToken, &ilOffset)))
                     {
                         ToRelease<IXCLRDataMethodDefinition> pMethodDef = NULL;
                         if (SUCCEEDED(ModDef->GetMethodDefinitionByToken(methodDefToken, &pMethodDef)))
@@ -12682,21 +12682,24 @@ public:
                 break;
             }
             
-            CROSS_PLATFORM_CONTEXT context;
+            // This is a workaround for a problem in the MacOS DAC/DBI PAL. The exception
+            // handling is enabled for DLLs and not passing them on to the OS causing an 
+            // fatal fault. Putting this struct in the heap works around this fault.
+            ArrayHolder<CROSS_PLATFORM_CONTEXT> context = new CROSS_PLATFORM_CONTEXT[1];
             ULONG32 cbContextActual;
-            if ((Status=pStackWalk->GetContext(
+            if ((Status = pStackWalk->GetContext(
                 DT_CONTEXT_FULL, 
-                sizeof(context),
+                sizeof(CROSS_PLATFORM_CONTEXT),
                 &cbContextActual,
-                (BYTE *)&context))!=S_OK)
+                (BYTE *)context.GetPtr())) != S_OK)
             {
                 ExtOut("GetFrameContext failed: %lx\n",Status);
                 break;
             }
 
             // First find the info for the Frame object, if the current frame has an associated clr!Frame.
-            CLRDATA_ADDRESS sp = GetSP(context);
-            CLRDATA_ADDRESS ip = GetIP(context);
+            CLRDATA_ADDRESS sp = GetSP(*context.GetPtr());
+            CLRDATA_ADDRESS ip = GetIP(*context.GetPtr());
 
             ToRelease<ICorDebugFrame> pFrame;
             IfFailRet(pStackWalk->GetFrame(&pFrame));
@@ -12765,7 +12768,7 @@ public:
                 IfFailRet(pFunction->GetModule(&pModule));
                 IfFailRet(pFunction->GetToken(&methodDef));
 
-                WCHAR wszModuleName[100];
+                WCHAR wszModuleName[MAX_LONGPATH];
                 ULONG32 cchModuleNameActual;
                 IfFailRet(pModule->GetName(_countof(wszModuleName), &cchModuleNameActual, wszModuleName));
 
@@ -15468,13 +15471,14 @@ DECLARE_API(SetSymbolServer)
             ExtOut("Symbol cache path: %s\n", symbolCache.data);
         }
     }
-
-#ifdef FEATURE_PAL
-    if (loadNative)
+    else if (loadNative)
     {
         Status = LoadNativeSymbols();
     }
-#endif
+    else
+    {
+        DisplaySymbolStore();
+    }
 
     return Status;
 }

@@ -14,6 +14,8 @@
 
 #define VER_PRODUCTVERSION_W        (0x0100)
 
+extern void SOSShutdown();
+
 //
 // globals
 //
@@ -256,6 +258,7 @@ DebugExtensionInitialize(PULONG Version, PULONG Flags)
     ExtRelease();
     
     OnUnloadTask::Register(CleanupEventCallbacks);
+    OnUnloadTask::Register(SOSShutdown);
     g_pCallbacksClient = DebugClient;
     EventCallbacks* pCallbacksObj = new EventCallbacks(DebugClient);
     IDebugEventCallbacks* pCallbacks = NULL;
