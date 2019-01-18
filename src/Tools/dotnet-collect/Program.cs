@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.Tools.Collect
                 return ExecuteKeywordsForAsync(console);
             }
 
-            if(string.IsNullOrEmpty(ConfigPath))
+            if (string.IsNullOrEmpty(ConfigPath) && !Etw)
             {
                 ConfigPath = ConfigPathDetector.TryDetectConfigPath(ProcessId);
                 if(string.IsNullOrEmpty(ConfigPath))
