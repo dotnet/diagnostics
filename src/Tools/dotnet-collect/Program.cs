@@ -28,6 +28,9 @@ namespace Microsoft.Diagnostics.Tools.Collect
         [Option("-o|--output <OUTPUT_DIRECTORY>", Description = "The directory to write the trace to. Defaults to the current working directory.")]
         public string OutputDir { get; set; }
 
+        [Option("--format <FORMAT_NAME>", Description = "The format of the output file: Trace (default) or SpeedScope.")]
+        public string OutputFormat { get; set; } = "Trace";
+
         [Option("--buffer <BUFFER_SIZE_IN_MB>", Description = "The size of the in-memory circular buffer in megabytes.")]
         public int? CircularMB { get; set; }
 
@@ -77,7 +80,8 @@ namespace Microsoft.Diagnostics.Tools.Collect
             {
                 ProcessId = ProcessId,
                 CircularMB = CircularMB,
-                OutputPath = string.IsNullOrEmpty(OutputDir) ? Directory.GetCurrentDirectory() : OutputDir
+                OutputPath = string.IsNullOrEmpty(OutputDir) ? Directory.GetCurrentDirectory() : OutputDir,
+                OutputFormat = OutputFormat
             };
 
             if (Profiles != null && Profiles.Count > 0)
@@ -142,7 +146,10 @@ namespace Microsoft.Diagnostics.Tools.Collect
             await console.WaitForCtrlCAsync();
 
             await collector.StopCollectingAsync();
-            console.WriteLine($"Tracing stopped. Trace files written to {config.OutputPath}");
+
+            await collector.FormatOutputAsync();
+
+            console.WriteLine($"Tracing stopped. Output files written to {config.OutputPath}");
 
             return 0;
         }

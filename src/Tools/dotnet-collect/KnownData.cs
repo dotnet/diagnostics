@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Linq;
+using Microsoft.Diagnostics.Tracing.EventPipe;
 using Microsoft.Diagnostics.Tracing.Parsers;
 
 namespace Microsoft.Diagnostics.Tools.Collect
@@ -25,7 +26,10 @@ namespace Microsoft.Diagnostics.Tools.Collect
                 CollectionProfile.DefaultProfileName,
                 "A default set of event providers useful for diagosing problems in any .NET application.",
                 new[] {
-                    new EventSpec(ClrTraceEventParser.ProviderName, (ulong)ClrTraceEventParser.Keywords.Default, EventLevel.Informational)
+                    new EventSpec(ClrTraceEventParser.ProviderName, (ulong)ClrTraceEventParser.Keywords.Default, EventLevel.Informational),
+                    new EventSpec(SampleProfilerTraceEventParser.ProviderName, ulong.MaxValue, EventLevel.Verbose),
+                    new EventSpec("Microsoft-Windows-DotNETRuntimeRundown", ulong.MaxValue, EventLevel.Verbose),
+                    new EventSpec("Microsoft-Windows-DotNETRuntimePrivate", ulong.MaxValue, EventLevel.Verbose)
                 },
                 Array.Empty<LoggerSpec>());
 

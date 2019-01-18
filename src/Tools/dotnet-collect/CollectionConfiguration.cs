@@ -10,6 +10,7 @@ namespace Microsoft.Diagnostics.Tools.Collect
     {
         public int? ProcessId { get; set; }
         public string OutputPath { get; set; }
+        public string OutputFormat { get; set; }
         public int? CircularMB { get; set; }
         public IList<EventSpec> Providers { get; set; } = new List<EventSpec>();
         public IList<LoggerSpec> Loggers { get; set; } = new List<LoggerSpec>();
