@@ -58,7 +58,8 @@ namespace Microsoft.Diagnostics.Tools.Collect
 
         private string GetNetPerfFilePath()
         {
-            var processName = Path.GetFileNameWithoutExtension(ConfigPathDetector.TryDetectConfigPath(Config.ProcessId.Value));
+            var processName = Path.GetFileNameWithoutExtension(ConfigPathDetector.TryDetectConfigPath(Config.ProcessId.Value))
+                ?? Path.GetFileNameWithoutExtension(_configPath);
 
             return Path.Combine(Config.OutputPath, $"{processName}.{Config.ProcessId.Value}.netperf");
         }
