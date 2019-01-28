@@ -2,13 +2,13 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using McMaster.Extensions.CommandLineUtils;
-using SOS.InstallHelper;
+using SOS;
 using System;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.SOS
 {
-    [Command(Name = "dotnet-analyze", Description = "Install and configure SOS")]
+    [Command(Name = "dotnet-sos", Description = "Install and configure SOS")]
     internal class Program
     {
         [Option("--install", Description = "Install and configure SOS.")]
@@ -17,30 +17,30 @@ namespace Microsoft.Diagnostics.Tools.SOS
         [Option("--uninstall", Description = "Uninstall SOS.")]
         public bool UninstallSOS { get; set; }
 
+        [Option("--source", Description = "SOS binaries source path.")]
+        public string SOSSourcePath { get; set; }
+
         public int OnExecute(IConsole console, CommandLineApplication app)
         {
             if (InstallSOS || UninstallSOS)
             {
-                var sosInstaller = new InstallHelper();
+                var sosInstaller = new InstallHelper((message) => console.WriteLine(message));
+                if (SOSSourcePath != null)
+                {
+                    sosInstaller.SOSSourcePath = SOSSourcePath;
+                }
                 try
                 {
                     if (UninstallSOS)
                     {
-                        console.WriteLine("Uninstalling SOS from {0}", sosInstaller.InstallLocation);
                         sosInstaller.Uninstall();
                     }
                     else 
                     {
-                        console.WriteLine("Installing SOS to {0}", sosInstaller.InstallLocation);
                         sosInstaller.Install();
-
-                        if (sosInstaller.LLDBInitFile != null) {
-                            console.WriteLine("Configuring LLDB {0}", sosInstaller.LLDBInitFile);
-                            sosInstaller.Configure();
-                        }
                     }
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is ArgumentException || ex is PlatformNotSupportedException || ex is InvalidOperationException)
                 {
                     console.Error.WriteLine(ex.Message);
                     return 1;

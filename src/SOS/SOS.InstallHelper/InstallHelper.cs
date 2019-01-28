@@ -8,8 +8,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security;
 
-namespace SOS.InstallHelper
+namespace SOS
 {
     /// <summary>
     /// Functions to install and configure SOS from the package containing this code.
@@ -37,22 +38,35 @@ namespace SOS.InstallHelper
         public string SOSSourcePath { get; set; }
 
         /// <summary>
+        /// Console output delegate
+        /// </summary>
+        private Action<string> m_writeLine;
+
+        /// <summary>
         /// Create an instance of the installer.
         /// </summary>
         /// <exception cref="PlatformNotSupportedException">unknown operating system</exception>
-        public InstallHelper()
+        /// <exception cref="InvalidOperationException">environment variable not found</exception>
+        public InstallHelper(Action<string> writeLine)
         {
+            m_writeLine = writeLine;
             string home = null;
             string os = null;
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) 
             {
                 home = Environment.GetEnvironmentVariable("USERPROFILE");
+                if (string.IsNullOrEmpty(home)) {
+                    throw new InvalidOperationException("USERPROFILE environment variable not found");
+                }
                 os = "win";
             }
             else
             {
                 home = Environment.GetEnvironmentVariable("HOME");
+                if (string.IsNullOrEmpty(home)) {
+                    throw new InvalidOperationException("HOME environment variable not found");
+                }
                 LLDBInitFile = Path.Combine(home, ".lldbinit");
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
@@ -65,7 +79,6 @@ namespace SOS.InstallHelper
             if (os == null) {
                 throw new PlatformNotSupportedException($"Unsupported operating system {RuntimeInformation.OSDescription}");
             }
-            Debug.Assert(!string.IsNullOrEmpty(home));
             InstallLocation = Path.GetFullPath(Path.Combine(home, ".dotnet", "sos"));
 
             string architecture = RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant();
@@ -76,38 +89,102 @@ namespace SOS.InstallHelper
         /// <summary>
         /// Install SOS to well known location (InstallLocation).
         /// </summary>
-        /// <exception cref="ArgumentException"></exception>
         /// <exception cref="PlatformNotSupportedException">SOS not found for OS/architecture</exception>
+        /// <exception cref="ArgumentException">various</exception>
         public void Install()
         {
-            Debug.Assert(!string.IsNullOrEmpty(InstallLocation));
-            Debug.Assert(!string.IsNullOrEmpty(SOSSourcePath));
+            WriteLine("Installing SOS to {0} from {1}", InstallLocation, SOSSourcePath);
+
+            if (string.IsNullOrEmpty(SOSSourcePath)) {
+                throw new ArgumentException("SOS source path not valid");
+            }
             if (!Directory.Exists(SOSSourcePath)) {
                 throw new PlatformNotSupportedException($"Operating system or architecture not supported: installing from {SOSSourcePath}");
             }
-            Directory.CreateDirectory(InstallLocation);
-            foreach (string file in Directory.EnumerateFiles(SOSSourcePath))
-            {
-                string destinationFile = Path.Combine(InstallLocation, Path.GetFileName(file));
-                File.Copy(file, destinationFile, overwrite: true);
+            if (string.IsNullOrEmpty(InstallLocation)) {
+                throw new ArgumentException($"Installation path {InstallLocation} not valid");
             }
+
+            // Rename any existing installation
+            string previousInstall = null;
+            if (Directory.Exists(InstallLocation))
+            {
+                WriteLine("Installing over existing installation...");
+                previousInstall = Path.Combine(Path.GetDirectoryName(InstallLocation), Path.GetRandomFileName());
+                RetryOperation($"Installation path '{InstallLocation}' not valid", () => Directory.Move(InstallLocation, previousInstall));
+            }
+
+            bool installSuccess = false;
+            try
+            {
+                // Create the installation directory
+                WriteLine("Creating installation directory...");
+                RetryOperation($"Installation path '{InstallLocation}' not valid", () => Directory.CreateDirectory(InstallLocation));
+
+                // Copy SOS files
+                WriteLine("Copying files...");
+                RetryOperation("Problem installing SOS", () =>
+                {
+                    foreach (string file in Directory.EnumerateFiles(SOSSourcePath))
+                    {
+                        string destinationFile = Path.Combine(InstallLocation, Path.GetFileName(file));
+                        File.Copy(file, destinationFile, overwrite: true);
+                    }
+                });
+
+                // Configure lldb 
+                if (LLDBInitFile != null) {
+                    Configure();
+                }
+
+                // If we get here without an exception, success!
+                installSuccess = true;
+            }
+            finally
+            {
+                if (previousInstall != null)
+                {
+                    WriteLine("Cleaning up...");
+                    if (installSuccess)
+                    {
+                        // Delete the previous installation if the install was successful
+                        RetryOperation(null, () => Directory.Delete(previousInstall, recursive: true));
+                    }
+                    else
+                    {
+                        // Delete partial installation
+                        RetryOperation(null, () => Directory.Delete(InstallLocation, recursive: true));
+
+                        // Restore previous install
+                        WriteLine("Restoring previous installation...");
+                        RetryOperation(null, () => Directory.Move(previousInstall, InstallLocation));
+                    }
+                }
+            }
+
+            Debug.Assert(installSuccess);
+            WriteLine("SOS install succeeded");
         }
 
         /// <summary>
         /// Uninstalls and removes the SOS configuration.
         /// </summary>
+        /// <exception cref="ArgumentException">various</exception>
         public void Uninstall()
         {
-            if (!string.IsNullOrEmpty(LLDBInitFile)) {
+            WriteLine("Uninstalling SOS from {0}", InstallLocation);
+            if (!string.IsNullOrEmpty(LLDBInitFile))
+            {
                 Configure(remove: true);
             }
             if (Directory.Exists(InstallLocation))
             {
-                foreach (string file in Directory.EnumerateFiles(InstallLocation))
-                {
-                    File.Delete(file);
-                }
-                Directory.Delete(InstallLocation);
+                RetryOperation("Problem uninstalling SOS", () => Directory.Delete(InstallLocation, recursive: true));
+                WriteLine("SOS uninstall succeeded");
+            }
+            else
+            {
+                WriteLine("SOS not installed");
             }
         }
 
@@ -122,23 +199,28 @@ namespace SOS.InstallHelper
         public void Configure(bool remove = false)
         {
             if (string.IsNullOrEmpty(LLDBInitFile)) {
-                throw new ArgumentException("No lldb configuration file");
+                throw new ArgumentException("No lldb configuration file path");
             }
+            bool changed = false;
+            bool existing = false;
 
             // Remove the start/end marker from an existing .lldbinit file
             var lines = new List<string>();
             if (File.Exists(LLDBInitFile))
             {
+                existing = true;
                 bool markerFound = false;
                 foreach (string line in File.ReadAllLines(LLDBInitFile))
                 {
                     if (line.Contains(InitFileEnd)) {
                         markerFound = false;
+                        changed = true;
                         continue;
                     }
                     if (!markerFound) {
                         if (line.Contains(InitFileStart)) {
                             markerFound = true;
+                            changed = true;
                             continue;
                         }
                         lines.Add(line);
@@ -161,12 +243,65 @@ namespace SOS.InstallHelper
                     lines.Add(string.Format("setsymbolserver -ms"));
                 }
                 lines.Add(InitFileEnd);
+                changed = true;
             }
 
             // If there is anything to write, write the lldb init file
-            if (lines.Count > 0) {
-                File.WriteAllLines(LLDBInitFile, lines.ToArray());
+            if (changed)
+            {
+                if (remove) {
+                    WriteLine("Reverting {0} file - LLDB will no longer load SOS at startup", LLDBInitFile);
+                }
+                else {
+                    WriteLine("{0} {1} file - LLDB will load SOS automatically at startup", existing ? "Updating existing" : "Creating new", LLDBInitFile);
+                }
+                RetryOperation($"Problem writing lldb init file {LLDBInitFile}", () => File.WriteAllLines(LLDBInitFile, lines.ToArray()));
             }
+        }
+
+        /// <summary>
+        /// Retries any IO operation failures.
+        /// </summary>
+        /// <param name="errorMessage">text message or null (don't throw exception)</param>
+        /// <param name="operation">callback</param>
+        /// <exception cref="ArgumentException">errorMessage</exception>
+        private void RetryOperation(string errorMessage, Action operation)
+        {
+            Exception lastfailure = null;
+
+            for (int retry = 0; retry < 5; retry++)
+            {
+                try
+                {
+                    operation();
+                    return;
+                }
+                catch (Exception ex) when (ex is IOException)
+                {
+                    // Retry file copy possible recoverable exception
+                    lastfailure = ex;
+                }
+                catch (Exception ex) when (ex is ArgumentException || ex is UnauthorizedAccessException || ex is SecurityException)
+                {
+                    if (errorMessage == null) {
+                        return;
+                    }
+                    throw new ArgumentException($"{errorMessage}: {ex.Message}", ex);
+                }
+            }
+
+            if (lastfailure != null)
+            {
+                if (errorMessage == null) {
+                    return;
+                }
+                throw new ArgumentException($"{errorMessage}: {lastfailure.Message}", lastfailure);
+            }
+        }
+
+        private void WriteLine(string format, params object[] args)
+        {
+            m_writeLine?.Invoke(string.Format(format, args));
         }
     }
 }

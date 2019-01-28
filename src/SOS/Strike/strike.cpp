@@ -12682,9 +12682,10 @@ public:
                 break;
             }
             
-            // This is a workaround for a problem in the MacOS DAC/DBI PAL. The exception
-            // handling is enabled for DLLs and not passing them on to the OS causing an 
-            // fatal fault. Putting this struct in the heap works around this fault.
+            // This is a workaround for a problem in the MacOS DAC/DBI PAL. The PAL exception
+            // handling is unnecessarily enabled for DLLs and is not properly passing what I
+            // think is recoverable stack fault on to the OS. Instead it is causing a fault
+            // GP fault. Putting this struct in the heap works around this fault.
             ArrayHolder<CROSS_PLATFORM_CONTEXT> context = new CROSS_PLATFORM_CONTEXT[1];
             ULONG32 cbContextActual;
             if ((Status = pStackWalk->GetContext(
