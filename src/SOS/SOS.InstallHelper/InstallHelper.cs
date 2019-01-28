@@ -9,7 +9,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace SOS.InstallHelper
+namespace SOS
 {
     /// <summary>
     /// Functions to install and configure SOS from the package containing this code.

@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using McMaster.Extensions.CommandLineUtils;
-using SOS.InstallHelper;
+using SOS;
 using System;
 using System.Threading.Tasks;
 
