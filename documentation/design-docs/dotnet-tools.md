@@ -1,124 +1,796 @@
-#Dotnet Diagnostic Tools CLI Design
+# Dotnet Diagnostic Tools CLI Design
 
-Capturing some comments from https://github.com/dotnet/diagnostics/issues/85 as a starting point
-we can edit from. This needs cleanup.
+# User workflows
 
-@davidfowl wrote:
+These are some quick examples of the work we'd expect a .Net developer to want to get a feel for the design. A more complete reference follows.
 
-@shirhatti We're thinking it should be part of dotnet-collect since all of the flags and infrastructure would likely be the same and it should have a "top" like interface. 
-
-![image](https://user-images.githubusercontent.com/95136/49297973-09575400-f471-11e8-99ec-823e616eafa2.png)
-
-We'll need to decide what things we show (aggregations and counters)
+### Ad-hoc Health Monitoring / 1st Level Performance Triage
 
 
+**Seeing performance counter values that refresh periodically in-place**
+
+    > dotnet tool install -g dotnet-counters
+    You can invoke the tool using the following command: dotnet-counters
+    Tool 'dotnet-counters' (version '1.0.0') was successfully installed.
+    > dotnet counters monitor --process-id 1902 Microsoft-Windows-DotNETRuntime Microsoft-AspNet
+    
+    Microsoft-Windows-DotNETRuntime: 
+        Total Processor Time (ms)              173923.48 
+        Private Virtual Memory (MB)                 1094       
+        Working Set (MB)                            1982
+        Virtual Memory (MB)                         3041
+        GC Heap Memory (MB)                          784
+        Exception Thrown Rate (exceptions/min)       117
+        Lock Contention Rate (contentions/min)      1792               
+
+     Microsoft-AspNet:
+        Request Rate (requests/sec)                 1915
+        Request Latency (ms)                          34  
+       
+    'p' - pause updates
+    'r' - resume updates
+    'q' - quit
+
+(Counter groups are for example purpose only, exact groups/counters TBD)
+
+### Capture a trace for performance analysis
+
+For analyzing CPU usage, IO, lock contention, allocation rate, etc the investigator wants to capture a performance trace. This trace can then be moved to a developer machine where it can be analyzed with profiling tools such as PerfView/VisualStudio or visualized as a flame graph with speedscope. 
+
+**Capture default trace**
+
+    > dotnet tool install -g dotnet-trace
+    You can invoke the tool using the following command: dotnet-trace
+    Tool 'dotnet-trace' (version '1.0.0') was successfully installed.
+    > dotnet trace collect --process-id 1902
+    Recording trace 38MB  
+
+    's' - stop tracing
+    'g' - capture GC heap snapshot
+
+...Hit 's'...
+
+    > dotnet trace collect --process-id 1902
+    Recording trace 107MB
+    Recording complete
+    Trace complete: ~/trace.netperf
+
+**Convert a trace to use with speedscope**
+
+    > dotnet trace convert --format:speedscope ~/trace.netperf
+    Writing:     ~/trace.speedscope.json
+    Conversion complete
+
+### Do a (dump-based) memory leak analysis
+
+For analyzing managed memory leaks over time, the investigator first wants to capture a series of dumps that will show the memory growth.
+
+    > dotnet tool install -g dotnet-dump
+    You can invoke the tool using the following command: dotnet-dump
+    Tool 'dotnet-dump' (version '1.0.0') was successfully installed.
+    > dotnet dump --process-id 1902 --number 2
+    Writing:     ./core0001
+    
+... 10 seconds pass (the default time interval)
+
+    > dotnet dump --process-id 1902 --number 2
+    Writing:     ./core0001
+    Writing:     ./core0002
+    Complete
+
+Next the investigator needs to compare the heaps in these two dumps.
+
+    > dotnet dump analyze ./core0002
+    Type 'help' for help
+    $ GCHeapDiff ./core0001
+    Showing top GC heap differences by size
+    Type                       Current Heap     Baseline Heap             Delta
+                               Size / Count      Size / Count      Size / Count
+    System.String           1790650 /  7430   1435870 /  6521   +354780 / + 909
+    System.Byte[]             65420 /    26     28432 /     7   + 36988 / +  19
+    WebApp1.RequestEntry       1800 /   180      1200 /   120   +   600 / +  60
+    ...
+    
+    To show all differences use 'HeapDiff -all ./core0001'
+    To show objects of a particular type use DumpHeap -type <type_name>
+
+    $ DumpHeap -type System.String
+      Address       MT     Size
+     03b51454 725ef698       84     
+     03b522d4 725ef698       52     
+     03b52328 725ef698       16     
+     03b52338 725ef698       28  
+     32cac458 7214b44c       48     
+     32cac504 725eeb40       56     
+     32cac620 725eeb40       94     
+     32cac6c4 725eeb40       74  
+     ...
+
+    $ GCRoot 03b51454
+     Thread 41a0:
+         0ad2f274 55f99590 DomainNeutralILStubClass.IL_STUB_PInvoke(System.Windows.Interop.MSG ByRef, System.Runtime.InteropServices.HandleRef, Int32, Int32)
+             ebp-c: 0ad2f2b0
+                 ->  041095f8 System.Windows.Threading.Dispatcher
+                 ...
+                 ->  03b512f8 System.AppDomain
+                 ->  03b513d0 System.AppDomainSetup
+                 ->  03b51454 System.String
+
+     Found 1 unique roots (run 'GCRoot -all' to see all roots).
 
 
-@shirhatti wrote:
+First we compared the leaky dump to the baseline dump to determine which types were growing, then listed addresses of particular instances of the leaking type, then determined the chain of references that was keeping that instance alive. The investigator may need to sample several instances of the leaked type to identify which ones are expected to be on the heap and which are not.
 
-```
-NAME
+Note: The DumpHeap/GCRoot output is identical to SOS. I'm not convinced this output is ideal for clarity, but I am not proposing we change it at this time.
 
-    dotnet-collect - Collect diagnostic information from a .NET process
+### Install SOS for use with LLDB
+
+    > dotnet tool install -g dotnet-sos
+    You can invoke the tool using the following command: dotnet-sos
+    Tool 'dotnet-sos' (version '1.0.0') was successfully installed.
+    > dotnet sos install
+    Installing SOS plugin at ~/.dotnet/sos
+    Updating .lldbinit - LLDB will load SOS automatically at startup
+    Complete
+
+## Command Line Reference
+
+### dotnet-counters
 
 SYNOPSIS
 
-    dotnet collect [-v, --version] [-h, --help]
-                   [-p, --process-id]
-                   [-o, --output]
-                   <command> [<args>]
+    dotnet-counters [-v, --version] 
+                    [-h, --help]
+                    <command> [<args>]
 
 OPTIONS
 
     -v, --version
-        Prints the version of the dotnet collect utility.
+        Display the version of the dotnet-counters utility.
 
     -h, --help
-        Prints the synopsis and a list of the most commonly used commands. 
+        Show command line help
 
-    -p, --process-id <PROCESS_ID>
-        The process id of the process you want to collect diagnostic information
-        from.
+COMMANDS
+
+    list      Display a list of counter names and descriptions
+    monitor   Display periodically refreshing values of selected counters
+
+LIST
+
+    dotnet-counters list [-h|--help] 
+
+    Display a list of counter names and descriptions, grouped by provider.
+
+    -h, --help
+        Show command line help
+
+    Examples:
+      > dotnet-counters list
+      Showing well-known counters only. Specific processes may support additional counters.
+
+      Microsoft-Windows-DotNETRuntime
+          total-processor-time           Amount of time the process has utilized the CPU (ms)
+          private-memory                 Amount of private virtual memory used by the process (KB)
+          working-set                    Amount of working set used by the process (KB)
+          virtual-memory                 Amount of virtual memory used by the process (KB)
+          gc-total-memory                Amount of commited virtual memory used by the GC (KB)
+          exceptions-thrown-rate         Number of exceptions thrown in a recent 1 minute window (exceptions/min)
+          lock-contention-rate           Number of instances of lock contention on runtime implemented locks in a
+                                       recent 1 minute window (contentions/min)
+      Microsoft-AspNet
+          request-rate                   Number of requests handled in a recent one second interval (requests/sec)
+          request-latency                Time to respond to a request, averaged over all requests in a recent
+                                       one second interval (ms)
     
-    -o, --output <OUTPUT_DIRECTORY>
-        The output directory where this diagnostic data should be written to.
+MONITOR
 
+    dotnet-counters monitor [-h||--help]
+                            [-p|--process-id <pid>]
+                            [-r|--refreshInterval <sec>]
+                            counter_list
 
-================================================================================
-
-NAME
-
-    dotnet-collect-dump - Collect a process dump 
-
-SYNOPSIS
-
-    dotnet collect dump [-h, --help]
-                        
-DESCRIPTION
-
-    On Windows, dotnet-collect-dump collects a Windows minidump.
-    On Linux, dotnet-collect-dump collects a core dump using createdump.
-
-OPTIONS
+    Display periodically refreshing values of selected counters
 
     -h, --help
-        Prints the synopsis and a list of the most commonly used commands. 
+        Show command line help
 
-================================================================================
+    -p,--process-id
+        The process that will be monitored
 
-NAME
+    -r,--refresh-interval 
+        The number of seconds to delay between updating the displayed counters
 
-    dotnet-collect-trace - Collect a trace
+    counter_list
+        A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the
+        provider_name is used without a qualifying counter_name then all counters will be shown. To discover 
+        provider and counter names, use the list command.
+
+
+    Examples:
+      > dotnet counters monitor --processId 1902 Microsoft-Windows-DotNETRuntime Microsoft-AspNet
+      
+      Microsoft-Windows-DotNETRuntime: 
+          Total Processor Time (ms)              173923.48 
+          Private Virtual Memory (MB)                 1094       
+          Working Set (MB)                            1982
+          Virtual Memory (MB)                         3041
+          GC Heap Memory (MB)                          784
+          Exception Thrown Rate (exceptions/min)       117
+          Lock Contention Rate (contentions/min)      1792               
+
+       Microsoft-AspNet:
+          Request Rate (requests/sec)                 1915
+          Request Latency (ms)                          34  
+       
+      'p' - pause updates
+      'r' - resume updates
+      'q' - quit
+
+### dotnet-trace ###
 
 SYNOPSIS
 
-    dotnet collect dump [-h, --help]
-                        [--provider]
-                        [--buffer]
-                        
-
-OPTIONS
-
-    -h, --help
-        Prints the synopsis and a list of the most commonly used commands.
-
-    --provider <PROVIDER_SPEC>
-        An EventPipe provider to enable.
-        A string in the form '<provider name>:<keywords>:<level>'. 
-    
-    --buffer <BUFFER_SIZE_IN_MB>
-        The size of the in-memory circular buffer in megabytes.
-
-================================================================================
-
-NAME
-
-    dotnet-monitor
-
-SYNOPSIS
-
-    dotnet monitor [-v, --version] [-h, --help]
-                   [--provider]
-                   [--buffer]
-                        
+    dotnet-trace [-v, --version]
+                 [-h, --help]
+                 <command> [<args>]
 
 OPTIONS
 
     -v, --version
-        Prints the version of the dotnet collect utility.
+        Display the version of the dotnet-trace utility.
 
     -h, --help
-        Prints the synopsis and a list of the most commonly used commands.
+        Show command line help
 
-    --provider <PROVIDER_SPEC>
-        An EventPipe provider to enable.
-        A string in the form '<provider name>:<keywords>:<level>'. 
+COMMANDS
+
+    collect   Collects a diagnostic trace from a currently running process
+    convert   Converts traces to alternate formats for use with alternate trace analysis tools
+    pack      Compresses a trace and any necessary symbols into a single zip file for easy off-machine analysis
+
+COLLECT
+
+    dotnet-trace collect -p|--process-id <pid>
+                         [-h|--help]
+                         [-o|--output <trace-file-path>]
+                         [--pack]
+                         [--profile: <profile_name>]
+                         [--providers <provider_configuration_list>]
+                         
+    Collects a diagnostic trace from a currently running process                    
+
+    -p, --process-id
+        The process to collect the trace from
+
+    -h, --help
+        Show command line help
+
+    -o, --output
+        The output path for the collected trace data. If not specified it defaults to ./trace.netperf
+
+    --pack
+        Automatically runs the pack command after collection is complete. Use dotnet-trace pack --help for more
+        details.
+
+    --profile
+        A named pre-defined set of provider configurations that allows common tracing scenarios to be specified
+        succintly. The options are:
+        runtime-basic   Useful for tracking CPU usage and general runtime information. This the default option
+                        if no profile is specified.
+        asp-net-basic   Useful starting point for ASP.Net performance investigations
+        gc              Tracks allocation and collection performance
+        gc-collect      Tracks GC collection only at very low overhead
+        none            Tracks nothing. Only providers specified by the --providers option will be available.
+
+    --providers
+        Provider configurations specified here add to the configurations already provided via the --profile
+        argument. If the same provider is configured in both places, this option takes precedence.
+        The provider_configuration_list is a comma separated list of provider configurations. Each configuration
+        consists of the provider name and optionally keywords, a verbosity level, and custom key/value pairs. A
+        configuration is encoded Name[:Keywords[:Level[:KeyValueArgs]]]
+        Name         - the provider's name
+        Keywords     - 8 character hex number bit mask
+        Level        - 2 character hex number
+        KeyValueArgs - a semicolon separated list of key=value
+
+
+    Examples:
+      > dotnet trace collect --process-id 1902 --pack
+      Recording trace 38MB  
+
+      's' - stop tracing
+      'g' - capture GC heap snapshot
+
+    <Process exits>
+
+      > dotnet trace collect --process-id 1902 --pack
+      Recording trace 107MB
+      Recording complete (process exited)
+      Packing...
+      Trace complete: ~/trace.netperf.zip
     
-    --buffer <BUFFER_SIZE_IN_MB>
-        The size of the in-memory circular buffer in megabytes.
+CONVERT
 
-================================================================================
-```
+    dotnet-trace convert --format: <output_format>
+                         [-h|--help]
+                         [-o|--output <output_file_path>]
+                         <trace_file_path>
+
+    Converts traces to alternate formats for use with alternate trace analysis tools
+
+    -h, --help
+        Show command line help
+
+    --format
+        The name of the output format. Currently supported formats:
+        speedscope   The speedscope JSON format used by https://www.speedscope.app/
+
+    -o, --output
+        The path where the converted file is written. If unspecified the file is written in the current directory
+        using the same base filename as the input file and the extension appropriate for the new format.
+
+    trace_file_path
+        The path to the trace file that should be converted. The trace file can be in either a netperf or netperf.zip file.
+
+    Examples:
+      > dotnet-trace convert --format:speedscope trace.netperf
+      Writing:       ./trace.speedscope.json
+      Conversion complete
+
+PACK
+
+    dotnet-trace pack [-h|--help]
+                      [-o|--output <output_file_path>]
+                      [--verbose]
+                      <trace_file_path>
+
+    Compresses a trace and any necessary symbols into a single zip file for easy off-machine analysis     
+
+    -h, --help
+        Show command line help
+
+    -o, --output
+        The path where the pack is written. If unspecified the pack is written in the current directory
+        using the same base filename as the input file and the .zip extension.
+
+    --verbose
+        Logs detailed information about what the pack command is doing.
+
+    trace_file_path
+        The path to the trace file that should be packed.
+
+
+    Examples:
+      > dotnet-trace pack trace.netperf
+      Packing:      ./trace.netperf.zip
+      Pack complete
+
+      > dotnet-trace pack --verbose trace.netperf
+      Packing:      /usr/home/noahfalk/trace.netperf.zip
+      Compressing   /usr/home/noahfalk/trace.netperf
+      Checking      /usr/bin/dotnet/shared/3.0.170/System.Private.CoreLib.dll
+        Not packing symbols - Policy skips Microsoft binary
+      Checking      /usr/bin/dotnet/shared/3.0.170/System.Diagnostics.dll
+        Not packing symbols - Policy skips Microsoft binary
+      Checking      /usr/home/noahfalk/MyApp/Newtonsoft.Json.dll
+        Searching for Newtonsoft.Json.pdb
+        Searching   /usr/home/noahfalk/MyApp/Newtonsoft.Json.pdb
+        Not packing symbols - Newtonsoft.Json.pdb not found
+      Checking      /usr/home/noahfalk/MyApp/MyApp.dll
+        Searching for MyApp.pdb
+        Searching   /usr/home/noahfalk/MyApp/MyApp.pdb
+        Found matching symbol file
+        Compressing symbol file /usr/home/noahfalk/MyApp/MyApp.pdb
+      ...
+      Pack Complete
+
+### dotnet-dump ###
+
+SYNOPSIS
+
+    dotnet-dump [-v, --version] 
+                [-h, --help]
+                <command> [<args>]
+
+OPTIONS
+
+    -v, --version
+        Display the version of the dotnet-dump utility.
+
+    -h, --help
+        Show command line help
+
+COMMANDS
+
+    collect   Capture one or more dumps (core files on Mac/Linux) from a process
+    analyze   Starts an interactive shell with debugging commands to explore a dump
+
+COLLECT
+
+    dotnet-dump collect -p|--process-id <pid>
+                        [-h|--help]
+                        [--interval-sec <seconds>]
+                        [--number <number_of_dumps>]
+                        [-o|--output <output_dump_path>]
+                        [--type <dump_type>]
+
+    Capture one or more dumps (core files on Mac/Linux) from a process
+
+    -p, --process-id
+        The process to collect dumps from
+
+    -h, --help
+        Show command line help
+
+    --interval-sec
+        The number of seconds to wait between collecting each dump. Defaults to 10 seconds if not specified.
+
+    --number
+        The number of dumps to collect from the target process. Defaults to 1 if not specified.
+ 
+    -o, --output
+        The path where collected dumps should be written. Defaults to .\dumpNNNN.dmp on windows and ./coreNNNN on
+        Linux\Mac if not specified. NNNN is an increasing 4 digit counter for each dump, for example 
+        .\dump0003.dmp. If the output_dump_path specifies a directory then dump files are written to that directory
+        with the same dumpNNNN[.dmp] naming format. Specifying an exact filename is only permitted when capturing a
+        single dump.
+
+    --type
+        The dump type determines the kinds of information that are collected from the process. There are two types:
+        heap - A large and relatively comprehensive dump containing module lists, thread lists, all stacks,
+               exception information, handle information, and all memory except for mapped images.
+        mini - A small dump containing module lists, thread lists, exception information and all stacks.
+
+        If not specified 'heap' is the default.
+
+
+     Examples:
+       > dotnet-dump collect --process-id 1902 --number 2 --type mini --output ~/dumps/go/here/
+       Writing:     ~/dumps/go/here/core0001
+    
+... 10 seconds pass (the default time interval)
+
+       > dotnet-dump collect --process-id 1902 --number 2 --type mini --output ~/dumps/go/here/
+       Writing:     ~/dumps/go/here/core0001
+       Writing:     ~/dumps/go/here/core0002
+       Complete
+
+
+ANALYZE
+
+    dotnet-dump analyze [-h|--help] dump_path
+
+    Starts an interactive shell with debugging commands to explore a dump
+
+    -h, --help
+        Show command line help
+
+    dump_path
+        The dump to analyze
+
+    Examples:
+      > dotnet-dump analyze core0002
+      Use 'help' for help, 'q' to quit
+      $
+    
+    ... use the nested command-line. The commands are broken out in the following section
+
+
+## dotnet-dump analyze nested command syntax ##
+
+By default these commands should come from SOS and include at least Help, DumpHeap, DumpObject, DumpArray, and PrintException. If we can get more easily we should. In addition new commands are listed below:
+    
+GCHEAPDIFF
+
+    GCHeapDiff <path_to_baseline_dump>
+
+    Compares the current GC heap to the one contained in the baseline dump
+
+    path_to_baseline_dump
+        The path to another dump that contains the baseline
+
+    Examples:
+      $ GCHeapDiff ./core0001
+      Showing top GC heap differences by size
+
+      Type                       Current Heap     Baseline Heap             Delta
+                                 Size / Count      Size / Count      Size / Count
+      System.String           1790650 /  7430   1435870 /  6521   +354780 / + 909
+      System.Byte[]             65420 /    26     28432 /     7   + 36988 / +  19
+      WebApp1.RequestEntry       1800 /   180      1200 /   120   +   600 / +  60
+      ...
+
+      To show all differences use 'HeapDiff -all ./core0001'
+      To show objects of a particular type use DumpHeap -type <type_name>
+
+## dotnet-sos ##
+
+SYNOPSIS
+
+    dotnet-sos [-v, --version] 
+               [-h, --help]
+               <command> [<args>]
+
+OPTIONS
+
+    -v, --version
+        Display the version of the dotnet-dump utility.
+
+    -h, --help
+        Show command line help
+
+COMMANDS
+
+    install    Installs SOS and configures LLDB to load it on startup
+    uninstall  Uninstalls SOS and reverts any configuration changes to LLDB
+
+INSTALL
+
+    dotnet-sos install [-h|--help]
+                       [--verbose]
+                       
+    Installs SOS and configures LLDB to load it on startup
+
+    -h, --help
+        Show command line help
+
+    --verbose
+        Enables verbose logging
+
+    Examples:
+      >dotnet-sos install
+      Installing SOS plugin at ~/.dotnet/sos
+      Updating .lldbinit - LLDB will load SOS automatically at startup
+      Complete
+
+UNINSTALL
+
+    dotnet-sos uninstall [-h|--help]
+                         [--verbose]
+    
+    Uninstalls SOS and reverts any configuration changes to LLDB
+
+    -h, --help
+        Show command line help
+
+    --verbose
+        Enables verbose logging
+
+    Examples:
+      >dotnet-sos uninstall
+      Reverting .lldbinit - LLDB will no longer load SOS at startup
+      Uninstalling SOS from ~/.dotnet/sos
+      Complete
+
+## Future suggestions
+
+Work described in here captures potential future directions these tools could take given time and customer interest. Some of these might come relatively soon, others feel quite speculative or duplicative with existing technology. Regardless, understanding potential future options helps to ensure that we don't unknowingly paint ourselves into a corner or build an incoherent offering.
+
+
+
+
+### dotnet-counters ###
+
+- Dynamic counter enumeration
+
+Add a --process-id to the list command in order to dynamically determine a full set of available counters rather than just well-known counters
+
+    > dotnet-counters list --process-id 1902
+    Json-DotNET-Events
+        parse-count                    The number of times you called Json.Parse
+    Microsoft-Windows-DotNETRuntime
+        total-processor-time           Amount of time the process has utilized the CPU (s)
+        private-memory                 Amount of private virtual memory used by the process (MB)
+        working-set                    Amount of working set used by the process (MB)
+        virtual-memory                 Amount of virtual memory used by the process (MB)
+        gc-total-memory                Amount of commited virtual memory used by the GC (MB)
+        exceptions-thrown-rate         Number of exceptions thrown in a recent 1 minute window (exceptions/min)
+        lock-contention-rate           Number of instances of lock contention on runtime implemented locks in a
+                                       recent 1 minute window (contentions/min)
+    Microsoft-AspNet
+        request-rate                   Number of requests handled in a recent one second interval (requests/sec)
+        request-latency                Time to respond to a request, averaged over all requests in a recent                         one second interval (ms)
+    MyAppEvents
+        Main-Page-Hits                 # of requests for our main page
+        user-sessions                  # of users logged in right now
+
+- View command
+
+Dumps a snapshot of counters on demand. In order to make this command fast the EventCounter infrastructure would need to support a command that dumps the counters immediately rather than waiting for their next transmission interval.
+
+    dotnet-counters view [-h||--help]
+                         [-p|--process-id <pid>]
+                         counter_list
+
+    Display current values of selected counters
+
+    -h, --help
+        Show command line help
+
+    -p,--process-id
+        The process to display counters for
+
+    counter_list
+        A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the
+        provider name is used without a qualifying counter name then all counters for that provider will be shown.
+        To discover provider and counter names, use the list command.
+
+
+    Examples:
+    > dotnet counters view --processId 1902 Microsoft-Windows-DotNETRuntime Microsoft-AspNet
+      Microsoft-Windows-DotNETRuntime: 
+          Total Processor Time (ms)              173923.48 
+          Private Virtual Memory (MB)                 1094       
+          Working Set (MB)                            1982
+          Virtual Memory (MB)                         3041
+          GC Heap Memory (MB)                          784
+          Exception Thrown Rate (exceptions/min)       117
+          Lock Contention Rate (contentions/min)      1792               
+
+       Microsoft-AspNet:
+          Request Rate (requests/sec)                 1915
+          Request Latency (ms)                          34  
+
+### dotnet-trace ###
+
+- Multi-process collection 
+  
+Make the --process-id argument optional or let it take a list of ids to create multi-process traces
+
+- Collection triggers
+
+Add additional arguments to the collect command to support conditions for starting, stopping, or adjusting the trace capture. This configuration could also be added to the profiles.
+
+- Custom profiles
+
+Add a serialization format for profiles that lets users author new ones and specify them to collect on the command line.
+
+- Provider/event enumeration
+
+Add a command that interogates a running process (or maybe binary?) to extract a set of providers and events it supports emitting.
+
+- Monitor command
+
+Add a command similar to collect, except it prints event data to the console as a real time log
+
+- Report command
+
+Add a command that produces various static reports from the trace data, either in text or html. Some of the reports might leverage existing PerfView reporting work. Others might be reports such as functions that use the most CPU, IO, or memory allocation.
+
+- Run command
+
+Add a run command that executes a specific process and captures a trace of it
+
+- Start / Stop / Cancel / Marker / UserCommand commands
+
+Add support for a persistent session that can be interacted with. Collect/Run/Monitor act as a shortcut to start session, attach/launch process, then stop session all in one command. Monitor could also gain an argument to eavesdrop an existing session rather than create a new one.
+
+- Web-Monitor command
+
+Add a command that launches a web-service which displays the streaming trace data. Further work might allow for real-time analysis.
+
+- Support for ETW / LTTNG / other tracing systems from this tool
+
+We could interoperate in various ways such as:
+
+1. Converting between serialized formats
+2. Allowing trace consuming commands (report/monitor) to consume trace data from external trace files/trace sessions
+3. Allowing the session control/collection commands to control alternate session types
+
+### dotnet-dump
+
+- Packing
+
+Allow gathering of symbols and binaries, similar to trace packing, that lets us more easily do cross-machine investigation.
+
+- Triggers
+
+We could allow dumps to be collected in response to various process or machine-state conditions such as exceptions being thrown, or performance metrics
+
+### dotnet-sos
+
+- Allow a custom installation path
+
+### dotnet-ps
+
+Add a new tool that lists a snapshot of processes with .Net Core loaded. It should be similar to the linux tool ps but it needs to show the managed entrypoint and entrypoint assembly. Right now all .Net Core apps tend to be indistinguishable 'dotnet.exe' processes.
+
+### dotnet-stack
+
+Show a snapshot of all a processes threads with a callstack for each.
+
+
+## General CLI/Workflow Questions
+
+1. Do we want an alternate installation technique that doesn't require the SDK?
+
+    Not immediately, but it should probably follow shortly after getting an SDK based option in place. There are several alternate installation options customers might want for more production oriented scenarios such as FDD and self-contained apps available as network downloads, or docker images that are pre-provisioned with the tools. We'll likely need customer feedback to prioritize.
+
+2. Do we want a single multi-purpose tool, or a larger number of narrower purpose tools?
+
+    Narrow purpose tools. 
+
+    Rationale: Originally I was leaning towards multi-purpose but there are various reasons this approach was awkward:
+    (a) dotnet's CLI guidance is that the term after dotnet is a 'context', but a multi-purpose tool doesn't make a very useful context. In most cases the verb that would follow needed another sub-context noun to determine the operation. For example 'dotnet diag collect trace' vs. 'dotnet diag collect dump.' Many of the parameters that make sense for a trace don't make sense for a dump and vice-versa so you either end up with workarounds such as a super-set of all possible arguments, arguments that are context sensitive based on earlier arguments, or verbs that are really verb-noun combinations (ie 'collect-dump'). None of these seem to match dotnet conventions.
+    (b) Putting the verbs before the sub-context noun makes it hard to determine what each sub-context supports with help commands. For example dotnet analyze dump\_file would be supported but dotnet analyze trace\_file wouldn't (for now at least).
+    (c) It encourages higher levels of abstraction and consistency than realistically exist. For example 'dotnet collect' was appealing if you imagined defining a collection plan that could have all sorts of triggers and different collected artifacts that ultimately gets zipped up in a nice package. But building that requires substantial additional work over a basic trace or dump collector.
+
+    Multi-purpose tool did have a few advantages we are giving up:
+    (a) Size on disk would have been better. Each tool must include the closure of its non-framework dependencies which means if any tools share a dependency (symbol loading for example) there will be multiple copies of that assembly in the global tools install directory
+    (b) A single dotnet install command. We could improve this in dotnet tool install itself, for example by allowing multiple tools to be listed in an install command (similar to many package managers) or supporting a tool meta-package that is just a grouping of related tools. In the meantime we should try to avoid needing too many different tools in the same workflow.
+
+3. Do we have a stripped down stand-alone collector?
+
+    Not at this time, though I still advocate for good layering. There are at least two useful scenarios for this I could see, one is a persistent monitoring agent and the other is on-demand install by support engineers in response to a production problem. In the latter case size on disk is probably only a small concern relative to being able to isolate and customer confidence in the tools. If we could lose the SDK dependency we'd probably be in decent shape there. In the former case size does matter more, but we again be better optimizing for no SDK dependency and FDD deployment before eliminating the analysis components becomes the top size issue. There are also other non-size concerns if we ultimately go this path such as daemonizing the tool, log cycling, auto-triggered collections and remote administration.
+
+4. Do we support command line response files?
+
+    Not at this time. I didn't see any documentation suggesting that dotnet supports the response file generally and it would be nice to follow suit rather than rolling our own. We can revisit this based on customer feedback.
+
+5. Do we support '/' style args that are more common on windows or only '--' style args?
+
+    Not at this time (feel like a broken record yet?). We should document and parse all arguments accepting only the single dash or double dash form. For example -h or --help are recognized for help, but /help is not. This keeps us identical to the behavior of other dotnet tools.
+    FWIW there might be value in accepting the /arg form of arguments but I'd rather it gets taken up across all dotnet tools or as a generic feature of the command-line parsing library so that we have some degree of standardization. Even if we did start recognizing the /arg form, I still suggest only printing the -/-- forms in the help to prevent clutter.
+
+6. Do we want the tool be 'dotnet' prefixed or use a separate tool name?
+
+    Dotnet prefixed. Our tools have similarities in function and naming to other non-dotnet tools, so including something that evokes 'dotnet' is important to distinguish them. Java established a precendent of putting a 'j' in front of their tool names but if we followed suit ('d' or 'dn' perhaps) I think it would only create confusion with dotnet's convention of using 'dotnet'. We could also try to name the tools something complete different (SOS is one example) and get users to still associate the name with dotnet, but it feels harder and less effective than simply naming 'dotnet' explicitly. Other names appear to be less discoverable, less easily predicted, and if we don't pick catchy names, probably less easily remembered. 
+    
+## Area specific Questions
+
+### dotnet-counters
+
+- Do we need pre-defined counter sets to make some typical cases easier?
+
+    Not right now. It might help, but I'm not sure how much use the console viewer is really going to get so we should avoid adding too much complexity right away. If we get customer demand later we could revisit.
+
+- Do we want to adjust our provider names? 
+
+    TBD. Microsoft-Windows-DotNETRuntime isn't that easy to remember and including it seems confusing.
+
+- What counters exactly are we going to expose and how will we name them?
+
+    TBD. The exact set of counters doesn't matter too much for CLI concerns but a few guidelines that will help.
+    1. Providers shouldn't have more than ~40 counters or it will be awkward to display them all in a single console window column
+    2. Counter names shouldn't be too long, and they should not use spaces as separators. The '-' character is a better separator
+    3. Counters should have separate display names that use spaces and indicate measurement units.
+
+### dotnet-trace
+
+- Does dotnet-trace support other tracing systems or EventPipe only?
+
+    EventPipe only, at least for now. Trying to be a front-end for various other tracing systems (etw, perf, lttng) comes with a substantial increase in complexity and other tools are already doing that such as PerfView and perfcollect. Although creating a unified front-end might have a little value, it is lower priority than doing a good job at our key goal - providing a platform agnostic solution for managed CPU and memory investigations.
+
+- Do we need to support triggers to start/stop collection?
+
+    Not right now. Triggers are a very useful automation primitive and I could imagine wanting to add support in the near future, but many basic scenarios can be resolved without them. They can be added to collect/run commands as options in a fairly non-disruptive way.
+
+- Does dotnet-trace need to support user-specified in-memory buffer sizes?
+
+    We should try to pick some reasonable default for now. If at some point its obvious that isn't working well or it would be easier to make it user-configurable and be done with it we should do so.
+
+- Should we pack traces as zip or diagsession?
+
+    TBD. Diagsession is a Visual Studio container format for profiling data so using that makes engineering a little easier for VS and indicates more clearly that the data is compatible with VS. On the other hand zip is format that nearly every developer should be familiar with, it would serve largely the same role in this case, and it is more easily manipulated by other tools. 
+
+- What binaries/symbols do we collect during the pack operation?
+
+    By default we should collect symbols for all non-Microsoft managed binaries refered to in the trace, if they are locatable on the machine. These are symbols that may not be recoverable during trace analysis on another machine because there is no guarantee they are on a symbol server. All Microsoft provided binaries and symbols are available on the symbol server. As of .Net Core 3.0 we will also be fully off of NGEN (assuming our CoreLib plans go forward) and it is much easier to extract symbol<->RVA mapping information for R2R images without requiring a special runtime matched crossgen binary. This should eliminate any need to precompute and package NGEN PDBs. 
+
+    We could have non-default options to capture more or fewer symbols based on the users expectations of symbol availability on their analysis machine or their willingness to forego symbolic information to make a trace smaller. 
+
+    Todo - design these options.
+
+### dotnet-debug
+
+- Do we need a memory comparison command that is more generic than GC heap? For example VMDiff?
+
+    Not yet, though it really feels pretty useful to me if we expect our customers not to automatically equate memory growth == gc heap growth. I could imagine wanting to add something like this soon.
+
+- Do we have a mechanism to pack dumps similar to our packing of traces?
+
+    Not for now, but probably something we'll want in the near future. Our tools are still picky about needing to analyze dumps on a machine of the same OS so I am assuming most investigation will occur on the same machine.
 
 # Background Info
 
@@ -264,7 +936,7 @@ Common options:
 - -hide= regex: Do not show entries that match regex.
 
 
-###Jcmd
+### Jcmd
 
 Java previously had numerous single-role tools such as jhat, jps, jstack, jinfo, etc that did a variety of diagnostic tasks (respectively they show heap analysis, process status, stacks, and runtime/machine info). Starting in Java8 jcmd, a new multi-role tool, offers a super-set of functionality from all those tools. Snippets below are from https://docs.oracle.com/javase/8/docs/technotes/guides/troubleshoot/tooldescr006.html
 
@@ -320,6 +992,8 @@ WPR uses the WPR -<verb\> [options] convention.
          -disablepagingexecutive}
 
 
+WPR does not support a default file name for saving, the filename must be explicitly provided.
+
 ### Perfview
 
 Perfview is CLI or GUI tool that allows collecting, analyzing and viewing ETW traces. 
@@ -350,6 +1024,8 @@ PerfView uses the PerfView <verb/> [options] CLI convention:
 
 
 PerfView has some commands that manipulate an ongoing trace without keeping the PerfView process running (example: start/stop/mark/abort), other commands that capture traces synchronously (example: collect/run), and then further commands that manipulate or view trace data that is already on disk.
+
+When no filename is specified, PerfView saves trace data as PerfViewData.etl[.zip]
 
 ### ProcDump
 
@@ -423,8 +1099,20 @@ ProcDump uses CLI convention: ProcDump [options]
 	-?
 	Use -? -e to see example command lines.
 
-###Perfmon
+
+When creating dumps, procdump uses a default output format of PROCESSNAME\_YYMMDD\_HHMMSS.dmp
+where:
+
+    PROCESSNAME = Process Name
+    YYMMDD = Year/Month/Day
+    HHMMSS = Hour/Minute/Second
+
+### Perfmon
 
 Perfmon is a Windows GUI tool that shows interactive performance counters and some reports of system performance. It has a minimal CLI that simply launches different GUI views. 
 
 perfmon </res|report|rel|sys>
+
+### LTTNG
+
+TODO
