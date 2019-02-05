@@ -24,13 +24,13 @@ namespace Microsoft.Diagnostics.Tools.SOS
         {
             if (InstallSOS || UninstallSOS)
             {
-                var sosInstaller = new InstallHelper((message) => console.WriteLine(message));
-                if (SOSSourcePath != null)
-                {
-                    sosInstaller.SOSSourcePath = SOSSourcePath;
-                }
                 try
                 {
+                    var sosInstaller = new InstallHelper((message) => console.WriteLine(message));
+                    if (SOSSourcePath != null)
+                    {
+                        sosInstaller.SOSSourcePath = SOSSourcePath;
+                    }
                     if (UninstallSOS)
                     {
                         sosInstaller.Uninstall();
@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.Tools.SOS
                         sosInstaller.Install();
                     }
                 }
-                catch (Exception ex) when (ex is ArgumentException || ex is PlatformNotSupportedException || ex is InvalidOperationException)
+                catch (SOSInstallerException ex)
                 {
                     console.Error.WriteLine(ex.Message);
                     return 1;

@@ -40,13 +40,12 @@ namespace SOS
         /// <summary>
         /// Console output delegate
         /// </summary>
-        private Action<string> m_writeLine;
+        private readonly Action<string> m_writeLine;
 
         /// <summary>
         /// Create an instance of the installer.
         /// </summary>
-        /// <exception cref="PlatformNotSupportedException">unknown operating system</exception>
-        /// <exception cref="InvalidOperationException">environment variable not found</exception>
+        /// <exception cref="SOSInstallerException">environment variable not found</exception>
         public InstallHelper(Action<string> writeLine)
         {
             m_writeLine = writeLine;
@@ -57,7 +56,7 @@ namespace SOS
             {
                 home = Environment.GetEnvironmentVariable("USERPROFILE");
                 if (string.IsNullOrEmpty(home)) {
-                    throw new InvalidOperationException("USERPROFILE environment variable not found");
+                    throw new SOSInstallerException("USERPROFILE environment variable not found");
                 }
                 os = "win";
             }
@@ -65,7 +64,7 @@ namespace SOS
             {
                 home = Environment.GetEnvironmentVariable("HOME");
                 if (string.IsNullOrEmpty(home)) {
-                    throw new InvalidOperationException("HOME environment variable not found");
+                    throw new SOSInstallerException("HOME environment variable not found");
                 }
                 LLDBInitFile = Path.Combine(home, ".lldbinit");
 
@@ -77,7 +76,7 @@ namespace SOS
                 }
             }
             if (os == null) {
-                throw new PlatformNotSupportedException($"Unsupported operating system {RuntimeInformation.OSDescription}");
+                throw new SOSInstallerException($"Unsupported operating system {RuntimeInformation.OSDescription}");
             }
             InstallLocation = Path.GetFullPath(Path.Combine(home, ".dotnet", "sos"));
 
@@ -89,20 +88,19 @@ namespace SOS
         /// <summary>
         /// Install SOS to well known location (InstallLocation).
         /// </summary>
-        /// <exception cref="PlatformNotSupportedException">SOS not found for OS/architecture</exception>
-        /// <exception cref="ArgumentException">various</exception>
+        /// <exception cref="SOSInstallerException">various</exception>
         public void Install()
         {
             WriteLine("Installing SOS to {0} from {1}", InstallLocation, SOSSourcePath);
 
             if (string.IsNullOrEmpty(SOSSourcePath)) {
-                throw new ArgumentException("SOS source path not valid");
+                throw new SOSInstallerException("SOS source path not valid");
             }
             if (!Directory.Exists(SOSSourcePath)) {
-                throw new PlatformNotSupportedException($"Operating system or architecture not supported: installing from {SOSSourcePath}");
+                throw new SOSInstallerException($"Operating system or architecture not supported: installing from {SOSSourcePath}");
             }
             if (string.IsNullOrEmpty(InstallLocation)) {
-                throw new ArgumentException($"Installation path {InstallLocation} not valid");
+                throw new SOSInstallerException($"Installation path {InstallLocation} not valid");
             }
 
             // Rename any existing installation
@@ -169,7 +167,7 @@ namespace SOS
         /// <summary>
         /// Uninstalls and removes the SOS configuration.
         /// </summary>
-        /// <exception cref="ArgumentException">various</exception>
+        /// <exception cref="SOSInstallerException">various</exception>
         public void Uninstall()
         {
             WriteLine("Uninstalling SOS from {0}", InstallLocation);
@@ -195,11 +193,11 @@ namespace SOS
         /// Configure lldb to load SOS.
         /// </summary>
         /// <param name="remove">if true, remove the configuration from the init file</param>
-        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="SOSInstallerException"></exception>
         public void Configure(bool remove = false)
         {
             if (string.IsNullOrEmpty(LLDBInitFile)) {
-                throw new ArgumentException("No lldb configuration file path");
+                throw new SOSInstallerException("No lldb configuration file path");
             }
             bool changed = false;
             bool existing = false;
@@ -209,16 +207,23 @@ namespace SOS
             if (File.Exists(LLDBInitFile))
             {
                 existing = true;
+
                 bool markerFound = false;
-                foreach (string line in File.ReadAllLines(LLDBInitFile))
+                string[] contents = null;
+                RetryOperation($"Problem reading lldb init file {LLDBInitFile}", () => contents = File.ReadAllLines(LLDBInitFile));
+
+                foreach (string line in contents)
                 {
-                    if (line.Contains(InitFileEnd)) {
+                    if (line.Contains(InitFileEnd))
+                    {
                         markerFound = false;
                         changed = true;
                         continue;
                     }
-                    if (!markerFound) {
-                        if (line.Contains(InitFileStart)) {
+                    if (!markerFound)
+                    {
+                        if (line.Contains(InitFileStart))
+                        {
                             markerFound = true;
                             changed = true;
                             continue;
@@ -226,8 +231,9 @@ namespace SOS
                         lines.Add(line);
                     }
                 }
+
                 if (markerFound) {
-                    throw new ArgumentException(".lldbinit file end marker not found");
+                    throw new SOSInstallerException(".lldbinit file end marker not found");
                 }
             }
 
@@ -264,7 +270,7 @@ namespace SOS
         /// </summary>
         /// <param name="errorMessage">text message or null (don't throw exception)</param>
         /// <param name="operation">callback</param>
-        /// <exception cref="ArgumentException">errorMessage</exception>
+        /// <exception cref="SOSInstallerException">errorMessage</exception>
         private void RetryOperation(string errorMessage, Action operation)
         {
             Exception lastfailure = null;
@@ -278,15 +284,18 @@ namespace SOS
                 }
                 catch (Exception ex) when (ex is IOException)
                 {
-                    // Retry file copy possible recoverable exception
+                    // Retry possible recoverable exception
                     lastfailure = ex;
+
+                    // Sleep to allow any temporary error condition to clear up
+                    System.Threading.Thread.Sleep(1000);
                 }
                 catch (Exception ex) when (ex is ArgumentException || ex is UnauthorizedAccessException || ex is SecurityException)
                 {
                     if (errorMessage == null) {
                         return;
                     }
-                    throw new ArgumentException($"{errorMessage}: {ex.Message}", ex);
+                    throw new SOSInstallerException($"{errorMessage}: {ex.Message}", ex);
                 }
             }
 
@@ -295,13 +304,29 @@ namespace SOS
                 if (errorMessage == null) {
                     return;
                 }
-                throw new ArgumentException($"{errorMessage}: {lastfailure.Message}", lastfailure);
+                throw new SOSInstallerException($"{errorMessage}: {lastfailure.Message}", lastfailure);
             }
         }
 
         private void WriteLine(string format, params object[] args)
         {
             m_writeLine?.Invoke(string.Format(format, args));
+        }
+    }
+
+    /// <summary>
+    /// SOS installer error
+    /// </summary>
+    public class SOSInstallerException : Exception
+    {
+        public SOSInstallerException(string message)
+            : base(message)
+        {
+        }
+
+        public SOSInstallerException(string message, Exception inner)
+            : base(message, inner)
+        {
         }
     }
 }
