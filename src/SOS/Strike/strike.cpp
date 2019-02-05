@@ -7152,7 +7152,7 @@ public:
 
         mdMethodDef methodDef;
         ULONG32 ilOffset;
-        if(FAILED(Status = pSymbolReader->ResolveSequencePoint(pFilename, lineNumber, mod, &methodDef, &ilOffset)))
+        if(FAILED(Status = pSymbolReader->ResolveSequencePoint(pFilename, lineNumber, &methodDef, &ilOffset)))
         {
             return S_FALSE; // not binding in a module is typical
         }
@@ -7992,7 +7992,7 @@ DECLARE_API(bpmd)
                     // if we have symbols then get the function name so we can lookup the MethodDescs
                     mdMethodDef methodDefToken;
                     ULONG32 ilOffset;
-                    if(SUCCEEDED(symbolReader.ResolveSequencePoint(Filename, lineNumber, moduleList[iModule], &methodDefToken, &ilOffset)))
+                    if(SUCCEEDED(symbolReader.ResolveSequencePoint(Filename, lineNumber, &methodDefToken, &ilOffset)))
                     {
                         ToRelease<IXCLRDataMethodDefinition> pMethodDef = NULL;
                         if (SUCCEEDED(ModDef->GetMethodDefinitionByToken(methodDefToken, &pMethodDef)))
@@ -15472,13 +15472,14 @@ DECLARE_API(SetSymbolServer)
             ExtOut("Symbol cache path: %s\n", symbolCache.data);
         }
     }
-
-#ifdef FEATURE_PAL
-    if (loadNative)
+    else if (loadNative)
     {
         Status = LoadNativeSymbols();
     }
-#endif
+    else
+    {
+        DisplaySymbolStore();
+    }
 
     return Status;
 }

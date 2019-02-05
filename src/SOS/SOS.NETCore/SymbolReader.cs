@@ -165,7 +165,6 @@ namespace SOS
 
         static SymbolStore s_symbolStore = null;
         static bool s_symbolCacheAdded = false;
-        static string s_tempDirectory = null;
         static ITracer s_tracer = null;
 
         /// <summary>
@@ -205,6 +204,30 @@ namespace SOS
         }
 
         /// <summary>
+        /// Displays the symbol server and cache configuration
+        /// </summary>
+        internal static void DisplaySymbolStore()
+        {
+            if (s_tracer != null)
+            {
+                SymbolStore symbolStore = s_symbolStore;
+                while (symbolStore != null)
+                {
+                    if (symbolStore is CacheSymbolStore cache) {
+                        s_tracer.WriteLine("Cache: {0}", cache.CacheDirectory);
+                    }
+                    else if (symbolStore is HttpSymbolStore http)  {
+                        s_tracer.WriteLine("Server: {0}", http.Uri);
+                    }
+                    else {
+                        s_tracer.WriteLine("Unknown symbol store");
+                    }
+                    symbolStore = symbolStore.BackingStore;
+                }
+            }
+        }
+
+        /// <summary>
         /// This function disables any symbol downloading support.
         /// </summary>
         internal static void DisableSymbolStore()
@@ -224,7 +247,7 @@ namespace SOS
         /// <param name="address">module base address</param>
         /// <param name="size">module size</param>
         /// <param name="readMemory">read memory callback delegate</param>
-        internal static void LoadNativeSymbols(SymbolFileCallback callback, IntPtr parameter, string moduleDirectory, string moduleFileName, 
+        internal static void LoadNativeSymbols(SymbolFileCallback callback, IntPtr parameter, string tempDirectory, string moduleDirectory, string moduleFileName, 
             ulong address, int size, ReadMemoryDelegate readMemory)
         {
             if (s_symbolStore != null)
@@ -265,21 +288,27 @@ namespace SOS
                             {
                                 if (file != null)
                                 {
-                                    string downloadFileName = file.FileName;
-
-                                    // If the downloaded doesn't already exists on disk in the cache, then write it to a temporary location.
-                                    if (!File.Exists(downloadFileName))
+                                    try
                                     {
-                                        downloadFileName = Path.Combine(GetTempDirectory(), symbolFileName);
+                                        string downloadFileName = file.FileName;
 
-                                        using (Stream destinationStream = File.OpenWrite(downloadFileName))
+                                        // If the downloaded doesn't already exists on disk in the cache, then write it to a temporary location.
+                                        if (!File.Exists(downloadFileName))
                                         {
-                                            file.Stream.CopyTo(destinationStream);
+                                            downloadFileName = Path.Combine(tempDirectory, symbolFileName);
+
+                                            using (Stream destinationStream = File.OpenWrite(downloadFileName)) {
+                                                file.Stream.CopyTo(destinationStream);
+                                            }
+                                            s_tracer.WriteLine("Downloaded symbol file {0}", key.FullPathName);
                                         }
-                                        s_tracer.WriteLine("Downloaded symbol file {0}", key.FullPathName);
+                                        s_tracer.Information("{0}: {1}", symbolFileName, downloadFileName);
+                                        callback(parameter, symbolFileName, downloadFileName);
                                     }
-                                    s_tracer.Information("{0}: {1}", symbolFileName, downloadFileName);
-                                    callback(parameter, symbolFileName, downloadFileName);
+                                    catch (Exception ex) when (ex is UnauthorizedAccessException || ex is DirectoryNotFoundException)
+                                    {
+                                        s_tracer.Error("{0}", ex.Message);
+                                    }
                                 }
                             }
                         }
@@ -859,6 +888,10 @@ namespace SOS
                     Debug.Assert(codeViewEntry.MinorVersion == ImageDebugDirectory.PortablePDBMinorVersion);
                     SymbolStoreKey key = PortablePDBFileKeyGenerator.GetKey(pdbPath, data.Guid);
                     pdbStream = GetSymbolStoreFile(key)?.Stream;
+                    if (pdbStream == null)
+                    {
+                        return null;
+                    }
                 }
 
                 provider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
@@ -983,7 +1016,8 @@ namespace SOS
                             break;
 
                         default:
-                            return false;
+                            // Directory path search (currently ignored)
+                            break;
                     }
 
                     // Add the symbol stores to the chain
@@ -1054,34 +1088,14 @@ namespace SOS
 
         private static string GetDefaultSymbolCache()
         {
-            var sb = new StringBuilder();
-
-            string environmentVar;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                environmentVar = "ProgramData";
+                return Path.Combine(Path.GetTempPath(), "SymbolCache");
             }
             else
             {
-                environmentVar = "HOME";
+                return Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".dotnet", "symbolcache");
             }
-            string userPath = Environment.GetEnvironmentVariable(environmentVar);
-            sb.Append(userPath);
-            sb.Append(Path.DirectorySeparatorChar);
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                sb.Append("dbg");
-                sb.Append(Path.DirectorySeparatorChar);
-                sb.Append("sym");
-            }
-            else
-            {
-                sb.Append(".dotnet");
-                sb.Append(Path.DirectorySeparatorChar);
-                sb.Append("symbolcache");
-            }
-            return sb.ToString();
         }
 
         /// <summary>
@@ -1103,19 +1117,6 @@ namespace SOS
             {
                 return null;
             }
-        }
-
-        /// <summary>
-        /// Create/return a temporary directory.
-        /// </summary>
-        private static string GetTempDirectory()
-        {
-            if (s_tempDirectory == null)
-            {
-                s_tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-                Directory.CreateDirectory(s_tempDirectory);
-            }
-            return s_tempDirectory;
         }
 
         /// <summary>

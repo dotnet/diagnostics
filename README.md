@@ -89,6 +89,10 @@ Symbol server support - The `setsymbolserver` command enables downloading the sy
     
     (lldb) setsymbolserver -ms
 
+Before executing the "bt" command to dump native frames to load the native symbols (for live debugging only):
+
+    (lldb) loadsymbols
+
 ## Useful Links
 
 * [The LLDB Debugger](http://lldb.llvm.org/index.html) - More information about lldb.

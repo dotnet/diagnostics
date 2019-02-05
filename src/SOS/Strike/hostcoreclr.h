@@ -18,8 +18,9 @@ typedef  int (*ReadMemoryDelegate)(ULONG64, uint8_t*, int);
 typedef void (*SymbolFileCallbackDelegate)(void*, const char* moduleFileName, const char* symbolFileName);
 
 typedef  BOOL (*InitializeSymbolStoreDelegate)(BOOL, BOOL, BOOL, const char*, const char*, const char*);
+typedef  void (*DisplaySymbolStoreDelegate)();
 typedef  void (*DisableSymbolStoreDelegate)();
-typedef  void (*LoadNativeSymbolsDelegate)(SymbolFileCallbackDelegate, void*, const char*, const char*, ULONG64, int, ReadMemoryDelegate);
+typedef  void (*LoadNativeSymbolsDelegate)(SymbolFileCallbackDelegate, void*, const char*, const char*, const char*, ULONG64, int, ReadMemoryDelegate);
 typedef  PVOID (*LoadSymbolsForModuleDelegate)(const char*, BOOL, ULONG64, int, ULONG64, int, ReadMemoryDelegate);
 typedef  void (*DisposeDelegate)(PVOID);
 typedef  BOOL (*ResolveSequencePointDelegate)(PVOID, const char*, unsigned int, unsigned int*, unsigned int*);
@@ -29,6 +30,7 @@ typedef  BOOL (*GetLineByILOffsetDelegate)(PVOID, mdMethodDef, ULONG64, ULONG *,
 struct SOSNetCoreCallbacks
 {
     InitializeSymbolStoreDelegate InitializeSymbolStoreDelegate;
+    DisplaySymbolStoreDelegate DisplaySymbolStoreDelegate;
     DisableSymbolStoreDelegate DisableSymbolStoreDelegate;
     LoadNativeSymbolsDelegate LoadNativeSymbolsDelegate;
     LoadSymbolsForModuleDelegate LoadSymbolsForModuleDelegate;
@@ -48,6 +50,7 @@ extern BOOL IsHostingInitialized();
 extern HRESULT InitializeHosting();
 extern HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* symbolServer, const char* cacheDirectory);
 extern HRESULT LoadNativeSymbols();
+extern void DisplaySymbolStore();
 extern void DisableSymbolStore();
 
 class SymbolReader
@@ -93,7 +96,7 @@ public:
     HRESULT LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataModule* pModule);
     HRESULT GetLineByILOffset(___in mdMethodDef MethodToken, ___in ULONG64 IlOffset, ___out ULONG *pLinenum, __out_ecount(cchFileName) WCHAR* pwszFileName, ___in ULONG cchFileName);
     HRESULT GetNamedLocalVariable(___in ICorDebugFrame * pFrame, ___in ULONG localIndex, __out_ecount(paramNameLen) WCHAR* paramName, ___in ULONG paramNameLen, ___out ICorDebugValue** ppValue);
-    HRESULT ResolveSequencePoint(__in_z WCHAR* pFilename, ___in ULONG32 lineNumber, ___in TADDR mod, ___out mdMethodDef* ___out pToken, ___out ULONG32* pIlOffset);
+    HRESULT ResolveSequencePoint(__in_z WCHAR* pFilename, ___in ULONG32 lineNumber, ___out mdMethodDef* ___out pToken, ___out ULONG32* pIlOffset);
 };
 
 HRESULT

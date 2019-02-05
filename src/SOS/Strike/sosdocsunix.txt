@@ -1844,14 +1844,16 @@ cleanup the previous resources.
 COMMAND: sethostruntime.
 SetHostRuntime <runtime-directory>
 
-This command sets the path to the .NET Core runtime to use to host the managed
+This command sets the path to the .NET Core runtime to use to host the managed 
 code that runs as part of SOS in the debugger (lldb). The runtime needs
 to be at least version 2.0.0 or greater. If there are spaces in directory, it
 needs to be single-quoted (').
 
-The default is to use the same runtime (libcoreclr) being debugged. Use this
-command when the runtime being debugged isn't working enough to run the SOS 
-code or if the version is less than 2.0.0.
+Normally, SOS attempts to find an installed .NET Core runtime to run its
+managed code automatically but this command is available if it fails. The
+default is to use the same runtime (libcoreclr) being debugged. Use this
+command if the default runtime being debugged isn't working enough to run
+the SOS code or if the version is less than 2.0.0.
 
 If you received the following error message when running a SOS command, use
 this command to set the path to 2.0.0 or greater .NET Core runtime.
@@ -1872,7 +1874,7 @@ SetSymbolServer [-ms] [-disable] [-log] [-cache <cache-path>] [-loadsymbols] [<s
 
 -ms - Use the public Microsoft symbol server.
 -disable - Disable symbol download support.
--cache - Specific a symbol cache directory. The default is $HOME/.sos/symbolcache if not specified.
+-cache - Specific a symbol cache directory. The default is $HOME/.dotnet/symbolcache if not specified.
 -log - Enable symbol download logging.
 -loadsymbols - Attempts to download the native .NET Core symbols for the runtime
 <symbol-server-URL> - Symbol server URL.
