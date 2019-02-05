@@ -38,23 +38,24 @@
       <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
     </Option>
     <Option Condition="'$(DailyTest)' != 'true'">
-      <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion21)</BuildProjectMicrosoftNetCoreAppVersion>
+      <!-- Build the debuggee for 2.1 but run it on 2.2 -->
       <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-      <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
+      <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion22)</BuildProjectMicrosoftNetCoreAppVersion>
+      <RuntimeFrameworkVersion>$(RuntimeVersion22)</RuntimeFrameworkVersion>
     </Option>
     <Option Condition="'$(DailyTest)' != 'true'">
-      <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion20)</BuildProjectMicrosoftNetCoreAppVersion>
-      <BuildProjectFramework>netcoreapp2.0</BuildProjectFramework>
-      <RuntimeFrameworkVersion>$(RuntimeVersion20)</RuntimeFrameworkVersion>
+      <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
+      <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion21)</BuildProjectMicrosoftNetCoreAppVersion>
+      <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
     </Option>
     <Option Condition="Exists('$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/$(RuntimeVersion11)')">
-      <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion11)</BuildProjectMicrosoftNetCoreAppVersion>
       <BuildProjectFramework>netcoreapp1.1</BuildProjectFramework>
+      <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion11)</BuildProjectMicrosoftNetCoreAppVersion>
       <RuntimeFrameworkVersion>$(RuntimeVersion11)</RuntimeFrameworkVersion>
       <!-- createdump doesn't exists in 1.1 -->
       <GenerateDumpWithGDB>true</GenerateDumpWithGDB>
       <!-- SOS needs at least 2.0 to run. The default without this is to use the runtime being debuggged to host SOS.NETCore -->
-      <SOSHostRuntime>$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/$(RuntimeVersion20)</SOSHostRuntime>
+      <SOSHostRuntime>$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/$(RuntimeVersion21)</SOSHostRuntime>
     </Option>
   </Options>
 
