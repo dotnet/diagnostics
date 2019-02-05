@@ -282,6 +282,71 @@ HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntimeDirecto
     return S_OK;
 }
 
+//
+// Returns the unique temporary directory for this instnace of SOS
+//
+static LPCSTR GetTempDirectory()
+{
+    if (g_tmpPath == nullptr)
+    {
+        char tmpPath[MAX_LONGPATH];
+        if (::GetTempPathA(MAX_LONGPATH, tmpPath) == 0)
+        {
+            strcpy_s(tmpPath, MAX_LONGPATH, ".");
+            strcat_s(tmpPath, MAX_LONGPATH, DIRECTORY_SEPARATOR_STR_A);
+        }
+        char pidstr[128];
+        sprintf_s(pidstr, _countof(pidstr), "%d", GetCurrentProcessId());
+        strcat_s(tmpPath, MAX_LONGPATH, pidstr);
+        strcat_s(tmpPath, MAX_LONGPATH, DIRECTORY_SEPARATOR_STR_A);
+
+        CreateDirectoryA(tmpPath, NULL);
+        g_tmpPath = _strdup(tmpPath);
+    }
+    return g_tmpPath;
+}
+
+/**********************************************************************\
+ * Clean up the temporary directory files and DAC symlink.
+\**********************************************************************/
+#ifdef FEATURE_PAL
+__attribute__((destructor)) 
+#endif
+void SOSShutdown()
+{
+    LPCSTR tmpPath = (LPCSTR)InterlockedExchangePointer((PVOID *)&g_tmpPath, nullptr);
+    if (tmpPath != nullptr)
+    {
+        std::string directory(tmpPath);
+        directory.append("*");
+
+        WIN32_FIND_DATAA data;
+        HANDLE findHandle = FindFirstFileA(directory.c_str(), &data);
+
+        if (findHandle != INVALID_HANDLE_VALUE) 
+        {
+            do
+            {
+                if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
+                {
+                    std::string file(tmpPath);
+                    file.append(data.cFileName);
+                    DeleteFileA(file.c_str());
+                }
+            } 
+            while (0 != FindNextFileA(findHandle, &data));
+
+            FindClose(findHandle);
+        }
+
+        RemoveDirectoryA(tmpPath);
+        free((void*)tmpPath);
+    }
+}
+
+/**********************************************************************\
+ * Returns the DAC module path to the rest of SOS.
+\**********************************************************************/
 LPCSTR GetDacFilePath()
 {
     // If the DAC path hasn't been set by the symbol download support, use the one in the runtime directory.
@@ -297,7 +362,32 @@ LPCSTR GetDacFilePath()
             // if DAC file exists
             if (access(dacModulePath.c_str(), F_OK) == 0)
 #endif
+            {
+#if defined(__linux__)
+                // We are creating a symlink to the DAC in a temp directory
+                // where libcoreclrtraceptprovider.so doesn't exist so it 
+                // doesn't get loaded by the DAC causing a LTTng-UST exception.
+                //
+                // Issue #https://github.com/dotnet/coreclr/issues/20205
+                LPCSTR tmpPath = GetTempDirectory();
+                if (tmpPath != nullptr) 
+                {
+                    std::string dacSymLink(tmpPath);
+                    dacSymLink.append(MAKEDLLNAME_A("mscordaccore"));
+
+                    int error = symlink(dacModulePath.c_str(), dacSymLink.c_str());
+                    if (error == 0)
+                    {
+                        dacModulePath.assign(dacSymLink);
+                    }
+                    else
+                    {
+                        ExtErr("symlink(%s, %s) FAILED %s\n", dacModulePath.c_str(), dacSymLink.c_str(), strerror(errno));
+                    }
+                }
+#endif
                 g_dacFilePath = _strdup(dacModulePath.c_str());
+            }
         }
     }
     return g_dacFilePath;
