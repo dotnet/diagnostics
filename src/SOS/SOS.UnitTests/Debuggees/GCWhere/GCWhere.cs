@@ -30,12 +30,17 @@ class GCWhere
     static int Main() 
     {
         GCWhere temp = new GCWhere("This is a string!!");
+        int genFirstTime = GC.GetGeneration(temp);
         Debugger.Break();   // GCWhere should temp in Gen0        
         GC.Collect();
+        int genSecondTime = GC.GetGeneration(temp);
         Debugger.Break();   // GCWhere should temp in Gen1                
         GC.Collect();
+        int genThirdTime = GC.GetGeneration(temp);
         Debugger.Break();   // GCWhere should temp in Gen2                
         GC.Collect();
+        int genFourthTime = GC.GetGeneration(temp);
+        Console.WriteLine("1st: {0} 2nd: {1}, 3rd: {2} 4th: {3}", genFirstTime, genSecondTime, genThirdTime, genFourthTime);
         Debugger.Break();   // GCWhere should temp in Gen2                
         PrintIt(temp);
         GC.KeepAlive(temp);

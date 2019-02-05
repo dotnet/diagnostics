@@ -46,15 +46,15 @@ DECLARE_HANDLE(OBJECTHANDLE);
 struct IMDInternalImport;
 
 #if defined(_TARGET_WIN64_)
-#define WIN64_8SPACES ""
-#define WIN86_8SPACES "        "
+#define WIN64_8SPACES "        "
+#define WIN86_8SPACES ""
 #define POINTERSIZE "16"
 #define POINTERSIZE_HEX 16
 #define POINTERSIZE_BYTES 8
 #define POINTERSIZE_TYPE "I64"
 #else
-#define WIN64_8SPACES "        "
-#define WIN86_8SPACES ""
+#define WIN64_8SPACES ""
+#define WIN86_8SPACES "        "
 #define POINTERSIZE "8"
 #define POINTERSIZE_HEX 8
 #define POINTERSIZE_BYTES 4
