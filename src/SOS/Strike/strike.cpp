@@ -12682,21 +12682,25 @@ public:
                 break;
             }
             
-            CROSS_PLATFORM_CONTEXT context;
+            // This is a workaround for a problem in the MacOS DAC/DBI PAL. The PAL exception
+            // handling is unnecessarily enabled for DLLs and is not properly passing what I
+            // think is recoverable stack fault on to the OS. Instead it is causing a fault
+            // GP fault. Putting this struct in the heap works around this fault.
+            ArrayHolder<CROSS_PLATFORM_CONTEXT> context = new CROSS_PLATFORM_CONTEXT[1];
             ULONG32 cbContextActual;
-            if ((Status=pStackWalk->GetContext(
+            if ((Status = pStackWalk->GetContext(
                 DT_CONTEXT_FULL, 
-                sizeof(context),
+                sizeof(CROSS_PLATFORM_CONTEXT),
                 &cbContextActual,
-                (BYTE *)&context))!=S_OK)
+                (BYTE *)context.GetPtr())) != S_OK)
             {
                 ExtOut("GetFrameContext failed: %lx\n",Status);
                 break;
             }
 
             // First find the info for the Frame object, if the current frame has an associated clr!Frame.
-            CLRDATA_ADDRESS sp = GetSP(context);
-            CLRDATA_ADDRESS ip = GetIP(context);
+            CLRDATA_ADDRESS sp = GetSP(*context.GetPtr());
+            CLRDATA_ADDRESS ip = GetIP(*context.GetPtr());
 
             ToRelease<ICorDebugFrame> pFrame;
             IfFailRet(pStackWalk->GetFrame(&pFrame));
@@ -12765,7 +12769,7 @@ public:
                 IfFailRet(pFunction->GetModule(&pModule));
                 IfFailRet(pFunction->GetToken(&methodDef));
 
-                WCHAR wszModuleName[100];
+                WCHAR wszModuleName[MAX_LONGPATH];
                 ULONG32 cchModuleNameActual;
                 IfFailRet(pModule->GetName(_countof(wszModuleName), &cchModuleNameActual, wszModuleName));
 

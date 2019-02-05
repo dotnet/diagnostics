@@ -643,14 +643,15 @@ void DisableSymbolStore()
     }
 }
 
+/**********************************************************************\
+ * Load symbols for an ICorDebugModule. Used by "clrstack -i".
+\**********************************************************************/
 HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in ICorDebugModule* pModule)
 {
     HRESULT Status = S_OK;
-    BOOL isDynamic = FALSE;
-    BOOL isInMemory = FALSE;
-    IfFailRet(pModule->IsDynamic(&isDynamic));
-    IfFailRet(pModule->IsInMemory(&isInMemory));
 
+    BOOL isDynamic = FALSE;
+    IfFailRet(pModule->IsDynamic(&isDynamic));
     if (isDynamic)
     {
         // Dynamic and in memory assemblies are a special case which we will ignore for now
@@ -659,23 +660,17 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in ICorDebugMod
     }
 
     ULONG64 peAddress = 0;
-    ULONG32 peSize = 0;
     IfFailRet(pModule->GetBaseAddress(&peAddress));
-    IfFailRet(pModule->GetSize(&peSize));
 
-    ULONG32 len = 0; 
-    WCHAR moduleName[MAX_LONGPATH];
-    IfFailRet(pModule->GetName(_countof(moduleName), &len, moduleName));
+    IXCLRDataModule* pClrModule;
+    IfFailRet(GetModuleFromAddress(peAddress, &pClrModule));
 
-#ifndef FEATURE_PAL
-    if (SUCCEEDED(LoadSymbolsForWindowsPDB(pMD, peAddress, moduleName, isInMemory)))
-    {
-        return S_OK;
-    }
-#endif // FEATURE_PAL
-    return LoadSymbolsForPortablePDB(moduleName, isInMemory, isInMemory, peAddress, peSize, 0, 0);
+    return LoadSymbols(pMD, pClrModule);
 }
 
+/**********************************************************************\
+ * Load symbols for a module.
+\**********************************************************************/
 HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataModule* pModule)
 {
     ULONG32 flags;
@@ -730,6 +725,9 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
 
 #ifndef FEATURE_PAL
 
+/**********************************************************************\
+ * Attempts to load Windows PDBs on Windows.
+\**********************************************************************/
 HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in ULONG64 peAddress, __in_z WCHAR* pModuleName, ___in BOOL isFileLayout)
 {
     HRESULT Status = S_OK;
@@ -740,7 +738,6 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
     IfFailRet(CoInitialize(NULL));
 
     // We now need a binder object that will take the module and return a 
-    // reader object
     ToRelease<ISymUnmanagedBinder3> pSymBinder;
     if (FAILED(Status = CreateInstanceCustom(CLSID_CorSymBinder_SxS, 
                         IID_ISymUnmanagedBinder3, 
@@ -801,6 +798,9 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
 
 #endif // FEATURE_PAL
 
+/**********************************************************************\
+ * Attempts to load a portable or embeded PDB. Both Windows and xplat.
+\**********************************************************************/
 HRESULT SymbolReader::LoadSymbolsForPortablePDB(__in_z WCHAR* pModuleName, ___in BOOL isInMemory, ___in BOOL isFileLayout,
     ___in ULONG64 peAddress, ___in ULONG64 peSize, ___in ULONG64 inMemoryPdbAddress, ___in ULONG64 inMemoryPdbSize)
 {

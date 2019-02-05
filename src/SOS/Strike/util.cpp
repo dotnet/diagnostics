@@ -2563,6 +2563,44 @@ Failure:
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
+*    Find the IXCLRDataModule instance for the base address.           *
+*                                                                      *
+\**********************************************************************/
+HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataModule** ppModule)
+{
+    HRESULT hr = E_FAIL;
+    *ppModule = nullptr;
+
+    int numModule;
+    ArrayHolder<DWORD_PTR> moduleList = ModuleFromName(NULL, &numModule);
+    if (moduleList != nullptr)
+    {
+        for (int i = 0; i < numModule; i++)
+        {
+            ToRelease<IXCLRDataModule> module;
+            hr = g_sos->GetModule(moduleList[i], &module);
+            if (FAILED(hr)) {
+                break;
+            }
+            DacpGetModuleData moduleData;
+            HRESULT hr = moduleData.Request(module);
+            if (FAILED(hr)) {
+                break;
+            }
+            if (peAddress == moduleData.LoadedPEAddress)
+            {
+                *ppModule = module.Detach();
+                break;
+            }
+        }
+    }
+
+    return hr;
+}
+
+/**********************************************************************\
+* Routine Description:                                                 *
+*                                                                      *
 *    Find the EE data given a name.                                    *  
 *                                                                      *
 \**********************************************************************/
