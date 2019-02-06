@@ -32,11 +32,11 @@ VERIFY:<HEXVAL>\s+0\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+33\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+34\]\s+
 
 SOSCOMMAND:GCRoot -all <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+33\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+34\]\s+
 
 SOSCOMMAND:DumpObj <PREVPOUT>
 VERIFY:\s*Name:\s+GCWhere\s+
@@ -103,11 +103,11 @@ VERIFY:<HEXVAL>\s+1\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+35\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+37\]\s+
 
 SOSCOMMAND:GCRoot -all <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+35\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+37\]\s+
 
 SOSCOMMAND:DumpObj <PREVPOUT>
 VERIFY:\s*Name:\s+GCWhere\s+
@@ -137,6 +137,7 @@ IFDEF:CDB
 VERIFY:Break instruction exception - code 80000003
 ENDIF:CDB
 
+SOSCOMMAND:EEHeap -gc
 SOSCOMMAND:DumpStackObjects
 SOSCOMMAND:GCWhere <POUT>\w+\s+(<HEXVAL>)\s+([Gg][Cc]where!\$0_)*GCWhere\s+<POUT>
 # we care that the Gen is 2
@@ -144,7 +145,7 @@ VERIFY:<HEXVAL>\s+2\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+37\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+40\]\s+
 
 # Continue to the next DebugBreak
 CONTINUE
@@ -152,14 +153,15 @@ IFDEF:CDB
 VERIFY:Break instruction exception - code 80000003
 ENDIF:CDB
 
+SOSCOMMAND:EEHeap -gc
 SOSCOMMAND:DumpStackObjects
 SOSCOMMAND:GCWhere <POUT>\w+\s+(<HEXVAL>)\s+([Gg][Cc]where!\$0_)*GCWhere\s+<POUT>
-# we care that the Gen is still 2
-VERIFY:<HEXVAL>\s+2\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
+# we care that the Gen is still 2 or 0 on Windows 3.x 
+VERIFY:<HEXVAL>\s+[02]\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+39\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+44\]\s+
 
 # Continue to the next DebugBreak
 CONTINUE

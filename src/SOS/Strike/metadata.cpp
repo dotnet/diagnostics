@@ -18,7 +18,6 @@
 *                                                                      *
 \**********************************************************************/
 // Caller should guard against exception
-// !!! mdName should have at least mdNameLen WCHAR
 static HRESULT NameForTypeDef_s(mdTypeDef tkTypeDef, IMetaDataImport *pImport,
                               __out_ecount (capacity_mdName) WCHAR *mdName, size_t capacity_mdName)
 {
@@ -26,7 +25,7 @@ static HRESULT NameForTypeDef_s(mdTypeDef tkTypeDef, IMetaDataImport *pImport,
     ULONG nameLen;
     
     HRESULT hr = pImport->GetTypeDefProps(tkTypeDef, mdName,
-                                          mdNameLen, &nameLen,
+                                          (ULONG)capacity_mdName, &nameLen,
                                           &flags, NULL);
     if (hr != S_OK) {
         return hr;
@@ -42,53 +41,22 @@ static HRESULT NameForTypeDef_s(mdTypeDef tkTypeDef, IMetaDataImport *pImport,
     }
     WCHAR *name = (WCHAR*)_alloca((nameLen+1)*sizeof(WCHAR));
     wcscpy_s (name, nameLen+1, mdName);
-    hr = NameForTypeDef_s(tkEnclosingClass,pImport,mdName, capacity_mdName);
+    hr = NameForTypeDef_s(tkEnclosingClass, pImport, mdName, capacity_mdName);
     if (hr != S_OK) {
         return hr;
     }
     size_t Len = _wcslen (mdName);
-    if (Len < mdNameLen-2) {
+    if (Len < capacity_mdName - 2) {
         mdName[Len++] = L'+';
         mdName[Len] = L'\0';
     }
-    Len = mdNameLen-1 - Len;
+    Len = capacity_mdName - 1 - Len;
     if (Len > nameLen) {
         Len = nameLen;
     }
-    wcsncat_s (mdName,capacity_mdName,name,Len);
+    wcsncat_s (mdName, capacity_mdName, name, Len);
     return hr;
 }
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function is called to find the name of a TypeDef using       *  
-*    metadata API.                                                     *
-*                                                                      *
-\**********************************************************************/
-// Caller should guard against exception
-// !!! mdName should have at least mdNameLen WCHAR
-/*
-static HRESULT NameForTypeDefNew(mdTypeDef tkTypeDef, IMDInternalImport *pImport,
-                              WCHAR *mdName)
-{
-    DWORD flags;
-    ULONG nameLen;
-    char *name = (char *)_alloca((mdNameLen+1)*sizeof(char));
-    char *namesp = (char *)_alloca((mdNameLen+1)*sizeof(char));
-    
-    HRESULT hr = pImport->GetNameOfTypeDef(tkTypeDef, name, namesp);
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-
-    strcpy (namesp, ".");
-    strcpy (namesp, name);
-    MultiByteToWideChar (CP_ACP,0,namesp,-1,mdName,mdNameLen);
-    return hr;
-}
-*/
 
 /**********************************************************************\
 * Routine Description:                                                 *

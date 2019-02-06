@@ -442,15 +442,23 @@ CharNextExA(
 #define IDYES                   6
 #define IDNO                    7
 
+PALIMPORT
+int
+PALAPI
+MessageBoxA(
+    IN LPVOID hWnd,  // NOTE: diff from winuser.h
+    IN LPCSTR lpText,
+    IN LPCSTR lpCaption,
+    IN UINT uType);
 
 PALIMPORT
 int
 PALAPI
 MessageBoxW(
-        IN LPVOID hWnd,  // NOTE: diff from winuser.h
-        IN LPCWSTR lpText,
-        IN LPCWSTR lpCaption,
-        IN UINT uType);
+    IN LPVOID hWnd,  // NOTE: diff from winuser.h
+    IN LPCWSTR lpText,
+    IN LPCWSTR lpCaption,
+    IN UINT uType);
 
 
 #ifdef UNICODE
@@ -515,18 +523,29 @@ typedef struct _SECURITY_ATTRIBUTES {
 
 #define INVALID_SET_FILE_POINTER   ((DWORD)-1)
 
+PALIMPORT
+HANDLE
+PALAPI
+CreateFileA(
+    IN LPCSTR lpFileName,
+    IN DWORD dwDesiredAccess,
+    IN DWORD dwShareMode,
+    IN LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+    IN DWORD dwCreationDisposition,
+    IN DWORD dwFlagsAndAttributes,
+    IN HANDLE hTemplateFile);
 
 PALIMPORT
 HANDLE
 PALAPI
 CreateFileW(
-        IN LPCWSTR lpFileName,
-        IN DWORD dwDesiredAccess,
-        IN DWORD dwShareMode,
-        IN LPSECURITY_ATTRIBUTES lpSecurityAttributes,
-        IN DWORD dwCreationDisposition,
-        IN DWORD dwFlagsAndAttributes,
-        IN HANDLE hTemplateFile);
+    IN LPCWSTR lpFileName,
+    IN DWORD dwDesiredAccess,
+    IN DWORD dwShareMode,
+    IN LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+    IN DWORD dwCreationDisposition,
+    IN DWORD dwFlagsAndAttributes,
+    IN HANDLE hTemplateFile);
 
 #ifdef UNICODE
 #define CreateFile CreateFileW
@@ -538,14 +557,25 @@ CreateFileW(
 PALIMPORT
 DWORD
 PALAPI
+SearchPathA(
+    IN LPCSTR lpPath,
+    IN LPCSTR lpFileName,
+    IN LPCSTR lpExtension,
+    IN DWORD nBufferLength,
+    OUT LPSTR lpBuffer,
+    OUT LPSTR *lpFilePart);
+
+PALIMPORT
+DWORD
+PALAPI
 SearchPathW(
     IN LPCWSTR lpPath,
     IN LPCWSTR lpFileName,
     IN LPCWSTR lpExtension,
     IN DWORD nBufferLength,
     OUT LPWSTR lpBuffer,
-    OUT LPWSTR *lpFilePart
-    );
+    OUT LPWSTR *lpFilePart);
+
 #ifdef UNICODE
 #define SearchPath  SearchPathW
 #else
@@ -553,14 +583,21 @@ SearchPathW(
 #endif // !UNICODE
 
 
+PALIMPORT
+BOOL
+PALAPI
+CopyFileA(
+    IN LPCSTR lpExistingFileName,
+    IN LPCSTR lpNewFileName,
+    IN BOOL bFailIfExists);
 
 PALIMPORT
 BOOL
 PALAPI
 CopyFileW(
-      IN LPCWSTR lpExistingFileName,
-      IN LPCWSTR lpNewFileName,
-      IN BOOL bFailIfExists);
+    IN LPCWSTR lpExistingFileName,
+    IN LPCWSTR lpNewFileName,
+    IN BOOL bFailIfExists);
 
 #ifdef UNICODE
 #define CopyFile CopyFileW
@@ -572,8 +609,14 @@ CopyFileW(
 PALIMPORT
 BOOL
 PALAPI
+DeleteFileA(
+    IN LPCSTR lpFileName);
+
+PALIMPORT
+BOOL
+PALAPI
 DeleteFileW(
-        IN LPCWSTR lpFileName);
+    IN LPCWSTR lpFileName);
 
 #ifdef UNICODE
 #define DeleteFile DeleteFileW
@@ -582,18 +625,24 @@ DeleteFileW(
 #endif
 
 
-
 #define MOVEFILE_REPLACE_EXISTING      0x00000001
 #define MOVEFILE_COPY_ALLOWED          0x00000002
 
+PALIMPORT
+BOOL
+PALAPI
+MoveFileExA(
+    IN LPCSTR lpExistingFileName,
+    IN LPCSTR lpNewFileName,
+    IN DWORD dwFlags);
 
 PALIMPORT
 BOOL
 PALAPI
 MoveFileExW(
-        IN LPCWSTR lpExistingFileName,
-        IN LPCWSTR lpNewFileName,
-        IN DWORD dwFlags);
+    IN LPCWSTR lpExistingFileName,
+    IN LPCWSTR lpNewFileName,
+    IN DWORD dwFlags);
 
 #ifdef UNICODE
 #define MoveFileEx MoveFileExW
@@ -601,12 +650,20 @@ MoveFileExW(
 #define MoveFileEx MoveFileExA
 #endif
 
+
+PALIMPORT
+BOOL
+PALAPI
+CreateDirectoryA(
+    IN LPCSTR lpPathName,
+    IN LPSECURITY_ATTRIBUTES lpSecurityAttributes);
+
 PALIMPORT
 BOOL
 PALAPI
 CreateDirectoryW(
-         IN LPCWSTR lpPathName,
-         IN LPSECURITY_ATTRIBUTES lpSecurityAttributes);
+    IN LPCWSTR lpPathName,
+    IN LPSECURITY_ATTRIBUTES lpSecurityAttributes);
 
 #ifdef UNICODE
 #define CreateDirectory CreateDirectoryW
@@ -614,11 +671,18 @@ CreateDirectoryW(
 #define CreateDirectory CreateDirectoryA
 #endif
 
+
+PALIMPORT
+BOOL
+PALAPI
+RemoveDirectoryA(
+    IN LPCSTR lpPathName);
+
 PALIMPORT
 BOOL
 PALAPI
 RemoveDirectoryW(
-         IN LPCWSTR lpPathName);
+    IN LPCWSTR lpPathName);
 
 #ifdef UNICODE
 #define RemoveDirectory RemoveDirectoryW
@@ -678,9 +742,16 @@ typedef LPWIN32_FIND_DATAA LPWIN32_FIND_DATA;
 PALIMPORT
 HANDLE
 PALAPI
+FindFirstFileA(
+    IN LPCSTR lpFileName,
+    OUT LPWIN32_FIND_DATAA lpFindFileData);
+
+PALIMPORT
+HANDLE
+PALAPI
 FindFirstFileW(
-           IN LPCWSTR lpFileName,
-           OUT LPWIN32_FIND_DATAW lpFindFileData);
+    IN LPCWSTR lpFileName,
+    OUT LPWIN32_FIND_DATAW lpFindFileData);
 
 #ifdef UNICODE
 #define FindFirstFile FindFirstFileW
@@ -688,12 +759,20 @@ FindFirstFileW(
 #define FindFirstFile FindFirstFileA
 #endif
 
+
+PALIMPORT
+BOOL
+PALAPI
+FindNextFileA(
+    IN HANDLE hFindFile,
+    OUT LPWIN32_FIND_DATAA lpFindFileData);
+
 PALIMPORT
 BOOL
 PALAPI
 FindNextFileW(
-          IN HANDLE hFindFile,
-          OUT LPWIN32_FIND_DATAW lpFindFileData);
+    IN HANDLE hFindFile,
+    OUT LPWIN32_FIND_DATAW lpFindFileData);
 
 #ifdef UNICODE
 #define FindNextFile FindNextFileW
@@ -701,23 +780,32 @@ FindNextFileW(
 #define FindNextFile FindNextFileA
 #endif
 
+
 PALIMPORT
 BOOL
 PALAPI
 FindClose(
       IN OUT HANDLE hFindFile);
 
+
+PALIMPORT
+DWORD
+PALAPI
+GetFileAttributesA(
+    IN LPCSTR lpFileName);
+
 PALIMPORT
 DWORD
 PALAPI
 GetFileAttributesW(
-           IN LPCWSTR lpFileName);
+    IN LPCWSTR lpFileName);
 
 #ifdef UNICODE
 #define GetFileAttributes GetFileAttributesW
 #else
 #define GetFileAttributes GetFileAttributesA
 #endif
+
 
 typedef enum _GET_FILEEX_INFO_LEVELS {
   GetFileExInfoStandard
@@ -749,13 +837,20 @@ PALIMPORT
 BOOL
 PALAPI
 GetFileAttributesExW(
-             IN LPCWSTR lpFileName,
-             IN GET_FILEEX_INFO_LEVELS fInfoLevelId,
-             OUT LPVOID lpFileInformation);
+    IN LPCWSTR lpFileName,
+    IN GET_FILEEX_INFO_LEVELS fInfoLevelId,
+    OUT LPVOID lpFileInformation);
 
 #ifdef UNICODE
 #define GetFileAttributesEx GetFileAttributesExW
 #endif
+
+PALIMPORT
+BOOL
+PALAPI
+SetFileAttributesA(
+    IN LPCSTR lpFileName,
+    IN DWORD dwFileAttributes);
 
 PALIMPORT
 BOOL
@@ -769,6 +864,7 @@ SetFileAttributesW(
 #else
 #define SetFileAttributes SetFileAttributesA
 #endif
+
 
 typedef struct _OVERLAPPED {
     ULONG_PTR Internal;
@@ -880,37 +976,44 @@ PALIMPORT
 VOID
 PALAPI
 GetSystemTime(
-          OUT LPSYSTEMTIME lpSystemTime);
+    OUT LPSYSTEMTIME lpSystemTime);
 
 PALIMPORT
 BOOL
 PALAPI
 FileTimeToSystemTime(
-            IN CONST FILETIME *lpFileTime,
-            OUT LPSYSTEMTIME lpSystemTime);
-
-
+    IN CONST FILETIME *lpFileTime,
+    OUT LPSYSTEMTIME lpSystemTime);
 
 PALIMPORT
 BOOL
 PALAPI
 FlushFileBuffers(
-         IN HANDLE hFile);
+    IN HANDLE hFile);
 
 PALIMPORT
 UINT
 PALAPI
 GetConsoleOutputCP(
-           VOID);
+    VOID);
+
+PALIMPORT
+DWORD
+PALAPI
+GetFullPathNameA(
+    IN LPCSTR lpFileName,
+    IN DWORD nBufferLength,
+    OUT LPSTR lpBuffer,
+    OUT LPSTR *lpFilePart);
 
 PALIMPORT
 DWORD
 PALAPI
 GetFullPathNameW(
-         IN LPCWSTR lpFileName,
-         IN DWORD nBufferLength,
-         OUT LPWSTR lpBuffer,
-         OUT LPWSTR *lpFilePart);
+    IN LPCWSTR lpFileName,
+    IN DWORD nBufferLength,
+    OUT LPWSTR lpBuffer,
+    OUT LPWSTR *lpFilePart);
 
 #ifdef UNICODE
 #define GetFullPathName GetFullPathNameW
@@ -918,13 +1021,14 @@ GetFullPathNameW(
 #define GetFullPathName GetFullPathNameA
 #endif
 
+
 PALIMPORT
 DWORD
 PALAPI
 GetLongPathNameW(
-         IN LPCWSTR lpszShortPath,
-                 OUT LPWSTR lpszLongPath,
-         IN DWORD cchBuffer);
+    IN LPCWSTR lpszShortPath,
+    OUT LPWSTR lpszLongPath,
+    IN DWORD cchBuffer);
 
 #ifdef UNICODE
 #define GetLongPathName GetLongPathNameW
@@ -934,9 +1038,9 @@ PALIMPORT
 DWORD
 PALAPI
 GetShortPathNameW(
-         IN LPCWSTR lpszLongPath,
-                 OUT LPWSTR lpszShortPath,
-         IN DWORD cchBuffer);
+    IN LPCWSTR lpszLongPath,
+    OUT LPWSTR lpszShortPath,
+    IN DWORD cchBuffer);
 
 #ifdef UNICODE
 #define GetShortPathName GetShortPathNameW
@@ -946,11 +1050,20 @@ GetShortPathNameW(
 PALIMPORT
 UINT
 PALAPI
+GetTempFileNameA(
+    IN LPCSTR lpPathName,
+    IN LPCSTR lpPrefixString,
+    IN UINT uUnique,
+    OUT LPSTR lpTempFileName);
+
+PALIMPORT
+UINT
+PALAPI
 GetTempFileNameW(
-         IN LPCWSTR lpPathName,
-         IN LPCWSTR lpPrefixString,
-         IN UINT uUnique,
-         OUT LPWSTR lpTempFileName);
+    IN LPCWSTR lpPathName,
+    IN LPCWSTR lpPrefixString,
+    IN UINT uUnique,
+    OUT LPWSTR lpTempFileName);
 
 #ifdef UNICODE
 #define GetTempFileName GetTempFileNameW
@@ -958,12 +1071,20 @@ GetTempFileNameW(
 #define GetTempFileName GetTempFileNameA
 #endif
 
+
+PALIMPORT
+DWORD
+PALAPI
+GetTempPathA(
+    IN DWORD nBufferLength,
+    OUT LPSTR lpBuffer);
+
 PALIMPORT
 DWORD
 PALAPI
 GetTempPathW(
-         IN DWORD nBufferLength,
-         OUT LPWSTR lpBuffer);
+    IN DWORD nBufferLength,
+    OUT LPWSTR lpBuffer);
 
 #ifdef UNICODE
 #define GetTempPath GetTempPathW
@@ -971,12 +1092,20 @@ GetTempPathW(
 #define GetTempPath GetTempPathA
 #endif
 
+
+PALIMPORT
+DWORD
+PALAPI
+GetCurrentDirectoryA(
+    IN DWORD nBufferLength,
+    OUT LPSTR lpBuffer);
+
 PALIMPORT
 DWORD
 PALAPI
 GetCurrentDirectoryW(
-             IN DWORD nBufferLength,
-             OUT LPWSTR lpBuffer);
+    IN DWORD nBufferLength,
+    OUT LPWSTR lpBuffer);
 
 #ifdef UNICODE
 #define GetCurrentDirectory GetCurrentDirectoryW
@@ -984,11 +1113,18 @@ GetCurrentDirectoryW(
 #define GetCurrentDirectory GetCurrentDirectoryA
 #endif
 
+
+PALIMPORT
+BOOL
+PALAPI
+SetCurrentDirectoryA(
+    IN LPCSTR lpPathName);
+
 PALIMPORT
 BOOL
 PALAPI
 SetCurrentDirectoryW(
-            IN LPCWSTR lpPathName);
+    IN LPCWSTR lpPathName);
 
 
 #ifdef UNICODE
@@ -1001,19 +1137,19 @@ PALIMPORT
 DWORD
 PALAPI
 GetCurrentProcessId(
-            VOID);
+    VOID);
 
 PALIMPORT
 DWORD
 PALAPI
 GetCurrentSessionId(
-            VOID);
+    VOID);
 
 PALIMPORT
 DWORD
 PALAPI
 GetCurrentThreadId(
-           VOID);
+   VOID);
 
 #define STARTF_USESTDHANDLES       0x00000100
 
@@ -1918,19 +2054,31 @@ SetErrorMode(
 PALIMPORT
 HANDLE
 PALAPI
+CreateFileMappingA(
+    IN HANDLE hFile,
+    IN LPSECURITY_ATTRIBUTES lpFileMappingAttributes,
+    IN DWORD flProtect,
+    IN DWORD dwMaximumSizeHigh,
+    IN DWORD dwMaximumSizeLow,
+    IN LPCSTR lpName);
+
+PALIMPORT
+HANDLE
+PALAPI
 CreateFileMappingW(
-           IN HANDLE hFile,
-           IN LPSECURITY_ATTRIBUTES lpFileMappingAttributes,
-           IN DWORD flProtect,
-           IN DWORD dwMaxmimumSizeHigh,
-           IN DWORD dwMaximumSizeLow,
-           IN LPCWSTR lpName);
+    IN HANDLE hFile,
+    IN LPSECURITY_ATTRIBUTES lpFileMappingAttributes,
+    IN DWORD flProtect,
+    IN DWORD dwMaxmimumSizeHigh,
+    IN DWORD dwMaximumSizeLow,
+    IN LPCWSTR lpName);
 
 #ifdef UNICODE
 #define CreateFileMapping CreateFileMappingW
 #else
 #define CreateFileMapping CreateFileMappingA
 #endif
+
 
 #define SECTION_QUERY       0x0001
 #define SECTION_MAP_WRITE   0x0002
@@ -1945,10 +2093,18 @@ CreateFileMappingW(
 PALIMPORT
 HANDLE
 PALAPI
-OpenFileMappingW(
+OpenFileMappingA(
          IN DWORD dwDesiredAccess,
          IN BOOL bInheritHandle,
-         IN LPCWSTR lpName);
+         IN LPCSTR lpName);
+
+PALIMPORT
+HANDLE
+PALAPI
+OpenFileMappingW(
+    IN DWORD dwDesiredAccess,
+    IN BOOL bInheritHandle,
+    IN LPCWSTR lpName);
 
 #ifdef UNICODE
 #define OpenFileMapping OpenFileMappingW
@@ -1956,38 +2112,54 @@ OpenFileMappingW(
 #define OpenFileMapping OpenFileMappingA
 #endif
 
+
 PALIMPORT
 LPVOID
 PALAPI
 MapViewOfFile(
-          IN HANDLE hFileMappingObject,
-          IN DWORD dwDesiredAccess,
-          IN DWORD dwFileOffsetHigh,
-          IN DWORD dwFileOffsetLow,
-          IN SIZE_T dwNumberOfBytesToMap);
+    IN HANDLE hFileMappingObject,
+    IN DWORD dwDesiredAccess,
+    IN DWORD dwFileOffsetHigh,
+    IN DWORD dwFileOffsetLow,
+    IN SIZE_T dwNumberOfBytesToMap);
 
 PALIMPORT
 LPVOID
 PALAPI
 MapViewOfFileEx(
-          IN HANDLE hFileMappingObject,
-          IN DWORD dwDesiredAccess,
-          IN DWORD dwFileOffsetHigh,
-          IN DWORD dwFileOffsetLow,
-          IN SIZE_T dwNumberOfBytesToMap,
-          IN LPVOID lpBaseAddress);
+    IN HANDLE hFileMappingObject,
+    IN DWORD dwDesiredAccess,
+    IN DWORD dwFileOffsetHigh,
+    IN DWORD dwFileOffsetLow,
+    IN SIZE_T dwNumberOfBytesToMap,
+    IN LPVOID lpBaseAddress);
 
 PALIMPORT
 BOOL
 PALAPI
 UnmapViewOfFile(
-        IN LPCVOID lpBaseAddress);
+    IN LPCVOID lpBaseAddress);
+
+
+PALIMPORT
+HMODULE
+PALAPI
+LoadLibraryA(
+    IN LPCSTR lpLibFileName);
+
+PALIMPORT
+HMODULE
+PALAPI
+LoadLibraryExA(
+    IN LPCSTR lpLibFileName,
+    IN /*Reserved*/ HANDLE hFile,
+    IN DWORD dwFlags);
 
 PALIMPORT
 HMODULE
 PALAPI
 LoadLibraryW(
-        IN LPCWSTR lpLibFileName);
+    IN LPCWSTR lpLibFileName);
 
 PALIMPORT
 HMODULE
@@ -2026,6 +2198,15 @@ PALAPI
 DisableThreadLibraryCalls(
     IN HMODULE hLibModule);
 
+
+PALIMPORT
+DWORD
+PALAPI
+GetModuleFileNameA(
+    IN HMODULE hModule,
+    OUT LPSTR lpFileName,
+    IN DWORD nSize);
+
 PALIMPORT
 DWORD
 PALAPI
@@ -2039,6 +2220,7 @@ GetModuleFileNameW(
 #else
 #define GetModuleFileName GetModuleFileNameA
 #endif
+
 
 PALIMPORT
 DWORD
@@ -2408,7 +2590,7 @@ PALIMPORT
 VOID
 PALAPI
 DebugBreak(
-       VOID);
+    VOID);
 
 PALIMPORT
 int
@@ -2431,10 +2613,18 @@ lstrlenW(
 PALIMPORT
 DWORD
 PALAPI
+GetEnvironmentVariableA(
+    IN LPCSTR lpName,
+    OUT LPSTR lpBuffer,
+    IN DWORD nSize);
+
+PALIMPORT
+DWORD
+PALAPI
 GetEnvironmentVariableW(
-            IN LPCWSTR lpName,
-            OUT LPWSTR lpBuffer,
-            IN DWORD nSize);
+    IN LPCWSTR lpName,
+    OUT LPWSTR lpBuffer,
+    IN DWORD nSize);
 
 #ifdef UNICODE
 #define GetEnvironmentVariable GetEnvironmentVariableW
@@ -2442,12 +2632,20 @@ GetEnvironmentVariableW(
 #define GetEnvironmentVariable GetEnvironmentVariableA
 #endif
 
+
+PALIMPORT
+BOOL
+PALAPI
+SetEnvironmentVariableA(
+    IN LPCSTR lpName,
+    IN LPCSTR lpValue);
+
 PALIMPORT
 BOOL
 PALAPI
 SetEnvironmentVariableW(
-            IN LPCWSTR lpName,
-            IN LPCWSTR lpValue);
+    IN LPCWSTR lpName,
+    IN LPCWSTR lpValue);
 
 #ifdef UNICODE
 #define SetEnvironmentVariable SetEnvironmentVariableW
@@ -2456,10 +2654,16 @@ SetEnvironmentVariableW(
 #endif
 
 PALIMPORT
+LPSTR
+PALAPI
+GetEnvironmentStringsA(
+    VOID);
+
+PALIMPORT
 LPWSTR
 PALAPI
 GetEnvironmentStringsW(
-               VOID);
+    VOID);
 
 #ifdef UNICODE
 #define GetEnvironmentStrings GetEnvironmentStringsW
@@ -2467,11 +2671,18 @@ GetEnvironmentStringsW(
 #define GetEnvironmentStrings GetEnvironmentStringsA
 #endif
 
+
+PALIMPORT
+BOOL
+PALAPI
+FreeEnvironmentStringsA(
+    IN LPSTR);
+
 PALIMPORT
 BOOL
 PALAPI
 FreeEnvironmentStringsW(
-            IN LPWSTR);
+    IN LPWSTR);
 
 #ifdef UNICODE
 #define FreeEnvironmentStrings FreeEnvironmentStringsW
@@ -2479,22 +2690,24 @@ FreeEnvironmentStringsW(
 #define FreeEnvironmentStrings FreeEnvironmentStringsA
 #endif
 
+
 PALIMPORT
 BOOL
 PALAPI
 CloseHandle(
-        IN OUT HANDLE hObject);
+    IN OUT HANDLE hObject);
 
 PALIMPORT
 DWORD
 PALAPI
 GetTickCount(
-         VOID);
+    VOID);
 
 PALIMPORT
 ULONGLONG
 PALAPI
-GetTickCount64(VOID);
+GetTickCount64(
+    VOID);
 
 PALIMPORT
 BOOL
@@ -2518,8 +2731,7 @@ PAL_nanosleep(
 
 #ifndef FEATURE_PAL_SXS
 
-typedef LONG (PALAPI *PTOP_LEVEL_EXCEPTION_FILTER)(
-                           struct _EXCEPTION_POINTERS *ExceptionInfo);
+typedef LONG (PALAPI *PTOP_LEVEL_EXCEPTION_FILTER)(struct _EXCEPTION_POINTERS *ExceptionInfo);
 typedef PTOP_LEVEL_EXCEPTION_FILTER LPTOP_LEVEL_EXCEPTION_FILTER;
 
 PALIMPORT
@@ -3144,10 +3356,6 @@ CreatePipe(
     IN LPSECURITY_ATTRIBUTES lpPipeAttributes,
     IN DWORD nSize
     );
-
-#if defined FEATURE_PAL_ANSI
-#include "palprivate.h"
-#endif //FEATURE_PAL_ANSI
 
 /******************* C Runtime Entrypoints *******************************/
 

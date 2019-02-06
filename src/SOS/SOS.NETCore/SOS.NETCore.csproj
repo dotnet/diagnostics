@@ -5,72 +5,11 @@
     <AssemblyName>SOS.NETCore</AssemblyName>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>;1591;1701</NoWarn>
-    <IsPackable>true</IsPackable>
-    <IsPublishable>true</IsPublishable>
     <Description>.NET Core SOS</Description>
-    <PackageId>SOS</PackageId>
-    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
-    <PackageTags>SOS</PackageTags>
-    <IncludeBuildOutput>false</IncludeBuildOutput>
-    <SOSNETCoreBinaries>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netcoreapp2.0\publish\*.dll</SOSNETCoreBinaries>
   </PropertyGroup>
   
   <ItemGroup>
     <PackageReference Include="System.Reflection.Metadata" Version="$(SystemReflectionMetadataVersion)" />
     <PackageReference Include="Microsoft.SymbolStore" Version="$(MicrosoftSymbolStoreVersion)" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <_PackageFiles Include="$(SOSNETCoreBinaries)">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/win-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\sos.dll">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/win-x64</PackagePath>
-    </_PackageFiles>
-
-    <_PackageFiles Include="$(SOSNETCoreBinaries)">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/win-x86</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\sos.dll">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/win-x86</PackagePath>
-    </_PackageFiles>
-
-    <_PackageFiles Include="$(SOSNETCoreBinaries)">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/linux-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsosplugin.so">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/linux-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsos.so">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/linux-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\sosdocsunix.txt">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/linux-x64</PackagePath>
-    </_PackageFiles>
-
-    <_PackageFiles Include="$(SOSNETCoreBinaries)">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/osx-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/osx-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsos.dylib">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/osx-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\sosdocsunix.txt">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/osx-x64</PackagePath>
-    </_PackageFiles>
   </ItemGroup>
 </Project>

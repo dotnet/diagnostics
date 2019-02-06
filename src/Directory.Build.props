@@ -9,10 +9,7 @@
 
   <PropertyGroup>
     <LangVersion>Latest</LangVersion>
-    <!--
-      Tools and packages produced by this repository support infrastructure and are not shipping on NuGet or via any other official channel.
-    -->
-    <IsShipping>false</IsShipping>
+    <IsShipping>true</IsShipping>
     <NoPackageAnalysis>true</NoPackageAnalysis>
   </PropertyGroup>
 
@@ -24,11 +21,11 @@
     <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net45'">
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net461'">
     <DebugType>full</DebugType>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TargetFramework)' != 'net45'">
+  <PropertyGroup Condition="'$(TargetFramework)' != 'net461'">
     <DebugType>portable</DebugType>
   </PropertyGroup>
 </Project>

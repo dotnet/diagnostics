@@ -45,6 +45,7 @@ static bool g_symbolStoreInitialized = false;
 LPCSTR g_hostRuntimeDirectory = nullptr;
 LPCSTR g_dacFilePath = nullptr;
 LPCSTR g_dbiFilePath = nullptr;
+LPCSTR g_tmpPath = nullptr;
 SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
 
 #ifdef FEATURE_PAL
@@ -53,7 +54,10 @@ SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
 #define TPALIST_SEPARATOR_STR_A ";"
 #endif
 
-void AddFilesFromDirectoryToTpaList(const char* directory, std::string& tpaList)
+//
+// Build the TPA list of assemblies for the runtime hosting api.
+//
+static void AddFilesFromDirectoryToTpaList(const char* directory, std::string& tpaList)
 {
     const char * const tpaExtensions[] = {
         "*.ni.dll",      // Probe for .ni.dll first so that it's preferred if ni and il coexist in the same dir
@@ -82,9 +86,8 @@ void AddFilesFromDirectoryToTpaList(const char* directory, std::string& tpaList)
         {
             do
             {
-                if (!(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+                if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
                 {
-
                     std::string filename(data.cFileName);
                     size_t extPos = filename.length() - extLength;
                     std::string filenameWithoutExt(filename.substr(0, extPos));
@@ -117,7 +120,7 @@ void AddFilesFromDirectoryToTpaList(const char* directory, std::string& tpaList)
 #define symlinkEntrypointExecutable "/proc/curproc/exe"
 #endif
 
-bool GetAbsolutePath(const char* path, std::string& absolutePath)
+static bool GetAbsolutePath(const char* path, std::string& absolutePath)
 {
     bool result = false;
 
@@ -134,7 +137,7 @@ bool GetAbsolutePath(const char* path, std::string& absolutePath)
     return result;
 }
 
-bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutable)
+static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutable)
 {
     bool result = false;
     
@@ -204,7 +207,7 @@ bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutable)
 
 #else // FEATURE_PAL
 
-bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutable)
+static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutable)
 {
     ArrayHolder<char> hostPath = new char[MAX_LONGPATH+1];
     if (::GetModuleFileName(NULL, hostPath, MAX_LONGPATH) == 0)
@@ -220,6 +223,9 @@ bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutable)
 
 #endif // FEATURE_PAL
 
+/**********************************************************************\
+ * Returns the coreclr module/runtime directory of the target.
+\**********************************************************************/
 HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
 {
 #ifdef FEATURE_PAL
@@ -263,16 +269,124 @@ HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
     return S_OK;
 }
 
+//
+// Searches the runtime directory for a .NET Core runtime version
+//
+static bool FindDotNetVersion(int majorFilter, int minorFilter, std::string& hostRuntimeDirectory)
+{
+    std::string directory(hostRuntimeDirectory);
+    directory.append("*");
+    std::string versionFound;
+
+    WIN32_FIND_DATAA data;
+    HANDLE findHandle = FindFirstFileA(directory.c_str(), &data);
+
+    if (findHandle != INVALID_HANDLE_VALUE) 
+    {
+        int highestRevision = 0;
+        do
+        {
+            if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+            {
+                int major = 0;
+                int minor = 0;
+                int revision = 0;
+                if (sscanf_s(data.cFileName, "%d.%d.%d", &major, &minor, &revision) == 3)
+                {
+                    if (major == majorFilter && minor == minorFilter)
+                    {
+                        if (revision >= highestRevision)
+                        {
+                            highestRevision = revision;
+                            versionFound.assign(data.cFileName);
+                        }
+                    }
+                }
+            }
+        } 
+        while (0 != FindNextFileA(findHandle, &data));
+
+        FindClose(findHandle);
+    }
+
+    if (versionFound.length() > 0)
+    {
+        hostRuntimeDirectory.append(versionFound);
+        return true;
+    }
+
+    return false;
+}
+
+#ifdef FEATURE_PAL
+const char *g_linuxPaths[] = {
+//  "/rh-dotnet22/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
+    "/rh-dotnet21/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
+    "/rh-dotnet20/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
+    "/usr/share/dotnet/shared/Microsoft.NETCore.App",
+};
+#endif
+
+/**********************************************************************\
+ * Returns the path to the coreclr to use for hosting and it's
+ * directory. Attempts to use the best installed version of the 
+ * runtime, otherwise it defaults to the target's runtime version.
+\**********************************************************************/
 HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntimeDirectory)
 {
     // If the hosting runtime isn't already set, use the runtime we are debugging
     if (g_hostRuntimeDirectory == nullptr)
     {
-        HRESULT hr = GetCoreClrDirectory(hostRuntimeDirectory);
-        if (FAILED(hr))
+#ifdef FEATURE_PAL
+#if defined(__APPLE__)
+        hostRuntimeDirectory.assign("/usr/local/share/dotnet/shared/Microsoft.NETCore.App");
+#elif defined (__FreeBSD__) || defined(__NetBSD__)
+        ExtErr("FreeBSD or NetBSD not supported\n");
+        return E_FAIL;
+#else
+        // Start with the possible RHEL's locations, then the regular Linux path
+        for (int i = 0; i < _countof(g_linuxPaths); i++)
         {
-            return hr;
+            hostRuntimeDirectory.assign(g_linuxPaths[i]);
+            if (access(hostRuntimeDirectory.c_str(), F_OK) == 0)
+            {
+                break;
+            }
         }
+#endif
+#else
+        ArrayHolder<CHAR> programFiles = new CHAR[MAX_LONGPATH];
+        if (GetEnvironmentVariableA("PROGRAMFILES", programFiles, MAX_LONGPATH) == 0)
+        {
+            ExtErr("PROGRAMFILES environment variable not found\n");
+            return E_FAIL;
+        }
+        hostRuntimeDirectory.assign(programFiles);
+        hostRuntimeDirectory.append("\\dotnet\\shared\\Microsoft.NETCore.App");
+#endif
+        hostRuntimeDirectory.append(DIRECTORY_SEPARATOR_STR_A);
+
+        // First attempt find the highest 2.1.x version. We want to start with the LTS
+        // and only use the higher versions if it isn't installed.
+        if (!FindDotNetVersion(2, 1, hostRuntimeDirectory))
+        {
+            // Find highest 2.2.x version
+            if (!FindDotNetVersion(2, 2, hostRuntimeDirectory))
+            {
+                // Find highest 3.0.x version
+                if (!FindDotNetVersion(3, 0, hostRuntimeDirectory))
+                {
+                    // If an installed runtime can not be found, use the target coreclr version
+                    HRESULT hr = GetCoreClrDirectory(hostRuntimeDirectory);
+                    if (FAILED(hr))
+                    {
+                        return hr;
+                    }
+                }
+            }
+        }
+
+        // Save away the runtime version we are going to use to host the SOS managed code
         g_hostRuntimeDirectory = _strdup(hostRuntimeDirectory.c_str());
     }
     hostRuntimeDirectory.assign(g_hostRuntimeDirectory);
@@ -282,6 +396,71 @@ HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntimeDirecto
     return S_OK;
 }
 
+//
+// Returns the unique temporary directory for this instnace of SOS
+//
+static LPCSTR GetTempDirectory()
+{
+    if (g_tmpPath == nullptr)
+    {
+        char tmpPath[MAX_LONGPATH];
+        if (::GetTempPathA(MAX_LONGPATH, tmpPath) == 0)
+        {
+            strcpy_s(tmpPath, MAX_LONGPATH, ".");
+            strcat_s(tmpPath, MAX_LONGPATH, DIRECTORY_SEPARATOR_STR_A);
+        }
+        char pidstr[128];
+        sprintf_s(pidstr, _countof(pidstr), "%d", GetCurrentProcessId());
+        strcat_s(tmpPath, MAX_LONGPATH, pidstr);
+        strcat_s(tmpPath, MAX_LONGPATH, DIRECTORY_SEPARATOR_STR_A);
+
+        CreateDirectoryA(tmpPath, NULL);
+        g_tmpPath = _strdup(tmpPath);
+    }
+    return g_tmpPath;
+}
+
+/**********************************************************************\
+ * Clean up the temporary directory files and DAC symlink.
+\**********************************************************************/
+#ifdef FEATURE_PAL
+__attribute__((destructor)) 
+#endif
+void SOSShutdown()
+{
+    LPCSTR tmpPath = (LPCSTR)InterlockedExchangePointer((PVOID *)&g_tmpPath, nullptr);
+    if (tmpPath != nullptr)
+    {
+        std::string directory(tmpPath);
+        directory.append("*");
+
+        WIN32_FIND_DATAA data;
+        HANDLE findHandle = FindFirstFileA(directory.c_str(), &data);
+
+        if (findHandle != INVALID_HANDLE_VALUE) 
+        {
+            do
+            {
+                if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
+                {
+                    std::string file(tmpPath);
+                    file.append(data.cFileName);
+                    DeleteFileA(file.c_str());
+                }
+            } 
+            while (0 != FindNextFileA(findHandle, &data));
+
+            FindClose(findHandle);
+        }
+
+        RemoveDirectoryA(tmpPath);
+        free((void*)tmpPath);
+    }
+}
+
+/**********************************************************************\
+ * Returns the DAC module path to the rest of SOS.
+\**********************************************************************/
 LPCSTR GetDacFilePath()
 {
     // If the DAC path hasn't been set by the symbol download support, use the one in the runtime directory.
@@ -297,12 +476,40 @@ LPCSTR GetDacFilePath()
             // if DAC file exists
             if (access(dacModulePath.c_str(), F_OK) == 0)
 #endif
+            {
+#if defined(__linux__)
+                // We are creating a symlink to the DAC in a temp directory
+                // where libcoreclrtraceptprovider.so doesn't exist so it 
+                // doesn't get loaded by the DAC causing a LTTng-UST exception.
+                //
+                // Issue #https://github.com/dotnet/coreclr/issues/20205
+                LPCSTR tmpPath = GetTempDirectory();
+                if (tmpPath != nullptr) 
+                {
+                    std::string dacSymLink(tmpPath);
+                    dacSymLink.append(MAKEDLLNAME_A("mscordaccore"));
+
+                    int error = symlink(dacModulePath.c_str(), dacSymLink.c_str());
+                    if (error == 0)
+                    {
+                        dacModulePath.assign(dacSymLink);
+                    }
+                    else
+                    {
+                        ExtErr("symlink(%s, %s) FAILED %s\n", dacModulePath.c_str(), dacSymLink.c_str(), strerror(errno));
+                    }
+                }
+#endif
                 g_dacFilePath = _strdup(dacModulePath.c_str());
+            }
         }
     }
     return g_dacFilePath;
 }
 
+/**********************************************************************\
+ * Returns the DBI module path to the rest of SOS.
+\**********************************************************************/
 LPCSTR GetDbiFilePath()
 {
     if (g_dbiFilePath == nullptr)
@@ -323,11 +530,18 @@ LPCSTR GetDbiFilePath()
     return g_dbiFilePath;
 }
 
+/**********************************************************************\
+ * Returns true if the host runtime has already been initialized.
+\**********************************************************************/
 BOOL IsHostingInitialized()
 {
     return g_hostingInitialized;
 }
 
+/**********************************************************************\
+ * Initializes the host coreclr runtime and gets the managed entry 
+ * points delegates.
+\**********************************************************************/
 HRESULT InitializeHosting()
 {
     if (g_hostingInitialized)
@@ -442,6 +656,7 @@ HRESULT InitializeHosting()
     }
 
     IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "InitializeSymbolStore", (void **)&g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate));
+    IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "DisplaySymbolStore", (void **)&g_SOSNetCoreCallbacks.DisplaySymbolStoreDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "DisableSymbolStore", (void **)&g_SOSNetCoreCallbacks.DisableSymbolStoreDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "LoadNativeSymbols", (void **)&g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "LoadSymbolsForModule", (void **)&g_SOSNetCoreCallbacks.LoadSymbolsForModuleDelegate));
@@ -454,6 +669,9 @@ HRESULT InitializeHosting()
     return Status;
 }
 
+/**********************************************************************\
+ * Public entry point to set the managed callbacks (unused).
+\**********************************************************************/
 extern "C" void InitializeSymbolReaderCallbacks(SOSNetCoreCallbacks sosNetCoreCallbacks)
 {
     g_SOSNetCoreCallbacks = sosNetCoreCallbacks;
@@ -461,7 +679,7 @@ extern "C" void InitializeSymbolReaderCallbacks(SOSNetCoreCallbacks sosNetCoreCa
 }
 
 //
-// Pass to managed helper code to read in-memory PEs/PDBs
+// Pass to managed helper code to read in-memory PEs/PDBs.
 // Returns the number of bytes read.
 //
 static int ReadMemoryForSymbols(ULONG64 address, uint8_t *buffer, int cb)
@@ -476,6 +694,9 @@ static int ReadMemoryForSymbols(ULONG64 address, uint8_t *buffer, int cb)
 
 #ifdef FEATURE_PAL
 
+//
+// Symbol downloader callback
+//
 static void SymbolFileCallback(void* param, const char* moduleFileName, const char* symbolFileName)
 {
     if (strcmp(moduleFileName, MAIN_CLR_DLL_NAME_A) == 0) {
@@ -501,15 +722,21 @@ static void SymbolFileCallback(void* param, const char* moduleFileName, const ch
     }
 }
 
+//
+// Enumerate native module callback
+//
 static void LoadNativeSymbolsCallback(void* param, const char* moduleDirectory, const char* moduleFileName, ULONG64 moduleAddress, int moduleSize)
 {
     _ASSERTE(g_hostingInitialized);
     _ASSERTE(g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate != nullptr);
-    g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(SymbolFileCallback, param, moduleDirectory, moduleFileName, moduleAddress, moduleSize, ReadMemoryForSymbols);
+    g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(SymbolFileCallback, param, GetTempDirectory(), moduleDirectory, moduleFileName, moduleAddress, moduleSize, ReadMemoryForSymbols);
 }
 
 #endif
 
+/**********************************************************************\
+ * Setup and initialize the symbol server support.
+\**********************************************************************/
 HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* symbolServer, const char* cacheDirectory)
 {
     HRESULT Status = S_OK;
@@ -525,6 +752,11 @@ HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* 
     return S_OK;
 }
 
+/**********************************************************************\
+ * Enumerate the native modules and attempt to download the symbols
+ * for them. Depends on the lldb callback to enumerate modules. Not
+ * necessary on dbgeng because it already downloads native symbols.
+\**********************************************************************/
 HRESULT LoadNativeSymbols()
 {
     HRESULT Status = S_OK;
@@ -542,6 +774,21 @@ HRESULT LoadNativeSymbols()
     return Status;
 }
 
+/**********************************************************************\
+ * Displays the symbol server and cache status.
+\**********************************************************************/
+void DisplaySymbolStore()
+{
+    if (g_symbolStoreInitialized)
+    {
+        _ASSERTE(g_SOSNetCoreCallbacks.DisplaySymbolStoreDelegate != nullptr);
+        g_SOSNetCoreCallbacks.DisplaySymbolStoreDelegate();
+    }
+}
+
+/**********************************************************************\
+ * Turns off the symbol server support.
+\**********************************************************************/
 void DisableSymbolStore()
 {
     if (g_symbolStoreInitialized)
@@ -553,14 +800,15 @@ void DisableSymbolStore()
     }
 }
 
+/**********************************************************************\
+ * Load symbols for an ICorDebugModule. Used by "clrstack -i".
+\**********************************************************************/
 HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in ICorDebugModule* pModule)
 {
     HRESULT Status = S_OK;
-    BOOL isDynamic = FALSE;
-    BOOL isInMemory = FALSE;
-    IfFailRet(pModule->IsDynamic(&isDynamic));
-    IfFailRet(pModule->IsInMemory(&isInMemory));
 
+    BOOL isDynamic = FALSE;
+    IfFailRet(pModule->IsDynamic(&isDynamic));
     if (isDynamic)
     {
         // Dynamic and in memory assemblies are a special case which we will ignore for now
@@ -569,23 +817,17 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in ICorDebugMod
     }
 
     ULONG64 peAddress = 0;
-    ULONG32 peSize = 0;
     IfFailRet(pModule->GetBaseAddress(&peAddress));
-    IfFailRet(pModule->GetSize(&peSize));
 
-    ULONG32 len = 0; 
-    WCHAR moduleName[MAX_LONGPATH];
-    IfFailRet(pModule->GetName(_countof(moduleName), &len, moduleName));
+    IXCLRDataModule* pClrModule;
+    IfFailRet(GetModuleFromAddress(peAddress, &pClrModule));
 
-#ifndef FEATURE_PAL
-    if (SUCCEEDED(LoadSymbolsForWindowsPDB(pMD, peAddress, moduleName, isInMemory)))
-    {
-        return S_OK;
-    }
-#endif // FEATURE_PAL
-    return LoadSymbolsForPortablePDB(moduleName, isInMemory, isInMemory, peAddress, peSize, 0, 0);
+    return LoadSymbols(pMD, pClrModule);
 }
 
+/**********************************************************************\
+ * Load symbols for a module.
+\**********************************************************************/
 HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataModule* pModule)
 {
     ULONG32 flags;
@@ -640,6 +882,9 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
 
 #ifndef FEATURE_PAL
 
+/**********************************************************************\
+ * Attempts to load Windows PDBs on Windows.
+\**********************************************************************/
 HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in ULONG64 peAddress, __in_z WCHAR* pModuleName, ___in BOOL isFileLayout)
 {
     HRESULT Status = S_OK;
@@ -650,7 +895,6 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
     IfFailRet(CoInitialize(NULL));
 
     // We now need a binder object that will take the module and return a 
-    // reader object
     ToRelease<ISymUnmanagedBinder3> pSymBinder;
     if (FAILED(Status = CreateInstanceCustom(CLSID_CorSymBinder_SxS, 
                         IID_ISymUnmanagedBinder3, 
@@ -711,6 +955,9 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
 
 #endif // FEATURE_PAL
 
+/**********************************************************************\
+ * Attempts to load a portable or embeded PDB. Both Windows and xplat.
+\**********************************************************************/
 HRESULT SymbolReader::LoadSymbolsForPortablePDB(__in_z WCHAR* pModuleName, ___in BOOL isInMemory, ___in BOOL isFileLayout,
     ___in ULONG64 peAddress, ___in ULONG64 peSize, ___in ULONG64 inMemoryPdbAddress, ___in ULONG64 inMemoryPdbSize)
 {
@@ -762,6 +1009,9 @@ HRESULT SymbolReader::LoadSymbolsForPortablePDB(__in_z WCHAR* pModuleName, ___in
     return Status;
 }
 
+/**********************************************************************\
+ * Return the source/line number info for method/il offset.
+\**********************************************************************/
 HRESULT SymbolReader::GetLineByILOffset(___in mdMethodDef methodToken, ___in ULONG64 ilOffset,
     ___out ULONG *pLinenum, __out_ecount(cchFileName) WCHAR* pwszFileName, ___in ULONG cchFileName)
 {
@@ -940,6 +1190,9 @@ HRESULT SymbolReader::GetNamedLocalVariable(___in ISymUnmanagedScope * pScope, _
     return E_FAIL;
 }
 
+/**********************************************************************\
+ * Returns the name of the local variable from a PDB. 
+\**********************************************************************/
 HRESULT SymbolReader::GetNamedLocalVariable(___in ICorDebugFrame * pFrame, ___in ULONG localIndex, __out_ecount(paramNameLen) WCHAR* paramName, 
     ___in ULONG paramNameLen, ___out ICorDebugValue** ppValue)
 {
@@ -964,7 +1217,10 @@ HRESULT SymbolReader::GetNamedLocalVariable(___in ICorDebugFrame * pFrame, ___in
     return GetNamedLocalVariable(NULL, pILFrame, methodDef, localIndex, paramName, paramNameLen, ppValue);
 }
 
-HRESULT SymbolReader::ResolveSequencePoint(__in_z WCHAR* pFilename, ___in ULONG32 lineNumber, ___in TADDR mod, ___out mdMethodDef* pToken, ___out ULONG32* pIlOffset)
+/**********************************************************************\
+ * Returns the sequence point to bind breakpoints.
+\**********************************************************************/
+HRESULT SymbolReader::ResolveSequencePoint(__in_z WCHAR* pFilename, ___in ULONG32 lineNumber, ___out mdMethodDef* pToken, ___out ULONG32* pIlOffset)
 {
     HRESULT Status = S_OK;
 

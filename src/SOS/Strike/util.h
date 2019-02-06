@@ -46,15 +46,15 @@ DECLARE_HANDLE(OBJECTHANDLE);
 struct IMDInternalImport;
 
 #if defined(_TARGET_WIN64_)
-#define WIN64_8SPACES ""
-#define WIN86_8SPACES "        "
+#define WIN64_8SPACES "        "
+#define WIN86_8SPACES ""
 #define POINTERSIZE "16"
 #define POINTERSIZE_HEX 16
 #define POINTERSIZE_BYTES 8
 #define POINTERSIZE_TYPE "I64"
 #else
-#define WIN64_8SPACES "        "
-#define WIN86_8SPACES ""
+#define WIN64_8SPACES ""
+#define WIN86_8SPACES "        "
 #define POINTERSIZE "8"
 #define POINTERSIZE_HEX 8
 #define POINTERSIZE_BYTES 4
@@ -1865,6 +1865,7 @@ BOOL TryGetMethodDescriptorForDelegate(CLRDATA_ADDRESS delegateAddr, CLRDATA_ADD
  *      ArrayHolder class.
  */
 DWORD_PTR *ModuleFromName(__in_opt LPSTR name, int *numModules);
+HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataModule** ppModule);
 void GetInfoFromName(DWORD_PTR ModuleAddr, const char* name);
 void GetInfoFromModule (DWORD_PTR ModuleAddr, ULONG token, DWORD_PTR *ret=NULL);
 

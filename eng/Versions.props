@@ -19,7 +19,7 @@
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
 
     <!-- Other libs -->
-    <MicrosoftSymbolStoreVersion>1.0.0-dev-63604-01</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.0-dev-63716-01</MicrosoftSymbolStoreVersion>
   </PropertyGroup>
 
   <PropertyGroup>
