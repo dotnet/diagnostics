@@ -57,7 +57,7 @@ For analyzing CPU usage, IO, lock contention, allocation rate, etc the investiga
 
 **Convert a trace to use with speedscope**
 
-    > dotnet trace convert --format:speedscope ~/trace.netperf
+    > dotnet trace convert --format speedscope ~/trace.netperf
     Writing:     ~/trace.speedscope.json
     Conversion complete
 
@@ -139,13 +139,13 @@ Note: The DumpHeap/GCRoot output is identical to SOS. I'm not convinced this out
 
 SYNOPSIS
 
-    dotnet-counters [-v, --version] 
+    dotnet-counters [--version] 
                     [-h, --help]
                     <command> [<args>]
 
 OPTIONS
 
-    -v, --version
+    --version
         Display the version of the dotnet-counters utility.
 
     -h, --help
@@ -177,17 +177,17 @@ LIST
           gc-total-memory                Amount of commited virtual memory used by the GC (KB)
           exceptions-thrown-rate         Number of exceptions thrown in a recent 1 minute window (exceptions/min)
           lock-contention-rate           Number of instances of lock contention on runtime implemented locks in a
-                                       recent 1 minute window (contentions/min)
+                                         recent 1 minute window (contentions/min)
       Microsoft-AspNet
           request-rate                   Number of requests handled in a recent one second interval (requests/sec)
           request-latency                Time to respond to a request, averaged over all requests in a recent
-                                       one second interval (ms)
+                                         one second interval (ms)
     
 MONITOR
 
     dotnet-counters monitor [-h||--help]
                             [-p|--process-id <pid>]
-                            [-r|--refreshInterval <sec>]
+                            [--refreshInterval <sec>]
                             counter_list
 
     Display periodically refreshing values of selected counters
@@ -196,9 +196,9 @@ MONITOR
         Show command line help
 
     -p,--process-id
-        The process that will be monitored
+        The ID of the process that will be monitored
 
-    -r,--refresh-interval 
+    --refresh-interval 
         The number of seconds to delay between updating the displayed counters
 
     counter_list
@@ -231,13 +231,13 @@ MONITOR
 
 SYNOPSIS
 
-    dotnet-trace [-v, --version]
+    dotnet-trace [--version]
                  [-h, --help]
                  <command> [<args>]
 
 OPTIONS
 
-    -v, --version
+    --version
         Display the version of the dotnet-trace utility.
 
     -h, --help
@@ -255,8 +255,8 @@ COLLECT
                          [-h|--help]
                          [-o|--output <trace-file-path>]
                          [--pack]
-                         [--profile: <profile_name>]
-                         [--providers <provider_configuration_list>]
+                         [--profile <profile_name>]
+                         [--provider <provider_configuration>]
                          
     Collects a diagnostic trace from a currently running process                    
 
@@ -281,18 +281,19 @@ COLLECT
         asp-net-basic   Useful starting point for ASP.Net performance investigations
         gc              Tracks allocation and collection performance
         gc-collect      Tracks GC collection only at very low overhead
-        none            Tracks nothing. Only providers specified by the --providers option will be available.
+        none            Tracks nothing. Only providers specified by the --provider option will be available.
 
-    --providers
-        Provider configurations specified here add to the configurations already provided via the --profile
+    --provider
+        A provider configuration specified here adds to the configuration already provided via the --profile
         argument. If the same provider is configured in both places, this option takes precedence.
-        The provider_configuration_list is a comma separated list of provider configurations. Each configuration
-        consists of the provider name and optionally keywords, a verbosity level, and custom key/value pairs. A
-        configuration is encoded Name[:Keywords[:Level[:KeyValueArgs]]]
-        Name         - the provider's name
-        Keywords     - 8 character hex number bit mask
-        Level        - 2 character hex number
-        KeyValueArgs - a semicolon separated list of key=value
+        A configuration consists of the provider name and optionally keywords, a verbosity level, and custom
+        key/value pairs. It is written Name[:Keywords[:Level[:KeyValueArgs]]]
+          Name         - the provider's name
+          Keywords     - 8 character hex number bit mask
+          Level        - 2 character hex number
+          KeyValueArgs - a semicolon separated list of key=value
+        This argument can be specified multiple times to add any number of provider configurations.
+        
 
 
     Examples:
@@ -312,19 +313,19 @@ COLLECT
     
 CONVERT
 
-    dotnet-trace convert --format: <output_format>
+    dotnet-trace convert --format <output_format>
                          [-h|--help]
                          [-o|--output <output_file_path>]
                          <trace_file_path>
 
     Converts traces to alternate formats for use with alternate trace analysis tools
 
-    -h, --help
-        Show command line help
-
     --format
         The name of the output format. Currently supported formats:
         speedscope   The speedscope JSON format used by https://www.speedscope.app/
+
+    -h, --help
+        Show command line help
 
     -o, --output
         The path where the converted file is written. If unspecified the file is written in the current directory
@@ -334,7 +335,7 @@ CONVERT
         The path to the trace file that should be converted. The trace file can be in either a netperf or netperf.zip file.
 
     Examples:
-      > dotnet-trace convert --format:speedscope trace.netperf
+      > dotnet-trace convert --format speedscope trace.netperf
       Writing:       ./trace.speedscope.json
       Conversion complete
 
@@ -389,13 +390,13 @@ PACK
 
 SYNOPSIS
 
-    dotnet-dump [-v, --version] 
+    dotnet-dump [--version] 
                 [-h, --help]
                 <command> [<args>]
 
 OPTIONS
 
-    -v, --version
+    --version
         Display the version of the dotnet-dump utility.
 
     -h, --help
@@ -508,13 +509,13 @@ GCHEAPDIFF
 
 SYNOPSIS
 
-    dotnet-sos [-v, --version] 
+    dotnet-sos [--version] 
                [-h, --help]
                <command> [<args>]
 
 OPTIONS
 
-    -v, --version
+    --version
         Display the version of the dotnet-dump utility.
 
     -h, --help
