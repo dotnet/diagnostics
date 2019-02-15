@@ -689,6 +689,10 @@ Allow gathering of symbols and binaries, similar to trace packing, that lets us 
 
 We could allow dumps to be collected in response to various process or machine-state conditions such as exceptions being thrown, or performance metrics
 
+- Extensible commands
+
+We could allow users to create their own commands packaged into a managed assembly and loaded as plugins, similar to how many command-line debuggers allow plugins. We would need to define an extensibility interface, but the initial thought would be to allow access to console output + the CLRMD API for inspecting dump contents. 
+
 ### dotnet-sos
 
 - Allow a custom installation path
