@@ -57,6 +57,7 @@
       <Filter>inc</Filter>
     </ClInclude>
     <ClInclude Include="hostcoreclr.h" />
+    <ClInclude Include="soshostservices.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Native.rc" />

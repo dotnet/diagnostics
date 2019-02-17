@@ -24,7 +24,9 @@ namespace SOS
 
         public void WriteLine(string message)
         {
-            m_output?.Invoke(message);
+            lock (this) {
+                m_output?.Invoke(message);
+            }
         }
 
         public void WriteLine(string format, params object[] arguments)

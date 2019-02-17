@@ -561,6 +561,17 @@ HRESULT InitializeHosting()
     {
         return S_OK;
     }
+#ifdef FEATURE_PAL
+    ToRelease<ISOSHostServices> hostServices(NULL);
+    if (SUCCEEDED(g_ExtServices->QueryInterface(__uuidof(ISOSHostServices), (void**)&hostServices)))
+    {
+        if (SUCCEEDED(hostServices->GetSOSNETCoreCallbacks(SOSNetCoreCallbacksVersion, &g_SOSNetCoreCallbacks)))
+        {
+            g_hostingInitialized = true;
+            return S_OK;
+        }
+    }
+#endif // FEATURE_PAL
     coreclr_initialize_ptr initializeCoreCLR = nullptr;
     coreclr_create_delegate_ptr createDelegate = nullptr;
     std::string hostRuntimeDirectory;
@@ -680,15 +691,6 @@ HRESULT InitializeHosting()
 
     g_hostingInitialized = true;
     return Status;
-}
-
-/**********************************************************************\
- * Public entry point to set the managed callbacks (unused).
-\**********************************************************************/
-extern "C" void InitializeSymbolReaderCallbacks(SOSNetCoreCallbacks sosNetCoreCallbacks)
-{
-    g_SOSNetCoreCallbacks = sosNetCoreCallbacks;
-    g_hostingInitialized = true;
 }
 
 //

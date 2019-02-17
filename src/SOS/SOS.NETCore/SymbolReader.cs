@@ -18,12 +18,11 @@ using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 
 namespace SOS
 {
-    internal class SymbolReader
+    public class SymbolReader
     {
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         internal struct DebugInfo
@@ -145,13 +144,13 @@ namespace SOS
         /// Read memory callback
         /// </summary>
         /// <returns>number of bytes read or 0 for error</returns>
-        internal unsafe delegate int ReadMemoryDelegate(ulong address, byte* buffer, int count);
+        public unsafe delegate int ReadMemoryDelegate(ulong address, byte* buffer, int count);
 
         /// <summary>
         /// Writeline delegate for symbol store logging
         /// </summary>
         /// <param name="message"></param>
-        internal delegate void WriteLine([MarshalAs(UnmanagedType.LPStr)] string message);
+        public delegate void WriteLine([MarshalAs(UnmanagedType.LPStr)] string message);
 
         /// <summary>
         /// The LoadNativeSymbols callback
@@ -175,7 +174,7 @@ namespace SOS
         /// <param name="symbolCachePath">symbol cache directory path (optional)</param>
         /// <param name="windowsSymbolPath">windows symbol path (optional)</param>
         /// <returns></returns>
-        internal static bool InitializeSymbolStore(bool logging, bool msdl, bool symweb, string symbolServerPath, string symbolCachePath, string windowsSymbolPath)
+        public static bool InitializeSymbolStore(bool logging, bool msdl, bool symweb, string symbolServerPath, string symbolCachePath, string windowsSymbolPath)
         {
             if (s_tracer == null) {
                 s_tracer = new Tracer(enabled: logging, enabledVerbose: logging, Console.WriteLine);
@@ -203,7 +202,7 @@ namespace SOS
         /// <summary>
         /// Displays the symbol server and cache configuration
         /// </summary>
-        internal static void DisplaySymbolStore()
+        public static void DisplaySymbolStore()
         {
             if (s_tracer != null)
             {
@@ -227,7 +226,7 @@ namespace SOS
         /// <summary>
         /// This function disables any symbol downloading support.
         /// </summary>
-        internal static void DisableSymbolStore()
+        public static void DisableSymbolStore()
         {
             s_tracer = null;
             s_symbolStore = null;
@@ -331,7 +330,7 @@ namespace SOS
         /// <param name="inMemoryPdbAddress">in memory PDB address or zero</param>
         /// <param name="inMemoryPdbSize">in memory PDB size</param>
         /// <returns>Symbol reader handle or zero if error</returns>
-        internal static IntPtr LoadSymbolsForModule(string assemblyPath, bool isFileLayout, ulong loadedPeAddress, int loadedPeSize, 
+        public static IntPtr LoadSymbolsForModule(string assemblyPath, bool isFileLayout, ulong loadedPeAddress, int loadedPeSize, 
             ulong inMemoryPdbAddress, int inMemoryPdbSize, ReadMemoryDelegate readMemory)
         {
             try
@@ -363,7 +362,7 @@ namespace SOS
         /// Cleanup and dispose of symbol reader handle
         /// </summary>
         /// <param name="symbolReaderHandle">symbol reader handle returned by LoadSymbolsForModule</param>
-        internal static void Dispose(IntPtr symbolReaderHandle)
+        public static void Dispose(IntPtr symbolReaderHandle)
         {
             Debug.Assert(symbolReaderHandle != IntPtr.Zero);
             try
@@ -386,7 +385,7 @@ namespace SOS
         /// <param name="methodToken">method token return</param>
         /// <param name="ilOffset">IL offset return</param>
         /// <returns> true if information is available</returns>
-        internal static bool ResolveSequencePoint(IntPtr symbolReaderHandle, string filePath, int lineNumber, out int methodToken, out int ilOffset)
+        public static bool ResolveSequencePoint(IntPtr symbolReaderHandle, string filePath, int lineNumber, out int methodToken, out int ilOffset)
         {
             Debug.Assert(symbolReaderHandle != IntPtr.Zero);
             methodToken = 0;
@@ -429,7 +428,7 @@ namespace SOS
         /// <param name="lineNumber">source line number return</param>
         /// <param name="fileName">source file name return</param>
         /// <returns> true if information is available</returns>
-        internal static bool GetLineByILOffset(IntPtr symbolReaderHandle, int methodToken, long ilOffset, out int lineNumber, out IntPtr fileName)
+        public static bool GetLineByILOffset(IntPtr symbolReaderHandle, int methodToken, long ilOffset, out int lineNumber, out IntPtr fileName)
         {
             lineNumber = 0;
             fileName = IntPtr.Zero;
@@ -511,7 +510,7 @@ namespace SOS
         /// <param name="localIndex">local variable index</param>
         /// <param name="localVarName">local variable name return</param>
         /// <returns>true if name has been found</returns>
-        internal static bool GetLocalVariableName(IntPtr symbolReaderHandle, int methodToken, int localIndex, out IntPtr localVarName)
+        public static bool GetLocalVariableName(IntPtr symbolReaderHandle, int methodToken, int localIndex, out IntPtr localVarName)
         {
             localVarName = IntPtr.Zero;
 
@@ -946,12 +945,20 @@ namespace SOS
         /// <returns>stream or null</returns>
         private static SymbolStoreFile GetSymbolStoreFile(SymbolStoreKey key)
         {
-            // Add the default symbol cache if it hasn't already been added
-            if (!s_symbolCacheAdded) {
-                s_symbolStore = new CacheSymbolStore(s_tracer, s_symbolStore, GetDefaultSymbolCache());
-                s_symbolCacheAdded = true;
+            try
+            {
+                // Add the default symbol cache if it hasn't already been added
+                if (!s_symbolCacheAdded) {
+                    s_symbolStore = new CacheSymbolStore(s_tracer, s_symbolStore, GetDefaultSymbolCache());
+                    s_symbolCacheAdded = true;
+                }
+                return s_symbolStore.GetFile(key, CancellationToken.None).GetAwaiter().GetResult();
             }
-            return s_symbolStore.GetFile(key, CancellationToken.None).GetAwaiter().GetResult();
+            catch (Exception ex) when (ex is UnauthorizedAccessException || ex is BadImageFormatException || ex is IOException)
+            {
+                s_tracer.Error("Exception: {0}", ex.ToString());
+                return null;
+            }
         }
 
         /// <summary>

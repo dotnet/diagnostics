@@ -233,5 +233,3 @@ EXPORTS
     TraceToCode
     tracetocode=TraceToCode
 #endif
-
-    InitializeSymbolReaderCallbacks
