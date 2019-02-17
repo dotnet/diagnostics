@@ -7,8 +7,8 @@
     <PackAsTool>true</PackAsTool>
     <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;osx-x64</PackAsToolShimRuntimeIdentifiers>
     <!-- The package version needs to be hard coded as a stable version so "dotnet tool install -g dotnet-sos" works -->
-    <Version>1.0.0</Version>
-    <PackageVersion>1.0.0</PackageVersion>
+    <Version>$(VersionPrefix)</Version>
+    <PackageVersion>$(VersionPrefix)</PackageVersion>
     <ToolCommandName>dotnet-sos</ToolCommandName>
     <RootNamespace>Microsoft.Diagnostics.Tools.SOS</RootNamespace>
     <Description>Diagnostic SOS installer</Description>
@@ -16,7 +16,7 @@
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <!-- Need to put the shims here to sign -->
     <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
-    <SOSNETCoreBinaries>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netcoreapp2.0\publish\*.dll</SOSNETCoreBinaries>
+    <SOSNETCoreBinaries>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netstandard2.0\publish\*.dll</SOSNETCoreBinaries>
   </PropertyGroup>
 
   <ItemGroup>

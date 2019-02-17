@@ -968,11 +968,11 @@ namespace SOS
         /// <returns>if false, error parsing symbol path</returns>
         private static bool ParseSymbolPath(ref SymbolStore store, string symbolPath)
         {
-            string[] paths = symbolPath.Split(";", StringSplitOptions.RemoveEmptyEntries);
+            string[] paths = symbolPath.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
 
             foreach (string path in paths.Reverse())
             {
-                string[] parts = path.Split("*", StringSplitOptions.RemoveEmptyEntries);
+                string[] parts = path.Split(new char[] { '*' }, StringSplitOptions.RemoveEmptyEntries);
 
                 // UNC or directory paths are ignored (paths not prefixed with srv* or cache*).
                 if (parts.Length > 0)

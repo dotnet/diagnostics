@@ -10,7 +10,7 @@ $BinDir = "$SourceDirectory\artifacts\bin"
 $SOSGalleryVersion = cat $BinDir\VersionPrefix.txt
 $SOSGalleryVersion = "$SOSGalleryVersion" + ".0"
 
-$SOSNETCorePath = "$BinDir\SOS.NETCore\Release\netcoreapp2.0\publish"
+$SOSNETCorePath = "$BinDir\SOS.NETCore\Release\netstandard2.0\publish"
 $GalleryDir = "$BinDir\gallery\$SOSGalleryVersion"
 $ZipFilePath = "$SourceDirectory\artifacts\packages\Release"
 $ZipFile = Join-Path -Path $ZipFilePath "$SOSGalleryVersion.zip"

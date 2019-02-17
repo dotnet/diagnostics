@@ -20,6 +20,7 @@
 
     <!-- Other libs -->
     <MicrosoftSymbolStoreVersion>1.0.0-dev-63716-01</MicrosoftSymbolStoreVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>1.0.3</MicrosoftDiagnosticsRuntimeVersion>
   </PropertyGroup>
 
   <PropertyGroup>
