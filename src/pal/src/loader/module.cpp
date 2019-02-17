@@ -366,8 +366,9 @@ GetProcAddress(
     }
     else
     {
-        TRACE("Symbol %s not found in module %p (named %S)\n",
-              lpProcName, module, MODNAME(module));
+        TRACE("Symbol %s not found in module %p (named %S) %s\n",
+              lpProcName, module, MODNAME(module), dlerror());
+
         SetLastError(ERROR_PROC_NOT_FOUND);
     }
 done:

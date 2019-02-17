@@ -281,8 +281,6 @@ public:
     // LLDBServices (internal)
     //----------------------------------------------------------------------------
 
-    PCSTR GetModuleDirectory(
-        PCSTR name);
     void LoadNativeSymbols(
         lldb::SBTarget target,
         lldb::SBModule module,

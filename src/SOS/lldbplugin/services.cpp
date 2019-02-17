@@ -88,17 +88,22 @@ LLDBServices::GetCoreClrDirectory()
 {
     if (g_coreclrDirectory == nullptr)
     {
-        const char *coreclrModule = MAKEDLLNAME_A("coreclr");
-        const char *directory = GetModuleDirectory(coreclrModule);
-        if (directory != nullptr)
+        lldb::SBTarget target = m_debugger.GetSelectedTarget();
+        if (target.IsValid())
         {
-            std::string path(directory);
-            path.append("/");
-            g_coreclrDirectory = strdup(path.c_str());
-        }
-        else
-        {
-            Output(DEBUG_OUTPUT_WARNING, "The %s module is not loaded yet in the target process\n", coreclrModule);
+            const char *coreclrModule = MAKEDLLNAME_A("coreclr");
+            lldb::SBFileSpec fileSpec;
+            fileSpec.SetFilename(coreclrModule);
+
+            lldb::SBModule module = target.FindModule(fileSpec);
+            if (module.IsValid())
+            {
+                const char *directory = module.GetFileSpec().GetDirectory();
+                std::string path(directory);
+                path.append("/");
+
+                g_coreclrDirectory = strdup(path.c_str());
+            }
         }
     }
     return g_coreclrDirectory;
@@ -1304,27 +1309,6 @@ LLDBServices::FindSourceFile(
 }
 
 // Internal functions
-PCSTR
-LLDBServices::GetModuleDirectory(
-    PCSTR name)
-{
-    lldb::SBTarget target = m_debugger.GetSelectedTarget();
-    if (!target.IsValid())
-    {
-        return NULL;
-    }
-
-    lldb::SBFileSpec fileSpec;
-    fileSpec.SetFilename(name);
-
-    lldb::SBModule module = target.FindModule(fileSpec);
-    if (!module.IsValid())
-    {
-        return NULL;
-    }
-
-    return module.GetFileSpec().GetDirectory();
-}
 
 ULONG64
 LLDBServices::GetModuleBase(
