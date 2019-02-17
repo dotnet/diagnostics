@@ -237,7 +237,6 @@ HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
     }
     if (!GetAbsolutePath(directory, coreClrDirectory))
     {
-        ExtErr("Error: Failed to get coreclr absolute path\n");
         return E_FAIL;
     }
 #else
@@ -410,7 +409,7 @@ static LPCSTR GetTempDirectory()
             strcat_s(tmpPath, MAX_LONGPATH, DIRECTORY_SEPARATOR_STR_A);
         }
         char pidstr[128];
-        sprintf_s(pidstr, _countof(pidstr), "%d", GetCurrentProcessId());
+        sprintf_s(pidstr, _countof(pidstr), "sos%d", GetCurrentProcessId());
         strcat_s(tmpPath, MAX_LONGPATH, pidstr);
         strcat_s(tmpPath, MAX_LONGPATH, DIRECTORY_SEPARATOR_STR_A);
 
@@ -503,6 +502,12 @@ LPCSTR GetDacFilePath()
                 g_dacFilePath = _strdup(dacModulePath.c_str());
             }
         }
+
+        if (g_dacFilePath == nullptr)
+        {
+            // Attempt to only load the DAC/DBI modules
+            LoadNativeSymbols(true);
+        }
     }
     return g_dacFilePath;
 }
@@ -524,7 +529,15 @@ LPCSTR GetDbiFilePath()
             // if DBI file exists
             if (access(dbiModulePath.c_str(), F_OK) == 0)
 #endif
+            {
                 g_dbiFilePath = _strdup(dbiModulePath.c_str());
+            }
+        }
+
+        if (g_dbiFilePath == nullptr)
+        {
+            // Attempt to only load the DAC/DBI modules
+            LoadNativeSymbols(true);
         }
     }
     return g_dbiFilePath;
@@ -697,20 +710,20 @@ static int ReadMemoryForSymbols(ULONG64 address, uint8_t *buffer, int cb)
 //
 // Symbol downloader callback
 //
-static void SymbolFileCallback(void* param, const char* moduleFileName, const char* symbolFileName)
+static void SymbolFileCallback(void* param, const char* moduleFileName, const char* symbolFilePath)
 {
     if (strcmp(moduleFileName, MAIN_CLR_DLL_NAME_A) == 0) {
         return;
     }
     if (strcmp(moduleFileName, MAKEDLLNAME_A("mscordaccore")) == 0) {
         if (g_dacFilePath == nullptr) {
-            g_dacFilePath = _strdup(symbolFileName);
+            g_dacFilePath = _strdup(symbolFilePath);
         }
         return;
     }
     if (strcmp(moduleFileName, MAKEDLLNAME_A("mscordbi")) == 0) {
         if (g_dbiFilePath == nullptr) {
-            g_dbiFilePath = _strdup(symbolFileName);
+            g_dbiFilePath = _strdup(symbolFilePath);
         }
         return;
     }
@@ -718,18 +731,18 @@ static void SymbolFileCallback(void* param, const char* moduleFileName, const ch
     HRESULT Status = g_ExtServices->QueryInterface(__uuidof(ILLDBServices2), (void**)&services2);
     if (SUCCEEDED(Status))
     {
-        services2->AddModuleSymbol(param, symbolFileName);
+        services2->AddModuleSymbol(param, symbolFilePath);
     }
 }
 
 //
 // Enumerate native module callback
 //
-static void LoadNativeSymbolsCallback(void* param, const char* moduleDirectory, const char* moduleFileName, ULONG64 moduleAddress, int moduleSize)
+static void LoadNativeSymbolsCallback(void* param, const char* moduleFilePath, ULONG64 moduleAddress, int moduleSize)
 {
     _ASSERTE(g_hostingInitialized);
     _ASSERTE(g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate != nullptr);
-    g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(SymbolFileCallback, param, GetTempDirectory(), moduleDirectory, moduleFileName, moduleAddress, moduleSize, ReadMemoryForSymbols);
+    g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(SymbolFileCallback, param, GetTempDirectory(), moduleFilePath, moduleAddress, moduleSize, ReadMemoryForSymbols);
 }
 
 #endif
@@ -757,7 +770,7 @@ HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* 
  * for them. Depends on the lldb callback to enumerate modules. Not
  * necessary on dbgeng because it already downloads native symbols.
 \**********************************************************************/
-HRESULT LoadNativeSymbols()
+HRESULT LoadNativeSymbols(bool runtimeOnly)
 {
     HRESULT Status = S_OK;
 #ifdef FEATURE_PAL
@@ -767,7 +780,7 @@ HRESULT LoadNativeSymbols()
         Status = g_ExtServices->QueryInterface(__uuidof(ILLDBServices2), (void**)&services2);
         if (SUCCEEDED(Status))
         {
-            Status = services2->LoadNativeSymbols(LoadNativeSymbolsCallback);
+            Status = services2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback);
         }
     }
 #endif

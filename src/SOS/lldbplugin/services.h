@@ -270,6 +270,7 @@ public:
     //----------------------------------------------------------------------------
 
     HRESULT LoadNativeSymbols(
+        bool runtimeOnly,
         PFN_MODULE_LOAD_CALLBACK callback);
 
     HRESULT AddModuleSymbol(
@@ -282,8 +283,10 @@ public:
 
     PCSTR GetModuleDirectory(
         PCSTR name);
+    void LoadNativeSymbols(
+        lldb::SBTarget target,
+        lldb::SBModule module,
+        PFN_MODULE_LOAD_CALLBACK callback);
 
     PCSTR GetPluginModuleDirectory();
-
-    int StartListenerThread();
 };

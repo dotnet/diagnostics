@@ -49,7 +49,7 @@ extern LPCSTR GetDbiFilePath();
 extern BOOL IsHostingInitialized();
 extern HRESULT InitializeHosting();
 extern HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* symbolServer, const char* cacheDirectory);
-extern HRESULT LoadNativeSymbols();
+extern HRESULT LoadNativeSymbols(bool runtimeOnly = false);
 extern void DisplaySymbolStore();
 extern void DisableSymbolStore();
 

@@ -158,10 +158,7 @@ namespace SOS
         /// </summary>
         /// <param name="moduleFileName">module file name</param>
         /// <param name="symbolFileName">symbol file name and path</param>
-        internal delegate void SymbolFileCallback(
-            IntPtr parameter,
-            [MarshalAs(UnmanagedType.LPStr)] string moduleFileName, 
-            [MarshalAs(UnmanagedType.LPStr)] string symbolFileName);
+        public delegate void SymbolFileCallback(IntPtr parameter, [MarshalAs(UnmanagedType.LPStr)] string moduleFileName, [MarshalAs(UnmanagedType.LPStr)] string symbolFileName);
 
         static SymbolStore s_symbolStore = null;
         static bool s_symbolCacheAdded = false;
@@ -242,18 +239,15 @@ namespace SOS
         /// </summary>
         /// <param name="callback">called back for each symbol file loaded</param>
         /// <param name="parameter">callback parameter</param>
-        /// <param name="moduleDirectory">module path</param>
-        /// <param name="moduleFileName">module file name</param>
+        /// <param name="moduleFilePath">module path</param>
         /// <param name="address">module base address</param>
         /// <param name="size">module size</param>
         /// <param name="readMemory">read memory callback delegate</param>
-        internal static void LoadNativeSymbols(SymbolFileCallback callback, IntPtr parameter, string tempDirectory, string moduleDirectory, string moduleFileName, 
-            ulong address, int size, ReadMemoryDelegate readMemory)
+        public static void LoadNativeSymbols(SymbolFileCallback callback, IntPtr parameter, string tempDirectory, string moduleFilePath, ulong address, int size, ReadMemoryDelegate readMemory)
         {
             if (s_symbolStore != null)
             {
                 Debug.Assert(s_tracer != null);
-                string path = Path.Combine(moduleDirectory, moduleFileName);
                 Stream stream = new TargetStream(address, size, readMemory);
                 KeyTypeFlags flags = KeyTypeFlags.SymbolKey | KeyTypeFlags.ClrKeys;
                 KeyGenerator generator = null;
@@ -261,12 +255,12 @@ namespace SOS
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
                     var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
-                    generator = new ELFFileKeyGenerator(s_tracer, elfFile, path);
+                    generator = new ELFFileKeyGenerator(s_tracer, elfFile, moduleFilePath);
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
                     var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
-                    generator = new MachOFileKeyGenerator(s_tracer, machOFile, path);
+                    generator = new MachOFileKeyGenerator(s_tracer, machOFile, moduleFilePath);
                 }
                 else
                 {
@@ -278,11 +272,11 @@ namespace SOS
                     IEnumerable<SymbolStoreKey> keys = generator.GetKeys(flags);
                     foreach (SymbolStoreKey key in keys)
                     {
-                        string symbolFileName = Path.GetFileName(key.FullPathName);
+                        string moduleFileName = Path.GetFileName(key.FullPathName);
                         s_tracer.Verbose("{0} {1}", key.FullPathName, key.Index);
 
                         // Don't download the sos binaries that come with the runtime
-                        if (symbolFileName != "SOS.NETCore.dll" && !symbolFileName.StartsWith("libsos."))
+                        if (moduleFileName != "SOS.NETCore.dll" && !moduleFileName.StartsWith("libsos."))
                         {
                             using (SymbolStoreFile file = GetSymbolStoreFile(key))
                             {
@@ -290,20 +284,20 @@ namespace SOS
                                 {
                                     try
                                     {
-                                        string downloadFileName = file.FileName;
+                                        string downloadFilePath = file.FileName;
 
                                         // If the downloaded doesn't already exists on disk in the cache, then write it to a temporary location.
-                                        if (!File.Exists(downloadFileName))
+                                        if (!File.Exists(downloadFilePath))
                                         {
-                                            downloadFileName = Path.Combine(tempDirectory, symbolFileName);
+                                            downloadFilePath = Path.Combine(tempDirectory, moduleFileName);
 
-                                            using (Stream destinationStream = File.OpenWrite(downloadFileName)) {
+                                            using (Stream destinationStream = File.OpenWrite(downloadFilePath)) {
                                                 file.Stream.CopyTo(destinationStream);
                                             }
                                             s_tracer.WriteLine("Downloaded symbol file {0}", key.FullPathName);
                                         }
-                                        s_tracer.Information("{0}: {1}", symbolFileName, downloadFileName);
-                                        callback(parameter, symbolFileName, downloadFileName);
+                                        s_tracer.Information("{0}: {1}", moduleFileName, downloadFilePath);
+                                        callback(parameter, moduleFileName, downloadFilePath);
                                     }
                                     catch (Exception ex) when (ex is UnauthorizedAccessException || ex is DirectoryNotFoundException)
                                     {
@@ -316,7 +310,7 @@ namespace SOS
                 }
                 catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException)
                 {
-                    s_tracer.Error("Exception: {0}/{1}: {2:X16}", moduleDirectory, moduleFileName, address);
+                    s_tracer.Error("Exception: {0}/{1}: {2:X16}", moduleFilePath, address);
                 }
             }
         }

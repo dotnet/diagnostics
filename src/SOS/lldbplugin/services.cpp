@@ -1720,49 +1720,79 @@ LLDBServices::GetFrameOffset(
 // ILLDBServices2
 //----------------------------------------------------------------------------
 
-HRESULT 
+void
 LLDBServices::LoadNativeSymbols(
+    lldb::SBTarget target,
+    lldb::SBModule module,
     PFN_MODULE_LOAD_CALLBACK callback)
 {
-    uint32_t numTargets = m_debugger.GetNumTargets();
-    for (int ti = 0; ti < numTargets; ti++)
+    if (module.IsValid())
     {
-        lldb::SBTarget target = m_debugger.GetTargetAtIndex(ti);
+        const char* directory = nullptr;
+        const char* filename = nullptr;
+
+        lldb::SBFileSpec symbolFileSpec = module.GetSymbolFileSpec();
+        if (symbolFileSpec.IsValid())
+        {
+            directory = symbolFileSpec.GetDirectory();
+            filename = symbolFileSpec.GetFilename();
+        }
+        else {
+            lldb::SBFileSpec fileSpec = module.GetFileSpec();
+            if (fileSpec.IsValid())
+            {
+                directory = fileSpec.GetDirectory();
+                filename = fileSpec.GetFilename();
+            }
+        }
+
+        if (directory != nullptr && filename != nullptr)
+        {
+            ULONG64 moduleAddress = GetModuleBase(target, module);
+            int moduleSize = INT32_MAX;
+            if (moduleAddress != UINT64_MAX)
+            {
+                std::string path(directory);
+                path.append("/");
+                path.append(filename);
+
+                callback(&module, path.c_str(), moduleAddress, moduleSize);
+            }
+        }
+    }
+}
+
+HRESULT 
+LLDBServices::LoadNativeSymbols(
+    bool runtimeOnly,
+    PFN_MODULE_LOAD_CALLBACK callback)
+{
+    if (runtimeOnly)
+    {
+        lldb::SBTarget target = m_debugger.GetSelectedTarget();
         if (target.IsValid())
         {
-            uint32_t numModules = target.GetNumModules();
-            for (int mi = 0; mi < numModules; mi++)
+            const char *coreclrModule = MAKEDLLNAME_A("coreclr");
+            lldb::SBFileSpec fileSpec;
+            fileSpec.SetFilename(coreclrModule);
+
+            lldb::SBModule module = target.FindModule(fileSpec);
+            LoadNativeSymbols(target, module, callback);
+        }
+    }
+    else 
+    {
+        uint32_t numTargets = m_debugger.GetNumTargets();
+        for (int ti = 0; ti < numTargets; ti++)
+        {
+            lldb::SBTarget target = m_debugger.GetTargetAtIndex(ti);
+            if (target.IsValid())
             {
-                lldb::SBModule module = target.GetModuleAtIndex(mi);
-                if (module.IsValid())
+                uint32_t numModules = target.GetNumModules();
+                for (int mi = 0; mi < numModules; mi++)
                 {
-                    const char* directory = nullptr;
-                    const char* filename = nullptr;
-
-                    lldb::SBFileSpec symbolFileSpec = module.GetSymbolFileSpec();
-                    if (symbolFileSpec.IsValid())
-                    {
-                        directory = symbolFileSpec.GetDirectory();
-                        filename = symbolFileSpec.GetFilename();
-                    }
-                    else {
-                        lldb::SBFileSpec fileSpec = module.GetFileSpec();
-                        if (fileSpec.IsValid())
-                        {
-                            directory = fileSpec.GetDirectory();
-                            filename = fileSpec.GetFilename();
-                        }
-                    }
-
-                    if (directory != nullptr && filename != nullptr)
-                    {
-                        ULONG64 moduleAddress = GetModuleBase(target, module);
-                        int moduleSize = INT32_MAX;
-                        if (moduleAddress != UINT64_MAX)
-                        {
-                            callback(&module, directory, filename, moduleAddress, moduleSize);
-                        }
-                    }
+                    lldb::SBModule module = target.GetModuleAtIndex(mi);
+                    LoadNativeSymbols(target, module, callback);
                 }
             }
         }
