@@ -5,9 +5,9 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 
-namespace Microsoft.Diagnostics.Tools.Dump
+namespace Microsoft.Diagnostic.Tools.Dump
 {
-    public static partial class Dumper
+    public partial class Dumper
     {
         private static class Windows
         {
