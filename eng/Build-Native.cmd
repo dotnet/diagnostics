@@ -331,6 +331,13 @@ if /i "%__DoCrossArchBuild%"=="1" (
     endlocal
 )
 
+REM Copy the native SOS binaries to where these tools expect for testing
+
+set "__dotnet_sos=%__RootBinDir%\bin\dotnet-sos\%__BuildType%\netcoreapp2.1\publish\win-%__BuildArch%"
+set "__dotnet_dump=%__RootBinDir%\bin\dotnet-dump\%__BuildType%\netcoreapp2.1\publish\win-%__BuildArch%"
+xcopy /y /q /i /s %__BinDir% %__dotnet_sos%
+xcopy /y /q /i /s %__BinDir% %__dotnet_dump%
+
 REM =========================================================================================
 REM ===
 REM === All builds complete!

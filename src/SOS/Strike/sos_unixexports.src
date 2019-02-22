@@ -53,5 +53,3 @@ ThreadState
 Token2EE
 u
 VerifyHeap
-
-InitializeSymbolReaderCallbacks

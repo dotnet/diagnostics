@@ -215,7 +215,7 @@ phases:
       - agent.os -equals Windows_NT
   variables: 
     _PublishBlobFeedUrl: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
-    _SOSNETCorePath: $(Build.SourcesDirectory)/artifacts/bin/SOS.NETCore/Release/netcoreapp2.0/publish
+    _SOSNETCorePath: $(Build.SourcesDirectory)/artifacts/bin/SOS.NETCore/Release/netstandard2.0/publish
     _TeamName: DotNetCore
 
   steps: 
@@ -433,7 +433,7 @@ phases:
     displayName: Publish TestHelpers to MyGet dotnet-buildtools feed
     inputs:
       command: custom
-      arguments: 'push $(Build.SourcesDirectory)\artifacts\packages\Release\NonShipping\Microsoft.Diagnostic.TestHelpers.*.nupkg -ApiKey $(dotnetfeed-storage-access-key-1) -Source $(_PublishBlobFeedUrl)'
+      arguments: 'push $(Build.SourcesDirectory)\artifacts\packages\Release\Shipping\Microsoft.Diagnostic.TestHelpers.*.nupkg -ApiKey $(dotnetfeed-storage-access-key-1) -Source $(_PublishBlobFeedUrl)'
     condition: and(succeeded(), eq(variables['PushPackages'], 'true'))
 
   - task: PublishBuildArtifacts@1

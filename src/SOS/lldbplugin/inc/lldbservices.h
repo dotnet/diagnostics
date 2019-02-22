@@ -542,7 +542,7 @@ public:
         PULONG64 offset) = 0;
 };
 
-typedef void (*PFN_MODULE_LOAD_CALLBACK)(void* param, const char* moduleName, const char* moduleDirectory, ULONG64 moduleAddress, int moduleSize);
+typedef void (*PFN_MODULE_LOAD_CALLBACK)(void* param, const char* moduleFilePath, ULONG64 moduleAddress, int moduleSize);
 
 MIDL_INTERFACE("012F32F0-33BA-4E8E-BC01-037D382D8A5E")
 ILLDBServices2: public IUnknown
@@ -553,11 +553,12 @@ public:
     //----------------------------------------------------------------------------
 
     virtual HRESULT LoadNativeSymbols(
+        bool runtimeOnly,
         PFN_MODULE_LOAD_CALLBACK callback) = 0;
 
     virtual HRESULT AddModuleSymbol(
         void* param, 
-        const char* symbolFileName) = 0;
+        const char* symbolFilePath) = 0;
 };
 
 #ifdef __cplusplus

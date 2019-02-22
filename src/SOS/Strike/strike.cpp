@@ -5972,6 +5972,8 @@ DECLARE_API(DumpModule)
     
     DMLOut("Assembly:   %s\n", DMLAssembly(module.Assembly));
 
+    ExtOut("PEFile:                  %p\n", SOS_PTR(module.File));
+    ExtOut("ModuleId:                %p\n", SOS_PTR(module.dwModuleID));
     ExtOut("LoaderHeap:              %p\n", SOS_PTR(module.pLookupTableHeap));
     ExtOut("TypeDefToMethodTableMap: %p\n", SOS_PTR(module.TypeDefToMethodTableMap));
     ExtOut("TypeRefToMethodTableMap: %p\n", SOS_PTR(module.TypeRefToMethodTableMap));
@@ -6261,7 +6263,7 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
     table.SetColAlignment(4, AlignRight);
 
     table.WriteColumn(8, "Lock");
-    table.WriteRow("", "ID", "OSID", "ThreadOBJ", "State", "GC Mode", "GC Alloc Context", "Domain", "Count", "Apt");
+    table.WriteRow("DBG", "ID", "OSID", "ThreadOBJ", "State", "GC Mode", "GC Alloc Context", "Domain", "Count", "Apt");
     
     if (hosted)
         table.WriteColumn("Fiber");
@@ -12694,7 +12696,10 @@ public:
                 &cbContextActual,
                 (BYTE *)context.GetPtr())) != S_OK)
             {
-                ExtOut("GetFrameContext failed: %lx\n",Status);
+                if (FAILED(Status))
+                {
+                    ExtOut("GetFrameContext failed: %lx\n", Status);
+                }
                 break;
             }
 
@@ -12946,64 +12951,66 @@ public:
             }
             CLRDATA_ADDRESS ip = 0, sp = 0;
             hr = GetFrameLocation(pStackWalk, &ip, &sp);
-
-            DacpFrameData FrameData;
-            HRESULT frameDataResult = FrameData.Request(pStackWalk);
-            if (SUCCEEDED(frameDataResult) && FrameData.frameAddr)
-                sp = FrameData.frameAddr;
+            if (SUCCEEDED(hr))
+            {
+                DacpFrameData FrameData;
+                HRESULT frameDataResult = FrameData.Request(pStackWalk);
+                if (SUCCEEDED(frameDataResult) && FrameData.frameAddr)
+                    sp = FrameData.frameAddr;
 
 #ifdef DEBUG_STACK_CONTEXT
-            while ((numNativeFrames > 0) && (currentNativeFrame->StackOffset <= sp))
-            {
-                if (currentNativeFrame->StackOffset != sp)
+                while ((numNativeFrames > 0) && (currentNativeFrame->StackOffset <= sp))
                 {
-                    PrintNativeStackFrame(out, currentNativeFrame, bSuppressLines);
+                    if (currentNativeFrame->StackOffset != sp)
+                    {
+                        PrintNativeStackFrame(out, currentNativeFrame, bSuppressLines);
+                    }
+                    currentNativeFrame++;
+                    numNativeFrames--;
                 }
-                currentNativeFrame++;
-                numNativeFrames--;
-            }
 #endif // DEBUG_STACK_CONTEXT
 
-            // Print the stack pointer.
-            out.WriteColumn(0, sp);
+                // Print the stack pointer.
+                out.WriteColumn(0, sp);
 
-            // Print the method/Frame info
-            if (SUCCEEDED(frameDataResult) && FrameData.frameAddr)
-            {
-                // Skip the instruction pointer because it doesn't really mean anything for method frames
-                out.WriteColumn(1, bFull ? String("") : NativePtr(ip));
-                
-                // This is a clr!Frame.
-                out.WriteColumn(2, GetFrameFromAddress(TO_TADDR(FrameData.frameAddr), pStackWalk, bFull));
-            
-                // Print out gc references for the Frame.  
-                for (unsigned int i = 0; i < refCount; ++i)
-                    if (pRefs[i].Source == sp)
-                        PrintRef(pRefs[i], out);
-                        
-                // Print out an error message if we got one.
-                for (unsigned int i = 0; i < errCount; ++i)
-                    if (pErrs[i].Source == sp)
-                        out.WriteColumn(2, "Failed to enumerate GC references.");
-            }
-            else
-            {
-                out.WriteColumn(1, InstructionPtr(ip));
-                out.WriteColumn(2, MethodNameFromIP(ip, bSuppressLines, bFull, bFull));
-                    
-                // Print out gc references.  refCount will be zero if bGC is false (or if we
-                // failed to fetch gc reference information).
-                for (unsigned int i = 0; i < refCount; ++i)
-                    if (pRefs[i].Source == ip && pRefs[i].StackPointer == sp)
-                        PrintRef(pRefs[i], out);
+                // Print the method/Frame info
+                if (SUCCEEDED(frameDataResult) && FrameData.frameAddr)
+                {
+                    // Skip the instruction pointer because it doesn't really mean anything for method frames
+                    out.WriteColumn(1, bFull ? String("") : NativePtr(ip));
 
-                // Print out an error message if we got one.
-                for (unsigned int i = 0; i < errCount; ++i)
-                    if (pErrs[i].Source == sp)
-                        out.WriteColumn(2, "Failed to enumerate GC references.");
+                    // This is a clr!Frame.
+                    out.WriteColumn(2, GetFrameFromAddress(TO_TADDR(FrameData.frameAddr), pStackWalk, bFull));
 
-                if (bParams || bLocals)
-                    PrintArgsAndLocals(pStackWalk, bParams, bLocals);
+                    // Print out gc references for the Frame.  
+                    for (unsigned int i = 0; i < refCount; ++i)
+                        if (pRefs[i].Source == sp)
+                            PrintRef(pRefs[i], out);
+
+                    // Print out an error message if we got one.
+                    for (unsigned int i = 0; i < errCount; ++i)
+                        if (pErrs[i].Source == sp)
+                            out.WriteColumn(2, "Failed to enumerate GC references.");
+                }
+                else
+                {
+                    out.WriteColumn(1, InstructionPtr(ip));
+                    out.WriteColumn(2, MethodNameFromIP(ip, bSuppressLines, bFull, bFull));
+
+                    // Print out gc references.  refCount will be zero if bGC is false (or if we
+                    // failed to fetch gc reference information).
+                    for (unsigned int i = 0; i < refCount; ++i)
+                        if (pRefs[i].Source == ip && pRefs[i].StackPointer == sp)
+                            PrintRef(pRefs[i], out);
+
+                    // Print out an error message if we got one.
+                    for (unsigned int i = 0; i < errCount; ++i)
+                        if (pErrs[i].Source == sp)
+                            out.WriteColumn(2, "Failed to enumerate GC references.");
+
+                    if (bParams || bLocals)
+                        PrintArgsAndLocals(pStackWalk, bParams, bLocals);
+                }
             }
 
             if (bDisplayRegVals)
@@ -13025,13 +13032,16 @@ public:
     {
         CROSS_PLATFORM_CONTEXT context;
         HRESULT hr = pStackWalk->GetContext(DT_CONTEXT_FULL, g_targetMachine->GetContextSize(), NULL, (BYTE *)&context);
-        if (FAILED(hr) || hr == S_FALSE)
+        if (FAILED(hr))
+        {
+            ExtOut("GetFrameContext failed: %lx\n", hr);
+            return hr;
+        }
+        if (hr == S_FALSE)
         {
             // GetFrameContext returns S_FALSE if the frame iterator is invalid.  That's basically an error for us.
-            ExtOut("GetFrameContext failed: %lx\n", hr);
             return E_FAIL;
         }
-                     
 #if defined(SOS_TARGET_AMD64)
         String outputFormat3 = "    %3s=%016x %3s=%016x %3s=%016x\n";
         String outputFormat2 = "    %3s=%016x %3s=%016x\n";
@@ -13082,13 +13092,16 @@ public:
     {
         CROSS_PLATFORM_CONTEXT context;
         HRESULT hr = pStackWalk->GetContext(DT_CONTEXT_FULL, g_targetMachine->GetContextSize(), NULL, (BYTE *)&context);
-        if (FAILED(hr) || hr == S_FALSE)
+        if (FAILED(hr))
+        {
+            ExtOut("GetFrameContext failed: %lx\n", hr);
+            return hr;
+        }
+        if (hr == S_FALSE)
         {
             // GetFrameContext returns S_FALSE if the frame iterator is invalid.  That's basically an error for us.
-            ExtOut("GetFrameContext failed: %lx\n", hr);
             return E_FAIL;
         }
-
         // First find the info for the Frame object, if the current frame has an associated clr!Frame.
         *ip = GetIP(context);
         *sp = GetSP(context);
@@ -13179,8 +13192,11 @@ public:
                 ExtErr("Failed to request thread at %p\n", CurThread);
                 return;
             }
-            ExtOut("OS Thread Id: 0x%x\n", Thread.osThreadId);
-            PrintThread(Thread.osThreadId, bParams, bLocals, bSuppressLines, bGC, bNative, bDisplayRegVals);
+            if (Thread.osThreadId != 0)
+            {
+                ExtOut("OS Thread Id: 0x%x\n", Thread.osThreadId);
+                PrintThread(Thread.osThreadId, bParams, bLocals, bSuppressLines, bGC, bNative, bDisplayRegVals);
+            }
             CurThread = Thread.nextThread;
         }
     }

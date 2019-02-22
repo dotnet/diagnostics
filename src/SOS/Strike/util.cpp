@@ -2582,6 +2582,13 @@ HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataMo
             if (FAILED(hr)) {
                 break;
             }
+            ULONG32 flags;
+            if ((hr = module->GetFlags(&flags)) != S_OK) {
+                continue;
+            }
+            if (flags != CLRDATA_MODULE_DEFAULT) {
+                continue;
+            }
             DacpGetModuleData moduleData;
             HRESULT hr = moduleData.Request(module);
             if (FAILED(hr)) {

@@ -469,6 +469,14 @@ if [ $__Build == true ]; then
     fi
 
     build_native "$__BuildArch" "$__IntermediatesDir" "$__ExtraCmakeArgs"
+
+    # Copy the native SOS binaries to where these tools expect for testing
+    __dotnet_sos=$__RootBinDir/bin/dotnet-sos/$__BuildType/netcoreapp2.1/publish/$__DistroRid
+    __dotnet_dump=$__RootBinDir/bin/dotnet-dump/$__BuildType/netcoreapp2.1/publish/$__DistroRid
+    mkdir -p "$__dotnet_sos"
+    mkdir -p "$__dotnet_dump"
+    cp "$__BinDir"/* "$__dotnet_sos"
+    cp "$__BinDir"/* "$__dotnet_dump"
 fi
 
 # Run SOS/lldbplugin tests

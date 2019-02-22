@@ -1,17 +1,4 @@
 <!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
 <Project>
-    <Import Project="..\Directory.Build.props"/>
-
-    <PropertyGroup>
-        <!--
-            We want to be able to ship pre-1.0 versions to NuGet but without
-            a pre-release tag, since 'dotnet tool install -g foo' only works
-            with the latest non-prerelease version (otherwise you have to specify
-            an explicit version).
-
-            So, these projects will be shipping as '0.X' versions for now.
-        -->
-        <VersionPrefix>0.1.0</VersionPrefix>
-        <PreReleaseVersionLabel>alpha</PreReleaseVersionLabel>
-    </PropertyGroup>
+  <Import Project="..\Directory.Build.props"/>
 </Project>

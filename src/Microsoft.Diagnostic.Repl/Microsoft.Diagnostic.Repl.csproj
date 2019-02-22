@@ -2,14 +2,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <AssemblyName>SOS.NETCore</AssemblyName>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>;1591;1701</NoWarn>
-    <Description>.NET Core SOS</Description>
+    <Description>Diagnostic utility functions and helpers</Description>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <DebugType>embedded</DebugType>
+    <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="System.Reflection.Metadata" Version="$(SystemReflectionMetadataVersion)" />
-    <PackageReference Include="Microsoft.SymbolStore" Version="$(MicrosoftSymbolStoreVersion)" />
+    <PackageReference Include="System.CommandLine.Experimental" Version="0.1.0-alpha-63807-01" />
   </ItemGroup>
+  
 </Project>
