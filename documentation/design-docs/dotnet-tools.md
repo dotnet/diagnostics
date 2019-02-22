@@ -12,9 +12,9 @@ These are some quick examples of the work we'd expect a .Net developer to want t
     > dotnet tool install -g dotnet-counters
     You can invoke the tool using the following command: dotnet-counters
     Tool 'dotnet-counters' (version '1.0.0') was successfully installed.
-    > dotnet counters monitor --process-id 1902 Microsoft-Windows-DotNETRuntime Microsoft-AspNet
+    > dotnet counters monitor --process-id 1902 System.Runtime Microsoft.AspNet
     
-    Microsoft-Windows-DotNETRuntime: 
+    System.Runtime: 
         Total Processor Time (ms)              173923.48 
         Private Virtual Memory (MB)                 1094       
         Working Set (MB)                            1982
@@ -23,7 +23,7 @@ These are some quick examples of the work we'd expect a .Net developer to want t
         Exception Thrown Rate (exceptions/min)       117
         Lock Contention Rate (contentions/min)      1792               
 
-     Microsoft-AspNet:
+     Microsoft.AspNet:
         Request Rate (requests/sec)                 1915
         Request Latency (ms)                          34  
        
@@ -35,7 +35,7 @@ These are some quick examples of the work we'd expect a .Net developer to want t
 
 ### Capture a trace for performance analysis
 
-For analyzing CPU usage, IO, lock contention, allocation rate, etc the investigator wants to capture a performance trace. This trace can then be moved to a developer machine where it can be analyzed with profiling tools such as PerfView/VisualStudio or visualized as a flame graph with speedscope. 
+For analyzing CPU usage, IO, lock contention, allocation rate, etc the investigator wants to capture a performance trace. This trace can then be moved to a developer machine where it can be analyzed with profiling tools such as PerfView/VisualStudio or visualized as a flame graph with speedscope (https://www.speedscope.app/). 
 
 **Capture default trace**
 
@@ -57,7 +57,7 @@ For analyzing CPU usage, IO, lock contention, allocation rate, etc the investiga
 
 **Convert a trace to use with speedscope**
 
-    > dotnet trace convert --format speedscope ~/trace.netperf
+    > dotnet trace convert ~/trace.netperf --to-speedscope 
     Writing:     ~/trace.speedscope.json
     Conversion complete
 
@@ -169,7 +169,7 @@ LIST
       > dotnet-counters list
       Showing well-known counters only. Specific processes may support additional counters.
 
-      Microsoft-Windows-DotNETRuntime
+      System.Runtime
           total-processor-time           Amount of time the process has utilized the CPU (ms)
           private-memory                 Amount of private virtual memory used by the process (KB)
           working-set                    Amount of working set used by the process (KB)
@@ -178,7 +178,7 @@ LIST
           exceptions-thrown-rate         Number of exceptions thrown in a recent 1 minute window (exceptions/min)
           lock-contention-rate           Number of instances of lock contention on runtime implemented locks in a
                                          recent 1 minute window (contentions/min)
-      Microsoft-AspNet
+      Microsoft.AspNet
           request-rate                   Number of requests handled in a recent one second interval (requests/sec)
           request-latency                Time to respond to a request, averaged over all requests in a recent
                                          one second interval (ms)
@@ -208,9 +208,9 @@ MONITOR
 
 
     Examples:
-      > dotnet counters monitor --processId 1902 Microsoft-Windows-DotNETRuntime Microsoft-AspNet
+      > dotnet counters monitor --processId 1902 System.Runtime Microsoft.AspNet
       
-      Microsoft-Windows-DotNETRuntime: 
+      System.Runtime: 
           Total Processor Time (ms)              173923.48 
           Private Virtual Memory (MB)                 1094       
           Working Set (MB)                            1982
@@ -219,7 +219,7 @@ MONITOR
           Exception Thrown Rate (exceptions/min)       117
           Lock Contention Rate (contentions/min)      1792               
 
-       Microsoft-AspNet:
+       Microsoft.AspNet:
           Request Rate (requests/sec)                 1915
           Request Latency (ms)                          34  
        
@@ -313,16 +313,12 @@ COLLECT
     
 CONVERT
 
-    dotnet-trace convert --format <output_format>
-                         [-h|--help]
+    dotnet-trace convert [-h|--help]
                          [-o|--output <output_file_path>]
+                         [--to-speedscope]
                          <trace_file_path>
 
     Converts traces to alternate formats for use with alternate trace analysis tools
-
-    --format
-        The name of the output format. Currently supported formats:
-        speedscope   The speedscope JSON format used by https://www.speedscope.app/
 
     -h, --help
         Show command line help
@@ -331,11 +327,15 @@ CONVERT
         The path where the converted file is written. If unspecified the file is written in the current directory
         using the same base filename as the input file and the extension appropriate for the new format.
 
+    --to-speedscope
+        Indicates that the output file format should be speedscope JSON format used by https://www.speedscope.app/
+        Currently this is the only supported format, but other options may be available in the future.
+
     trace_file_path
         The path to the trace file that should be converted. The trace file can be in either a netperf or netperf.zip file.
 
     Examples:
-      > dotnet-trace convert --format speedscope trace.netperf
+      > dotnet-trace convert trace.netperf --to-speedscope 
       Writing:       ./trace.speedscope.json
       Conversion complete
 
@@ -573,6 +573,8 @@ Work described in here captures potential future directions these tools could ta
 
 ### dotnet-counters ###
 
+- Add a profile option similar to dotnet-trace that allows curated sets of counters to be shown that could span multiple providers.
+
 - Dynamic counter enumeration
 
 Add a --process-id to the list command in order to dynamically determine a full set of available counters rather than just well-known counters
@@ -731,7 +733,7 @@ Show a snapshot of all a processes threads with a callstack for each.
 
 4. Do we support command line response files?
 
-    Not at this time. I didn't see any documentation suggesting that dotnet supports the response file generally and it would be nice to follow suit rather than rolling our own. We can revisit this based on customer feedback.
+    If System.CommandLine supports something default out-of-the-box (and @jonsequitur says it does) then we should use it. We can update the spec once any details are better understood.
 
 5. Do we support '/' style args that are more common on windows or only '--' style args?
 
@@ -748,11 +750,11 @@ Show a snapshot of all a processes threads with a callstack for each.
 
 - Do we need pre-defined counter sets to make some typical cases easier?
 
-    Not right now. It might help, but I'm not sure how much use the console viewer is really going to get so we should avoid adding too much complexity right away. If we get customer demand later we could revisit.
+    Not right now, though there is some contention around it. My opinion at the moment is that this feature would probably be useful, but it isn't necessary to create an MVP. If customers try the tool and say it needs profiles I'm happy to add it. @shirhatti and @richlander suggest that we should add it immediately without waiting for that feedback. I'm open to continue the discussion, but I haven't been convinced yet. If nothing changes in the next few weeks on that front then I think we'll wind up shipping a Preview that doesn't have this feature and we'll see what feedback we get.
 
 - Do we want to adjust our provider names? 
 
-    TBD. Microsoft-Windows-DotNETRuntime isn't that easy to remember and including it seems confusing.
+    SYstem.Runtime is expected to be the final name for the runtime provider. The rest is TBD placeholders.
 
 - What counters exactly are we going to expose and how will we name them?
 
