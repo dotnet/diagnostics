@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 namespace Microsoft.Diagnostic.Tools.Dump
 {
     [Command(Name = "exit", Help = "Exit interactive mode.")]
+    [Command(Name = "quit")]
     public class ExitCommand : CommandBase
     {
         public AnalyzeContext AnalyzeContext { get; set; }

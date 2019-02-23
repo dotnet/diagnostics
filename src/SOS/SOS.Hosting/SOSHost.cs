@@ -48,7 +48,7 @@ namespace SOS
                 os = "linux";
             }
             if (os == null) {
-                throw new PlatformNotSupportedException($"{RuntimeInformation.OSDescription} not supported");
+                throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
             }
             string architecture = RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant();
             string rid = os + "-" + architecture;

@@ -16,8 +16,9 @@ namespace Microsoft.Diagnostic.Tools.Dump
     /// </summary>
     public class AnalyzeContext: ISOSHostContext
     {
-        readonly IConsole _console;
-        ClrRuntime _runtime;
+        private readonly IConsole _console;
+        private ClrRuntime _runtime;
+        private SOSHost _sosHost;
 
         public AnalyzeContext(IConsole console, DataTarget target, Action exit)
         {
@@ -40,13 +41,26 @@ namespace Microsoft.Diagnostic.Tools.Dump
             {
                 if (_runtime == null)
                 {
-                    if (Target.ClrVersions.Count != 1)
-                    {
+                    if (Target.ClrVersions.Count != 1) {
                         throw new InvalidOperationException("More or less than 1 CLR version is present");
                     }
                     _runtime = Target.ClrVersions[0].CreateRuntime();
                 }
                 return _runtime;
+            }
+        }
+
+        /// <summary>
+        /// Returns the SOS host instance
+        /// </summary>
+        public SOSHost SOSHost
+        {
+            get 
+            {
+                if (_sosHost == null) {
+                    _sosHost = new SOSHost(Target.DataReader, this);
+                }
+                return _sosHost;
             }
         }
 

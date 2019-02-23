@@ -77,6 +77,11 @@ Getting a version of lldb that works for your platform can be a problem sometime
 * [FreeBSD Instructions](documentation/lldb/freebsd-instructions.md) 
 * [NetBSD Instructions](documentation/lldb/netbsd-instructions.md)
 
+## Installing SOS
+
+* [Linux and MacOS Instructions](documentation/installing-sos-instructions.md)
+* [Windows Instructions](documentation/installing-sos-windows-instructions.md)
+  
 ## Using SOS
 
 * [SOS debugging for Linux/MacOS](documentation/sos-debugging-extension.md)
