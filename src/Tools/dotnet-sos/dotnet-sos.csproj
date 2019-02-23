@@ -23,13 +23,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="2.2.5" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\SOS\SOS.InstallHelper\SOS.InstallHelper.csproj" />
   </ItemGroup>
-
+  
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine.Experimental" Version="0.1.0-alpha-63807-01" />
+  </ItemGroup>
+  
   <ItemGroup>
     <_PackageFiles Include="$(SOSNETCoreBinaries)">
       <BuildAction>None</BuildAction>

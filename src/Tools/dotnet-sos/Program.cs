@@ -1,64 +1,58 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using McMaster.Extensions.CommandLineUtils;
 using SOS;
 using System;
+using System.CommandLine;
+using System.CommandLine.Builder;
+using System.CommandLine.Invocation;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.SOS
 {
-    [Command(Name = "dotnet-sos", Description = "Install and configure SOS")]
-    internal class Program
+    public class Program
     {
-        [Option("--install", Description = "Install and configure SOS.")]
-        public bool InstallSOS { get; set; }
-
-        [Option("--uninstall", Description = "Uninstall SOS.")]
-        public bool UninstallSOS { get; set; }
-
-        [Option("--source", Description = "SOS binaries source path.")]
-        public string SOSSourcePath { get; set; }
-
-        public int OnExecute(IConsole console, CommandLineApplication app)
+        public static Task<int> Main(string[] args)
         {
-            if (InstallSOS || UninstallSOS)
-            {
-                try
-                {
-                    var sosInstaller = new InstallHelper((message) => console.WriteLine(message));
-                    if (SOSSourcePath != null)
-                    {
-                        sosInstaller.SOSSourcePath = SOSSourcePath;
-                    }
-                    if (UninstallSOS)
-                    {
-                        sosInstaller.Uninstall();
-                    }
-                    else 
-                    {
-                        sosInstaller.Install();
-                    }
-                }
-                catch (SOSInstallerException ex)
-                {
-                    console.Error.WriteLine(ex.Message);
-                    return 1;
-                }
-            }
-            return 0;
+            var parser = new CommandLineBuilder()
+                .AddCommand(InstallCommand())
+                .AddCommand(UninstallCommand())
+                .UseDefaults()
+                .Build();
+
+            return parser.InvokeAsync(args);
         }
 
-        private static int Main(string[] args)
+        private static Command InstallCommand() =>
+            new Command(
+                "install", 
+                "Installs SOS and configures LLDB to load it on startup.", 
+                handler: CommandHandler.Create<IConsole>((console) => InvokeAsync(console, install: true)));
+
+        private static Command UninstallCommand() =>
+            new Command(
+                "uninstall",
+                "Uninstalls SOS and reverts any configuration changes to LLDB.",
+                handler: CommandHandler.Create<IConsole>((console) => InvokeAsync(console, install: false)));
+
+        private static Task<int> InvokeAsync(IConsole console, bool install)
         {
             try
             {
-                return CommandLineApplication.Execute<Program>(args);
+                var sosInstaller = new InstallHelper((message) => console.Out.WriteLine(message));
+                if (install) {
+                    sosInstaller.Install();
+                }
+                else {
+                    sosInstaller.Uninstall();
+                }
             }
-            catch (OperationCanceledException)
+            catch (SOSInstallerException ex)
             {
-                return 0;
+                console.Error.WriteLine(ex.Message);
+                return Task.FromResult(1);
             }
+            return Task.FromResult(0);
         }
     }
 }
