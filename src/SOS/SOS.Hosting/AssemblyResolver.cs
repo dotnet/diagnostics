@@ -14,18 +14,12 @@ namespace SOS
     /// </summary>
     internal static class AssemblyResolver
     {
-        static AssemblyResolver()
-        {
-            AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-        }
-
         /// <summary>
         /// Call to enable the assembly resolver for the current AppDomain.
         /// </summary>
         public static void Enable()
         {
-            // intentionally empty.  This is just meant to ensure the static constructor
-            // has run.
+            AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
         }
 
         private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
@@ -33,42 +27,34 @@ namespace SOS
             // apply any existing policy
             AssemblyName referenceName = new AssemblyName(AppDomain.CurrentDomain.ApplyPolicy(args.Name));
 
-            string fileName = referenceName.Name + ".dll";
-            string assemblyPath = null;
-            string probingPath = null;
-            Assembly assm = null;
-
-            // look next to requesting assembly
-            assemblyPath = args.RequestingAssembly?.Location;
-            if (!String.IsNullOrEmpty(assemblyPath))
+            if (referenceName.Name == "SOS.NETCore")
             {
-                probingPath = Path.Combine(Path.GetDirectoryName(assemblyPath), fileName);
-                Debug.WriteLine($"Considering {probingPath} based on RequestingAssembly");
-                if (Probe(probingPath, referenceName.Version, out assm))
+                string fileName = referenceName.Name + ".dll";
+                string assemblyPath = null;
+                string probingPath = null;
+                Assembly assembly = null;
+
+                // Look next to requesting assembly
+                assemblyPath = args.RequestingAssembly?.Location;
+                if (!String.IsNullOrEmpty(assemblyPath))
                 {
-                    return assm;
+                    probingPath = Path.Combine(Path.GetDirectoryName(assemblyPath), fileName);
+                    Debug.WriteLine($"Considering {probingPath} based on RequestingAssembly");
+                    if (Probe(probingPath, referenceName.Version, out assembly)) {
+                        return assembly;
+                    }
                 }
-            }
 
-            // look next to the executing assembly
-            assemblyPath = Assembly.GetExecutingAssembly().Location;
-            if (!String.IsNullOrEmpty(assemblyPath))
-            {
-                probingPath = Path.Combine(Path.GetDirectoryName(assemblyPath), fileName);
-
-                Debug.WriteLine($"Considering {probingPath} based on ExecutingAssembly");
-                if (Probe(probingPath, referenceName.Version, out assm))
+                // Look next to the executing assembly
+                assemblyPath = Assembly.GetExecutingAssembly().Location;
+                if (!String.IsNullOrEmpty(assemblyPath))
                 {
-                    return assm;
+                    probingPath = Path.Combine(Path.GetDirectoryName(assemblyPath), fileName);
+                    Debug.WriteLine($"Considering {probingPath} based on ExecutingAssembly");
+                    if (Probe(probingPath, referenceName.Version, out assembly)) {
+                        return assembly;
+                    }
                 }
-            }
-
-            // look in AppDomain base directory
-            probingPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
-            Debug.WriteLine($"Considering {probingPath} based on BaseDirectory");
-            if (Probe(probingPath, referenceName.Version, out assm))
-            {
-                return assm;
             }
 
             return null;
@@ -87,14 +73,11 @@ namespace SOS
             if (File.Exists(filePath))
             {
                 AssemblyName name = AssemblyName.GetAssemblyName(filePath);
-
-                if (name.Version >= minimumVersion)
-                {
+                if (name.Version >= minimumVersion) {
                     assembly = Assembly.LoadFile(filePath);
                     return true;
                 }
             }
-
             assembly = null;
             return false;
         }
