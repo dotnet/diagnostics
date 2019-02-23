@@ -65,24 +65,25 @@ For analyzing CPU usage, IO, lock contention, allocation rate, etc the investiga
 
 For analyzing managed memory leaks over time, the investigator first wants to capture a series of dumps that will show the memory growth.
 
-    > dotnet tool install -g dotnet-dump
+    $ dotnet tool install -g dotnet-dump
     You can invoke the tool using the following command: dotnet-dump
     Tool 'dotnet-dump' (version '1.0.0') was successfully installed.
-    > dotnet dump --process-id 1902 --number 2
-    Writing:     ./core0001
+
+    $ dotnet dump collect --process-id 1902
+    Writing minidump with heap to file ./core_20190226_135837
+    Written 98983936 bytes (24166 pages) to core file
     
 ... 10 seconds pass (the default time interval)
 
-    > dotnet dump --process-id 1902 --number 2
-    Writing:     ./core0001
-    Writing:     ./core0002
+    Writing minidump with heap to file ./core_20190226_135850
+    Written 98959360 bytes (24160 pages) to core file
     Complete
 
 Next the investigator needs to compare the heaps in these two dumps.
 
-    > dotnet dump analyze ./core0002
-    Type 'help' for help
-    $ GCHeapDiff ./core0001
+    > dotnet dump analyze ./core_20190226_135850
+    Loading core dump: ./core_20190226_135850
+    $ gcheapdiff ./core_20190226_135837
     Showing top GC heap differences by size
     Type                       Current Heap     Baseline Heap             Delta
                                Size / Count      Size / Count      Size / Count
@@ -91,10 +92,10 @@ Next the investigator needs to compare the heaps in these two dumps.
     WebApp1.RequestEntry       1800 /   180      1200 /   120   +   600 / +  60
     ...
     
-    To show all differences use 'HeapDiff -all ./core0001'
-    To show objects of a particular type use DumpHeap -type <type_name>
+    To show all differences use 'gcheapdiff -all ./core_20190226_135850'
+    To show objects of a particular type use dumpheap -type <type_name>
 
-    $ DumpHeap -type System.String
+    $ dumpheap -type System.String
       Address       MT     Size
      03b51454 725ef698       84     
      03b522d4 725ef698       52     
@@ -106,7 +107,7 @@ Next the investigator needs to compare the heaps in these two dumps.
      32cac6c4 725eeb40       74  
      ...
 
-    $ GCRoot 03b51454
+    $ gcroot 03b51454
      Thread 41a0:
          0ad2f274 55f99590 DomainNeutralILStubClass.IL_STUB_PInvoke(System.Windows.Interop.MSG ByRef, System.Runtime.InteropServices.HandleRef, Int32, Int32)
              ebp-c: 0ad2f2b0
@@ -118,10 +119,9 @@ Next the investigator needs to compare the heaps in these two dumps.
 
      Found 1 unique roots (run 'GCRoot -all' to see all roots).
 
-
 First we compared the leaky dump to the baseline dump to determine which types were growing, then listed addresses of particular instances of the leaking type, then determined the chain of references that was keeping that instance alive. The investigator may need to sample several instances of the leaked type to identify which ones are expected to be on the heap and which are not.
 
-Note: The DumpHeap/GCRoot output is identical to SOS. I'm not convinced this output is ideal for clarity, but I am not proposing we change it at this time.
+Note: The dumpheap/gcroot output is identical to SOS. I'm not convinced this output is ideal for clarity, but I am not proposing we change it at this time.
 
 ### Install SOS for use with LLDB
 
@@ -431,32 +431,31 @@ COLLECT
         The number of dumps to collect from the target process. Defaults to 1 if not specified.
  
     -o, --output
-        The path where collected dumps should be written. Defaults to .\dumpNNNN.dmp on windows and ./coreNNNN on
-        Linux\Mac if not specified. NNNN is an increasing 4 digit counter for each dump, for example 
-        .\dump0003.dmp. If the output_dump_path specifies a directory then dump files are written to that directory
-        with the same dumpNNNN[.dmp] naming format. Specifying an exact filename is only permitted when capturing a
-        single dump.
+        The path where collected dumps should be written. Defaults to '.\dump_YYYYMMDD_HHMMSS.dmp' on Windows and 
+        '.\core_YYYYMMDD_HHMMSS' on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. This 
+        option is a directory if an existing directory, ends with '\' or '/', or if the --number or --interval-sec
+        options are specified, otherwise it is an exact file name.",
 
     --type
         The dump type determines the kinds of information that are collected from the process. There are two types:
         heap - A large and relatively comprehensive dump containing module lists, thread lists, all stacks,
                exception information, handle information, and all memory except for mapped images.
-        mini - A small dump containing module lists, thread lists, exception information and all stacks.
+        triage - A small dump containing module lists, thread lists, exception information and all stacks.
 
         If not specified 'heap' is the default.
 
 
      Examples:
-       > dotnet-dump collect --process-id 1902 --number 2 --type mini --output ~/dumps/go/here/
-       Writing:     ~/dumps/go/here/core0001
-    
+
+        $ dotnet dump collect --process-id 1902 --number 2 --type triage --output ~/dumps/go/here/
+        Writing triage dump to file ~/dumps/go/here/core_20190226_135837
+        Written 98983936 bytes (24166 pages) to core file
+        
 ... 10 seconds pass (the default time interval)
 
-       > dotnet-dump collect --process-id 1902 --number 2 --type mini --output ~/dumps/go/here/
-       Writing:     ~/dumps/go/here/core0001
-       Writing:     ~/dumps/go/here/core0002
-       Complete
-
+        Writing triage dump to file ~/dumps/go/here/core_20190226_135850
+        Written 98959360 bytes (24160 pages) to core file
+        Complete
 
 ANALYZE
 
@@ -471,20 +470,20 @@ ANALYZE
         The dump to analyze
 
     Examples:
-      > dotnet-dump analyze core0002
-      Use 'help' for help, 'q' to quit
-      $
+      $ dotnet-dump analyze ~/dumps/go/here/core_20190226_135850
+      Loading core dump: ~/dumps/go/here/core_20190226_135850
+      >
     
     ... use the nested command-line. The commands are broken out in the following section
 
 
 ## dotnet-dump analyze nested command syntax ##
 
-By default these commands should come from SOS and include at least Help, DumpHeap, DumpObject, DumpArray, and PrintException. If we can get more easily we should. In addition new commands are listed below:
+By default these commands should come from SOS and include at least help, dumpheap, dumpobject, dumparray, and printexception. If we can get more easily we should. In addition new commands are listed below:
     
 GCHEAPDIFF
 
-    GCHeapDiff <path_to_baseline_dump>
+    gcheapdiff <path_to_baseline_dump>
 
     Compares the current GC heap to the one contained in the baseline dump
 
@@ -492,7 +491,7 @@ GCHEAPDIFF
         The path to another dump that contains the baseline
 
     Examples:
-      $ GCHeapDiff ./core0001
+      $ gcheapdiff ./core_20190226_135837
       Showing top GC heap differences by size
 
       Type                       Current Heap     Baseline Heap             Delta
@@ -502,7 +501,7 @@ GCHEAPDIFF
       WebApp1.RequestEntry       1800 /   180      1200 /   120   +   600 / +  60
       ...
 
-      To show all differences use 'HeapDiff -all ./core0001'
+      To show all differences use 'gcheapdiff -all ./core_20190226_135837'
       To show objects of a particular type use DumpHeap -type <type_name>
 
 ## dotnet-sos ##
@@ -1054,7 +1053,8 @@ ProcDump uses CLI convention: ProcDump [options]
 	CPU threshold at which to create a dump of the process.
 	-cl
 	CPU threshold below which to create a dump of the process.
-	-d
+	-
+d
 	Invoke the minidump callback routine named MiniDumpCallbackRoutine of the specified DLL.
 	-e
 	Write a dump when the process encounters an unhandled exception. Include the 1 to create dump on first chance exceptions.

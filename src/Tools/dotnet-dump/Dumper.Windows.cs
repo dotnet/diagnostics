@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostic.Tools.Dump
     {
         private static class Windows
         {
-            internal static Task CollectDumpAsync(Process process, string outputFile)
+            internal static Task CollectDumpAsync(Process process, string outputFile, bool triage)
             {
                 // We can't do this "asynchronously" so just Task.Run it. It shouldn't be "long-running" so this is fairly safe.
                 return Task.Run(() =>
@@ -21,9 +21,10 @@ namespace Microsoft.Diagnostic.Tools.Dump
                     {
                         // Dump the process!
                         var exceptionInfo = new NativeMethods.MINIDUMP_EXCEPTION_INFORMATION();
-                        if (!NativeMethods.MiniDumpWriteDump(process.Handle, (uint)process.Id, stream.SafeFileHandle, NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemory, ref exceptionInfo, IntPtr.Zero, IntPtr.Zero))
+                        var dumpType = triage ? NativeMethods.MINIDUMP_TYPE.MiniDumpFilterTriage : NativeMethods.MINIDUMP_TYPE.MiniDumpWithPrivateReadWriteMemory;
+                        if (!NativeMethods.MiniDumpWriteDump(process.Handle, (uint)process.Id, stream.SafeFileHandle, dumpType, ref exceptionInfo, IntPtr.Zero, IntPtr.Zero))
                         {
-                            var err = Marshal.GetHRForLastWin32Error();
+                            int err = Marshal.GetHRForLastWin32Error();
                             Marshal.ThrowExceptionForHR(err);
                         }
                     }
