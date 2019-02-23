@@ -259,24 +259,6 @@ fi
 
 echo $NUGET_PACKAGES
 
-# Resolve python-version to use
-if [ "$PYTHON" == "" ] ; then
-    if ! PYTHON=$(command -v python2.7 || command -v python2 || command -v python)
-    then
-       echo "Unable to locate build-dependency python2.x!" 1>&2
-       exit 1
-    fi
-fi
-
-# Validate python-dependency. Useful in case of explicitly set option.
-if ! command -v $PYTHON > /dev/null
-then
-   echo "Unable to locate build-dependency python2.x ($PYTHON)!" 1>&2
-   exit 1
-fi
-
-echo $PYTHON
-
 __RootBinDir=$__ProjectRoot/artifacts
 __BinDir=$__RootBinDir/bin/$__BuildOS.$__BuildArch.$__BuildType
 __LogDir=$__RootBinDir/log/$__BuildOS.$__BuildArch.$__BuildType
@@ -451,6 +433,11 @@ if [ "$__HostOS" == "OSX" ]; then
         echo "Cannot find the lldb library. Try installing Xcode."
         exit 1
     fi
+
+    # Workaround bad python version in /usr/local/bin/python2.7 on lab machines
+    export PATH=/usr/bin:$PATH
+    which python
+    python --version
 fi
 
 # Build native components

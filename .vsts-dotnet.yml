@@ -214,9 +214,14 @@ phases:
     demands:
       - agent.os -equals Windows_NT
   variables: 
-    _PublishBlobFeedUrl: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
-    _SOSNETCorePath: $(Build.SourcesDirectory)/artifacts/bin/SOS.NETCore/Release/netstandard2.0/publish
-    _TeamName: DotNetCore
+    - group: DotNet-Blob-Feed
+    - group: DotNet-MyGet-Publish
+    - name: _PublishBlobFeedUrl
+      value: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
+    - name: _SOSNETCorePath
+      value: $(Build.SourcesDirectory)/artifacts/bin/SOS.NETCore/Release/netstandard2.0/publish
+    - name: _TeamName
+      value: DotNetCore
 
   steps: 
   - task: ms-vseng.MicroBuildTasks.30666190-6959-11e5-9f96-f56098202fef.MicroBuildSigningPlugin@1
@@ -399,7 +404,7 @@ phases:
       /p:DotNetSignType=$(SignType) 
       /p:DotNetPublishBlobFeedKey=$(dotnetfeed-storage-access-key-1) 
       /p:DotNetPublishBlobFeedUrl=$(_PublishBlobFeedUrl)
-      /p:DotNetPublishToBlobFeed=false
+      /p:DotNetPublishToBlobFeed=true
       /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
       /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
       /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
@@ -407,40 +412,41 @@ phases:
     continueOnError: true
     condition: succeeded()
 
-  # Optionally drop the artifacts on a share
-
   - task: PublishBuildArtifacts@1
-    displayName: Drop Binaries
+    displayName: Publish Package Artifacts
     inputs:
-      publishLocation: FilePath
-      pathtoPublish: '$(Build.SourcesDirectory)\artifacts\bin'
-      artifactName: bin
-      targetPath: '$(DropRoot)\DotNetCore\$(Build.DefinitionName)\$(Build.BuildNumber)'
-    condition: and(succeeded(), eq(variables['DropArtifacts'], 'true'))
+      publishLocation: Container
+      pathtoPublish: '$(Build.SourcesDirectory)/artifacts/packages'
+      artifactName: packages
+    condition: succeeded()
+
+  # Optionally drop the artifacts on a share
 
   - task: PublishBuildArtifacts@1
     displayName: Drop Packages
     inputs:
       publishLocation: FilePath
-      pathtoPublish: '$(Build.SourcesDirectory)\artifacts\packages'
-      artifactName: packages
+      pathtoPublish: '$(Build.SourcesDirectory)/artifacts/packages'
+      artifactName: _packages
       targetPath: '$(DropRoot)\DotNetCore\$(Build.DefinitionName)\$(Build.BuildNumber)'
-    condition: and(succeeded(), eq(variables['DropArtifacts'], 'true'))
-
-  # Optionally publish the packages to a blob feed
-
-  - task: NuGetCommand@2
-    displayName: Publish TestHelpers to MyGet dotnet-buildtools feed
-    inputs:
-      command: custom
-      arguments: 'push $(Build.SourcesDirectory)\artifacts\packages\Release\Shipping\Microsoft.Diagnostic.TestHelpers.*.nupkg -ApiKey $(dotnetfeed-storage-access-key-1) -Source $(_PublishBlobFeedUrl)'
-    condition: and(succeeded(), eq(variables['PushPackages'], 'true'))
+    continueOnError: true
+    condition: eq(variables['DropPackages'], 'true')
 
   - task: PublishBuildArtifacts@1
-    displayName: Publish Logs to VSTS
+    displayName: Drop Binaries
     inputs:
-      pathtoPublish: '$(Build.SourcesDirectory)/artifacts/log'
+      publishLocation: FilePath
+      pathtoPublish: '$(Build.SourcesDirectory)/artifacts/bin'
+      artifactName: _bin
+      targetPath: '$(DropRoot)\DotNetCore\$(Build.DefinitionName)\$(Build.BuildNumber)'
+    continueOnError: true
+    condition: eq(variables['DropBinaries'], 'true')
+
+  - task: PublishBuildArtifacts@1
+    displayName: Publish Logs Artifacts
+    inputs:
       publishLocation: Container
+      pathtoPublish: '$(Build.SourcesDirectory)/artifacts/log'
       artifactName: Logs_Packaging_Signing
     continueOnError: true
     condition: always()

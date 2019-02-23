@@ -126,14 +126,12 @@ phases:
         displayName: Build / Test
         condition: succeeded()
  
-    # Internal only build steps (until publishing artifacts in public CI is supported)
-    - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-      - task: PublishBuildArtifacts@1
-        displayName: Upload Artifacts
-        inputs:
-          pathtoPublish: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
-          artifactName: $(_PhaseName)_$(Agent.JobName)
-        condition: and(succeeded(), ne(variables['_PublishArtifacts'], ''))
+    - task: PublishBuildArtifacts@1
+      displayName: Upload Artifacts
+      inputs:
+        pathtoPublish: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
+        artifactName: $(_PhaseName)_$(Agent.JobName)
+      condition: and(succeeded(), ne(variables['_PublishArtifacts'], ''))
 
     - task: CopyFiles@2
       displayName: Gather Build Logs
