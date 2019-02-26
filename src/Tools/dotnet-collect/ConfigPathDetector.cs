@@ -67,7 +67,6 @@ namespace Microsoft.Diagnostics.Tools.Collect
                 int result = 0;
                 byte* pBuffer = stackalloc byte[PROC_PIDPATHINFO_MAXSIZE];
                 int _pid = getpid();
-                Console.WriteLine("About to pinvoke proc_pidpath on " + _pid);
                 result = proc_pidpath(pid, pBuffer, (uint)(PROC_PIDPATHINFO_MAXSIZE * sizeof(byte)));
                 if (result <= 0)
                 {
