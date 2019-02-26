@@ -53,9 +53,6 @@ namespace Microsoft.Diagnostics.Tools.Collect
                 byte* buffer, 
                 uint bufferSize);
 
-            [DllImport("libSystem.dylib")]
-            private static extern int getpid();
-
             /// <summary>
             /// Gets the full path to the executable file identified by the specified PID
             /// </summary>
@@ -66,7 +63,10 @@ namespace Microsoft.Diagnostics.Tools.Collect
                 // The path is a fixed buffer size, so use that and trim it after
                 int result = 0;
                 byte* pBuffer = stackalloc byte[PROC_PIDPATHINFO_MAXSIZE];
-                int _pid = getpid();
+
+                // WARNING - Despite its name, don't try to pass in a smaller size than specified by PROC_PIDPATHINFO_MAXSIZE.
+                // For some reason libproc returns -1 if you specify something that's NOT EQUAL to PROC_PIDPATHINFO_MAXSIZE
+                // even if you declare your buffer to be smaller/larger than this size. 
                 result = proc_pidpath(pid, pBuffer, (uint)(PROC_PIDPATHINFO_MAXSIZE * sizeof(byte)));
                 if (result <= 0)
                 {
