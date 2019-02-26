@@ -28,7 +28,70 @@ namespace Microsoft.Diagnostics.Tools.Collect
             {
                 return Linux.TryDetectConfigPath(processId);
             }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return OSX.TryDetectConfigPath(processId);
+            }
             return null;
+        }
+
+        private static class OSX
+        {
+            // This is defined in proc_info.h (https://opensource.apple.com/source/xnu/xnu-1228/bsd/sys/proc_info.h)
+            private const int PROC_PIDPATHINFO_MAXSIZE = 1024 * 4;
+
+            /// <summary>
+            /// Gets the full path to the executable file identified by the specified PID
+            /// </summary>
+            /// <param name="pid">The PID of the running process</param>
+            /// <param name="buffer">A pointer to an allocated block of memory that will be filled with the process path</param>
+            /// <param name="bufferSize">The size of the buffer, should be PROC_PIDPATHINFO_MAXSIZE</param>
+            /// <returns>Returns the length of the path returned on success</returns>
+            [DllImport("libproc.dylib", SetLastError = true)]
+            private static extern unsafe int proc_pidpath(
+                int pid, 
+                byte* buffer, 
+                uint bufferSize);
+
+            [DllImport("libSystem.dylib")]
+            private static extern int getpid();
+
+            /// <summary>
+            /// Gets the full path to the executable file identified by the specified PID
+            /// </summary>
+            /// <param name="pid">The PID of the running process</param>
+            /// <returns>Returns the full path to the process executable</returns>
+            internal static unsafe string proc_pidpath(int pid)
+            {
+                // The path is a fixed buffer size, so use that and trim it after
+                int result = 0;
+                byte* pBuffer = stackalloc byte[PROC_PIDPATHINFO_MAXSIZE];
+                int _pid = getpid();
+                Console.WriteLine("About to pinvoke proc_pidpath on " + _pid);
+                result = proc_pidpath(pid, pBuffer, (uint)(PROC_PIDPATHINFO_MAXSIZE * sizeof(byte)));
+                if (result <= 0)
+                {
+                    throw new Exception("Could not find procpath using libproc.");
+                }
+
+                // OS X uses UTF-8. The conversion may not strip off all trailing \0s so remove them here
+                return System.Text.Encoding.UTF8.GetString(pBuffer, result);
+            }
+
+            public static string TryDetectConfigPath(int processId)
+            {
+                try
+                {
+                    var path = proc_pidpath(processId);
+                    var candidateDir = Path.GetDirectoryName(path);
+                    var candidateName = Path.GetFileNameWithoutExtension(path);
+                    return Path.Combine(candidateDir, $"{candidateName}.eventpipeconfig");
+                }
+                catch (Exception)
+                {
+                    return null;  // The pinvoke above may fail - return null in that case to handle error gracefully.
+                }
+            }
         }
 
         private static class Linux
