@@ -3,8 +3,8 @@
   <PropertyGroup>
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
 
-    <VersionPrefix>1.0.1</VersionPrefix>
-    <PreReleaseVersionLabel>dev</PreReleaseVersionLabel>
+    <VersionPrefix>1.0.2</VersionPrefix>
+    <PreReleaseVersionLabel>preview3</PreReleaseVersionLabel>
 
     <!-- Opt-out repo features -->
     <UsingToolXliff>false</UsingToolXliff>

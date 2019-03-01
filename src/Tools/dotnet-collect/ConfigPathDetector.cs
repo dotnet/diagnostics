@@ -70,7 +70,7 @@ namespace Microsoft.Diagnostics.Tools.Collect
                 result = proc_pidpath(pid, pBuffer, (uint)(PROC_PIDPATHINFO_MAXSIZE * sizeof(byte)));
                 if (result <= 0)
                 {
-                    throw new ArgumentException("Could not find procpath using libproc.");
+                    throw new InvalidOperationException("Could not find procpath using libproc.");
                 }
 
                 // OS X uses UTF-8. The conversion may not strip off all trailing \0s so remove them here
@@ -86,7 +86,7 @@ namespace Microsoft.Diagnostics.Tools.Collect
                     var candidateName = Path.GetFileNameWithoutExtension(path);
                     return Path.Combine(candidateDir, $"{candidateName}.eventpipeconfig");
                 }
-                catch (ArgumentException)
+                catch (InvalidOperationException)
                 {
                     return null;  // The pinvoke above may fail - return null in that case to handle error gracefully.
                 }

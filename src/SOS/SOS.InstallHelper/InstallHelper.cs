@@ -134,6 +134,9 @@ namespace SOS
                 if (LLDBInitFile != null) {
                     Configure();
                 }
+                else {
+                    WriteLine($"Execute '.load {InstallLocation}\\sos.dll' to load SOS in your Windows debugger.");
+                }
 
                 // If we get here without an exception, success!
                 installSuccess = true;

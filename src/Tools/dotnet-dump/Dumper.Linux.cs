@@ -10,7 +10,7 @@ namespace Microsoft.Diagnostic.Tools.Dump
     {
         private static class Linux
         {
-            internal static async Task CollectDumpAsync(Process process, string fileName)
+            internal static async Task CollectDumpAsync(Process process, string fileName, DumpType type)
             {
                 // We don't work on WSL :(
                 string ostype = await File.ReadAllTextAsync("/proc/sys/kernel/osrelease");
@@ -35,25 +35,23 @@ namespace Microsoft.Diagnostic.Tools.Dump
                 }
 
                 // Create the dump
-                int exitCode = await CreateDumpAsync(createDumpPath, fileName, process.Id);
+                int exitCode = await CreateDumpAsync(createDumpPath, fileName, process.Id, type);
                 if (exitCode != 0)
                 {
-                    throw new Exception($"createdump exited with non-zero exit code: {exitCode}");
+                    throw new InvalidOperationException($"createdump exited with non-zero exit code: {exitCode}");
                 }
             }
 
-            private static Task<int> CreateDumpAsync(string exePath, string fileName, int processId)
+            private static Task<int> CreateDumpAsync(string exePath, string fileName, int processId, DumpType type)
             {
+                string dumpType = type == DumpType.Mini ? "--normal" : "--withheap";
                 var tcs = new TaskCompletionSource<int>();
                 var createdump = new Process()
                 {
                     StartInfo = new ProcessStartInfo()
                     {
                         FileName = exePath,
-                        Arguments = $"--diag -f {fileName} {processId}",
-                        //RedirectStandardError = true,
-                        //RedirectStandardOutput = true,
-                        //RedirectStandardInput = true,
+                        Arguments = $"--name {fileName} {dumpType} {processId}",
                     },
                     EnableRaisingEvents = true,
                 };

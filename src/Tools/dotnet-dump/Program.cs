@@ -22,26 +22,41 @@ namespace Microsoft.Diagnostic.Tools.Dump
         private static Command CollectCommand() =>
             new Command(
                 "collect", 
-                "Captures memory dumps of .NET processes.", 
-                new Option[] { ProcessIdOption(), OutputOption() },
-                handler: CommandHandler.Create<IConsole, int, string>(new Dumper().Collect));
+                "Capture dumps from a process", 
+                new Option[] { ProcessIdOption(), OutputOption(), TypeOption() },
+                handler: CommandHandler.Create<IConsole, int, string, Dumper.DumpType>(new Dumper().Collect));
 
         private static Option ProcessIdOption() =>
             new Option(
                 new[] { "-p", "--process-id" }, 
-                "The ID of the process to collect a memory dump.",
-                new Argument<int> { Name = "processId" });
+                "The process to collect a memory dump from.",
+                new Argument<int> { Name = "pid" });
+
 
         private static Option OutputOption() =>
             new Option(
-                new[] { "-o", "--output" }, 
-                "The directory to write the dump. Defaults to the current working directory.",
-                new Argument<string>(Directory.GetCurrentDirectory()) { Name = "directory" });
+                new[] { "-o", "--output" },
+                @"The path where collected dumps should be written. Defaults to '.\dump_YYYYMMDD_HHMMSS.dmp' on Windows and 
+'./core_YYYYMMDD_HHMMSS' on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full
+path and file name of the dump.",
+                new Argument<string>() { Name = "output_dump_path" });
+
+        private static Option TypeOption() =>
+            new Option(
+                "--type",
+                @"The dump type determines the kinds of information that are collected from the process. There are two types:
+
+heap - A large and relatively comprehensive dump containing module lists, thread lists, all stacks,
+       exception information, handle information, and all memory except for mapped images.
+mini - A small dump containing module lists, thread lists, exception information and all stacks.
+
+If not specified 'heap' is the default.",
+                new Argument<Dumper.DumpType>(Dumper.DumpType.Heap) { Name = "dump_type" });
 
         private static Command AnalyzeCommand() =>
             new Command(
                 "analyze",
-                "Start interactive dump analyze.",
+                "Starts an interactive shell with debugging commands to explore a dump",
                 new Option[] { RunCommand() }, argument: DumpPath(),
                 handler: CommandHandler.Create<FileInfo, string[]>(new Analyzer().Analyze));
 

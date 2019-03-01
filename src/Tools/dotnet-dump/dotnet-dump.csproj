@@ -4,14 +4,15 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <RuntimeFrameworkVersion>2.1.0</RuntimeFrameworkVersion>
-    <!-- Don't pack until ship engineering is done. Currently causing the official job to fail.
     <IsPackable>true</IsPackable>
     <PackAsTool>true</PackAsTool>
-    -->
     <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;osx-x64</PackAsToolShimRuntimeIdentifiers>
-    <!-- The package version needs to be hard coded as a stable version so "dotnet tool install -g dotnet-dump" works -->
+
+    <!-- The package version needs to be hard coded as a stable version so "dotnet tool install -g dotnet-dump" works
     <Version>$(VersionPrefix)</Version>
     <PackageVersion>$(VersionPrefix)</PackageVersion>
+     -->
+
     <ToolCommandName>dotnet-dump</ToolCommandName>
     <RootNamespace>Microsoft.Diagnostic.Tools.Dump</RootNamespace>
     <Description>Diagnostic dump collect and analyze tool</Description>

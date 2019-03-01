@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostic.Tools.Dump
     {
         private static class Windows
         {
-            internal static Task CollectDumpAsync(Process process, string outputFile)
+            internal static Task CollectDumpAsync(Process process, string outputFile, DumpType type)
             {
                 // We can't do this "asynchronously" so just Task.Run it. It shouldn't be "long-running" so this is fairly safe.
                 return Task.Run(() =>
@@ -19,11 +19,20 @@ namespace Microsoft.Diagnostic.Tools.Dump
                     // Open the file for writing
                     using (var stream = new FileStream(outputFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
                     {
-                        // Dump the process!
                         var exceptionInfo = new NativeMethods.MINIDUMP_EXCEPTION_INFORMATION();
-                        if (!NativeMethods.MiniDumpWriteDump(process.Handle, (uint)process.Id, stream.SafeFileHandle, NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemory, ref exceptionInfo, IntPtr.Zero, IntPtr.Zero))
+                        var dumpType = type == DumpType.Mini ? NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo :
+                            NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
+                            NativeMethods.MINIDUMP_TYPE.MiniDumpWithPrivateReadWriteMemory |
+                            NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
+                            NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules |
+                            NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
+                            NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
+                            NativeMethods.MINIDUMP_TYPE.MiniDumpWithTokenInformation;
+
+                        // Dump the process!
+                        if (!NativeMethods.MiniDumpWriteDump(process.Handle, (uint)process.Id, stream.SafeFileHandle, dumpType, ref exceptionInfo, IntPtr.Zero, IntPtr.Zero))
                         {
-                            var err = Marshal.GetHRForLastWin32Error();
+                            int err = Marshal.GetHRForLastWin32Error();
                             Marshal.ThrowExceptionForHR(err);
                         }
                     }

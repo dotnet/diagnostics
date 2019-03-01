@@ -47,19 +47,14 @@ namespace Microsoft.Diagnostic.Tools.Dump
 
         public AnalyzeContext AnalyzeContext { get; set; }
 
-        private SOSHost _sosHost;
-
         public override Task InvokeAsync()
         {
             try {
-                if (_sosHost == null) {
-                    _sosHost = new SOSHost(AnalyzeContext.Target.DataReader, AnalyzeContext);
-                }
                 string arguments = null;
                 if (Arguments.Length > 0) {
                     arguments = string.Concat(Arguments.Select((arg) => arg + " "));
                 }
-                _sosHost.ExecuteCommand(AliasExpansion, arguments);
+                AnalyzeContext.SOSHost.ExecuteCommand(AliasExpansion, arguments);
             }
             catch (Exception ex) when (ex is FileNotFoundException || ex is EntryPointNotFoundException || ex is InvalidOperationException) {
                 Console.Error.WriteLine(ex.Message);
