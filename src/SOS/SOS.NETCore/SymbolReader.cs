@@ -244,7 +244,7 @@ namespace SOS
         /// <param name="readMemory">read memory callback delegate</param>
         public static void LoadNativeSymbols(SymbolFileCallback callback, IntPtr parameter, string tempDirectory, string moduleFilePath, ulong address, int size, ReadMemoryDelegate readMemory)
         {
-            if (s_symbolStore != null)
+            if (IsSymbolStoreEnable())
             {
                 Debug.Assert(s_tracer != null);
                 Stream stream = new TargetStream(address, size, readMemory);
@@ -874,13 +874,12 @@ namespace SOS
 
                 if (pdbStream == null)
                 {
-                    if (s_symbolStore == null)
+                    if (IsSymbolStoreEnable())
                     {
-                        return null;
+                        Debug.Assert(codeViewEntry.MinorVersion == ImageDebugDirectory.PortablePDBMinorVersion);
+                        SymbolStoreKey key = PortablePDBFileKeyGenerator.GetKey(pdbPath, data.Guid);
+                        pdbStream = GetSymbolStoreFile(key)?.Stream;
                     }
-                    Debug.Assert(codeViewEntry.MinorVersion == ImageDebugDirectory.PortablePDBMinorVersion);
-                    SymbolStoreKey key = PortablePDBFileKeyGenerator.GetKey(pdbPath, data.Guid);
-                    pdbStream = GetSymbolStoreFile(key)?.Stream;
                     if (pdbStream == null)
                     {
                         return null;
@@ -939,11 +938,19 @@ namespace SOS
         }
 
         /// <summary>
+        /// Returns true if symbol download has been enabled.
+        /// </summary>
+        internal static bool IsSymbolStoreEnable()
+        {
+            return s_symbolStore != null;
+        }
+
+        /// <summary>
         /// Attempts to download/retrieve from cache the key.
         /// </summary>
         /// <param name="key">index of the file to retrieve</param>
         /// <returns>stream or null</returns>
-        private static SymbolStoreFile GetSymbolStoreFile(SymbolStoreKey key)
+        internal static SymbolStoreFile GetSymbolStoreFile(SymbolStoreKey key)
         {
             try
             {
@@ -1104,7 +1111,7 @@ namespace SOS
         /// </summary>
         /// <param name="path">file path</param>
         /// <returns>stream or null if doesn't exist or error</returns>
-        private static Stream TryOpenFile(string path)
+        internal static Stream TryOpenFile(string path)
         {
             if (!File.Exists(path))
             {

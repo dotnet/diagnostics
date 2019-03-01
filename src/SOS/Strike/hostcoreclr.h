@@ -12,8 +12,9 @@
 
 #include <soshostservices.h>
 
-static const char *SymbolReaderDllName = "SOS.NETCore";
+static const char *SOSManagedDllName = "SOS.NETCore";
 static const char *SymbolReaderClassName = "SOS.SymbolReader";
+static const char *MetadataHelperClassName = "SOS.MetadataHelper";
 
 extern HMODULE g_hInstance;
 extern LPCSTR g_hostRuntimeDirectory;
@@ -24,6 +25,7 @@ extern LPCSTR GetDbiFilePath();
 extern BOOL IsHostingInitialized();
 extern HRESULT InitializeHosting();
 extern HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* symbolServer, const char* cacheDirectory);
+extern void InitializeSymbolStore();
 extern HRESULT LoadNativeSymbols(bool runtimeOnly = false);
 extern void DisplaySymbolStore();
 extern void DisableSymbolStore();

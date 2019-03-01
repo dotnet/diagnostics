@@ -13757,6 +13757,9 @@ DECLARE_API( SOSFlush )
     INIT_API();
 
     g_clrData->Flush();
+#ifdef FEATURE_PAL
+    FlushMetadataRegions();
+#endif
     
     return Status;
 }   // DECLARE_API( SOSFlush )

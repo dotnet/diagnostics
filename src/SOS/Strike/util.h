@@ -1852,6 +1852,11 @@ BOOL IsObjectArray (DacpObjectData *pData);
 BOOL IsDerivedFrom(CLRDATA_ADDRESS mtObj, __in_z LPCWSTR baseString);
 BOOL TryGetMethodDescriptorForDelegate(CLRDATA_ADDRESS delegateAddr, CLRDATA_ADDRESS* pMD);
 
+#ifdef FEATURE_PAL
+void FlushMetadataRegions();
+bool IsMetadataMemory(CLRDATA_ADDRESS address, ULONG32 size);
+#endif
+
 /* Returns a list of all modules in the process.
  * Params:
  *      name - The name of the module you would like.  If mName is NULL the all modules are returned.
@@ -2896,7 +2901,7 @@ private:
                 if (curr_next)
                     curr_next->Prev = Prev;
             }
-        }	
+        }
     };
 
 public:

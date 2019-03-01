@@ -77,6 +77,17 @@ namespace SOS
             int localIndex,
             out IntPtr localVarName);
 
+        private delegate int GetMetadataLocatorDelegate(
+            [MarshalAs(UnmanagedType.LPWStr)] string imagePath,
+            uint imageTimestamp,
+            uint imageSize,
+            [MarshalAs(UnmanagedType.LPArray, SizeConst = 16)] byte[] mvid,
+            uint mdRva,
+            uint flags,
+            uint bufferSize,
+            IntPtr buffer,
+            IntPtr dataSize);
+
         #endregion
 
         /// <summary>
@@ -94,6 +105,7 @@ namespace SOS
             public ResolveSequencePointDelegate ResolveSequencePointDelegate;
             public GetLineByILOffsetDelegate GetLineByILOffsetDelegate;
             public GetLocalVariableNameDelegate GetLocalVariableNameDelegate;
+            public GetMetadataLocatorDelegate GetMetadataLocatorDelegate;
         }
 
         static SOSNetCoreCallbacks s_callbacks = new SOSNetCoreCallbacks {
@@ -105,7 +117,8 @@ namespace SOS
             DisposeDelegate  = SymbolReader.Dispose,
             ResolveSequencePointDelegate = SymbolReader.ResolveSequencePoint,
             GetLineByILOffsetDelegate = SymbolReader.GetLineByILOffset,
-            GetLocalVariableNameDelegate  = SymbolReader.GetLocalVariableName,
+            GetLocalVariableNameDelegate = SymbolReader.GetLocalVariableName,
+            GetMetadataLocatorDelegate = MetadataHelper.GetMetadataLocator
         };
 
         static readonly string s_coreclrModuleName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "coreclr" : "libcoreclr.so";

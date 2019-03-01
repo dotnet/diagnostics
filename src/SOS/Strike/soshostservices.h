@@ -34,7 +34,19 @@ typedef  BOOL (*ResolveSequencePointDelegate)(PVOID, const char*, unsigned int, 
 typedef  BOOL (*GetLocalVariableNameDelegate)(PVOID, int, int, BSTR*);
 typedef  BOOL (*GetLineByILOffsetDelegate)(PVOID, mdMethodDef, ULONG64, ULONG *, BSTR*);
 
-#define SOSNetCoreCallbacksVersion 1
+typedef  BOOL (*GetMetadataLocatorDelegate)(
+    LPCWSTR imagePath,
+    unsigned int imageTimestamp,
+    unsigned int imageSize,
+    GUID* mvid,
+    unsigned int mdRva,
+    unsigned int flags,
+    unsigned int bufferSize,
+    PVOID pMetadata,
+    unsigned int* pMetadataSize
+);
+
+#define SOSNetCoreCallbacksVersion 2
 
 struct SOSNetCoreCallbacks
 {
@@ -47,6 +59,7 @@ struct SOSNetCoreCallbacks
     ResolveSequencePointDelegate ResolveSequencePointDelegate;
     GetLineByILOffsetDelegate GetLineByILOffsetDelegate;
     GetLocalVariableNameDelegate GetLocalVariableNameDelegate;
+    GetMetadataLocatorDelegate GetMetadataLocatorDelegate;
 };
 
 MIDL_INTERFACE("D13608FB-AD14-4B49-990A-80284F934C41")

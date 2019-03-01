@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-class DataTarget : public ICLRDataTarget, ICorDebugDataTarget4
+class DataTarget : public ICLRDataTarget, ICorDebugDataTarget4, ICLRMetadataLocator
 {
 private:
     LONG m_ref;                         // Reference count.
@@ -87,4 +87,18 @@ public:
         /* [in] */ DWORD threadId,
         /* [in] */ ULONG32 contextSize,
         /* [in, out, size_is(contextSize)] */ PBYTE context);
+
+    // ICLRMetadataLocator
+
+    virtual HRESULT STDMETHODCALLTYPE GetMetadata(
+        /* [in] */ LPCWSTR imagePath,
+        /* [in] */ ULONG32 imageTimestamp,
+        /* [in] */ ULONG32 imageSize,
+        /* [in] */ GUID* mvid,
+        /* [in] */ ULONG32 mdRva,
+        /* [in] */ ULONG32 flags,
+        /* [in] */ ULONG32 bufferSize,
+        /* [out, size_is(bufferSize), length_is(*dataSize)] */
+        BYTE* buffer,
+        /* [out] */ ULONG32* dataSize);
 };
