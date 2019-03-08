@@ -54,17 +54,28 @@ public class SOS
             await runner.RunScript(scriptName);
         }
 
-        // Against a crash dump.
+        // Generate a crash dump.
         if (IsCreateDumpConfig(config))
         {
             await SOSRunner.CreateDump(config, Output, testName, debuggeeName, debuggeeArguments, useCreateDump);
         }
 
+        // Test against a crash dump.
         if (IsOpenDumpConfig(config))
         {
-            using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName, debuggeeName, debuggeeArguments, loadDump: true))
+            // With cdb (Windows) or lldb (Linux or OSX)
+            using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName, debuggeeName, debuggeeArguments, SOSRunner.Options.LoadDump))
             {
                 await runner.RunScript(scriptName);
+            }
+
+            // With the dotnet-dump analyze tool
+            if (OS.Kind == OSKind.Linux)
+            {
+                using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName, debuggeeName, debuggeeArguments, SOSRunner.Options.LoadDumpWithDotNetDump))
+                {
+                    await runner.RunScript(scriptName);
+                }
             }
         }
     }

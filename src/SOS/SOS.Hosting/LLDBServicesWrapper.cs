@@ -314,13 +314,8 @@ namespace SOS
             uint descriptionSize,
             out uint descriptionUsed)
         {
-            type = 0;
-            processId = 0;
-            threadId = 0;
-            extraInformationSize = 0;
-            extraInformationUsed = 0;
-            descriptionUsed = 0;
-            return E_NOTIMPL;
+            // Should never be called. This exception will take down the program.
+            throw new NotImplementedException("GetLastEventInformation");
         }
 
         int Disassemble(
@@ -329,11 +324,12 @@ namespace SOS
             DEBUG_DISASM flags,
             StringBuilder buffer,
             uint bufferSize,
-            out uint disassemblySize,
-            out ulong endOffset)
+            IntPtr pdisassemblySize,            // uint
+            IntPtr pendOffset)                  // ulong
         {
-            disassemblySize = 0;
-            endOffset = 0;
+            buffer.Clear();
+            WriteUInt32(pdisassemblySize, 0);
+            WriteUInt64(pendOffset, offset);
             return E_NOTIMPL;
         }
 
@@ -346,9 +342,11 @@ namespace SOS
             IntPtr frameContexts,
             uint frameContextsSize,
             uint frameContextsEntrySize,
-            IntPtr pframesFilled)
+            IntPtr pframesFilled)               // uint
         {
-            return E_NOTIMPL;
+            // Don't fail, but always return 0 native frames so "clrstack -f" still prints the managed frames
+            WriteUInt32(pframesFilled, 0);
+            return S_OK;
         }
 
         int ReadVirtual(
@@ -356,14 +354,11 @@ namespace SOS
             ulong address,
             IntPtr buffer,
             int bytesRequested,
-            IntPtr pbytesRead)
+            IntPtr pbytesRead)                  // uint
         {
             if (_dataReader.ReadMemory(address, buffer, bytesRequested, out int bytesRead))
             {
-                if (pbytesRead != IntPtr.Zero)
-                {
-                    Marshal.WriteInt32(pbytesRead, bytesRead);
-                }
+                WriteUInt32(pbytesRead, (uint)bytesRead);
                 return S_OK;
             }
             return E_FAIL;
@@ -377,9 +372,7 @@ namespace SOS
             IntPtr pbytesWritten)
         {
             // This gets used by MemoryBarrier() calls in the dac, which really shouldn't matter what we do here.
-            if (pbytesWritten != IntPtr.Zero) {
-                Marshal.WriteInt32(pbytesWritten, (int)bytesRequested);
-            }
+            WriteUInt32(pbytesWritten, bytesRequested);
             return S_OK;
         }
 
@@ -396,11 +389,12 @@ namespace SOS
             ulong offset,
             StringBuilder nameBuffer,
             uint nameBufferSize,
-            out uint nameSize,
-            out ulong displacement)
+            IntPtr pnameSize,                       // uint
+            IntPtr pdisplacement)                   // ulong
         {
-            nameSize = 0;
-            displacement = 0;
+            nameBuffer.Clear();
+            WriteUInt32(pnameSize, 0);
+            WriteUInt64(pdisplacement, 0);
             return E_NOTIMPL;
         }
 
@@ -420,7 +414,6 @@ namespace SOS
             out ulong baseAddress)
         {
             baseAddress = 0;
-
             try
             {
                 ModuleInfo module = _dataReader.EnumerateModules().ElementAt((int)index);
@@ -434,7 +427,6 @@ namespace SOS
             {
                 return E_FAIL;
             }
-
             return S_OK;
         }
 
@@ -450,7 +442,6 @@ namespace SOS
             Debug.Assert(startIndex == 0);
 
             baseAddress = 0;
-
             foreach (ModuleInfo module in _dataReader.EnumerateModules())
             {
                 if (string.Equals(Path.GetFileName(module.FileName), name))
@@ -466,11 +457,11 @@ namespace SOS
             IntPtr self,
             ulong offset,
             uint startIndex,
-            out uint index,
-            out ulong baseAddress)
+            IntPtr pindex,                          // uint
+            IntPtr pbaseAddress)                    // ulong
         {
-            index = 0;
-            baseAddress = 0;
+            WriteUInt32(pindex, 0);
+            WriteUInt64(pbaseAddress, 0);
             return E_NOTIMPL;
         }
 
@@ -480,32 +471,32 @@ namespace SOS
             ulong baseAddress,
             StringBuilder imageNameBuffer,
             uint imageNameBufferSize,
-            out uint imageNameSize,
+            IntPtr pimageNameSize,                  // uint
             StringBuilder moduleNameBuffer,
             uint ModuleNameBufferSize,
-            out uint moduleNameSize,
+            IntPtr pmoduleNameSize,                 // uint
             StringBuilder loadedImageNameBuffer,
             uint loadedImageNameBufferSize,
-            out uint loadedImageNameSize)
+            IntPtr ploadedImageNameSize)            // uint
         {
-            imageNameSize = 0;
-            moduleNameSize = 0;
-            loadedImageNameSize = 0;
+            WriteUInt32(pimageNameSize, 0);
+            WriteUInt32(pmoduleNameSize, 0);
+            WriteUInt32(ploadedImageNameSize, 0);
             return E_NOTIMPL;
         }
 
         int GetLineByOffset(
             IntPtr self,
             ulong offset,
-            out uint line,
+            IntPtr pline,                            // uint
             StringBuilder fileBuffer,
             uint fileBufferSize,
-            out uint fileSize,
-            out ulong displacement)
+            IntPtr pfileSize,                        // uint
+            IntPtr pdisplacement)                    // ulong 
         {
-            line = 0;
-            fileSize = 0;
-            displacement = 0;
+            WriteUInt32(pline, 0);
+            WriteUInt32(pfileSize, 0);
+            WriteUInt64(pdisplacement, 0);
             return E_NOTIMPL;
         }
 
@@ -514,9 +505,9 @@ namespace SOS
             string file,
             ulong[] buffer,
             uint bufferLines,
-            out uint fileLines)
+            IntPtr pfileLines)                      // uint
         {
-            fileLines = 0;
+            WriteUInt32(pfileLines, 0);
             return E_NOTIMPL;
         }
 
@@ -525,13 +516,13 @@ namespace SOS
             uint startElement,
             string file,
             uint flags,
-            out uint foundElement,
+            IntPtr pfoundElement,                   // uint
             StringBuilder buffer,
             uint bufferSize,
-            out uint foundSize)
+            IntPtr pfoundSize)                      // uint
         {
-            foundElement = 0;
-            foundSize = 0;
+            WriteUInt32(pfoundElement, 0);
+            WriteUInt32(pfoundSize, 0);
             return E_NOTIMPL;
         }
 
@@ -643,6 +634,20 @@ namespace SOS
         }
 
         #endregion 
+
+        void WriteUInt32(IntPtr pointer, uint value)
+        {
+            if (pointer != IntPtr.Zero) {
+                Marshal.WriteInt32(pointer, unchecked((int)value));
+            }
+        }
+
+        void WriteUInt64(IntPtr pointer, ulong value)
+        {
+            if (pointer != IntPtr.Zero) {
+                Marshal.WriteInt64(pointer, unchecked((long)value));
+            }
+        }
 
         // TODO: Support other architectures
         int GetRegister(string register, out ulong value)
@@ -853,8 +858,8 @@ namespace SOS
             DEBUG_DISASM flags,
             [Out, MarshalAs(UnmanagedType.LPStr)] StringBuilder buffer,
             uint bufferSize,
-            out uint disassemblySize,
-            out ulong endOffset);
+            IntPtr pdisassemblySize,
+            IntPtr pendOffset);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate int GetContextStackTraceDelegate(
@@ -895,8 +900,8 @@ namespace SOS
             ulong offset,
             [Out, MarshalAs(UnmanagedType.LPStr)] StringBuilder nameBuffer,
             uint nameBufferSize,
-            out uint nameSize,
-            out ulong displacement);
+            IntPtr pnameSize,
+            IntPtr pdisplacement);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate int GetNumberModulesDelegate(
@@ -923,8 +928,8 @@ namespace SOS
             IntPtr self,
             ulong offset,
             uint startIndex,
-            out uint index,
-            out ulong baseAddress);
+            IntPtr pindex,
+            IntPtr pbaseAddress);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate int GetModuleNamesDelegate(
@@ -933,23 +938,23 @@ namespace SOS
             ulong baseAddress,
             [Out, MarshalAs(UnmanagedType.LPStr)] StringBuilder imageNameBuffer,
             uint imageNameBufferSize,
-            out uint imageNameSize,
+            IntPtr pimageNameSize,
             [Out, MarshalAs(UnmanagedType.LPStr)] StringBuilder moduleNameBuffer,
             uint ModuleNameBufferSize,
-            out uint moduleNameSize,
+            IntPtr pmoduleNameSize,
             [Out, MarshalAs(UnmanagedType.LPStr)] StringBuilder loadedImageNameBuffer,
             uint loadedImageNameBufferSize,
-            out uint loadedImageNameSize);
+            IntPtr ploadedImageNameSize);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate int GetLineByOffsetDelegate(
             IntPtr self,
             ulong offset,
-            out uint line,
+            IntPtr line,
             [Out, MarshalAs(UnmanagedType.LPStr)] StringBuilder fileBuffer,
             uint fileBufferSize,
-            out uint fileSize,
-            out ulong displacement);
+            IntPtr fileSize,
+            IntPtr displacement);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate int GetSourceFileLineOffsetsDelegate(
@@ -957,7 +962,7 @@ namespace SOS
             [In, MarshalAs(UnmanagedType.LPStr)] string file,
             [Out, MarshalAs(UnmanagedType.LPArray)] ulong[] buffer,
             uint bufferLines,
-            out uint fileLines);
+            IntPtr fileLines);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate int FindSourceFileDelegate(
@@ -965,10 +970,10 @@ namespace SOS
             uint startElement,
             [In, MarshalAs(UnmanagedType.LPStr)] string file,
             uint flags,
-            out uint foundElement,
+            IntPtr foundElement,
             [Out, MarshalAs(UnmanagedType.LPStr)] StringBuilder buffer,
             uint bufferSize,
-            out uint foundSize);
+            IntPtr foundSize);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate int GetCurrentProcessIdDelegate(

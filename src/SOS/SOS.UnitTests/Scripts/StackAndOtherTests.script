@@ -11,7 +11,9 @@ ENDIF:LIVE
 
 # Verify that ClrStack with no options works
 SOSCOMMAND:SetSymbolServer -ms
+!IFDEF:DOTNETDUMP
 SOSCOMMAND:SetHostRuntime
+ENDIF:DOTNETDUMP
 SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
@@ -110,28 +112,28 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
 ENDIF:PROJECTK
 
-# Verify DumpStack works
+!IFDEF:DOTNETDUMP
 IFDEF:PROJECTK
+
+# Verify DumpStack works
 SOSCOMMAND:DumpStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:.*Child(-SP|EBP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\),\s+calling.*\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\),\s+calling.*\s+)
-ENDIF:PROJECTK
 
 # Verify DumpStack -EE works
-IFDEF:PROJECTK
 SOSCOMMAND:DumpStack -EE
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:.*Child(-SP|EBP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\)\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\)\s+)
-ENDIF:PROJECTK
 
 # Verify EEStack works
-IFDEF:PROJECTK
 SOSCOMMAND:EEStack
 VERIFY:.*Child(-SP|EBP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\),\s+calling.*\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\),\s+calling.*\s+)
+
 ENDIF:PROJECTK
+ENDIF:DOTNETDUMP
 
 # Verify that IP2MD works (uses IP from ClrStack)
 SOSCOMMAND:ClrStack
@@ -139,31 +141,31 @@ SOSCOMMAND:IP2MD <POUT>.*\s+(<HEXVAL>)\s+SymbolTestApp\.Program\.Foo4.*\s+<POUT>
 VERIFY:.*\s+Method Name:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 54\s+
 
-# Verify that "u" works (depends on the IP2MD right above)
+!IFDEF:DOTNETDUMP
 IFDEF:PROJECTK
+
+# Verify that "u" works (depends on the IP2MD right above)
 SOSCOMMAND:u <POUT>\s*MethodDesc:\s+(<HEXVAL>)\s*<POUT>
 VERIFY:\s*Normal JIT generated code\s+
 VERIFY:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:\s+Begin\s+<HEXVAL>,\s+size\s+<HEXVAL>\s+
 VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 54:\s+
-ENDIF:PROJECTK
 
 # Verify that "u" with no line info works
-IFDEF:PROJECTK
 SOSCOMMAND:u -n <PREVPOUT>
 VERIFY:\s*Normal JIT generated code\s+
 VERIFY:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:\s+Begin\s+<HEXVAL>,\s+size\s+<HEXVAL>\s+
-ENDIF:PROJECTK
 
 # Verify that "u" with offsets info works
-IFDEF:PROJECTK
 SOSCOMMAND:u -o <PREVPOUT>
 VERIFY:\s*Normal JIT generated code\s+
 VERIFY:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:\s+Begin\s+<HEXVAL>,\s+size\s+<HEXVAL>\s+
 VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 54:\s+
+
 ENDIF:PROJECTK
+ENDIF:DOTNETDUMP
 
 # Verify that Name2EE works
 IFDEF:PROJECTK
@@ -175,7 +177,12 @@ VERIFY:\s+JITTED Code Address:\s+<HEXVAL>\s+
 ENDIF:PROJECTK
 
 # Verify that Threads (clrthreads) works
+IFDEF:DOTNETDUMP
+SOSCOMMAND:clrthreads
+ENDIF:DOTNETDUMP
+!IFDEF:DOTNETDUMP
 SOSCOMMAND:Threads
+ENDIF:DOTNETDUMP
 VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
 VERIFY:\s+UnstartedThread:\s+<DECVAL>\s+
 VERIFY:\s+BackgroundThread:\s+<DECVAL>\s+

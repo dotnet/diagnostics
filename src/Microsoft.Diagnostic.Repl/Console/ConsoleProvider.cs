@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,6 +27,7 @@ namespace Microsoft.Diagnostic.Repl
         private CancellationTokenSource m_interruptExecutingCommand;
 
         private string m_clearLine;
+        private bool m_interactiveConsole;
         private bool m_refreshingLine;
         private StringBuilder m_activeLine;
 
@@ -76,12 +78,26 @@ namespace Microsoft.Diagnostic.Repl
         {
             m_lastCommandLine = null;
             m_shutdown = false;
+            m_interactiveConsole = !Console.IsInputRedirected;
             RefreshLine();
 
             // Start keyboard processing
             while (!m_shutdown) {
-                ConsoleKeyInfo keyInfo = Console.ReadKey(true);
-                await ProcessKeyInfo(keyInfo, dispatchCommand);
+                if (m_interactiveConsole)
+                {
+                    ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+                    await ProcessKeyInfo(keyInfo, dispatchCommand);
+                }
+                else
+                {
+                    // The input has been redirected (i.e. testing or in script)
+                    WriteLine(OutputType.Normal, "<END_COMMAND_OUTPUT>");
+                    string line = Console.ReadLine();
+                    if (string.IsNullOrEmpty(line)) {
+                        continue;
+                    }
+                    await Dispatch(line, dispatchCommand);
+                }
             }
         }
 
@@ -173,7 +189,7 @@ namespace Microsoft.Diagnostic.Repl
         /// </summary>
         private void OnCtrlBreakKeyPress(object sender, ConsoleCancelEventArgs e)
         {
-            if (!m_shutdown) {
+            if (!m_shutdown && m_interactiveConsole) {
                 if (m_interruptExecutingCommand != null) {
                     m_interruptExecutingCommand.Cancel();
                 }
@@ -198,6 +214,10 @@ namespace Microsoft.Diagnostic.Repl
 
         private void ClearLine()
         {
+            if (!m_interactiveConsole) {
+                return;
+            }
+
             if (m_commandExecuting != 0) {
                 return;
             }
@@ -212,6 +232,10 @@ namespace Microsoft.Diagnostic.Repl
 
         private void PrintActiveLine()
         {
+            if (!m_interactiveConsole) {
+                return;
+            }
+
             if (m_shutdown) {
                 return;
             }
@@ -399,7 +423,7 @@ namespace Microsoft.Diagnostic.Repl
                     // ctrl-c interrupted the command
                     m_lastCommandLine = null;
                 }
-                catch (Exception ex) when (!(ex is NullReferenceException || ex is ArgumentNullException))
+                catch (Exception ex) when (!(ex is NullReferenceException || ex is ArgumentNullException || ex is ArgumentException))
                 {
                     WriteLine(OutputType.Error, "ERROR: {0}", ex.Message);
                     m_lastCommandLine = null;
