@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+
+    <!-- Target .NET Core 2.1 so it will run on LTS -->
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+
+    <RootNamespace>Microsoft.Diagnostics.Tools.Counters</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Common\CommandLineException.cs" Link="CommandLineException.cs" />
+    <Compile Include="..\Common\ConsoleCancellation.cs" Link="ConsoleCancellation.cs" />
+    <Compile Include="..\Common\DebugUtil.cs" Link="DebugUtil.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="2.2.5" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.30" />
+  </ItemGroup>
+
+</Project>
