@@ -22,6 +22,8 @@
   <ItemGroup>
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="2.2.5" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.30" />
+    <PackageReference Include="System.CommandLine.Experimental" Version="0.2.0-alpha.19156.3" />
+
   </ItemGroup>
 
 </Project>
