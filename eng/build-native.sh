@@ -28,7 +28,6 @@ __CrossBuild=false
 __NumProc=1
 __Build=false
 __Test=false
-__CopySOS=false
 __DailyTest=
 __CI=false
 __Verbosity=minimal
@@ -40,7 +39,6 @@ usage()
     echo "Usage: $0 [options]"
     echo "--build-native - build native components"
     echo "--test - test native components"
-    echo "--copy-sos - copy the SOS binaries to dotnet-sos/dotnet-dump"
     echo "--daily-test - test native components for daily build job"
     echo "--architecture <x64|x86|arm|armel|arm64>"
     echo "--configuration <debug|release>"
@@ -164,10 +162,6 @@ while :; do
         # Passed to common build script when testing
         --test)
             __Test=true
-            ;;
-
-        --copy-sos)
-            __CopySOS=true
             ;;
 
         --daily-test)
@@ -469,7 +463,7 @@ if [ $__Build == true ]; then
     build_native "$__BuildArch" "$__IntermediatesDir" "$__ExtraCmakeArgs"
 fi
 
-if [[ $__Build == true || $__CopySOS == true ]]; then
+if [[ $__Build == true || $__Test == true ]]; then
     # Copy the native SOS binaries to where these tools expect for testing
     __dotnet_sos=$__RootBinDir/bin/dotnet-sos/$__BuildType/netcoreapp2.1/publish/$__DistroRid
     __dotnet_dump=$__RootBinDir/bin/dotnet-dump/$__BuildType/netcoreapp2.1/publish/$__DistroRid

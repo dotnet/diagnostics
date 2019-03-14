@@ -17,7 +17,7 @@ done
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
 
 # remove the options that build.sh can't handle and pass it to build-native.sh
-__args="$(echo $@ | sed 's/--build-native//g;s/--copy-sos//g;s/--daily-test//g;s/--test//g;s/--clang[0-9]\.[0-9]//g')"
+__args="$(echo $@ | sed 's/--build-native//g;s/--daily-test//g;s/--test//g;s/--clang[0-9]\.[0-9]//g')"
 
 # build managed components
 "$scriptroot/common/build.sh" $__args
