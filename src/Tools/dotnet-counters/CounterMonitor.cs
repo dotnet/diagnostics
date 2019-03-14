@@ -59,8 +59,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 return 1;
             }
 
-            _console.Out.WriteLine($"processId: {_processId}, interval: {_interval}, counterList: {_counterList}");
-
             configPath = ConfigPathDetector.TryDetectConfigPath(_processId);
 
             if(string.IsNullOrEmpty(configPath))
