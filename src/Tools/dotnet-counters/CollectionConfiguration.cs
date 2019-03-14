@@ -1,3 +1,6 @@
+// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
@@ -41,11 +44,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
             Providers.Add(provider);
         }
 
-        public string SerializeProvider(CounterProvider provider)
+        private string SerializeProviders(IEnumerable<CounterProvider> providers) => string.Join(",", providers.Select(p => SerializeProvider(p)));
+
+        private string SerializeProvider(CounterProvider provider)
         {
             return $"{provider.Name}:{provider.Keywords}:{provider.Level}:EventCounterIntervalSec={Interval}";
         }
 
-        private string SerializeProviders(IEnumerable<CounterProvider> providers) => string.Join(",", providers.Select(p => SerializeProvider(p)));
     }
 }

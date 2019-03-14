@@ -1,3 +1,7 @@
+// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,6 +11,8 @@ using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
+    // NOTE: This is copied over from dotnet-collect.
+    // This will eventually go away once we get the runtime ready to stream events via IPC.
     internal static class ConfigPathDetector
     {
         private static readonly HashSet<string> _managedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".exe", ".dll" };
