@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 {
     public class CounterMonitor
     {
-        private string configPath;  // Path to the eventpipe config file that needs to be generated
+        private string configPath;
         private EventPipeCollector collector;
         private CollectionConfiguration config;
 
