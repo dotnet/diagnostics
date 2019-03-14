@@ -182,27 +182,35 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             public static string TryDetectConfigPath(int processId)
             {
-                var process = Process.GetProcessById(processId);
-
-                // Iterate over modules
-                foreach (var module in process.Modules.Cast<ProcessModule>())
+                try
                 {
-                    // Filter out things that aren't exes and dlls (useful on Unix/macOS to skip native libraries)
-                    var extension = Path.GetExtension(module.FileName);
-                    var name = Path.GetFileName(module.FileName);
-                    if (_managedExtensions.Contains(extension) && !_knownNativeLibraries.Contains(name) && !_platformAssemblies.Contains(name))
-                    {
-                        var candidateDir = Path.GetDirectoryName(module.FileName);
-                        var appName = Path.GetFileNameWithoutExtension(module.FileName);
 
-                        // Check for the deps.json file
-                        // TODO: Self-contained apps?
-                        if (File.Exists(Path.Combine(candidateDir, $"{appName}.deps.json")))
+                    var process = Process.GetProcessById(processId);
+
+                    // Iterate over modules
+                    foreach (var module in process.Modules.Cast<ProcessModule>())
+                    {
+                        // Filter out things that aren't exes and dlls (useful on Unix/macOS to skip native libraries)
+                        var extension = Path.GetExtension(module.FileName);
+                        var name = Path.GetFileName(module.FileName);
+                        if (_managedExtensions.Contains(extension) && !_knownNativeLibraries.Contains(name) && !_platformAssemblies.Contains(name))
                         {
-                            // This is an app!
-                            return Path.Combine(candidateDir, $"{appName}.eventpipeconfig");
+                            var candidateDir = Path.GetDirectoryName(module.FileName);
+                            var appName = Path.GetFileNameWithoutExtension(module.FileName);
+
+                            // Check for the deps.json file
+                            // TODO: Self-contained apps?
+                            if (File.Exists(Path.Combine(candidateDir, $"{appName}.deps.json")))
+                            {
+                                // This is an app!
+                                return Path.Combine(candidateDir, $"{appName}.eventpipeconfig");
+                            }
                         }
                     }
+                }
+                catch (ArgumentException)
+                {
+                    return null;
                 }
 
                 return null;

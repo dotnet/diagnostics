@@ -65,7 +65,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             if(string.IsNullOrEmpty(configPath))
             {
-                _console.Error.WriteLine("Couldn't determine the path for the eventpipeconfig file from the process ID. Specify the '--config-path' option to provide it manually.");
+                _console.Error.WriteLine("Couldn't determine the path for the eventpipeconfig file from the process ID.");
                 return 1;
             }
 
