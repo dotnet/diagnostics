@@ -2,60 +2,91 @@ using System;
 using System.CommandLine;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.CommandLine.Builder;
+using System.CommandLine.Invocation;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
     public class CounterMonitor
     {
-        string configPath;  // Path to the eventpipe config file that needs to be generated
+        private string configPath;  // Path to the eventpipe config file that needs to be generated
+        private EventPipeCollector collector;
+        private CollectionConfiguration config;
+
+        private int _processId;
+        private int _interval;
+        private string _counterList;
+        private CancellationToken _ct;
+        private IConsole _console;
 
         public CounterMonitor()
         {
         }
 
-        public async Task<int> Monitor(string counterList, IConsole console, int ProcessId, int interval)
+        public async Task<int> Monitor(CancellationToken ct, string counterList, IConsole console, int processId, int interval)
         {
-            if (ProcessId == 0) {
-                console.Error.WriteLine("ProcessId is required.");
+            try
+            {
+                _ct = ct;
+                _counterList = counterList;
+                _console = console;
+                _processId = processId;
+                _interval = interval;
+
+                return await StartMonitor();
+            }
+
+            catch (OperationCanceledException)
+            {
+                await collector.StopCollectingAsync();
+                console.Out.WriteLine($"Tracing stopped. Trace files written to {config.OutputPath}");
+                console.Out.WriteLine($"Complete");
+                return 1;
+            }
+        }
+
+        private async Task<int> StartMonitor()
+        {
+            if (_processId == 0) {
+                _console.Error.WriteLine("ProcessId is required.");
                 return 1;
             }
 
-            if (interval == 0) {
-                console.Error.WriteLine("interval is required.");
+            if (_interval == 0) {
+                _console.Error.WriteLine("interval is required.");
                 return 1;
             }
 
-            console.Out.WriteLine($"processId: {ProcessId}, interval: {interval}, counterList: {counterList}");
+            _console.Out.WriteLine($"processId: {_processId}, interval: {_interval}, counterList: {_counterList}");
 
-            configPath = ConfigPathDetector.TryDetectConfigPath(ProcessId);
+            configPath = ConfigPathDetector.TryDetectConfigPath(_processId);
 
             if(string.IsNullOrEmpty(configPath))
             {
-                console.Error.WriteLine("Couldn't determine the path for the eventpipeconfig file from the process ID. Specify the '--config-path' option to provide it manually.");
+                _console.Error.WriteLine("Couldn't determine the path for the eventpipeconfig file from the process ID. Specify the '--config-path' option to provide it manually.");
                 return 1;
             }
 
-            console.Out.WriteLine($"Detected config file path: {configPath}");
+            _console.Out.WriteLine($"Detected config file path: {configPath}");
 
-            var config = new CollectionConfiguration()
+            config = new CollectionConfiguration()
             {
-                ProcessId = ProcessId,
+                ProcessId = _processId,
                 CircularMB = 1000,  // TODO: Make this configurable?
                 OutputPath = Directory.GetCurrentDirectory(),
-                Interval = interval
+                Interval = _interval
             };
 
-            if (string.IsNullOrEmpty(counterList))
+            if (string.IsNullOrEmpty(_counterList))
             {
-                console.Out.WriteLine($"counter_list is unspecified. Monitoring all counters by default.");
+                _console.Out.WriteLine($"counter_list is unspecified. Monitoring all counters by default.");
 
                 // Enable the default profile if nothing is specified
                 if (!KnownData.TryGetProvider("System.Runtime", out var defaultProvider))
                 {
-                    console.Error.WriteLine("No providers or profiles were specified and there is no default profile available.");
+                    _console.Error.WriteLine("No providers or profiles were specified and there is no default profile available.");
                     return 1;
                 }
                 config.AddProvider(defaultProvider);
@@ -63,25 +94,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             if (File.Exists(configPath))
             {
-                console.Error.WriteLine("Config file already exists, tracing is already underway by a different consumer.");
+                _console.Error.WriteLine("Config file already exists, tracing is already underway by a different consumer.");
                 return 1;
             }
 
-            EventPipeCollector collector = new EventPipeCollector(config, configPath);
+            collector = new EventPipeCollector(config, configPath);
 
             // Write the config file contents
             await collector.StartCollectingAsync();
-            console.Out.WriteLine("Tracing has started. Press Ctrl-C to stop.");
-
-            // await WaitForCtrlCAsync(console);
-            Thread.Sleep(20000);
-
-            await collector.StopCollectingAsync();
-            console.Out.WriteLine($"Tracing stopped. Trace files written to {config.OutputPath}");
-
-            console.Out.WriteLine($"Complete");
+            _console.Out.WriteLine("Tracing has started. Press Ctrl-C to stop.");
+            await Task.Delay(int.MaxValue, _ct);
             return 0;
         }
-
     }
 }

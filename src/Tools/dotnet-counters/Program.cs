@@ -1,15 +1,12 @@
 using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using System.CommandLine;
-using Microsoft.Internal.Utilities;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -21,7 +18,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "Start monitoring a .NET application", 
                 new Option[] { ProcessIdOption(), RefreshIntervalOption() },
                 argument: CounterList(),
-                handler: CommandHandler.Create<string, IConsole, int, int>(new CounterMonitor().Monitor));
+                handler: CommandHandler.Create<CancellationToken, string, IConsole, int, int>(new CounterMonitor().Monitor));
 
         private static Option ProcessIdOption() =>
             new Option(
@@ -51,7 +48,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 new Option[] { },
                 handler: CommandHandler.Create<IConsole>(List));
 
-        public static async Task<int> List(IConsole console)
+        public static int List(IConsole console)
         {
             var profiles = KnownData.GetAllProviders();
             var maxNameLength = profiles.Max(p => p.Name.Length);
@@ -73,7 +70,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             var parser = new CommandLineBuilder()
                 .AddCommand(MonitorCommand())
                 .AddCommand(ListCommand())
-                .UseDefaults()
+                .CancelOnProcessTermination()
                 .Build();
             return parser.InvokeAsync(args);
         }
