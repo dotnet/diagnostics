@@ -1595,6 +1595,23 @@ possibility is eliminated, consider contacting Microsoft Product Support for
 help.
 \\
 
+COMMAND: gcwhere.
+GCWhere <object address>
+
+!GCWhere displays the location in the GC heap of the argument passed in.
+
+	0:002> !GCWhere 02800038  
+	Address  Gen Heap segment  begin    allocated size
+	02800038 2    0   02800000 02800038 0282b740  12
+
+When the argument lies in the managed heap, but is not a valid *object* address 
+the "size" is displayed as 0:
+
+	0:002> !GCWhere 0280003c
+	Address  Gen Heap segment  begin    allocated size
+	0280003c 2    0   02800000 02800038 0282b740  0
+\\
+
 COMMAND: dumplog.
 DumpLog [-addr <addressOfStressLog>] [<Filename>]
 

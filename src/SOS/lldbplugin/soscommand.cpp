@@ -151,6 +151,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     interpreter.AddCommand("eestack", new sosCommand("EEStack"), "Runs dumpstack on all threads in the process.");
     interpreter.AddCommand("finalizequeue", new sosCommand("FinalizeQueue"), "Displays all objects registered for finalization.");
     interpreter.AddCommand("gcroot", new sosCommand("GCRoot"), "Displays info about references (or roots) to an object at the specified address.");
+    interpreter.AddCommand("gcwhere", new sosCommand("GCWhere"), "Displays the location in the GC heap of the argument passed in.");
     interpreter.AddCommand("ip2md", new sosCommand("IP2MD"), "Displays the MethodDesc structure at the specified address in code that has been JIT-compiled.");
     interpreter.AddCommand("loadsymbols", new sosCommand("SetSymbolServer", "-loadsymbols"), "Load the .NET Core native module symbols.");
     interpreter.AddCommand("name2ee", new sosCommand("Name2EE"), "Displays the MethodTable structure and EEClass structure for the specified type or method in the specified module.");

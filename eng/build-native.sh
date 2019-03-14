@@ -415,6 +415,8 @@ initHostDistroRid
 # Init the target distro name
 initTargetDistroRid
 
+echo "RID: $__DistroRid"
+
 if [ "$__HostOS" == "OSX" ]; then
     export LLDB_H=$__ProjectRoot/src/SOS/lldbplugin/swift-4.0
     export LLDB_LIB=/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/LLDB
@@ -442,6 +444,7 @@ if [ "$__HostOS" == "OSX" ]; then
     python --version
 fi
 
+
 # Build native components
 if [ $__Build == true ]; then
     if [[ $__CI == true ]]; then
@@ -458,14 +461,21 @@ if [ $__Build == true ]; then
     fi
 
     build_native "$__BuildArch" "$__IntermediatesDir" "$__ExtraCmakeArgs"
+fi
 
+if [[ $__Build == true || $__Test == true ]]; then
     # Copy the native SOS binaries to where these tools expect for testing
     __dotnet_sos=$__RootBinDir/bin/dotnet-sos/$__BuildType/netcoreapp2.1/publish/$__DistroRid
     __dotnet_dump=$__RootBinDir/bin/dotnet-dump/$__BuildType/netcoreapp2.1/publish/$__DistroRid
+
     mkdir -p "$__dotnet_sos"
     mkdir -p "$__dotnet_dump"
+
     cp "$__BinDir"/* "$__dotnet_sos"
+    echo "Copied SOS to $__dotnet_sos"
+
     cp "$__BinDir"/* "$__dotnet_dump"
+    echo "Copied SOS to $__dotnet_dump"
 fi
 
 # Run SOS/lldbplugin tests
