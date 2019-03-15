@@ -12,8 +12,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 
-$RuntimeVersion11="1.1.10"
-$RuntimeVersion22="2.2.1"
+$RuntimeVersion11="1.1.11"
+$RuntimeVersion22="2.2.2"
 $DailyTestText="true"
 
 # Install the other versions of .NET Core runtime we are going to test. 1.1.x, 2.1.x (installed with the CLI), 2.2.x

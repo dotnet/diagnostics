@@ -9,8 +9,8 @@ daily_test=0
 branch="master"
 uncached_feed="https://dotnetcli.blob.core.windows.net/dotnet"
 
-runtime_version_11="1.1.10"
-runtime_version_22="2.2.1"
+runtime_version_11="1.1.11"
+runtime_version_22="2.2.2"
 runtime_version_21=
 
 while [ $# -ne 0 ]; do
