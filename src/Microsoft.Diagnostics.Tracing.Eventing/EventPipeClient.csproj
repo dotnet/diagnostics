@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <RootNamespace>Microsoft.Diagnostics.Tools.Trace</RootNamespace>
+    <RootNamespace>Microsoft.Diagnostics.Tracing.Eventing</RootNamespace>
     <IsPackable>False</IsPackable>
     <PackAsTool>False</PackAsTool>
   </PropertyGroup>
@@ -13,21 +13,11 @@
     <LangVersion>Latest</LangVersion>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-    <GenerateDocumentationFile>False</GenerateDocumentationFile>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.CommandLine.Experimental" Version="0.2.0-alpha.19167.2" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Remove="ConfigPathDetector.cs" />
-    <Compile Remove="EtwCollector.cs" />
-    <Compile Remove="EventCollector.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)\..\..\Microsoft.Diagnostics.Tracing.Eventing\EventPipeClient.csproj" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.38" />
   </ItemGroup>
 
   <PropertyGroup>
