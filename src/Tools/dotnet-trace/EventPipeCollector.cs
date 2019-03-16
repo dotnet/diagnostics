@@ -1,7 +1,7 @@
 using System.IO;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostics.Tools.Collect
+namespace Microsoft.Diagnostics.Tools.Trace
 {
     public class EventPipeCollector : EventCollector
     {

@@ -4,7 +4,7 @@ using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Text;
 
-namespace Microsoft.Diagnostics.Tools.Collect
+namespace Microsoft.Diagnostics.Tools.Trace
 {
     public class CollectionConfiguration
     {

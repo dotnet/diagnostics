@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Microsoft.Diagnostics.Tools.Collect
+namespace Microsoft.Diagnostics.Tools.Trace
 {
     public class LoggerSpec
     {

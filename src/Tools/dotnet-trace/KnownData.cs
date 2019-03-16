@@ -4,7 +4,7 @@ using System.Diagnostics.Tracing;
 using System.Linq;
 using Microsoft.Diagnostics.Tracing.Parsers;
 
-namespace Microsoft.Diagnostics.Tools.Collect
+namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class KnownData
     {

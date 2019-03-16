@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Internal.Utilities;
 
-namespace Microsoft.Diagnostics.Tools.Collect
+namespace Microsoft.Diagnostics.Tools.Trace
 {
     [Command(Name = "dotnet-trace", Description = "Collects Event Traces from .NET processes")]
     internal class Program

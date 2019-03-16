@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Session;
 
-namespace Microsoft.Diagnostics.Tools.Collect
+namespace Microsoft.Diagnostics.Tools.Trace
 {
     public class EtwCollector : EventCollector
     {

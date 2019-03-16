@@ -5,7 +5,7 @@ using System.Globalization;
 using System.Text;
 using Microsoft.Internal.Utilities;
 
-namespace Microsoft.Diagnostics.Tools.Collect
+namespace Microsoft.Diagnostics.Tools.Trace
 {
     public class EventSpec
     {
