@@ -11,7 +11,7 @@ using Microsoft.Internal.Utilities;
 
 namespace Microsoft.Diagnostics.Tools.Collect
 {
-    [Command(Name = "dotnet-collect", Description = "Collects Event Traces from .NET processes")]
+    [Command(Name = "dotnet-trace", Description = "Collects Event Traces from .NET processes")]
     internal class Program
     {
 
@@ -86,7 +86,7 @@ namespace Microsoft.Diagnostics.Tools.Collect
                 {
                     if (!KnownData.TryGetProfile(profile, out var collectionProfile))
                     {
-                        console.Error.WriteLine($"Unknown profile name: '{profile}'. See 'dotnet-collect --list-profiles' to get a list of profiles.");
+                        console.Error.WriteLine($"Unknown profile name: '{profile}'. See 'dotnet-trace --list-profiles' to get a list of profiles.");
                         return 1;
                     }
                     config.AddProfile(collectionProfile);
@@ -99,7 +99,7 @@ namespace Microsoft.Diagnostics.Tools.Collect
                 {
                     if (!EventSpec.TryParse(provider, out var providerSpec))
                     {
-                        console.Error.WriteLine($"Invalid provider specification: '{provider}'. See 'dotnet-collect --help' for more information.");
+                        console.Error.WriteLine($"Invalid provider specification: '{provider}'. See 'dotnet-trace --help' for more information.");
                         return 1;
                     }
                     config.Providers.Add(providerSpec);
@@ -112,7 +112,7 @@ namespace Microsoft.Diagnostics.Tools.Collect
                 {
                     if (!LoggerSpec.TryParse(logger, out var loggerSpec))
                     {
-                        console.Error.WriteLine($"Invalid logger specification: '{logger}'. See 'dotnet-collect --help' for more information.");
+                        console.Error.WriteLine($"Invalid logger specification: '{logger}'. See 'dotnet-trace --help' for more information.");
                         return 1;
                     }
                     config.Loggers.Add(loggerSpec);
@@ -266,7 +266,7 @@ namespace Microsoft.Diagnostics.Tools.Collect
                 writer.WriteLine("  '<level>' can be one of: Critical (1), Error (2), Warning (3), Informational (4), Verbose (5). Either the name or number can be specified.");
                 writer.WriteLine("  '<keywords>' is one of the following:");
                 writer.WriteLine("    A '*' character, indicating ALL keywords should be enabled (this can be very costly for some providers!)");
-                writer.WriteLine("    A comma-separated list of known keywords for a provider (use 'dotnet collect --keywords-for [providerName]' to get a list of known keywords for a provider)");
+                writer.WriteLine("    A comma-separated list of known keywords for a provider (use 'dotnet trace collect --keywords-for [providerName]' to get a list of known keywords for a provider)");
                 writer.WriteLine("    A 64-bit hexadecimal number, starting with '0x' indicating the keywords to enable");
                 writer.WriteLine("  '<parameters>' is an optional list of key-value parameters to provide to the EventPipe provider. The expected values depend on the provider you are enabling.");
                 writer.WriteLine("    This should be a list of key-value pairs, in the form: '<key1>=<value1>;<key2>=<value2>;...'. Note that some shells, such as PowerShell, require that you");
