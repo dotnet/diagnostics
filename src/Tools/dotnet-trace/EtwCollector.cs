@@ -22,13 +22,13 @@ namespace Microsoft.Diagnostics.Tools.Collect
         {
             // TODO: Allow a file name to be provided
             var outputFile = _config.ProcessId == null ?
-                Path.Combine(_config.OutputPath, "dotnet-collect.etl") :
-                Path.Combine(_config.OutputPath, $"dotnet-collect.{_config.ProcessId.Value}.etl");
+                Path.Combine(_config.OutputPath, "dotnet-trace.etl") :
+                Path.Combine(_config.OutputPath, $"dotnet-trace.{_config.ProcessId.Value}.etl");
             if (File.Exists(outputFile))
             {
                 throw new InvalidOperationException($"Target file already exists: {outputFile}");
             }
-            _session = new TraceEventSession("dotnet-collect", outputFile);
+            _session = new TraceEventSession("dotnet-trace", outputFile);
 
             if (_config.CircularMB is int circularMb)
             {
