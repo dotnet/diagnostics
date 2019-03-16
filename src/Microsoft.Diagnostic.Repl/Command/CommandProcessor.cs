@@ -19,11 +19,7 @@ namespace Microsoft.Diagnostic.Repl
     {
         private readonly Parser _parser;
         private readonly Command _rootCommand;
-
-        /// <summary>
-        /// Domain specific context passed to commands
-        /// </summary>
-        public object CommandContext { get; set; }
+        private readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();
 
         /// <summary>
         /// Create an instance of the command processor;
@@ -31,6 +27,7 @@ namespace Microsoft.Diagnostic.Repl
         /// <param name="assemblies">The list of assemblies to look for commands</param>
         public CommandProcessor(IEnumerable<Assembly> assemblies)
         {
+            _services.Add(typeof(CommandProcessor), this);
             var rootBuilder = new CommandLineBuilder();
             rootBuilder.UseHelp()
                        .UseParseDirective()
@@ -40,6 +37,26 @@ namespace Microsoft.Diagnostic.Repl
             BuildCommands(rootBuilder, assemblies);
             _rootCommand = rootBuilder.Command;
             _parser = rootBuilder.Build();
+        }
+
+        /// <summary>
+        /// Adds a service or context to inject into an command.
+        /// </summary>
+        /// <typeparam name="T">type of service</typeparam>
+        /// <param name="instance">service instance</param>
+        public void AddService<T>(T instance)
+        {
+            AddService(typeof(T), instance);
+        }
+
+        /// <summary>
+        /// Adds a service or context to inject into an command.
+        /// </summary>
+        /// <param name="type">service type</param>
+        /// <param name="instance">service instance</param>
+        public void AddService(Type type, object instance)
+        {
+            _services.Add(type, instance);
         }
 
         /// <summary>
@@ -194,7 +211,7 @@ namespace Microsoft.Diagnostic.Repl
             {
                 IEnumerable<OptionResult> optionResults = context.ParseResult.CommandResult.Children.OfType<OptionResult>();
 
-                foreach (var property in _properties)
+                foreach ((PropertyInfo Property, Option Option) property in _properties)
                 {
                     object value = property.Property.GetValue(instance);
 
@@ -210,11 +227,8 @@ namespace Microsoft.Diagnostic.Repl
                         else if (propertyType == typeof(IConsole)) {
                             value = context.Console;
                         }
-                        else if (propertyType == typeof(CommandProcessor)) {
-                            value = _commandProcessor;
-                        }
-                        else if (propertyType == _commandProcessor.CommandContext?.GetType()) {
-                            value = _commandProcessor.CommandContext;
+                        else if (_commandProcessor._services.TryGetValue(propertyType, out object service)) {
+                            value = service;
                         }
                         else if (property.Option != null)
                         {

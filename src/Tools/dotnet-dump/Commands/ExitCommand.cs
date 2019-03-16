@@ -9,11 +9,11 @@ namespace Microsoft.Diagnostic.Tools.Dump
     [CommandAlias(Name = "quit")]
     public class ExitCommand : CommandBase
     {
-        public AnalyzeContext AnalyzeContext { get; set; }
+        public ConsoleProvider ConsoleProvider { get; set; }
 
         public override Task InvokeAsync()
         {
-            AnalyzeContext.Exit();
+            ConsoleProvider.Stop();
             return Task.CompletedTask;
         }
     }
