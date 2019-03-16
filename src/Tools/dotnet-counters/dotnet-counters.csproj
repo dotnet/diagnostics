@@ -1,26 +1,28 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-
-    <!-- Target .NET Core 2.1 so it will run on LTS -->
     <TargetFramework>netcoreapp2.1</TargetFramework>
-
-    <RootNamespace>Microsoft.Diagnostics.Tools.Counters</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-
     <IsPackable>true</IsPackable>
     <PackAsTool>true</PackAsTool>
+    <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;osx-x64</PackAsToolShimRuntimeIdentifiers>
+    <!-- The package version needs to be hard coded as a stable version so "dotnet tool install -g dotnet-sos" works
+    <Version>$(VersionPrefix)</Version>
+    <PackageVersion>$(VersionPrefix)</PackageVersion>
+     -->
+
+    <ToolCommandName>dotnet-counters</ToolCommandName>
+    <RootNamespace>Microsoft.Diagnostics.Tools.Counters</RootNamespace>
+    <Description>.NET Core Performance Counter Tool</Description>
+    <PackageTags>Diagnostic</PackageTags>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <!-- Need to put the shims here to sign -->
+    <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
+
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\Common\CommandLineException.cs" Link="CommandLineException.cs" />
-    <Compile Include="..\Common\ConsoleCancellation.cs" Link="ConsoleCancellation.cs" />
-    <Compile Include="..\Common\DebugUtil.cs" Link="DebugUtil.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="2.2.5" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.30" />
   </ItemGroup>
 
