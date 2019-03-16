@@ -1,16 +1,25 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-
-    <!-- Target .NET Core 2.1 so it will run on LTS -->
     <TargetFramework>netcoreapp2.1</TargetFramework>
-
-    <RootNamespace>Microsoft.Diagnostics.Tools.Counters</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-
     <IsPackable>true</IsPackable>
     <PackAsTool>true</PackAsTool>
+    <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;osx-x64</PackAsToolShimRuntimeIdentifiers>
+    <!-- The package version needs to be hard coded as a stable version so "dotnet tool install -g dotnet-sos" works
+    <Version>$(VersionPrefix)</Version>
+    <PackageVersion>$(VersionPrefix)</PackageVersion>
+     -->
+
+    <ToolCommandName>dotnet-sos</ToolCommandName>
+    <RootNamespace>Microsoft.Diagnostics.Tools.Counters</RootNamespace>
+    <Description>.NET Core Performance Counter Tool</Description>
+    <PackageTags>Diagnostic</PackageTags>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <!-- Need to put the shims here to sign -->
+    <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
+
   </PropertyGroup>
 
   <ItemGroup>
