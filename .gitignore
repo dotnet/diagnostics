@@ -12,9 +12,10 @@
 [Aa]rtifacts/
 [Dd]ebug/
 [Rr]elease/
-x64/
 [Bb]in/
 [Oo]bj/
+[Pp]ackages/
+x64/
 .dotnet/
 .packages/
 .tools/
