@@ -5,7 +5,6 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <RootNamespace>Microsoft.Diagnostics.Tracing.Eventing</RootNamespace>
     <IsPackable>False</IsPackable>
-    <PackAsTool>False</PackAsTool>
   </PropertyGroup>
 
   <PropertyGroup>
