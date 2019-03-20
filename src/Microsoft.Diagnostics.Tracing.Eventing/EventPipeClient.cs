@@ -108,9 +108,7 @@ namespace Microsoft.Diagnostics.Tracing.Eventing
 
                     var sw = new BinaryWriter(namedPipe);
                     sw.Write(sessionIdInBytes);
-
-                    var br = new BinaryReader(namedPipe);
-                    return br.ReadUInt64();
+                    return sessionId;
                 }
             }
             else
@@ -122,10 +120,7 @@ namespace Microsoft.Diagnostics.Tracing.Eventing
                     socket.Connect(remoteEP);
 
                     socket.Send(sessionIdInBytes);
-
-                    var content = new byte[sizeof(ulong)];
-                    socket.Receive(content);
-                    return BitConverter.ToUInt64(content, 0);
+                    return sessionId;
                 }
             }
         }
