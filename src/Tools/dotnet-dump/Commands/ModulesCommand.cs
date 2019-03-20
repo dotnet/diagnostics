@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Microsoft.Diagnostic.Tools.Dump
 {
     [Command(Name = "modules", Help = "Displays the native modules in the process.")]
-    [Command(Name = "lm")]
+    [CommandAlias(Name = "lm")]
     public class ModulesCommand : CommandBase
     {
         [Option(Name = "--verbose", Help = "Displays more details.")]

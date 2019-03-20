@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace Microsoft.Diagnostic.Tools.Dump
 {
     [Command(Name = "setthread", Help = "Sets or displays the current thread id for the SOS commands.")]
-    [Command(Name = "threads")]
+    [CommandAlias(Name = "threads")]
     public class SetThreadCommand : CommandBase
     {
         [Argument(Help = "The thread id to set, otherwise displays the current id.")]

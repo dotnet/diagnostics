@@ -20,6 +20,7 @@ namespace Microsoft.Diagnostic.Tools.Dump
         {
             _consoleProvider = new ConsoleProvider();
             _commandProcessor = new CommandProcessor(new Assembly[] { typeof(Analyzer).Assembly });
+            _commandProcessor.AddService(_consoleProvider);
         }
 
         public async Task<int> Analyze(FileInfo dump_path, string[] command)
@@ -46,10 +47,10 @@ namespace Microsoft.Diagnostic.Tools.Dump
                     _consoleProvider.Out.WriteLine("Type 'quit' or 'exit' to exit the session.");
 
                     // Create common analyze context for commands
-                    var analyzeContext = new AnalyzeContext(_consoleProvider, target, _consoleProvider.Stop) {
+                    var analyzeContext = new AnalyzeContext(_consoleProvider, target) {
                         CurrentThreadId = unchecked((int)target.DataReader.EnumerateAllThreads().FirstOrDefault())
                     };
-                    _commandProcessor.CommandContext = analyzeContext;
+                    _commandProcessor.AddService(analyzeContext);
 
                     // Automatically enable symbol server support on Linux and MacOS
                     if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {

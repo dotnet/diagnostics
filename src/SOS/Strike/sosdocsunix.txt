@@ -45,7 +45,7 @@ DumpClass (dumpclass)
 DumpMD (dumpmd)                    
 Token2EE                           
 DumpModule (dumpmodule)
-DumpAssembly
+DumpAssembly (dumpassembly)
 DumpRuntimeTypes
 DumpIL (dumpil)
 DumpSig
