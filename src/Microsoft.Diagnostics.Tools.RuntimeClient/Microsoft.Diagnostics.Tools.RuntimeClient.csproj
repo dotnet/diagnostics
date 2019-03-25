@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <RootNamespace>Microsoft.Diagnostics.Tracing.Eventing</RootNamespace>
+    <RootNamespace>Microsoft.Diagnostics.Tools.RuntimeClient</RootNamespace>
     <IsPackable>False</IsPackable>
   </PropertyGroup>
 

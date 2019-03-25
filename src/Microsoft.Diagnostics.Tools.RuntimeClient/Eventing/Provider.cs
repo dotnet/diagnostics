@@ -5,7 +5,7 @@
 using System;
 using System.Diagnostics.Tracing;
 
-namespace Microsoft.Diagnostics.Tracing.Eventing
+namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
 {
     public struct Provider
     {

@@ -7,11 +7,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Microsoft.Diagnostics.Tracing.Eventing
+namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
 {
-    public struct ProviderConfiguration
+    public struct SessionConfiguration
     {
-        public ProviderConfiguration(uint circularBufferSizeMB, ulong multiFileSec, string outputPath, IEnumerable<Provider> providers)
+        public SessionConfiguration(uint circularBufferSizeMB, ulong multiFileSec, string outputPath, IEnumerable<Provider> providers)
         {
             if (providers == null)
                 throw new ArgumentNullException(nameof(providers));

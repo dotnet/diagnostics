@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Tracing.Eventing;
+using Microsoft.Diagnostics.Tools.RuntimeClient.Eventing;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -14,17 +14,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class StartCommandHandler
     {
-        public static async Task<int> Start(IConsole console, int pid, string output, uint buffersize, string providers)
+        public static async Task<int> Start(IConsole console, int pid, string output, uint buffersize, string providers, ulong multiFileSec)
         {
             try
             {
-                var providerConfiguration = new ProviderConfiguration(
+                var configuration = new SessionConfiguration(
                     circularBufferSizeMB: buffersize,
-                    multiFileSec: 0,
+                    multiFileSec: multiFileSec,
                     outputPath: output,
                     ToProviders(providers));
-                var sessionId = EventPipeClient.EnableTracingToFile(pid, providerConfiguration);
-                Console.Out.WriteLine($"OutputPath={providerConfiguration.OutputPath}");
+                var sessionId = EventPipeClient.EnableTracingToFile(pid, configuration);
+                Console.Out.WriteLine($"OutputPath={configuration.OutputPath}");
                 Console.Out.WriteLine($"SessionId=0x{sessionId:X16}");
 
                 await Task.FromResult(0);
@@ -46,8 +46,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     OutputPathOption(),
                     CircularBufferOption(),
                     ProvidersOption(),
+                    MultiFileSecOption(),
                 },
-                handler: CommandHandler.Create<IConsole, int, string, uint, string>(Start));
+                handler: CommandHandler.Create<IConsole, int, string, uint, string, ulong>(Start));
 
         private static Option OutputPathOption() =>
             new Option(
@@ -66,6 +67,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 aliases: new[] { "--providers" },
                 description: @"A list EventPipe provider to be enabled in the form 'Provider[,Provider]', where Provider is in the form: '(GUID|KnownProviderName)[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'",
                 argument: new Argument<string> { Name = "Providers" }); // TODO: Can we specify an actual type?
+
+        private static Option MultiFileSecOption() =>
+            new Option(
+                aliases: new[] { "--multifilesec" },
+                description: @"Enable a file switch timer every 'n' seconds (Default is 0)",
+                argument: new Argument<ulong> { Name = "MultiFileSec" });
 
         private static IEnumerable<Provider> ToProviders(string providers)
         {

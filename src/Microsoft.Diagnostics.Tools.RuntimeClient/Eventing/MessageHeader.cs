@@ -4,7 +4,7 @@
 
 using System.Runtime.InteropServices;
 
-namespace Microsoft.Diagnostics.Tracing.Eventing
+namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
 {
     [StructLayout(LayoutKind.Sequential)]
     struct MessageHeader

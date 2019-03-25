@@ -15,31 +15,20 @@ using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Microsoft.Diagnostics.Tracing.Eventing
+namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
 {
     public static class EventPipeClient
     {
         public static IEnumerable<int> ListAvailablePorts()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                const string DiagnosticPortPattern = @"^dotnetcore-diagnostic-(\d+)$";
-                return Directory.GetFiles(@"\\.\pipe\")
-                    .Select(namedPipe => (new FileInfo(namedPipe)).Name)
-                    .Where(input => Regex.IsMatch(input, DiagnosticPortPattern))
-                    .Select(input => int.Parse(Regex.Match(input, DiagnosticPortPattern).Groups[1].Value, NumberStyles.Integer));
-            }
-            else
-            {
-                const string DiagnosticPortPattern = @"^dotnetcore-diagnostic-(\d+)-(\d+)-socket$";
-                return Directory.GetFiles(Path.GetTempPath())
-                    .Select(namedPipe => (new FileInfo(namedPipe)).Name)
-                    .Where(input => Regex.IsMatch(input, DiagnosticPortPattern))
-                    .Select(input => int.Parse(Regex.Match(input, DiagnosticPortPattern).Groups[1].Value, NumberStyles.Integer));
-            }
+            string DiagnosticPortPattern = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnetcore-diagnostic-(\d+)$" : @"^dotnetcore-diagnostic-(\d+)-(\d+)-socket$";
+            return Directory.GetFiles(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath())
+                .Select(namedPipe => (new FileInfo(namedPipe)).Name)
+                .Where(input => Regex.IsMatch(input, DiagnosticPortPattern))
+                .Select(input => int.Parse(Regex.Match(input, DiagnosticPortPattern).Groups[1].Value, NumberStyles.Integer));
         }
 
-        public static ulong EnableTracingToFile(int processId, ProviderConfiguration providerConfiguration)
+        public static ulong EnableTracingToFile(int processId, SessionConfiguration configuration)
         {
             var header = new MessageHeader {
                 RequestType = DiagnosticMessageType.Enable,
@@ -48,10 +37,7 @@ namespace Microsoft.Diagnostics.Tracing.Eventing
 
             byte[] serializedConfiguration;
             using (var stream = new MemoryStream())
-            {
-                serializedConfiguration = Serialize(header, providerConfiguration, stream);
-                Console.WriteLine($"Serialized data is {serializedConfiguration.Length} bytes vs {GetByteCount(providerConfiguration)}.");
-            }
+                serializedConfiguration = Serialize(header, configuration, stream);
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -91,11 +77,8 @@ namespace Microsoft.Diagnostics.Tracing.Eventing
 
                     sw.Write(sessionId);
                     sw.Flush();
-                    stream.Position = 0;
-                    sessionIdInBytes = new byte[stream.Length];
-                    stream.Read(sessionIdInBytes, 0, sessionIdInBytes.Length);
+                    sessionIdInBytes = stream.ToArray();
                 }
-                Console.WriteLine($"Serialized data is {sessionIdInBytes.Length} bytes vs {sizeof(ulong)}.");
             }
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -108,20 +91,14 @@ namespace Microsoft.Diagnostics.Tracing.Eventing
 
                     var sw = new BinaryWriter(namedPipe);
                     sw.Write(sessionIdInBytes);
-                    return sessionId;
+
+                    var br = new BinaryReader(namedPipe);
+                    return br.ReadUInt64();
                 }
             }
             else
             {
-                using (var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified))
-                {
-                    var remoteEP = new UnixDomainSocketEndPoint("/tmp/dotnetcore-diagnostic-1234.socket");
-                    socket.Bind(remoteEP);
-                    socket.Connect(remoteEP);
-
-                    socket.Send(sessionIdInBytes);
-                    return sessionId;
-                }
+                throw new PlatformNotSupportedException("TODO: Get the ApplicationGroupId to form the string: 'dotnetcore-diagnostic-{processId}-{ApplicationGroupId}-socket'");
             }
         }
 
@@ -131,17 +108,17 @@ namespace Microsoft.Diagnostics.Tracing.Eventing
             return Marshal.SizeOf(typeof(int)) + strLength;
         }
 
-        private static int GetByteCount(ProviderConfiguration providerConfiguration)
+        private static int GetByteCount(SessionConfiguration configuration)
         {
             int size = 0;
 
-            size += Marshal.SizeOf(providerConfiguration.CircularBufferSizeInMB.GetType());
-            size += Marshal.SizeOf(providerConfiguration.MultiFileTraceLengthInSeconds.GetType());
+            size += Marshal.SizeOf(configuration.CircularBufferSizeInMB.GetType());
+            size += Marshal.SizeOf(configuration.MultiFileTraceLengthInSeconds.GetType());
 
-            size += GetSizeInBytes(providerConfiguration.OutputPath);
+            size += GetSizeInBytes(configuration.OutputPath);
 
             size += Marshal.SizeOf(typeof(int));
-            foreach (var provider in providerConfiguration.Providers)
+            foreach (var provider in configuration.Providers)
             {
                 size += Marshal.SizeOf(provider.Keywords.GetType());
                 size += Marshal.SizeOf(typeof(uint)); // provider.EventLevel.GetType()
@@ -159,20 +136,20 @@ namespace Microsoft.Diagnostics.Tracing.Eventing
                 sw.Write(Encoding.Unicode.GetBytes(value + '\0'));
         }
 
-        private static byte[] Serialize(MessageHeader header, ProviderConfiguration providerConfiguration, Stream stream)
+        private static byte[] Serialize(MessageHeader header, SessionConfiguration configuration, Stream stream)
         {
             using (var sw = new BinaryWriter(stream))
             {
                 sw.Write((uint)header.RequestType);
                 sw.Write(header.Pid);
 
-                sw.Write(providerConfiguration.CircularBufferSizeInMB);
-                sw.Write(providerConfiguration.MultiFileTraceLengthInSeconds);
+                sw.Write(configuration.CircularBufferSizeInMB);
+                sw.Write(configuration.MultiFileTraceLengthInSeconds);
 
-                WriteString(providerConfiguration.OutputPath, sw);
+                WriteString(configuration.OutputPath, sw);
 
-                sw.Write(providerConfiguration.Providers.Count());
-                foreach (var provider in providerConfiguration.Providers)
+                sw.Write(configuration.Providers.Count());
+                foreach (var provider in configuration.Providers)
                 {
                     sw.Write(provider.Keywords);
                     sw.Write((uint)provider.EventLevel);

@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Tracing.Eventing;
+using Microsoft.Diagnostics.Tools.RuntimeClient.Eventing;
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
@@ -10,9 +10,9 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal static class ListCommandHandler
+    internal static class PortsCommandHandler
     {
-        public static async Task<int> AvailablePorts(IConsole console)
+        public static async Task<int> GetActivePorts(IConsole console)
         {
             try
             {
@@ -29,10 +29,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        public static Command ListCommand() =>
+        public static Command ActivePortsCommand() =>
             new Command(
-                name: "list",
+                name: "ports",
                 description: "List all active DotNet Core Diagnostic ports.",
-                handler: CommandHandler.Create<IConsole>(AvailablePorts));
+                handler: CommandHandler.Create<IConsole>(GetActivePorts),
+                isHidden: true);
     }
 }

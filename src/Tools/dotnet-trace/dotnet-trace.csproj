@@ -21,13 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="ConfigPathDetector.cs" />
-    <Compile Remove="EtwCollector.cs" />
-    <Compile Remove="EventCollector.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)\..\..\Microsoft.Diagnostics.Tracing.Eventing\EventPipeClient.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.Tools.RuntimeClient\Microsoft.Diagnostics.Tools.RuntimeClient.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
