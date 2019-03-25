@@ -129,36 +129,29 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
             return size;
         }
 
-        private static void WriteString(string value, BinaryWriter sw)
-        {
-            sw.Write(value != null ? (value.Length + 1) : 0);
-            if (value != null)
-                sw.Write(Encoding.Unicode.GetBytes(value + '\0'));
-        }
-
         private static byte[] Serialize(MessageHeader header, SessionConfiguration configuration, Stream stream)
         {
-            using (var sw = new BinaryWriter(stream))
+            using (var bw = new BinaryWriter(stream))
             {
-                sw.Write((uint)header.RequestType);
-                sw.Write(header.Pid);
+                bw.Write((uint)header.RequestType);
+                bw.Write(header.Pid);
 
-                sw.Write(configuration.CircularBufferSizeInMB);
-                sw.Write(configuration.MultiFileTraceLengthInSeconds);
+                bw.Write(configuration.CircularBufferSizeInMB);
+                bw.Write(configuration.MultiFileTraceLengthInSeconds);
 
-                WriteString(configuration.OutputPath, sw);
+                bw.WriteString(configuration.OutputPath);
 
-                sw.Write(configuration.Providers.Count());
+                bw.Write(configuration.Providers.Count());
                 foreach (var provider in configuration.Providers)
                 {
-                    sw.Write(provider.Keywords);
-                    sw.Write((uint)provider.EventLevel);
+                    bw.Write(provider.Keywords);
+                    bw.Write((uint)provider.EventLevel);
 
-                    WriteString(provider.Name, sw);
-                    WriteString(provider.FilterData, sw);
+                    bw.WriteString(provider.Name);
+                    bw.WriteString(provider.FilterData);
                 }
 
-                sw.Flush();
+                bw.Flush();
                 stream.Position = 0;
 
                 var bytes = new byte[stream.Length];
