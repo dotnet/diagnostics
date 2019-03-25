@@ -102,33 +102,6 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
             }
         }
 
-        private static int GetSizeInBytes(string str)
-        {
-            var strLength = str == null ? 0 : Encoding.Unicode.GetByteCount(str + '\0');
-            return Marshal.SizeOf(typeof(int)) + strLength;
-        }
-
-        private static int GetByteCount(SessionConfiguration configuration)
-        {
-            int size = 0;
-
-            size += Marshal.SizeOf(configuration.CircularBufferSizeInMB.GetType());
-            size += Marshal.SizeOf(configuration.MultiFileTraceLengthInSeconds.GetType());
-
-            size += GetSizeInBytes(configuration.OutputPath);
-
-            size += Marshal.SizeOf(typeof(int));
-            foreach (var provider in configuration.Providers)
-            {
-                size += Marshal.SizeOf(provider.Keywords.GetType());
-                size += Marshal.SizeOf(typeof(uint)); // provider.EventLevel.GetType()
-                size += GetSizeInBytes(provider.Name);
-                size += GetSizeInBytes(provider.FilterData);
-            }
-
-            return size;
-        }
-
         private static byte[] Serialize(MessageHeader header, SessionConfiguration configuration, Stream stream)
         {
             using (var bw = new BinaryWriter(stream))
