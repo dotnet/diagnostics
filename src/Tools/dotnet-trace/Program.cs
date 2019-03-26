@@ -17,6 +17,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 .AddCommand(PortsCommandHandler.ActivePortsCommand())
                 .AddCommand(ProvidersCommandHandler.KnownProvidersCommand())
 #endif
+                .AddCommand(StreamCommandHandler.StartCommand())
                 .AddCommand(StartCommandHandler.StartCommand())
                 .AddCommand(StopCommandHandler.StopCommand())
                 .UseDefaults()

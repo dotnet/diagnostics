@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             try
             {
                 foreach (var pid in EventPipeClient.ListAvailablePorts())
-                    Console.Out.WriteLine($"ProcessId={pid}");
+                    Console.Out.WriteLine($"{System.Diagnostics.Process.GetProcessById(pid).ProcessName}({pid})");
 
                 await Task.FromResult(0);
                 return 0;

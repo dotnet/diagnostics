@@ -6,7 +6,10 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
 {
     enum DiagnosticMessageType : uint
     {
-        Enable = 1024,
-        Disable,
+        StartSession = 1024,
+        StopSession,
+        Stream,
+        Attach,
+        Detach,
     }
 }

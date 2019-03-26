@@ -12,13 +12,50 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
 {
     public static class EventPipeClient
     {
+        // TODO: Make async.
+        // TODO: Required an interface (e.g. "ISerializableToByteArray").
+        // TODO: Maybe require DiagnosticMessageType separate.
+        public static ulong SendCommand(int processId, byte[] buffer)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                var pipeName = $"dotnetcore-diagnostic-{processId}";
+                using (var namedPipe = new NamedPipeClientStream(
+                    ".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation))
+                {
+                    namedPipe.Connect((int)TimeSpan.FromSeconds(20).TotalMilliseconds);
+
+                    var sw = new BinaryWriter(namedPipe);
+                    sw.Write(buffer);
+
+                    var br = new BinaryReader(namedPipe);
+                    return br.ReadUInt64();
+                }
+            }
+            else
+            {
+                //throw new PlatformNotSupportedException("TODO: Get the ApplicationGroupId to form the string: 'dotnetcore-diagnostic-{processId}-{ApplicationGroupId}-socket'");
+                using (var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified))
+                {
+                    var remoteEP = new UnixDomainSocketEndPoint(Path.Combine(Path.GetTempPath(), $"dotnetcore-diagnostic-{processId}-{6}-socket"));
+                    socket.Bind(remoteEP);
+                    socket.Connect(remoteEP);
+
+                    socket.Send(buffer);
+
+                    var content = new byte[sizeof(ulong)];
+                    socket.Receive(content);
+                    return BitConverter.ToUInt64(content, 0);
+                }
+            }
+        }
+
         public static IEnumerable<int> ListAvailablePorts()
         {
             string DiagnosticPortPattern = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnetcore-diagnostic-(\d+)$" : @"^dotnetcore-diagnostic-(\d+)-(\d+)-socket$";
@@ -28,10 +65,12 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
                 .Select(input => int.Parse(Regex.Match(input, DiagnosticPortPattern).Groups[1].Value, NumberStyles.Integer));
         }
 
-        public static ulong EnableTracingToFile(int processId, SessionConfiguration configuration)
+        public static BinaryReader StreamTracingToFile(int processId, SessionConfiguration configuration, out ulong sessionId)
         {
+            sessionId = 0;
+
             var header = new MessageHeader {
-                RequestType = DiagnosticMessageType.Enable,
+                RequestType = DiagnosticMessageType.Stream,
                 Pid = (uint)Process.GetCurrentProcess().Id,
             };
 
@@ -42,17 +81,16 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 var pipeName = $"dotnetcore-diagnostic-{processId}";
-                using (var namedPipe = new NamedPipeClientStream(
-                    ".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation))
-                {
-                    namedPipe.Connect((int)TimeSpan.FromSeconds(20).TotalMilliseconds);
+                var namedPipe = new NamedPipeClientStream(
+                    ".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation);
+                namedPipe.Connect((int)TimeSpan.FromSeconds(20).TotalMilliseconds);
 
-                    var sw = new BinaryWriter(namedPipe);
-                    sw.Write(serializedConfiguration);
+                var sw = new BinaryWriter(namedPipe);
+                sw.Write(serializedConfiguration);
 
-                    var br = new BinaryReader(namedPipe);
-                    return br.ReadUInt64();
-                }
+                var br = new BinaryReader(namedPipe);
+                sessionId = br.ReadUInt64();
+                return br;
             }
             else
             {
@@ -60,10 +98,24 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
             }
         }
 
+        public static ulong EnableTracingToFile(int processId, SessionConfiguration configuration)
+        {
+            var header = new MessageHeader {
+                RequestType = DiagnosticMessageType.StartSession,
+                Pid = (uint)Process.GetCurrentProcess().Id,
+            };
+
+            byte[] serializedConfiguration;
+            using (var stream = new MemoryStream())
+                serializedConfiguration = Serialize(header, configuration, stream);
+
+            return SendCommand(processId, serializedConfiguration);
+        }
+
         public static ulong DisableTracingToFile(int processId, ulong sessionId)
         {
             var header = new MessageHeader {
-                RequestType = DiagnosticMessageType.Disable,
+                RequestType = DiagnosticMessageType.StopSession,
                 Pid = (uint)Process.GetCurrentProcess().Id,
             };
 
@@ -81,25 +133,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
                 }
             }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                var pipeName = $"dotnetcore-diagnostic-{processId}";
-                using (var namedPipe = new NamedPipeClientStream(
-                    ".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation))
-                {
-                    namedPipe.Connect((int)TimeSpan.FromSeconds(20).TotalMilliseconds);
-
-                    var sw = new BinaryWriter(namedPipe);
-                    sw.Write(sessionIdInBytes);
-
-                    var br = new BinaryReader(namedPipe);
-                    return br.ReadUInt64();
-                }
-            }
-            else
-            {
-                throw new PlatformNotSupportedException("TODO: Get the ApplicationGroupId to form the string: 'dotnetcore-diagnostic-{processId}-{ApplicationGroupId}-socket'");
-            }
+            return SendCommand(processId, sessionIdInBytes);
         }
 
         private static byte[] Serialize(MessageHeader header, SessionConfiguration configuration, Stream stream)
