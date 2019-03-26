@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 namespace Microsoft.Diagnostic.Tools.Dump
 {
     [Command(Name = "exit", Help = "Exit interactive mode.")]
-    [Command(Name = "quit")]
+    [CommandAlias(Name = "quit")]
     public class ExitCommand : CommandBase
     {
-        public AnalyzeContext AnalyzeContext { get; set; }
+        public ConsoleProvider ConsoleProvider { get; set; }
 
         public override Task InvokeAsync()
         {
-            AnalyzeContext.Exit();
+            ConsoleProvider.Stop();
             return Task.CompletedTask;
         }
     }

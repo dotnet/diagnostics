@@ -20,11 +20,10 @@ namespace Microsoft.Diagnostic.Tools.Dump
         private ClrRuntime _runtime;
         private SOSHost _sosHost;
 
-        public AnalyzeContext(IConsole console, DataTarget target, Action exit)
+        public AnalyzeContext(IConsole console, DataTarget target)
         {
             _console = console;
             Target = target;
-            Exit = exit;
         }
 
         /// <summary>

@@ -36,6 +36,14 @@ namespace Microsoft.Diagnostic.Repl
     }
 
     /// <summary>
+    /// Adds an alias to the previous command attribute
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+    public class CommandAliasAttribute : BaseAttribute
+    {
+    }
+
+    /// <summary>
     /// Marks the property as a Option.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property)]

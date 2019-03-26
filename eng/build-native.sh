@@ -267,8 +267,8 @@ __ResultsDir=$__RootBinDir/TestResults/$__BuildType
 __PackagesBinDir=$__RootBinDir/packages/$__BuildType/Shipping
 __ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=$__RootBinDir/bin -DCLR_BUILD_TYPE=$__BuildType"
 __DotNetCli=$__ProjectRoot/.dotnet/dotnet
-__MSBuildPath=$__ProjectRoot/.dotnet/sdk/2.1.503/MSBuild.dll
-__DotNetRuntimeVersion=2.1.7
+__MSBuildPath=$__ProjectRoot/.dotnet/sdk/2.1.505/MSBuild.dll
+__DotNetRuntimeVersion=2.1.9
 
 if [ ! -e $__DotNetCli ]; then
    echo "dotnet cli not installed $__DotNetCli"
