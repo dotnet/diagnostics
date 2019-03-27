@@ -83,7 +83,9 @@ namespace Microsoft.Diagnostics.Tools.Collect
             {
                 var stackSource = new MutableTraceEventStackSource(eventLog);
 
+#pragma warning disable 618 // ThreadTimeStackComputer is not obsolete but experimental, because its interface is likely to change
                 var computer = new ThreadTimeStackComputer(eventLog, symbolReader);
+#pragma warning restore 618
                 computer.GenerateThreadTimeStacks(stackSource);
 
                 return stackSource;
