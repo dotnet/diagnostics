@@ -18,9 +18,10 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
 {
     public static class EventPipeClient
     {
-        // TODO: Make async.
-        // TODO: Required an interface (e.g. "ISerializableToByteArray").
-        // TODO: Maybe require DiagnosticMessageType separate.
+        private static string DiagnosticPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnetcore-diagnostic-(\d+)$" : @"^dotnetcore-diagnostic-(\d+)-(\d+)-socket$";
+
+        private static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
+
         public static ulong SendCommand(int processId, byte[] buffer)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -41,25 +42,28 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
             else
             {
                 //throw new PlatformNotSupportedException("TODO: Get the ApplicationGroupId to form the string: 'dotnetcore-diagnostic-{processId}-{ApplicationGroupId}-socket'");
-                using (var socket = new Socket(AddressFamily.Unix, SocketType.Dgram, ProtocolType.Unspecified))
+                var ipcPort = Directory.GetFiles(IpcRootPath) // Try best match.
+                    .Select(namedPipe => (new FileInfo(namedPipe)).Name)
+                    .Single(input => Regex.IsMatch(input, $"^dotnetcore-diagnostic-{processId}-(\\d+)-socket$"));
+                var path = Path.Combine(Path.GetTempPath(), ipcPort);
+                var remoteEP = new UnixDomainSocketEndPoint(path);
+
+                using (var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified))
                 {
-                    var remoteEP = new UnixDomainSocketEndPoint(Path.Combine(Path.GetTempPath(), $"dotnetcore-diagnostic-{processId}-{6}-socket"));
                     socket.Bind(remoteEP);
                     socket.Connect(remoteEP);
-
                     socket.Send(buffer);
 
                     var content = new byte[sizeof(ulong)];
-                    socket.Receive(content);
-                    return BitConverter.ToUInt64(content, 0);
+                    int nReceivedBytes = socket.Receive(content);
+                    return (nReceivedBytes == sizeof(ulong)) ? BitConverter.ToUInt64(content, 0) : 0;
                 }
             }
         }
 
         public static IEnumerable<int> ListAvailablePorts()
         {
-            string DiagnosticPortPattern = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnetcore-diagnostic-(\d+)$" : @"^dotnetcore-diagnostic-(\d+)-(\d+)-socket$";
-            return Directory.GetFiles(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath())
+            return Directory.GetFiles(IpcRootPath)
                 .Select(namedPipe => (new FileInfo(namedPipe)).Name)
                 .Where(input => Regex.IsMatch(input, DiagnosticPortPattern))
                 .Select(input => int.Parse(Regex.Match(input, DiagnosticPortPattern).Groups[1].Value, NumberStyles.Integer));

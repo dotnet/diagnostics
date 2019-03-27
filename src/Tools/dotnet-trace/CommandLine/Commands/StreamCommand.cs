@@ -1,14 +1,8 @@
 ﻿using Microsoft.Diagnostics.Tools.RuntimeClient.Eventing;
-using Microsoft.Diagnostics.Tracing;
-using Microsoft.Diagnostics.Tracing.Etlx;
-using Microsoft.Diagnostics.Tracing.Parsers;
-using Microsoft.Diagnostics.Tracing.Parsers.Clr;
-using Microsoft.Diagnostics.Tracing.Session;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
-using System.Diagnostics.Tracing;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -29,25 +23,22 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 var binaryReader = EventPipeClient.StreamTracingToFile(pid, configuration, out var sessionId);
                 Console.Out.WriteLine($"SessionId=0x{sessionId:X16}");
 
-                using (var fs = new FileStream("foo.netperf", FileMode.Create, FileAccess.Write))
+                if (sessionId != 0)
                 {
-                    while (true)
+                    var filePath = $"dotnetcore-eventpipe-{pid}-0x{sessionId:X16}.netperf";
+                    filePath = Path.Combine(@"S:\github.com\jorive\diagnostics\src\Tools\dotnet-trace", filePath);
+                    using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
                     {
-                        var buffer = new byte[1024];
-                        int read = binaryReader.Read(buffer, 0, buffer.Length);
-                        if (read <= 0)
-                            break;
-                        fs.Write(buffer, 0, read);
+                        while (true)
+                        {
+                            var buffer = new byte[1024];
+                            int nBytesRead = binaryReader.Read(buffer, 0, buffer.Length);
+                            if (nBytesRead <= 0)
+                                break;
+                            fs.Write(buffer, 0, nBytesRead);
+                        }
                     }
                 }
-
-                //using (var trace = new TraceLog(TraceLog.CreateFromEventPipeDataFile("foo.netperf")).Events.GetSource())
-                //{
-                //    trace.Dynamic.All += delegate (TraceEvent data) {
-                //        Console.WriteLine(data);
-                //    };
-                //    trace.Process();
-                //}
 
                 await Task.FromResult(0);
                 return sessionId != 0 ? 0 : 1;
