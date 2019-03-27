@@ -73,7 +73,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             var parser = new CommandLineBuilder()
                 .AddCommand(MonitorCommand())
                 .AddCommand(ListCommand())
-                .CancelOnProcessTermination()
+                .UseDefaults()
                 .Build();
             return parser.InvokeAsync(args);
         }
