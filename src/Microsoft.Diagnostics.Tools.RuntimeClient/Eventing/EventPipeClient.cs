@@ -41,7 +41,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
             else
             {
                 //throw new PlatformNotSupportedException("TODO: Get the ApplicationGroupId to form the string: 'dotnetcore-diagnostic-{processId}-{ApplicationGroupId}-socket'");
-                using (var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified))
+                using (var socket = new Socket(AddressFamily.Unix, SocketType.Dgram, ProtocolType.Unspecified))
                 {
                     var remoteEP = new UnixDomainSocketEndPoint(Path.Combine(Path.GetTempPath(), $"dotnetcore-diagnostic-{processId}-{6}-socket"));
                     socket.Bind(remoteEP);
