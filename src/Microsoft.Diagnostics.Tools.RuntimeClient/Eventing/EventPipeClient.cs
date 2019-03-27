@@ -14,7 +14,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
 
-namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
+namespace Microsoft.Diagnostics.Tools.RuntimeClient
 {
     public static class EventPipeClient
     {
