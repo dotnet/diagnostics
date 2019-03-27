@@ -114,3 +114,5 @@ $RECYCLE.BIN/
 # SOS stress log
 StressLog.txt
 
+# EventPipe files
+*.netperf
