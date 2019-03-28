@@ -30,7 +30,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (sessionId != 0)
                 {
                     var filePath = $"dotnetcore-eventpipe-{pid}-0x{sessionId:X16}.netperf";
-                    filePath = Path.Combine(@"S:\github.com\jorive\diagnostics\src\Tools\dotnet-trace", filePath);
                     using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
                     {
                         while (true)
