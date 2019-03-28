@@ -1,4 +1,8 @@
-﻿using Microsoft.Diagnostics.Tools.RuntimeClient.Eventing;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -26,7 +30,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (sessionId != 0)
                 {
                     var filePath = $"dotnetcore-eventpipe-{pid}-0x{sessionId:X16}.netperf";
-                    filePath = Path.Combine(@"S:\github.com\jorive\diagnostics\src\Tools\dotnet-trace", filePath);
                     using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
                     {
                         while (true)
