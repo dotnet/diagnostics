@@ -80,11 +80,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             outputPath = Path.Combine(Directory.GetCurrentDirectory(), $"dotnet-counters-{_processId}.netperf"); // TODO: This can be removed once events can be streamed in real time.
 
-            CounterProvider defaultProvider = null;
             String providerString;
 
             if (string.IsNullOrEmpty(_counterList))
             {
+                CounterProvider defaultProvider = null;
                 _console.Out.WriteLine($"counter_list is unspecified. Monitoring all counters by default.");
 
                 // Enable the default profile if nothing is specified
