@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.CommandLine.Builder;
@@ -81,6 +82,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             outputPath = Path.Combine(Directory.GetCurrentDirectory(), $"dotnet-counters-{_processId}.netperf"); // TODO: This can be removed once events can be streamed in real time.
 
             CounterProvider defaultProvider = null;
+            String providerString;
+
             if (string.IsNullOrEmpty(_counterList))
             {
                 _console.Out.WriteLine($"counter_list is unspecified. Monitoring all counters by default.");
@@ -91,10 +94,28 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     _console.Error.WriteLine("No providers or profiles were specified and there is no default profile available.");
                     return 1;
                 }
+                providerString = defaultProvider.ToProviderString(_interval);
             }
-            // TODO: Parse _counterList and add appropriate "known" counters into a comma-separated list of providerString
-            
-            var providerString = defaultProvider.ToProviderString(_interval);
+            else
+            {
+                string[] counters = _counterList.Split(" ");
+                CounterProvider provider = null;
+                StringBuilder sb = new StringBuilder("");
+                for (var i = 0; i < counters.Length; i++)
+                {
+                    if (!KnownData.TryGetProvider(counters[i], out provider))
+                    {
+                        _console.Error.WriteLine($"No known provider called {counters[i]}.");
+                        return 1;
+                    }
+                    sb.Append(provider.ToProviderString(_interval));
+                    if (i != counters.Length - 1)
+                    {
+                        sb.Append(",");
+                    }
+                }
+                providerString = sb.ToString();
+            }
 
             var configuration = new SessionConfiguration(
                 1000,
