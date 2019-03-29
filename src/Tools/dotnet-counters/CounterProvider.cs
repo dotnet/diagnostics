@@ -24,6 +24,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
             Level = level;
             Counters = counters.ToList();
         }
+
+        public string ToProviderString(int interval)
+        {
+            return $"{Name}:{Keywords}:{Level}:EventCounterIntervalSec={interval}";
+        }
     }
 
     public class CounterProfile

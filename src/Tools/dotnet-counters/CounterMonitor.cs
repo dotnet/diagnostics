@@ -3,20 +3,23 @@
 
 using System;
 using System.CommandLine;
-using System.Diagnostics;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 
+using Microsoft.Diagnostics.Tools.RuntimeClient;
+
 namespace Microsoft.Diagnostics.Tools.Counters
 {
     public class CounterMonitor
     {
-        private string configPath;
-        private EventPipeCollector collector;
-        private CollectionConfiguration config;
+        private string outputPath;
+        private ulong sessionId;
 
         private int _processId;
         private int _interval;
@@ -43,11 +46,24 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             catch (OperationCanceledException)
             {
-                await collector.StopCollectingAsync();
-                console.Out.WriteLine($"Tracing stopped. Trace files written to {config.OutputPath}");
+                try
+                {
+                    EventPipeClient.DisableTracingToFile(_processId, sessionId);    
+                }
+                catch (Exception) {} // Swallow all exceptions for now.
+                
+                console.Out.WriteLine($"Tracing stopped. Trace files written to {outputPath}");
                 console.Out.WriteLine($"Complete");
                 return 1;
             }
+        }
+
+        private static IEnumerable<Provider> ToProviders(string providers)
+        {
+            if (string.IsNullOrWhiteSpace(providers))
+                throw new ArgumentNullException(nameof(providers));
+            return providers.Split(',')
+                .Select(Provider.ToProvider);
         }
 
         private async Task<int> StartMonitor()
@@ -62,47 +78,53 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 return 1;
             }
 
-            configPath = ConfigPathDetector.TryDetectConfigPath(_processId);
+            outputPath = Path.Combine(Directory.GetCurrentDirectory(), $"dotnet-counters-{_processId}.netperf"); // TODO: This can be removed once events can be streamed in real time.
 
-            if(string.IsNullOrEmpty(configPath))
-            {
-                _console.Error.WriteLine("Couldn't determine the path for the eventpipeconfig file from the process ID.");
-                return 1;
-            }
-
-            _console.Out.WriteLine($"Detected config file path: {configPath}");
-
-            config = new CollectionConfiguration()
-            {
-                ProcessId = _processId,
-                CircularMB = 1000,  // TODO: Make this configurable?
-                OutputPath = Directory.GetCurrentDirectory(),
-                Interval = _interval
-            };
+            String providerString;
 
             if (string.IsNullOrEmpty(_counterList))
             {
+                CounterProvider defaultProvider = null;
                 _console.Out.WriteLine($"counter_list is unspecified. Monitoring all counters by default.");
 
                 // Enable the default profile if nothing is specified
-                if (!KnownData.TryGetProvider("System.Runtime", out var defaultProvider))
+                if (!KnownData.TryGetProvider("System.Runtime", out defaultProvider))
                 {
                     _console.Error.WriteLine("No providers or profiles were specified and there is no default profile available.");
                     return 1;
                 }
-                config.AddProvider(defaultProvider);
+                providerString = defaultProvider.ToProviderString(_interval);
             }
-
-            if (File.Exists(configPath))
+            else
             {
-                _console.Error.WriteLine("Config file already exists, tracing is already underway by a different consumer.");
-                return 1;
+                string[] counters = _counterList.Split(" ");
+                CounterProvider provider = null;
+                StringBuilder sb = new StringBuilder("");
+                for (var i = 0; i < counters.Length; i++)
+                {
+                    if (!KnownData.TryGetProvider(counters[i], out provider))
+                    {
+                        _console.Error.WriteLine($"No known provider called {counters[i]}.");
+                        return 1;
+                    }
+                    sb.Append(provider.ToProviderString(_interval));
+                    if (i != counters.Length - 1)
+                    {
+                        sb.Append(",");
+                    }
+                }
+                providerString = sb.ToString();
             }
 
-            collector = new EventPipeCollector(config, configPath);
+            var configuration = new SessionConfiguration(
+                1000,
+                0,
+                outputPath,
+                ToProviders(providerString));
+
+            sessionId = EventPipeClient.EnableTracingToFile(_processId, configuration);
 
             // Write the config file contents
-            await collector.StartCollectingAsync();
             _console.Out.WriteLine("Tracing has started. Press Ctrl-C to stop.");
             await Task.Delay(int.MaxValue, _ct);
             return 0;
