@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 
-using Microsoft.Diagnostics.Tools.RuntimeClient.Eventing;
+using Microsoft.Diagnostics.Tools.RuntimeClient;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
