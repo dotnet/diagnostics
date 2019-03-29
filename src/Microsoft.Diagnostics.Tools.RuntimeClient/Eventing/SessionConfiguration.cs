@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Microsoft.Diagnostics.Tools.RuntimeClient.Eventing
+namespace Microsoft.Diagnostics.Tools.RuntimeClient
 {
     public struct SessionConfiguration
     {
