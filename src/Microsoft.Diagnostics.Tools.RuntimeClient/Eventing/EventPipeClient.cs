@@ -50,7 +50,6 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
                 using (var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified))
                 {
-                    socket.Bind(remoteEP);
                     socket.Connect(remoteEP);
                     socket.Send(buffer);
 
