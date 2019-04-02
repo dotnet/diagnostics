@@ -46,12 +46,10 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                     .Select(namedPipe => (new FileInfo(namedPipe)).Name)
                     .Single(input => Regex.IsMatch(input, $"^dotnetcore-diagnostic-{processId}-(\\d+)-socket$"));
                 var path = Path.Combine(Path.GetTempPath(), ipcPort);
-                Console.WriteLine($"Trying to connect to : {path}");
                 var remoteEP = new UnixDomainSocketEndPoint(path);
 
                 using (var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified))
                 {
-                    //socket.Bind(remoteEP);
                     socket.Connect(remoteEP);
                     socket.Send(buffer);
 
