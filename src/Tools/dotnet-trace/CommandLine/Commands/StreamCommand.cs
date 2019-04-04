@@ -3,6 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Tools.RuntimeClient;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Etlx;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -24,18 +26,27 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     multiFileSec: 0,
                     outputPath: output,
                     ToProviders(providers));
-                var binaryReader = EventPipeClient.StreamTracingToFile(pid, configuration, out var sessionId);
-                Console.Out.WriteLine($"SessionId=0x{sessionId:X16}");
+                string filePath = null;
+                ulong sessionId = 0;
 
-                if (sessionId != 0)
+                using (Stream stream = EventPipeClient.StreamTracingToFile(pid, configuration, out sessionId))
                 {
-                    var filePath = $"dotnetcore-eventpipe-{pid}-0x{sessionId:X16}.netperf";
+                    if (sessionId == 0)
+                    {
+                        Console.Error.WriteLine("Unable to create streaming session.");
+                        return -1;
+                    }
+
+                    filePath = $"dotnetcore-eventpipe-{pid}-0x{sessionId:X16}.netperf";
                     using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
                     {
+                        Console.Out.WriteLine($"OutputPath={fs.Name}");
+                        Console.Out.WriteLine($"SessionId=0x{sessionId:X16}");
+
                         while (true)
                         {
                             var buffer = new byte[1024];
-                            int nBytesRead = binaryReader.Read(buffer, 0, buffer.Length);
+                            int nBytesRead = stream.Read(buffer, 0, buffer.Length);
                             if (nBytesRead <= 0)
                                 break;
                             fs.Write(buffer, 0, nBytesRead);
@@ -43,12 +54,33 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                 }
 
+                if (sessionId != 0 && filePath != null)
+                {
+                    var eventPipeResults = new List<TraceEvent>();
+                    using (var trace = new TraceLog(TraceLog.CreateFromEventPipeDataFile(filePath)).Events.GetSource())
+                    {
+                        trace.Dynamic.All += (TraceEvent data) => {
+                            eventPipeResults.Add(data);
+                        };
+
+                        trace.Process();
+                    }
+
+                    eventPipeResults.ForEach(e => {
+                        if (!string.IsNullOrWhiteSpace(e.ProviderName) && !string.IsNullOrWhiteSpace(e.EventName))
+                        {
+                            Console.Out.WriteLine($"Event Provider: {e.ProviderName}");
+                            Console.Out.WriteLine($"    Event Name: {e.EventName}");
+                        }
+                    });
+                }
+
                 await Task.FromResult(0);
                 return sessionId != 0 ? 0 : 1;
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ERROR]: {ex.ToString()}");
+                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                 return 1;
             }
         }

@@ -17,10 +17,15 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 throw new ArgumentNullException(nameof(providers));
             if (providers.Count() <= 0)
                 throw new ArgumentException($"Specified providers collection is empty.");
+            if (Directory.Exists(outputPath))
+                throw new ArgumentException($"Specified output file name: {outputPath}, refers to a directory.");
 
             CircularBufferSizeInMB = circularBufferSizeMB;
             MultiFileTraceLengthInSeconds = multiFileSec;
-            _outputPath = new FileInfo(fileName: outputPath ?? $"eventpipe-{DateTime.Now:yyyyMMdd_HHmmss}.netperf");
+
+            outputPath = outputPath ?? $"eventpipe-{DateTime.Now:yyyyMMdd_HHmmss}.netperf";
+            outputPath = !outputPath.EndsWith(".netperf") ? $"{outputPath}.netperf" : outputPath;
+            _outputPath = new FileInfo(fileName: outputPath);
             _providers = new List<Provider>(providers);
         }
 

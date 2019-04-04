@@ -23,7 +23,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ERROR]: {ex.ToString()}");
+                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                 return 1;
             }
         }
