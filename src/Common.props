@@ -1,0 +1,31 @@
+<Project>
+
+  <PropertyGroup Label="Repository information">
+    <RepositoryUrl>https://github.com/dotnet/diagnostics.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Common Build properties">
+    <UseSharedCompilation>False</UseSharedCompilation>
+    <LangVersion>Latest</LangVersion>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Label="NuGet package information">
+    <PackageIconUrl>http://go.microsoft.com/fwlink/?LinkID=288859</PackageIconUrl>
+    <PackageProjectUrl>https://github.com/dotnet/diagnostics.git</PackageProjectUrl>
+    <PackageLicenseUrl>https://raw.githubusercontent.com/dotnet/diagnostics/master/LICENSE.TXT</PackageLicenseUrl>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!--
+      Suppress warnings for using preview SDK:
+      You are working with a preview version of the .NET Core SDK.
+      You can define the SDK version via a global.json file in the current project.
+      More at https://go.microsoft.com/fwlink/?linkid=869452
+    -->
+    <SuppressNETCoreSdkPreviewMessage>True</SuppressNETCoreSdkPreviewMessage>
+  </PropertyGroup>
+
+</Project>

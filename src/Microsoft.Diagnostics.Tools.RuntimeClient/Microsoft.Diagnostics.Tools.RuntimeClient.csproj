@@ -1,32 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="$(MSBuildThisFileDirectory)\..\Common.props" />
+
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <RootNamespace>Microsoft.Diagnostics.Tools.RuntimeClient</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <IsPackable>False</IsPackable>
   </PropertyGroup>
 
   <PropertyGroup>
-    <UseSharedCompilation>False</UseSharedCompilation>
-    <LangVersion>Latest</LangVersion>
-    <WarningLevel>4</WarningLevel>
-    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.38" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.40" />
   </ItemGroup>
-
-  <PropertyGroup>
-    <!--
-      Suppress warnings for using preview SDK:
-      You are working with a preview version of the .NET Core SDK.
-      You can define the SDK version via a global.json file in the current project.
-      More at https://go.microsoft.com/fwlink/?linkid=869452
-    -->
-    <SuppressNETCoreSdkPreviewMessage>True</SuppressNETCoreSdkPreviewMessage>
-  </PropertyGroup>
 
 </Project>
