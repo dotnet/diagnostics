@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Trace
@@ -23,9 +22,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 var configuration = new SessionConfiguration(
                     circularBufferSizeMB: buffersize,
-                    multiFileSec: 0,
                     outputPath: output,
-                    ToProviders(providers));
+                    Provider.ToProviders(providers));
                 string filePath = null;
                 ulong sessionId = 0;
 
@@ -49,6 +47,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             int nBytesRead = stream.Read(buffer, 0, buffer.Length);
                             if (nBytesRead <= 0)
                                 break;
+                            Console.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)}");
                             fs.Write(buffer, 0, nBytesRead);
                         }
                     }
@@ -107,13 +106,5 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 aliases: new[] { "--providers" },
                 description: @"A list EventPipe provider to be enabled in the form 'Provider[,Provider]', where Provider is in the form: '(GUID|KnownProviderName)[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'",
                 argument: new Argument<string> { Name = "Providers" }); // TODO: Can we specify an actual type?
-
-        private static IEnumerable<Provider> ToProviders(string providers)
-        {
-            if (string.IsNullOrWhiteSpace(providers))
-                throw new ArgumentNullException(nameof(providers));
-            return providers.Split(',')
-                .Select(Provider.ToProvider);
-        }
     }
 }

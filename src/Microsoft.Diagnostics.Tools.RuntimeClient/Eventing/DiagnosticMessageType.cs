@@ -4,12 +4,10 @@
 
 namespace Microsoft.Diagnostics.Tools.RuntimeClient
 {
-    enum DiagnosticMessageType : uint
+    public enum DiagnosticMessageType : uint
     {
         StartSession = 1024,
         StopSession,
         Stream,
-        Attach,
-        Detach,
     }
 }

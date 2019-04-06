@@ -136,6 +136,9 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
         public static ulong DisableTracingToFile(int processId, ulong sessionId)
         {
+            if (sessionId == 0)
+                return sessionId; // TODO: Throw here instead?
+
             var header = new MessageHeader {
                 RequestType = DiagnosticMessageType.StopSession,
                 Pid = (uint)Process.GetCurrentProcess().Id,
@@ -166,7 +169,6 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 bw.Write(header.Pid);
 
                 bw.Write(configuration.CircularBufferSizeInMB);
-                bw.Write(configuration.MultiFileTraceLengthInSeconds);
 
                 bw.WriteString(configuration.OutputPath);
 
