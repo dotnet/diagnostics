@@ -1,18 +1,13 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System;
 using System.CommandLine;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.CommandLine.Builder;
-using System.CommandLine.Invocation;
-
-using Microsoft.Diagnostics.Tools.RuntimeClient;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -56,14 +51,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 console.Out.WriteLine($"Complete");
                 return 1;
             }
-        }
-
-        private static IEnumerable<Provider> ToProviders(string providers)
-        {
-            if (string.IsNullOrWhiteSpace(providers))
-                throw new ArgumentNullException(nameof(providers));
-            return providers.Split(',')
-                .Select(Provider.ToProvider);
         }
 
         private async Task<int> StartMonitor()
@@ -117,10 +104,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
 
             var configuration = new SessionConfiguration(
-                1000,
-                0,
-                outputPath,
-                ToProviders(providerString));
+                circularBufferSizeMB: 1000,
+                outputPath: outputPath,
+                providers: Provider.ToProviders(providerString));
 
             sessionId = EventPipeClient.EnableTracingToFile(_processId, configuration);
 
