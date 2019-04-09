@@ -5,7 +5,8 @@
 using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System;
 using System.CommandLine;
-using System.CommandLine.Invocation;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Trace
@@ -16,16 +17,33 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             try
             {
-                foreach (var pid in EventPipeClient.ListAvailablePorts())
-                    Console.Out.WriteLine($"{System.Diagnostics.Process.GetProcessById(pid).ProcessName}({pid})");
+                var processes = EventPipeClient.ListAvailablePorts()
+                    .Select(GetProcessById)
+                    .Where(process => process != null)
+                    .OrderBy(process => process.ProcessName);
+
+                foreach (var process in processes)
+                    Console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} - {process.MainModule.FileName}");
 
                 await Task.FromResult(0);
                 return 0;
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ERROR]: {ex.ToString()}");
+                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                 return 1;
+            }
+        }
+
+        private static Process GetProcessById(int processId)
+        {
+            try
+            {
+                return Process.GetProcessById(processId);
+            }
+            catch (ArgumentException)
+            {
+                return null;
             }
         }
 
@@ -33,7 +51,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new Command(
                 name: "ports",
                 description: "List all active DotNet Core Diagnostic ports.",
-                handler: CommandHandler.Create<IConsole>(GetActivePorts),
+                handler: System.CommandLine.Invocation.CommandHandler.Create<IConsole>(GetActivePorts),
                 isHidden: true);
     }
 }

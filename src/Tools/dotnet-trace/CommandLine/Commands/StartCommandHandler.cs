@@ -4,25 +4,22 @@
 
 using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System;
-using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class StartCommandHandler
     {
-        public static async Task<int> Start(IConsole console, int pid, string output, uint buffersize, string providers, ulong multiFileSec)
+        public static async Task<int> Start(IConsole console, int pid, string output, uint buffersize, string providers)
         {
             try
             {
                 var configuration = new SessionConfiguration(
                     circularBufferSizeMB: buffersize,
-                    multiFileSec: multiFileSec,
                     outputPath: output,
-                    ToProviders(providers));
+                    Provider.ToProviders(providers));
                 var sessionId = EventPipeClient.EnableTracingToFile(pid, configuration);
                 Console.Out.WriteLine($"OutputPath={configuration.OutputPath}");
                 Console.Out.WriteLine($"SessionId=0x{sessionId:X16}");
@@ -32,7 +29,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ERROR]: {ex.ToString()}");
+                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                 return 1;
             }
         }
@@ -46,9 +43,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     OutputPathOption(),
                     CircularBufferOption(),
                     ProvidersOption(),
-                    MultiFileSecOption(),
                 },
-                handler: CommandHandler.Create<IConsole, int, string, uint, string, ulong>(Start));
+                handler: CommandHandler.Create<IConsole, int, string, uint, string>(Start));
 
         private static Option OutputPathOption() =>
             new Option(
@@ -60,26 +56,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new Option(
                 new[] { "--buffersize" },
                 @"Sets the size of the in-memory circular buffer in megabytes.",
-                new Argument<uint> { Name = "Size" }); // TODO: 1024 ? Default ?
+                new Argument<uint>(defaultValue: 1024) {
+                    Name = "Size",
+                }); // TODO: Seems excesive, but this has been the value.
 
         private static Option ProvidersOption() =>
             new Option(
                 aliases: new[] { "--providers" },
                 description: @"A list EventPipe provider to be enabled in the form 'Provider[,Provider]', where Provider is in the form: '(GUID|KnownProviderName)[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'",
                 argument: new Argument<string> { Name = "Providers" }); // TODO: Can we specify an actual type?
-
-        private static Option MultiFileSecOption() =>
-            new Option(
-                aliases: new[] { "--multifilesec" },
-                description: @"Enable a file switch timer every 'n' seconds (Default is 0)",
-                argument: new Argument<ulong> { Name = "MultiFileSec" });
-
-        private static IEnumerable<Provider> ToProviders(string providers)
-        {
-            if (string.IsNullOrWhiteSpace(providers))
-                throw new ArgumentNullException(nameof(providers));
-            return providers.Split(',')
-                .Select(Provider.ToProvider);
-        }
     }
 }

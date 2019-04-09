@@ -21,7 +21,6 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 @this.Write(Encoding.Unicode.GetBytes(value + '\0'));
         }
 
-
 #if DEBUG
         private static int GetByteCount(this string @this)
         {
@@ -37,11 +36,9 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             int size = 0;
 
             size += Marshal.SizeOf(@this.CircularBufferSizeInMB.GetType());
-            size += Marshal.SizeOf(@this.MultiFileTraceLengthInSeconds.GetType());
-
             size += @this.OutputPath.GetByteCount();
-
             size += Marshal.SizeOf(typeof(int));
+
             foreach (var provider in @this.Providers)
             {
                 size += Marshal.SizeOf(provider.Keywords.GetType());
