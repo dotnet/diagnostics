@@ -52,7 +52,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     break;
                                 fs.Write(buffer, 0, nBytesRead);
 
-                                Console.Out.Write($"\r  Recording trace {GetSize(fs.Length)}");
+                                ResetCurrentConsoleLine();
+                                Console.Out.Write($"  Recording trace {GetSize(fs.Length)}");
+
                                 Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
                             }
                         }
@@ -99,6 +101,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                 return 1;
             }
+        }
+
+        private static void ResetCurrentConsoleLine()
+        {
+            int currentCursorTop = Console.CursorTop;
+            Console.SetCursorPosition(0, Console.CursorTop);
+            Console.Out.Write(new string(' ', Console.WindowWidth));
+            Console.SetCursorPosition(0, currentCursorTop);
         }
 
         private static string GetSize(long length)
