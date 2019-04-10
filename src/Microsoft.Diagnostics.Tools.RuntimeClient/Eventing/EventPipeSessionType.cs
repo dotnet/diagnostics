@@ -7,7 +7,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
     /// <summary>
     /// Defines constants for EventPipe logging sessions.
     /// </summary>
-    public enum SessionLoggingType : uint
+    public enum EventPipeSessionType : uint
     {
         /// <summary>
         /// The events will be written to file at the end of the session.

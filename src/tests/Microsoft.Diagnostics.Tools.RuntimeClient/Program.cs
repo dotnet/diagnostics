@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
                 {
                     using (var bw = new BinaryWriter(stream))
                     {
-                        bw.Write((uint)DiagnosticMessageType.StartSession);
+                        bw.Write((uint)DiagnosticMessageType.StartEventPipeTracing);
                         bw.Flush();
                         stream.Position = 0;
 
@@ -93,6 +93,39 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
             }
         }
 
+        private static void SendInvalidPayloadToCollectCommand()
+        {
+            Console.WriteLine("Send Invalid Payload To Collect Command.");
+
+            ulong sessionId = 0;
+
+            try
+            {
+                uint circularBufferSizeMB = 64;
+                var filePath = Path.Combine(
+                    Directory.GetCurrentDirectory(),
+                    $"dotnetcore-eventpipe-{ThisProcess.Id}.netperf");
+                var providers = new[] {
+                    new Provider(name: "Microsoft-Windows-DotNETRuntime"),
+                };
+
+                var configuration = new SessionConfiguration(circularBufferSizeMB, filePath, providers);
+
+                // Start session #1.
+                sessionId = EventPipeClient.EnableTracingToFile(
+                    processId: ThisProcess.Id,
+                    configuration: configuration);
+
+                // Check that a session was created.
+                Assert.Equal("EventPipe Session Id", sessionId, (ulong)0);
+            }
+            finally
+            {
+                if (sessionId != 0)
+                    EventPipeClient.DisableTracingToFile(ThisProcess.Id, sessionId);
+            }
+        }
+
         private static void StartNewTracingToFileSession()
         {
             Console.WriteLine("Start collection.");
@@ -108,7 +141,6 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
                 var providers = new[] {
                     new Provider(name: "Microsoft-Windows-DotNETRuntime"),
                 };
-                // "Microsoft-Windows-DotNETRuntime:0x00000004C14FCCBD:4"
 
                 var configuration = new SessionConfiguration(circularBufferSizeMB, filePath, providers);
 
@@ -124,8 +156,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
                 // NOTE: This might change in the future, and file could be created only "OnDisable".
                 Assert.Equal("EventPipe output file", File.Exists(filePath), true);
 
-                {
-                    // Attempt to create another session, and verify that is not possible.
+                { // Attempt to create another session, and verify that is not possible.
                     var sessionId2 = EventPipeClient.EnableTracingToFile(
                         processId: ThisProcess.Id,
                         configuration: configuration);
@@ -162,7 +193,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
 
         private static void StartNewTracingToStreamSession()
         {
-            Console.WriteLine("Start streaming.");
+            Console.WriteLine("TODO: Start streaming.");
         }
     }
 }
