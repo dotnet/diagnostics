@@ -38,26 +38,32 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return -1;
                     }
 
-                    Console.Out.WriteLine("press CTRL+C to quit ...");
-                    using (var fs = new FileStream(output, FileMode.Create, FileAccess.Write))
-                    {
-                        Console.Out.WriteLine($"Recording tracing session to: {fs.Name}");
-                        Console.Out.WriteLine($"  SessionId: 0x{sessionId:X16}");
-
-                        while (true)
+                    var collectingTask = new Task(() => {
+                        using (var fs = new FileStream(output, FileMode.Create, FileAccess.Write))
                         {
-                            var buffer = new byte[16 * 1024];
-                            int nBytesRead = stream.Read(buffer, 0, buffer.Length);
-                            if (nBytesRead <= 0)
-                                break;
-                            fs.Write(buffer, 0, nBytesRead);
+                            Console.Out.WriteLine($"Recording tracing session to: {fs.Name}");
+                            Console.Out.WriteLine($"  Session Id: 0x{sessionId:X16}");
 
+                            while (true)
+                            {
+                                var buffer = new byte[16 * 1024];
+                                int nBytesRead = stream.Read(buffer, 0, buffer.Length);
+                                if (nBytesRead <= 0)
+                                    break;
+                                fs.Write(buffer, 0, nBytesRead);
 
-                            // TODO: Units should scale w.r.t. file size.
-                            Console.Out.Write($"\r  Recording trace {fs.Length} (bytes)");
-                            Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
+                                Console.Out.Write($"\r  Recording trace {GetSize(fs.Length)}");
+                                Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
+                            }
                         }
-                    }
+                    });
+                    collectingTask.Start();
+
+                    Console.Out.WriteLine("press <Enter> to exit...");
+                    while (Console.ReadKey().Key != ConsoleKey.Enter) { }
+
+                    EventPipeClient.DisableTracingToFile(pid, sessionId);
+                    collectingTask.Wait();
                 }
 
                 Console.Out.WriteLine();
@@ -93,6 +99,18 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                 return 1;
             }
+        }
+
+        private static string GetSize(long length)
+        {
+            if (length > 1e9)
+                return $"{length / 1e9:0.00##} (GB)";
+            else if (length > 1e6)
+                return $"{length / 1e6:0.00##} (MB)";
+            else if (length > 1e3)
+                return $"{length / 1e3:0.00##} (KB)";
+            else
+                return $"{length / 1.0:0.00##} (byte)";
         }
 
         public static Command CollectCommand() =>
