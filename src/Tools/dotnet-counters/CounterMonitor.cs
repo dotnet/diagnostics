@@ -106,7 +106,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             var configuration = new SessionConfiguration(
                 circularBufferSizeMB: 1000,
                 outputPath: outputPath,
-                providers: Provider.ToProviders(providerString));
+                providers: Trace.Extensions.ToProviders(providerString));
 
             sessionId = EventPipeClient.EnableTracingToFile(_processId, configuration);
 
