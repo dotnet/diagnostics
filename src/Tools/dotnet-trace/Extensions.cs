@@ -45,6 +45,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             // Event counters
             string filterData = tokens.Length > 3 ? tokens[3] : null;
+            filterData = string.IsNullOrWhiteSpace(filterData) ? null : filterData;
 
             return new Provider(providerName, keywords, eventLevel, filterData);
         }
