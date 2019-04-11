@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             try
             {
-                EventPipeClient.DisableTracingToFile(pid, sessionId);
+                EventPipeClient.StopTracing(pid, sessionId);
 
                 await Task.FromResult(0);
                 return sessionId != 0 ? 0 : 1;

@@ -19,8 +19,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 var configuration = new SessionConfiguration(
                     circularBufferSizeMB: buffersize,
                     outputPath: output,
-                    Provider.ToProviders(providers));
-                var sessionId = EventPipeClient.EnableTracingToFile(pid, configuration);
+                    Extensions.ToProviders(providers));
+                var sessionId = EventPipeClient.StartTracingToFile(pid, configuration);
                 Console.Out.WriteLine($"OutputPath={configuration.OutputPath}");
                 Console.Out.WriteLine($"SessionId=0x{sessionId:X16}");
 
@@ -37,33 +37,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Command StartCommand() =>
             new Command(
                 name: "start",
-                description: "Starts an EventPipe session.",
+                description: "Starts an EventPipe session where the runtime writes to a file.",
                 symbols: new Option[] {
                     CommonOptions.ProcessIdOption(),
-                    OutputPathOption(),
-                    CircularBufferOption(),
-                    ProvidersOption(),
+                    CommonOptions.OutputPathOption(),
+                    CommonOptions.CircularBufferOption(),
+                    CommonOptions.ProvidersOption(),
                 },
                 handler: CommandHandler.Create<IConsole, int, string, uint, string>(Start));
-
-        private static Option OutputPathOption() =>
-            new Option(
-                new[] { "-o", "--output" },
-                @"The file name to log events to.",
-                new Argument<string> { Name = "filename" });
-
-        private static Option CircularBufferOption() =>
-            new Option(
-                new[] { "--buffersize" },
-                @"Sets the size of the in-memory circular buffer in megabytes.",
-                new Argument<uint>(defaultValue: 1024) {
-                    Name = "Size",
-                }); // TODO: Seems excesive, but this has been the value.
-
-        private static Option ProvidersOption() =>
-            new Option(
-                aliases: new[] { "--providers" },
-                description: @"A list EventPipe provider to be enabled in the form 'Provider[,Provider]', where Provider is in the form: '(GUID|KnownProviderName)[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'",
-                argument: new Argument<string> { Name = "Providers" }); // TODO: Can we specify an actual type?
     }
 }

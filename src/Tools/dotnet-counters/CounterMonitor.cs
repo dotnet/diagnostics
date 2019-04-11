@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 try
                 {
-                    EventPipeClient.DisableTracingToFile(_processId, sessionId);    
+                    EventPipeClient.StopTracing(_processId, sessionId);    
                 }
                 catch (Exception) {} // Swallow all exceptions for now.
                 
@@ -106,9 +106,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
             var configuration = new SessionConfiguration(
                 circularBufferSizeMB: 1000,
                 outputPath: outputPath,
-                providers: Provider.ToProviders(providerString));
+                providers: Trace.Extensions.ToProviders(providerString));
 
-            sessionId = EventPipeClient.EnableTracingToFile(_processId, configuration);
+            sessionId = EventPipeClient.StartTracingToFile(_processId, configuration);
 
             // Write the config file contents
             _console.Out.WriteLine("Tracing has started. Press Ctrl-C to stop.");

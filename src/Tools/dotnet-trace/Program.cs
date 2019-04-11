@@ -16,10 +16,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
 #if DEBUG
                 .AddCommand(PortsCommandHandler.ActivePortsCommand())
                 .AddCommand(ProvidersCommandHandler.KnownProvidersCommand())
-#endif
-                .AddCommand(StreamCommandHandler.StartCommand())
                 .AddCommand(StartCommandHandler.StartCommand())
                 .AddCommand(StopCommandHandler.StopCommand())
+#endif
+                .AddCommand(CollectCommandHandler.CollectCommand())
                 .UseDefaults()
                 .Build();
 
