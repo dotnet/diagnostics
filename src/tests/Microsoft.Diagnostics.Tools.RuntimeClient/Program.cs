@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
             SendSmallerHeaderCommand();
             SendInvalidDiagnosticMessageTypeCommand();
             SendInvalidInputData();
-            TestStartEventPipeTracing();
+            //TestStartEventPipeTracing();
             TestCollectEventPipeTracing();
             return 100;
         }
@@ -106,14 +106,21 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
 
                 bw.WriteString(null);
 
-                bw.Write(configuration.Providers.Count());
-                foreach (var provider in configuration.Providers)
+                if (configuration.Providers == null)
                 {
-                    bw.Write(provider.Keywords);
-                    bw.Write((uint)provider.EventLevel);
+                    bw.Write(0);
+                }
+                else
+                {
+                    bw.Write(configuration.Providers.Count());
+                    foreach (var provider in configuration.Providers)
+                    {
+                        bw.Write(provider.Keywords);
+                        bw.Write((uint)provider.EventLevel);
 
-                    bw.WriteString(provider.Name);
-                    bw.WriteString(provider.FilterData);
+                        bw.WriteString(provider.Name);
+                        bw.WriteString(provider.FilterData);
+                    }
                 }
 
                 bw.Flush();
@@ -297,8 +304,6 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
 
         private static void TestCollectEventPipeTracing()
         {
-            Console.WriteLine("Start collecting.");
-
             ulong sessionId = 0;
 
             try
@@ -313,7 +318,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
 
                 var configuration = new SessionConfiguration(circularBufferSizeMB, filePath, providers);
 
-                // Start session.
+                Console.WriteLine("Start collecting.");
                 using (Stream stream = EventPipeClient.CollectTracing(
                     processId: ThisProcess.Id,
                     configuration: configuration,
@@ -337,11 +342,8 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
                     // Check that a session was created.
                     Assert.NotEqual("EventPipe Session Id", sessionId, (ulong)0);
 
-                    // Check that file is created
-                    // NOTE: This might change in the future, and file could be created only "OnDisable".
-                    Assert.Equal("EventPipe output file", File.Exists(filePath), true);
-
                     { // Attempt to create another session, and verify that is not possible.
+                        Console.WriteLine("Attempt to create another session.");
                         EventPipeClient.CollectTracing(
                              processId: ThisProcess.Id,
                              configuration: configuration,
@@ -356,6 +358,8 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
                     var ret = EventPipeClient.StopTracing(ThisProcess.Id, sessionId);
                     Assert.Equal("Expect return value to be the disabled session Id", sessionId, ret);
                     sessionId = 0; // Reset session Id, we do not need to disable it later.
+
+                    Assert.Equal("EventPipe output file", File.Exists(filePath), true);
 
                     // Check file is valid.
                     ValidateNetPerf(filePath);
