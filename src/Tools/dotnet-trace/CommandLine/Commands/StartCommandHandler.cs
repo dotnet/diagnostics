@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     circularBufferSizeMB: buffersize,
                     outputPath: output,
                     Extensions.ToProviders(providers));
-                var sessionId = EventPipeClient.EnableTracingToFile(pid, configuration);
+                var sessionId = EventPipeClient.StartTracingToFile(pid, configuration);
                 Console.Out.WriteLine($"OutputPath={configuration.OutputPath}");
                 Console.Out.WriteLine($"SessionId=0x{sessionId:X16}");
 

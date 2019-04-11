@@ -9,7 +9,7 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Tools.RuntimeClient
 {
-    internal static class Extensions
+    public static class Extensions
     {
         public static void WriteString(this BinaryWriter @this, string value)
         {

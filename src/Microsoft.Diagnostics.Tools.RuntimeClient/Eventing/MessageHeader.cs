@@ -10,7 +10,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
     /// Message header used to send commands to the .NET Core runtime through IPC.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    struct MessageHeader
+    public struct MessageHeader
     {
         /// <summary>
         /// Request type.

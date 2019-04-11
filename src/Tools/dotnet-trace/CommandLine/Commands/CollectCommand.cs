@@ -3,10 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Tools.RuntimeClient;
-using Microsoft.Diagnostics.Tracing;
-using Microsoft.Diagnostics.Tracing.Etlx;
 using System;
-using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Diagnostics;
@@ -64,34 +61,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     Console.Out.WriteLine("press <Enter> to exit...");
                     while (Console.ReadKey().Key != ConsoleKey.Enter) { }
 
-                    EventPipeClient.DisableTracingToFile(pid, sessionId);
+                    EventPipeClient.StopTracing(pid, sessionId);
                     collectingTask.Wait();
                 }
 
                 Console.Out.WriteLine();
                 Console.Out.WriteLine("Trace completed.");
-
-                // This is validating output.
-                if (sessionId != 0)
-                {
-                    var eventPipeResults = new List<TraceEvent>();
-                    using (var trace = new TraceLog(TraceLog.CreateFromEventPipeDataFile(output)).Events.GetSource())
-                    {
-                        trace.Dynamic.All += (TraceEvent data) => {
-                            eventPipeResults.Add(data);
-                        };
-
-                        trace.Process();
-                    }
-
-                    eventPipeResults.ForEach(e => {
-                        if (!string.IsNullOrWhiteSpace(e.ProviderName) && !string.IsNullOrWhiteSpace(e.EventName))
-                        {
-                            Debug.WriteLine($"Event Provider: {e.ProviderName}");
-                            Debug.WriteLine($"    Event Name: {e.EventName}");
-                        }
-                    });
-                }
 
                 await Task.FromResult(0);
                 return sessionId != 0 ? 0 : 1;

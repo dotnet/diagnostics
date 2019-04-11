@@ -120,7 +120,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             }
         }
 
-        public static ulong EnableTracingToFile(int processId, SessionConfiguration configuration)
+        public static ulong StartTracingToFile(int processId, SessionConfiguration configuration)
         {
             var header = new MessageHeader {
                 RequestType = DiagnosticMessageType.StartEventPipeTracing,
@@ -134,7 +134,13 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             return SendCommand(processId, serializedConfiguration);
         }
 
-        public static ulong DisableTracingToFile(int processId, ulong sessionId)
+        /// <summary>
+        /// Turn off EventPipe logging session for the specified process Id.
+        /// </summary>
+        /// <param name="processId">Process Id to turn off logging session.</param>
+        /// <param name="sessionId">EventPipe session Id to turn off.</param>
+        /// <returns>It returns sessionId if success, otherwise 0.</returns>
+        public static ulong StopTracing(int processId, ulong sessionId)
         {
             if (sessionId == 0)
                 return sessionId; // TODO: Throw here instead?
