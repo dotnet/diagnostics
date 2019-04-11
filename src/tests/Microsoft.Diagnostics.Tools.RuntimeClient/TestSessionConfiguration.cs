@@ -10,7 +10,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
     {
         public uint CircularBufferSizeInMB { get; set; }
 
-        public string OutputPath { get; set; }
+        public string TestName { get; set; }
 
         public IEnumerable<TestProvider> Providers { get; set; }
     }
