@@ -101,7 +101,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Command CollectCommand() =>
             new Command(
                 name: "collect",
-                description: "Starts an EventPipe tracing session.",
+                description: "Collects a diagnostic trace from a currently running process",
                 symbols: new Option[] {
                     CommonOptions.ProcessIdOption(),
                     CommonOptions.CircularBufferOption(),

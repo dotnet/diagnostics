@@ -36,7 +36,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     CommonOptions.ProcessIdOption(),
                     SessionIdOption(),
                 },
-                handler: CommandHandler.Create<IConsole, int, ulong>(Stop));
+                handler: CommandHandler.Create<IConsole, int, ulong>(Stop),
+                isHidden: true);
 
         private static Option SessionIdOption() =>
             new Option(

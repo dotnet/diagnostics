@@ -11,28 +11,29 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         public static Option ProcessIdOption() =>
             new Option(
-                new[] { "-pid" },
-                "The unique identifier of the associated process to connect to.",
-                new Argument<int> { Name = "ProcessId" });
+                aliases: new[] { "-p", "--process-id" },
+                description: "The process to collect the trace from",
+                argument: new Argument<int> { Name = "pid" });
 
         public static Option OutputPathOption() =>
             new Option(
-                new[] { "-o", "--output" },
-                @"The .netperf file name to log events to.",
-                new Argument<string>(defaultValue: $"eventpipe-{DateTime.Now:yyyyMMdd_HHmmss}.netperf") {
-                    Name = "FILE_NAME",
-                });
-
-        public static Option CircularBufferOption() =>
-            new Option(
-                new[] { "--buffersize" },
-                @"Sets the size of the in-memory circular buffer in megabytes.",
-                new Argument<uint>(defaultValue: 64) { Name = "SIZE" });
+                aliases: new[] { "-o", "--output" },
+                description: "The output path for the collected trace data. If not specified it defaults to 'trace.netperf'",
+                argument: new Argument<string>(defaultValue: $"trace.netperf") { Name = "trace-file-path" });
 
         public static Option ProvidersOption() =>
             new Option(
-                aliases: new[] { "--providers" },
+                alias: "--providers",
                 description: @"A list EventPipe provider to be enabled in the form 'Provider[,Provider]', where Provider is in the form: '(GUID|KnownProviderName)[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'",
-                argument: new Argument<string> { Name = "PROVIDERS" }); // TODO: Can we specify an actual type?
+                argument: new Argument<string> { Name = "list-of-comma-separated-providers" }); // TODO: Can we specify an actual type?
+
+        // This is a hidden option, currently not in the design-doc spec.
+        private static uint DefaultCircularBufferSizeInMB => 64;
+        public static Option CircularBufferOption() =>
+            new Option(
+                alias: "--buffersize",
+                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB",
+                argument: new Argument<uint>(defaultValue: DefaultCircularBufferSizeInMB) { Name = "size" },
+                isHidden: true);
     }
 }
