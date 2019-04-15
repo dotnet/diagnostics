@@ -1,11 +1,10 @@
 # Dotnet Diagnostic Tools CLI Design
 
-# User workflows
+## User workflows
 
 These are some quick examples of the work we'd expect a .Net developer to want to get a feel for the design. A more complete reference follows.
 
 ### Ad-hoc Health Monitoring / 1st Level Performance Triage
-
 
 **Seeing performance counter values that refresh periodically in-place**
 
@@ -13,20 +12,20 @@ These are some quick examples of the work we'd expect a .Net developer to want t
     You can invoke the tool using the following command: dotnet-counters
     Tool 'dotnet-counters' (version '1.0.0') was successfully installed.
     > dotnet counters monitor --process-id 1902 System.Runtime Microsoft.AspNet
-    
-    System.Runtime: 
-        Total Processor Time (ms)              173923.48 
-        Private Virtual Memory (MB)                 1094       
+
+    System.Runtime:
+        Total Processor Time (ms)              173923.48
+        Private Virtual Memory (MB)                 1094
         Working Set (MB)                            1982
         Virtual Memory (MB)                         3041
         GC Heap Memory (MB)                          784
         Exception Thrown Rate (exceptions/min)       117
-        Lock Contention Rate (contentions/min)      1792               
+        Lock Contention Rate (contentions/min)      1792
 
      Microsoft.AspNet:
         Request Rate (requests/sec)                 1915
-        Request Latency (ms)                          34  
-       
+        Request Latency (ms)                          34
+
     'p' - pause updates
     'r' - resume updates
     'q' - quit
@@ -35,7 +34,7 @@ These are some quick examples of the work we'd expect a .Net developer to want t
 
 ### Capture a trace for performance analysis
 
-For analyzing CPU usage, IO, lock contention, allocation rate, etc the investigator wants to capture a performance trace. This trace can then be moved to a developer machine where it can be analyzed with profiling tools such as PerfView/VisualStudio or visualized as a flame graph with speedscope (https://www.speedscope.app/). 
+For analyzing CPU usage, IO, lock contention, allocation rate, etc the investigator wants to capture a performance trace. This trace can then be moved to a developer machine where it can be analyzed with profiling tools such as PerfView/VisualStudio or visualized as a flame graph with speedscope (https://www.speedscope.app/).
 
 **Capture default trace**
 
@@ -43,7 +42,7 @@ For analyzing CPU usage, IO, lock contention, allocation rate, etc the investiga
     You can invoke the tool using the following command: dotnet-trace
     Tool 'dotnet-trace' (version '1.0.0') was successfully installed.
     > dotnet trace collect --process-id 1902
-    Recording trace 38MB  
+    Recording trace 38MB
 
     's' - stop tracing
     'g' - capture GC heap snapshot
@@ -57,7 +56,7 @@ For analyzing CPU usage, IO, lock contention, allocation rate, etc the investiga
 
 **Convert a trace to use with speedscope**
 
-    > dotnet trace convert ~/trace.netperf --to-speedscope 
+    > dotnet trace convert ~/trace.netperf --to-speedscope
     Writing:     ~/trace.speedscope.json
     Conversion complete
 
@@ -73,7 +72,7 @@ For analyzing managed memory leaks over time, the investigator first wants to ca
     Writing minidump with heap to file ./core_20190226_135837
     Written 98983936 bytes (24166 pages) to core file
     Complete
-    
+
 Some time interval passes
 
     $ dotnet dump collect --process-id 1902
@@ -93,20 +92,20 @@ Next the investigator needs to compare the heaps in these two dumps.
     System.Byte[]             65420 /    26     28432 /     7   + 36988 / +  19
     WebApp1.RequestEntry       1800 /   180      1200 /   120   +   600 / +  60
     ...
-    
+
     To show all differences use 'gcheapdiff -all ./core_20190226_135850'
     To show objects of a particular type use dumpheap -type <type_name>
 
     $ dumpheap -type System.String
       Address       MT     Size
-     03b51454 725ef698       84     
-     03b522d4 725ef698       52     
-     03b52328 725ef698       16     
-     03b52338 725ef698       28  
-     32cac458 7214b44c       48     
-     32cac504 725eeb40       56     
-     32cac620 725eeb40       94     
-     32cac6c4 725eeb40       74  
+     03b51454 725ef698       84
+     03b522d4 725ef698       52
+     03b52328 725ef698       16
+     03b52338 725ef698       28
+     32cac458 7214b44c       48
+     32cac504 725eeb40       56
+     32cac620 725eeb40       94
+     32cac6c4 725eeb40       74
      ...
 
     $ gcroot 03b51454
@@ -141,7 +140,7 @@ Note: The dumpheap/gcroot output is identical to SOS. I'm not convinced this out
 
 SYNOPSIS
 
-    dotnet-counters [--version] 
+    dotnet-counters [--version]
                     [-h, --help]
                     <command> [<args>]
 
@@ -160,7 +159,7 @@ COMMANDS
 
 LIST
 
-    dotnet-counters list [-h|--help] 
+    dotnet-counters list [-h|--help]
 
     Display a list of counter names and descriptions, grouped by provider.
 
@@ -184,7 +183,7 @@ LIST
           request-rate                   Number of requests handled in a recent one second interval (requests/sec)
           request-latency                Time to respond to a request, averaged over all requests in a recent
                                          one second interval (ms)
-    
+
 MONITOR
 
     dotnet-counters monitor [-h||--help]
@@ -200,36 +199,36 @@ MONITOR
     -p,--process-id
         The ID of the process that will be monitored
 
-    --refresh-interval 
+    --refresh-interval
         The number of seconds to delay between updating the displayed counters
 
     counter_list
         A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the
-        provider_name is used without a qualifying counter_name then all counters will be shown. To discover 
+        provider_name is used without a qualifying counter_name then all counters will be shown. To discover
         provider and counter names, use the list command.
 
 
     Examples:
       > dotnet counters monitor --processId 1902 System.Runtime Microsoft.AspNet
-      
-      System.Runtime: 
-          Total Processor Time (ms)              173923.48 
-          Private Virtual Memory (MB)                 1094       
+
+      System.Runtime:
+          Total Processor Time (ms)              173923.48
+          Private Virtual Memory (MB)                 1094
           Working Set (MB)                            1982
           Virtual Memory (MB)                         3041
           GC Heap Memory (MB)                          784
           Exception Thrown Rate (exceptions/min)       117
-          Lock Contention Rate (contentions/min)      1792               
+          Lock Contention Rate (contentions/min)      1792
 
        Microsoft.AspNet:
           Request Rate (requests/sec)                 1915
-          Request Latency (ms)                          34  
-       
+          Request Latency (ms)                          34
+
       'p' - pause updates
       'r' - resume updates
       'q' - quit
 
-### dotnet-trace ###
+### dotnet-trace
 
 SYNOPSIS
 
@@ -259,8 +258,8 @@ COLLECT
                          [--pack]
                          [--profile <profile_name>]
                          [--provider <provider_configuration>]
-                         
-    Collects a diagnostic trace from a currently running process                    
+
+    Collects a diagnostic trace from a currently running process
 
     -p, --process-id
         The process to collect the trace from
@@ -295,12 +294,12 @@ COLLECT
           Level        - 2 character hex number
           KeyValueArgs - a semicolon separated list of key=value
         This argument can be specified multiple times to add any number of provider configurations.
-        
+
 
 
     Examples:
       > dotnet trace collect --process-id 1902 --pack
-      Recording trace 38MB  
+      Recording trace 38MB
 
       's' - stop tracing
       'g' - capture GC heap snapshot
@@ -312,7 +311,7 @@ COLLECT
       Recording complete (process exited)
       Packing...
       Trace complete: ~/trace.netperf.zip
-    
+
 CONVERT
 
     dotnet-trace convert [-h|--help]
@@ -337,7 +336,7 @@ CONVERT
         The path to the trace file that should be converted. The trace file can be in either a netperf or netperf.zip file.
 
     Examples:
-      > dotnet-trace convert trace.netperf --to-speedscope 
+      > dotnet-trace convert trace.netperf --to-speedscope
       Writing:       ./trace.speedscope.json
       Conversion complete
 
@@ -348,7 +347,7 @@ PACK
                       [--verbose]
                       <trace_file_path>
 
-    Compresses a trace and any necessary symbols into a single zip file for easy off-machine analysis     
+    Compresses a trace and any necessary symbols into a single zip file for easy off-machine analysis
 
     -h, --help
         Show command line help
@@ -388,11 +387,11 @@ PACK
       ...
       Pack Complete
 
-### dotnet-dump ###
+### dotnet-dump
 
 SYNOPSIS
 
-    dotnet-dump [--version] 
+    dotnet-dump [--version]
                 [-h, --help]
                 <command> [<args>]
 
@@ -420,12 +419,12 @@ COLLECT
 
     -p, --process-id
         The process to collect a memory dump from.
- 
+
     -h, --help
         Show command line help
 
     -o, --output
-        The path where collected dumps should be written. Defaults to '.\dump_YYYYMMDD_HHMMSS.dmp' on Windows and 
+        The path where collected dumps should be written. Defaults to '.\dump_YYYYMMDD_HHMMSS.dmp' on Windows and
         './core_YYYYMMDD_HHMMSS' on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full
         path and file name of the dump.
 
@@ -444,7 +443,7 @@ COLLECT
         Writing minidump to file ./core_20190226_135837
         Written 98983936 bytes (24166 pages) to core file
         Complete
-        
+
         $ dotnet dump collect --process-id 1902 --type mini
         Writing minidump to file ./core_20190226_135850
         Written 98959360 bytes (24160 pages) to core file
@@ -467,10 +466,10 @@ ANALYZE
       >
       ... use the nested command-line. The commands are broken out in the following section
 
-## dotnet-dump analyze nested command syntax ##
+### dotnet-dump analyze nested command syntax
 
 By default these commands should come from SOS and include at least help, dumpheap, dumpobject, dumparray, and printexception. If we can get more easily we should. In addition new commands are listed below:
-    
+
 GCHEAPDIFF
 
     gcheapdiff <path_to_baseline_dump>
@@ -494,11 +493,11 @@ GCHEAPDIFF
       To show all differences use 'gcheapdiff -all ./core_20190226_135837'
       To show objects of a particular type use DumpHeap -type <type_name>
 
-## dotnet-sos ##
+### dotnet-sos
 
 SYNOPSIS
 
-    dotnet-sos [--version] 
+    dotnet-sos [--version]
                [-h, --help]
                <command> [<args>]
 
@@ -519,7 +518,7 @@ INSTALL
 
     dotnet-sos install [-h|--help]
                        [--verbose]
-                       
+
     Installs SOS and configures LLDB to load it on startup
 
     -h, --help
@@ -538,7 +537,7 @@ UNINSTALL
 
     dotnet-sos uninstall [-h|--help]
                          [--verbose]
-    
+
     Uninstalls SOS and reverts any configuration changes to LLDB
 
     -h, --help
@@ -557,10 +556,7 @@ UNINSTALL
 
 Work described in here captures potential future directions these tools could take given time and customer interest. Some of these might come relatively soon, others feel quite speculative or duplicative with existing technology. Regardless, understanding potential future options helps to ensure that we don't unknowingly paint ourselves into a corner or build an incoherent offering.
 
-
-
-
-### dotnet-counters ###
+### dotnet-counters
 
 - Add a profile option similar to dotnet-trace that allows curated sets of counters to be shown that could span multiple providers.
 
@@ -611,23 +607,23 @@ Dumps a snapshot of counters on demand. In order to make this command fast the E
 
     Examples:
     > dotnet counters view --processId 1902 Microsoft-Windows-DotNETRuntime Microsoft-AspNet
-      Microsoft-Windows-DotNETRuntime: 
-          Total Processor Time (ms)              173923.48 
-          Private Virtual Memory (MB)                 1094       
+      Microsoft-Windows-DotNETRuntime:
+          Total Processor Time (ms)              173923.48
+          Private Virtual Memory (MB)                 1094
           Working Set (MB)                            1982
           Virtual Memory (MB)                         3041
           GC Heap Memory (MB)                          784
           Exception Thrown Rate (exceptions/min)       117
-          Lock Contention Rate (contentions/min)      1792               
+          Lock Contention Rate (contentions/min)      1792
 
        Microsoft-AspNet:
           Request Rate (requests/sec)                 1915
-          Request Latency (ms)                          34  
+          Request Latency (ms)                          34
 
-### dotnet-trace ###
+### dotnet-trace
 
-- Multi-process collection 
-  
+- Multi-process collection
+
 Make the --process-id argument optional or let it take a list of ids to create multi-process traces
 
 - Collection triggers
@@ -682,7 +678,7 @@ We could allow dumps to be collected in response to various process or machine-s
 
 - Extensible commands
 
-We could allow users to create their own commands packaged into a managed assembly and loaded as plugins, similar to how many command-line debuggers allow plugins. We would need to define an extensibility interface, but the initial thought would be to allow access to console output + the CLRMD API for inspecting dump contents. 
+We could allow users to create their own commands packaged into a managed assembly and loaded as plugins, similar to how many command-line debuggers allow plugins. We would need to define an extensibility interface, but the initial thought would be to allow access to console output + the CLRMD API for inspecting dump contents.
 
 ### dotnet-sos
 
@@ -705,7 +701,7 @@ Show a snapshot of all a processes threads with a callstack for each.
 
 2. Do we want a single multi-purpose tool, or a larger number of narrower purpose tools?
 
-    Narrow purpose tools. 
+    Narrow purpose tools.
 
     Rationale: Originally I was leaning towards multi-purpose but there are various reasons this approach was awkward:
     (a) dotnet's CLI guidance is that the term after dotnet is a 'context', but a multi-purpose tool doesn't make a very useful context. In most cases the verb that would follow needed another sub-context noun to determine the operation. For example 'dotnet diag collect trace' vs. 'dotnet diag collect dump.' Many of the parameters that make sense for a trace don't make sense for a dump and vice-versa so you either end up with workarounds such as a super-set of all possible arguments, arguments that are context sensitive based on earlier arguments, or verbs that are really verb-noun combinations (ie 'collect-dump'). None of these seem to match dotnet conventions.
@@ -731,8 +727,8 @@ Show a snapshot of all a processes threads with a callstack for each.
 
 6. Do we want the tool be 'dotnet' prefixed or use a separate tool name?
 
-    Dotnet prefixed. Our tools have similarities in function and naming to other non-dotnet tools, so including something that evokes 'dotnet' is important to distinguish them. Java established a precendent of putting a 'j' in front of their tool names but if we followed suit ('d' or 'dn' perhaps) I think it would only create confusion with dotnet's convention of using 'dotnet'. We could also try to name the tools something complete different (SOS is one example) and get users to still associate the name with dotnet, but it feels harder and less effective than simply naming 'dotnet' explicitly. Other names appear to be less discoverable, less easily predicted, and if we don't pick catchy names, probably less easily remembered. 
-    
+    Dotnet prefixed. Our tools have similarities in function and naming to other non-dotnet tools, so including something that evokes 'dotnet' is important to distinguish them. Java established a precendent of putting a 'j' in front of their tool names but if we followed suit ('d' or 'dn' perhaps) I think it would only create confusion with dotnet's convention of using 'dotnet'. We could also try to name the tools something complete different (SOS is one example) and get users to still associate the name with dotnet, but it feels harder and less effective than simply naming 'dotnet' explicitly. Other names appear to be less discoverable, less easily predicted, and if we don't pick catchy names, probably less easily remembered.
+
 ## Area specific Questions
 
 ### dotnet-counters
@@ -741,7 +737,7 @@ Show a snapshot of all a processes threads with a callstack for each.
 
     Not right now, though there is some contention around it. My opinion at the moment is that this feature would probably be useful, but it isn't necessary to create an MVP. If customers try the tool and say it needs profiles I'm happy to add it. @shirhatti and @richlander suggest that we should add it immediately without waiting for that feedback. I'm open to continue the discussion, but I haven't been convinced yet. If nothing changes in the next few weeks on that front then I think we'll wind up shipping a Preview that doesn't have this feature and we'll see what feedback we get.
 
-- Do we want to adjust our provider names? 
+- Do we want to adjust our provider names?
 
     SYstem.Runtime is expected to be the final name for the runtime provider. The rest is TBD placeholders.
 
@@ -768,13 +764,13 @@ Show a snapshot of all a processes threads with a callstack for each.
 
 - Should we pack traces as zip or diagsession?
 
-    TBD. Diagsession is a Visual Studio container format for profiling data so using that makes engineering a little easier for VS and indicates more clearly that the data is compatible with VS. On the other hand zip is format that nearly every developer should be familiar with, it would serve largely the same role in this case, and it is more easily manipulated by other tools. 
+    TBD. Diagsession is a Visual Studio container format for profiling data so using that makes engineering a little easier for VS and indicates more clearly that the data is compatible with VS. On the other hand zip is format that nearly every developer should be familiar with, it would serve largely the same role in this case, and it is more easily manipulated by other tools.
 
 - What binaries/symbols do we collect during the pack operation?
 
-    By default we should collect symbols for all non-Microsoft managed binaries refered to in the trace, if they are locatable on the machine. These are symbols that may not be recoverable during trace analysis on another machine because there is no guarantee they are on a symbol server. All Microsoft provided binaries and symbols are available on the symbol server. As of .Net Core 3.0 we will also be fully off of NGEN (assuming our CoreLib plans go forward) and it is much easier to extract symbol<->RVA mapping information for R2R images without requiring a special runtime matched crossgen binary. This should eliminate any need to precompute and package NGEN PDBs. 
+    By default we should collect symbols for all non-Microsoft managed binaries refered to in the trace, if they are locatable on the machine. These are symbols that may not be recoverable during trace analysis on another machine because there is no guarantee they are on a symbol server. All Microsoft provided binaries and symbols are available on the symbol server. As of .Net Core 3.0 we will also be fully off of NGEN (assuming our CoreLib plans go forward) and it is much easier to extract symbol<->RVA mapping information for R2R images without requiring a special runtime matched crossgen binary. This should eliminate any need to precompute and package NGEN PDBs.
 
-    We could have non-default options to capture more or fewer symbols based on the users expectations of symbol availability on their analysis machine or their willingness to forego symbolic information to make a trace smaller. 
+    We could have non-default options to capture more or fewer symbols based on the users expectations of symbol availability on their analysis machine or their willingness to forego symbolic information to make a trace smaller.
 
     Todo - design these options.
 
@@ -798,118 +794,111 @@ Perf is a tool that collects performance traces on Linux in kernel or user-mode.
 
      perf
 
-	 usage: perf [--version] [--help] COMMAND [ARGS]
-	
-	 The most commonly used perf commands are:
-	  annotate        Read perf.data (created by perf record) and display annotated code
-	  archive         Create archive with object files with build-ids found in perf.data file
-	  bench           General framework for benchmark suites
-	  buildid-cache   Manage <tt>build-id</tt> cache.
-	  buildid-list    List the buildids in a perf.data file
-	  diff            Read two perf.data files and display the differential profile
-	  inject          Filter to augment the events stream with additional information
-	  kmem            Tool to trace/measure kernel memory(slab) properties
-	  kvm             Tool to trace/measure kvm guest os
-	  list            List all symbolic event types
-	  lock            Analyze lock events
-	  probe           Define new dynamic tracepoints
-	  record          Run a command and record its profile into perf.data
-	  report          Read perf.data (created by perf record) and display the profile
-	  sched           Tool to trace/measure scheduler properties (latencies)
-	  script          Read perf.data (created by perf record) and display trace output
-	  stat            Run a command and gather performance counter statistics
-	  test            Runs sanity tests.
-	  timechart       Tool to visualize total system behavior during a workload
-	  top             System profiling tool.
+     usage: perf [--version] [--help] COMMAND [ARGS]
+
+     The most commonly used perf commands are:
+      annotate        Read perf.data (created by perf record) and display annotated code
+      archive         Create archive with object files with build-ids found in perf.data file
+      bench           General framework for benchmark suites
+      buildid-cache   Manage <tt>build-id</tt> cache.
+      buildid-list    List the buildids in a perf.data file
+      diff            Read two perf.data files and display the differential profile
+      inject          Filter to augment the events stream with additional information
+      kmem            Tool to trace/measure kernel memory(slab) properties
+      kvm             Tool to trace/measure kvm guest os
+      list            List all symbolic event types
+      lock            Analyze lock events
+      probe           Define new dynamic tracepoints
+      record          Run a command and record its profile into perf.data
+      report          Read perf.data (created by perf record) and display the profile
+      sched           Tool to trace/measure scheduler properties (latencies)
+      script          Read perf.data (created by perf record) and display trace output
+      stat            Run a command and gather performance counter statistics
+      test            Runs sanity tests.
+      timechart       Tool to visualize total system behavior during a workload
+      top             System profiling tool.
 
      See 'perf help COMMAND' for more information on a specific command.
 
-
-
 Perf stat [options] <command\_line\> [more\_options] runs the command-line, collects performance statistics, and then displays the counters:
 
+    perf stat -B dd if=/dev/zero of=/dev/null count=1000000
 
-	perf stat -B dd if=/dev/zero of=/dev/null count=1000000
-	
-	1000000+0 records in
-	1000000+0 records out
-	512000000 bytes (512 MB) copied, 0.956217 s, 535 MB/s
-	
-	 Performance counter stats for 'dd if=/dev/zero of=/dev/null count=1000000':
-	
-	            5,099 cache-misses             #      0.005 M/sec (scaled from 66.58%)
-	          235,384 cache-references         #      0.246 M/sec (scaled from 66.56%)
-	        9,281,660 branch-misses            #      3.858 %     (scaled from 33.50%)
-	      240,609,766 branches                 #    251.559 M/sec (scaled from 33.66%)
-	    1,403,561,257 instructions             #      0.679 IPC   (scaled from 50.23%)
-	    2,066,201,729 cycles                   #   2160.227 M/sec (scaled from 66.67%)
-	              217 page-faults              #      0.000 M/sec
-	                3 CPU-migrations           #      0.000 M/sec
-	               83 context-switches         #      0.000 M/sec
-	       956.474238 task-clock-msecs         #      0.999 CPUs
-	
-	       0.957617512  seconds time elapsed
+    1000000+0 records in
+    1000000+0 records out
+    512000000 bytes (512 MB) copied, 0.956217 s, 535 MB/s
 
+     Performance counter stats for 'dd if=/dev/zero of=/dev/null count=1000000':
+
+                5,099 cache-misses             #      0.005 M/sec (scaled from 66.58%)
+              235,384 cache-references         #      0.246 M/sec (scaled from 66.56%)
+            9,281,660 branch-misses            #      3.858 %     (scaled from 33.50%)
+          240,609,766 branches                 #    251.559 M/sec (scaled from 33.66%)
+        1,403,561,257 instructions             #      0.679 IPC   (scaled from 50.23%)
+        2,066,201,729 cycles                   #   2160.227 M/sec (scaled from 66.67%)
+                  217 page-faults              #      0.000 M/sec
+                    3 CPU-migrations           #      0.000 M/sec
+                   83 context-switches         #      0.000 M/sec
+           956.474238 task-clock-msecs         #      0.999 CPUs
+
+           0.957617512  seconds time elapsed
 
 Perf record <comamnd\_line\> collects a trace for the given command\_line
 
-	perf record ./noploop 1
-	
-	[ perf record: Woken up 1 times to write data ]
-	[ perf record: Captured and wrote 0.002 MB perf.data (~89 samples) ]
+    perf record ./noploop 1
 
+    [ perf record: Woken up 1 times to write data ]
+    [ perf record: Captured and wrote 0.002 MB perf.data (~89 samples) ]
 
 Perf report [options] reads data from the trace file and renders it to the command-line
 
-	perf report
-	
-	# Events: 1K cycles
-	#
-	# Overhead          Command                   Shared Object  Symbol
-	# ........  ...............  ..............................  .....................................
-	#
-	    28.15%      firefox-bin  libxul.so                       [.] 0xd10b45
-	     4.45%          swapper  [kernel.kallsyms]               [k] mwait_idle_with_hints
-	     4.26%          swapper  [kernel.kallsyms]               [k] read_hpet
-	     2.13%      firefox-bin  firefox-bin                     [.] 0x1e3d
-	     1.40%  unity-panel-ser  libglib-2.0.so.0.2800.6         [.] 0x886f1
-	     [...]
+    perf report
 
+    # Events: 1K cycles
+    #
+    # Overhead          Command                   Shared Object  Symbol
+    # ........  ...............  ..............................  .....................................
+    #
+        28.15%      firefox-bin  libxul.so                       [.] 0xd10b45
+         4.45%          swapper  [kernel.kallsyms]               [k] mwait_idle_with_hints
+         4.26%          swapper  [kernel.kallsyms]               [k] read_hpet
+         2.13%      firefox-bin  firefox-bin                     [.] 0x1e3d
+         1.40%  unity-panel-ser  libglib-2.0.so.0.2800.6         [.] 0x886f1
+         [...]
 
 perf top monitors a machine and shows an updating console UI with the most expensive functions
 
-	perf top
-	-------------------------------------------------------------------------------------------------------------------------------------------------------
-	  PerfTop:     260 irqs/sec  kernel:61.5%  exact:  0.0% [1000Hz
-	cycles],  (all, 2 CPUs)
-	-------------------------------------------------------------------------------------------------------------------------------------------------------
-	
-	            samples  pcnt function                       DSO
-	            _______ _____ ______________________________ ___________________________________________________________
-	
-	              80.00 23.7% read_hpet                      [kernel.kallsyms]
-	              14.00  4.2% system_call                    [kernel.kallsyms]
-	              14.00  4.2% __ticket_spin_lock             [kernel.kallsyms]
-	              14.00  4.2% __ticket_spin_unlock           [kernel.kallsyms]
-	               8.00  2.4% hpet_legacy_next_event         [kernel.kallsyms]
-	               7.00  2.1% i8042_interrupt                [kernel.kallsyms]
-	               7.00  2.1% strcmp                         [kernel.kallsyms]
-	               6.00  1.8% _raw_spin_unlock_irqrestore    [kernel.kallsyms]
-	               6.00  1.8% pthread_mutex_lock             /lib/i386-linux-gnu/libpthread-2.13.so
-	               6.00  1.8% fget_light                     [kernel.kallsyms]
-	               6.00  1.8% __pthread_mutex_unlock_usercnt /lib/i386-linux-gnu/libpthread-2.13.so
-	               5.00  1.5% native_sched_clock             [kernel.kallsyms]
-	               5.00  1.5% drm_addbufs_sg                 /lib/modules/2.6.38-8-generic/kernel/drivers/gpu/drm/drm.ko
+    perf top
+    -------------------------------------------------------------------------------------------------------------------------------------------------------
+      PerfTop:     260 irqs/sec  kernel:61.5%  exact:  0.0% [1000Hz
+    cycles],  (all, 2 CPUs)
+    -------------------------------------------------------------------------------------------------------------------------------------------------------
 
+                samples  pcnt function                       DSO
+                _______ _____ ______________________________ ___________________________________________________________
+
+                  80.00 23.7% read_hpet                      [kernel.kallsyms]
+                  14.00  4.2% system_call                    [kernel.kallsyms]
+                  14.00  4.2% __ticket_spin_lock             [kernel.kallsyms]
+                  14.00  4.2% __ticket_spin_unlock           [kernel.kallsyms]
+                   8.00  2.4% hpet_legacy_next_event         [kernel.kallsyms]
+                   7.00  2.1% i8042_interrupt                [kernel.kallsyms]
+                   7.00  2.1% strcmp                         [kernel.kallsyms]
+                   6.00  1.8% _raw_spin_unlock_irqrestore    [kernel.kallsyms]
+                   6.00  1.8% pthread_mutex_lock             /lib/i386-linux-gnu/libpthread-2.13.so
+                   6.00  1.8% fget_light                     [kernel.kallsyms]
+                   6.00  1.8% __pthread_mutex_unlock_usercnt /lib/i386-linux-gnu/libpthread-2.13.so
+                   5.00  1.5% native_sched_clock             [kernel.kallsyms]
+                   5.00  1.5% drm_addbufs_sg                 /lib/modules/2.6.38-8-generic/kernel/drivers/gpu/drm/drm.ko
 
 
 ### Pprof
 
 Pprof is both a runtime library used by golang to collect trace data as well as a CLI tool to visualize that data after it has been collected. The CLI tool is the focus here. Snippets below from https://github.com/google/pprof/blob/master/doc/README.md
 
-Pprof follows the convention Pprof <format\> [options] source. 
+Pprof follows the convention Pprof <format\> [options] source.
 
-Unlike many of the other tools there is no need for a verb because it only does one action, reporting on trace data. Source can be an on-disk file or a URL that is streaming the trace data. Format is flexible enough to include text on the console, file based graphics formats, and optionally starting a web browser to visualize content. 
+Unlike many of the other tools there is no need for a verb because it only does one action, reporting on trace data. Source can be an on-disk file or a URL that is streaming the trace data. Format is flexible enough to include text on the console, file based graphics formats, and optionally starting a web browser to visualize content.
 
 Interactive terminal use:
 
@@ -931,43 +920,41 @@ Common options:
 - -show= regex: Only show entries that match regex.
 - -hide= regex: Do not show entries that match regex.
 
-
 ### Jcmd
 
 Java previously had numerous single-role tools such as jhat, jps, jstack, jinfo, etc that did a variety of diagnostic tasks (respectively they show heap analysis, process status, stacks, and runtime/machine info). Starting in Java8 jcmd, a new multi-role tool, offers a super-set of functionality from all those tools. Snippets below are from https://docs.oracle.com/javase/8/docs/technotes/guides/troubleshoot/tooldescr006.html
 
 Jcmd uses a Jcmd <process\_id/main\_class\> <verb> [options] convention. The set of verbs that are supported varies dynamically depending on the version of the java runtime running in the indicated process. This makes jcmd more of a proxy for a CLI in the runtime than a CLI tool in its own right.
 
-	> jcmd
-	5485 sun.tools.jcmd.JCmd
-	2125 MyProgram
-	 
-	> jcmd MyProgram help (or "jcmd 2125 help")
-	2125:
-	The following commands are available:
-	JFR.stop
-	JFR.start
-	JFR.dump
-	JFR.check
-	VM.native_memory
-	VM.check_commercial_features
-	VM.unlock_commercial_features
-	ManagementAgent.stop
-	ManagementAgent.start_local
-	ManagementAgent.start
-	Thread.print
-	GC.class_stats
-	GC.class_histogram
-	GC.heap_dump
-	GC.run_finalization
-	GC.run
-	VM.uptime
-	VM.flags
-	VM.system_properties
-	VM.command_line
-	VM.version
-	help
+    > jcmd
+    5485 sun.tools.jcmd.JCmd
+    2125 MyProgram
 
+    > jcmd MyProgram help (or "jcmd 2125 help")
+    2125:
+    The following commands are available:
+    JFR.stop
+    JFR.start
+    JFR.dump
+    JFR.check
+    VM.native_memory
+    VM.check_commercial_features
+    VM.unlock_commercial_features
+    ManagementAgent.stop
+    ManagementAgent.start_local
+    ManagementAgent.start
+    Thread.print
+    GC.class_stats
+    GC.class_histogram
+    GC.heap_dump
+    GC.run_finalization
+    GC.run
+    VM.uptime
+    VM.flags
+    VM.system_properties
+    VM.command_line
+    VM.version
+    help
 
 ### WPR
 
@@ -975,8 +962,7 @@ The Windows Performance Recorder is a CLI or GUI tool to capture etw traces on w
 
 WPR uses the WPR -<verb\> [options] convention.
 
-
-	wpr {-profiles [<path> [ …]] |
+    wpr {-profiles [<path> [ …]] |
          -start<arguments> |
          -stop<arguments> |
          -cancel |
@@ -987,37 +973,35 @@ WPR uses the WPR -<verb\> [options] convention.
          -profiledetails |
          -disablepagingexecutive}
 
-
 WPR does not support a default file name for saving, the filename must be explicitly provided.
 
 ### Perfview
 
-Perfview is CLI or GUI tool that allows collecting, analyzing and viewing ETW traces. 
+Perfview is CLI or GUI tool that allows collecting, analyzing and viewing ETW traces.
 
 PerfView uses the PerfView <verb/> [options] CLI convention:
 
-	PerfView [DataFile]
-		run CommandAndArgs ...
-		collect [DataFile]
-		start [DataFile]
-		stop
-		mark [Message]
-		abort
-		merge [DataFile]
-		unzip [DataFile]
-		listSessions
-		ListCpuCounters
-		EnableKernelStacks
-		DisableKernelStacks
-		HeapSnapshot Process [DataFile]
-		ForceGC Process
-		HeapSnapshotFromProcessDump ProcessDumpFile [DataFile]
-		GuiRun
-		GuiCollect
-		GuiHeapSnapshot
-		UserCommand CommandAndArgs ...
+    PerfView [DataFile]
+        run CommandAndArgs ...
+        collect [DataFile]
+        start [DataFile]
+        stop
+        mark [Message]
+        abort
+        merge [DataFile]
+        unzip [DataFile]
+        listSessions
+        ListCpuCounters
+        EnableKernelStacks
+        DisableKernelStacks
+        HeapSnapshot Process [DataFile]
+        ForceGC Process
+        HeapSnapshotFromProcessDump ProcessDumpFile [DataFile]
+        GuiRun
+        GuiCollect
+        GuiHeapSnapshot
+        UserCommand CommandAndArgs ...
         ...
-
 
 PerfView has some commands that manipulate an ongoing trace without keeping the PerfView process running (example: start/stop/mark/abort), other commands that capture traces synchronously (example: collect/run), and then further commands that manipulate or view trace data that is already on disk.
 
@@ -1029,73 +1013,72 @@ ProcDump is a tool for capturing one or more process dumps (core file on Linux).
 
 ProcDump uses CLI convention: ProcDump [options]
 
-	usage: procdump [-a] [[-c|-cl CPU usage] [-u] [-s seconds]] [-n exceeds] [-e [1 [-b]] [-f <filter,...>] [-g] [-h]
+    usage: procdump [-a] [[-c|-cl CPU usage] [-u] [-s seconds]] [-n exceeds] [-e [1 [-b]] [-f <filter,...>] [-g] [-h]
      [-l] [-m|-ml commit usage] [-ma | -mp] [-o] [-p|-pl counter threshold] [-r] [-t] [-d <callback DLL>] [-64] <[-w]
      <process name or service name or PID> [dump file] | -i <dump file> | -u | -x <dump file> <image file> [arguments]
      >] [-? [ -e]
-	Parameter
-	Description
-	-a
-	Avoid outage. Requires -r. If the trigger will cause the target to suspend for a prolonged time due to an exceeded concurrent dump limit, the trigger will be skipped.
-	-b
-	Treat debug breakpoints as exceptions (otherwise ignore them).
-	-c
-	CPU threshold at which to create a dump of the process.
-	-cl
-	CPU threshold below which to create a dump of the process.
-	-
+    Parameter
+    Description
+    -a
+    Avoid outage. Requires -r. If the trigger will cause the target to suspend for a prolonged time due to an exceeded concurrent dump limit, the trigger will be skipped.
+    -b
+    Treat debug breakpoints as exceptions (otherwise ignore them).
+    -c
+    CPU threshold at which to create a dump of the process.
+    -cl
+    CPU threshold below which to create a dump of the process.
+    -
 d
-	Invoke the minidump callback routine named MiniDumpCallbackRoutine of the specified DLL.
-	-e
-	Write a dump when the process encounters an unhandled exception. Include the 1 to create dump on first chance exceptions.
-	-f
-	Filter the first chance exceptions. Wildcards (*) are supported. To just display the names without dumping, use a blank ("") filter.
-	-g
-	Run as a native debugger in a managed process (no interop).
-	-h
-	Write dump if process has a hung window (does not respond to window messages for at least 5 seconds).
-	-i
-	Install ProcDump as the AeDebug postmortem debugger. Only -ma, -mp, -d and -r are supported as additional options.
-	-l
-	Display the debug logging of the process.
-	-m
-	Memory commit threshold in MB at which to create a dump.
-	-ma
-	Write a dump file with all process memory. The default dump format only includes thread and handle information.
-	-ml
-	Trigger when memory commit drops below specified MB value.
-	-mp
-	Write a dump file with thread and handle information, and all read/write process memory. To minimize dump size, memory areas larger than 512MB are searched for, and if found, the largest area is excluded. A memory area is the collection of same sized memory allocation areas. The removal of this (cache) memory reduces Exchange and SQL Server dumps by over 90%.
-	-n
-	Number of dumps to write before exiting.
-	-o
-	Overwrite an existing dump file.
-	-p
-	Trigger on the specified performance counter when the threshold is exceeded. Note: to specify a process counter when there are multiple instances of the process running, use the process ID with the following syntax: "\Process(<name>_<pid>)\counter"
-	-pl
-	Trigger when performance counter falls below the specified value.
-	-r
-	Dump using a clone. Concurrent limit is optional (default 1, max 5).
-	CAUTION: a high concurrency value may impact system performance.
-	- Windows 7   : Uses Reflection. OS doesn't support -e.
-	- Windows 8.0 : Uses Reflection. OS doesn't support -e.
-	- Windows 8.1+: Uses PSS. All trigger types are supported.
-	-s
-	Consecutive seconds before dump is written (default is 10).
-	-t
-	Write a dump when the process terminates.
-	-u
-	Treat CPU usage relative to a single core (used with -c).
-	As the only option, Uninstalls ProcDump as the postmortem debugger.
-	-w
-	Wait for the specified process to launch if it's not running.
-	-x
-	Launch the specified image with optional arguments. If it is a Store Application or Package, ProcDump will start on the next activation (only).
-	-64
-	By default ProcDump will capture a 32-bit dump of a 32-bit process when running on 64-bit Windows. This option overrides to create a 64-bit dump. Only use for WOW64 subsystem debugging.
-	-?
-	Use -? -e to see example command lines.
-
+    Invoke the minidump callback routine named MiniDumpCallbackRoutine of the specified DLL.
+    -e
+    Write a dump when the process encounters an unhandled exception. Include the 1 to create dump on first chance exceptions.
+    -f
+    Filter the first chance exceptions. Wildcards (*) are supported. To just display the names without dumping, use a blank ("") filter.
+    -g
+    Run as a native debugger in a managed process (no interop).
+    -h
+    Write dump if process has a hung window (does not respond to window messages for at least 5 seconds).
+    -i
+    Install ProcDump as the AeDebug postmortem debugger. Only -ma, -mp, -d and -r are supported as additional options.
+    -l
+    Display the debug logging of the process.
+    -m
+    Memory commit threshold in MB at which to create a dump.
+    -ma
+    Write a dump file with all process memory. The default dump format only includes thread and handle information.
+    -ml
+    Trigger when memory commit drops below specified MB value.
+    -mp
+    Write a dump file with thread and handle information, and all read/write process memory. To minimize dump size, memory areas larger than 512MB are searched for, and if found, the largest area is excluded. A memory area is the collection of same sized memory allocation areas. The removal of this (cache) memory reduces Exchange and SQL Server dumps by over 90%.
+    -n
+    Number of dumps to write before exiting.
+    -o
+    Overwrite an existing dump file.
+    -p
+    Trigger on the specified performance counter when the threshold is exceeded. Note: to specify a process counter when there are multiple instances of the process running, use the process ID with the following syntax: "\Process(<name>_<pid>)\counter"
+    -pl
+    Trigger when performance counter falls below the specified value.
+    -r
+    Dump using a clone. Concurrent limit is optional (default 1, max 5).
+    CAUTION: a high concurrency value may impact system performance.
+    - Windows 7   : Uses Reflection. OS doesn't support -e.
+    - Windows 8.0 : Uses Reflection. OS doesn't support -e.
+    - Windows 8.1+: Uses PSS. All trigger types are supported.
+    -s
+    Consecutive seconds before dump is written (default is 10).
+    -t
+    Write a dump when the process terminates.
+    -u
+    Treat CPU usage relative to a single core (used with -c).
+    As the only option, Uninstalls ProcDump as the postmortem debugger.
+    -w
+    Wait for the specified process to launch if it's not running.
+    -x
+    Launch the specified image with optional arguments. If it is a Store Application or Package, ProcDump will start on the next activation (only).
+    -64
+    By default ProcDump will capture a 32-bit dump of a 32-bit process when running on 64-bit Windows. This option overrides to create a 64-bit dump. Only use for WOW64 subsystem debugging.
+    -?
+    Use -? -e to see example command lines.
 
 When creating dumps, procdump uses a default output format of PROCESSNAME\_YYMMDD\_HHMMSS.dmp
 where:
@@ -1106,7 +1089,7 @@ where:
 
 ### Perfmon
 
-Perfmon is a Windows GUI tool that shows interactive performance counters and some reports of system performance. It has a minimal CLI that simply launches different GUI views. 
+Perfmon is a Windows GUI tool that shows interactive performance counters and some reports of system performance. It has a minimal CLI that simply launches different GUI views.
 
 perfmon </res|report|rel|sys>
 
