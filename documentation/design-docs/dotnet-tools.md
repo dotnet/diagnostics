@@ -276,7 +276,7 @@ COLLECT
 
     --profile
         A named pre-defined set of provider configurations that allows common tracing scenarios to be specified
-        succintly. The options are:
+        succinctly. The options are:
         runtime-basic   Useful for tracking CPU usage and general runtime information. This the default option
                         if no profile is specified.
         asp-net-basic   Useful starting point for ASP.Net performance investigations
