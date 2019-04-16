@@ -14,7 +14,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        public static async Task<int> Collect(IConsole console, int pid, string output, uint buffersize, string providers)
+        /// <summary>
+        /// Collects a diagnostic trace from a currently running process.
+        /// </summary>
+        /// <param name="console"></param>
+        /// <param name="processId">The process to collect the trace from.</param>
+        /// <param name="output">The output path for the collected trace data.</param>
+        /// <param name="buffersize">Sets the size of the in-memory circular buffer in megabytes.</param>
+        /// <param name="providers">A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: '(GUID|KnownProviderName)[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'</param>
+        /// <returns></returns>
+        public static async Task<int> Collect(IConsole console, int processId, string output, uint buffersize, string providers)
         {
             try
             {
@@ -27,7 +36,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     Extensions.ToProviders(providers));
 
                 ulong sessionId = 0;
-                using (Stream stream = EventPipeClient.CollectTracing(pid, configuration, out sessionId))
+                using (Stream stream = EventPipeClient.CollectTracing(processId, configuration, out sessionId))
                 {
                     if (sessionId == 0)
                     {
@@ -61,7 +70,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     Console.Out.WriteLine("press <Enter> to exit...");
                     while (Console.ReadKey().Key != ConsoleKey.Enter) { }
 
-                    EventPipeClient.StopTracing(pid, sessionId);
+                    EventPipeClient.StopTracing(processId, sessionId);
                     collectingTask.Wait();
                 }
 
@@ -101,7 +110,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Command CollectCommand() =>
             new Command(
                 name: "collect",
-                description: "Starts an EventPipe tracing session.",
+                description: "Collects a diagnostic trace from a currently running process",
                 symbols: new Option[] {
                     CommonOptions.ProcessIdOption(),
                     CommonOptions.CircularBufferOption(),

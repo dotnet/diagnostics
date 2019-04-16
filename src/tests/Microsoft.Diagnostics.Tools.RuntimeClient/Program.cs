@@ -20,7 +20,6 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
             SendSmallerHeaderCommand();
             SendInvalidDiagnosticMessageTypeCommand();
             SendInvalidInputData();
-            //TestStartEventPipeTracing();
             TestCollectEventPipeTracing();
             return 100;
         }
@@ -237,71 +236,6 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
             }
         }
 
-        private static void TestStartEventPipeTracing()
-        {
-            Console.WriteLine("Start collection.");
-
-            ulong sessionId = 0;
-
-            try
-            {
-                uint circularBufferSizeMB = 64;
-                var filePath = Path.Combine(
-                    Directory.GetCurrentDirectory(),
-                    $"dotnetcore-eventpipe-{ThisProcess.Id}.netperf");
-                var providers = new[] {
-                    new Provider(name: "Microsoft-Windows-DotNETRuntime"),
-                };
-
-                var configuration = new SessionConfiguration(circularBufferSizeMB, filePath, providers);
-
-                // Start session.
-                sessionId = EventPipeClient.StartTracingToFile(
-                    processId: ThisProcess.Id,
-                    configuration: configuration);
-
-                // Check that a session was created.
-                Assert.NotEqual("EventPipe Session Id", sessionId, (ulong)0);
-
-                // Check that file is created
-                // NOTE: This might change in the future, and file could be created only "OnDisable".
-                Assert.Equal("EventPipe output file", File.Exists(filePath), true);
-
-                { // Attempt to create another session, and verify that is not possible.
-                    var sessionId2 = EventPipeClient.StartTracingToFile(
-                        processId: ThisProcess.Id,
-                        configuration: configuration);
-
-                    // Check that a new session was not created.
-                    Assert.Equal("EventPipe Session Id", sessionId2, (ulong)0);
-                }
-
-                Workload.DoWork(10);
-
-                var ret = EventPipeClient.StopTracing(ThisProcess.Id, sessionId);
-                Assert.Equal("Expect return value to be the disabled session Id", sessionId, ret);
-                sessionId = 0; // Reset session Id, we do not need to disable it later.
-
-                // Check file is valid.
-                var nEventPipeResults = 0;
-                using (var trace = new TraceLog(TraceLog.CreateFromEventPipeDataFile(filePath)).Events.GetSource())
-                {
-                    trace.Dynamic.All += (TraceEvent data) => {
-                        ++nEventPipeResults;
-                    };
-                    trace.Process();
-                }
-
-                // Assert there were events in the file.
-                Assert.NotEqual("Found events in trace file", nEventPipeResults, 0);
-            }
-            finally
-            {
-                if (sessionId != 0)
-                    EventPipeClient.StopTracing(ThisProcess.Id, sessionId);
-            }
-        }
-
         private static void TestCollectEventPipeTracing()
         {
             ulong sessionId = 0;
@@ -324,6 +258,9 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
                     configuration: configuration,
                     sessionId: out sessionId))
                 {
+                    // Check that a session was created.
+                    Assert.NotEqual("EventPipe Session Id", sessionId, (ulong)0);
+
                     var collectingTask = new Task(() => {
                         using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
                         {
@@ -339,29 +276,45 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
                     });
                     collectingTask.Start();
 
-                    // Check that a session was created.
-                    Assert.NotEqual("EventPipe Session Id", sessionId, (ulong)0);
-
                     { // Attempt to create another session, and verify that is not possible.
                         Console.WriteLine("Attempt to create another session.");
-                        EventPipeClient.CollectTracing(
-                             processId: ThisProcess.Id,
-                             configuration: configuration,
-                             sessionId: out var sessionId2);
 
-                        // Check that a new session was not created.
+                        ulong sessionId2 = 0;
+                        try
+                        {
+                            using (var stream2 = EventPipeClient.CollectTracing(
+                                 processId: ThisProcess.Id,
+                                 configuration: configuration,
+                                 sessionId: out sessionId2))
+                            {
+                                var buffer = new byte[16 * 1024];
+                                int nBytesRead = stream.Read(buffer, 0, buffer.Length);
+                            }
+                        }
+                        catch (EndOfStreamException)
+                        {
+                        }
+                        catch
+                        {
+                            Assert.True("EventPipeClient.CollectTracing threw unexpected exception", false);
+                        }
+
                         Assert.Equal("EventPipe Session Id", sessionId2, (ulong)0);
                     }
 
+                    Console.WriteLine("Doing some work.");
                     Workload.DoWork(10);
 
                     var ret = EventPipeClient.StopTracing(ThisProcess.Id, sessionId);
                     Assert.Equal("Expect return value to be the disabled session Id", sessionId, ret);
+                    collectingTask.Wait();
+
                     sessionId = 0; // Reset session Id, we do not need to disable it later.
 
                     Assert.Equal("EventPipe output file", File.Exists(filePath), true);
 
                     // Check file is valid.
+                    Console.WriteLine("Validating netperf file.");
                     ValidateNetPerf(filePath);
                 }
             }
