@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
 		public string GetDisplayName(string name)
 		{
-			if(displayName.TryGetValue(name, out string displayName))
+			if (displayNames.TryGetValue(name, out string displayName))
 			{
 				return displayName;
 			}
