@@ -61,9 +61,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     });
                     collectingTask.Start();
 
-                    Console.Out.WriteLine("press <Enter> or <Ctrl-c> to exit...");
-                    System.Console.CancelKeyPress += (sender, args) =>
-                    {
+                    Console.Out.WriteLine("press <Enter> or <Ctrl+c> to exit...");
+                    System.Console.CancelKeyPress += (sender, args) => {
                         args.Cancel = true;
                         shouldExit.Set();
                     };
