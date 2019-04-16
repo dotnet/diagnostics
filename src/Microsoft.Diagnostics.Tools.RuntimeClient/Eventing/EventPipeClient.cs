@@ -22,6 +22,8 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
         private static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
 
+        private static double ConnectTimeoutMilliseconds { get; } = TimeSpan.FromSeconds(3).TotalMilliseconds;
+
         public static ulong SendCommand(int processId, byte[] buffer)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -30,7 +32,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 using (var namedPipe = new NamedPipeClientStream(
                     ".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation))
                 {
-                    namedPipe.Connect((int)TimeSpan.FromSeconds(20).TotalMilliseconds);
+                    namedPipe.Connect((int)ConnectTimeoutMilliseconds);
                     namedPipe.Write(buffer, 0, buffer.Length);
 
                     return new BinaryReader(namedPipe).ReadUInt64();
@@ -89,7 +91,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 var pipeName = $"dotnetcore-diagnostic-{processId}";
                 var namedPipe = new NamedPipeClientStream(
                     ".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation);
-                namedPipe.Connect((int)TimeSpan.FromSeconds(20).TotalMilliseconds);
+                namedPipe.Connect((int)ConnectTimeoutMilliseconds);
 
                 // Request start-collection
                 namedPipe.Write(serializedConfiguration, 0, serializedConfiguration.Length);
