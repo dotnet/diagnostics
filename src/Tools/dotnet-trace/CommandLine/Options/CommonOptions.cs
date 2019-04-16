@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Option ProvidersOption() =>
             new Option(
                 alias: "--providers",
-                description: @"A list EventPipe provider to be enabled in the form 'Provider[,Provider]', where Provider is in the form: '(GUID|KnownProviderName)[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'",
+                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: '(GUID|KnownProviderName)[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'",
                 argument: new Argument<string> { Name = "list-of-comma-separated-providers" }); // TODO: Can we specify an actual type?
 
         // This is a hidden option, currently not in the design-doc spec.
