@@ -7,10 +7,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
 	public class CounterPayloadParser
 	{
 		private Dictionary<string, CounterProvider> providerProfiles;
+		private Dictionary<string, string> displayNames;
 
 		public CounterPayloadParser()
 		{
 			providerProfiles = new Dictionary<string, CounterProvider>();
+			displayNames = new Dictionary<string, string>();
 			foreach (CounterProvider provider in KnownData.GetAllProviders())
             {
                 providerProfiles.Add(provider.Name, provider);
@@ -23,8 +25,20 @@ namespace Microsoft.Diagnostics.Tools.Counters
 			string[] payloadTokens = payload.Split(",");
             string name = payloadTokens[0].Split(":")[2];
             name = name.Substring(1, name.Length-2);  // This removes quotation marks around the name
+
+            string displayName = payloadTokens[1].Split(":")[1];
+
             string val = GetCounterValue(providerName, name, payloadTokens);
             return (name, val);
+		}
+
+		public string GetDisplayName(string name)
+		{
+			if(displayName.TryGetValue(name, out string displayName))
+			{
+				return displayName;
+			}
+			return name;
 		}
 
         private string GetCounterValue(string providerName, string counterName, string[] payloadTokens)
