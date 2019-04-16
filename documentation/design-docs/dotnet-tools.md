@@ -410,55 +410,66 @@ COMMANDS
 
 COLLECT
 
-    dotnet-dump collect -p|--process-id <pid>
-                       [-h|--help]
-                       [-o|--output <output_dump_path>]
-                       [--type <dump_type>]
+    dotnet-dump collect -p|--process-id <pid> [-h|--help] [-o|--output <output_dump_path>] [--type <dump_type>]
 
-    Capture one or more dumps (core files on Mac/Linux) from a process
+    Capture dumps (core files on Mac/Linux) from a process
 
-    -p, --process-id
-        The process to collect a memory dump from.
+    Usage:
+      dotnet-dump collect [options]
 
-    -h, --help
-        Show command line help
+    Options:
+      -p, --process-id
+          The process to collect a memory dump from.
+     
+      -h, --help
+          Show command line help
 
-    -o, --output
-        The path where collected dumps should be written. Defaults to '.\dump_YYYYMMDD_HHMMSS.dmp' on Windows and
-        './core_YYYYMMDD_HHMMSS' on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full
-        path and file name of the dump.
+      -o, --output
+          The path where collected dumps should be written. Defaults to '.\dump_YYYYMMDD_HHMMSS.dmp' on Windows and 
+          './core_YYYYMMDD_HHMMSS' on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full
+          path and file name of the dump.
 
-    --type
-        The dump type determines the kinds of information that are collected from the process. There are two types:
-        heap - A large and relatively comprehensive dump containing module lists, thread lists, all stacks,
-               exception information, handle information, and all memory except for mapped images.
-        mini - A small dump containing module lists, thread lists, exception information and all stacks.
+      --type
+          The dump type determines the kinds of information that are collected from the process. There are two types:
+          heap - A large and relatively comprehensive dump containing module lists, thread lists, all stacks,
+                 exception information, handle information, and all memory except for mapped images.
+          mini - A small dump containing module lists, thread lists, exception information and all stacks.
 
-        If not specified 'heap' is the default.
+          If not specified 'heap' is the default.
 
+Examples:
 
-     Examples:
-
-        $ dotnet dump collect --process-id 1902 --type mini
-        Writing minidump to file ./core_20190226_135837
-        Written 98983936 bytes (24166 pages) to core file
-        Complete
-
-        $ dotnet dump collect --process-id 1902 --type mini
-        Writing minidump to file ./core_20190226_135850
-        Written 98959360 bytes (24160 pages) to core file
-        Complete
+    $ dotnet dump collect --process-id 1902 --type mini
+    Writing minidump to file ./core_20190226_135837
+    Written 98983936 bytes (24166 pages) to core file
+    Complete
+    
+    $ dotnet dump collect --process-id 1902 --type mini
+    Writing minidump to file ./core_20190226_135850
+    Written 98959360 bytes (24160 pages) to core file
+    Complete
 
 ANALYZE
 
-    dotnet-dump analyze [-h|--help] dump_path
+    dotnet-dump analyze [-h|--help] [-c|--command <command>] dump_path
 
     Starts an interactive shell with debugging commands to explore a dump
 
-    dump_path
-        The dump to analyze
+    Usage:
+      dotnet-dump analyze [options] <dump_path>
 
-    Examples:
+    Arguments:
+      <dump_path>    Name of the dump file to analyze.
+
+    Options:
+      -h, --help
+          Show command line help
+
+      -c, --command <command>    
+          Run the command on start.
+
+Examples:
+
       $ dotnet-dump analyze ./core_20190226_135850
       Loading core dump: ./core_20190226_135850
       Ready to process analysis commands. Type 'help' to list available commands or 'help [command]' to get detailed help on a command.
@@ -468,8 +479,48 @@ ANALYZE
 
 ### dotnet-dump analyze nested command syntax
 
-By default these commands should come from SOS and include at least help, dumpheap, dumpobject, dumparray, and printexception. If we can get more easily we should. In addition new commands are listed below:
+The following commands are supported:
 
+```
+   exit, quit                           Exit interactive mode.
+   help <command>                       Display help for a command.
+   lm, modules                          Displays the native modules in the process.
+   threads, setthread <threadid>        Sets or displays the current thread id for the SOS commands.
+   clrstack <arguments>                 Provides a stack trace of managed code only.
+   clrthreads <arguments>               List the managed threads running.
+   dumpasync <arguments>                Displays info about async state machines on the garbage-collected heap.
+   dumpassembly <arguments>             Displays details about an assembly.
+   dumpclass <arguments>                Displays information about a EE class structure at the specified address.
+   dumpdelegate <arguments>             Displays information about a delegate.
+   dumpdomain <arguments>               Displays information all the AppDomains and all assemblies within the domains.
+   dumpheap <arguments>                 Displays info about the garbage-collected heap and collection statistics about objects.
+   dumpil <arguments>                   Displays the Microsoft intermediate language (MSIL) that is associated with a managed method.
+   dumplog <arguments>                  Writes the contents of an in-memory stress log to the specified file.
+   dumpmd <arguments>                   Displays information about a MethodDesc structure at the specified address.
+   dumpmodule <arguments>               Displays information about a EE module structure at the specified address.
+   dumpmt <arguments>                   Displays information about a method table at the specified address.
+   dumpobj <arguments>                  Displays info about an object at the specified address.
+   dso, dumpstackobjects <arguments>    Displays all managed objects found within the bounds of the current stack.
+   eeheap <arguments>                   Displays info about process memory consumed by internal runtime data structures.
+   finalizequeue <arguments>            Displays all objects registered for finalization.
+   gcroot <arguments>                   Displays info about references (or roots) to an object at the specified address.
+   gcwhere <arguments>                  Displays the location in the GC heap of the argument passed in.
+   ip2md <arguments>                    Displays the MethodDesc structure at the specified address in code that has been JIT-compiled.
+   name2ee <arguments>                  Displays the MethodTable structure and EEClass structure for the specified type or method in the specified module.
+   pe, printexception <arguments>       Displays and formats fields of any object derived from the Exception class at the specified address.
+   syncblk <arguments>                  Displays the SyncBlock holder info.
+   histclear <arguments>                Releases any resources used by the family of Hist commands.
+   histinit <arguments>                 Initializes the SOS structures from the stress log saved in the debuggee.
+   histobj <arguments>                  Examines all stress log relocation records and displays the chain of garbage collection relocations that may have led to the address passed in as an argument.
+   histobjfind <arguments>              Displays all the log entries that reference an object at the specified address.
+   histroot <arguments>                 Displays information related to both promotions and relocations of the specified root.
+   setsymbolserver <arguments>          Enables the symbol server support.
+ ```
+
+The "modules", "threads" and "setthread" commands display/control the native state.
+
+In addition new commands are listed below:
+    
 GCHEAPDIFF
 
     gcheapdiff <path_to_baseline_dump>

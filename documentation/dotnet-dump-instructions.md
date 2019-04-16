@@ -17,7 +17,7 @@ The next step is to collect a dump. This can be skipped if a core dump has alrea
 
 On Linux, it needs to be run as superuser:
      
-    $ sudo -E dotnet dump collect --process-id 1902
+    $ sudo -E PATH=$PATH dotnet dump collect --process-id 1902
     Writing minidump to file ./core_20190226_135837
     Written 98983936 bytes (24166 pages) to core file
     Complete
