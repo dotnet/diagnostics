@@ -25,6 +25,7 @@
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostic.Repl\Microsoft.Diagnostic.Repl.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.Tools.RuntimeClient\Microsoft.Diagnostics.Tools.RuntimeClient.csproj" />
+    <ProjectReference Include="..\..\..\..\perfview\src\TraceEvent\TraceEvent.csproj" />
   </ItemGroup>
 
 </Project>

@@ -3,11 +3,14 @@
 
 using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System;
+using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -21,9 +24,26 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private string _counterList;
         private CancellationToken _ct;
         private IConsole _console;
+        private CounterValueHolder cvHolder;
+        private ConsoleWriter writer;
+        private CounterPayloadParser payloadParser;
 
         public CounterMonitor()
         {
+            cvHolder = new CounterValueHolder();
+            writer = new ConsoleWriter();
+            payloadParser = new CounterPayloadParser();
+        }
+
+        private void Dynamic_All(TraceEvent obj)
+        {
+            if (obj.EventName.Equals("EventCounters"))
+            {
+                string payload = obj.PayloadString(0); // EventCounters always have 1 payload
+                (string counterName, string counterValue) = payloadParser.ParseCounterValue(obj.ProviderName, payload);
+                cvHolder.Update(obj.ProviderName, counterName, counterValue);
+                writer.Update(counterName, counterValue);
+            }
         }
 
         public async Task<int> Monitor(CancellationToken ct, string counterList, IConsole console, int processId, int interval)
@@ -108,11 +128,20 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 outputPath: outputPath,
                 providers: Provider.ToProviders(providerString));
 
-            sessionId = EventPipeClient.EnableTracingToFile(_processId, configuration);
+
+            var binaryReader = EventPipeClient.StreamTracingToFile(_processId, configuration, out var sessionId);
+            _console.Out.WriteLine($"SessionId=0x{sessionId:X16}");
+            var tBytesRead = 0;
+            EventPipeEventSource source = new EventPipeEventSource(binaryReader);
+            writer.InitializeDisplay();
+            source.Dynamic.All += Dynamic_All;
+            source.Process();
+
+//            sessionId = EventPipeClient.EnableTracingToFile(_processId, configuration);
 
             // Write the config file contents
-            _console.Out.WriteLine("Tracing has started. Press Ctrl-C to stop.");
-            await Task.Delay(int.MaxValue, _ct);
+            //_console.Out.WriteLine("Tracing has started. Press Ctrl-C to stop.");
+            //await Task.Delay(int.MaxValue, _ct);
             return 0;
         }
     }

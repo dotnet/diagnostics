@@ -27,14 +27,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     // we don't really display any counters in real time. (We just collect .netperf files) 
                     // In the future (with IPC), we should filter counter payloads by name provided below to display.  
                     // These are mainly here as placeholders. 
-                    new CounterProfile{ Name="total-processor-time", Description="Amount of time the process has utilized the CPU (ms)" },
-                    new CounterProfile{ Name="private-memory", Description="Amount of private virtual memory used by the process (KB)" },
-                    new CounterProfile{ Name="working-set", Description="Amount of working set used by the process (KB)" },
-                    new CounterProfile{ Name="virtual-memory", Description="Amount of virtual memory used by the process (KB)" },
-                    new CounterProfile{ Name="gc-total-memory", Description="Amount of commited virtual memory used by the GC (KB)" },
-                    new CounterProfile{ Name="exceptions-thrown-rate", Description="Number of exceptions thrown in a recent 1 minute window (exceptions/min)" },
+                    new CounterProfile{ Name="cpu-usage", Description="Amount of time the process has utilized the CPU (ms)", Type=CounterType.PollingCounter },
+                    new CounterProfile{ Name="working-set", Description="Amount of working set used by the process (KB)", Type=CounterType.PollingCounter },
+                    new CounterProfile{ Name="gc-heap-size", Description="Total heap size reported by the GC (KB)", Type=CounterType.PollingCounter },
+                    new CounterProfile{ Name="gen-0-gc-count", Description="Number of Gen 0 GCs", Type=CounterType.IncrementingPollingCounter },
+                    new CounterProfile{ Name="gen-1-gc-count", Description="Number of Gen 1 GCs", Type=CounterType.IncrementingPollingCounter },
+                    new CounterProfile{ Name="gen-2-gc-count", Description="Number of Gen 2 GCs", Type=CounterType.IncrementingPollingCounter },
+                    new CounterProfile{ Name="exception-count", Description="Exception Count", Type=CounterType.IncrementingPollingCounter },
                 });
-
             // TODO: Add more providers (ex. ASP.NET ones)
         }
 

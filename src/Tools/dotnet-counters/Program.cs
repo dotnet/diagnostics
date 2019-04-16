@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             foreach (var profile in profiles)
             {
                 Console.WriteLine($"* {profile.Name.PadRight(maxNameLength)}");
-                foreach (var counter in profile.Counters)
+                foreach (var counter in profile.Counters.Values)
                 {
                     Console.WriteLine($"    {counter.Name} \t\t {counter.Description}");
                 }
