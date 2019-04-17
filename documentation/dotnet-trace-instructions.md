@@ -33,7 +33,7 @@ Collecting to file: <Full-Path-To-Trace>/trace.netperf
   Recording trace 721.025 (KB)
 ```
 
-- Finally, stop collection by pressing \<Enter> key. Once collection is done, the trace file `trace.netperf` will contain the
+- Finally, stop collection by pressing the \<Enter> key, and *dotnet-trace* will finish logging events to *trace.netperf* file.
 
 ## Commonly used keywords for the *Microsoft-Windows-DotNETRuntime* provider
 
