@@ -33,7 +33,7 @@ See the instructions on the main README.md.
     (lldb) sethostruntime /usr/share/dotnet/shared/Microsoft.NETCore.App/2.1.0
     (lldb) target create --core /tmp/dump/coredump.32232
 
-Even if the core dump was not generated on this machine, the native and managed .NET Core symbols should be avaliable along with all the SOS commands. Note that path passed to the `sethostruntime` needs to be a .NET Core runtime installed on the machine. See `dotnet --info` for information on the installed runtimes and SDKs.
+Even if the core dump was not generated on this machine, the native and managed .NET Core symbols should be available along with all the SOS commands. Note that path passed to the `sethostruntime` needs to be a .NET Core runtime installed on the machine. See `dotnet --info` for information on the installed runtimes and SDKs.
 
 ### Launch lldb under MacOS ###
 
