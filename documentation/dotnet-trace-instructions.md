@@ -4,7 +4,7 @@ The dotnet-trace tool is a cross-platform CLI global tool that enables the colle
 
 ## Installing dotnet-trace
 
-The first step is to install the dotnet-trace CLI global tool. This requires the 2.1 .NET Core SDK to be installed.
+The first step is to install the dotnet-trace CLI global tool. This requires at least version 2.1 of the SDK to be installed.
 
 <!-- TODO: Make package globally available. -->
 ```cmd
