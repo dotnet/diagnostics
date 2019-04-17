@@ -29,6 +29,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 if (output == null)
                     throw new ArgumentNullException(nameof(output));
+                if (processId <= 0)
+                    throw new ArgumentException(nameof(processId));
 
                 var configuration = new SessionConfiguration(
                     circularBufferSizeMB: buffersize,
