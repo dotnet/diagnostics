@@ -1,6 +1,6 @@
 # Trace for performance analysis utility (dotnet-trace)
 
-The dotnet-trace is a cross-platform CLI global tool that enables the collection of .NET Core traces of a running process without any native profiler involved. It is built around the EventPipe technology of the .NET Core runtime as an alternative to ETW on Windows and LTTNG on non-Windows.
+The dotnet-trace tool is a cross-platform CLI global tool that enables the collection of .NET Core traces of a running process without any native profiler involved. It is built around the EventPipe technology of the .NET Core runtime as an alternative to ETW on Windows and LTTNG on non-Windows.
 
 ## Installing dotnet-trace
 
