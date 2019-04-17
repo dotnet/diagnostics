@@ -54,6 +54,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         {
                             Console.Out.WriteLine($"Recording tracing session to: {fs.Name}");
                             Console.Out.WriteLine($"\tSession Id: 0x{sessionId:X16}");
+                            lineToClear = Console.CursorTop;
 
                             while (true)
                             {
@@ -101,21 +102,26 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static int prevBufferWidth = 0;
         private static string clearLineString = "";
+        private static int lineToClear = 0;
         private static void ResetCurrentConsoleLine(bool isVTerm)
         {
             if (isVTerm)
             {
-                Console.Out.Write("\u001b[2K\u001b[1G");
+                // ANSI escape codes:
+                //  [2K => clear current line
+                //  [{lineToClear};0H => move cursor to column 0 of row `lineToClear`
+                Console.Out.Write($"\u001b[2K\u001b[{lineToClear};0H");
             }
             else
             {
                 if (prevBufferWidth != Console.BufferWidth)
                 {
+                    prevBufferWidth = Console.BufferWidth;
                     clearLineString = new string(' ', Console.BufferWidth - 1);
                 }
-                Console.SetCursorPosition(0,Console.BufferHeight);
+                Console.SetCursorPosition(0,lineToClear);
                 Console.Out.Write(clearLineString);
-                Console.SetCursorPosition(0,Console.BufferHeight);
+                Console.SetCursorPosition(0,lineToClear);
             }
         }
 
