@@ -8,6 +8,7 @@ using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Trace
@@ -34,6 +35,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     circularBufferSizeMB: buffersize,
                     outputPath: null, // Not used on the streaming scenario.
                     Extensions.ToProviders(providers));
+
+                var shouldExit = new ManualResetEvent(false);
 
                 ulong sessionId = 0;
                 using (Stream stream = EventPipeClient.CollectTracing(processId, configuration, out sessionId))
@@ -67,8 +70,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     });
                     collectingTask.Start();
 
-                    Console.Out.WriteLine("press <Enter> to exit...");
-                    while (Console.ReadKey().Key != ConsoleKey.Enter) { }
+                    Console.Out.WriteLine("press <Enter> or <Ctrl+c> to exit...");
+                    System.Console.CancelKeyPress += (sender, args) => {
+                        args.Cancel = true;
+                        shouldExit.Set();
+                    };
+
+                    do {
+                        while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
+                    } while (!shouldExit.WaitOne(0) && Console.ReadKey(true).Key != ConsoleKey.Enter);
 
                     EventPipeClient.StopTracing(processId, sessionId);
                     collectingTask.Wait();
