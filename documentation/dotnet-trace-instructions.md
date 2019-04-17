@@ -8,9 +8,9 @@ The first step is to install the dotnet-trace CLI global tool. This requires the
 
 <!-- TODO: Make package globally available. -->
 ```cmd
-$ dotnet tool install --global dotnet-trace
+$ dotnet tool install --global dotnet-trace --version 1.0.3-preview5.19217.3 --add-source https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
 You can invoke the tool using the following command: dotnet-trace
-Tool 'dotnet-trace' (version '0.1.0') was successfully installed.
+Tool 'dotnet-trace' (version '1.0.3-preview5.19217.3') was successfully installed.
 ```
 
 ## Using dotnet-trace
