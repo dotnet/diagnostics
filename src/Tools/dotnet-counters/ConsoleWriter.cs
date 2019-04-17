@@ -33,8 +33,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
 	        	foreach (CounterProfile counter in provider.Counters.Values)
 	        	{
-	        		Console.WriteLine($"    {counter.Name} : 0");
-	        		displayPosition[counter.Name] = (counter.Name.Length+4+3, rowCnt);
+	        		Console.WriteLine($"    {counter.DisplayName} : 0");
+	        		displayPosition[counter.Name] = (counter.DisplayName.Length+4+3, rowCnt);
 	        		rowCnt += 1;
 	        	}
 	        }

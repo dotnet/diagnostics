@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "Start monitoring a .NET application", 
                 new Option[] { ProcessIdOption(), RefreshIntervalOption() },
                 argument: CounterList(),
-                handler: CommandHandler.Create<CancellationToken, string, IConsole, int, int>(new CounterMonitor().Monitor));
+                handler: CommandHandler.Create<CancellationToken, string, IConsole, int, float>(new CounterMonitor().Monitor));
 
         private static Option ProcessIdOption() =>
             new Option(
@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             new Option(
                 new[] { "-r", "--interval" }, 
                 "The number of seconds to delay between updating the displayed counters.",
-                new Argument<int> { Name = "interval" });
+                new Argument<float> { Name = "interval" });
 
         private static Argument CounterList() =>
             new Argument<string> {

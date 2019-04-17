@@ -34,20 +34,20 @@ namespace Microsoft.Diagnostics.Tools.Counters
             Counters = new Dictionary<string, CounterProfile>();
             foreach (CounterProfile counter in counters)
             {
-                Console.WriteLine($"Adding: {counter.Name}");
                 Counters.Add(counter.Name, counter);
             }
         }
 
-        public string ToProviderString(int interval)
+        public string ToProviderString(float interval)
         {
-            return $"{Name}:{Keywords}:{Level}:EventCounterIntervalSec={interval}";
+            return $"{Name}:{Keywords}:{Level}:EventCounterIntervalSec={interval/5}";
         }
     }
 
     public class CounterProfile
     {
         public string Name { get; set; }
+        public string DisplayName { get; set; }
         public string Description { get; set; }
         public CounterType Type { get; set; }
     }

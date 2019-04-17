@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private ulong sessionId;
 
         private int _processId;
-        private int _interval;
+        private float _interval;
         private string _counterList;
         private CancellationToken _ct;
         private IConsole _console;
@@ -46,7 +46,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        public async Task<int> Monitor(CancellationToken ct, string counterList, IConsole console, int processId, int interval)
+        public async Task<int> Monitor(CancellationToken ct, string counterList, IConsole console, int processId, float interval)
         {
             try
             {
