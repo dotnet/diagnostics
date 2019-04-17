@@ -63,7 +63,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         /// </summary>
         /// <returns>
         /// A collection of process identifiers associated with the list of opened files (IPC ports).
-        /// These process Ids migth have expired and not properly cleaned up.
+        /// These process Ids might have expired and not properly cleaned up.
         /// </returns>
         public static IEnumerable<int> ListAvailablePorts()
         {
