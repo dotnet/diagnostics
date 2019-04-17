@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.CommandLine.Rendering;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -40,6 +41,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 ulong sessionId = 0;
                 using (Stream stream = EventPipeClient.CollectTracing(processId, configuration, out sessionId))
+                using (VirtualTerminalMode vTermMode = VirtualTerminalMode.TryEnable())
                 {
                     if (sessionId == 0)
                     {
@@ -51,7 +53,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         using (var fs = new FileStream(output, FileMode.Create, FileAccess.Write))
                         {
                             Console.Out.WriteLine($"Recording tracing session to: {fs.Name}");
-                            Console.Out.WriteLine($"  Session Id: 0x{sessionId:X16}");
+                            Console.Out.WriteLine($"\tSession Id: 0x{sessionId:X16}");
 
                             while (true)
                             {
@@ -61,7 +63,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     break;
                                 fs.Write(buffer, 0, nBytesRead);
 
-                                ResetCurrentConsoleLine();
+                                ResetCurrentConsoleLine(vTermMode.IsEnabled);
                                 Console.Out.Write($"\tRecording trace {GetSize(fs.Length)}");
 
                                 Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
@@ -97,9 +99,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        private static void ResetCurrentConsoleLine()
+        private static void ResetCurrentConsoleLine(bool isVTerm)
         {
-            Console.Out.Write("\u001b[2K\u001b[1000D");
+            if (isVTerm)
+            {
+                Console.Out.Write("\u001b[2K\u001b[1000D");
+            }
+            else
+            {
+                Console.Out.Write("\r" + new string(' ', Console.BufferWidth - 1) + "\r");
+            }
         }
 
         private static string GetSize(long length)
