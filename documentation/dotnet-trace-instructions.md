@@ -99,19 +99,33 @@ Usage:
   dotnet-trace collect [options]
 
 Options:
-  -h, --help                                        Shows this help message and exit.
+  -h, --help
+    Shows this help message and exit.
 
-  -p, --process-id <pid>                            The process to collect the trace from
+  -p, --process-id <pid>
+    The process to collect the trace from
 
-  -o, --output <trace-file-path>                    The output path for the collected trace data.
-                                                    If not specified it defaults to 'trace.netperf'
+  -o, --output <trace-file-path>
+    The output path for the collected trace data. If not specified it defaults to 'trace.netperf'
 
-  --providers <list-of-comma-separated-providers>   A list of EventPipe providers to be enabled.
-                                                    This is in the form 'Provider[,Provider]',
-                                                    where Provider is in the form:
-                                                        (GUID|KnownProviderName)[:Flags[:Level][:KeyValueArgs]]
-                                                    and KeyValueArgs is in the form:
-                                                        '[key1=value1][;key2=value2]'
+  --providers <list-of-comma-separated-providers>
+    A list of coma separated EventPipe providers to be enabled.
+    This option adds to the configuration already provided via the --profile argument. If the same provider if configured in both places, this option takes precedence.
+    A provider consists of the name and optionally the keywords, verbosity level, and custom key/value pairs.
+
+    The string is written 'Provider[,Provider]'
+        Provider format: (GUID|KnownProviderName)[:Keywords[:Level][:KeyValueArgs]]
+            GUID|KnownProviderName  - The provider's name
+            Keywords                - 8 character hex number bit mask
+            Level                   - A number in the range [0, 5]
+                0 - Always
+                1 - Critical
+                2 - Error
+                3 - Warning
+                4 - Informational
+                5 - Verbose
+            KeyValueArgs            - A semicolon separated list of key=value
+        KeyValueArgs format: '[key1=value1][;key2=value2]'
 
     --buffersize <Size>                             Sets the size of the in-memory circular buffer
                                                     in megabytes. Default 64 MB.
