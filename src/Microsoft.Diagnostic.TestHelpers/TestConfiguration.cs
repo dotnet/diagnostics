@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostic.TestHelpers
             }
             // The TargetArchitecture and NuGetPackageCacheDir can still be overridden
             // in a config file. This is just setting the default. The other values can 
-            // also // be overriden but it is not recommended.
+            // also // be overridden but it is not recommended.
             Dictionary<string, string> initialConfig = new Dictionary<string, string>
             {
                 ["Timestamp"] = GetTimeStampText(),
