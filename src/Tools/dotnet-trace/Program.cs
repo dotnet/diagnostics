@@ -14,11 +14,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             var parser = new CommandLineBuilder()
 #if DEBUG
-                .AddCommand(PortsCommandHandler.ActivePortsCommand())
                 .AddCommand(ProvidersCommandHandler.KnownProvidersCommand())
                 .AddCommand(StopCommandHandler.StopCommand())
 #endif
                 .AddCommand(CollectCommandHandler.CollectCommand())
+                .AddCommand(EndPointsCommandHandler.ActivePortsCommand())
                 .UseDefaults()
                 .Build();
 
