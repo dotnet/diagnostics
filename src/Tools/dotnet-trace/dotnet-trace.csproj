@@ -10,8 +10,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <IsPackable>False</IsPackable>
-    <PackAsTool>False</PackAsTool>
+    <IsPackable>True</IsPackable>
+    <PackAsTool>True</PackAsTool>
   </PropertyGroup>
 
   <ItemGroup>
