@@ -604,7 +604,7 @@ namespace Microsoft.Diagnostic.TestHelpers
         /// <returns>configuration value or null</returns>
         public string GetValue(string key)
         {
-            // unlike dictionary it is OK to ask for non-existant keys
+            // unlike dictionary it is OK to ask for non-existent keys
             // if the key doesn't exist the result is null
             _settings.TryGetValue(key, out string settingValue);
             return settingValue;
