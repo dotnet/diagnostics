@@ -213,7 +213,7 @@ namespace Microsoft.Diagnostic.TestHelpers
                     string leftValue = ResolveProperties(config, parts[0]).Trim();
                     string rightValue = ResolveProperties(config, parts[1]).Trim();
 
-                    // Now do the simple string comparsion of the left/right sides of the condition
+                    // Now do the simple string comparison of the left/right sides of the condition
                     return equal ? leftValue == rightValue : leftValue != rightValue;
                 }
             }
