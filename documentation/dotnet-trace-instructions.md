@@ -24,7 +24,7 @@ In order to collect traces you will need to:
 - Then, run the following command:
 
 ```cmd
-dotnet-trace collect --process-id <PID> --providers Microsoft-Windows-DotNETRuntime:0x00000004C14FCCBD:4
+dotnet-trace collect --process-id <PID> --providers Microsoft-Windows-DotNETRuntime
 
 Press <Enter> to exit...
 Connecting to process: <Full-Path-To-Process-Being-Profiled>/dotnet.exe
