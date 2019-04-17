@@ -99,15 +99,23 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
+        private static int prevBufferWidth = 0;
+        private static string clearLineString = "";
         private static void ResetCurrentConsoleLine(bool isVTerm)
         {
             if (isVTerm)
             {
-                Console.Out.Write("\u001b[2K\u001b[1000D");
+                Console.Out.Write("\u001b[2K\u001b[1G");
             }
             else
             {
-                Console.Out.Write("\r" + new string(' ', Console.BufferWidth - 1) + "\r");
+                if (prevBufferWidth != Console.BufferWidth)
+                {
+                    clearLineString = new string(' ', Console.BufferWidth - 1);
+                }
+                Console.SetCursorPosition(0,Console.BufferHeight);
+                Console.Out.Write(clearLineString);
+                Console.SetCursorPosition(0,Console.BufferHeight);
             }
         }
 
