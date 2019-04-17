@@ -286,7 +286,7 @@ COLLECT
 
     --providers
         A list of coma separated EventPipe providers to be enabled.
-        This option adds to the configuration already provided via the --profile argument. If the same provider if configured in both places, this option takes precedence.
+        This option adds to the configuration already provided via the --profile argument. If the same provider is configured in both places, this option takes precedence.
         A provider consists of the name and optionally the keywords, verbosity level, and custom key/value pairs.
 
         The string is written 'Provider[,Provider]'
