@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 argument: new Argument<string> { Name = "list-of-comma-separated-providers" }); // TODO: Can we specify an actual type?
 
         // This is a hidden option, currently not in the design-doc spec.
-        private static uint DefaultCircularBufferSizeInMB => 64;
+        private static uint DefaultCircularBufferSizeInMB => 256;
         public static Option CircularBufferOption() =>
             new Option(
                 alias: "--buffersize",

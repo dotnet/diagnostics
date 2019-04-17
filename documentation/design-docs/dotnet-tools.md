@@ -298,7 +298,7 @@ COLLECT
             KeyValueArgs format: '[key1=value1][;key2=value2]'
 
     --buffersize <Size>
-        Sets the size of the in-memory circular buffer in megabytes. Default 64 MB.
+        Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
 
 
     Examples:
