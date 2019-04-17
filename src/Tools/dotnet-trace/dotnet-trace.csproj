@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="System.CommandLine.Experimental" Version="0.2.0-alpha.19179.1" />
+    <PackageReference Include="System.CommandLine.Rendering" Version="0.2.0-alpha.19179.1" />
   </ItemGroup>
 
   <ItemGroup>

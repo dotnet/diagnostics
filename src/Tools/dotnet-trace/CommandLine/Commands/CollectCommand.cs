@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.CommandLine.Rendering;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -40,6 +41,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 ulong sessionId = 0;
                 using (Stream stream = EventPipeClient.CollectTracing(processId, configuration, out sessionId))
+                using (VirtualTerminalMode vTermMode = VirtualTerminalMode.TryEnable())
                 {
                     if (sessionId == 0)
                     {
@@ -51,7 +53,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         using (var fs = new FileStream(output, FileMode.Create, FileAccess.Write))
                         {
                             Console.Out.WriteLine($"Recording tracing session to: {fs.Name}");
-                            Console.Out.WriteLine($"  Session Id: 0x{sessionId:X16}");
+                            Console.Out.WriteLine($"\tSession Id: 0x{sessionId:X16}");
+                            lineToClear = Console.CursorTop;
 
                             while (true)
                             {
@@ -61,8 +64,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     break;
                                 fs.Write(buffer, 0, nBytesRead);
 
-                                ResetCurrentConsoleLine();
-                                Console.Out.Write($"  Recording trace {GetSize(fs.Length)}");
+                                ResetCurrentConsoleLine(vTermMode.IsEnabled);
+                                Console.Out.Write($"\tRecording trace {GetSize(fs.Length)}");
 
                                 Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
                             }
@@ -97,12 +100,29 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        private static void ResetCurrentConsoleLine()
+        private static int prevBufferWidth = 0;
+        private static string clearLineString = "";
+        private static int lineToClear = 0;
+        private static void ResetCurrentConsoleLine(bool isVTerm)
         {
-            int currentCursorTop = Console.CursorTop;
-            Console.SetCursorPosition(0, Console.CursorTop);
-            Console.Out.Write(new string(' ', Console.WindowWidth));
-            Console.SetCursorPosition(0, currentCursorTop);
+            if (isVTerm)
+            {
+                // ANSI escape codes:
+                //  [2K => clear current line
+                //  [{lineToClear};0H => move cursor to column 0 of row `lineToClear`
+                Console.Out.Write($"\u001b[2K\u001b[{lineToClear};0H");
+            }
+            else
+            {
+                if (prevBufferWidth != Console.BufferWidth)
+                {
+                    prevBufferWidth = Console.BufferWidth;
+                    clearLineString = new string(' ', Console.BufferWidth - 1);
+                }
+                Console.SetCursorPosition(0,lineToClear);
+                Console.Out.Write(clearLineString);
+                Console.SetCursorPosition(0,lineToClear);
+            }
         }
 
         private static string GetSize(long length)
