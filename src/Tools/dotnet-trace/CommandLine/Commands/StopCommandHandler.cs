@@ -12,11 +12,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class StopCommandHandler
     {
-        public static async Task<int> Stop(IConsole console, int pid, ulong sessionId)
+        public static async Task<int> Stop(IConsole console, int processId, ulong sessionId)
         {
             try
             {
-                EventPipeClient.StopTracing(pid, sessionId);
+                EventPipeClient.StopTracing(processId, sessionId);
 
                 await Task.FromResult(0);
                 return sessionId != 0 ? 0 : 1;
