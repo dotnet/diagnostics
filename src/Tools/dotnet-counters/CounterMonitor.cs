@@ -46,12 +46,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        public async Task<int> Monitor(CancellationToken ct, string counterList, IConsole console, int processId, float interval)
+        public async Task<int> Monitor(CancellationToken ct, string counter_list, IConsole console, int processId, float interval)
         {
             try
             {
                 _ct = ct;
-                _counterList = counterList;
+                _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase.
                 _console = console;
                 _processId = processId;
                 _interval = interval;
