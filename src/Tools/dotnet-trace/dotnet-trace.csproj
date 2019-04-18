@@ -7,11 +7,18 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <RootNamespace>Microsoft.Diagnostics.Tools.Trace</RootNamespace>
     <GenerateDocumentationFile>False</GenerateDocumentationFile>
-  </PropertyGroup>
 
-  <PropertyGroup>
-    <IsPackable>False</IsPackable>
-    <PackAsTool>False</PackAsTool>
+    <ToolCommandName>dotnet-trace</ToolCommandName>
+    <Description>.NET Core Performance Trace Tool</Description>
+    <PackageTags>Diagnostic</PackageTags>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <!-- Need to put the shims here to sign -->
+    <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
+
+    <IsPackable>True</IsPackable>
+    <PackAsTool>True</PackAsTool>
+    <RuntimeFrameworkVersion>2.1.0</RuntimeFrameworkVersion>
+    <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;osx-x64</PackAsToolShimRuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>

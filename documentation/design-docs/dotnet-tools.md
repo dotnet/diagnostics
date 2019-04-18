@@ -257,7 +257,7 @@ COLLECT
                          [-o|--output <trace-file-path>]
                          [--pack]
                          [--profile <profile_name>]
-                         [--provider <provider_configuration>]
+                         [--providers <list-of-comma-separated-providers>]
 
     Collects a diagnostic trace from a currently running process
 
@@ -282,19 +282,23 @@ COLLECT
         asp-net-basic   Useful starting point for ASP.Net performance investigations
         gc              Tracks allocation and collection performance
         gc-collect      Tracks GC collection only at very low overhead
-        none            Tracks nothing. Only providers specified by the --provider option will be available.
+        none            Tracks nothing. Only providers specified by the --providers option will be available.
 
-    --provider
-        A provider configuration specified here adds to the configuration already provided via the --profile
-        argument. If the same provider is configured in both places, this option takes precedence.
-        A configuration consists of the provider name and optionally keywords, a verbosity level, and custom
-        key/value pairs. It is written Name[:Keywords[:Level[:KeyValueArgs]]]
-          Name         - the provider's name
-          Keywords     - 8 character hex number bit mask
-          Level        - 2 character hex number
-          KeyValueArgs - a semicolon separated list of key=value
-        This argument can be specified multiple times to add any number of provider configurations.
+    --providers
+        A list of comma separated EventPipe providers to be enabled.
+        This option adds to the configuration already provided via the --profile argument. If the same provider is configured in both places, this option takes precedence.
+        A provider consists of the name and optionally the keywords, verbosity level, and custom key/value pairs.
 
+        The string is written 'Provider[,Provider]'
+            Provider format: (GUID|KnownProviderName)[:Keywords[:Level][:KeyValueArgs]]
+                GUID|KnownProviderName  - The provider's name
+                Keywords                - 8 character hex number bit mask
+                Level                   - A number in the range [0, 5]
+                KeyValueArgs            - A semicolon separated list of key=value
+            KeyValueArgs format: '[key1=value1][;key2=value2]'
+
+    --buffersize <Size>
+        Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
 
 
     Examples:

@@ -6,10 +6,12 @@
     <OutputType>Library</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <RootNamespace>Microsoft.Diagnostics.Tools.RuntimeClient</RootNamespace>
-  </PropertyGroup>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
 
-  <PropertyGroup>
-    <IsPackable>False</IsPackable>
+    <Description>.NET Core Diagnostics Runtime Client</Description>
+    <IsPackable>True</IsPackable>
+    <PackageTags>Diagnostic</PackageTags>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup>
