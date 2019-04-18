@@ -23,7 +23,7 @@ public:
     {
         if (arguments == nullptr || arguments[0] == nullptr)
         {
-            if (g_currentThreadSystemId == -1 || g_currentThreadIndex == -1)
+            if (g_currentThreadSystemId == (ULONG)-1 || g_currentThreadIndex == (ULONG)-1)
             {
                 result.Printf("sos OS tid not mapped\n");
             }
@@ -33,8 +33,8 @@ public:
             }
         }
         else if (strcmp(arguments[0], "-clear") == 0) {
-            g_currentThreadIndex = -1;
-            g_currentThreadSystemId = -1;
+            g_currentThreadIndex = (ULONG)-1;
+            g_currentThreadSystemId = (ULONG)-1;
             result.Printf("Cleared sos OS tid/index\n");
         }
         else if (arguments[1] == nullptr)
