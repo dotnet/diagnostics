@@ -88,7 +88,7 @@ Microsoft-DotNETCore-SampleProfiler     | Enable the sample profiler
 
 ## `dotnet-trace` output formats
 
-You can change the output file format using the `-f|--format` option. ou can currently choose between `netperf` (the default on Windows) and `speedscope` (the default on all other OSes). Speedscope files can be opened at https://www.speedscope.app.
+You can change the output file format using the `-f|--format` option. You can currently choose between `netperf` (the default on Windows) and `speedscope` (the default on all other OSes). Speedscope files can be opened at https://www.speedscope.app.
 
 Note that all traces are transmitted in the `netperf` format and are converted after the trace is completed. Since some conversions may result in loss of data, the original `netperf` file is preserved next to the converted file.
 
