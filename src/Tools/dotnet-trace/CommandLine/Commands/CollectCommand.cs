@@ -5,7 +5,6 @@
 using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System;
 using System.CommandLine;
-using System.CommandLine.Invocation;
 using System.CommandLine.Rendering;
 using System.Diagnostics;
 using System.IO;
@@ -34,6 +33,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (processId <= 0)
                     throw new ArgumentException(nameof(processId));
 
+                var process = Process.GetProcessById(processId);
                 var configuration = new SessionConfiguration(
                     circularBufferSizeMB: buffersize,
                     outputPath: null, // Not used on the streaming scenario.
@@ -54,7 +54,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     var collectingTask = new Task(() => {
                         using (var fs = new FileStream(output, FileMode.Create, FileAccess.Write))
                         {
-                            Console.Out.WriteLine($"Recording tracing session to: {fs.Name}");
+                            Console.Out.WriteLine($"Process     : {process.MainModule.FileName}");
+                            Console.Out.WriteLine($"Output File : {fs.Name}");
                             Console.Out.WriteLine($"\tSession Id: 0x{sessionId:X16}");
                             lineToClear = Console.CursorTop;
 
@@ -75,7 +76,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     });
                     collectingTask.Start();
 
-                    Console.Out.WriteLine("press <Enter> or <Ctrl+c> to exit...");
+                    Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
                     System.Console.CancelKeyPress += (sender, args) => {
                         args.Cancel = true;
                         shouldExit.Set();
@@ -149,6 +150,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     CommonOptions.OutputPathOption(),
                     CommonOptions.ProvidersOption(),
                 },
-                handler: CommandHandler.Create<IConsole, int, string, uint, string>(Collect));
+                handler: System.CommandLine.Invocation.CommandHandler.Create<IConsole, int, string, uint, string>(Collect));
     }
 }
