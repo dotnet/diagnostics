@@ -66,14 +66,14 @@ GCSampledObjectAllocationHigh   |            200000 | Enables allocation samplin
 GCHeapSurvivalAndMovement       |            400000 | Enables events associate with object movement or survival with each GC.
 GCHeapCollect                   |            800000 | Triggers a GC. Can pass a 64 bit value that will be logged with the GC Start event so you know which GC you actually triggered.
 GCHeapAndTypeNames              |           1000000 | Indicates that you want type names looked up and put into the events (not just meta-data tokens).
-GCHeapSnapshot                  |           1980001 | This provides the flags commonly needed to take a heap .NET Heap snapshot with ETW.<br>This is equivalent to `GC+Type+GCHeapDump+GCHeapCollect+GCHeapAndTypeNames`
+GCHeapSnapshot                  |           1980001 | This provides the flags commonly needed to take a heap .NET Heap snapshot with EventPipe.<br>This is equivalent to `GC+Type+GCHeapDump+GCHeapCollect+GCHeapAndTypeNames`
 GCSampledObjectAllocationLow    |           2000000 | Enables allocation sampling with the 'slow' rate, Sample to limit to 5 allocations per second per type. This is reasonable for monitoring. Note that this DOES update the allocation path to be slower and only works if the process start with this on.
 GCAllObjectAllocation           |           2200000 | Turns on capturing the stack and type of object allocation made by the .NET Runtime. This is only supported after V4.5.3 (Late 2014) This can be very verbose and you should seriously using GCSampledObjectAllocationHigh instead (and GCSampledObjectAllocationLow for production scenarios).
 Stack                           |          40000000 | Also log the stack trace of events for which this is valuable.
 ThreadTransfer                  |          80000000 | This allows tracing work item transfer events (thread pool enqueue/dequeue/ioenqueue/iodequeue/a.o.).
 Debugger                        |         100000000 | .NET Debugger events
 Monitoring                      |         200000000 | Events intended for monitoring on an ongoing basis.
-Codesymbols                     |         400000000 | Events that will dump PDBs of dynamically generated assemblies to the ETW stream.
+Codesymbols                     |         400000000 | Events that will dump PDBs of dynamically generated assemblies to the EventPipe stream.
 Default                         |         4C14FCCBD | Recommend default flags (good compromise on verbosity).
 
 [source](https://github.com/Microsoft/perfview/blob/master/src/TraceEvent/Parsers/ClrTraceEventParser.cs#L41)
