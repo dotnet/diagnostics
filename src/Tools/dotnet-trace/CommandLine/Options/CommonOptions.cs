@@ -41,6 +41,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public static TraceFileFormat DefaultTraceFileFormat => 
             RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? TraceFileFormat.netperf : TraceFileFormat.speedscope;
+
         public static Option FormatOption() =>
             new Option(
                 aliases: new[] { "-f", "--format" },
