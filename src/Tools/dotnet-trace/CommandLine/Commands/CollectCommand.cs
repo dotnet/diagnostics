@@ -27,8 +27,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="providers">A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: '(GUID|KnownProviderName)[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'</param>
         /// <param name="profile">A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.</param>
         /// <param name="format">The desired format of the created trace file.</param>
+        /// <param name="pack">Automatically runs the pack command after collection is complete. Use dotnet-trace pack --help for more details.</param>
         /// <returns></returns>
-        public static async Task<int> Collect(IConsole console, int processId, string output, uint buffersize, string providers, string profile, TraceFileFormat format)
+        private static async Task<int> Collect(IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, bool pack)
         {
             try
             {
@@ -47,6 +48,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 var providerCollection = Extensions.ToProviders(providers);
                 if (selectedProfile.Providers != null)
                     providerCollection.AddRange(selectedProfile.Providers);
+                if (providerCollection.Count <= 0)
+                    throw new ArgumentException("No providers were specified to start a trace.");
 
                 PrintProviders(providerCollection);
 
@@ -69,7 +72,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
 
                     var collectingTask = new Task(() => {
-                        using (var fs = new FileStream(output, FileMode.Create, FileAccess.Write))
+                        using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                         {
                             Console.Out.WriteLine($"Process     : {process.MainModule.FileName}");
                             Console.Out.WriteLine($"Output File : {fs.Name}");
@@ -94,7 +97,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     collectingTask.Start();
 
                     Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
-                    System.Console.CancelKeyPress += (sender, args) => {
+                    Console.CancelKeyPress += (sender, args) => {
                         args.Cancel = true;
                         shouldExit.Set();
                     };
@@ -133,6 +136,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static int prevBufferWidth = 0;
         private static string clearLineString = "";
         private static int lineToClear = 0;
+
         private static void ResetCurrentConsoleLine(bool isVTerm)
         {
             if (isVTerm)
@@ -173,19 +177,52 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 description: "Collects a diagnostic trace from a currently running process",
                 symbols: new Option[] {
                     CommonOptions.ProcessIdOption(),
-                    CommonOptions.CircularBufferOption(),
-                    CommonOptions.OutputPathOption(),
-                    CommonOptions.ProvidersOption(),
+                    CircularBufferOption(),
+                    OutputPathOption(),
+                    ProvidersOption(),
                     ProfileOption(),
                     CommonOptions.FormatOption(),
+                    PackOption(),
                 },
-                handler: System.CommandLine.Invocation.CommandHandler.Create<IConsole, int, string, uint, string, string, TraceFileFormat>(Collect));
+                handler: System.CommandLine.Invocation.CommandHandler.Create<IConsole, int, FileInfo, uint, string, string, TraceFileFormat, bool>(Collect));
 
-        public static Option ProfileOption() =>
+        private static uint DefaultCircularBufferSizeInMB => 256;
+
+        private static Option CircularBufferOption() =>
+            new Option(
+                alias: "--buffersize",
+                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB",
+                argument: new Argument<uint>(defaultValue: DefaultCircularBufferSizeInMB) { Name = "size" },
+                isHidden: false);
+
+        private static string DefaultTraceName => "trace.netperf";
+
+        private static Option OutputPathOption() =>
+            new Option(
+                aliases: new[] { "-o", "--output" },
+                description: $"The output path for the collected trace data. If not specified it defaults to '{DefaultTraceName}'",
+                argument: new Argument<FileInfo>(defaultValue: new FileInfo(DefaultTraceName)) { Name = "trace-file-path" },
+                isHidden: false);
+
+        private static Option ProvidersOption() =>
+            new Option(
+                alias: "--providers",
+                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: '(GUID|KnownProviderName)[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'",
+                argument: new Argument<string>(defaultValue: "") { Name = "list-of-comma-separated-providers" }, // TODO: Can we specify an actual type?
+                isHidden: false);
+
+        private static Option ProfileOption() =>
             new Option(
                 alias: "--profile",
                 description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.",
                 argument: new Argument<string>(defaultValue: "runtime-basic") { Name = "profile_name" }, // TODO: Can we specify an actual type?
+                isHidden: false);
+
+        private static Option PackOption() =>
+            new Option(
+                alias: "--pack",
+                description: $"Automatically runs the pack command after collection is complete. Use dotnet-trace pack --help for more details.",
+                argument: new Argument<bool>(defaultValue: false),
                 isHidden: false);
     }
 }

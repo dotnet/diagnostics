@@ -14,11 +14,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         public static List<Provider> ToProviders(string providers)
         {
-            if (string.IsNullOrWhiteSpace(providers))
+            if (providers == null)
                 throw new ArgumentNullException(nameof(providers));
-            return providers.Split(',')
-                .Select(ToProvider)
-                .ToList();
+            return string.IsNullOrWhiteSpace(providers) ?
+                new List<Provider>() : providers.Split(',').Select(ToProvider).ToList();
         }
 
         private static Provider ToProvider(string provider)
