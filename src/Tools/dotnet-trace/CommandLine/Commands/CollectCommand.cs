@@ -215,7 +215,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new Option(
                 alias: "--profile",
                 description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.",
-                argument: new Argument<string>(defaultValue: "runtime-basic") { Name = "profile_name" }, // TODO: Can we specify an actual type?
+                argument: new Argument<string>(defaultValue: "runtime-basic") { Name = "profile_name" },
                 isHidden: false);
 
         private static Option PackOption() =>
