@@ -17,7 +17,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         public static void ConvertToFormat(TraceFileFormat format, string fileToConvert)
         {
-            // TODO convert to appropriate file format
             switch (format)
             {
                 case TraceFileFormat.netperf:
@@ -28,7 +27,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     break;
                 default:
                     // Validation happened way before this, so we shoud never reach this...
-                    throw new System.Exception($"Invalid TraceFileFormat \"{format}\"");
+                    throw new Exception($"Invalid TraceFileFormat \"{format}\"");
             }
         }
 
