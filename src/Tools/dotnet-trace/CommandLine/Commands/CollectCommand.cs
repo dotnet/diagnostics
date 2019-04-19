@@ -4,11 +4,12 @@
 
 using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System;
+using System.Collections.Generic;
 using System.CommandLine;
-using System.CommandLine.Invocation;
 using System.CommandLine.Rendering;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,8 +25,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="output">The output path for the collected trace data.</param>
         /// <param name="buffersize">Sets the size of the in-memory circular buffer in megabytes.</param>
         /// <param name="providers">A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: '(GUID|KnownProviderName)[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'</param>
+        /// <param name="profile">A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.</param>
         /// <returns></returns>
-        public static async Task<int> Collect(IConsole console, int processId, string output, uint buffersize, string providers)
+        public static async Task<int> Collect(IConsole console, int processId, string output, uint buffersize, string providers, string profile)
         {
             try
             {
@@ -33,11 +35,25 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     throw new ArgumentNullException(nameof(output));
                 if (processId <= 0)
                     throw new ArgumentException(nameof(processId));
+                if (profile == null)
+                    throw new ArgumentNullException(nameof(profile));
 
+                var selectedProfile = ProfilesCommandHandler.DotNETRuntimeProfiles
+                    .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
+                if (selectedProfile == null)
+                    throw new ArgumentException($"Invalid profile name: {profile}");
+
+                var providerCollection = Extensions.ToProviders(providers);
+                if (selectedProfile.Providers != null)
+                    providerCollection.AddRange(selectedProfile.Providers);
+
+                PrintProviders(providerCollection);
+
+                var process = Process.GetProcessById(processId);
                 var configuration = new SessionConfiguration(
                     circularBufferSizeMB: buffersize,
                     outputPath: null, // Not used on the streaming scenario.
-                    Extensions.ToProviders(providers));
+                    providers: providerCollection);
 
                 var shouldExit = new ManualResetEvent(false);
 
@@ -54,7 +70,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     var collectingTask = new Task(() => {
                         using (var fs = new FileStream(output, FileMode.Create, FileAccess.Write))
                         {
-                            Console.Out.WriteLine($"Recording tracing session to: {fs.Name}");
+                            Console.Out.WriteLine($"Process     : {process.MainModule.FileName}");
+                            Console.Out.WriteLine($"Output File : {fs.Name}");
                             Console.Out.WriteLine($"\tSession Id: 0x{sessionId:X16}");
                             lineToClear = Console.CursorTop;
 
@@ -75,7 +92,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     });
                     collectingTask.Start();
 
-                    Console.Out.WriteLine("press <Enter> or <Ctrl+c> to exit...");
+                    Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
                     System.Console.CancelKeyPress += (sender, args) => {
                         args.Cancel = true;
                         shouldExit.Set();
@@ -100,6 +117,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                 return 1;
             }
+        }
+
+        [Conditional("DEBUG")]
+        private static void PrintProviders(IReadOnlyList<Provider> providers)
+        {
+            Console.Out.WriteLine("Enabling the following providers");
+            foreach (var provider in providers)
+                Console.Out.WriteLine($"\t{provider.ToString()}");
         }
 
         private static int prevBufferWidth = 0;
@@ -148,7 +173,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     CommonOptions.CircularBufferOption(),
                     CommonOptions.OutputPathOption(),
                     CommonOptions.ProvidersOption(),
+                    ProfileOption(),
                 },
-                handler: CommandHandler.Create<IConsole, int, string, uint, string>(Collect));
+                handler: System.CommandLine.Invocation.CommandHandler.Create<IConsole, int, string, uint, string, string>(Collect));
+
+        public static Option ProfileOption() =>
+            new Option(
+                alias: "--profile",
+                description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.",
+                argument: new Argument<string>(defaultValue: "runtime-basic") { Name = "profile_name" }, // TODO: Can we specify an actual type?
+                isHidden: false);
     }
 }

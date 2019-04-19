@@ -30,5 +30,8 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         public string Name { get; }
 
         public string FilterData { get; }
+
+        public override string ToString() =>
+            $"{Name}:0x{Keywords:X16}:{(uint)EventLevel}{(FilterData == null ? "" : $":{FilterData}")}";
     }
 }
