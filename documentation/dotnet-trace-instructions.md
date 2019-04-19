@@ -47,7 +47,7 @@ Binder                          |                 4 |
 Loader                          |                 8 | Logging when modules actually get loaded and unloaded.
 Jit                             |                10 | Logging when Just in time (JIT) compilation occurs.
 NGen                            |                20 | Logging when precompiled native (NGEN) images are loaded.
-StartEnumeration                |                40 | Indicates that on attach or module load , a rundown of all existing methods should be done.
+StartEnumeration                |                40 | Indicates that on attach or module load, a rundown of all existing methods should be done.
 StopEnumeration                 |                80 | Indicates that on detach or process shutdown, a rundown of all existing methods should be done.
 Security                        |               400 | Events associated with validating security restrictions.
 AppDomainResourceManagement     |               800 | Events for logging resource consumption on an app-domain level granularity.
@@ -66,7 +66,7 @@ GCSampledObjectAllocationHigh   |            200000 | Enables allocation samplin
 GCHeapSurvivalAndMovement       |            400000 | Enables events associate with object movement or survival with each GC.
 GCHeapCollect                   |            800000 | Triggers a GC. Can pass a 64 bit value that will be logged with the GC Start event so you know which GC you actually triggered.
 GCHeapAndTypeNames              |           1000000 | Indicates that you want type names looked up and put into the events (not just meta-data tokens).
-GCHeapSnapshot                  |           1980001 | This provides the flags commonly needed to take a heap .NET Heap snapshot with ETW.
+GCHeapSnapshot                  |           1980001 | This provides the flags commonly needed to take a heap .NET Heap snapshot with ETW.<br>This is equivalent to `GC+Type+GCHeapDump+GCHeapCollect+GCHeapAndTypeNames`
 GCSampledObjectAllocationLow    |           2000000 | Enables allocation sampling with the 'slow' rate, Sample to limit to 5 allocations per second per type. This is reasonable for monitoring. Note that this DOES update the allocation path to be slower and only works if the process start with this on.
 GCAllObjectAllocation           |           2200000 | Turns on capturing the stack and type of object allocation made by the .NET Runtime. This is only supported after V4.5.3 (Late 2014) This can be very verbose and you should seriously using GCSampledObjectAllocationHigh instead (and GCSampledObjectAllocationLow for production scenarios).
 Stack                           |          40000000 | Also log the stack trace of events for which this is valuable.
