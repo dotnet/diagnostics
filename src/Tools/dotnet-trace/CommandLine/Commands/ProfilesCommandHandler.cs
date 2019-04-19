@@ -41,7 +41,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         // FIXME: Read from a config file!
         // TODO: Is the "string provider" expected to be "string[] providers"?
-        private static IEnumerable<(string profile, Provider? provider, string description)> DotNETRuntimeProfiles { get; } = new (string profile, Provider? provider, string description)[] {
+        internal static IEnumerable<(string profile, Provider? provider, string description)> DotNETRuntimeProfiles { get; } = new (string profile, Provider? provider, string description)[] {
             ("runtime-basic", new Provider("Microsoft-Windows-DotNETRuntime", 0x00000004C14FCCBD, EventLevel.Informational), "Useful for tracking CPU usage and general runtime information. This the default option if no profile is specified."),
             ("gc", new Provider("Microsoft-Windows-DotNETRuntime", 0x0000000000000001, EventLevel.Verbose), "Tracks allocation and collection performance."),
             ("gc-collect", new Provider("Microsoft-Windows-DotNETRuntime", 0x0000000000800000, EventLevel.Informational), "Tracks GC collection only at very low overhead."),

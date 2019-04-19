@@ -12,13 +12,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class Extensions
     {
-        public static IReadOnlyCollection<Provider> ToProviders(string providers)
+        public static List<Provider> ToProviders(string providers)
         {
             if (string.IsNullOrWhiteSpace(providers))
                 throw new ArgumentNullException(nameof(providers));
             return providers.Split(',')
                 .Select(ToProvider)
-                .ToArray();
+                .ToList();
         }
 
         private static Provider ToProvider(string provider)
