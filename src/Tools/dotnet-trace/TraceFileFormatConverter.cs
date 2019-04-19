@@ -12,7 +12,7 @@ using Microsoft.Diagnostics.Tracing.Stacks.Formats;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    public enum TraceFileFormat { netperf, speedscope };
+    internal enum TraceFileFormat { netperf, speedscope };
     internal static class TraceFileFormatConverter
     {
         public static void ConvertToFormat(TraceFileFormat format, string fileToConvert)
