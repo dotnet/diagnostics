@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 eventLog.Dispose();
 
-                 if (File.Exists(etlxFilePath))
+                if (File.Exists(etlxFilePath))
                 {
                     File.Delete(etlxFilePath);
                 }

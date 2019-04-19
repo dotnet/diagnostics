@@ -86,6 +86,10 @@ Microsoft-Windows-DotNETRuntime         | [The Runtime Provider](https://docs.mi
 Microsoft-Windows-DotNETRuntimeRundown  | [The Rundown Provider](https://docs.microsoft.com/en-us/dotnet/framework/performance/clr-etw-providers#the-rundown-provider)<br>[CLR Rundown Keywords](https://docs.microsoft.com/en-us/dotnet/framework/performance/clr-etw-keywords-and-levels#rundown)
 Microsoft-DotNETCore-SampleProfiler     | Enable the sample profiler
 
+## `dotnet-trace` output formats
+
+You can change the output file format using the `-f|--format` option.  You can currently choose between `netperf` (the default on Windows) and `speedscope` (the default on all other OSes).  Speedscope files can be opened at https://www.speedscope.app.
+
 ## *dotnet-trace* help
 
 ```cmd
@@ -126,6 +130,8 @@ Options:
             KeyValueArgs            - A semicolon separated list of key=value
         KeyValueArgs format: '[key1=value1][;key2=value2]'
 
-    --buffersize <Size>                             Sets the size of the in-memory circular buffer
-                                                    in megabytes. Default 256 MB.
-```
+  --buffersize <Size>
+    Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
+  
+  -f, --format
+    The format of the output trace file.  This deafualts to "netperf" on Windows and "speedscope" on other OSes.
