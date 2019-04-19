@@ -18,9 +18,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             try
             {
-                Console.Out.WriteLine("Provider: Microsoft-Windows-DotNETRuntime");
-                foreach ((var profile, var _, var description) in DotNETRuntimeProfiles)
-                    Console.Out.WriteLine($"\t{profile, -16} - {description}");
+                foreach (var profile in DotNETRuntimeProfiles)
+                    Console.Out.WriteLine($"\t{profile.Name,-16} - {profile.Description}");
 
                 await Task.FromResult(0);
                 return 0;
@@ -40,12 +39,33 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 isHidden: false);
 
         // FIXME: Read from a config file!
-        // TODO: Is the "string provider" expected to be "string[] providers"?
-        internal static IEnumerable<(string profile, Provider? provider, string description)> DotNETRuntimeProfiles { get; } = new (string profile, Provider? provider, string description)[] {
-            ("runtime-basic", new Provider("Microsoft-Windows-DotNETRuntime", 0x00000004C14FCCBD, EventLevel.Informational), "Useful for tracking CPU usage and general runtime information. This the default option if no profile is specified."),
-            ("gc", new Provider("Microsoft-Windows-DotNETRuntime", 0x0000000000000001, EventLevel.Verbose), "Tracks allocation and collection performance."),
-            ("gc-collect", new Provider("Microsoft-Windows-DotNETRuntime", 0x0000000000800000, EventLevel.Informational), "Tracks GC collection only at very low overhead."),
-            ("none", null, "Tracks nothing. Only providers specified by the --providers option will be available."),
+        internal static IEnumerable<Profile> DotNETRuntimeProfiles { get; } = new[] {
+            new Profile(
+                "runtime-basic",
+                new Provider[] {
+                    new Provider("Microsoft-DotNETCore-SampleProfiler"),
+                    new Provider("Microsoft-Windows-DotNETRuntime", 0x00000004C14FCCBD, EventLevel.Informational),
+                },
+                "Useful for tracking CPU usage and general runtime information. This the default option if no profile is specified."),
+            new Profile(
+                "gc",
+                new Provider[] {
+                    new Provider("Microsoft-DotNETCore-SampleProfiler"),
+                    new Provider("Microsoft-Windows-DotNETRuntime", 0x0000000000000001, EventLevel.Verbose),
+                },
+                "Tracks allocation and collection performance."),
+            new Profile(
+                "gc-collect",
+                new Provider[] {
+                    new Provider("Microsoft-DotNETCore-SampleProfiler"),
+                    new Provider("Microsoft-Windows-DotNETRuntime", 0x0000000000000001, EventLevel.Informational),
+                },
+                "Tracks GC collection only at very low overhead."),
+
+            new Profile(
+                "none",
+                null,
+                "Tracks nothing. Only providers specified by the --providers option will be available."),
         };
     }
 }

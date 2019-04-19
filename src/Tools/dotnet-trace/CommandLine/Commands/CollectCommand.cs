@@ -38,14 +38,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (profile == null)
                     throw new ArgumentNullException(nameof(profile));
 
-                (string profileName, Provider? provider, string _) = ProfilesCommandHandler.DotNETRuntimeProfiles
-                    .FirstOrDefault(p => p.profile.Equals(profile, StringComparison.OrdinalIgnoreCase));
-                if (profileName == null)
+                var selectedProfile = ProfilesCommandHandler.DotNETRuntimeProfiles
+                    .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
+                if (selectedProfile == null)
                     throw new ArgumentException($"Invalid profile name: {profile}");
 
                 var providerCollection = Extensions.ToProviders(providers);
-                if (provider.HasValue)
-                    providerCollection.Add(provider.Value);
+                if (selectedProfile.Providers != null)
+                    providerCollection.AddRange(selectedProfile.Providers);
 
                 PrintProviders(providerCollection);
 
