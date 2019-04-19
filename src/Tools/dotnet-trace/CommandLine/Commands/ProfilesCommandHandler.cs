@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Tools.RuntimeClient;
+using Microsoft.Diagnostics.Tracing.Parsers;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -44,21 +45,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 "runtime-basic",
                 new Provider[] {
                     new Provider("Microsoft-DotNETCore-SampleProfiler"),
-                    new Provider("Microsoft-Windows-DotNETRuntime", 0x00000004C14FCCBD, EventLevel.Informational),
+                    new Provider("Microsoft-Windows-DotNETRuntime", (ulong)ClrTraceEventParser.Keywords.Default, EventLevel.Informational),
                 },
                 "Useful for tracking CPU usage and general runtime information. This the default option if no profile is specified."),
             new Profile(
                 "gc",
                 new Provider[] {
                     new Provider("Microsoft-DotNETCore-SampleProfiler"),
-                    new Provider("Microsoft-Windows-DotNETRuntime", 0x0000000000000001, EventLevel.Verbose),
+                    new Provider("Microsoft-Windows-DotNETRuntime", (ulong)ClrTraceEventParser.Keywords.GC, EventLevel.Verbose),
                 },
                 "Tracks allocation and collection performance."),
             new Profile(
                 "gc-collect",
                 new Provider[] {
                     new Provider("Microsoft-DotNETCore-SampleProfiler"),
-                    new Provider("Microsoft-Windows-DotNETRuntime", 0x0000000000000001, EventLevel.Informational),
+                    new Provider("Microsoft-Windows-DotNETRuntime", (ulong)ClrTraceEventParser.Keywords.GC, EventLevel.Informational),
                 },
                 "Tracks GC collection only at very low overhead."),
 
