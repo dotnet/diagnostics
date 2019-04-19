@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.CommandLine;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -36,6 +37,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 alias: "--buffersize",
                 description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB",
                 argument: new Argument<uint>(defaultValue: DefaultCircularBufferSizeInMB) { Name = "size" },
+                isHidden: false);
+
+        public static TraceFileFormat DefaultTraceFileFormat => 
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? TraceFileFormat.netperf : TraceFileFormat.speedscope;
+
+        public static Option FormatOption() =>
+            new Option(
+                aliases: new[] { "-f", "--format" },
+                description: $"Sets the output format for the trace file.  Default is {DefaultTraceFileFormat}",
+                argument: new Argument<TraceFileFormat>(defaultValue: DefaultTraceFileFormat) { Name = "trace-file-format" },
                 isHidden: false);
     }
 }

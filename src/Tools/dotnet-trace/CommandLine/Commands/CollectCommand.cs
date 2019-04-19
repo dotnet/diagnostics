@@ -26,8 +26,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="buffersize">Sets the size of the in-memory circular buffer in megabytes.</param>
         /// <param name="providers">A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: '(GUID|KnownProviderName)[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'</param>
         /// <param name="profile">A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.</param>
+        /// <param name="format">The desired format of the created trace file.</param>
         /// <returns></returns>
-        public static async Task<int> Collect(IConsole console, int processId, string output, uint buffersize, string providers, string profile)
+        public static async Task<int> Collect(IConsole console, int processId, string output, uint buffersize, string providers, string profile, TraceFileFormat format)
         {
             try
             {
@@ -109,6 +110,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Console.Out.WriteLine();
                 Console.Out.WriteLine("Trace completed.");
 
+                TraceFileFormatConverter.ConvertToFormat(format, output);
+
                 await Task.FromResult(0);
                 return sessionId != 0 ? 0 : 1;
             }
@@ -174,8 +177,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     CommonOptions.OutputPathOption(),
                     CommonOptions.ProvidersOption(),
                     ProfileOption(),
+                    CommonOptions.FormatOption(),
                 },
-                handler: System.CommandLine.Invocation.CommandHandler.Create<IConsole, int, string, uint, string, string>(Collect));
+                handler: System.CommandLine.Invocation.CommandHandler.Create<IConsole, int, string, uint, string, string, TraceFileFormat>(Collect));
 
         public static Option ProfileOption() =>
             new Option(

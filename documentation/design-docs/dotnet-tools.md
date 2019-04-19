@@ -258,6 +258,7 @@ COLLECT
                          [--pack]
                          [--profile <profile_name>]
                          [--providers <list-of-comma-separated-providers>]
+                         [-f|--format <trace-file-format>]
 
     Collects a diagnostic trace from a currently running process
 
@@ -299,6 +300,9 @@ COLLECT
 
     --buffersize <Size>
         Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
+
+    -f, --format
+        The format of the output trace file.  This defualts to "netperf" on Windows and "speedscope" on other OSes.
 
 
     Examples:
