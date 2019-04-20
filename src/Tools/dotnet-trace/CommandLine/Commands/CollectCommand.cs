@@ -27,9 +27,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="providers">A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: '(GUID|KnownProviderName)[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'</param>
         /// <param name="profile">A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.</param>
         /// <param name="format">The desired format of the created trace file.</param>
-        /// <param name="pack">Automatically runs the pack command after collection is complete. Use dotnet-trace pack --help for more details.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, bool pack)
+        private static async Task<int> Collect(IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format)
         {
             try
             {
@@ -113,7 +112,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Console.Out.WriteLine();
                 Console.Out.WriteLine("Trace completed.");
 
-                TraceFileFormatConverter.ConvertToFormat(format, output);
+                TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
 
                 await Task.FromResult(0);
                 return sessionId != 0 ? 0 : 1;
@@ -182,9 +181,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     ProvidersOption(),
                     ProfileOption(),
                     CommonOptions.FormatOption(),
-                    PackOption(),
                 },
-                handler: System.CommandLine.Invocation.CommandHandler.Create<IConsole, int, FileInfo, uint, string, string, TraceFileFormat, bool>(Collect));
+                handler: System.CommandLine.Invocation.CommandHandler.Create<IConsole, int, FileInfo, uint, string, string, TraceFileFormat>(Collect));
 
         private static uint DefaultCircularBufferSizeInMB => 256;
 
@@ -216,13 +214,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 alias: "--profile",
                 description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.",
                 argument: new Argument<string>(defaultValue: "runtime-basic") { Name = "profile_name" },
-                isHidden: false);
-
-        private static Option PackOption() =>
-            new Option(
-                alias: "--pack",
-                description: $"Automatically runs the pack command after collection is complete. Use dotnet-trace pack --help for more details.",
-                argument: new Argument<bool>(defaultValue: false),
                 isHidden: false);
     }
 }
