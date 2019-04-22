@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="private-memory", Description="Amount of private virtual memory used by the process (KB)" },
                     new CounterProfile{ Name="working-set", Description="Amount of working set used by the process (KB)" },
                     new CounterProfile{ Name="virtual-memory", Description="Amount of virtual memory used by the process (KB)" },
-                    new CounterProfile{ Name="gc-total-memory", Description="Amount of commited virtual memory used by the GC (KB)" },
+                    new CounterProfile{ Name="gc-total-memory", Description="Amount of committed virtual memory used by the GC (KB)" },
                     new CounterProfile{ Name="exceptions-thrown-rate", Description="Number of exceptions thrown in a recent 1 minute window (exceptions/min)" },
                 });
 

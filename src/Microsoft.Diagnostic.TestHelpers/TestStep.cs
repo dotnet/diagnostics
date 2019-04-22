@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostic.TestHelpers
     /// can consist of multiple processes running across different machines at
     /// different times. The TestStep supports:
     /// 1) coordination between test processes to ensure each step runs only once
-    /// 2) disk based persistance so that later steps in different processes can
+    /// 2) disk based persistence so that later steps in different processes can
     ///    reload the state of earlier steps
     /// 3) Pretty printing logs
     /// 4) TODO: Dependency analysis to determine if the cached output of a previous step

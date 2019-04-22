@@ -149,7 +149,7 @@ namespace Microsoft.Diagnostic.Repl
                     if (baseAttribute is CommandAliasAttribute commandAliasAttribute)
                     {
                         if (command == null) {
-                            throw new ArgumentException($"No previous CommandAttribute for this CommandAliasAttrbute: {type.Name}");
+                            throw new ArgumentException($"No previous CommandAttribute for this CommandAliasAttribute: {type.Name}");
                         }
                         command.AddAlias(commandAliasAttribute.Name);
                     }
