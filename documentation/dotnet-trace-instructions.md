@@ -136,4 +136,4 @@ Options:
     Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
   
   -f, --format
-    The format of the output trace file.  This deafualts to "netperf" on Windows and "speedscope" on other OSes.
+    The format of the output trace file.  This defaults to "netperf" on Windows and "speedscope" on other OSes.
