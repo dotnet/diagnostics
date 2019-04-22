@@ -786,7 +786,7 @@ Show a snapshot of all a processes threads with a callstack for each.
 
 6. Do we want the tool be 'dotnet' prefixed or use a separate tool name?
 
-    Dotnet prefixed. Our tools have similarities in function and naming to other non-dotnet tools, so including something that evokes 'dotnet' is important to distinguish them. Java established a precendent of putting a 'j' in front of their tool names but if we followed suit ('d' or 'dn' perhaps) I think it would only create confusion with dotnet's convention of using 'dotnet'. We could also try to name the tools something complete different (SOS is one example) and get users to still associate the name with dotnet, but it feels harder and less effective than simply naming 'dotnet' explicitly. Other names appear to be less discoverable, less easily predicted, and if we don't pick catchy names, probably less easily remembered.
+    Dotnet prefixed. Our tools have similarities in function and naming to other non-dotnet tools, so including something that evokes 'dotnet' is important to distinguish them. Java established a precedent of putting a 'j' in front of their tool names but if we followed suit ('d' or 'dn' perhaps) I think it would only create confusion with dotnet's convention of using 'dotnet'. We could also try to name the tools something complete different (SOS is one example) and get users to still associate the name with dotnet, but it feels harder and less effective than simply naming 'dotnet' explicitly. Other names appear to be less discoverable, less easily predicted, and if we don't pick catchy names, probably less easily remembered.
 
 ## Area specific Questions
 
