@@ -695,7 +695,7 @@ Add a serialization format for profiles that lets users author new ones and spec
 
 - Provider/event enumeration
 
-Add a command that interogates a running process (or maybe binary?) to extract a set of providers and events it supports emitting.
+Add a command that interrogates a running process (or maybe binary?) to extract a set of providers and events it supports emitting.
 
 - Monitor command
 
