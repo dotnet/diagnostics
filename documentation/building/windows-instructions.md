@@ -103,5 +103,5 @@ You can of course add a directory to the PATH environment variable with the synt
 However the change above will only last until the command windows closes.   You can make your change to
 the PATH variable persistent by going to  Control Panel -> System And Security -> System -> Advanced system settings -> Environment Variables, 
 and select the 'Path' variable in the 'System variables' (if you want to change it for all users) or 'User variables' (if you only want
-to change it for the currnet user).  Simply edit the PATH variable's value and add the directory (with a semicolon separator).
+to change it for the current user).  Simply edit the PATH variable's value and add the directory (with a semicolon separator).
 
