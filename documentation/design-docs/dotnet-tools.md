@@ -902,7 +902,7 @@ Perf stat [options] <command\_line\> [more\_options] runs the command-line, coll
 
            0.957617512  seconds time elapsed
 
-Perf record <comamnd\_line\> collects a trace for the given command\_line
+Perf record <command\_line\> collects a trace for the given command\_line
 
     perf record ./noploop 1
 
