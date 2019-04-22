@@ -175,7 +175,7 @@ LIST
           private-memory                 Amount of private virtual memory used by the process (KB)
           working-set                    Amount of working set used by the process (KB)
           virtual-memory                 Amount of virtual memory used by the process (KB)
-          gc-total-memory                Amount of commited virtual memory used by the GC (KB)
+          gc-total-memory                Amount of committed virtual memory used by the GC (KB)
           exceptions-thrown-rate         Number of exceptions thrown in a recent 1 minute window (exceptions/min)
           lock-contention-rate           Number of instances of lock contention on runtime implemented locks in a
                                          recent 1 minute window (contentions/min)
