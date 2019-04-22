@@ -52,14 +52,28 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 "gc",
                 new Provider[] {
                     new Provider("Microsoft-DotNETCore-SampleProfiler"),
-                    new Provider("Microsoft-Windows-DotNETRuntime", (ulong)ClrTraceEventParser.Keywords.GC, EventLevel.Verbose),
+                    new Provider(
+                        name: "Microsoft-Windows-DotNETRuntime",
+                        keywords: (ulong)ClrTraceEventParser.Keywords.GC |
+                                  (ulong)ClrTraceEventParser.Keywords.GCHeapSurvivalAndMovement |
+                                  (ulong)ClrTraceEventParser.Keywords.Stack |
+                                  (ulong)ClrTraceEventParser.Keywords.Jit |
+                                  (ulong)ClrTraceEventParser.Keywords.StopEnumeration |
+                                  (ulong)ClrTraceEventParser.Keywords.SupressNGen |
+                                  (ulong)ClrTraceEventParser.Keywords.Loader |
+                                  (ulong)ClrTraceEventParser.Keywords.Exception,
+                        eventLevel: EventLevel.Verbose),
                 },
                 "Tracks allocation and collection performance."),
             new Profile(
                 "gc-collect",
                 new Provider[] {
                     new Provider("Microsoft-DotNETCore-SampleProfiler"),
-                    new Provider("Microsoft-Windows-DotNETRuntime", (ulong)ClrTraceEventParser.Keywords.GC, EventLevel.Informational),
+                    new Provider(
+                        name: "Microsoft-Windows-DotNETRuntime",
+                        keywords:   (ulong)ClrTraceEventParser.Keywords.GC |
+                                    (ulong)ClrTraceEventParser.Keywords.Exception,
+                        eventLevel: EventLevel.Informational),
                 },
                 "Tracks GC collection only at very low overhead."),
 
