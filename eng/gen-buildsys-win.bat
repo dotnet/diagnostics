@@ -1,4 +1,4 @@
-@if not defined __echo @echo off
+@if not defined _echo @echo off
 rem
 rem This file invokes cmake and generates the build system for windows.
 
@@ -19,13 +19,18 @@ set __SourceDir=%1
 set __VSVersion=%2
 set __Arch=%3
 set __CmakeGenerator=Visual Studio
-if /i "%__VSVersion%" == "vs2017" (set __CmakeGenerator=%__CmakeGenerator% 15 2017)
-if /i "%__VSVersion%" == "vs2015" (set __CmakeGenerator=%__CmakeGenerator% 14 2015)
-if /i "%__Arch%" == "x64" (set __CmakeGenerator=%__CmakeGenerator% Win64)
-if /i "%__Arch%" == "arm64" (set __CmakeGenerator=%__CmakeGenerator% Win64)
-if /i "%__Arch%" == "arm" (set __CmakeGenerator=%__CmakeGenerator% ARM)
 
-if /i "%__NMakeMakefiles%" == "1" (set __CmakeGenerator=NMake Makefiles)
+if /i "%__NMakeMakefiles%" == "1" (
+    set __CmakeGenerator=NMake Makefiles
+) else (
+    if /i "%__VSVersion%" == "vs2019" (set __CmakeGenerator=%__CmakeGenerator% 16 2019)
+    if /i "%__VSVersion%" == "vs2017" (set __CmakeGenerator=%__CmakeGenerator% 15 2017)
+
+    if /i "%__Arch%" == "x64" (set __ExtraCmakeParams=%__ExtraCmakeParams% -A x64)
+    if /i "%__Arch%" == "arm" (set __ExtraCmakeParams=%__ExtraCmakeParams% -A ARM)
+    if /i "%__Arch%" == "arm64" (set __ExtraCmakeParams=%__ExtraCmakeParams% -A ARM64)
+    if /i "%__Arch%" == "x86" (set __ExtraCmakeParams=%__ExtraCmakeParams% -A Win32)
+)
 
 :loop
 if [%4] == [] goto end_loop
@@ -36,7 +41,7 @@ goto loop
 
 if defined CMakePath goto DoGen
 
-:: Eval the output from probe-win1.ps1
+:: Eval the output from probe-win.ps1
 for /f "delims=" %%a in ('powershell -NoProfile -ExecutionPolicy ByPass "& "%basePath%\probe-win.ps1""') do %%a
 
 :DoGen
@@ -48,7 +53,7 @@ GOTO :DONE
   echo "Usage..."
   echo "gen-buildsys-win.bat <path to top level CMakeLists.txt> <VSVersion>"
   echo "Specify the path to the top level CMake file - <ProjectK>/src/NDP"
-  echo "Specify the VSVersion to be used - VS2015 or VS2017"
+  echo "Specify the VSVersion to be used - VS2017 or VS2019"
   EXIT /B 1
 
 :DONE
