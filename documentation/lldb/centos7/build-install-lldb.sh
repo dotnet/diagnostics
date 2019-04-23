@@ -2,7 +2,7 @@
 sudo yum install doxygen libedit-devel libxml2-devel python-argparse python-devel readline-devel swig xz
 
 cd $HOME
-wget ftp://sourceware.org/pub/binutils/snapshots/binutils-2.29.1.tar.xz
+wget http://ftp.gnu.org/gnu/binutils/binutils-2.29.1.tar.xz
 wget http://releases.llvm.org/3.9.1/cfe-3.9.1.src.tar.xz
 wget http://releases.llvm.org/3.9.1/llvm-3.9.1.src.tar.xz
 wget http://releases.llvm.org/3.9.1/lldb-3.9.1.src.tar.xz
