@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFrameworks>netcoreapp2.1;netcoreapp2.2;netcoreapp3.0</TargetFrameworks>
     <RootNamespace>Microsoft.Diagnostics.Tools.Trace</RootNamespace>
     <GenerateDocumentationFile>False</GenerateDocumentationFile>
 
@@ -17,7 +17,6 @@
 
     <IsPackable>True</IsPackable>
     <PackAsTool>True</PackAsTool>
-    <RuntimeFrameworkVersion>2.1.0</RuntimeFrameworkVersion>
     <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;osx-x64</PackAsToolShimRuntimeIdentifiers>
   </PropertyGroup>
 

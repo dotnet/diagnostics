@@ -172,11 +172,6 @@ if not exist "%__DotNetCli%" (
     echo %__MsgPrefix%Assertion failed: dotnet cli not found at path "%__DotNetCli%"
     exit /b 1
 )
-set __MSBuildPath=%__ProjectDir%\.dotnet\sdk\2.1.505\MSBuild.dll
-if not exist "%__MSBuildPath%" (
-    echo %__MsgPrefix%Assertion failed: dotnet cli sdk not found at path "%__MSBuildPath%"
-    exit /b 1
-)
 
 set __DotNetRuntimeVersion=2.1.9
 
@@ -231,7 +226,7 @@ if %__Build% EQU 1 (
 :GenVSSolution
     echo Generating Version Header
     set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    %__DotNetCli% %__MSBuildPath% %__ProjectDir%\eng\CreateVersionFile.csproj /v:!__Verbosity! /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:VersionPrefixFile=%__RootBinDir%\bin\VersionPrefix.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
+    %__DotNetCli% msbuild %__ProjectDir%\eng\CreateVersionFile.csproj /v:!__Verbosity! /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:VersionPrefixFile=%__RootBinDir%\bin\VersionPrefix.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
         exit /b 1
