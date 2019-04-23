@@ -115,7 +115,7 @@ Options:
 
   --providers <list-of-comma-separated-providers>
     A list of comma separated EventPipe providers to be enabled.
-    This option adds to the configuration already provided via the --profile argument. If the same provider if configured in both places, this option takes precedence.
+    This option adds to the configuration already provided via the --profile argument. If the same provider is configured in both places, this option takes precedence.
     A provider consists of the name and optionally the keywords, verbosity level, and custom key/value pairs.
 
     The string is written 'Provider[,Provider]'
@@ -136,4 +136,4 @@ Options:
     Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
   
   -f, --format
-    The format of the output trace file.  This deafualts to "netperf" on Windows and "speedscope" on other OSes.
+    The format of the output trace file.  This defaults to "netperf" on Windows and "speedscope" on other OSes.
