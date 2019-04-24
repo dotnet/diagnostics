@@ -33,53 +33,41 @@
   </ItemGroup>
 
   <ItemGroup>
-    <_PackageFiles Include="$(SOSNETCoreBinaries)">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/win-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\sos.dll">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/win-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(SOSNETCoreBinaries)">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/win-x86</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\sos.dll">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/win-x86</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(SOSNETCoreBinaries)">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/linux-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsosplugin.so">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/linux-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsos.so">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/linux-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\sosdocsunix.txt">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/linux-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(SOSNETCoreBinaries)">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/osx-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/osx-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsos.dylib">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/osx-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\sosdocsunix.txt">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/osx-x64</PackagePath>
-    </_PackageFiles>
+    <None Pack="True" Include="$(SOSNETCoreBinaries)">
+      <PackagePath>tools/$(TargetFramework)/any/win-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\sos.dll">
+      <PackagePath>tools/$(TargetFramework)/any/win-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(SOSNETCoreBinaries)">
+      <PackagePath>tools/$(TargetFramework)/any/win-x86</PackagePath>
+    </None>
+    <None Pack="True" Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\sos.dll">
+      <PackagePath>tools/$(TargetFramework)/any/win-x86</PackagePath>
+    </None>
+    <None Pack="True" Include="$(SOSNETCoreBinaries)">
+      <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsosplugin.so">
+      <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsos.so">
+      <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\sosdocsunix.txt">
+      <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(SOSNETCoreBinaries)">
+      <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib">
+      <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsos.dylib">
+      <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\sosdocsunix.txt">
+      <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
+    </None>
   </ItemGroup>
 </Project>
