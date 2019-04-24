@@ -45,7 +45,6 @@ For analyzing CPU usage, IO, lock contention, allocation rate, etc the investiga
     Recording trace 38MB
 
     's' - stop tracing
-    'g' - capture GC heap snapshot
 
 ...Hit 's'...
 
@@ -304,7 +303,6 @@ COLLECT
       Recording trace 38MB
 
       's' - stop tracing
-      'g' - capture GC heap snapshot
 
 CONVERT
 
@@ -619,6 +617,10 @@ Dumps a snapshot of counters on demand. In order to make this command fast the E
           Request Latency (ms)                          34
 
 ### dotnet-trace
+
+- Capture GC heap snapshot
+
+Add a command to `dotnet-trace collect` that enables the collection of GC heap snapshots on an active tracing session.
 
 - Compress a trace and any necessary symbols into a single zip file for easy off-machine analysis
 
