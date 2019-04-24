@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (profile == null)
                     throw new ArgumentNullException(nameof(profile));
 
-                var selectedProfile = ProfilesCommandHandler.DotNETRuntimeProfiles
+                var selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
                     .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
                 if (selectedProfile == null)
                     throw new ArgumentException($"Invalid profile name: {profile}");
