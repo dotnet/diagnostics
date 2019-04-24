@@ -1,7 +1,6 @@
 [cmdletbinding()]
 param(
    [string]$DotNetDir,
-   [string]$RuntimeVersion21,
    [string]$TempDir,
    [string]$BuildArch,
    [switch]$DailyTest,
@@ -13,7 +12,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 
 $RuntimeVersion11="1.1.11"
-$RuntimeVersion22="2.2.2"
+$RuntimeVersion21="2.1.10"
+$RuntimeVersion22="2.2.4"
 $DailyTestText="true"
 
 # Install the other versions of .NET Core runtime we are going to test. 1.1.x, 2.1.x (installed with the CLI), 2.2.x
@@ -21,6 +21,7 @@ $DailyTestText="true"
 if (!$DailyTest) {
     $DailyTestText="false"
     . $DotNetDir\dotnet-install.ps1 -Version $RuntimeVersion11 -Architecture $BuildArch -SkipNonVersionedFiles -Runtime dotnet -InstallDir $DotNetDir
+    . $DotNetDir\dotnet-install.ps1 -Version $RuntimeVersion21 -Architecture $BuildArch -SkipNonVersionedFiles -Runtime dotnet -InstallDir $DotNetDir
     . $DotNetDir\dotnet-install.ps1 -Version $RuntimeVersion22 -Architecture $BuildArch -SkipNonVersionedFiles -Runtime dotnet -InstallDir $DotNetDir
 }
 

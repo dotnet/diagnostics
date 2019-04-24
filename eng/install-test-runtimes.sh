@@ -10,8 +10,8 @@ branch="master"
 uncached_feed="https://dotnetcli.blob.core.windows.net/dotnet"
 
 runtime_version_11="1.1.11"
-runtime_version_22="2.2.2"
-runtime_version_21=
+runtime_version_21="2.1.10"
+runtime_version_22="2.2.4"
 
 while [ $# -ne 0 ]; do
     name=$1
@@ -19,10 +19,6 @@ while [ $# -ne 0 ]; do
         --dotnet-directory)
             shift
             dotnet_dir=$1
-            ;;
-        --runtime-version-21)
-            shift
-            runtime_version_21=$1
             ;;
         --temp-directory)
             shift
@@ -53,6 +49,7 @@ daily_test_text="true"
 if [ $daily_test == 0 ]; then
     daily_test_text="false"
     bash "$dotnet_dir/dotnet-install.sh" --version "$runtime_version_11" --architecture "$build_arch" --skip-non-versioned-files --runtime dotnet --install-dir "$dotnet_dir"
+    bash "$dotnet_dir/dotnet-install.sh" --version "$runtime_version_21" --architecture "$build_arch" --skip-non-versioned-files --runtime dotnet --install-dir "$dotnet_dir"
     bash "$dotnet_dir/dotnet-install.sh" --version "$runtime_version_22" --architecture "$build_arch" --skip-non-versioned-files --runtime dotnet --install-dir "$dotnet_dir"
 fi
 
