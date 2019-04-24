@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 .AddCommand(StopCommandHandler.StopCommand())
 #endif
                 .AddCommand(CollectCommandHandler.CollectCommand())
-                .AddCommand(EndPointsCommandHandler.ActivePortsCommand())
+                .AddCommand(ListProcessesCommandHandler.ListProcessesCommand())
                 .AddCommand(ListProfilesCommandHandler.ListProfilesCommand())
                 .UseDefaults()
                 .Build();
