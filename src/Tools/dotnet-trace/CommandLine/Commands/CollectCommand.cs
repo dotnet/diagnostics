@@ -189,7 +189,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option CircularBufferOption() =>
             new Option(
                 alias: "--buffersize",
-                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB",
+                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB.",
                 argument: new Argument<uint>(defaultValue: DefaultCircularBufferSizeInMB) { Name = "size" },
                 isHidden: false);
 

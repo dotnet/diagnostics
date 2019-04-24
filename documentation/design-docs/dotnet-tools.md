@@ -231,9 +231,7 @@ MONITOR
 
 SYNOPSIS
 
-    dotnet-trace [--version]
-                 [-h, --help]
-                 <command> [<args>]
+    dotnet-trace [options] [command] [<args>]
 
 OPTIONS
 
@@ -245,8 +243,10 @@ OPTIONS
 
 COMMANDS
 
-    collect   Collects a diagnostic trace from a currently running process
-    convert   Converts traces to alternate formats for use with alternate trace analysis tools
+    collect         Collects a diagnostic trace from a currently running process
+    list-processes  Lists dotnet processes that can be attached to.
+    list-profiles   Lists pre-built tracing profiles with a description of what providers and filters are in each profile.
+    convert         Converts traces to alternate formats for use with alternate trace analysis tools
 
 COLLECT
 
@@ -273,7 +273,6 @@ COLLECT
         succinctly. The options are:
         runtime-basic   Useful for tracking CPU usage and general runtime information. This the default option
                         if no profile is specified.
-        asp-net-basic   Useful starting point for ASP.Net performance investigations
         gc              Tracks allocation and collection performance
         gc-collect      Tracks GC collection only at very low overhead
         none            Tracks nothing. Only providers specified by the --providers option will be available.
@@ -814,6 +813,8 @@ Show a snapshot of all a processes threads with a callstack for each.
     3. Counters should have separate display names that use spaces and indicate measurement units.
 
 ### dotnet-trace
+
+- Add a useful starting point profile for ASP.NET performance investigations
 
 - Does dotnet-trace support other tracing systems or EventPipe only?
 
