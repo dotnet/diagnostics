@@ -4,6 +4,12 @@
 
   <Target Name="_PublishPackageReferences"
           AfterTargets="PostBuildEvent"
-          Condition="$(IsPublishable) == 'true'"
-          DependsOnTargets="$(_BeforePublishNoBuildTargets);$(_CorePublishTargets)" />
+          Condition="'$(NeedsPublishing)'=='true'"
+          DependsOnTargets="SetNoBuild;Publish" />
+
+  <Target Name="SetNoBuild">
+    <PropertyGroup>
+      <NoBuild>true</NoBuild>
+    </PropertyGroup>
+  </Target>
 </Project>

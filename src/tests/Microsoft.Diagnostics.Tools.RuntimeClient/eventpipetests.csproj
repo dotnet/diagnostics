@@ -1,7 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="$(MSBuildThisFileDirectory)\..\..\Common.props" />
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.0</TargetFramework>
@@ -12,6 +10,7 @@
   <PropertyGroup>
     <IsPackable>False</IsPackable>
     <PackAsTool>False</PackAsTool>
+    <IsShipping>false</IsShipping>
   </PropertyGroup>
 
   <ItemGroup>

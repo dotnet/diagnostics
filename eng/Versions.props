@@ -21,6 +21,10 @@
     <!-- Other libs -->
     <MicrosoftSymbolStoreVersion>1.0.0-dev-64016-01</MicrosoftSymbolStoreVersion>
     <MicrosoftDiagnosticsRuntimeVersion>1.0.5</MicrosoftDiagnosticsRuntimeVersion>
+
+    <MicrosoftDiagnosticsTracingLibraryVersion>2.0.40</MicrosoftDiagnosticsTracingLibraryVersion>
+    <SystemCommandLineExperimentalVersion>0.2.0-alpha.19213.1</SystemCommandLineExperimentalVersion>
+    <SystemCommandLineRenderingVersion>0.2.0-alpha.19213.1</SystemCommandLineRenderingVersion>
   </PropertyGroup>
 
   <PropertyGroup>
