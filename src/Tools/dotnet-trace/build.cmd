@@ -1,7 +1,7 @@
 @if not defined _echo echo off
 cls
 
-dotnet.exe restore "%~dp0dotnet-trace.csproj" --packages "%~dp0..\..\..\artifacts\packages" || (
+dotnet.exe restore "%~dp0dotnet-trace.csproj" --packages "%~dp0..\..\..\.packages" || (
     echo [ERROR] Failed to restore.
     exit /b 1
 )
