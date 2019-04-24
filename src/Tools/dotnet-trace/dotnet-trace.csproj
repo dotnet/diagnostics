@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>netcoreapp2.1;netcoreapp2.2;netcoreapp3.0</TargetFrameworks>
+    <TargetFrameworks>netcoreapp2.1;netcoreapp3.0</TargetFrameworks>
     <RootNamespace>Microsoft.Diagnostics.Tools.Trace</RootNamespace>
     <GenerateDocumentationFile>False</GenerateDocumentationFile>
 
