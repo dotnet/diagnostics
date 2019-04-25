@@ -320,7 +320,7 @@ CONVERT
         using the same base filename as the input file and the extension appropriate for the new format.
 
     -f, --format
-        Specifies the format to convert the netperf file to. Valid inputs are: speedscope.
+        Specifies the format to convert the netperf file to. Currently, the only valid input is 'speedscope'.
 
     trace_file_path
         The path to the trace file that should be converted. The trace file can be a netperf file. Defaults to 'trace.netperf'.
