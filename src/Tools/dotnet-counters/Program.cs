@@ -32,9 +32,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private static Option RefreshIntervalOption() =>
             new Option(
-                new[] { "-r", "--interval" }, 
+                new[] { "-r", "--refresh-interval" }, 
                 "The number of seconds to delay between updating the displayed counters.",
-                new Argument<int> { Name = "interval" });
+                new Argument<int> { Name = "refresh-interval" });
 
         private static Argument CounterList() =>
             new Argument<string> {

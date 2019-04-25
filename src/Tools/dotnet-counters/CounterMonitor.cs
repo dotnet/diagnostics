@@ -39,21 +39,22 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // There really isn't a great way to tell whether an EventCounter payload is an instance of 
                 // IncrementingCounterPayload or CounterPayload, so here we check the number of fields 
                 // to distinguish the two.                
-                ICounterPayload payload = payloadFields["CounterType"] == "Sum" ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
+                ICounterPayload payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
                 
                 writer.Update(obj.ProviderName, payload);
             }
         }
 
-        public async Task<int> Monitor(CancellationToken ct, string counter_list, IConsole console, int processId, int interval)
+        public async Task<int> Monitor(CancellationToken ct, string counter_list, IConsole console, int processId, int refreshInterval)
         {
             try
             {
+                Console.WriteLine($"interval: {refreshInterval}");
                 _ct = ct;
                 _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
                 _console = console;
                 _processId = processId;
-                _interval = interval;
+                _interval = refreshInterval;
 
                 return await StartMonitor();
             }
@@ -79,7 +80,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
 
             if (_interval == 0) {
-                _console.Error.WriteLine("interval is required.");
+                _console.Error.WriteLine("refreshInterval is required.");
                 return 1;
             }
 
@@ -135,7 +136,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
             await monitorTask;
             EventPipeClient.StopTracing(_processId, _sessionId);
 
-            Task.FromResult(0);
             return 0;
         }
     }
