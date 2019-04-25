@@ -46,12 +46,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static void ConvertToSpeedscope(string fileToConvert, string outputFilename)
         {
-            var symbolReader = new SymbolReader(System.IO.TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath };
             var etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert);
-
-            var eventLog = new TraceLog(etlxFilePath);
-
-            try
+            using (var symbolReader = new SymbolReader(System.IO.TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
+            using (var eventLog = new TraceLog(etlxFilePath))
             {
                 var stackSource = new MutableTraceEventStackSource(eventLog)
                 {
@@ -63,15 +60,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 SpeedScopeStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename);
             }
-            finally
-            {
-                eventLog.Dispose();
 
-                if (File.Exists(etlxFilePath))
-                {
-                    File.Delete(etlxFilePath);
-                }
+            if (File.Exists(etlxFilePath))
+            {
+                File.Delete(etlxFilePath);
             }
+            
         }
     }
 }
