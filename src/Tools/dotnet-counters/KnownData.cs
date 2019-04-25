@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "System.Runtime", // Name
                 "A default set of performance counters provided by the .NET runtime.", // Description
                 "0xffffffff", // Keywords
-                "0x5", // Level 
+                "5", // Level 
                 new[] { // Counters
                     new CounterProfile{ Name="cpu-usage", Description="Amount of time the process has utilized the CPU (ms)", DisplayName="CPU Usage (%)", Type=CounterType.PollingCounter },
                     new CounterProfile{ Name="working-set", Description="Amount of working set used by the process (MB)", DisplayName="Working Set (MB)", Type=CounterType.PollingCounter },

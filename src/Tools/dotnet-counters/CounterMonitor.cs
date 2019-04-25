@@ -17,15 +17,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
 {
     public class CounterMonitor
     {
-        private string outputPath;
-        private ulong sessionId;
-
         private int _processId;
         private float _interval;
         private string _counterList;
         private CancellationToken _ct;
         private IConsole _console;
         private ConsoleWriter writer;
+        private ulong _sessionId;
         public CounterMonitor()
         {
             writer = new ConsoleWriter();
@@ -52,7 +50,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             try
             {
                 _ct = ct;
-                _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase.
+                _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
                 _console = console;
                 _processId = processId;
                 _interval = interval;
@@ -64,11 +62,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 try
                 {
-                    EventPipeClient.StopTracing(_processId, sessionId);    
+                    EventPipeClient.StopTracing(_processId, _sessionId);    
                 }
                 catch (Exception) {} // Swallow all exceptions for now.
                 
-                console.Out.WriteLine($"Tracing stopped. Trace files written to {outputPath}");
                 console.Out.WriteLine($"Complete");
                 return 1;
             }
@@ -85,8 +82,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _console.Error.WriteLine("interval is required.");
                 return 1;
             }
-
-            outputPath = Path.Combine(Directory.GetCurrentDirectory(), $"dotnet-counters-{_processId}.netperf"); // TODO: This can be removed once events can be streamed in real time.
 
             String providerString;
 
@@ -123,20 +118,24 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 providerString = sb.ToString();
             }
+            Task monitorTask = new Task(() => {
+                var configuration = new SessionConfiguration(
+                    circularBufferSizeMB: 1000,
+                    outputPath: "",
+                    providers: Trace.Extensions.ToProviders(providerString));
 
-            var configuration = new SessionConfiguration(
-                circularBufferSizeMB: 1000,
-                outputPath: outputPath,
-                providers: Trace.Extensions.ToProviders(providerString));
+                var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
+                EventPipeEventSource source = new EventPipeEventSource(binaryReader);
+                writer.InitializeDisplay();
+                source.Dynamic.All += Dynamic_All;
+                source.Process();
+            });
 
-            var binaryReader = EventPipeClient.StreamTracingToFile(_processId, configuration, out var sessionId);
-            _console.Out.WriteLine($"SessionId=0x{sessionId:X16}");
-            var tBytesRead = 0;
-            EventPipeEventSource source = new EventPipeEventSource(binaryReader);
-            writer.InitializeDisplay();
-            source.Dynamic.All += Dynamic_All;
-            source.Process();
+            monitorTask.Start();
+            monitorTask.Wait();
+            EventPipeClient.StopTracing(_processId, _sessionId);
 
+            await Task.FromResult(0);
             return 0;
         }
     }

@@ -42,7 +42,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 Description = @"A space separated list of counters. Counters can be specified provider_name[:counter_name].
                 If the provider_name is used without a qualifying counter_name then all counters will be shown. To discover 
                 provider and counter names, use the list command.
-                ."
+                .",
             };
 
         private static Command ListCommand() =>
