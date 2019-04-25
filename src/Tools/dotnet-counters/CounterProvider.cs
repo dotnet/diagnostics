@@ -39,7 +39,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public string TryGetDisplayName(string counterName)
         {
-            return Counters[counterName].DisplayName;
+            if (Counters.ContainsKey(counterName))
+                return Counters[counterName].DisplayName;
+            return null;
         }
 
         public string ToProviderString(float interval)
