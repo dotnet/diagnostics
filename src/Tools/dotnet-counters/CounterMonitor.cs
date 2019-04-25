@@ -41,14 +41,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 IDictionary<string, object> payloadVal = (IDictionary<string, object>)(obj.PayloadValue(0));
                 IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
+
+
                 // There really isn't a great way to tell whether an EventCounter payload is an instance of 
                 // IncrementingCounterPayload or CounterPayload, so here we check the number of fields 
-                // to distinguish the two.
-                
+                // to distinguish the two.                
                 ICounterPayload payload = (payloadFields.Count == 6) ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
                 
                 cvHolder.Update(obj.ProviderName, payload);
-                writer.Update(payload.GetName(), payload.GetValue());
+                writer.Update(payload);
             }
         }
 

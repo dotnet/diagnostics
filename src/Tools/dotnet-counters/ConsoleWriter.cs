@@ -12,6 +12,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
 	    private Dictionary<string, (int, int)> displayPosition; // Display position (x-y coordiates) of each counter values.
 	    private int origRow;
 	    private int origCol;
+	    private int maxRow;  // Running maximum of row number
+	    private int maxCol;  // Running maximum of col number
 
 		public ConsoleWriter()
 		{
@@ -24,30 +26,38 @@ namespace Microsoft.Diagnostics.Tools.Counters
 	        origRow = Console.CursorTop;
 	        origCol = Console.CursorLeft;
 
-	        int rowCnt = 0;
-
-	        foreach (CounterProvider provider in KnownData.GetAllProviders())
-	        {
-	        	Console.WriteLine(provider.Name);
-	        	rowCnt += 1;
-
-	        	foreach (CounterProfile counter in provider.Counters.Values)
-	        	{
-	        		Console.WriteLine($"    {counter.DisplayName} : 0");
-	        		displayPosition[counter.Name] = (counter.DisplayName.Length+4+3, rowCnt);
-	        		rowCnt += 1;
-	        	}
-	        }
+	        maxRow = origRow;
+	        maxCol = origCol;
 	    }
 
-	    public void Update(string counterName, string val)
+	    public void Update(ICounterPayload payload)
 	    {
-	    	(int left, int row) = displayPosition[counterName];
-	    	Console.SetCursorPosition(left, row);
-	    	Console.Write(new String(' ', 10)); // TODO: fix this
+	    	string name = payload.GetName();
 
-	    	Console.SetCursorPosition(left, row);//row, left);
-	    	Console.Write(val);
+	    	if (displayPosition.ContainsKey(name))
+	    	{
+	    		(int left, int row) = displayPosition[name];
+		    	Console.SetCursorPosition(left, row);
+		    	Console.Write(new String(' ', 10)); // TODO: fix this
+
+		    	Console.SetCursorPosition(left, row);//row, left);
+		    	Console.Write(payload.GetValue());	
+	    	}
+	    	else
+	    	{
+	    		string displayName = payload.GetDisplay();
+	    		int left = displayName.Length + 3; // displayName + " : "
+	    		int row = maxRow;
+
+	    		displayPosition[name] = (left, row);
+
+	    		Console.SetCursorPosition(left, row);
+	    		Console.Write(new String(' ', 10));
+	    		Console.SetCursorPosition(left, row);
+	    		Console.Write(payload.GetValue());
+
+	    		maxRow += 1;
+	    	}
 	    }
 	}
 }
