@@ -6,6 +6,7 @@
     <RuntimeFrameworkVersion>2.1.0</RuntimeFrameworkVersion>
     <IsPackable>true</IsPackable>
     <PackAsTool>true</PackAsTool>
+    <NeedsPublishing>true</NeedsPublishing>
     <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;osx-x64</PackAsToolShimRuntimeIdentifiers>
 
     <!-- The package version needs to be hard coded as a stable version so "dotnet tool install -g dotnet-dump" works
@@ -33,40 +34,40 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Pack="True" Include="$(SOSNETCoreBinaries)">
+    <None Include="$(SOSNETCoreBinaries)" Pack="True">
       <PackagePath>tools/$(TargetFramework)/any/win-x64</PackagePath>
     </None>
-    <None Pack="True" Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\sos.dll">
+    <None Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\sos.dll" Pack="True">
       <PackagePath>tools/$(TargetFramework)/any/win-x64</PackagePath>
     </None>
-    <None Pack="True" Include="$(SOSNETCoreBinaries)">
+    <None Include="$(SOSNETCoreBinaries)" Pack="True">
       <PackagePath>tools/$(TargetFramework)/any/win-x86</PackagePath>
     </None>
-    <None Pack="True" Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\sos.dll">
+    <None Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\sos.dll" Pack="True">
       <PackagePath>tools/$(TargetFramework)/any/win-x86</PackagePath>
     </None>
-    <None Pack="True" Include="$(SOSNETCoreBinaries)">
+    <None Include="$(SOSNETCoreBinaries)" Pack="True">
       <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
     </None>
-    <None Pack="True" Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsosplugin.so">
+    <None Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsosplugin.so" Pack="True">
       <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
     </None>
-    <None Pack="True" Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsos.so">
+    <None Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsos.so" Pack="True">
       <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
     </None>
-    <None Pack="True" Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\sosdocsunix.txt">
+    <None Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\sosdocsunix.txt" Pack="True">
       <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
     </None>
-    <None Pack="True" Include="$(SOSNETCoreBinaries)">
+    <None Include="$(SOSNETCoreBinaries)" Pack="True">
       <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
     </None>
-    <None Pack="True" Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib">
+    <None Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib" Pack="True">
       <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
     </None>
-    <None Pack="True" Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsos.dylib">
+    <None Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsos.dylib" Pack="True">
       <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
     </None>
-    <None Pack="True" Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\sosdocsunix.txt">
+    <None Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\sosdocsunix.txt" Pack="True">
       <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
     </None>
   </ItemGroup>

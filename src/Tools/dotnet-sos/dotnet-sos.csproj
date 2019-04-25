@@ -5,6 +5,7 @@
     <RuntimeFrameworkVersion>2.1.0</RuntimeFrameworkVersion>
     <IsPackable>true</IsPackable>
     <PackAsTool>true</PackAsTool>
+    <NeedsPublishing>true</NeedsPublishing>
     <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;osx-x64</PackAsToolShimRuntimeIdentifiers>
 
     <!-- The package version needs to be hard coded as a stable version so "dotnet tool install -g dotnet-sos" works
