@@ -17,8 +17,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 argument: new Argument<int> { Name = "pid" },
                 isHidden: false);
 
-        public static TraceFileFormat DefaultTraceFileFormat => 
-            RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? TraceFileFormat.netperf : TraceFileFormat.speedscope;
+        public static TraceFileFormat DefaultTraceFileFormat => TraceFileFormat.netperf;
 
         public static Option FormatOption() =>
             new Option(

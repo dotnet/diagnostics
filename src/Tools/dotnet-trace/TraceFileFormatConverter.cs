@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Microsoft.Diagnostics.Symbols;
 using Microsoft.Diagnostics.Tracing;
@@ -16,23 +17,34 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
     internal static class TraceFileFormatConverter
     {
-        public static void ConvertToFormat(TraceFileFormat format, string fileToConvert)
+        private static Dictionary<TraceFileFormat, string> TraceFileFormatExtensions = new Dictionary<TraceFileFormat, string>() {
+            { TraceFileFormat.netperf,      "netperf" },
+            { TraceFileFormat.speedscope,   "speedscope.json" }
+        };
+
+        public static void ConvertToFormat(TraceFileFormat format, string fileToConvert, string outputFilename = "")
         {
+            if (string.IsNullOrWhiteSpace(outputFilename))
+                outputFilename = fileToConvert;
+
+            outputFilename = Path.ChangeExtension(outputFilename, TraceFileFormatExtensions[format]);
+            Console.Out.WriteLine($"Writing:\t{outputFilename}");
+
             switch (format)
             {
                 case TraceFileFormat.netperf:
                     break;
                 case TraceFileFormat.speedscope:
-                    Console.Out.WriteLine($"Converting to {format}...");
-                    ConvertToSpeedscope(fileToConvert);
+                    ConvertToSpeedscope(fileToConvert, outputFilename);
                     break;
                 default:
                     // Validation happened way before this, so we shoud never reach this...
-                    throw new Exception($"Invalid TraceFileFormat \"{format}\"");
+                    throw new ArgumentException($"Invalid TraceFileFormat \"{format}\"");
             }
+            Console.Out.WriteLine("Conversion complete");
         }
 
-        private static void ConvertToSpeedscope(string fileToConvert)
+        private static void ConvertToSpeedscope(string fileToConvert, string outputFilename)
         {
             var symbolReader = new SymbolReader(System.IO.TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath };
             var etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert);
@@ -47,11 +59,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 };
 
                 var computer = new SampleProfilerThreadTimeComputer(eventLog, symbolReader);
-                computer.GenerateThreadTimeStacks(stackSource); 
+                computer.GenerateThreadTimeStacks(stackSource);
 
-                var speedScopeFilePath = Path.ChangeExtension(fileToConvert, "speedscope.json");
-
-                SpeedScopeStackSourceWriter.WriteStackViewAsJson(stackSource, speedScopeFilePath);
+                SpeedScopeStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename);
             }
             finally
             {
