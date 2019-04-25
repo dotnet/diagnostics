@@ -25,15 +25,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private string _counterList;
         private CancellationToken _ct;
         private IConsole _console;
-        private CounterValueHolder cvHolder;
         private ConsoleWriter writer;
-        private CounterPayloadParser payloadParser;
-
         public CounterMonitor()
         {
-            cvHolder = new CounterValueHolder();
             writer = new ConsoleWriter();
-            payloadParser = new CounterPayloadParser();
         }
 
         private void Dynamic_All(TraceEvent obj)
@@ -43,13 +38,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 IDictionary<string, object> payloadVal = (IDictionary<string, object>)(obj.PayloadValue(0));
                 IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
 
-
                 // There really isn't a great way to tell whether an EventCounter payload is an instance of 
                 // IncrementingCounterPayload or CounterPayload, so here we check the number of fields 
                 // to distinguish the two.                
                 ICounterPayload payload = (payloadFields.Count == 6) ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
                 
-                cvHolder.Update(obj.ProviderName, payload);
                 writer.Update(obj.ProviderName, payload);
             }
         }

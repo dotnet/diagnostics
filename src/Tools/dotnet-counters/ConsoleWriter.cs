@@ -67,7 +67,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 	    				maxRow += 1;
 	    			}
 
-		    		string displayName = payload.GetDisplay();
+		    		string displayName = KnownData.TryGetProvider(providerName).TryGetDisplayName(name);
 		    		int left = displayName.Length + 7; // displayName + " : "
 		    		int row = maxRow;
 		    		displayPosition[name] = (left, row);

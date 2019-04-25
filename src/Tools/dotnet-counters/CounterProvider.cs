@@ -18,8 +18,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
     public class CounterProvider
     {
-        public static readonly string DefaultProviderName = "System.Runtime";
-
         public string Name { get; }
         public string Description { get; }
         public string Keywords { get; }
@@ -37,6 +35,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 Counters.Add(counter.Name, counter);
             }
+        }
+
+        public string TryGetDisplayName(string counterName)
+        {
+            return Counters[counterName].DisplayName;
         }
 
         public string ToProviderString(float interval)

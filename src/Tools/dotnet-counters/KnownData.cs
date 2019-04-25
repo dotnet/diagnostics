@@ -29,14 +29,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     // In the future (with IPC), we should filter counter payloads by name provided below to display.  
                     // These are mainly here as placeholders. 
                     new CounterProfile{ Name="cpu-usage", Description="Amount of time the process has utilized the CPU (ms)", DisplayName="CPU Usage (%)", Type=CounterType.PollingCounter },
-                    new CounterProfile{ Name="working-set", Description="Amount of working set used by the process (KB)", DisplayName="Working Set (MB)", Type=CounterType.PollingCounter },
-                    new CounterProfile{ Name="gc-heap-size", Description="Total heap size reported by the GC (KB)", DisplayName="GC Heap Size (MB)", Type=CounterType.PollingCounter },
+                    new CounterProfile{ Name="working-set", Description="Amount of working set used by the process (MB)", DisplayName="Working Set (MB)", Type=CounterType.PollingCounter },
+                    new CounterProfile{ Name="gc-heap-size", Description="Total heap size reported by the GC (MB)", DisplayName="GC Heap Size (MB)", Type=CounterType.PollingCounter },
                     new CounterProfile{ Name="gen-0-gc-count", Description="Number of Gen 0 GCs", DisplayName="Gen 0 GC / sec", Type=CounterType.IncrementingPollingCounter },
                     new CounterProfile{ Name="gen-1-gc-count", Description="Number of Gen 1 GCs", DisplayName="Gen 1 GC / sec", Type=CounterType.IncrementingPollingCounter },
                     new CounterProfile{ Name="gen-2-gc-count", Description="Number of Gen 2 GCs", DisplayName="Gen 2 GC / sec", Type=CounterType.IncrementingPollingCounter },
-                    new CounterProfile{ Name="threadpool-thread-count", Description="Number of ThreadPool Threads", DisplayName="ThreadPool Thread Count", Type=CounterType.PollingCounter },
-                    new CounterProfile{ Name="monitor-lock-contention-count", Description="Lock Contention Count", DisplayName="Lock Contention Count", Type=CounterType.IncrementingPollingCounter },
-                    new CounterProfile{ Name="threadpool-queue-length", Description="Length of ThreadPool Work Items Queue", DisplayName="ThreadPool Queue Length", Type=CounterType.PollingCounter },
+                    new CounterProfile{ Name="exception-count", Description="Number of Exceptions / Sec", DisplayName="Exceptions / sec", Type=CounterType.IncrementingPollingCounter },
                 });
             // TODO: Add more providers (ex. ASP.NET ones)
         }
