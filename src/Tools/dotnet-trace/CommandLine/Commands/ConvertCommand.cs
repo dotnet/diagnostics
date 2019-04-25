@@ -24,6 +24,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 
                 if (!inputFilename.Exists)
                     throw new FileNotFoundException($"File '{inputFilename}' does not exist.");
+                
+                if (output == null)
+                    output = inputFilename;
 
                 TraceFileFormatConverter.ConvertToFormat(format, inputFilename.FullName, output.FullName);
 
@@ -57,7 +60,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new Option(
                 aliases: new [] { "-o", "--output" },
                 description: "Output filename. Extension of target format will be added.",
-                argument: new Argument<FileInfo>(defaultValue: new FileInfo(CollectCommandHandler.DefaultTraceName)) { Name = "output-filename", Arity = ArgumentArity.ExactlyOne },
+                argument: new Argument<FileInfo>() { Name = "output-filename", Arity = ArgumentArity.ZeroOrOne },
                 isHidden: false
             );
     }
