@@ -22,6 +22,8 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
         private static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
 
+        private static double ConnectTimeoutMilliseconds { get; } = TimeSpan.FromSeconds(3).TotalMilliseconds;
+
         public static ulong SendCommand(int processId, byte[] buffer)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -30,7 +32,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 using (var namedPipe = new NamedPipeClientStream(
                     ".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation))
                 {
-                    namedPipe.Connect((int)TimeSpan.FromSeconds(20).TotalMilliseconds);
+                    namedPipe.Connect((int)ConnectTimeoutMilliseconds);
                     namedPipe.Write(buffer, 0, buffer.Length);
 
                     return new BinaryReader(namedPipe).ReadUInt64();
@@ -61,7 +63,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         /// </summary>
         /// <returns>
         /// A collection of process identifiers associated with the list of opened files (IPC ports).
-        /// These process Ids migth have expired and not properly cleaned up.
+        /// These process Ids might have expired and not properly cleaned up.
         /// </returns>
         public static IEnumerable<int> ListAvailablePorts()
         {
@@ -71,12 +73,12 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 .Select(input => int.Parse(Regex.Match(input, DiagnosticPortPattern).Groups[1].Value, NumberStyles.Integer));
         }
 
-        public static Stream StreamTracingToFile(int processId, SessionConfiguration configuration, out ulong sessionId)
+        public static Stream CollectTracing(int processId, SessionConfiguration configuration, out ulong sessionId)
         {
             sessionId = 0;
 
             var header = new MessageHeader {
-                RequestType = DiagnosticMessageType.Stream,
+                RequestType = DiagnosticMessageType.CollectEventPipeTracing,
                 Pid = (uint)Process.GetCurrentProcess().Id,
             };
 
@@ -89,9 +91,9 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 var pipeName = $"dotnetcore-diagnostic-{processId}";
                 var namedPipe = new NamedPipeClientStream(
                     ".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation);
-                namedPipe.Connect((int)TimeSpan.FromSeconds(20).TotalMilliseconds);
+                namedPipe.Connect((int)ConnectTimeoutMilliseconds);
 
-                // Request start-streaming
+                // Request start-collection
                 namedPipe.Write(serializedConfiguration, 0, serializedConfiguration.Length);
 
                 sessionId = new BinaryReader(namedPipe).ReadUInt64();
@@ -109,7 +111,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
                 socket.Connect(remoteEP);
 
-                // Request start-streaming
+                // Request start-collection
                 socket.Send(serializedConfiguration);
 
                 var content = new byte[sizeof(ulong)];
@@ -120,10 +122,10 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             }
         }
 
-        public static ulong EnableTracingToFile(int processId, SessionConfiguration configuration)
+        public static ulong StartTracingToFile(int processId, SessionConfiguration configuration)
         {
             var header = new MessageHeader {
-                RequestType = DiagnosticMessageType.StartSession,
+                RequestType = DiagnosticMessageType.StartEventPipeTracing,
                 Pid = (uint)Process.GetCurrentProcess().Id,
             };
 
@@ -134,13 +136,19 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             return SendCommand(processId, serializedConfiguration);
         }
 
-        public static ulong DisableTracingToFile(int processId, ulong sessionId)
+        /// <summary>
+        /// Turn off EventPipe logging session for the specified process Id.
+        /// </summary>
+        /// <param name="processId">Process Id to turn off logging session.</param>
+        /// <param name="sessionId">EventPipe session Id to turn off.</param>
+        /// <returns>It returns sessionId if success, otherwise 0.</returns>
+        public static ulong StopTracing(int processId, ulong sessionId)
         {
             if (sessionId == 0)
                 return sessionId; // TODO: Throw here instead?
 
             var header = new MessageHeader {
-                RequestType = DiagnosticMessageType.StopSession,
+                RequestType = DiagnosticMessageType.StopEventPipeTracing,
                 Pid = (uint)Process.GetCurrentProcess().Id,
             };
 

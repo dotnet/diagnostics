@@ -6,11 +6,20 @@ using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.Tools.RuntimeClient
 {
+    /// <summary>
+    /// Message header used to send commands to the .NET Core runtime through IPC.
+    /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    struct MessageHeader
+    public struct MessageHeader
     {
+        /// <summary>
+        /// Request type.
+        /// </summary>
         public DiagnosticMessageType RequestType;
 
+        /// <summary>
+        /// Remote process Id.
+        /// </summary>
         public uint Pid;
     }
 }

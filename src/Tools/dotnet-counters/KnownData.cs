@@ -24,10 +24,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "0xffffffff", // Keywords
                 "0x5", // Level 
                 new[] { // Counters
-                    // NOTE: For now, the set of counters below doesn't really matter because 
-                    // we don't really display any counters in real time. (We just collect .netperf files) 
-                    // In the future (with IPC), we should filter counter payloads by name provided below to display.  
-                    // These are mainly here as placeholders. 
                     new CounterProfile{ Name="cpu-usage", Description="Amount of time the process has utilized the CPU (ms)", DisplayName="CPU Usage (%)", Type=CounterType.PollingCounter },
                     new CounterProfile{ Name="working-set", Description="Amount of working set used by the process (MB)", DisplayName="Working Set (MB)", Type=CounterType.PollingCounter },
                     new CounterProfile{ Name="gc-heap-size", Description="Total heap size reported by the GC (MB)", DisplayName="GC Heap Size (MB)", Type=CounterType.PollingCounter },

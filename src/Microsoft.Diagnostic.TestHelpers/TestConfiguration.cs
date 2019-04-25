@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostic.TestHelpers
             }
             // The TargetArchitecture and NuGetPackageCacheDir can still be overridden
             // in a config file. This is just setting the default. The other values can 
-            // also // be overriden but it is not recommended.
+            // also // be overridden but it is not recommended.
             Dictionary<string, string> initialConfig = new Dictionary<string, string>
             {
                 ["Timestamp"] = GetTimeStampText(),
@@ -213,7 +213,7 @@ namespace Microsoft.Diagnostic.TestHelpers
                     string leftValue = ResolveProperties(config, parts[0]).Trim();
                     string rightValue = ResolveProperties(config, parts[1]).Trim();
 
-                    // Now do the simple string comparsion of the left/right sides of the condition
+                    // Now do the simple string comparison of the left/right sides of the condition
                     return equal ? leftValue == rightValue : leftValue != rightValue;
                 }
             }
@@ -604,7 +604,7 @@ namespace Microsoft.Diagnostic.TestHelpers
         /// <returns>configuration value or null</returns>
         public string GetValue(string key)
         {
-            // unlike dictionary it is OK to ask for non-existant keys
+            // unlike dictionary it is OK to ask for non-existent keys
             // if the key doesn't exist the result is null
             _settings.TryGetValue(key, out string settingValue);
             return settingValue;

@@ -1,6 +1,3 @@
-# These are need to build lldb
-sudo zypper install doxygen libedit-devel libxml2-devel ncurses-devel python-argparse python-devel readline-devel swig
-
 cd $HOME
 
 wget http://cmake.org/files/v3.11/cmake-3.11.4-Linux-x86_64.tar.gz
@@ -29,8 +26,3 @@ cd ..
 rm -r llvmbuild
 rm -r llvm-3.9.1.src
 rm -r cmake-3.11.4-Linux-x86_64
-
-# Remove the no longer needed packages 
-sudo zypper rm doxygen libedit-devel libxml2-devel ncurses-devel python-argparse python-devel readline-devel swig
-sudo zypper clean -a
-

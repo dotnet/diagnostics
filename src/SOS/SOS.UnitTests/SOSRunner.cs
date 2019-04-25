@@ -774,7 +774,7 @@ public class SOSRunner : IDisposable
             input = input.Replace(prevPoutTag, _previousCommandCapture);
         }
 
-        // The POUT convention is to write a commnd like this:
+        // The POUT convention is to write a command like this:
         // COMMAND: Some stuff <POUT>regex<POUT> more stuff
         // The regular expression identified by the POUT tags is applied to last command's output
         // and then the 1st capture group is substituted into this command in place of the POUT tagged region

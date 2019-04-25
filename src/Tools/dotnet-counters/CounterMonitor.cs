@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 try
                 {
-                    EventPipeClient.DisableTracingToFile(_processId, sessionId);    
+                    EventPipeClient.StopTracing(_processId, sessionId);    
                 }
                 catch (Exception) {} // Swallow all exceptions for now.
                 
@@ -127,8 +127,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             var configuration = new SessionConfiguration(
                 circularBufferSizeMB: 1000,
                 outputPath: outputPath,
-                providers: Provider.ToProviders(providerString));
-
+                providers: Trace.Extensions.ToProviders(providerString));
 
             var binaryReader = EventPipeClient.StreamTracingToFile(_processId, configuration, out var sessionId);
             _console.Out.WriteLine($"SessionId=0x{sessionId:X16}");

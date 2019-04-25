@@ -1,5 +1,7 @@
 <Project>
 
+  <Import Project="$(MSBuildThisFileDirectory)\Versions.props" />
+
   <PropertyGroup Label="Repository information">
     <RepositoryUrl>https://github.com/dotnet/diagnostics.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

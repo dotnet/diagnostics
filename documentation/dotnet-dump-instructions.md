@@ -5,11 +5,11 @@ The dotnet-dump CLI global tool is way to collect and analyze Windows and Linux 
 
 ## Installing dotnet-dump
 
-The first step is to install the dotnet-dump CLI global tool. This requires the 2.1 .NET Core SDK to be installed. 
+The first step is to install the dotnet-dump CLI global tool. This requires the 2.1 .NET Core SDK to be installed. If you see the error message `Tool 'dotnet-dump' is already installed`, you will need to uninstall the global tool (see below). 
 
-    $ dotnet tool install -g dotnet-dump --version 1.0.2-preview3.19170.2 --add-source https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
+    $ dotnet tool install -g dotnet-dump --version 1.0.3-preview5.19217.3 --add-source https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
     You can invoke the tool using the following command: dotnet-dump
-    Tool 'dotnet-dump' (version '1.0.2-preview3.19170.2') was successfully installed.
+    Tool 'dotnet-dump' (version '1.0.3-preview5.19217.3') was successfully installed.
 
 ## Using dotnet-dump
 
@@ -17,7 +17,7 @@ The next step is to collect a dump. This can be skipped if a core dump has alrea
 
 On Linux, it needs to be run as superuser:
      
-    $ sudo -E dotnet dump collect --process-id 1902
+    $ sudo -E PATH=$PATH dotnet dump collect --process-id 1902
     Writing minidump to file ./core_20190226_135837
     Written 98983936 bytes (24166 pages) to core file
     Complete
@@ -104,3 +104,8 @@ To display the help:
       histroot <arguments>                 Displays information related to both promotions and relocations of the specified root.
       setsymbolserver <arguments>          Enables the symbol server support
       soshelp <arguments>                  Displays all available commands when no parameter is specified, or displays detailed help information about the specified command. soshelp <command>
+
+## Uninstalling dotnet-dump 
+
+    $ dotnet tool uninstall -g dotnet-dump
+    Tool 'dotnet-dump' (version '1.0.3-preview5.19217.3') was successfully uninstalled.

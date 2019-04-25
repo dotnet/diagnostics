@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostic.TestHelpers
     /// This test step builds debuggees using the dotnet tools with .csproj projects files.
     /// </summary>
     /// <remarks>
-    /// Any <debugge name>.csproj file that is found will be specialized by adding a linker package reference.
+    /// Any <debuggee name>.csproj file that is found will be specialized by adding a linker package reference.
     /// This lets us decide the runtime and dependency versions at test execution time.
     /// </remarks>
     public class CsprojBuildDebuggeeTestStep : DotNetBuildDebuggeeTestStep

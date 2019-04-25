@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal static class PortsCommandHandler
+    internal static class ListProcessesCommandHandler
     {
         public static async Task<int> GetActivePorts(IConsole console)
         {
@@ -20,10 +20,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 var processes = EventPipeClient.ListAvailablePorts()
                     .Select(GetProcessById)
                     .Where(process => process != null)
-                    .OrderBy(process => process.ProcessName);
+                    .OrderBy(process => process.ProcessName)
+                    .ThenBy(process => process.Id);
 
                 foreach (var process in processes)
-                    Console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} - {process.MainModule.FileName}");
+                    Console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}");
 
                 await Task.FromResult(0);
                 return 0;
@@ -47,11 +48,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        public static Command ActivePortsCommand() =>
+        public static Command ListProcessesCommand() =>
             new Command(
-                name: "ports",
-                description: "List all active DotNet Core Diagnostic ports.",
+                name: "list-processes",
+                description: "Lists dotnet processes that can be attached to.",
                 handler: System.CommandLine.Invocation.CommandHandler.Create<IConsole>(GetActivePorts),
-                isHidden: true);
+                isHidden: false);
     }
 }

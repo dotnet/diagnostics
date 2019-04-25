@@ -3,6 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System.CommandLine;
+using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -10,8 +12,19 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         public static Option ProcessIdOption() =>
             new Option(
-                new[] { "-pid" },
-                "The unique identifier of the associated process to connect to.",
-                new Argument<int> { Name = "ProcessId" });
+                aliases: new[] { "-p", "--process-id" },
+                description: "The process to collect the trace from",
+                argument: new Argument<int> { Name = "pid" },
+                isHidden: false);
+
+        public static TraceFileFormat DefaultTraceFileFormat => 
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? TraceFileFormat.netperf : TraceFileFormat.speedscope;
+
+        public static Option FormatOption() =>
+            new Option(
+                aliases: new[] { "-f", "--format" },
+                description: $"Sets the output format for the trace file.  Default is {DefaultTraceFileFormat}",
+                argument: new Argument<TraceFileFormat>(defaultValue: DefaultTraceFileFormat) { Name = "trace-file-format" },
+                isHidden: false);
     }
 }

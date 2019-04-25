@@ -12,14 +12,14 @@ set __ThisScriptDir="%~dp0"
 call "%__ThisScriptDir%"\setup-vs-tools.cmd
 if NOT '%ERRORLEVEL%' == '0' exit /b 1
 
-if defined VS150COMNTOOLS (
-  set "__VSToolsRoot=%VS150COMNTOOLS%"
-  set "__VCToolsRoot=%VS150COMNTOOLS%\..\..\VC\Auxiliary\Build"
-  set __VSVersion=vs2017
-) else (
-  set "__VSToolsRoot=%VS140COMNTOOLS%"
-  set "__VCToolsRoot=%VS140COMNTOOLS%\..\..\VC"
-  set __VSVersion=vs2015
+if defined VS160COMNTOOLS (
+    set "__VSToolsRoot=%VS160COMNTOOLS%"
+    set "__VCToolsRoot=%VS160COMNTOOLS%\..\..\VC\Auxiliary\Build"
+    set __VSVersion=vs2019
+) else if defined VS150COMNTOOLS (
+    set "__VSToolsRoot=%VS150COMNTOOLS%"
+    set "__VCToolsRoot=%VS150COMNTOOLS%\..\..\VC\Auxiliary\Build"
+    set __VSVersion=vs2017
 )
 
 :: Work around Jenkins CI + msbuild problem: Jenkins sometimes creates very large environment

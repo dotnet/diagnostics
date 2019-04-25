@@ -42,7 +42,7 @@ their choices with respect to:
   * The hardware being used (e.g. X64, X64, ARM64 ...)
   * The operating system being used (Windows, Linux ...)
   * The software environment in use (Raw VMs, containers, Azure Service Fabric, Web Applications (PAAS), Azure Functions, ...)
-  * The other services used (Database, Storage, Redit Caches, Identity/Authorization (e.g. Microsoft ID, FaceBook Google)
+  * The other services used (Database, Storage, Redis Caches, Identity/Authorization (e.g. Microsoft ID, FaceBook Google)
 
 ### The Need for Collection (Verbosity) Control.
 
@@ -359,7 +359,7 @@ A high level summary of the work being done is as follows
  1. Add a top level landing page for Diagnostics and Performance on the https://docs.microsoft.com.
     Then flesh that out with details on how to do specific investigations, and in particular all the 
     other work items listed here will be included in that documentation.
- 2. Add a new DumpASync command to the SOS debugging extension.  Work with Visual Studio Team to have it integrated into their parallel stacks view.  Make sure our existing Async dianostics works well.
+ 2. Add a new DumpASync command to the SOS debugging extension.  Work with Visual Studio Team to have it integrated into their parallel stacks view.  Make sure our existing Async diagnostics works well.
  3. Create a new 'dotnet-collect' global command that allows the collection of EventPipe data 'by hand'.  (See [dotnet-collect And dotnet-analyze](https://github.com/aspnet/AspLabs/tree/master/src/DotNetDiagnostics) for more.
     It should be able to collect traces that can be read with either PerfView or Visual Studio.
  4. Create a new 'dotnet-analyze' global command that allows you to do investigations on crash dumps.  Simple triage of crashes as well as memory investigations should be possible.

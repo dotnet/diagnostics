@@ -3,8 +3,8 @@
   <PropertyGroup>
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
 
-    <VersionPrefix>1.0.2</VersionPrefix>
-    <PreReleaseVersionLabel>preview3</PreReleaseVersionLabel>
+    <VersionPrefix>1.0.3</VersionPrefix>
+    <PreReleaseVersionLabel>preview5</PreReleaseVersionLabel>
 
     <!-- Opt-out repo features -->
     <UsingToolXliff>false</UsingToolXliff>
@@ -19,7 +19,7 @@
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
 
     <!-- Other libs -->
-    <MicrosoftSymbolStoreVersion>1.0.0-dev-63716-01</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.0-dev-64016-01</MicrosoftSymbolStoreVersion>
     <MicrosoftDiagnosticsRuntimeVersion>1.0.5</MicrosoftDiagnosticsRuntimeVersion>
   </PropertyGroup>
 

@@ -4,10 +4,22 @@
 
 namespace Microsoft.Diagnostics.Tools.RuntimeClient
 {
+    /// <summary>
+    /// Different diagnostic message types that are handled by the runtime.
+    /// </summary>
     public enum DiagnosticMessageType : uint
     {
-        StartSession = 1024,
-        StopSession,
-        Stream,
+        /// <summary>
+        /// Starts an EventPipe session that writes events to a file when the session is stopped or the application exits.
+        /// </summary>
+        StartEventPipeTracing = 1024,
+        /// <summary>
+        /// Stops an EventPipe session.
+        /// </summary>
+        StopEventPipeTracing,
+        /// <summary>
+        /// Starts an EventPipe session that sends events out-of-proc through IPC.
+        /// </summary>
+        CollectEventPipeTracing,
     }
 }

@@ -93,16 +93,20 @@ First the prerequisites:
 
     sudo yum install centos-release-SCL epel-release
     sudo yum install cmake cmake3 gcc gcc-c++ git libicu libunwind make python27 tar wget which zip
+    sudo yum install doxygen libedit-devel libxml2-devel python-argparse python-devel readline-devel swig xz
 
 Now build and install llvm/lldb 3.9 using the script provided here: [build-install-lldb.sh](../lldb/centos7/build-install-lldb.sh).
 
-WARNING: this script installs llvm and lldb and may overwrite any previously installed versions.
+WARNING: This script installs llvm and lldb as root (via sudo) and may overwrite any previously installed versions.
 
     cd $HOME
     git clone https://github.com/dotnet/diagnostics.git
     $HOME/diagnostics/documentation/lldb/centos7/build-install-lldb.sh
 
-This will take some time to complete.
+This will take some time to complete. After the build is finished, run these commands to remove the no longer needed packages:
+
+    sudo yum remove doxygen libedit-devel libxml2-devel python-argparse python-devel readline-devel swig xz
+    sudo yum clean all
 
 To launch lldb:
 
@@ -138,16 +142,20 @@ To launch lldb:
 #### Fedora 24 ####
 
     sudo dnf install clang cmake findutils git libicu libunwind make python tar wget which zip
+    sudo dnf install doxygen libedit-devel libxml2-devel python-argparse python-devel readline-devel swig xz
 
 Now build and install llvm/lldb 3.9 using the script provided here: [build-install-lldb.sh](../lldb/fedora24/build-install-lldb.sh).
 
-WARNING: this script installs llvm and lldb and may overwrite any previously installed versions.
+WARNING: This script installs llvm and lldb as root (via sudo) and may overwrite any previously installed versions.
 
     cd $HOME
     git clone https://github.com/dotnet/diagnostics.git
     $HOME/diagnostics/documentation/lldb/fedora24/build-install-lldb.sh
 
-This will take some time to complete.
+This will take some time to complete. After the build is finished, run these commands to remove the no longer needed packages:
+
+    sudo dnf remove doxygen libedit-devel libxml2-devel readline-devel swig
+    sudo dnf clean all
 
 To launch lldb:
 
@@ -164,17 +172,20 @@ To launch lldb:
 #### OpenSuse 42.1, 42.3 ####
 
     sudo zypper install cmake gcc-c++ git hostname libicu libunwind lldb-devel llvm-clang llvm-devel make python python-xml tar wget which zip
-    ln -s /usr/bin/clang++ /usr/bin/clang++-3.5
+    sudo zypper install doxygen libedit-devel libxml2-devel ncurses-devel python-argparse python-devel readline-devel swig
 
 Now build and install llvm/lldb 3.9 using the script provided here: [build-install-lldb.sh](../lldb/opensuse/build-install-lldb.sh).
 
-WARNING: this script installs llvm and lldb and may overwrite any previously installed versions.
+WARNING: This script installs llvm and lldb as root (via sudo) and may overwrite any previously installed versions.
 
     cd $HOME
     git clone https://github.com/dotnet/diagnostics.git
     $HOME/diagnostics/documentation/lldb/opensuse/build-install-lldb.sh
 
-This will take some time to complete.
+This will take some time to complete. After the build is finished, run these commands to remove the no longer needed packages:
+
+    sudo zypper rm doxygen libedit-devel libxml2-devel ncurses-devel python-argparse python-devel readline-devel swig
+    sudo zypper clean -a
 
 To launch lldb:
 
