@@ -8,14 +8,6 @@ using System.Linq;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
-    public enum CounterType
-    {
-        EventCounter = 1,
-        PollingCounter,
-        IncrementingEventCounter,
-        IncrementingPollingCounter,
-    }
-
     public class CounterProvider
     {
         public string Name { get; }
@@ -55,6 +47,5 @@ namespace Microsoft.Diagnostics.Tools.Counters
         public string Name { get; set; }
         public string DisplayName { get; set; }
         public string Description { get; set; }
-        public CounterType Type { get; set; }
     }
 }

@@ -24,13 +24,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "0xffffffff", // Keywords
                 "5", // Level 
                 new[] { // Counters
-                    new CounterProfile{ Name="cpu-usage", Description="Amount of time the process has utilized the CPU (ms)", DisplayName="CPU Usage (%)", Type=CounterType.PollingCounter },
-                    new CounterProfile{ Name="working-set", Description="Amount of working set used by the process (MB)", DisplayName="Working Set (MB)", Type=CounterType.PollingCounter },
-                    new CounterProfile{ Name="gc-heap-size", Description="Total heap size reported by the GC (MB)", DisplayName="GC Heap Size (MB)", Type=CounterType.PollingCounter },
-                    new CounterProfile{ Name="gen-0-gc-count", Description="Number of Gen 0 GCs", DisplayName="Gen 0 GC / sec", Type=CounterType.IncrementingPollingCounter },
-                    new CounterProfile{ Name="gen-1-gc-count", Description="Number of Gen 1 GCs", DisplayName="Gen 1 GC / sec", Type=CounterType.IncrementingPollingCounter },
-                    new CounterProfile{ Name="gen-2-gc-count", Description="Number of Gen 2 GCs", DisplayName="Gen 2 GC / sec", Type=CounterType.IncrementingPollingCounter },
-                    new CounterProfile{ Name="exception-count", Description="Number of Exceptions / Sec", DisplayName="Exceptions / sec", Type=CounterType.IncrementingPollingCounter },
+                    new CounterProfile{ Name="cpu-usage", Description="Amount of time the process has utilized the CPU (ms)", DisplayName="CPU Usage (%)" },
+                    new CounterProfile{ Name="working-set", Description="Amount of working set used by the process (MB)", DisplayName="Working Set (MB)" },
+                    new CounterProfile{ Name="gc-heap-size", Description="Total heap size reported by the GC (MB)", DisplayName="GC Heap Size (MB)" },
+                    new CounterProfile{ Name="gen-0-gc-count", Description="Number of Gen 0 GCs", DisplayName="Gen 0 GC / sec" },
+                    new CounterProfile{ Name="gen-1-gc-count", Description="Number of Gen 1 GCs", DisplayName="Gen 1 GC / sec" },
+                    new CounterProfile{ Name="gen-2-gc-count", Description="Number of Gen 2 GCs", DisplayName="Gen 2 GC / sec" },
+                    new CounterProfile{ Name="exception-count", Description="Number of Exceptions / Sec", DisplayName="Exceptions / sec" },
                 });
             // TODO: Add more providers (ex. ASP.NET ones)
         }
