@@ -16,8 +16,8 @@ $RuntimeVersion21="2.1.10"
 $RuntimeVersion22="2.2.4"
 $DailyTestText="true"
 
-# Install the other versions of .NET Core runtime we are going to test. 1.1.x, 2.1.x (installed with the CLI), 2.2.x
-# and latest. Only install the latest master for daily jobs and leave the RuntimeVersion* config properties blank.
+# Install the versions of .NET Core runtime we are going to test. The latest released 1.1, 2.1, and 2.2 runtimes as well as the latest on master.
+# Only install the latest master for daily jobs and leave the RuntimeVersion* config properties blank.
 if (!$DailyTest) {
     $DailyTestText="false"
     . $DotNetDir\dotnet-install.ps1 -Version $RuntimeVersion11 -Architecture $BuildArch -SkipNonVersionedFiles -Runtime dotnet -InstallDir $DotNetDir

@@ -10,7 +10,9 @@ branch="master"
 uncached_feed="https://dotnetcli.blob.core.windows.net/dotnet"
 
 runtime_version_11="1.1.11"
-runtime_version_21="2.1.10"
+# This one gets passed from build-native.sh to avoid sos-lldb test issues which rely on this matching.
+# It would be nice to hoist all this version setting to a common file.
+runtime_version_21=
 runtime_version_22="2.2.4"
 
 while [ $# -ne 0 ]; do
@@ -19,6 +21,10 @@ while [ $# -ne 0 ]; do
         --dotnet-directory)
             shift
             dotnet_dir=$1
+            ;;
+        --runtime-version-21)
+            shift
+            runtime_version_21=$1
             ;;
         --temp-directory)
             shift
@@ -44,8 +50,8 @@ done
 
 daily_test_text="true"
 
-# Install the other versions of .NET Core runtime we are going to test. 1.1.x, 2.1.x (installed with the CLI), 2.2.x
-# and latest. Only install the latest master for daily jobs and leave the RuntimeVersion* config properties blank.
+# Install the versions of .NET Core runtime we are going to test. The latest released 1.1, 2.1, and 2.2 runtimes as well as the latest on master.
+# Only install the latest master for daily jobs and leave the RuntimeVersion* config properties blank.
 if [ $daily_test == 0 ]; then
     daily_test_text="false"
     bash "$dotnet_dir/dotnet-install.sh" --version "$runtime_version_11" --architecture "$build_arch" --skip-non-versioned-files --runtime dotnet --install-dir "$dotnet_dir"

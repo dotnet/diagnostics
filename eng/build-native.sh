@@ -267,6 +267,7 @@ __ResultsDir=$__RootBinDir/TestResults/$__BuildType
 __PackagesBinDir=$__RootBinDir/packages/$__BuildType/Shipping
 __ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=$__RootBinDir/bin -DCLR_BUILD_TYPE=$__BuildType"
 __DotNetCli=$__ProjectRoot/.dotnet/dotnet
+__DotNetRuntimeVersion=2.1.10
 
 if [ ! -e $__DotNetCli ]; then
    echo "dotnet cli not installed $__DotNetCli"
@@ -475,7 +476,7 @@ fi
 # Run SOS/lldbplugin tests
 if [ $__Test == true ]; then
     # Install the other versions of .NET Core runtime we are going to test on
-    "$__ProjectRoot/eng/install-test-runtimes.sh" --dotnet-directory "$__ProjectRoot/.dotnet" --temp-directory "$__IntermediatesDir" --architecture "$__BuildArch" $__DailyTest
+    "$__ProjectRoot/eng/install-test-runtimes.sh" --dotnet-directory "$__ProjectRoot/.dotnet" --runtime-version-21 "$__DotNetRuntimeVersion" --temp-directory "$__IntermediatesDir" --architecture "$__BuildArch" $__DailyTest
 
     if [ "$LLDB_PATH" = "" ]; then
         export LLDB_PATH="$(which lldb-3.9.1 2> /dev/null)"
