@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
     public class CounterMonitor
     {
         private int _processId;
-        private float _interval;
+        private int _interval;
         private string _counterList;
         private CancellationToken _ct;
         private IConsole _console;
@@ -45,7 +45,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        public async Task<int> Monitor(CancellationToken ct, string counter_list, IConsole console, int processId, float interval)
+        public async Task<int> Monitor(CancellationToken ct, string counter_list, IConsole console, int processId, int interval)
         {
             try
             {

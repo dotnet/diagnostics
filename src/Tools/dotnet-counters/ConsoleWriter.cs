@@ -47,9 +47,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 (int left, int row) = displayPosition[name];
                 Console.SetCursorPosition(left, row);
-                Console.Write(new String(' ', 10)); // TODO: fix this
+                Console.Write(new String(' ', 16));
 
-                Console.SetCursorPosition(left, row);//row, left);
+                Console.SetCursorPosition(left, row);
                 Console.Write(payload.GetValue());  
             }
             // Got a payload from a new counter that hasn't been written to the console yet.

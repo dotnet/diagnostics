@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             return null;
         }
 
-        public string ToProviderString(float interval)
+        public string ToProviderString(int interval)
         {
             return $"{Name}:{Keywords}:{Level}:EventCounterIntervalSec={interval}";
         }
