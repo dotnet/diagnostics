@@ -94,14 +94,15 @@
       <BuiltByString Condition="'$(VersionUserName)' != '' AND '$(VersionHostName)' != ''">$(BuiltByString) %40BuiltBy: $(VersionUserName)-$(VersionHostName)</BuiltByString>
     </PropertyGroup>
 
-    <ItemGroup>
-      <SourceFileLines />
-      <SourceFileLines Include="static char sccsid%5B%5D %5F%5Fattribute%5F%5F%28%28used%29%29 %3D %22%40%28%23%29Version $(InformationalVersion)$(BuiltByString)%22%3B" />
-      <!-- Since this is a source file, compiler will complain if there is no new line at end of file, so adding one bellow. -->
-      <SourceFileLines Include=" " />
-    </ItemGroup>
+    <PropertyGroup>
+      <NativeVersionLines>
+<![CDATA[
+static char sccsid[] __attribute__((used)) = "@(#)Version $(InformationalVersion)$(BuiltByString)";
+ ]]>
+      </NativeVersionLines>
+    </PropertyGroup>
 
-    <WriteLinesToFile File="$(NativeVersionSourceFile)" Lines="@(SourceFileLines)" Overwrite="true" />
+    <WriteLinesToFile File="$(NativeVersionSourceFile)" Lines="$(NativeVersionLines.Replace(';', '%3B'))" Overwrite="true" />
 
     <ItemGroup>
       <FileWrites Include="$(NativeVersionSourceFile)" />
