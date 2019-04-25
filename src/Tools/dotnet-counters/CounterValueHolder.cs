@@ -29,9 +29,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        public void Update(string providerName, string counterName, string counterValue)
+        public void Update(string providerName, ICounterPayload payload)
         {
-            providerCounterValues[providerName].Update(counterName, counterValue);
+            providerCounterValues[providerName].Update(payload);
         }
     }
 
@@ -45,11 +45,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             counterValues = new SortedDictionary<string, string>();
             nameToDisplayName = new Dictionary<string, string>();
-
-            foreach (CounterProfile counter in provider.Counters.Values)
-            {
-                counterValues.Add(counter.Name, "0");
-            }
         }
 
         public int counterCount()
@@ -66,9 +61,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
             return name;
         }
 
-        public void Update(string counterName, string val)
+        public void Update(ICounterPayload payload)
         {
-            counterValues[counterName] = val;
+            counterValues[payload.GetName()] = payload.GetValue();
+
+            if (nameToDisplayName.ContainsKey(payload.GetName()))
+            {
+                nameToDisplayName[payload.GetName()] = payload.GetDisplay();
+            }
         }
 
         // Displays all the counters in this Provider.

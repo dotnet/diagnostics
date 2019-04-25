@@ -39,10 +39,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             if (obj.EventName.Equals("EventCounters"))
             {
-                string payload = obj.PayloadString(0); // EventCounters always have 1 payload
-                (string counterName, string counterValue) = payloadParser.ParseCounterValue(obj.ProviderName, payload);
-                cvHolder.Update(obj.ProviderName, counterName, counterValue);
-                writer.Update(counterName, counterValue);
+                IDictionary<string, object> payloadVal = (IDictionary<string, object>)(obj.PayloadValue(0));
+                IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
+                // There really isn't a great way to tell whether an EventCounter payload is an instance of 
+                // IncrementingCounterPayload or CounterPayload, so here we check the number of fields 
+                // to distinguish the two.
+                
+                ICounterPayload payload = (payloadFields.Count == 6) ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
+                
+                cvHolder.Update(obj.ProviderName, payload);
+                writer.Update(payload.GetName(), payload.GetValue());
             }
         }
 
@@ -137,11 +143,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
             source.Dynamic.All += Dynamic_All;
             source.Process();
 
-//            sessionId = EventPipeClient.EnableTracingToFile(_processId, configuration);
-
-            // Write the config file contents
-            //_console.Out.WriteLine("Tracing has started. Press Ctrl-C to stop.");
-            //await Task.Delay(int.MaxValue, _ct);
             return 0;
         }
     }

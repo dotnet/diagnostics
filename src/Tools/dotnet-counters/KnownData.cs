@@ -33,7 +33,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="gen-0-gc-count", Description="Number of Gen 0 GCs", DisplayName="Gen 0 GC / sec", Type=CounterType.IncrementingPollingCounter },
                     new CounterProfile{ Name="gen-1-gc-count", Description="Number of Gen 1 GCs", DisplayName="Gen 1 GC / sec", Type=CounterType.IncrementingPollingCounter },
                     new CounterProfile{ Name="gen-2-gc-count", Description="Number of Gen 2 GCs", DisplayName="Gen 2 GC / sec", Type=CounterType.IncrementingPollingCounter },
-                    new CounterProfile{ Name="exception-count", Description="Exception Count", DisplayName="Exceptions / sec", Type=CounterType.IncrementingPollingCounter },
+                    new CounterProfile{ Name="threadpool-thread-count", Description="Number of ThreadPool Threads", DisplayName="ThreadPool Thread Count", Type=CounterType.PollingCounter },
+                    new CounterProfile{ Name="monitor-lock-contention-count", Description="Lock Contention Count", DisplayName="Lock Contention Count", Type=CounterType.IncrementingPollingCounter },
+                    new CounterProfile{ Name="threadpool-queue-length", Description="Length of ThreadPool Work Items Queue", DisplayName="ThreadPool Queue Length", Type=CounterType.PollingCounter },
                 });
             // TODO: Add more providers (ex. ASP.NET ones)
         }
