@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal sealed class ProfilesCommandHandler
+    internal sealed class ListProfilesCommandHandler
     {
         public static async Task<int> GetProfiles(IConsole console)
         {
@@ -32,10 +32,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        public static Command ProfilesCommand() =>
+        public static Command ListProfilesCommand() =>
             new Command(
-                name: "profiles",
-                description: "List pre-defined set of provider aliases that allows common tracing scenarios to be specified.",
+                name: "list-profiles",
+                description: "Lists pre-built tracing profiles with a description of what providers and filters are in each profile.",
                 handler: CommandHandler.Create<IConsole>(GetProfiles),
                 isHidden: false);
 

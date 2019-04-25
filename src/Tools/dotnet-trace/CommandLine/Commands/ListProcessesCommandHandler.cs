@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal static class EndPointsCommandHandler
+    internal static class ListProcessesCommandHandler
     {
         public static async Task<int> GetActivePorts(IConsole console)
         {
@@ -48,10 +48,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        public static Command ActivePortsCommand() =>
+        public static Command ListProcessesCommand() =>
             new Command(
-                name: "endpoints",
-                description: "List all active DotNet Core Diagnostic endpoints.",
+                name: "list-processes",
+                description: "Lists dotnet processes that can be attached to.",
                 handler: System.CommandLine.Invocation.CommandHandler.Create<IConsole>(GetActivePorts),
                 isHidden: false);
     }

@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (profile == null)
                     throw new ArgumentNullException(nameof(profile));
 
-                var selectedProfile = ProfilesCommandHandler.DotNETRuntimeProfiles
+                var selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
                     .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
                 if (selectedProfile == null)
                     throw new ArgumentException($"Invalid profile name: {profile}");
@@ -189,7 +189,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option CircularBufferOption() =>
             new Option(
                 alias: "--buffersize",
-                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB",
+                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB.",
                 argument: new Argument<uint>(defaultValue: DefaultCircularBufferSizeInMB) { Name = "size" },
                 isHidden: false);
 
