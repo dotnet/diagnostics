@@ -1,6 +1,8 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -8,13 +10,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
 {
     public class CounterProvider
     {
-        public static readonly string DefaultProviderName = "System.Runtime";
-
         public string Name { get; }
         public string Description { get; }
         public string Keywords { get; }
         public string Level { get; }
-        public IReadOnlyList<CounterProfile> Counters { get; }
+        public Dictionary<string, CounterProfile> Counters { get; }
 
         public CounterProvider(string name, string description, string keywords, string level, IEnumerable<CounterProfile> counters)
         {
@@ -22,7 +22,18 @@ namespace Microsoft.Diagnostics.Tools.Counters
             Description = description;
             Keywords = keywords;
             Level = level;
-            Counters = counters.ToList();
+            Counters = new Dictionary<string, CounterProfile>();
+            foreach (CounterProfile counter in counters)
+            {
+                Counters.Add(counter.Name, counter);
+            }
+        }
+
+        public string TryGetDisplayName(string counterName)
+        {
+            if (Counters.ContainsKey(counterName))
+                return Counters[counterName].DisplayName;
+            return null;
         }
 
         public string ToProviderString(int interval)
@@ -34,6 +45,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
     public class CounterProfile
     {
         public string Name { get; set; }
+        public string DisplayName { get; set; }
         public string Description { get; set; }
     }
 }

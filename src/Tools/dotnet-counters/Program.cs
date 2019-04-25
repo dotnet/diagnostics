@@ -1,5 +1,6 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.CommandLine;
@@ -41,7 +42,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 Description = @"A space separated list of counters. Counters can be specified provider_name[:counter_name].
                 If the provider_name is used without a qualifying counter_name then all counters will be shown. To discover 
                 provider and counter names, use the list command.
-                ."
+                .",
             };
 
         private static Command ListCommand() =>
@@ -59,7 +60,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             foreach (var profile in profiles)
             {
                 Console.WriteLine($"* {profile.Name.PadRight(maxNameLength)}");
-                foreach (var counter in profile.Counters)
+                foreach (var counter in profile.Counters.Values)
                 {
                     Console.WriteLine($"    {counter.Name} \t\t {counter.Description}");
                 }

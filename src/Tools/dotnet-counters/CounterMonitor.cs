@@ -1,37 +1,56 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System;
+using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Microsoft.Diagnostics.Tracing;
+
 namespace Microsoft.Diagnostics.Tools.Counters
 {
     public class CounterMonitor
     {
-        private string outputPath;
-        private ulong sessionId;
-
         private int _processId;
         private int _interval;
         private string _counterList;
         private CancellationToken _ct;
         private IConsole _console;
-
+        private ConsoleWriter writer;
+        private ulong _sessionId;
         public CounterMonitor()
         {
+            writer = new ConsoleWriter();
         }
 
-        public async Task<int> Monitor(CancellationToken ct, string counterList, IConsole console, int processId, int interval)
+        private void Dynamic_All(TraceEvent obj)
+        {
+            if (obj.EventName.Equals("EventCounters"))
+            {
+                IDictionary<string, object> payloadVal = (IDictionary<string, object>)(obj.PayloadValue(0));
+                IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
+
+                // There really isn't a great way to tell whether an EventCounter payload is an instance of 
+                // IncrementingCounterPayload or CounterPayload, so here we check the number of fields 
+                // to distinguish the two.                
+                ICounterPayload payload = payloadFields["CounterType"] == "Sum" ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
+                
+                writer.Update(obj.ProviderName, payload);
+            }
+        }
+
+        public async Task<int> Monitor(CancellationToken ct, string counter_list, IConsole console, int processId, int interval)
         {
             try
             {
                 _ct = ct;
-                _counterList = counterList;
+                _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
                 _console = console;
                 _processId = processId;
                 _interval = interval;
@@ -43,11 +62,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 try
                 {
-                    EventPipeClient.StopTracing(_processId, sessionId);    
+                    EventPipeClient.StopTracing(_processId, _sessionId);    
                 }
                 catch (Exception) {} // Swallow all exceptions for now.
                 
-                console.Out.WriteLine($"Tracing stopped. Trace files written to {outputPath}");
                 console.Out.WriteLine($"Complete");
                 return 1;
             }
@@ -64,8 +82,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _console.Error.WriteLine("interval is required.");
                 return 1;
             }
-
-            outputPath = Path.Combine(Directory.GetCurrentDirectory(), $"dotnet-counters-{_processId}.netperf"); // TODO: This can be removed once events can be streamed in real time.
 
             String providerString;
 
@@ -102,17 +118,24 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 providerString = sb.ToString();
             }
+            Task monitorTask = new Task(() => {
+                var configuration = new SessionConfiguration(
+                    circularBufferSizeMB: 1000,
+                    outputPath: "",
+                    providers: Trace.Extensions.ToProviders(providerString));
 
-            var configuration = new SessionConfiguration(
-                circularBufferSizeMB: 1000,
-                outputPath: outputPath,
-                providers: Trace.Extensions.ToProviders(providerString));
+                var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
+                EventPipeEventSource source = new EventPipeEventSource(binaryReader);
+                writer.InitializeDisplay();
+                source.Dynamic.All += Dynamic_All;
+                source.Process();
+            });
 
-            sessionId = EventPipeClient.StartTracingToFile(_processId, configuration);
+            monitorTask.Start();
+            await monitorTask;
+            EventPipeClient.StopTracing(_processId, _sessionId);
 
-            // Write the config file contents
-            _console.Out.WriteLine("Tracing has started. Press Ctrl-C to stop.");
-            await Task.Delay(int.MaxValue, _ct);
+            Task.FromResult(0);
             return 0;
         }
     }
