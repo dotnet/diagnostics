@@ -38,9 +38,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                 // There really isn't a great way to tell whether an EventCounter payload is an instance of 
                 // IncrementingCounterPayload or CounterPayload, so here we check the number of fields 
-                // to distinguish the two.                
-                ICounterPayload payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
-                
+                // to distinguish the two.
+                ICounterPayload payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
                 writer.Update(obj.ProviderName, payload);
             }
         }
@@ -134,8 +133,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             monitorTask.Start();
             await monitorTask;
-            EventPipeClient.StopTracing(_processId, _sessionId);
 
+            try
+            {
+                EventPipeClient.StopTracing(_processId, _sessionId);    
+            }
+            catch (System.IO.EndOfStreamException) {} // If the app we're monitoring exits abrubtly, this may throw in which case we just swallow the exception and exit gracefully.
+            
             return 0;
         }
     }
