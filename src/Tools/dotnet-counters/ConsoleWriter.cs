@@ -1,5 +1,6 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -14,10 +15,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
 	    private int origCol;
 	    private int maxRow;  // Running maximum of row number
 	    private int maxCol;  // Running maximum of col number
+	    private Dictionary<string, int> knownProvidersRowNum;
 
 		public ConsoleWriter()
 		{
 			displayPosition = new Dictionary<string, (int, int)>();
+			knownProvidersRowNum = new Dictionary<string, int>();
+
+			foreach(CounterProvider provider in KnownData.GetAllProviders())
+			{
+				knownProvidersRowNum[provider.Name] = -1;
+			}
 		}
 
 	    public void InitializeDisplay()
@@ -30,10 +38,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
 	        maxCol = origCol;
 	    }
 
-	    public void Update(ICounterPayload payload)
+	    public void Update(string providerName, ICounterPayload payload)
 	    {
 	    	string name = payload.GetName();
 
+	    	// We already know what this counter is! Just update the value string on the console.
 	    	if (displayPosition.ContainsKey(name))
 	    	{
 	    		(int left, int row) = displayPosition[name];
@@ -43,20 +52,38 @@ namespace Microsoft.Diagnostics.Tools.Counters
 		    	Console.SetCursorPosition(left, row);//row, left);
 		    	Console.Write(payload.GetValue());	
 	    	}
+	    	// Got a payload from a new counter that hasn't been written to the console yet.
 	    	else
 	    	{
-	    		string displayName = payload.GetDisplay();
-	    		int left = displayName.Length + 3; // displayName + " : "
-	    		int row = maxRow;
+	    		bool isWellKnownProvider = knownProvidersRowNum.ContainsKey(providerName);
 
-	    		displayPosition[name] = (left, row);
+	    		if (isWellKnownProvider)
+	    		{
+	    			if (knownProvidersRowNum[providerName] < 0)
+	    			{
+	    				knownProvidersRowNum[providerName] = maxRow + 1;
+	    				Console.SetCursorPosition(0, maxRow);
+	    				Console.WriteLine(providerName);
+	    				maxRow += 1;
+	    			}
 
-	    		Console.SetCursorPosition(left, row);
-	    		Console.Write(new String(' ', 10));
-	    		Console.SetCursorPosition(left, row);
-	    		Console.Write(payload.GetValue());
-
-	    		maxRow += 1;
+		    		string displayName = payload.GetDisplay();
+		    		int left = displayName.Length + 7; // displayName + " : "
+		    		int row = maxRow;
+		    		displayPosition[name] = (left, row);
+		    		Console.WriteLine($"    {displayName} : {payload.GetValue()}");
+		    		maxRow += 1;
+	    		}
+	    		else
+	    		{
+	    			// If it's from an provider, just append it at the end.
+		    		string displayName = payload.GetDisplay();
+		    		int left = displayName.Length + 7; // displayName + " : "
+		    		int row = maxRow;
+		    		displayPosition[name] = (left, row);
+		    		Console.WriteLine($"    {displayName} : {payload.GetValue()}");
+		    		maxRow += 1;
+	    		}
 	    	}
 	    }
 	}
