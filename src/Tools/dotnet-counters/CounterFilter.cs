@@ -8,23 +8,23 @@ using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
-	public class CounterFilter
-	{
-		private Dictionary<string, List<string>> enabledCounters;
+    public class CounterFilter
+    {
+        private Dictionary<string, List<string>> enabledCounters;
 
-		public CounterFilter()
-		{
-			enabledCounters = new Dictionary<string, List<string>>();
-		}
+        public CounterFilter()
+        {
+            enabledCounters = new Dictionary<string, List<string>>();
+        }
 
-		public void AddFilter(string providerName, string[] counters)
-		{
-			enabledCounters[providerName] = new List<string>(counters);
-		}
+        public void AddFilter(string providerName, string[] counters)
+        {
+            enabledCounters[providerName] = new List<string>(counters);
+        }
 
-		public bool Filter(string providerName, string counterName)
-		{
-			return enabledCounters.ContainsKey(providerName) && enabledCounters[providerName].Contains(counterName);
-		}
-	}
+        public bool Filter(string providerName, string counterName)
+        {
+            return enabledCounters.ContainsKey(providerName) && enabledCounters[providerName].Contains(counterName);
+        }
+    }
 }
