@@ -45,7 +45,6 @@ For analyzing CPU usage, IO, lock contention, allocation rate, etc the investiga
     Recording trace 38MB
 
     's' - stop tracing
-    'g' - capture GC heap snapshot
 
 ...Hit 's'...
 
@@ -232,9 +231,7 @@ MONITOR
 
 SYNOPSIS
 
-    dotnet-trace [--version]
-                 [-h, --help]
-                 <command> [<args>]
+    dotnet-trace [options] [command] [<args>]
 
 OPTIONS
 
@@ -246,16 +243,16 @@ OPTIONS
 
 COMMANDS
 
-    collect   Collects a diagnostic trace from a currently running process
-    convert   Converts traces to alternate formats for use with alternate trace analysis tools
-    pack      Compresses a trace and any necessary symbols into a single zip file for easy off-machine analysis
+    collect         Collects a diagnostic trace from a currently running process
+    list-processes  Lists dotnet processes that can be attached to.
+    list-profiles   Lists pre-built tracing profiles with a description of what providers and filters are in each profile.
+    convert         Converts traces to alternate formats for use with alternate trace analysis tools
 
 COLLECT
 
     dotnet-trace collect -p|--process-id <pid>
                          [-h|--help]
                          [-o|--output <trace-file-path>]
-                         [--pack]
                          [--profile <profile_name>]
                          [--providers <list-of-comma-separated-providers>]
                          [-f|--format <trace-file-format>]
@@ -271,16 +268,11 @@ COLLECT
     -o, --output
         The output path for the collected trace data. If not specified it defaults to ./trace.netperf
 
-    --pack
-        Automatically runs the pack command after collection is complete. Use dotnet-trace pack --help for more
-        details.
-
     --profile
         A named pre-defined set of provider configurations that allows common tracing scenarios to be specified
         succinctly. The options are:
         runtime-basic   Useful for tracking CPU usage and general runtime information. This the default option
                         if no profile is specified.
-        asp-net-basic   Useful starting point for ASP.Net performance investigations
         gc              Tracks allocation and collection performance
         gc-collect      Tracks GC collection only at very low overhead
         none            Tracks nothing. Only providers specified by the --providers option will be available.
@@ -306,19 +298,10 @@ COLLECT
 
 
     Examples:
-      > dotnet trace collect --process-id 1902 --pack
+      > dotnet trace collect --process-id 1902
       Recording trace 38MB
 
       's' - stop tracing
-      'g' - capture GC heap snapshot
-
-    <Process exits>
-
-      > dotnet trace collect --process-id 1902 --pack
-      Recording trace 107MB
-      Recording complete (process exited)
-      Packing...
-      Trace complete: ~/trace.netperf.zip
 
 CONVERT
 
@@ -347,53 +330,6 @@ CONVERT
       > dotnet-trace convert trace.netperf --to-speedscope
       Writing:       ./trace.speedscope.json
       Conversion complete
-
-PACK
-
-    dotnet-trace pack [-h|--help]
-                      [-o|--output <output_file_path>]
-                      [--verbose]
-                      <trace_file_path>
-
-    Compresses a trace and any necessary symbols into a single zip file for easy off-machine analysis
-
-    -h, --help
-        Show command line help
-
-    -o, --output
-        The path where the pack is written. If unspecified the pack is written in the current directory
-        using the same base filename as the input file and the .zip extension.
-
-    --verbose
-        Logs detailed information about what the pack command is doing.
-
-    trace_file_path
-        The path to the trace file that should be packed.
-
-
-    Examples:
-      > dotnet-trace pack trace.netperf
-      Packing:      ./trace.netperf.zip
-      Pack complete
-
-      > dotnet-trace pack --verbose trace.netperf
-      Packing:      /usr/home/noahfalk/trace.netperf.zip
-      Compressing   /usr/home/noahfalk/trace.netperf
-      Checking      /usr/bin/dotnet/shared/3.0.170/System.Private.CoreLib.dll
-        Not packing symbols - Policy skips Microsoft binary
-      Checking      /usr/bin/dotnet/shared/3.0.170/System.Diagnostics.dll
-        Not packing symbols - Policy skips Microsoft binary
-      Checking      /usr/home/noahfalk/MyApp/Newtonsoft.Json.dll
-        Searching for Newtonsoft.Json.pdb
-        Searching   /usr/home/noahfalk/MyApp/Newtonsoft.Json.pdb
-        Not packing symbols - Newtonsoft.Json.pdb not found
-      Checking      /usr/home/noahfalk/MyApp/MyApp.dll
-        Searching for MyApp.pdb
-        Searching   /usr/home/noahfalk/MyApp/MyApp.pdb
-        Found matching symbol file
-        Compressing symbol file /usr/home/noahfalk/MyApp/MyApp.pdb
-      ...
-      Pack Complete
 
 ### dotnet-dump
 
@@ -681,6 +617,75 @@ Dumps a snapshot of counters on demand. In order to make this command fast the E
 
 ### dotnet-trace
 
+- Capture GC heap snapshot
+
+Add a command to `dotnet-trace collect` that enables the collection of GC heap snapshots on an active tracing session.
+
+- Compress a trace and any necessary symbols into a single zip file for easy off-machine analysis
+
+    OPTION
+
+        [--pack]  Automatically runs the pack command after collection is complete. Use dotnet-trace pack --help for more details.
+
+    USAGE
+
+        > dotnet trace collect --process-id 1902 --pack
+        Recording trace 107MB
+        Recording complete (process exited)
+        Packing...
+        Trace complete: ~/trace.netperf.zip
+
+    VERB
+
+        pack      Compresses a trace and any necessary symbols into a single zip file for easy off-machine analysis
+
+    PACK
+
+        dotnet-trace pack [-h|--help]
+                        [-o|--output <output_file_path>]
+                        [--verbose]
+                        <trace_file_path>
+
+        Compresses a trace and any necessary symbols into a single zip file for easy off-machine analysis
+
+        -h, --help
+            Show command line help
+
+        -o, --output
+            The path where the pack is written. If unspecified the pack is written in the current directory
+            using the same base filename as the input file and the .zip extension.
+
+        --verbose
+            Logs detailed information about what the pack command is doing.
+
+        trace_file_path
+            The path to the trace file that should be packed.
+
+
+        Examples:
+        > dotnet-trace pack trace.netperf
+        Packing:      ./trace.netperf.zip
+        Pack complete
+
+        > dotnet-trace pack --verbose trace.netperf
+        Packing:      /usr/home/noahfalk/trace.netperf.zip
+        Compressing   /usr/home/noahfalk/trace.netperf
+        Checking      /usr/bin/dotnet/shared/3.0.170/System.Private.CoreLib.dll
+            Not packing symbols - Policy skips Microsoft binary
+        Checking      /usr/bin/dotnet/shared/3.0.170/System.Diagnostics.dll
+            Not packing symbols - Policy skips Microsoft binary
+        Checking      /usr/home/noahfalk/MyApp/Newtonsoft.Json.dll
+            Searching for Newtonsoft.Json.pdb
+            Searching   /usr/home/noahfalk/MyApp/Newtonsoft.Json.pdb
+            Not packing symbols - Newtonsoft.Json.pdb not found
+        Checking      /usr/home/noahfalk/MyApp/MyApp.dll
+            Searching for MyApp.pdb
+            Searching   /usr/home/noahfalk/MyApp/MyApp.pdb
+            Found matching symbol file
+            Compressing symbol file /usr/home/noahfalk/MyApp/MyApp.pdb
+        ...
+        Pack Complete
+
 - Multi-process collection
 
 Make the --process-id argument optional or let it take a list of ids to create multi-process traces
@@ -808,6 +813,8 @@ Show a snapshot of all a processes threads with a callstack for each.
     3. Counters should have separate display names that use spaces and indicate measurement units.
 
 ### dotnet-trace
+
+- Add a useful starting point profile for ASP.NET performance investigations
 
 - Does dotnet-trace support other tracing systems or EventPipe only?
 

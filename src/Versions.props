@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <MicrosoftDiagnosticsTracingLibraryVersion>2.0.41</MicrosoftDiagnosticsTracingLibraryVersion>
+    <SystemCommandLineExperimentalVersion>0.2.0-alpha.19213.1</SystemCommandLineExperimentalVersion>
+    <SystemCommandLineRenderingVersion>0.2.0-alpha.19213.1</SystemCommandLineRenderingVersion>
+  </PropertyGroup>
+</Project>

@@ -1,40 +1,73 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System;
+using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Microsoft.Diagnostics.Tracing;
+
 namespace Microsoft.Diagnostics.Tools.Counters
 {
     public class CounterMonitor
     {
-        private string outputPath;
-        private ulong sessionId;
-
         private int _processId;
         private int _interval;
-        private string _counterList;
+        private List<string> _counterList;
         private CancellationToken _ct;
         private IConsole _console;
+        private ConsoleWriter writer;
+        private CounterFilter filter;
+        private ulong _sessionId;
+        private bool pauseCmdSet;
 
         public CounterMonitor()
         {
+            writer = new ConsoleWriter();
+            filter = new CounterFilter();
+            pauseCmdSet = false;
         }
 
-        public async Task<int> Monitor(CancellationToken ct, string counterList, IConsole console, int processId, int interval)
+        private void Dynamic_All(TraceEvent obj)
+        {
+            // If we are paused, ignore the event. 
+            // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
+            if (pauseCmdSet) 
+            {
+                return;
+            }
+
+            if (obj.EventName.Equals("EventCounters"))
+            {
+                IDictionary<string, object> payloadVal = (IDictionary<string, object>)(obj.PayloadValue(0));
+                IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
+
+                // If it's not a counter we asked for, ignore it.
+                if (!filter.Filter(obj.ProviderName, payloadFields["Name"].ToString())) return;
+
+                // There really isn't a great way to tell whether an EventCounter payload is an instance of 
+                // IncrementingCounterPayload or CounterPayload, so here we check the number of fields 
+                // to distinguish the two.
+                ICounterPayload payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
+                writer.Update(obj.ProviderName, payload);
+            }
+        }
+
+        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval)
         {
             try
             {
                 _ct = ct;
-                _counterList = counterList;
+                _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
                 _console = console;
                 _processId = processId;
-                _interval = interval;
+                _interval = refreshInterval;
 
                 return await StartMonitor();
             }
@@ -43,11 +76,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 try
                 {
-                    EventPipeClient.StopTracing(_processId, sessionId);    
+                    EventPipeClient.StopTracing(_processId, _sessionId);    
                 }
                 catch (Exception) {} // Swallow all exceptions for now.
                 
-                console.Out.WriteLine($"Tracing stopped. Trace files written to {outputPath}");
                 console.Out.WriteLine($"Complete");
                 return 1;
             }
@@ -61,15 +93,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
 
             if (_interval == 0) {
-                _console.Error.WriteLine("interval is required.");
+                _console.Error.WriteLine("refreshInterval is required.");
                 return 1;
             }
 
-            outputPath = Path.Combine(Directory.GetCurrentDirectory(), $"dotnet-counters-{_processId}.netperf"); // TODO: This can be removed once events can be streamed in real time.
-
             String providerString;
 
-            if (string.IsNullOrEmpty(_counterList))
+            if (_counterList.Count == 0)
             {
                 CounterProvider defaultProvider = null;
                 _console.Out.WriteLine($"counter_list is unspecified. Monitoring all counters by default.");
@@ -81,38 +111,90 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     return 1;
                 }
                 providerString = defaultProvider.ToProviderString(_interval);
+                filter.AddFilter("System.Runtime");
             }
             else
             {
-                string[] counters = _counterList.Split(" ");
                 CounterProvider provider = null;
                 StringBuilder sb = new StringBuilder("");
-                for (var i = 0; i < counters.Length; i++)
+                for (var i = 0; i < _counterList.Count; i++)
                 {
-                    if (!KnownData.TryGetProvider(counters[i], out provider))
+                    string counterSpecifier = _counterList[i];
+                    string[] tokens = counterSpecifier.Split('[');
+                    string providerName = tokens[0];
+                    if (!KnownData.TryGetProvider(providerName, out provider))
                     {
-                        _console.Error.WriteLine($"No known provider called {counters[i]}.");
-                        return 1;
+                        sb.Append(CounterProvider.SerializeUnknownProviderName(providerName, _interval));
                     }
-                    sb.Append(provider.ToProviderString(_interval));
-                    if (i != counters.Length - 1)
+                    else
+                    {
+                        sb.Append(provider.ToProviderString(_interval));    
+                    }
+                    
+                    if (i != _counterList.Count - 1)
                     {
                         sb.Append(",");
+                    }
+
+                    if (tokens.Length == 1)
+                    {
+                        filter.AddFilter(providerName); // This means no counter filter was specified.
+                    }
+                    else
+                    {
+                        string counterNames = tokens[1];
+                        string[] enabledCounters = counterNames.Substring(0, counterNames.Length-1).Split(',');
+                        
+                        filter.AddFilter(providerName, enabledCounters);
                     }
                 }
                 providerString = sb.ToString();
             }
 
-            var configuration = new SessionConfiguration(
-                circularBufferSizeMB: 1000,
-                outputPath: outputPath,
-                providers: Trace.Extensions.ToProviders(providerString));
+            Task monitorTask = new Task(() => {
+                var configuration = new SessionConfiguration(
+                    circularBufferSizeMB: 1000,
+                    outputPath: "",
+                    providers: Trace.Extensions.ToProviders(providerString));
 
-            sessionId = EventPipeClient.StartTracingToFile(_processId, configuration);
+                var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
+                EventPipeEventSource source = new EventPipeEventSource(binaryReader);
+                writer.InitializeDisplay();
+                source.Dynamic.All += Dynamic_All;
+                source.Process();
+            });
 
-            // Write the config file contents
-            _console.Out.WriteLine("Tracing has started. Press Ctrl-C to stop.");
-            await Task.Delay(int.MaxValue, _ct);
+            Task commandTask = new Task(() =>
+            {
+                while(true)
+                {
+                    while (!Console.KeyAvailable) { }
+                    ConsoleKey cmd = Console.ReadKey(true).Key;
+                    if (cmd == ConsoleKey.Q)
+                    {
+                        break;
+                    }
+                    else if (cmd == ConsoleKey.P)
+                    {
+                        pauseCmdSet = true;
+                    }
+                    else if (cmd == ConsoleKey.R)
+                    {
+                        pauseCmdSet = false;
+                    }
+                }
+            });
+
+            monitorTask.Start();
+            commandTask.Start();
+            await commandTask;
+
+            try
+            {
+                EventPipeClient.StopTracing(_processId, _sessionId);    
+            }
+            catch (System.IO.EndOfStreamException) {} // If the app we're monitoring exits abrubtly, this may throw in which case we just swallow the exception and exit gracefully.
+
             return 0;
         }
     }
