@@ -112,7 +112,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Console.Out.WriteLine();
                 Console.Out.WriteLine("Trace completed.");
 
-                TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
+                if (format != TraceFileFormat.Netperf)
+                    TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
 
                 await Task.FromResult(0);
                 return sessionId != 0 ? 0 : 1;
@@ -193,7 +194,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 argument: new Argument<uint>(defaultValue: DefaultCircularBufferSizeInMB) { Name = "size" },
                 isHidden: false);
 
-        private static string DefaultTraceName => "trace.netperf";
+        public static string DefaultTraceName => "trace.netperf";
 
         private static Option OutputPathOption() =>
             new Option(

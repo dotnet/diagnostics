@@ -255,7 +255,7 @@ COLLECT
                          [-o|--output <trace-file-path>]
                          [--profile <profile_name>]
                          [--providers <list-of-comma-separated-providers>]
-                         [-f|--format <trace-file-format>]
+                         [--format <trace-file-format>]
 
     Collects a diagnostic trace from a currently running process
 
@@ -293,8 +293,8 @@ COLLECT
     --buffersize <Size>
         Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
 
-    -f, --format
-        The format of the output trace file.  This defaults to "netperf" on Windows and "speedscope" on other OSes.
+    --format
+        The format of the output trace file. The default value is netperf.
 
 
     Examples:
@@ -307,7 +307,7 @@ CONVERT
 
     dotnet-trace convert [-h|--help]
                          [-o|--output <output_file_path>]
-                         [--to-speedscope]
+                         --format <format>
                          <trace_file_path>
 
     Converts traces to alternate formats for use with alternate trace analysis tools
@@ -319,15 +319,14 @@ CONVERT
         The path where the converted file is written. If unspecified the file is written in the current directory
         using the same base filename as the input file and the extension appropriate for the new format.
 
-    --to-speedscope
-        Indicates that the output file format should be speedscope JSON format used by https://www.speedscope.app/
-        Currently this is the only supported format, but other options may be available in the future.
+    --format
+        Specifies the format to convert the netperf file to. Currently, the only valid input is 'speedscope'.
 
     trace_file_path
-        The path to the trace file that should be converted. The trace file can be in either a netperf or netperf.zip file.
+        The path to the trace file that should be converted. The trace file can be a netperf file. Defaults to 'trace.netperf'.
 
     Examples:
-      > dotnet-trace convert trace.netperf --to-speedscope
+      > dotnet-trace convert trace.netperf -f speedscope
       Writing:       ./trace.speedscope.json
       Conversion complete
 
