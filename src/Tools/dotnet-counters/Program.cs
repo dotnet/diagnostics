@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 
 namespace Microsoft.Diagnostics.Tools.Counters
@@ -22,7 +23,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "Start monitoring a .NET application", 
                 new Option[] { ProcessIdOption(), RefreshIntervalOption() },
                 argument: CounterList(),
-                handler: CommandHandler.Create<CancellationToken, string, IConsole, int, int>(new CounterMonitor().Monitor));
+                handler: CommandHandler.Create<CancellationToken, List<string>, IConsole, int, int>(new CounterMonitor().Monitor));
 
         private static Option ProcessIdOption() =>
             new Option(
@@ -37,12 +38,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 new Argument<int> { Name = "refresh-interval" });
 
         private static Argument CounterList() =>
-            new Argument<string> {
+            new Argument<List<string>> {
                 Name = "counter_list",
                 Description = @"A space separated list of counters. Counters can be specified provider_name[:counter_name].
                 If the provider_name is used without a qualifying counter_name then all counters will be shown. To discover 
                 provider and counter names, use the list command.
                 .",
+                Arity = ArgumentArity.ZeroOrMore
             };
 
         private static Command ListCommand() =>

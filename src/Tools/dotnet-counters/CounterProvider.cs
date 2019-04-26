@@ -40,6 +40,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             return $"{Name}:{Keywords}:{Level}:EventCounterIntervalSec={interval}";
         }
+
+        public static string SerializeUnknownProviderName(string unknownCounterProviderName, int interval)
+        {
+            return $"{unknownCounterProviderName}:0xffffffff:0x4:EventCounterIntervalSec={interval}";
+        }
     }
 
     public class CounterProfile

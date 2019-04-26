@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
     {
         private int _processId;
         private int _interval;
-        private string _counterList;
+        private List<string> _counterList;
         private CancellationToken _ct;
         private IConsole _console;
         private ConsoleWriter writer;
@@ -44,11 +44,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        public async Task<int> Monitor(CancellationToken ct, string counter_list, IConsole console, int processId, int refreshInterval)
+        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval)
         {
             try
             {
-                Console.WriteLine($"interval: {refreshInterval}");
                 _ct = ct;
                 _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
                 _console = console;
@@ -85,7 +84,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             String providerString;
 
-            if (string.IsNullOrEmpty(_counterList))
+            if (_counterList.Count == 0)
             {
                 CounterProvider defaultProvider = null;
                 _console.Out.WriteLine($"counter_list is unspecified. Monitoring all counters by default.");
@@ -100,24 +99,33 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             else
             {
-                string[] counters = _counterList.Split(" ");
                 CounterProvider provider = null;
                 StringBuilder sb = new StringBuilder("");
-                for (var i = 0; i < counters.Length; i++)
+                for (var i = 0; i < _counterList.Count; i++)
                 {
-                    if (!KnownData.TryGetProvider(counters[i], out provider))
+                    string counterSpecifier = _counterList[i];
+                    string[] tokens = counterSpecifier.Split('[');
+                    string providerName = tokens[0];
+
+                    if (!KnownData.TryGetProvider(providerName, out provider))
                     {
-                        _console.Error.WriteLine($"No known provider called {counters[i]}.");
-                        return 1;
+                        sb.Append(CounterProvider.SerializeUnknownProviderName(providerName, _interval));
                     }
-                    sb.Append(provider.ToProviderString(_interval));
-                    if (i != counters.Length - 1)
+                    else
+                    {
+                        sb.Append(provider.ToProviderString(_interval));    
+                    }
+                    
+                    if (i != _counterList.Count - 1)
                     {
                         sb.Append(",");
                     }
                 }
                 providerString = sb.ToString();
             }
+
+            Console.WriteLine($"providerString: {providerString}");
+            /*
             Task monitorTask = new Task(() => {
                 var configuration = new SessionConfiguration(
                     circularBufferSizeMB: 1000,
@@ -132,14 +140,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
             });
 
             monitorTask.Start();
+
             await monitorTask;
+            
 
             try
             {
                 EventPipeClient.StopTracing(_processId, _sessionId);    
             }
             catch (System.IO.EndOfStreamException) {} // If the app we're monitoring exits abrubtly, this may throw in which case we just swallow the exception and exit gracefully.
-            
+            */
             return 0;
         }
     }
