@@ -19,14 +19,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
     {
         private int _processId;
         private int _interval;
-        private string _counterList;
+        private List<string> _counterList;
         private CancellationToken _ct;
         private IConsole _console;
         private ConsoleWriter writer;
+        private CounterFilter filter;
         private ulong _sessionId;
         public CounterMonitor()
         {
             writer = new ConsoleWriter();
+            filter = new CounterFilter();
         }
 
         private void Dynamic_All(TraceEvent obj)
@@ -36,16 +38,18 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 IDictionary<string, object> payloadVal = (IDictionary<string, object>)(obj.PayloadValue(0));
                 IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
 
+                // If it's not a counter we asked for, ignore it.
+                if (!filter.Filter(obj.ProviderName, payloadFields["Name"].ToString())) return;
+
                 // There really isn't a great way to tell whether an EventCounter payload is an instance of 
                 // IncrementingCounterPayload or CounterPayload, so here we check the number of fields 
-                // to distinguish the two.                
-                ICounterPayload payload = payloadFields["CounterType"] == "Sum" ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
-                
+                // to distinguish the two.
+                ICounterPayload payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
                 writer.Update(obj.ProviderName, payload);
             }
         }
 
-        public async Task<int> Monitor(CancellationToken ct, string counter_list, IConsole console, int processId, int interval)
+        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval)
         {
             try
             {
@@ -53,7 +57,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
                 _console = console;
                 _processId = processId;
-                _interval = interval;
+                _interval = refreshInterval;
 
                 return await StartMonitor();
             }
@@ -79,13 +83,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
 
             if (_interval == 0) {
-                _console.Error.WriteLine("interval is required.");
+                _console.Error.WriteLine("refreshInterval is required.");
                 return 1;
             }
 
             String providerString;
 
-            if (string.IsNullOrEmpty(_counterList))
+            if (_counterList.Count == 0)
             {
                 CounterProvider defaultProvider = null;
                 _console.Out.WriteLine($"counter_list is unspecified. Monitoring all counters by default.");
@@ -97,27 +101,46 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     return 1;
                 }
                 providerString = defaultProvider.ToProviderString(_interval);
+                filter.AddFilter("System.Runtime");
             }
             else
             {
-                string[] counters = _counterList.Split(" ");
                 CounterProvider provider = null;
                 StringBuilder sb = new StringBuilder("");
-                for (var i = 0; i < counters.Length; i++)
+                for (var i = 0; i < _counterList.Count; i++)
                 {
-                    if (!KnownData.TryGetProvider(counters[i], out provider))
+                    string counterSpecifier = _counterList[i];
+                    string[] tokens = counterSpecifier.Split('[');
+                    string providerName = tokens[0];
+                    if (!KnownData.TryGetProvider(providerName, out provider))
                     {
-                        _console.Error.WriteLine($"No known provider called {counters[i]}.");
-                        return 1;
+                        sb.Append(CounterProvider.SerializeUnknownProviderName(providerName, _interval));
                     }
-                    sb.Append(provider.ToProviderString(_interval));
-                    if (i != counters.Length - 1)
+                    else
+                    {
+                        sb.Append(provider.ToProviderString(_interval));    
+                    }
+                    
+                    if (i != _counterList.Count - 1)
                     {
                         sb.Append(",");
+                    }
+
+                    if (tokens.Length == 1)
+                    {
+                        filter.AddFilter(providerName); // This means no counter filter was specified.
+                    }
+                    else
+                    {
+                        string counterNames = tokens[1];
+                        string[] enabledCounters = counterNames.Substring(0, counterNames.Length-1).Split(',');
+                        
+                        filter.AddFilter(providerName, enabledCounters);
                     }
                 }
                 providerString = sb.ToString();
             }
+
             Task monitorTask = new Task(() => {
                 var configuration = new SessionConfiguration(
                     circularBufferSizeMB: 1000,
@@ -132,10 +155,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
             });
 
             monitorTask.Start();
+            
             await monitorTask;
-            EventPipeClient.StopTracing(_processId, _sessionId);
+            
+            try
+            {
+                EventPipeClient.StopTracing(_processId, _sessionId);    
+            }
+            catch (System.IO.EndOfStreamException) {} // If the app we're monitoring exits abrubtly, this may throw in which case we just swallow the exception and exit gracefully.
 
-            Task.FromResult(0);
             return 0;
         }
     }
