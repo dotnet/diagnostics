@@ -25,14 +25,24 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private ConsoleWriter writer;
         private CounterFilter filter;
         private ulong _sessionId;
+        private bool pauseCmdSet;
+
         public CounterMonitor()
         {
             writer = new ConsoleWriter();
             filter = new CounterFilter();
+            pauseCmdSet = false;
         }
 
         private void Dynamic_All(TraceEvent obj)
         {
+            // If we are paused, ignore the event. 
+            // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
+            if (pauseCmdSet) 
+            {
+                return;
+            }
+
             if (obj.EventName.Equals("EventCounters"))
             {
                 IDictionary<string, object> payloadVal = (IDictionary<string, object>)(obj.PayloadValue(0));
@@ -154,10 +164,31 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 source.Process();
             });
 
+            Task commandTask = new Task(() =>
+            {
+                while(true)
+                {
+                    while (!Console.KeyAvailable) { }
+                    ConsoleKey cmd = Console.ReadKey(true).Key;
+                    if (cmd == ConsoleKey.Q)
+                    {
+                        break;
+                    }
+                    else if (cmd == ConsoleKey.P)
+                    {
+                        pauseCmdSet = true;
+                    }
+                    else if (cmd == ConsoleKey.R)
+                    {
+                        pauseCmdSet = false;
+                    }
+                }
+            });
+
             monitorTask.Start();
-            
-            await monitorTask;
-            
+            commandTask.Start();
+            await commandTask;
+
             try
             {
                 EventPipeClient.StopTracing(_processId, _sessionId);    

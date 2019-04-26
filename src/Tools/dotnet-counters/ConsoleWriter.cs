@@ -33,8 +33,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
             Console.Clear();
             origRow = Console.CursorTop;
             origCol = Console.CursorLeft;
+            Console.WriteLine("Press p to pause, r to resume, q to quit.");
 
-            maxRow = origRow;
+            maxRow = origRow+1;
             maxCol = origCol;
         }
 
@@ -47,7 +48,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 (int left, int row) = displayPosition[name];
                 Console.SetCursorPosition(left, row);
-                Console.Write(new String(' ', 16));
+                Console.Write(new String(' ', 8));
 
                 Console.SetCursorPosition(left, row);
                 Console.Write(payload.GetValue());  
