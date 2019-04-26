@@ -17,8 +17,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         public static int ConvertFile(IConsole console, FileInfo inputFilename, TraceFileFormat format, FileInfo output)
         {
-            try
-            {
                 if (format == TraceFileFormat.Netperf)
                     throw new ArgumentException("Cannot convert to netperf format.");
                 
@@ -31,23 +29,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 TraceFileFormatConverter.ConvertToFormat(format, inputFilename.FullName, output.FullName);
 
                 return 0;
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
-                return 1;
-            }
         }
 
         public static Command ConvertCommand() =>
             new Command(
                 name: "convert",
                 description: "Converts traces to alternate formats for use with alternate trace analysis tools. Can only convert from the netperf format.",
-                argument: new Argument<FileInfo>(defaultValue: new FileInfo(CollectCommandHandler.DefaultTraceName)) { 
+                argument: (new Argument<FileInfo>(defaultValue: new FileInfo(CollectCommandHandler.DefaultTraceName)) { 
                     Name = "input-filename",
-                    Description = $"Input trace file to be converted.  Defaults to '{CollectCommandHandler.DefaultTraceName}'.",
-                    Arity = ArgumentArity.ExactlyOne 
-                },
+                    Description = $"Input trace file to be converted.  Defaults to '{CollectCommandHandler.DefaultTraceName}'."
+                }).ExistingOnly(),
                 symbols: new Option[] {
                     CommonOptions.FormatOption(),
                     OutputOption()
@@ -60,7 +51,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new Option(
                 aliases: new [] { "-o", "--output" },
                 description: "Output filename. Extension of target format will be added.",
-                argument: new Argument<FileInfo>() { Name = "output-filename", Arity = ArgumentArity.ZeroOrOne },
+                argument: new Argument<FileInfo>() { Name = "output-filename" },
                 isHidden: false
             );
     }
