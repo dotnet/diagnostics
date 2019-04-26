@@ -101,6 +101,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     return 1;
                 }
                 providerString = defaultProvider.ToProviderString(_interval);
+                filter.AddFilter("System.Runtime");
             }
             else
             {
