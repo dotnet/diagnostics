@@ -112,7 +112,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Console.Out.WriteLine();
                 Console.Out.WriteLine("Trace completed.");
 
-                if (format != TraceFileFormat.netperf)
+                if (format != TraceFileFormat.Netperf)
                     TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
 
                 await Task.FromResult(0);

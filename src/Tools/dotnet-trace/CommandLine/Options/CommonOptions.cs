@@ -17,11 +17,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 argument: new Argument<int> { Name = "pid" },
                 isHidden: false);
 
-        public static TraceFileFormat DefaultTraceFileFormat => TraceFileFormat.netperf;
+        public static TraceFileFormat DefaultTraceFileFormat => TraceFileFormat.Netperf;
 
         public static Option FormatOption() =>
             new Option(
-                aliases: new[] { "-f", "--format" },
+                aliases: new[] { "--format" },
                 description: $"Sets the output format for the trace file.  Default is {DefaultTraceFileFormat}",
                 argument: new Argument<TraceFileFormat>(defaultValue: DefaultTraceFileFormat) { Name = "trace-file-format" },
                 isHidden: false);

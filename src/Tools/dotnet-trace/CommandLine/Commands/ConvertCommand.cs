@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             try
             {
-                if (format == TraceFileFormat.netperf)
+                if (format == TraceFileFormat.Netperf)
                     throw new ArgumentException("Cannot convert to netperf format.");
                 
                 if (!inputFilename.Exists)

@@ -255,7 +255,7 @@ COLLECT
                          [-o|--output <trace-file-path>]
                          [--profile <profile_name>]
                          [--providers <list-of-comma-separated-providers>]
-                         [-f|--format <trace-file-format>]
+                         [--format <trace-file-format>]
 
     Collects a diagnostic trace from a currently running process
 
@@ -293,7 +293,7 @@ COLLECT
     --buffersize <Size>
         Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
 
-    -f, --format
+    --format
         The format of the output trace file. The default value is netperf.
 
 
@@ -307,7 +307,7 @@ CONVERT
 
     dotnet-trace convert [-h|--help]
                          [-o|--output <output_file_path>]
-                         -f|--format <format>
+                         --format <format>
                          <trace_file_path>
 
     Converts traces to alternate formats for use with alternate trace analysis tools
@@ -319,7 +319,7 @@ CONVERT
         The path where the converted file is written. If unspecified the file is written in the current directory
         using the same base filename as the input file and the extension appropriate for the new format.
 
-    -f, --format
+    --format
         Specifies the format to convert the netperf file to. Currently, the only valid input is 'speedscope'.
 
     trace_file_path
