@@ -45,6 +45,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             return $"{unknownCounterProviderName}:0xffffffff:0x4:EventCounterIntervalSec={interval}";
         }
+
+        public IReadOnlyList<CounterProfile> GetAllCounters() => Counters.Values.ToList();
+
     }
 
     public class CounterProfile
