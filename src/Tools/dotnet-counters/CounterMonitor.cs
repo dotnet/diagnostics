@@ -23,10 +23,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private CancellationToken _ct;
         private IConsole _console;
         private ConsoleWriter writer;
+        private CounterFilter filter;
         private ulong _sessionId;
         public CounterMonitor()
         {
             writer = new ConsoleWriter();
+            filter = new CounterFilter();
         }
 
         private void Dynamic_All(TraceEvent obj)
@@ -35,6 +37,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 IDictionary<string, object> payloadVal = (IDictionary<string, object>)(obj.PayloadValue(0));
                 IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
+
+                // If it's not a counter we asked for, ignore it.
+                if (!filter.Filter(obj.ProviderName, payloadFields["Name"].ToString())) return;
 
                 // There really isn't a great way to tell whether an EventCounter payload is an instance of 
                 // IncrementingCounterPayload or CounterPayload, so here we check the number of fields 
@@ -106,7 +111,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     string counterSpecifier = _counterList[i];
                     string[] tokens = counterSpecifier.Split('[');
                     string providerName = tokens[0];
-
                     if (!KnownData.TryGetProvider(providerName, out provider))
                     {
                         sb.Append(CounterProvider.SerializeUnknownProviderName(providerName, _interval));
@@ -120,12 +124,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     {
                         sb.Append(",");
                     }
+
+
+                    string counterNames = tokens[1];
+                    string[] enabledCounters = counterNames.Substring(0, counterNames.Length-1).Split(',');
+                    
+                    filter.AddFilter(providerName, enabledCounters);
                 }
                 providerString = sb.ToString();
             }
 
-            Console.WriteLine($"providerString: {providerString}");
-            /*
             Task monitorTask = new Task(() => {
                 var configuration = new SessionConfiguration(
                     circularBufferSizeMB: 1000,
@@ -143,13 +151,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             await monitorTask;
             
-
             try
             {
                 EventPipeClient.StopTracing(_processId, _sessionId);    
             }
             catch (System.IO.EndOfStreamException) {} // If the app we're monitoring exits abrubtly, this may throw in which case we just swallow the exception and exit gracefully.
-            */
+
             return 0;
         }
     }
