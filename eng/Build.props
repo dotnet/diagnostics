@@ -1,0 +1,5 @@
+<Project>
+  <ItemGroup>
+    <SolutionBuildTargets Include="NeedsPublishingForTesting" Condition="'$(Build)'=='true'"/>
+  </ItemGroup>
+</Project>
