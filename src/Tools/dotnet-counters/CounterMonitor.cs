@@ -125,11 +125,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         sb.Append(",");
                     }
 
-
-                    string counterNames = tokens[1];
-                    string[] enabledCounters = counterNames.Substring(0, counterNames.Length-1).Split(',');
-                    
-                    filter.AddFilter(providerName, enabledCounters);
+                    if (tokens.Length == 1)
+                    {
+                        filter.AddFilter(providerName); // This means no counter filter was specified.
+                    }
+                    else
+                    {
+                        string counterNames = tokens[1];
+                        string[] enabledCounters = counterNames.Substring(0, counterNames.Length-1).Split(',');
+                        
+                        filter.AddFilter(providerName, enabledCounters);
+                    }
                 }
                 providerString = sb.ToString();
             }
@@ -148,7 +154,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             });
 
             monitorTask.Start();
-
+            
             await monitorTask;
             
             try
