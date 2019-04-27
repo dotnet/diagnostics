@@ -44,7 +44,7 @@ phases:
 
     variables: 
       ${{ insert }}: ${{ parameters.variables }}
-      _PortableLinuxBuild: CentOS_7_$(BuildArch)_$(_BuildConfig)
+      _PortableLinuxBuild: CentOS_7_$(_BuildArch)_$(_BuildConfig)
       _DockerImageName: ${{ parameters.dockerImage }}
       _PhaseName : ${{ parameters.name }}
       _HelixType: build/product
