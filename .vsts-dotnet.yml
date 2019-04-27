@@ -247,14 +247,14 @@ phases:
   - task: DownloadBuildArtifacts@0
     displayName: Download Windows x64 and Managed Artifacts
     inputs:
-      artifactName: Windows_Build_Release
+      artifactName: Windows_x64_Release
       downloadPath: '$(System.ArtifactsDirectory)'
     condition: succeeded()
 
   - task: CopyFiles@2
     displayName: Copy Windows Artifacts
     inputs:
-      sourceFolder: '$(System.ArtifactsDirectory)/Windows_Build_Release'
+      sourceFolder: '$(System.ArtifactsDirectory)/Windows_x64_Release'
       targetFolder: '$(Build.SourcesDirectory)/artifacts/bin'
     condition: succeeded()
 
@@ -289,14 +289,14 @@ phases:
   - task: DownloadBuildArtifacts@0
     displayName: Download Windows x86 Artifacts
     inputs:
-      artifactName: Windows_Build_Release_x86
+      artifactName: Windows_x86_Release
       downloadPath: '$(System.ArtifactsDirectory)'
     condition: succeeded()
 
   - task: CopyFiles@2
     displayName: Copy Windows x86 Artifacts
     inputs:
-      sourceFolder: '$(System.ArtifactsDirectory)/Windows_Build_Release_x86'
+      sourceFolder: '$(System.ArtifactsDirectory)/Windows_x86_Release'
       contents: 'sos.dll'
       targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.x86.Release'
     condition: succeeded()
@@ -330,14 +330,14 @@ phases:
   - task: DownloadBuildArtifacts@0
     displayName: Download Linux Artifacts
     inputs:
-      artifactName: CentOS_7_Build_Release
+      artifactName: CentOS_7_x64_Release
       downloadPath: '$(System.ArtifactsDirectory)'
     condition: succeeded()
 
   - task: CopyFiles@2
     displayName: Copy Linux Artifacts
     inputs:
-      sourceFolder: '$(System.ArtifactsDirectory)/CentOS_7_Build_Release'
+      sourceFolder: '$(System.ArtifactsDirectory)/CentOS_7_x64_Release'
       contents: ?(libsos.so|libsosplugin.so|sosdocsunix.txt)
       targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Linux.x64.Release'
     condition: succeeded()
@@ -365,14 +365,14 @@ phases:
   - task: DownloadBuildArtifacts@0
     displayName: Download MacOS Artifacts
     inputs:
-      artifactName: MacOS_Build_Release
+      artifactName: MacOS_x64_Release
       downloadPath: '$(System.ArtifactsDirectory)'
     condition: succeeded()
 
   - task: CopyFiles@2
     displayName: Copy MacOS Artifacts
     inputs:
-      sourceFolder: '$(System.ArtifactsDirectory)/MacOS_Build_Release'
+      sourceFolder: '$(System.ArtifactsDirectory)/MacOS_x64_Release'
       contents: ?(libsos.dylib|libsosplugin.dylib|sosdocsunix.txt)
       targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/OSX.x64.Release'
     condition: succeeded()
