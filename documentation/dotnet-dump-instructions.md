@@ -7,9 +7,9 @@ The dotnet-dump CLI global tool is way to collect and analyze Windows and Linux 
 
 The first step is to install the dotnet-dump CLI global tool. This requires the 2.1 .NET Core SDK to be installed. If you see the error message `Tool 'dotnet-dump' is already installed`, you will need to uninstall the global tool (see below). 
 
-    $ dotnet tool install -g dotnet-dump --version 1.0.3-preview5.19217.3 --add-source https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
+    $ dotnet tool install -g dotnet-dump --version 1.0.3-preview5.19228.1 --add-source https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
     You can invoke the tool using the following command: dotnet-dump
-    Tool 'dotnet-dump' (version '1.0.3-preview5.19217.3') was successfully installed.
+    Tool 'dotnet-dump' (version '1.0.3-preview5.19228.1') was successfully installed.
 
 ## Using dotnet-dump
 
@@ -108,4 +108,4 @@ To display the help:
 ## Uninstalling dotnet-dump 
 
     $ dotnet tool uninstall -g dotnet-dump
-    Tool 'dotnet-dump' (version '1.0.3-preview5.19217.3') was successfully uninstalled.
+    Tool 'dotnet-dump' (version '1.0.3-preview5.19228.1') was successfully uninstalled.
