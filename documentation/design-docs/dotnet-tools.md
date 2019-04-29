@@ -160,17 +160,16 @@ LIST
     Examples:
       > dotnet-counters list
 
-
-
-    Showing well-known counters only. Specific processes may support additional counters.
-
-    cpu-usage                    Amount of time the process has utilized the CPU (ms)
-    working-set                  Amount of working set used by the process (MB)
-    gc-heap-size                 Total heap size reported by the GC (MB)
-    gen-0-gc-count               Number of Gen 0 GCs / sec
-    gen-1-gc-count               Number of Gen 1 GCs / sec
-    gen-2-gc-count               Number of Gen 2 GCs / sec
-    exception-count              Number of Exceptions / sec
+      Showing well-known counters only. Specific processes may support additional counters.
+      System.Runtime
+          total-processor-time           Amount of time the process has utilized the CPU (ms)
+          private-memory                 Amount of private virtual memory used by the process (KB)
+          working-set                    Amount of working set used by the process (KB)
+          virtual-memory                 Amount of virtual memory used by the process (KB)
+          gc-total-memory                Amount of committed virtual memory used by the GC (KB)
+          exceptions-thrown-rate         Number of exceptions thrown in a recent 1 minute window (exceptions/min)
+          lock-contention-rate           Number of instances of lock contention on runtime implemented locks in a
+                                         recent 1 minute window (contentions/
 
 MONITOR
 

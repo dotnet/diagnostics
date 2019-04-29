@@ -29,7 +29,7 @@ dotnet-counters is a performance monitoring tool for ad-hoc health monitoring or
     -h, --help
         Show command line help
 
-COMMANDS
+*COMMANDS*
 
     list      Display a list of counter names and descriptions
     monitor   Display periodically refreshing values of selected counters
@@ -46,17 +46,15 @@ COMMANDS
     Examples:
       > dotnet-counters list
 
-
-​
     Showing well-known counters only. Specific processes may support additional counters.
-
-    cpu-usage                    Amount of time the process has utilized the CPU (ms)
-    working-set                  Amount of working set used by the process (MB)
-    gc-heap-size                 Total heap size reported by the GC (MB)
-    gen-0-gc-count               Number of Gen 0 GCs / sec
-    gen-1-gc-count               Number of Gen 1 GCs / sec
-    gen-2-gc-count               Number of Gen 2 GCs / sec
-    exception-count              Number of Exceptions / sec
+    System.Runtime
+        cpu-usage                    Amount of time the process has utilized the CPU (ms)
+        working-set                  Amount of working set used by the process (MB)
+        gc-heap-size                 Total heap size reported by the GC (MB)
+        gen-0-gc-count               Number of Gen 0 GCs / sec
+        gen-1-gc-count               Number of Gen 1 GCs / sec
+        gen-2-gc-count               Number of Gen 2 GCs / sec
+        exception-count              Number of Exceptions / sec
 
 *MONITOR*
 
