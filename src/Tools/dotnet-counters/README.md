@@ -72,7 +72,7 @@ MONITOR
     
     -p,--process-id
         The ID of the process that will be monitored
-    
+
     --refresh-interval
         The number of seconds to delay between updating the displayed counters
     
@@ -81,10 +81,9 @@ MONITOR
         provider_name is used without a qualifying counter_name then all counters will be shown. To discover
         provider and counter names, use the list command.
 
-
     Examples:
       > dotnet-counters monitor --processId 1902 System.Runtime 
-    
+   
       System.Runtime:
         CPU Usage (%)                                 24
         Working Set (MB)                            1982
@@ -93,15 +92,14 @@ MONITOR
         Gen 1 GC / second                              4
         Gen 1 GC / Second                              1
         Number of Exceptions / sec                     4
-    
+
        Microsoft.AspNet:
           Request Rate (requests/sec)                 1915
           Request Latency (ms)                          34
-    
+
       'p' - pause updates
       'r' - resume updates
       'q' - quit
-
 
 **Seeing performance counter values that refresh periodically in-place**
 
