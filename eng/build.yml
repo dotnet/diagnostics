@@ -44,7 +44,7 @@ phases:
 
     variables: 
       ${{ insert }}: ${{ parameters.variables }}
-      _PortableLinuxBuild: CentOS_7_Build_$(_BuildConfig)
+      _PortableLinuxBuild: CentOS_7_$(_BuildArch)_$(_BuildConfig)
       _DockerImageName: ${{ parameters.dockerImage }}
       _PhaseName : ${{ parameters.name }}
       _HelixType: build/product
@@ -130,7 +130,7 @@ phases:
       displayName: Upload Artifacts
       inputs:
         pathtoPublish: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
-        artifactName: $(_PhaseName)_$(Agent.JobName)
+        artifactName: $(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
       condition: and(succeeded(), ne(variables['_PublishArtifacts'], ''))
 
     - task: CopyFiles@2
@@ -147,6 +147,6 @@ phases:
       inputs:
         PathtoPublish: '$(Build.StagingDirectory)/BuildLogs'
         PublishLocation: Container
-        ArtifactName: Logs_$(_PhaseName)_$(Agent.JobName)
+        ArtifactName: Logs_$(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
       continueOnError: true
       condition: always()
