@@ -168,14 +168,12 @@ LIST
           virtual-memory                 Amount of virtual memory used by the process (KB)
           gc-total-memory                Amount of committed virtual memory used by the GC (KB)
           exceptions-thrown-rate         Number of exceptions thrown in a recent 1 minute window (exceptions/min)
-          lock-contention-rate           Number of instances of lock contention on runtime implemented locks in a
-                                         recent 1 minute window (contentions/
 
 MONITOR
 
     dotnet-counters monitor [-h||--help]
                             [-p|--process-id <pid>]
-                            [--refreshInterval <sec>]
+                            [--refresh-interval <sec>]
                             counter_list
 
     Display periodically refreshing values of selected counters
@@ -196,6 +194,9 @@ MONITOR
 
 
     Examples:
+
+    1. Monitoring all counters from `System.Runtime` at a refresh interval of 3 seconds:
+
       > dotnet-counters monitor --process-id 1902 --refresh-interval 3 System.Runtime 
     Press p to pause, r to resume, q to quit.
       System.Runtime:
@@ -206,6 +207,16 @@ MONITOR
         Gen 1 GC / second                              4
         Gen 1 GC / Second                              1
         Number of Exceptions / sec                     4
+
+
+    2. Monitoring just CPU usage and GC heap size from `System.Runtime` at a refresh interval of 35 seconds:
+
+      > dotnet-counters monitor --process-id 1902 --refresh-interval 5 System.Runtime[cpu-usage,gc-heap-size] 
+    Press p to pause, r to resume, q to quit.
+      System.Runtime:
+        CPU Usage (%)                                 24
+        GC Heap Size (MB)                            811
+
 
 
 ### dotnet-trace
