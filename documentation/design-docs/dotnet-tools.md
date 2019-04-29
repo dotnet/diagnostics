@@ -11,26 +11,18 @@ These are some quick examples of the work we'd expect a .Net developer to want t
     > dotnet tool install -g dotnet-counters
     You can invoke the tool using the following command: dotnet-counters
     Tool 'dotnet-counters' (version '1.0.0') was successfully installed.
-    > dotnet counters monitor --process-id 1902 System.Runtime Microsoft.AspNet
-
+    > dotnet-counters monitor --process-id 1902 --refresh-interval 1 System.Runtime 
+    
+    Press p to pause, r to resume, q to quit.
     System.Runtime:
-        Total Processor Time (ms)              173923.48
-        Private Virtual Memory (MB)                 1094
+        CPU Usage (%)                                 24
         Working Set (MB)                            1982
-        Virtual Memory (MB)                         3041
-        GC Heap Memory (MB)                          784
-        Exception Thrown Rate (exceptions/min)       117
-        Lock Contention Rate (contentions/min)      1792
+        GC Heap Size (MB)                            811
+        Gen 0 GC / second                             20
+        Gen 1 GC / second                              4
+        Gen 1 GC / Second                              1
+        Number of Exceptions / sec                     4
 
-     Microsoft.AspNet:
-        Request Rate (requests/sec)                 1915
-        Request Latency (ms)                          34
-
-    'p' - pause updates
-    'r' - resume updates
-    'q' - quit
-
-(Counter groups are for example purpose only, exact groups/counters TBD)
 
 ### Capture a trace for performance analysis
 
@@ -43,7 +35,7 @@ For analyzing CPU usage, IO, lock contention, allocation rate, etc the investiga
     Tool 'dotnet-trace' (version '1.0.0') was successfully installed.
     > dotnet trace collect --process-id 1902
     Recording trace 38MB
-
+    
     's' - stop tracing
 
 ...Hit 's'...
@@ -66,7 +58,7 @@ For analyzing managed memory leaks over time, the investigator first wants to ca
     $ dotnet tool install -g dotnet-dump
     You can invoke the tool using the following command: dotnet-dump
     Tool 'dotnet-dump' (version '1.0.0') was successfully installed.
-
+    
     $ dotnet dump collect --process-id 1902
     Writing minidump with heap to file ./core_20190226_135837
     Written 98983936 bytes (24166 pages) to core file
@@ -91,10 +83,10 @@ Next the investigator needs to compare the heaps in these two dumps.
     System.Byte[]             65420 /    26     28432 /     7   + 36988 / +  19
     WebApp1.RequestEntry       1800 /   180      1200 /   120   +   600 / +  60
     ...
-
+    
     To show all differences use 'gcheapdiff -all ./core_20190226_135850'
     To show objects of a particular type use dumpheap -type <type_name>
-
+    
     $ dumpheap -type System.String
       Address       MT     Size
      03b51454 725ef698       84
@@ -106,7 +98,7 @@ Next the investigator needs to compare the heaps in these two dumps.
      32cac620 725eeb40       94
      32cac6c4 725eeb40       74
      ...
-
+    
     $ gcroot 03b51454
      Thread 41a0:
          0ad2f274 55f99590 DomainNeutralILStubClass.IL_STUB_PInvoke(System.Windows.Interop.MSG ByRef, System.Runtime.InteropServices.HandleRef, Int32, Int32)
@@ -116,7 +108,7 @@ Next the investigator needs to compare the heaps in these two dumps.
                  ->  03b512f8 System.AppDomain
                  ->  03b513d0 System.AppDomainSetup
                  ->  03b51454 System.String
-
+    
      Found 1 unique roots (run 'GCRoot -all' to see all roots).
 
 First we compared the leaky dump to the baseline dump to determine which types were growing, then listed addresses of particular instances of the leaking type, then determined the chain of references that was keeping that instance alive. The investigator may need to sample several instances of the leaked type to identify which ones are expected to be on the heap and which are not.
@@ -147,7 +139,7 @@ OPTIONS
 
     --version
         Display the version of the dotnet-counters utility.
-
+    
     -h, --help
         Show command line help
 
@@ -159,29 +151,26 @@ COMMANDS
 LIST
 
     dotnet-counters list [-h|--help]
-
+    
     Display a list of counter names and descriptions, grouped by provider.
-
+    
     -h, --help
         Show command line help
-
+    
     Examples:
       > dotnet-counters list
-      Showing well-known counters only. Specific processes may support additional counters.
 
-      System.Runtime
-          total-processor-time           Amount of time the process has utilized the CPU (ms)
-          private-memory                 Amount of private virtual memory used by the process (KB)
-          working-set                    Amount of working set used by the process (KB)
-          virtual-memory                 Amount of virtual memory used by the process (KB)
-          gc-total-memory                Amount of committed virtual memory used by the GC (KB)
-          exceptions-thrown-rate         Number of exceptions thrown in a recent 1 minute window (exceptions/min)
-          lock-contention-rate           Number of instances of lock contention on runtime implemented locks in a
-                                         recent 1 minute window (contentions/min)
-      Microsoft.AspNet
-          request-rate                   Number of requests handled in a recent one second interval (requests/sec)
-          request-latency                Time to respond to a request, averaged over all requests in a recent
-                                         one second interval (ms)
+
+​      
+    Showing well-known counters only. Specific processes may support additional counters.
+    
+    cpu-usage                    Amount of time the process has utilized the CPU (ms)
+    working-set                  Amount of working set used by the process (MB)
+    gc-heap-size                 Total heap size reported by the GC (MB)
+    gen-0-gc-count               Number of Gen 0 GCs / sec
+    gen-1-gc-count               Number of Gen 1 GCs / sec
+    gen-2-gc-count               Number of Gen 2 GCs / sec
+    exception-count              Number of Exceptions / sec
 
 MONITOR
 
@@ -189,18 +178,18 @@ MONITOR
                             [-p|--process-id <pid>]
                             [--refreshInterval <sec>]
                             counter_list
-
+    
     Display periodically refreshing values of selected counters
-
+    
     -h, --help
         Show command line help
-
+    
     -p,--process-id
         The ID of the process that will be monitored
-
+    
     --refresh-interval
         The number of seconds to delay between updating the displayed counters
-
+    
     counter_list
         A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the
         provider_name is used without a qualifying counter_name then all counters will be shown. To discover
@@ -208,21 +197,21 @@ MONITOR
 
 
     Examples:
-      > dotnet counters monitor --processId 1902 System.Runtime Microsoft.AspNet
-
+      > dotnet-counters monitor --processId 1902 System.Runtime 
+    
       System.Runtime:
-          Total Processor Time (ms)              173923.48
-          Private Virtual Memory (MB)                 1094
-          Working Set (MB)                            1982
-          Virtual Memory (MB)                         3041
-          GC Heap Memory (MB)                          784
-          Exception Thrown Rate (exceptions/min)       117
-          Lock Contention Rate (contentions/min)      1792
-
+        CPU Usage (%)                                 24
+        Working Set (MB)                            1982
+        GC Heap Size (MB)                            811
+        Gen 0 GC / second                             20
+        Gen 1 GC / second                              4
+        Gen 1 GC / Second                              1
+        Number of Exceptions / sec                     4
+    
        Microsoft.AspNet:
           Request Rate (requests/sec)                 1915
           Request Latency (ms)                          34
-
+    
       'p' - pause updates
       'r' - resume updates
       'q' - quit
@@ -237,7 +226,7 @@ OPTIONS
 
     --version
         Display the version of the dotnet-trace utility.
-
+    
     -h, --help
         Show command line help
 
@@ -256,18 +245,18 @@ COLLECT
                          [--profile <profile_name>]
                          [--providers <list-of-comma-separated-providers>]
                          [--format <trace-file-format>]
-
+    
     Collects a diagnostic trace from a currently running process
-
+    
     -p, --process-id
         The process to collect the trace from
-
+    
     -h, --help
         Show command line help
-
+    
     -o, --output
         The output path for the collected trace data. If not specified it defaults to ./trace.netperf
-
+    
     --profile
         A named pre-defined set of provider configurations that allows common tracing scenarios to be specified
         succinctly. The options are:
@@ -276,12 +265,12 @@ COLLECT
         gc              Tracks allocation and collection performance
         gc-collect      Tracks GC collection only at very low overhead
         none            Tracks nothing. Only providers specified by the --providers option will be available.
-
+    
     --providers
         A list of comma separated EventPipe providers to be enabled.
         This option adds to the configuration already provided via the --profile argument. If the same provider is configured in both places, this option takes precedence.
         A provider consists of the name and optionally the keywords, verbosity level, and custom key/value pairs.
-
+    
         The string is written 'Provider[,Provider]'
             Provider format: (GUID|KnownProviderName)[:Keywords[:Level][:KeyValueArgs]]
                 GUID|KnownProviderName  - The provider's name
@@ -289,10 +278,10 @@ COLLECT
                 Level                   - A number in the range [0, 5]
                 KeyValueArgs            - A semicolon separated list of key=value
             KeyValueArgs format: '[key1=value1][;key2=value2]'
-
+    
     --buffersize <Size>
         Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
-
+    
     --format
         The format of the output trace file. The default value is netperf.
 
@@ -300,7 +289,7 @@ COLLECT
     Examples:
       > dotnet trace collect --process-id 1902
       Recording trace 38MB
-
+    
       's' - stop tracing
 
 CONVERT
@@ -309,22 +298,22 @@ CONVERT
                          [-o|--output <output_file_path>]
                          --format <format>
                          <trace_file_path>
-
+    
     Converts traces to alternate formats for use with alternate trace analysis tools
-
+    
     -h, --help
         Show command line help
-
+    
     -o, --output
         The path where the converted file is written. If unspecified the file is written in the current directory
         using the same base filename as the input file and the extension appropriate for the new format.
-
+    
     --format
         Specifies the format to convert the netperf file to. Currently, the only valid input is 'speedscope'.
-
+    
     trace_file_path
         The path to the trace file that should be converted. The trace file can be a netperf file. Defaults to 'trace.netperf'.
-
+    
     Examples:
       > dotnet-trace convert trace.netperf -f speedscope
       Writing:       ./trace.speedscope.json
@@ -342,7 +331,7 @@ OPTIONS
 
     --version
         Display the version of the dotnet-dump utility.
-
+    
     -h, --help
         Show command line help
 
@@ -354,30 +343,30 @@ COMMANDS
 COLLECT
 
     dotnet-dump collect -p|--process-id <pid> [-h|--help] [-o|--output <output_dump_path>] [--type <dump_type>]
-
+    
     Capture dumps (core files on Mac/Linux) from a process
-
+    
     Usage:
       dotnet-dump collect [options]
-
+    
     Options:
       -p, --process-id
           The process to collect a memory dump from.
      
       -h, --help
           Show command line help
-
+    
       -o, --output
           The path where collected dumps should be written. Defaults to '.\dump_YYYYMMDD_HHMMSS.dmp' on Windows and 
           './core_YYYYMMDD_HHMMSS' on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full
           path and file name of the dump.
-
+    
       --type
           The dump type determines the kinds of information that are collected from the process. There are two types:
           heap - A large and relatively comprehensive dump containing module lists, thread lists, all stacks,
                  exception information, handle information, and all memory except for mapped images.
           mini - A small dump containing module lists, thread lists, exception information and all stacks.
-
+    
           If not specified 'heap' is the default.
 
 Examples:
@@ -395,19 +384,19 @@ Examples:
 ANALYZE
 
     dotnet-dump analyze [-h|--help] [-c|--command <command>] dump_path
-
+    
     Starts an interactive shell with debugging commands to explore a dump
-
+    
     Usage:
       dotnet-dump analyze [options] <dump_path>
-
+    
     Arguments:
       <dump_path>    Name of the dump file to analyze.
-
+    
     Options:
       -h, --help
           Show command line help
-
+    
       -c, --command <command>    
           Run the command on start.
 
@@ -458,7 +447,7 @@ The following commands are supported:
    histobjfind <arguments>              Displays all the log entries that reference an object at the specified address.
    histroot <arguments>                 Displays information related to both promotions and relocations of the specified root.
    setsymbolserver <arguments>          Enables the symbol server support.
- ```
+```
 
 The "modules", "threads" and "setthread" commands display/control the native state.
 
@@ -467,23 +456,23 @@ In addition new commands are listed below:
 GCHEAPDIFF
 
     gcheapdiff <path_to_baseline_dump>
-
+    
     Compares the current GC heap to the one contained in the baseline dump
-
+    
     path_to_baseline_dump
         The path to another dump that contains the baseline
-
+    
     Examples:
       $ gcheapdiff ./core_20190226_135837
       Showing top GC heap differences by size
-
+    
       Type                       Current Heap     Baseline Heap             Delta
                                  Size / Count      Size / Count      Size / Count
       System.String           1790650 /  7430   1435870 /  6521   +354780 / + 909
       System.Byte[]             65420 /    26     28432 /     7   + 36988 / +  19
       WebApp1.RequestEntry       1800 /   180      1200 /   120   +   600 / +  60
       ...
-
+    
       To show all differences use 'gcheapdiff -all ./core_20190226_135837'
       To show objects of a particular type use DumpHeap -type <type_name>
 
@@ -499,7 +488,7 @@ OPTIONS
 
     --version
         Display the version of the dotnet-dump utility.
-
+    
     -h, --help
         Show command line help
 
@@ -512,15 +501,15 @@ INSTALL
 
     dotnet-sos install [-h|--help]
                        [--verbose]
-
+    
     Installs SOS and configures LLDB to load it on startup
-
+    
     -h, --help
         Show command line help
-
+    
     --verbose
         Enables verbose logging
-
+    
     Examples:
       >dotnet-sos install
       Installing SOS plugin at ~/.dotnet/sos
@@ -531,15 +520,15 @@ UNINSTALL
 
     dotnet-sos uninstall [-h|--help]
                          [--verbose]
-
+    
     Uninstalls SOS and reverts any configuration changes to LLDB
-
+    
     -h, --help
         Show command line help
-
+    
     --verbose
         Enables verbose logging
-
+    
     Examples:
       >dotnet-sos uninstall
       Reverting .lldbinit - LLDB will no longer load SOS at startup
@@ -584,15 +573,15 @@ Dumps a snapshot of counters on demand. In order to make this command fast the E
     dotnet-counters view [-h||--help]
                          [-p|--process-id <pid>]
                          counter_list
-
+    
     Display current values of selected counters
-
+    
     -h, --help
         Show command line help
-
+    
     -p,--process-id
         The process to display counters for
-
+    
     counter_list
         A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the
         provider name is used without a qualifying counter name then all counters for that provider will be shown.
@@ -609,7 +598,7 @@ Dumps a snapshot of counters on demand. In order to make this command fast the E
           GC Heap Memory (MB)                          784
           Exception Thrown Rate (exceptions/min)       117
           Lock Contention Rate (contentions/min)      1792
-
+    
        Microsoft-AspNet:
           Request Rate (requests/sec)                 1915
           Request Latency (ms)                          34
@@ -644,19 +633,19 @@ Add a command to `dotnet-trace collect` that enables the collection of GC heap s
                         [-o|--output <output_file_path>]
                         [--verbose]
                         <trace_file_path>
-
+    
         Compresses a trace and any necessary symbols into a single zip file for easy off-machine analysis
-
+    
         -h, --help
             Show command line help
-
+    
         -o, --output
             The path where the pack is written. If unspecified the pack is written in the current directory
             using the same base filename as the input file and the .zip extension.
-
+    
         --verbose
             Logs detailed information about what the pack command is doing.
-
+    
         trace_file_path
             The path to the trace file that should be packed.
 
@@ -665,7 +654,7 @@ Add a command to `dotnet-trace collect` that enables the collection of GC heap s
         > dotnet-trace pack trace.netperf
         Packing:      ./trace.netperf.zip
         Pack complete
-
+    
         > dotnet-trace pack --verbose trace.netperf
         Packing:      /usr/home/noahfalk/trace.netperf.zip
         Compressing   /usr/home/noahfalk/trace.netperf
@@ -858,9 +847,9 @@ Show a snapshot of all a processes threads with a callstack for each.
 Perf is a tool that collects performance traces on Linux in kernel or user-mode. It follows a perf <verb\> <arguments\> convention for its CLI.
 
      perf
-
+    
      usage: perf [--version] [--help] COMMAND [ARGS]
-
+    
      The most commonly used perf commands are:
       annotate        Read perf.data (created by perf record) and display annotated code
       archive         Create archive with object files with build-ids found in perf.data file
@@ -882,19 +871,19 @@ Perf is a tool that collects performance traces on Linux in kernel or user-mode.
       test            Runs sanity tests.
       timechart       Tool to visualize total system behavior during a workload
       top             System profiling tool.
-
+    
      See 'perf help COMMAND' for more information on a specific command.
 
 Perf stat [options] <command\_line\> [more\_options] runs the command-line, collects performance statistics, and then displays the counters:
 
     perf stat -B dd if=/dev/zero of=/dev/null count=1000000
-
+    
     1000000+0 records in
     1000000+0 records out
     512000000 bytes (512 MB) copied, 0.956217 s, 535 MB/s
-
+    
      Performance counter stats for 'dd if=/dev/zero of=/dev/null count=1000000':
-
+    
                 5,099 cache-misses             #      0.005 M/sec (scaled from 66.58%)
               235,384 cache-references         #      0.246 M/sec (scaled from 66.56%)
             9,281,660 branch-misses            #      3.858 %     (scaled from 33.50%)
@@ -905,20 +894,20 @@ Perf stat [options] <command\_line\> [more\_options] runs the command-line, coll
                     3 CPU-migrations           #      0.000 M/sec
                    83 context-switches         #      0.000 M/sec
            956.474238 task-clock-msecs         #      0.999 CPUs
-
+    
            0.957617512  seconds time elapsed
 
 Perf record <command\_line\> collects a trace for the given command\_line
 
     perf record ./noploop 1
-
+    
     [ perf record: Woken up 1 times to write data ]
     [ perf record: Captured and wrote 0.002 MB perf.data (~89 samples) ]
 
 Perf report [options] reads data from the trace file and renders it to the command-line
 
     perf report
-
+    
     # Events: 1K cycles
     #
     # Overhead          Command                   Shared Object  Symbol
@@ -938,10 +927,10 @@ perf top monitors a machine and shows an updating console UI with the most expen
       PerfTop:     260 irqs/sec  kernel:61.5%  exact:  0.0% [1000Hz
     cycles],  (all, 2 CPUs)
     -------------------------------------------------------------------------------------------------------------------------------------------------------
-
+    
                 samples  pcnt function                       DSO
                 _______ _____ ______________________________ ___________________________________________________________
-
+    
                   80.00 23.7% read_hpet                      [kernel.kallsyms]
                   14.00  4.2% system_call                    [kernel.kallsyms]
                   14.00  4.2% __ticket_spin_lock             [kernel.kallsyms]
@@ -994,7 +983,7 @@ Jcmd uses a Jcmd <process\_id/main\_class\> <verb> [options] convention. The set
     > jcmd
     5485 sun.tools.jcmd.JCmd
     2125 MyProgram
-
+    
     > jcmd MyProgram help (or "jcmd 2125 help")
     2125:
     The following commands are available:
