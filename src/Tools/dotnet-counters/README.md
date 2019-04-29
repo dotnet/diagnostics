@@ -15,17 +15,17 @@ dotnet-counters is a performance monitoring tool for ad-hoc health monitoring or
 
 ## Using dotnet-counters
 
-SYNOPSIS
+*SYNOPSIS*
 
     dotnet-counters [--version]
                     [-h, --help]
                     <command> [<args>]
 
-OPTIONS
+*OPTIONS*
 
     --version
         Display the version of the dotnet-counters utility.
-    
+
     -h, --help
         Show command line help
 
@@ -34,22 +34,22 @@ COMMANDS
     list      Display a list of counter names and descriptions
     monitor   Display periodically refreshing values of selected counters
 
-LIST
+*LIST*
 
     dotnet-counters list [-h|--help]
-    
+
     Display a list of counter names and descriptions, grouped by provider.
-    
+
     -h, --help
         Show command line help
-    
+
     Examples:
       > dotnet-counters list
 
 
-​      
+​
     Showing well-known counters only. Specific processes may support additional counters.
-    
+
     cpu-usage                    Amount of time the process has utilized the CPU (ms)
     working-set                  Amount of working set used by the process (MB)
     gc-heap-size                 Total heap size reported by the GC (MB)
@@ -58,7 +58,7 @@ LIST
     gen-2-gc-count               Number of Gen 2 GCs / sec
     exception-count              Number of Exceptions / sec
 
-MONITOR
+*MONITOR*
 
     dotnet-counters monitor [-h||--help]
                             [-p|--process-id <pid>]
@@ -82,8 +82,9 @@ MONITOR
         provider and counter names, use the list command.
 
     Examples:
-      > dotnet-counters monitor --processId 1902 System.Runtime 
-   
+      > dotnet-counters monitor --processId 1902 System.Runtime
+
+    Press p to pause, r to resume, q to quit.
       System.Runtime:
         CPU Usage (%)                                 24
         Working Set (MB)                            1982
@@ -93,27 +94,11 @@ MONITOR
         Gen 1 GC / Second                              1
         Number of Exceptions / sec                     4
 
-       Microsoft.AspNet:
-          Request Rate (requests/sec)                 1915
-          Request Latency (ms)                          34
+      > dotnet-counters monitor --processId 1902 System.Runtime[cpu-usage,gc-heap-size,exception-count]
 
-      'p' - pause updates
-      'r' - resume updates
-      'q' - quit
-
-**Seeing performance counter values that refresh periodically in-place**
-
-    > dotnet tool install -g dotnet-counters
-    You can invoke the tool using the following command: dotnet-counters
-    Tool 'dotnet-counters' (version '1.0.0') was successfully installed.
-    > dotnet-counters monitor --process-id 1902 --refresh-interval 1 System.Runtime 
-    
     Press p to pause, r to resume, q to quit.
-    System.Runtime:
+      System.Runtime:
         CPU Usage (%)                                 24
-        Working Set (MB)                            1982
         GC Heap Size (MB)                            811
-        Gen 0 GC / second                             20
-        Gen 1 GC / second                              4
-        Gen 1 GC / Second                              1
         Number of Exceptions / sec                     4
+

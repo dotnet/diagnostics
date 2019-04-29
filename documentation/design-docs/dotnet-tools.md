@@ -35,7 +35,7 @@ For analyzing CPU usage, IO, lock contention, allocation rate, etc the investiga
     Tool 'dotnet-trace' (version '1.0.0') was successfully installed.
     > dotnet trace collect --process-id 1902
     Recording trace 38MB
-    
+
     's' - stop tracing
 
 ...Hit 's'...
@@ -647,7 +647,7 @@ Add a command to `dotnet-trace collect` that enables the collection of GC heap s
         > dotnet-trace pack trace.netperf
         Packing:      ./trace.netperf.zip
         Pack complete
-    
+
         > dotnet-trace pack --verbose trace.netperf
         Packing:      /usr/home/noahfalk/trace.netperf.zip
         Compressing   /usr/home/noahfalk/trace.netperf
