@@ -47,7 +47,7 @@ SOS will automatically be loaded from the internal Microsoft extension gallery. 
 
 It is recommended that you update to the newer versions of the Windows debugger, but you can still use the latest SOS with older Windows debuggers by using the dotnet-sos CLI global tool to install. It is not as convenient. You may have to ".unload" the SOS that is loaded from the "runtime" directory.
 
-    C:\Users\mikem>dotnet tool install -g dotnet-sos --version 1.0.3-preview5.19228.1 --add-source https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
+    C:\Users\mikem>dotnet tool install -g dotnet-sos --version 1.0.3-preview5.19228.1
     You can invoke the tool using the following command: dotnet-sos
     Tool 'dotnet-sos' (version '1.0.3-preview5.19228.1') was successfully installed.
 
