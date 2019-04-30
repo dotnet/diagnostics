@@ -17,13 +17,13 @@
 
     <IsPackable>True</IsPackable>
     <PackAsTool>True</PackAsTool>
-    <RuntimeFrameworkVersion>2.1.0</RuntimeFrameworkVersion>
     <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;osx-x64</PackAsToolShimRuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="System.CommandLine.Experimental" Version="$(SystemCommandLineExperimentalVersion)" />
     <PackageReference Include="System.CommandLine.Rendering" Version="$(SystemCommandLineRenderingVersion)" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.41" />
   </ItemGroup>
 
   <ItemGroup>
