@@ -1,16 +1,16 @@
 # dotnet-counters
 
 
-## Install dotnet-counters
-
-```
- dotnet tool install -g dotnet-counters
-```
-
-
 ## Intro
 
 dotnet-counters is a performance monitoring tool for ad-hoc health monitoring or 1st level performance investigation. It can observe performance counter values that are published via `EventCounter` API (https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.tracing.eventcounter). 
+
+
+## Install dotnet-counters
+
+```
+dotnet tool install --global dotnet-counters --version 1.0.3-preview5.19228.1 --add-source https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
+```
 
 
 ## Using dotnet-counters
@@ -58,6 +58,42 @@ dotnet-counters is a performance monitoring tool for ad-hoc health monitoring or
 
 *MONITOR*
 
+    Examples:
+
+    1. Monitoring all counters from `System.Runtime` at a refresh interval of 3 seconds:
+
+      > dotnet-counters monitor --processId 1902 System.Runtime
+
+    Press p to pause, r to resume, q to quit.
+      System.Runtime:
+        CPU Usage (%)                                 24
+        Working Set (MB)                            1982
+        GC Heap Size (MB)                            811
+        Gen 0 GC / second                             20
+        Gen 1 GC / second                              4
+        Gen 1 GC / Second                              1
+        Number of Exceptions / sec                     4
+
+    2. Monitoring just CPU usage and GC heap size from `System.Runtime` at a refresh interval of 5 seconds:
+
+      > dotnet-counters monitor --processId 1902 System.Runtime[cpu-usage,gc-heap-size,exception-count]
+
+    Press p to pause, r to resume, q to quit.
+      System.Runtime:
+        CPU Usage (%)                                 24
+        GC Heap Size (MB)                            811
+        Number of Exceptions / sec                     4
+
+    3. Monitoring EventCounter values from user-defined EventSource: (see https://github.com/dotnet/corefx/blob/master/src/System.Diagnostics.Tracing/documentation/EventCounterTutorial.md on how to do this.0)
+
+      > dotnet-counters monitor --processId 1902 Samples-EventCounterDemos-Minimal
+
+    Press p to pause, r to resume, q to quit.
+        request                                      100
+
+
+    Syntax:
+    
     dotnet-counters monitor [-h||--help]
                             [-p|--process-id <pid>]
                             [--refreshInterval <sec>]
@@ -78,25 +114,4 @@ dotnet-counters is a performance monitoring tool for ad-hoc health monitoring or
         A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the
         provider_name is used without a qualifying counter_name then all counters will be shown. To discover
         provider and counter names, use the list command.
-
-    Examples:
-      > dotnet-counters monitor --processId 1902 System.Runtime
-
-    Press p to pause, r to resume, q to quit.
-      System.Runtime:
-        CPU Usage (%)                                 24
-        Working Set (MB)                            1982
-        GC Heap Size (MB)                            811
-        Gen 0 GC / second                             20
-        Gen 1 GC / second                              4
-        Gen 1 GC / Second                              1
-        Number of Exceptions / sec                     4
-
-      > dotnet-counters monitor --processId 1902 System.Runtime[cpu-usage,gc-heap-size,exception-count]
-
-    Press p to pause, r to resume, q to quit.
-      System.Runtime:
-        CPU Usage (%)                                 24
-        GC Heap Size (MB)                            811
-        Number of Exceptions / sec                     4
 
