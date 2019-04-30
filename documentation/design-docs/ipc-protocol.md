@@ -77,7 +77,7 @@ runtime -> client : [ stream of netperf data ]
 ### Errors
 * runtime: 
   * read failure -> end connection; no response
-  * unknown protocol -> ERROR response // TODO: flesh out errors
+  * unknown protocol -> ERROR response
 * Client:
   * no response -> simply have a timeout
   * unkown protocol error -> fix your client
@@ -162,8 +162,6 @@ The simplest of command/reply packets will only contain a header and therefore b
 
 ### Commands Sets
 
-#### Requirements:
-// TODO
 
 ```c
 enum command_sets : char
@@ -179,7 +177,6 @@ enum command_sets : char
 * minimal
 * as close to a no-op with current code as possible
 
-> TODO: does file writing mode require its own start/stop/update commands?
 
 ```c
 enum event_pipe_commands : char
@@ -191,7 +188,6 @@ enum event_pipe_commands : char
 }
 ```
 
-> TODO: Use HRESULTS?
 
 ```c
 enum event_pipe_responses : char
