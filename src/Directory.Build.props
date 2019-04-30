@@ -1,7 +1,7 @@
 <!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
 <Project>
-  <Import Project="..\Directory.Build.props"/>
   <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+  <Import Project="..\Directory.Build.props"/>
 
   <PropertyGroup Label="Common Build properties">
     <UseSharedCompilation>False</UseSharedCompilation>
@@ -9,14 +9,6 @@
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     <SuppressNETCoreSdkPreviewMessage>True</SuppressNETCoreSdkPreviewMessage>
-  </PropertyGroup>
-
-  <PropertyGroup Label="NuGet package information">
-    <PackageIconUrl>http://go.microsoft.com/fwlink/?LinkID=288859</PackageIconUrl>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <RepositoryUrl>https://github.com/dotnet/diagnostics</RepositoryUrl>
-    <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <PropertyGroup>
