@@ -58,12 +58,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             var profiles = KnownData.GetAllProviders();
             var maxNameLength = profiles.Max(p => p.Name.Length);
-            Console.WriteLine(maxNameLength);
             Console.WriteLine("Showing well-known counters only. Specific processes may support additional counters.\n");
             foreach (var profile in profiles)
             {
                 var counters = profile.GetAllCounters();
                 var maxCounterNameLength = counters.Max(c => c.Name.Length);
+                Console.WriteLine($"{profile.Name.PadRight(maxNameLength)}");
                 foreach (var counter in profile.Counters.Values)
                 {
                     Console.WriteLine($"    {counter.Name.PadRight(maxCounterNameLength)} \t\t {counter.Description}");
