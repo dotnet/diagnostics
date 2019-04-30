@@ -2,7 +2,7 @@
 
 ## Overview
 
-The IPC Protocol is a means of standardizing communication with the runtime via a duplex pipe/socket.  This protocol is meant to be generic enough that future feature additions in the runtime can make use of it.
+This spec describes a proposed IPC Protocol to be used for communicating with the runtime's diagnostics server from an external client over a platform-specific transport, e.g., Unix Domain Sockets. This protocol should be lightweight and generic, so as to be extensible for future use cases.  The primary use today is for EventPipe.
 
 ## TODOs
 * formalize struct names
@@ -72,6 +72,10 @@ runtime -> client : [ stream of netperf data ]
 * All data will be sent little-endian
 * All commands will be sent in a packet with the defined header
 * Command specific data can be sent after a command ACK
+
+#### Transport
+
+The protocol will be communicated over a platform-specific transport.  On Unix/Linux based platforms, a Unix Domain Socket will be used, and on Windows, a Named Pipe will be used. 
 
 
 ### Errors
