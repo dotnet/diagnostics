@@ -1,8 +1,8 @@
-# Event Pipe
+# IPC Protocol
 
 ## Overview
 
-> TODO: Write an overview of what this does
+The IPC Protocol is a means of standardizing communication with the runtime via a duplex pipe/socket.  This protocol is meant to be generic enough that future feature additions in the runtime can make use of it.
 
 ## TODOs
 * formalize struct names
@@ -10,7 +10,9 @@
 
 ## Inter-Process Communication Specification
 
-### Current
+### Current Implementation (OLD)
+
+Single-purpose IPC potocol used exclusively for EventPipe functionality.  "Packets" in the current implementation are simply the `netperf` payloads and command/control is handled via `uint32` enum values sent one way with hardcoded responses expected.
 
 ```c++
 enum class DiagnosticMessageType : uint32_t
@@ -39,42 +41,40 @@ runtime -> client : event stream
 runtime <- client : stop command
 runtime -> client : session id and stops
 ```
+-----
 
-### Proposed
+## Proposed Implementation (NEW)
 
-Connection:
+The IPC protocol will become a multi-purpose protocol to be used for communication to and from command servers running in the dotnet core runtime.  EventPipe is a good example of a service that will operate over this protocol.
+
+Connection (general):
+
+![](ipc-protocOl-genericflow.png)
+
 ```
-runtime <- client : handshake (set length byte array that represents version)
-runtime -> client : sends handshake back as ACK
-runtime <- client : packet containing start code
-runtime -> client : ACK + potential payload
-repeat till closed
+runtime <- client : [ header ][ optional payload ]
+runtime -> client : [ header ][ optional payload ]
+optional
+    runtime <- client : [ optional stream of command specific data ]
+    ------or------
+    runtime -> client : [ optional stream of command specific data ]
+```
+
+EventPipe flow:
+```
+runtime <- client : [ ver; size; start_stream_command ][ stream config struct ]
+runtime -> client : [ ver; size; stream_started_response ][ stream started struct ]
+runtime -> client : [ stream of netperf data ]
 ```
 
 ### Transport considerations
 
-* All data will be sent in the endianess of the machine
-* All data will be sent in a packet containing a header of information concerning the contents
+* All data will be sent little-endian
+* All commands will be sent in a packet with the defined header
+* Command specific data can be sent after a command ACK
 
-### Handshake
 
-#### Requirements:
-* simple - easy to code
-* fast - no complex structures/serialization
-* extensible - leaves room to change resulting behavior
-
-The client will initiate the connection by sending a byte array containing the ASCII codes for the version string of the protocol it wishes to communicate with.
-
-> There will only be one for now, but it will give us the ability to extend this and potentially have _other_ protocols we can speak if we'd like.
-
-```c
-// "EVENTPIPE_V1"
-char[15] handshake = { 0x00, 0x00, 0x00, 0x45, 0x56, 0x45, 0x4e, 0x54, 0x50, 0x49, 0x50, 0x45, 0x5f, 0x56, 0x31 };
-```
-
-The `Accept` function in the runtime will immediately try to read 15 bytes of data and then use that determine what protocol we are speaking.  Once it has been determined, the runtime will respond with that handshake.
-
-#### Errors
+### Errors
 * runtime: 
   * read failure -> end connection; no response
   * unknown protocol -> ERROR response // TODO: flesh out errors
@@ -88,20 +88,21 @@ The `Accept` function in the runtime will immediately try to read 15 bytes of da
 * small - shouldn't affect write times or read times
 * simple - flat and blittable
 * descriptive - self describing
-* extensible - ability for us to add funcitonality without necessarily incrementing protocol version
+* extensible - ability for us to add functionality without necessarily incrementing protocol version
 
-Every packet will start with a header and every header will start with a size.  This makes it easy to read the data directly out of the stream no matter the size or contents of the packet.
+Every packet will start with a header and every header will start with a version magic number and a size.  This makes it easy to read the data directly out of the stream no matter the size or contents of the packet.
 
 > Taking inspiration from Mono's Soft-Debugger protocol, I am splitting command codes into command sets and commands, allowing command codes to be reused between command sets, e.g., 0x01,0x01 and 0x02,0x01 would be different commands despite sharing the same explicit value for the command code.
 
 ```c
-// size = 4 + 1 + 1 + 1 = 7 bytes
+// size = 16 + 2 + 2 + 2 = 22 bytes
 struct header
 {
-    uint16 size; // size of packet = size of header + payload
-    char   flag; // command or response
-    char   command_set;
-    char   command;
+    // "DOTNET_IPC_V1" with trailing 0s
+    char[16]   magic = { 0x68, 0x79, 0x84, 0x78, 0x69, 0x84, 0x95, 0x73, 0x80, 0x67, 0x95, 0x86, 0x49, 0x00, 0x00, 0x00 };
+    uint16_t  size; // size of packet = size of header + payload
+    uint16_t  command; // top two bytes are command_set & bottom two bytes are command_id
+    uint16_t  reserved; // for potential future use
 }
 ```
 
@@ -125,24 +126,39 @@ Packets will contain a header and 0 or one payload.  The payload will completely
     <th>9</th>
     <th>10</th>
     <th>11</th>
+    <th>12</th>
+    <th>13</th>
+    <th>14</th>
+    <th>15</th>
+    <th>16</th>
+    <th>17</th>
+    <th>18</th>
+    <th>19</th>
+    <th>20</th>
+    <th>21</th>
+    <th>22</th>
+    <th>23</th>
+    <th>24</th>
+    <th>25</th>
+    <th>26</th>
     <th>...</th>
     <th>size - 1 </th>
     <th>size</th>
   </tr>
   <tr>
-    <td colspan="7">header</td>
+    <td colspan="22">header</td>
     <td colspan="7">payload</td>
   </tr>
   <tr>
-    <td colspan="4">size</td>
-    <td>flag</td>
-    <td>command_set</td>
-    <td>command</td>
+    <td colspan="16">magic</td>
+    <td colspan="2">size</td>
+    <td colspan="2">command</td>
+    <td colspan="2">reserved</td>
     <td colspan="7">payload</td>
   </tr>
 </table>
 
-The simplest of command/reply packets will only contain a header and therefore be only 7 bytes long.
+The simplest of command/reply packets will only contain a header and therefore be only 22 bytes long.
 
 ### Commands Sets
 
@@ -163,21 +179,30 @@ enum command_sets : char
 * minimal
 * as close to a no-op with current code as possible
 
+> TODO: does file writing mode require its own start/stop/update commands?
 
 ```c
 enum event_pipe_commands : char
 {
-    CLOSE_STREAM_SESSION    = 0x00, // stop a given session
-    START_STREAM_SESSION    = 0x01, // create/start a given session
+    START_STREAM_SESSION    = 0x00, // create/start a given session
+    STOP_STREAM_SESSION     = 0x01, // stop a given session
     UPDATE_STREAM_SESSION   = 0x02, // update a given session
-    GET_STREAM_SESSION      = 0x03, // get info on a given session
-    PAUSE_STREAM_SESSION    = 0x04, // temporarily pause a given session
+    
 }
 ```
 
-State machine diagram:
-```
-TODO
+> TODO: Use HRESULTS?
+
+```c
+enum event_pipe_responses : char
+{
+    STREAM_SESSION_SUCCESS    = 0x00, // command success
+    STREAM_SESSION_FAILURE    = 0x01, // command failure
+}
 ```
 
-...
+A complete EventPipe command would look like this then:
+```
+0x0100 => start a new session
+0x0101 => stop a session
+```
