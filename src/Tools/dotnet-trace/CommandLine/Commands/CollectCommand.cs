@@ -45,8 +45,35 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     throw new ArgumentException($"Invalid profile name: {profile}");
 
                 var providerCollection = Extensions.ToProviders(providers);
+                var profileProviders = new List<Provider>();
+
+                // If user defined a different key/level on the same provider via --providers option that was specified via --profile option,
+                // --providers option takes precedence. Go through the list of providers specified and only add it if it wasn't specified
+                // via --providers options.
                 if (selectedProfile.Providers != null)
-                    providerCollection.AddRange(selectedProfile.Providers);
+                {
+                    foreach (Provider selectedProfileProvider in selectedProfile.Providers)
+                    {
+                        bool shouldAdd = true;
+
+                        foreach (Provider providerCollectionProvider in providerCollection)
+                        {
+                            if (providerCollectionProvider.Name.Equals(selectedProfileProvider.Name))
+                            {
+                                shouldAdd = false;
+                                break;
+                            }
+                        }
+
+                        if (shouldAdd)
+                        {
+                            profileProviders.Add(selectedProfileProvider);
+                        }
+                    }
+                }
+
+                providerCollection.AddRange(profileProviders);
+
                 if (providerCollection.Count <= 0)
                     throw new ArgumentException("No providers were specified to start a trace.");
 
