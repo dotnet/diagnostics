@@ -109,3 +109,11 @@ To display the help:
 
     $ dotnet tool uninstall -g dotnet-dump
     Tool 'dotnet-dump' (version '1.0.3-preview5.19228.1') was successfully uninstalled.
+
+## Release Notes
+
+Preview5
+
+* dotnet-dump does not work on alpine and other MUSL based distros. Issue [#195](https://github.com/dotnet/diagnostics/issues/195).
+* dotnet-dump collect requires SYS\_PTRACE docker capabilities (--cap-add=SYS\_PTRACE or --privileged).
+* dotnet-dump analyze in Microsoft SDK docker images throws `Unhandled exception: System.DllNotFoundException: Unable to load shared library 'libdl.so' or one of its dependencies` exception. Issue [#201](https://github.com/dotnet/diagnostics/issues/201).
