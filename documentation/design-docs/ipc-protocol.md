@@ -49,7 +49,7 @@ The IPC protocol will become a multi-purpose protocol to be used for communicati
 
 Connection (general):
 
-![](ipc-protocOl-genericflow.png)
+![](ipc-protocol-genericflow.svg)
 
 ```
 runtime <- client : [ header ][ optional payload ]
