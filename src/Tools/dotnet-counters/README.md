@@ -58,7 +58,7 @@ dotnet tool install --global dotnet-counters --version 1.0.3-preview5.19228.1 --
 
 *MONITOR*
 
-    Examples:
+    ### Examples:
 
     1. Monitoring all counters from `System.Runtime` at a refresh interval of 3 seconds:
 
@@ -92,7 +92,7 @@ dotnet tool install --global dotnet-counters --version 1.0.3-preview5.19228.1 --
         request                                      100
 
 
-    Syntax:
+    ### Syntax:
 
     dotnet-counters monitor [-h||--help]
                             [-p|--process-id <pid>]
