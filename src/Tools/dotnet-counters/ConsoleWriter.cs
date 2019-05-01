@@ -83,8 +83,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 else
                 {
-                    // If it's from an provider, just append it at the end.
+                    // If it's from an unknown provider, just append it at the end.
                     string displayName = payload.GetDisplay();
+                    if (string.IsNullOrEmpty(displayName))
+                    {
+                        displayName = payload.GetName();
+                    }
                     int left = displayName.Length + 7; // displayName + " : "
                     int row = maxRow;
                     displayPosition[name] = (left, row);
