@@ -138,6 +138,10 @@ DataTarget::ReadVirtual(
 #ifdef FEATURE_PAL
     if (g_sos != nullptr)
     {
+        // LLDB synthesizes memory (returns 0's) for missing pages (in this case the missing metadata 
+        // pages) in core dumps. This functions creates a list of the metadata regions and returns true
+        // if the read would be in the metadata of a loaded assembly. This allows an error to be returned 
+        // instead of 0's so the DAC will call the GetMetadataLocator datatarget callback.
         if (IsMetadataMemory(address, request))
         {
             return E_ACCESSDENIED;

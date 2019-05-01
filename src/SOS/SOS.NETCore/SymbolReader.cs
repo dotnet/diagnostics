@@ -244,7 +244,7 @@ namespace SOS
         /// <param name="readMemory">read memory callback delegate</param>
         public static void LoadNativeSymbols(SymbolFileCallback callback, IntPtr parameter, string tempDirectory, string moduleFilePath, ulong address, int size, ReadMemoryDelegate readMemory)
         {
-            if (IsSymbolStoreEnable())
+            if (IsSymbolStoreEnabled())
             {
                 Debug.Assert(s_tracer != null);
                 Stream stream = new TargetStream(address, size, readMemory);
@@ -874,7 +874,7 @@ namespace SOS
 
                 if (pdbStream == null)
                 {
-                    if (IsSymbolStoreEnable())
+                    if (IsSymbolStoreEnabled())
                     {
                         Debug.Assert(codeViewEntry.MinorVersion == ImageDebugDirectory.PortablePDBMinorVersion);
                         SymbolStoreKey key = PortablePDBFileKeyGenerator.GetKey(pdbPath, data.Guid);
@@ -940,7 +940,7 @@ namespace SOS
         /// <summary>
         /// Returns true if symbol download has been enabled.
         /// </summary>
-        internal static bool IsSymbolStoreEnable()
+        internal static bool IsSymbolStoreEnabled()
         {
             return s_symbolStore != null;
         }

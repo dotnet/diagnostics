@@ -37,7 +37,7 @@ namespace SOS
             {
                 peStream = SymbolReader.TryOpenFile(imagePath);
             }
-            else if (SymbolReader.IsSymbolStoreEnable())
+            else if (SymbolReader.IsSymbolStoreEnabled())
             {
                 SymbolStoreKey key = PEFileKeyGenerator.GetKey(imagePath, imageTimestamp, imageSize);
                 peStream = SymbolReader.GetSymbolStoreFile(key)?.Stream;
