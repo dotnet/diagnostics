@@ -294,7 +294,7 @@ void ARM64Machine::Unassembly (
             // Print out real code address in place of the copy address
             //
 
-			ExtOut("%08x`%08x ", (ULONG)(InstrAddr >> 32), (ULONG)InstrAddr);
+            ExtOut("%08x`%08x ", (ULONG)(InstrAddr >> 32), (ULONG)InstrAddr);
 
             ptr = line;
             NextTerm (ptr);

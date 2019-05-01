@@ -6197,3 +6197,127 @@ HRESULT InternalFrameManager::PrintCurrentInternalFrame()
 
     return S_OK;
 }
+
+#ifdef FEATURE_PAL
+
+struct MemoryRegion 
+{
+private:
+    uint64_t m_startAddress;
+    uint64_t m_endAddress;
+
+public:
+    MemoryRegion(uint64_t start, uint64_t end) : 
+        m_startAddress(start),
+        m_endAddress(end)
+    {
+    }
+
+    // copy constructor
+    MemoryRegion(const MemoryRegion& region) : 
+        m_startAddress(region.m_startAddress),
+        m_endAddress(region.m_endAddress)
+    {
+    }
+
+    uint64_t StartAddress() const { return m_startAddress; }
+    uint64_t EndAddress() const { return m_endAddress; }
+    uint64_t Size() const { return m_endAddress - m_startAddress; }
+
+    bool operator<(const MemoryRegion& rhs) const
+    {
+        return (m_startAddress < rhs.m_startAddress) && (m_endAddress <= rhs.m_startAddress);
+    }
+
+    // Returns true if "rhs" is wholly contained in this one
+    bool Contains(const MemoryRegion& rhs) const
+    {
+        return (m_startAddress <= rhs.m_startAddress) && (m_endAddress >= rhs.m_endAddress);
+    }
+};
+
+std::set<MemoryRegion> g_metadataRegions;
+bool g_metadataRegionsPopulated = false;
+
+void FlushMetadataRegions()
+{
+    g_metadataRegionsPopulated = false;
+}
+
+//-------------------------------------------------------------------------------
+// Lifted from "..\md\inc\mdfileformat.h"
+#define STORAGE_MAGIC_SIG   0x424A5342  // BSJB
+struct STORAGESIGNATURE
+{
+    ULONG       lSignature;             // "Magic" signature.
+    USHORT      iMajorVer;              // Major file version.
+    USHORT      iMinorVer;              // Minor file version.
+    ULONG       iExtraData;             // Offset to next structure of information
+    ULONG       iVersionString;         // Length of version string
+};
+
+void PopulateMetadataRegions()
+{
+    g_metadataRegions.clear();
+
+    // Only populate the metadata regions if core dump
+    if (IsDumpFile())
+    {
+        int numModule;
+        ArrayHolder<DWORD_PTR> moduleList = ModuleFromName(NULL, &numModule);
+        if (moduleList != nullptr)
+        {
+            for (int i = 0; i < numModule; i++)
+            {
+                DacpModuleData moduleData;
+                if (SUCCEEDED(moduleData.Request(g_sos, moduleList[i])))
+                {
+                    if (moduleData.metadataStart != 0)
+                    {
+                        bool add = false;
+                        STORAGESIGNATURE header;
+                        if (SUCCEEDED(g_ExtData->ReadVirtual(moduleData.metadataStart, (PVOID)&header, sizeof(header), NULL)))
+                        {
+                            add = header.lSignature != STORAGE_MAGIC_SIG;
+                        }
+                        else {
+                            add = true;
+                        }
+                        if (add)
+                        {
+                            MemoryRegion region(moduleData.metadataStart, moduleData.metadataStart + moduleData.metadataSize);
+                            g_metadataRegions.insert(region);
+                        }
+#ifdef METADATA_REGION_LOGGING
+                        ArrayHolder<WCHAR> name = new WCHAR[MAX_LONGPATH];
+                        name[0] = '\0';
+                        if (moduleData.File != 0)
+                        {
+                            g_sos->GetPEFileName(moduleData.File, MAX_LONGPATH, name.GetPtr(), NULL);
+                        }
+                        ExtOut("%c%016x %016x %016x %S\n", add ? '*' : ' ', moduleData.metadataStart, moduleData.metadataStart + moduleData.metadataSize, moduleData.metadataSize, name.GetPtr());
+#endif // METADATA_REGION_LOGGING
+                    }
+                }
+            }
+        }
+    }
+}
+
+bool IsMetadataMemory(CLRDATA_ADDRESS address, ULONG32 size)
+{
+    if (!g_metadataRegionsPopulated)
+    {
+        g_metadataRegionsPopulated = true;
+        PopulateMetadataRegions();
+    }
+    MemoryRegion region(address, address + size);
+    const auto& found = g_metadataRegions.find(region);
+    if (found != g_metadataRegions.end())
+    {
+        return found->Contains(region);
+    }
+    return false;
+}
+
+#endif // FEATURE_PAL
