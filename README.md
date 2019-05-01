@@ -20,53 +20,13 @@ The details of installing the components differ depending on the operating syste
 pages based on your OS.  There is no cross-building across OS (only for ARM, which is built on X64).
 You have to be on the particular platform to build that platform.
 
-To install the platform's prerequisites:
+To install the platform's prerequisites and build:
 
  * [Windows Instructions](documentation/building/windows-instructions.md)
  * [Linux Instructions](documentation/building/linux-instructions.md)
  * [MacOS Instructions](documentation/building/osx-instructions.md)
  * [FreeBSD Instructions](documentation/building/freebsd-instructions.md)
  * [NetBSD Instructions](documentation/building/netbsd-instructions.md)
-
-To build under Windows, run build.cmd from the root of the repository:
-
-```bat
-build.cmd
-
-[Lots of build spew]
-
-BUILD: Repo sucessfully built.
-BUILD: Product binaries are available at c:\git\diagnostics\artifacts\Debug\bin\Windows_NT.x64
-```
-
-To build for x86:
-
-```bat
-build.cmd -architecture x86
-```
-
-To test the resulting SOS:
-
-```bat
-test.cmd
-```
-
-To build under Linux, MacOS, FreeBSD, or NetBSD, run build.sh from the root of the repository:
-
-```sh
-./build.sh
-
-[Lots of build spew]
-
-BUILD: Repo sucessfully built.
-BUILD: Product binaries are available at /home/mikem/diagnostics/artifacts/Debug/bin/Linux.x64
-```
-
-To test the resulting SOS and plugin:
-
-```sh
-./test.sh
-```
 
 ## Getting lldb
 
@@ -102,6 +62,22 @@ Symbol server support - The `setsymbolserver` command enables downloading the sy
 Before executing the "bt" command to dump native frames to load the native symbols (for live debugging only):
 
     (lldb) loadsymbols
+
+## Release Notes
+
+### dotnet-dump
+
+* Does not work on alpine and other MUSL based distros. Issue [#195](https://github.com/dotnet/diagnostics/issues/195).
+* Not supported ARM32 or ARM64. Issue [#168](https://github.com/dotnet/diagnostics/issues/168).
+* Not supported on MacOS.
+* Dump collection (dotnet dump collect) requires SYS\_PTRACE docker capabilities (--cap-add=SYS\_PTRACE or --privileged).
+* Dump analysis (dotnet dump analyze) in on Microsoft SDK Linux docker images throws `Unhandled exception: System.DllNotFoundException: Unable to load shared library 'libdl.so' or one of its dependencies` exception. Issue [#201](https://github.com/dotnet/diagnostics/issues/201). A work around is to install the "libc6-dev" package.
+* Dump analysis on Windows is not supported. Minidump collection is support. Issue [#157](https://github.com/dotnet/diagnostics/issues/157).
+
+### dotnet-sos
+
+* Does not work on alpine and other MUSL based distros. Issue [#195](https://github.com/dotnet/diagnostics/issues/195).
+* Not supported ARM32 or ARM64. Issue [#168](https://github.com/dotnet/diagnostics/issues/168).
 
 ## Useful Links
 
