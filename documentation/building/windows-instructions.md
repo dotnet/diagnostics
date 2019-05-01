@@ -105,3 +105,27 @@ the PATH variable persistent by going to  Control Panel -> System And Security -
 and select the 'Path' variable in the 'System variables' (if you want to change it for all users) or 'User variables' (if you only want
 to change it for the current user).  Simply edit the PATH variable's value and add the directory (with a semicolon separator).
 
+## Building
+
+To build under Windows, run build.cmd from the root of the repository:
+
+```bat
+build.cmd
+
+[Lots of build spew]
+
+BUILD: Repo sucessfully built.
+BUILD: Product binaries are available at c:\git\diagnostics\artifacts\Debug\bin\Windows_NT.x64
+```
+
+To build for x86:
+
+```bat
+build.cmd -architecture x86
+```
+
+To test the resulting SOS:
+
+```bat
+test.cmd
+```

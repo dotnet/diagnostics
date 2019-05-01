@@ -7,9 +7,9 @@ The dotnet-dump CLI global tool is way to collect and analyze Windows and Linux 
 
 The first step is to install the dotnet-dump CLI global tool. This requires the 2.1 .NET Core SDK to be installed. If you see the error message `Tool 'dotnet-dump' is already installed`, you will need to uninstall the global tool (see below). 
 
-    $ dotnet tool install -g dotnet-dump --version 1.0.3-preview5.19228.1
+    $ dotnet tool install -g dotnet-dump --version 1.0.3-preview5.19251.2
     You can invoke the tool using the following command: dotnet-dump
-    Tool 'dotnet-dump' (version '1.0.3-preview5.19228.1') was successfully installed.
+    Tool 'dotnet-dump' (version '1.0.3-preview5.19251.2') was successfully installed.
 
 ## Using dotnet-dump
 
@@ -17,7 +17,7 @@ The next step is to collect a dump. This can be skipped if a core dump has alrea
 
 On Linux, it needs to be run as superuser:
      
-    $ sudo -E PATH=$PATH dotnet dump collect --process-id 1902
+    $ sudo $HOME/.dotnet/tools/dotnet-dump collect --process-id 1902
     Writing minidump to file ./core_20190226_135837
     Written 98983936 bytes (24166 pages) to core file
     Complete
@@ -108,12 +108,4 @@ To display the help:
 ## Uninstalling dotnet-dump 
 
     $ dotnet tool uninstall -g dotnet-dump
-    Tool 'dotnet-dump' (version '1.0.3-preview5.19228.1') was successfully uninstalled.
-
-## Release Notes
-
-Preview5
-
-* dotnet-dump does not work on alpine and other MUSL based distros. Issue [#195](https://github.com/dotnet/diagnostics/issues/195).
-* dotnet-dump collect requires SYS\_PTRACE docker capabilities (--cap-add=SYS\_PTRACE or --privileged).
-* dotnet-dump analyze in Microsoft SDK docker images throws `Unhandled exception: System.DllNotFoundException: Unable to load shared library 'libdl.so' or one of its dependencies` exception. Issue [#201](https://github.com/dotnet/diagnostics/issues/201).
+    Tool 'dotnet-dump' (version '1.0.3-preview5.19251.2') was successfully uninstalled.
