@@ -92,6 +92,7 @@ Getting a version of lldb that works for your platform can be a problem sometime
 
 * [dotnet-dump](documentation/dotnet-dump-instructions.md) - Dump collection and analysis utility.
 * [dotnet-trace](documentation/dotnet-trace-instructions.md) - Enable the collection of events for a running .NET Core Application to a local trace file.
+* [dotnet-counters](src/Tools/dotnet-counters/README.md) - Monitor performance counters of a .NET Core application in real time. 
 
 ## New Features
 
