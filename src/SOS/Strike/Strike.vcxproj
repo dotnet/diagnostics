@@ -418,7 +418,6 @@
     <ClInclude Include="ntinfo.h" />
     <ClInclude Include="platformspecific.h" />
     <ClInclude Include="sos.h" />
-    <ClInclude Include="soshostservices.h" />
     <ClInclude Include="sos_md.h" />
     <ClInclude Include="sos_stacktrace.h" />
     <ClInclude Include="strike.h" />

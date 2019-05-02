@@ -238,6 +238,7 @@ namespace SOS
         /// </summary>
         /// <param name="callback">called back for each symbol file loaded</param>
         /// <param name="parameter">callback parameter</param>
+        /// <param name="tempDirectory">temp directory unique to this instance of SOS</param>
         /// <param name="moduleFilePath">module path</param>
         /// <param name="address">module base address</param>
         /// <param name="size">module size</param>
@@ -277,41 +278,65 @@ namespace SOS
                         // Don't download the sos binaries that come with the runtime
                         if (moduleFileName != "SOS.NETCore.dll" && !moduleFileName.StartsWith("libsos."))
                         {
-                            using (SymbolStoreFile file = GetSymbolStoreFile(key))
+                            string downloadFilePath = GetSymbolFile(key, tempDirectory);
+                            if (downloadFilePath != null)
                             {
-                                if (file != null)
-                                {
-                                    try
-                                    {
-                                        string downloadFilePath = file.FileName;
-
-                                        // If the downloaded doesn't already exists on disk in the cache, then write it to a temporary location.
-                                        if (!File.Exists(downloadFilePath))
-                                        {
-                                            downloadFilePath = Path.Combine(tempDirectory, moduleFileName);
-
-                                            using (Stream destinationStream = File.OpenWrite(downloadFilePath)) {
-                                                file.Stream.CopyTo(destinationStream);
-                                            }
-                                            s_tracer.WriteLine("Downloaded symbol file {0}", key.FullPathName);
-                                        }
-                                        s_tracer.Information("{0}: {1}", moduleFileName, downloadFilePath);
-                                        callback(parameter, moduleFileName, downloadFilePath);
-                                    }
-                                    catch (Exception ex) when (ex is UnauthorizedAccessException || ex is DirectoryNotFoundException)
-                                    {
-                                        s_tracer.Error("{0}", ex.Message);
-                                    }
-                                }
+                                s_tracer.Information("{0}: {1}", moduleFileName, downloadFilePath);
+                                callback(parameter, moduleFileName, downloadFilePath);
                             }
                         }
                     }
                 }
                 catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException)
                 {
-                    s_tracer.Error("Exception: {0}/{1}: {2:X16}", moduleFilePath, address);
+                    s_tracer.Error("{0}/{1:X16}: {2}", moduleFilePath, address, ex.Message);
                 }
             }
+        }
+
+        /// <summary>
+        /// Download a symbol from the symbol stores/server.
+        /// </summary>
+        /// <param name="key">index of the file to download</param>
+        /// <param name="tempDirectory">temp directory to put the file. This directory is only created if 
+        /// the file is NOT already in the cache and is downloaded.</param>
+        /// <returns>Path to the downloaded file either in the cache or in the temp directory</returns>
+        public static string GetSymbolFile(SymbolStoreKey key, string tempDirectory)
+        {
+            string downloadFilePath = null;
+
+            if (IsSymbolStoreEnabled())
+            {
+                using (SymbolStoreFile file = GetSymbolStoreFile(key))
+                {
+                    if (file != null)
+                    {
+                        try
+                        {
+                            downloadFilePath = file.FileName;
+
+                            // If the downloaded doesn't already exists on disk in the cache, then write it to a temporary location.
+                            if (!File.Exists(downloadFilePath))
+                            {
+                                Directory.CreateDirectory(tempDirectory);
+                                downloadFilePath = Path.Combine(tempDirectory, Path.GetFileName(key.FullPathName));
+
+                                using (Stream destinationStream = File.OpenWrite(downloadFilePath)) {
+                                    file.Stream.CopyTo(destinationStream);
+                                }
+                                s_tracer.WriteLine("Downloaded symbol file {0}", key.FullPathName);
+                            }
+                        }
+                        catch (Exception ex) when (ex is UnauthorizedAccessException || ex is DirectoryNotFoundException)
+                        {
+                            s_tracer.Error("{0}: {1}", file.FileName, ex.Message);
+                            downloadFilePath = null;
+                        }
+                    }
+                }
+            }
+
+            return downloadFilePath;
         }
 
         /// <summary>
@@ -940,7 +965,7 @@ namespace SOS
         /// <summary>
         /// Returns true if symbol download has been enabled.
         /// </summary>
-        internal static bool IsSymbolStoreEnabled()
+        public static bool IsSymbolStoreEnabled()
         {
             return s_symbolStore != null;
         }
