@@ -172,11 +172,6 @@ if not exist "%__DotNetCli%" (
     echo %__MsgPrefix%Assertion failed: dotnet cli not found at path "%__DotNetCli%"
     exit /b 1
 )
-set __MSBuildPath=%__ProjectDir%\.dotnet\sdk\2.1.505\MSBuild.dll
-if not exist "%__MSBuildPath%" (
-    echo %__MsgPrefix%Assertion failed: dotnet cli sdk not found at path "%__MSBuildPath%"
-    exit /b 1
-)
 
 set __DotNetRuntimeVersion=2.1.9
 
