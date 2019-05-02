@@ -9,7 +9,7 @@ dotnet-counters is a performance monitoring tool for ad-hoc health monitoring or
 ## Install dotnet-counters
 
 ```
-dotnet tool install --global dotnet-counters --version 1.0.3-preview5.19228.1 --add-source https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
+dotnet tool install --global dotnet-counters --version 1.0.3-preview5.19228.2
 ```
 
 
