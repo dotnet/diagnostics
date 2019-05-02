@@ -27,7 +27,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="System.CommandLine.Experimental" Version="0.1.0-alpha-63807-01" />
+    <PackageReference Include="System.CommandLine.Experimental" Version="$(SystemCommandLineExperimentalVersion)" />
   </ItemGroup>
   
   <ItemGroup>

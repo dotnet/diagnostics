@@ -34,6 +34,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Win32.Primitives" Version="$(MicrosoftWin32PrimitivesVersion)" />
-    <PackageReference Include="cdb-sos" Version="1.1.0" Condition="'$(OS)' == 'Windows_NT'" />
+    <PackageReference Include="cdb-sos" Version="$(cdbsosversion)" Condition="'$(OS)' == 'Windows_NT'" />
   </ItemGroup>
 </Project>

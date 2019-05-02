@@ -1,11 +1,13 @@
 ﻿<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
 <Project>
   <PropertyGroup>
-    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
-
+    <RepositoryUrl>https://github.com/dotnet/diagnostics</RepositoryUrl>
+    <PreReleaseVersionLabel/>preview6</PreReleaseVersionLabel>
     <VersionPrefix>1.0.3</VersionPrefix>
-    <PreReleaseVersionLabel>preview5</PreReleaseVersionLabel>
+    <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
+  </PropertyGroup>
 
+  <PropertyGroup>
     <!-- Opt-out repo features -->
     <UsingToolXliff>false</UsingToolXliff>
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
@@ -21,6 +23,15 @@
     <!-- Other libs -->
     <MicrosoftSymbolStoreVersion>1.0.0-dev-64016-01</MicrosoftSymbolStoreVersion>
     <MicrosoftDiagnosticsRuntimeVersion>1.0.5</MicrosoftDiagnosticsRuntimeVersion>
+
+    <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.41</MicrosoftDiagnosticsTracingTraceEventVersion>
+    <SystemCommandLineExperimentalVersion>0.2.0-alpha.19213.1</SystemCommandLineExperimentalVersion>
+    <SystemCommandLineRenderingVersion>0.2.0-alpha.19213.1</SystemCommandLineRenderingVersion>
+
+    <XUnitVersion>2.3.1</XUnitVersion>
+    <XUnitAbstractionsVersion>2.0.1</XUnitAbstractionsVersion>
+
+    <cdbsosversion>1.1.0</cdbsosversion>
   </PropertyGroup>
 
   <PropertyGroup>
