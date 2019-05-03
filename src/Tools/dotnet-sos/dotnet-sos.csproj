@@ -7,6 +7,7 @@
     <Description>Diagnostic SOS installer</Description>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <SOSNETCoreBinaries>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netstandard2.0\publish\*.dll</SOSNETCoreBinaries>
   </PropertyGroup>
 
   <ItemGroup>
