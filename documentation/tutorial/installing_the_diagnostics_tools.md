@@ -6,7 +6,7 @@ Depending on the diagnostics scenario you will use one or more of the tools belo
 In the .NET full/Windows world, we have a myriad of performance counters that can be used to triage and diagnose production issues. For .Net core we have a similar and cross platform story centered around a tool called dotnet-counters. To install the tool, run the following command:
 
 > ```bash
-> dotnet tool install --global dotnet-counters --version 1.0.3-preview5.19228.1 --add-source https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json`
+> dotnet tool install --global dotnet-counters --version 1.0.3-preview5.19251.2
 > ```
 
 
@@ -14,7 +14,7 @@ In the .NET full/Windows world, we have a myriad of performance counters that ca
 .NET core includes what is called the 'EventPipe' through which diagnostics data is exposed. The dotnet-trace tool allows you to consume interesting profiling data from your app that can help in scenarios where you need to root cause apps running slow. To install the tool, run the following command:
 
 > ```bash
-> dotnet tool install --global dotnet-trace --version 1.0.3-preview5.19228.1 --add-source https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
+> dotnet tool install --global dotnet-trace --version 1.0.3-preview5.19251.2 
 > ```
 
 Please note, the dotnet-trace tool is version independent but as of right now (preview 5) it requires the 2.1 runtime to be installed to work. This will be fixed moving forward.
@@ -24,7 +24,7 @@ Please note, the dotnet-trace tool is version independent but as of right now (p
 In order to generate core dumps for .net core apps, you can use the dotnet-dump tool. To install the tool, run the following command:
 
 > ```bash
-> dotnet tool install --global dotnet-dump --version 1.0.3-preview5.19228.1 --add-source https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
+> dotnet tool install --global dotnet-dump --version 1.0.3-preview5.19251.2
 > ```
 
 Please note, the dotnet-trace tool is version independent but as of right now (preview 5) it requires the 2.1 runtime to be installed to work. This will be fixed moving forward.
