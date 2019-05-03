@@ -18,7 +18,8 @@
   <PropertyGroup>
     <PackageIconUrl>http://go.microsoft.com/fwlink/?LinkID=288859</PackageIconUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <!-- Uncomment this when we bump arcade versions -->
+    <!-- <PackageLicenseExpression>MIT</PackageLicenseExpression> -->
     <EnableSourceControlManagerQueries>true</EnableSourceControlManagerQueries>
   </PropertyGroup>
 
