@@ -1,25 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <RuntimeFrameworkVersion>2.1.0</RuntimeFrameworkVersion>
-    <IsPackable>true</IsPackable>
-    <PackAsTool>true</PackAsTool>
-    <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;osx-x64</PackAsToolShimRuntimeIdentifiers>
-
-    <!-- The package version needs to be hard coded as a stable version so "dotnet tool install -g dotnet-dump" works
-    <Version>$(VersionPrefix)</Version>
-    <PackageVersion>$(VersionPrefix)</PackageVersion>
-     -->
-
     <ToolCommandName>dotnet-dump</ToolCommandName>
     <RootNamespace>Microsoft.Diagnostic.Tools.Dump</RootNamespace>
     <Description>Diagnostic dump collect and analyze tool</Description>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
-    <!-- Need to put the shims here to sign -->
-    <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
     <SOSNETCoreBinaries>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netstandard2.0\publish\*.dll</SOSNETCoreBinaries>
   </PropertyGroup>
 
@@ -28,58 +16,46 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\Microsoft.Diagnostic.Repl\Microsoft.Diagnostic.Repl.csproj" />
-    <ProjectReference Include="..\..\SOS\SOS.Hosting\SOS.Hosting.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostic.Repl\Microsoft.Diagnostic.Repl.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\SOS\SOS.Hosting\SOS.Hosting.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <_PackageFiles Include="$(SOSNETCoreBinaries)">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/win-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\sos.dll">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/win-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(SOSNETCoreBinaries)">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/win-x86</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\sos.dll">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/win-x86</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(SOSNETCoreBinaries)">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/linux-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsosplugin.so">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/linux-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsos.so">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/linux-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\sosdocsunix.txt">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/linux-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(SOSNETCoreBinaries)">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/osx-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/osx-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsos.dylib">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/osx-x64</PackagePath>
-    </_PackageFiles>
-    <_PackageFiles Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\sosdocsunix.txt">
-      <BuildAction>None</BuildAction>
-      <PackagePath>tools/netcoreapp2.1/any/osx-x64</PackagePath>
-    </_PackageFiles>
+    <None Pack="True" Include="$(SOSNETCoreBinaries)">
+      <PackagePath>tools/$(TargetFramework)/any/win-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\sos.dll">
+      <PackagePath>tools/$(TargetFramework)/any/win-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(SOSNETCoreBinaries)">
+      <PackagePath>tools/$(TargetFramework)/any/win-x86</PackagePath>
+    </None>
+    <None Pack="True" Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\sos.dll">
+      <PackagePath>tools/$(TargetFramework)/any/win-x86</PackagePath>
+    </None>
+    <None Pack="True" Include="$(SOSNETCoreBinaries)">
+      <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsosplugin.so">
+      <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsos.so">
+      <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\sosdocsunix.txt">
+      <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(SOSNETCoreBinaries)">
+      <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib">
+      <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsos.dylib">
+      <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
+    </None>
+    <None Pack="True" Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\sosdocsunix.txt">
+      <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
+    </None>
   </ItemGroup>
 </Project>

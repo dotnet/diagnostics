@@ -1,15 +1,14 @@
 ﻿<!-- All Rights Reserved. Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
 <Project>
-  <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
-
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <ContinuousIntegrationBuild Condition="'$(OfficialBuildId)' != ''">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
-  <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
-
-  <Target Name="Build" />
-
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <ContinuousIntegrationBuild Condition="'$(ContinuousIntegrationBuild)' != ''">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
   <Target Name="GenerateVersionFiles" DependsOnTargets="GenerateVersionPrefixFile;GenerateVersionHeader;GenerateVersionSourceFile" />
 
   <Target Name="GenerateVersionPrefixFile" Condition="'$(VersionPrefixFile)' != ''" >
@@ -94,11 +93,8 @@
 
     <Message Importance="High" Text="Created version file $(NativeVersionSourceFile)" />
   </Target>
-
-  <ItemGroup>
-    <Compile Remove="**" />
-    <EmbeddedResource Remove="**" />
-    <None Remove="**" />
-  </ItemGroup>
-
+  
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <Target Name="Build" />
+  <Target Name="Restore" />
 </Project>

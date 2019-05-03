@@ -14,22 +14,22 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="ConfigFiles\Windows\Debugger.Tests.Config.txt" Condition="'$(OS)' == 'Windows_NT'">
+    <Content Include="$(MSBuildThisFileDirectory)ConfigFiles\Windows\Debugger.Tests.Config.txt" Condition="'$(OS)' == 'Windows_NT'">
       <Link>Debugger.Tests.Config.txt</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="ConfigFiles\Unix\Debugger.Tests.Config.txt" Condition="$(OS) == 'Unix'">
+    <Content Include="$(MSBuildThisFileDirectory)ConfigFiles\Unix\Debugger.Tests.Config.txt" Condition="$(OS) == 'Unix'">
       <Link>Debugger.Tests.Config.txt</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="ConfigFiles\$(Configuration)\Debugger.Tests.Common.txt">
+    <Content Include="$(MSBuildThisFileDirectory)ConfigFiles\$(Configuration)\Debugger.Tests.Common.txt">
       <Link>Debugger.Tests.Common.txt</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\Microsoft.Diagnostic.TestHelpers\Microsoft.Diagnostic.TestHelpers.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostic.TestHelpers\Microsoft.Diagnostic.TestHelpers.csproj" />
   </ItemGroup>
 
   <ItemGroup>

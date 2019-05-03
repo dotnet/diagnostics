@@ -2,7 +2,7 @@
 <Project>
   <PropertyGroup>
     <RepositoryUrl>https://github.com/dotnet/diagnostics</RepositoryUrl>
-    <PreReleaseVersionLabel/>preview6</PreReleaseVersionLabel>
+    <PreReleaseVersionLabel>preview6</PreReleaseVersionLabel>
     <VersionPrefix>1.0.3</VersionPrefix>
     <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
   </PropertyGroup>
@@ -13,7 +13,7 @@
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
 
     <!-- Build tools -->
-    <MicrosoftNetCompilersVersion>2.8.0-beta6-62830-08</MicrosoftNetCompilersVersion>
+    <MicrosoftNetCompilersVersion>3.0.0</MicrosoftNetCompilersVersion>
 
     <!-- CoreFX -->
     <SystemReflectionMetadataVersion>1.6.0</SystemReflectionMetadataVersion>
@@ -32,6 +32,10 @@
     <XUnitAbstractionsVersion>2.0.1</XUnitAbstractionsVersion>
 
     <cdbsosversion>1.1.0</cdbsosversion>
+
+    <!-- The Repl project depends on types that were removed from  -->
+    <SystemCommandLineExperimentalVersionRepl>0.1.0-alpha-63807-01</SystemCommandLineExperimentalVersionRepl>
+
   </PropertyGroup>
 
   <PropertyGroup>
