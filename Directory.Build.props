@@ -5,8 +5,6 @@
     <ImportNetSdkFromRepoToolset>false</ImportNetSdkFromRepoToolset>
   </PropertyGroup>
 
-  <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
-
   <PropertyGroup>
     <UseSharedCompilation>false</UseSharedCompilation>
     <LangVersion>Latest</LangVersion>

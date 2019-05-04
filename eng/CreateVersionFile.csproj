@@ -5,6 +5,8 @@
   </PropertyGroup>
 
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+  
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <ContinuousIntegrationBuild Condition="'$(ContinuousIntegrationBuild)' != ''">true</ContinuousIntegrationBuild>
@@ -104,6 +106,7 @@ static char sccsid[] __attribute__((used)) = "@(#)Version $(InformationalVersion
     <Message Importance="High" Text="Created version file $(NativeVersionSourceFile)" />
   </Target>
 
+  <Import Project="Sdk.targets" Sdk="Microsoft.Dotnet.Arcade.Sdk" />
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
   <Target Name="Build" />
   <Target Name="Restore" />
