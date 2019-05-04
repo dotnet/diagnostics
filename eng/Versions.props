@@ -28,8 +28,8 @@
     <SystemCommandLineExperimentalVersion>0.2.0-alpha.19213.1</SystemCommandLineExperimentalVersion>
     <SystemCommandLineRenderingVersion>0.2.0-alpha.19213.1</SystemCommandLineRenderingVersion>
 
-    <XUnitVersion>2.3.1</XUnitVersion>
-    <XUnitAbstractionsVersion>2.0.1</XUnitAbstractionsVersion>
+    <XUnitVersion>2.4.1</XUnitVersion>
+    <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
 
     <cdbsosversion>1.1.0</cdbsosversion>
 
