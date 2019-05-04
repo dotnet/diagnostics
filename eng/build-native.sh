@@ -267,15 +267,10 @@ __ResultsDir=$__RootBinDir/TestResults/$__BuildType
 __PackagesBinDir=$__RootBinDir/packages/$__BuildType/Shipping
 __ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=$__RootBinDir/bin -DCLR_BUILD_TYPE=$__BuildType"
 __DotNetCli=$__ProjectRoot/.dotnet/dotnet
-__MSBuildPath=$__ProjectRoot/.dotnet/sdk/2.1.505/MSBuild.dll
 __DotNetRuntimeVersion=2.1.9
 
 if [ ! -e $__DotNetCli ]; then
    echo "dotnet cli not installed $__DotNetCli"
-   exit 1
-fi
-if [ ! -e $__MSBuildPath ]; then
-   echo "dotnet cli sdk not installed $__MSBuildPath"
    exit 1
 fi
 
@@ -450,7 +445,7 @@ if [ $__Build == true ]; then
     if [[ $__CI == true ]]; then
         echo "Generating Version Source File"
         __GenerateVersionLog="$__LogDir/GenerateVersion.binlog"
-        $__DotNetCli $__MSBuildPath $__ProjectRoot/eng/CreateVersionFile.csproj /v:$__Verbosity /bl:$__GenerateVersionLog /t:GenerateVersionFiles /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
+        $__DotNetCli msbuild $__ProjectRoot/eng/CreateVersionFile.csproj /v:$__Verbosity /bl:$__GenerateVersionLog /t:GenerateVersionFiles /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
         if [ $? != 0 ]; then
             echo "Generating Version Source File FAILED"
             exit 1

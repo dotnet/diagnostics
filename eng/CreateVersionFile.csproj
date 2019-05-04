@@ -1,18 +1,19 @@
-﻿<!-- All Rights Reserved. Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
+<!-- All Rights Reserved. Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
 <Project>
-  <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
-
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <ContinuousIntegrationBuild Condition="'$(OfficialBuildId)' != ''">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
-  <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
-
-  <Target Name="Build" />
-
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+  
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <ContinuousIntegrationBuild Condition="'$(ContinuousIntegrationBuild)' != ''">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
   <Target Name="GenerateVersionFiles" DependsOnTargets="GenerateVersionPrefixFile;GenerateVersionHeader;GenerateVersionSourceFile" />
 
-  <Target Name="GenerateVersionPrefixFile" Condition="'$(VersionPrefixFile)' != ''" >
+  <Target Name="GenerateVersionPrefixFile" Condition="'$(VersionPrefixFile)' != ''">
     <ItemGroup>
       <VersionPrefixLines Include="$(VersionPrefix)" />
     </ItemGroup>
@@ -30,22 +31,31 @@
       <VersionSuffixBuildOfTheDay>42424</VersionSuffixBuildOfTheDay>
     </PropertyGroup>
 
-    <ItemGroup>
-      <!-- Defining versioning variables -->
-      <NativeVersionLines Include="#undef VER_FILEVERSION" />
-      <NativeVersionLines Include="#define VER_FILEVERSION             $(_FileMajor),$(_FileMinor),$(_FilePatch),$(_FileRevision)" />
+    <PropertyGroup>
+      <NativeVersionLines>
+<![CDATA[
+#ifndef VER_COMPANYNAME_STR
+#define VER_COMPANYNAME_STR         "Microsoft Corporation"
+#endif
+#ifndef VER_PRODUCTNAME_STR
+#define VER_PRODUCTNAME_STR         "Microsoft\xae .NET Framework"
+#endif
+#undef VER_PRODUCTVERSION
+#define VER_PRODUCTVERSION          $(_FileMajor),$(_FileMinor),$(VersionSuffixDateStamp),$(VersionSuffixBuildOfTheDay)
+#undef VER_PRODUCTVERSION_STR
+#define VER_PRODUCTVERSION_STR      "$(InformationalVersion)"
+#undef VER_FILEVERSION
+#define VER_FILEVERSION             $(_FileMajor),$(_FileMinor),$(_FilePatch),$(_FileRevision)
+#undef VER_FILEVERSION_STR
+#define VER_FILEVERSION_STR         "$(FileVersion)"
+#ifndef VER_LEGALCOPYRIGHT_STR
+#define VER_LEGALCOPYRIGHT_STR      "\xa9 Microsoft Corporation. All rights reserved."
+#endif
+]]>
+      </NativeVersionLines>
+    </PropertyGroup>
 
-      <NativeVersionLines Include="#undef VER_FILEVERSION_STR" />
-      <NativeVersionLines Include="#define VER_FILEVERSION_STR         &quot;$(FileVersion)&quot;" />
-
-      <NativeVersionLines Include="#undef VER_PRODUCTVERSION" />
-      <NativeVersionLines Include="#define VER_PRODUCTVERSION          $(_FileMajor),$(_FileMinor),$(VersionSuffixDateStamp),$(VersionSuffixBuildOfTheDay)" />
-
-      <NativeVersionLines Include="#undef VER_PRODUCTVERSION_STR" />
-      <NativeVersionLines Include="#define VER_PRODUCTVERSION_STR      &quot;$(InformationalVersion)&quot;" />
-    </ItemGroup>
-
-    <WriteLinesToFile File="$(NativeVersionHeaderFile)" Lines="@(NativeVersionLines)" Overwrite="true" />
+    <WriteLinesToFile File="$(NativeVersionHeaderFile)" Lines="$(NativeVersionLines.Replace(';', '%3B'))" Overwrite="true" />
 
     <ItemGroup>
       <FileWrites Include="$(NativeVersionHeaderFile)" />
@@ -79,14 +89,15 @@
       <BuiltByString Condition="'$(VersionUserName)' != '' AND '$(VersionHostName)' != ''">$(BuiltByString) %40BuiltBy: $(VersionUserName)-$(VersionHostName)</BuiltByString>
     </PropertyGroup>
 
-    <ItemGroup>
-      <SourceFileLines />
-      <SourceFileLines Include="static char sccsid%5B%5D %5F%5Fattribute%5F%5F%28%28used%29%29 %3D %22%40%28%23%29Version $(InformationalVersion)$(BuiltByString)%22%3B" />
-      <!-- Since this is a source file, compiler will complain if there is no new line at end of file, so adding one bellow. -->
-      <SourceFileLines Include=" " />
-    </ItemGroup>
+    <PropertyGroup>
+      <NativeVersionLines>
+<![CDATA[
+static char sccsid[] __attribute__((used)) = "@(#)Version $(InformationalVersion)$(BuiltByString)";
+ ]]>
+      </NativeVersionLines>
+    </PropertyGroup>
 
-    <WriteLinesToFile File="$(NativeVersionSourceFile)" Lines="@(SourceFileLines)" Overwrite="true" />
+    <WriteLinesToFile File="$(NativeVersionSourceFile)" Lines="$(NativeVersionLines.Replace(';', '%3B'))" Overwrite="true" />
 
     <ItemGroup>
       <FileWrites Include="$(NativeVersionSourceFile)" />
@@ -95,10 +106,8 @@
     <Message Importance="High" Text="Created version file $(NativeVersionSourceFile)" />
   </Target>
 
-  <ItemGroup>
-    <Compile Remove="**" />
-    <EmbeddedResource Remove="**" />
-    <None Remove="**" />
-  </ItemGroup>
-
+  <Import Project="Sdk.targets" Sdk="Microsoft.Dotnet.Arcade.Sdk" />
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <Target Name="Build" />
+  <Target Name="Restore" />
 </Project>

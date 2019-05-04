@@ -2,6 +2,7 @@
 <Project>
   <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
+  <!-- Remove this once arcade version is bumped -->
   <Target Name="_PublishPackageReferences"
           AfterTargets="PostBuildEvent"
           Condition="$(IsPublishable) == 'true'"

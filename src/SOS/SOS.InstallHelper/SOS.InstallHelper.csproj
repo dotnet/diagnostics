@@ -7,6 +7,5 @@
     <Description>Diagnostic SOS Install Helper</Description>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <PackageTags>SOS</PackageTags>
-    <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
 </Project>
