@@ -13,6 +13,6 @@
   
   <ItemGroup>
     <PackageReference Include="xunit" Version="$(XUnitVersion)" />
-    <PackageReference Include="xunit.abstractions" Version="$(XUnitAbstractionsVersion)" PrivateAssets="all" />
+    <PackageReference Include="xunit.abstractions" Version="$(XUnitAbstractionsVersion)" />
   </ItemGroup>
 </Project>
