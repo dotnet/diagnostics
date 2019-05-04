@@ -4,7 +4,6 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>;1591;1701</NoWarn>
-    <IsShipping>false</IsShipping>
     <IsPackable>true</IsPackable>
     <Description>Diagnostic test support</Description>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
@@ -13,9 +12,7 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="xunit.runner.visualstudio" Version="$(XUnitVersion)" />
     <PackageReference Include="xunit" Version="$(XUnitVersion)" />
-    <PackageReference Include="xunit.abstractions" Version="$(XUnitAbstractionsVersion)" />
-    <PackageReference Include="xunit.runner.console" Version="$(XUnitVersion)" />
+    <PackageReference Include="xunit.abstractions" Version="$(XUnitAbstractionsVersion)" PrivateAssets="all" />
   </ItemGroup>
 </Project>
