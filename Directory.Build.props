@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <ContinuousIntegrationBuild Condition="'$(OfficialBuildId)' != ''">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <UseSharedCompilation>false</UseSharedCompilation>
     <LangVersion>Latest</LangVersion>
     <WarningLevel>4</WarningLevel>
