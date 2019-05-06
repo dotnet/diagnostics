@@ -43,6 +43,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dotnet-counters", "src\Tool
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.Tools.RuntimeClient", "src\Microsoft.Diagnostics.Tools.RuntimeClient\Microsoft.Diagnostics.Tools.RuntimeClient.csproj", "{54C240C5-7932-4421-A5FB-75205DE0B824}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CreateVersionFile", "eng\CreateVersionFile.csproj", "{54E3BCB7-6094-4B25-AC44-D4F914438F03}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Checked|Any CPU = Checked|Any CPU
@@ -677,6 +679,46 @@ Global
 		{54C240C5-7932-4421-A5FB-75205DE0B824}.RelWithDebInfo|x64.Build.0 = Release|Any CPU
 		{54C240C5-7932-4421-A5FB-75205DE0B824}.RelWithDebInfo|x86.ActiveCfg = Release|Any CPU
 		{54C240C5-7932-4421-A5FB-75205DE0B824}.RelWithDebInfo|x86.Build.0 = Release|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Checked|Any CPU.ActiveCfg = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Checked|Any CPU.Build.0 = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Checked|ARM.ActiveCfg = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Checked|ARM.Build.0 = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Checked|ARM64.ActiveCfg = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Checked|ARM64.Build.0 = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Checked|x64.ActiveCfg = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Checked|x64.Build.0 = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Checked|x86.ActiveCfg = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Checked|x86.Build.0 = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Debug|ARM.Build.0 = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Debug|x64.Build.0 = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Debug|x86.Build.0 = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Release|ARM.ActiveCfg = Release|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Release|ARM.Build.0 = Release|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Release|ARM64.Build.0 = Release|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Release|x64.ActiveCfg = Release|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Release|x64.Build.0 = Release|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Release|x86.ActiveCfg = Release|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.Release|x86.Build.0 = Release|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.RelWithDebInfo|Any CPU.ActiveCfg = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.RelWithDebInfo|Any CPU.Build.0 = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.RelWithDebInfo|ARM.ActiveCfg = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.RelWithDebInfo|ARM.Build.0 = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.RelWithDebInfo|ARM64.ActiveCfg = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.RelWithDebInfo|ARM64.Build.0 = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.RelWithDebInfo|x64.ActiveCfg = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.RelWithDebInfo|x64.Build.0 = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.RelWithDebInfo|x86.ActiveCfg = Debug|Any CPU
+		{54E3BCB7-6094-4B25-AC44-D4F914438F03}.RelWithDebInfo|x86.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
