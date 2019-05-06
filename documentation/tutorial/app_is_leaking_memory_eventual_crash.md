@@ -10,7 +10,7 @@ Before we dig into collecting diagnostics data to help us root cause this scenar
 Next, lets run the webapi (dotnet run) and before hitting the above URL that will cause the leak, lets check our managed memory counters:
 
 > ```bash
-> dotnet-counters monitor gc-heap-size --refresh-interval 1 -p 4807
+> dotnet-counters monitor --refresh-interval 1 -p 4807
 > ```
 
 4807 is the process identifier which can be found using dotnet-trace list-processes. The refresh-interval is the number of seconds before refreshes. 
