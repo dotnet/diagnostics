@@ -35,8 +35,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             new Option(
                 new[] { "--refresh-interval" }, 
                 "The number of seconds to delay between updating the displayed counters.",
-                new Argument<int> { Name = "refresh-interval" },
-                Arity = ArgumentArity.ZeroOrOne);
+                new Argument<int>(defaultValue: 1) { Name = "refresh-interval" });
 
         private static Argument CounterList() =>
             new Argument<List<string>> {
