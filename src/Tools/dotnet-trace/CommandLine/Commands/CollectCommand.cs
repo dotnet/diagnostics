@@ -86,6 +86,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     providers: providerCollection);
 
                 var shouldExit = new ManualResetEvent(false);
+                var terminated = false;
 
                 ulong sessionId = 0;
                 using (Stream stream = EventPipeClient.CollectTracing(processId, configuration, out sessionId))
@@ -118,6 +119,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                                 Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
                             }
+                            terminated = true;
+                            shouldExit.Set();
                         }
                     });
                     collectingTask.Start();
@@ -132,7 +135,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
                     } while (!shouldExit.WaitOne(0) && Console.ReadKey(true).Key != ConsoleKey.Enter);
 
-                    EventPipeClient.StopTracing(processId, sessionId);
+                    if (!terminated)
+                    {
+                        EventPipeClient.StopTracing(processId, sessionId);
+                    }
                     collectingTask.Wait();
                 }
 
