@@ -25,7 +25,11 @@ Now, let's hit the URL (http://localhost:5000/api/diagscenario/memspike/300) whi
 
 Re-run the dotnet-counters command. We should see an alternating heap size with a baseline of roughly 250MB and the highest spike around 530MB. The memory usage will alternate between baseline and spike every 5 seconds or so. 
 
-![alt text](https://user-images.githubusercontent.com/15442480/57110722-596f6680-6cee-11e9-9707-954bcbe21312.png)
+Baseline:
+![alt text](https://user-images.githubusercontent.com/15442480/57338185-463f0b00-70e1-11e9-8d52-0305d3158dd5.jpg)
+
+High:
+![alt text](https://user-images.githubusercontent.com/15442480/57338164-36272b80-70e1-11e9-843a-604af1ddfd5f.jpg)
 
 At this point, we can safely say that memory is spiking to a high that is not normal and the next step is to to run a collection tool that can help us collect the right data for memory analysis at the right time. 
 
