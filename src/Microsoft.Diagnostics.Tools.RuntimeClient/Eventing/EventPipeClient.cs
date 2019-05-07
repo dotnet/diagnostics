@@ -24,11 +24,17 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
         private static double ConnectTimeoutMilliseconds { get; } = TimeSpan.FromSeconds(3).TotalMilliseconds;
 
+        /// <summary>
+        /// Send event pipe command.
+        /// </summary>
+        /// <param name="processId">runtime process id</param>
+        /// <param name="buffer">serialized command</param>
+        /// <returns>command result</returns>
         public static ulong SendCommand(int processId, byte[] buffer)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                var pipeName = $"dotnetcore-diagnostic-{processId}";
+                string pipeName = $"dotnetcore-diagnostic-{processId}";
                 using (var namedPipe = new NamedPipeClientStream(
                     ".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation))
                 {
@@ -40,10 +46,14 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             }
             else
             {
-                var ipcPort = Directory.GetFiles(IpcRootPath) // Try best match.
+                string ipcPort = Directory.GetFiles(IpcRootPath) // Try best match.
                     .Select(namedPipe => (new FileInfo(namedPipe)).Name)
-                    .Single(input => Regex.IsMatch(input, $"^dotnetcore-diagnostic-{processId}-(\\d+)-socket$"));
-                var path = Path.Combine(Path.GetTempPath(), ipcPort);
+                    .SingleOrDefault(input => Regex.IsMatch(input, $"^dotnetcore-diagnostic-{processId}-(\\d+)-socket$"));
+                if (ipcPort == null)
+                {
+                    throw new InvalidOperationException($"Process {processId} not running compatible .NET Core runtime");
+                }
+                string path = Path.Combine(Path.GetTempPath(), ipcPort);
                 var remoteEP = new UnixDomainSocketEndPoint(path);
 
                 using (var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified))
@@ -52,7 +62,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                     socket.Send(buffer);
 
                     var content = new byte[sizeof(ulong)];
-                    var nReceivedBytes = socket.Receive(content);
+                    int nReceivedBytes = socket.Receive(content);
                     return (nReceivedBytes == sizeof(ulong)) ? BitConverter.ToUInt64(content, 0) : 0;
                 }
             }
@@ -73,6 +83,13 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 .Select(input => int.Parse(Regex.Match(input, DiagnosticPortPattern).Groups[1].Value, NumberStyles.Integer));
         }
 
+        /// <summary>
+        /// Start trace collection.
+        /// </summary>
+        /// <param name="processId">Runtime process to trace</param>
+        /// <param name="configuration">buffer size and provider configuration</param>
+        /// <param name="sessionId">session id</param>
+        /// <returns>Stream</returns>
         public static Stream CollectTracing(int processId, SessionConfiguration configuration, out ulong sessionId)
         {
             sessionId = 0;
@@ -88,7 +105,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                var pipeName = $"dotnetcore-diagnostic-{processId}";
+                string pipeName = $"dotnetcore-diagnostic-{processId}";
                 var namedPipe = new NamedPipeClientStream(
                     ".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation);
                 namedPipe.Connect((int)ConnectTimeoutMilliseconds);
@@ -102,10 +119,14 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             else
             {
                 // TODO: Determine ApplicationGroupId
-                var ipcPort = Directory.GetFiles(IpcRootPath) // Try best match.
+                string ipcPort = Directory.GetFiles(IpcRootPath) // Try best match.
                     .Select(namedPipe => (new FileInfo(namedPipe)).Name)
-                    .Single(input => Regex.IsMatch(input, $"^dotnetcore-diagnostic-{processId}-(\\d+)-socket$"));
-                var path = Path.Combine(Path.GetTempPath(), ipcPort);
+                    .SingleOrDefault(input => Regex.IsMatch(input, $"^dotnetcore-diagnostic-{processId}-(\\d+)-socket$"));
+                if (ipcPort == null)
+                {
+                    throw new InvalidOperationException($"Process {processId} not running compatible .NET Core runtime");
+                }
+                string path = Path.Combine(Path.GetTempPath(), ipcPort);
                 var remoteEP = new UnixDomainSocketEndPoint(path);
 
                 var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
@@ -122,6 +143,12 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             }
         }
 
+        /// <summary>
+        /// Start tracing to file.
+        /// </summary>
+        /// <param name="processId">Runtime process to trace</param>
+        /// <param name="configuration">buffer size, file path and provider configuration</param>
+        /// <returns>session id</returns>
         public static ulong StartTracingToFile(int processId, SessionConfiguration configuration)
         {
             var header = new MessageHeader {
@@ -197,7 +224,6 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 stream.Read(bytes, 0, bytes.Length);
                 return bytes;
             }
-
         }
     }
 }
