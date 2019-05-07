@@ -35,7 +35,11 @@ At this point, we can safely say that memory is spiking to a high that is not no
 
 
 ### Core dump generation
-Most commonly when analyzing possible memory leaks, we need access to as much of the apps memory as possible. We can then analyze the memory contents and relationships between objects to create theories on why memory is not being freed. A very common diagnostics data source is a memory dump (Win) and the equivalent core dump (on Linux). In order to generate a core dump of a .net core application, we can use the dotnet-dump tool (please see 'Installing the diagnostics tools' section). Using the previous webapi run, run the following command to generate a core dump:
+Let's step back a bit and revisit the high memory scenario earlier in the tutorial. In that scenario, memory grew high and stayed high allowing us the opportunity to run the dotnet-dump command without restriction. However, in our current scenario we have a short memory spike that only lasts about 5 seconds per spike. This makes it difficult to get setup to run the dotnet-dump tool manually. What we would preferably like is a tool that could monitor the dotnet core counters and automatically create a core dump once a threshold has been breached. This is a perfect opportunity to start exploring how we can write our own diagnostics tools to cater to our diagnostics needs. 
+
+
+
+command to generate a core dump:
 
 > ```bash
 > sudo ./dotnet-dump collect -p 4807
