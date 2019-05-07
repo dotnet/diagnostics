@@ -21,21 +21,13 @@ The output should be similar to the below:
 
 Here we can see that right after startup, the managed heap memory is 4MB. 
 
-Now, let's hit the URL (http://localhost:5000/api/diagscenario/memleak/200000)
+Now, let's hit the URL (http://localhost:5000/api/diagscenario/memspike/300) which will run for 5 minutes giving us ample time to experiement. 
 
-Re-run the dotnet-counters command. We should see an increase in memory usage as shown below:
+Re-run the dotnet-counters command. We should see an alternating heap size with a baseline of roughly 250MB and the highest spike around 530MB. The memory usage will alternate between baseline and spike every 5 seconds or so. 
 
 ![alt text](https://user-images.githubusercontent.com/15442480/57110722-596f6680-6cee-11e9-9707-954bcbe21312.png)
 
-Memory has now grown to around 265MB. 
-
-Note that this shows all the counters. If you want to specify individual counters please use the System.Private[counter1, counter2,...] syntax. For example, to display just the gc-heap-counter, use:
-
-> ```bash
-> dotnet-counters monitor System.Runtime[gc-heap-size] --refresh-interval 1 -p 4923
-> ```
-
-At this point, we can safely say that memory is leaking (or at the very least is growing and doesn't seem to come back down once request is finished). The next step is now to run a collection tool that can help us collect the right data for memory analysis. 
+At this point, we can safely say that memory is spiking to a high that is not normal and the next step is to to run a collection tool that can help us collect the right data for memory analysis at the right time. 
 
 
 ### Core dump generation
