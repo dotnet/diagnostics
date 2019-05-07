@@ -1,13 +1,13 @@
-# App is leaking memory (eventual crash/hang)
+# App is experiencing intermittent memory spikes
 
-http://localhost:5000/api/diagscenario/memleak/{kb}
+http://localhost:5000/api/diagscenario/memspike/{seconds}
 
-In this scenario, the endpoint will slowly start leaking memory (amount specified by {kb}) and eventually will result in an out of memory exception. In order to diagnose this scenario, we need several key pieces of diagnostics data.
+In this scenario, the endpoint will experience intermittent memory spikes over the specified number of seconds. Memory will go from base line to spike and back to baseline a number of times. What makes this scenario different from the memory leak scenario is that we will have to figure out a way to automatically trigger the collection of a dump when the memory spikes. 
 
 ### Memory counters
-Before we dig into collecting diagnostics data to help us root cause this scenario, we need to convince ourselves that what we are actually seeing is a memory leak (memory growth). On Windows we could use the myriad of .NET performance counters, but what about on Linux? It turns out .net core has been instrumented to expose metrics from the runtime and we can use the dotnet-counters tool to get at this information (please see 'Installing the diagnostics tools' section). 
+Before we dig into collecting diagnostics data to help us root cause this scenario, we need to convince ourselves that what we are actually seeing is an intermittent memory spike. To help with this we can use the dotnet-counters tool which allows us to watch the memory usage for a selected dotnet process (please see 'Installing the diagnostics tools' section). 
 
-Next, lets run the webapi (dotnet run) and before hitting the above URL that will cause the leak, lets check our managed memory counters:
+Let's run the webapi (dotnet run) and before hitting the above URL (specifying 300 seconds), lets check our managed memory counters:
 
 > ```bash
 > dotnet-counters monitor --refresh-interval 1 -p 4807
