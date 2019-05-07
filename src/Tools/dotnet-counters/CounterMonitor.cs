@@ -151,6 +151,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 providerString = sb.ToString();
             }
 
+            var terminated = false;
+
             Task monitorTask = new Task(() => {
                 var configuration = new SessionConfiguration(
                     circularBufferSizeMB: 1000,
@@ -162,6 +164,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 writer.InitializeDisplay();
                 source.Dynamic.All += Dynamic_All;
                 source.Process();
+                terminated = true; // This indicates that the runtime is done. We shoudn't try to talk to it anymore.
             });
 
             Task commandTask = new Task(() =>
@@ -189,12 +192,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
             commandTask.Start();
             await commandTask;
 
-            try
+            if (!terminated)
             {
-                EventPipeClient.StopTracing(_processId, _sessionId);    
+                try
+                {
+                    EventPipeClient.StopTracing(_processId, _sessionId);    
+                }
+                catch (System.IO.EndOfStreamException) {} // If the app we're monitoring exits abrubtly, this may throw in which case we just swallow the exception and exit gracefully.    
             }
-            catch (System.IO.EndOfStreamException) {} // If the app we're monitoring exits abrubtly, this may throw in which case we just swallow the exception and exit gracefully.
-
+            
             return 0;
         }
     }
