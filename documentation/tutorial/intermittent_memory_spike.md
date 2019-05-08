@@ -1,5 +1,7 @@
 # App is experiencing intermittent memory spikes
 
+** This tutorial uses API/methods available in dotnet core preview 5. These API/methods are subject to change ** 
+
 http://localhost:5000/api/diagscenario/memspike/{seconds}
 
 In this scenario, the endpoint will experience intermittent memory spikes over the specified number of seconds. Memory will go from base line to spike and back to baseline a number of times. What makes this scenario different from the memory leak scenario is that we will have to figure out a way to automatically trigger the collection of a dump when the memory spikes. 
