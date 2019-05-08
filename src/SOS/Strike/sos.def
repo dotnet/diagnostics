@@ -233,3 +233,5 @@ EXPORTS
     TraceToCode
     tracetocode=TraceToCode
 #endif
+
+    SOSInitializeByHost

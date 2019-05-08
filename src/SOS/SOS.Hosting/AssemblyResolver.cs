@@ -12,14 +12,20 @@ namespace SOS
     /// <summary>
     /// Used to enable app-local assembly unification.
     /// </summary>
-    internal static class AssemblyResolver
+    public static class AssemblyResolver
     {
+        private static bool s_initialized = false;
+
         /// <summary>
         /// Call to enable the assembly resolver for the current AppDomain.
         /// </summary>
         public static void Enable()
         {
-            AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+            if (!s_initialized)
+            {
+                s_initialized = true;
+                AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+            }
         }
 
         private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)

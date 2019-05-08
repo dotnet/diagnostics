@@ -544,6 +544,32 @@ LPCSTR GetDbiFilePath()
 }
 
 /**********************************************************************\
+ * Called when the managed SOS Host loads/initializes SOS.
+\**********************************************************************/
+extern "C" HRESULT SOSInitializeByHost(SOSNetCoreCallbacks* callbacks, int callbacksSize, LPCSTR tempDirectory, LPCSTR dacFilePath, LPCSTR dbiFilePath, bool symbolStoreEnabled)
+{
+    if (memcpy_s(&g_SOSNetCoreCallbacks, sizeof(g_SOSNetCoreCallbacks), callbacks, callbacksSize) != 0)
+    {
+        return E_INVALIDARG;
+    }
+    if (tempDirectory != nullptr)
+    {
+        g_tmpPath = _strdup(tempDirectory);
+    }
+    if (dacFilePath != nullptr)
+    {
+        g_dacFilePath = _strdup(dacFilePath);
+    }
+    if (dbiFilePath != nullptr)
+    {
+        g_dbiFilePath = _strdup(dbiFilePath);
+    }
+    g_symbolStoreInitialized = symbolStoreEnabled;
+    g_hostingInitialized = true;
+    return S_OK;
+}
+
+/**********************************************************************\
  * Returns true if the host runtime has already been initialized.
 \**********************************************************************/
 BOOL IsHostingInitialized()
@@ -561,17 +587,6 @@ HRESULT InitializeHosting()
     {
         return S_OK;
     }
-#ifdef FEATURE_PAL
-    ToRelease<ISOSHostServices> hostServices(NULL);
-    if (SUCCEEDED(g_ExtServices->QueryInterface(__uuidof(ISOSHostServices), (void**)&hostServices)))
-    {
-        if (SUCCEEDED(hostServices->GetSOSNETCoreCallbacks(SOSNetCoreCallbacksVersion, &g_SOSNetCoreCallbacks)))
-        {
-            g_hostingInitialized = true;
-            return S_OK;
-        }
-    }
-#endif // FEATURE_PAL
     coreclr_initialize_ptr initializeCoreCLR = nullptr;
     coreclr_create_delegate_ptr createDelegate = nullptr;
     std::string hostRuntimeDirectory;

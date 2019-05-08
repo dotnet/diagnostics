@@ -1,5 +1,6 @@
 using Microsoft.Diagnostic.Repl;
 using Microsoft.Diagnostics.Runtime;
+using SOS;
 using System;
 using System.CommandLine;
 using System.IO;
@@ -15,6 +16,15 @@ namespace Microsoft.Diagnostic.Tools.Dump
     {
         private readonly ConsoleProvider _consoleProvider;
         private readonly CommandProcessor _commandProcessor;
+
+        /// <summary>
+        /// Enable the assembly resolver to get the right SOS.NETCore version (the one
+        /// in the same directory as this assembly).
+        /// </summary>
+        static Analyzer()
+        {
+            AssemblyResolver.Enable();
+        }
 
         public Analyzer()
         {
@@ -34,8 +44,7 @@ namespace Microsoft.Diagnostic.Tools.Dump
                     target = DataTarget.LoadCoreDump(dump_path.FullName);
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                    //target = DataTarget.LoadCrashDump(dump_path.FullName, CrashDumpReader.ClrMD);
-                    throw new PlatformNotSupportedException("Preview build: This is not yet implemented on Windows");
+                    target = DataTarget.LoadCrashDump(dump_path.FullName, CrashDumpReader.ClrMD);
                 }
                 else {
                     throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
@@ -53,8 +62,9 @@ namespace Microsoft.Diagnostic.Tools.Dump
                     _commandProcessor.AddService(analyzeContext);
 
                     // Automatically enable symbol server support on Linux and MacOS
-                    if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                        analyzeContext.SOSHost.ExecuteCommand("SetSymbolServer", "-ms");
+                    //if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        SymbolReader.InitializeSymbolStore(logging: false, msdl: true, symweb: false, symbolServerPath: null, symbolCachePath: null, windowsSymbolPath: null);
                     }
 
                     // Run the commands from the dotnet-dump command line
