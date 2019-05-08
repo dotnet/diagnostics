@@ -71,10 +71,22 @@ The protocol will be communicated over a platform-specific transport.  On Unix/L
 #### Naming and Location Conventions
 
 Unix Domain Sockets:
-> TODO
+> The socket is created in the `tmp` dir.  This will be determined by the output of the `Path.GetTempPath()` function in managed code.  On Mac, this is typically an application group specific temp directory which can be found in the `$TMPDIR` environment variable.
 
-Named Pipes:
-> TODO
+MacOS:
+```
+/$TMPDIR/dotnetcore-diagnostic-<PID>-<AppGroupID>-socket
+```
+
+Linux:
+```
+/tmp/dotnetcore-diagnostic-<PID>-<EpochTimestamp>-socket
+```
+
+Named Pipes (Windows):
+```
+\\.\pipe\dotnetcore-diagnostic-<PID>
+```
 
 ### Errors
 
