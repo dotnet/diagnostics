@@ -1,6 +1,6 @@
 # App is experiencing intermittent memory spikes
 
-**This tutorial uses API/methods available in dotnet core preview 5. These API/methods are _subject to change_** 
+**IMPORTANT: This tutorial uses API/methods available in dotnet core preview 5. These API/methods are _subject to change._** 
 
 http://localhost:5000/api/diagscenario/memspike/{seconds}
 
