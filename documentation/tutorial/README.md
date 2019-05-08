@@ -17,6 +17,8 @@ Most of the scenarios below are implemented using a simple webapi with methods t
 
 Please note that you have to be using at least preview 5 for most of the capabilities to work. 
 
+**Note: The tools/APIs that are used are based on preview 5 and are subject to change. The tutorial will be updated to account for later previews and final release**
+
 
 ### [Installing the diagnostics tools](installing_the_diagnostics_tools.md)
 
