@@ -51,7 +51,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                     .SingleOrDefault(input => Regex.IsMatch(input, $"^dotnetcore-diagnostic-{processId}-(\\d+)-socket$"));
                 if (ipcPort == null)
                 {
-                    throw new InvalidOperationException($"Process {processId} not running compatible .NET Core runtime");
+                    throw new PlatformNotSupportedException($"Process {processId} not running compatible .NET Core runtime");
                 }
                 string path = Path.Combine(Path.GetTempPath(), ipcPort);
                 var remoteEP = new UnixDomainSocketEndPoint(path);
@@ -124,7 +124,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                     .SingleOrDefault(input => Regex.IsMatch(input, $"^dotnetcore-diagnostic-{processId}-(\\d+)-socket$"));
                 if (ipcPort == null)
                 {
-                    throw new InvalidOperationException($"Process {processId} not running compatible .NET Core runtime");
+                    throw new PlatformNotSupportedException($"Process {processId} not running compatible .NET Core runtime");
                 }
                 string path = Path.Combine(Path.GetTempPath(), ipcPort);
                 var remoteEP = new UnixDomainSocketEndPoint(path);
