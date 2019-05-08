@@ -39,6 +39,15 @@ At this point, we can safely say that memory is spiking to a high that is not no
 ### Core dump generation
 Let's step back a bit and revisit the high memory scenario earlier in the tutorial. In that scenario, memory grew high and stayed high allowing us the opportunity to run the dotnet-dump command without restriction. However, in our current scenario we have a short memory spike that only lasts about 5 seconds per spike. This makes it difficult to get setup to run the dotnet-dump tool manually. What we would preferably like is a tool that could monitor the dotnet core counters and automatically create a core dump once a threshold has been breached. This is a perfect opportunity to start exploring how we can write our own diagnostics tools to cater to our diagnostics needs. 
 
+What we would like this tool to do do is allow the user to specify the pid of the target process as well as the threshold in memory consumption (in MBs). It would then continously monitor the process and create a dump if the threshold is breached:
+
+> ```bash
+> sudo ./triggerdump <pid> <memory threshold in MBs>
+> ```
+
+## Some background before we start writing the tool...
+<talk about event pipe>
+  
 
 
 command to generate a core dump:
