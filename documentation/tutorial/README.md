@@ -24,6 +24,8 @@ Please note that you have to be using at least preview 5 for most of the capabil
 
 ### [Scenario - App is running slow (due to high CPU)](app_running_slow_highcpu.md)
 
+### [Scenario - App is experiencing intermittent memory spikes](intermittent_memory_spike.md)
+
 ### Scenario - App is experiencing intermittent exceptions
 
 
