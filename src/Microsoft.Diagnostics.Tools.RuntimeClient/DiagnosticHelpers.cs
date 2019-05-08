@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 bw.Write((uint)header.RequestType);
                 bw.Write(header.Pid);
 
-                bw.WriteAsciiString(dumpName);
+                bw.WriteString(dumpName);
                 bw.Write((int)dumpType);
                 bw.Write(diagnostics ? 1 : 0);
 
