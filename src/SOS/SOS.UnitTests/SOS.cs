@@ -3,7 +3,9 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostic.TestHelpers;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
@@ -48,25 +50,35 @@ public class SOS
     {
         SkipIfArm(config);
 
-        // Live
-        using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName, debuggeeName, debuggeeArguments))
+        if (!SOSRunner.IsAlpine())
         {
-            await runner.RunScript(scriptName);
+            // Live
+            using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName, debuggeeName, debuggeeArguments))
+            {
+                await runner.RunScript(scriptName);
+            }
         }
 
         // Generate a crash dump.
         if (IsCreateDumpConfig(config))
         {
+            if (!useCreateDump && SOSRunner.IsAlpine())
+            {
+                throw new SkipTestException("lldb tests not supported on Alpine");
+            }
             await SOSRunner.CreateDump(config, Output, testName, debuggeeName, debuggeeArguments, useCreateDump);
         }
 
         // Test against a crash dump.
         if (IsOpenDumpConfig(config))
         {
-            // With cdb (Windows) or lldb (Linux or OSX)
-            using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName, debuggeeName, debuggeeArguments, SOSRunner.Options.LoadDump))
+            if (!SOSRunner.IsAlpine())
             {
-                await runner.RunScript(scriptName);
+                // With cdb (Windows) or lldb (Linux or OSX)
+                using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName, debuggeeName, debuggeeArguments, SOSRunner.Options.LoadDump))
+                {
+                    await runner.RunScript(scriptName);
+                }
             }
 
             // With the dotnet-dump analyze tool
@@ -91,6 +103,10 @@ public class SOS
     {
         // Live only
         SkipIfArm(config);
+        if (SOSRunner.IsAlpine())
+        {
+            throw new SkipTestException("lldb tests not supported on Alpine");
+        }
         using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName: "SOS.GCTests", debuggeeName: "GCWhere"))
         {
             await runner.RunScript("GCTests.script");

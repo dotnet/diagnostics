@@ -43,6 +43,22 @@ phases:
 
 - template: /eng/build.yml
   parameters:
+    name: Alpine3_6
+    agentOs: Linux
+    dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.6-WithNode-f4d3fe3-20181220200247
+    queue:
+      name: DotNet-Build
+      demands:
+        - agent.os -equals Linux
+      parallel: 2
+      matrix:
+        Build_Release:
+          _BuildConfig: Release
+          _BuildArch: x64
+          _PublishArtifacts: bin/Linux.x64.Release
+
+- template: /eng/build.yml
+  parameters:
     name: MacOS
     agentOs: Darwin
     queue: 
@@ -207,6 +223,7 @@ phases:
   dependsOn:
   - Windows
   - CentOS_7
+  - Alpine3_6
   - MacOS
   condition: ne(variables['Build.Reason'], 'Schedule')
   queue:
@@ -275,15 +292,6 @@ phases:
       targetFolder: '$(Build.SourcesDirectory)/artifacts/Windows_NT.x64.Release'
     condition: succeeded()
 
-  - task: ArchiveFiles@2
-    displayName: Archive Windows x64 Artifacts
-    inputs:
-      archiveType: zip
-      includeRootFolder: false
-      rootFolderOrFile: '$(Build.SourcesDirectory)/artifacts/Windows_NT.x64.Release'
-      archiveFile: '$(Build.SourcesDirectory)/artifacts/packages/Release/sos-win-x64.zip'
-    condition: succeeded()
-
   # Windows x86 download, copy and archive.
 
   - task: DownloadBuildArtifacts@0
@@ -310,22 +318,13 @@ phases:
       targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.x86.Release'
     condition: succeeded()
 
-  - task: ArchiveFiles@2
-    displayName: Archive Windows x86 Artifacts
-    inputs:
-      archiveType: zip
-      includeRootFolder: false
-      rootFolderOrFile: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.x86.Release'
-      archiveFile: '$(Build.SourcesDirectory)/artifacts/packages/Release/sos-win-x86.zip'
-    condition: succeeded()
-  
   # Copy and archive the files for windbg extension gallery.
 
   - powershell: $(Build.SourcesDirectory)\eng\create-gallery-zip.ps1 $(Build.SourcesDirectory)
     displayName: Create Extension Gallery Zip File
     condition: succeeded()
 
-  # Linux download, copy and archive
+  # Linux x64 download, copy and archive
 
   - task: DownloadBuildArtifacts@0
     displayName: Download Linux Artifacts
@@ -351,13 +350,30 @@ phases:
       targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Linux.x64.Release'
     condition: succeeded()
 
-  - task: ArchiveFiles@2
-    displayName: Archive Linux Artifacts
+  # Linux MUSL x64 download, copy and archive
+
+  - task: DownloadBuildArtifacts@0
+    displayName: Download Linux Artifacts
     inputs:
-      archiveType: zip
-      includeRootFolder: false
-      rootFolderOrFile: '$(Build.SourcesDirectory)/artifacts/bin/Linux.x64.Release'
-      archiveFile: '$(Build.SourcesDirectory)/artifacts/packages/Release/sos-linux-x64.zip'
+      artifactName: Alpine3_6_x64_Release
+      downloadPath: '$(System.ArtifactsDirectory)'
+    condition: succeeded()
+
+  - task: CopyFiles@2
+    displayName: Copy Linux Artifacts
+    inputs:
+      sourceFolder: '$(System.ArtifactsDirectory)/Alpine3_6_x64_Release'
+      contents: ?(libsos.so|libsosplugin.so|sosdocsunix.txt)
+      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Linux-musl.x64.Release'
+    condition: succeeded()
+
+  - task: CopyFiles@2
+    displayName: Copy Linux Artifacts
+    inputs:
+      sourceFolder: '$(_SOSNETCorePath)'
+      contents: '*.dll'
+      overWrite: true
+      targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Linux-musl.x64.Release'
     condition: succeeded()
 
   # MacOS download, copy and archive
@@ -384,15 +400,6 @@ phases:
       contents: '*.dll'
       overWrite: true
       targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/OSX.x64.Release'
-    condition: succeeded()
-
-  - task: ArchiveFiles@2
-    displayName: Archive MacOS Artifacts
-    inputs:
-      archiveType: zip
-      includeRootFolder: false
-      rootFolderOrFile: '$(Build.SourcesDirectory)/artifacts/bin/OSX.x64.Release'
-      archiveFile: '$(Build.SourcesDirectory)/artifacts/packages/Release/sos-osx-x64.zip'
     condition: succeeded()
 
   # Create nuget package and sign binaries

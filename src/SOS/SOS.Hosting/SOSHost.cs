@@ -152,20 +152,8 @@ namespace SOS
         /// </summary>
         public SOSHost(IDataReader dataReader, ISOSHostContext context)
         {
-            string os = null;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                os = "win";
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
-                os = "linux";
-            }
-            if (os == null) {
-                throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
-            }
-            string architecture = RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant();
-            string rid = os + "-" + architecture;
+            string rid = InstallHelper.GetRid();
             SOSPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
-
             _wrapper = new LLDBServicesWrapper(this, dataReader, context);
         }
 

@@ -33,6 +33,7 @@ __CI=false
 __Verbosity=minimal
 __TestArgs=
 __UnprocessedBuildArgs=
+__Alpine=false
 
 usage()
 {
@@ -195,6 +196,10 @@ while :; do
             shift
             ;;
 
+        --portablebuild=false)
+            __PortableBuild=0
+            ;;
+
         --clang3.5)
             __ClangMajorVersion=3
             __ClangMinorVersion=5
@@ -348,77 +353,22 @@ build_native()
     popd
 }
 
-initHostDistroRid()
-{
-    __HostDistroRid=""
-    if [ "$__HostOS" == "Linux" ]; then
-        if [ -e /etc/os-release ]; then
-            source /etc/os-release
-            if [[ $ID == "rhel" ]]; then
-                # remove the last version digit
-                VERSION_ID=${VERSION_ID%.*}
-            fi
-            __HostDistroRid="$ID.$VERSION_ID-$__HostArch"
-            if [[ $ID == "alpine" ]]; then
-                __HostDistroRid="linux-musl-$__HostArch"
-            fi
-        elif [ -e /etc/redhat-release ]; then
-            local redhatRelease=$(</etc/redhat-release)
-            if [[ $redhatRelease == "CentOS release 6."* || $redhatRelease == "Red Hat Enterprise Linux Server release 6."* ]]; then
-               __HostDistroRid="rhel.6-$__HostArch"
-            fi
-        fi
-    fi
-    if [ "$__HostOS" == "FreeBSD" ]; then
-        __freebsd_version=`sysctl -n kern.osrelease | cut -f1 -d'.'`
-        __HostDistroRid="freebsd.$__freebsd_version-$__HostArch"
-    fi
-
-    if [ "$__HostDistroRid" == "" ]; then
-        echo "WARNING: Can not determine runtime id for current distro."
-    fi
-}
-
 initTargetDistroRid()
 {
-    if [ $__CrossBuild == true ]; then
-        if [ "$__BuildOS" == "Linux" ]; then
-            if [ ! -e $ROOTFS_DIR/etc/os-release ]; then
-                if [ -e $ROOTFS_DIR/android_platform ]; then
-                    source $ROOTFS_DIR/android_platform
-                    export __DistroRid="$RID"
-                else
-                    echo "WARNING: Can not determine runtime id for current distro."
-                    export __DistroRid=""
-                fi
-            else
-                source $ROOTFS_DIR/etc/os-release
-                export __DistroRid="$ID.$VERSION_ID-$__BuildArch"
-            fi
-        fi
-    else
-        export __DistroRid="$__HostDistroRid"
+    source "$__ProjectRoot/eng/init-distro-rid.sh"
+
+    local passedRootfsDir=""
+
+    # Only pass ROOTFS_DIR if cross is specified.
+    if (( ${__CrossBuild} == 1 )); then
+        passedRootfsDir=${ROOTFS_DIR}
+    elif [ "${__BuildArch}" != "${__HostArch}" ]; then
+        echo "Error, you are building a cross scenario without passing -cross."
+        exit 1
     fi
 
-    if [ "$__BuildOS" == "OSX" ]; then
-        __PortableBuild=1
-    fi
-
-    # Portable builds target the base RID
-    if [ $__PortableBuild == 1 ]; then
-        if [ "$__BuildOS" == "Linux" ]; then
-            export __DistroRid="linux-$__BuildArch"
-        elif [ "$__BuildOS" == "OSX" ]; then
-            export __DistroRid="osx-$__BuildArch"
-        elif [ "$__BuildOS" == "FreeBSD" ]; then
-            export __DistroRid="freebsd-$__BuildArch"
-        fi
-    fi
+    initDistroRidGlobal ${__BuildOS} ${__BuildArch} ${__PortableBuild} ${passedRootfsDir}
 }
-
-
-# Init the host distro name
-initHostDistroRid
 
 # Init the target distro name
 initTargetDistroRid
@@ -451,7 +401,6 @@ if [ "$__HostOS" == "OSX" ]; then
     which python
     python --version
 fi
-
 
 # Build native components
 if [ $__Build == true ]; then
@@ -519,16 +468,19 @@ if [ $__Test == true ]; then
         exit 1
     fi
 
-    if [ "$__BuildOS" == "OSX" ]; then
-        __Plugin=$__CMakeBinDir/libsosplugin.dylib
-    else
-        __Plugin=$__CMakeBinDir/libsosplugin.so
-    fi
+    # Skip Alpine because lldb doesn't work
+    if [ $__Alpine == false ]; then
+        if [ "$__BuildOS" == "OSX" ]; then
+            __Plugin=$__CMakeBinDir/libsosplugin.dylib
+        else
+            __Plugin=$__CMakeBinDir/libsosplugin.so
+        fi
 
-    # Run lldb python tests
-    "$__ProjectRoot/src/SOS/lldbplugin.tests/testsos.sh" "$__ProjectRoot" "$__Plugin" "$__DotNetRuntimeVersion" "$__RootBinDir/bin/TestDebuggee/$__BuildType/netcoreapp2.0/TestDebuggee.dll" "$__ResultsDir"
-    if [ $? != 0 ]; then
-        exit 1
+        # Run lldb python tests
+        "$__ProjectRoot/src/SOS/lldbplugin.tests/testsos.sh" "$__ProjectRoot" "$__Plugin" "$__DotNetRuntimeVersion" "$__RootBinDir/bin/TestDebuggee/$__BuildType/netcoreapp2.0/TestDebuggee.dll" "$__ResultsDir"
+        if [ $? != 0 ]; then
+            exit 1
+        fi
     fi
 fi
 
