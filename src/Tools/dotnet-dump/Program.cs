@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostic.Tools.Dump
                 "collect", 
                 "Capture dumps from a process", 
                 new Option[] { ProcessIdOption(), OutputOption(), TypeOption() },
-                handler: CommandHandler.Create<IConsole, int, string, Dumper.DumpType>(new Dumper().Collect));
+                handler: CommandHandler.Create<IConsole, int, string, Dumper.DumpTypeOption>(new Dumper().Collect));
 
         private static Option ProcessIdOption() =>
             new Option(
@@ -51,7 +51,7 @@ heap - A large and relatively comprehensive dump containing module lists, thread
 mini - A small dump containing module lists, thread lists, exception information and all stacks.
 
 If not specified 'heap' is the default.",
-                new Argument<Dumper.DumpType>(Dumper.DumpType.Heap) { Name = "dump_type" });
+                new Argument<Dumper.DumpTypeOption>(Dumper.DumpTypeOption.Heap) { Name = "dump_type" });
 
         private static Command AnalyzeCommand() =>
             new Command(

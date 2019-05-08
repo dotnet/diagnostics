@@ -21,6 +21,16 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 @this.Write(Encoding.Unicode.GetBytes(value + '\0'));
         }
 
+        public static void WriteAsciiString(this BinaryWriter @this, string value)
+        {
+            if (@this == null)
+                throw new ArgumentNullException(nameof(@this));
+
+            @this.Write(value != null ? (value.Length + 1) : 0);
+            if (value != null)
+                @this.Write(Encoding.ASCII.GetBytes(value + '\0'));
+        }
+
 #if DEBUG
         private static int GetByteCount(this string @this)
         {

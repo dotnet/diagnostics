@@ -10,6 +10,10 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
     public enum DiagnosticMessageType : uint
     {
         /// <summary>
+        /// Initiates core dump generation 
+        /// </summary>
+        GenerateCoreDump = 1,
+        /// <summary>
         /// Starts an EventPipe session that writes events to a file when the session is stopped or the application exits.
         /// </summary>
         StartEventPipeTracing = 1024,
