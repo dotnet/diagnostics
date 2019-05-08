@@ -22,9 +22,9 @@ Please note that you have to be using at least preview 5 for most of the capabil
 
 ### [Installing the diagnostics tools](installing_the_diagnostics_tools.md)
 
-### [Scenario - App is leaking memory (eventual crash)](app_is_leaking_memory_eventual_crash.md)
+### [Scenario - App is leaking memory](app_is_leaking_memory_eventual_crash.md)
 
-### [Scenario - App is running slow (due to high CPU)](app_running_slow_highcpu.md)
+### [Scenario - App is running slow](app_running_slow_highcpu.md)
 
 ### [Scenario - App is experiencing intermittent memory spikes](intermittent_memory_spike.md)
 
