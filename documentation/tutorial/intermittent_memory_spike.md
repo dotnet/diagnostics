@@ -154,7 +154,9 @@ We can now build the tool (dotnet build) and run it against our application. Onc
 > sudo dotnet triggerdump.dll 80926 500
 > ```
 
-Please note that triggerdump has to be run with sudo. At this point, you should see triggerdump waiting/monitoring the memory counter. Let's trigger the intermittent memory spike by navigating to:
+Please note that triggerdump has to be run with sudo. The invocation tells triggerdump to monitor process with a process id of 80926 and to create dump when memory grows above 500MB. 
+
+At this point, you should see triggerdump waiting/monitoring the memory counter. Let's trigger the intermittent memory spike by navigating to:
 
 http://localhost:5000/api/diagscenario/memspike/300
 
@@ -166,10 +168,10 @@ After 10-15 seconds, you will notice that triggerdump outputs the following foll
 > Written 820518912 bytes (200322 pages) to core file
 > ```
 
-That's it for creating your own diagnostics tool to support custom scenarios. 
+That's it for creating your own diagnostics tool to solve the intermittent memory spike scenario! 
 
 ### Analyzing the core dump
-Since the core dump that our tool generates is a standard core dump, we can use the same techniques illustrated in [Scenario - App is leaking memory](app_is_leaking_memory_eventual_crash.md) to analyze why we're seeing intermitten high memory conditions. 
+Since the core dump that our tool generates is a standard core dump, we can use the same techniques illustrated in [Scenario - App is leaking memory](app_is_leaking_memory_eventual_crash.md) to analyze the dump and find out why we're seeing intermittent high memory conditions. 
 
 
 
