@@ -67,20 +67,45 @@ string prov = provider.ToProviderString(1);
 The above code attempts to get the System.Runtime provider which we will need in the next section of code that actually configures and starts the counter collection:
 
 ```csharp
-CounterProvider provider=null;
-KnownData.TryGetProvider("System.Runtime", out provider);
-string prov = provider.ToProviderString(1); 
+Task monitorTask = new Task(() => 
+{
+    var configuration = new SessionConfiguration(circularBufferSizeMB: 1000, outputPath: "", providers: Trace.Extensions.ToProviders(prov.ToString()));
+                        
+    var binaryReader = EventPipeClient.CollectTracing(Int32.Parse(args[0]), configuration, out _sessionId);
+    EventPipeEventSource source = new EventPipeEventSource(binaryReader);
+    source.Dynamic.All += Dynamic_All;
+    source.Process();
+}); 
 ```
+The above code first creates the configuration and specifying the buffer size, output path and finally the System.Runtime provider that we are interested in. Next, it calls the CollectTracing method specifying the process identifier we are interested in tracing, the configuration and an out session ID. Once that is completed, we create an EventPipeSource from the reader created in the previous step and attach a callback that will be invoked as the events are delivered over EventPipe. Last, we call the Process method to start processing the events. At this point, the Dynamic_All method will be invoked anytime an event comes through from the System.Runtime provider. 
+
+Now that we have the events flowing through out callback, let's turn our attention to the callback itself and how we can get the counter information:
+
+```csharp
+private static void Dynamic_All(TraceEvent obj)
+{
+    if (obj.EventName.Equals("EventCounters"))
+    {
+        IDictionary<string, object> payloadVal = (IDictionary<string, object>)(obj.PayloadValue(0));
+        IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
+
+        ICounterPayload payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
+        string displayName = payload.GetDisplay();                
+        if (string.IsNullOrEmpty(displayName))
+        {
+            displayName = payload.GetName();
+        }
+
+        if(string.Compare(displayName, "GC Heap Size") == 0 && Convert.ToInt32(payload.GetValue())>threshold)
+        {
+            // Generate dump and exit
+        }
+    }
+}
+```
+Every time the callback is invoked, a TraceEvent is recieved. The TraceEvent contains information about the event that was delivered. In our case, the first thing we do is to make sure the event corresponds to EventCounters (line 87). If so, we get the GC Heap Size counter from the event payload and compare it to the threshold that the user set as part of the command line invocation. If the threshold was breached we are ready to generate a dump. 
 
 
-
-command to generate a core dump:
-
-> ```bash
-> sudo ./dotnet-dump collect -p 4807
-> ```
-
-4807 is the process identifier which can be found using dotnet-trace list-processes. The result is a core dump located in the same folder. Please note that to generate core dumps, dotnet-dump requires sudo.  
 
 
 ### Analyzing the core dump
