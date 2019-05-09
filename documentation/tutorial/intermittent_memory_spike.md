@@ -46,9 +46,18 @@ What we would like this tool to do do is allow the user to specify the pid of th
 > ```
 
 #### Some background before we start writing the tool...
-The dotnet core runtime contains a mechanism known as the EventPipe and serves as a mechanism to push events to interested consumers. There are a number of different events that flow through the EventPipe including diagnostics information such as counters. The EventPipe is exposed as a Unix domain socket on Linux machines and named pipes on Windows.  EventPipe is set to duplex mode which means that clients can both read and write to the pipe. A diagnostics application can register to consume these events from the EventPipe and create new diagnostics experiences. Rather than communicating directly with EventPipe there is a client library that can be used and implemented in Microsoft.Diagnostics.Tools.RuntimeClient.dll.  
+The dotnet core runtime contains a mechanism known as the EventPipe and serves as a mechanism to push events to interested consumers. There are a number of different events that flow through the EventPipe including diagnostics information such as counters. The EventPipe is exposed as a Unix domain socket on Linux machines and named pipes on Windows.  EventPipe is set to duplex mode which means that clients can both read and write to the pipe. A diagnostics application can register to consume these events from the EventPipe and create new diagnostics experiences. Rather than communicating directly with EventPipe there is a client library that can be used and implemented in Microsoft.Diagnostics.Tools.RuntimeClient.dll.
 
-**Please note that while still in preview, the APIs are subject to change**
+Events that are written to the EventPipe can come from multiple sources (or providers) and as such, clients that recieve events over EventPipe can filter those events based on specific providers.  
+
+#### Writing the tool...
+We have two requirements in order to implemented a tool that will create a dump file based on memory consumption:
+
+Being able to read dotnet memory counter to know when it breaches the specified threshold
+Generate the actual core dump
+
+Let's start with the first requirement, reading dotnet counters. As explained earlier, we can use the EventPipe mechanism to read counters from the runtime. In this case, the provider that writes counter events is System.Runtime. Below is the code that 
+sets up the System.Runtime provider for use in our tool:
 
 
   
