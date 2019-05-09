@@ -53,8 +53,8 @@ Events that are written to the EventPipe can come from multiple sources (or prov
 #### Writing the tool...
 We have two requirements in order to implemented a tool that will create a dump file based on memory consumption:
 
-+Being able to read dotnet memory counter to know when it breaches the specified threshold
-+Generate the actual core dump
+* Being able to read dotnet memory counter to know when it breaches the specified threshold
+* Generate the actual core dump
 
 Let's start with the first requirement, reading dotnet counters. As explained earlier, we can use the EventPipe mechanism to read counters from the runtime. In this case, the provider that writes counter events is System.Runtime. Below is the code that 
 sets up the System.Runtime provider for use in our tool:
