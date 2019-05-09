@@ -57,10 +57,21 @@ We have two requirements in order to implemented a tool that will create a dump 
 * Generate the actual core dump
 
 Let's start with the first requirement, reading dotnet counters. As explained earlier, we can use the EventPipe mechanism to read counters from the runtime. In this case, the provider that writes counter events is System.Runtime. Below is the code that 
-sets up the System.Runtime provider for use in our tool:
+sets up the System.Runtime provider for use in our tool (for brevity, error checking has been excluded):
 
+```csharp
+CounterProvider provider=null;
+KnownData.TryGetProvider("System.Runtime", out provider);
+string prov = provider.ToProviderString(1); 
+```
+The above code attempts to get the System.Runtime provider which we will need in the next section of code that actually configures and starts the counter collection:
 
-  
+```csharp
+CounterProvider provider=null;
+KnownData.TryGetProvider("System.Runtime", out provider);
+string prov = provider.ToProviderString(1); 
+```
+
 
 
 command to generate a core dump:
