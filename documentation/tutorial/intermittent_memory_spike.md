@@ -103,7 +103,50 @@ private static void Dynamic_All(TraceEvent obj)
     }
 }
 ```
-Every time the callback is invoked, a TraceEvent is recieved. The TraceEvent contains information about the event that was delivered. In our case, the first thing we do is to make sure the event corresponds to EventCounters (line 87). If so, we get the GC Heap Size counter from the event payload and compare it to the threshold that the user set as part of the command line invocation. If the threshold was breached we are ready to generate a dump. 
+Every time the callback is invoked, a TraceEvent is recieved. The TraceEvent contains information about the event that was delivered. In our case, the first thing we do is to make sure the event corresponds to EventCounters. If so, we get the GC Heap Size counter from the event payload and compare it to the threshold that the user set as part of the command line invocation. If the threshold was breached we are ready to generate a dump. 
+
+The last step of the puzzle is to generate the dump. For brevity, we will focus only on core dump generation on Linux. In preview 5, the way to generate a core dump is to invoke the createdump tool that ships with the runtime. Add the following code to the Dynamic_All method (replacing the Generate dump and exit comment):
+
+
+```csharp
+Console.WriteLine("Memory threshold has been breached....");
+System.Diagnostics.Process process = System.Diagnostics.Process.GetProcessById(pid);
+
+System.Diagnostics.ProcessModule coreclr = process.Modules.Cast<System.Diagnostics.ProcessModule>().FirstOrDefault(m => string.Equals(m.ModuleName, "libcoreclr.so"));
+if (coreclr == null)
+{
+    Console.WriteLine("Unable to locate .NET runtime associated with this process!");
+    Environment.Exit(1);
+}
+else
+{
+    string runtimeDirectory = Path.GetDirectoryName(coreclr.FileName);
+    string createDumpPath = Path.Combine(runtimeDirectory, "createdump");
+    if (!File.Exists(createDumpPath))
+    {
+        Console.WriteLine("Unable to locate 'createdump' tool in '{runtimeDirectory}'");
+        Environment.Exit(1);                            
+    }                        
+
+    var createdump = new System.Diagnostics.Process()
+    {       
+        StartInfo = new System.Diagnostics.ProcessStartInfo()
+        {
+            FileName = createDumpPath,
+            Arguments = $"--name coredump --withheap {pid}",
+        },
+        EnableRaisingEvents = true,
+    };
+
+    createdump.Start();
+    createdump.WaitForExit();
+
+    Environment.Exit(0);
+}
+```
+
+
+
 
 
 
