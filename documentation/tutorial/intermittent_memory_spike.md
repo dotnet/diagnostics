@@ -169,7 +169,7 @@ After 10-15 seconds, you will notice that triggerdump outputs the following foll
 That's it for creating your own diagnostics tool to support custom scenarios. 
 
 ### Analyzing the core dump
-Since the core dump that our tool generates is a standard core dump, we can use the same techniques illustrated in this tutorial to analyze why we're seeing intermitten high memory conditions. 
+Since the core dump that our tool generates is a standard core dump, we can use the same techniques illustrated in [Scenario - App is leaking memory](app_is_leaking_memory_eventual_crash.md) to analyze why we're seeing intermitten high memory conditions. 
 
 
 
