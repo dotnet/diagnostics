@@ -45,8 +45,12 @@ What we would like this tool to do do is allow the user to specify the pid of th
 > sudo ./triggerdump <pid> <memory threshold in MBs>
 > ```
 
-## Some background before we start writing the tool...
-<talk about event pipe>
+#### Some background before we start writing the tool...
+The dotnet core runtime contains a mechanism known as the EventPipe and serves as a mechanism to push events to interested consumers. There are a number of different events that flow through the EventPipe including diagnostics information such as counters. The EventPipe is exposed as a Unix domain socket on Linux machines and named pipes on Windows.  EventPipe is set to duplex mode which means that clients can both read and write to the pipe. A diagnostics application can register to consume these events from the EventPipe and create new diagnostics experiences. Rather than communicating directly with EventPipe there is a client library that can be used and implemented in Microsoft.Diagnostics.Tools.RuntimeClient.dll.  
+
+**Please note that while still in preview, the APIs are subject to change**
+
+
   
 
 
