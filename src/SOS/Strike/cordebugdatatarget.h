@@ -175,10 +175,13 @@ public:
 
         // Prepare context structure
         ZeroMemory(context, contextSize);
-        ((CONTEXT*) context)->ContextFlags = contextFlags;
+        ((CONTEXT*)context)->ContextFlags = contextFlags;
 
         // Ok, do it!
         hr = g_ExtAdvanced->GetThreadContext((LPVOID) context, contextSize);
+
+        // GetThreadContext clears ContextFlags but DBI needs it set to know what registers to copy
+        ((CONTEXT*)context)->ContextFlags = contextFlags;
 
         // This is cleanup; failure here doesn't mean GetThreadContext should fail
         // (that's determined by hr).
@@ -230,7 +233,7 @@ public:
         /* [annotation][length_is][size_is][out] */ 
         _Out_writes_to_(cchPathBuffer, *pcchPathBuffer) WCHAR wszPathBuffer[])
     {
-        return E_NOTIMPL;
+        return ::GetICorDebugMetadataLocator(wszImagePath, dwImageTimeStamp, dwImageSize, cchPathBuffer, pcchPathBuffer, wszPathBuffer);
     }
 
     //

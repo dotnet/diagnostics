@@ -262,6 +262,9 @@ DataTarget::GetThreadContext(
     // Ok, do it!
     hr = g_ExtAdvanced->GetThreadContext((LPVOID) context, contextSize);
 
+    // GetThreadContext clears ContextFlags
+    ((CONTEXT*)context)->ContextFlags = contextFlags;
+
     // This is cleanup; failure here doesn't mean GetThreadContext should fail
     // (that's determined by hr).
     g_ExtSystem->SetCurrentThreadId(ulThreadIDOrig);
