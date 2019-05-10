@@ -63,22 +63,23 @@ The protocol will be communicated over a platform-specific transport.  On Unix/L
 
 #### Naming and Location Conventions
 
-Unix Domain Sockets:
-> The socket is created in the `tmp` dir.  This will be determined by the output of the `Path.GetTempPath()` function in managed code.  On Mac, this is typically an application group specific temp directory which can be found in the `$TMPDIR` environment variable.
+Unix Domain Sockets (MacOS and *nix):
 
-MacOS:
-```
-/$TMPDIR/dotnetcore-diagnostic-<PID>-<AppGroupID>-socket
-```
+The location of the socket is determined by a call to `GetTempPathA()` in the PAL.  This has a fallthrough behavior and attempts to use the following three locations, in order:
+1. (Mac only) App Group Container if `AppGroupId` is not null
+2. The directory stored in the `$TMPDIR` environment variable
+3. `/tmp`
 
-Linux:
-```
-/tmp/dotnetcore-diagnostic-<PID>-<EpochTimestamp>-socket
+In order to ensure filename uniqueness, a `disambiguation key` is generated.  On Mac and NetBSD, this is the process start time encoded as the number of seconds since UNIX epoch time.  If `/proc/$PID/stat` is available (all other *nix platforms), then the process start time encoded as jiffies since boot time is used.
+
+socket name:
+```c
+dotnetcore-diagnostic-{%d:PID}-{%llu:disambiguation key}-socket
 ```
 
 Named Pipes (Windows):
 ```
-\\.\pipe\dotnetcore-diagnostic-<PID>
+\\.\pipe\dotnetcore-diagnostic-{%d:PID}
 ```
 
 ### Messages
@@ -183,22 +184,32 @@ Every Diagnostic IPC Message will start with a header and every header will:
 // size = 14 + 2 + 1 + 1 + 2 = 20 bytes
 struct IpcHeader
 {
-    char[14]  magic;    // null terminated string of the version of the protocol, for example "DOTNET_IPC_V1"
-    uint16_t  size;     // size of packet = size of header + payload
-    uint8_t   command_set;  // combined with command_id is the Command to invoke
-    uint8_t   command_id;   // combined with command_set is the Command to invoke
-    uint16_t  reserved; // for potential future use
+    char[14]  magic = "DOTNET_IPC_V1";
+    uint16_t  size;        // size of packet = size of header + payload
+    uint8_t   command_set; // combined with command_id is the Command to invoke
+    uint8_t   command_id;  // combined with command_set is the Command to invoke
+    uint16_t  reserved;    // for potential future use
 };
 ```
 
-The `reserved` field is reserved for future use.  It is unused in `DOTNET_IPC_V1`, so it should be set to `0x0000` by convention when unused.
+The `reserved` field is reserved for future use.  It is unused in `DOTNET_IPC_V1` and must be 0x0000.
 
 
 #### Payloads
 
 Payloads are Command specific data encoded into a Diagnostic IPC Message.  The size of the payload is implicitly encoded in the Header's `size` field as `PayloadSize = header.size - sizeof(struct IpcHeader)`.  A Payload _may_ be 0 bytes long if it empty.  The encoding of data in the Payload is Command specific.
 
-As an example, EventPipe encodes non fixed-size Payloads using type codes, little-endian numbers, and size-prefixed, null-terminated char strings.  Using these rules, a hypothetical Diagnostic IPC Message telling EventPipe to start streaming _may_ look like the following:
+As an example, the CollectTracing command to EventPipe (explained below) encodes its Payload with the following rules:
+```c
+// X, Y, Z means encode bytes for X followed by bytes for Y followed by bytes for Z
+// Payload = ulong PID, uint circularBufferMB, string outputPath, array<provider_config> providers
+// uint = 4 little endian bytes
+// ulong = 8 little endian bytes
+// wchar = 2 little endian bytes, UTF16 encoding
+// array<T> = uint length, length # of Ts
+// string = (array<wchar> where the last wchar must = 0) or (length = 0)
+// provider_config = ulong keywords, uint logLevel, string provider_name, string filter_data
+```
 
 <table>
   <tr>
@@ -248,31 +259,79 @@ As an example, EventPipe encodes non fixed-size Payloads using type codes, littl
     <th>44</th>
     <th>45</th>
     <th>46</th>
+    <th>47</th>
+    <th>48</th>
+    <th>49</th>
+    <th>50</th>
+    <th>51</th>
+    <th>52</th>
+    <th>53</th>
+    <th>54</th>
+    <th>55</th>
+    <th>56</th>
+    <th>57</th>
+    <th>58</th>
+    <th>59</th>
+    <th>60</th>
+    <th>61</th>
+    <th>62</th>
+    <th>63</th>
+    <th>64</th>
+    <th>65</th>
+    <th>66</th>
+    <th>67</th>
+    <th>68</th>
+    <th>69</th>
+    <th>70</th>
+    <th>71</th>
+    <th>72</th>
+    <th>73</th>
+    <th>74</th>
+    <th>75</th>
+    <th>76</th>
+    <th>77</th>
+    <th>78</th>
+    <th>79</th>
+    <th>80</th>
+    <th>81</th>
+    <th>82</th>
+    <th>83</th>
+    <th>84</th>
+    <th>85</th>
+    <th>86</th>
   </tr>
   <tr>
     <td colspan="20">Header</td>
-    <td colspan="26">Payload</td>
+    <td colspan="66">Payload</td>
   </tr>
   <tr>
     <td colspan="14">magic</td>
     <td colspan="2">size</td>
     <td colspan="2">command</td>
     <td colspan="2">reserved</td>
-    <td colspan="1">type_code</td>
     <td colspan="8">PID</td>
-    <td colspan="1">type_code</td>
-    <td colspan="2">String Length</td>
-    <td colspan="14">Providers String</td>
+    <td colspan="4">circularBufferMB</td>
+    <td colspan="4">outputPath Length</td>
+    <td colspan="16">outputPath String</td>
+    <td colspan="4">n Providers</td>
+    <td colspan="8">Keywords</td>
+    <td colspan="4">logLevel</td>
+    <td colspan="4">provider_name length</td>
+    <td colspan="14">provider_name string</td>
   </tr>
   <tr>
     <td colspan="14">"DOTNET_IPC_V1"</td>
-    <td colspan="2">46</td>
+    <td colspan="2">66</td>
     <td colspan="2">0x0202</td>
     <td colspan="2">0x0000</td>
-    <td colspan="1">UINT64</td>
-    <td colspan="8">1234</td>
-    <td colspan="1">STRING</td>
-    <td colspan="2">14</td>
+    <td colspan="8">1234567</td>
+    <td colspan="4">250</td>
+    <td colspan="4">16</td>
+    <td colspan="16">"/tmp/foo.netperf"</td>
+    <td colspan="4">1</td>
+    <td colspan="8">100</td>
+    <td colspan="4">2</td>
+    <td colspan="4">14</td>
     <td colspan="14">"MyEventSource"</td>
   </tr>
 </table>
@@ -309,8 +368,8 @@ enum class ServerCommandId : uint8_t
 enum class EventPipeCommandId : uint8_t
 {
     // reserved = 0x00,
-    StopTracing    = 0x01, // create/start a given session
-    CollectTracing = 0x02, // stop a given session
+    StopTracing    = 0x01, // stop a given session
+    CollectTracing = 0x02, // create/start a given session
 }
 ```
 
