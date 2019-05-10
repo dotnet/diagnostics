@@ -56,27 +56,30 @@ We have two requirements in order to implement a tool that will create a dump fi
 * Read dotnet memory counter to know if the current memory consumptions goes above the specified threshold
 * Generate the actual core dump
 
-Let's start with the first requirement, reading dotnet counters. As explained earlier, we can use the EventPipe mechanism to read counters from the runtime. In this case, the provider that writes counter events is System.Runtime. Below is the code that 
-sets up the System.Runtime provider for use in our tool (for brevity, error checking has been excluded):
+Let's start with the first requirement, reading dotnet counters. As explained earlier, we can use the EventPipe mechanism to read counters from the runtime. In this case, the provider that writes counter events is System.Runtime. 
 
-```csharp
-CounterProvider provider=null;
-KnownData.TryGetProvider("System.Runtime", out provider);
-string prov = provider.ToProviderString(1); 
-```
-The above code attempts to get the System.Runtime provider which we will need in the next section of code that configures and starts the counter collection:
+[Full code](src/triggerdump/Program.cs)
+
+Below is the releveant code snippet that is required to consume the counters:
 
 ```csharp
 Task monitorTask = new Task(() => 
 {
-    var configuration = new SessionConfiguration(circularBufferSizeMB: 1000, outputPath: "", providers: Trace.Extensions.ToProviders(prov.ToString()));
-                        
+    var prov = new List<Provider>();
+    prov.Add(new Provider("System.Runtime", filterData:"EventCounterIntervalSec=1"));
+
+    var configuration = new SessionConfiguration(
+    circularBufferSizeMB: 1000,
+    outputPath: "",
+    providers: prov);
+    
     var binaryReader = EventPipeClient.CollectTracing(Int32.Parse(args[0]), configuration, out _sessionId);
     EventPipeEventSource source = new EventPipeEventSource(binaryReader);
     source.Dynamic.All += Dynamic_All;
     source.Process();
-}); 
+});
 ```
+
 The above code first creates the configuration and specifying the buffer size, output path and finally the System.Runtime provider that we are interested in. Next, it calls the CollectTracing method specifying the process identifier we are interested in tracing, the configuration and an out session ID. Once that is completed, we create an EventPipeSource from the reader created in the previous step and attach a callback that will be invoked as the events are delivered over EventPipe. Last, we call the Process method to start processing the events. At this point, the Dynamic_All method will be invoked anytime an event comes through from the System.Runtime provider. 
 
 Now that we have the events flowing through out callback, let's turn our attention to the callback itself and how we can get the counter information:

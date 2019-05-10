@@ -3,9 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.CommandLine;
-using System.CommandLine.Builder;
-using System.CommandLine.Invocation;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -36,18 +33,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                     pid = Convert.ToInt32(args[0]);
                     threshold = Convert.ToInt32(args[1]);
-                    CounterProvider provider=null;
-                    StringBuilder sb = new StringBuilder("");
-                    KnownData.TryGetProvider("System.Runtime", out provider);
-                    string prov=provider.ToProviderString(1);    
 
                     Task monitorTask = new Task(() => 
                     {
+                        var prov = new List<Provider>();
+                        prov.Add(new Provider("System.Runtime", filterData:"EventCounterIntervalSec=1"));
+
                         var configuration = new SessionConfiguration(
                         circularBufferSizeMB: 1000,
                         outputPath: "",
-                        providers: Trace.Extensions.ToProviders(prov));
-
+                        providers: prov);
                         
                         var binaryReader = EventPipeClient.CollectTracing(Int32.Parse(args[0]), configuration, out _sessionId);
                         EventPipeEventSource source = new EventPipeEventSource(binaryReader);
