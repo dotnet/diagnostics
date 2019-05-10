@@ -364,6 +364,12 @@ enum class ServerCommandId : uint8_t
 };
 ```
 
+Commands may use the generic `{ magic="DOTNET_IPC_V1"; size=20; command_set=0xFF (Server); command_id=0x00 (OK); reserved = 0x0000; }` to indicate success rather than having a command specific success `command_id`.  Similarly, Commands may use the `command_set=0xFF (Server); command_id=0xFF (Error);` to generically indicate an error has occurred.
+
+For example, the Command to start a stream session with EventPipe would be `0x0202` made up of `0x02` (the `command_set` for EventPipe) and `0x02` (the `command_id` for CollectTracing).
+
+#### EventPipe Commands
+
 ```c
 enum class EventPipeCommandId : uint8_t
 {
@@ -372,10 +378,59 @@ enum class EventPipeCommandId : uint8_t
     CollectTracing = 0x02, // create/start a given session
 }
 ```
+EventPipe Payloads are encoded with the following rules:
+```c
+// X, Y, Z means encode bytes for X followed by bytes for Y followed by bytes for Z
+// uint = 4 little endian bytes
+// ulong = 8 little endian bytes
+// wchar = 2 little endian bytes, UTF16 encoding
+// array<T> = uint length, length # of Ts
+// string = (array<wchar> where the last wchar must = 0) or (length = 0)
+```
 
-Commands may use the generic `{ magic="DOTNET_IPC_V1"; size=20; command_set=0xFF (Server); command_id=0x00 (OK); reserved = 0x0000; }` to indicate success rather than having a command specific success `command_id`.  Similarly, Commands may use the `command_set=0xFF (Server); command_id=0xFF (Error);` to generically indicate an error has occurred.
+The `CollectTracing` Command consumes the following Payload:
+```
+Payload
+{
+    ulong PID,
+    uint circularBufferMB,
+    string outputPath,
+    array<provider_config> providers
+}
 
-For example, the Command to start a stream session with EventPipe would be `0x0202` made up of `0x02` (the `command_set` for EventPipe) and `0x02` (the `command_id` for CollectTracing).
+provider_config 
+{
+    ulong keywords,
+    uint logLevel,
+    string provider_name,
+    string filter_data (optional)
+}
+```
+
+and responds with a Payload of
+```c
+Payload
+{
+    ulong sessionId
+}
+```
+Followed by an Optional Continuation of a `netperf` format stream of events.
+
+The `StopTracing` Command consumes the following Payload:
+```c
+Payload
+{
+   ulong sessionId
+}
+```
+
+and responds with a Payload of
+```c
+Payload
+{
+   ulong sessionId
+}
+```
 
 ### Errors
 
