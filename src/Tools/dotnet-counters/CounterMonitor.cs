@@ -54,7 +54,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // There really isn't a great way to tell whether an EventCounter payload is an instance of 
                 // IncrementingCounterPayload or CounterPayload, so here we check the number of fields 
                 // to distinguish the two.
-                ICounterPayload payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
+                ICounterPayload payload;
+                if (payloadFields.ContainsKey("CounterType"))
+                {
+                    payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
+                }
+                else
+                {
+                    payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
+                }
                 writer.Update(obj.ProviderName, payload);
             }
         }
