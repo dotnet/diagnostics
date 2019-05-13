@@ -184,11 +184,11 @@ Every Diagnostic IPC Message will start with a header and every header will:
 // size = 14 + 2 + 1 + 1 + 2 = 20 bytes
 struct IpcHeader
 {
-    char[14]  magic = "DOTNET_IPC_V1";
-    uint16_t  size;        // size of packet = size of header + payload
-    uint8_t   command_set; // combined with command_id is the Command to invoke
-    uint8_t   command_id;  // combined with command_set is the Command to invoke
-    uint16_t  reserved;    // for potential future use
+    uint8_t[14]  magic = "DOTNET_IPC_V1";
+    uint16_t     size;        // size of packet = size of header + payload
+    uint8_t      command_set; // combined with command_id is the Command to invoke
+    uint8_t      command_id;  // combined with command_set is the Command to invoke
+    uint16_t     reserved;    // for potential future use
 };
 ```
 
