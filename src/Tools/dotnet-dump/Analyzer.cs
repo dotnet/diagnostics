@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostic.Tools.Dump
         public Analyzer()
         {
             _consoleProvider = new ConsoleProvider();
-            _commandProcessor = new CommandProcessor(new Assembly[] { typeof(Analyzer).Assembly });
+            _commandProcessor = new CommandProcessor(_consoleProvider, new Assembly[] { typeof(Analyzer).Assembly });
             _commandProcessor.AddService(_consoleProvider);
         }
 
@@ -71,14 +71,14 @@ namespace Microsoft.Diagnostic.Tools.Dump
                     if (command != null)
                     {
                         foreach (string cmd in command) {
-                            await _commandProcessor.Parse(cmd, _consoleProvider);
+                            await _commandProcessor.Parse(cmd);
                         }
                     }
 
                     // Start interactive command line processing
                     await _consoleProvider.Start(async (string commandLine, CancellationToken cancellation) => {
                         analyzeContext.CancellationToken = cancellation;
-                        await _commandProcessor.Parse(commandLine, _consoleProvider);
+                        await _commandProcessor.Parse(commandLine);
                     });
                 }
             }

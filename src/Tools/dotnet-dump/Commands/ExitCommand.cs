@@ -11,10 +11,9 @@ namespace Microsoft.Diagnostic.Tools.Dump
     {
         public ConsoleProvider ConsoleProvider { get; set; }
 
-        public override Task InvokeAsync()
+        public override void Invoke()
         {
             ConsoleProvider.Stop();
-            return Task.CompletedTask;
         }
     }
 }

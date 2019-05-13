@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostic.Tools.Dump
 
         public AnalyzeContext AnalyzeContext { get; set; }
 
-        public override Task InvokeAsync()
+        public override void Invoke()
         {
             foreach (ModuleInfo module in AnalyzeContext.Target.DataReader.EnumerateModules())
             {
@@ -38,7 +38,6 @@ namespace Microsoft.Diagnostic.Tools.Dump
                     WriteLine("{0:X16} {1:X8} {2}", module.ImageBase, module.FileSize, module.FileName);
                 }
             }
-            return Task.CompletedTask;
         }
     }
 }

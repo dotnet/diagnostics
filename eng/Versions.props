@@ -25,16 +25,13 @@
     <MicrosoftDiagnosticsRuntimeVersion>1.0.5</MicrosoftDiagnosticsRuntimeVersion>
 
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.41</MicrosoftDiagnosticsTracingTraceEventVersion>
-    <SystemCommandLineExperimentalVersion>0.2.0-alpha.19213.1</SystemCommandLineExperimentalVersion>
-    <SystemCommandLineRenderingVersion>0.2.0-alpha.19213.1</SystemCommandLineRenderingVersion>
+    <SystemCommandLineExperimentalVersion>0.2.0-alpha.19254.1</SystemCommandLineExperimentalVersion>
+    <SystemCommandLineRenderingVersion>0.2.0-alpha.19254.1</SystemCommandLineRenderingVersion>
 
     <XUnitVersion>2.4.1</XUnitVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
 
     <cdbsosversion>1.1.0</cdbsosversion>
-
-    <!-- The Repl project depends on types that were removed from  -->
-    <SystemCommandLineExperimentalVersionRepl>0.1.0-alpha-63807-01</SystemCommandLineExperimentalVersionRepl>
 
   </PropertyGroup>
 

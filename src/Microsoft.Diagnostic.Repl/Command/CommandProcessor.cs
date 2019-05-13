@@ -7,8 +7,10 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.Binding;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -20,16 +22,23 @@ namespace Microsoft.Diagnostic.Repl
         private readonly Parser _parser;
         private readonly Command _rootCommand;
         private readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();
+        private readonly Dictionary<string, Handler> _commandHandlers = new Dictionary<string, Handler>();
 
         /// <summary>
         /// Create an instance of the command processor;
         /// </summary>
+        /// <param name="console">console instance to use for commands</param>
         /// <param name="assemblies">The list of assemblies to look for commands</param>
-        public CommandProcessor(IEnumerable<Assembly> assemblies)
+        public CommandProcessor(IConsole console, IEnumerable<Assembly> assemblies)
         {
+            Debug.Assert(console != null);
+            Debug.Assert(assemblies != null);
             _services.Add(typeof(CommandProcessor), this);
-            var rootBuilder = new CommandLineBuilder();
+            _services.Add(typeof(IConsole), console);
+            _services.Add(typeof(IHelpBuilder), new LocalHelpBuilder(this));
+            var rootBuilder = new CommandLineBuilder(new Command(">"));
             rootBuilder.UseHelp()
+                       .UseHelpBuilder((bindingContext) => GetService<IHelpBuilder>())
                        .UseParseDirective()
                        .UseSuggestDirective()
                        .UseParseErrorReporting()
@@ -63,12 +72,11 @@ namespace Microsoft.Diagnostic.Repl
         /// Parse the command line.
         /// </summary>
         /// <param name="commandLine">command line txt</param>
-        /// <param name="console">option console</param>
         /// <returns>exit code</returns>
-        public Task<int> Parse(string commandLine, IConsole console = null)
+        public Task<int> Parse(string commandLine)
         {
             ParseResult result = _parser.Parse(commandLine);
-            return _parser.InvokeAsync(result, console);
+            return _parser.InvokeAsync(result, GetService<IConsole>());
         }
 
         /// <summary>
@@ -112,11 +120,13 @@ namespace Microsoft.Diagnostic.Repl
                                 if (argument != null) {
                                     throw new ArgumentException($"More than one ArgumentAttribute in command class: {type.Name}");
                                 }
+                                IArgumentArity arity = property.PropertyType.IsArray ? ArgumentArity.ZeroOrMore : ArgumentArity.ZeroOrOne;
+
                                 command.Argument = new Argument {
                                     Name = argumentAttribute.Name ?? property.Name.ToLowerInvariant(),
                                     Description = argumentAttribute.Help,
                                     ArgumentType = property.PropertyType,
-                                    Arity = new ArgumentArity(0, int.MaxValue)
+                                    Arity = arity
                                 };
                                 argument = property;
                             }
@@ -142,7 +152,10 @@ namespace Microsoft.Diagnostic.Repl
                             }
                         }
 
-                        command.Handler = new Handler(this, commandAttribute.AliasExpansion, argument, properties, type);
+                        var handler = new Handler(this, commandAttribute.AliasExpansion, argument, properties, type);
+                        _commandHandlers.Add(command.Name, handler);
+                        command.Handler = handler;
+
                         rootBuilder.AddCommand(command);
                     }
 
@@ -157,10 +170,16 @@ namespace Microsoft.Diagnostic.Repl
             }
         }
 
+        private T GetService<T>()
+        {
+            _services.TryGetValue(typeof(T), out object service);
+            Debug.Assert(service != null);
+            return (T)service;
+        }
+
         private static string BuildAlias(string parameterName)
         {
-            if (string.IsNullOrWhiteSpace(parameterName))
-            {
+            if (string.IsNullOrWhiteSpace(parameterName)) {
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(parameterName));
             }
             return parameterName.Length > 1 ? $"--{parameterName.ToKebabCase()}" : $"-{parameterName.ToLowerInvariant()}";
@@ -175,6 +194,7 @@ namespace Microsoft.Diagnostic.Repl
 
             private readonly ConstructorInfo _constructor;
             private readonly MethodInfo _methodInfo;
+            private readonly MethodInfo _methodInfoHelp;
 
             public Handler(CommandProcessor commandProcessor, string aliasExpansion, PropertyInfo argument, IEnumerable<(PropertyInfo, Option)> properties, Type type)
             {
@@ -186,11 +206,45 @@ namespace Microsoft.Diagnostic.Repl
                 _constructor = type.GetConstructors().SingleOrDefault((info) => info.GetParameters().Length == 0) ?? 
                     throw new ArgumentException($"No eligible constructor found in {type}");
 
-                _methodInfo = type.GetMethod(CommandBase.EntryPointName, new Type[] { typeof(IHelpBuilder) }) ?? type.GetMethod(CommandBase.EntryPointName) ?? 
-                    throw new ArgumentException($"{CommandBase.EntryPointName} method not found in {type}");
+                _methodInfo = type.GetMethods().Where((methodInfo) => methodInfo.GetCustomAttribute<CommandInvokeAttribute>() != null).SingleOrDefault() ??
+                    throw new ArgumentException($"No command invoke method found in {type}");
+
+                _methodInfoHelp = type.GetMethods().Where((methodInfo) => methodInfo.GetCustomAttribute<HelpInvokeAttribute>() != null).SingleOrDefault();
             }
 
             public Task<int> InvokeAsync(InvocationContext context)
+            {
+                try
+                {
+                    Invoke(_methodInfo, context);
+                }
+                catch (Exception ex)
+                {
+                    return Task.FromException<int>(ex);
+                }
+                return Task.FromResult(context.ResultCode);
+            }
+
+            /// <summary>
+            /// Executes the command's help invoke function if exists
+            /// </summary>
+            /// <returns>true help called, false no help function</returns>
+            internal bool InvokeHelp()
+            {
+                if (_methodInfoHelp == null)
+                {
+                    return false;
+                }
+                // The InvocationContext is null so the options and arguments in the 
+                // command instance created don't get set. The context for the command
+                // requesting help (either the help command or some other command using
+                // --help) won't work for the command instance that implements it's own
+                // help (SOS command).
+                Invoke(_methodInfoHelp, context: null);
+                return true;
+            }
+
+            private void Invoke(MethodInfo methodInfo, InvocationContext context)
             {
                 try
                 {
@@ -198,8 +252,8 @@ namespace Microsoft.Diagnostic.Repl
                     object instance = _constructor.Invoke(new object[0]);
                     SetProperties(context, instance);
 
-                    var methodBinder = new MethodBinder(_methodInfo, () => instance);
-                    return methodBinder.InvokeAsync(context);
+                    object[] arguments = BuildArguments(methodInfo, context);
+                    methodInfo.Invoke(instance, arguments);
                 }
                 catch (TargetInvocationException ex)
                 {
@@ -209,7 +263,7 @@ namespace Microsoft.Diagnostic.Repl
 
             private void SetProperties(InvocationContext context, object instance)
             {
-                IEnumerable<OptionResult> optionResults = context.ParseResult.CommandResult.Children.OfType<OptionResult>();
+                IEnumerable<OptionResult> optionResults = context?.ParseResult.CommandResult.Children.OfType<OptionResult>();
 
                 foreach ((PropertyInfo Property, Option Option) property in _properties)
                 {
@@ -221,16 +275,10 @@ namespace Microsoft.Diagnostic.Repl
                     else 
                     {
                         Type propertyType = property.Property.PropertyType;
-                        if (propertyType == typeof(InvocationContext)) {
-                            value = context;
-                        }
-                        else if (propertyType == typeof(IConsole)) {
-                            value = context.Console;
-                        }
-                        else if (_commandProcessor._services.TryGetValue(propertyType, out object service)) {
+                        if (TryGetService(propertyType, context, out object service)) {
                             value = service;
                         }
-                        else if (property.Option != null)
+                        else if (context != null && property.Option != null)
                         {
                             OptionResult optionResult = optionResults.Where((result) => result.Option == property.Option).SingleOrDefault();
                             if (optionResult != null) {
@@ -242,11 +290,66 @@ namespace Microsoft.Diagnostic.Repl
                     property.Property.SetValue(instance, value);
                 }
 
-                if (_argument != null)
+                if (context != null && _argument != null)
                 {
-                    object value = context.ParseResult.CommandResult.GetValueOrDefault();
+                    object value = null;
+                    ArgumentResult result = context.ParseResult.CommandResult.ArgumentResult;
+                    switch (result)
+                    {
+                        case SuccessfulArgumentResult successful:
+                            value = successful.Value;
+                            break;
+                        case FailedArgumentResult failed:
+                            throw new InvalidOperationException(failed.ErrorMessage);
+                    }
                     _argument.SetValue(instance, value);
                 }
+            }
+
+            private object[] BuildArguments(MethodBase methodBase, InvocationContext context)
+            {
+                ParameterInfo[] parameters = methodBase.GetParameters();
+                object[] arguments = new object[parameters.Length];
+                for (int i = 0; i < parameters.Length; i++) {
+                    Type parameterType = parameters[i].ParameterType;
+                    TryGetService(parameterType, context, out arguments[i]);
+                }
+                return arguments;
+            }
+
+            private bool TryGetService(Type type, InvocationContext context, out object service)
+            {
+                if (type == typeof(InvocationContext)) {
+                    service = context;
+                }
+                else if (!_commandProcessor._services.TryGetValue(type, out service)) {
+                    service = null;
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        class LocalHelpBuilder : IHelpBuilder
+        {
+            private readonly CommandProcessor _commandProcessor;
+            private readonly HelpBuilder _helpBuilder;
+
+            public LocalHelpBuilder(CommandProcessor commandProcessor)
+            {
+                _commandProcessor = commandProcessor;
+                _helpBuilder = new HelpBuilder(commandProcessor.GetService<IConsole>(), maxWidth: Console.WindowWidth);
+            }
+
+            void IHelpBuilder.Write(ICommand command)
+            {
+                if (_commandProcessor._commandHandlers.TryGetValue(command.Name, out Handler handler))
+                {
+                    if (handler.InvokeHelp()) {
+                        return;
+                    }
+                }
+                _helpBuilder.Write(command);
             }
         }
     }

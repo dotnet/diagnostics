@@ -69,6 +69,6 @@ If not specified 'heap' is the default.",
             new Option(
                 new[] { "-c", "--command" },
                 "Run the command on start.",
-                new Argument<string[]>() { Name = "command" });
+                new Argument<string[]>() { Name = "command", Arity = ArgumentArity.ZeroOrMore });
     }
 }
