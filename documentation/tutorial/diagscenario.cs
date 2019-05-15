@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading;
 
 namespace testwebapi.Controllers
 {
@@ -11,8 +12,87 @@ namespace testwebapi.Controllers
     [ApiController]
     public class DiagScenarioController : ControllerBase
     {
+        object o1 = new object();
+        object o2 = new object();
 
-        private static Processor p = new Processor();
+
+
+        private static Processor p = new Processor(); 
+
+        [HttpGet]
+        [Route("deadlock/")]
+        public ActionResult<string> deadlock()
+        {
+            (new System.Threading.Thread(() => {                
+                DeadlockFunc();
+            })).Start();
+
+            Thread.Sleep(5000);
+
+            Thread[] threads = new Thread[300];
+            for(int i=0; i<300;i++)
+            {
+                (threads[i] = new Thread(() => {
+                    lock (o1) {Thread.Sleep(100);}
+                })).Start();
+            }
+
+            foreach(Thread thread in threads)
+            { 
+                thread.Join(); 
+            }
+
+            return "success:deadlock";
+        }
+
+        private void DeadlockFunc()
+        {
+            lock (o1)
+            {
+                (new Thread(() => {
+                    lock (o2) { Monitor.Enter(o1); }
+                })).Start();
+
+                Thread.Sleep(2000);
+                Monitor.Enter(o2);
+            }
+        }
+
+
+        [HttpGet]
+        [Route("memspike/{seconds}")]
+        public ActionResult<string> memspike(int seconds)
+        {
+            Stopwatch watch=new Stopwatch();
+            watch.Start();
+
+	    while(true)
+	    {
+		p = new Processor();
+                 watch.Stop();
+                 if(watch.ElapsedMilliseconds > seconds*1000)
+                     break;
+                 watch.Start();
+		
+            	int it = (200000*1000) / 100; 
+	        for(int i=0; i<it; i++)
+                {
+	             p.ProcessTransaction(new Customer(Guid.NewGuid().ToString()));
+	        }
+
+	        Thread.Sleep(5000);	// Sleep for 5 seconds before cleaning up
+
+	        // Cleanup
+                p = null;
+		GC.Collect();
+		GC.Collect();
+
+	        Thread.Sleep(5000);	// Sleep for 5 seconds before spiking memory again
+	    }
+
+
+            return "success:memspike";
+        }
 
         [HttpGet]
         [Route("memleak/{kb}")]
