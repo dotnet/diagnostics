@@ -43,6 +43,7 @@ usage()
     echo "--architecture <x64|x86|arm|armel|arm64>"
     echo "--configuration <debug|release>"
     echo "--clangx.y - optional argument to build using clang version x.y"
+    echo "--cross - optional argument to enable cross architecture building"
     echo "--ci - CI lab build"
     echo "--verbosity <q[uiet]|m[inimal]|n[ormal]|d[etailed]|diag[nostic]>"
     echo "--help - this help message"
@@ -229,6 +230,10 @@ while :; do
             __ClangMinorVersion=0
             ;;
 
+        --cross)
+            __CrossBuild=true
+            ;;
+
         # Ignored for a native build
         --build|--rebuild|--sign|--restore|--pack|--publish|--preparemachine|--projects|--solution)
             ;;
@@ -292,6 +297,14 @@ fi
 if [[ "$__BuildArch" == "armel" ]]; then
     # Armel cross build is Tizen specific and does not support Portable RID build
     __PortableBuild=0
+fi
+
+# Configure environment if we are doing a cross compile.
+if [ "$__CrossBuild" == true ]; then
+    export CROSSCOMPILE=1
+    if ! [[ -n "$ROOTFS_DIR" ]]; then
+        export ROOTFS_DIR="$__ProjectRoot/cross/rootfs/$__BuildArch"
+    fi
 fi
 
 mkdir -p "$__IntermediatesDir"
