@@ -44,6 +44,18 @@
       <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
     </None>
     <None Include="$(SOSNETCoreBinaries)" Pack="true" Visible="false">
+      <PackagePath>tools/$(TargetFramework)/any/linux-musl-x64</PackagePath>
+    </None>
+    <None Include="$(ArtifactsBinDir)\Linux-musl.x64.$(Configuration)\libsosplugin.so" Pack="true" Visible="false">
+      <PackagePath>tools/$(TargetFramework)/any/linux-musl-x64</PackagePath>
+    </None>
+    <None Include="$(ArtifactsBinDir)\Linux-musl.x64.$(Configuration)\libsos.so" Pack="true" Visible="false">
+      <PackagePath>tools/$(TargetFramework)/any/linux-musl-x64</PackagePath>
+    </None>
+    <None Include="$(ArtifactsBinDir)\Linux-musl.x64.$(Configuration)\sosdocsunix.txt" Pack="true" Visible="false">
+      <PackagePath>tools/$(TargetFramework)/any/linux-musl-x64</PackagePath>
+    </None>
+    <None Include="$(SOSNETCoreBinaries)" Pack="true" Visible="false">
       <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
     </None>
     <None Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib" Pack="true" Visible="false">
