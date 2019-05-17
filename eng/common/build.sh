@@ -26,7 +26,6 @@ ci=false
 
 projects=''
 configuration='Debug'
-architecture='<auto>'
 prepare_machine=false
 verbosity='minimal'
 properties=''
@@ -46,14 +45,9 @@ while (($# > 0)); do
       configuration=$2
       shift 2
       ;;
-    --architecture)
-      architecture=$2
-      shift 2
-      ;;
     --help)
       echo "Common settings:"
       echo "  --configuration <value>  Build configuration Debug, Release"
-      echo "  --architecture <value>   Build architecture x64, x86, arm, arm64"
       echo "  --verbosity <value>      Msbuild verbosity (q[uiet], m[inimal], n[ormal], d[etailed], and diag[nostic])"
       echo "  --help                   Print help and exit"
       echo ""
@@ -182,7 +176,7 @@ function InitializeDotNetCli {
     export DOTNET_INSTALL_DIR="$dotnet_root"
 
     if [[ "$restore" == true ]]; then
-      InstallDotNetSdk $dotnet_root $dotnet_sdk_version $architecture
+      InstallDotNetSdk $dotnet_root $dotnet_sdk_version
     fi
   fi
 
@@ -192,11 +186,10 @@ function InitializeDotNetCli {
 function InstallDotNetSdk {
   local root=$1
   local version=$2
-  local arch=$3
 
   local install_script=`GetDotNetInstallScript $root`
 
-  bash "$install_script" --version $version --install-dir $root --architecture $arch
+  bash "$install_script" --version $version --install-dir $root
   local lastexitcode=$?
 
   if [[ $lastexitcode != 0 ]]; then

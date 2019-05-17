@@ -3056,9 +3056,8 @@ private:
 // Flags defining activation policy for COM objects
 enum CIOptionsBits 
 {
-    cciDbiColocated = 0x01,     // NYI: Look next to the already loaded DBI module
-    cciDacColocated = 0x02,     // Look next to the already loaded DAC module
-    cciDbgPath      = 0x04,     // Look in all folders in the debuggers symbols and binary path
+    cciDacColocated = 0x01,     // Look next to the already loaded DAC module
+    cciDbgPath      = 0x02,     // Look in all folders in the debuggers symbols and binary path
 };
 
 typedef Flags<DWORD, CIOptionsBits> CIOptions;

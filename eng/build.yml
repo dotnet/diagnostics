@@ -12,6 +12,7 @@ parameters:
   name: ''
   agentOs: Windows_NT
   dockerImage: ''
+  crossrootfsDir: ''
   testOnly: false
   dependsOn: ''
   # send telemetry
@@ -34,9 +35,7 @@ phases:
 - template: /eng/common/templates/phases/base.yml
   parameters:
     enableTelemetry: ${{ parameters.enableTelemetry }}
-
     enableMicrobuild: ${{ parameters.enableMicrobuild }}
-
     name: ${{ parameters.name }}
     agentOs: ${{ parameters.agentOs }}
     dependsOn: ${{ parameters.dependsOn }}
@@ -49,16 +48,18 @@ phases:
       _PhaseName : ${{ parameters.name }}
       _HelixType: build/product
       _HelixBuildConfig: $(_BuildConfig)
+
       # Only enable publishing in non-public, non PR scenarios.
       ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
         _HelixSource: official/dotnet/arcade/$(Build.SourceBranch)
-      # else
       ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
         _HelixSource: pr/dotnet/arcade/$(Build.SourceBranch)
+
       ${{ if eq(parameters.testOnly, 'true') }}:
         _LinuxScript: $(Build.SourcesDirectory)/eng/citest.sh
       ${{ if ne(parameters.testOnly, 'true') }}:
         _LinuxScript: $(Build.SourcesDirectory)/eng/cibuild.sh
+
       ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
         ${{ if eq(parameters.agentOs, 'Windows_NT') }}:
           _DailyTest: -daily-test
@@ -66,6 +67,12 @@ phases:
           _DailyTest: --daily-test
       ${{ if ne(variables['Build.Reason'], 'Schedule') }}:
         _DailyTest: ''
+
+      ${{ if eq(parameters.crossrootfsDir, '') }}:
+        _RootFs: ''
+      # This is only required for cross builds.
+      ${{ if ne(parameters.crossrootfsDir, '') }}:
+        _RootFs: --rootfs ${{ parameters.crossrootfsDir }}
 
     steps:
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
@@ -108,7 +115,7 @@ phases:
           --docker-image $(_DockerImageName)
           --source-directory $(Build.SourcesDirectory)
           --container-name diagnostics-$(Build.BuildId)
-          $(_LinuxScript) $(_DailyTest)
+          $(_LinuxScript) $(_DailyTest) $(_RootFs)
           --configuration $(_BuildConfig) 
           --architecture $(_BuildArch)
           --prepareMachine 

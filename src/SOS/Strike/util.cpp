@@ -85,7 +85,10 @@ ICorDebugProcess *g_pCorDebugProcess = NULL;
 // Max number of reverted rejit versions that !dumpmd and !ip2md will print
 const UINT kcMaxRevertedRejitData   = 10;
 const UINT kcMaxTieredVersions      = 10;
+
 #ifndef FEATURE_PAL
+
+extern LPCSTR GetHostRuntimeDirectory();
 
 // ensure we always allocate on the process heap
 void* __cdecl operator new(size_t size) throw()
@@ -183,31 +186,41 @@ HRESULT CreateInstanceCustomImpl(
                         void** ppItf)
 {
     _ASSERTE(ppItf != NULL);
+    _ASSERTE(dllName != NULL);
 
-    if (ppItf == NULL)
+    if (ppItf == NULL || dllName == NULL)
         return E_POINTER;
 
     WCHAR wszClsid[64] = W("<CLSID>");
 
-    if ((cciOptions & cciDbiColocated) != 0)
+    // Step 1: attempt activation using the host runtime directory
+    LPCSTR hostRuntimeDirectory = GetHostRuntimeDirectory();
+    if (hostRuntimeDirectory != nullptr)
     {
-        // if we institute a way to retrieve the module for the current DBI we
-        // can perform the same steps as for the DAC.
+        ArrayHolder<WCHAR> path = new WCHAR[MAX_LONGPATH];
+        int length = MultiByteToWideChar(CP_ACP, 0, hostRuntimeDirectory, -1, path, MAX_LONGPATH);
+        if (length > 0)
+        {
+            if (wcscat_s(path, MAX_LONGPATH, W("\\")) == 0 && wcscat_s(path, MAX_LONGPATH, dllName) == 0 &&
+                SUCCEEDED(CreateInstanceFromPath(clsid, iid, path, ppItf)))
+            {
+                return S_OK;
+            }
+        }
     }
 
     // Step 2: attempt activation using the folder the DAC was loaded from
     if ((cciOptions & cciDacColocated) != 0)
     {
-        _ASSERTE(dllName != NULL);
         HMODULE hDac = NULL;
-        WCHAR path[MAX_LONGPATH];
+        ArrayHolder<WCHAR> path = new WCHAR[MAX_LONGPATH];
 
-        if (SUCCEEDED(g_sos->GetDacModuleHandle(&hDac))
-            && GetPathFromModule(hDac, path, _countof(path)))
+        if (SUCCEEDED(g_sos->GetDacModuleHandle(&hDac)) && 
+            GetPathFromModule(hDac, path, MAX_LONGPATH))
         {
             // build the fully qualified file name and attempt instantiation
-            if (wcscat_s(path, dllName) == 0
-                && SUCCEEDED(CreateInstanceFromPath(clsid, iid, path, ppItf)))
+            if (wcscat_s(path, MAX_LONGPATH, dllName) == 0 && 
+                SUCCEEDED(CreateInstanceFromPath(clsid, iid, path, ppItf)))
             {
                 return S_OK;
             }
@@ -219,8 +232,6 @@ HRESULT CreateInstanceCustomImpl(
     // Step 3: attempt activation using the debugger's .exepath and .sympath
     if ((cciOptions & cciDbgPath) != 0)
     {
-        _ASSERTE(dllName != NULL);
-
         ToRelease<IDebugSymbols3> spSym3(NULL);
         HRESULT hr = g_ExtSymbols->QueryInterface(__uuidof(IDebugSymbols3), (void**)&spSym3);
         if (FAILED(hr))
@@ -247,10 +258,6 @@ HRESULT CreateInstanceCustomImpl(
                 }
 
                 ArrayHolder<WCHAR> imgPath = new WCHAR[pathSize+MAX_LONGPATH+1];
-                if (imgPath == NULL)
-                {
-                    continue;
-                }
 
                 // actually get the path
                 if ((spSym3.GetPtr()->*rgGetPathFuncs[i])(imgPath, pathSize, NULL) != S_OK)
@@ -262,11 +269,11 @@ HRESULT CreateInstanceCustomImpl(
                 LPCWSTR pathElem = wcstok_s(imgPath, W(";"), &ctx);
                 while (pathElem != NULL)
                 {
-                    WCHAR fullName[MAX_LONGPATH];
-                    wcscpy_s(fullName, _countof(fullName), pathElem);
-                    if (wcscat_s(fullName, W("\\")) == 0 && wcscat_s(fullName, dllName) == 0)
+                    ArrayHolder<WCHAR> path = new WCHAR[MAX_LONGPATH];
+                    wcscpy_s(path, MAX_LONGPATH, pathElem);
+                    if (wcscat_s(path, MAX_LONGPATH, W("\\")) == 0 && wcscat_s(path, MAX_LONGPATH, dllName) == 0) 
                     {
-                        if (SUCCEEDED(CreateInstanceFromPath(clsid, iid, fullName, ppItf)))
+                        if (SUCCEEDED(CreateInstanceFromPath(clsid, iid, path, ppItf)))
                         {
                             return S_OK;
                         }
@@ -3975,14 +3982,7 @@ void ResetGlobals(void)
     Output::ResetIndent();
 }
 
-//---------------------------------------------------------------------------------------
-//
-// Loads private DAC interface, and points g_clrData to it.
-//
-// Return Value:
-//      HRESULT indicating success or failure
-//
-HRESULT LoadClrDebugDll(void)
+static HRESULT GetClrDataProcess()
 {
     static IXCLRDataProcess* clrDataProcess = NULL;
     HRESULT hr = S_OK;
@@ -4020,6 +4020,38 @@ HRESULT LoadClrDebugDll(void)
     g_clrData = clrDataProcess;
     g_clrData->AddRef();
     g_clrData->Flush();
+
+    return S_OK;
+}
+
+//---------------------------------------------------------------------------------------
+//
+// Loads private DAC interface, and points g_clrData to it.
+//
+// Return Value:
+//      HRESULT indicating success or failure
+//
+HRESULT LoadClrDebugDll(void)
+{
+    static IXCLRDataProcess* clrDataProcess = NULL;
+    HRESULT hr = GetClrDataProcess();
+    if (FAILED(hr)) 
+    {
+#ifdef FEATURE_PAL
+        return hr;
+#else
+        // Try getting the DAC interface from dbgeng if the above fails on Windows
+        WDBGEXTS_CLR_DATA_INTERFACE Query;
+
+        Query.Iid = &__uuidof(IXCLRDataProcess);
+        if (!Ioctl(IG_GET_CLR_DATA_INTERFACE, &Query, sizeof(Query)))
+        {
+            return hr;
+        }
+        g_clrData = (IXCLRDataProcess*)Query.Iface;
+        g_clrData->Flush();
+#endif
+    }
 
     hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface), (void**)&g_sos);
     if (FAILED(hr))

@@ -3,6 +3,11 @@
 // See the LICENSE file in the project root for more information.
 
 
+// ******************************************************************************
+// WARNING!!!: This header is also used by the coreclr repo.
+// See: https://github.com/dotnet/coreclr/blob/master/src/inc/gcinfo.h
+// ******************************************************************************
+
 /*****************************************************************************/
 #ifndef _GCINFO_H_
 #define _GCINFO_H_

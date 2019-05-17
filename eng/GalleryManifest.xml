@@ -8,6 +8,7 @@
             <Files>
                 <File Architecture="amd64" Module="x64\sos.dll" />
                 <File Architecture="x86"   Module="x86\sos.dll" />
+                <File Architecture="arm"   Module="arm\sos.dll" />
             </Files>
             <LoadTriggers>
                 <TriggerSet>

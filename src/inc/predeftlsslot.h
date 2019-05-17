@@ -7,6 +7,10 @@
 #ifndef __PREDEFTLSSLOT_H__
 #define __PREDEFTLSSLOT_H__
 
+// ******************************************************************************
+// WARNING!!!: This header is also used by the coreclr repo.
+// See: https://github.com/dotnet/coreclr/blob/master/src/inc/predeftlsslot.h
+// ******************************************************************************
 
 // And here are the predefined slots for accessing TLS from various DLLs of the CLR.
 // Note that we want to support combinations of Debug and Retail DLLs for testing
@@ -20,7 +24,7 @@ enum PredefinedTlsSlots
     TlsIdx_JitLogEnv,
     TlsIdx_IceCap,
     TlsIdx_StressLog,
-    TlsIdx_StackProbe,
+    TlsIdx_Unused,
     TlsIdx_Check,
     TlsIdx_ForbidGCLoaderUseCount,
     TlsIdx_ClrDebugState,         // Pointer to ClrDebugState* structure
@@ -55,8 +59,6 @@ enum PredefinedTlsSlots
     TlsIdx_PEXCEPTION_RECORD,
     TlsIdx_PCONTEXT,
 
-    TlsIdx_SOIntolerantTransitionHandler, // The thread is entering SO intolerant code.  This one is used by
-                                          // Thread::IsSOIntolerant to decide the SO mode of the thread.
     MAX_PREDEFINED_TLS_SLOT
 };
 

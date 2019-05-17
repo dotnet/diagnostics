@@ -16,17 +16,49 @@ done
 
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
 
-# remove the options that build.sh can't handle and pass it to build-native.sh
-__args="$(echo $@ | sed 's/--build-native//g;s/--daily-test//g;s/--test//g;s/--clang[0-9]\.[0-9]//g;s/--cross//g')"
+# args:
+# input - $1
+function ToLowerCase() {
+    echo "$1" | tr '[:upper:]' '[:lower:]'
+    return 0
+}
+
+buildargs=
+buildnativeargs=$@
+
+# Parse command line options
+while :; do
+    if [ $# -le 0 ]; then
+        break
+    fi
+    lowerI="$(ToLowerCase "$1")"
+    case $lowerI in
+        --architecture)
+            shift
+            ;;
+        --rootfs)
+            shift
+            ;;
+        --build-native|--test|--daily-test)
+            ;;
+        --clang3.5|--clang3.6|--clang3.7|--clang3.8|--clang3.9|--clang4.0|--clang5.0)
+            ;;
+        *)
+            buildargs="$buildargs $1"
+            ;;
+    esac
+
+    shift
+done
 
 # build managed components
-"$scriptroot/common/build.sh" $__args
+"$scriptroot/common/build.sh" $buildargs
 if [[ $? != 0 ]]; then
     exit 1
 fi
 
 # build native components and test both
-"$scriptroot/build-native.sh" $@
+"$scriptroot/build-native.sh" $buildnativeargs
 if [[ $? != 0 ]]; then
     exit 1
 fi

@@ -20,7 +20,7 @@ phases:
   parameters:
     name: CentOS_7
     agentOs: Linux
-    dockerImage: microsoft/dotnet-buildtools-prereqs:centos-7-c103199-20180628120549
+    dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-3e800f1-20190501005343
     queue:
       name: DotNetCore-Linux
       demands:
