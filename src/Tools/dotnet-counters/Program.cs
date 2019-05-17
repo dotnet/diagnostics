@@ -63,24 +63,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private static int ListProcesses(IConsole console)
         {
-            try
-            {
-                var processes = EventPipeClient.ListAvailablePorts()
-                    .Select(System.Diagnostics.Process.GetProcessById)
-                    .Where(process => process != null)
-                    .OrderBy(process => process.ProcessName)
-                    .ThenBy(process => process.Id);
+            var processes = EventPipeClient.ListAvailablePorts()
+                .Select(System.Diagnostics.Process.GetProcessById)
+                .Where(process => process != null)
+                .OrderBy(process => process.ProcessName)
+                .ThenBy(process => process.Id);
 
-                foreach (var process in processes)
-                    Console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}");
+            foreach (var process in processes)
+                console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}");
 
-                return 0;
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
-                return 1;
-            }
+            return 0;
         }
 
         public static int List(IConsole console)
