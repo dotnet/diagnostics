@@ -11,7 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-
+using Microsoft.Diagnostics.Tools.RuntimeClient;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -54,6 +54,27 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 new Option[] { },
                 handler: CommandHandler.Create<IConsole>(List));
 
+        private static Command ListProcessesCommand() =>
+            new Command(
+                "list-processes",
+                "Display a list of dotnet processes that can be monitored.",
+                new Option[] { },
+                handler: CommandHandler.Create<IConsole>(ListProcesses));
+
+        private static int ListProcesses(IConsole console)
+        {
+            var processes = EventPipeClient.ListAvailablePorts()
+                .Select(System.Diagnostics.Process.GetProcessById)
+                .Where(process => process != null)
+                .OrderBy(process => process.ProcessName)
+                .ThenBy(process => process.Id);
+
+            foreach (var process in processes)
+                console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}");
+
+            return 0;
+        }
+
         public static int List(IConsole console)
         {
             var profiles = KnownData.GetAllProviders();
@@ -78,6 +99,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             var parser = new CommandLineBuilder()
                 .AddCommand(MonitorCommand())
                 .AddCommand(ListCommand())
+                .AddCommand(ListProcessesCommand())
                 .UseDefaults()
                 .Build();
             return parser.InvokeAsync(args);
