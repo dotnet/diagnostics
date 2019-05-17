@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -38,16 +39,24 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             if (string.IsNullOrEmpty(dumpName))
                 throw new ArgumentNullException($"{nameof(dumpName)} required");
 
-            var header = new MessageHeader {
-                RequestType = DiagnosticMessageType.GenerateCoreDump,
-                Pid = (uint)Process.GetCurrentProcess().Id,
-            };
+            var payload = SerializeCoreDump(dumpName, dumpType, diagnostics);
+            var message = new IpcMessage(DiagnosticServerCommandSet.Miscellandeous, (byte)MiscellaneousCommandId.GenerateCoreDump, payload);
 
-            byte[] serializedConfiguration;
-            using (var stream = new MemoryStream())
-                serializedConfiguration = SerializeCoreDump(header, stream, dumpName, dumpType, diagnostics);
+            var response = IpcClient.SendMessage(processId, message);
 
-            return (int)EventPipeClient.SendCommand(processId, serializedConfiguration);
+            var hr = 0;
+            switch ((DiagnosticServerCommandId)response.Header.CommandId)
+            {
+                case DiagnosticServerCommandId.Error:
+                    // handle error differently?
+                case DiagnosticServerCommandId.OK:
+                    hr = (int)BitConverter.ToUInt32(response.Payload);
+                    break;
+                default:
+                    return -1;
+            }
+
+            return hr;
         }
 
         /// <summary>
@@ -76,11 +85,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 Pid = (uint)Process.GetCurrentProcess().Id,
             };
 
-            byte[] serializedConfiguration;
-            using (var stream = new MemoryStream())
-            {
-                serializedConfiguration = SerializeProfilerAttach(header, stream, attachTimeout, profilerGuid, profilerPath, additionalData);
-            }
+            byte[] serializedConfiguration = SerializeProfilerAttach(attachTimeout, profilerGuid, profilerPath, additionalData);
 
             // TODO: the call to set up the pipe and send the message operates on a different timeout than attachTimeout, which is for the runtime.
             // We should eventually have a configurable timeout for the message passing, potentially either separately from the 
@@ -89,53 +94,41 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
         }
 
-        private static byte[] SerializeProfilerAttach(MessageHeader header, MemoryStream stream, uint attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData)
+        private static byte[] SerializeProfilerAttach(uint attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData)
         {
-            using (var bw = new BinaryWriter(stream))
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
             {
-                bw.Write((uint)header.RequestType);
-                bw.Write(header.Pid);
-
-                bw.Write(attachTimeout);
-                bw.Write(profilerGuid.ToByteArray());
-                bw.WriteString(profilerPath);
+                writer.Write(attachTimeout);
+                writer.Write(profilerGuid.ToByteArray());
+                writer.WriteString(profilerPath);
 
                 if (additionalData == null)
                 {
-                    bw.Write(0);
+                    writer.Write(0);
                 }
                 else
                 {
-                    bw.Write(additionalData.Length);
-                    bw.Write(additionalData);
+                    writer.Write(additionalData.Length);
+                    writer.Write(additionalData);
                 }
 
-                bw.Flush();
-                stream.Position = 0;
-
-                var bytes = new byte[stream.Length];
-                stream.Read(bytes, 0, bytes.Length);
-                return bytes;
+                writer.Flush();
+                return stream.ToArray();
             }
         }
 
-        private static byte[] SerializeCoreDump(MessageHeader header, Stream stream, string dumpName, DumpType dumpType, bool diagnostics)
+        private static byte[] SerializeCoreDump(string dumpName, DumpType dumpType, bool diagnostics)
         {
-            using (var bw = new BinaryWriter(stream))
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
             {
-                bw.Write((uint)header.RequestType);
-                bw.Write(header.Pid);
+                writer.WriteString(dumpName);
+                writer.Write((int)dumpType);
+                writer.Write(diagnostics ? 1 : 0);
 
-                bw.WriteString(dumpName);
-                bw.Write((int)dumpType);
-                bw.Write(diagnostics ? 1 : 0);
-
-                bw.Flush();
-                stream.Position = 0;
-
-                var bytes = new byte[stream.Length];
-                stream.Read(bytes, 0, bytes.Length);
-                return bytes;
+                writer.Flush();
+                return stream.ToArray();
             }
         }
     }
