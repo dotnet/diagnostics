@@ -14,11 +14,11 @@ The protocol will use the following names for various constructs and behaviors d
 * *Flow*: A sequence of interactions making up communication with the Diagnostics Server
 * *Pipe*: The duplex communication construct this protocol is communicated over.  This is a Unix Domain Socket on *nix systems and a Named Pipe on Windows.
 * *IPC Message*: The base unit of communication over the Diagnostic IPC Protocol. Is made up of a Header and a Payload.
-* *Header*: A struct containing version and metadata.
+* *Header*: A struct containing a magic version, the size, a command, and metadata.
 * *Payload*: An opaque chunk of data that is Command specific.
 * *Optional Continuation*: The reuse of the pipe for application specific communication. This communication does not need to adhere to any requirements listed in this spec, e.g., this could be a stream of custom encoded data that is Command specific.
 
-### General Flow
+## General Flow
 
 All communication with the Diagnostic Server will begin with a Diagnostic IPC Message sent from the client to the server.  The server will respond with a Diagnostic IPC Message.  After this, the client and runtime _may_ reuse the Pipe for any Command specific communication which is referred to as an Optional Continuation.
 
@@ -34,30 +34,16 @@ connection closed
 
 Example flow for EventPipe:
 ```
-runtime <- client : [ ver; size; EventPipe CollectTracing ][ stream config struct  ] <- Diagnostic IPC Message
-runtime -> client : [ ver; size; EventPipe TracingStarted ][ stream started struct ] <- Diagnostic IPC Message
-runtime -> client : [ stream of netperf data ]                                       <- Optional Continuation
+runtime <- client : [ magic; size; EventPipe CollectTracing ][ stream config struct  ] <- Diagnostic IPC Message
+runtime -> client : [ magic; size; Server OK                ][ sessionId             ] <- Diagnostic IPC Message
+runtime -> client : [ stream of netperf data ]                                         <- Optional Continuation
 
 // stop message is sent on another connection
 
 connection closed
 ```
 
-Example flow for hypothetical application with custom communication protocol:
-```
-runtime <- client : [ ver; size; start_app_session_command    ][ app config struct      ] <- Diagnostic IPC Message
-runtime -> client : [ ver; size; app_session_started_response ][ session started struct ] <- Diagnostic IPC Message
-
-Optional Continuation using app specific protocol
-
-runtime <- client : [ command specific protocol ]                                         <- Optional Continuation
-runtime -> client : [ command specific protocol ]                                         <- Optional Continuation
-Eventually...
-runtime <- client : [ command specific protocol (close connection) ]                      <- Optional Continuation
-connection closed
-```
-
-### Transport
+## Transport
 
 The protocol will be communicated over a platform-specific transport.  On Unix/Linux based platforms, a Unix Domain Socket will be used, and on Windows, a Named Pipe will be used.
 
@@ -65,10 +51,9 @@ The protocol will be communicated over a platform-specific transport.  On Unix/L
 
 Unix Domain Sockets (MacOS and *nix):
 
-The location of the socket is determined by a call to `GetTempPathA()` in the PAL.  This has a fallthrough behavior and attempts to use the following three locations, in order:
-1. (Mac only) App Group Container if `AppGroupId` is not null
-2. The directory stored in the `$TMPDIR` environment variable
-3. `/tmp`
+The socket is placed in one of two places:
+1. The directory specified in `$TMPDIR`
+2. `/tmp` if `$TMPDIR` is undefined/empty
 
 In order to ensure filename uniqueness, a `disambiguation key` is generated.  On Mac and NetBSD, this is the process start time encoded as the number of seconds since UNIX epoch time.  If `/proc/$PID/stat` is available (all other *nix platforms), then the process start time encoded as jiffies since boot time is used.
 
@@ -82,7 +67,7 @@ Named Pipes (Windows):
 \\.\pipe\dotnetcore-diagnostic-{%d:PID}
 ```
 
-### Messages
+## Messages
 
 Diagnostic IPC Messages are the base unit of communication with the Diagnostic Server.  A Diagnostic IPC Message contains a Header and Payload (described in following sections).
 
@@ -132,7 +117,7 @@ Diagnostic IPC Messages are the base unit of communication with the Diagnostic S
 
 The simplest Diagnostic IPC Message will contain a Header and an empty Payload and therefore only be 20 bytes long.
 
-For example, this IPC Message sends a hypothetical Command (discussed later) `0xFFEE` which has an empty Payload:
+For example, this IPC Message is the generic OK message which has an empty Payload:
 <table>
   <tr>
     <th>1</th>
@@ -167,12 +152,12 @@ For example, this IPC Message sends a hypothetical Command (discussed later) `0x
     <td colspan="14">"DOTNET_IPC_V1"</td>
     <td colspan="2">20</td>
     <td colspan="1">0xFF</td>
-    <td colspan="1">0xEE</td>
+    <td colspan="1">0x00</td>
     <td colspan="2">0x0000</td>
   </tr>
 </table>
 
-#### Headers
+### Headers
 
 Every Diagnostic IPC Message will start with a header and every header will:
 * start with a magic version number and a size
@@ -195,14 +180,14 @@ struct IpcHeader
 The `reserved` field is reserved for future use.  It is unused in `DOTNET_IPC_V1` and must be 0x0000.
 
 
-#### Payloads
+### Payloads
 
 Payloads are Command specific data encoded into a Diagnostic IPC Message.  The size of the payload is implicitly encoded in the Header's `size` field as `PayloadSize = header.size - sizeof(struct IpcHeader)`.  A Payload _may_ be 0 bytes long if it empty.  The encoding of data in the Payload is Command specific.
 
 As an example, the CollectTracing command to EventPipe (explained below) encodes its Payload with the following rules:
 ```c
 // X, Y, Z means encode bytes for X followed by bytes for Y followed by bytes for Z
-// Payload = ulong PID, uint circularBufferMB, string outputPath, array<provider_config> providers
+// Payload = uint circularBufferMB, string outputPath, array<provider_config> providers
 // uint = 4 little endian bytes
 // ulong = 8 little endian bytes
 // wchar = 2 little endian bytes, UTF16 encoding
@@ -291,25 +276,16 @@ As an example, the CollectTracing command to EventPipe (explained below) encodes
     <th>76</th>
     <th>77</th>
     <th>78</th>
-    <th>79</th>
-    <th>80</th>
-    <th>81</th>
-    <th>82</th>
-    <th>83</th>
-    <th>84</th>
-    <th>85</th>
-    <th>86</th>
   </tr>
   <tr>
     <td colspan="20">Header</td>
-    <td colspan="66">Payload</td>
+    <td colspan="58">Payload</td>
   </tr>
   <tr>
     <td colspan="14">magic</td>
     <td colspan="2">size</td>
     <td colspan="2">command</td>
     <td colspan="2">reserved</td>
-    <td colspan="8">PID</td>
     <td colspan="4">circularBufferMB</td>
     <td colspan="4">outputPath Length</td>
     <td colspan="16">outputPath String</td>
@@ -321,10 +297,9 @@ As an example, the CollectTracing command to EventPipe (explained below) encodes
   </tr>
   <tr>
     <td colspan="14">"DOTNET_IPC_V1"</td>
-    <td colspan="2">66</td>
+    <td colspan="2">78</td>
     <td colspan="2">0x0202</td>
     <td colspan="2">0x0000</td>
-    <td colspan="8">1234567</td>
     <td colspan="4">250</td>
     <td colspan="4">16</td>
     <td colspan="16">"/tmp/foo.netperf"</td>
@@ -364,11 +339,20 @@ enum class ServerCommandId : uint8_t
 };
 ```
 
-Commands may use the generic `{ magic="DOTNET_IPC_V1"; size=20; command_set=0xFF (Server); command_id=0x00 (OK); reserved = 0x0000; }` to indicate success rather than having a command specific success `command_id`.  Similarly, Commands may use the `command_set=0xFF (Server); command_id=0xFF (Error);` to generically indicate an error has occurred.
+```c
+enum class EventPipeCommandId : uint8_t
+{
+    // reserved = 0x00,
+    StopTracing    = 0x01, // stop a given session
+    CollectTracing = 0x02, // create/start a given session
+}
+```
+
+Commands may use the generic `{ magic="DOTNET_IPC_V1"; size=20; command_set=0xFF (Server); command_id=0x00 (OK); reserved = 0x0000; }` to indicate success rather than having a command specific success `command_id`.
 
 For example, the Command to start a stream session with EventPipe would be `0x0202` made up of `0x02` (the `command_set` for EventPipe) and `0x02` (the `command_id` for CollectTracing).
 
-#### EventPipe Commands
+## EventPipe Commands
 
 ```c
 enum class EventPipeCommandId : uint8_t
@@ -379,20 +363,55 @@ enum class EventPipeCommandId : uint8_t
 }
 ```
 EventPipe Payloads are encoded with the following rules:
-```c
-// X, Y, Z means encode bytes for X followed by bytes for Y followed by bytes for Z
-// uint = 4 little endian bytes
-// ulong = 8 little endian bytes
-// wchar = 2 little endian bytes, UTF16 encoding
-// array<T> = uint length, length # of Ts
-// string = (array<wchar> where the last wchar must = 0) or (length = 0)
-```
 
-The `CollectTracing` Command consumes the following Payload:
+* `X, Y, Z` means encode bytes for `X` followed by bytes for `Y` followed by bytes for `Z`
+* `uint` = 4 little endian bytes
+* `ulong` = 8 little endian bytes
+* `wchar` = 2 little endian bytes, UTF16 encoding
+* `array<T>` = uint length, length # of `T`s
+* `string` = (`array<wchar>` where the last `wchar` must = `0`) or (length = `0`)
+
+### `CollectTracing`
+
+Command Code: `0x0202`
+
+The `CollectTracing` Command is used to start a streaming session of event data.  The runtime will attempt to start a session and respond with a success message with a payload of the `sessionId`.  The event data is streamed in the `netperf` format.  The stream begins after the response Message from the runtime to the client.  The client is expected to continue to listen on the transport until the connection is closed.
+
+In the event there is an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+The client is expected to send a [`StopTracing`](#StopTracing) command to the runtime in order to stop the stream, as there is a "run down" at the end of a stream session that transmits additional metadata.
+
+If the stream is stopped prematurely due to a client or server error, the `netperf` file generated will be incomplete and should be considered corrupted.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0202; 0x0000 }`
+
+* `uint circularBufferMB`: The size of the circular buffer used for buffering event data while streaming
+* `string outputPath`: currently unused, and should be 0 length
+* `array<provider_config> providers`: The providers to turn on for the streaming session
+
+A `provider_config` is composed of the following data:
+* `ulong keywords`: The keywords to turn on with this providers
+* `uint logLevel`: The level of information to turn on
+* `string provider_name`: The name of the provider
+* `string filter_data` (optional): Filter information
+
+> see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; 28; 0xFF00; 0x0000; }`
+
+`CollectTracing` returns:
+* `ulong sessionId`: the ID for the stream session starting on the current connection
+
+##### Details:
+
+Input:
 ```
 Payload
 {
-    ulong PID,
     uint circularBufferMB,
     string outputPath,
     array<provider_config> providers
@@ -407,7 +426,7 @@ provider_config
 }
 ```
 
-and responds with a Payload of
+Returns:
 ```c
 Payload
 {
@@ -416,7 +435,28 @@ Payload
 ```
 Followed by an Optional Continuation of a `netperf` format stream of events.
 
-The `StopTracing` Command consumes the following Payload:
+### `StopTracing` 
+
+Command Code: `0x0201`
+
+The `StopTracing` command is used to stop a specific streaming session.  Clients are expected to use this command to stop streaming sessions started with [`CollectStreaming`](#CollectStreaming).
+
+#### Inputs:
+
+Header: `{ Magic; 28; 0x0201; 0x0000 }`
+
+* `ulong sessionId`: The ID for the streaming session to stop
+
+#### Returns:
+
+Header: `{ Magic; 28; 0x0201; 0x0000 }`
+
+* `ulong sessionId`: the ID for the streaming session that was stopped
+
+
+##### Details:
+
+Inputs:
 ```c
 Payload
 {
@@ -424,7 +464,7 @@ Payload
 }
 ```
 
-and responds with a Payload of
+Returns:
 ```c
 Payload
 {
@@ -434,7 +474,7 @@ Payload
 
 ### Errors
 
-Errors are mostly Command specific, but there are some generic Diagnostic Server errors described in the code snippet below.
+In the event an error occurs in the handling of an Ipc Message, the Diagnostic Server will attempt to send an Ipc Message encoding the error and subsequently close the connection.  The connection will be closed **regardless** of the success of sending the error message.  The Client is expected to be resilient in the event of a connection being abruptly closed.
 
 ```c++
 enum class DiagnosticServerErrorCode : uint32_t
@@ -443,10 +483,10 @@ enum class DiagnosticServerErrorCode : uint32_t
     BadEncoding       = 0x00000001,
     UnknownCommandSet = 0x00000002,
     UnknownCommandId  = 0x00000003,
-    UnknownVersion    = 0x00000004,
+    UnknownMagic      = 0x00000004,
     // future
 
-    BAD               = 0xFFFFFFFF,
+    UnknownError      = 0xFFFFFFFF,
 };
 ```
 
@@ -459,10 +499,9 @@ All errors will result in the Server closing the connection.
 
 Error response Messages will be sent when:
 * the client sends an improperly encoded Diagnostic IPC Message
-* the client uses an unknown `command_set`
-* the client uses an unknown `command_id`
+* the client uses an unknown `command`
 * the client uses an unknown `magic` version string
-* the server encounters an unrecoverable error
+* the server encounters an unrecoverable error, e.g., OOM, transport error, etc.
 
 The client is expected to be resilient in the event that the Diagnostic Server fails to respond in a reasonable amount of time (this may be Command specific).
 
