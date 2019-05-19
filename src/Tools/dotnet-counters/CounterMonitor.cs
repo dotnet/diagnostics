@@ -22,14 +22,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private List<string> _counterList;
         private CancellationToken _ct;
         private IConsole _console;
-        private ConsoleWriter writer;
+        private IOutputWriter outpuWriter;
         private CounterFilter filter;
         private ulong _sessionId;
         private bool pauseCmdSet;
 
         public CounterMonitor()
         {
-            writer = new ConsoleWriter();
             filter = new CounterFilter();
             pauseCmdSet = false;
         }
@@ -63,7 +62,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
                 }
-                writer.Update(obj.ProviderName, payload);
+                outpuWriter.Update(obj.ProviderName, payload);
             }
         }
 
@@ -77,14 +76,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _processId = processId;
                 _interval = refreshInterval;
 
-                return await StartMonitor();
+                return await StartMonitor(console.IsOutputRedirected);
             }
 
             catch (OperationCanceledException)
             {
                 try
                 {
-                    EventPipeClient.StopTracing(_processId, _sessionId);    
+                    EventPipeClient.StopTracing(_processId, _sessionId);
                 }
                 catch (Exception) {} // Swallow all exceptions for now.
                 
@@ -93,7 +92,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        private async Task<int> StartMonitor()
+        private async Task<int> StartMonitor(bool outputRedirected)
         {
             if (_processId == 0) {
                 _console.Error.WriteLine("ProcessId is required.");
@@ -110,7 +109,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
             if (_counterList.Count == 0)
             {
                 CounterProvider defaultProvider = null;
-                _console.Out.WriteLine($"counter_list is unspecified. Monitoring all counters by default.");
+
+                if (!_console.IsOutputRedirected)
+                {
+                    _console.Out.WriteLine($"counter_list is unspecified. Monitoring all counters by default.");
+                }
 
                 // Enable the default profile if nothing is specified
                 if (!KnownData.TryGetProvider("System.Runtime", out defaultProvider))
@@ -136,7 +139,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                     else
                     {
-                        sb.Append(provider.ToProviderString(_interval));    
+                        sb.Append(provider.ToProviderString(_interval));
                     }
                     
                     if (i != _counterList.Count - 1)
@@ -169,7 +172,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                 var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
                 EventPipeEventSource source = new EventPipeEventSource(binaryReader);
-                writer.InitializeDisplay();
+                outpuWriter = outputRedirected ? (IOutputWriter)new TsvWriter() : new ConsoleWriter();
                 source.Dynamic.All += Dynamic_All;
                 source.Process();
                 terminated = true; // This indicates that the runtime is done. We shoudn't try to talk to it anymore.

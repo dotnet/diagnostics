@@ -8,7 +8,7 @@ using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
-    public class ConsoleWriter
+    public class ConsoleWriter : IOutputWriter
     {
         private Dictionary<string, (int, int)> displayPosition; // Display position (x-y coordiates) of each counter values.
         private int origRow;
@@ -26,16 +26,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 knownProvidersRowNum[provider.Name] = -1;
             }
-        }
 
-        public void InitializeDisplay()
-        {
+            // Init console
             Console.Clear();
             origRow = Console.CursorTop;
             origCol = Console.CursorLeft;
             Console.WriteLine("Press p to pause, r to resume, q to quit.");
 
-            maxRow = origRow+1;
+            maxRow = origRow + 1;
             maxCol = origCol;
         }
 
