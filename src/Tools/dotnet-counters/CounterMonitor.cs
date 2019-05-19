@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 CounterProvider defaultProvider = null;
 
-                if (!_console.IsOutputRedirected)
+                if (!outputRedirected)
                 {
                     _console.Out.WriteLine($"counter_list is unspecified. Monitoring all counters by default.");
                 }
