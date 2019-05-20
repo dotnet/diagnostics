@@ -53,43 +53,6 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
         }
 
         /// <summary>
-        /// Get the OS Transport to be used for communicating with a dotnet process.
-        /// </summary>
-        /// <param name="processId">The PID of the dotnet process to get the transport for</param>
-        /// <returns>A System.IO.Stream wrapper around the transport</returns>
-        private static Stream GetTransport_OLD(int processId)
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                string pipeName = $"dotnetcore-diagnostic-{processId}";
-                using (var namedPipe = new NamedPipeClientStream(
-                    ".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation))
-                {
-                    namedPipe.Connect((int)ConnectTimeoutMilliseconds);
-                    return namedPipe;
-                }
-            }
-            else
-            {
-                string ipcPort = Directory.GetFiles(IpcRootPath) // Try best match.
-                    .Select(namedPipe => (new FileInfo(namedPipe)).Name)
-                    .SingleOrDefault(input => Regex.IsMatch(input, $"^dotnetcore-diagnostic-{processId}-(\\d+)-socket$"));
-                if (ipcPort == null)
-                {
-                    throw new PlatformNotSupportedException($"Process {processId} not running compatible .NET Core runtime");
-                }
-                string path = Path.Combine(Path.GetTempPath(), ipcPort);
-                var remoteEP = new UnixDomainSocketEndPoint(path);
-
-                using (var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified))
-                {
-                    socket.Connect(remoteEP);
-                    return new NetworkStream(socket);
-                }
-            }
-        }
-
-        /// <summary>
         /// Sends a single DiagnosticIpc Message to the dotnet process with PID processId.
         /// </summary>
         /// <param name="processId">The PID of the dotnet process</param>
