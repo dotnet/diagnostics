@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostic.Tools.Dump
 
         public AnalyzeContext AnalyzeContext { get; set; }
 
-        public override Task InvokeAsync()
+        public override void Invoke()
         {
             if (ThreadId.HasValue)
             {
@@ -29,7 +29,6 @@ namespace Microsoft.Diagnostic.Tools.Dump
                     index++;
                 }
             }
-            return Task.CompletedTask;
         }
     }
 }

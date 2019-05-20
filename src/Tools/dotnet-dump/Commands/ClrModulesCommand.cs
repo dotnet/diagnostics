@@ -11,13 +11,12 @@ namespace Microsoft.Diagnostic.Tools.Dump
     {
         public AnalyzeContext AnalyzeContext { get; set; }
 
-        public override Task InvokeAsync()
+        public override void Invoke()
         {
             foreach (ClrModule module in AnalyzeContext.Runtime.Modules)
             {
                 WriteLine("{0:X16} {1}", module.Address, module.FileName);
             }
-            return Task.CompletedTask;
         }
     }
 }

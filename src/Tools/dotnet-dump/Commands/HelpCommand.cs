@@ -12,25 +12,17 @@ namespace Microsoft.Diagnostic.Tools.Dump
 
         public CommandProcessor CommandProcessor { get; set; }
 
-        public override Task InvokeAsync()
-        {
-            return Task.CompletedTask;
-        }
+        public IHelpBuilder HelpBuilder { get; set; }
 
-        /// <summary>
-        /// Get help builder interface
-        /// </summary>
-        /// <param name="helpBuilder">help builder</param>
-        public Task InvokeAsync(IHelpBuilder helpBuilder)
+        public override void Invoke()
         {
             Command command = CommandProcessor.GetCommand(Command);
             if (command != null) {
-                helpBuilder.Write(command);
+                HelpBuilder.Write(command);
             }
             else {
                 Console.Error.WriteLine($"Help for {Command} not found.");
             }
-            return Task.CompletedTask;
         }
     }
 }
