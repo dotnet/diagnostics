@@ -1,6 +1,5 @@
 using Microsoft.Diagnostic.Repl;
 using System.CommandLine;
-using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostic.Tools.Dump
 {

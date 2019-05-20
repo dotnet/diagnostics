@@ -1,12 +1,8 @@
 using Microsoft.Diagnostic.Repl;
-using SOS;
 using System;
 using System.CommandLine;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostic.Tools.Dump
 {
