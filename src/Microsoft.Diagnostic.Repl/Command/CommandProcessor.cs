@@ -332,12 +332,10 @@ namespace Microsoft.Diagnostic.Repl
         class LocalHelpBuilder : IHelpBuilder
         {
             private readonly CommandProcessor _commandProcessor;
-            private readonly HelpBuilder _helpBuilder;
 
             public LocalHelpBuilder(CommandProcessor commandProcessor)
             {
                 _commandProcessor = commandProcessor;
-                _helpBuilder = new HelpBuilder(commandProcessor.GetService<IConsole>(), maxWidth: Console.WindowWidth);
             }
 
             void IHelpBuilder.Write(ICommand command)
@@ -348,7 +346,8 @@ namespace Microsoft.Diagnostic.Repl
                         return;
                     }
                 }
-                _helpBuilder.Write(command);
+                var helpBuilder = new HelpBuilder(_commandProcessor.GetService<IConsole>(), maxWidth: Console.WindowWidth);
+                helpBuilder.Write(command);
             }
         }
     }
