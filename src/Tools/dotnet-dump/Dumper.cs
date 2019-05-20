@@ -60,7 +60,7 @@ namespace Microsoft.Diagnostic.Tools.Dump
                     DiagnosticHelpers.DumpType dumpType = type == DumpTypeOption.Heap ? DiagnosticHelpers.DumpType.WithHeap : DiagnosticHelpers.DumpType.Normal;
 
                     // Send the command to the runtime to initiate the core dump
-                    int hr = DiagnosticHelpers.GenerateCoreDump(processId, output, dumpType, diagnostics: false);
+                    uint hr = DiagnosticHelpers.GenerateCoreDump(processId, output, dumpType, diagnostics: false);
                     if (hr != 0)
                     {
                         throw new InvalidOperationException($"Core dump generation FAILED 0x{hr:X8}");

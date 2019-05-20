@@ -15,7 +15,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         /// <summary>
         /// Controls the contents of the dump
         /// </summary>
-        public enum DumpType : int
+        public enum DumpType : uint
         {
             Normal = 1,
             WithHeap = 2,
@@ -30,7 +30,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         /// <param name="dumpName">Path and file name of core dump</param>
         /// <param name="dumpType">Type of dump</param>
         /// <param name="diagnostics">If true, log to console the dump generation diagnostics</param>
-        /// <returns>HRESULT</returns>
+        /// <returns>DiagnosticServerErrorCode</returns>
         public static int GenerateCoreDump(int processId, string dumpName, DumpType dumpType, bool diagnostics)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
@@ -39,8 +39,9 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             if (string.IsNullOrEmpty(dumpName))
                 throw new ArgumentNullException($"{nameof(dumpName)} required");
 
+
             var payload = SerializeCoreDump(dumpName, dumpType, diagnostics);
-            var message = new IpcMessage(DiagnosticServerCommandSet.Miscellandeous, (byte)MiscellaneousCommandId.GenerateCoreDump, payload);
+            var message = new IpcMessage(DiagnosticServerCommandSet.Miscellaneous, (byte)MiscellaneousCommandId.GenerateCoreDump, payload);
 
             var response = IpcClient.SendMessage(processId, message);
 
@@ -124,8 +125,8 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             using (var writer = new BinaryWriter(stream))
             {
                 writer.WriteString(dumpName);
-                writer.Write((int)dumpType);
-                writer.Write(diagnostics ? 1 : 0);
+                writer.Write((uint)dumpType);
+                writer.Write((uint)(diagnostics ? 1 : 0));
 
                 writer.Flush();
                 return stream.ToArray();

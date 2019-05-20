@@ -6,7 +6,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
 {
     public enum DiagnosticServerCommandSet : byte
     {
-        Miscellandeous = 0x01,
+        Miscellaneous  = 0x01,
         EventPipe      = 0x02,
 
         Server         = 0xFF,
