@@ -106,9 +106,6 @@ namespace Microsoft.Diagnostic.Repl
                     if (baseAttribute is CommandAttribute commandAttribute)
                     {
                         command = new Command(commandAttribute.Name, commandAttribute.Help);
-                        var builder = new CommandLineBuilder(command);
-                        builder.UseHelp();
-
                         var properties = new List<(PropertyInfo, Option)>();
                         PropertyInfo argument = null;
 
@@ -212,7 +209,7 @@ namespace Microsoft.Diagnostic.Repl
                 _methodInfoHelp = type.GetMethods().Where((methodInfo) => methodInfo.GetCustomAttribute<HelpInvokeAttribute>() != null).SingleOrDefault();
             }
 
-            public Task<int> InvokeAsync(InvocationContext context)
+            Task<int> ICommandHandler.InvokeAsync(InvocationContext context)
             {
                 try
                 {
@@ -312,6 +309,8 @@ namespace Microsoft.Diagnostic.Repl
                 object[] arguments = new object[parameters.Length];
                 for (int i = 0; i < parameters.Length; i++) {
                     Type parameterType = parameters[i].ParameterType;
+                    // Ignoring false: the parameter will passed as null to allow for "optional"
+                    // services. The invoked method needs to check for possible null parameters.
                     TryGetService(parameterType, context, out arguments[i]);
                 }
                 return arguments;
