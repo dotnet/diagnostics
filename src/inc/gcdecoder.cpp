@@ -13,6 +13,10 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 */
 
+// ******************************************************************************
+// WARNING!!!: This code is also used by the coreclr repo.
+// See: https://github.com/dotnet/coreclr/blob/master/src/inc/gcdecoder.cpp
+// ******************************************************************************
 
 #ifdef _TARGET_X86_
 

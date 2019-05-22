@@ -60,7 +60,6 @@ echo "container user name: $container_user_name"
 $docker_bin exec $docker_id useradd -K MAIL_DIR=/dev/null -m -u $user_id $container_user_name
 $docker_bin exec $docker_id groupadd sudouser
 $docker_bin exec $docker_id usermod -a -G sudouser $container_user_name
-$docker_bin exec $docker_id su -c "$source_directory/eng/docker-init.sh"
 $docker_bin exec $docker_id su -c "echo '%sudouser ALL=(ALL:ALL) NOPASSWD:ALL' >> /etc/sudoers"
 
 echo "Execute $args"

@@ -18,54 +18,5 @@
     <PackageReference Include="System.CommandLine.Experimental" Version="$(SystemCommandLineExperimentalVersion)" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="$(SOSNETCoreBinaries)" Pack="true" Visible="false">
-      <PackagePath>tools/$(TargetFramework)/any/win-x64</PackagePath>
-    </None>
-    <None Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\sos.dll" Pack="true" Visible="false">
-      <PackagePath>tools/$(TargetFramework)/any/win-x64</PackagePath>
-    </None>
-    <None Include="$(SOSNETCoreBinaries)" Pack="true" Visible="false">
-      <PackagePath>tools/$(TargetFramework)/any/win-x86</PackagePath>
-    </None>
-    <None Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\sos.dll" Pack="true" Visible="false">
-      <PackagePath>tools/$(TargetFramework)/any/win-x86</PackagePath>
-    </None>
-    <None Include="$(SOSNETCoreBinaries)" Pack="true" Visible="false">
-      <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
-    </None>
-    <None Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsosplugin.so" Pack="true" Visible="false">
-      <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
-    </None>
-    <None Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsos.so" Pack="true" Visible="false">
-      <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
-    </None>
-    <None Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\sosdocsunix.txt" Pack="true" Visible="false">
-      <PackagePath>tools/$(TargetFramework)/any/linux-x64</PackagePath>
-    </None>
-    <None Include="$(SOSNETCoreBinaries)" Pack="true" Visible="false">
-      <PackagePath>tools/$(TargetFramework)/any/linux-musl-x64</PackagePath>
-    </None>
-    <None Include="$(ArtifactsBinDir)\Linux-musl.x64.$(Configuration)\libsosplugin.so" Pack="true" Visible="false">
-      <PackagePath>tools/$(TargetFramework)/any/linux-musl-x64</PackagePath>
-    </None>
-    <None Include="$(ArtifactsBinDir)\Linux-musl.x64.$(Configuration)\libsos.so" Pack="true" Visible="false">
-      <PackagePath>tools/$(TargetFramework)/any/linux-musl-x64</PackagePath>
-    </None>
-    <None Include="$(ArtifactsBinDir)\Linux-musl.x64.$(Configuration)\sosdocsunix.txt" Pack="true" Visible="false">
-      <PackagePath>tools/$(TargetFramework)/any/linux-musl-x64</PackagePath>
-    </None>
-    <None Include="$(SOSNETCoreBinaries)" Pack="true" Visible="false">
-      <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
-    </None>
-    <None Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib" Pack="true" Visible="false">
-      <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
-    </None>
-    <None Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsos.dylib" Pack="true" Visible="false">
-      <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
-    </None>
-    <None Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\sosdocsunix.txt" Pack="true" Visible="false">
-      <PackagePath>tools/$(TargetFramework)/any/osx-x64</PackagePath>
-    </None>
-  </ItemGroup>
+  <Import Project="$(MSBuildThisFileDirectory)..\sos-packaging.props" />
 </Project>

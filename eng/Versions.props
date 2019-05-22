@@ -3,7 +3,7 @@
   <PropertyGroup>
     <RepositoryUrl>https://github.com/dotnet/diagnostics</RepositoryUrl>
     <PreReleaseVersionLabel>preview6</PreReleaseVersionLabel>
-    <VersionPrefix>1.0.3</VersionPrefix>
+    <VersionPrefix>1.0.4</VersionPrefix>
     <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
   </PropertyGroup>
 

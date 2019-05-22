@@ -43,14 +43,13 @@ usage()
     echo "--daily-test - test native components for daily build job"
     echo "--architecture <x64|x86|arm|armel|arm64>"
     echo "--configuration <debug|release>"
+    echo "--rootfs <ROOTFS_DIR>"
     echo "--clangx.y - optional argument to build using clang version x.y"
-    echo "--cross - optional argument to enable cross architecture building"
     echo "--ci - CI lab build"
     echo "--verbosity <q[uiet]|m[inimal]|n[ormal]|d[etailed]|diag[nostic]>"
     echo "--help - this help message"
     exit 1
 }
-
 
 # args:
 # input - $1
@@ -196,6 +195,11 @@ while :; do
             shift
             ;;
 
+        --rootfs)
+            export ROOTFS_DIR="$2"
+            shift
+            ;;
+
         --portablebuild=false)
             __PortableBuild=0
             ;;
@@ -233,10 +237,6 @@ while :; do
         --clang5.0)
             __ClangMajorVersion=5
             __ClangMinorVersion=0
-            ;;
-
-        --cross)
-            __CrossBuild=true
             ;;
 
         # Ignored for a native build
@@ -305,11 +305,14 @@ if [[ "$__BuildArch" == "armel" ]]; then
 fi
 
 # Configure environment if we are doing a cross compile.
-if [ "$__CrossBuild" == true ]; then
+if [ "${__BuildArch}" != "${__HostArch}" ]; then
+    __CrossBuild=true
     export CROSSCOMPILE=1
     if ! [[ -n "$ROOTFS_DIR" ]]; then
-        export ROOTFS_DIR="$__ProjectRoot/cross/rootfs/$__BuildArch"
+        echo "ERROR: ROOTFS_DIR not set for cross build"
+        exit 1
     fi
+    echo "ROOTFS_DIR: $ROOTFS_DIR"
 fi
 
 mkdir -p "$__IntermediatesDir"
@@ -328,10 +331,11 @@ build_native()
     generator=""
     buildFile="Makefile"
     buildTool="make"
+    scriptDir="$__ProjectRoot/eng"
 
     pushd "$intermediatesForBuild"
-    echo "Invoking \"$__ProjectRoot/eng/gen-buildsys-clang.sh\" \"$__ProjectRoot\" $__ClangMajorVersion $__ClangMinorVersion $platformArch $__BuildType $generator $extraCmakeArguments $__cmakeargs"
-    "$__ProjectRoot/eng/gen-buildsys-clang.sh" "$__ProjectRoot" $__ClangMajorVersion $__ClangMinorVersion $platformArch $__BuildType $generator "$extraCmakeArguments" "$__cmakeargs"
+    echo "Invoking \"$scriptDir/gen-buildsys-clang.sh\" \"$__ProjectRoot\" $__ClangMajorVersion \"$__ClangMinorVersion\" $platformArch "$scriptDir" $__BuildType $generator $extraCmakeArguments $__cmakeargs"
+    "$scriptDir/gen-buildsys-clang.sh" "$__ProjectRoot" $__ClangMajorVersion "$__ClangMinorVersion" $platformArch "$scriptDir" $__BuildType $generator "$extraCmakeArguments" "$__cmakeargs"
     popd
 
     if [ ! -f "$intermediatesForBuild/$buildFile" ]; then
@@ -360,11 +364,8 @@ initTargetDistroRid()
     local passedRootfsDir=""
 
     # Only pass ROOTFS_DIR if cross is specified.
-    if (( ${__CrossBuild} == 1 )); then
+    if [ "$__CrossBuild" == true ]; then
         passedRootfsDir=${ROOTFS_DIR}
-    elif [ "${__BuildArch}" != "${__HostArch}" ]; then
-        echo "Error, you are building a cross scenario without passing -cross."
-        exit 1
     fi
 
     initDistroRidGlobal ${__BuildOS} ${__BuildArch} ${__PortableBuild} ${passedRootfsDir}
@@ -437,51 +438,54 @@ fi
 
 # Run SOS/lldbplugin tests
 if [ $__Test == true ]; then
-    # Install the other versions of .NET Core runtime we are going to test on
-    "$__ProjectRoot/eng/install-test-runtimes.sh" --dotnet-directory "$__ProjectRoot/.dotnet" --runtime-version-21 "$__DotNetRuntimeVersion" --temp-directory "$__IntermediatesDir" --architecture "$__BuildArch" $__DailyTest
+   if [[ "$__BuildArch" != "arm" && "$__BuildArch" != "armel" && "$__BuildArch" != "arm64" ]]; then
 
-    if [ "$LLDB_PATH" = "" ]; then
-        export LLDB_PATH="$(which lldb-3.9.1 2> /dev/null)"
-        if [ "$LLDB_PATH" = "" ]; then
-            export LLDB_PATH="$(which lldb-3.9 2> /dev/null)"
-            if [ "$LLDB_PATH" = "" ]; then
-                export LLDB_PATH="$(which lldb-4.0 2> /dev/null)"
-                if [ "$LLDB_PATH" = "" ]; then
-                    export LLDB_PATH="$(which lldb-5.0 2> /dev/null)"
-                    if [ "$LLDB_PATH" = "" ]; then
-                        export LLDB_PATH="$(which lldb 2> /dev/null)"
-                    fi
-                fi
-            fi
-        fi
-    fi
+      # Install the other versions of .NET Core runtime we are going to test on
+      "$__ProjectRoot/eng/install-test-runtimes.sh" --dotnet-directory "$__ProjectRoot/.dotnet" --runtime-version-21 "$__DotNetRuntimeVersion" --temp-directory "$__IntermediatesDir" --architecture "$__BuildArch" $__DailyTest
 
-    if [ "$GDB_PATH" = "" ]; then
-        export GDB_PATH="$(which gdb 2> /dev/null)"
-    fi
+      if [ "$LLDB_PATH" == "" ]; then
+          export LLDB_PATH="$(which lldb-3.9.1 2> /dev/null)"
+          if [ "$LLDB_PATH" == "" ]; then
+              export LLDB_PATH="$(which lldb-3.9 2> /dev/null)"
+              if [ "$LLDB_PATH" == "" ]; then
+                  export LLDB_PATH="$(which lldb-4.0 2> /dev/null)"
+                  if [ "$LLDB_PATH" == "" ]; then
+                      export LLDB_PATH="$(which lldb-5.0 2> /dev/null)"
+                      if [ "$LLDB_PATH" == "" ]; then
+                          export LLDB_PATH="$(which lldb 2> /dev/null)"
+                      fi
+                  fi
+              fi
+          fi
+      fi
 
-    echo "lldb: '$LLDB_PATH' gdb: '$GDB_PATH'"
+      if [ "$GDB_PATH" == "" ]; then
+          export GDB_PATH="$(which gdb 2> /dev/null)"
+      fi
 
-    # Run xunit SOS tests
-    "$__ProjectRoot/eng/common/build.sh" --test --configuration "$__BuildType" "$__TestArgs"
-    if [ $? != 0 ]; then
-        exit 1
-    fi
+      echo "lldb: '$LLDB_PATH' gdb: '$GDB_PATH'"
 
-    # Skip Alpine because lldb doesn't work
-    if [ $__Alpine == false ]; then
-        if [ "$__BuildOS" == "OSX" ]; then
-            __Plugin=$__CMakeBinDir/libsosplugin.dylib
-        else
-            __Plugin=$__CMakeBinDir/libsosplugin.so
-        fi
+      # Run xunit SOS tests
+      "$__ProjectRoot/eng/common/build.sh" --test --configuration "$__BuildType" "$__TestArgs"
+      if [ $? != 0 ]; then
+          exit 1
+      fi
 
-        # Run lldb python tests
-        "$__ProjectRoot/src/SOS/lldbplugin.tests/testsos.sh" "$__ProjectRoot" "$__Plugin" "$__DotNetRuntimeVersion" "$__RootBinDir/bin/TestDebuggee/$__BuildType/netcoreapp2.0/TestDebuggee.dll" "$__ResultsDir"
-        if [ $? != 0 ]; then
-            exit 1
-        fi
-    fi
+      # Skip Alpine because lldb doesn't work
+      if [ $__Alpine == false ]; then
+          if [ "$__BuildOS" == "OSX" ]; then
+              __Plugin=$__CMakeBinDir/libsosplugin.dylib
+          else
+              __Plugin=$__CMakeBinDir/libsosplugin.so
+          fi
+
+          # Run lldb python tests
+          "$__ProjectRoot/src/SOS/lldbplugin.tests/testsos.sh" "$__ProjectRoot" "$__Plugin" "$__DotNetRuntimeVersion" "$__RootBinDir/bin/TestDebuggee/$__BuildType/netcoreapp2.0/TestDebuggee.dll" "$__ResultsDir"
+          if [ $? != 0 ]; then
+              exit 1
+          fi
+      fi
+   fi
 fi
 
 echo "BUILD: Repo sucessfully built."

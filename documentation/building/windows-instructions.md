@@ -11,13 +11,8 @@ You must install several components to build. These instructions were tested on 
 ## Visual Studio
 
 Visual Studio must be installed. Supported versions:
-- [Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) (Community, Professional, Enterprise).  The community version is completely free.  
 - [Visual Studio 2017](https://www.visualstudio.com/downloads/) (Community, Professional, Enterprise).  The community version is completely free.  
-
-For Visual Studio 2015:
-* Ensure you have installed at least [Visual Studio 2015 Update 3](https://www.visualstudio.com/en-us/news/releasenotes/vs2015-update3-vs).
-* Make sure that you install "VC++ Tools". By default, they will not be installed.
-* To build for Arm32, Make sure that you have the Windows SDK for Windows 10 installed (or selected to be installed as part of VS installation). To explicitly install Windows SDK, download it from here: [Windows SDK for Windows 10](https://developer.microsoft.com/en-us/windows/downloads)
+- [Visual Studio 2019 Preview](https://visualstudio.microsoft.com/vs/preview/) (Community, Professional, Enterprise).  The community version is completely free.  
 
 For Visual Studio 2017:
 * When doing a 'Workloads' based install, the following are the minimum requirements:
@@ -50,7 +45,6 @@ For Visual Studio 2017:
 * **Important:** You must have the `msdia120.dll` COM Library registered in order to build the repository.
   * This binary is registered by default when installing the "VC++ Tools" with Visual Studio 2015
   * You can also manually register the binary by launching the "Developer Command Prompt for VS2017" with Administrative privileges and running `regsvr32.exe "%VSINSTALLDIR%\Common7\IDE\msdia120.dll"`
-* **Important:** By default, the build will attempt to use VS2015 as the toolset for the build. To build using VS2017 as your toolset, you must use the "Developer Command Prompt for VS2017".
 
 Visual Studio Express is not supported.
 
