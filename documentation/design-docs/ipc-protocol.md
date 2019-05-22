@@ -57,6 +57,8 @@ The socket is placed in one of two places:
 
 In order to ensure filename uniqueness, a `disambiguation key` is generated.  On Mac and NetBSD, this is the process start time encoded as the number of seconds since UNIX epoch time.  If `/proc/$PID/stat` is available (all other *nix platforms), then the process start time encoded as jiffies since boot time is used.
 
+> NOTE: If the target application is running inside an application sandbox on MacOS, the transport will be placed in the Application Group container directory.  This is a convention for all sandboxed applications on MacOS.
+
 socket name:
 ```c
 dotnetcore-diagnostic-{%d:PID}-{%llu:disambiguation key}-socket
@@ -184,17 +186,16 @@ The `reserved` field is reserved for future use.  It is unused in `DOTNET_IPC_V1
 
 Payloads are Command specific data encoded into a Diagnostic IPC Message.  The size of the payload is implicitly encoded in the Header's `size` field as `PayloadSize = header.size - sizeof(struct IpcHeader)`.  A Payload _may_ be 0 bytes long if it empty.  The encoding of data in the Payload is Command specific.
 
-As an example, the CollectTracing command to EventPipe (explained below) encodes its Payload with the following rules:
-```c
-// X, Y, Z means encode bytes for X followed by bytes for Y followed by bytes for Z
-// Payload = uint circularBufferMB, string outputPath, array<provider_config> providers
-// uint = 4 little endian bytes
-// ulong = 8 little endian bytes
-// wchar = 2 little endian bytes, UTF16 encoding
-// array<T> = uint length, length # of Ts
-// string = (array<wchar> where the last wchar must = 0) or (length = 0)
-// provider_config = ulong keywords, uint logLevel, string provider_name, string filter_data
-```
+Payloads are either encoded as fixed size structures that can be `memcpy`'ed , _or_:
+
+* `X, Y, Z` means encode bytes for `X` followed by bytes for `Y` followed by bytes for `Z`
+* `uint` = 4 little endian bytes
+* `ulong` = 8 little endian bytes
+* `wchar` = 2 little endian bytes, UTF16 encoding
+* `array<T>` = uint length, length # of `T`s
+* `string` = (`array<wchar>` where the last `wchar` must = `0`) or (length = `0`)
+
+As an example, the CollectTracing command to EventPipe (explained below) encodes its Payload as:
 
 <table>
   <tr>
@@ -449,7 +450,7 @@ Header: `{ Magic; 28; 0x0201; 0x0000 }`
 
 #### Returns:
 
-Header: `{ Magic; 28; 0x0201; 0x0000 }`
+Header: `{ Magic; 28; 0xFF00; 0x0000 }`
 
 * `ulong sessionId`: the ID for the streaming session that was stopped
 
@@ -481,9 +482,9 @@ enum class DiagnosticServerErrorCode : uint32_t
 {
     OK                = 0x00000000,
     BadEncoding       = 0x00000001,
-    UnknownCommandSet = 0x00000002,
-    UnknownCommandId  = 0x00000003,
-    UnknownMagic      = 0x00000004,
+    UnknownCommand    = 0x00000002,
+    UnknownMagic      = 0x00000003,
+    BadInput          = 0x00000004,
     // future
 
     UnknownError      = 0xFFFFFFFF,
