@@ -54,7 +54,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         /// Attach a profiler to the target process runtime.
         /// </summary>
         /// <param name="processId">.NET Core process id</param>
-        /// <param name="attachTimeout">The timeout (in ms) to wait while attempting to attach.</param>
+        /// <param name="attachTimeout">The timeout (in ms) for the runtime to wait while attempting to attach.</param>
         /// <param name="profilerGuid">CLSID of the profiler to load</param>
         /// <param name="profilerPath">Path to the profiler library on disk</param>
         /// <param name="additionalData">additional data to pass to the profiler on attach</param>
@@ -82,6 +82,9 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 serializedConfiguration = SerializeProfilerAttach(header, stream, attachTimeout, profilerGuid, profilerPath, additionalData);
             }
 
+            // TODO: the call to set up the pipe and send the message operates on a different timeout than attachTimeout, which is for the runtime.
+            // We should eventually have a configurable timeout for the message passing, potentially either separately from the 
+            // runtime timeout or respect attachTimeout as one total duration.
             return (int)EventPipeClient.SendCommand(processId, serializedConfiguration);
 
         }
