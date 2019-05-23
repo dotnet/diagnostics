@@ -41,7 +41,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
 
             var payload = SerializeCoreDump(dumpName, dumpType, diagnostics);
-            var message = new IpcMessage(DiagnosticServerCommandSet.Miscellaneous, (byte)MiscellaneousCommandId.GenerateCoreDump, payload);
+            var message = new IpcMessage(DiagnosticServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
 
             var response = IpcClient.SendMessage(processId, message);
 

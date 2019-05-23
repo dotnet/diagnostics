@@ -6,7 +6,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
 {
     public enum DiagnosticServerCommandSet : byte
     {
-        Miscellaneous  = 0x01,
+        Dump  = 0x01,
         EventPipe      = 0x02,
 
         Server         = 0xFF,
@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
         CollectTracing = 0x02,
     }
 
-    public enum MiscellaneousCommandId : byte
+    public enum DumpCommandId : byte
     {
         GenerateCoreDump = 0x01,
     }
