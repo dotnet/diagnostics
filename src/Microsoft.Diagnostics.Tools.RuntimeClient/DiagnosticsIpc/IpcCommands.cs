@@ -6,8 +6,9 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
 {
     public enum DiagnosticServerCommandSet : byte
     {
-        Dump  = 0x01,
+        Dump           = 0x01,
         EventPipe      = 0x02,
+        Profiler       = 0x03,
 
         Server         = 0xFF,
     }
@@ -27,5 +28,10 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
     public enum DumpCommandId : byte
     {
         GenerateCoreDump = 0x01,
+    }
+
+    public enum ProfilerCommandId : byte
+    {
+        AttachProfiler = 0x01,
     }
 }

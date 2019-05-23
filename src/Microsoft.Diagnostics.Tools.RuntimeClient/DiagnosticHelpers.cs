@@ -87,12 +87,27 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             };
 
             byte[] serializedConfiguration = SerializeProfilerAttach(attachTimeout, profilerGuid, profilerPath, additionalData);
+            var message = new IpcMessage(DiagnosticServerCommandSet.Profiler, (byte)ProfilerCommandId.AttachProfiler, serializedConfiguration);
+
+            var response = IpcClient.SendMessage(processId, message);
+
+            var hr = 0;
+            switch ((DiagnosticServerCommandId)response.Header.CommandId)
+            {
+                case DiagnosticServerCommandId.Error:
+                    // Handle error differently?
+                case DiagnosticServerCommandId.OK:
+                    hr = (int)BitConverter.ToUInt32(response.Payload);
+                    break;
+                default:
+                    hr = -1;
+                    break;
+            }
 
             // TODO: the call to set up the pipe and send the message operates on a different timeout than attachTimeout, which is for the runtime.
             // We should eventually have a configurable timeout for the message passing, potentially either separately from the 
             // runtime timeout or respect attachTimeout as one total duration.
-            return (int)EventPipeClient.SendCommand(processId, serializedConfiguration);
-
+            return hr;
         }
 
         private static byte[] SerializeProfilerAttach(uint attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData)
