@@ -45,12 +45,81 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
             byte[] serializedConfiguration;
             using (var stream = new MemoryStream())
-                serializedConfiguration = Serialize(header, stream, dumpName, dumpType, diagnostics);
+                serializedConfiguration = SerializeCoreDump(header, stream, dumpName, dumpType, diagnostics);
 
             return (int)EventPipeClient.SendCommand(processId, serializedConfiguration);
         }
 
-        private static byte[] Serialize(MessageHeader header, Stream stream, string dumpName, DumpType dumpType, bool diagnostics)
+        /// <summary>
+        /// Attach a profiler to the target process runtime.
+        /// </summary>
+        /// <param name="processId">.NET Core process id</param>
+        /// <param name="attachTimeout">The timeout (in ms) for the runtime to wait while attempting to attach.</param>
+        /// <param name="profilerGuid">CLSID of the profiler to load</param>
+        /// <param name="profilerPath">Path to the profiler library on disk</param>
+        /// <param name="additionalData">additional data to pass to the profiler on attach</param>
+        /// <returns>HRESULT</returns>
+        public static int AttachProfiler(int processId, uint attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData)
+        {
+            if (profilerGuid == null || profilerGuid == Guid.Empty)
+            {
+                throw new ArgumentException($"{nameof(profilerGuid)} must be a valid Guid");
+            }
+
+            if (String.IsNullOrEmpty(profilerPath))
+            {
+                throw new ArgumentException($"{nameof(profilerPath)} must be non-null");
+            }
+
+            var header = new MessageHeader {
+                RequestType = DiagnosticMessageType.AttachProfiler,
+                Pid = (uint)Process.GetCurrentProcess().Id,
+            };
+
+            byte[] serializedConfiguration;
+            using (var stream = new MemoryStream())
+            {
+                serializedConfiguration = SerializeProfilerAttach(header, stream, attachTimeout, profilerGuid, profilerPath, additionalData);
+            }
+
+            // TODO: the call to set up the pipe and send the message operates on a different timeout than attachTimeout, which is for the runtime.
+            // We should eventually have a configurable timeout for the message passing, potentially either separately from the 
+            // runtime timeout or respect attachTimeout as one total duration.
+            return (int)EventPipeClient.SendCommand(processId, serializedConfiguration);
+
+        }
+
+        private static byte[] SerializeProfilerAttach(MessageHeader header, MemoryStream stream, uint attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData)
+        {
+            using (var bw = new BinaryWriter(stream))
+            {
+                bw.Write((uint)header.RequestType);
+                bw.Write(header.Pid);
+
+                bw.Write(attachTimeout);
+                bw.Write(profilerGuid.ToByteArray());
+                bw.WriteString(profilerPath);
+
+                if (additionalData == null)
+                {
+                    bw.Write(0);
+                }
+                else
+                {
+                    bw.Write(additionalData.Length);
+                    bw.Write(additionalData);
+                }
+
+                bw.Flush();
+                stream.Position = 0;
+
+                var bytes = new byte[stream.Length];
+                stream.Read(bytes, 0, bytes.Length);
+                return bytes;
+            }
+        }
+
+        private static byte[] SerializeCoreDump(MessageHeader header, Stream stream, string dumpName, DumpType dumpType, bool diagnostics)
         {
             using (var bw = new BinaryWriter(stream))
             {
