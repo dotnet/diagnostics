@@ -113,6 +113,15 @@ Options:
   -o, --output <trace-file-path>
     The output path for the collected trace data. If not specified it defaults to 'trace.netperf'
 
+  --profile
+      A named pre-defined set of provider configurations that allows common tracing scenarios to be specified
+      succinctly. The options are:
+      runtime-basic   Useful for tracking CPU usage and general runtime information. This the default option
+                      if no profile is specified.
+      gc              Tracks allocation and collection performance
+      gc-collect      Tracks GC collection only at very low overhead
+      none            Tracks nothing. Only providers specified by the --providers option will be available.
+
   --providers <list-of-comma-separated-providers>
     A list of comma separated EventPipe providers to be enabled.
     This option adds to the configuration already provided via the --profile argument. If the same provider is configured in both places, this option takes precedence.
