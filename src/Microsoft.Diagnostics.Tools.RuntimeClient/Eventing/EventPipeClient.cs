@@ -58,7 +58,8 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                     break;
                 case DiagnosticServerCommandId.Error:
                     // bad...
-                    break;
+                    var hr = BitConverter.ToInt32(response.Payload);
+                    throw new Exception($"Session start FAILED 0x{hr:X8}");
                 default:
                     break;
             }
