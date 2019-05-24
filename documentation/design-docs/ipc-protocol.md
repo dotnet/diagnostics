@@ -320,19 +320,20 @@ Commands are a `command_set` and a `command_id`.  A `command_set` is analogous t
 
 The current set of `command_set`s and `command_id`s are listed below:
 
-```c
+```c++
 enum class CommandSet : uint8_t
 {
     // reserved = 0x00,
-    Miscellaneous = 0x01,
-    EventPipe     = 0x02,
+    Dump        = 0x01,
+    EventPipe   = 0x02,
+    Profiler    = 0x03
     // future
 
     Server = 0xFF,
 };
 ```
 
-```c
+```c++
 enum class ServerCommandId : uint8_t
 {
     OK    = 0x00,
@@ -340,7 +341,7 @@ enum class ServerCommandId : uint8_t
 };
 ```
 
-```c
+```c++
 enum class EventPipeCommandId : uint8_t
 {
     // reserved = 0x00,
@@ -348,6 +349,27 @@ enum class EventPipeCommandId : uint8_t
     CollectTracing = 0x02, // create/start a given session
 }
 ```
+See: [EventPipe Commands](#EventPipe-Commands)
+
+```c++
+enum class DumpCommandId : uint8_t
+{
+    // reserved     = 0x00,
+    CreateCoreDump  = 0x01,
+    // future
+}
+```
+See: [Dump Commands](#Dump-Commands)
+
+```c++
+enum class ProfilerCommandId : uint8_t
+{
+    // reserver     = 0x00,
+    AttachProfiler  = 0x01,
+    // future
+}
+``` 
+See: [Profiler Commands](#Profiler-Commands)
 
 Commands may use the generic `{ magic="DOTNET_IPC_V1"; size=20; command_set=0xFF (Server); command_id=0x00 (OK); reserved = 0x0000; }` to indicate success rather than having a command specific success `command_id`.
 
@@ -473,28 +495,24 @@ Payload
 }
 ```
 
+## Dump Commands
+
 ### Errors
 
 In the event an error occurs in the handling of an Ipc Message, the Diagnostic Server will attempt to send an Ipc Message encoding the error and subsequently close the connection.  The connection will be closed **regardless** of the success of sending the error message.  The Client is expected to be resilient in the event of a connection being abruptly closed.
 
-```c++
-enum class DiagnosticServerErrorCode : uint32_t
-{
-    OK                = 0x00000000,
-    BadEncoding       = 0x00000001,
-    UnknownCommand    = 0x00000002,
-    UnknownMagic      = 0x00000003,
-    BadInput          = 0x00000004,
-    // future
-
-    UnknownError      = 0xFFFFFFFF,
-};
+Errors are `HRESULTS` encoded as `int32_t` when sent back to the client.  There are a few Diagnostics IPC specific `HRESULT`s:
+```c
+#define CORDIAGIPC_E_BAD_ENCODING    = 0x80131384
+#define CORDIAGIPC_E_UNKNOWN_COMMAND = 0x80131385
+#define CORDIAGIPC_E_UNKNOWN_MAGIC   = 0x80131386
+#define CORDIAGIPC_E_UNKNOWN_ERROR   = 0x80131387
 ```
 
 Diagnostic Server errors are sent as a Diagnostic IPC Message with:
 * a `command_set` of `0xFF`
 * a `command_id` of `0xFF`
-* a Payload consisting of a `uint32_t` representing the error encountered (described above)
+* a Payload consisting of a `int32_t` representing the error encountered (described above)
 
 All errors will result in the Server closing the connection.
 
@@ -502,7 +520,7 @@ Error response Messages will be sent when:
 * the client sends an improperly encoded Diagnostic IPC Message
 * the client uses an unknown `command`
 * the client uses an unknown `magic` version string
-* the server encounters an unrecoverable error, e.g., OOM, transport error, etc.
+* the server encounters an unrecoverable error, e.g., OOM, transport error, runtime malfunction etc.
 
 The client is expected to be resilient in the event that the Diagnostic Server fails to respond in a reasonable amount of time (this may be Command specific).
 
@@ -557,7 +575,7 @@ For example, if the Diagnostic Server finds incorrectly encoded data while parsi
     <td colspan="1">0xFF</td>
     <td colspan="1">0xFF</td>
     <td colspan="2">0x0000</td>
-    <td colspan="8">0x00000001</td>
+    <td colspan="8">0x80131384</td>
   </tr>
 </table>
 
