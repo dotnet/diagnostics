@@ -49,7 +49,6 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             switch ((DiagnosticServerCommandId)response.Header.CommandId)
             {
                 case DiagnosticServerCommandId.Error:
-                    // handle error differently?
                 case DiagnosticServerCommandId.OK:
                     hr = BitConverter.ToInt32(response.Payload);
                     break;
@@ -95,7 +94,6 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             switch ((DiagnosticServerCommandId)response.Header.CommandId)
             {
                 case DiagnosticServerCommandId.Error:
-                    // Handle error differently?
                 case DiagnosticServerCommandId.OK:
                     hr = BitConverter.ToInt32(response.Payload);
                     break;

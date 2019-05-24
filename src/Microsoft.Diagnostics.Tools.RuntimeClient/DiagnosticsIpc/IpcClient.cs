@@ -90,6 +90,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
                 writer.Write(buffer);
             }
         }
+
         private static void Write(Stream stream, IpcMessage message)
         {
             using (var writer = new BinaryWriter(stream, Encoding.UTF8, true))

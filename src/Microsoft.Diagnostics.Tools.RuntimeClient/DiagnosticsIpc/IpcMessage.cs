@@ -28,20 +28,8 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
         public byte[] Serialize()
         { 
             byte[] serializedData = null;
-            UInt16 size = IpcHeader.HeaderSizeInBytes;
-
             // Verify things will fit in the size capacity
-            try
-            {
-                size = checked((UInt16)(IpcHeader.HeaderSizeInBytes + Payload.Length));
-            }
-            catch (OverflowException e)
-            {
-                // TODO error checking
-                throw e;
-            }
-
-            Header.Size = size;
+            Header.Size = checked((UInt16)(IpcHeader.HeaderSizeInBytes + Payload.Length)); ;
             byte[] headerBytes = Header.Serialize();
 
             using (var stream = new MemoryStream())
