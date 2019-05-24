@@ -38,14 +38,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
             using (var writer = new BinaryWriter(stream))
             {
                 writer.Write(Magic);
-                if (Magic.Length < MagicSizeInBytes)
-                {
-                    // pad to 14 bytes
-                    for (int i = 0; i < Magic.Length - MagicSizeInBytes; i++)
-                    {
-                        writer.Write((byte)'\0');
-                    }
-                }
+                Debug.Assert(Magic.Length == MagicSizeInBytes);
                 writer.Write(Size);
                 writer.Write(CommandSet);
                 writer.Write(CommandId);
