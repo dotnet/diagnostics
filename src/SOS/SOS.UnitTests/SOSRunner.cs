@@ -730,7 +730,12 @@ public class SOSRunner : IDisposable
         switch (OS.Kind)
         {
             case OSKind.Windows:
-                return NativeDebugger.Cdb;
+                switch (options) {
+                    case Options.LoadDumpWithDotNetDump:
+                        return NativeDebugger.DotNetDump;
+                    default:
+                        return NativeDebugger.Cdb;
+                }
 
             case OSKind.Linux:
             case OSKind.OSX:

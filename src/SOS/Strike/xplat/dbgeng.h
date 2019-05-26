@@ -84,13 +84,7 @@ public:
         PCSTR format,
         va_list args)
     {
-        ArrayHolder<char> str = new char[8192];
-        int length = _vsnprintf_s(str, 8192, _TRUNCATE, format, args);
-        if (length > 0)
-        {
-            return m_lldbservices->OutputVaList(mask, str, args);
-        }
-        return E_FAIL;
+        return m_lldbservices->OutputVaList(mask, format, args);
     }
 
     // The following methods allow direct control

@@ -21,7 +21,7 @@
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
 
     <!-- Other libs -->
-    <MicrosoftSymbolStoreVersion>1.0.0-dev-64016-01</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.0-dev-64131-02</MicrosoftSymbolStoreVersion>
     <MicrosoftDiagnosticsRuntimeVersion>1.0.5</MicrosoftDiagnosticsRuntimeVersion>
 
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.41</MicrosoftDiagnosticsTracingTraceEventVersion>
@@ -41,7 +41,6 @@
       https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json;
       https://dotnet.myget.org/F/symstore/api/v3/index.json;
       https://dotnet.myget.org/F/dotnet-core/api/v3/index.json;
-      https://dotnet.myget.org/F/dotnet-buildtools/api/v3/index.json;
       https://dotnet.myget.org/F/system-commandline/api/v3/index.json
     </RestoreSources>
   </PropertyGroup>

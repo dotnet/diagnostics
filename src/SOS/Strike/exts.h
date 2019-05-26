@@ -142,11 +142,16 @@ extern PDEBUG_REGISTERS      g_ExtRegisters;
 extern PDEBUG_CLIENT         g_ExtClient;
 extern PDEBUG_DATA_SPACES2   g_ExtData2;
 extern PDEBUG_SYMBOLS2       g_ExtSymbols2;
-extern PDEBUG_ADVANCED3      g_ExtAdvanced3;
+extern PDEBUG_ADVANCED       g_ExtAdvanced;
+
+bool
+IsInitializedByDbgEng();
 
 #else // FEATURE_PAL
 
 extern ILLDBServices*        g_ExtServices;    
+
+#define IsInitializedByDbgEng() false
 
 #endif // FEATURE_PAL
 
@@ -305,11 +310,6 @@ HRESULT CheckEEDll();
     
 extern BOOL g_bDacBroken;
 
-#define PAGE_ALIGN64(Va) ((ULONG64)((Va) & ~((ULONG64) ((LONG64) (LONG) PageSize - 1))))
-
-extern ULONG PageSize;
-
-
 //-----------------------------------------------------------------------------------------
 //
 //  Target platform abstraction
@@ -445,10 +445,6 @@ inline CLRDATA_ADDRESS GetBP(const CROSS_PLATFORM_CONTEXT& context)
 
 extern WINDBG_EXTENSION_APIS ExtensionApis;
 #define GetExpression (ExtensionApis.lpGetExpressionRoutine)
-
-extern ULONG TargetMachine;
-extern ULONG g_TargetClass;
-extern ULONG g_VDbgEng;
 
 #else // FEATURE_PAL
 

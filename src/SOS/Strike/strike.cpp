@@ -346,10 +346,11 @@ static HRESULT
 GetContextStackTrace(ULONG osThreadId, PULONG pnumFrames)
 {
     PDEBUG_CONTROL4 debugControl4;
-    HRESULT hr;
+    HRESULT hr = S_OK;
+    *pnumFrames = 0;
 
     // Do we have advanced capability?
-    if ((hr = g_ExtControl->QueryInterface(__uuidof(IDebugControl4), (void **)&debugControl4)) == S_OK)
+    if (g_ExtControl->QueryInterface(__uuidof(IDebugControl4), (void **)&debugControl4) == S_OK)
     {
         ULONG oldId, id;
         g_ExtSystem->GetCurrentThreadId(&oldId);
@@ -10473,7 +10474,6 @@ DECLARE_API(Name2EE)
 }
 
 
-#ifndef FEATURE_PAL
 DECLARE_API(PathTo)
 {
     INIT_API();
@@ -10512,8 +10512,6 @@ DECLARE_API(PathTo)
     
     return Status;
 }
-#endif
-
 
 
 /**********************************************************************\
@@ -14142,7 +14140,6 @@ static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp,
             bModuleNameWorked = TRUE;
         }
     }
-#ifdef FEATURE_PAL
     else
     {
         if (g_sos->GetPEFileName(dmd.File, MAX_LONGPATH, wszNameBuffer, NULL) == S_OK)
@@ -14158,7 +14155,6 @@ static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp,
             }
         }
     }
-#endif // FEATURE_PAL
 
     // Under certain circumstances DacpMethodDescData::GetMethodDescName() 
     //   returns a module qualified method name
@@ -15364,86 +15360,6 @@ _EFN_GetManagedObjectFieldInfo(
     }
 
     return S_OK;
-}
-
-#endif // FEATURE_PAL
-
-#ifdef FEATURE_PAL
-
-#ifdef CREATE_DUMP_SUPPORTED
-#include <dumpcommon.h>
-#include "datatarget.h"
-extern bool CreateDumpForSOS(const char* programPath, const char* dumpPathTemplate, pid_t pid, MINIDUMP_TYPE minidumpType, ICLRDataTarget* dataTarget);
-extern bool g_diagnostics;
-#endif // CREATE_DUMP_SUPPORTED
-
-DECLARE_API(CreateDump)
-{
-    INIT_API();
-#ifdef CREATE_DUMP_SUPPORTED
-    StringHolder sFileName;
-    BOOL normal = FALSE;
-    BOOL withHeap = FALSE;
-    BOOL triage = FALSE;
-    BOOL full = FALSE;
-    BOOL diag = FALSE;
-
-    size_t nArg = 0;
-    CMDOption option[] = 
-    {   // name, vptr, type, hasValue
-        {"-n", &normal, COBOOL, FALSE},
-        {"-h", &withHeap, COBOOL, FALSE},
-        {"-t", &triage, COBOOL, FALSE},
-        {"-f", &full, COBOOL, FALSE},
-        {"-d", &diag, COBOOL, FALSE},
-    };
-    CMDValue arg[] = 
-    {   // vptr, type
-        {&sFileName.data, COSTRING}
-    };
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
-    {
-        return E_FAIL;
-    }
-    MINIDUMP_TYPE minidumpType = MiniDumpWithPrivateReadWriteMemory;
-    ULONG pid = 0; 
-    g_ExtSystem->GetCurrentProcessId(&pid);
-
-    if (full)
-    {
-        minidumpType = MiniDumpWithFullMemory;
-    }
-    else if (withHeap)
-    {
-        minidumpType = MiniDumpWithPrivateReadWriteMemory;
-    }
-    else if (triage)
-    {
-        minidumpType = MiniDumpFilterTriage;
-    }
-    else if (normal)
-    {
-        minidumpType = MiniDumpNormal;
-    }
-    g_diagnostics = diag;
-
-    const char* programPath = g_ExtServices->GetCoreClrDirectory();
-    const char* dumpPathTemplate = "/tmp/coredump.%d";
-    ToRelease<ICLRDataTarget> dataTarget = new DataTarget();
-    dataTarget->AddRef();
-
-    if (sFileName.data != nullptr)
-    {
-        dumpPathTemplate = sFileName.data;
-    }
-    if (!CreateDumpForSOS(programPath, dumpPathTemplate, pid, minidumpType, dataTarget))
-    {
-        Status = E_FAIL;
-    } 
-#else // CREATE_DUMP_SUPPORTED
-    ExtErr("CreateDump not supported on this platform\n");
-#endif // CREATE_DUMP_SUPPORTED
-    return Status;
 }
 
 #endif // FEATURE_PAL

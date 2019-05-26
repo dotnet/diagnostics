@@ -208,7 +208,7 @@ DataTarget::GetThreadContext(
     }
     return g_ExtServices->GetThreadContextById(threadID, contextFlags, contextSize, context);
 #else
-    if (g_ExtSystem == NULL || g_ExtAdvanced3 == NULL)
+    if (g_ExtSystem == NULL || g_ExtAdvanced == NULL)
     {
         return E_UNEXPECTED;
     }
@@ -239,7 +239,7 @@ DataTarget::GetThreadContext(
     ((CONTEXT*) context)->ContextFlags = contextFlags;
 
     // Ok, do it!
-    hr = g_ExtAdvanced3->GetThreadContext((LPVOID) context, contextSize);
+    hr = g_ExtAdvanced->GetThreadContext((LPVOID) context, contextSize);
 
     // This is cleanup; failure here doesn't mean GetThreadContext should fail
     // (that's determined by hr).

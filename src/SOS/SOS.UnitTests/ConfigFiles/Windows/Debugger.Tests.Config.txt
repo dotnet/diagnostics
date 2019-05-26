@@ -64,6 +64,7 @@
       <HostArgs>--fx-version $(RuntimeFrameworkVersion)</HostArgs>
       <RuntimeSymbolsPath>$(RepoRootDir)\.dotnet\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
       <SOSPath>$(InstallDir)\sos.dll</SOSPath>
+      <DotNetDumpPath>$(RootBinDir)/bin/dotnet-dump/$(TargetConfiguration)/netcoreapp2.1/publish/dotnet-dump.dll</DotNetDumpPath>
     </Option>
     <Option Condition="$(TargetArchitecture) != arm64">
       <TestProduct>Desktop</TestProduct>

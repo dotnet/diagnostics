@@ -29,19 +29,21 @@ namespace SOS
         public int MxCsr;
 
         [FieldOffset(0x38)]
-        public short SegCs;
+        public short Cs;
         [FieldOffset(0x3a)]
-        public short SegDs;
+        public short Ds;
         [FieldOffset(0x3c)]
-        public short SegEs;
+        public short Es;
         [FieldOffset(0x3e)]
-        public short SegFs;
+        public short Fs;
         [FieldOffset(0x40)]
-        public short SegGs;
+        public short Gs;
         [FieldOffset(0x42)]
-        public short SegSs;
+        public short Ss;
         [FieldOffset(0x44)]
         public int EFlags;
+        [FieldOffset(0x44)]
+        public ulong RFlags;
 
         [FieldOffset(0x48)]
         public ulong Dr0;

@@ -25,6 +25,7 @@ typedef  void (*DisposeDelegate)(PVOID);
 typedef  BOOL (*ResolveSequencePointDelegate)(PVOID, const char*, unsigned int, unsigned int*, unsigned int*);
 typedef  BOOL (*GetLocalVariableNameDelegate)(PVOID, int, int, BSTR*);
 typedef  BOOL (*GetLineByILOffsetDelegate)(PVOID, mdMethodDef, ULONG64, ULONG *, BSTR*);
+typedef DWORD_PTR (*GetExpressionDelegate)(PCSTR);
 
 typedef  BOOL (*GetMetadataLocatorDelegate)(
     LPCWSTR imagePath,
@@ -50,6 +51,7 @@ struct SOSNetCoreCallbacks
     GetLineByILOffsetDelegate GetLineByILOffsetDelegate;
     GetLocalVariableNameDelegate GetLocalVariableNameDelegate;
     GetMetadataLocatorDelegate GetMetadataLocatorDelegate;
+    GetExpressionDelegate GetExpressionDelegate;
 };
 
 static const char *SOSManagedDllName = "SOS.NETCore";
@@ -60,6 +62,7 @@ extern HMODULE g_hInstance;
 extern LPCSTR g_hostRuntimeDirectory;
 extern SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
 
+extern HRESULT GetCoreClrDirectory(LPWSTR modulePath, int modulePathSize);
 extern LPCSTR GetDacFilePath();
 extern LPCSTR GetDbiFilePath();
 extern BOOL IsHostingInitialized();
