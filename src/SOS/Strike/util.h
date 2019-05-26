@@ -1871,7 +1871,7 @@ bool IsMetadataMemory(CLRDATA_ADDRESS address, ULONG32 size);
  */
 DWORD_PTR *ModuleFromName(__in_opt LPSTR name, int *numModules);
 HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataModule** ppModule);
-void GetInfoFromName(DWORD_PTR ModuleAddr, const char* name);
+void GetInfoFromName(DWORD_PTR ModuleAddr, const char* name, mdTypeDef* retMdTypeDef=NULL);
 void GetInfoFromModule (DWORD_PTR ModuleAddr, ULONG token, DWORD_PTR *ret=NULL);
 
     
