@@ -502,7 +502,7 @@ Payload
 
 Command Code: `0x0101`
 
-The `CreateCoreDump` command is used to instruct the runtime to generate a core dump of the process.  The command will keep the connection open while the dump is generated and then response with a message containing an `HRESULT` indicating success or failure.
+The `CreateCoreDump` command is used to instruct the runtime to generate a core dump of the process.  The command will keep the connection open while the dump is generated and then respond with a message containing an `HRESULT` indicating success or failure.
 
 In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
 
@@ -552,7 +552,7 @@ Payload
 
 Command Code: `0x0301`
 
-The `AttachProfiler` command is used to attach a profiler to the runtime.  The command will keep the connection open while the profiler is being attached and then response with a message containing an `HRESULT` indicating success or failure.
+The `AttachProfiler` command is used to attach a profiler to the runtime.  The command will keep the connection open while the profiler is being attached and then respond with a message containing an `HRESULT` indicating success or failure.
 
 In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
 
