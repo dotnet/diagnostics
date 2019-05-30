@@ -61,12 +61,12 @@ In order to ensure filename uniqueness, a `disambiguation key` is generated.  On
 
 socket name:
 ```c
-dotnetcore-diagnostic-{%d:PID}-{%llu:disambiguation key}-socket
+dotnet-diagnostic-{%d:PID}-{%llu:disambiguation key}-socket
 ```
 
 Named Pipes (Windows):
 ```
-\\.\pipe\dotnetcore-diagnostic-{%d:PID}
+\\.\pipe\dotnet-diagnostic-{%d:PID}
 ```
 
 ## Messages
@@ -320,19 +320,20 @@ Commands are a `command_set` and a `command_id`.  A `command_set` is analogous t
 
 The current set of `command_set`s and `command_id`s are listed below:
 
-```c
+```c++
 enum class CommandSet : uint8_t
 {
     // reserved = 0x00,
-    Miscellaneous = 0x01,
-    EventPipe     = 0x02,
+    Dump        = 0x01,
+    EventPipe   = 0x02,
+    Profiler    = 0x03
     // future
 
     Server = 0xFF,
 };
 ```
 
-```c
+```c++
 enum class ServerCommandId : uint8_t
 {
     OK    = 0x00,
@@ -340,7 +341,7 @@ enum class ServerCommandId : uint8_t
 };
 ```
 
-```c
+```c++
 enum class EventPipeCommandId : uint8_t
 {
     // reserved = 0x00,
@@ -348,6 +349,27 @@ enum class EventPipeCommandId : uint8_t
     CollectTracing = 0x02, // create/start a given session
 }
 ```
+See: [EventPipe Commands](#EventPipe-Commands)
+
+```c++
+enum class DumpCommandId : uint8_t
+{
+    // reserved     = 0x00,
+    CreateCoreDump  = 0x01,
+    // future
+}
+```
+See: [Dump Commands](#Dump-Commands)
+
+```c++
+enum class ProfilerCommandId : uint8_t
+{
+    // reserver     = 0x00,
+    AttachProfiler  = 0x01,
+    // future
+}
+``` 
+See: [Profiler Commands](#Profiler-Commands)
 
 Commands may use the generic `{ magic="DOTNET_IPC_V1"; size=20; command_set=0xFF (Server); command_id=0x00 (OK); reserved = 0x0000; }` to indicate success rather than having a command specific success `command_id`.
 
@@ -369,6 +391,7 @@ EventPipe Payloads are encoded with the following rules:
 * `uint` = 4 little endian bytes
 * `ulong` = 8 little endian bytes
 * `wchar` = 2 little endian bytes, UTF16 encoding
+* `byte` = 1 unsigned little endian byte
 * `array<T>` = uint length, length # of `T`s
 * `string` = (`array<wchar>` where the last `wchar` must = `0`) or (length = `0`)
 
@@ -473,28 +496,126 @@ Payload
 }
 ```
 
+## Dump Commands
+
+### `CreateCoreDump`
+
+Command Code: `0x0101`
+
+The `CreateCoreDump` command is used to instruct the runtime to generate a core dump of the process.  The command will keep the connection open while the dump is generated and then respond with a message containing an `HRESULT` indicating success or failure.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0101; 0x0000 }`
+
+* `string dumpName`: The name of the dump generated.
+* `uint dumpType`: A value between 1 and 4 inclusive that indicates the type of dump to take
+  * Normal = 1,
+  * WithHeap = 2,
+  * Triage = 3,
+  * Full = 4
+* `uint diagnostics`: The providers to turn on for the streaming session
+  * `0` or `1` for on or off
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; 28; 0xFF00; 0x0000; }`
+
+`CreateCoreDump` returns:
+* `int32 hresult`: The result of creating the core dump (`0` indicates success)
+
+##### Details:
+
+Input:
+```
+Payload
+{
+    string dumpName,
+    uint dumpType,
+    uint diagnostics
+}
+```
+
+Returns:
+```c
+Payload
+{
+    int32 hresult
+}
+```
+
+## Profiler Commands
+
+### `AttachProfiler`
+
+Command Code: `0x0301`
+
+The `AttachProfiler` command is used to attach a profiler to the runtime.  The command will keep the connection open while the profiler is being attached and then respond with a message containing an `HRESULT` indicating success or failure.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0301; 0x0000 }`
+
+* `uint32 attachTimeout`: The timeout for attaching to the profiler (in milliseconds)
+* `CLSID profilerGuid`: The GUID associated with the profiler
+* `string profilerPath`: Location of the profiler
+* `array<byte> clientData`: The data being provided to the profiler
+
+Where a `CLSID` is a fixed size struct consisting of:
+* `uint x`
+* `byte s1`
+* `byte s2`
+* `byte[8] c`
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; 28; 0xFF00; 0x0000; }`
+
+`AttachProfiler` returns:
+* `int32 hresult`: The result of attaching the profiler (`0` indicates success)
+
+##### Details:
+
+Input:
+```
+Payload
+{
+    uint32 dwAttachTimeout
+    CLSID profilerGuid
+    string profilerPath
+    uint32 clientDataSize
+    array<byte> pClientData
+}
+```
+
+Returns:
+```c
+Payload
+{
+    int32 hresult
+}
+```
+
 ### Errors
 
 In the event an error occurs in the handling of an Ipc Message, the Diagnostic Server will attempt to send an Ipc Message encoding the error and subsequently close the connection.  The connection will be closed **regardless** of the success of sending the error message.  The Client is expected to be resilient in the event of a connection being abruptly closed.
 
-```c++
-enum class DiagnosticServerErrorCode : uint32_t
-{
-    OK                = 0x00000000,
-    BadEncoding       = 0x00000001,
-    UnknownCommand    = 0x00000002,
-    UnknownMagic      = 0x00000003,
-    BadInput          = 0x00000004,
-    // future
-
-    UnknownError      = 0xFFFFFFFF,
-};
+Errors are `HRESULTS` encoded as `int32_t` when sent back to the client.  There are a few Diagnostics IPC specific `HRESULT`s:
+```c
+#define CORDIAGIPC_E_BAD_ENCODING    = 0x80131384
+#define CORDIAGIPC_E_UNKNOWN_COMMAND = 0x80131385
+#define CORDIAGIPC_E_UNKNOWN_MAGIC   = 0x80131386
+#define CORDIAGIPC_E_UNKNOWN_ERROR   = 0x80131387
 ```
 
 Diagnostic Server errors are sent as a Diagnostic IPC Message with:
 * a `command_set` of `0xFF`
 * a `command_id` of `0xFF`
-* a Payload consisting of a `uint32_t` representing the error encountered (described above)
+* a Payload consisting of a `int32_t` representing the error encountered (described above)
 
 All errors will result in the Server closing the connection.
 
@@ -502,7 +623,7 @@ Error response Messages will be sent when:
 * the client sends an improperly encoded Diagnostic IPC Message
 * the client uses an unknown `command`
 * the client uses an unknown `magic` version string
-* the server encounters an unrecoverable error, e.g., OOM, transport error, etc.
+* the server encounters an unrecoverable error, e.g., OOM, transport error, runtime malfunction etc.
 
 The client is expected to be resilient in the event that the Diagnostic Server fails to respond in a reasonable amount of time (this may be Command specific).
 
@@ -557,7 +678,7 @@ For example, if the Diagnostic Server finds incorrectly encoded data while parsi
     <td colspan="1">0xFF</td>
     <td colspan="1">0xFF</td>
     <td colspan="2">0x0000</td>
-    <td colspan="8">0x00000001</td>
+    <td colspan="8">0x80131384</td>
   </tr>
 </table>
 
