@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -159,46 +160,62 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 providerString = sb.ToString();
             }
 
+            var shouldExit = new ManualResetEvent(false);
             var terminated = false;
 
             Task monitorTask = new Task(() => {
-                var configuration = new SessionConfiguration(
-                    circularBufferSizeMB: 1000,
-                    outputPath: "",
-                    providers: Trace.Extensions.ToProviders(providerString));
-
-                var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
-                EventPipeEventSource source = new EventPipeEventSource(binaryReader);
-                writer.InitializeDisplay();
-                source.Dynamic.All += Dynamic_All;
-                source.Process();
-                terminated = true; // This indicates that the runtime is done. We shoudn't try to talk to it anymore.
-            });
-
-            Task commandTask = new Task(() =>
-            {
-                while(true)
+                try
                 {
-                    while (!Console.KeyAvailable) { }
-                    ConsoleKey cmd = Console.ReadKey(true).Key;
-                    if (cmd == ConsoleKey.Q)
-                    {
-                        break;
-                    }
-                    else if (cmd == ConsoleKey.P)
-                    {
-                        pauseCmdSet = true;
-                    }
-                    else if (cmd == ConsoleKey.R)
-                    {
-                        pauseCmdSet = false;
-                    }
+                    var configuration = new SessionConfiguration(
+                        circularBufferSizeMB: 1000,
+                        outputPath: "",
+                        providers: Trace.Extensions.ToProviders(providerString));
+
+                    var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
+                    EventPipeEventSource source = new EventPipeEventSource(binaryReader);
+                    writer.InitializeDisplay();
+                    source.Dynamic.All += Dynamic_All;
+                    source.Process();
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
+                }
+                finally
+                {
+                    terminated = true; // This indicates that the runtime is done. We shouldn't try to talk to it anymore.
+                    shouldExit.Set();
                 }
             });
 
             monitorTask.Start();
-            commandTask.Start();
-            await commandTask;
+            while(true)
+            {
+                while (true)
+                {
+                    if (shouldExit.WaitOne(250))
+                    {
+                        return 0;
+                    }
+                    if (Console.KeyAvailable)
+                    {
+                        break;
+                    }
+                }
+                ConsoleKey cmd = Console.ReadKey(true).Key;
+                if (cmd == ConsoleKey.Q)
+                {
+                    break;
+                }
+                else if (cmd == ConsoleKey.P)
+                {
+                    pauseCmdSet = true;
+                }
+                else if (cmd == ConsoleKey.R)
+                {
+                    pauseCmdSet = false;
+                }
+            }
 
             if (!terminated)
             {
@@ -206,10 +223,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     EventPipeClient.StopTracing(_processId, _sessionId);    
                 }
-                catch (System.IO.EndOfStreamException) {} // If the app we're monitoring exits abruptly, this may throw in which case we just swallow the exception and exit gracefully.
+                catch (EndOfStreamException ex)
+                {
+                    // If the app we're monitoring exits abruptly, this may throw in which case we just swallow the exception and exit gracefully.
+                    Debug.WriteLine($"[ERROR] {ex.ToString()}");
+                } 
             }
             
-            return 0;
+            return await Task.FromResult(0);
         }
     }
 }
