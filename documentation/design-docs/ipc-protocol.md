@@ -576,7 +576,7 @@ Where a `CLSID` is a fixed size struct consisting of:
 Header: `{ Magic; 28; 0xFF00; 0x0000; }`
 
 `AttachProfiler` returns:
-* `int32 hresult`: The result of creating the core dump (`0` indicates success)
+* `int32 hresult`: The result of attaching the profiler (`0` indicates success)
 
 ##### Details:
 
