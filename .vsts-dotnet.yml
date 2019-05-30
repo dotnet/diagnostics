@@ -4,9 +4,7 @@ phases:
     name: Windows
     agentOs: Windows_NT
     queue: 
-      name: DotNetCore-Build
-      demands:
-        - agent.os -equals Windows_NT
+      name: Hosted VS2017
       parallel: 4
       matrix:
         Build_Debug:
@@ -31,9 +29,7 @@ phases:
     agentOs: Linux
     dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-3e800f1-20190501005343
     queue:
-      name: DotNet-Build
-      demands:
-        - agent.os -equals Linux
+      name: Hosted Ubuntu 1604
       parallel: 2
       matrix:
         Build_Debug:
@@ -52,9 +48,7 @@ phases:
     dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-14.04-cross-1735d26-20190521133857
     crossrootfsDir: '/crossrootfs/arm'
     queue:
-      name: DotNet-Build
-      demands:
-        - agent.os -equals Linux
+      name: Hosted Ubuntu 1604
       matrix:
         Build_Release:
           _BuildConfig: Release
@@ -68,9 +62,7 @@ phases:
     dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-a3ae44b-20180315221921
     crossrootfsDir: '/crossrootfs/arm64'
     queue:
-      name: DotNet-Build
-      demands:
-        - agent.os -equals Linux
+      name: Hosted Ubuntu 1604
       matrix:
         Build_Release:
           _BuildConfig: Release
@@ -83,9 +75,7 @@ phases:
     agentOs: Linux
     dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.6-WithNode-f4d3fe3-20181220200247
     queue:
-      name: DotNet-Build
-      demands:
-        - agent.os -equals Linux
+      name: Hosted Ubuntu 1604
       matrix:
         Build_Release:
           _BuildConfig: Release
@@ -97,9 +87,7 @@ phases:
     name: MacOS
     agentOs: Darwin
     queue: 
-      name: Hosted macOS Preview
-      demands:
-        - agent.os -equals Darwin
+      name: Hosted macOS
       parallel: 2
       matrix:
         Build_Debug:
@@ -118,9 +106,7 @@ phases:
     dependsOn: CentOS_7
     testOnly: true
     queue:
-      name: DotNet-Build
-      demands:
-        - agent.os -equals Linux
+      name: Hosted Ubuntu 1604
       matrix:
         Build_Debug:
           _BuildConfig: Debug
@@ -134,9 +120,7 @@ phases:
     dependsOn: CentOS_7
     testOnly: true
     queue:
-      name: DotNet-Build
-      demands:
-        - agent.os -equals Linux
+      name: Hosted Ubuntu 1604
       matrix:
         Build_Debug:
           _BuildConfig: Debug
@@ -150,9 +134,7 @@ phases:
     dependsOn: CentOS_7
     testOnly: true
     queue:
-      name: DotNet-Build
-      demands:
-        - agent.os -equals Linux
+      name: Hosted Ubuntu 1604
       matrix:
         Build_Debug:
           _BuildConfig: Debug
@@ -166,9 +148,7 @@ phases:
     dependsOn: CentOS_7
     testOnly: true
     queue:
-      name: DotNet-Build
-      demands:
-        - agent.os -equals Linux
+      name: Hosted Ubuntu 1604
       matrix:
         Build_Debug:
           _BuildConfig: Debug
@@ -182,9 +162,7 @@ phases:
     dependsOn: CentOS_7
     testOnly: true
     queue:
-      name: DotNet-Build
-      demands:
-        - agent.os -equals Linux
+      name: Hosted Ubuntu 1604
       matrix:
         Build_Debug:
           _BuildConfig: Debug
@@ -198,9 +176,7 @@ phases:
     dependsOn: CentOS_7
     testOnly: true
     queue:
-      name: DotNet-Build
-      demands:
-        - agent.os -equals Linux
+      name: Hosted Ubuntu 1604
       matrix:
         Build_Debug:
           _BuildConfig: Debug
@@ -214,9 +190,7 @@ phases:
     dependsOn: CentOS_7
     testOnly: true
     queue:
-      name: DotNet-Build
-      demands:
-        - agent.os -equals Linux
+      name: Hosted Ubuntu 1604
       matrix:
         Build_Debug:
           _BuildConfig: Debug
@@ -230,9 +204,7 @@ phases:
     dependsOn: CentOS_7
     testOnly: true
     queue:
-      name: DotNet-Build
-      demands:
-        - agent.os -equals Linux
+      name: Hosted Ubuntu 1604
       matrix:
         Build_Debug:
           _BuildConfig: Debug
@@ -248,9 +220,7 @@ phases:
   - Linux_cross64
   condition: ne(variables['Build.Reason'], 'Schedule')
   queue:
-    name: DotNetCore-Build
-    demands:
-      - agent.os -equals Windows_NT
+    name: Hosted VS2017
   variables: 
     - group: DotNet-Blob-Feed
     - group: DotNet-MyGet-Publish
