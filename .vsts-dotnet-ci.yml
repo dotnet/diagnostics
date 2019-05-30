@@ -35,7 +35,7 @@ phases:
     name: MacOS
     agentOs: Darwin
     queue: 
-      name: Hosted macOS Preview
+      name: Hosted macOS
       parallel: 2
       matrix:
         Build_Debug:
