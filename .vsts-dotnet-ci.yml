@@ -22,7 +22,7 @@ phases:
     agentOs: Linux
     dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-3e800f1-20190501005343
     queue:
-      name: DotNetCore-Linux
+      name: Hosted Ubuntu 1604
       demands:
         - agent.os -equals Linux
       parallel: 2
