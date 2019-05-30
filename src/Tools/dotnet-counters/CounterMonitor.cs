@@ -206,7 +206,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     EventPipeClient.StopTracing(_processId, _sessionId);    
                 }
-                catch (System.IO.EndOfStreamException) {} // If the app we're monitoring exits abrubtly, this may throw in which case we just swallow the exception and exit gracefully.    
+                catch (System.IO.EndOfStreamException) {} // If the app we're monitoring exits abruptly, this may throw in which case we just swallow the exception and exit gracefully.
             }
             
             return 0;

@@ -99,26 +99,36 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
 
                     var collectingTask = new Task(() => {
-                        using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
+                        try
                         {
-                            Console.Out.WriteLine($"Process     : {process.MainModule.FileName}");
-                            Console.Out.WriteLine($"Output File : {fs.Name}");
-                            Console.Out.WriteLine($"\tSession Id: 0x{sessionId:X16}");
-                            lineToClear = Console.CursorTop;
-
-                            while (true)
+                            using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                             {
-                                var buffer = new byte[16 * 1024];
-                                int nBytesRead = stream.Read(buffer, 0, buffer.Length);
-                                if (nBytesRead <= 0)
-                                    break;
-                                fs.Write(buffer, 0, nBytesRead);
+                                Console.Out.WriteLine($"Process     : {process.MainModule.FileName}");
+                                Console.Out.WriteLine($"Output File : {fs.Name}");
+                                Console.Out.WriteLine($"\tSession Id: 0x{sessionId:X16}");
+                                lineToClear = Console.CursorTop;
 
-                                ResetCurrentConsoleLine(vTermMode.IsEnabled);
-                                Console.Out.Write($"\tRecording trace {GetSize(fs.Length)}");
+                                while (true)
+                                {
+                                    var buffer = new byte[16 * 1024];
+                                    int nBytesRead = stream.Read(buffer, 0, buffer.Length);
+                                    if (nBytesRead <= 0)
+                                        break;
+                                    fs.Write(buffer, 0, nBytesRead);
 
-                                Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
+                                    ResetCurrentConsoleLine(vTermMode.IsEnabled);
+                                    Console.Out.Write($"\tRecording trace {GetSize(fs.Length)}");
+
+                                    Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
+                                }
                             }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
+                        }
+                        finally
+                        {
                             terminated = true;
                             shouldExit.Set();
                         }
