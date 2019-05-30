@@ -61,12 +61,12 @@ In order to ensure filename uniqueness, a `disambiguation key` is generated.  On
 
 socket name:
 ```c
-dotnetcore-diagnostic-{%d:PID}-{%llu:disambiguation key}-socket
+dotnet-diagnostic-{%d:PID}-{%llu:disambiguation key}-socket
 ```
 
 Named Pipes (Windows):
 ```
-\\.\pipe\dotnetcore-diagnostic-{%d:PID}
+\\.\pipe\dotnet-diagnostic-{%d:PID}
 ```
 
 ## Messages
