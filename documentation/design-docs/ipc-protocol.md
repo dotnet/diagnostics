@@ -391,6 +391,7 @@ EventPipe Payloads are encoded with the following rules:
 * `uint` = 4 little endian bytes
 * `ulong` = 8 little endian bytes
 * `wchar` = 2 little endian bytes, UTF16 encoding
+* `byte` = 1 unsigned little endian byte
 * `array<T>` = uint length, length # of `T`s
 * `string` = (`array<wchar>` where the last `wchar` must = `0`) or (length = `0`)
 
@@ -496,6 +497,108 @@ Payload
 ```
 
 ## Dump Commands
+
+### `CreateCoreDump`
+
+Command Code: `0x0101`
+
+The `CreateCoreDump` command is used to instruct the runtime to generate a core dump of the process.  The command will keep the connection open while the dump is generated and then response with a message containing an `HRESULT` indicating success or failure.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0101; 0x0000 }`
+
+* `string dumpName`: The name of the dump generated.
+* `uint dumpType`: A value between 1 and 4 inclusive that indicates the type of dump to take
+  * Normal = 1,
+  * WithHeap = 2,
+  * Triage = 3,
+  * Full = 4
+* `uint diagnostics`: The providers to turn on for the streaming session
+  * `0` or `1` for on or off
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; 28; 0xFF00; 0x0000; }`
+
+`CreateCoreDump` returns:
+* `int32 hresult`: The result of creating the core dump (`0` indicates success)
+
+##### Details:
+
+Input:
+```
+Payload
+{
+    string dumpName,
+    uint dumpType,
+    uint diagnostics
+}
+```
+
+Returns:
+```c
+Payload
+{
+    int32 hresult
+}
+```
+
+## Profiler Commands
+
+### `AttachProfiler`
+
+Command Code: `0x0301`
+
+The `AttachProfiler` command is used to attach a profiler to the runtime.  The command will keep the connection open while the profiler is being attached and then response with a message containing an `HRESULT` indicating success or failure.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0301; 0x0000 }`
+
+* `uint32 attachTimeout`: The timeout for attaching to the profiler (in milliseconds)
+* `CLSID profilerGuid`: The GUID associated with the profiler
+* `string profilerPath`: Location of the profiler
+* `array<byte> clientData`: The data being provided to the profiler
+
+Where a `CLSID` is a fixed size struct consisting of:
+* `uint x`
+* `byte s1`
+* `byte s2`
+* `byte[8] c`
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; 28; 0xFF00; 0x0000; }`
+
+`AttachProfiler` returns:
+* `int32 hresult`: The result of creating the core dump (`0` indicates success)
+
+##### Details:
+
+Input:
+```
+Payload
+{
+    uint32 dwAttachTimeout
+    CLSID profilerGuid
+    string profilerPath
+    uint32 clientDataSize
+    array<byte> pClientData
+}
+```
+
+Returns:
+```c
+Payload
+{
+    int32 hresult
+}
+```
 
 ### Errors
 
