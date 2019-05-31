@@ -2152,6 +2152,23 @@ BOOL IsDerivedFrom(CLRDATA_ADDRESS mtObj, __in_z LPCWSTR baseString)
     return FALSE;
 }
 
+BOOL IsDerivedFrom(CLRDATA_ADDRESS mtObj, DWORD_PTR modulePtr, mdTypeDef typeDef)
+{
+    DacpMethodTableData dmtd;
+    
+    for (CLRDATA_ADDRESS walkMT = mtObj;
+         walkMT != NULL && dmtd.Request(g_sos, walkMT) == S_OK;
+         walkMT = dmtd.ParentMethodTable)
+    {
+        if (dmtd.Module == modulePtr && dmtd.cl == typeDef)
+        {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 BOOL TryGetMethodDescriptorForDelegate(CLRDATA_ADDRESS delegateAddr, CLRDATA_ADDRESS* pMD)
 {
     if (!sos::IsObject(delegateAddr, false))
