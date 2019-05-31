@@ -8281,12 +8281,32 @@ DECLARE_API(ThreadPool)
                 DisplayInvalidStructuresMessage();
             }
 
+            int numModule;
+            ArrayHolder<DWORD_PTR> moduleList = ModuleFromName(const_cast<LPSTR>("System.Private.CoreLib.dll"), &numModule);
+            if (moduleList == NULL || numModule != 1)
+            {
+                ExtOut("    Failed to find System.Private.CoreLib.dll\n");
+                return Status;
+            }
+            DWORD_PTR corelibModule = moduleList[0];
+
+            mdTypeDef threadPoolWorkQueueMd, threadPoolWorkStealingQueueMd;
+            GetInfoFromName(corelibModule, "System.Threading.ThreadPoolWorkQueue", &threadPoolWorkQueueMd);
+            GetInfoFromName(corelibModule, "System.Threading.ThreadPoolWorkQueue+WorkStealingQueue", &threadPoolWorkStealingQueueMd);
+
             // Walk every heap item looking for the global queue and local queues.
             ExtOut("\nQueued work items:\n%" POINTERSIZE "s %" POINTERSIZE "s %s\n", "Queue", "Address", "Work Item");
             HeapStat stats;
             for (sos::ObjectIterator itr = gcheap.WalkHeap(); !IsInterrupt() && itr != NULL; ++itr)
             {
-                if (_wcscmp(itr->GetTypeName(), W("System.Threading.ThreadPoolWorkQueue")) == 0)
+                DacpMethodTableData mtdata;
+                if (mtdata.Request(g_sos, TO_TADDR(itr->GetMT())) != S_OK ||
+                    mtdata.Module != corelibModule)
+                {
+                    continue;
+                }
+
+                if (mtdata.cl == threadPoolWorkQueueMd)
                 {
                     // We found a global queue (there should be only one, given one AppDomain).
                     // Get its workItems ConcurrentQueue<IThreadPoolWorkItem>.
@@ -8371,7 +8391,7 @@ DECLARE_API(ThreadPool)
                         }
                     }
                 }
-                else if (_wcscmp(itr->GetTypeName(), W("System.Threading.ThreadPoolWorkQueue+WorkStealingQueue")) == 0)
+                else if (mtdata.cl == threadPoolWorkStealingQueueMd)
                 {
                     // We found a local queue.  Get its work items array.
                     int offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("m_array"));
