@@ -4428,7 +4428,7 @@ void ExtOutStateMachineFields(AsyncRecord& ar)
 	}
 }
 
-void FindStateMachineTypes(DWORD_PTR* corelibModule, mdTypeDef* stateMachineBox, mdTypeDef* debugStateMachineBox)
+void FindStateMachineTypes(DWORD_PTR* corelibModule, mdTypeDef* stateMachineBox, mdTypeDef* debugStateMachineBox, mdTypeDef* task)
 {
     int numModule;
     ArrayHolder<DWORD_PTR> moduleList = ModuleFromName(const_cast<LPSTR>("System.Private.CoreLib.dll"), &numModule);
@@ -4437,6 +4437,7 @@ void FindStateMachineTypes(DWORD_PTR* corelibModule, mdTypeDef* stateMachineBox,
         *corelibModule = moduleList[0];
         GetInfoFromName(*corelibModule, "System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1+AsyncStateMachineBox`1", stateMachineBox);
         GetInfoFromName(*corelibModule, "System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1+DebugFinalizableAsyncStateMachineBox`1", debugStateMachineBox);
+        GetInfoFromName(*corelibModule, "System.Threading.Tasks.Task", task);
     }
     else
     {
@@ -4511,8 +4512,8 @@ DECLARE_API(DumpAsync)
 
         // Find the state machine types
         DWORD_PTR corelibModule;
-        mdTypeDef stateMachineBoxMd, debugStateMachineBoxMd;
-        FindStateMachineTypes(&corelibModule, &stateMachineBoxMd, &debugStateMachineBoxMd);
+        mdTypeDef stateMachineBoxMd, debugStateMachineBoxMd, taskMd;
+        FindStateMachineTypes(&corelibModule, &stateMachineBoxMd, &debugStateMachineBoxMd, &taskMd);
 
         // Walk each heap object looking for async state machine objects.  As we're targeting .NET Core 2.1+, all such objects
         // will be Task or Task-derived types.
@@ -4530,7 +4531,7 @@ DECLARE_API(DumpAsync)
             {
                 // If the user has selected to include all tasks and not just async state machine boxes, we simply need to validate
                 // that this is Task or Task-derived, and if it's not, skip it.
-                if (!IsDerivedFrom(itr->GetMT(), W("System.Threading.Tasks.Task")))
+                if (!IsDerivedFrom(itr->GetMT(), corelibModule, taskMd))
                 {
                     continue;
                 }

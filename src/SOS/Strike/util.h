@@ -1850,6 +1850,7 @@ BOOL IsStringObject (size_t obj);
 BOOL IsObjectArray (DWORD_PTR objPointer);
 BOOL IsObjectArray (DacpObjectData *pData);
 BOOL IsDerivedFrom(CLRDATA_ADDRESS mtObj, __in_z LPCWSTR baseString);
+BOOL IsDerivedFrom(CLRDATA_ADDRESS mtObj, DWORD_PTR modulePtr, mdTypeDef typeDef);
 BOOL TryGetMethodDescriptorForDelegate(CLRDATA_ADDRESS delegateAddr, CLRDATA_ADDRESS* pMD);
 
 #ifdef FEATURE_PAL
