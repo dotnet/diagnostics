@@ -15,7 +15,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private int origCol;
         private int maxRow;  // Running maximum of row number
         private int maxCol;  // Running maximum of col number
+        private int STATUS_ROW; // Row # of where we print the status of dotnet-counters
+        private bool paused = false;
         private Dictionary<string, int> knownProvidersRowNum;
+
+        private void UpdateStatus(string msg)
+        {
+            Console.SetCursorPosition(0, STATUS_ROW);
+            Console.Write(new String(' ', 20));
+            Console.SetCursorPosition(0, STATUS_ROW);
+            Console.Write(msg);
+        }
 
         public ConsoleWriter()
         {
@@ -34,13 +44,42 @@ namespace Microsoft.Diagnostics.Tools.Counters
             origRow = Console.CursorTop;
             origCol = Console.CursorLeft;
             Console.WriteLine("Press p to pause, r to resume, q to quit.");
+            Console.WriteLine("    Status: Running.");
 
-            maxRow = origRow+1;
+            STATUS_ROW = origRow+1;
+            maxRow = origRow+2;
             maxCol = origCol;
         }
 
-        public void Update(string providerName, ICounterPayload payload)
+        public void ToggleStatus(bool pauseCmdSet)
         {
+            if (paused == pauseCmdSet)
+            {
+                return;
+            }
+            else if (pauseCmdSet)
+            {
+                UpdateStatus("    Status: Paused");
+            }
+            else
+            {
+                UpdateStatus("    Status: Running");
+            }
+            paused = pauseCmdSet;
+        }
+
+        public void Update(string providerName, ICounterPayload payload, bool pauseCmdSet)
+        {
+            if (paused != pauseCmdSet)
+            {
+                ToggleStatus(pauseCmdSet);
+            }
+
+            if (pauseCmdSet)
+            {
+                return;
+            }
+
             string name = payload.GetName();
 
             // We already know what this counter is! Just update the value string on the console.

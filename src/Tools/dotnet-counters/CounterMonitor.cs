@@ -41,7 +41,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
             if (pauseCmdSet) 
             {
-                return;
+                writer.ToggleStatus(pauseCmdSet);
             }
 
             if (obj.EventName.Equals("EventCounters"))
@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
                 }
-                writer.Update(obj.ProviderName, payload);
+                writer.Update(obj.ProviderName, payload, pauseCmdSet);
             }
         }
 
