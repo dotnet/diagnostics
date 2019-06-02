@@ -177,8 +177,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     source.Dynamic.All += Dynamic_All;
                     source.Process();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Debug.WriteLine($"[ERROR] {ex.ToString()}");
                 }
                 finally
                 {
