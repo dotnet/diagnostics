@@ -16,11 +16,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private int maxRow;  // Running maximum of row number
         private int maxCol;  // Running maximum of col number
         private Dictionary<string, int> knownProvidersRowNum;
+        private Dictionary<string, int> unknownProvidersRowNum;
 
         public ConsoleWriter()
         {
             displayPosition = new Dictionary<string, (int, int)>();
             knownProvidersRowNum = new Dictionary<string, int>();
+            unknownProvidersRowNum = new Dictionary<string, int>();
 
             foreach(CounterProvider provider in KnownData.GetAllProviders())
             {
@@ -64,7 +66,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     {
                         knownProvidersRowNum[providerName] = maxRow + 1;
                         Console.SetCursorPosition(0, maxRow);
-                        Console.WriteLine(providerName);
+                        Console.WriteLine($"[{providerName}]");
                         maxRow += 1;
                     }
 
@@ -84,6 +86,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 else
                 {
                     // If it's from an unknown provider, just append it at the end.
+                    if (!unknownProvidersRowNum.ContainsKey(providerName))
+                    {
+                        knownProvidersRowNum[providerName] = maxRow + 1;
+                        Console.SetCursorPosition(0, maxRow);
+                        Console.WriteLine($"[{providerName}]");
+                        maxRow += 1;
+                    }
+
                     string displayName = payload.GetDisplay();
                     if (string.IsNullOrEmpty(displayName))
                     {
