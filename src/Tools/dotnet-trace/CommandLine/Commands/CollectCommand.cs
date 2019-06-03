@@ -32,17 +32,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             try
             {
-                if (output == null)
-                    throw new ArgumentNullException(nameof(output));
+                Debug.Assert(output != null);
+                Debug.Assert(profile != null);
                 if (processId <= 0)
-                    throw new ArgumentException(nameof(processId));
-                if (profile == null)
-                    throw new ArgumentNullException(nameof(profile));
+                {
+                    Console.Error.WriteLine("Process ID should not be negative.");
+                    return ErrorCodes.ArgumentError;
+                }
 
                 var selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
                     .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
                 if (selectedProfile == null)
-                    throw new ArgumentException($"Invalid profile name: {profile}");
+                {
+                    Console.Error.WriteLine($"Invalid profile name: {profile}");
+                    return ErrorCodes.ArgumentError;
+                }
 
                 var providerCollection = Extensions.ToProviders(providers);
                 var profileProviders = new List<Provider>();
@@ -75,7 +79,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 providerCollection.AddRange(profileProviders);
 
                 if (providerCollection.Count <= 0)
-                    throw new ArgumentException("No providers were specified to start a trace.");
+                {
+                    Console.Error.WriteLine("No providers were specified to start a trace.");
+                    return ErrorCodes.ArgumentError;
+                }
 
                 PrintProviders(providerCollection);
 
@@ -86,6 +93,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     providers: providerCollection);
 
                 var shouldExit = new ManualResetEvent(false);
+                var failed = false;
                 var terminated = false;
 
                 ulong sessionId = 0;
@@ -95,9 +103,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (sessionId == 0)
                     {
                         Console.Error.WriteLine("Unable to create session.");
-                        return -1;
+                        return ErrorCodes.SessionCreationError;
                     }
-
+                    if (File.Exists(output.FullName))
+                    {
+                        Console.Error.WriteLine("Unable to create file.");
+                        return ErrorCodes.FileCreationError;
+                    }
                     var collectingTask = new Task(() => {
                         try
                         {
@@ -125,6 +137,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         }
                         catch (Exception ex)
                         {
+                            failed = true;
                             Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                         }
                         finally
@@ -149,7 +162,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     {
                         EventPipeClient.StopTracing(processId, sessionId);
                     }
-                    collectingTask.Wait();
+                    await collectingTask;
                 }
 
                 Console.Out.WriteLine();
@@ -158,13 +171,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (format != TraceFileFormat.Netperf)
                     TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
 
-                await Task.FromResult(0);
-                return sessionId != 0 ? 0 : 1;
+                return failed ? ErrorCodes.TracingError : 0;
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
-                return 1;
+                return ErrorCodes.UnknownError;
             }
         }
 
