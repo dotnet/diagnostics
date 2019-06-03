@@ -88,7 +88,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     // If it's from an unknown provider, just append it at the end.
                     if (!unknownProvidersRowNum.ContainsKey(providerName))
                     {
-                        knownProvidersRowNum[providerName] = maxRow + 1;
+                        unknownProvidersRowNum[providerName] = maxRow + 1;
                         Console.SetCursorPosition(0, maxRow);
                         Console.WriteLine($"[{providerName}]");
                         maxRow += 1;
