@@ -18,6 +18,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private int STATUS_ROW; // Row # of where we print the status of dotnet-counters
         private bool paused = false;
         private Dictionary<string, int> knownProvidersRowNum;
+        private Dictionary<string, int> unknownProvidersRowNum;
 
         private void UpdateStatus(string msg)
         {
@@ -31,6 +32,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             displayPosition = new Dictionary<string, (int, int)>();
             knownProvidersRowNum = new Dictionary<string, int>();
+            unknownProvidersRowNum = new Dictionary<string, int>();
 
             foreach(CounterProvider provider in KnownData.GetAllProviders())
             {
@@ -103,7 +105,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     {
                         knownProvidersRowNum[providerName] = maxRow + 1;
                         Console.SetCursorPosition(0, maxRow);
-                        Console.WriteLine(providerName);
+                        Console.WriteLine($"[{providerName}]");
                         maxRow += 1;
                     }
 
@@ -123,6 +125,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 else
                 {
                     // If it's from an unknown provider, just append it at the end.
+                    if (!unknownProvidersRowNum.ContainsKey(providerName))
+                    {
+                        knownProvidersRowNum[providerName] = maxRow + 1;
+                        Console.SetCursorPosition(0, maxRow);
+                        Console.WriteLine($"[{providerName}]");
+                        maxRow += 1;
+                    }
+
                     string displayName = payload.GetDisplay();
                     if (string.IsNullOrEmpty(displayName))
                     {

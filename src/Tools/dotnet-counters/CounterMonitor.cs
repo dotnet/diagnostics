@@ -101,11 +101,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 return 1;
             }
 
-            if (_interval == 0) {
-                _console.Error.WriteLine("refreshInterval is required.");
-                return 1;
-            }
-
             String providerString;
 
             if (_counterList.Count == 0)
@@ -179,7 +174,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
+                    Debug.WriteLine($"[ERROR] {ex.ToString()}");
                 }
                 finally
                 {
