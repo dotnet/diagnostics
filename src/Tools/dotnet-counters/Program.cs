@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static int ListProcesses(IConsole console)
         {
             var processes = EventPipeClient.ListAvailablePorts()
-                .Select(System.Diagnostics.Process.GetProcessById)
+                .Select(GetProcess)
                 .Where(process => process != null)
                 .OrderBy(process => process.ProcessName)
                 .ThenBy(process => process.Id);
@@ -73,6 +73,18 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}");
 
             return 0;
+        }
+
+        private static System.Diagnostics.Process GetProcess(int processId)
+        {
+            try
+            {
+                return System.Diagnostics.Process.GetProcessById(processId);
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
         }
 
         public static int List(IConsole console)
