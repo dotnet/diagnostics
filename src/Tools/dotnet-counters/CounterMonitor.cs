@@ -157,6 +157,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             var shouldExit = new ManualResetEvent(false);
             var terminated = false;
+            writer.InitializeDisplay();
 
             Task monitorTask = new Task(() => {
                 try
@@ -168,7 +169,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                     var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
                     EventPipeEventSource source = new EventPipeEventSource(binaryReader);
-                    writer.InitializeDisplay();
                     source.Dynamic.All += Dynamic_All;
                     source.Process();
                 }
