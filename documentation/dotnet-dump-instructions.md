@@ -3,6 +3,8 @@ Dump collection and analysis utility (dotnet-dump)
 
 The dotnet-dump CLI global tool is way to collect and analyze Windows and Linux dumps all without any native debugger involved like lldb on Linux. This is important on platforms like Alpine Linux where a fully working lldb isn't available. The dotnet-dump tool will allow you to run SOS commands to analyze crashes and the GC, but it isn't a native debugger so things like displaying the native stack frames isn't supported.
 
+Currently not supported on macOS.
+
 ## Installing dotnet-dump
 
 The first step is to install the dotnet-dump CLI global tool. This requires at least the 2.1 or greater .NET Core SDK to be installed. If you see the error message `Tool 'dotnet-dump' is already installed`, you will need to uninstall the global tool (see below). 
@@ -10,6 +12,10 @@ The first step is to install the dotnet-dump CLI global tool. This requires at l
     $ dotnet tool install -g dotnet-dump --version 1.0.3-preview5.19251.2
     You can invoke the tool using the following command: dotnet-dump
     Tool 'dotnet-dump' (version '1.0.3-preview5.19251.2') was successfully installed.
+
+If this is the first global tool installed or you get message `Could not execute because the specified command or file was not found.` you need to add `$HOME/.dotnet/tools` to your path.
+
+    export PATH=$PATH:$HOME/.dotnet/tools
 
 ## Using dotnet-dump
 
@@ -21,6 +27,8 @@ On Linux, the runtime version must be 3.0 or greater.
     Writing minidump to file ./core_20190226_135837
     Written 98983936 bytes (24166 pages) to core file
     Complete
+
+If you are running under docker, dump collection requires SYS_PTRACE docker capabilities (--cap-add=SYS_PTRACE or --privileged).
 
 Now analyze the core dump. Only works on Linux for this preview.
 
@@ -104,6 +112,8 @@ To display the help:
       histroot <arguments>                 Displays information related to both promotions and relocations of the specified root.
       setsymbolserver <arguments>          Enables the symbol server support
       soshelp <arguments>                  Displays all available commands when no parameter is specified, or displays detailed help information about the specified command. soshelp <command>
+
+This command on Microsoft .NET Core SDK Linux docker images can throw `Unhandled exception: System.DllNotFoundException: Unable to load shared library 'libdl.so' or one of its dependencies` exception. Issue [#201](https://github.com/dotnet/diagnostics/issues/201). To work around this problem install the "libc6-dev" package.
 
 ## Uninstalling dotnet-dump 
 
