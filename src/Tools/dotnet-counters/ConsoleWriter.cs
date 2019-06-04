@@ -46,7 +46,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             origRow = Console.CursorTop;
             origCol = Console.CursorLeft;
             Console.WriteLine("Press p to pause, r to resume, q to quit.");
-            Console.WriteLine("    Status: Running.");
+            Console.WriteLine("    Status: Waiting for initial payload...");
 
             STATUS_ROW = origRow+1;
             maxRow = origRow+2;
