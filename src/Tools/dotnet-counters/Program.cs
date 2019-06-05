@@ -70,7 +70,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 .ThenBy(process => process.Id);
 
             foreach (var process in processes)
-                console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}");
+            {
+                try
+                {
+                    console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}");
+                }
+                catch (Exception)
+                {
+                    console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} [Could not determine path of elevated process]");
+                }
+            }
 
             return 0;
         }
