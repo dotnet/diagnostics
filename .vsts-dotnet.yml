@@ -221,9 +221,7 @@ phases:
   condition: ne(variables['Build.Reason'], 'Schedule')
   queue:
     name: Hosted VS2017
-  variables: 
-    - group: DotNet-Blob-Feed
-    - group: DotNet-MyGet-Publish
+  variables:
     - name: _PublishBlobFeedUrl
       value: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
     - name: _SOSNETCorePath
@@ -231,27 +229,8 @@ phases:
     - name: _TeamName
       value: DotNetCore
 
-  steps: 
-  - task: ms-vseng.MicroBuildTasks.30666190-6959-11e5-9f96-f56098202fef.MicroBuildSigningPlugin@1
-    displayName: Install MicroBuild plugin
-    inputs:
-      signType: $(SignType)
-      esrpSigning: true
-      zipSources: false
-    env:
-      TeamName: $(_TeamName)
-    continueOnError: false
-    condition: succeeded()
-
-  - task: AzureKeyVault@1
-    inputs:
-      azureSubscription: 'DncEng-VSTS'
-      keyVaultName: EngKeyVault
-      secretsFilter: 'dotnetfeed-storage-access-key-1,microsoft-symbol-server-pat,symweb-symbol-server-pat'
-    condition: succeeded()
-
+  steps:
   # Windows x64 download, copy and archive. Everything under "bin" is published for the Windows x64 build.
-
   - task: DownloadBuildArtifacts@0
     displayName: Download Windows x64 and Managed Artifacts
     inputs:
