@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="gen-1-size", Description="Gen 1 Heap Size", DisplayName="Gen 1 Size (B)" },
                     new CounterProfile{ Name="gen-2-size", Description="Gen 2 Heap Size", DisplayName="Gen 2 Size (B)" },
                     new CounterProfile{ Name="loh-size", Description="LOH Heap Size", DisplayName="LOH Size (B)" },
-                    new CounterProfile{ Name="alloc-rate", Description="Allocation Rate", DisplayName="ALlocation Rate" },
+                    new CounterProfile{ Name="alloc-rate", Description="Allocation Rate", DisplayName="Allocation Rate (Bytes / sec)" },
                     new CounterProfile{ Name="assembly-count", Description="Number of Assemblies Loaded", DisplayName="# of Assemblies Loaded" },
                     new CounterProfile{ Name="exception-count", Description="Number of Exceptions / sec", DisplayName="Exceptions / sec" },
                     new CounterProfile{ Name="threadpool-thread-count", Description="Number of ThreadPool Threads", DisplayName="ThreadPool Threads Count" },
