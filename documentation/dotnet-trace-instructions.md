@@ -1,6 +1,6 @@
 # Trace for performance analysis utility (dotnet-trace)
 
-The dotnet-trace tool is a cross-platform CLI global tool that enables the collection of .NET Core traces of a running process without any native profiler involved. It is built around the EventPipe technology of the .NET Core runtime as an alternative to ETW on Windows and LTTng on Linux.
+The dotnet-trace tool is a cross-platform CLI global tool that enables the collection of .NET Core traces of a running process without any native profiler involved. It is built around the EventPipe technology of the .NET Core runtime as a cross-platform alternative to ETW on Windows and LTTng on Linux, which only work on a single platform. With EventPipe/dotnet-trace, we are trying to deliver the same experience on Windows, Linux, or macOS. dotnet-trace can be used on any .NET Core applications using versions .NET Core 3.0 Preview 5 or later.
 
 ## Installing dotnet-trace
 
@@ -14,7 +14,7 @@ Tool 'dotnet-trace' (version '1.0.3-preview5.19251.2') was successfully installe
 
 ## Using dotnet-trace
 
-In order to collect traces you will need to:
+In order to collect traces using dotnet-trace, you will need to:
 
 - First, find out the process identifier (pid) of the .NET Core 3.0 application (using builds Preview 5 or after) to collect traces from.
 
@@ -44,6 +44,13 @@ On Windows, `.netperf` files can be viewed on PerfView (https://github.com/micro
 If you would rather view the trace on a Linux machine, you can do this by changing the output format of `dotnet-trace` to `speedscope`. You can change the output file format using the `-f|--format` option - `-f speedscope` will make `dotnet-trace` to produce a speedscope file. You can currently choose between `netperf` (the default option) and `speedscope`. Speedscope files can be opened at https://www.speedscope.app.
 
 Note: The .NET Core runtime generates traces in the `netperf` format, and are converted to speedscope (if specified) after the trace is completed. Since some conversions may result in loss of data, the original `netperf` file is preserved next to the converted file.
+
+## Known Caveats
+
+- "dotnet-trace used to work but now it's giving me `Unable to create a session`"
+
+Between .NET Core Preview 5 and Preview 6, there were breaking changes in the runtime. To use the Preview 6 version of dotnet-trace, you need to be using it on an application with Preview 6 of the runtime, and the same holds for the other way around - To trace an application using .NET Core Preview 6 or later, you need to use the latest version of dotnet-trace.
+
 
 
 ## Commonly used keywords for the *Microsoft-Windows-DotNETRuntime* provider
