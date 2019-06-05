@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                     catch (Exception)
                     {
-                        Console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10}");
+                        Console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]");
                     }
                 }
 
