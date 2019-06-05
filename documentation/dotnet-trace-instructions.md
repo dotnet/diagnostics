@@ -1,6 +1,6 @@
 # Trace for performance analysis utility (dotnet-trace)
 
-The dotnet-trace tool is a cross-platform CLI global tool that enables the collection of .NET Core traces of a running process without any native profiler involved. It is built around the EventPipe technology of the .NET Core runtime as an alternative to ETW on Windows and LTTNG on non-Windows.
+The dotnet-trace tool is a cross-platform CLI global tool that enables the collection of .NET Core traces of a running process without any native profiler involved. It is built around the EventPipe technology of the .NET Core runtime as an alternative to ETW on Windows and LTTng on Linux.
 
 ## Installing dotnet-trace
 
@@ -16,10 +16,12 @@ Tool 'dotnet-trace' (version '1.0.3-preview5.19251.2') was successfully installe
 
 In order to collect traces you will need to:
 
-- First, find out the process identifier (pid) of the .NET Core 3.0 app to collect traces from
+- First, find out the process identifier (pid) of the .NET Core 3.0 application (using builds Preview 5 or after) to collect traces from.
 
   - On Windows, there are options such as using the task manager or the `tasklist` command on the cmd window.
-  - On Linux, the trivial option could be using `pidof` on the terminal window.
+  - On Linux, the trivial option could be using `pidof` on the terminal window. 
+
+You may also use the command `dotnet-trace list-processes` command to find out what .NET Core processes are running, along with their process IDs.
 
 - Then, run the following command:
 
@@ -34,6 +36,15 @@ Collecting to file: <Full-Path-To-Trace>/trace.netperf
 ```
 
 - Finally, stop collection by pressing the \<Enter> key, and *dotnet-trace* will finish logging events to *trace.netperf* file.
+
+## Viewing the trace captured from dotnet-trace
+
+On Windows, `.netperf` files can be viewed on PerfView (https://github.com/microsoft/perfview) for analysis, just like traces collected with ETW or LTTng. For traces collected on Linux, you can either move the trace to a Windows machine to be viewed on PerfView. 
+
+If you would rather view the trace on a Linux machine, you can do this by changing the output format of `dotnet-trace` to `speedscope`. You can change the output file format using the `-f|--format` option - `-f speedscope` will make `dotnet-trace` to produce a speedscope file. You can currently choose between `netperf` (the default option) and `speedscope`. Speedscope files can be opened at https://www.speedscope.app.
+
+Note: The .NET Core runtime generates traces in the `netperf` format, and are converted to speedscope (if specified) after the trace is completed. Since some conversions may result in loss of data, the original `netperf` file is preserved next to the converted file.
+
 
 ## Commonly used keywords for the *Microsoft-Windows-DotNETRuntime* provider
 
@@ -85,12 +96,6 @@ Default                         |         4C14FCCBD | Recommend default flags (g
 Microsoft-Windows-DotNETRuntime         | [The Runtime Provider](https://docs.microsoft.com/en-us/dotnet/framework/performance/clr-etw-providers#the-runtime-provider)<br>[CLR Runtime Keywords](https://docs.microsoft.com/en-us/dotnet/framework/performance/clr-etw-keywords-and-levels#runtime)
 Microsoft-Windows-DotNETRuntimeRundown  | [The Rundown Provider](https://docs.microsoft.com/en-us/dotnet/framework/performance/clr-etw-providers#the-rundown-provider)<br>[CLR Rundown Keywords](https://docs.microsoft.com/en-us/dotnet/framework/performance/clr-etw-keywords-and-levels#rundown)
 Microsoft-DotNETCore-SampleProfiler     | Enable the sample profiler
-
-## `dotnet-trace` output formats
-
-You can change the output file format using the `-f|--format` option. You can currently choose between `netperf` (the default on Windows) and `speedscope` (the default on all other OSes). Speedscope files can be opened at https://www.speedscope.app.
-
-Note that all traces are transmitted in the `netperf` format and are converted after the trace is completed. Since some conversions may result in loss of data, the original `netperf` file is preserved next to the converted file.
 
 ## *dotnet-trace* help
 
