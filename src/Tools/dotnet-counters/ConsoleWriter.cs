@@ -17,15 +17,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private int maxCol;  // Running maximum of col number
         private int STATUS_ROW; // Row # of where we print the status of dotnet-counters
         private bool paused = false;
+        private bool initialized = false;
         private Dictionary<string, int> knownProvidersRowNum;
         private Dictionary<string, int> unknownProvidersRowNum;
 
         private void UpdateStatus(string msg)
         {
             Console.SetCursorPosition(0, STATUS_ROW);
-            Console.Write(new String(' ', 20));
+            Console.Write(new String(' ', 42)); // Length of the initial string we print on the console..
             Console.SetCursorPosition(0, STATUS_ROW);
             Console.Write(msg);
+            Console.SetCursorPosition(maxRow, maxCol);
         }
 
         public ConsoleWriter()
@@ -72,16 +74,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public void Update(string providerName, ICounterPayload payload, bool pauseCmdSet)
         {
-            if (paused != pauseCmdSet)
+
+            if (!initialized)
             {
-                ToggleStatus(pauseCmdSet);
+                initialized = true;
+                UpdateStatus("    Status: Running");
             }
 
             if (pauseCmdSet)
             {
                 return;
             }
-
             string name = payload.GetName();
 
             // We already know what this counter is! Just update the value string on the console.

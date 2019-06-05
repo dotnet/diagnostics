@@ -39,10 +39,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             // If we are paused, ignore the event. 
             // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
-            if (pauseCmdSet) 
-            {
-                writer.ToggleStatus(pauseCmdSet);
-            }
+            writer.ToggleStatus(pauseCmdSet);
 
             if (obj.EventName.Equals("EventCounters"))
             {
