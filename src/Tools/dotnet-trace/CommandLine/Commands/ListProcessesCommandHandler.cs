@@ -24,7 +24,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     .ThenBy(process => process.Id);
 
                 foreach (var process in processes)
-                    Console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}");
+                {
+                    try
+                    {
+                        Console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}");
+                    }
+                    catch (Exception)
+                    {
+                        Console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10}");
+                    }
+                }
 
                 await Task.FromResult(0);
                 return 0;

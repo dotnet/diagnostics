@@ -77,7 +77,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 catch (Exception)
                 {
-                    console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} [Could not determine path of elevated process]");
+                    console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10}");
                 }
             }
 
