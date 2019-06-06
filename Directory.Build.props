@@ -1,11 +1,6 @@
 <!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
 <Project>
   <PropertyGroup>
-    <!-- Remove this when we update Arcade. -->
-    <ImportNetSdkFromRepoToolset>false</ImportNetSdkFromRepoToolset>
-  </PropertyGroup>
-
-  <PropertyGroup>
     <ContinuousIntegrationBuild Condition="'$(OfficialBuildId)' != ''">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
@@ -20,8 +15,7 @@
   <PropertyGroup>
     <PackageIconUrl>http://go.microsoft.com/fwlink/?LinkID=288859</PackageIconUrl>
     <RepositoryType>git</RepositoryType>
-    <!-- Uncomment this when we bump arcade versions -->
-    <!-- <PackageLicenseExpression>MIT</PackageLicenseExpression> -->
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <EnableSourceControlManagerQueries>true</EnableSourceControlManagerQueries>
   </PropertyGroup>
 

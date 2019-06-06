@@ -277,7 +277,7 @@ __ResultsDir=$__RootBinDir/TestResults/$__BuildType
 __PackagesBinDir=$__RootBinDir/packages/$__BuildType/Shipping
 __ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=$__RootBinDir/bin -DCLR_BUILD_TYPE=$__BuildType"
 __DotNetCli=$__ProjectRoot/.dotnet/dotnet
-__DotNetRuntimeVersion=2.1.9
+__DotNetRuntimeVersion=2.1.11
 
 if [ ! -e $__DotNetCli ]; then
    echo "dotnet cli not installed $__DotNetCli"
@@ -466,7 +466,7 @@ if [ $__Test == true ]; then
       echo "lldb: '$LLDB_PATH' gdb: '$GDB_PATH'"
 
       # Run xunit SOS tests
-      "$__ProjectRoot/eng/common/build.sh" --test --configuration "$__BuildType" "$__TestArgs"
+      "$__ProjectRoot/eng/common/build.sh" --test --configuration "$__BuildType" $__TestArgs
       if [ $? != 0 ]; then
           exit 1
       fi
