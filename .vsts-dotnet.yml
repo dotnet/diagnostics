@@ -228,6 +228,8 @@ phases:
       value: $(Build.SourcesDirectory)/artifacts/bin/SOS.NETCore/Release/netstandard2.0/publish
     - name: _TeamName
       value: DotNetCore
+    - name: _SignType
+      value: $(SignType)
 
   steps:
   # Windows x64 download, copy and archive. Everything under "bin" is published for the Windows x64 build.
