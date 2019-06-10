@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
     public class ConsoleWriter
     {
         private Dictionary<string, (int, int)> displayPosition; // Display position (x-y coordiates) of each counter values.
-        private Dictionary<string, (int, int)> displayLength; // Length of the counter values displayed for each counter.
+        private Dictionary<string, int> displayLength; // Length of the counter values displayed for each counter.
         private int origRow;
         private int origCol;
         private int maxRow;  // Running maximum of row number
@@ -34,6 +34,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         public ConsoleWriter()
         {
             displayPosition = new Dictionary<string, (int, int)>();
+            displayLength = new Dictionary<string, int>();
             knownProvidersRowNum = new Dictionary<string, int>();
             unknownProvidersRowNum = new Dictionary<string, int>();
 
@@ -129,9 +130,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     
                     int left = displayName.Length + 7; // displayName + " : "
                     int row = maxRow;
+                    string val = payload.GetValue();
                     displayPosition[CounterNameString(providerName, name)] = (left, row);
-                    displayLength[CounterNameString(providerName, name)] = val.Length();
-                    Console.WriteLine($"    {displayName} : {payload.GetValue()}");
+                    displayLength[CounterNameString(providerName, name)] = val.Length;
+                    Console.WriteLine($"    {displayName} : {val}");
                     maxRow += 1;
                 }
                 else
@@ -152,9 +154,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                     int left = displayName.Length + 7; // displayName + " : "
                     int row = maxRow;
-                    string val = payload.getValue();
+                    string val = payload.GetValue();
                     displayPosition[CounterNameString(providerName, name)] = (left, row);
-                    displayLength[CounterNameString(providerName, name)] = val.Length();
+                    displayLength[CounterNameString(providerName, name)] = val.Length;
                     Console.WriteLine($"    {displayName} : {val}");
                     maxRow += 1;
                 }
