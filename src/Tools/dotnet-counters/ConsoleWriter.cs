@@ -11,6 +11,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
     public class ConsoleWriter
     {
         private Dictionary<string, (int, int)> displayPosition; // Display position (x-y coordiates) of each counter values.
+        private Dictionary<string, (int, int)> displayLength; // Length of the counter values displayed for each counter.
         private int origRow;
         private int origCol;
         private int maxRow;  // Running maximum of row number
@@ -72,6 +73,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
             paused = pauseCmdSet;
         }
 
+        // Generates a string using providerName and counterName that can be used as a dictionary key to prevent key collision
+        private string CounterNameString(string providerName, string counterName)
+        {
+            return $"{providerName}:{counterName}";
+        }
+
         public void Update(string providerName, ICounterPayload payload, bool pauseCmdSet)
         {
 
@@ -90,9 +97,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
             // We already know what this counter is! Just update the value string on the console.
             if (displayPosition.ContainsKey(name))
             {
-                (int left, int row) = displayPosition[name];
+                (int left, int row) = displayPosition[CounterNameString(providerName, name)];
+                int clearLength = displayLength[CounterNameString(providerName, name)];
                 Console.SetCursorPosition(left, row);
-                Console.Write(new String(' ', 8));
+                Console.Write(new String(' ', clearLength));
 
                 Console.SetCursorPosition(left, row);
                 Console.Write(payload.GetValue());  
@@ -121,7 +129,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     
                     int left = displayName.Length + 7; // displayName + " : "
                     int row = maxRow;
-                    displayPosition[name] = (left, row);
+                    displayPosition[CounterNameString(providerName, name)] = (left, row);
+                    displayLength[CounterNameString(providerName, name)] = val.Length();
                     Console.WriteLine($"    {displayName} : {payload.GetValue()}");
                     maxRow += 1;
                 }
@@ -143,8 +152,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                     int left = displayName.Length + 7; // displayName + " : "
                     int row = maxRow;
-                    displayPosition[name] = (left, row);
-                    Console.WriteLine($"    {displayName} : {payload.GetValue()}");
+                    string val = payload.getValue();
+                    displayPosition[CounterNameString(providerName, name)] = (left, row);
+                    displayLength[CounterNameString(providerName, name)] = val.Length();
+                    Console.WriteLine($"    {displayName} : {val}");
                     maxRow += 1;
                 }
             }
