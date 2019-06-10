@@ -94,12 +94,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 return;
             }
             string name = payload.GetName();
-
+            string keyName = CounterNameString(providerName, name);
             // We already know what this counter is! Just update the value string on the console.
-            if (displayPosition.ContainsKey(name))
+            if (displayPosition.ContainsKey(keyName))
             {
-                (int left, int row) = displayPosition[CounterNameString(providerName, name)];
-                int clearLength = displayLength[CounterNameString(providerName, name)];
+                (int left, int row) = displayPosition[keyName];
+                int clearLength = displayLength[keyName];
                 Console.SetCursorPosition(left, row);
                 Console.Write(new String(' ', clearLength));
 
@@ -131,8 +131,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     int left = displayName.Length + 7; // displayName + " : "
                     int row = maxRow;
                     string val = payload.GetValue();
-                    displayPosition[CounterNameString(providerName, name)] = (left, row);
-                    displayLength[CounterNameString(providerName, name)] = val.Length;
+                    displayPosition[keyName] = (left, row);
+                    displayLength[keyName] = val.Length;
                     Console.WriteLine($"    {displayName} : {val}");
                     maxRow += 1;
                 }
@@ -155,8 +155,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     int left = displayName.Length + 7; // displayName + " : "
                     int row = maxRow;
                     string val = payload.GetValue();
-                    displayPosition[CounterNameString(providerName, name)] = (left, row);
-                    displayLength[CounterNameString(providerName, name)] = val.Length;
+                    displayPosition[keyName] = (left, row);
+                    displayLength[keyName] = val.Length;
                     Console.WriteLine($"    {displayName} : {val}");
                     maxRow += 1;
                 }
