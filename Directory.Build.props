@@ -1,10 +1,28 @@
 <!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
 <Project>
-  <!-- Disable source link until issue https://github.com/dotnet/roslyn/issues/29289#issuecomment-413294637 is fixed -->
+  <PropertyGroup>
+    <ContinuousIntegrationBuild Condition="'$(OfficialBuildId)' != ''">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <UseSharedCompilation>false</UseSharedCompilation>
+    <LangVersion>Latest</LangVersion>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageIconUrl>http://go.microsoft.com/fwlink/?LinkID=288859</PackageIconUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <EnableSourceControlManagerQueries>true</EnableSourceControlManagerQueries>
+  </PropertyGroup>
+
   <PropertyGroup Condition="'$(OS)' == 'Unix'">
+    <!-- Disable source link until issue https://github.com/dotnet/roslyn/issues/29289#issuecomment-413294637 is fixed -->
     <EnableSourceLink>false</EnableSourceLink>
     <DeterministicSourcePaths>false</DeterministicSourcePaths>
     <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
-    <RepositoryUrl>https://github.com/dotnet/diagnostics.git</RepositoryUrl>
   </PropertyGroup>
 </Project>

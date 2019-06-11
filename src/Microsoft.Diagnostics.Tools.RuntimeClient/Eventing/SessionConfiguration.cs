@@ -36,5 +36,32 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
         private readonly FileInfo _outputPath;
         private readonly List<Provider> _providers;
+
+        public byte[] Serialize()
+        {
+            byte[] serializedData = null;
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write(CircularBufferSizeInMB);
+
+                writer.WriteString(OutputPath);
+
+                writer.Write(Providers.Count());
+                foreach (var provider in Providers)
+                {
+                    writer.Write(provider.Keywords);
+                    writer.Write((uint)provider.EventLevel);
+
+                    writer.WriteString(provider.Name);
+                    writer.WriteString(provider.FilterData);
+                }
+
+                writer.Flush();
+                serializedData = stream.ToArray();
+            }
+
+            return serializedData;
+        }
     }
 }

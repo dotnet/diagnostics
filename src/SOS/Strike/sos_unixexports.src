@@ -53,3 +53,5 @@ ThreadState
 Token2EE
 u
 VerifyHeap
+
+SOSInitializeByHost

@@ -1,6 +1,6 @@
 # Trace for performance analysis utility (dotnet-trace)
 
-The dotnet-trace tool is a cross-platform CLI global tool that enables the collection of .NET Core traces of a running process without any native profiler involved. It is built around the EventPipe technology of the .NET Core runtime as an alternative to ETW on Windows and LTTNG on non-Windows.
+The dotnet-trace tool is a cross-platform CLI global tool that enables the collection of .NET Core traces of a running process without any native profiler involved. It is built around the EventPipe technology of the .NET Core runtime as a cross-platform alternative to ETW on Windows and LTTng on Linux, which only work on a single platform. With EventPipe/dotnet-trace, we are trying to deliver the same experience on Windows, Linux, or macOS. dotnet-trace can be used on any .NET Core applications using versions .NET Core 3.0 Preview 5 or later.
 
 ## Installing dotnet-trace
 
@@ -14,12 +14,14 @@ Tool 'dotnet-trace' (version '1.0.3-preview5.19251.2') was successfully installe
 
 ## Using dotnet-trace
 
-In order to collect traces you will need to:
+In order to collect traces using dotnet-trace, you will need to:
 
-- First, find out the process identifier (pid) of the .NET Core 3.0 app to collect traces from
+- First, find out the process identifier (pid) of the .NET Core 3.0 application (using builds Preview 5 or after) to collect traces from.
 
   - On Windows, there are options such as using the task manager or the `tasklist` command on the cmd window.
-  - On Linux, the trivial option could be using `pidof` on the terminal window.
+  - On Linux, the trivial option could be using `pidof` on the terminal window. 
+
+You may also use the command `dotnet-trace list-processes` command to find out what .NET Core processes are running, along with their process IDs.
 
 - Then, run the following command:
 
@@ -34,6 +36,22 @@ Collecting to file: <Full-Path-To-Trace>/trace.netperf
 ```
 
 - Finally, stop collection by pressing the \<Enter> key, and *dotnet-trace* will finish logging events to *trace.netperf* file.
+
+## Viewing the trace captured from dotnet-trace
+
+On Windows, `.netperf` files can be viewed on PerfView (https://github.com/microsoft/perfview) for analysis, just like traces collected with ETW or LTTng. For traces collected on Linux, you can either move the trace to a Windows machine to be viewed on PerfView. 
+
+If you would rather view the trace on a Linux machine, you can do this by changing the output format of `dotnet-trace` to `speedscope`. You can change the output file format using the `-f|--format` option - `-f speedscope` will make `dotnet-trace` to produce a speedscope file. You can currently choose between `netperf` (the default option) and `speedscope`. Speedscope files can be opened at https://www.speedscope.app.
+
+Note: The .NET Core runtime generates traces in the `netperf` format, and are converted to speedscope (if specified) after the trace is completed. Since some conversions may result in loss of data, the original `netperf` file is preserved next to the converted file.
+
+## Known Caveats
+
+- "dotnet-trace used to work but now it's giving me `Unable to create a session`"
+
+Between .NET Core Preview 5 and Preview 6, there were breaking changes in the runtime. To use the Preview 6 version of dotnet-trace, you need to be using it on an application with Preview 6 of the runtime, and the same holds for the other way around - To trace an application using .NET Core Preview 6 or later, you need to use the latest version of dotnet-trace.
+
+
 
 ## Commonly used keywords for the *Microsoft-Windows-DotNETRuntime* provider
 
@@ -86,12 +104,6 @@ Microsoft-Windows-DotNETRuntime         | [The Runtime Provider](https://docs.mi
 Microsoft-Windows-DotNETRuntimeRundown  | [The Rundown Provider](https://docs.microsoft.com/en-us/dotnet/framework/performance/clr-etw-providers#the-rundown-provider)<br>[CLR Rundown Keywords](https://docs.microsoft.com/en-us/dotnet/framework/performance/clr-etw-keywords-and-levels#rundown)
 Microsoft-DotNETCore-SampleProfiler     | Enable the sample profiler
 
-## `dotnet-trace` output formats
-
-You can change the output file format using the `-f|--format` option. You can currently choose between `netperf` (the default on Windows) and `speedscope` (the default on all other OSes). Speedscope files can be opened at https://www.speedscope.app.
-
-Note that all traces are transmitted in the `netperf` format and are converted after the trace is completed. Since some conversions may result in loss of data, the original `netperf` file is preserved next to the converted file.
-
 ## *dotnet-trace* help
 
 ```cmd
@@ -112,6 +124,15 @@ Options:
 
   -o, --output <trace-file-path>
     The output path for the collected trace data. If not specified it defaults to 'trace.netperf'
+
+  --profile
+      A named pre-defined set of provider configurations that allows common tracing scenarios to be specified
+      succinctly. The options are:
+      runtime-basic   Useful for tracking CPU usage and general runtime information. This the default option
+                      if no profile is specified.
+      gc              Tracks allocation and collection performance
+      gc-collect      Tracks GC collection only at very low overhead
+      none            Tracks nothing. Only providers specified by the --providers option will be available.
 
   --providers <list-of-comma-separated-providers>
     A list of comma separated EventPipe providers to be enabled.

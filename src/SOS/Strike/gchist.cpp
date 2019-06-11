@@ -56,7 +56,7 @@
 
 #ifndef _ASSERTE
 #ifdef _DEBUG
-#define _ASSERTE(expr) 		\
+#define _ASSERTE(expr) \
         do { if (!(expr) ) { ExtOut(#expr); DebugBreak(); } } while (0)
 #else // _DEBUG
 #define _ASSERTE(expr)

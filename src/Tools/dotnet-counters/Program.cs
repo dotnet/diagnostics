@@ -11,7 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-
+using Microsoft.Diagnostics.Tools.RuntimeClient;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             new Option(
                 new[] { "--refresh-interval" }, 
                 "The number of seconds to delay between updating the displayed counters.",
-                new Argument<int> { Name = "refresh-interval" });
+                new Argument<int>(defaultValue: 1) { Name = "refresh-interval" });
 
         private static Argument CounterList() =>
             new Argument<List<string>> {
@@ -53,6 +53,48 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "Display a list of counter names and descriptions, grouped by provider.", 
                 new Option[] { },
                 handler: CommandHandler.Create<IConsole>(List));
+
+        private static Command ListProcessesCommand() =>
+            new Command(
+                "list-processes",
+                "Display a list of dotnet processes that can be monitored.",
+                new Option[] { },
+                handler: CommandHandler.Create<IConsole>(ListProcesses));
+
+        private static int ListProcesses(IConsole console)
+        {
+            var processes = EventPipeClient.ListAvailablePorts()
+                .Select(GetProcess)
+                .Where(process => process != null)
+                .OrderBy(process => process.ProcessName)
+                .ThenBy(process => process.Id);
+
+            foreach (var process in processes)
+            {
+                try
+                {
+                    console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}");
+                }
+                catch (Exception)
+                {
+                    console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]");
+                }
+            }
+
+            return 0;
+        }
+
+        private static System.Diagnostics.Process GetProcess(int processId)
+        {
+            try
+            {
+                return System.Diagnostics.Process.GetProcessById(processId);
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+        }
 
         public static int List(IConsole console)
         {
@@ -78,6 +120,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             var parser = new CommandLineBuilder()
                 .AddCommand(MonitorCommand())
                 .AddCommand(ListCommand())
+                .AddCommand(ListProcessesCommand())
                 .UseDefaults()
                 .Build();
             return parser.InvokeAsync(args);

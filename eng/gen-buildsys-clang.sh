@@ -1,20 +1,19 @@
 #!/usr/bin/env bash
-# Copyright (c) .NET Foundation and contributors. All rights reserved.
-# Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
 #
 # This file invokes cmake and generates the build system for Clang.
 #
 
-if [ $# -lt 4 ]
+if [ $# -lt 5 ]
 then
   echo "Usage..."
-  echo "gen-buildsys-clang.sh <path to top level CMakeLists.txt> <ClangMajorVersion> <ClangMinorVersion> <Architecture> [build flavor] [coverage] [ninja] [cmakeargs]"
+  echo "gen-buildsys-clang.sh <path to top level CMakeLists.txt> <ClangMajorVersion> <ClangMinorVersion> <Architecture> <ScriptDirectory> [build flavor] [coverage] [ninja] [scan-build] [cmakeargs]"
   echo "Specify the path to the top level CMake file - <ProjectK>/src/NDP"
   echo "Specify the clang version to use, split into major and minor version"
-  echo "Specify the target architecture." 
+  echo "Specify the target architecture."
+  echo "Specify the script directory."
   echo "Optionally specify the build configuration (flavor.) Defaults to DEBUG." 
   echo "Optionally specify 'coverage' to enable code coverage build."
+  echo "Optionally specify 'scan-build' to enable build with clang static analyzer."
   echo "Target ninja instead of make. ninja must be on the PATH."
   echo "Pass additional arguments to CMake call."
   exit 1
@@ -23,36 +22,50 @@ fi
 # Set up the environment to be used for building with clang.
 if command -v "clang-$2.$3" > /dev/null
     then
-        export CC="$(command -v clang-$2.$3)"
-        export CXX="$(command -v clang++-$2.$3)"
+        desired_llvm_version="-$2.$3"
 elif command -v "clang$2$3" > /dev/null
     then
-        export CC="$(command -v clang$2$3)"
-        export CXX="$(command -v clang++$2$3)"
+        desired_llvm_version="$2$3"
+elif command -v "clang-$2$3" > /dev/null
+    then
+        desired_llvm_version="-$2$3"
 elif command -v clang > /dev/null
     then
-        export CC="$(command -v clang)"
-        export CXX="$(command -v clang++)"
+        desired_llvm_version=
 else
     echo "Unable to find Clang Compiler"
     exit 1
 fi
 
+export CC="$(command -v clang$desired_llvm_version)"
+export CXX="$(command -v clang++$desired_llvm_version)"
+
 build_arch="$4"
+script_dir="$5"
 buildtype=DEBUG
+code_coverage=OFF
 build_tests=OFF
+scan_build=OFF
 generator="Unix Makefiles"
 __UnprocessedCMakeArgs=""
 
-for i in "${@:5}"; do
+for i in "${@:6}"; do
     upperI="$(echo $i | awk '{print toupper($0)}')"
     case $upperI in
       # Possible build types are DEBUG, CHECKED, RELEASE, RELWITHDEBINFO, MINSIZEREL.
       DEBUG | CHECKED | RELEASE | RELWITHDEBINFO | MINSIZEREL)
       buildtype=$upperI
       ;;
+      COVERAGE)
+      echo "Code coverage is turned on for this build."
+      code_coverage=ON
+      ;;
       NINJA)
       generator=Ninja
+      ;;
+      SCAN-BUILD)
+      echo "Static analysis is turned on for this build."
+      scan_build=ON
       ;;
       *)
       __UnprocessedCMakeArgs="${__UnprocessedCMakeArgs}${__UnprocessedCMakeArgs:+ }$i"
@@ -77,19 +90,6 @@ else
   exit 1
 fi
 
-desired_llvm_major_version=$2
-desired_llvm_minor_version=$3
-if [ $OS = "FreeBSD" ]; then
-    desired_llvm_version="$desired_llvm_major_version$desired_llvm_minor_version"
-elif [ $OS = "OpenBSD" ]; then
-    desired_llvm_version=""
-elif [ $OS = "NetBSD" ]; then
-    desired_llvm_version=""
-elif [ $OS = "SunOS" ]; then
-    desired_llvm_version=""
-else
-  desired_llvm_version="-$desired_llvm_major_version.$desired_llvm_minor_version"
-fi
 locate_llvm_exec() {
   if command -v "$llvm_prefix$1$desired_llvm_version" > /dev/null 2>&1
   then
@@ -114,8 +114,11 @@ if [ $OS = "Linux" -o $OS = "FreeBSD" -o $OS = "OpenBSD" -o $OS = "NetBSD" -o $O
 fi
 
 cmake_extra_defines=
-if [[ -n "$CROSSCOMPONENT" ]]; then
-    cmake_extra_defines="$cmake_extra_defines -DCLR_CROSS_COMPONENTS_BUILD=1"
+if [[ -n "$LLDB_LIB_DIR" ]]; then
+    cmake_extra_defines="$cmake_extra_defines -DWITH_LLDB_LIBS=$LLDB_LIB_DIR"
+fi
+if [[ -n "$LLDB_INCLUDE_DIR" ]]; then
+    cmake_extra_defines="$cmake_extra_defines -DWITH_LLDB_INCLUDES=$LLDB_INCLUDE_DIR"
 fi
 if [ "$CROSSCOMPILE" == "1" ]; then
     if ! [[ -n "$ROOTFS_DIR" ]]; then
@@ -123,7 +126,7 @@ if [ "$CROSSCOMPILE" == "1" ]; then
         exit 1
     fi
     if [[ -z $CONFIG_DIR ]]; then
-        CONFIG_DIR="$1/cross"
+        CONFIG_DIR="$1/eng/cross"
     fi
     export TARGET_BUILD_ARCH=$build_arch
     cmake_extra_defines="$cmake_extra_defines -C $CONFIG_DIR/tryrun.cmake"
@@ -154,15 +157,28 @@ else
     overridefile=clang-compiler-override.txt
 fi
 
-cmake \
+__currentScriptDir="$script_dir"
+
+cmake_command=cmake
+
+if [[ "$scan_build" == "ON" ]]; then
+    export CCC_CC=$CC
+    export CCC_CXX=$CXX
+    export SCAN_BUILD_COMMAND=$(command -v scan-build$desired_llvm_version)
+    cmake_command="$SCAN_BUILD_COMMAND $cmake_command"
+fi
+
+$cmake_command \
   -G "$generator" \
-  "-DCMAKE_USER_MAKE_RULES_OVERRIDE=$1/eng/$overridefile" \
+  "-DCMAKE_USER_MAKE_RULES_OVERRIDE=${__currentScriptDir}/$overridefile" \
   "-DCMAKE_AR=$llvm_ar" \
   "-DCMAKE_LINKER=$llvm_link" \
   "-DCMAKE_NM=$llvm_nm" \
   "-DCMAKE_OBJDUMP=$llvm_objdump" \
   "-DCMAKE_BUILD_TYPE=$buildtype" \
   "-DCMAKE_EXPORT_COMPILE_COMMANDS=1 " \
+  "-DCLR_CMAKE_ENABLE_CODE_COVERAGE=$code_coverage" \
+  "-DCLR_CMAKE_COMPILER=Clang" \
   $cmake_extra_defines \
   $__UnprocessedCMakeArgs \
   "$1"

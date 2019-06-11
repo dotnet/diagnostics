@@ -420,6 +420,17 @@ LLDBServices::GetDebuggeeType(
 {
     *debugClass = DEBUG_CLASS_USER_WINDOWS; 
     *qualifier = 0;
+
+    lldb::SBProcess process = GetCurrentProcess();
+    if (process.IsValid())
+    {
+        const char* pluginName = process.GetPluginName();
+        if ((strcmp(pluginName, "elf-core") == 0) || (strcmp(pluginName, "mach-o-core") == 0))
+        {
+            *qualifier = DEBUG_DUMP_FULL;
+        }
+    }
+
     return S_OK;
 }
 

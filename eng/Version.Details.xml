@@ -1,0 +1,22 @@
+<Dependencies>
+  <ProductDependencies>
+    <Dependency Name="System.CommandLine.Experimental" Version=">0.2.0-alpha.19213.1">
+        <Uri>https://github.com/dotnet/command-line-api</Uri>
+        <Sha>166610c56ff732093f0145a2911d4f6c40b786da</Sha>
+    </Dependency>
+  </ProductDependencies>
+  <ToolsetDependencies>
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="1.0.0-beta.19309.1">
+      <Uri>https://github.com/dotnet/arcade</Uri>
+      <Sha>45361625125cdd3119050a852bd73163ca4b73f4</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.DotNet.Build.Tasks.Feed" Version="2.2.0-beta.19309.1">
+      <Uri>https://github.com/dotnet/arcade</Uri>
+      <Sha>45361625125cdd3119050a852bd73163ca4b73f4</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.DotNet.SignTool" Version="1.0.0-beta.19309.1">
+      <Uri>https://github.com/dotnet/arcade</Uri>
+      <Sha>45361625125cdd3119050a852bd73163ca4b73f4</Sha>
+    </Dependency>
+  </ToolsetDependencies>
+</Dependencies>

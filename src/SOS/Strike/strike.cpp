@@ -4416,6 +4416,37 @@ void ExtOutTaskStateFlagsDescription(int stateFlags)
     ExtOut("\n");
 }
 
+void ExtOutStateMachineFields(AsyncRecord& ar)
+{
+	DacpMethodTableData mtabledata;
+	DacpMethodTableFieldData vMethodTableFields;
+	if (mtabledata.Request(g_sos, ar.StateMachineMT) == S_OK &&
+		vMethodTableFields.Request(g_sos, ar.StateMachineMT) == S_OK &&
+		vMethodTableFields.wNumInstanceFields + vMethodTableFields.wNumStaticFields > 0)
+	{
+		DisplayFields(ar.StateMachineMT, &mtabledata, &vMethodTableFields, (DWORD_PTR)ar.StateMachineAddr, TRUE, ar.IsValueType);
+	}
+}
+
+void FindStateMachineTypes(DWORD_PTR* corelibModule, mdTypeDef* stateMachineBox, mdTypeDef* debugStateMachineBox, mdTypeDef* task)
+{
+    int numModule;
+    ArrayHolder<DWORD_PTR> moduleList = ModuleFromName(const_cast<LPSTR>("System.Private.CoreLib.dll"), &numModule);
+    if (moduleList != NULL && numModule == 1)
+    {
+        *corelibModule = moduleList[0];
+        GetInfoFromName(*corelibModule, "System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1+AsyncStateMachineBox`1", stateMachineBox);
+        GetInfoFromName(*corelibModule, "System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1+DebugFinalizableAsyncStateMachineBox`1", debugStateMachineBox);
+        GetInfoFromName(*corelibModule, "System.Threading.Tasks.Task", task);
+    }
+    else
+    {
+        *corelibModule = 0;
+        *stateMachineBox = 0;
+        *debugStateMachineBox = 0;
+    }
+}
+
 DECLARE_API(DumpAsync)
 {
     INIT_API();
@@ -4479,6 +4510,11 @@ DECLARE_API(DumpAsync)
             DisplayInvalidStructuresMessage();
         }
 
+        // Find the state machine types
+        DWORD_PTR corelibModule;
+        mdTypeDef stateMachineBoxMd, debugStateMachineBoxMd, taskMd;
+        FindStateMachineTypes(&corelibModule, &stateMachineBoxMd, &debugStateMachineBoxMd, &taskMd);
+
         // Walk each heap object looking for async state machine objects.  As we're targeting .NET Core 2.1+, all such objects
         // will be Task or Task-derived types.
         std::map<CLRDATA_ADDRESS, AsyncRecord> asyncRecords;
@@ -4495,7 +4531,7 @@ DECLARE_API(DumpAsync)
             {
                 // If the user has selected to include all tasks and not just async state machine boxes, we simply need to validate
                 // that this is Task or Task-derived, and if it's not, skip it.
-                if (!IsDerivedFrom(itr->GetMT(), W("System.Threading.Tasks.Task")))
+                if (!IsDerivedFrom(itr->GetMT(), corelibModule, taskMd))
                 {
                     continue;
                 }
@@ -4504,8 +4540,10 @@ DECLARE_API(DumpAsync)
             {
                 // Otherwise, we only care about AsyncStateMachineBox`1 as well as the DebugFinalizableAsyncStateMachineBox`1
                 // that's used when certain ETW events are set.
-                if (_wcsncmp(itr->GetTypeName(), W("System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1+AsyncStateMachineBox`1"), 79) != 0 &&
-                    _wcsncmp(itr->GetTypeName(), W("System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1+DebugFinalizableAsyncStateMachineBox`1"), 95) != 0)
+                DacpMethodTableData mtdata;
+                if (mtdata.Request(g_sos, TO_TADDR(itr->GetMT())) != S_OK ||
+                    mtdata.Module != corelibModule ||
+                    (mtdata.cl != stateMachineBoxMd && mtdata.cl != debugStateMachineBoxMd))
                 {
                     continue;
                 }
@@ -4684,19 +4722,14 @@ DECLARE_API(DumpAsync)
 
             // Output the state machine's details as a single line.
             sos::Object obj = TO_TADDR(arIt->second.Address);
-            DacpMethodTableData mtabledata;
-            DacpMethodTableFieldData vMethodTableFields;
-            if (arIt->second.IsStateMachine &&
-                mtabledata.Request(g_sos, arIt->second.StateMachineMT) == S_OK &&
-                vMethodTableFields.Request(g_sos, arIt->second.StateMachineMT) == S_OK &&
-                vMethodTableFields.wNumInstanceFields + vMethodTableFields.wNumStaticFields > 0)
+            if (arIt->second.IsStateMachine)
             {
                 // This has a StateMachine.  Output its details.
                 sos::MethodTable mt = TO_TADDR(arIt->second.StateMachineMT);
                 DMLOut("%s %s %8d ", DMLAsync(obj.GetAddress()), DMLDumpHeapMT(obj.GetMT()), obj.GetSize());
                 if (includeCompleted) ExtOut("%8s ", GetAsyncRecordStatusDescription(arIt->second));
                 ExtOut("%10d %S\n", arIt->second.StateValue, mt.GetName());
-                if (dumpFields) DisplayFields(arIt->second.StateMachineMT, &mtabledata, &vMethodTableFields, (DWORD_PTR)arIt->second.StateMachineAddr, TRUE, arIt->second.IsValueType);
+                if (dumpFields) ExtOutStateMachineFields(arIt->second);
             }
             else
             {
@@ -4759,7 +4792,8 @@ DECLARE_API(DumpAsync)
                             sos::MethodTable contMT = TO_TADDR(contAsyncRecord->second.StateMachineMT);
                             if (contAsyncRecord->second.IsStateMachine) ExtOut("(%d) ", contAsyncRecord->second.StateValue);
                             ExtOut("%S\n", contMT.GetName());
-                        }
+							if (contAsyncRecord->second.IsStateMachine && dumpFields) ExtOutStateMachineFields(contAsyncRecord->second);
+						}
                         else
                         {
                             ExtOut("%S\n", cont.GetTypeName());
@@ -8248,12 +8282,32 @@ DECLARE_API(ThreadPool)
                 DisplayInvalidStructuresMessage();
             }
 
+            int numModule;
+            ArrayHolder<DWORD_PTR> moduleList = ModuleFromName(const_cast<LPSTR>("System.Private.CoreLib.dll"), &numModule);
+            if (moduleList == NULL || numModule != 1)
+            {
+                ExtOut("    Failed to find System.Private.CoreLib.dll\n");
+                return Status;
+            }
+            DWORD_PTR corelibModule = moduleList[0];
+
+            mdTypeDef threadPoolWorkQueueMd, threadPoolWorkStealingQueueMd;
+            GetInfoFromName(corelibModule, "System.Threading.ThreadPoolWorkQueue", &threadPoolWorkQueueMd);
+            GetInfoFromName(corelibModule, "System.Threading.ThreadPoolWorkQueue+WorkStealingQueue", &threadPoolWorkStealingQueueMd);
+
             // Walk every heap item looking for the global queue and local queues.
             ExtOut("\nQueued work items:\n%" POINTERSIZE "s %" POINTERSIZE "s %s\n", "Queue", "Address", "Work Item");
             HeapStat stats;
             for (sos::ObjectIterator itr = gcheap.WalkHeap(); !IsInterrupt() && itr != NULL; ++itr)
             {
-                if (_wcscmp(itr->GetTypeName(), W("System.Threading.ThreadPoolWorkQueue")) == 0)
+                DacpMethodTableData mtdata;
+                if (mtdata.Request(g_sos, TO_TADDR(itr->GetMT())) != S_OK ||
+                    mtdata.Module != corelibModule)
+                {
+                    continue;
+                }
+
+                if (mtdata.cl == threadPoolWorkQueueMd)
                 {
                     // We found a global queue (there should be only one, given one AppDomain).
                     // Get its workItems ConcurrentQueue<IThreadPoolWorkItem>.
@@ -8338,7 +8392,7 @@ DECLARE_API(ThreadPool)
                         }
                     }
                 }
-                else if (_wcscmp(itr->GetTypeName(), W("System.Threading.ThreadPoolWorkQueue+WorkStealingQueue")) == 0)
+                else if (mtdata.cl == threadPoolWorkStealingQueueMd)
                 {
                     // We found a local queue.  Get its work items array.
                     int offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("m_array"));
@@ -13757,6 +13811,9 @@ DECLARE_API( SOSFlush )
     INIT_API();
 
     g_clrData->Flush();
+#ifdef FEATURE_PAL
+    FlushMetadataRegions();
+#endif
     
     return Status;
 }   // DECLARE_API( SOSFlush )

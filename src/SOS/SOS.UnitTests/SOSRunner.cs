@@ -709,6 +709,22 @@ public class SOSRunner : IDisposable
         _outputHelper.Dispose();
     }
 
+    public static bool IsAlpine()
+    {
+        if (OS.Kind == OSKind.Linux)
+        {
+            try
+            {
+                string ostype = File.ReadAllText("/etc/os-release");
+                return ostype.Contains("ID=alpine");
+            }
+            catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException || ex is IOException)
+            {
+            }
+        }
+        return false;
+    }
+
     private static NativeDebugger GetNativeDebuggerToUse(TestConfiguration config, Options options)
     {
         switch (OS.Kind)
@@ -862,6 +878,10 @@ public class SOSRunner : IDisposable
         else
         {
             throw new NotSupportedException("TargetArchitecture " + _config.TargetArchitecture + " not supported");
+        }
+        if (IsAlpine())
+        {
+            defines.Add("ALPINE");
         }
         return defines;
     }

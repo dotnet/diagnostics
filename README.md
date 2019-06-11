@@ -52,6 +52,7 @@ Getting a version of lldb that works for your platform can be a problem sometime
 
 * [dotnet-dump](documentation/dotnet-dump-instructions.md) - Dump collection and analysis utility.
 * [dotnet-trace](documentation/dotnet-trace-instructions.md) - Enable the collection of events for a running .NET Core Application to a local trace file.
+* [dotnet-counters](documentation/dotnet-counters-instructions.md) - Monitor performance counters of a .NET Core application in real time. 
 
 ## New Features
 
@@ -63,24 +64,9 @@ Before executing the "bt" command to dump native frames to load the native symbo
 
     (lldb) loadsymbols
 
-## Release Notes
-
-### dotnet-dump
-
-* Does not work on alpine and other MUSL based distros. Issue [#195](https://github.com/dotnet/diagnostics/issues/195).
-* Not supported ARM32 or ARM64. Issue [#168](https://github.com/dotnet/diagnostics/issues/168).
-* Not supported on MacOS.
-* Dump collection (dotnet dump collect) requires SYS\_PTRACE docker capabilities (--cap-add=SYS\_PTRACE or --privileged).
-* Dump analysis (dotnet dump analyze) in on Microsoft SDK Linux docker images throws `Unhandled exception: System.DllNotFoundException: Unable to load shared library 'libdl.so' or one of its dependencies` exception. Issue [#201](https://github.com/dotnet/diagnostics/issues/201). A work around is to install the "libc6-dev" package.
-* Dump analysis on Windows is not supported. Minidump collection is support. Issue [#157](https://github.com/dotnet/diagnostics/issues/157).
-
-### dotnet-sos
-
-* Does not work on alpine and other MUSL based distros. Issue [#195](https://github.com/dotnet/diagnostics/issues/195).
-* Not supported ARM32 or ARM64. Issue [#168](https://github.com/dotnet/diagnostics/issues/168).
-
 ## Useful Links
 
+* [FAQ](documentation/FAQ.md) - Frequently asked questions.
 * [The LLDB Debugger](http://lldb.llvm.org/index.html) - More information about lldb.
 * [SOS](https://msdn.microsoft.com/en-us/library/bb190764(v=vs.110).aspx) - More information about SOS.
 * [Debugging CoreCLR](https://github.com/dotnet/coreclr/blob/master/Documentation/building/debugging-instructions.md) - Instructions for debugging .NET Core and the CoreCLR runtime.

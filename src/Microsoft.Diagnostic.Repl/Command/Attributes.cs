@@ -66,4 +66,20 @@ namespace Microsoft.Diagnostic.Repl
     public class ArgumentAttribute : BaseAttribute
     {
     }
+
+    /// <summary>
+    /// Marks the function to invoke to execute the command.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Method)]
+    public class CommandInvokeAttribute : Attribute
+    {
+    }
+
+    /// <summary>
+    /// Marks the function to invoke to display alternate help for command.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Method)]
+    public class HelpInvokeAttribute : Attribute
+    {
+    }
 }

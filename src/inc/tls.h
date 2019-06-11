@@ -8,7 +8,10 @@
 // Encapsulates TLS access for maximum performance. 
 //
 
-
+// ******************************************************************************
+// WARNING!!!: This header is also used by the coreclr repo.
+// See: https://github.com/dotnet/coreclr/blob/master/src/inc/tls.h
+// ******************************************************************************
 
 #ifndef __tls_h__
 #define __tls_h__
