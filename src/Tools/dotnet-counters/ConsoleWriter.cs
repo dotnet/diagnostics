@@ -11,6 +11,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
     public class ConsoleWriter
     {
         private Dictionary<string, (int, int)> displayPosition; // Display position (x-y coordiates) of each counter values.
+        private Dictionary<string, int> displayLength; // Length of the counter values displayed for each counter.
         private int origRow;
         private int origCol;
         private int maxRow;  // Running maximum of row number
@@ -33,6 +34,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         public ConsoleWriter()
         {
             displayPosition = new Dictionary<string, (int, int)>();
+            displayLength = new Dictionary<string, int>();
             knownProvidersRowNum = new Dictionary<string, int>();
             unknownProvidersRowNum = new Dictionary<string, int>();
 
@@ -72,6 +74,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
             paused = pauseCmdSet;
         }
 
+        // Generates a string using providerName and counterName that can be used as a dictionary key to prevent key collision
+        private string CounterNameString(string providerName, string counterName)
+        {
+            return $"{providerName}:{counterName}";
+        }
+
         public void Update(string providerName, ICounterPayload payload, bool pauseCmdSet)
         {
 
@@ -86,13 +94,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 return;
             }
             string name = payload.GetName();
-
+            string keyName = CounterNameString(providerName, name);
             // We already know what this counter is! Just update the value string on the console.
-            if (displayPosition.ContainsKey(name))
+            if (displayPosition.ContainsKey(keyName))
             {
-                (int left, int row) = displayPosition[name];
+                (int left, int row) = displayPosition[keyName];
+                int clearLength = displayLength[keyName];
                 Console.SetCursorPosition(left, row);
-                Console.Write(new String(' ', 8));
+                Console.Write(new String(' ', clearLength));
 
                 Console.SetCursorPosition(left, row);
                 Console.Write(payload.GetValue());  
@@ -121,8 +130,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     
                     int left = displayName.Length + 7; // displayName + " : "
                     int row = maxRow;
-                    displayPosition[name] = (left, row);
-                    Console.WriteLine($"    {displayName} : {payload.GetValue()}");
+                    string val = payload.GetValue();
+                    displayPosition[keyName] = (left, row);
+                    displayLength[keyName] = val.Length;
+                    Console.WriteLine($"    {displayName} : {val}");
                     maxRow += 1;
                 }
                 else
@@ -143,8 +154,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                     int left = displayName.Length + 7; // displayName + " : "
                     int row = maxRow;
-                    displayPosition[name] = (left, row);
-                    Console.WriteLine($"    {displayName} : {payload.GetValue()}");
+                    string val = payload.GetValue();
+                    displayPosition[keyName] = (left, row);
+                    displayLength[keyName] = val.Length;
+                    Console.WriteLine($"    {displayName} : {val}");
                     maxRow += 1;
                 }
             }
