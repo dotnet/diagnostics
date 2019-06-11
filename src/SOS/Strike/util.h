@@ -43,8 +43,6 @@ typedef LPSTR   LPUTF8;
 
 DECLARE_HANDLE(OBJECTHANDLE);
 
-struct IMDInternalImport;
-
 #if defined(_TARGET_WIN64_)
 #define WIN64_8SPACES "        "
 #define WIN86_8SPACES ""
@@ -1399,8 +1397,6 @@ void NameForToken_s(DacpModuleData *pModule, mdTypeDef mb, __out_ecount (capacit
 void NameForToken_s(DWORD_PTR ModuleAddr, mdTypeDef mb, __out_ecount (capacity_mdName) WCHAR *mdName, size_t capacity_mdName, 
                   bool bClassName=true);
 HRESULT NameForToken_s(mdTypeDef mb, IMetaDataImport *pImport, __out_ecount (capacity_mdName) WCHAR *mdName,  size_t capacity_mdName, 
-                     bool bClassName);
-HRESULT NameForTokenNew_s(mdTypeDef mb, IMDInternalImport *pImport, __out_ecount (capacity_mdName) WCHAR *mdName,  size_t capacity_mdName, 
                      bool bClassName);
 
 void vmmap();

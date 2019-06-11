@@ -178,9 +178,11 @@ void DisassembleToken(IMetaDataImport *i,
             LPCWSTR pMemberName;
             WCHAR memberName[50];
             ULONG memberNameLen;
+            PCCOR_SIGNATURE sig;
+            ULONG cbSigBlob;
 
             hr = i->GetMemberRefProps(token, &cr, memberName, 49,
-                                      &memberNameLen, NULL, NULL);
+                                      &memberNameLen, &sig, &cbSigBlob);
 
             if (FAILED(hr))
             {
@@ -209,27 +211,17 @@ void DisassembleToken(IMetaDataImport *i,
             }
             else if(TypeFromToken(cr) == mdtTypeSpec)
             {
-                IMDInternalImport *pIMDI = NULL;
-                if (SUCCEEDED(GetMDInternalFromImport(i, &pIMDI)))
+                CQuickBytes out;
+                ULONG cSig;
+                PCCOR_SIGNATURE sig;
+                if (FAILED(i->GetTypeSpecFromToken(cr, &sig, &cSig)))
                 {
-                    CQuickBytes out;
-                    ULONG cSig;
-                    PCCOR_SIGNATURE sig;
-                    if (FAILED(pIMDI->GetSigFromToken(cr, &cSig, &sig)))
-                    {
-                        StringCchCopyW(szName, COUNTOF(szName), W("<Invalid record>"));
-                    }
-                    else
-                    {
-                        PrettyPrintType(sig, &out, pIMDI);
-                        MultiByteToWideChar (CP_ACP, 0, asString(&out), -1, szName, 50);
-                    }
-
-                    pIMDI->Release();
+                    StringCchCopyW(szName, COUNTOF(szName), W("<Invalid record>"));
                 }
                 else
                 {
-                    StringCchCopyW(szName, COUNTOF(szName), W("<unknown type spec>"));
+                    PrettyPrintType(sig, &out, i);
+                    MultiByteToWideChar (CP_ACP, 0, asString(&out), -1, szName, 50);
                 }
             }
             else
@@ -642,6 +634,16 @@ static void appendStr(CQuickBytes *out, const char* str, unsigned len=-1) {
         // Note no trailing null!   
 }
 
+static void appendStr(CQuickBytes *out, const WCHAR* str, unsigned len=-1) {
+    if(len == (unsigned)(-1)) len = (unsigned)_wcslen(str); 
+
+    int acpSize = WideCharToMultiByte(CP_ACP, 0, str, len, NULL, 0, NULL, NULL);
+    char *pAcpString = (char*)_alloca(acpSize + 1);
+    WideCharToMultiByte(CP_ACP, 0, str, len, pAcpString, acpSize, NULL, NULL);
+    pAcpString[acpSize] = '\0';
+    appendStr(out, pAcpString, acpSize);
+}
+
 static void appendChar(CQuickBytes *out, char chr) {
     SIZE_T oldSize = out->Size();
     out->ReSize(oldSize + 1); 
@@ -670,7 +672,7 @@ static void appendStrNum(CQuickBytes *out, int num) {
 PCCOR_SIGNATURE PrettyPrintType(
     PCCOR_SIGNATURE typePtr,            // type to convert,     
     CQuickBytes *out,                   // where to put the pretty printed string   
-    IMDInternalImport *pIMDI,           // ptr to IMDInternal class with ComSig
+    IMetaDataImport *pIMD,           // ptr to IMetaDataImport class with ComSig
     DWORD formatFlags /*= formatILDasm*/)
 {
     mdToken  tk;    
@@ -742,7 +744,7 @@ PCCOR_SIGNATURE PrettyPrintType(
                 {
                     appendStr(out, "[ERROR! NIL TOKEN]");
                 }
-                else PrettyPrintClass(out, tk, pIMDI, formatFlags);
+                else PrettyPrintClass(out, tk, pIMD, formatFlags);
                 break;  
 
             case ELEMENT_TYPE_SZARRAY    :   
@@ -752,7 +754,7 @@ PCCOR_SIGNATURE PrettyPrintType(
             
             case ELEMENT_TYPE_ARRAY       :   
                 {   
-                typePtr = PrettyPrintType(typePtr, out, pIMDI, formatFlags);
+                typePtr = PrettyPrintType(typePtr, out, pIMD, formatFlags);
                 unsigned rank = CorSigUncompressData(typePtr);  
                     // <TODO> what is the syntax for the rank 0 case? </TODO> 
                 if (rank == 0) {
@@ -829,12 +831,12 @@ PCCOR_SIGNATURE PrettyPrintType(
 
             case ELEMENT_TYPE_FNPTR :   
                 appendStr(out, "method ");  
-                appendStr(out, "METHOD"); // was: typePtr = PrettyPrintSignature(typePtr, 0x7FFF, "*", out, pIMDI, NULL);
+                appendStr(out, "METHOD"); // was: typePtr = PrettyPrintSignature(typePtr, 0x7FFF, "*", out, pIMD, NULL);
                 break;
 
             case ELEMENT_TYPE_GENERICINST :
             {
-              typePtr = PrettyPrintType(typePtr, out, pIMDI, formatFlags);
+              typePtr = PrettyPrintType(typePtr, out, pIMD, formatFlags);
               if ((formatFlags & FormatSignature) == 0)
                   break;
 
@@ -848,7 +850,7 @@ PCCOR_SIGNATURE PrettyPrintType(
               {
                   if (needComma)
                       appendChar(out, ',');
-                  typePtr = PrettyPrintType(typePtr, out, pIMDI, formatFlags);
+                  typePtr = PrettyPrintType(typePtr, out, pIMD, formatFlags);
                   needComma = true;
               }
               if ((formatFlags & FormatAngleBrackets) != 0)
@@ -889,24 +891,26 @@ PCCOR_SIGNATURE PrettyPrintType(
 }
 
 // Protection against null names, used by ILDASM/SOS
-const char *const szStdNamePrefix[] = {"MO","TR","TD","","FD","","MD","","PA","II","MR","","CA","","PE","","","SG","","","EV",
-"","","PR","","","MOR","TS","","","","","AS","","","AR","","","FL","ET","MAR"};
+const WCHAR *const szStdNamePrefix[] = {W("MO"),W("TR"),W("TD"),W(""),W("FD"),W(""),W("MD"),W(""),W("PA"),W("II"),W("MR"),W(""),W("CA"),W(""),W("PE"),W(""),W(""),W("SG"),W(""),W(""),W("EV"),
+W(""),W(""),W("PR"),W(""),W(""),W("MOR"),W("TS"),W(""),W(""),W(""),W(""),W("AS"),W(""),W(""),W("AR"),W(""),W(""),W("FL"),W("ET"),W("MAR")};
 
-#define MAKE_NAME_IF_NONE(psz, tk) { if(!(psz && *psz)) { char* sz = (char*)_alloca(16); \
-sprintf_s(sz,16,"$%s$%X",szStdNamePrefix[tk>>24],tk&0x00FFFFFF); psz = sz; } }
+#define MAKE_NAME_IF_NONE(psz, tk) { if(!(psz && *psz)) { WCHAR* sz = (WCHAR*)_alloca(16 * sizeof(WCHAR)); \
+swprintf_s(sz,16,W("$%s$%X"),szStdNamePrefix[tk>>24],tk&0x00FFFFFF); psz = sz; } }
 
 const char* PrettyPrintClass(
     CQuickBytes *out,                   // where to put the pretty printed string   
     mdToken tk,					 		// The class token to look up 
-    IMDInternalImport *pIMDI,           // ptr to IMDInternalImport class with ComSig
+    IMetaDataImport *pIMD,           // ptr to IMetaDataImport class with ComSig
     DWORD formatFlags /*= formatILDasm*/)
 {
+#define MAX_TYPE_NAME_LEN MAX_CLASSNAME_LENGTH + MAX_CLASSNAME_LENGTH + 1
+    WCHAR nameComplete[MAX_TYPE_NAME_LEN];
     if(tk == mdTokenNil)  // Zero resolution scope for "somewhere here" TypeRefs
     {
         appendStr(out,"[*]");
         return(asString(out));
     }
-    if (!pIMDI->IsValidToken(tk))
+    if (!pIMD->IsValidToken(tk))
     {
         char str[1024];
         sprintf_s(str,COUNTOF(str)," [ERROR: INVALID TOKEN 0x%8.8X] ",tk);
@@ -918,14 +922,13 @@ const char* PrettyPrintClass(
         case mdtTypeRef:
         case mdtTypeDef:
             {
-                const char *nameSpace = 0;  
-                const char *name = 0;
+                WCHAR *name = NULL;
+                ULONG unused;
                 mdToken tkEncloser = mdTokenNil;
                 
                 if (TypeFromToken(tk) == mdtTypeRef)
                 {
-                    if (((formatFlags & FormatAssembly) && FAILED(pIMDI->GetResolutionScopeOfTypeRef(tk, &tkEncloser))) || 
-                        FAILED(pIMDI->GetNameOfTypeRef(tk, &nameSpace, &name)))
+                    if (((formatFlags & FormatAssembly) && FAILED(pIMD->GetTypeRefProps(tk, &tkEncloser, nameComplete, MAX_TYPE_NAME_LEN, &unused))))
                     {
                         char str[1024];
                         sprintf_s(str, COUNTOF(str), " [ERROR: Invalid TypeRef record 0x%8.8X] ", tk);
@@ -935,16 +938,42 @@ const char* PrettyPrintClass(
                 }
                 else 
                 {
-                    if (((formatFlags & FormatNamespace) == 0) || FAILED(pIMDI->GetNestedClassProps(tk,&tkEncloser)))
-                    {
-                        tkEncloser = mdTypeDefNil;
-                    }
-                    if (FAILED(pIMDI->GetNameOfTypeDef(tk, &name, &nameSpace)))
+                    DWORD typeDefFlags = 0;
+                    mdToken tkExtends;
+
+                    if (FAILED(pIMD->GetTypeDefProps(tk, nameComplete, MAX_TYPE_NAME_LEN, &unused, &typeDefFlags, &tkExtends)))
                     {
                         char str[1024];
                         sprintf_s(str, COUNTOF(str), " [ERROR: Invalid TypeDef record 0x%8.8X] ", tk);
                         appendStr(out, str);
                         return asString(out);
+                    }
+
+                    if (IsTdNested(typeDefFlags))
+                    {
+                        if (FAILED(pIMD->GetNestedClassProps(tk, &tkEncloser)))
+                        {
+                            tkEncloser = mdTypeDefNil;
+                        }
+                    }
+
+                    if ((formatFlags & FormatNamespace) == 0)
+                    {
+                        tkEncloser = mdTypeDefNil;
+                        auto nameLen = _wcslen(nameComplete);
+                        name = nameComplete;
+
+                        for (decltype(nameLen) index = 0; index < nameLen; index++)
+                        {
+                            if (nameComplete[index] == '.')
+                            {
+                                name = nameComplete + index + 1;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        name = nameComplete;
                     }
                 }
                 MAKE_NAME_IF_NONE(name,tk);
@@ -952,7 +981,7 @@ const char* PrettyPrintClass(
                 {
                     if (TypeFromToken(tkEncloser) == mdtTypeRef || TypeFromToken(tkEncloser) == mdtTypeDef)
                     {
-                        PrettyPrintClass(out,tkEncloser,pIMDI, formatFlags);
+                        PrettyPrintClass(out,tkEncloser,pIMD, formatFlags);
                         if (formatFlags & FormatSlashSep)
                             appendChar(out, '/');    
                         else
@@ -961,74 +990,52 @@ const char* PrettyPrintClass(
                     }
                     else if (formatFlags & FormatAssembly)
                     {
-                        PrettyPrintClass(out,tkEncloser,pIMDI, formatFlags);
+                        PrettyPrintClass(out,tkEncloser,pIMD, formatFlags);
                     }
                 }
-                if(TypeFromToken(tk)==mdtTypeDef)
-                {
-                    unsigned L = (unsigned)strlen(name)+1;
-                    char* szFN = NULL;
-                    if(((formatFlags & FormatNamespace) != 0) && nameSpace && *nameSpace)
-                    {
-                        const char* sz = nameSpace;
-                        L+= (unsigned)strlen(sz)+1;
-                        szFN = new char[L];
-                        sprintf_s(szFN,L,"%s.",sz);
-                    }
-                    else
-                    {
-                        szFN = new char[L];
-                        *szFN = 0;
-                    }
-                    strcat_s(szFN,L, name);
-                    appendStr(out, szFN);
-                    if (szFN) delete[] (szFN);
-                }
-                else
-                {
-                    if (((formatFlags & FormatNamespace) != 0) && nameSpace && *nameSpace) {
-                        appendStr(out, nameSpace);  
-                        appendChar(out, '.');    
-                    }
-
-                    appendStr(out, name);
-                }
+                appendStr(out, name);
             }
             break;
 
         case mdtAssemblyRef:
             {
                 LPCSTR	szName = NULL;
-                pIMDI->GetAssemblyRefProps(tk,NULL,NULL,&szName,NULL,NULL,NULL,NULL);
-                if(szName && *szName)
+                ULONG unused;
+                ToRelease<IMetaDataAssemblyImport> pAsmImport;
+                if (SUCCEEDED(pIMD->QueryInterface(IID_IMetaDataAssemblyImport, (LPVOID *)&pAsmImport)))
                 {
-                    appendChar(out, '[');    
-                    appendStr(out, szName);
-                    appendChar(out, ']');    
+                    if(SUCCEEDED(pAsmImport->GetAssemblyRefProps(tk,NULL,NULL,nameComplete, MAX_TYPE_NAME_LEN,&unused,NULL, NULL, NULL, NULL)))
+                    {
+                        appendChar(out, '[');    
+                        appendStr(out, nameComplete);
+                        appendChar(out, ']');    
+                    }
                 }
             }
             break;
         case mdtAssembly:
             {
-                LPCSTR	szName = NULL;
-                pIMDI->GetAssemblyProps(tk,NULL,NULL,NULL,&szName,NULL,NULL);
-                if(szName && *szName)
+                ULONG unused;
+                ToRelease<IMetaDataAssemblyImport> pAsmImport;
+                if (SUCCEEDED(pIMD->QueryInterface(IID_IMetaDataAssemblyImport, (LPVOID *)&pAsmImport)))
                 {
-                    appendChar(out, '[');    
-                    appendStr(out, szName);
-                    appendChar(out, ']');    
+                    if(SUCCEEDED(pAsmImport->GetAssemblyProps(tk,NULL,NULL,NULL,nameComplete, MAX_TYPE_NAME_LEN,&unused,NULL, NULL)))
+                    {
+                        appendChar(out, '[');    
+                        appendStr(out, nameComplete);
+                        appendChar(out, ']');    
+                    }
                 }
             }
             break;
         case mdtModuleRef:
             {
-                LPCSTR	szName = NULL;
-                pIMDI->GetModuleRefProps(tk,&szName);
-                if(szName && *szName)
+                ULONG unused;
+                if(SUCCEEDED(pIMD->GetModuleRefProps(tk,nameComplete, MAX_TYPE_NAME_LEN, &unused)))
                 {
                     appendChar(out, '[');    
                     appendStr(out, ".module ");
-                    appendStr(out, szName);
+                    appendStr(out, nameComplete);
                     appendChar(out, ']');    
                 }
             }
@@ -1038,7 +1045,7 @@ const char* PrettyPrintClass(
             {
                 ULONG cSig;
                 PCCOR_SIGNATURE sig;
-                if (FAILED(pIMDI->GetSigFromToken(tk, &cSig, &sig)))
+                if (FAILED(pIMD->GetTypeSpecFromToken(tk, &sig, &cSig)))
                 {
                     char str[128];
                     sprintf_s(str, COUNTOF(str), " [ERROR: Invalid token 0x%8.8X] ", tk);
@@ -1046,7 +1053,7 @@ const char* PrettyPrintClass(
                 }
                 else
                 {
-                    PrettyPrintType(sig, out, pIMDI, formatFlags);
+                    PrettyPrintType(sig, out, pIMD, formatFlags);
                 }
             }
             break;
@@ -1080,12 +1087,8 @@ void PrettyPrintClassFromToken(
         return;
 
     ToRelease<IMetaDataImport> pImport(MDImportForModule(&dmd));
-    ToRelease<IMDInternalImport> pIMDI = NULL;
-
-    if ((pImport == NULL) || FAILED(GetMDInternalFromImport(pImport, &pIMDI)))
-        return;
 
     CQuickBytes qb;
-    PrettyPrintClass(&qb, tok, pIMDI, formatFlags);
+    PrettyPrintClass(&qb, tok, pImport, formatFlags);
     MultiByteToWideChar (CP_ACP, 0, asString(&qb), -1, mdName, (int) cbName);
 }
