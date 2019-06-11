@@ -99,6 +99,12 @@ the PATH variable persistent by going to  Control Panel -> System And Security -
 and select the 'Path' variable in the 'System variables' (if you want to change it for all users) or 'User variables' (if you only want
 to change it for the current user).  Simply edit the PATH variable's value and add the directory (with a semicolon separator).
 
+## Cross Compilation for ARM on Windows
+
+Building ARM for Windows can be done using cross compilation. Make sure the above requirements for building for arm32 are installed.
+
+    C:\diagnostics> build.cmd -architecture arm
+
 ## Building
 
 To build under Windows, run build.cmd from the root of the repository:
