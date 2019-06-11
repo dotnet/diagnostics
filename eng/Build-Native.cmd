@@ -173,7 +173,6 @@ if not exist "%__DotNetCli%" (
     exit /b 1
 )
 
-set __DotNetRuntimeVersion=2.1.9
 REM =========================================================================================
 REM ===
 REM === Build Cross-Architecture Native Components (if applicable)
@@ -339,7 +338,7 @@ if /i "%__BuildArch%" == "arm64" goto Done
 :: Test components
 if %__Test% EQU 1 (
     :: Install the other versions of .NET Core runtime we are going to test on
-    powershell -ExecutionPolicy ByPass -NoProfile -command "& """%__ProjectDir%\eng\install-test-runtimes.ps1""" -DotNetDir %__ProjectDir%\.dotnet -RuntimeVersion21 %__DotNetRuntimeVersion% -TempDir %__IntermediatesDir% -BuildArch %__BuildArch%" %__DailyTest%
+    powershell -ExecutionPolicy ByPass -NoProfile -command "& """%__ProjectDir%\eng\install-test-runtimes.ps1""" -DotNetDir %__ProjectDir%\.dotnet -TempDir %__IntermediatesDir% -BuildArch %__BuildArch%" %__DailyTest%
 
     :: Run the xunit tests
     powershell -ExecutionPolicy ByPass -NoProfile -command "& """%__ProjectDir%\eng\common\Build.ps1""" -test -configuration %__BuildType% -verbosity %__Verbosity% %__TestArgs%"

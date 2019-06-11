@@ -6,9 +6,17 @@
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="1.0.0-beta.18516.5">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="1.0.0-beta.19309.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>3f6ded0d4d606ed995f275a47c154ca6a22e8c7b</Sha>
+      <Sha>45361625125cdd3119050a852bd73163ca4b73f4</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.DotNet.Build.Tasks.Feed" Version="2.2.0-beta.19309.1">
+      <Uri>https://github.com/dotnet/arcade</Uri>
+      <Sha>45361625125cdd3119050a852bd73163ca4b73f4</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.DotNet.SignTool" Version="1.0.0-beta.19309.1">
+      <Uri>https://github.com/dotnet/arcade</Uri>
+      <Sha>45361625125cdd3119050a852bd73163ca4b73f4</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>

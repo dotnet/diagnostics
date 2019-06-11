@@ -9,9 +9,9 @@ daily_test=0
 branch="master"
 uncached_feed="https://dotnetcli.blob.core.windows.net/dotnet"
 
-runtime_version_11="1.1.11"
-runtime_version_22="2.2.2"
+runtime_version_11="1.1.13"
 runtime_version_21=
+runtime_version_22="2.2.5"
 
 while [ $# -ne 0 ]; do
     name=$1
@@ -48,11 +48,13 @@ done
 
 daily_test_text="true"
 
-# Install the other versions of .NET Core runtime we are going to test. 1.1.x, 2.1.x (installed with the CLI), 2.2.x
-# and latest. Only install the latest master for daily jobs and leave the RuntimeVersion* config properties blank.
+# Install the other versions of .NET Core runtime we are going to test. 1.1.x, 2.1.x, 2.2.x
+# and latest. Only install the latest master for daily jobs and leave the RuntimeVersion* 
+# config properties blank.
 if [ $daily_test == 0 ]; then
     daily_test_text="false"
     bash "$dotnet_dir/dotnet-install.sh" --version "$runtime_version_11" --architecture "$build_arch" --skip-non-versioned-files --runtime dotnet --install-dir "$dotnet_dir"
+    bash "$dotnet_dir/dotnet-install.sh" --version "$runtime_version_21" --architecture "$build_arch" --skip-non-versioned-files --runtime dotnet --install-dir "$dotnet_dir"
     bash "$dotnet_dir/dotnet-install.sh" --version "$runtime_version_22" --architecture "$build_arch" --skip-non-versioned-files --runtime dotnet --install-dir "$dotnet_dir"
 fi
 

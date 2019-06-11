@@ -75,14 +75,6 @@ phases:
         _RootFs: --rootfs ${{ parameters.crossrootfsDir }}
 
     steps:
-    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-        - task: AzureKeyVault@1
-          inputs:
-            azureSubscription: 'DncEng-VSTS'
-            KeyVaultName: EngKeyVault
-            SecretsFilter: 'dotnetfeed-storage-access-key-1,microsoft-symbol-server-pat,symweb-symbol-server-pat'
-
-    # Internal only build steps
     - template: /eng/common/templates/steps/run-on-windows.yml
       parameters:
         agentOs: ${{ parameters.agentOs }} 
