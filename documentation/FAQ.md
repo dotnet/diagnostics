@@ -5,4 +5,5 @@ Frequently Asked Questions
 
 * If dump collection (`dotnet dump collect` or `createdump`) doesn't work in a docker container, try adding the SYS\_TRACE capablity with --cap-add=SYS\_PTRACE or --privileged.
  
-* If dump analysis (`dotnet dump analyze`) on Microsoft .NET Core SDK Linux docker images fails with an`Unhandled exception: System.DllNotFoundException: Unable to load shared library 'libdl.so' or one of its dependencies` exception. Issue [#201](https://github.com/dotnet/diagnostics/issues/201), try installing the "libc6-dev" package.
+* If dump analysis (`dotnet dump analyze`) on Microsoft .NET Core SDK Linux docker images fails with an`Unhandled exception: System.DllNotFoundException: Unable to load shared library 'libdl.so' or one of its dependencies` exception. Try installing the "libc6-dev" package.
+ 

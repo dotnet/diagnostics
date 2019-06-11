@@ -113,7 +113,7 @@ To display the help:
       setsymbolserver <arguments>          Enables the symbol server support
       soshelp <arguments>                  Displays all available commands when no parameter is specified, or displays detailed help information about the specified command. soshelp <command>
 
-This command on Microsoft .NET Core SDK Linux docker images can throw `Unhandled exception: System.DllNotFoundException: Unable to load shared library 'libdl.so' or one of its dependencies` exception. Issue [#201](https://github.com/dotnet/diagnostics/issues/201). To work around this problem install the "libc6-dev" package.
+This command on Microsoft .NET Core SDK Linux docker images can throw `Unhandled exception: System.DllNotFoundException: Unable to load shared library 'libdl.so' or one of its dependencies` exception. To work around this problem install the "libc6-dev" package.
 
 ## Uninstalling dotnet-dump 
 
