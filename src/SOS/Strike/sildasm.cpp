@@ -90,6 +90,80 @@ unsigned int readOpcode()
 void DisassembleToken(IMetaDataImport *i,
                       DWORD token)
 {
+    class MethodSigArgPrettyPrinter
+    {
+        SigParser sigParser;
+        ULONG cParamTypes = 0;
+        bool isField = true;
+
+    public: 
+        MethodSigArgPrettyPrinter(PCCOR_SIGNATURE sig, ULONG cbSig) : sigParser(sig, cbSig)
+        {
+        }
+
+        void HandleReturnType()
+        {
+            HRESULT hr;
+            ULONG callConv;
+            hr = sigParser.GetCallingConvInfo(&callConv);
+            if (SUCCEEDED(hr))
+            {
+                isField = ((callConv & IMAGE_CEE_CS_CALLCONV_FIELD) == IMAGE_CEE_CS_CALLCONV_FIELD);
+
+                if (!isField)
+                {
+                    // Discard generic arg count
+                    if ((callConv & IMAGE_CEE_CS_CALLCONV_GENERIC) == IMAGE_CEE_CS_CALLCONV_GENERIC)
+                    {
+                        ULONG unused;
+                        hr = sigParser.GetData(&unused);
+                    }
+                }
+
+                if (SUCCEEDED(hr))
+                {
+                    // Get arg count;
+                    hr = sigParser.GetData(&cParamTypes);
+                    if (SUCCEEDED(hr))
+                    {
+                        // Print type
+                        CQuickBytes out;
+                        PrettyPrintType(sigParser.GetPtr(), &out, i);
+                        int cchString = MultiByteToWideChar (CP_ACP, 0, asString(&out), -1, NULL, 0);
+                        WCHAR *psz = new WCHAR[cchString];
+                        MultiByteToWideChar (CP_ACP, 0, asString(&out), -1, psz, cchString);
+                        printf("%S ", psz);
+                        delete[] psz;
+                        sigParser.SkipExactlyOne();
+                    }
+                }
+            }
+        }
+
+        void HandleArguments()
+        {
+            if (!isField)
+            {
+                printf("(");
+                for (ULONG paramIndex = 0; paramIndex < cParamTypes; paramIndex++)
+                {
+                    CQuickBytes out;
+                    PrettyPrintType(sigParser.GetPtr(), &out, i);
+                    int cchString = MultiByteToWideChar (CP_ACP, 0, asString(&out), -1, NULL, 0);
+                    WCHAR *psz = new WCHAR[cchString];
+                    MultiByteToWideChar (CP_ACP, 0, asString(&out), -1, psz, cchString);
+                    if ((paramIndex + 1) < cParamTypes)
+                        printf("%S,", psz);
+                    else
+                        printf("%S", psz);
+                    delete[] psz;
+                    sigParser.SkipExactlyOne();
+                }
+                printf(")");
+            }
+        }
+    };
+
     HRESULT hr;
 
     switch (TypeFromToken(token))
@@ -155,12 +229,18 @@ void DisassembleToken(IMetaDataImport *i,
             WCHAR szFieldName[50];
             WCHAR szClassName[50];
             mdTypeDef mdClass;
+            PCCOR_SIGNATURE sig;
+            ULONG cbSigBlob;
 
             hr = i->GetMethodProps(token, &mdClass, szFieldName, 49, &cLen,
-                                   NULL, NULL, NULL, NULL, NULL);
+                                   NULL, &sig, &cbSigBlob, NULL, NULL);
+
+            MethodSigArgPrettyPrinter methodPrettyPrinter(sig, cbSigBlob);
 
             if (FAILED(hr))
                 StringCchCopyW(szFieldName, COUNTOF(szFieldName), W("<unknown method def>"));
+            else
+                methodPrettyPrinter.HandleReturnType();
 
             hr = i->GetTypeDefProps(mdClass, szClassName, 49, &cLen,
                                     NULL, NULL);
@@ -169,6 +249,7 @@ void DisassembleToken(IMetaDataImport *i,
                 StringCchCopyW(szClassName, COUNTOF(szClassName), W("<unknown type def>"));
 
             printf("%S::%S", szClassName, szFieldName);
+            methodPrettyPrinter.HandleArguments(); // Safe to call in all cases if HandleReturnType hasn't been called. Will do nothing.
         }
         break;
 
@@ -184,12 +265,17 @@ void DisassembleToken(IMetaDataImport *i,
             hr = i->GetMemberRefProps(token, &cr, memberName, 49,
                                       &memberNameLen, &sig, &cbSigBlob);
 
+            MethodSigArgPrettyPrinter methodPrettyPrinter(sig, cbSigBlob);
+
             if (FAILED(hr))
             {
                 pMemberName = W("<unknown member ref>");
             }
             else
+            {
                 pMemberName = memberName;
+                methodPrettyPrinter.HandleReturnType();
+            }
 
             ULONG cLen;
             WCHAR szName[50];
@@ -229,7 +315,8 @@ void DisassembleToken(IMetaDataImport *i,
                 StringCchCopyW(szName, COUNTOF(szName), W("<unknown type token>"));
             }
             
-            printf("%S::%S ", szName, pMemberName);
+            printf("%S::%S", szName, pMemberName);
+            methodPrettyPrinter.HandleArguments(); // Safe to call in all cases if HandleReturnType hasn't been called. Will do nothing.
         }
         break;
     }
@@ -869,7 +956,28 @@ PCCOR_SIGNATURE PrettyPrintType(
             MODIFIER:
                 insertStr(&Appendix, str);
                 Reiterate = TRUE;
-                break;  
+                break;
+            case ELEMENT_TYPE_CMOD_REQD:
+                appendStr(out, " mod req ");
+                typePtr += CorSigUncompressToken(typePtr, &tk); 
+                if(IsNilToken(tk))
+                {
+                    appendStr(out, "[ERROR! NIL TOKEN]");
+                }
+                else PrettyPrintClass(out, tk, pIMD, formatFlags);
+                Reiterate = TRUE;
+                break;
+            case ELEMENT_TYPE_CMOD_OPT:
+                appendStr(out, " mod opt ");
+                typePtr += CorSigUncompressToken(typePtr, &tk); 
+                if(IsNilToken(tk))
+                {
+                    appendStr(out, "[ERROR! NIL TOKEN]");
+                }
+                else PrettyPrintClass(out, tk, pIMD, formatFlags);
+                Reiterate = TRUE;
+                break;
+
 
             default:    
             case ELEMENT_TYPE_SENTINEL      :   
@@ -956,26 +1064,27 @@ const char* PrettyPrintClass(
                             tkEncloser = mdTypeDefNil;
                         }
                     }
+                }
 
-                    if ((formatFlags & FormatNamespace) == 0)
+                if ((formatFlags & FormatNamespace) == 0)
+                {
+                    tkEncloser = mdTypeDefNil;
+                    auto nameLen = _wcslen(nameComplete);
+                    name = nameComplete;
+
+                    for (decltype(nameLen) index = 0; index < nameLen; index++)
                     {
-                        tkEncloser = mdTypeDefNil;
-                        auto nameLen = _wcslen(nameComplete);
-                        name = nameComplete;
-
-                        for (decltype(nameLen) index = 0; index < nameLen; index++)
+                        if (nameComplete[index] == '.')
                         {
-                            if (nameComplete[index] == '.')
-                            {
-                                name = nameComplete + index + 1;
-                            }
+                            name = nameComplete + index + 1;
                         }
                     }
-                    else
-                    {
-                        name = nameComplete;
-                    }
                 }
+                else
+                {
+                    name = nameComplete;
+                }
+
                 MAKE_NAME_IF_NONE(name,tk);
                 if((tkEncloser == mdTokenNil) || RidFromToken(tkEncloser))
                 {

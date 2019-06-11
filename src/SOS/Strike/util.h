@@ -3149,4 +3149,5 @@ private:
     HRESULT PrintCurrentInternalFrame();
 };
 
+#include "sigparser.h"
 #endif // __util_h__

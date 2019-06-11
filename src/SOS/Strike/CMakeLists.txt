@@ -69,6 +69,7 @@ if(WIN32)
     gcroot.cpp
     hostcoreclr.cpp
     metadata.cpp
+    sigparser.cpp
     sildasm.cpp
     sos.cpp
     stressLogDump.cpp

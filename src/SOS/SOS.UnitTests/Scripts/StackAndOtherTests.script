@@ -150,10 +150,16 @@ SOSCOMMAND:IP2MD <POUT>.*\s+(<HEXVAL>)\s+SymbolTestApp\.Program\.Foo4.*\s+<POUT>
 VERIFY:.*\s+Method Name:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 54\s+
 
+# Verify that DumpIL works (depends on the IP2MD right above)
+SOSCOMMAND:DumpIL <POUT>\s*MethodDesc:\s+(<HEXVAL>)\s*<POUT>
+VERIFY:.*IL_<HEXVAL>: call class \[System.Runtime\]System\.Reflection\.Assembly System\.Reflection\.Assembly::Load\(uint8\[\],uint8\[\]\)
+
 !IFDEF:DOTNETDUMP
 IFDEF:PROJECTK
 
-# Verify that "u" works (depends on the IP2MD right above)
+# Verify that "u" works (depends on the IP2MD here)
+SOSCOMMAND:ClrStack
+SOSCOMMAND:IP2MD <POUT>.*\s+(<HEXVAL>)\s+SymbolTestApp\.Program\.Foo4.*\s+<POUT>
 SOSCOMMAND:u <POUT>\s*MethodDesc:\s+(<HEXVAL>)\s*<POUT>
 VERIFY:\s*Normal JIT generated code\s+
 VERIFY:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
