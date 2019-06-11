@@ -48,13 +48,15 @@ done
 
 daily_test_text="true"
 
+# Always install 2.1 for the daily test (scheduled builds) scenario because xunit needs it
+bash "$dotnet_dir/dotnet-install.sh" --version "$runtime_version_21" --architecture "$build_arch" --skip-non-versioned-files --runtime dotnet --install-dir "$dotnet_dir"
+
 # Install the other versions of .NET Core runtime we are going to test. 1.1.x, 2.1.x, 2.2.x
 # and latest. Only install the latest master for daily jobs and leave the RuntimeVersion* 
 # config properties blank.
 if [ $daily_test == 0 ]; then
     daily_test_text="false"
     bash "$dotnet_dir/dotnet-install.sh" --version "$runtime_version_11" --architecture "$build_arch" --skip-non-versioned-files --runtime dotnet --install-dir "$dotnet_dir"
-    bash "$dotnet_dir/dotnet-install.sh" --version "$runtime_version_21" --architecture "$build_arch" --skip-non-versioned-files --runtime dotnet --install-dir "$dotnet_dir"
     bash "$dotnet_dir/dotnet-install.sh" --version "$runtime_version_22" --architecture "$build_arch" --skip-non-versioned-files --runtime dotnet --install-dir "$dotnet_dir"
 fi
 

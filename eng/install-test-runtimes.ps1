@@ -16,13 +16,15 @@ $RuntimeVersion21="2.1.11"
 $RuntimeVersion22="2.2.5"
 $DailyTestText="true"
 
+# Always install 2.1 for the daily test (scheduled builds) scenario because xunit needs it
+. $DotNetDir\dotnet-install.ps1 -Version $RuntimeVersion21 -Architecture $BuildArch -SkipNonVersionedFiles -Runtime dotnet -InstallDir $DotNetDir
+
 # Install the other versions of .NET Core runtime we are going to test. 1.1.x, 2.1.x, 2.2.x
 # and latest. Only install the latest master for daily jobs and leave the RuntimeVersion* 
 # config properties blank.
 if (!$DailyTest) {
     $DailyTestText="false"
     . $DotNetDir\dotnet-install.ps1 -Version $RuntimeVersion11 -Architecture $BuildArch -SkipNonVersionedFiles -Runtime dotnet -InstallDir $DotNetDir
-    . $DotNetDir\dotnet-install.ps1 -Version $RuntimeVersion21 -Architecture $BuildArch -SkipNonVersionedFiles -Runtime dotnet -InstallDir $DotNetDir
     . $DotNetDir\dotnet-install.ps1 -Version $RuntimeVersion22 -Architecture $BuildArch -SkipNonVersionedFiles -Runtime dotnet -InstallDir $DotNetDir
 }
 
