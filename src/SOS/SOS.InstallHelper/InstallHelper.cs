@@ -50,7 +50,7 @@ namespace SOS
         {
             m_writeLine = writeLine;
             string home = null;
-            string os = null;
+            string rid = GetRid();
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) 
             {
@@ -58,7 +58,6 @@ namespace SOS
                 if (string.IsNullOrEmpty(home)) {
                     throw new SOSInstallerException("USERPROFILE environment variable not found");
                 }
-                os = "win";
             }
             else
             {
@@ -67,21 +66,8 @@ namespace SOS
                     throw new SOSInstallerException("HOME environment variable not found");
                 }
                 LLDBInitFile = Path.Combine(home, ".lldbinit");
-
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
-                    os = "osx";
-                }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
-                    os = "linux";
-                }
-            }
-            if (os == null) {
-                throw new SOSInstallerException($"Unsupported operating system {RuntimeInformation.OSDescription}");
             }
             InstallLocation = Path.GetFullPath(Path.Combine(home, ".dotnet", "sos"));
-
-            string architecture = RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant();
-            string rid = os + "-" + architecture;
             SOSSourcePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
         }
 
@@ -309,6 +295,43 @@ namespace SOS
                 }
                 throw new SOSInstallerException($"{errorMessage}: {lastfailure.Message}", lastfailure);
             }
+        }
+
+        /// <summary>
+        /// Returns the RID
+        /// </summary>
+        public static string GetRid()
+        {
+            string os = null;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                os = "win";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                os = "osx";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                os = "linux";
+                try
+                {
+                    string ostype = File.ReadAllText("/etc/os-release");
+                    if (ostype.Contains("ID=alpine"))
+                    {
+                        os = "linux-musl";
+                    }
+                }
+                catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException || ex is IOException)
+                {
+                }
+            }
+            if (os == null)
+            {
+                throw new SOSInstallerException($"Unsupported operating system {RuntimeInformation.OSDescription}");
+            }
+            string architecture = RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant();
+            return $"{os}-{architecture}";
         }
 
         private void WriteLine(string format, params object[] args)

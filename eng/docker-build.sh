@@ -53,15 +53,14 @@ docker_id="$($docker_bin create -it --rm --privileged --ulimit core=-1 \
 $docker_bin start $docker_id
 
 # Create an user with the same uid in the container
-container_user_name=vsts_$user_name
+container_user_name=vsts_$(echo $user_name | awk '{print tolower($0)}')
 echo "container user name: $container_user_name"
 
 # Add sudo user with same uid that can run any sudo command without password
-$docker_bin exec $docker_id useradd -m -u $user_id $container_user_name
-$docker_bin exec $docker_id groupadd container_SUDO_user
-$docker_bin exec $docker_id usermod -a -G container_SUDO_user $container_user_name
-$docker_bin exec $docker_id su -c "$source_directory/eng/docker-init.sh"
-$docker_bin exec $docker_id su -c "echo '%container_SUDO_user ALL=(ALL:ALL) NOPASSWD:ALL' >> /etc/sudoers"
+$docker_bin exec $docker_id useradd -K MAIL_DIR=/dev/null -m -u $user_id $container_user_name
+$docker_bin exec $docker_id groupadd sudouser
+$docker_bin exec $docker_id usermod -a -G sudouser $container_user_name
+$docker_bin exec $docker_id su -c "echo '%sudouser ALL=(ALL:ALL) NOPASSWD:ALL' >> /etc/sudoers"
 
 echo "Execute $args"
 $docker_bin exec --workdir=$source_directory --user $container_user_name $docker_id $args

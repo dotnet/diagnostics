@@ -8,6 +8,10 @@
 #include "gcinfotypes.h"
 #include "gcinfodecoder.h"
 
+// ******************************************************************************
+// WARNING!!!: This header is also used by the coreclr repo.
+// See: https://github.com/dotnet/coreclr/blob/master/src/inc/gcinfodumper.h
+// ******************************************************************************
 
 //
 // This class dumps the contents of the gc encodings, providing outputs

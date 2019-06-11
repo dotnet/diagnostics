@@ -1,24 +1,30 @@
 
 using Microsoft.Diagnostic.Repl;
+using System;
+using System.Collections.Generic;
 using System.CommandLine;
-using System.Threading.Tasks;
+using System.Linq;
 
 namespace Microsoft.Diagnostic.Tools.Dump
 {
-    [Command(Name = "setthread", Help = "Sets or displays the current thread id for the SOS commands.")]
+    [Command(Name = "setthread", Help = "Sets or displays the current thread for the SOS commands.")]
     [CommandAlias(Name = "threads")]
     public class SetThreadCommand : CommandBase
     {
-        [Argument(Help = "The thread id to set, otherwise displays the current id.")]
-        public int? ThreadId { get; set; } = null;
+        [Argument(Help = "The thread index to set, otherwise displays the list of threads.")]
+        public int? ThreadIndex { get; set; } = null;
 
         public AnalyzeContext AnalyzeContext { get; set; }
 
-        public override Task InvokeAsync()
+        public override void Invoke()
         {
-            if (ThreadId.HasValue)
+            if (ThreadIndex.HasValue)
             {
-                AnalyzeContext.CurrentThreadId = ThreadId.Value;
+                IEnumerable<uint> threads = AnalyzeContext.Target.DataReader.EnumerateAllThreads();
+                if (ThreadIndex.Value >= threads.Count()) {
+                    throw new InvalidOperationException($"Invalid thread index {ThreadIndex.Value}");
+                }
+                AnalyzeContext.CurrentThreadId = unchecked((int)threads.ElementAt(ThreadIndex.Value));
             }
             else
             {
@@ -29,7 +35,6 @@ namespace Microsoft.Diagnostic.Tools.Dump
                     index++;
                 }
             }
-            return Task.CompletedTask;
         }
     }
 }

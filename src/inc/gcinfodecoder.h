@@ -8,6 +8,11 @@
  *
  *****************************************************************/
 
+// ******************************************************************************
+// WARNING!!!: This header is also used by the coreclr repo.
+// See: https://github.com/dotnet/coreclr/blob/master/src/inc/gcinfodecoder.h
+// ******************************************************************************
+
 #ifndef _GC_INFO_DECODER_
 #define _GC_INFO_DECODER_
 

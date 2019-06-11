@@ -11,26 +11,18 @@ These are some quick examples of the work we'd expect a .Net developer to want t
     > dotnet tool install -g dotnet-counters
     You can invoke the tool using the following command: dotnet-counters
     Tool 'dotnet-counters' (version '1.0.0') was successfully installed.
-    > dotnet counters monitor --process-id 1902 System.Runtime Microsoft.AspNet
-
+    > dotnet-counters monitor --process-id 1902 --refresh-interval 1 System.Runtime 
+    
+    Press p to pause, r to resume, q to quit.
     System.Runtime:
-        Total Processor Time (ms)              173923.48
-        Private Virtual Memory (MB)                 1094
+        CPU Usage (%)                                 24
         Working Set (MB)                            1982
-        Virtual Memory (MB)                         3041
-        GC Heap Memory (MB)                          784
-        Exception Thrown Rate (exceptions/min)       117
-        Lock Contention Rate (contentions/min)      1792
+        GC Heap Size (MB)                            811
+        Gen 0 GC / second                             20
+        Gen 1 GC / second                              4
+        Gen 1 GC / Second                              1
+        Number of Exceptions / sec                     4
 
-     Microsoft.AspNet:
-        Request Rate (requests/sec)                 1915
-        Request Latency (ms)                          34
-
-    'p' - pause updates
-    'r' - resume updates
-    'q' - quit
-
-(Counter groups are for example purpose only, exact groups/counters TBD)
 
 ### Capture a trace for performance analysis
 
@@ -167,8 +159,8 @@ LIST
 
     Examples:
       > dotnet-counters list
-      Showing well-known counters only. Specific processes may support additional counters.
 
+      Showing well-known counters only. Specific processes may support additional counters.
       System.Runtime
           total-processor-time           Amount of time the process has utilized the CPU (ms)
           private-memory                 Amount of private virtual memory used by the process (KB)
@@ -176,18 +168,45 @@ LIST
           virtual-memory                 Amount of virtual memory used by the process (KB)
           gc-total-memory                Amount of committed virtual memory used by the GC (KB)
           exceptions-thrown-rate         Number of exceptions thrown in a recent 1 minute window (exceptions/min)
-          lock-contention-rate           Number of instances of lock contention on runtime implemented locks in a
-                                         recent 1 minute window (contentions/min)
-      Microsoft.AspNet
-          request-rate                   Number of requests handled in a recent one second interval (requests/sec)
-          request-latency                Time to respond to a request, averaged over all requests in a recent
-                                         one second interval (ms)
 
 MONITOR
 
+    Examples:
+
+    1. Monitoring all counters from `System.Runtime` at a refresh interval of 3 seconds:
+
+      > dotnet-counters monitor --process-id 1902 --refresh-interval 3 System.Runtime 
+    Press p to pause, r to resume, q to quit.
+      System.Runtime:
+        CPU Usage (%)                                 24
+        Working Set (MB)                            1982
+        GC Heap Size (MB)                            811
+        Gen 0 GC / second                             20
+        Gen 1 GC / second                              4
+        Gen 1 GC / Second                              1
+        Number of Exceptions / sec                     4
+
+
+    2. Monitoring just CPU usage and GC heap size from `System.Runtime` at a refresh interval of 5 seconds:
+
+      > dotnet-counters monitor --process-id 1902 --refresh-interval 5 System.Runtime[cpu-usage,gc-heap-size] 
+    Press p to pause, r to resume, q to quit.
+      System.Runtime:
+        CPU Usage (%)                                 24
+        GC Heap Size (MB)                            811
+
+    3. Monitoring EventCounter values from user-defined EventSource: (see https://github.com/dotnet/corefx/blob/master/src/System.Diagnostics.Tracing/documentation/EventCounterTutorial.md on how to do this.0)
+
+      > dotnet-counters monitor --processId 1902 Samples-EventCounterDemos-Minimal
+
+    Press p to pause, r to resume, q to quit.
+        request                                      100
+
+    Syntax:
+
     dotnet-counters monitor [-h||--help]
                             [-p|--process-id <pid>]
-                            [--refreshInterval <sec>]
+                            [--refresh-interval <sec>]
                             counter_list
 
     Display periodically refreshing values of selected counters
@@ -207,25 +226,7 @@ MONITOR
         provider and counter names, use the list command.
 
 
-    Examples:
-      > dotnet counters monitor --processId 1902 System.Runtime Microsoft.AspNet
 
-      System.Runtime:
-          Total Processor Time (ms)              173923.48
-          Private Virtual Memory (MB)                 1094
-          Working Set (MB)                            1982
-          Virtual Memory (MB)                         3041
-          GC Heap Memory (MB)                          784
-          Exception Thrown Rate (exceptions/min)       117
-          Lock Contention Rate (contentions/min)      1792
-
-       Microsoft.AspNet:
-          Request Rate (requests/sec)                 1915
-          Request Latency (ms)                          34
-
-      'p' - pause updates
-      'r' - resume updates
-      'q' - quit
 
 ### dotnet-trace
 
@@ -386,7 +387,7 @@ Examples:
     Writing minidump to file ./core_20190226_135837
     Written 98983936 bytes (24166 pages) to core file
     Complete
-    
+
     $ dotnet dump collect --process-id 1902 --type mini
     Writing minidump to file ./core_20190226_135850
     Written 98959360 bytes (24160 pages) to core file
@@ -458,12 +459,12 @@ The following commands are supported:
    histobjfind <arguments>              Displays all the log entries that reference an object at the specified address.
    histroot <arguments>                 Displays information related to both promotions and relocations of the specified root.
    setsymbolserver <arguments>          Enables the symbol server support.
- ```
+```
 
 The "modules", "threads" and "setthread" commands display/control the native state.
 
 In addition new commands are listed below:
-    
+
 GCHEAPDIFF
 
     gcheapdiff <path_to_baseline_dump>

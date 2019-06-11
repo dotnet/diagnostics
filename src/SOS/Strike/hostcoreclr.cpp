@@ -66,7 +66,7 @@ static void AddFilesFromDirectoryToTpaList(const char* directory, std::string& t
     std::set<std::string> addedAssemblies;
 
     // Don't add this file to the list because we don't want to the one from the hosting runtime
-    addedAssemblies.insert(SymbolReaderDllName);
+    addedAssemblies.insert(SOSManagedDllName);
 
     // Walk the directory for each extension separately so that we first get files with .ni.dll extension,
     // then files with .dll extension, etc.
@@ -226,7 +226,7 @@ static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutabl
 /**********************************************************************\
  * Returns the coreclr module/runtime directory of the target.
 \**********************************************************************/
-HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
+static HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
 {
 #ifdef FEATURE_PAL
     LPCSTR directory = g_ExtServices->GetCoreClrDirectory();
@@ -244,7 +244,7 @@ HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
     HRESULT Status = g_ExtSymbols->GetModuleByModuleName(MAIN_CLR_MODULE_NAME_A, 0, &index, NULL);
     if (FAILED(Status))
     {
-        ExtErr("Error: Can't find coreclr module\n");
+        ExtErr("Error: Runtime module (%s) not loaded yet\n", MAKEDLLNAME_A("coreclr"));
         return Status;
     }
     ArrayHolder<char> szModuleName = new char[MAX_LONGPATH + 1];
@@ -254,13 +254,17 @@ HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
         ExtErr("Error: Failed to get coreclr module name\n");
         return Status;
     }
+    if (GetFileAttributesA(szModuleName) == INVALID_FILE_ATTRIBUTES)
+    {
+        ExtErr("Error: coreclr module name doesn't exists\n");
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
     coreClrDirectory = szModuleName;
 
     // Parse off the module name to get just the path
     size_t lastSlash = coreClrDirectory.rfind(DIRECTORY_SEPARATOR_CHAR_A);
     if (lastSlash == std::string::npos)
     {
-        ExtErr("Error: Failed to parse coreclr module name\n");
         return E_FAIL;
     }
     coreClrDirectory.assign(coreClrDirectory, 0, lastSlash);
@@ -331,7 +335,7 @@ const char *g_linuxPaths[] = {
  * directory. Attempts to use the best installed version of the 
  * runtime, otherwise it defaults to the target's runtime version.
 \**********************************************************************/
-HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntimeDirectory)
+static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntimeDirectory)
 {
     // If the hosting runtime isn't already set, use the runtime we are debugging
     if (g_hostRuntimeDirectory == nullptr)
@@ -394,6 +398,25 @@ HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntimeDirecto
     coreClrPath.append(MAIN_CLR_DLL_NAME_A);
     return S_OK;
 }
+
+#ifndef FEATURE_PAL
+/**********************************************************************\
+ * Returns the path to the runtime directory to use for hosting. 
+\**********************************************************************/
+LPCSTR
+GetHostRuntimeDirectory()
+{
+    std::string hostRuntimeDirectory;
+    std::string coreClrPath;
+
+    HRESULT Status = GetHostRuntime(coreClrPath, hostRuntimeDirectory);
+    if (FAILED(Status))
+    {
+        return nullptr;
+    }
+    return hostRuntimeDirectory.c_str();
+}
+#endif // FEATURE_PAL
 
 //
 // Returns the unique temporary directory for this instnace of SOS
@@ -544,6 +567,32 @@ LPCSTR GetDbiFilePath()
 }
 
 /**********************************************************************\
+ * Called when the managed SOS Host loads/initializes SOS.
+\**********************************************************************/
+extern "C" HRESULT SOSInitializeByHost(SOSNetCoreCallbacks* callbacks, int callbacksSize, LPCSTR tempDirectory, LPCSTR dacFilePath, LPCSTR dbiFilePath, bool symbolStoreEnabled)
+{
+    if (memcpy_s(&g_SOSNetCoreCallbacks, sizeof(g_SOSNetCoreCallbacks), callbacks, callbacksSize) != 0)
+    {
+        return E_INVALIDARG;
+    }
+    if (tempDirectory != nullptr)
+    {
+        g_tmpPath = _strdup(tempDirectory);
+    }
+    if (dacFilePath != nullptr)
+    {
+        g_dacFilePath = _strdup(dacFilePath);
+    }
+    if (dbiFilePath != nullptr)
+    {
+        g_dbiFilePath = _strdup(dbiFilePath);
+    }
+    g_symbolStoreInitialized = symbolStoreEnabled;
+    g_hostingInitialized = true;
+    return S_OK;
+}
+
+/**********************************************************************\
  * Returns true if the host runtime has already been initialized.
 \**********************************************************************/
 BOOL IsHostingInitialized()
@@ -561,17 +610,6 @@ HRESULT InitializeHosting()
     {
         return S_OK;
     }
-#ifdef FEATURE_PAL
-    ToRelease<ISOSHostServices> hostServices(NULL);
-    if (SUCCEEDED(g_ExtServices->QueryInterface(__uuidof(ISOSHostServices), (void**)&hostServices)))
-    {
-        if (SUCCEEDED(hostServices->GetSOSNETCoreCallbacks(SOSNetCoreCallbacksVersion, &g_SOSNetCoreCallbacks)))
-        {
-            g_hostingInitialized = true;
-            return S_OK;
-        }
-    }
-#endif // FEATURE_PAL
     coreclr_initialize_ptr initializeCoreCLR = nullptr;
     coreclr_create_delegate_ptr createDelegate = nullptr;
     std::string hostRuntimeDirectory;
@@ -679,15 +717,16 @@ HRESULT InitializeHosting()
         return Status;
     }
 
-    IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "InitializeSymbolStore", (void **)&g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate));
-    IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "DisplaySymbolStore", (void **)&g_SOSNetCoreCallbacks.DisplaySymbolStoreDelegate));
-    IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "DisableSymbolStore", (void **)&g_SOSNetCoreCallbacks.DisableSymbolStoreDelegate));
-    IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "LoadNativeSymbols", (void **)&g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate));
-    IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "LoadSymbolsForModule", (void **)&g_SOSNetCoreCallbacks.LoadSymbolsForModuleDelegate));
-    IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "Dispose", (void **)&g_SOSNetCoreCallbacks.DisposeDelegate));
-    IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "ResolveSequencePoint", (void **)&g_SOSNetCoreCallbacks.ResolveSequencePointDelegate));
-    IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "GetLocalVariableName", (void **)&g_SOSNetCoreCallbacks.GetLocalVariableNameDelegate));
-    IfFailRet(createDelegate(hostHandle, domainId, SymbolReaderDllName, SymbolReaderClassName, "GetLineByILOffset", (void **)&g_SOSNetCoreCallbacks.GetLineByILOffsetDelegate));
+    IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "InitializeSymbolStore", (void **)&g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate));
+    IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "DisplaySymbolStore", (void **)&g_SOSNetCoreCallbacks.DisplaySymbolStoreDelegate));
+    IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "DisableSymbolStore", (void **)&g_SOSNetCoreCallbacks.DisableSymbolStoreDelegate));
+    IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "LoadNativeSymbols", (void **)&g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate));
+    IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "LoadSymbolsForModule", (void **)&g_SOSNetCoreCallbacks.LoadSymbolsForModuleDelegate));
+    IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "Dispose", (void **)&g_SOSNetCoreCallbacks.DisposeDelegate));
+    IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "ResolveSequencePoint", (void **)&g_SOSNetCoreCallbacks.ResolveSequencePointDelegate));
+    IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "GetLocalVariableName", (void **)&g_SOSNetCoreCallbacks.GetLocalVariableNameDelegate));
+    IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "GetLineByILOffset", (void **)&g_SOSNetCoreCallbacks.GetLineByILOffsetDelegate));
+    IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, MetadataHelperClassName, "GetMetadataLocator", (void **)&g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate));
 
     g_hostingInitialized = true;
     return Status;
@@ -765,6 +804,33 @@ HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* 
     }
     g_symbolStoreInitialized = true;
     return S_OK;
+}
+
+/**********************************************************************\
+ * Setup and initialize the symbol server support using the .sympath
+\**********************************************************************/
+void InitializeSymbolStore()
+{
+    _ASSERTE(g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate != nullptr);
+
+#ifndef FEATURE_PAL
+    if (!g_symbolStoreInitialized)
+    {
+        g_symbolStoreInitialized = true;
+
+        ArrayHolder<char> symbolPath = new char[MAX_LONGPATH];
+        if (SUCCEEDED(g_ExtSymbols->GetSymbolPath(symbolPath, MAX_LONGPATH, nullptr)))
+        {
+            if (strlen(symbolPath) > 0)
+            {
+                if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(false, false, false, nullptr, nullptr, symbolPath))
+                {
+                    ExtErr("Windows symbol path parsing FAILED\n");
+                }
+            }
+        }
+    }
+#endif
 }
 
 /**********************************************************************\
@@ -979,28 +1045,9 @@ HRESULT SymbolReader::LoadSymbolsForPortablePDB(__in_z WCHAR* pModuleName, ___in
     HRESULT Status = S_OK;
 
     IfFailRet(InitializeHosting());
+    InitializeSymbolStore();
 
     _ASSERTE(g_SOSNetCoreCallbacks.LoadSymbolsForModuleDelegate != nullptr);
-    _ASSERTE(g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate != nullptr);
-
-#ifndef FEATURE_PAL
-    if (!g_symbolStoreInitialized)
-    {
-        g_symbolStoreInitialized = true;
-
-        ArrayHolder<char> symbolPath = new char[MAX_LONGPATH];
-        if (SUCCEEDED(g_ExtSymbols->GetSymbolPath(symbolPath, MAX_LONGPATH, nullptr)))
-        {
-            if (strlen(symbolPath) > 0)
-            {
-                if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(false, false, false, nullptr, nullptr, symbolPath))
-                {
-                    ExtErr("Windows symbol path parsing FAILED\n");
-                }
-            }
-        }
-    }
-#endif
 
     // The module name needs to be null for in-memory PE's.
     ArrayHolder<char> szModuleName = nullptr;

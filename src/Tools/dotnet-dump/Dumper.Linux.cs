@@ -10,7 +10,7 @@ namespace Microsoft.Diagnostic.Tools.Dump
     {
         private static class Linux
         {
-            internal static async Task CollectDumpAsync(Process process, string fileName, DumpType type)
+            internal static async Task CollectDumpAsync(Process process, string fileName, DumpTypeOption type)
             {
                 // We don't work on WSL :(
                 string ostype = await File.ReadAllTextAsync("/proc/sys/kernel/osrelease");
@@ -42,9 +42,9 @@ namespace Microsoft.Diagnostic.Tools.Dump
                 }
             }
 
-            private static Task<int> CreateDumpAsync(string exePath, string fileName, int processId, DumpType type)
+            private static Task<int> CreateDumpAsync(string exePath, string fileName, int processId, DumpTypeOption type)
             {
-                string dumpType = type == DumpType.Mini ? "--normal" : "--withheap";
+                string dumpType = type == DumpTypeOption.Mini ? "--normal" : "--withheap";
                 var tcs = new TaskCompletionSource<int>();
                 var createdump = new Process()
                 {

@@ -10,10 +10,51 @@
 #ifndef __hostcoreclr_h__
 #define __hostcoreclr_h__
 
-#include <soshostservices.h>
+struct SymbolModuleInfo;
 
-static const char *SymbolReaderDllName = "SOS.NETCore";
+typedef void (*OutputDelegate)(const char*);
+typedef  int (*ReadMemoryDelegate)(ULONG64, uint8_t*, int);
+typedef void (*SymbolFileCallbackDelegate)(void*, const char* moduleFileName, const char* symbolFilePath);
+
+typedef  BOOL (*InitializeSymbolStoreDelegate)(BOOL, BOOL, BOOL, const char*, const char*, const char*);
+typedef  void (*DisplaySymbolStoreDelegate)();
+typedef  void (*DisableSymbolStoreDelegate)();
+typedef  void (*LoadNativeSymbolsDelegate)(SymbolFileCallbackDelegate, void*, const char*, const char*, ULONG64, int, ReadMemoryDelegate);
+typedef  PVOID (*LoadSymbolsForModuleDelegate)(const char*, BOOL, ULONG64, int, ULONG64, int, ReadMemoryDelegate);
+typedef  void (*DisposeDelegate)(PVOID);
+typedef  BOOL (*ResolveSequencePointDelegate)(PVOID, const char*, unsigned int, unsigned int*, unsigned int*);
+typedef  BOOL (*GetLocalVariableNameDelegate)(PVOID, int, int, BSTR*);
+typedef  BOOL (*GetLineByILOffsetDelegate)(PVOID, mdMethodDef, ULONG64, ULONG *, BSTR*);
+
+typedef  BOOL (*GetMetadataLocatorDelegate)(
+    LPCWSTR imagePath,
+    unsigned int imageTimestamp,
+    unsigned int imageSize,
+    GUID* mvid,
+    unsigned int mdRva,
+    unsigned int flags,
+    unsigned int bufferSize,
+    PVOID pMetadata,
+    unsigned int* pMetadataSize
+);
+
+struct SOSNetCoreCallbacks
+{
+    InitializeSymbolStoreDelegate InitializeSymbolStoreDelegate;
+    DisplaySymbolStoreDelegate DisplaySymbolStoreDelegate;
+    DisableSymbolStoreDelegate DisableSymbolStoreDelegate;
+    LoadNativeSymbolsDelegate LoadNativeSymbolsDelegate;
+    LoadSymbolsForModuleDelegate LoadSymbolsForModuleDelegate;
+    DisposeDelegate DisposeDelegate;
+    ResolveSequencePointDelegate ResolveSequencePointDelegate;
+    GetLineByILOffsetDelegate GetLineByILOffsetDelegate;
+    GetLocalVariableNameDelegate GetLocalVariableNameDelegate;
+    GetMetadataLocatorDelegate GetMetadataLocatorDelegate;
+};
+
+static const char *SOSManagedDllName = "SOS.NETCore";
 static const char *SymbolReaderClassName = "SOS.SymbolReader";
+static const char *MetadataHelperClassName = "SOS.MetadataHelper";
 
 extern HMODULE g_hInstance;
 extern LPCSTR g_hostRuntimeDirectory;
@@ -24,6 +65,7 @@ extern LPCSTR GetDbiFilePath();
 extern BOOL IsHostingInitialized();
 extern HRESULT InitializeHosting();
 extern HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* symbolServer, const char* cacheDirectory);
+extern void InitializeSymbolStore();
 extern HRESULT LoadNativeSymbols(bool runtimeOnly = false);
 extern void DisplaySymbolStore();
 extern void DisableSymbolStore();

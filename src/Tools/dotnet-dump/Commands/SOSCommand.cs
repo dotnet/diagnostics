@@ -1,12 +1,8 @@
 using Microsoft.Diagnostic.Repl;
-using SOS;
 using System;
 using System.CommandLine;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostic.Tools.Dump
 {
@@ -41,7 +37,6 @@ namespace Microsoft.Diagnostic.Tools.Dump
     [Command(Name = "histobjfind",      AliasExpansion = "HistObjFind",         Help = "Displays all the log entries that reference an object at the specified address.")]
     [Command(Name = "histroot",         AliasExpansion = "HistRoot",            Help = "Displays information related to both promotions and relocations of the specified root.")]
     [Command(Name = "setsymbolserver",  AliasExpansion = "SetSymbolServer",     Help = "Enables the symbol server support ")]
-    [Command(Name = "soshelp",          AliasExpansion = "Help",                Help = "Displays all available commands when no parameter is specified, or displays detailed help information about the specified command. soshelp <command>")]
     public class SOSCommand : CommandBase
     {
         [Argument(Name = "arguments", Help = "Arguments to SOS command.")]
@@ -49,7 +44,7 @@ namespace Microsoft.Diagnostic.Tools.Dump
 
         public AnalyzeContext AnalyzeContext { get; set; }
 
-        public override Task InvokeAsync()
+        public override void Invoke()
         {
             try {
                 string arguments = null;
@@ -61,7 +56,12 @@ namespace Microsoft.Diagnostic.Tools.Dump
             catch (Exception ex) when (ex is FileNotFoundException || ex is EntryPointNotFoundException || ex is InvalidOperationException) {
                 Console.Error.WriteLine(ex.Message);
             }
-            return Task.CompletedTask;
+        }
+
+        [HelpInvoke]
+        public void InvokeHelp()
+        {
+            AnalyzeContext.SOSHost.ExecuteCommand("Help", AliasExpansion);
         }
     }
 }

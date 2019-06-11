@@ -15,17 +15,16 @@ namespace Microsoft.Diagnostic.Repl
     /// </summary>
     public abstract class CommandBase
     {
-        public const string EntryPointName = nameof(InvokeAsync);
-
         /// <summary>
-        /// Parser invocation context. Contains the ParseResult, CommandResult, etc.
+        /// Parser invocation context. Contains the ParseResult, CommandResult, etc. Is null when 
+        /// InvokeAdditionalHelp is called.
         /// </summary>
         public InvocationContext InvocationContext { get; set; }
 
         /// <summary>
         /// Console instance
         /// </summary>
-        public IConsole Console { get { return InvocationContext.Console; } }
+        public IConsole Console { get; set; }
 
         /// <summary>
         /// The AliasExpansion value from the CommandAttribute or null if none.
@@ -35,7 +34,8 @@ namespace Microsoft.Diagnostic.Repl
         /// <summary>
         /// Execute the command
         /// </summary>
-        public abstract Task InvokeAsync();
+        [CommandInvoke]
+        public abstract void Invoke();
 
         /// <summary>
         /// Display text

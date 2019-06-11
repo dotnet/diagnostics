@@ -52,6 +52,7 @@ Getting a version of lldb that works for your platform can be a problem sometime
 
 * [dotnet-dump](documentation/dotnet-dump-instructions.md) - Dump collection and analysis utility.
 * [dotnet-trace](documentation/dotnet-trace-instructions.md) - Enable the collection of events for a running .NET Core Application to a local trace file.
+* [dotnet-counters](documentation/dotnet-counters-instructions.md) - Monitor performance counters of a .NET Core application in real time. 
 
 ## New Features
 
@@ -81,6 +82,7 @@ Before executing the "bt" command to dump native frames to load the native symbo
 
 ## Useful Links
 
+* [FAQ](documentation/FAQ.md) - Frequently asked questions.
 * [The LLDB Debugger](http://lldb.llvm.org/index.html) - More information about lldb.
 * [SOS](https://msdn.microsoft.com/en-us/library/bb190764(v=vs.110).aspx) - More information about SOS.
 * [Debugging CoreCLR](https://github.com/dotnet/coreclr/blob/master/Documentation/building/debugging-instructions.md) - Instructions for debugging .NET Core and the CoreCLR runtime.

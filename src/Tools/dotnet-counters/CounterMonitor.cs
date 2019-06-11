@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -38,10 +39,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             // If we are paused, ignore the event. 
             // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
-            if (pauseCmdSet) 
-            {
-                return;
-            }
+            writer.ToggleStatus(pauseCmdSet);
 
             if (obj.EventName.Equals("EventCounters"))
             {
@@ -54,8 +52,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // There really isn't a great way to tell whether an EventCounter payload is an instance of 
                 // IncrementingCounterPayload or CounterPayload, so here we check the number of fields 
                 // to distinguish the two.
-                ICounterPayload payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
-                writer.Update(obj.ProviderName, payload);
+                ICounterPayload payload;
+                if (payloadFields.ContainsKey("CounterType"))
+                {
+                    payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
+                }
+                else
+                {
+                    payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
+                }
+                writer.Update(obj.ProviderName, payload, pauseCmdSet);
             }
         }
 
@@ -89,11 +95,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             if (_processId == 0) {
                 _console.Error.WriteLine("ProcessId is required.");
-                return 1;
-            }
-
-            if (_interval == 0) {
-                _console.Error.WriteLine("refreshInterval is required.");
                 return 1;
             }
 
@@ -151,51 +152,77 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 providerString = sb.ToString();
             }
 
+            var shouldExit = new ManualResetEvent(false);
+            var terminated = false;
+            writer.InitializeDisplay();
+
             Task monitorTask = new Task(() => {
-                var configuration = new SessionConfiguration(
-                    circularBufferSizeMB: 1000,
-                    outputPath: "",
-                    providers: Trace.Extensions.ToProviders(providerString));
-
-                var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
-                EventPipeEventSource source = new EventPipeEventSource(binaryReader);
-                writer.InitializeDisplay();
-                source.Dynamic.All += Dynamic_All;
-                source.Process();
-            });
-
-            Task commandTask = new Task(() =>
-            {
-                while(true)
+                try
                 {
-                    while (!Console.KeyAvailable) { }
-                    ConsoleKey cmd = Console.ReadKey(true).Key;
-                    if (cmd == ConsoleKey.Q)
-                    {
-                        break;
-                    }
-                    else if (cmd == ConsoleKey.P)
-                    {
-                        pauseCmdSet = true;
-                    }
-                    else if (cmd == ConsoleKey.R)
-                    {
-                        pauseCmdSet = false;
-                    }
+                    var configuration = new SessionConfiguration(
+                        circularBufferSizeMB: 1000,
+                        outputPath: "",
+                        providers: Trace.Extensions.ToProviders(providerString));
+
+                    var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
+                    EventPipeEventSource source = new EventPipeEventSource(binaryReader);
+                    source.Dynamic.All += Dynamic_All;
+                    source.Process();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[ERROR] {ex.ToString()}");
+                }
+                finally
+                {
+                    terminated = true; // This indicates that the runtime is done. We shouldn't try to talk to it anymore.
+                    shouldExit.Set();
                 }
             });
 
             monitorTask.Start();
-            commandTask.Start();
-            await commandTask;
-
-            try
+            while(true)
             {
-                EventPipeClient.StopTracing(_processId, _sessionId);    
+                while (true)
+                {
+                    if (shouldExit.WaitOne(250))
+                    {
+                        return 0;
+                    }
+                    if (Console.KeyAvailable)
+                    {
+                        break;
+                    }
+                }
+                ConsoleKey cmd = Console.ReadKey(true).Key;
+                if (cmd == ConsoleKey.Q)
+                {
+                    break;
+                }
+                else if (cmd == ConsoleKey.P)
+                {
+                    pauseCmdSet = true;
+                }
+                else if (cmd == ConsoleKey.R)
+                {
+                    pauseCmdSet = false;
+                }
             }
-            catch (System.IO.EndOfStreamException) {} // If the app we're monitoring exits abrubtly, this may throw in which case we just swallow the exception and exit gracefully.
 
-            return 0;
+            if (!terminated)
+            {
+                try
+                {
+                    EventPipeClient.StopTracing(_processId, _sessionId);    
+                }
+                catch (EndOfStreamException ex)
+                {
+                    // If the app we're monitoring exits abruptly, this may throw in which case we just swallow the exception and exit gracefully.
+                    Debug.WriteLine($"[ERROR] {ex.ToString()}");
+                } 
+            }
+            
+            return await Task.FromResult(0);
         }
     }
 }
