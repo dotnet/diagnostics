@@ -125,6 +125,7 @@ else(WIN32)
     gcroot.cpp
     hostcoreclr.cpp
     metadata.cpp
+    sigparser.cpp
     sildasm.cpp
     stressLogDump.cpp
     strike.cpp
