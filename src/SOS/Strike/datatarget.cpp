@@ -37,6 +37,12 @@ DataTarget::QueryInterface(
         AddRef();
         return S_OK;
     }
+    else if (InterfaceId == IID_ICLRMetadataLocator)
+    {
+        *Interface = (ICLRMetadataLocator*)this;
+        AddRef();
+        return S_OK;
+    }
     else
     {
         *Interface = NULL;
@@ -129,6 +135,19 @@ DataTarget::ReadVirtual(
     {
         return E_UNEXPECTED;
     }
+#ifdef FEATURE_PAL
+    if (g_sos != nullptr)
+    {
+        // LLDB synthesizes memory (returns 0's) for missing pages (in this case the missing metadata 
+        // pages) in core dumps. This functions creates a list of the metadata regions and returns true
+        // if the read would be in the metadata of a loaded assembly. This allows an error to be returned 
+        // instead of 0's so the DAC will call the GetMetadataLocator datatarget callback.
+        if (IsMetadataMemory(address, request))
+        {
+            return E_ACCESSDENIED;
+        }
+    }
+#endif
     return g_ExtData->ReadVirtual(address, (PVOID)buffer, request, (PULONG)done);
 }
 
@@ -250,6 +269,8 @@ DataTarget::Request(
     return E_NOTIMPL;
 }
 
+// ICorDebugDataTarget4
+
 HRESULT STDMETHODCALLTYPE 
 DataTarget::VirtualUnwind(
     /* [in] */ DWORD threadId,
@@ -266,3 +287,30 @@ DataTarget::VirtualUnwind(
     return E_NOTIMPL;
 #endif
 }
+
+// ICLRMetadataLocator
+
+HRESULT STDMETHODCALLTYPE
+DataTarget::GetMetadata(
+    /* [in] */ LPCWSTR imagePath,
+    /* [in] */ ULONG32 imageTimestamp,
+    /* [in] */ ULONG32 imageSize,
+    /* [in] */ GUID* mvid,
+    /* [in] */ ULONG32 mdRva,
+    /* [in] */ ULONG32 flags,
+    /* [in] */ ULONG32 bufferSize,
+    /* [out, size_is(bufferSize), length_is(*dataSize)] */
+    BYTE* buffer,
+    /* [out] */ ULONG32* dataSize)
+{
+    HRESULT hr = InitializeHosting();
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    InitializeSymbolStore();
+    _ASSERTE(g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate != nullptr);
+    return g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate(imagePath, imageTimestamp, imageSize, mvid, mdRva, flags, bufferSize, buffer, dataSize);
+}
+
+

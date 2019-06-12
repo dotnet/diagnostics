@@ -171,7 +171,7 @@ namespace sos
     {
         TADDR mt = GetMT();
         MethodTableInfo* info = g_special_mtCache.Lookup((DWORD_PTR)mt);
-        if (!info->IsInitialized())	
+        if (!info->IsInitialized())
         {
             // this is the first time we see this method table, so we need to get the information
             // from the target

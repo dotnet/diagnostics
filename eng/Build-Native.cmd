@@ -53,6 +53,8 @@ set __CI=0
 set __DailyTest=
 set __Verbosity=minimal
 set __TestArgs=
+set __BuildCrossArch=0
+set __CrossArch=
 
 :: Set the various build properties here so that CMake and MSBuild can pick them up
 set "__ProjectDir=%~dp0"
@@ -107,13 +109,13 @@ if [!processedArgs!] == [] (
 :: Determine if this is a cross-arch build
 
 if /i "%__BuildArch%" == "arm64" (
-    set __DoCrossArchBuild=1
-    set __CrossArch=x86
+    set __BuildCrossArch=%__Build%
+    set __CrossArch=x64
 )
 
 if /i "%__BuildArch%" == "arm" (
-    set __DoCrossArchBuild=1
-    set __CrossArch=x64
+    set __BuildCrossArch=%__Build%
+    set __CrossArch=x86
 )
 
 if /i "%__BuildType%" == "debug" set __BuildType=Debug
@@ -139,8 +141,6 @@ set "__PackagesBinDir=%__RootBinDir%\packages\%__BuildType%\Shipping"
 set "__CrossComponentBinDir=%__BinDir%"
 set "__CrossCompIntermediatesDir=%__IntermediatesDir%\crossgen"
 if NOT "%__CrossArch%" == "" set __CrossComponentBinDir=%__CrossComponentBinDir%\%__CrossArch%
-set "__CrossGenCoreLibLog=%__LogDir%\CrossgenCoreLib_%__BuildOS%_%__BuildArch%.log"
-set "__CrossgenExe=%__CrossComponentBinDir%\crossgen.exe"
 
 :: Generate path to be set for CMAKE_INSTALL_PREFIX to contain forward slash
 set "__CMakeBinDir=%__BinDir%"
@@ -156,7 +156,7 @@ echo %__MsgPrefix%Commencing diagnostics repo build
 
 echo %__MsgPrefix%Checking prerequisites
 :: Eval the output from probe-win1.ps1
-for /f "delims=" %%a in ('powershell -NoProfile -ExecutionPolicy ByPass "& ""%__ProjectDir%\eng\probe-win.ps1"""') do %%a
+for /f "delims=" %%a in ('powershell -NoProfile -ExecutionPolicy ByPass "& ""%__ProjectDir%\eng\set-cmake-path.ps1"""') do %%a
 
 REM =========================================================================================
 REM ===
@@ -172,106 +172,6 @@ if not exist "%__DotNetCli%" (
     echo %__MsgPrefix%Assertion failed: dotnet cli not found at path "%__DotNetCli%"
     exit /b 1
 )
-set __MSBuildPath=%__ProjectDir%\.dotnet\sdk\2.1.505\MSBuild.dll
-if not exist "%__MSBuildPath%" (
-    echo %__MsgPrefix%Assertion failed: dotnet cli sdk not found at path "%__MSBuildPath%"
-    exit /b 1
-)
-
-set __DotNetRuntimeVersion=2.1.9
-
-REM =========================================================================================
-REM ===
-REM === Build the native code
-REM ===
-REM =========================================================================================
-
-if %__Build% EQU 1 (
-    rem Scope environment changes start {
-    setlocal
-
-    echo %__MsgPrefix%Commencing build of native components for %__BuildOS%.%__BuildArch%.%__BuildType%
-
-    set __NativePlatformArgs=-platform=%__BuildArch%
-    if not "%__ToolsetDir%" == "" ( set __NativePlatformArgs=-useEnv )
-
-    if not "%__ToolsetDir%" == "" (
-        :: arm64 builds currently use private toolset which has not been released yet
-        :: TODO, remove once the toolset is open.
-        call :PrivateToolSet
-        goto GenVSSolution
-    )
-
-    :: Set the environment for the native build
-    set __VCBuildArch=x86_amd64
-    if /i "%__BuildArch%" == "x86" ( set __VCBuildArch=x86 )
-    if /i "%__BuildArch%" == "arm" (
-        set __VCBuildArch=x86_arm
-
-        :: Make CMake pick the highest installed version in the 10.0.* range
-        set ___SDKVersion="-DCMAKE_SYSTEM_VERSION=10.0"
-    )
-    if /i "%__BuildArch%" == "arm64" (
-        set __VCBuildArch=x86_arm64
-
-        REM Make CMake pick the highest installed version in the 10.0.* range
-        set ___SDKVersion="-DCMAKE_SYSTEM_VERSION=10.0"
-    )
-
-    echo %__MsgPrefix%Using environment: "%__VCToolsRoot%\vcvarsall.bat" !__VCBuildArch!
-    call                                 "%__VCToolsRoot%\vcvarsall.bat" !__VCBuildArch!
-    @if defined _echo @echo on
-
-    if not defined VSINSTALLDIR (
-        echo %__MsgPrefix%Error: VSINSTALLDIR variable not defined.
-        exit /b 1
-    )
-    if not exist "!VSINSTALLDIR!DIA SDK" goto NoDIA
-
-:GenVSSolution
-    echo Generating Version Header
-    set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    %__DotNetCli% %__MSBuildPath% %__ProjectDir%\eng\CreateVersionFile.csproj /v:!__Verbosity! /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:VersionPrefixFile=%__RootBinDir%\bin\VersionPrefix.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
-    if not !errorlevel! == 0 (
-        echo Generate Version Header FAILED
-        exit /b 1
-    )
-
-    if defined __SkipConfigure goto SkipConfigure
-
-    echo %__MsgPrefix%Regenerating the Visual Studio solution
-
-    set "__ManagedBinaryDir=%__RootBinDir%\bin"
-    set "__ManagedBinaryDir=!__ManagedBinaryDir:\=/!"
-    set __ExtraCmakeArgs=!___SDKVersion! "-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=!__BuildType!"
-
-    pushd "%__IntermediatesDir%"
-    call "%__ProjectDir%\eng\gen-buildsys-win.bat" "%__ProjectDir%" %__VSVersion% %__BuildArch% !__ExtraCmakeArgs!
-    @if defined _echo @echo on
-    popd
-
-:SkipConfigure
-    if defined __ConfigureOnly goto SkipNativeBuild
-
-    if not exist "%__IntermediatesDir%\install.vcxproj" (
-        echo %__MsgPrefix%Error: failed to generate native component build project!
-        exit /b 1
-    )
-    set __BuildLog="%__LogDir%\Native.Build.binlog"
-
-    :: For some currently unknown reason, "%__DotNetCli% msbuild" fails because VCTargetsPath isn't defined.
-    msbuild.exe %__IntermediatesDir%\install.vcxproj /v:!__Verbosity! /bl:!__BuildLog! /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
-
-    if not !ERRORLEVEL! == 0 (
-        echo %__MsgPrefix%Error: native component build failed. Refer to the build log files for details:
-        echo     !__BuildLog!
-        exit /b 1
-    )
-
-:SkipNativeBuild
-    rem } Scope environment changes end
-    endlocal
-)
 
 REM =========================================================================================
 REM ===
@@ -279,7 +179,7 @@ REM === Build Cross-Architecture Native Components (if applicable)
 REM ===
 REM =========================================================================================
 
-if /i "%__DoCrossArchBuild%"=="1" (
+if /i %__BuildCrossArch% EQU 1 (
     rem Scope environment changes start {
     setlocal
 
@@ -294,14 +194,22 @@ if /i "%__DoCrossArchBuild%"=="1" (
     @if defined _echo @echo on
 
     if not exist "%__CrossCompIntermediatesDir%" md "%__CrossCompIntermediatesDir%"
+
+    echo Generating Version Header
+    set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
+    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.csproj" /v:!__Verbosity! /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:VersionPrefixFile=%__RootBinDir%\bin\VersionPrefix.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__CrossCompIntermediatesDir%\_version.h /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
+    if not !errorlevel! == 0 (
+        echo Generate Version Header FAILED
+        exit /b 1
+    )
     if defined __SkipConfigure goto SkipConfigureCrossBuild
 
     set __CMakeBinDir=%__CrossComponentBinDir%
     set "__CMakeBinDir=!__CMakeBinDir:\=/!"
 
-    set "__ManagedBinaryDir=%__RootBinDir%\%__BuildType%\bin"
+    set "__ManagedBinaryDir=%__RootBinDir%\bin"
     set "__ManagedBinaryDir=!__ManagedBinaryDir:\=/!"
-    set __ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=!__BuildType!" "-DCLR_CROSS_COMPONENTS_BUILD=1" "-DCLR_CMAKE_TARGET_ARCH=%__BuildArch%" "-DCMAKE_SYSTEM_VERSION=10.0"
+    set __ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=%__BuildType%" "-DCLR_CMAKE_TARGET_ARCH=%__BuildArch%" "-DCMAKE_SYSTEM_VERSION=10.0"
 
     pushd "%__CrossCompIntermediatesDir%"
     call "%__ProjectDir%\eng\gen-buildsys-win.bat" "%__ProjectDir%" %__VSVersion% %__CrossArch% !__ExtraCmakeArgs!
@@ -317,7 +225,7 @@ if /i "%__DoCrossArchBuild%"=="1" (
 
     set __BuildLog="%__LogDir%\Cross.Build.binlog"
 
-    :: For some currently unknown reason, "%__DotNetCli% msbuild" fails because VCTargetsPath isn't defined.
+    :: MSBuild.exe is the only one that has the C++ targets. "%__DotNetCli% msbuild" fails because VCTargetsPath isn't defined.
     msbuild.exe %__CrossCompIntermediatesDir%\install.vcxproj /v:!__Verbosity! /bl:!__BuildLog! /p:Configuration=%__BuildType% /p:Platform=%__CrossArch% %__UnprocessedBuildArgs%
 
     if not !ERRORLEVEL! == 0 (
@@ -327,6 +235,83 @@ if /i "%__DoCrossArchBuild%"=="1" (
     )
 
 :SkipCrossCompBuild
+    rem } Scope environment changes end
+    endlocal
+)
+
+REM =========================================================================================
+REM ===
+REM === Build the native code
+REM ===
+REM =========================================================================================
+
+if %__Build% EQU 1 (
+    rem Scope environment changes start {
+    setlocal
+
+    echo %__MsgPrefix%Commencing build of native components for %__BuildOS%.%__BuildArch%.%__BuildType%
+
+    set __VCBuildArch=x86_amd64
+    if /i "%__BuildArch%" == "x86" ( set __VCBuildArch=x86 )
+    if /i "%__BuildArch%" == "arm" (
+        set __VCBuildArch=x86_arm
+        :: Make CMake pick the highest installed version in the 10.0.* range
+        set ___SDKVersion="-DCMAKE_SYSTEM_VERSION=10.0"
+    )
+    if /i "%__BuildArch%" == "arm64" (
+        set __VCBuildArch=x86_arm64
+        :: Make CMake pick the highest installed version in the 10.0.* range
+        set ___SDKVersion="-DCMAKE_SYSTEM_VERSION=10.0"
+    )
+
+    echo %__MsgPrefix%Using environment: "%__VCToolsRoot%\vcvarsall.bat" !__VCBuildArch!
+    call                                 "%__VCToolsRoot%\vcvarsall.bat" !__VCBuildArch!
+    @if defined _echo @echo on
+
+    if not defined VSINSTALLDIR (
+        echo %__MsgPrefix%Error: VSINSTALLDIR variable not defined.
+        exit /b 1
+    )
+
+    echo Generating Version Header
+    set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
+    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.csproj" /v:!__Verbosity! /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:VersionPrefixFile=%__RootBinDir%\bin\VersionPrefix.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
+    if not !errorlevel! == 0 (
+        echo Generate Version Header FAILED
+        exit /b 1
+    )
+    if defined __SkipConfigure goto SkipConfigure
+
+    echo %__MsgPrefix%Regenerating the Visual Studio solution
+
+    set "__ManagedBinaryDir=%__RootBinDir%\bin"
+    set "__ManagedBinaryDir=!__ManagedBinaryDir:\=/!"
+    set __ExtraCmakeArgs=!___SDKVersion! "-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=%__BuildType%"
+
+    pushd "%__IntermediatesDir%"
+    call "%__ProjectDir%\eng\gen-buildsys-win.bat" "%__ProjectDir%" %__VSVersion% %__BuildArch% !__ExtraCmakeArgs!
+    @if defined _echo @echo on
+    popd
+
+:SkipConfigure
+    if defined __ConfigureOnly goto SkipNativeBuild
+
+    if not exist "%__IntermediatesDir%\install.vcxproj" (
+        echo %__MsgPrefix%Error: failed to generate native component build project!
+        exit /b 1
+    )
+    set __BuildLog="%__LogDir%\Native.Build.binlog"
+
+    :: MSBuild.exe is the only one that has the C++ targets. "%__DotNetCli% msbuild" fails because VCTargetsPath isn't defined.
+    msbuild.exe %__IntermediatesDir%\install.vcxproj /v:!__Verbosity! /bl:!__BuildLog! /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
+
+    if not !ERRORLEVEL! == 0 (
+        echo %__MsgPrefix%Error: native component build failed. Refer to the build log files for details:
+        echo     !__BuildLog!
+        exit /b 1
+    )
+
+:SkipNativeBuild
     rem } Scope environment changes end
     endlocal
 )
@@ -347,15 +332,20 @@ REM ============================================================================
 echo %__MsgPrefix%Repo successfully built. Finished at %TIME%
 echo %__MsgPrefix%Product binaries are available at !__BinDir!
 
+if /i "%__BuildArch%" == "arm" goto Done
+if /i "%__BuildArch%" == "arm64" goto Done
+
 :: Test components
 if %__Test% EQU 1 (
     :: Install the other versions of .NET Core runtime we are going to test on
-    powershell -ExecutionPolicy ByPass -NoProfile -command "& """%__ProjectDir%\eng\install-test-runtimes.ps1""" -DotNetDir %__ProjectDir%\.dotnet -RuntimeVersion21 %__DotNetRuntimeVersion% -TempDir %__IntermediatesDir% -BuildArch %__BuildArch%" %__DailyTest%
+    powershell -ExecutionPolicy ByPass -NoProfile -command "& """%__ProjectDir%\eng\install-test-runtimes.ps1""" -DotNetDir %__ProjectDir%\.dotnet -TempDir %__IntermediatesDir% -BuildArch %__BuildArch%" %__DailyTest%
 
     :: Run the xunit tests
     powershell -ExecutionPolicy ByPass -NoProfile -command "& """%__ProjectDir%\eng\common\Build.ps1""" -test -configuration %__BuildType% -verbosity %__Verbosity% %__TestArgs%"
     exit /b !ERRORLEVEL!
 )
+
+:Done
 exit /b 0
 
 REM =========================================================================================
@@ -381,32 +371,3 @@ echo -architecture <x64|x86|arm|arm64>
 echo -configuration <debug|release>
 echo -verbosity <q[uiet]|m[inimal]|n[ormal]|d[etailed]|diag[nostic]>
 exit /b 1
-
-:PrivateToolSet
-
-echo %__MsgPrefix%Setting up the usage of __ToolsetDir:%__ToolsetDir%
-
-if /i "%__ToolsetDir%" == "" (
-    echo %__MsgPrefix%Error: A toolset directory is required for the Arm64 Windows build. Use the toolset_dir argument.
-    exit /b 1
-)
-
-if not exist "%__ToolsetDir%"\buildenv_arm64.cmd goto :Not_EWDK
-call "%__ToolsetDir%"\buildenv_arm64.cmd
-exit /b 0
-
-:Not_EWDK
-set PATH=%__ToolsetDir%\VC_sdk\bin;%PATH%
-set LIB=%__ToolsetDir%\VC_sdk\lib\arm64;%__ToolsetDir%\sdpublic\sdk\lib\arm64
-set INCLUDE=^
-%__ToolsetDir%\VC_sdk\inc;^
-%__ToolsetDir%\sdpublic\sdk\inc;^
-%__ToolsetDir%\sdpublic\shared\inc;^
-%__ToolsetDir%\sdpublic\shared\inc\minwin;^
-%__ToolsetDir%\sdpublic\sdk\inc\ucrt;^
-%__ToolsetDir%\sdpublic\sdk\inc\minwin;^
-%__ToolsetDir%\sdpublic\sdk\inc\mincore;^
-%__ToolsetDir%\sdpublic\sdk\inc\abi;^
-%__ToolsetDir%\sdpublic\sdk\inc\clientcore;^
-%__ToolsetDir%\diasdk\include
-exit /b 0

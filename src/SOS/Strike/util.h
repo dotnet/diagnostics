@@ -1850,7 +1850,13 @@ BOOL IsStringObject (size_t obj);
 BOOL IsObjectArray (DWORD_PTR objPointer);
 BOOL IsObjectArray (DacpObjectData *pData);
 BOOL IsDerivedFrom(CLRDATA_ADDRESS mtObj, __in_z LPCWSTR baseString);
+BOOL IsDerivedFrom(CLRDATA_ADDRESS mtObj, DWORD_PTR modulePtr, mdTypeDef typeDef);
 BOOL TryGetMethodDescriptorForDelegate(CLRDATA_ADDRESS delegateAddr, CLRDATA_ADDRESS* pMD);
+
+#ifdef FEATURE_PAL
+void FlushMetadataRegions();
+bool IsMetadataMemory(CLRDATA_ADDRESS address, ULONG32 size);
+#endif
 
 /* Returns a list of all modules in the process.
  * Params:
@@ -1866,7 +1872,7 @@ BOOL TryGetMethodDescriptorForDelegate(CLRDATA_ADDRESS delegateAddr, CLRDATA_ADD
  */
 DWORD_PTR *ModuleFromName(__in_opt LPSTR name, int *numModules);
 HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataModule** ppModule);
-void GetInfoFromName(DWORD_PTR ModuleAddr, const char* name);
+void GetInfoFromName(DWORD_PTR ModuleAddr, const char* name, mdTypeDef* retMdTypeDef=NULL);
 void GetInfoFromModule (DWORD_PTR ModuleAddr, ULONG token, DWORD_PTR *ret=NULL);
 
     
@@ -2896,7 +2902,7 @@ private:
                 if (curr_next)
                     curr_next->Prev = Prev;
             }
-        }	
+        }
     };
 
 public:
@@ -3051,9 +3057,8 @@ private:
 // Flags defining activation policy for COM objects
 enum CIOptionsBits 
 {
-    cciDbiColocated = 0x01,     // NYI: Look next to the already loaded DBI module
-    cciDacColocated = 0x02,     // Look next to the already loaded DAC module
-    cciDbgPath      = 0x04,     // Look in all folders in the debuggers symbols and binary path
+    cciDacColocated = 0x01,     // Look next to the already loaded DAC module
+    cciDbgPath      = 0x02,     // Look in all folders in the debuggers symbols and binary path
 };
 
 typedef Flags<DWORD, CIOptionsBits> CIOptions;

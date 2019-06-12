@@ -1,17 +1,19 @@
 ﻿<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
 <Project>
   <PropertyGroup>
-    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <RepositoryUrl>https://github.com/dotnet/diagnostics</RepositoryUrl>
+    <PreReleaseVersionLabel>preview6</PreReleaseVersionLabel>
+    <VersionPrefix>1.0.4</VersionPrefix>
+    <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
+  </PropertyGroup>
 
-    <VersionPrefix>1.0.3</VersionPrefix>
-    <PreReleaseVersionLabel>preview5</PreReleaseVersionLabel>
-
+  <PropertyGroup>
     <!-- Opt-out repo features -->
     <UsingToolXliff>false</UsingToolXliff>
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
 
     <!-- Build tools -->
-    <MicrosoftNetCompilersVersion>2.8.0-beta6-62830-08</MicrosoftNetCompilersVersion>
+    <MicrosoftNetCompilersVersion>3.0.0</MicrosoftNetCompilersVersion>
 
     <!-- CoreFX -->
     <SystemReflectionMetadataVersion>1.6.0</SystemReflectionMetadataVersion>
@@ -21,6 +23,16 @@
     <!-- Other libs -->
     <MicrosoftSymbolStoreVersion>1.0.0-dev-64016-01</MicrosoftSymbolStoreVersion>
     <MicrosoftDiagnosticsRuntimeVersion>1.0.5</MicrosoftDiagnosticsRuntimeVersion>
+
+    <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.41</MicrosoftDiagnosticsTracingTraceEventVersion>
+    <SystemCommandLineExperimentalVersion>0.2.0-alpha.19254.1</SystemCommandLineExperimentalVersion>
+    <SystemCommandLineRenderingVersion>0.2.0-alpha.19254.1</SystemCommandLineRenderingVersion>
+
+    <XUnitVersion>2.4.1</XUnitVersion>
+    <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
+
+    <cdbsosversion>1.1.0</cdbsosversion>
+
   </PropertyGroup>
 
   <PropertyGroup>

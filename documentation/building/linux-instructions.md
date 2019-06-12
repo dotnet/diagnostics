@@ -8,6 +8,8 @@ Toolchain Setup
 
 The following instructions will install the required packages. This only needs to be done once per machine. These instructions assume that you already have "sudo" installed. It is also recommended to create a github fork of the diagnostics repo and cloning that instead of https://github.com/dotnet/diagnostics.git directly.
 
+To build or cross build for ARM on Windows or Linux see the instructions [here](https://github.com/mikem8361/coreclr/blob/master/Documentation/building/cross-building.md) in the coreclr repo.
+
 #### Ubuntu 14.04 ####
 
 In order to get clang-3.9, llvm-3.9 and lldb-3.9, we need to add additional package sources (see [http://llvm.org/apt/](http://llvm.org/apt/) for the other Ubuntu versions not listed here):

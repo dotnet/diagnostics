@@ -1,0 +1,4 @@
+<Project>
+    <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.props"/>
+    <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+</Project>

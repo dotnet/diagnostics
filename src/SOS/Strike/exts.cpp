@@ -122,24 +122,25 @@ ArchQuery(void)
     {
         targetMachine = AMD64Machine::GetInstance();
     }
-#elif defined(SOS_TARGET_X86)
+#endif // SOS_TARGET_AMD64
+#ifdef SOS_TARGET_X86
     if (targetArchitecture == IMAGE_FILE_MACHINE_I386)
     {
         targetMachine = X86Machine::GetInstance();
     }
-#elif defined(SOS_TARGET_ARM)
+#endif // SOS_TARGET_X86
+#ifdef SOS_TARGET_ARM
     if (targetArchitecture == IMAGE_FILE_MACHINE_ARMNT)
     {
         targetMachine = ARMMachine::GetInstance();
     }
-#elif defined(SOS_TARGET_ARM64)
+#endif // SOS_TARGET_ARM
+#ifdef SOS_TARGET_ARM64
     if (targetArchitecture == IMAGE_FILE_MACHINE_ARM64)
     {
         targetMachine = ARM64Machine::GetInstance();
     }
-#else
-#error "Undefined target architecture"
-#endif
+#endif // SOS_TARGET_ARM64
 
     if (targetMachine == NULL)
     {

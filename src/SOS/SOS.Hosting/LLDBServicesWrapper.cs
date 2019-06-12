@@ -23,91 +23,6 @@ namespace SOS
 
         public IntPtr ILLDBServices { get; }
 
-        #region SOS.NETCore function delegates
-
-        private delegate bool InitializeSymbolStoreDelegate(
-            bool logging,
-            bool msdl,
-            bool symweb,
-            string symbolServerPath,
-            string symbolCachePath,
-            string windowsSymbolPath);
-
-        private delegate void DisplaySymbolStoreDelegate();
-
-        private delegate void DisableSymbolStoreDelegate();
-
-        private delegate void LoadNativeSymbolsDelegate(
-            SymbolReader.SymbolFileCallback callback,
-            IntPtr parameter,
-            string tempDirectory,
-            string moduleFilePath,
-            ulong address,
-            int size,
-            SymbolReader.ReadMemoryDelegate readMemory);
-
-        private delegate IntPtr LoadSymbolsForModuleDelegate(
-            string assemblyPath,
-            bool isFileLayout,
-            ulong loadedPeAddress,
-            int loadedPeSize,
-            ulong inMemoryPdbAddress,
-            int inMemoryPdbSize,
-            SymbolReader.ReadMemoryDelegate readMemory);
-
-        private delegate void DisposeDelegate(IntPtr symbolReaderHandle);
-
-        private delegate bool ResolveSequencePointDelegate(
-            IntPtr symbolReaderHandle,
-            string filePath,
-            int lineNumber,
-            out int methodToken,
-            out int ilOffset);
-
-        private delegate bool GetLineByILOffsetDelegate(
-            IntPtr symbolReaderHandle,
-            int methodToken,
-            long ilOffset,
-            out int lineNumber,
-            out IntPtr fileName);
-
-        private delegate bool GetLocalVariableNameDelegate(
-            IntPtr symbolReaderHandle,
-            int methodToken,
-            int localIndex,
-            out IntPtr localVarName);
-
-        #endregion
-
-        /// <summary>
-        /// Used by ISOSHostServices.GetSOSNETCoreCallbacks.
-        /// </summary>
-        [StructLayout(LayoutKind.Sequential)]
-        struct SOSNetCoreCallbacks
-        {
-            public InitializeSymbolStoreDelegate InitializeSymbolStoreDelegate;
-            public DisplaySymbolStoreDelegate DisplaySymbolStoreDelegate;
-            public DisableSymbolStoreDelegate DisableSymbolStoreDelegate;
-            public LoadNativeSymbolsDelegate LoadNativeSymbolsDelegate;
-            public LoadSymbolsForModuleDelegate LoadSymbolsForModuleDelegate;
-            public DisposeDelegate DisposeDelegate;
-            public ResolveSequencePointDelegate ResolveSequencePointDelegate;
-            public GetLineByILOffsetDelegate GetLineByILOffsetDelegate;
-            public GetLocalVariableNameDelegate GetLocalVariableNameDelegate;
-        }
-
-        static SOSNetCoreCallbacks s_callbacks = new SOSNetCoreCallbacks {
-            InitializeSymbolStoreDelegate = SymbolReader.InitializeSymbolStore,
-            DisplaySymbolStoreDelegate = SymbolReader.DisplaySymbolStore,
-            DisableSymbolStoreDelegate = SymbolReader.DisableSymbolStore,
-            LoadNativeSymbolsDelegate = SymbolReader.LoadNativeSymbols,
-            LoadSymbolsForModuleDelegate = SymbolReader.LoadSymbolsForModule,
-            DisposeDelegate  = SymbolReader.Dispose,
-            ResolveSequencePointDelegate = SymbolReader.ResolveSequencePoint,
-            GetLineByILOffsetDelegate = SymbolReader.GetLineByILOffset,
-            GetLocalVariableNameDelegate  = SymbolReader.GetLocalVariableName,
-        };
-
         static readonly string s_coreclrModuleName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "coreclr" : "libcoreclr.so";
 
         readonly SOSHost _sosHost;
@@ -174,10 +89,6 @@ namespace SOS
             builder = AddInterface(IID_ILLDBServices2, validate: false);
             builder.AddMethod(new LoadNativeSymbolsDelegate2(LoadNativeSymbols2));
             builder.AddMethod(new AddModuleSymbolDelegate(AddModuleSymbol));
-            builder.Complete();
-
-            builder = AddInterface(IID_SOSHostServices, validate: false);
-            builder.AddMethod(new GetSOSNETCoreCallbacksDelegate(GetSOSNETCoreCallbacks));
             builder.Complete();
 
             AddRef();
@@ -749,30 +660,6 @@ namespace SOS
 
         #endregion
 
-        #region ISOSHostServices
-
-        int GetSOSNETCoreCallbacks(
-            IntPtr self,
-            int version,
-            IntPtr pCallbacks)
-        {
-            if (version < 1)
-            {
-                return E_FAIL;
-            }
-            try
-            {
-                Marshal.StructureToPtr(s_callbacks, pCallbacks, false);
-            }
-            catch (ArgumentException)
-            {
-                return E_FAIL;
-            }
-            return S_OK;
-        }
-
-        #endregion 
-
         #region ILLDBServices delegates
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
@@ -1056,15 +943,5 @@ namespace SOS
             [MarshalAs(UnmanagedType.LPStr)] string symbolFilename);
 
         #endregion
-
-        #region ISOSHostServices delegates
-
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate int GetSOSNETCoreCallbacksDelegate(
-            IntPtr self,
-            int version,
-            IntPtr pCallbacks);
-
-        #endregion 
     }
 }

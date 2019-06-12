@@ -33,6 +33,7 @@ __CI=false
 __Verbosity=minimal
 __TestArgs=
 __UnprocessedBuildArgs=
+__Alpine=false
 
 usage()
 {
@@ -42,13 +43,13 @@ usage()
     echo "--daily-test - test native components for daily build job"
     echo "--architecture <x64|x86|arm|armel|arm64>"
     echo "--configuration <debug|release>"
+    echo "--rootfs <ROOTFS_DIR>"
     echo "--clangx.y - optional argument to build using clang version x.y"
     echo "--ci - CI lab build"
     echo "--verbosity <q[uiet]|m[inimal]|n[ormal]|d[etailed]|diag[nostic]>"
     echo "--help - this help message"
     exit 1
 }
-
 
 # args:
 # input - $1
@@ -194,6 +195,15 @@ while :; do
             shift
             ;;
 
+        --rootfs)
+            export ROOTFS_DIR="$2"
+            shift
+            ;;
+
+        --portablebuild=false)
+            __PortableBuild=0
+            ;;
+
         --clang3.5)
             __ClangMajorVersion=3
             __ClangMinorVersion=5
@@ -267,15 +277,10 @@ __ResultsDir=$__RootBinDir/TestResults/$__BuildType
 __PackagesBinDir=$__RootBinDir/packages/$__BuildType/Shipping
 __ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=$__RootBinDir/bin -DCLR_BUILD_TYPE=$__BuildType"
 __DotNetCli=$__ProjectRoot/.dotnet/dotnet
-__MSBuildPath=$__ProjectRoot/.dotnet/sdk/2.1.505/MSBuild.dll
-__DotNetRuntimeVersion=2.1.9
+__DotNetRuntimeVersion=2.1.11
 
 if [ ! -e $__DotNetCli ]; then
    echo "dotnet cli not installed $__DotNetCli"
-   exit 1
-fi
-if [ ! -e $__MSBuildPath ]; then
-   echo "dotnet cli sdk not installed $__MSBuildPath"
    exit 1
 fi
 
@@ -299,6 +304,17 @@ if [[ "$__BuildArch" == "armel" ]]; then
     __PortableBuild=0
 fi
 
+# Configure environment if we are doing a cross compile.
+if [ "${__BuildArch}" != "${__HostArch}" ]; then
+    __CrossBuild=true
+    export CROSSCOMPILE=1
+    if ! [[ -n "$ROOTFS_DIR" ]]; then
+        echo "ERROR: ROOTFS_DIR not set for cross build"
+        exit 1
+    fi
+    echo "ROOTFS_DIR: $ROOTFS_DIR"
+fi
+
 mkdir -p "$__IntermediatesDir"
 mkdir -p "$__LogDir"
 mkdir -p "$__CMakeBinDir"
@@ -315,10 +331,11 @@ build_native()
     generator=""
     buildFile="Makefile"
     buildTool="make"
+    scriptDir="$__ProjectRoot/eng"
 
     pushd "$intermediatesForBuild"
-    echo "Invoking \"$__ProjectRoot/eng/gen-buildsys-clang.sh\" \"$__ProjectRoot\" $__ClangMajorVersion $__ClangMinorVersion $platformArch $__BuildType $generator $extraCmakeArguments $__cmakeargs"
-    "$__ProjectRoot/eng/gen-buildsys-clang.sh" "$__ProjectRoot" $__ClangMajorVersion $__ClangMinorVersion $platformArch $__BuildType $generator "$extraCmakeArguments" "$__cmakeargs"
+    echo "Invoking \"$scriptDir/gen-buildsys-clang.sh\" \"$__ProjectRoot\" $__ClangMajorVersion \"$__ClangMinorVersion\" $platformArch "$scriptDir" $__BuildType $generator $extraCmakeArguments $__cmakeargs"
+    "$scriptDir/gen-buildsys-clang.sh" "$__ProjectRoot" $__ClangMajorVersion "$__ClangMinorVersion" $platformArch "$scriptDir" $__BuildType $generator "$extraCmakeArguments" "$__cmakeargs"
     popd
 
     if [ ! -f "$intermediatesForBuild/$buildFile" ]; then
@@ -340,77 +357,19 @@ build_native()
     popd
 }
 
-initHostDistroRid()
-{
-    __HostDistroRid=""
-    if [ "$__HostOS" == "Linux" ]; then
-        if [ -e /etc/os-release ]; then
-            source /etc/os-release
-            if [[ $ID == "rhel" ]]; then
-                # remove the last version digit
-                VERSION_ID=${VERSION_ID%.*}
-            fi
-            __HostDistroRid="$ID.$VERSION_ID-$__HostArch"
-            if [[ $ID == "alpine" ]]; then
-                __HostDistroRid="linux-musl-$__HostArch"
-            fi
-        elif [ -e /etc/redhat-release ]; then
-            local redhatRelease=$(</etc/redhat-release)
-            if [[ $redhatRelease == "CentOS release 6."* || $redhatRelease == "Red Hat Enterprise Linux Server release 6."* ]]; then
-               __HostDistroRid="rhel.6-$__HostArch"
-            fi
-        fi
-    fi
-    if [ "$__HostOS" == "FreeBSD" ]; then
-        __freebsd_version=`sysctl -n kern.osrelease | cut -f1 -d'.'`
-        __HostDistroRid="freebsd.$__freebsd_version-$__HostArch"
-    fi
-
-    if [ "$__HostDistroRid" == "" ]; then
-        echo "WARNING: Can not determine runtime id for current distro."
-    fi
-}
-
 initTargetDistroRid()
 {
-    if [ $__CrossBuild == true ]; then
-        if [ "$__BuildOS" == "Linux" ]; then
-            if [ ! -e $ROOTFS_DIR/etc/os-release ]; then
-                if [ -e $ROOTFS_DIR/android_platform ]; then
-                    source $ROOTFS_DIR/android_platform
-                    export __DistroRid="$RID"
-                else
-                    echo "WARNING: Can not determine runtime id for current distro."
-                    export __DistroRid=""
-                fi
-            else
-                source $ROOTFS_DIR/etc/os-release
-                export __DistroRid="$ID.$VERSION_ID-$__BuildArch"
-            fi
-        fi
-    else
-        export __DistroRid="$__HostDistroRid"
+    source "$__ProjectRoot/eng/init-distro-rid.sh"
+
+    local passedRootfsDir=""
+
+    # Only pass ROOTFS_DIR if cross is specified.
+    if [ "$__CrossBuild" == true ]; then
+        passedRootfsDir=${ROOTFS_DIR}
     fi
 
-    if [ "$__BuildOS" == "OSX" ]; then
-        __PortableBuild=1
-    fi
-
-    # Portable builds target the base RID
-    if [ $__PortableBuild == 1 ]; then
-        if [ "$__BuildOS" == "Linux" ]; then
-            export __DistroRid="linux-$__BuildArch"
-        elif [ "$__BuildOS" == "OSX" ]; then
-            export __DistroRid="osx-$__BuildArch"
-        elif [ "$__BuildOS" == "FreeBSD" ]; then
-            export __DistroRid="freebsd-$__BuildArch"
-        fi
-    fi
+    initDistroRidGlobal ${__BuildOS} ${__BuildArch} ${__PortableBuild} ${passedRootfsDir}
 }
-
-
-# Init the host distro name
-initHostDistroRid
 
 # Init the target distro name
 initTargetDistroRid
@@ -444,13 +403,12 @@ if [ "$__HostOS" == "OSX" ]; then
     python --version
 fi
 
-
 # Build native components
 if [ $__Build == true ]; then
     if [[ $__CI == true ]]; then
         echo "Generating Version Source File"
         __GenerateVersionLog="$__LogDir/GenerateVersion.binlog"
-        $__DotNetCli $__MSBuildPath $__ProjectRoot/eng/CreateVersionFile.csproj /v:$__Verbosity /bl:$__GenerateVersionLog /t:GenerateVersionFiles /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
+        $__DotNetCli msbuild $__ProjectRoot/eng/CreateVersionFile.csproj /v:$__Verbosity /bl:$__GenerateVersionLog /t:GenerateVersionFiles /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
         if [ $? != 0 ]; then
             echo "Generating Version Source File FAILED"
             exit 1
@@ -480,48 +438,54 @@ fi
 
 # Run SOS/lldbplugin tests
 if [ $__Test == true ]; then
-    # Install the other versions of .NET Core runtime we are going to test on
-    "$__ProjectRoot/eng/install-test-runtimes.sh" --dotnet-directory "$__ProjectRoot/.dotnet" --runtime-version-21 "$__DotNetRuntimeVersion" --temp-directory "$__IntermediatesDir" --architecture "$__BuildArch" $__DailyTest
+   if [[ "$__BuildArch" != "arm" && "$__BuildArch" != "armel" && "$__BuildArch" != "arm64" ]]; then
 
-    if [ "$LLDB_PATH" = "" ]; then
-        export LLDB_PATH="$(which lldb-3.9.1 2> /dev/null)"
-        if [ "$LLDB_PATH" = "" ]; then
-            export LLDB_PATH="$(which lldb-3.9 2> /dev/null)"
-            if [ "$LLDB_PATH" = "" ]; then
-                export LLDB_PATH="$(which lldb-4.0 2> /dev/null)"
-                if [ "$LLDB_PATH" = "" ]; then
-                    export LLDB_PATH="$(which lldb-5.0 2> /dev/null)"
-                    if [ "$LLDB_PATH" = "" ]; then
-                        export LLDB_PATH="$(which lldb 2> /dev/null)"
-                    fi
-                fi
-            fi
-        fi
-    fi
+      # Install the other versions of .NET Core runtime we are going to test on
+      "$__ProjectRoot/eng/install-test-runtimes.sh" --dotnet-directory "$__ProjectRoot/.dotnet" --runtime-version-21 "$__DotNetRuntimeVersion" --temp-directory "$__IntermediatesDir" --architecture "$__BuildArch" $__DailyTest
 
-    if [ "$GDB_PATH" = "" ]; then
-        export GDB_PATH="$(which gdb 2> /dev/null)"
-    fi
+      if [ "$LLDB_PATH" == "" ]; then
+          export LLDB_PATH="$(which lldb-3.9.1 2> /dev/null)"
+          if [ "$LLDB_PATH" == "" ]; then
+              export LLDB_PATH="$(which lldb-3.9 2> /dev/null)"
+              if [ "$LLDB_PATH" == "" ]; then
+                  export LLDB_PATH="$(which lldb-4.0 2> /dev/null)"
+                  if [ "$LLDB_PATH" == "" ]; then
+                      export LLDB_PATH="$(which lldb-5.0 2> /dev/null)"
+                      if [ "$LLDB_PATH" == "" ]; then
+                          export LLDB_PATH="$(which lldb 2> /dev/null)"
+                      fi
+                  fi
+              fi
+          fi
+      fi
 
-    echo "lldb: '$LLDB_PATH' gdb: '$GDB_PATH'"
+      if [ "$GDB_PATH" == "" ]; then
+          export GDB_PATH="$(which gdb 2> /dev/null)"
+      fi
 
-    # Run xunit SOS tests
-    "$__ProjectRoot/eng/common/build.sh" --test --configuration "$__BuildType" "$__TestArgs"
-    if [ $? != 0 ]; then
-        exit 1
-    fi
+      echo "lldb: '$LLDB_PATH' gdb: '$GDB_PATH'"
 
-    if [ "$__BuildOS" == "OSX" ]; then
-        __Plugin=$__CMakeBinDir/libsosplugin.dylib
-    else
-        __Plugin=$__CMakeBinDir/libsosplugin.so
-    fi
+      # Run xunit SOS tests
+      "$__ProjectRoot/eng/common/build.sh" --test --configuration "$__BuildType" $__TestArgs
+      if [ $? != 0 ]; then
+          exit 1
+      fi
 
-    # Run lldb python tests
-    "$__ProjectRoot/src/SOS/lldbplugin.tests/testsos.sh" "$__ProjectRoot" "$__Plugin" "$__DotNetRuntimeVersion" "$__RootBinDir/bin/TestDebuggee/$__BuildType/netcoreapp2.0/TestDebuggee.dll" "$__ResultsDir"
-    if [ $? != 0 ]; then
-        exit 1
-    fi
+      # Skip Alpine because lldb doesn't work
+      if [ $__Alpine == false ]; then
+          if [ "$__BuildOS" == "OSX" ]; then
+              __Plugin=$__CMakeBinDir/libsosplugin.dylib
+          else
+              __Plugin=$__CMakeBinDir/libsosplugin.so
+          fi
+
+          # Run lldb python tests
+          "$__ProjectRoot/src/SOS/lldbplugin.tests/testsos.sh" "$__ProjectRoot" "$__Plugin" "$__DotNetRuntimeVersion" "$__RootBinDir/bin/TestDebuggee/$__BuildType/netcoreapp2.0/TestDebuggee.dll" "$__ResultsDir"
+          if [ $? != 0 ]; then
+              exit 1
+          fi
+      fi
+   fi
 fi
 
 echo "BUILD: Repo sucessfully built."

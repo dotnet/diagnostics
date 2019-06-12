@@ -64,9 +64,12 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
 ENDIF:PROJECTK
 
+# Issue #https://github.com/dotnet/diagnostics/issues/266
+IFDEF:NEVER
+
 # Verify that ClrStack with the ICorDebug options works
-SOSCOMMAND:ClrStack -i
 IFDEF:PROJECTK
+SOSCOMMAND:ClrStack -i
 VERIFY:.*\s+Dumping managed stack and managed variables using ICorDebug.\s+
 VERIFY:.*\s+Child\s+SP\s+IP\s+Call Site\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[NativeStackFrame\]\s+
@@ -94,6 +97,10 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void SymbolTestApp\.Program\.Main\
 VERIFY:.*\s+Stack walk complete.\s+
 ENDIF:PROJECTK
 
+ENDIF:NEVER
+
+!IFDEF:ALPINE
+
 # Verify DumpStackObjects works
 IFDEF:PROJECTK
 SOSCOMMAND:DumpStackObjects
@@ -111,6 +118,8 @@ VERIFY:\s+[R|E]SP/REG\s+Object\s+Name\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
 ENDIF:PROJECTK
+
+ENDIF:ALPINE
 
 !IFDEF:DOTNETDUMP
 IFDEF:PROJECTK

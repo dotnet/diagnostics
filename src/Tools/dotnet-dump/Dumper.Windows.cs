@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostic.Tools.Dump
     {
         private static class Windows
         {
-            internal static Task CollectDumpAsync(Process process, string outputFile, DumpType type)
+            internal static Task CollectDumpAsync(Process process, string outputFile, DumpTypeOption type)
             {
                 // We can't do this "asynchronously" so just Task.Run it. It shouldn't be "long-running" so this is fairly safe.
                 return Task.Run(() =>
@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostic.Tools.Dump
                     using (var stream = new FileStream(outputFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
                     {
                         var exceptionInfo = new NativeMethods.MINIDUMP_EXCEPTION_INFORMATION();
-                        var dumpType = type == DumpType.Mini ? NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo :
+                        var dumpType = type == DumpTypeOption.Mini ? NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo :
                             NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
                             NativeMethods.MINIDUMP_TYPE.MiniDumpWithPrivateReadWriteMemory |
                             NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |

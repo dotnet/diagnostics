@@ -85,7 +85,10 @@ ICorDebugProcess *g_pCorDebugProcess = NULL;
 // Max number of reverted rejit versions that !dumpmd and !ip2md will print
 const UINT kcMaxRevertedRejitData   = 10;
 const UINT kcMaxTieredVersions      = 10;
+
 #ifndef FEATURE_PAL
+
+extern LPCSTR GetHostRuntimeDirectory();
 
 // ensure we always allocate on the process heap
 void* __cdecl operator new(size_t size) throw()
@@ -183,31 +186,41 @@ HRESULT CreateInstanceCustomImpl(
                         void** ppItf)
 {
     _ASSERTE(ppItf != NULL);
+    _ASSERTE(dllName != NULL);
 
-    if (ppItf == NULL)
+    if (ppItf == NULL || dllName == NULL)
         return E_POINTER;
 
     WCHAR wszClsid[64] = W("<CLSID>");
 
-    if ((cciOptions & cciDbiColocated) != 0)
+    // Step 1: attempt activation using the host runtime directory
+    LPCSTR hostRuntimeDirectory = GetHostRuntimeDirectory();
+    if (hostRuntimeDirectory != nullptr)
     {
-        // if we institute a way to retrieve the module for the current DBI we
-        // can perform the same steps as for the DAC.
+        ArrayHolder<WCHAR> path = new WCHAR[MAX_LONGPATH];
+        int length = MultiByteToWideChar(CP_ACP, 0, hostRuntimeDirectory, -1, path, MAX_LONGPATH);
+        if (length > 0)
+        {
+            if (wcscat_s(path, MAX_LONGPATH, W("\\")) == 0 && wcscat_s(path, MAX_LONGPATH, dllName) == 0 &&
+                SUCCEEDED(CreateInstanceFromPath(clsid, iid, path, ppItf)))
+            {
+                return S_OK;
+            }
+        }
     }
 
     // Step 2: attempt activation using the folder the DAC was loaded from
     if ((cciOptions & cciDacColocated) != 0)
     {
-        _ASSERTE(dllName != NULL);
         HMODULE hDac = NULL;
-        WCHAR path[MAX_LONGPATH];
+        ArrayHolder<WCHAR> path = new WCHAR[MAX_LONGPATH];
 
-        if (SUCCEEDED(g_sos->GetDacModuleHandle(&hDac))
-            && GetPathFromModule(hDac, path, _countof(path)))
+        if (SUCCEEDED(g_sos->GetDacModuleHandle(&hDac)) && 
+            GetPathFromModule(hDac, path, MAX_LONGPATH))
         {
             // build the fully qualified file name and attempt instantiation
-            if (wcscat_s(path, dllName) == 0
-                && SUCCEEDED(CreateInstanceFromPath(clsid, iid, path, ppItf)))
+            if (wcscat_s(path, MAX_LONGPATH, dllName) == 0 && 
+                SUCCEEDED(CreateInstanceFromPath(clsid, iid, path, ppItf)))
             {
                 return S_OK;
             }
@@ -219,8 +232,6 @@ HRESULT CreateInstanceCustomImpl(
     // Step 3: attempt activation using the debugger's .exepath and .sympath
     if ((cciOptions & cciDbgPath) != 0)
     {
-        _ASSERTE(dllName != NULL);
-
         ToRelease<IDebugSymbols3> spSym3(NULL);
         HRESULT hr = g_ExtSymbols->QueryInterface(__uuidof(IDebugSymbols3), (void**)&spSym3);
         if (FAILED(hr))
@@ -247,10 +258,6 @@ HRESULT CreateInstanceCustomImpl(
                 }
 
                 ArrayHolder<WCHAR> imgPath = new WCHAR[pathSize+MAX_LONGPATH+1];
-                if (imgPath == NULL)
-                {
-                    continue;
-                }
 
                 // actually get the path
                 if ((spSym3.GetPtr()->*rgGetPathFuncs[i])(imgPath, pathSize, NULL) != S_OK)
@@ -262,11 +269,11 @@ HRESULT CreateInstanceCustomImpl(
                 LPCWSTR pathElem = wcstok_s(imgPath, W(";"), &ctx);
                 while (pathElem != NULL)
                 {
-                    WCHAR fullName[MAX_LONGPATH];
-                    wcscpy_s(fullName, _countof(fullName), pathElem);
-                    if (wcscat_s(fullName, W("\\")) == 0 && wcscat_s(fullName, dllName) == 0)
+                    ArrayHolder<WCHAR> path = new WCHAR[MAX_LONGPATH];
+                    wcscpy_s(path, MAX_LONGPATH, pathElem);
+                    if (wcscat_s(path, MAX_LONGPATH, W("\\")) == 0 && wcscat_s(path, MAX_LONGPATH, dllName) == 0) 
                     {
-                        if (SUCCEEDED(CreateInstanceFromPath(clsid, iid, fullName, ppItf)))
+                        if (SUCCEEDED(CreateInstanceFromPath(clsid, iid, path, ppItf)))
                         {
                             return S_OK;
                         }
@@ -2145,6 +2152,23 @@ BOOL IsDerivedFrom(CLRDATA_ADDRESS mtObj, __in_z LPCWSTR baseString)
     return FALSE;
 }
 
+BOOL IsDerivedFrom(CLRDATA_ADDRESS mtObj, DWORD_PTR modulePtr, mdTypeDef typeDef)
+{
+    DacpMethodTableData dmtd;
+    
+    for (CLRDATA_ADDRESS walkMT = mtObj;
+         walkMT != NULL && dmtd.Request(g_sos, walkMT) == S_OK;
+         walkMT = dmtd.ParentMethodTable)
+    {
+        if (dmtd.Module == modulePtr && dmtd.cl == typeDef)
+        {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 BOOL TryGetMethodDescriptorForDelegate(CLRDATA_ADDRESS delegateAddr, CLRDATA_ADDRESS* pMD)
 {
     if (!sos::IsObject(delegateAddr, false))
@@ -2611,8 +2635,12 @@ HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataMo
 *    Find the EE data given a name.                                    *  
 *                                                                      *
 \**********************************************************************/
-void GetInfoFromName(DWORD_PTR ModulePtr, const char* name)
+void GetInfoFromName(DWORD_PTR ModulePtr, const char* name, mdTypeDef* retMdTypeDef)
 {
+    DWORD_PTR ignoredModuleInfoRet = NULL;
+    if (retMdTypeDef)
+        *retMdTypeDef = 0;
+
     ToRelease<IMetaDataImport> pImport = MDImportForModule (ModulePtr);    
     if (pImport == 0)
         return;
@@ -2637,13 +2665,13 @@ void GetInfoFromName(DWORD_PTR ModulePtr, const char* name)
             BOOL fStatus = FALSE;
             while (ModuleDefinition->EnumMethodDefinitionByName(&h, &pMeth) == S_OK)
             {
-                if (fStatus)
+                if (fStatus && !retMdTypeDef)
                     ExtOut("-----------------------\n");
 
                 mdTypeDef token;
                 if (pMeth->GetTokenAndScope(&token, NULL) == S_OK)
                 {
-                    GetInfoFromModule(ModulePtr, token);
+                    GetInfoFromModule(ModulePtr, token, retMdTypeDef ? &ignoredModuleInfoRet : NULL);
                     fStatus = TRUE;
                 }
                 pMeth->Release();
@@ -2672,7 +2700,10 @@ void GetInfoFromName(DWORD_PTR ModulePtr, const char* name)
     // @todo:  Handle Nested classes correctly.
     if (SUCCEEDED (pImport->FindTypeDefByName (pName, tkEnclose, &cl)))
     {
-        GetInfoFromModule(ModulePtr, cl);
+        if (retMdTypeDef)
+            *retMdTypeDef = cl;
+        
+        GetInfoFromModule(ModulePtr, cl, retMdTypeDef ? &ignoredModuleInfoRet : NULL);
         return;
     }
     
@@ -2689,6 +2720,9 @@ void GetInfoFromName(DWORD_PTR ModulePtr, const char* name)
     // @todo:  Handle Nested classes correctly.
     if (SUCCEEDED(pImport->FindTypeDefByName (pName, tkEnclose, &cl)))
     {
+        if (retMdTypeDef)
+            *retMdTypeDef = cl;
+
         mdMethodDef token;
         ULONG cTokens;
         HCORENUM henum = NULL;
@@ -2699,8 +2733,8 @@ void GetInfoFromName(DWORD_PTR ModulePtr, const char* name)
                                                      &token, 1, &cTokens))
             && cTokens == 1)
         {
-            ExtOut("Member (mdToken token) of\n");
-            GetInfoFromModule(ModulePtr, cl);
+            if (!retMdTypeDef) ExtOut("Member (mdToken token) of\n");
+            GetInfoFromModule(ModulePtr, cl, retMdTypeDef ? &ignoredModuleInfoRet : NULL);
             return;
         }
 
@@ -2710,8 +2744,8 @@ void GetInfoFromName(DWORD_PTR ModulePtr, const char* name)
                                                      &token, 1, &cTokens))
             && cTokens == 1)
         {
-            ExtOut("Field (mdToken token) of\n");
-            GetInfoFromModule(ModulePtr, cl);
+            if (!retMdTypeDef) ExtOut("Field (mdToken token) of\n");
+            GetInfoFromModule(ModulePtr, cl, retMdTypeDef ? &ignoredModuleInfoRet : NULL);
             return;
         }
     }
@@ -3975,14 +4009,7 @@ void ResetGlobals(void)
     Output::ResetIndent();
 }
 
-//---------------------------------------------------------------------------------------
-//
-// Loads private DAC interface, and points g_clrData to it.
-//
-// Return Value:
-//      HRESULT indicating success or failure
-//
-HRESULT LoadClrDebugDll(void)
+static HRESULT GetClrDataProcess()
 {
     static IXCLRDataProcess* clrDataProcess = NULL;
     HRESULT hr = S_OK;
@@ -4020,6 +4047,38 @@ HRESULT LoadClrDebugDll(void)
     g_clrData = clrDataProcess;
     g_clrData->AddRef();
     g_clrData->Flush();
+
+    return S_OK;
+}
+
+//---------------------------------------------------------------------------------------
+//
+// Loads private DAC interface, and points g_clrData to it.
+//
+// Return Value:
+//      HRESULT indicating success or failure
+//
+HRESULT LoadClrDebugDll(void)
+{
+    static IXCLRDataProcess* clrDataProcess = NULL;
+    HRESULT hr = GetClrDataProcess();
+    if (FAILED(hr)) 
+    {
+#ifdef FEATURE_PAL
+        return hr;
+#else
+        // Try getting the DAC interface from dbgeng if the above fails on Windows
+        WDBGEXTS_CLR_DATA_INTERFACE Query;
+
+        Query.Iid = &__uuidof(IXCLRDataProcess);
+        if (!Ioctl(IG_GET_CLR_DATA_INTERFACE, &Query, sizeof(Query)))
+        {
+            return hr;
+        }
+        g_clrData = (IXCLRDataProcess*)Query.Iface;
+        g_clrData->Flush();
+#endif
+    }
 
     hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface), (void**)&g_sos);
     if (FAILED(hr))
@@ -6197,3 +6256,127 @@ HRESULT InternalFrameManager::PrintCurrentInternalFrame()
 
     return S_OK;
 }
+
+#ifdef FEATURE_PAL
+
+struct MemoryRegion 
+{
+private:
+    uint64_t m_startAddress;
+    uint64_t m_endAddress;
+
+public:
+    MemoryRegion(uint64_t start, uint64_t end) : 
+        m_startAddress(start),
+        m_endAddress(end)
+    {
+    }
+
+    // copy constructor
+    MemoryRegion(const MemoryRegion& region) : 
+        m_startAddress(region.m_startAddress),
+        m_endAddress(region.m_endAddress)
+    {
+    }
+
+    uint64_t StartAddress() const { return m_startAddress; }
+    uint64_t EndAddress() const { return m_endAddress; }
+    uint64_t Size() const { return m_endAddress - m_startAddress; }
+
+    bool operator<(const MemoryRegion& rhs) const
+    {
+        return (m_startAddress < rhs.m_startAddress) && (m_endAddress <= rhs.m_startAddress);
+    }
+
+    // Returns true if "rhs" is wholly contained in this one
+    bool Contains(const MemoryRegion& rhs) const
+    {
+        return (m_startAddress <= rhs.m_startAddress) && (m_endAddress >= rhs.m_endAddress);
+    }
+};
+
+std::set<MemoryRegion> g_metadataRegions;
+bool g_metadataRegionsPopulated = false;
+
+void FlushMetadataRegions()
+{
+    g_metadataRegionsPopulated = false;
+}
+
+//-------------------------------------------------------------------------------
+// Lifted from "..\md\inc\mdfileformat.h"
+#define STORAGE_MAGIC_SIG   0x424A5342  // BSJB
+struct STORAGESIGNATURE
+{
+    ULONG       lSignature;             // "Magic" signature.
+    USHORT      iMajorVer;              // Major file version.
+    USHORT      iMinorVer;              // Minor file version.
+    ULONG       iExtraData;             // Offset to next structure of information
+    ULONG       iVersionString;         // Length of version string
+};
+
+void PopulateMetadataRegions()
+{
+    g_metadataRegions.clear();
+
+    // Only populate the metadata regions if core dump
+    if (IsDumpFile())
+    {
+        int numModule;
+        ArrayHolder<DWORD_PTR> moduleList = ModuleFromName(NULL, &numModule);
+        if (moduleList != nullptr)
+        {
+            for (int i = 0; i < numModule; i++)
+            {
+                DacpModuleData moduleData;
+                if (SUCCEEDED(moduleData.Request(g_sos, moduleList[i])))
+                {
+                    if (moduleData.metadataStart != 0)
+                    {
+                        bool add = false;
+                        STORAGESIGNATURE header;
+                        if (SUCCEEDED(g_ExtData->ReadVirtual(moduleData.metadataStart, (PVOID)&header, sizeof(header), NULL)))
+                        {
+                            add = header.lSignature != STORAGE_MAGIC_SIG;
+                        }
+                        else {
+                            add = true;
+                        }
+                        if (add)
+                        {
+                            MemoryRegion region(moduleData.metadataStart, moduleData.metadataStart + moduleData.metadataSize);
+                            g_metadataRegions.insert(region);
+                        }
+#ifdef METADATA_REGION_LOGGING
+                        ArrayHolder<WCHAR> name = new WCHAR[MAX_LONGPATH];
+                        name[0] = '\0';
+                        if (moduleData.File != 0)
+                        {
+                            g_sos->GetPEFileName(moduleData.File, MAX_LONGPATH, name.GetPtr(), NULL);
+                        }
+                        ExtOut("%c%016x %016x %016x %S\n", add ? '*' : ' ', moduleData.metadataStart, moduleData.metadataStart + moduleData.metadataSize, moduleData.metadataSize, name.GetPtr());
+#endif // METADATA_REGION_LOGGING
+                    }
+                }
+            }
+        }
+    }
+}
+
+bool IsMetadataMemory(CLRDATA_ADDRESS address, ULONG32 size)
+{
+    if (!g_metadataRegionsPopulated)
+    {
+        g_metadataRegionsPopulated = true;
+        PopulateMetadataRegions();
+    }
+    MemoryRegion region(address, address + size);
+    const auto& found = g_metadataRegions.find(region);
+    if (found != g_metadataRegions.end())
+    {
+        return found->Contains(region);
+    }
+    return false;
+}
+
+#endif // FEATURE_PAL

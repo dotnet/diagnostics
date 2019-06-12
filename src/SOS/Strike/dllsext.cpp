@@ -50,7 +50,7 @@ typedef struct _PRIVATE_LDR_DATA_TABLE_ENTRY {
 static void DllsNameFromPeb(
     ULONG_PTR addrContaining,
     __out_ecount (MAX_LONGPATH) WCHAR *dllName
-	)
+    )
 {
     ULONG64 ProcessPeb;
     g_ExtSystem->GetCurrentProcessPeb (&ProcessPeb);
