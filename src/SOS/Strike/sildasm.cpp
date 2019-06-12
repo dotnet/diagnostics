@@ -95,9 +95,10 @@ void DisassembleToken(IMetaDataImport *i,
         SigParser sigParser;
         ULONG cParamTypes = 0;
         bool isField = true;
+        IMetaDataImport *pMDImport;
 
     public: 
-        MethodSigArgPrettyPrinter(PCCOR_SIGNATURE sig, ULONG cbSig) : sigParser(sig, cbSig)
+        MethodSigArgPrettyPrinter(PCCOR_SIGNATURE sig, ULONG cbSig, IMetaDataImport *_pMDImport) : sigParser(sig, cbSig), pMDImport(_pMDImport)
         {
         }
 
@@ -128,7 +129,7 @@ void DisassembleToken(IMetaDataImport *i,
                     {
                         // Print type
                         CQuickBytes out;
-                        PrettyPrintType(sigParser.GetPtr(), &out, i);
+                        PrettyPrintType(sigParser.GetPtr(), &out, pMDImport);
                         int cchString = MultiByteToWideChar (CP_ACP, 0, asString(&out), -1, NULL, 0);
                         WCHAR *psz = new WCHAR[cchString];
                         MultiByteToWideChar (CP_ACP, 0, asString(&out), -1, psz, cchString);
@@ -148,7 +149,7 @@ void DisassembleToken(IMetaDataImport *i,
                 for (ULONG paramIndex = 0; paramIndex < cParamTypes; paramIndex++)
                 {
                     CQuickBytes out;
-                    PrettyPrintType(sigParser.GetPtr(), &out, i);
+                    PrettyPrintType(sigParser.GetPtr(), &out, pMDImport);
                     int cchString = MultiByteToWideChar (CP_ACP, 0, asString(&out), -1, NULL, 0);
                     WCHAR *psz = new WCHAR[cchString];
                     MultiByteToWideChar (CP_ACP, 0, asString(&out), -1, psz, cchString);
@@ -235,7 +236,7 @@ void DisassembleToken(IMetaDataImport *i,
             hr = i->GetMethodProps(token, &mdClass, szFieldName, 49, &cLen,
                                    NULL, &sig, &cbSigBlob, NULL, NULL);
 
-            MethodSigArgPrettyPrinter methodPrettyPrinter(sig, cbSigBlob);
+            MethodSigArgPrettyPrinter methodPrettyPrinter(sig, cbSigBlob, i);
 
             if (FAILED(hr))
                 StringCchCopyW(szFieldName, COUNTOF(szFieldName), W("<unknown method def>"));
@@ -265,7 +266,7 @@ void DisassembleToken(IMetaDataImport *i,
             hr = i->GetMemberRefProps(token, &cr, memberName, 49,
                                       &memberNameLen, &sig, &cbSigBlob);
 
-            MethodSigArgPrettyPrinter methodPrettyPrinter(sig, cbSigBlob);
+            MethodSigArgPrettyPrinter methodPrettyPrinter(sig, cbSigBlob, i);
 
             if (FAILED(hr))
             {
