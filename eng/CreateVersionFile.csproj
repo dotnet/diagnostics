@@ -8,7 +8,7 @@
 
   <Target Name="GenerateVersionPrefixFile" Condition="'$(VersionPrefixFile)' != ''">
     <ItemGroup>
-      <VersionPrefixLines Include="$(VersionPrefix)" />
+      <VersionPrefixLines Include="$(VersionPrefix).0" />
     </ItemGroup>
     <WriteLinesToFile File="$(VersionPrefixFile)" Lines="@(VersionPrefixLines)" Overwrite="true" />
   </Target>
