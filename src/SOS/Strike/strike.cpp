@@ -12853,10 +12853,8 @@ public:
 
                 ToRelease<IUnknown> pMDUnknown;
                 ToRelease<IMetaDataImport> pMD;
-                ToRelease<IMDInternalImport> pMDInternal;
                 IfFailRet(pModule->GetMetaDataInterface(IID_IMetaDataImport, &pMDUnknown));
                 IfFailRet(pMDUnknown->QueryInterface(IID_IMetaDataImport, (LPVOID*) &pMD));
-                IfFailRet(GetMDInternalFromImport(pMD, &pMDInternal));
 
                 mdTypeDef typeDef;
                 IfFailRet(pClass->GetToken(&typeDef));
