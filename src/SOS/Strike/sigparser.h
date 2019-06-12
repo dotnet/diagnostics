@@ -34,7 +34,7 @@ class SigParser
         //------------------------------------------------------------------------
         FORCEINLINE void SkipBytes(ULONG cb)
         {
-            _ASSERT(cb <= m_dwLen);
+            _ASSERTE(cb <= m_dwLen);
             m_ptr += cb;
             m_dwLen -= cb;
         }
