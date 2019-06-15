@@ -27,7 +27,7 @@ In order to generate core dumps for .net core apps, you can use the dotnet-dump 
 > dotnet tool install --global dotnet-dump --version 1.0.4-preview6.19311.1
 > ```
 
-Please note, the dotnet-trace tool is version independent but as of right now (preview 5) it requires the 2.1 runtime to be installed to work. This will be fixed moving forward.
+Please note, the dotnet-dump tool is version independent but as of right now (preview 5) it requires the 2.1 runtime to be installed to work. This will be fixed moving forward.
 
 
 ### dotnet-symbol
