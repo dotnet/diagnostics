@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 {
     public static class EventPipeClient
     {
-        private static string DiagnosticPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnetcore-diagnostic-(\d+)$" : @"^dotnetcore-diagnostic-(\d+)-(\d+)-socket$";
+        private static string DiagnosticPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
 
         private static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
 
