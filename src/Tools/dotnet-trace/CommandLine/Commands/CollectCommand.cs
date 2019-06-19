@@ -217,13 +217,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static string GetSize(long length)
         {
             if (length > 1e9)
-                return $"{length / 1e9:0.00##} (GB)";
+                return String.Format("{0,-8} (GB)", $"{length / 1e9:0.00##}");
             else if (length > 1e6)
-                return $"{length / 1e6:0.00##} (MB)";
+                return String.Format("{0,-8} (MB)", $"{length / 1e6:0.00##}");
             else if (length > 1e3)
-                return $"{length / 1e3:0.00##} (KB)";
+                return String.Format("{0,-8} (KB)", $"{length / 1e3:0.00##}");
             else
-                return $"{length / 1.0:0.00##} (byte)";
+                return String.Format("{0,-8} (byte)", $"{length / 1.0:0.00##}");
         }
 
         public static Command CollectCommand() =>
