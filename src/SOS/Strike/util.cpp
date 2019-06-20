@@ -6333,20 +6333,8 @@ void PopulateMetadataRegions()
                 {
                     if (moduleData.metadataStart != 0)
                     {
-                        bool add = false;
-                        STORAGESIGNATURE header;
-                        if (SUCCEEDED(g_ExtData->ReadVirtual(moduleData.metadataStart, (PVOID)&header, sizeof(header), NULL)))
-                        {
-                            add = header.lSignature != STORAGE_MAGIC_SIG;
-                        }
-                        else {
-                            add = true;
-                        }
-                        if (add)
-                        {
-                            MemoryRegion region(moduleData.metadataStart, moduleData.metadataStart + moduleData.metadataSize);
-                            g_metadataRegions.insert(region);
-                        }
+                        MemoryRegion region(moduleData.metadataStart, moduleData.metadataStart + moduleData.metadataSize);
+                        g_metadataRegions.insert(region);
 #ifdef METADATA_REGION_LOGGING
                         ArrayHolder<WCHAR> name = new WCHAR[MAX_LONGPATH];
                         name[0] = '\0';
