@@ -20,6 +20,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
     {
         private int _processId;
         private int _interval;
+        private string _seriesFilter;
         private List<string> _counterList;
         private CancellationToken _ct;
         private IConsole _console;
@@ -49,9 +50,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // If it's not a counter we asked for, ignore it.
                 if (!filter.Filter(obj.ProviderName, payloadFields["Name"].ToString())) return;
 
-                // There really isn't a great way to tell whether an EventCounter payload is an instance of 
-                // IncrementingCounterPayload or CounterPayload, so here we check the number of fields 
-                // to distinguish the two.
+                if (payloadFields.ContainsKey("Series"))
+                {
+                    // Check if this is data for the interval that we asked for.
+                    if (!payloadFields["Series"].ToString().Equals(_seriesFilter))
+                    {
+                        return;
+                    }
+                }
                 ICounterPayload payload;
                 if (payloadFields.ContainsKey("CounterType"))
                 {
@@ -74,6 +80,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _console = console;
                 _processId = processId;
                 _interval = refreshInterval;
+                _seriesFilter = "Interval=" + (refreshInterval * 1000).ToString();
 
                 return await StartMonitor();
             }
