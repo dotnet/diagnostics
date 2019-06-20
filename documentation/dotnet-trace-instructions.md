@@ -30,20 +30,20 @@ dotnet-trace collect --process-id <PID> --providers Microsoft-Windows-DotNETRunt
 
 Press <Enter> to exit...
 Connecting to process: <Full-Path-To-Process-Being-Profiled>/dotnet.exe
-Collecting to file: <Full-Path-To-Trace>/trace.netperf
+Collecting to file: <Full-Path-To-Trace>/trace.nettrace
   Session Id: <SessionId>
   Recording trace 721.025 (KB)
 ```
 
-- Finally, stop collection by pressing the \<Enter> key, and *dotnet-trace* will finish logging events to *trace.netperf* file.
+- Finally, stop collection by pressing the \<Enter> key, and *dotnet-trace* will finish logging events to *trace.nettrace* file.
 
 ## Viewing the trace captured from dotnet-trace
 
-On Windows, `.netperf` files can be viewed on PerfView (https://github.com/microsoft/perfview) for analysis, just like traces collected with ETW or LTTng. For traces collected on Linux, you can either move the trace to a Windows machine to be viewed on PerfView. 
+On Windows, `.nettrace` files can be viewed on PerfView (https://github.com/microsoft/perfview) for analysis, just like traces collected with ETW or LTTng. For traces collected on Linux, you can either move the trace to a Windows machine to be viewed on PerfView. 
 
-If you would rather view the trace on a Linux machine, you can do this by changing the output format of `dotnet-trace` to `speedscope`. You can change the output file format using the `-f|--format` option - `-f speedscope` will make `dotnet-trace` to produce a speedscope file. You can currently choose between `netperf` (the default option) and `speedscope`. Speedscope files can be opened at https://www.speedscope.app.
+If you would rather view the trace on a Linux machine, you can do this by changing the output format of `dotnet-trace` to `speedscope`. You can change the output file format using the `-f|--format` option - `-f speedscope` will make `dotnet-trace` to produce a speedscope file. You can currently choose between `nettrace` (the default option) and `speedscope`. Speedscope files can be opened at https://www.speedscope.app.
 
-Note: The .NET Core runtime generates traces in the `netperf` format, and are converted to speedscope (if specified) after the trace is completed. Since some conversions may result in loss of data, the original `netperf` file is preserved next to the converted file.
+Note: The .NET Core runtime generates traces in the `nettrace` format, and are converted to speedscope (if specified) after the trace is completed. Since some conversions may result in loss of data, the original `nettrace` file is preserved next to the converted file.
 
 ## Known Caveats
 
@@ -123,7 +123,7 @@ Options:
     The process to collect the trace from
 
   -o, --output <trace-file-path>
-    The output path for the collected trace data. If not specified it defaults to 'trace.netperf'
+    The output path for the collected trace data. If not specified it defaults to 'trace.nettrace'
 
   --profile
       A named pre-defined set of provider configurations that allows common tracing scenarios to be specified
@@ -157,4 +157,4 @@ Options:
     Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
   
   -f, --format
-    The format of the output trace file.  This defaults to "netperf" on Windows and "speedscope" on other OSes.
+    The format of the output trace file.  This defaults to "nettrace" on Windows and "speedscope" on other OSes.

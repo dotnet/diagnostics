@@ -89,6 +89,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 var process = Process.GetProcessById(processId);
                 var configuration = new SessionConfiguration(
                     circularBufferSizeMB: buffersize,
+                    format: EventPipeSerializationFormat.NetTrace,
                     outputPath: null, // Not used on the streaming scenario.
                     providers: providerCollection);
 
@@ -168,7 +169,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Console.Out.WriteLine();
                 Console.Out.WriteLine("Trace completed.");
 
-                if (format != TraceFileFormat.Netperf)
+                if (format != TraceFileFormat.NetTrace)
                     TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
 
                 return failed ? ErrorCodes.TracingError : 0;
@@ -249,7 +250,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 argument: new Argument<uint>(defaultValue: DefaultCircularBufferSizeInMB) { Name = "size" },
                 isHidden: false);
 
-        public static string DefaultTraceName => "trace.netperf";
+        public static string DefaultTraceName => "trace.nettrace";
 
         private static Option OutputPathOption() =>
             new Option(

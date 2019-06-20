@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.Tools.Analyze
             {
                 foreach (var file in Files)
                 {
-                    if (file.EndsWith(".netperf"))
+                    if (file.EndsWith(".nettrace"))
                     {
                         console.WriteLine($"Loading trace: {file} ...");
                         var etlx = TraceLog.CreateFromEventPipeDataFile(file);

@@ -36,7 +36,7 @@ Example flow for EventPipe:
 ```
 runtime <- client : [ magic; size; EventPipe CollectTracing ][ stream config struct  ] <- Diagnostic IPC Message
 runtime -> client : [ magic; size; Server OK                ][ sessionId             ] <- Diagnostic IPC Message
-runtime -> client : [ stream of netperf data ]                                         <- Optional Continuation
+runtime -> client : [ stream of nettrace data ]                                        <- Optional Continuation
 
 // stop message is sent on another connection
 
@@ -303,7 +303,7 @@ As an example, the CollectTracing command to EventPipe (explained below) encodes
     <td colspan="2">0x0000</td>
     <td colspan="4">250</td>
     <td colspan="4">16</td>
-    <td colspan="16">"/tmp/foo.netperf"</td>
+    <td colspan="16">"/tmp/foo.nettrace"</td>
     <td colspan="4">1</td>
     <td colspan="8">100</td>
     <td colspan="4">2</td>
@@ -399,19 +399,20 @@ EventPipe Payloads are encoded with the following rules:
 
 Command Code: `0x0202`
 
-The `CollectTracing` Command is used to start a streaming session of event data.  The runtime will attempt to start a session and respond with a success message with a payload of the `sessionId`.  The event data is streamed in the `netperf` format.  The stream begins after the response Message from the runtime to the client.  The client is expected to continue to listen on the transport until the connection is closed.
+The `CollectTracing` Command is used to start a streaming session of event data.  The runtime will attempt to start a session and respond with a success message with a payload of the `sessionId`.  The event data is streamed in the `nettrace` format.  The stream begins after the response Message from the runtime to the client.  The client is expected to continue to listen on the transport until the connection is closed.
 
 In the event there is an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
 
 The client is expected to send a [`StopTracing`](#StopTracing) command to the runtime in order to stop the stream, as there is a "run down" at the end of a stream session that transmits additional metadata.
 
-If the stream is stopped prematurely due to a client or server error, the `netperf` file generated will be incomplete and should be considered corrupted.
+If the stream is stopped prematurely due to a client or server error, the `nettrace` file generated will be incomplete and should be considered corrupted.
 
 #### Inputs:
 
 Header: `{ Magic; Size; 0x0202; 0x0000 }`
 
 * `uint circularBufferMB`: The size of the circular buffer used for buffering event data while streaming
+* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace format
 * `string outputPath`: currently unused, and should be 0 length
 * `array<provider_config> providers`: The providers to turn on for the streaming session
 
@@ -457,7 +458,7 @@ Payload
     ulong sessionId
 }
 ```
-Followed by an Optional Continuation of a `netperf` format stream of events.
+Followed by an Optional Continuation of a `nettrace` format stream of events.
 
 ### `StopTracing` 
 
@@ -685,7 +686,7 @@ For example, if the Diagnostic Server finds incorrectly encoded data while parsi
 -----
 ### Current Implementation (OLD)
 
-Single-purpose IPC protocol used exclusively for EventPipe functionality.  "Packets" in the current implementation are simply the `netperf` payloads and command/control is handled via `uint32` enum values sent one way with hard coded responses expected.
+Single-purpose IPC protocol used exclusively for EventPipe functionality.  "Packets" in the current implementation are simply the `nettrace` payloads and command/control is handled via `uint32` enum values sent one way with hard coded responses expected.
 
 ```c++
 enum class DiagnosticMessageType : uint32_t

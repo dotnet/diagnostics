@@ -49,9 +49,9 @@ In order to generate profiler traces of a .net core application, we can use the 
 > dotnet-trace collect -p 2266  --providers Microsoft-DotNETCore-SampleProfiler
 > ```
 
-2266 is the process identifier which can be found using dotnet-trace list-processes. Let dotnet-trace run for about 20-30 seconds and then hit enter to exit the collection. The result is a netperf file located in the same folder. netperf files are a great way to use existing analysis tools on Windows (such as PerfView) to diagose performance problems. 
+2266 is the process identifier which can be found using dotnet-trace list-processes. Let dotnet-trace run for about 20-30 seconds and then hit enter to exit the collection. The result is a nettrace file located in the same folder. nettrace files are a great way to use existing analysis tools on Windows (such as PerfView) to diagose performance problems. 
 
-Alternatively, you can get the perf and LTTng trace data in netperf format by using the perfcollect tool (please see Installing the tools section). Once installed, run the following command:
+Alternatively, you can get the perf and LTTng trace data in nettrace format by using the perfcollect tool (please see Installing the tools section). Once installed, run the following command:
 
 > ```bash
 > sudo ./perfcollect collect sampleTrace
@@ -78,9 +78,9 @@ In the same terminal, run the webapi again, hit the URL (http://localhost:5000/a
 This will start the perf collection process. Let it run for about 20-30 seconds and then hit CTRL-C to exit the collection process. The output should tell you how many MBs of perf data was written.  
 
 ### Analyzing the trace
-When it comes to analyzing the profiler trace generated in the previous step, you have two options depending on if you generated a netperf file or used the native perf command in Linux. 
+When it comes to analyzing the profiler trace generated in the previous step, you have two options depending on if you generated a nettrace file or used the native perf command in Linux. 
 
-Starting with the netperf file, you need to transfer the netperf file to a Windows machine and use PerfView to analyze the trace as shown below.
+Starting with the nettrace file, you need to transfer the nettrace file to a Windows machine and use PerfView to analyze the trace as shown below.
 
 ![alt text](https://user-images.githubusercontent.com/15442480/57110777-976c8a80-6cee-11e9-9cf7-407a01a08b1d.jpg)
 

@@ -24,7 +24,7 @@
     <MicrosoftSymbolStoreVersion>1.0.0-dev-64016-01</MicrosoftSymbolStoreVersion>
     <MicrosoftDiagnosticsRuntimeVersion>1.0.5</MicrosoftDiagnosticsRuntimeVersion>
 
-    <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.41</MicrosoftDiagnosticsTracingTraceEventVersion>
+    <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.43</MicrosoftDiagnosticsTracingTraceEventVersion>
     <SystemCommandLineExperimentalVersion>0.2.0-alpha.19254.1</SystemCommandLineExperimentalVersion>
     <SystemCommandLineRenderingVersion>0.2.0-alpha.19254.1</SystemCommandLineRenderingVersion>
 
