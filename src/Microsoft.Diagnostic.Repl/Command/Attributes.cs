@@ -5,7 +5,7 @@
 // --------------------------------------------------------------------
 using System;
 
-namespace Microsoft.Diagnostic.Repl
+namespace Microsoft.Diagnostics.Repl
 {
     /// <summary>
     /// Base command option attribute.

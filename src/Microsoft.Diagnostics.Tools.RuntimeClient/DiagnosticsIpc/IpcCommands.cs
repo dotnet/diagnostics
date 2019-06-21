@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
 {
-    public enum DiagnosticServerCommandSet : byte
+    public enum DiagnosticsServerCommandSet : byte
     {
         Dump           = 0x01,
         EventPipe      = 0x02,
@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
         Server         = 0xFF,
     }
 
-    public enum DiagnosticServerCommandId : byte
+    public enum DiagnosticsServerCommandId : byte
     {
         OK    = 0x00,
         Error = 0xFF,

@@ -8,7 +8,7 @@ using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostic.Repl
+namespace Microsoft.Diagnostics.Repl
 {
     /// <summary>
     /// The common command context

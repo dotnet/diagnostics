@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.Tools.RuntimeClient
 {
-    public static class DiagnosticHelpers
+    public static class DiagnosticsHelpers
     {
         /// <summary>
         /// Controls the contents of the dump
@@ -30,7 +30,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         /// <param name="dumpName">Path and file name of core dump</param>
         /// <param name="dumpType">Type of dump</param>
         /// <param name="diagnostics">If true, log to console the dump generation diagnostics</param>
-        /// <returns>DiagnosticServerErrorCode</returns>
+        /// <returns>DiagnosticsServerErrorCode</returns>
         public static int GenerateCoreDump(int processId, string dumpName, DumpType dumpType, bool diagnostics)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
@@ -41,15 +41,15 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
 
             var payload = SerializeCoreDump(dumpName, dumpType, diagnostics);
-            var message = new IpcMessage(DiagnosticServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
+            var message = new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
 
             var response = IpcClient.SendMessage(processId, message);
 
             var hr = 0;
-            switch ((DiagnosticServerCommandId)response.Header.CommandId)
+            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
             {
-                case DiagnosticServerCommandId.Error:
-                case DiagnosticServerCommandId.OK:
+                case DiagnosticsServerCommandId.Error:
+                case DiagnosticsServerCommandId.OK:
                     hr = BitConverter.ToInt32(response.Payload);
                     break;
                 default:
@@ -81,20 +81,20 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             }
 
             var header = new MessageHeader {
-                RequestType = DiagnosticMessageType.AttachProfiler,
+                RequestType = DiagnosticsMessageType.AttachProfiler,
                 Pid = (uint)Process.GetCurrentProcess().Id,
             };
 
             byte[] serializedConfiguration = SerializeProfilerAttach(attachTimeout, profilerGuid, profilerPath, additionalData);
-            var message = new IpcMessage(DiagnosticServerCommandSet.Profiler, (byte)ProfilerCommandId.AttachProfiler, serializedConfiguration);
+            var message = new IpcMessage(DiagnosticsServerCommandSet.Profiler, (byte)ProfilerCommandId.AttachProfiler, serializedConfiguration);
 
             var response = IpcClient.SendMessage(processId, message);
 
             var hr = 0;
-            switch ((DiagnosticServerCommandId)response.Header.CommandId)
+            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
             {
-                case DiagnosticServerCommandId.Error:
-                case DiagnosticServerCommandId.OK:
+                case DiagnosticsServerCommandId.Error:
+                case DiagnosticsServerCommandId.OK:
                     hr = BitConverter.ToInt32(response.Payload);
                     break;
                 default:

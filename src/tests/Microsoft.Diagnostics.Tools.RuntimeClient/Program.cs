@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
         static int Main(string[] args)
         {
             SendSmallerHeaderCommand();
-            SendInvalidDiagnosticMessageTypeCommand();
+            SendInvalidDiagnosticsMessageTypeCommand();
             SendInvalidInputData();
             TestCollectEventPipeTracing();
             return 100;
@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
                 {
                     using (var bw = new BinaryWriter(stream))
                     {
-                        bw.Write((uint)DiagnosticMessageType.StartEventPipeTracing);
+                        bw.Write((uint)DiagnosticsMessageType.StartEventPipeTracing);
                         bw.Flush();
                         stream.Position = 0;
 
@@ -60,7 +60,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
             }
         }
 
-        private static void SendInvalidDiagnosticMessageTypeCommand()
+        private static void SendInvalidDiagnosticsMessageTypeCommand()
         {
             Console.WriteLine("Send a wrong message type as the diagnostic header header.");
             ulong sessionId = 0;
@@ -178,7 +178,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
                 try
                 {
                     var header = new MessageHeader {
-                        RequestType = DiagnosticMessageType.CollectEventPipeTracing,
+                        RequestType = DiagnosticsMessageType.CollectEventPipeTracing,
                         Pid = (uint)Process.GetCurrentProcess().Id,
                     };
 

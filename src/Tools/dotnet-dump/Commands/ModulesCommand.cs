@@ -1,11 +1,11 @@
 
-using Microsoft.Diagnostic.Repl;
+using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
 using System.CommandLine;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostic.Tools.Dump
+namespace Microsoft.Diagnostics.Tools.Dump
 {
     [Command(Name = "modules", Help = "Displays the native modules in the process.")]
     [CommandAlias(Name = "lm")]

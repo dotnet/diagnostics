@@ -1,10 +1,10 @@
 
-using Microsoft.Diagnostic.Repl;
+using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
 using System.CommandLine;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostic.Tools.Dump
+namespace Microsoft.Diagnostics.Tools.Dump
 {
     [Command(Name = "clrmodules", Help = "Lists the managed modules in the process.")]
     public class ClrModulesCommand : CommandBase

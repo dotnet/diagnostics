@@ -1,11 +1,11 @@
 
-using Microsoft.Diagnostic.Repl;
+using Microsoft.Diagnostics.Repl;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.Linq;
 
-namespace Microsoft.Diagnostic.Tools.Dump
+namespace Microsoft.Diagnostics.Tools.Dump
 {
     [Command(Name = "setthread", Help = "Sets or displays the current thread for the SOS commands.")]
     [CommandAlias(Name = "threads")]

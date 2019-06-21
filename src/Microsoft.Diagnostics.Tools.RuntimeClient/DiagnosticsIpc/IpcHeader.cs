@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
     {
         IpcHeader() { }
 
-        public IpcHeader(DiagnosticServerCommandSet commandSet, byte commandId)
+        public IpcHeader(DiagnosticsServerCommandSet commandSet, byte commandId)
         {
             CommandSet = (byte)commandSet;
             CommandId = commandId;

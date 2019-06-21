@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
 {
     public class IpcClient
     {
-        private static string DiagnosticPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
+        private static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
 
         private static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
 
@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
         }
 
         /// <summary>
-        /// Sends a single DiagnosticIpc Message to the dotnet process with PID processId.
+        /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId.
         /// </summary>
         /// <param name="processId">The PID of the dotnet process</param>
         /// <param name="message">The DiagnosticsIpc Message to be sent</param>
@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
         }
 
         /// <summary>
-        /// Sends a single DiagnosticIpc Message to the dotnet process with PID processId
+        /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId
         /// and returns the Stream for reuse in Optional Continuations.
         /// </summary>
         /// <param name="processId">The PID of the dotnet process</param>

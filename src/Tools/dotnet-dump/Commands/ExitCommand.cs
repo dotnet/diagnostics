@@ -1,9 +1,9 @@
 
-using Microsoft.Diagnostic.Repl;
+using Microsoft.Diagnostics.Repl;
 using System.CommandLine;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostic.Tools.Dump
+namespace Microsoft.Diagnostics.Tools.Dump
 {
     [Command(Name = "exit", Help = "Exit interactive mode.")]
     [CommandAlias(Name = "quit")]
