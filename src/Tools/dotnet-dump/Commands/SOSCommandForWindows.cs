@@ -1,7 +1,7 @@
-using Microsoft.Diagnostic.Repl;
+using Microsoft.Diagnostics.Repl;
 using System.CommandLine;
 
-namespace Microsoft.Diagnostic.Tools.Dump
+namespace Microsoft.Diagnostics.Tools.Dump
 {
     [Command(Name = "dumprcw",              AliasExpansion = "DumpRCW",             Help = "Displays information about a Runtime Callable Wrapper.")]
     [Command(Name = "dumpccw",              AliasExpansion = "DumpCCW",             Help = "Displays information about a COM Callable Wrapper.")]
