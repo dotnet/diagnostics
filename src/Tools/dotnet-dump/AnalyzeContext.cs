@@ -16,7 +16,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace Microsoft.Diagnostic.Tools.Dump
+namespace Microsoft.Diagnostics.Tools.Dump
 {
     /// <summary>
     /// The the common context for analyze commands

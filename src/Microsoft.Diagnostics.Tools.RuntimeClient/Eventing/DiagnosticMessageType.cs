@@ -7,7 +7,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
     /// <summary>
     /// Different diagnostic message types that are handled by the runtime.
     /// </summary>
-    public enum DiagnosticMessageType : uint
+    public enum DiagnosticsMessageType : uint
     {
         /// <summary>
         /// Initiates core dump generation 

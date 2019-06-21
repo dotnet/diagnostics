@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostic.Tools.Dump
+namespace Microsoft.Diagnostics.Tools.Dump
 {
     public partial class Dumper
     {
@@ -57,10 +57,10 @@ namespace Microsoft.Diagnostic.Tools.Dump
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    DiagnosticHelpers.DumpType dumpType = type == DumpTypeOption.Heap ? DiagnosticHelpers.DumpType.WithHeap : DiagnosticHelpers.DumpType.Normal;
+                    DiagnosticsHelpers.DumpType dumpType = type == DumpTypeOption.Heap ? DiagnosticsHelpers.DumpType.WithHeap : DiagnosticsHelpers.DumpType.Normal;
 
                     // Send the command to the runtime to initiate the core dump
-                    var hr = DiagnosticHelpers.GenerateCoreDump(processId, output, dumpType, diagnostics: false);
+                    var hr = DiagnosticsHelpers.GenerateCoreDump(processId, output, dumpType, diagnostics: false);
                     if (hr != 0)
                     {
                         throw new InvalidOperationException($"Core dump generation FAILED 0x{hr:X8}");

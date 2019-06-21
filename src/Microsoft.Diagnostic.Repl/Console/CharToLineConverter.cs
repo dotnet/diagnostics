@@ -7,7 +7,7 @@
 using System;
 using System.Text;
 
-namespace Microsoft.Diagnostic.Repl
+namespace Microsoft.Diagnostics.Repl
 {
     public sealed class CharToLineConverter
     {

@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
             Header = header;
         }
 
-        internal IpcMessage(DiagnosticServerCommandSet commandSet, byte commandId, byte[] payload = null)
+        internal IpcMessage(DiagnosticsServerCommandSet commandSet, byte commandId, byte[] payload = null)
         {
             Header = new IpcHeader(commandSet, commandId);
             Payload = payload;

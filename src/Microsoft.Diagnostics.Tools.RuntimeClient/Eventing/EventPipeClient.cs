@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 {
     public static class EventPipeClient
     {
-        private static string DiagnosticPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
+        private static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
 
         private static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
 
@@ -34,8 +34,8 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         {
             return Directory.GetFiles(IpcRootPath)
                 .Select(namedPipe => (new FileInfo(namedPipe)).Name)
-                .Where(input => Regex.IsMatch(input, DiagnosticPortPattern))
-                .Select(input => int.Parse(Regex.Match(input, DiagnosticPortPattern).Groups[1].Value, NumberStyles.Integer));
+                .Where(input => Regex.IsMatch(input, DiagnosticsPortPattern))
+                .Select(input => int.Parse(Regex.Match(input, DiagnosticsPortPattern).Groups[1].Value, NumberStyles.Integer));
         }
 
         /// <summary>
@@ -48,15 +48,15 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         public static Stream CollectTracing(int processId, SessionConfiguration configuration, out ulong sessionId)
         {
             sessionId = 0;
-            var message = new IpcMessage(DiagnosticServerCommandSet.EventPipe, (byte)EventPipeCommandId.CollectTracing, configuration.Serialize());
+            var message = new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.CollectTracing, configuration.Serialize());
             var stream = IpcClient.SendMessage(processId, message, out var response);
 
-            switch ((DiagnosticServerCommandId)response.Header.CommandId)
+            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
             {
-                case DiagnosticServerCommandId.OK:
+                case DiagnosticsServerCommandId.OK:
                     sessionId = BitConverter.ToUInt64(response.Payload);
                     break;
-                case DiagnosticServerCommandId.Error:
+                case DiagnosticsServerCommandId.Error:
                     // bad...
                     var hr = BitConverter.ToInt32(response.Payload);
                     throw new Exception($"Session start FAILED 0x{hr:X8}");
@@ -80,13 +80,13 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
             byte[] payload = BitConverter.GetBytes(sessionId);
 
-            var response = IpcClient.SendMessage(processId, new IpcMessage(DiagnosticServerCommandSet.EventPipe, (byte)EventPipeCommandId.StopTracing, payload));
+            var response = IpcClient.SendMessage(processId, new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.StopTracing, payload));
 
-            switch ((DiagnosticServerCommandId)response.Header.CommandId)
+            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
             {
-                case DiagnosticServerCommandId.OK:
+                case DiagnosticsServerCommandId.OK:
                     return BitConverter.ToUInt64(response.Payload);
-                case DiagnosticServerCommandId.Error:
+                case DiagnosticsServerCommandId.Error:
                     return 0;
                 default:
                     return 0;

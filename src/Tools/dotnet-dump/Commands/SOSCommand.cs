@@ -1,10 +1,10 @@
-using Microsoft.Diagnostic.Repl;
+using Microsoft.Diagnostics.Repl;
 using System;
 using System.CommandLine;
 using System.IO;
 using System.Linq;
 
-namespace Microsoft.Diagnostic.Tools.Dump
+namespace Microsoft.Diagnostics.Tools.Dump
 {
     [Command(Name = "clrstack",         AliasExpansion = "ClrStack",            Help = "Provides a stack trace of managed code only.")]
     [Command(Name = "clrthreads",       AliasExpansion = "Threads",             Help = "List the managed threads running.")]

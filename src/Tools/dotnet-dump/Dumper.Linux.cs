@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.IO;
 
-namespace Microsoft.Diagnostic.Tools.Dump
+namespace Microsoft.Diagnostics.Tools.Dump
 {
     public partial class Dumper
     {

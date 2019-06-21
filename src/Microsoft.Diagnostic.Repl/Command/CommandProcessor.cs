@@ -15,7 +15,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostic.Repl
+namespace Microsoft.Diagnostics.Repl
 {
     public class CommandProcessor
     {

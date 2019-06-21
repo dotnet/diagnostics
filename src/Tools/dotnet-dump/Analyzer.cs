@@ -1,4 +1,4 @@
-using Microsoft.Diagnostic.Repl;
+using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
 using SOS;
 using System;
@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostic.Tools.Dump
+namespace Microsoft.Diagnostics.Tools.Dump
 {
     public class Analyzer
     {

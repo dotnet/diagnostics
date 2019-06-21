@@ -1,7 +1,7 @@
-using Microsoft.Diagnostic.Repl;
+using Microsoft.Diagnostics.Repl;
 using System.CommandLine;
 
-namespace Microsoft.Diagnostic.Tools.Dump
+namespace Microsoft.Diagnostics.Tools.Dump
 {
     [Command(Name = "help", Help = "Display help for a command.")]
     public class HelpCommand : CommandBase

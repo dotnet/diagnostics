@@ -4,7 +4,7 @@
 //
 // --------------------------------------------------------------------
 
-namespace Microsoft.Diagnostic.Repl
+namespace Microsoft.Diagnostics.Repl
 {
     /// <summary>
     /// The type of output. 
