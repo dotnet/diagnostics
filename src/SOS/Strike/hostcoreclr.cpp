@@ -609,7 +609,7 @@ extern "C" HRESULT SOSInitializeByHost(SOSNetCoreCallbacks* callbacks, int callb
 #ifndef FEATURE_PAL
     // When SOS is hosted on dotnet-dump, the ExtensionApis are not set so 
     // the expression evaluation function needs to be supplied.
-    GetExpression = callbacks->GetExpressionDelegate;
+    GetExpression = (PWINDBG_GET_EXPRESSION64)callbacks->GetExpressionDelegate;
 #endif
     g_symbolStoreInitialized = symbolStoreEnabled;
     g_hostingInitialized = true;
