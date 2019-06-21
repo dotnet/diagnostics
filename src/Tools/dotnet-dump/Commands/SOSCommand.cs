@@ -30,7 +30,6 @@ namespace Microsoft.Diagnostic.Tools.Dump
     [Command(Name = "name2ee",          AliasExpansion = "Name2EE",             Help = "Displays the MethodTable structure and EEClass structure for the specified type or method in the specified module.")]
     [Command(Name = "printexception",   AliasExpansion = "PrintException",      Help = "Displays and formats fields of any object derived from the Exception class at the specified address.")]
     [CommandAlias(Name = "pe")]
-    [Command(Name = "pathto",           AliasExpansion = "PathTo",              Help = "Displays the GC object path to the specified object.")]
     [Command(Name = "syncblk",          AliasExpansion = "SyncBlk",             Help = "Displays the SyncBlock holder info.")]
     [Command(Name = "histclear",        AliasExpansion = "HistClear",           Help = "Releases any resources used by the family of Hist commands.")]
     [Command(Name = "histinit",         AliasExpansion = "HistInit",            Help = "Initializes the SOS structures from the stress log saved in the debuggee.")]

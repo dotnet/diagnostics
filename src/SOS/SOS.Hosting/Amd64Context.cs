@@ -42,8 +42,6 @@ namespace SOS
         public short Ss;
         [FieldOffset(0x44)]
         public int EFlags;
-        [FieldOffset(0x44)]
-        public ulong RFlags;
 
         [FieldOffset(0x48)]
         public ulong Dr0;
