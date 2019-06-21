@@ -34,7 +34,7 @@ In order to debug core dumps, the correct symbols need to be available. The dotn
 > ```
 
 ### perfcollect
-Thet .NET core runtime is instrumented for both perf and LTTng. To facilitate easier collection of both tracing technologies there is a tool called perfcollect. Perfcollect will output the joint trace data into a netperf file that can be analyzed using PerfView on Windows. To install the tool run the following commands:
+Thet .NET core runtime is instrumented for both perf and LTTng. To facilitate easier collection of both tracing technologies there is a tool called perfcollect. Perfcollect will output the joint trace data into a nettrace file that can be analyzed using PerfView on Windows. To install the tool run the following commands:
 
 > ```
 > curl -OL http://aka.ms/perfcollect

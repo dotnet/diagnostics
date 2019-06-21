@@ -13,12 +13,12 @@ using Microsoft.Diagnostics.Tracing.Stacks.Formats;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal enum TraceFileFormat { Netperf, Speedscope };
+    internal enum TraceFileFormat { NetTrace, Speedscope };
 
     internal static class TraceFileFormatConverter
     {
         private static Dictionary<TraceFileFormat, string> TraceFileFormatExtensions = new Dictionary<TraceFileFormat, string>() {
-            { TraceFileFormat.Netperf,      "netperf" },
+            { TraceFileFormat.NetTrace,     "nettrace" },
             { TraceFileFormat.Speedscope,   "speedscope.json" }
         };
 
@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             switch (format)
             {
-                case TraceFileFormat.Netperf:
+                case TraceFileFormat.NetTrace:
                     break;
                 case TraceFileFormat.Speedscope:
                     ConvertToSpeedscope(fileToConvert, outputFilename);

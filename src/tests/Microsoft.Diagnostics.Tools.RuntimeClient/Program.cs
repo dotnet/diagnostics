@@ -214,7 +214,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
                 uint circularBufferSizeMB = 64;
                 var filePath = Path.Combine(
                     Directory.GetCurrentDirectory(),
-                    $"dotnetcore-eventpipe-{ThisProcess.Id}.netperf");
+                    $"dotnetcore-eventpipe-{ThisProcess.Id}.nettrace");
                 var providers = new[] {
                     new Provider(name: "Microsoft-Windows-DotNETRuntime"),
                 };
@@ -245,7 +245,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
                 uint circularBufferSizeMB = 64;
                 var filePath = Path.Combine(
                     Directory.GetCurrentDirectory(),
-                    $"dotnetcore-eventpipe-{ThisProcess.Id}.netperf");
+                    $"dotnetcore-eventpipe-{ThisProcess.Id}.nettrace");
                 var providers = new[] {
                     new Provider(name: "Microsoft-Windows-DotNETRuntime"),
                 };
@@ -314,8 +314,8 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
                     Assert.Equal("EventPipe output file", File.Exists(filePath), true);
 
                     // Check file is valid.
-                    Console.WriteLine("Validating netperf file.");
-                    ValidateNetPerf(filePath);
+                    Console.WriteLine("Validating nettrace file.");
+                    ValidateNetTrace(filePath);
                 }
             }
             finally
@@ -325,7 +325,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
             }
         }
 
-        private static void ValidateNetPerf(string filePath)
+        private static void ValidateNetTrace(string filePath)
         {
             var nEventPipeResults = 0;
             using (var trace = new TraceLog(TraceLog.CreateFromEventPipeDataFile(filePath)).Events.GetSource())
@@ -341,7 +341,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.Tests
         }
 
         [Conditional("DEBUG")]
-        private static void DumpNetPerf(string filePath)
+        private static void DumpNetTrace(string filePath)
         {
             using (var trace = new TraceLog(TraceLog.CreateFromEventPipeDataFile(filePath)).Events.GetSource())
             {
