@@ -37,7 +37,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dotnet-sos", "src\Tools\dot
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SOS.Hosting", "src\SOS\SOS.Hosting\SOS.Hosting.csproj", "{ED27F39F-DF5C-4E22-87E0-EC5B5873B503}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostic.Repl", "src\Microsoft.Diagnostic.Repl\Microsoft.Diagnostic.Repl.csproj", "{90CF2633-58F0-44EE-943B-D70207455F20}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.Repl", "src\Microsoft.Diagnostics.Repl\Microsoft.Diagnostics.Repl.csproj", "{90CF2633-58F0-44EE-943B-D70207455F20}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dotnet-counters", "src\Tools\dotnet-counters\dotnet-counters.csproj", "{2A9B5988-982F-4E26-9E44-D38AC5978C30}"
 EndProject
