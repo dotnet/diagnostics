@@ -517,12 +517,10 @@ HRESULT CheckEEDll()
                 g_ExtSymbols->Reload("/f " MAIN_CLR_DLL_NAME_A);
                 g_ExtSymbols->GetModuleParameters(1, &g_moduleInfo[MSCORWKS].baseAddr, 0, &Params);
             }
-
             if (Params.SymbolType == SymPdb || Params.SymbolType == SymDia)
             {
                 g_moduleInfo[MSCORWKS].hasPdb = TRUE;
             }
-
             g_moduleInfo[MSCORWKS].size = Params.Size;
         }
         if (g_moduleInfo[MSCORWKS].baseAddr != 0 && g_moduleInfo[MSCORWKS].hasPdb == FALSE) 
@@ -530,7 +528,6 @@ HRESULT CheckEEDll()
             ExtOut("PDB symbol for coreclr.dll not loaded\n");
         }
     }
-    
     return (g_moduleInfo[MSCORWKS].baseAddr != 0) ? S_OK : E_FAIL;
 #else
     return S_OK;
@@ -1461,7 +1458,7 @@ int GetValueFieldOffset(CLRDATA_ADDRESS cdaMT, __in_z LPCWSTR wszFieldName, Dacp
     if (dmtd.ParentMethodTable)
     {
         DWORD retVal = GetValueFieldOffset(dmtd.ParentMethodTable, wszFieldName, pDacpFieldDescData);
-        if (retVal != NOT_FOUND)
+        if (retVal != (DWORD)NOT_FOUND)
         {
             // Return in case of error or success. Fall through for field-not-found.
             return retVal;
@@ -3058,20 +3055,55 @@ void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersi
     for(int i = cTieredVersionData - 1; i >= 0; --i)
     {
         const char *descriptor = NULL;
-        switch(pTieredVersionData[i].TieredInfo)
+        switch(pTieredVersionData[i].OptimizationTier)
         {
-        case DacpTieredVersionData::TIERED_UNKNOWN:
+        case DacpTieredVersionData::OptimizationTier_Unknown:
         default:
-            _ASSERTE(!"Update SOS to understand the new tier");
             descriptor = "Unknown Tier";
             break;
-        case DacpTieredVersionData::NON_TIERED:
+        case DacpTieredVersionData::OptimizationTier_MinOptJitted:
+            descriptor = "MinOptJitted";
+            break;
+        case DacpTieredVersionData::OptimizationTier_Optimized:
+            descriptor = "Optimized";
+            break;
+        case DacpTieredVersionData::OptimizationTier_QuickJitted:
+            descriptor = "QuickJitted";
+            break;
+        case DacpTieredVersionData::OptimizationTier_OptimizedTier1:
+            descriptor = "OptimizedTier1";
+            break;
+        case DacpTieredVersionData::OptimizationTier_ReadyToRun:
+            descriptor = "ReadyToRun";
+            break;
+        }
+
+        DMLOut("  CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
+        ExtOut("  NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
+    }
+}
+
+// 2.1 version
+void DumpTieredNativeCodeAddressInfo_21(struct DacpTieredVersionData_21 * pTieredVersionData, const UINT cTieredVersionData)
+{
+    ExtOut("Code Version History:\n");
+
+    for(int i = cTieredVersionData - 1; i >= 0; --i)
+    {
+        const char *descriptor = NULL;
+        switch(pTieredVersionData[i].TieredInfo)
+        {
+        case DacpTieredVersionData_21::TIERED_UNKNOWN:
+        default:
+            descriptor = "Unknown Tier";
+            break;
+        case DacpTieredVersionData_21::NON_TIERED:
             descriptor = "Non-Tiered";
             break;
-        case DacpTieredVersionData::TIERED_0:
+        case DacpTieredVersionData_21::TIERED_0:
             descriptor = "Tier 0";
             break;
-        case DacpTieredVersionData::TIERED_1:
+        case DacpTieredVersionData_21::TIERED_1:
             descriptor = "Tier 1";
             break;
         }
@@ -4067,6 +4099,11 @@ HRESULT LoadClrDebugDll(void)
 #ifdef FEATURE_PAL
         return hr;
 #else
+        // Fail if ExtensionApis wasn't initialized because we are hosted under dotnet-dump
+        if (Ioctl == nullptr)
+        {
+            return hr;
+        }
         // Try getting the DAC interface from dbgeng if the above fails on Windows
         WDBGEXTS_CLR_DATA_INTERFACE Query;
 
@@ -4091,78 +4128,50 @@ HRESULT LoadClrDebugDll(void)
 
 #ifndef FEATURE_PAL
 
-// This structure carries some input/output data to the FindFileInPathCallback below
-typedef struct _FindFileCallbackData
+HMODULE
+LoadLibraryAndCheck(
+    PCWSTR filename,
+    DWORD timestamp,
+    DWORD filesize)
 {
-    DWORD timestamp;
-    DWORD filesize;
-    HMODULE hModule;
-} FindFileCallbackData;
-
-
-// A callback used by SymFindFileInPath - called once for each file that matches
-// the initial search criteria and allows the user to do arbitrary processing
-// This implementation checks that filesize and timestamp are correct, then
-// saves the loaded module handle
-// Parameters
-//           filename - the full path the file which was found
-//           context - a user specified pointer to arbitrary data, in this case a FindFileCallbackData
-// Return Value
-//           TRUE if the search should continue (the file is no good)
-//           FALSE if the search should stop (the file is good)
-BOOL
-FindFileInPathCallback(
-    ___in PCWSTR filename,
-    ___in PVOID context
-    )
-{
-    FindFileCallbackData* pCallbackData = (FindFileCallbackData*)context;
-    if (pCallbackData == NULL)
-    {
-        return TRUE;
-    }
-
-    pCallbackData->hModule = LoadLibraryExW(
+    HMODULE hModule = LoadLibraryExW(
         filename,
         NULL,                               //  __reserved
         LOAD_WITH_ALTERED_SEARCH_PATH);     // Ensure we check the dir in wszFullPath first
 
-    if (pCallbackData->hModule == NULL)
+    if (hModule == NULL)
     {
         ExtOut("Unable to load '%S'. hr = 0x%x.\n", filename, HRESULT_FROM_WIN32(GetLastError()));
-        return TRUE;
+        return NULL;
     }
     
     // Did we load the right one?
     MODULEINFO modInfo = {0};
     if (!GetModuleInformation(
         GetCurrentProcess(),
-        pCallbackData->hModule,
+        hModule,
         &modInfo,
         sizeof(modInfo)))
     {
         ExtOut("Failed to read module information for '%S'. hr = 0x%x.\n", filename, HRESULT_FROM_WIN32(GetLastError()));
-        FreeLibrary(pCallbackData->hModule);
-        pCallbackData->hModule = NULL;
-        return TRUE;
+        FreeLibrary(hModule);
+        return NULL;
     }
 
     IMAGE_DOS_HEADER * pDOSHeader = (IMAGE_DOS_HEADER *) modInfo.lpBaseOfDll;
     IMAGE_NT_HEADERS * pNTHeaders = (IMAGE_NT_HEADERS *) (((LPBYTE) modInfo.lpBaseOfDll) + pDOSHeader->e_lfanew);
     DWORD dwSizeActual = pNTHeaders->OptionalHeader.SizeOfImage;
     DWORD dwTimeStampActual = pNTHeaders->FileHeader.TimeDateStamp;
-    if ((dwSizeActual != pCallbackData->filesize) || (dwTimeStampActual != pCallbackData->timestamp))
+    if ((dwSizeActual != filesize) || (dwTimeStampActual != timestamp))
     {
         ExtOut("Found '%S', but it does not match the CLR being debugged.\n", filename);
-        ExtOut("Size: Expected '0x%x', Actual '0x%x'\n", pCallbackData->filesize, dwSizeActual);
-        ExtOut("Time stamp: Expected '0x%x', Actual '0x%x'\n", pCallbackData->timestamp, dwTimeStampActual);
-        FreeLibrary(pCallbackData->hModule);
-        pCallbackData->hModule = NULL;
-        return TRUE;
+        ExtOut("Size: Expected '0x%x', Actual '0x%x'\n", filesize, dwSizeActual);
+        ExtOut("Time stamp: Expected '0x%x', Actual '0x%x'\n", timestamp, dwTimeStampActual);
+        FreeLibrary(hModule);
+        return NULL;
     }
 
-    ExtOut("Loaded %S\n", filename);
-    return FALSE;
+    return hModule;
 }
 
 #endif // FEATURE_PAL
@@ -4222,25 +4231,6 @@ public:
         return ref;
     }
 
-    struct CoTaskStringHolder
-    {
-    private:
-        WCHAR* m_string;
-    public:
-        const int Length = MAX_LONGPATH;
-
-        CoTaskStringHolder() : m_string((WCHAR*)CoTaskMemAlloc(MAX_LONGPATH + 1)) { }
-        ~CoTaskStringHolder() { if (m_string != NULL) CoTaskMemFree(m_string); }
-        operator WCHAR* () { return m_string; }
-
-        WCHAR* Detach()
-        {
-            WCHAR* ret = m_string;
-            m_string = NULL;
-            return ret;
-        }
-    };
-
     HRESULT ProvideLibraryInternal(
         const WCHAR* pwszFileName,
         DWORD dwTimestamp,
@@ -4248,92 +4238,6 @@ public:
         HMODULE* phModule,
         LPWSTR* ppResolvedModulePath)
     {
-#ifndef FEATURE_PAL
-        HRESULT hr = S_OK;
-        FindFileCallbackData callbackData;
-        callbackData.hModule = NULL;
-        callbackData.timestamp = dwTimestamp;
-        callbackData.filesize = dwSizeOfImage;
-
-        // if we are looking for the DAC, just load the one windbg already found
-        if (_wcsncmp(pwszFileName, MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W), _wcslen(MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W))) == 0)
-        {
-            HMODULE dacModule;
-            if (g_sos == NULL)
-            {
-                // we ensure that windbg loads DAC first so that we can be sure to use the same one
-                return E_UNEXPECTED;
-            }
-            if (FAILED(hr = g_sos->GetDacModuleHandle(&dacModule)))
-            {
-                ExtErr("Failed to get the dac module handle. hr=0x%x.\n", hr);
-                return hr;
-            }
-            CoTaskStringHolder dacPath;
-            DWORD len = GetModuleFileNameW(dacModule, dacPath, dacPath.Length);
-            if (len == 0 || len == MAX_LONGPATH)
-            {
-                hr = HRESULT_FROM_WIN32(GetLastError());
-                ExtErr("GetModuleFileName(dacModuleHandle) failed. hr=0x%x.\n", hr);
-                return hr;
-            }
-            FindFileInPathCallback(dacPath, &callbackData);
-            if (ppResolvedModulePath != NULL)
-            {
-                *ppResolvedModulePath = dacPath.Detach();
-            }
-        }
-        else {
-            ULONG64 hProcess;
-            hr = g_ExtSystem->GetCurrentProcessHandle(&hProcess);
-            if (FAILED(hr))
-            {
-                ExtErr("IDebugSystemObjects::GetCurrentProcessHandle hr=0x%x.\n", hr);
-                return hr;
-            }
-            ToRelease<IDebugSymbols3> spSym3(NULL);
-            hr = g_ExtSymbols->QueryInterface(__uuidof(IDebugSymbols3), (void**)&spSym3);
-            if (FAILED(hr))
-            {
-                ExtErr("Unable to query IDebugSymbol3 hr=0x%x.\n", hr);
-                return hr;
-            }
-            ArrayHolder<WCHAR> symbolPath = new WCHAR[MAX_LONGPATH + 1];
-            hr = spSym3->GetSymbolPathWide(symbolPath, MAX_LONGPATH, NULL);
-            if (FAILED(hr))
-            {
-                ExtErr("Unable to get symbol path. IDebugSymbols3::GetSymbolPathWide hr=0x%x.\n", hr);
-                return hr;
-            }
-            CoTaskStringHolder foundPath;
-            if (!SymFindFileInPathW(
-                (HANDLE)hProcess,
-                symbolPath,
-                pwszFileName,
-                (PVOID)(ULONG_PTR)dwTimestamp,
-                dwSizeOfImage,
-                0,
-                SSRVOPT_DWORD,
-                foundPath,
-                (PFINDFILEINPATHCALLBACKW)&FindFileInPathCallback,
-                (PVOID)&callbackData))
-            {
-                hr = HRESULT_FROM_WIN32(GetLastError());
-                ExtErr("SymFindFileInPath failed for %S. hr=0x%x.\nPlease ensure that %S is on your symbol path.\n", pwszFileName, hr, pwszFileName);
-                return hr;
-            }
-            if (ppResolvedModulePath != NULL)
-            {
-                *ppResolvedModulePath = foundPath.Detach();
-            }
-        }
-        if (phModule != NULL)
-        {
-            *phModule = callbackData.hModule;
-        }
-        return S_OK;
-#else
-        _ASSERTE(phModule == NULL);
         const char* filePath = nullptr;
 
         if (_wcsncmp(pwszFileName, MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W), _wcslen(MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W))) == 0)
@@ -4352,34 +4256,32 @@ public:
             if (0 >= length)
             {
                 ExtErr("MultiByteToWideChar(filePath) failed. Last error = 0x%x\n", GetLastError());
-                return E_FAIL;
+                return HRESULT_FROM_WIN32(GetLastError());
             }
         }
         else
         {
-            LPCSTR coreclrDirectory = g_ExtServices->GetCoreClrDirectory();
-            if (coreclrDirectory == NULL)
+            HRESULT hr = GetCoreClrDirectory(modulePath, MAX_LONGPATH);
+            if (FAILED(hr))
             {
-                ExtErr("Runtime module (%s) not loaded yet\n", MAKEDLLNAME_A("coreclr"));
-                return E_FAIL;
-            }
-            int length = MultiByteToWideChar(CP_ACP, 0, coreclrDirectory, -1, modulePath, MAX_LONGPATH);
-            if (0 >= length)
-            {
-                ExtErr("MultiByteToWideChar(coreclrDirectory) failed. Last error = 0x%x\n", GetLastError());
-                return E_FAIL;
+                return hr;
             }
             wcscat_s(modulePath, MAX_LONGPATH, pwszFileName);
         }
 
         ExtOut("Loaded %S\n", modulePath.GetPtr());
 
+#ifndef FEATURE_PAL
+        if (phModule != NULL)
+        {
+            *phModule = LoadLibraryAndCheck(modulePath.GetPtr(), dwTimestamp, dwSizeOfImage);
+        }
+#endif
         if (ppResolvedModulePath != NULL)
         {
             *ppResolvedModulePath = modulePath.Detach();
         }
         return S_OK;
-#endif // FEATURE_PAL
     }
 
     // Called by the shim to locate and load mscordaccore and mscordbi
@@ -4568,7 +4470,7 @@ public:
         ((CONTEXT*) context)->ContextFlags = contextFlags;
 
         // Ok, do it!
-        hr = g_ExtAdvanced3->GetThreadContext((LPVOID) context, contextSize);
+        hr = g_ExtAdvanced->GetThreadContext((LPVOID) context, contextSize);
 
         // This is cleanup; failure here doesn't mean GetThreadContext should fail
         // (that's determined by hr).
@@ -5223,6 +5125,43 @@ size_t CountHexCharacters(CLRDATA_ADDRESS val)
     }
 
     return ret;
+} 
+
+HRESULT 
+OutputVaList(
+    ULONG mask,
+    PCSTR format,
+    va_list args)
+{
+#ifndef FEATURE_PAL
+    if (IsInitializedByDbgEng())
+    {
+        return g_ExtControl->OutputVaList(DEBUG_OUTPUT_NORMAL, format, args);
+    }
+    else
+#endif
+    {
+        ArrayHolder<char> str = new char[8192];
+        int length = _vsnprintf_s(str, 8192, _TRUNCATE, format, args);
+        if (length > 0)
+        {
+            return g_ExtControl->OutputVaList(DEBUG_OUTPUT_NORMAL, str, args);
+        }
+        return E_FAIL;
+    }
+}
+
+HRESULT 
+OutputText(
+    ULONG mask,
+    PCSTR format,
+    ...)
+{
+    va_list args;
+    va_start (args, format);
+    HRESULT result = OutputVaList(mask, format, args);
+    va_end (args);
+    return result;
 }
 
 void WhitespaceOut(int count)
@@ -5238,10 +5177,10 @@ void WhitespaceOut(int count)
     count &= ~0x3F;
 
     if (mod > 0)
-        g_ExtControl->Output(DEBUG_OUTPUT_NORMAL, "%.*s", mod, FixedIndentString);
+        OutputText(DEBUG_OUTPUT_NORMAL, "%.*s", mod, FixedIndentString);
 
     for ( ; count > 0; count -= FixedIndentWidth)
-        g_ExtControl->Output(DEBUG_OUTPUT_NORMAL, FixedIndentString);
+        OutputText(DEBUG_OUTPUT_NORMAL, FixedIndentString);
 }
 
 void DMLOut(PCSTR format, ...)
@@ -5261,7 +5200,7 @@ void DMLOut(PCSTR format, ...)
     else
 #endif
     {
-        g_ExtControl->OutputVaList(DEBUG_OUTPUT_NORMAL, format, args);
+        OutputVaList(DEBUG_OUTPUT_NORMAL, format, args);
     }
 
     va_end(args);
@@ -5291,7 +5230,7 @@ void ExtOut(PCSTR Format, ...)
     
     va_start(Args, Format);
     ExtOutIndent();
-    g_ExtControl->OutputVaList(DEBUG_OUTPUT_NORMAL, Format, Args);
+    OutputVaList(DEBUG_OUTPUT_NORMAL, Format, Args);
     va_end(Args);
 }
 
@@ -5303,7 +5242,7 @@ void ExtWarn(PCSTR Format, ...)
     va_list Args;
     
     va_start(Args, Format);
-    g_ExtControl->OutputVaList(DEBUG_OUTPUT_WARNING, Format, Args);
+    OutputVaList(DEBUG_OUTPUT_WARNING, Format, Args);
     va_end(Args);
 }
 
@@ -5312,7 +5251,7 @@ void ExtErr(PCSTR Format, ...)
     va_list Args;
     
     va_start(Args, Format);
-    g_ExtControl->OutputVaList(DEBUG_OUTPUT_ERROR, Format, Args);
+    OutputVaList(DEBUG_OUTPUT_ERROR, Format, Args);
     va_end(Args);
 }
 
@@ -5326,7 +5265,7 @@ void ExtDbgOut(PCSTR Format, ...)
 
         va_start(Args, Format);
         ExtOutIndent();
-        g_ExtControl->OutputVaList(DEBUG_OUTPUT_NORMAL, Format, Args);
+        OutputVaList(DEBUG_OUTPUT_NORMAL, Format, Args);
         va_end(Args);
     }
 #endif
@@ -5512,7 +5451,7 @@ EnableDMLHolder::~EnableDMLHolder()
 
 bool IsDMLEnabled()
 {
-    return Output::g_DMLEnable > 0;
+    return IsInitializedByDbgEng() && Output::g_DMLEnable > 0;
 }
 
 NoOutputHolder::NoOutputHolder(BOOL bSuppress)

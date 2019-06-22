@@ -82,8 +82,8 @@ public class SOS
             }
 
             // With the dotnet-dump analyze tool
-            if (OS.Kind == OSKind.Linux)
-            {
+            if (config.DotNetDumpPath() != null)
+            { 
                 using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName, debuggeeName, debuggeeArguments, SOSRunner.Options.LoadDumpWithDotNetDump))
                 {
                     await runner.RunScript(scriptName);

@@ -88,31 +88,34 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
                 else if (SymbolReader.IsSymbolStoreEnabled())
                 {
-                    string dacFileName = Path.GetFileName(clrInfo.LocalMatchingDac);
-                    SymbolStoreKey key = null;
-
-                    if (clrInfo.ModuleInfo.BuildId != null)
+                    string dacFileName = Path.GetFileName(dac ?? clrInfo.DacInfo.FileName);
+                    if (dacFileName != null)
                     {
-                        IEnumerable<SymbolStoreKey> keys = ELFFileKeyGenerator.GetKeys(
-                            KeyTypeFlags.ClrKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId, symbolFile: false, symbolFileName: null);
+                        SymbolStoreKey key = null;
 
-                        key = keys.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
-                    }
-                    else
-                    {
-                        // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
-                        key = PEFileKeyGenerator.GetKey(dacFileName, clrInfo.ModuleInfo.TimeStamp, clrInfo.ModuleInfo.FileSize);
-                    }
-
-                    if (key != null)
-                    {
-                        if (s_tempDirectory == null)
+                        if (clrInfo.ModuleInfo.BuildId != null)
                         {
-                            int processId = Process.GetCurrentProcess().Id;
-                            s_tempDirectory = Path.Combine(Path.GetTempPath(), "analyze" + processId.ToString());
+                            IEnumerable<SymbolStoreKey> keys = ELFFileKeyGenerator.GetKeys(
+                                KeyTypeFlags.ClrKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId, symbolFile: false, symbolFileName: null);
+
+                            key = keys.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
                         }
-                        // Now download the DAC module from the symbol server
-                        s_dacFilePath = SymbolReader.GetSymbolFile(key, s_tempDirectory);
+                        else
+                        {
+                            // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
+                            key = PEFileKeyGenerator.GetKey(dacFileName, clrInfo.ModuleInfo.TimeStamp, clrInfo.ModuleInfo.FileSize);
+                        }
+
+                        if (key != null)
+                        {
+                            if (s_tempDirectory == null)
+                            {
+                                int processId = Process.GetCurrentProcess().Id;
+                                s_tempDirectory = Path.Combine(Path.GetTempPath(), "analyze" + processId.ToString());
+                            }
+                            // Now download the DAC module from the symbol server
+                            s_dacFilePath = SymbolReader.GetSymbolFile(key, s_tempDirectory);
+                        }
                     }
                 }
 

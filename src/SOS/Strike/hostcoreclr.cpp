@@ -256,7 +256,6 @@ static HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
     }
     if (GetFileAttributesA(szModuleName) == INVALID_FILE_ATTRIBUTES)
     {
-        ExtErr("Error: coreclr module name doesn't exists\n");
         return HRESULT_FROM_WIN32(GetLastError());
     }
     coreClrDirectory = szModuleName;
@@ -269,6 +268,26 @@ static HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
     }
     coreClrDirectory.assign(coreClrDirectory, 0, lastSlash);
 #endif
+    return S_OK;
+}
+
+/**********************************************************************\
+ * Returns the coreclr module/runtime directory of the target.
+\**********************************************************************/
+HRESULT GetCoreClrDirectory(LPWSTR modulePath, int modulePathSize)
+{
+    std::string coreclrDirectory;
+    HRESULT hr = GetCoreClrDirectory(coreclrDirectory);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    int length = MultiByteToWideChar(CP_ACP, 0, coreclrDirectory.c_str(), -1, modulePath, modulePathSize);
+    if (0 >= length)
+    {
+        ExtErr("MultiByteToWideChar(coreclrDirectory) failed. Last error = 0x%x\n", GetLastError());
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
     return S_OK;
 }
 
@@ -587,6 +606,11 @@ extern "C" HRESULT SOSInitializeByHost(SOSNetCoreCallbacks* callbacks, int callb
     {
         g_dbiFilePath = _strdup(dbiFilePath);
     }
+#ifndef FEATURE_PAL
+    // When SOS is hosted on dotnet-dump, the ExtensionApis are not set so 
+    // the expression evaluation function needs to be supplied.
+    GetExpression = (PWINDBG_GET_EXPRESSION64)callbacks->GetExpressionDelegate;
+#endif
     g_symbolStoreInitialized = symbolStoreEnabled;
     g_hostingInitialized = true;
     return S_OK;
@@ -746,48 +770,6 @@ static int ReadMemoryForSymbols(ULONG64 address, uint8_t *buffer, int cb)
     return 0;
 }
 
-#ifdef FEATURE_PAL
-
-//
-// Symbol downloader callback
-//
-static void SymbolFileCallback(void* param, const char* moduleFileName, const char* symbolFilePath)
-{
-    if (strcmp(moduleFileName, MAIN_CLR_DLL_NAME_A) == 0) {
-        return;
-    }
-    if (strcmp(moduleFileName, MAKEDLLNAME_A("mscordaccore")) == 0) {
-        if (g_dacFilePath == nullptr) {
-            g_dacFilePath = _strdup(symbolFilePath);
-        }
-        return;
-    }
-    if (strcmp(moduleFileName, MAKEDLLNAME_A("mscordbi")) == 0) {
-        if (g_dbiFilePath == nullptr) {
-            g_dbiFilePath = _strdup(symbolFilePath);
-        }
-        return;
-    }
-    ToRelease<ILLDBServices2> services2(NULL);
-    HRESULT Status = g_ExtServices->QueryInterface(__uuidof(ILLDBServices2), (void**)&services2);
-    if (SUCCEEDED(Status))
-    {
-        services2->AddModuleSymbol(param, symbolFilePath);
-    }
-}
-
-//
-// Enumerate native module callback
-//
-static void LoadNativeSymbolsCallback(void* param, const char* moduleFilePath, ULONG64 moduleAddress, int moduleSize)
-{
-    _ASSERTE(g_hostingInitialized);
-    _ASSERTE(g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate != nullptr);
-    g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(SymbolFileCallback, param, GetTempDirectory(), moduleFilePath, moduleAddress, moduleSize, ReadMemoryForSymbols);
-}
-
-#endif
-
 /**********************************************************************\
  * Setup and initialize the symbol server support.
 \**********************************************************************/
@@ -833,6 +815,46 @@ void InitializeSymbolStore()
 #endif
 }
 
+//
+// Symbol downloader callback
+//
+static void SymbolFileCallback(void* param, const char* moduleFileName, const char* symbolFilePath)
+{
+    if (strcmp(moduleFileName, MAIN_CLR_DLL_NAME_A) == 0) {
+        return;
+    }
+    if (strcmp(moduleFileName, MAKEDLLNAME_A("mscordaccore")) == 0) {
+        if (g_dacFilePath == nullptr) {
+            g_dacFilePath = _strdup(symbolFilePath);
+        }
+        return;
+    }
+    if (strcmp(moduleFileName, MAKEDLLNAME_A("mscordbi")) == 0) {
+        if (g_dbiFilePath == nullptr) {
+            g_dbiFilePath = _strdup(symbolFilePath);
+        }
+        return;
+    }
+#ifdef FEATURE_PAL
+    ToRelease<ILLDBServices2> services2(NULL);
+    HRESULT Status = g_ExtServices->QueryInterface(__uuidof(ILLDBServices2), (void**)&services2);
+    if (SUCCEEDED(Status))
+    {
+        services2->AddModuleSymbol(param, symbolFilePath);
+    }
+#endif
+}
+
+//
+// Enumerate native module callback
+//
+static void LoadNativeSymbolsCallback(void* param, const char* moduleFilePath, ULONG64 moduleAddress, int moduleSize)
+{
+    _ASSERTE(g_hostingInitialized);
+    _ASSERTE(g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate != nullptr);
+    g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(SymbolFileCallback, param, GetTempDirectory(), moduleFilePath, moduleAddress, moduleSize, ReadMemoryForSymbols);
+}
+
 /**********************************************************************\
  * Enumerate the native modules and attempt to download the symbols
  * for them. Depends on the lldb callback to enumerate modules. Not
@@ -840,19 +862,40 @@ void InitializeSymbolStore()
 \**********************************************************************/
 HRESULT LoadNativeSymbols(bool runtimeOnly)
 {
-    HRESULT Status = S_OK;
-#ifdef FEATURE_PAL
+    HRESULT hr = S_OK;
     if (g_symbolStoreInitialized)
     {
+#ifdef FEATURE_PAL
         ToRelease<ILLDBServices2> services2(NULL);
-        Status = g_ExtServices->QueryInterface(__uuidof(ILLDBServices2), (void**)&services2);
-        if (SUCCEEDED(Status))
+        hr = g_ExtServices->QueryInterface(__uuidof(ILLDBServices2), (void**)&services2);
+        if (SUCCEEDED(hr))
         {
-            Status = services2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback);
+            hr = services2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback);
         }
-    }
+#else
+        if (runtimeOnly)
+        {
+            ULONG index;
+            ULONG64 moduleAddress;
+            HRESULT hr = g_ExtSymbols->GetModuleByModuleName(MAIN_CLR_MODULE_NAME_A, 0, &index, &moduleAddress);
+            if (SUCCEEDED(hr))
+            {
+                ArrayHolder<char> moduleFilePath = new char[MAX_LONGPATH + 1];
+                hr = g_ExtSymbols->GetModuleNames(index, 0, moduleFilePath, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
+                if (SUCCEEDED(hr))
+                {
+                    DEBUG_MODULE_PARAMETERS moduleParams;
+                    hr = g_ExtSymbols->GetModuleParameters(1, &moduleAddress, 0, &moduleParams);
+                    if (SUCCEEDED(hr))
+                    {
+                        LoadNativeSymbolsCallback(nullptr, moduleFilePath, moduleAddress, moduleParams.Size);
+                    }
+                }
+            }
+        }
 #endif
-    return Status;
+    }
+    return hr;
 }
 
 /**********************************************************************\
@@ -973,7 +1016,8 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
     if (m_pSymReader != NULL) 
         return S_OK;
 
-    IfFailRet(CoInitialize(NULL));
+    // Ignore errors to be able to run under a managed host (dotnet-dump).
+    CoInitialize(NULL);
 
     // We now need a binder object that will take the module and return a 
     ToRelease<ISymUnmanagedBinder3> pSymBinder;

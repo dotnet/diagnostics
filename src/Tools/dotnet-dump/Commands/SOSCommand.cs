@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [Command(Name = "histobjfind",      AliasExpansion = "HistObjFind",         Help = "Displays all the log entries that reference an object at the specified address.")]
     [Command(Name = "histroot",         AliasExpansion = "HistRoot",            Help = "Displays information related to both promotions and relocations of the specified root.")]
     [Command(Name = "setsymbolserver",  AliasExpansion = "SetSymbolServer",     Help = "Enables the symbol server support ")]
-    public class SOSCommand : CommandBase
+    internal class SOSCommand : CommandBase
     {
         [Argument(Name = "arguments", Help = "Arguments to SOS command.")]
         public string[] Arguments { get; set; }

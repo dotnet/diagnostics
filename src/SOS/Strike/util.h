@@ -427,6 +427,8 @@ private:
 
 size_t CountHexCharacters(CLRDATA_ADDRESS val);
 
+HRESULT OutputVaList(ULONG mask, PCSTR format, va_list args);
+
 // Normal output.
 void DMLOut(PCSTR format, ...);         /* Prints out DML strings. */
 void IfDMLOut(PCSTR format, ...);       /* Prints given DML string ONLY if DML is enabled; prints nothing otherwise. */
