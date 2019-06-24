@@ -90,7 +90,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 var configuration = new SessionConfiguration(
                     circularBufferSizeMB: buffersize,
                     format: EventPipeSerializationFormat.NetTrace,
-                    outputPath: null, // Not used on the streaming scenario.
                     providers: providerCollection);
 
                 var shouldExit = new ManualResetEvent(false);
