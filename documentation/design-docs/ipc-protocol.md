@@ -413,7 +413,6 @@ Header: `{ Magic; Size; 0x0202; 0x0000 }`
 
 * `uint circularBufferMB`: The size of the circular buffer used for buffering event data while streaming
 * `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace format
-* `string outputPath`: currently unused, and should be 0 length
 * `array<provider_config> providers`: The providers to turn on for the streaming session
 
 A `provider_config` is composed of the following data:
@@ -438,7 +437,7 @@ Input:
 Payload
 {
     uint circularBufferMB,
-    string outputPath,
+    uint format,
     array<provider_config> providers
 }
 
