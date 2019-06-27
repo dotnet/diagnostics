@@ -4,7 +4,7 @@
 
 using Xunit.Abstractions;
 
-namespace Microsoft.Diagnostic.TestHelpers
+namespace Microsoft.Diagnostics.TestHelpers
 {
     /// <summary>
     /// An implementation of ITestOutputHelper that adds one indent level to

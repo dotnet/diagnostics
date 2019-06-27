@@ -8,7 +8,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
 
-namespace Microsoft.Diagnostic.TestHelpers
+namespace Microsoft.Diagnostics.TestHelpers
 {
     /// <summary>
     /// This compiler acquires the CLI tools and uses them to build debuggees.

@@ -2,6 +2,6 @@
 
 namespace Xunit.Extensions
 {
-    [XunitTestCaseDiscoverer("Xunit.Extensions.SkippableTheoryDiscoverer", "Microsoft.Diagnostic.TestHelpers")]
+    [XunitTestCaseDiscoverer("Xunit.Extensions.SkippableTheoryDiscoverer", "Microsoft.Diagnostics.TestHelpers")]
     public class SkippableTheoryAttribute : TheoryAttribute { }
 }

@@ -6,7 +6,7 @@ using System;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
 
-namespace Microsoft.Diagnostic.TestHelpers
+namespace Microsoft.Diagnostics.TestHelpers
 {
     /// <summary>
     /// DebugeeCompiler is responsible for finding and/or producing the source and binaries of a given debuggee.
