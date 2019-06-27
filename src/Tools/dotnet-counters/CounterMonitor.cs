@@ -65,6 +65,19 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
+        private void StopMonitor()
+        {
+            try
+            {
+                EventPipeClient.StopTracing(_processId, _sessionId);
+            }
+            catch (EndOfStreamException ex)
+            {
+                // If the app we're monitoring exits abruptly, this may throw in which case we just swallow the exception and exit gracefully.
+                Debug.WriteLine($"[ERROR] {ex.ToString()}");
+            }
+        }
+
         public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval)
         {
             try
@@ -152,7 +165,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 providerString = sb.ToString();
             }
 
-            var shouldExit = new ManualResetEvent(false);
+            ManualResetEvent shouldExit = new ManualResetEvent(false);
             var terminated = false;
             writer.InitializeDisplay();
 
@@ -181,12 +194,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
             });
 
             monitorTask.Start();
-            while(true)
+            Console.CancelKeyPress += (sender, args) => {
+                args.Cancel = true;
+                shouldExit.Set();
+            };
+            while(!shouldExit.WaitOne(250))
             {
                 while (true)
                 {
                     if (shouldExit.WaitOne(250))
                     {
+                        StopMonitor();
                         return 0;
                     }
                     if (Console.KeyAvailable)
@@ -208,18 +226,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     pauseCmdSet = false;
                 }
             }
-
             if (!terminated)
             {
-                try
-                {
-                    EventPipeClient.StopTracing(_processId, _sessionId);    
-                }
-                catch (EndOfStreamException ex)
-                {
-                    // If the app we're monitoring exits abruptly, this may throw in which case we just swallow the exception and exit gracefully.
-                    Debug.WriteLine($"[ERROR] {ex.ToString()}");
-                } 
+                StopMonitor();
             }
             
             return await Task.FromResult(0);
