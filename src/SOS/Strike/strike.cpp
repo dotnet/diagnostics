@@ -15379,13 +15379,13 @@ DECLARE_API(VerifyGMT)
             return Status;
         }
     }
-    ULONG64 managedObject;
-    HRESULT hr = _EFN_GetManagedThread(client, osThreadId, &managedObject);
+    ULONG64 managedThread;
+    HRESULT hr = _EFN_GetManagedThread(client, osThreadId, &managedThread);
     {
         INIT_API();
 
         if (SUCCEEDED(hr)) {
-            ExtOut("%08x %p\n", osThreadId, managedObject);
+            ExtOut("%08x %p\n", osThreadId, managedThread);
         }
         else {
             ExtErr("_EFN_GetManagedThread FAILED %08x\n", hr);
@@ -15398,12 +15398,12 @@ HRESULT CALLBACK
 _EFN_GetManagedThread(
     PDEBUG_CLIENT client,
     ULONG osThreadId,
-    PULONG64 pManagedObject)
+    PULONG64 pManagedThread)
 {
     INIT_API();
 
-    _ASSERTE(pManagedObject != nullptr);
-    *pManagedObject = 0;
+    _ASSERTE(pManagedThread != nullptr);
+    *pManagedThread = 0;
 
     DacpThreadStoreData threadStore;
     if ((Status = threadStore.Request(g_sos)) != S_OK)
@@ -15421,7 +15421,7 @@ _EFN_GetManagedThread(
         }        
         if (thread.osThreadId == osThreadId)
         {        
-            *pManagedObject = (ULONG64)curThread;
+            *pManagedThread = (ULONG64)curThread;
             return S_OK;
         }
         curThread = thread.nextThread;

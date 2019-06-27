@@ -166,14 +166,14 @@ HRESULT CALLBACK _EFN_GetManagedObjectFieldInfo(
     PULONG pOffset
     );
 
-// _EFN_GetManagedThread - return the managed thread object for the os thread id
+// _EFN_GetManagedThread - return the managed thread (Thread*) for the os thread id
 //
 // osThreadId - os thread id
-// pManagedObject - managed thread object returned
+// pManagedThread - managed thread returned
 HRESULT CALLBACK _EFN_GetManagedThread(
     PDEBUG_CLIENT client,
     ULONG osThreadId,
-    PULONG64 pManagedObject
+    PULONG64 pManagedThread
 );
 
 #ifdef __cplusplus
