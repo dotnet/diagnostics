@@ -166,6 +166,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
 
             ManualResetEvent shouldExit = new ManualResetEvent(false);
+            _ct.Register(() => shouldExit.Set());
+
             var terminated = false;
             writer.InitializeDisplay();
 
@@ -194,10 +196,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             });
 
             monitorTask.Start();
-            Console.CancelKeyPress += (sender, args) => {
-                args.Cancel = true;
-                shouldExit.Set();
-            };
+
             while(!shouldExit.WaitOne(250))
             {
                 while (true)
