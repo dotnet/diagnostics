@@ -191,6 +191,8 @@ EXPORTS
     _EFN_GetManagedObjectFieldInfo    
     _EFN_GetManagedObjectName
     _EFN_StackTrace
+    _EFN_GetManagedThread
+    VerifyGMT
     bpmd
     BPMD=bpmd
     DebugExtensionInitialize
