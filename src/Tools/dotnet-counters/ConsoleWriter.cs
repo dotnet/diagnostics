@@ -132,8 +132,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         displayName = payload.GetDisplay();
                     }
 
+                    // If counter name is longer than left-indent of counter values, increase indent size 
                     int left = displayName.Length;
-                    if (left+3 > leftAlign)
+                    if (left+3 > leftAlign) // +3 so that the counter value does not start right where the counter name ends
                     {
                         leftAlign = left+3;
                     }
@@ -142,7 +143,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                     int row = maxRow;
                     string val = payload.GetValue();
-                    displayPosition[keyName] = (leftAlign+4, row);
+                    displayPosition[keyName] = (leftAlign+4, row); // +4 because counter names are indented by 4 spaces
                     displayLength[keyName] = val.Length;
                     Console.WriteLine("{0}{1}{2}", $"    {displayName}", spaces, val);
                     maxRow += 1;
@@ -165,8 +166,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         displayName = payload.GetName();
                     }
 
+                    // If counter name is longer than left-indent of counter values, increase indent size
                     int left = displayName.Length;
-                    if (left+3 > leftAlign)
+                    if (left+3 > leftAlign) // +3 so that the counter value does not start right where the counter name ends
                     {
                         leftAlign = left+3;
                     }
@@ -175,7 +177,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                     int row = maxRow;
                     string val = payload.GetValue();
-                    displayPosition[keyName] = (leftAlign+4, row);
+                    displayPosition[keyName] = (leftAlign+4, row); // +4 because counter names are indented by 4 spaces
                     displayLength[keyName] = val.Length;
                     Console.WriteLine("{0}{1}{2}", $"    {displayName}", spaces, val);
                     maxRow += 1;
