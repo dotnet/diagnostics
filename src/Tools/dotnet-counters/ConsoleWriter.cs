@@ -22,6 +22,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private Dictionary<string, int> knownProvidersRowNum;
         private Dictionary<string, int> unknownProvidersRowNum;
 
+        private int leftAlign;
+
         private void UpdateStatus(string msg)
         {
             Console.SetCursorPosition(0, STATUS_ROW);
@@ -37,6 +39,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             displayLength = new Dictionary<string, int>();
             knownProvidersRowNum = new Dictionary<string, int>();
             unknownProvidersRowNum = new Dictionary<string, int>();
+            leftAlign = 42;
 
             foreach(CounterProvider provider in KnownData.GetAllProviders())
             {
@@ -123,17 +126,25 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                     KnownData.TryGetProvider(providerName, out CounterProvider counterProvider);
                     string displayName = counterProvider.TryGetDisplayName(name);
+                    
                     if (displayName == null)
                     {
                         displayName = payload.GetDisplay();
                     }
-                    
-                    int left = displayName.Length + 7; // displayName + " : "
+
+                    int left = displayName.Length;
+                    if (left+3 > leftAlign)
+                    {
+                        leftAlign = left+3;
+                    }
+
+                    string spaces = new String(' ', leftAlign-left);
+
                     int row = maxRow;
                     string val = payload.GetValue();
-                    displayPosition[keyName] = (left, row);
+                    displayPosition[keyName] = (leftAlign+4, row);
                     displayLength[keyName] = val.Length;
-                    Console.WriteLine($"    {displayName} : {val}");
+                    Console.WriteLine("{0}{1}{2}", $"    {displayName}", spaces, val);
                     maxRow += 1;
                 }
                 else
@@ -148,16 +159,25 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
 
                     string displayName = payload.GetDisplay();
+                    
                     if (string.IsNullOrEmpty(displayName))
                     {
                         displayName = payload.GetName();
                     }
-                    int left = displayName.Length + 7; // displayName + " : "
+
+                    int left = displayName.Length;
+                    if (left+3 > leftAlign)
+                    {
+                        leftAlign = left+3;
+                    }
+
+                    string spaces = new String(' ', leftAlign-left);
+
                     int row = maxRow;
                     string val = payload.GetValue();
-                    displayPosition[keyName] = (left, row);
+                    displayPosition[keyName] = (leftAlign+4, row);
                     displayLength[keyName] = val.Length;
-                    Console.WriteLine($"    {displayName} : {val}");
+                    Console.WriteLine("{0}{1}{2}", $"    {displayName}", spaces, val);
                     maxRow += 1;
                 }
             }
