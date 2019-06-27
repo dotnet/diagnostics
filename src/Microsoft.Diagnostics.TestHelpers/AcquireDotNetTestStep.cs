@@ -9,7 +9,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
 
-namespace Microsoft.Diagnostic.TestHelpers
+namespace Microsoft.Diagnostics.TestHelpers
 {
     /// <summary>
     /// Acquires the CLI tools from a web endpoint, a local zip/tar.gz, or directly from a local path

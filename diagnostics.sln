@@ -1,13 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27004.2005
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29019.234
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SOS.NETCore", "src\SOS\SOS.NETCore\SOS.NETCore.csproj", "{20513BA2-A156-4A17-4C70-5AC2DBD4F833}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestDebuggee", "src\SOS\lldbplugin.tests\TestDebuggee\TestDebuggee.csproj", "{6C43BE85-F8C3-4D76-8050-F25CE953A7FD}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostic.TestHelpers", "src\Microsoft.Diagnostic.TestHelpers\Microsoft.Diagnostic.TestHelpers.csproj", "{730C1201-1848-4F1E-8C1F-6316FB886C35}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.TestHelpers", "src\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj", "{730C1201-1848-4F1E-8C1F-6316FB886C35}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SOS", "SOS", "{41638A4C-0DAF-47ED-A774-ECBBAC0315D7}"
 EndProject
@@ -43,7 +43,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dotnet-counters", "src\Tool
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.Tools.RuntimeClient", "src\Microsoft.Diagnostics.Tools.RuntimeClient\Microsoft.Diagnostics.Tools.RuntimeClient.csproj", "{54C240C5-7932-4421-A5FB-75205DE0B824}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CreateVersionFile", "eng\CreateVersionFile.csproj", "{54E3BCB7-6094-4B25-AC44-D4F914438F03}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CreateVersionFile", "eng\CreateVersionFile.csproj", "{54E3BCB7-6094-4B25-AC44-D4F914438F03}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

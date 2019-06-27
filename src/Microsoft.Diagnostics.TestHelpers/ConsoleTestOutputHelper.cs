@@ -5,7 +5,7 @@
 using System;
 using Xunit.Abstractions;
 
-namespace Microsoft.Diagnostic.TestHelpers
+namespace Microsoft.Diagnostics.TestHelpers
 {
     public class ConsoleTestOutputHelper : ITestOutputHelper
     {

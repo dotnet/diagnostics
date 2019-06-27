@@ -6,7 +6,7 @@ using System;
 using System.IO;
 using Xunit.Abstractions;
 
-namespace Microsoft.Diagnostic.TestHelpers
+namespace Microsoft.Diagnostics.TestHelpers
 {
     public static partial class AssertX
     {

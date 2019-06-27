@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using Xunit.Abstractions;
 
-namespace Microsoft.Diagnostic.TestHelpers
+namespace Microsoft.Diagnostics.TestHelpers
 {
     public class TestOutputProcessLogger : IProcessLogger
     {

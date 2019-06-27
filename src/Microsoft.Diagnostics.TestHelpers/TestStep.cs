@@ -13,7 +13,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Xunit.Abstractions;
 
-namespace Microsoft.Diagnostic.TestHelpers
+namespace Microsoft.Diagnostics.TestHelpers
 {
     /// <summary>
     /// An incremental atomic unit of work in the process of running a test. A test

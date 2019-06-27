@@ -13,7 +13,7 @@ using System.Xml.Linq;
 using Xunit;
 using Xunit.Extensions;
 
-namespace Microsoft.Diagnostic.TestHelpers
+namespace Microsoft.Diagnostics.TestHelpers
 {
     /// <summary>
     /// Represents the all the test configurations for a test run.
