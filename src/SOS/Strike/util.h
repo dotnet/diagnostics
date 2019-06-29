@@ -41,6 +41,12 @@ inline void RestoreSOToleranceState() {}
 typedef LPCSTR  LPCUTF8;
 typedef LPSTR   LPUTF8;
 
+#ifdef FEATURE_PAL
+#define NOTHROW
+#else
+#define NOTHROW (std::nothrow)
+#endif 
+
 DECLARE_HANDLE(OBJECTHANDLE);
 
 #if defined(_TARGET_WIN64_)
@@ -1853,7 +1859,7 @@ BOOL TryGetMethodDescriptorForDelegate(CLRDATA_ADDRESS delegateAddr, CLRDATA_ADD
 
 #ifdef FEATURE_PAL
 void FlushMetadataRegions();
-bool IsMetadataMemory(CLRDATA_ADDRESS address, ULONG32 size);
+HRESULT GetMetadataMemory(CLRDATA_ADDRESS address, ULONG32 bufferSize, BYTE* buffer);
 #endif
 
 /* Returns a list of all modules in the process.

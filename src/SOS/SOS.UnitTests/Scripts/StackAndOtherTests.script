@@ -64,9 +64,6 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
 ENDIF:PROJECTK
 
-# Issue #https://github.com/dotnet/diagnostics/issues/266
-IFDEF:NEVER
-
 # Verify that ClrStack with the ICorDebug options works
 IFDEF:PROJECTK
 SOSCOMMAND:ClrStack -i
@@ -96,8 +93,6 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] I4 SymbolTestApp\.Program\.Foo1\(.
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void SymbolTestApp\.Program\.Main\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+Stack walk complete.\s+
 ENDIF:PROJECTK
-
-ENDIF:NEVER
 
 !IFDEF:ALPINE
 

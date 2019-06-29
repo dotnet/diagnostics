@@ -66,9 +66,6 @@ VERIFY:\s+[r|e]ax=<HEXVAL>\s+[r|e]bx=<HEXVAL>\s+[r|e]cx=<HEXVAL>\s+
 ENDIF:64BIT
 ENDIF:PROJECTK
 
-# Issue #https://github.com/dotnet/diagnostics/issues/266
-IFDEF:NEVER
-
 # 5) Verifying that ClrStack with the ICorDebug options works
 SOSCOMMAND:ClrStack -i
 VERIFY:.*\s+Dumping managed stack and managed variables using ICorDebug.\s+
@@ -92,8 +89,6 @@ VERIFY:\s+\+ System.FormatException ex @ 0x<HEXVAL>\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void NestedExceptionTest\.Program\.Main\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+Stack walk complete.\s+
 ENDIF:PROJECTK
-
-ENDIF:NEVER
 
 # 7) Verify DumpStackObjects works
 IFDEF:PROJECTK

@@ -73,6 +73,17 @@ extern HRESULT LoadNativeSymbols(bool runtimeOnly = false);
 extern void DisplaySymbolStore();
 extern void DisableSymbolStore();
 
+extern HRESULT GetMetadataLocator(
+    LPCWSTR imagePath,
+    ULONG32 imageTimestamp,
+    ULONG32 imageSize,
+    GUID* mvid,
+    ULONG32 mdRva,
+    ULONG32 flags,
+    ULONG32 bufferSize,
+    BYTE* buffer,
+    ULONG32* dataSize);
+
 class SymbolReader
 {
 private:

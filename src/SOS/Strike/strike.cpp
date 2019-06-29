@@ -197,7 +197,6 @@ HMODULE g_hInstance = NULL;
 
 #ifdef FEATURE_PAL
 
-#define NOTHROW
 #define MINIDUMP_NOT_SUPPORTED()
 
 #else // !FEATURE_PAL
@@ -209,8 +208,6 @@ HMODULE g_hInstance = NULL;
         ExtOut("To try the command anyway, run !MinidumpMode 0\n"); \
         return Status;         \
     }
-
-#define NOTHROW (std::nothrow)
 
 #include "safemath.h"
 
