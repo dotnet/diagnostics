@@ -9175,7 +9175,15 @@ DECLARE_API(u)
     }
 
     DacpMethodDescData MethodDescData;
-    if ((Status=MethodDescData.Request(g_sos, TO_CDADDR(methodDesc))) != S_OK)
+    Status =
+        g_sos->GetMethodDescData(
+            TO_CDADDR(methodDesc),
+            dwStartAddr == methodDesc ? NULL : dwStartAddr,
+            &MethodDescData,
+            0, // cRevertedRejitVersions
+            NULL, // rgRevertedRejitData
+            NULL); // pcNeededRevertedRejitData
+    if (Status != S_OK)
     {
         ExtOut("Failed to get method desc for %p.\n", SOS_PTR(dwStartAddr));
         return Status;
@@ -9319,7 +9327,7 @@ DECLARE_API(u)
         {
             ReportOOM();                
         }
-        else if (g_sos->TraverseEHInfo(MethodDescData.NativeCodeAddr, gatherEh, (LPVOID)pInfo) != S_OK)
+        else if (g_sos->TraverseEHInfo(codeHeaderData.MethodStart, gatherEh, (LPVOID)pInfo) != S_OK)
         {
             ExtOut("Failed to gather EHInfo data\n");
             delete pInfo;
