@@ -113,7 +113,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                     if (File.Exists(output.FullName))
                     {
-                        Console.Error.WriteLine("Unable to create file.");
+                        Console.Error.WriteLine($"Unable to create file {output.FullName}. Try using -o or --output option to specify a different output file name.");
                         return ErrorCodes.FileCreationError;
                     }
                     var collectingTask = new Task(() => {
@@ -125,10 +125,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 Console.Out.WriteLine($"Output File : {fs.Name}");
                                 Console.Out.WriteLine($"\tSession Id: 0x{sessionId:X16}");
                                 lineToClear = Console.CursorTop;
+                                var buffer = new byte[16 * 1024];
 
                                 while (true)
                                 {
-                                    var buffer = new byte[16 * 1024];
                                     int nBytesRead = stream.Read(buffer, 0, buffer.Length);
                                     if (nBytesRead <= 0)
                                         break;
