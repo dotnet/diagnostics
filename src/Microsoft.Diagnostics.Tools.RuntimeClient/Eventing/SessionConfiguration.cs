@@ -39,7 +39,6 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         public EventPipeSerializationFormat Format { get; }
         public bool RequestRundown { get; }
 
-
         public IReadOnlyCollection<Provider> Providers => _providers.AsReadOnly();
 
         private readonly List<Provider> _providers;

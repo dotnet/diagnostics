@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         public static Stream CollectTracing(int processId, SessionConfiguration configuration, out ulong sessionId)
         {
             sessionId = 0;
-            var message = new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.CollectTracing, configuration.Serialize());
+            var message = new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.CollectTracing2, configuration.Serialize());
             var stream = IpcClient.SendMessage(processId, message, out var response);
 
             switch ((DiagnosticsServerCommandId)response.Header.CommandId)
