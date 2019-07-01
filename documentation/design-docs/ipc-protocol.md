@@ -413,6 +413,7 @@ Header: `{ Magic; Size; 0x0202; 0x0000 }`
 
 * `uint circularBufferMB`: The size of the circular buffer used for buffering event data while streaming
 * `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace format
+* `bool requestRundown`: Specifies whether rundown events should be emitted by the runtime.
 * `array<provider_config> providers`: The providers to turn on for the streaming session
 
 A `provider_config` is composed of the following data:
@@ -438,6 +439,7 @@ Payload
 {
     uint circularBufferMB,
     uint format,
+    bool requestRundown,
     array<provider_config> providers
 }
 
