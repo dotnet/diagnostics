@@ -177,6 +177,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     var configuration = new SessionConfiguration(
                         circularBufferSizeMB: 1000,
                         format: EventPipeSerializationFormat.NetTrace,
+                        requestRundown: false,
                         providers: Trace.Extensions.ToProviders(providerString));
 
                     var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);

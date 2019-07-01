@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
     public struct SessionConfiguration
     {
-        public SessionConfiguration(uint circularBufferSizeMB, EventPipeSerializationFormat format, IReadOnlyCollection<Provider> providers)
+        public SessionConfiguration(uint circularBufferSizeMB, EventPipeSerializationFormat format, bool requestRundown, IReadOnlyCollection<Provider> providers)
         {
             if (circularBufferSizeMB == 0)
                 throw new ArgumentException($"Buffer size cannot be zero.");
@@ -30,12 +30,14 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
             CircularBufferSizeInMB = circularBufferSizeMB;
             Format = format;
+            RequestRundown = requestRundown;
             string extension = format == EventPipeSerializationFormat.NetPerf ? ".netperf" : ".nettrace";
             _providers = new List<Provider>(providers);
         }
 
         public uint CircularBufferSizeInMB { get; }
         public EventPipeSerializationFormat Format { get; }
+        public bool RequestRundown { get; }
 
 
         public IReadOnlyCollection<Provider> Providers => _providers.AsReadOnly();
@@ -50,6 +52,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             {
                 writer.Write(CircularBufferSizeInMB);
                 writer.Write((uint)Format);
+                writer.Write(RequestRundown);
 
                 writer.Write(Providers.Count());
                 foreach (var provider in Providers)

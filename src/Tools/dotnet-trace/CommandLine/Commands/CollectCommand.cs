@@ -94,6 +94,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 var configuration = new SessionConfiguration(
                     circularBufferSizeMB: buffersize,
                     format: EventPipeSerializationFormat.NetTrace,
+                    requestRundown: true,
                     providers: providerCollection);
 
                 var shouldExit = new ManualResetEvent(false);
