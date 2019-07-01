@@ -7,8 +7,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
     internal static class ErrorCodes
     {
         public const int SessionCreationError = 1;
-        public const int TracingError = 3;
-        public const int ArgumentError = 4;
-        public const int UnknownError = 5;
+        public const int TracingError = 2;
+        public const int ArgumentError = 3;
+        public const int UnknownError = 4;
     }
 }
