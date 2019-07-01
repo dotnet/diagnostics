@@ -111,11 +111,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         Console.Error.WriteLine("Unable to create session.");
                         return ErrorCodes.SessionCreationError;
                     }
-                    if (File.Exists(output.FullName))
-                    {
-                        Console.Error.WriteLine($"Unable to create file {output.FullName}. Try using -o or --output option to specify a different output file name.");
-                        return ErrorCodes.FileCreationError;
-                    }
+
                     var collectingTask = new Task(() => {
                         try
                         {
