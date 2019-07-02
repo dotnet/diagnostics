@@ -345,8 +345,9 @@ enum class ServerCommandId : uint8_t
 enum class EventPipeCommandId : uint8_t
 {
     // reserved = 0x00,
-    StopTracing    = 0x01, // stop a given session
-    CollectTracing = 0x02, // create/start a given session
+    StopTracing     = 0x01, // stop a given session
+    CollectTracing  = 0x02, // create/start a given session
+    CollectTracing2 = 0x03, // create/start a given session with/without rundown
 }
 ```
 See: [EventPipe Commands](#EventPipe-Commands)
@@ -381,8 +382,9 @@ For example, the Command to start a stream session with EventPipe would be `0x02
 enum class EventPipeCommandId : uint8_t
 {
     // reserved = 0x00,
-    StopTracing    = 0x01, // stop a given session
-    CollectTracing = 0x02, // create/start a given session
+    StopTracing     = 0x01, // stop a given session
+    CollectTracing  = 0x02, // create/start a given session
+    CollectTracing2 = 0x03, // create/start a given session with/without rundown
 }
 ```
 EventPipe Payloads are encoded with the following rules:
@@ -413,7 +415,6 @@ Header: `{ Magic; Size; 0x0202; 0x0000 }`
 
 * `uint circularBufferMB`: The size of the circular buffer used for buffering event data while streaming
 * `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace format
-* `bool requestRundown`: Specifies whether rundown events should be emitted by the runtime.
 * `array<provider_config> providers`: The providers to turn on for the streaming session
 
 A `provider_config` is composed of the following data:
@@ -429,6 +430,65 @@ A `provider_config` is composed of the following data:
 Header: `{ Magic; 28; 0xFF00; 0x0000; }`
 
 `CollectTracing` returns:
+* `ulong sessionId`: the ID for the stream session starting on the current connection
+
+##### Details:
+
+Input:
+```
+Payload
+{
+    uint circularBufferMB,
+    uint format,
+    array<provider_config> providers
+}
+
+provider_config 
+{
+    ulong keywords,
+    uint logLevel,
+    string provider_name,
+    string filter_data (optional)
+}
+```
+
+Returns:
+```c
+Payload
+{
+    ulong sessionId
+}
+```
+Followed by an Optional Continuation of a `nettrace` format stream of events.
+
+### `CollectTracing2`
+
+Command Code: `0x0203`
+
+The `CollectTracing2` Command is an extension of the `CollectTracing` command - its behavior is the same as `CollectTracing` command, except that it has another field that lets you specify whether rundown event should be fired by the runtime.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0203; 0x0000 }`
+
+* `uint circularBufferMB`: The size of the circular buffer used for buffering event data while streaming
+* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace format
+* `bool requestRundown`: Indicates whether rundown should be fired by the runtime.
+* `array<provider_config> providers`: The providers to turn on for the streaming session
+
+A `provider_config` is composed of the following data:
+* `ulong keywords`: The keywords to turn on with this providers
+* `uint logLevel`: The level of information to turn on
+* `string provider_name`: The name of the provider
+* `string filter_data` (optional): Filter information
+
+> see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
+> 
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; 28; 0xFF00; 0x0000; }`
+
+`CollectTracing2` returns:
 * `ulong sessionId`: the ID for the stream session starting on the current connection
 
 ##### Details:
