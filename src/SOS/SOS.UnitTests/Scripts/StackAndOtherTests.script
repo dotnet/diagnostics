@@ -77,6 +77,8 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void SymbolTestApp\.Program\.Main\
 VERIFY:.*\s+Stack walk complete.\s+
 ENDIF:PROJECTK
 
+!IFDEF:ALPINE
+
 # Verify that ClrStack with the ICorDebug options and all option (locals/params) works
 IFDEF:PROJECTK
 SOSCOMMAND:ClrStack -i -a
@@ -93,8 +95,6 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] I4 SymbolTestApp\.Program\.Foo1\(.
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void SymbolTestApp\.Program\.Main\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+Stack walk complete.\s+
 ENDIF:PROJECTK
-
-!IFDEF:ALPINE
 
 # Verify DumpStackObjects works
 IFDEF:PROJECTK
