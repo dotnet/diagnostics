@@ -45,7 +45,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         /// <param name="configuration">buffer size and provider configuration</param>
         /// <param name="sessionId">session id</param>
         /// <returns>Stream</returns>
-        public static Stream CollectTracing(int processId, SessionConfigurationV1 configuration, out ulong sessionId)
+        public static Stream CollectTracing(int processId, SessionConfiguration configuration, out ulong sessionId)
         {
             sessionId = 0;
             var message = new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.CollectTracing, configuration.Serialize());

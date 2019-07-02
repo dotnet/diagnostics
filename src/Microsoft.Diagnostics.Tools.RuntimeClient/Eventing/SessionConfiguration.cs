@@ -15,9 +15,9 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         NetTrace
     }
 
-    public class SessionConfigurationV1
+    public class SessionConfiguration
     {
-        public SessionConfigurationV1(uint circularBufferSizeMB, EventPipeSerializationFormat format, IReadOnlyCollection<Provider> providers)
+        public SessionConfiguration(uint circularBufferSizeMB, EventPipeSerializationFormat format, IReadOnlyCollection<Provider> providers)
         {
             if (circularBufferSizeMB == 0)
                 throw new ArgumentException($"Buffer size cannot be zero.");
@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         }
     }
 
-    public class SessionConfigurationV2 : SessionConfigurationV1
+    public class SessionConfigurationV2 : SessionConfiguration
     {
         public SessionConfigurationV2(uint circularBufferSizeMB, EventPipeSerializationFormat format, bool requestRundown, IReadOnlyCollection<Provider> providers) : base(circularBufferSizeMB, format, providers)
         {

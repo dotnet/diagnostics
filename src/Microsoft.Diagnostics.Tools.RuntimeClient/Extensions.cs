@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             return Marshal.SizeOf(typeof(int)) + strLength;
         }
 
-        public static int GetByteCount(this SessionConfigurationV1 @this)
+        public static int GetByteCount(this SessionConfiguration @this)
         {
             int size = 0;
 
