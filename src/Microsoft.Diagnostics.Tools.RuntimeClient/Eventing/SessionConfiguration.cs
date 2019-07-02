@@ -15,9 +15,9 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         NetTrace
     }
 
-    public struct SessionConfiguration
+    public class SessionConfigurationV1
     {
-        public SessionConfiguration(uint circularBufferSizeMB, EventPipeSerializationFormat format, bool requestRundown, IReadOnlyCollection<Provider> providers)
+        public SessionConfigurationV1(uint circularBufferSizeMB, EventPipeSerializationFormat format, IReadOnlyCollection<Provider> providers)
         {
             if (circularBufferSizeMB == 0)
                 throw new ArgumentException($"Buffer size cannot be zero.");
@@ -30,20 +30,54 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
             CircularBufferSizeInMB = circularBufferSizeMB;
             Format = format;
-            RequestRundown = requestRundown;
             string extension = format == EventPipeSerializationFormat.NetPerf ? ".netperf" : ".nettrace";
             _providers = new List<Provider>(providers);
         }
 
         public uint CircularBufferSizeInMB { get; }
         public EventPipeSerializationFormat Format { get; }
-        public bool RequestRundown { get; }
 
         public IReadOnlyCollection<Provider> Providers => _providers.AsReadOnly();
 
         private readonly List<Provider> _providers;
 
-        public byte[] Serialize()
+        public virtual byte[] Serialize()
+        {
+            byte[] serializedData = null;
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write(CircularBufferSizeInMB);
+                writer.Write((uint)Format);
+
+                writer.Write(Providers.Count());
+                foreach (var provider in Providers)
+                {
+                    writer.Write(provider.Keywords);
+                    writer.Write((uint)provider.EventLevel);
+
+                    writer.WriteString(provider.Name);
+                    writer.WriteString(provider.FilterData);
+                }
+
+                writer.Flush();
+                serializedData = stream.ToArray();
+            }
+
+            return serializedData;
+        }
+    }
+
+    public class SessionConfigurationV2 : SessionConfigurationV1
+    {
+        public SessionConfigurationV2(uint circularBufferSizeMB, EventPipeSerializationFormat format, bool requestRundown, IReadOnlyCollection<Provider> providers) : base(circularBufferSizeMB, format, providers)
+        {
+            RequestRundown = requestRundown;
+        }
+
+        public bool RequestRundown { get; }
+
+        public override byte[] Serialize()
         {
             byte[] serializedData = null;
             using (var stream = new MemoryStream())

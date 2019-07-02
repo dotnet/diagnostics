@@ -45,7 +45,29 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         /// <param name="configuration">buffer size and provider configuration</param>
         /// <param name="sessionId">session id</param>
         /// <returns>Stream</returns>
-        public static Stream CollectTracing(int processId, SessionConfiguration configuration, out ulong sessionId)
+        public static Stream CollectTracing(int processId, SessionConfigurationV1 configuration, out ulong sessionId)
+        {
+            sessionId = 0;
+            var message = new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.CollectTracing, configuration.Serialize());
+            var stream = IpcClient.SendMessage(processId, message, out var response);
+
+            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
+            {
+                case DiagnosticsServerCommandId.OK:
+                    sessionId = BitConverter.ToUInt64(response.Payload);
+                    break;
+                case DiagnosticsServerCommandId.Error:
+                    // bad...
+                    var hr = BitConverter.ToInt32(response.Payload);
+                    throw new Exception($"Session start FAILED 0x{hr:X8}");
+                default:
+                    break;
+            }
+
+            return stream;
+        }
+
+        public static Stream CollectTracing2(int processId, SessionConfigurationV2 configuration, out ulong sessionId)
         {
             sessionId = 0;
             var message = new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.CollectTracing2, configuration.Serialize());

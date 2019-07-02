@@ -91,10 +91,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 PrintProviders(providerCollection);
 
                 var process = Process.GetProcessById(processId);
-                var configuration = new SessionConfiguration(
+                var configuration = new SessionConfigurationV1(
                     circularBufferSizeMB: buffersize,
                     format: EventPipeSerializationFormat.NetTrace,
-                    requestRundown: true,
                     providers: providerCollection);
 
                 var shouldExit = new ManualResetEvent(false);

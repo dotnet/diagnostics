@@ -95,7 +95,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 try
                 {
-                    EventPipeClient.StopTracing(_processId, _sessionId);    
+                    EventPipeClient.StopTracing(_processId, _sessionId);
                 }
                 catch (Exception) {} // Swallow all exceptions for now.
                 
@@ -174,13 +174,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
             Task monitorTask = new Task(() => {
                 try
                 {
-                    var configuration = new SessionConfiguration(
+                    var configuration = new SessionConfigurationV2(
                         circularBufferSizeMB: 1000,
                         format: EventPipeSerializationFormat.NetTrace,
                         requestRundown: false,
                         providers: Trace.Extensions.ToProviders(providerString));
 
-                    var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
+                    var binaryReader = EventPipeClient.CollectTracing2(_processId, configuration, out _sessionId);
                     EventPipeEventSource source = new EventPipeEventSource(binaryReader);
                     source.Dynamic.All += Dynamic_All;
                     source.Process();
