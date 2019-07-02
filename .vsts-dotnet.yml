@@ -460,7 +460,7 @@ phases:
         /p:DotNetSignType=$(SignType) 
         /p:DotNetPublishBlobFeedKey=$(dotnetfeed-storage-access-key-1) 
         /p:DotNetPublishBlobFeedUrl=$(_PublishBlobFeedUrl)
-        /p:DotNetPublishToBlobFeed=true
+        /p:DotNetPublishToBlobFeed=$(PublishPackages)
         /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
         /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
         /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
