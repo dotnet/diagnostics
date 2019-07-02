@@ -17,6 +17,11 @@ using System.Text.RegularExpressions;
 
 namespace Microsoft.Diagnostics.Tools.RuntimeClient
 {
+    public class EventPipeServerException : Exception
+    {
+        public EventPipeServerException(string msg) : base(msg) {}
+    }
+
     public static class EventPipeClient
     {
         private static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
@@ -81,7 +86,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 case DiagnosticsServerCommandId.Error:
                     // bad...
                     var hr = BitConverter.ToInt32(response.Payload);
-                    throw new Exception($"Session start FAILED 0x{hr:X8}");
+                    throw new EventPipeServerException($"Session start FAILED 0x{hr:X8}");
                 default:
                     break;
             }

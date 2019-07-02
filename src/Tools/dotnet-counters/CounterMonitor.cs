@@ -104,6 +104,32 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
+        // Use EventPipe CollectTracing2 command to start monitoring. This may throw.
+        private void RequestTracingV2(string providerString)
+        {
+            var configuration = new SessionConfigurationV2(
+                                        circularBufferSizeMB: 1000,
+                                        format: EventPipeSerializationFormat.NetTrace,
+                                        requestRundown: false,
+                                        providers: Trace.Extensions.ToProviders(providerString));
+            var binaryReader = EventPipeClient.CollectTracing2(_processId, configuration, out _sessionId);
+            EventPipeEventSource source = new EventPipeEventSource(binaryReader);
+            source.Dynamic.All += Dynamic_All;
+            source.Process();
+        }
+        // Use EventPipe CollectTracing command to start monitoring. This may throw.
+        private void RequestTracingV1(string providerString)
+        {
+            var configuration = new SessionConfiguration(
+                                        circularBufferSizeMB: 1000,
+                                        format: EventPipeSerializationFormat.NetTrace,
+                                        providers: Trace.Extensions.ToProviders(providerString));
+            var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
+            EventPipeEventSource source = new EventPipeEventSource(binaryReader);
+            source.Dynamic.All += Dynamic_All;
+            source.Process();
+        }
+
         private async Task<int> StartMonitor()
         {
             if (_processId == 0) {
@@ -174,16 +200,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
             Task monitorTask = new Task(() => {
                 try
                 {
-                    var configuration = new SessionConfigurationV2(
-                        circularBufferSizeMB: 1000,
-                        format: EventPipeSerializationFormat.NetTrace,
-                        requestRundown: false,
-                        providers: Trace.Extensions.ToProviders(providerString));
-
-                    var binaryReader = EventPipeClient.CollectTracing2(_processId, configuration, out _sessionId);
-                    EventPipeEventSource source = new EventPipeEventSource(binaryReader);
-                    source.Dynamic.All += Dynamic_All;
-                    source.Process();
+                    RequestTracingV2(providerString);
+                }
+                catch (EventPipeServerException)
+                {
+                    RequestTracingV1(providerString);
                 }
                 catch (Exception ex)
                 {
