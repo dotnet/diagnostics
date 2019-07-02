@@ -138,13 +138,16 @@ DataTarget::ReadVirtual(
 #ifdef FEATURE_PAL
     if (g_sos != nullptr)
     {
-        // LLDB synthesizes memory (returns 0's) for missing pages (in this case the missing metadata 
-        // pages) in core dumps. This functions creates a list of the metadata regions and returns true
-        // if the read would be in the metadata of a loaded assembly. This allows an error to be returned 
-        // instead of 0's so the DAC will call the GetMetadataLocator datatarget callback.
-        if (IsMetadataMemory(address, request))
-        {
-            return E_ACCESSDENIED;
+        // LLDB synthesizes memory (returns 0's) for missing pages (in this case the missing metadata  pages) 
+        // in core dumps. This functions creates a list of the metadata regions and caches the metadata if 
+        // available from the local or downloaded assembly. If the read would be in the metadata of a loaded 
+        // assembly, the metadata from the this cache will be returned.
+        HRESULT hr = GetMetadataMemory(address, request, buffer);
+        if (SUCCEEDED(hr)) {
+            if (done != nullptr) {
+                *done = request;
+            }
+            return hr;
         }
     }
 #endif
@@ -303,14 +306,7 @@ DataTarget::GetMetadata(
     BYTE* buffer,
     /* [out] */ ULONG32* dataSize)
 {
-    HRESULT hr = InitializeHosting();
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-    InitializeSymbolStore();
-    _ASSERTE(g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate != nullptr);
-    return g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate(imagePath, imageTimestamp, imageSize, mvid, mdRva, flags, bufferSize, buffer, dataSize);
+    return ::GetMetadataLocator(imagePath, imageTimestamp, imageSize, mvid, mdRva, flags, bufferSize, buffer, dataSize);
 }
 
 

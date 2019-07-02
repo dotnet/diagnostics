@@ -2469,8 +2469,7 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
         return NULL;
     }
 
-    WCHAR StringData[MAX_LONGPATH];
-    char fileName[sizeof(StringData)/2];
+    ArrayHolder<char> fileName = new char[MAX_LONGPATH];
     
     // Search all domains to find a module
     for (int n = 0; n < adsData.DomainCount+numSpecialDomains; n++)
@@ -2550,13 +2549,14 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
                         goto Failure;
                     }
 
-                    FileNameForModule ((DWORD_PTR)ModuleAddr, StringData);
-                    int m;
-                    for (m = 0; StringData[m] != L'\0'; m++)
+                    if (mName != NULL)
                     {
-                        fileName[m] = (char)StringData[m];
+                        ArrayHolder<WCHAR> moduleName = new WCHAR[MAX_LONGPATH];
+                        FileNameForModule((DWORD_PTR)ModuleAddr, moduleName);
+
+                        int bytesWritten = WideCharToMultiByte(CP_ACP, 0, moduleName, -1, fileName, MAX_LONGPATH, NULL, NULL);
+                        _ASSERTE(bytesWritten > 0);
                     }
-                    fileName[m] = '\0';
                     
                     if ((mName == NULL) || 
                         IsSameModuleName(fileName, mName) ||
@@ -4427,6 +4427,22 @@ public:
         {
             return E_UNEXPECTED;
         }
+#ifdef FEATURE_PAL
+        if (g_sos != nullptr)
+        {
+            // LLDB synthesizes memory (returns 0's) for missing pages (in this case the missing metadata  pages) 
+            // in core dumps. This functions creates a list of the metadata regions and caches the metadata if 
+            // available from the local or downloaded assembly. If the read would be in the metadata of a loaded 
+            // assembly, the metadata from the this cache will be returned.
+            HRESULT hr = GetMetadataMemory(address, request, pBuffer);
+            if (SUCCEEDED(hr)) {
+                if (pcbRead != nullptr) {
+                    *pcbRead = request;
+                }
+                return hr;
+            }
+        }
+#endif
         return g_ExtData->ReadVirtual(address, pBuffer, request, (PULONG) pcbRead);
     }
 
@@ -6203,24 +6219,67 @@ struct MemoryRegion
 private:
     uint64_t m_startAddress;
     uint64_t m_endAddress;
+    CLRDATA_ADDRESS m_peFile;
+    BYTE* m_metadataMemory;
+    volatile LONG m_busy;
 
-public:
-    MemoryRegion(uint64_t start, uint64_t end) : 
-        m_startAddress(start),
-        m_endAddress(end)
+    HRESULT CacheMetadata()
     {
+        if (m_metadataMemory == nullptr)
+        {
+            HRESULT hr;
+            CLRDATA_ADDRESS baseAddress;
+            if (FAILED(hr = g_sos->GetPEFileBase(m_peFile, &baseAddress))) {
+                return hr;
+            }
+            ArrayHolder<WCHAR> imagePath = new WCHAR[MAX_LONGPATH];
+            if (FAILED(hr = g_sos->GetPEFileName(m_peFile, MAX_LONGPATH, imagePath.GetPtr(), NULL))) {
+                return hr;
+            }
+            IMAGE_DOS_HEADER DosHeader;
+            if (FAILED(hr = g_ExtData->ReadVirtual(baseAddress, &DosHeader, sizeof(DosHeader), NULL))) {
+                return hr;
+            }
+            IMAGE_NT_HEADERS Header;
+            if (FAILED(hr = g_ExtData->ReadVirtual(baseAddress + DosHeader.e_lfanew, &Header, sizeof(Header), NULL))) {
+                return hr;
+            }
+            // If there is no COMHeader, this can not be managed code.
+            if (Header.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_COMHEADER].VirtualAddress == 0) {
+                return E_ACCESSDENIED;
+            }
+            ULONG32 imageSize = Header.OptionalHeader.SizeOfImage;
+            ULONG32 timeStamp = Header.FileHeader.TimeDateStamp;
+            ULONG32 bufferSize = (ULONG32)Size();
+
+            ArrayHolder<BYTE> buffer = new NOTHROW BYTE[bufferSize];
+            if (buffer == nullptr) {
+                return E_OUTOFMEMORY;
+            }
+            ULONG32 actualSize = 0;
+            if (FAILED(hr = GetMetadataLocator(imagePath, timeStamp, imageSize, nullptr, 0, 0, bufferSize, buffer, &actualSize))) {
+                return hr;
+            }
+            m_metadataMemory = buffer.Detach();
+        }
+        return S_OK;
     }
 
-    // copy constructor
-    MemoryRegion(const MemoryRegion& region) : 
-        m_startAddress(region.m_startAddress),
-        m_endAddress(region.m_endAddress)
+public:
+    MemoryRegion(uint64_t start, uint64_t end, CLRDATA_ADDRESS peFile) : 
+        m_startAddress(start),
+        m_endAddress(end),
+        m_peFile(peFile),
+        m_metadataMemory(nullptr),
+        m_busy(0)
     {
     }
 
     uint64_t StartAddress() const { return m_startAddress; }
     uint64_t EndAddress() const { return m_endAddress; }
     uint64_t Size() const { return m_endAddress - m_startAddress; }
+
+    CLRDATA_ADDRESS const PEFile() { return m_peFile; }
 
     bool operator<(const MemoryRegion& rhs) const
     {
@@ -6232,6 +6291,47 @@ public:
     {
         return (m_startAddress <= rhs.m_startAddress) && (m_endAddress >= rhs.m_endAddress);
     }
+
+    HRESULT ReadMetadata(CLRDATA_ADDRESS address, ULONG32 bufferSize, BYTE* buffer)
+    {
+        _ASSERTE((m_startAddress <= address) && (m_endAddress >= (address + bufferSize)));
+
+        HRESULT hr = E_ACCESSDENIED;
+
+        // Skip in-memory and dynamic modules or if CacheMetadata failed
+        if (m_peFile != 0)
+        {
+            if (InterlockedIncrement(&m_busy) == 1)
+            {
+                // Attempt to get the assembly metadata from local file or by downloading from a symbol server
+                hr = CacheMetadata();
+                if (FAILED(hr)) {
+                    // If we can get the metadata from the assembly, mark this region to always fail.
+                    m_peFile = 0;
+                }
+            }
+            InterlockedDecrement(&m_busy);
+        }
+
+        if (FAILED(hr)) {
+            return hr;
+        }
+
+        // Read the memory from the cached metadata blob
+        _ASSERTE(m_metadataMemory != nullptr);
+        uint64_t offset = address - m_startAddress;
+        memcpy(buffer, m_metadataMemory + offset, bufferSize);
+        return S_OK;
+    }
+
+    void Dispose()
+    {
+        if (m_metadataMemory != nullptr)
+        {
+            delete[] m_metadataMemory;
+            m_metadataMemory = nullptr;
+        }
+    }
 };
 
 std::set<MemoryRegion> g_metadataRegions;
@@ -6239,20 +6339,12 @@ bool g_metadataRegionsPopulated = false;
 
 void FlushMetadataRegions()
 {
+    for (const MemoryRegion& region : g_metadataRegions)
+    {
+        const_cast<MemoryRegion&>(region).Dispose();
+    }
     g_metadataRegionsPopulated = false;
 }
-
-//-------------------------------------------------------------------------------
-// Lifted from "..\md\inc\mdfileformat.h"
-#define STORAGE_MAGIC_SIG   0x424A5342  // BSJB
-struct STORAGESIGNATURE
-{
-    ULONG       lSignature;             // "Magic" signature.
-    USHORT      iMajorVer;              // Major file version.
-    USHORT      iMinorVer;              // Minor file version.
-    ULONG       iExtraData;             // Offset to next structure of information
-    ULONG       iVersionString;         // Length of version string
-};
 
 void PopulateMetadataRegions()
 {
@@ -6272,17 +6364,8 @@ void PopulateMetadataRegions()
                 {
                     if (moduleData.metadataStart != 0)
                     {
-                        MemoryRegion region(moduleData.metadataStart, moduleData.metadataStart + moduleData.metadataSize);
+                        MemoryRegion region(moduleData.metadataStart, moduleData.metadataStart + moduleData.metadataSize, moduleData.File);
                         g_metadataRegions.insert(region);
-#ifdef METADATA_REGION_LOGGING
-                        ArrayHolder<WCHAR> name = new WCHAR[MAX_LONGPATH];
-                        name[0] = '\0';
-                        if (moduleData.File != 0)
-                        {
-                            g_sos->GetPEFileName(moduleData.File, MAX_LONGPATH, name.GetPtr(), NULL);
-                        }
-                        ExtOut("%c%016x %016x %016x %S\n", add ? '*' : ' ', moduleData.metadataStart, moduleData.metadataStart + moduleData.metadataSize, moduleData.metadataSize, name.GetPtr());
-#endif // METADATA_REGION_LOGGING
                     }
                 }
             }
@@ -6290,20 +6373,21 @@ void PopulateMetadataRegions()
     }
 }
 
-bool IsMetadataMemory(CLRDATA_ADDRESS address, ULONG32 size)
+HRESULT GetMetadataMemory(CLRDATA_ADDRESS address, ULONG32 bufferSize, BYTE* buffer)
 {
+    // Populate the metadata memory region map
     if (!g_metadataRegionsPopulated)
     {
         g_metadataRegionsPopulated = true;
         PopulateMetadataRegions();
     }
-    MemoryRegion region(address, address + size);
+    // Check if the memory address is in a metadata memory region
+    MemoryRegion region(address, address + bufferSize, 0);
     const auto& found = g_metadataRegions.find(region);
-    if (found != g_metadataRegions.end())
-    {
-        return found->Contains(region);
+    if (found != g_metadataRegions.end() && found->Contains(region)) {
+        return const_cast<MemoryRegion&>(*found).ReadMetadata(address, bufferSize, buffer);
     }
-    return false;
+    return E_ACCESSDENIED;
 }
 
 #endif // FEATURE_PAL

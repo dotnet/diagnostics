@@ -925,6 +925,29 @@ void DisableSymbolStore()
 }
 
 /**********************************************************************\
+ * Returns the metadata from a local or downloaded assembly
+\**********************************************************************/
+HRESULT GetMetadataLocator(
+    LPCWSTR imagePath,
+    ULONG32 imageTimestamp,
+    ULONG32 imageSize,
+    GUID* mvid,
+    ULONG32 mdRva,
+    ULONG32 flags,
+    ULONG32 bufferSize,
+    BYTE* buffer,
+    ULONG32* dataSize)
+{
+    HRESULT hr = InitializeHosting();
+    if (FAILED(hr)) {
+        return hr;
+    }
+    InitializeSymbolStore();
+    _ASSERTE(g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate != nullptr);
+    return g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate(imagePath, imageTimestamp, imageSize, mvid, mdRva, flags, bufferSize, buffer, dataSize);
+}
+
+/**********************************************************************\
  * Load symbols for an ICorDebugModule. Used by "clrstack -i".
 \**********************************************************************/
 HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in ICorDebugModule* pModule)
@@ -1193,6 +1216,9 @@ HRESULT SymbolReader::GetLineByILOffset(___in mdMethodDef methodToken, ___in ULO
     return E_FAIL;
 }
 
+/**********************************************************************\
+ * Returns the name of the local variable from a PDB. 
+\**********************************************************************/
 HRESULT SymbolReader::GetNamedLocalVariable(___in ISymUnmanagedScope * pScope, ___in ICorDebugILFrame * pILFrame, ___in mdMethodDef methodToken, 
     ___in ULONG localIndex, __out_ecount(paramNameLen) WCHAR* paramName, ___in ULONG paramNameLen, ICorDebugValue** ppValue)
 {
