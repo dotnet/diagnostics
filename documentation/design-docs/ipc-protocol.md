@@ -465,7 +465,7 @@ Followed by an Optional Continuation of a `nettrace` format stream of events.
 
 Command Code: `0x0203`
 
-The `CollectTracing2` Command is an extension of the `CollectTracing` command - its behavior is the same as `CollectTracing` command, except that it has another field that lets you specify whether rundown event should be fired by the runtime.
+The `CollectTracing2` Command is an extension of the `CollectTracing` command - its behavior is the same as `CollectTracing` command, except that it has another field that lets you specify whether rundown events should be fired by the runtime.
 
 #### Inputs:
 
