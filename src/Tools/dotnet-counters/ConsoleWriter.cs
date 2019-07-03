@@ -140,16 +140,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     {
                         displayName = payload.GetDisplay();
                     }
-
-                    // If counter name is longer than left-indent of counter values, move values to the right
+                    
                     int left = displayName.Length;
-                    if (left+indentLength+4 > leftAlign) // +4 so that the counter value does not start right where the counter name ends
-                    {
-                        leftAlign = left+indentLength+4;
-                    }
-
                     string spaces = new String(' ', leftAlign-left-indentLength);
-
                     int row = maxRow;
                     string val = payload.GetValue();
                     displayPosition[keyName] = (leftAlign, row); 
@@ -174,16 +167,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     {
                         displayName = payload.GetName();
                     }
-
-                    // If counter name is longer than left-indent of counter values, move values to the right
+                    
                     int left = displayName.Length;
+
+                    // If counter name is exceeds position of counter values, move values to the right
                     if (left+indentLength+4 > leftAlign) // +4 so that the counter value does not start right where the counter name ends
                     {
                         leftAlign = left+indentLength+4;
                     }
 
                     string spaces = new String(' ', leftAlign-left-indentLength);
-
                     int row = maxRow;
                     string val = payload.GetValue();
                     displayPosition[keyName] = (leftAlign, row); 
