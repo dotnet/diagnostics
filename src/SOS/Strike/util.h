@@ -89,15 +89,15 @@ DECLARE_HANDLE(OBJECTHANDLE);
 
 // The native symbol reader dll name
 #if defined(_AMD64_)
-#define NATIVE_SYMBOL_READER_DLL W("Microsoft.DiaSymReader.Native.amd64.dll")
+#define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.amd64.dll"
 #elif defined(_X86_)
-#define NATIVE_SYMBOL_READER_DLL W("Microsoft.DiaSymReader.Native.x86.dll")
+#define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.x86.dll"
 #elif defined(_ARM_)
-#define NATIVE_SYMBOL_READER_DLL W("Microsoft.DiaSymReader.Native.arm.dll")
+#define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.arm.dll"
 #elif defined(_ARM64_)
 // Use diasymreader until the package has an arm64 version - issue #7360
-//#define NATIVE_SYMBOL_READER_DLL W("Microsoft.DiaSymReader.Native.arm64.dll")
-#define NATIVE_SYMBOL_READER_DLL W("diasymreader.dll")
+//#define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.arm64.dll"
+#define NATIVE_SYMBOL_READER_DLL "diasymreader.dll"
 #endif
 
 // PREFIX macros - Begin
@@ -3055,78 +3055,6 @@ struct Flags
 private:
     UnderlyingType m_val;
 };
-
-#ifndef FEATURE_PAL
-
-// Flags defining activation policy for COM objects
-enum CIOptionsBits 
-{
-    cciDacColocated = 0x01,     // Look next to the already loaded DAC module
-    cciDbgPath      = 0x02,     // Look in all folders in the debuggers symbols and binary path
-};
-
-typedef Flags<DWORD, CIOptionsBits> CIOptions;
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-* CreateInstanceCustom() provides a way to activate a COM object w/o   *
-* triggering the FeatureOnDemand dialog. In order to do this we        *
-* must avoid using  the CoCreateInstance() API, which, on a machine    *
-* with v4+ installed and w/o v2, would trigger this.                   *
-* CreateInstanceCustom() activates the requested COM object according  *
-* to the specified passed in CIOptions, in the following order         *
-* (skipping the steps not enabled in the CIOptions flags passed in):   *
-*    1. Attempt to activate the COM object using a framework install:  *
-*       a. If the debugger machine has a V4+ shell shim use the shim   *
-*          to activate the object                                      *
-*       b. Otherwise simply call CoCreateInstance                      *
-*    2. If unsuccessful attempt to activate looking for the dllName in *
-*       the same folder as the DAC was loaded from                     *
-*    3. If unsuccessful attempt to activate the COM object looking in  *
-*       every path specified in the debugger's .exepath and .sympath   *
-\**********************************************************************/
-HRESULT CreateInstanceCustom(
-                        REFCLSID clsid,
-                        REFIID   iid,
-                        LPCWSTR  dllName,
-                        CIOptions cciOptions,
-                        void** ppItf);
-
-
-//------------------------------------------------------------------------
-// A typesafe version of GetProcAddress
-//------------------------------------------------------------------------
-template <typename T>
-BOOL
-GetProcAddressT(
-    ___in PCSTR FunctionName,
-    __in_opt PCWSTR DllName,
-    __inout T* OutFunctionPointer,
-    __inout HMODULE* InOutDllHandle
-    )
-{
-    _ASSERTE(InOutDllHandle != NULL);
-    _ASSERTE(OutFunctionPointer != NULL);
-
-    T FunctionPointer = NULL;
-    HMODULE DllHandle = *InOutDllHandle;
-    if (DllHandle == NULL)
-    {
-        DllHandle = LoadLibraryExW(DllName, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
-        if (DllHandle != NULL)
-            *InOutDllHandle = DllHandle;
-    }
-    if (DllHandle != NULL)
-    {
-        FunctionPointer = (T) GetProcAddress(DllHandle, FunctionName);
-    }
-    *OutFunctionPointer = FunctionPointer;
-    return FunctionPointer != NULL;
-}
-
-
-#endif // FEATURE_PAL
 
 struct ImageInfo
 {

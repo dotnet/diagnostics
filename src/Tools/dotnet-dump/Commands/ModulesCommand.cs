@@ -33,7 +33,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     if (module.BuildId != null) {
                         WriteLine("    BuildId:   {0}", string.Concat(module.BuildId.Select((b) => b.ToString("x2"))));
                     }
-                    WriteLine("    IsRuntime: {0}", module.IsRuntime);
                     WriteLine("    IsManaged: {0}", module.IsManaged);
                 }
                 else

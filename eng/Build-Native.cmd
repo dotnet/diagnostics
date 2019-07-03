@@ -209,7 +209,7 @@ if /i %__BuildCrossArch% EQU 1 (
 
     set "__ManagedBinaryDir=%__RootBinDir%\bin"
     set "__ManagedBinaryDir=!__ManagedBinaryDir:\=/!"
-    set __ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=%__BuildType%" "-DCLR_CMAKE_TARGET_ARCH=%__BuildArch%" "-DCMAKE_SYSTEM_VERSION=10.0"
+    set __ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=%__BuildType%" "-DCLR_CMAKE_TARGET_ARCH=%__BuildArch%" "-DCMAKE_SYSTEM_VERSION=10.0" "-DNUGET_PACKAGES=%NUGET_PACKAGES:\=/%"
 
     pushd "%__CrossCompIntermediatesDir%"
     call "%__ProjectDir%\eng\gen-buildsys-win.bat" "%__ProjectDir%" %__VSVersion% %__CrossArch% !__ExtraCmakeArgs!
@@ -286,7 +286,7 @@ if %__Build% EQU 1 (
 
     set "__ManagedBinaryDir=%__RootBinDir%\bin"
     set "__ManagedBinaryDir=!__ManagedBinaryDir:\=/!"
-    set __ExtraCmakeArgs=!___SDKVersion! "-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=%__BuildType%"
+    set __ExtraCmakeArgs=!___SDKVersion! "-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=%__BuildType%" "-DCLR_CMAKE_TARGET_ARCH=%__BuildArch%" "-DNUGET_PACKAGES=%NUGET_PACKAGES:\=/%"
 
     pushd "%__IntermediatesDir%"
     call "%__ProjectDir%\eng\gen-buildsys-win.bat" "%__ProjectDir%" %__VSVersion% %__BuildArch% !__ExtraCmakeArgs!

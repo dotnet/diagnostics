@@ -20,10 +20,13 @@ mkdir -Force "$GalleryDir\arm32"
 mkdir -Force "$ZipFilePath"
 
 Copy-Item $BinDir\Windows_NT.x64.Release\sos.dll $GalleryDir\x64
+Copy-Item $BinDir\Windows_NT.x64.Release\Microsoft.DiaSymReader.Native.amd64.dll $GalleryDir\x64
 Copy-Item $SOSNETCorePath\*.dll $GalleryDir\x64
 Copy-Item $BinDir\Windows_NT.x86.Release\sos.dll $GalleryDir\x86
+Copy-Item $BinDir\Windows_NT.x64.Release\Microsoft.DiaSymReader.Native.x86.dll $GalleryDir\x86
 Copy-Item $SOSNETCorePath\*.dll $GalleryDir\x86
 Copy-Item $BinDir\Windows_NT.arm.Release\sos.dll $GalleryDir\arm32
+Copy-Item $BinDir\Windows_NT.x64.Release\Microsoft.DiaSymReader.Native.arm.dll $GalleryDir\arm32
 Copy-Item $SOSNETCorePath\*.dll $GalleryDir\arm32
 cat $SourceDirectory\eng\GalleryManifest.xml | %{$_ -replace "X.X.X.X","$SOSGalleryVersion"} | Set-Content $BinDir\gallery\GalleryManifest.xml
 
