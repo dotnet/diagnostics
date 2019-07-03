@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             displayLength = new Dictionary<string, int>();
             knownProvidersRowNum = new Dictionary<string, int>();
             unknownProvidersRowNum = new Dictionary<string, int>();
-            leftAlign = 45;
+            leftAlign = 45; // Width of counter names column
 
             foreach(CounterProvider provider in KnownData.GetAllProviders())
             {
@@ -97,8 +97,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             string name = payload.GetName();
             string keyName = CounterNameString(providerName, name);
-            string indent = "    ";
-            int indentLength = 4;
+            const string indent = "    ";
+            const int indentLength = 4;
             // We already know what this counter is! Just update the value string on the console.
             if (displayPosition.ContainsKey(keyName))
             {
