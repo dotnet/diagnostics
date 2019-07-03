@@ -202,13 +202,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     RequestTracingV2(providerString);
                 }
-                catch (EventPipeServerException)
+                catch (EventPipeUnknownCommandException)
                 {
+                    // If unknown command exception is thrown, it's likely the app being monitored is running an older version of runtime that doesn't support CollectTracingV2. Try again with V1.
                     RequestTracingV1(providerString);
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[ERROR] {ex.ToString()}");
+                    Console.WriteLine($"[ERROR] {ex.ToString()}");
                 }
                 finally
                 {
