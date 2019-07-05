@@ -7,7 +7,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 
 $BinDir = "$SourceDirectory\artifacts\bin"
-$SOSGalleryVersion = cat $BinDir\VersionPrefix.txt
+$SOSGalleryVersion = cat $BinDir\FileVersion.txt
 
 $SOSNETCorePath = "$BinDir\SOS.NETCore\Release\netstandard2.0\publish"
 $GalleryDir = "$BinDir\gallery\$SOSGalleryVersion"
