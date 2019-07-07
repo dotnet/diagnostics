@@ -47,7 +47,10 @@ LPCSTR g_dacFilePath = nullptr;
 LPCSTR g_dbiFilePath = nullptr;
 LPCSTR g_tmpPath = nullptr;
 SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
+#ifndef FEATURE_PAL
+HMODULE g_hmoduleSymBinder = nullptr;
 ISymUnmanagedBinder3 *g_pSymBinder = nullptr;
+#endif
 
 #ifdef FEATURE_PAL
 #define TPALIST_SEPARATOR_STR_A ":"
@@ -979,23 +982,23 @@ BOOL GetProcAddressT(PCSTR FunctionName, PCSTR DllName, T* OutFunctionPointer, H
 * CreateInstanceFromPath() instantiates a COM object using a passed in *
 * fully-qualified path and a CLSID.                                    *
 \**********************************************************************/
-HRESULT CreateInstanceFromPath(REFCLSID clsid, REFIID iid, LPCSTR path, void** ppItf)
+HRESULT CreateInstanceFromPath(REFCLSID clsid, REFIID iid, LPCSTR path, HMODULE* pModuleHandle, void** ppItf)
 {
     HRESULT (__stdcall *pfnDllGetClassObject)(REFCLSID rclsid, REFIID riid, LPVOID *ppv) = NULL;
-    HMODULE hmod = NULL;
     HRESULT hr = S_OK;
 
-    if (!GetProcAddressT("DllGetClassObject", path, &pfnDllGetClassObject, &hmod)) {
+    if (!GetProcAddressT("DllGetClassObject", path, &pfnDllGetClassObject, pModuleHandle)) {
         return REGDB_E_CLASSNOTREG;
     }
     ToRelease<IClassFactory> pFactory;
-    if (SUCCEEDED(hr = pfnDllGetClassObject(clsid, IID_IClassFactory, (void**)& pFactory))) {
+    if (SUCCEEDED(hr = pfnDllGetClassObject(clsid, IID_IClassFactory, (void**)&pFactory))) {
         if (SUCCEEDED(hr = pFactory->CreateInstance(NULL, iid, ppItf))) {
             return S_OK;
         }
     }
-    if (hmod != NULL) {
-        FreeLibrary(hmod);
+    if (*pModuleHandle != NULL) {
+        FreeLibrary(*pModuleHandle);
+        *pModuleHandle = NULL;
     }
     return hr;
 }
@@ -1084,6 +1087,20 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
 
 #ifndef FEATURE_PAL
 
+static void CleanupSymBinder()
+{
+    if (g_pSymBinder != nullptr)
+    {
+        g_pSymBinder->Release();
+        g_pSymBinder = nullptr;
+    }
+    if (g_hmoduleSymBinder != nullptr)
+    {
+        FreeLibrary(g_hmoduleSymBinder);
+        g_hmoduleSymBinder = nullptr;
+    }
+}
+
 /**********************************************************************\
  * Attempts to load Windows PDBs on Windows.
 \**********************************************************************/
@@ -1119,11 +1136,12 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
         diasymreaderPath.append(NATIVE_SYMBOL_READER_DLL);
 
         // We now need a binder object that will take the module and return a 
-        if (FAILED(Status = CreateInstanceFromPath(CLSID_CorSymBinder_SxS, IID_ISymUnmanagedBinder3, diasymreaderPath.c_str(), (void**)&g_pSymBinder)))
+        if (FAILED(Status = CreateInstanceFromPath(CLSID_CorSymBinder_SxS, IID_ISymUnmanagedBinder3, diasymreaderPath.c_str(), &g_hmoduleSymBinder, (void**)&g_pSymBinder)))
         {
             ExtOut("SOS error: Unable to find the diasymreader module/interface %08x at %s\n", Status, diasymreaderPath.c_str());
             return Status;
         }
+        OnUnloadTask::Register(CleanupSymBinder);
     }
     ToRelease<IDebugSymbols3> spSym3(NULL);
     Status = g_ExtSymbols->QueryInterface(__uuidof(IDebugSymbols3), (void**)&spSym3);
