@@ -47,6 +47,10 @@ LPCSTR g_dacFilePath = nullptr;
 LPCSTR g_dbiFilePath = nullptr;
 LPCSTR g_tmpPath = nullptr;
 SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
+#ifndef FEATURE_PAL
+HMODULE g_hmoduleSymBinder = nullptr;
+ISymUnmanagedBinder3 *g_pSymBinder = nullptr;
+#endif
 
 #ifdef FEATURE_PAL
 #define TPALIST_SEPARATOR_STR_A ":"
@@ -667,7 +671,7 @@ HRESULT InitializeHosting()
     if (GetModuleFileNameA(g_hInstance, szSOSModulePath, MAX_LONGPATH) == 0)
     {
         ExtErr("Error: Failed to get SOS module directory\n");
-        return E_FAIL;
+        return HRESULT_FROM_WIN32(GetLastError());
     }
     sosModuleDirectory = szSOSModulePath;
 
@@ -947,6 +951,60 @@ HRESULT GetMetadataLocator(
     return g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate(imagePath, imageTimestamp, imageSize, mvid, mdRva, flags, bufferSize, buffer, dataSize);
 }
 
+#ifndef FEATURE_PAL
+
+/**********************************************************************\
+* A typesafe version of GetProcAddress
+\**********************************************************************/
+template <typename T>
+BOOL GetProcAddressT(PCSTR FunctionName, PCSTR DllName, T* OutFunctionPointer, HMODULE* InOutDllHandle)
+{
+    _ASSERTE(InOutDllHandle != NULL);
+    _ASSERTE(OutFunctionPointer != NULL);
+
+    T FunctionPointer = NULL;
+    HMODULE DllHandle = *InOutDllHandle;
+    if (DllHandle == NULL)
+    {
+        DllHandle = LoadLibraryEx(DllName, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+        if (DllHandle != NULL)
+            *InOutDllHandle = DllHandle;
+    }
+    if (DllHandle != NULL)
+    {
+        FunctionPointer = (T) GetProcAddress(DllHandle, FunctionName);
+    }
+    *OutFunctionPointer = FunctionPointer;
+    return FunctionPointer != NULL;
+}
+
+/**********************************************************************\
+* CreateInstanceFromPath() instantiates a COM object using a passed in *
+* fully-qualified path and a CLSID.                                    *
+\**********************************************************************/
+HRESULT CreateInstanceFromPath(REFCLSID clsid, REFIID iid, LPCSTR path, HMODULE* pModuleHandle, void** ppItf)
+{
+    HRESULT (__stdcall *pfnDllGetClassObject)(REFCLSID rclsid, REFIID riid, LPVOID *ppv) = NULL;
+    HRESULT hr = S_OK;
+
+    if (!GetProcAddressT("DllGetClassObject", path, &pfnDllGetClassObject, pModuleHandle)) {
+        return REGDB_E_CLASSNOTREG;
+    }
+    ToRelease<IClassFactory> pFactory;
+    if (SUCCEEDED(hr = pfnDllGetClassObject(clsid, IID_IClassFactory, (void**)&pFactory))) {
+        if (SUCCEEDED(hr = pFactory->CreateInstance(NULL, iid, ppItf))) {
+            return S_OK;
+        }
+    }
+    if (*pModuleHandle != NULL) {
+        FreeLibrary(*pModuleHandle);
+        *pModuleHandle = NULL;
+    }
+    return hr;
+}
+
+#endif // FEATURE_PAL
+
 /**********************************************************************\
  * Load symbols for an ICorDebugModule. Used by "clrstack -i".
 \**********************************************************************/
@@ -1029,6 +1087,20 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
 
 #ifndef FEATURE_PAL
 
+static void CleanupSymBinder()
+{
+    if (g_pSymBinder != nullptr)
+    {
+        g_pSymBinder->Release();
+        g_pSymBinder = nullptr;
+    }
+    if (g_hmoduleSymBinder != nullptr)
+    {
+        FreeLibrary(g_hmoduleSymBinder);
+        g_hmoduleSymBinder = nullptr;
+    }
+}
+
 /**********************************************************************\
  * Attempts to load Windows PDBs on Windows.
 \**********************************************************************/
@@ -1039,22 +1111,38 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
     if (m_pSymReader != NULL) 
         return S_OK;
 
-    // Ignore errors to be able to run under a managed host (dotnet-dump).
-    CoInitialize(NULL);
-
-    // We now need a binder object that will take the module and return a 
-    ToRelease<ISymUnmanagedBinder3> pSymBinder;
-    if (FAILED(Status = CreateInstanceCustom(CLSID_CorSymBinder_SxS, 
-                        IID_ISymUnmanagedBinder3, 
-                        NATIVE_SYMBOL_READER_DLL,
-                        cciDacColocated|cciDbgPath, 
-                        (void**)&pSymBinder)))
+    if (g_pSymBinder == nullptr)
     {
-        ExtOut("SOS Error: Unable to CoCreateInstance class=CLSID_CorSymBinder_SxS, interface=IID_ISymUnmanagedBinder3, hr=0x%x\n", Status);
-        ExtOut("This usually means SOS was unable to locate a suitable version of DiaSymReader. The dll searched for was '%S'\n", NATIVE_SYMBOL_READER_DLL);
-        return Status;
-    }
+        // Ignore errors to be able to run under a managed host (dotnet-dump).
+        CoInitialize(NULL);
 
+        std::string diasymreaderPath;
+        ArrayHolder<char> szSOSModulePath = new char[MAX_LONGPATH + 1];
+        if (GetModuleFileNameA(g_hInstance, szSOSModulePath, MAX_LONGPATH) == 0)
+        {
+            ExtErr("Error: Failed to get SOS module directory\n");
+            return HRESULT_FROM_WIN32(GetLastError());
+        }
+        diasymreaderPath = szSOSModulePath;
+
+        // Get just the sos module directory
+        size_t lastSlash = diasymreaderPath.rfind(DIRECTORY_SEPARATOR_CHAR_A);
+        if (lastSlash == std::string::npos)
+        {
+            ExtErr("Error: Failed to parse sos module name\n");
+            return E_FAIL;
+        }
+        diasymreaderPath.erase(lastSlash + 1);
+        diasymreaderPath.append(NATIVE_SYMBOL_READER_DLL);
+
+        // We now need a binder object that will take the module and return a 
+        if (FAILED(Status = CreateInstanceFromPath(CLSID_CorSymBinder_SxS, IID_ISymUnmanagedBinder3, diasymreaderPath.c_str(), &g_hmoduleSymBinder, (void**)&g_pSymBinder)))
+        {
+            ExtOut("SOS error: Unable to find the diasymreader module/interface %08x at %s\n", Status, diasymreaderPath.c_str());
+            return Status;
+        }
+        OnUnloadTask::Register(CleanupSymBinder);
+    }
     ToRelease<IDebugSymbols3> spSym3(NULL);
     Status = g_ExtSymbols->QueryInterface(__uuidof(IDebugSymbols3), (void**)&spSym3);
     if (FAILED(Status))
@@ -1090,7 +1178,7 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
     }
 
     // TODO: this should be better integrated with windbg's symbol lookup
-    Status = pSymBinder->GetReaderFromCallback(pMD, pModuleName, symbolPath, 
+    Status = g_pSymBinder->GetReaderFromCallback(pMD, pModuleName, symbolPath, 
         AllowRegistryAccess | AllowSymbolServerAccess | AllowOriginalPathAccess | AllowReferencePathAccess, pCallback, &m_pSymReader);
 
     if (FAILED(Status) && m_pSymReader != NULL)
