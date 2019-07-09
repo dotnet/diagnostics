@@ -197,7 +197,7 @@ if /i %__BuildCrossArch% EQU 1 (
 
     echo Generating Version Header
     set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.csproj" /v:!__Verbosity! /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__CrossCompIntermediatesDir%\_version.h /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
+    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.proj" /v:!__Verbosity! /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__CrossCompIntermediatesDir%\_version.h /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
         exit /b 1
@@ -275,7 +275,7 @@ if %__Build% EQU 1 (
 
     echo Generating Version Header
     set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.csproj" /v:!__Verbosity! /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
+    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.proj" /v:!__Verbosity! /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h /p:Configuration=%__BuildType% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
         exit /b 1

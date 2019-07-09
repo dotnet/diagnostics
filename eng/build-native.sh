@@ -408,7 +408,7 @@ if [ $__Build == true ]; then
     if [[ $__CI == true ]]; then
         echo "Generating Version Source File"
         __GenerateVersionLog="$__LogDir/GenerateVersion.binlog"
-        $__DotNetCli msbuild $__ProjectRoot/eng/CreateVersionFile.csproj /v:$__Verbosity /bl:$__GenerateVersionLog /t:GenerateVersionFiles /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
+        $__DotNetCli msbuild $__ProjectRoot/eng/CreateVersionFile.proj /v:$__Verbosity /bl:$__GenerateVersionLog /t:GenerateVersionFiles /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
         if [ $? != 0 ]; then
             echo "Generating Version Source File FAILED"
             exit 1
