@@ -15,7 +15,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static readonly IReadOnlyDictionary<string, CounterProvider> _knownProviders =
             CreateKnownProviders().ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
 
-
         private static IEnumerable<CounterProvider> CreateKnownProviders()
         {
             yield return new CounterProvider(

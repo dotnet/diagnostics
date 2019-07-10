@@ -38,10 +38,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
             displayLength = new Dictionary<string, int>();
             knownProvidersRowNum = new Dictionary<string, int>();
             unknownProvidersRowNum = new Dictionary<string, int>();
-            leftAlign = 45; // Width of counter names column
+            leftAlign = -1; // Width of counter names column
 
             foreach(CounterProvider provider in KnownData.GetAllProviders())
             {
+                foreach(CounterProfile counterProfile in provider.GetAllCounters())
+                {
+                    if (counterProfile.DisplayName.Length > leftAlign)
+                    {
+                        leftAlign = counterProfile.DisplayName.Length;
+                    }
+                }
                 knownProvidersRowNum[provider.Name] = -1;
             }
         }
@@ -103,7 +110,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
             if (displayPosition.ContainsKey(keyName))
             {
                 (int left, int row) = displayPosition[keyName];
-                int clearLength = displayLength[keyName];
+                string payloadVal = payload.GetValue();
+
+                int clearLength = Math.Max(displayLength[keyName], payloadVal.Length); // Compute how long we need to clear out.
+                displayLength[keyName] = clearLength;
+
                 Console.SetCursorPosition(left, row); 
                 Console.Write(new String(' ', clearLength));
 
@@ -116,7 +127,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     Console.SetCursorPosition(left, row);
                 }
-                Console.Write(payload.GetValue());  
+                Console.Write(payloadVal);
             }
             // Got a payload from a new counter that hasn't been written to the console yet.
             else
