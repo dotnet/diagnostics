@@ -17,6 +17,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private int maxRow;  // Running maximum of row number
         private int maxCol;  // Running maximum of col number
         private int STATUS_ROW; // Row # of where we print the status of dotnet-counters
+        private int leftAlign;
         private bool paused = false;
         private bool initialized = false;
         private Dictionary<string, int> knownProvidersRowNum;
@@ -37,6 +38,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             displayLength = new Dictionary<string, int>();
             knownProvidersRowNum = new Dictionary<string, int>();
             unknownProvidersRowNum = new Dictionary<string, int>();
+            leftAlign = 45; // Width of counter names column
 
             foreach(CounterProvider provider in KnownData.GetAllProviders())
             {
@@ -95,15 +97,25 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             string name = payload.GetName();
             string keyName = CounterNameString(providerName, name);
+            const string indent = "    ";
+            const int indentLength = 4;
             // We already know what this counter is! Just update the value string on the console.
             if (displayPosition.ContainsKey(keyName))
             {
                 (int left, int row) = displayPosition[keyName];
                 int clearLength = displayLength[keyName];
-                Console.SetCursorPosition(left, row);
+                Console.SetCursorPosition(left, row); 
                 Console.Write(new String(' ', clearLength));
 
-                Console.SetCursorPosition(left, row);
+                if (left < leftAlign)
+                {
+                    displayPosition[keyName] = (leftAlign, row);
+                    Console.SetCursorPosition(leftAlign, row);
+                }
+                else
+                {
+                    Console.SetCursorPosition(left, row);
+                }
                 Console.Write(payload.GetValue());  
             }
             // Got a payload from a new counter that hasn't been written to the console yet.
@@ -123,17 +135,19 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                     KnownData.TryGetProvider(providerName, out CounterProvider counterProvider);
                     string displayName = counterProvider.TryGetDisplayName(name);
+                    
                     if (displayName == null)
                     {
                         displayName = payload.GetDisplay();
                     }
                     
-                    int left = displayName.Length + 7; // displayName + " : "
+                    int left = displayName.Length;
+                    string spaces = new String(' ', leftAlign-left-indentLength);
                     int row = maxRow;
                     string val = payload.GetValue();
-                    displayPosition[keyName] = (left, row);
+                    displayPosition[keyName] = (leftAlign, row); 
                     displayLength[keyName] = val.Length;
-                    Console.WriteLine($"    {displayName} : {val}");
+                    Console.WriteLine($"{indent}{displayName}{spaces}{val}");
                     maxRow += 1;
                 }
                 else
@@ -148,16 +162,26 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
 
                     string displayName = payload.GetDisplay();
+                    
                     if (string.IsNullOrEmpty(displayName))
                     {
                         displayName = payload.GetName();
                     }
-                    int left = displayName.Length + 7; // displayName + " : "
+                    
+                    int left = displayName.Length;
+
+                    // If counter name is exceeds position of counter values, move values to the right
+                    if (left+indentLength+4 > leftAlign) // +4 so that the counter value does not start right where the counter name ends
+                    {
+                        leftAlign = left+indentLength+4;
+                    }
+
+                    string spaces = new String(' ', leftAlign-left-indentLength);
                     int row = maxRow;
                     string val = payload.GetValue();
-                    displayPosition[keyName] = (left, row);
+                    displayPosition[keyName] = (leftAlign, row); 
                     displayLength[keyName] = val.Length;
-                    Console.WriteLine($"    {displayName} : {val}");
+                    Console.WriteLine($"{indent}{displayName}{spaces}{val}");
                     maxRow += 1;
                 }
             }
