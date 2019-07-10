@@ -47,6 +47,11 @@ Note: The .NET Core runtime generates traces in the `nettrace` format, and are c
 
 ## Known Caveats
 
+- Perfview/VS aren't showing any callstacks
+
+There was a regression in Preview6 (https://github.com/dotnet/coreclr/issues/25046) that dropped these callstacks. It has since been fixed in daily builds. If you want to demo callstacks you can use either Preview5, Preview7 which will be out soon, or daily builds.
+
+
 - "dotnet-trace used to work but now it's giving me `Unable to create a session`"
 
 Between .NET Core Preview 5 and Preview 6, there were breaking changes in the runtime. To use the Preview 6 version of dotnet-trace, you need to be using it on an application with Preview 6 of the runtime, and the same holds for the other way around - To trace an application using .NET Core Preview 6 or later, you need to use the latest version of dotnet-trace.
