@@ -38,19 +38,20 @@ namespace Microsoft.Diagnostics.Tools.Counters
             displayLength = new Dictionary<string, int>();
             knownProvidersRowNum = new Dictionary<string, int>();
             unknownProvidersRowNum = new Dictionary<string, int>();
-            leftAlign = -1; // Width of counter names column
 
+            int maxNameWidth = -1;
             foreach(CounterProvider provider in KnownData.GetAllProviders())
             {
                 foreach(CounterProfile counterProfile in provider.GetAllCounters())
                 {
-                    if (counterProfile.DisplayName.Length > leftAlign)
+                    if (counterProfile.DisplayName.Length > maxNameWidth)
                     {
-                        leftAlign = counterProfile.DisplayName.Length;
+                        maxNameWidth = counterProfile.DisplayName.Length;
                     }
                 }
                 knownProvidersRowNum[provider.Name] = -1;
             }
+            leftAlign = maxNameWidth + 15;
         }
 
         public void InitializeDisplay()
@@ -114,7 +115,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                 int clearLength = Math.Max(displayLength[keyName], payloadVal.Length); // Compute how long we need to clear out.
                 displayLength[keyName] = clearLength;
-
                 Console.SetCursorPosition(left, row); 
                 Console.Write(new String(' ', clearLength));
 
