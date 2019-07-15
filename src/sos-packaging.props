@@ -1,4 +1,9 @@
-﻿<Project>
+<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+
+    Input:
+        SOSPackagePathPrefix - the nupkg package path prefix. The SOS binaries are added to package relative to this.
+-->
+<Project>
   <PropertyGroup>
     <SOSNETCoreBinaries>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netstandard2.0\publish\*.dll</SOSNETCoreBinaries>
   </PropertyGroup>
