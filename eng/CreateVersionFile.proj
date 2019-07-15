@@ -4,14 +4,7 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
 
-  <Target Name="GenerateVersionFiles" DependsOnTargets="GenerateFileVersionFile;GenerateVersionHeader;GenerateVersionSourceFile" />
-
-  <Target Name="GenerateFileVersionFile" DependsOnTargets="GetAssemblyVersion;AddSourceRevisionToInformationalVersion" Condition="'$(FileVersionFile)' != ''">
-    <ItemGroup>
-      <FileVersionLines Include="$(FileVersion)" />
-    </ItemGroup>
-    <WriteLinesToFile File="$(FileVersionFile)" Lines="@(FileVersionLines)" Overwrite="true" />
-  </Target>
+  <Target Name="GenerateVersionFiles" DependsOnTargets="GenerateVersionHeader;GenerateVersionSourceFile" />
 
   <Target Name="GenerateVersionHeader" DependsOnTargets="GetAssemblyVersion;AddSourceRevisionToInformationalVersion" Condition="'$(NativeVersionHeaderFile)' != '' and '$(GenerateVersionHeader)' == 'true' and !Exists($(NativeVersionHeaderFile))">
 

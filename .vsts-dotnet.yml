@@ -315,12 +315,6 @@ phases:
         targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.arm.Release'
       condition: succeeded()
 
-    # Copy and archive the files for windbg extension gallery.
-
-    - powershell: $(Build.SourcesDirectory)\eng\create-gallery-zip.ps1 $(Build.SourcesDirectory)
-      displayName: Create Extension Gallery Zip File
-      condition: succeeded()
-
     # Linux x64 download, copy and archive
 
     - task: DownloadBuildArtifacts@0
