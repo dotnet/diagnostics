@@ -262,8 +262,12 @@ namespace SOS
                     var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
                     generator = new MachOFileKeyGenerator(s_tracer, machOFile, moduleFilePath);
                 }
-                else
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
+                    var peFile = new PEFile(new StreamAddressSpace(stream), true);
+                    generator = new PEFileKeyGenerator(s_tracer, peFile, moduleFilePath);
+                }
+                else {
                     return;
                 }
 

@@ -17,8 +17,6 @@ In the .NET full/Windows world, we have a myriad of performance counters that ca
 > dotnet tool install --global dotnet-trace --version 1.0.4-preview6.19311.1 
 > ```
 
-Please note, the dotnet-trace tool is version independent but as of right now (preview 5) it requires the 2.1 runtime to be installed to work. This will be fixed moving forward.
-
 
 ### dotnet-dump
 In order to generate core dumps for .net core apps, you can use the dotnet-dump tool. To install the tool, run the following command:
@@ -26,8 +24,6 @@ In order to generate core dumps for .net core apps, you can use the dotnet-dump 
 > ```bash
 > dotnet tool install --global dotnet-dump --version 1.0.4-preview6.19311.1
 > ```
-
-Please note, the dotnet-trace tool is version independent but as of right now (preview 5) it requires the 2.1 runtime to be installed to work. This will be fixed moving forward.
 
 
 ### dotnet-symbol
@@ -38,7 +34,7 @@ In order to debug core dumps, the correct symbols need to be available. The dotn
 > ```
 
 ### perfcollect
-Thet .NET core runtime is instrumented for both perf and LTTng. To facilitate easier collection of both tracing technologies there is a tool called perfcollect. Perfcollect will output the joint trace data into a netperf file that can be analyzed using PerfView on Windows. To install the tool run the following commands:
+Thet .NET core runtime is instrumented for both perf and LTTng. To facilitate easier collection of both tracing technologies there is a tool called perfcollect. Perfcollect will output the joint trace data into a nettrace file that can be analyzed using PerfView on Windows. To install the tool run the following commands:
 
 > ```
 > curl -OL http://aka.ms/perfcollect

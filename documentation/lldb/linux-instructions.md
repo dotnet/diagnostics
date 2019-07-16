@@ -129,7 +129,7 @@ Install the lldb packages:
 
 To launch lldb:
 
-    lldb-3.9
+    lldb-5.0
 
 #### Debian 9 (Stretch) ####
 

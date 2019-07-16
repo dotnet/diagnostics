@@ -7,7 +7,7 @@
     <Description>Diagnostic SOS installer</Description>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
-    <SOSNETCoreBinaries>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netstandard2.0\publish\*.dll</SOSNETCoreBinaries>
+    <SOSPackagePathPrefix>tools/$(TargetFramework)/any</SOSPackagePathPrefix>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,5 +18,5 @@
     <PackageReference Include="System.CommandLine.Experimental" Version="$(SystemCommandLineExperimentalVersion)" />
   </ItemGroup>
 
-  <Import Project="$(MSBuildThisFileDirectory)..\sos-packaging.props" />
+  <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.props" />
 </Project>

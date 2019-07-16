@@ -43,11 +43,11 @@ For analyzing CPU usage, IO, lock contention, allocation rate, etc the investiga
     > dotnet trace collect --process-id 1902
     Recording trace 107MB
     Recording complete
-    Trace complete: ~/trace.netperf
+    Trace complete: ~/trace.nettrace
 
 **Convert a trace to use with speedscope**
 
-    > dotnet trace convert ~/trace.netperf --to-speedscope
+    > dotnet trace convert ~/trace.nettrace --to-speedscope
     Writing:     ~/trace.speedscope.json
     Conversion complete
 
@@ -267,7 +267,7 @@ COLLECT
         Show command line help
 
     -o, --output
-        The output path for the collected trace data. If not specified it defaults to ./trace.netperf
+        The output path for the collected trace data. If not specified it defaults to ./trace.nettrace
 
     --profile
         A named pre-defined set of provider configurations that allows common tracing scenarios to be specified
@@ -295,7 +295,7 @@ COLLECT
         Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
 
     --format
-        The format of the output trace file. The default value is netperf.
+        The format of the output trace file. The default value is nettrace.
 
 
     Examples:
@@ -321,13 +321,13 @@ CONVERT
         using the same base filename as the input file and the extension appropriate for the new format.
 
     --format
-        Specifies the format to convert the netperf file to. Currently, the only valid input is 'speedscope'.
+        Specifies the format to convert the nettrace file to. Currently, the only valid input is 'speedscope'.
 
     trace_file_path
-        The path to the trace file that should be converted. The trace file can be a netperf file. Defaults to 'trace.netperf'.
+        The path to the trace file that should be converted. The trace file can be a nettrace file. Defaults to 'trace.nettrace'.
 
     Examples:
-      > dotnet-trace convert trace.netperf -f speedscope
+      > dotnet-trace convert trace.nettrace -f speedscope
       Writing:       ./trace.speedscope.json
       Conversion complete
 
@@ -633,7 +633,7 @@ Add a command to `dotnet-trace collect` that enables the collection of GC heap s
         Recording trace 107MB
         Recording complete (process exited)
         Packing...
-        Trace complete: ~/trace.netperf.zip
+        Trace complete: ~/trace.nettrace.zip
 
     VERB
 
@@ -663,13 +663,13 @@ Add a command to `dotnet-trace collect` that enables the collection of GC heap s
 
 
         Examples:
-        > dotnet-trace pack trace.netperf
-        Packing:      ./trace.netperf.zip
+        > dotnet-trace pack trace.nettrace
+        Packing:      ./trace.nettrace.zip
         Pack complete
 
-        > dotnet-trace pack --verbose trace.netperf
-        Packing:      /usr/home/noahfalk/trace.netperf.zip
-        Compressing   /usr/home/noahfalk/trace.netperf
+        > dotnet-trace pack --verbose trace.nettrace
+        Packing:      /usr/home/noahfalk/trace.nettrace.zip
+        Compressing   /usr/home/noahfalk/trace.nettrace
         Checking      /usr/bin/dotnet/shared/3.0.170/System.Private.CoreLib.dll
             Not packing symbols - Policy skips Microsoft binary
         Checking      /usr/bin/dotnet/shared/3.0.170/System.Diagnostics.dll

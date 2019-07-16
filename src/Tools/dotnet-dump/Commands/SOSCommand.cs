@@ -1,10 +1,14 @@
-using Microsoft.Diagnostic.Repl;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using Microsoft.Diagnostics.Repl;
 using System;
 using System.CommandLine;
 using System.IO;
 using System.Linq;
 
-namespace Microsoft.Diagnostic.Tools.Dump
+namespace Microsoft.Diagnostics.Tools.Dump
 {
     [Command(Name = "clrstack",         AliasExpansion = "ClrStack",            Help = "Provides a stack trace of managed code only.")]
     [Command(Name = "clrthreads",       AliasExpansion = "Threads",             Help = "List the managed threads running.")]
@@ -37,7 +41,7 @@ namespace Microsoft.Diagnostic.Tools.Dump
     [Command(Name = "histobjfind",      AliasExpansion = "HistObjFind",         Help = "Displays all the log entries that reference an object at the specified address.")]
     [Command(Name = "histroot",         AliasExpansion = "HistRoot",            Help = "Displays information related to both promotions and relocations of the specified root.")]
     [Command(Name = "setsymbolserver",  AliasExpansion = "SetSymbolServer",     Help = "Enables the symbol server support ")]
-    public class SOSCommand : CommandBase
+    internal class SOSCommand : CommandBase
     {
         [Argument(Name = "arguments", Help = "Arguments to SOS command.")]
         public string[] Arguments { get; set; }

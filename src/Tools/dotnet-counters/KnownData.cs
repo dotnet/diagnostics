@@ -15,7 +15,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static readonly IReadOnlyDictionary<string, CounterProvider> _knownProviders =
             CreateKnownProviders().ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
 
-
         private static IEnumerable<CounterProvider> CreateKnownProviders()
         {
             yield return new CounterProvider(
@@ -42,6 +41,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="monitor-lock-contention-count", Description="Monitor Lock Contention Count", DisplayName="Monitor Lock Contention Count / sec" },
                     new CounterProfile{ Name="threadpool-queue-length", Description="ThreadPool Work Items Queue Length", DisplayName="ThreadPool Queue Length" },
                     new CounterProfile{ Name="threadpool-completed-items-count", Description="ThreadPool Completed Work Items Count", DisplayName="ThreadPool Completed Work Items / sec" },
+                    new CounterProfile{ Name="active-timer-count", Description="Active Timers Count", DisplayName="Number of Active Timers" },
                 });
             // TODO: Add more providers (ex. ASP.NET ones)
         }

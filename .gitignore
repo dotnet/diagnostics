@@ -118,3 +118,4 @@ StressLog.txt
 *.etl
 *.etlx
 *.netperf
+*.nettrace

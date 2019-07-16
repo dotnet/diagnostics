@@ -62,7 +62,7 @@ dotnet tool install --global dotnet-counters --version 1.0.4-preview6.19311.1
 
     1. Monitoring all counters from `System.Runtime` at a refresh interval of 3 seconds:
 
-      > dotnet-counters monitor --processId 1902 System.Runtime
+      > dotnet-counters monitor --process-id 1902 System.Runtime
 
     Press p to pause, r to resume, q to quit.
       System.Runtime:
@@ -76,7 +76,7 @@ dotnet tool install --global dotnet-counters --version 1.0.4-preview6.19311.1
 
     2. Monitoring just CPU usage and GC heap size from `System.Runtime` at a refresh interval of 5 seconds:
 
-      > dotnet-counters monitor --processId 1902 System.Runtime[cpu-usage,gc-heap-size,exception-count]
+      > dotnet-counters monitor --process-id 1902 System.Runtime[cpu-usage,gc-heap-size,exception-count]
 
     Press p to pause, r to resume, q to quit.
       System.Runtime:
@@ -86,7 +86,7 @@ dotnet tool install --global dotnet-counters --version 1.0.4-preview6.19311.1
 
     3. Monitoring EventCounter values from user-defined EventSource: (see https://github.com/dotnet/corefx/blob/master/src/System.Diagnostics.Tracing/documentation/EventCounterTutorial.md on how to do this.0)
 
-      > dotnet-counters monitor --processId 1902 Samples-EventCounterDemos-Minimal
+      > dotnet-counters monitor --process-id 1902 Samples-EventCounterDemos-Minimal
 
     Press p to pause, r to resume, q to quit.
         request                                      100

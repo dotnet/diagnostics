@@ -8,6 +8,7 @@
     <Description>Diagnostic dump collect and analyze tool</Description>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <SOSPackagePathPrefix>tools/$(TargetFramework)/any</SOSPackagePathPrefix>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,11 +17,11 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostic.Repl\Microsoft.Diagnostic.Repl.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.Repl\Microsoft.Diagnostics.Repl.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.Tools.RuntimeClient\Microsoft.Diagnostics.Tools.RuntimeClient.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\SOS\SOS.Hosting\SOS.Hosting.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\SOS\SOS.NETCore\SOS.NETCore.csproj" />
   </ItemGroup>
 
-  <Import Project="$(MSBuildThisFileDirectory)..\sos-packaging.props" />
+  <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.props" />
 </Project>

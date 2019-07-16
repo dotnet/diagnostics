@@ -1,11 +1,14 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostic.Repl;
+using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
 using System.CommandLine;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostic.Tools.Dump
+namespace Microsoft.Diagnostics.Tools.Dump
 {
     [Command(Name = "modules", Help = "Displays the native modules in the process.")]
     [CommandAlias(Name = "lm")]
@@ -30,7 +33,6 @@ namespace Microsoft.Diagnostic.Tools.Dump
                     if (module.BuildId != null) {
                         WriteLine("    BuildId:   {0}", string.Concat(module.BuildId.Select((b) => b.ToString("x2"))));
                     }
-                    WriteLine("    IsRuntime: {0}", module.IsRuntime);
                     WriteLine("    IsManaged: {0}", module.IsManaged);
                 }
                 else

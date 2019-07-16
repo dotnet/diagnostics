@@ -297,7 +297,7 @@ vDoOut(BOOL bToConsole, FILE* file, PCSTR Format, ...)
 
     if (bToConsole)
     {
-        g_ExtControl->OutputVaList(DEBUG_OUTPUT_NORMAL, Format, Args);
+        OutputVaList(DEBUG_OUTPUT_NORMAL, Format, Args);
     }
     else
     {

@@ -1,11 +1,14 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostic.Repl;
+using Microsoft.Diagnostics.Repl;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.Linq;
 
-namespace Microsoft.Diagnostic.Tools.Dump
+namespace Microsoft.Diagnostics.Tools.Dump
 {
     [Command(Name = "setthread", Help = "Sets or displays the current thread for the SOS commands.")]
     [CommandAlias(Name = "threads")]

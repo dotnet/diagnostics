@@ -1,13 +1,13 @@
 .NET Core Diagnostics Repo
 ==========================
 
-**Currently under construction**
-
-This repository contains the source code for various .NET Core runtime diagnostic tools. It currently contains SOS, the managed portion of SOS and the lldb SOS plugin. The goals of this repo is to build SOS and the lldb SOS plugin for the portable (glibc based) Linux platform (Centos 7) and the platforms not supported by the portable (musl based) build (Centos 6, Alpine, and macOS) and to test across various indexes in a very large matrix: OSs/distros (Centos 6/7, Ubuntu, Alpine, Fedora, Debian, RHEL 7.2), architectures (x64, x86, arm, arm64), lldb versions (3.9, 4.0, 5.0, 6.0) and .NET Core versions (1.1, 2.0.x, 2.1).
+This repository contains the source code for various .NET Core runtime diagnostic tools. It currently contains SOS, the managed portion of SOS, the lldb SOS plugin and various global diagnostic tools. The goals of this repo is to build SOS and the lldb SOS plugin for the portable (glibc based) Linux platform (Centos 7) and the platforms not supported by the portable (musl based) build (Centos 6, Alpine, and macOS) and to test across various indexes in a very large matrix: OSs/distros (Centos 6/7, Ubuntu, Alpine, Fedora, Debian, RHEL 7.2), architectures (x64, x86, arm, arm64), lldb versions (3.9, 4.0, 5.0, 6.0) and .NET Core versions (1.1, 2.0.x, 2.1).
 
 Another goal to make it easier to obtain a version of lldb (currently 3.9) with scripts and documentation for platforms/distros like Centos, Alpine, Fedora, etc. that by default provide really old versions.
 
 This repo will also allow out of band development of new SOS and lldb plugin features like symbol server support for the .NET Core runtime and solve the source build problem having SOS.NETCore (managed portion of SOS) in the coreclr repo.
+
+See the github release tab for notes on SOS and diagnostic tools releases.
 
 --------------------------
 ## Building the Repository
@@ -63,22 +63,6 @@ Symbol server support - The `setsymbolserver` command enables downloading the sy
 Before executing the "bt" command to dump native frames to load the native symbols (for live debugging only):
 
     (lldb) loadsymbols
-
-## Release Notes
-
-### dotnet-dump
-
-* Does not work on alpine and other MUSL based distros. Issue [#195](https://github.com/dotnet/diagnostics/issues/195).
-* Not supported ARM32 or ARM64. Issue [#168](https://github.com/dotnet/diagnostics/issues/168).
-* Not supported on MacOS.
-* Dump collection (dotnet dump collect) requires SYS\_PTRACE docker capabilities (--cap-add=SYS\_PTRACE or --privileged).
-* Dump analysis (dotnet dump analyze) in on Microsoft SDK Linux docker images throws `Unhandled exception: System.DllNotFoundException: Unable to load shared library 'libdl.so' or one of its dependencies` exception. Issue [#201](https://github.com/dotnet/diagnostics/issues/201). A work around is to install the "libc6-dev" package.
-* Dump analysis on Windows is not supported. Minidump collection is support. Issue [#157](https://github.com/dotnet/diagnostics/issues/157).
-
-### dotnet-sos
-
-* Does not work on alpine and other MUSL based distros. Issue [#195](https://github.com/dotnet/diagnostics/issues/195).
-* Not supported ARM32 or ARM64. Issue [#168](https://github.com/dotnet/diagnostics/issues/168).
 
 ## Useful Links
 

@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
@@ -13,7 +17,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
 {
     public class IpcClient
     {
-        private static string DiagnosticPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnetcore-diagnostic-(\d+)$" : @"^dotnetcore-diagnostic-(\d+)-(\d+)-socket$";
+        private static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
 
         private static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
 
@@ -28,7 +32,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                string pipeName = $"dotnetcore-diagnostic-{processId}";
+                string pipeName = $"dotnet-diagnostic-{processId}";
                 var namedPipe = new NamedPipeClientStream(
                     ".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation);
                 namedPipe.Connect((int)ConnectTimeoutMilliseconds);
@@ -38,7 +42,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
             {
                 string ipcPort = Directory.GetFiles(IpcRootPath) // Try best match.
                     .Select(namedPipe => (new FileInfo(namedPipe)).Name)
-                    .SingleOrDefault(input => Regex.IsMatch(input, $"^dotnetcore-diagnostic-{processId}-(\\d+)-socket$"));
+                    .SingleOrDefault(input => Regex.IsMatch(input, $"^dotnet-diagnostic-{processId}-(\\d+)-socket$"));
                 if (ipcPort == null)
                 {
                     throw new PlatformNotSupportedException($"Process {processId} not running compatible .NET Core runtime");
@@ -53,7 +57,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
         }
 
         /// <summary>
-        /// Sends a single DiagnosticIpc Message to the dotnet process with PID processId.
+        /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId.
         /// </summary>
         /// <param name="processId">The PID of the dotnet process</param>
         /// <param name="message">The DiagnosticsIpc Message to be sent</param>
@@ -68,7 +72,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
         }
 
         /// <summary>
-        /// Sends a single DiagnosticIpc Message to the dotnet process with PID processId
+        /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId
         /// and returns the Stream for reuse in Optional Continuations.
         /// </summary>
         /// <param name="processId">The PID of the dotnet process</param>

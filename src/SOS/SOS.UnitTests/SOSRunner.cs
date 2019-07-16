@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostic.TestHelpers;
+using Microsoft.Diagnostics.TestHelpers;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -730,7 +730,12 @@ public class SOSRunner : IDisposable
         switch (OS.Kind)
         {
             case OSKind.Windows:
-                return NativeDebugger.Cdb;
+                switch (options) {
+                    case Options.LoadDumpWithDotNetDump:
+                        return NativeDebugger.DotNetDump;
+                    default:
+                        return NativeDebugger.Cdb;
+                }
 
             case OSKind.Linux:
             case OSKind.OSX:

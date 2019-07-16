@@ -21,23 +21,18 @@ extern void SOSShutdown();
 //
 WINDBG_EXTENSION_APIS   ExtensionApis;
 
-ULONG PageSize;
-
 OnUnloadTask *OnUnloadTask::s_pUnloadTaskList = NULL;
 
 //
 // Valid for the lifetime of the debug session.
 //
 
-ULONG   TargetMachine;
-BOOL    Connected;
-ULONG   g_TargetClass;
 DWORD_PTR g_filterHint = 0;
 
 PDEBUG_CLIENT         g_ExtClient;    
 PDEBUG_DATA_SPACES2   g_ExtData2;
 PDEBUG_SYMBOLS2       g_ExtSymbols2;
-PDEBUG_ADVANCED3      g_ExtAdvanced3;
+PDEBUG_ADVANCED       g_ExtAdvanced;
 PDEBUG_CLIENT         g_pCallbacksClient;
 
 #else
@@ -97,7 +92,7 @@ ExtQuery(ILLDBServices* services)
 #ifndef FEATURE_PAL
     SOS_ExtQueryFailGo(g_ExtData2, IDebugDataSpaces2);
     SOS_ExtQueryFailGo(g_ExtSymbols2, IDebugSymbols2);
-    SOS_ExtQueryFailGo(g_ExtAdvanced3, IDebugAdvanced3);
+    SOS_ExtQueryFailGo(g_ExtAdvanced, IDebugAdvanced);
 #endif // FEATURE_PAL
     return S_OK;
 
@@ -165,7 +160,7 @@ ExtRelease(void)
 #ifndef FEATURE_PAL
     EXT_RELEASE(g_ExtData2);
     EXT_RELEASE(g_ExtSymbols2);
-    EXT_RELEASE(g_ExtAdvanced3);
+    EXT_RELEASE(g_ExtAdvanced);
     g_ExtClient = NULL;
 #else 
     EXT_RELEASE(g_DebugClient);
@@ -204,6 +199,11 @@ void CleanupEventCallbacks()
 
 bool g_Initialized = false;
 
+bool IsInitializedByDbgEng()
+{
+    return g_Initialized;
+}
+
 extern "C"
 HRESULT
 CALLBACK
@@ -240,7 +240,7 @@ DebugExtensionInitialize(PULONG Version, PULONG Flags)
     }
     
     // Fixes the "Unable to read dynamic function table entries" error messages by disabling the WinDbg security
-    // feature that prevents the loading of unknown out of proc tack walkers.
+    // feature that prevents the loading of unknown out of proc stack walkers.
     DebugControl->Execute(DEBUG_OUTCTL_IGNORE, ".settings set EngineInitialization.VerifyFunctionTableCallbacks=false", 
         DEBUG_EXECUTE_NOT_LOGGED | DEBUG_EXECUTE_NO_REPEAT);
 
@@ -289,69 +289,6 @@ void
 CALLBACK
 DebugExtensionNotify(ULONG Notify, ULONG64 /*Argument*/)
 {
-    //
-    // The first time we actually connect to a target, get the page size
-    //
-
-    if ((Notify == DEBUG_NOTIFY_SESSION_ACCESSIBLE) && (!Connected))
-    {
-        IDebugClient *DebugClient;
-        PDEBUG_DATA_SPACES DebugDataSpaces;
-        PDEBUG_CONTROL DebugControl;
-        HRESULT Hr;
-        ULONG64 Page;
-
-        if ((Hr = DebugCreate(__uuidof(IDebugClient),
-                              (void **)&DebugClient)) == S_OK)
-        {
-            //
-            // Get the page size and PAE enable flag
-            //
-
-            if ((Hr = DebugClient->QueryInterface(__uuidof(IDebugDataSpaces),
-                                       (void **)&DebugDataSpaces)) == S_OK)
-            {
-                if ((Hr = DebugDataSpaces->ReadDebuggerData(
-                    DEBUG_DATA_MmPageSize, &Page,
-                    sizeof(Page), NULL)) == S_OK)
-                {
-                    PageSize = (ULONG)(ULONG_PTR)Page;
-                }
-
-                DebugDataSpaces->Release();
-            }
-            //
-            // Get the architecture type.
-            //
-
-            if ((Hr = DebugClient->QueryInterface(__uuidof(IDebugControl),
-                                                  (void **)&DebugControl)) == S_OK)
-            {
-                if ((Hr = DebugControl->GetActualProcessorType(
-                    &TargetMachine)) == S_OK)
-                {
-                    Connected = TRUE;
-                }
-                ULONG Qualifier;
-                if ((Hr = DebugControl->GetDebuggeeType(&g_TargetClass, &Qualifier)) == S_OK)
-                {
-                }
-
-                DebugControl->Release();
-            }
-
-            DebugClient->Release();
-        }
-    }
-
-
-    if (Notify == DEBUG_NOTIFY_SESSION_INACTIVE)
-    {
-        Connected = FALSE;
-        PageSize = 0;
-        TargetMachine = 0;
-    }
-
     return;
 }
 
@@ -363,30 +300,6 @@ DebugExtensionUninitialize(void)
     // execute all registered cleanup tasks
     OnUnloadTask::Run();
     return;
-}
-
-
-BOOL DllInit(
-    HANDLE /*hModule*/,
-    DWORD  dwReason,
-    DWORD  /*dwReserved*/
-    )
-{
-    switch (dwReason) {
-        case DLL_THREAD_ATTACH:
-            break;
-
-        case DLL_THREAD_DETACH:
-            break;
-
-        case DLL_PROCESS_DETACH:
-            break;
-
-        case DLL_PROCESS_ATTACH:
-            break;
-    }
-
-    return TRUE;
 }
 
 BOOL WINAPI DllMain(HANDLE hInstance, DWORD dwReason, LPVOID lpReserved)

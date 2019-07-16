@@ -7,11 +7,9 @@ The first step is to install the dotnet-sos CLI global tool. This requires at le
     You can invoke the tool using the following command: dotnet-sos
     Tool 'dotnet-sos' (version '1.0.4-preview6.19311.1') was successfully installed.
 
-
-
 The next step is use this global tool to install SOS. 
 
-    $ dotnet sos install
+    $ dotnet-sos install
     Installing SOS to /home/mikem/.dotnet/sos from /home/mikem/.dotnet/tools/.store/dotnet-sos/1.0.4-preview6.19311.1/dotnet-sos/1.0.4-preview6.19311.1/tools/netcoreapp2.1/any/linux-x64
     Creating installation directory...
     Copying files...
@@ -73,7 +71,7 @@ Now any time you run lldb, SOS will automatically be loaded and the symbol downl
 
 The installer needs to be run again:
 
-    $ dotnet sos install
+    $ dotnet-sos install
     Installing SOS to /home/mikem/.dotnet/sos from /home/mikem/.dotnet/tools/.store/dotnet-sos/1.0.4-preview6.19311.1/dotnet-sos/1.0.4-preview6.19311.1/tools/netcoreapp2.1/any/linux-x64
     Installing over existing installation...
     Creating installation directory...
@@ -86,7 +84,7 @@ The installer needs to be run again:
 
 To uninstall and remove the lldb configuration run this command:
 
-    $ dotnet sos uninstall
+    $ dotnet-sos uninstall
     Uninstalling SOS from /home/mikem/.dotnet/sos
     Reverting /home/mikem/.lldbinit file - LLDB will no longer load SOS at startup
     SOS uninstall succeeded

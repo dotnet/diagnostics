@@ -26,6 +26,7 @@ namespace X86GCDump
 #define DAC_ARG(x)
 #define CONTRACTL_END
 #define LIMITED_METHOD_CONTRACT
+#undef NOTHROW
 #define NOTHROW
 #define GC_NOTRIGGER
 #define SUPPORTS_DAC

@@ -1,4 +1,8 @@
-using Microsoft.Diagnostic.Repl;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
 using SOS;
 using System;
@@ -6,11 +10,12 @@ using System.CommandLine;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostic.Tools.Dump
+namespace Microsoft.Diagnostics.Tools.Dump
 {
     public class Analyzer
     {
@@ -29,7 +34,8 @@ namespace Microsoft.Diagnostic.Tools.Dump
         public Analyzer()
         {
             _consoleProvider = new ConsoleProvider();
-            _commandProcessor = new CommandProcessor(_consoleProvider, new Assembly[] { typeof(Analyzer).Assembly });
+            Type type = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? typeof(SOSCommandForWindows) : typeof(SOSCommand);
+            _commandProcessor = new CommandProcessor(_consoleProvider, new Assembly[] { typeof(Analyzer).Assembly }, new Type[] { type });
             _commandProcessor.AddService(_consoleProvider);
         }
 
@@ -61,11 +67,8 @@ namespace Microsoft.Diagnostic.Tools.Dump
                     };
                     _commandProcessor.AddService(analyzeContext);
 
-                    // Automatically enable symbol server support on Linux and MacOS
-                    //if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    {
-                        SymbolReader.InitializeSymbolStore(logging: false, msdl: true, symweb: false, symbolServerPath: null, symbolCachePath: null, windowsSymbolPath: null);
-                    }
+                    // Automatically enable symbol server support
+                    SymbolReader.InitializeSymbolStore(logging: false, msdl: true, symweb: false, symbolServerPath: null, symbolCachePath: null, windowsSymbolPath: null);
 
                     // Run the commands from the dotnet-dump command line
                     if (command != null)
