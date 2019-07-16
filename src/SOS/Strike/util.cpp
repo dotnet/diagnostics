@@ -34,12 +34,7 @@
 #define STRESS_LOG_READONLY
 #include "stresslog.h"
 
-#ifndef FEATURE_PAL
-#define MAX_SYMBOL_LEN 4096
-#define SYM_BUFFER_SIZE (sizeof(IMAGEHLP_SYMBOL) + MAX_SYMBOL_LEN)
-char symBuffer[SYM_BUFFER_SIZE];
-PIMAGEHLP_SYMBOL sym = (PIMAGEHLP_SYMBOL) symBuffer;
-#else
+#ifdef FEATURE_PAL
 #include <sys/stat.h>
 #include <dlfcn.h>
 #endif // !FEATURE_PAL
@@ -4805,28 +4800,44 @@ size_t CountHexCharacters(CLRDATA_ADDRESS val)
     return ret;
 } 
 
+// SOS is single threaded so a global buffer doesn't need any locking
+char g_printBuffer[8192];
+
+//---------------------------------------------------------------------
+// Because debuggers and hosts SOS runs on now output formatting always
+// happens with the C++ runtime functions and not dbgeng. This means
+// the special dbgeng formatting charaters are not supported: %N, %I,
+// %ma, %mu, %msa, %msu, %y, %ly and %p takes an architecture size 
+// pointer (size_t) instead of always a 64bit one.
+//---------------------------------------------------------------------
+
 HRESULT 
 OutputVaList(
     ULONG mask,
     PCSTR format,
     va_list args)
 {
-#ifndef FEATURE_PAL
-    if (IsInitializedByDbgEng())
+    int length = _vsnprintf_s((char* const)&g_printBuffer, sizeof(g_printBuffer), _TRUNCATE, format, args);
+    if (length > 0)
     {
-        return g_ExtControl->OutputVaList(DEBUG_OUTPUT_NORMAL, format, args);
+        return g_ExtControl->OutputVaList(mask, (char* const)&g_printBuffer, args);
     }
-    else
-#endif
+    return E_FAIL;
+}
+
+HRESULT 
+ControlledOutputVaList(
+    ULONG outputControl,
+    ULONG mask,
+    PCSTR format,
+    va_list args)
+{
+    int length = _vsnprintf_s((char* const)&g_printBuffer, sizeof(g_printBuffer), _TRUNCATE, format, args);
+    if (length > 0)
     {
-        ArrayHolder<char> str = new char[8192];
-        int length = _vsnprintf_s(str, 8192, _TRUNCATE, format, args);
-        if (length > 0)
-        {
-            return g_ExtControl->OutputVaList(DEBUG_OUTPUT_NORMAL, str, args);
-        }
-        return E_FAIL;
+        return g_ExtControl->ControlledOutputVaList(outputControl, mask, (char* const)&g_printBuffer, args);
     }
+    return E_FAIL;
 }
 
 HRESULT 
@@ -4870,13 +4881,11 @@ void DMLOut(PCSTR format, ...)
     va_start(args, format);
     ExtOutIndent();
 
-#ifndef FEATURE_PAL
     if (IsDMLEnabled() && !Output::IsDMLExposed())
     {
-        g_ExtControl->ControlledOutputVaList(DEBUG_OUTCTL_AMBIENT_DML, DEBUG_OUTPUT_NORMAL, format, args);
+        ControlledOutputVaList(DEBUG_OUTCTL_AMBIENT_DML, DEBUG_OUTPUT_NORMAL, format, args);
     }
     else
-#endif
     {
         OutputVaList(DEBUG_OUTPUT_NORMAL, format, args);
     }
@@ -4886,7 +4895,6 @@ void DMLOut(PCSTR format, ...)
 
 void IfDMLOut(PCSTR format, ...)
 {
-#ifndef FEATURE_PAL
     if (Output::IsOutputSuppressed() || !IsDMLEnabled())
         return;
 
@@ -4896,7 +4904,6 @@ void IfDMLOut(PCSTR format, ...)
     ExtOutIndent();
     g_ExtControl->ControlledOutputVaList(DEBUG_OUTCTL_AMBIENT_DML, DEBUG_OUTPUT_NORMAL, format, args);
     va_end(args);
-#endif
 }
 
 void ExtOut(PCSTR Format, ...)

@@ -2,15 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
+using Microsoft.SymbolStore;
+using Microsoft.SymbolStore.KeyGenerators;
 using SOS;
 using System;
+using System.Collections.Generic;
 using System.CommandLine;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,8 +23,12 @@ namespace Microsoft.Diagnostics.Tools.Dump
 {
     public class Analyzer
     {
+        private readonly ServiceProvider _serviceProvider;
         private readonly ConsoleProvider _consoleProvider;
         private readonly CommandProcessor _commandProcessor;
+        private string _dacFilePath;
+
+        private static string s_tempDirectory;
 
         /// <summary>
         /// Enable the assembly resolver to get the right SOS.NETCore version (the one
@@ -33,10 +41,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         public Analyzer()
         {
+            _serviceProvider = new ServiceProvider();
             _consoleProvider = new ConsoleProvider();
             Type type = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? typeof(SOSCommandForWindows) : typeof(SOSCommand);
-            _commandProcessor = new CommandProcessor(_consoleProvider, new Assembly[] { typeof(Analyzer).Assembly }, new Type[] { type });
-            _commandProcessor.AddService(_consoleProvider);
+            _commandProcessor = new CommandProcessor(_serviceProvider, new Assembly[] { typeof(Analyzer).Assembly }, new Type[] { type });
         }
 
         public async Task<int> Analyze(FileInfo dump_path, string[] command)
@@ -61,11 +69,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     _consoleProvider.Out.WriteLine("Ready to process analysis commands. Type 'help' to list available commands or 'help [command]' to get detailed help on a command.");
                     _consoleProvider.Out.WriteLine("Type 'quit' or 'exit' to exit the session.");
 
-                    // Create common analyze context for commands
-                    var analyzeContext = new AnalyzeContext(_consoleProvider, target) {
-                        CurrentThreadId = unchecked((int)target.DataReader.EnumerateAllThreads().FirstOrDefault())
-                    };
-                    _commandProcessor.AddService(analyzeContext);
+                    // Add all the services needed by commands and other services
+                    AddServices(target);
 
                     // Automatically enable symbol server support
                     SymbolReader.InitializeSymbolStore(logging: false, msdl: true, symweb: false, symbolServerPath: null, symbolCachePath: null, windowsSymbolPath: null);
@@ -79,6 +84,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     }
 
                     // Start interactive command line processing
+                    var analyzeContext = _serviceProvider.GetService<AnalyzeContext>();
                     await _consoleProvider.Start(async (string commandLine, CancellationToken cancellation) => {
                         analyzeContext.CancellationToken = cancellation;
                         await _commandProcessor.Parse(commandLine);
@@ -100,6 +106,117 @@ namespace Microsoft.Diagnostics.Tools.Dump
             }
 
             return 0;
+        }
+
+        /// <summary>
+        /// Add all the services needed by commands
+        /// </summary>
+        private void AddServices(DataTarget target)
+        {
+            _serviceProvider.AddService(target);
+            _serviceProvider.AddService<IConsole>(_consoleProvider);
+            _serviceProvider.AddService(_consoleProvider);
+            _serviceProvider.AddService(_commandProcessor);
+            _serviceProvider.AddServiceFactory(typeof(IHelpBuilder), _commandProcessor.CreateHelpBuilder);
+
+            // Create common analyze context for commands
+            var analyzeContext = new AnalyzeContext() {
+                CurrentThreadId = unchecked((int)target.DataReader.EnumerateAllThreads().FirstOrDefault())
+            };
+            _serviceProvider.AddService(analyzeContext);
+
+            // Add the register, SOSHost and ClrRuntime services
+            var registerService = new RegisterService(target);
+            _serviceProvider.AddService(registerService);
+
+            _serviceProvider.AddServiceFactory(typeof(ClrRuntime), () => CreateRuntime(target));
+
+            _serviceProvider.AddServiceFactory(typeof(SOSHost), () => {
+                var sosHost = new SOSHost(_serviceProvider);
+                sosHost.InitializeSOSHost(s_tempDirectory, _dacFilePath, dbiFilePath: null);
+                return sosHost;
+            });
+        }
+
+        /// <summary>
+        /// ClrRuntime service factory
+        /// </summary>
+        private ClrRuntime CreateRuntime(DataTarget target)
+        {
+            ClrRuntime runtime;
+            if (target.ClrVersions.Count != 1) {
+                throw new InvalidOperationException("More or less than 1 CLR version is present");
+            }
+            ClrInfo clrInfo = target.ClrVersions[0];
+            string dacFilePath = GetDacFile(clrInfo);
+            try
+            {
+                runtime = clrInfo.CreateRuntime(dacFilePath);
+            }
+            catch (DllNotFoundException ex)
+            {
+                // This is a workaround for the Microsoft SDK docker images. Can fail when clrmd uses libdl.so 
+                // to create a symlink to and load the DAC module.
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    throw new DllNotFoundException("Problem initializing CLRMD. Try installing libc6-dev (apt-get install libc6-dev) to work around this problem.", ex);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+            return runtime;
+        }
+
+        private string GetDacFile(ClrInfo clrInfo)
+        {
+            if (_dacFilePath == null)
+            {
+                string dac = clrInfo.LocalMatchingDac;
+                if (dac != null && File.Exists(dac))
+                {
+                    _dacFilePath = dac;
+                }
+                else if (SymbolReader.IsSymbolStoreEnabled())
+                {
+                    string dacFileName = Path.GetFileName(dac ?? clrInfo.DacInfo.FileName);
+                    if (dacFileName != null)
+                    {
+                        SymbolStoreKey key = null;
+
+                        if (clrInfo.ModuleInfo.BuildId != null)
+                        {
+                            IEnumerable<SymbolStoreKey> keys = ELFFileKeyGenerator.GetKeys(
+                                KeyTypeFlags.ClrKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId, symbolFile: false, symbolFileName: null);
+
+                            key = keys.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
+                        }
+                        else
+                        {
+                            // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
+                            key = PEFileKeyGenerator.GetKey(dacFileName, clrInfo.ModuleInfo.TimeStamp, clrInfo.ModuleInfo.FileSize);
+                        }
+
+                        if (key != null)
+                        {
+                            if (s_tempDirectory == null)
+                            {
+                                int processId = Process.GetCurrentProcess().Id;
+                                s_tempDirectory = Path.Combine(Path.GetTempPath(), "analyze" + processId.ToString());
+                            }
+                            // Now download the DAC module from the symbol server
+                            _dacFilePath = SymbolReader.GetSymbolFile(key, s_tempDirectory);
+                        }
+                    }
+                }
+
+                if (_dacFilePath == null)
+                {
+                    throw new FileNotFoundException("Could not find matching DAC for this runtime: {0}", clrInfo.ModuleInfo.FileName);
+                }
+            }
+            return _dacFilePath;
         }
     }
 }

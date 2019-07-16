@@ -41,6 +41,9 @@ extern "C" {
 // Symbol messages, such as for !sym noisy.
 #define DEBUG_OUTPUT_SYMBOLS           0x00000200
 
+#define DEBUG_OUTCTL_DML               0x00000020
+#define DEBUG_OUTCTL_AMBIENT_DML       0xfffffffe
+
 // Execute and ExecuteCommandFile flags.
 // These flags only apply to the command
 // text itself; output from the executed

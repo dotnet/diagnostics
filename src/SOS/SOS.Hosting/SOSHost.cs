@@ -2,11 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Collections.Generic;
+using System.CommandLine;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -43,7 +45,7 @@ namespace SOS
             bool symbolStoreEnabled);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate ulong GetExpressionDelegate(
+        private delegate UIntPtr GetExpressionDelegate(
             [In, MarshalAs(UnmanagedType.LPStr)] string expression);
 
         private const string SOSInitialize = "SOSInitializeByHost";
@@ -149,11 +151,11 @@ namespace SOS
         };
 
         internal readonly IDataReader DataReader;
-        internal readonly ISOSHostContext SOSHostContext;
+        internal readonly AnalyzeContext AnalyzeContext;
+        internal readonly RegisterService RegisterService;
+        internal readonly IConsole Console;
 
         private static readonly string s_coreclrModuleName;
-        private static readonly Dictionary<string, int> s_registersByName;
-        private static readonly int[] s_registerOffsets;
 
         private readonly COMCallableIUnknown _ccw;  
         private readonly IntPtr _interface;
@@ -176,23 +178,6 @@ namespace SOS
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
                 s_coreclrModuleName = "libcoreclr.dylib";
             }
-
-            // TODO: Support other architectures
-            Type contextType = typeof(AMD64Context);
-            var registerNames = new Dictionary<string, int>();
-            var offsets = new List<int>();
-            int index = 0;
-
-            FieldInfo[] fields = contextType.GetFields(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic);
-            foreach (FieldInfo field in fields) {
-                registerNames.Add(field.Name.ToLower(), index);
-
-                FieldOffsetAttribute attribute = field.GetCustomAttributes<FieldOffsetAttribute>(inherit: false).Single();
-                offsets.Insert(index, attribute.Value);
-                index++;
-            }
-            s_registersByName = registerNames;
-            s_registerOffsets = offsets.ToArray();
         }
 
         /// <summary>
@@ -203,10 +188,14 @@ namespace SOS
         /// <summary>
         /// Create an instance of the hosting class
         /// </summary>
-        public SOSHost(IDataReader dataReader, ISOSHostContext context)
+        public SOSHost(IServiceProvider serviceProvider)
         {
-            DataReader = dataReader;
-            SOSHostContext = context;
+            DataTarget dataTarget = serviceProvider.GetService<DataTarget>();
+            DataReader = dataTarget.DataReader;
+            Console = serviceProvider.GetService<IConsole>();
+            AnalyzeContext = serviceProvider.GetService<AnalyzeContext>();
+            RegisterService = serviceProvider.GetService<RegisterService>();
+
             string rid = InstallHelper.GetRid();
             SOSPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -325,23 +314,23 @@ namespace SOS
 
         #region Reverse PInvoke Implementations
 
-        internal static ulong GetExpression(
+        internal static UIntPtr GetExpression(
             string expression)
         {
             if (expression != null)
             {
                 if (ulong.TryParse(expression.Replace("0x", ""), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ulong result))
                 {
-                    return result;
+                    return new UIntPtr(result);
                 }
             }
-            return 0;
+            return UIntPtr.Zero;
         }
 
         internal int GetInterrupt(
             IntPtr self)
         {
-            return SOSHostContext.CancellationToken.IsCancellationRequested ? S_OK : E_FAIL;
+            return AnalyzeContext.CancellationToken.IsCancellationRequested ? S_OK : E_FAIL;
         }
 
         internal int OutputVaList(
@@ -353,7 +342,7 @@ namespace SOS
             try
             {
                 // The text has already been formated by sos
-                SOSHostContext.Write(format);
+                Console.Out.Write(format);
             }
             catch (OperationCanceledException)
             {
@@ -401,7 +390,10 @@ namespace SOS
                     *type = IMAGE_FILE_MACHINE.I386;
                     break;
                 case Microsoft.Diagnostics.Runtime.Architecture.Arm:
-                    *type = IMAGE_FILE_MACHINE.ARM;
+                    *type = IMAGE_FILE_MACHINE.THUMB2;
+                    break;
+                case Microsoft.Diagnostics.Runtime.Architecture.Arm64:
+                    *type = IMAGE_FILE_MACHINE.ARM64;
                     break;
                 default:
                     *type = IMAGE_FILE_MACHINE.UNKNOWN;
@@ -706,7 +698,7 @@ namespace SOS
             IntPtr context,
             uint contextSize)
         {
-            uint threadId = (uint)SOSHostContext.CurrentThreadId;
+            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
             if (!DataReader.GetThreadContext(threadId, uint.MaxValue, contextSize, context)) {
                 return E_FAIL;
             }
@@ -754,7 +746,7 @@ namespace SOS
             IntPtr self,
             out uint id)
         {
-            return GetThreadIdBySystemId(self, (uint)SOSHostContext.CurrentThreadId, out id);
+            return GetThreadIdBySystemId(self, (uint)AnalyzeContext.CurrentThreadId, out id);
         }
 
         internal int SetCurrentThreadId(
@@ -764,7 +756,7 @@ namespace SOS
             try
             {
                 unchecked {
-                    SOSHostContext.CurrentThreadId = (int)DataReader.EnumerateAllThreads().ElementAt((int)id);
+                    AnalyzeContext.CurrentThreadId = (int)DataReader.EnumerateAllThreads().ElementAt((int)id);
                 }
             }
             catch (ArgumentOutOfRangeException)
@@ -778,7 +770,7 @@ namespace SOS
             IntPtr self,
             out uint sysId)
         {
-            sysId = (uint)SOSHostContext.CurrentThreadId;
+            sysId = (uint)AnalyzeContext.CurrentThreadId;
             return S_OK;
         }
 
@@ -834,7 +826,7 @@ namespace SOS
             IntPtr self,
             ulong* offset)
         {
-            uint threadId = (uint)SOSHostContext.CurrentThreadId;
+            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
             ulong teb = DataReader.GetThreadTeb(threadId);
             Write(offset, teb);
             return S_OK;
@@ -844,24 +836,21 @@ namespace SOS
             IntPtr self,
             out ulong offset)
         {
-            // TODO: Support other architectures
-            return GetRegister("rip", out offset);
+            return GetRegister(RegisterService.InstructionPointerIndex, out offset);
         }
 
         internal int GetStackOffset(
             IntPtr self,
             out ulong offset)
         {
-            // TODO: Support other architectures
-            return GetRegister("rsp", out offset);
+            return GetRegister(RegisterService.StackPointerIndex, out offset);
         }
 
         internal int GetFrameOffset(
             IntPtr self,
             out ulong offset)
         {
-            // TODO: Support other architectures
-            return GetRegister("rbp", out offset);
+            return GetRegister(RegisterService.FramePointerIndex, out offset);
         }
 
         internal int GetIndexByName(
@@ -869,7 +858,7 @@ namespace SOS
             string name,
             out uint index)
         {
-            if (!s_registersByName.TryGetValue(name, out int value)) {
+            if (RegisterService.GetRegisterIndexByName(name, out int value)) {
                 index = 0;
                 return E_INVALIDARG;
             }
@@ -882,46 +871,32 @@ namespace SOS
             uint register,
             out DEBUG_VALUE value)
         {
-            return GetRegister((int)register, out value);
+            int hr = GetRegister((int)register, out ulong offset);
+            value = new DEBUG_VALUE {
+                Type = DEBUG_VALUE_TYPE.INT64,
+                I64 = offset
+            };
+            return hr;
         }
 
-        internal unsafe int GetRegister(
+        internal int GetRegister(
             string register,
             out ulong value)
         {
             value = 0;
-            if (!s_registersByName.TryGetValue(register, out int index)) {
+            if (!RegisterService.GetRegisterIndexByName(register, out int index)) {
                 return E_INVALIDARG;
             }
-            int hr = GetRegister(index, out DEBUG_VALUE debugValue);
-            if (hr != S_OK) {
-                return hr;
-            }
-            // TODO: Support other architectures
-            value = debugValue.I64;
-            return S_OK;
+            return GetRegister(index, out value);
         }
 
-        internal unsafe int GetRegister(
+        internal int GetRegister(
             int index, 
-            out DEBUG_VALUE value)
+            out ulong value)
         {
-            value = new DEBUG_VALUE();
-
-            if (index >= s_registerOffsets.Length) {
-                return E_INVALIDARG;
-            }
-            uint threadId = (uint)SOSHostContext.CurrentThreadId;
-
-            // TODO: Support other architectures
-            byte[] buffer = new byte[AMD64Context.Size];
-            fixed (byte* ptr = buffer)
-            {
-                if (!DataReader.GetThreadContext(threadId, uint.MaxValue, (uint)AMD64Context.Size, new IntPtr(ptr))) {
-                    return E_FAIL;
-                }
-                int offset = s_registerOffsets[index];
-                value.I64 = *((ulong*)(ptr + offset));
+            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
+            if (!RegisterService.GetRegisterValue(threadId, index, out value)) {
+                return E_FAIL;
             }
             return S_OK;
         }

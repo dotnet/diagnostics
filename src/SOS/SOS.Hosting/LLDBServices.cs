@@ -152,9 +152,11 @@ namespace SOS
         int GetValueByName(
             IntPtr self,
             string name,
-            out ulong value)
+            out UIntPtr value)
         {
-            return _soshost.GetRegister(name, out value);
+            int hr = _soshost.GetRegister(name, out ulong register);
+            value = new UIntPtr(register);
+            return hr;
         }
 
         #endregion 
@@ -202,7 +204,7 @@ namespace SOS
             IntPtr self);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate ulong GetExpressionDelegate(
+        private delegate UIntPtr GetExpressionDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string text);
 
@@ -434,7 +436,7 @@ namespace SOS
         private delegate int GetValueByNameDelegate(
             IntPtr self,
             [In, MarshalAs(UnmanagedType.LPStr)] string name,
-            out ulong value);
+            out UIntPtr value);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate int GetInstructionOffsetDelegate(
