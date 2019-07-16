@@ -25,8 +25,9 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
 
     public enum EventPipeCommandId : byte
     {
-        StopTracing    = 0x01,
-        CollectTracing = 0x02,
+        StopTracing     = 0x01,
+        CollectTracing  = 0x02,
+        CollectTracing2 = 0x03,
     }
 
     public enum DumpCommandId : byte

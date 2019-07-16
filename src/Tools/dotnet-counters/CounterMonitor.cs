@@ -95,13 +95,39 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 try
                 {
-                    EventPipeClient.StopTracing(_processId, _sessionId);    
+                    EventPipeClient.StopTracing(_processId, _sessionId);
                 }
                 catch (Exception) {} // Swallow all exceptions for now.
                 
                 console.Out.WriteLine($"Complete");
                 return 1;
             }
+        }
+
+        // Use EventPipe CollectTracing2 command to start monitoring. This may throw.
+        private void RequestTracingV2(string providerString)
+        {
+            var configuration = new SessionConfigurationV2(
+                                        circularBufferSizeMB: 1000,
+                                        format: EventPipeSerializationFormat.NetTrace,
+                                        requestRundown: false,
+                                        providers: Trace.Extensions.ToProviders(providerString));
+            var binaryReader = EventPipeClient.CollectTracing2(_processId, configuration, out _sessionId);
+            EventPipeEventSource source = new EventPipeEventSource(binaryReader);
+            source.Dynamic.All += Dynamic_All;
+            source.Process();
+        }
+        // Use EventPipe CollectTracing command to start monitoring. This may throw.
+        private void RequestTracingV1(string providerString)
+        {
+            var configuration = new SessionConfiguration(
+                                        circularBufferSizeMB: 1000,
+                                        format: EventPipeSerializationFormat.NetTrace,
+                                        providers: Trace.Extensions.ToProviders(providerString));
+            var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
+            EventPipeEventSource source = new EventPipeEventSource(binaryReader);
+            source.Dynamic.All += Dynamic_All;
+            source.Process();
         }
 
         private async Task<int> StartMonitor()
@@ -174,15 +200,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
             Task monitorTask = new Task(() => {
                 try
                 {
-                    var configuration = new SessionConfiguration(
-                        circularBufferSizeMB: 1000,
-                        format: EventPipeSerializationFormat.NetTrace,
-                        providers: Trace.Extensions.ToProviders(providerString));
-
-                    var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
-                    EventPipeEventSource source = new EventPipeEventSource(binaryReader);
-                    source.Dynamic.All += Dynamic_All;
-                    source.Process();
+                    RequestTracingV2(providerString);
+                }
+                catch (EventPipeUnknownCommandException)
+                {
+                    // If unknown command exception is thrown, it's likely the app being monitored is running an older version of runtime that doesn't support CollectTracingV2. Try again with V1.
+                    RequestTracingV1(providerString);
                 }
                 catch (Exception ex)
                 {

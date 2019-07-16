@@ -17,6 +17,33 @@ using System.Text.RegularExpressions;
 
 namespace Microsoft.Diagnostics.Tools.RuntimeClient
 {
+    public enum EventPipeErrorCode : uint
+    {
+        BAD_ENCODING    = 0x80131384,
+        UNKNOWN_COMMAND = 0x80131385,
+        UNKNOWN_MAGIC   = 0x80131386,
+        UNKNOWN_ERROR   = 0x80131387
+    }
+
+    public class EventPipeBadEncodingException : Exception
+    {
+        public EventPipeBadEncodingException(string msg) : base(msg) {}
+    }
+    public class EventPipeUnknownCommandException : Exception
+    {
+        public EventPipeUnknownCommandException(string msg) : base(msg) {}
+    }
+
+    public class EventPipeUnknownMagicException : Exception
+    {
+        public EventPipeUnknownMagicException(string msg) : base(msg) {}
+    }
+
+    public class EventPipeUnknownErrorException : Exception
+    {
+        public EventPipeUnknownErrorException(string msg) : base(msg) {}
+    }
+
     public static class EventPipeClient
     {
         private static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
@@ -67,6 +94,29 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             return stream;
         }
 
+        public static Stream CollectTracing2(int processId, SessionConfigurationV2 configuration, out ulong sessionId)
+        {
+            sessionId = 0;
+            var message = new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.CollectTracing2, configuration.Serialize());
+            var stream = IpcClient.SendMessage(processId, message, out var response);
+
+            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
+            {
+                case DiagnosticsServerCommandId.OK:
+                    sessionId = BitConverter.ToUInt64(response.Payload);
+                    break;
+                case DiagnosticsServerCommandId.Error:
+                    // bad...
+                    uint hr = BitConverter.ToUInt32(response.Payload);
+                    Exception ex = ConvertHRToException(hr, $"Session start FAILED 0x{hr:X8}");
+                    throw ex;
+                default:
+                    break;
+            }
+
+            return stream;
+        }
+
         /// <summary>
         /// Turn off EventPipe logging session for the specified process Id.
         /// </summary>
@@ -90,6 +140,26 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                     return 0;
                 default:
                     return 0;
+            }
+        }
+
+        private static Exception ConvertHRToException(uint hr, string msg)
+        {
+            if (hr == (uint)EventPipeErrorCode.BAD_ENCODING)
+            {
+                return new EventPipeBadEncodingException(msg);
+            }
+            else if (hr == (uint)EventPipeErrorCode.UNKNOWN_COMMAND)
+            {
+                return new EventPipeUnknownCommandException(msg);
+            }
+            else if (hr == (uint)EventPipeErrorCode.UNKNOWN_MAGIC)
+            {
+                return new EventPipeUnknownMagicException(msg);
+            }
+            else
+            {
+                return new EventPipeUnknownErrorException(msg);
             }
         }
     }
