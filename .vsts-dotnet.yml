@@ -250,7 +250,7 @@ phases:
       displayName: Copy Windows x64 Artifacts
       inputs:
         sourceFolder: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.x64.Release'
-        contents: 'sos.dll'
+        contents: ?(sos.dll|Microsoft.DiaSymReader.Native.amd64.dll)
         targetFolder: '$(Build.SourcesDirectory)/artifacts/Windows_NT.x64.Release'
       condition: succeeded()
 
@@ -276,7 +276,7 @@ phases:
       displayName: Copy Windows x86 Artifacts
       inputs:
         sourceFolder: '$(System.ArtifactsDirectory)/Windows_x86_Release'
-        contents: 'sos.dll'
+        contents: ?(sos.dll|Microsoft.DiaSymReader.Native.x86.dll)
         targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.x86.Release'
       condition: succeeded()
 
@@ -302,7 +302,7 @@ phases:
       displayName: Copy Windows Arm Artifacts
       inputs:
         sourceFolder: '$(System.ArtifactsDirectory)/Windows_arm_Release'
-        contents: 'sos.dll'
+        contents: ?(sos.dll|Microsoft.DiaSymReader.Native.arm.dll)
         targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.arm.Release'
       condition: succeeded()
 
@@ -313,12 +313,6 @@ phases:
         contents: '*.dll'
         overWrite: true
         targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.arm.Release'
-      condition: succeeded()
-
-    # Copy and archive the files for windbg extension gallery.
-
-    - powershell: $(Build.SourcesDirectory)\eng\create-gallery-zip.ps1 $(Build.SourcesDirectory)
-      displayName: Create Extension Gallery Zip File
       condition: succeeded()
 
     # Linux x64 download, copy and archive
@@ -460,7 +454,7 @@ phases:
         /p:DotNetSignType=$(SignType) 
         /p:DotNetPublishBlobFeedKey=$(dotnetfeed-storage-access-key-1) 
         /p:DotNetPublishBlobFeedUrl=$(_PublishBlobFeedUrl)
-        /p:DotNetPublishToBlobFeed=true
+        /p:DotNetPublishToBlobFeed=$(PublishPackages)
         /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
         /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
         /p:OfficialBuildId=$(BUILD.BUILDNUMBER)

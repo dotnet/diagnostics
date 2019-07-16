@@ -15,7 +15,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
         /// <summary>
         /// Request type.
         /// </summary>
-        public DiagnosticMessageType RequestType;
+        public DiagnosticsMessageType RequestType;
 
         /// <summary>
         /// Remote process Id.

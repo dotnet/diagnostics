@@ -47,6 +47,10 @@ LPCSTR g_dacFilePath = nullptr;
 LPCSTR g_dbiFilePath = nullptr;
 LPCSTR g_tmpPath = nullptr;
 SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
+#ifndef FEATURE_PAL
+HMODULE g_hmoduleSymBinder = nullptr;
+ISymUnmanagedBinder3 *g_pSymBinder = nullptr;
+#endif
 
 #ifdef FEATURE_PAL
 #define TPALIST_SEPARATOR_STR_A ":"
@@ -256,7 +260,6 @@ static HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
     }
     if (GetFileAttributesA(szModuleName) == INVALID_FILE_ATTRIBUTES)
     {
-        ExtErr("Error: coreclr module name doesn't exists\n");
         return HRESULT_FROM_WIN32(GetLastError());
     }
     coreClrDirectory = szModuleName;
@@ -269,6 +272,26 @@ static HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
     }
     coreClrDirectory.assign(coreClrDirectory, 0, lastSlash);
 #endif
+    return S_OK;
+}
+
+/**********************************************************************\
+ * Returns the coreclr module/runtime directory of the target.
+\**********************************************************************/
+HRESULT GetCoreClrDirectory(LPWSTR modulePath, int modulePathSize)
+{
+    std::string coreclrDirectory;
+    HRESULT hr = GetCoreClrDirectory(coreclrDirectory);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    int length = MultiByteToWideChar(CP_ACP, 0, coreclrDirectory.c_str(), -1, modulePath, modulePathSize);
+    if (0 >= length)
+    {
+        ExtErr("MultiByteToWideChar(coreclrDirectory) failed. Last error = 0x%x\n", GetLastError());
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
     return S_OK;
 }
 
@@ -587,6 +610,11 @@ extern "C" HRESULT SOSInitializeByHost(SOSNetCoreCallbacks* callbacks, int callb
     {
         g_dbiFilePath = _strdup(dbiFilePath);
     }
+#ifndef FEATURE_PAL
+    // When SOS is hosted on dotnet-dump, the ExtensionApis are not set so 
+    // the expression evaluation function needs to be supplied.
+    GetExpression = (PWINDBG_GET_EXPRESSION64)callbacks->GetExpressionDelegate;
+#endif
     g_symbolStoreInitialized = symbolStoreEnabled;
     g_hostingInitialized = true;
     return S_OK;
@@ -643,7 +671,7 @@ HRESULT InitializeHosting()
     if (GetModuleFileNameA(g_hInstance, szSOSModulePath, MAX_LONGPATH) == 0)
     {
         ExtErr("Error: Failed to get SOS module directory\n");
-        return E_FAIL;
+        return HRESULT_FROM_WIN32(GetLastError());
     }
     sosModuleDirectory = szSOSModulePath;
 
@@ -746,48 +774,6 @@ static int ReadMemoryForSymbols(ULONG64 address, uint8_t *buffer, int cb)
     return 0;
 }
 
-#ifdef FEATURE_PAL
-
-//
-// Symbol downloader callback
-//
-static void SymbolFileCallback(void* param, const char* moduleFileName, const char* symbolFilePath)
-{
-    if (strcmp(moduleFileName, MAIN_CLR_DLL_NAME_A) == 0) {
-        return;
-    }
-    if (strcmp(moduleFileName, MAKEDLLNAME_A("mscordaccore")) == 0) {
-        if (g_dacFilePath == nullptr) {
-            g_dacFilePath = _strdup(symbolFilePath);
-        }
-        return;
-    }
-    if (strcmp(moduleFileName, MAKEDLLNAME_A("mscordbi")) == 0) {
-        if (g_dbiFilePath == nullptr) {
-            g_dbiFilePath = _strdup(symbolFilePath);
-        }
-        return;
-    }
-    ToRelease<ILLDBServices2> services2(NULL);
-    HRESULT Status = g_ExtServices->QueryInterface(__uuidof(ILLDBServices2), (void**)&services2);
-    if (SUCCEEDED(Status))
-    {
-        services2->AddModuleSymbol(param, symbolFilePath);
-    }
-}
-
-//
-// Enumerate native module callback
-//
-static void LoadNativeSymbolsCallback(void* param, const char* moduleFilePath, ULONG64 moduleAddress, int moduleSize)
-{
-    _ASSERTE(g_hostingInitialized);
-    _ASSERTE(g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate != nullptr);
-    g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(SymbolFileCallback, param, GetTempDirectory(), moduleFilePath, moduleAddress, moduleSize, ReadMemoryForSymbols);
-}
-
-#endif
-
 /**********************************************************************\
  * Setup and initialize the symbol server support.
 \**********************************************************************/
@@ -833,6 +819,46 @@ void InitializeSymbolStore()
 #endif
 }
 
+//
+// Symbol downloader callback
+//
+static void SymbolFileCallback(void* param, const char* moduleFileName, const char* symbolFilePath)
+{
+    if (strcmp(moduleFileName, MAIN_CLR_DLL_NAME_A) == 0) {
+        return;
+    }
+    if (strcmp(moduleFileName, MAKEDLLNAME_A("mscordaccore")) == 0) {
+        if (g_dacFilePath == nullptr) {
+            g_dacFilePath = _strdup(symbolFilePath);
+        }
+        return;
+    }
+    if (strcmp(moduleFileName, MAKEDLLNAME_A("mscordbi")) == 0) {
+        if (g_dbiFilePath == nullptr) {
+            g_dbiFilePath = _strdup(symbolFilePath);
+        }
+        return;
+    }
+#ifdef FEATURE_PAL
+    ToRelease<ILLDBServices2> services2(NULL);
+    HRESULT Status = g_ExtServices->QueryInterface(__uuidof(ILLDBServices2), (void**)&services2);
+    if (SUCCEEDED(Status))
+    {
+        services2->AddModuleSymbol(param, symbolFilePath);
+    }
+#endif
+}
+
+//
+// Enumerate native module callback
+//
+static void LoadNativeSymbolsCallback(void* param, const char* moduleFilePath, ULONG64 moduleAddress, int moduleSize)
+{
+    _ASSERTE(g_hostingInitialized);
+    _ASSERTE(g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate != nullptr);
+    g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(SymbolFileCallback, param, GetTempDirectory(), moduleFilePath, moduleAddress, moduleSize, ReadMemoryForSymbols);
+}
+
 /**********************************************************************\
  * Enumerate the native modules and attempt to download the symbols
  * for them. Depends on the lldb callback to enumerate modules. Not
@@ -840,19 +866,40 @@ void InitializeSymbolStore()
 \**********************************************************************/
 HRESULT LoadNativeSymbols(bool runtimeOnly)
 {
-    HRESULT Status = S_OK;
-#ifdef FEATURE_PAL
+    HRESULT hr = S_OK;
     if (g_symbolStoreInitialized)
     {
+#ifdef FEATURE_PAL
         ToRelease<ILLDBServices2> services2(NULL);
-        Status = g_ExtServices->QueryInterface(__uuidof(ILLDBServices2), (void**)&services2);
-        if (SUCCEEDED(Status))
+        hr = g_ExtServices->QueryInterface(__uuidof(ILLDBServices2), (void**)&services2);
+        if (SUCCEEDED(hr))
         {
-            Status = services2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback);
+            hr = services2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback);
         }
-    }
+#else
+        if (runtimeOnly)
+        {
+            ULONG index;
+            ULONG64 moduleAddress;
+            HRESULT hr = g_ExtSymbols->GetModuleByModuleName(MAIN_CLR_MODULE_NAME_A, 0, &index, &moduleAddress);
+            if (SUCCEEDED(hr))
+            {
+                ArrayHolder<char> moduleFilePath = new char[MAX_LONGPATH + 1];
+                hr = g_ExtSymbols->GetModuleNames(index, 0, moduleFilePath, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
+                if (SUCCEEDED(hr))
+                {
+                    DEBUG_MODULE_PARAMETERS moduleParams;
+                    hr = g_ExtSymbols->GetModuleParameters(1, &moduleAddress, 0, &moduleParams);
+                    if (SUCCEEDED(hr))
+                    {
+                        LoadNativeSymbolsCallback(nullptr, moduleFilePath, moduleAddress, moduleParams.Size);
+                    }
+                }
+            }
+        }
 #endif
-    return Status;
+    }
+    return hr;
 }
 
 /**********************************************************************\
@@ -880,6 +927,83 @@ void DisableSymbolStore()
         g_SOSNetCoreCallbacks.DisableSymbolStoreDelegate();
     }
 }
+
+/**********************************************************************\
+ * Returns the metadata from a local or downloaded assembly
+\**********************************************************************/
+HRESULT GetMetadataLocator(
+    LPCWSTR imagePath,
+    ULONG32 imageTimestamp,
+    ULONG32 imageSize,
+    GUID* mvid,
+    ULONG32 mdRva,
+    ULONG32 flags,
+    ULONG32 bufferSize,
+    BYTE* buffer,
+    ULONG32* dataSize)
+{
+    HRESULT hr = InitializeHosting();
+    if (FAILED(hr)) {
+        return hr;
+    }
+    InitializeSymbolStore();
+    _ASSERTE(g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate != nullptr);
+    return g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate(imagePath, imageTimestamp, imageSize, mvid, mdRva, flags, bufferSize, buffer, dataSize);
+}
+
+#ifndef FEATURE_PAL
+
+/**********************************************************************\
+* A typesafe version of GetProcAddress
+\**********************************************************************/
+template <typename T>
+BOOL GetProcAddressT(PCSTR FunctionName, PCSTR DllName, T* OutFunctionPointer, HMODULE* InOutDllHandle)
+{
+    _ASSERTE(InOutDllHandle != NULL);
+    _ASSERTE(OutFunctionPointer != NULL);
+
+    T FunctionPointer = NULL;
+    HMODULE DllHandle = *InOutDllHandle;
+    if (DllHandle == NULL)
+    {
+        DllHandle = LoadLibraryEx(DllName, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+        if (DllHandle != NULL)
+            *InOutDllHandle = DllHandle;
+    }
+    if (DllHandle != NULL)
+    {
+        FunctionPointer = (T) GetProcAddress(DllHandle, FunctionName);
+    }
+    *OutFunctionPointer = FunctionPointer;
+    return FunctionPointer != NULL;
+}
+
+/**********************************************************************\
+* CreateInstanceFromPath() instantiates a COM object using a passed in *
+* fully-qualified path and a CLSID.                                    *
+\**********************************************************************/
+HRESULT CreateInstanceFromPath(REFCLSID clsid, REFIID iid, LPCSTR path, HMODULE* pModuleHandle, void** ppItf)
+{
+    HRESULT (__stdcall *pfnDllGetClassObject)(REFCLSID rclsid, REFIID riid, LPVOID *ppv) = NULL;
+    HRESULT hr = S_OK;
+
+    if (!GetProcAddressT("DllGetClassObject", path, &pfnDllGetClassObject, pModuleHandle)) {
+        return REGDB_E_CLASSNOTREG;
+    }
+    ToRelease<IClassFactory> pFactory;
+    if (SUCCEEDED(hr = pfnDllGetClassObject(clsid, IID_IClassFactory, (void**)&pFactory))) {
+        if (SUCCEEDED(hr = pFactory->CreateInstance(NULL, iid, ppItf))) {
+            return S_OK;
+        }
+    }
+    if (*pModuleHandle != NULL) {
+        FreeLibrary(*pModuleHandle);
+        *pModuleHandle = NULL;
+    }
+    return hr;
+}
+
+#endif // FEATURE_PAL
 
 /**********************************************************************\
  * Load symbols for an ICorDebugModule. Used by "clrstack -i".
@@ -963,6 +1087,20 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
 
 #ifndef FEATURE_PAL
 
+static void CleanupSymBinder()
+{
+    if (g_pSymBinder != nullptr)
+    {
+        g_pSymBinder->Release();
+        g_pSymBinder = nullptr;
+    }
+    if (g_hmoduleSymBinder != nullptr)
+    {
+        FreeLibrary(g_hmoduleSymBinder);
+        g_hmoduleSymBinder = nullptr;
+    }
+}
+
 /**********************************************************************\
  * Attempts to load Windows PDBs on Windows.
 \**********************************************************************/
@@ -973,21 +1111,38 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
     if (m_pSymReader != NULL) 
         return S_OK;
 
-    IfFailRet(CoInitialize(NULL));
-
-    // We now need a binder object that will take the module and return a 
-    ToRelease<ISymUnmanagedBinder3> pSymBinder;
-    if (FAILED(Status = CreateInstanceCustom(CLSID_CorSymBinder_SxS, 
-                        IID_ISymUnmanagedBinder3, 
-                        NATIVE_SYMBOL_READER_DLL,
-                        cciDacColocated|cciDbgPath, 
-                        (void**)&pSymBinder)))
+    if (g_pSymBinder == nullptr)
     {
-        ExtOut("SOS Error: Unable to CoCreateInstance class=CLSID_CorSymBinder_SxS, interface=IID_ISymUnmanagedBinder3, hr=0x%x\n", Status);
-        ExtOut("This usually means SOS was unable to locate a suitable version of DiaSymReader. The dll searched for was '%S'\n", NATIVE_SYMBOL_READER_DLL);
-        return Status;
-    }
+        // Ignore errors to be able to run under a managed host (dotnet-dump).
+        CoInitialize(NULL);
 
+        std::string diasymreaderPath;
+        ArrayHolder<char> szSOSModulePath = new char[MAX_LONGPATH + 1];
+        if (GetModuleFileNameA(g_hInstance, szSOSModulePath, MAX_LONGPATH) == 0)
+        {
+            ExtErr("Error: Failed to get SOS module directory\n");
+            return HRESULT_FROM_WIN32(GetLastError());
+        }
+        diasymreaderPath = szSOSModulePath;
+
+        // Get just the sos module directory
+        size_t lastSlash = diasymreaderPath.rfind(DIRECTORY_SEPARATOR_CHAR_A);
+        if (lastSlash == std::string::npos)
+        {
+            ExtErr("Error: Failed to parse sos module name\n");
+            return E_FAIL;
+        }
+        diasymreaderPath.erase(lastSlash + 1);
+        diasymreaderPath.append(NATIVE_SYMBOL_READER_DLL);
+
+        // We now need a binder object that will take the module and return a 
+        if (FAILED(Status = CreateInstanceFromPath(CLSID_CorSymBinder_SxS, IID_ISymUnmanagedBinder3, diasymreaderPath.c_str(), &g_hmoduleSymBinder, (void**)&g_pSymBinder)))
+        {
+            ExtOut("SOS error: Unable to find the diasymreader module/interface %08x at %s\n", Status, diasymreaderPath.c_str());
+            return Status;
+        }
+        OnUnloadTask::Register(CleanupSymBinder);
+    }
     ToRelease<IDebugSymbols3> spSym3(NULL);
     Status = g_ExtSymbols->QueryInterface(__uuidof(IDebugSymbols3), (void**)&spSym3);
     if (FAILED(Status))
@@ -1023,7 +1178,7 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
     }
 
     // TODO: this should be better integrated with windbg's symbol lookup
-    Status = pSymBinder->GetReaderFromCallback(pMD, pModuleName, symbolPath, 
+    Status = g_pSymBinder->GetReaderFromCallback(pMD, pModuleName, symbolPath, 
         AllowRegistryAccess | AllowSymbolServerAccess | AllowOriginalPathAccess | AllowReferencePathAccess, pCallback, &m_pSymReader);
 
     if (FAILED(Status) && m_pSymReader != NULL)
@@ -1149,6 +1304,9 @@ HRESULT SymbolReader::GetLineByILOffset(___in mdMethodDef methodToken, ___in ULO
     return E_FAIL;
 }
 
+/**********************************************************************\
+ * Returns the name of the local variable from a PDB. 
+\**********************************************************************/
 HRESULT SymbolReader::GetNamedLocalVariable(___in ISymUnmanagedScope * pScope, ___in ICorDebugILFrame * pILFrame, ___in mdMethodDef methodToken, 
     ___in ULONG localIndex, __out_ecount(paramNameLen) WCHAR* paramName, ___in ULONG paramNameLen, ICorDebugValue** ppValue)
 {

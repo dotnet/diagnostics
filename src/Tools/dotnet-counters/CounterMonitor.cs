@@ -65,6 +65,19 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
+        private void StopMonitor()
+        {
+            try
+            {
+                EventPipeClient.StopTracing(_processId, _sessionId);
+            }
+            catch (EndOfStreamException ex)
+            {
+                // If the app we're monitoring exits abruptly, this may throw in which case we just swallow the exception and exit gracefully.
+                Debug.WriteLine($"[ERROR] {ex.ToString()}");
+            }
+        }
+
         public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval)
         {
             try
@@ -82,13 +95,39 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 try
                 {
-                    EventPipeClient.StopTracing(_processId, _sessionId);    
+                    EventPipeClient.StopTracing(_processId, _sessionId);
                 }
                 catch (Exception) {} // Swallow all exceptions for now.
                 
                 console.Out.WriteLine($"Complete");
                 return 1;
             }
+        }
+
+        // Use EventPipe CollectTracing2 command to start monitoring. This may throw.
+        private void RequestTracingV2(string providerString)
+        {
+            var configuration = new SessionConfigurationV2(
+                                        circularBufferSizeMB: 1000,
+                                        format: EventPipeSerializationFormat.NetTrace,
+                                        requestRundown: false,
+                                        providers: Trace.Extensions.ToProviders(providerString));
+            var binaryReader = EventPipeClient.CollectTracing2(_processId, configuration, out _sessionId);
+            EventPipeEventSource source = new EventPipeEventSource(binaryReader);
+            source.Dynamic.All += Dynamic_All;
+            source.Process();
+        }
+        // Use EventPipe CollectTracing command to start monitoring. This may throw.
+        private void RequestTracingV1(string providerString)
+        {
+            var configuration = new SessionConfiguration(
+                                        circularBufferSizeMB: 1000,
+                                        format: EventPipeSerializationFormat.NetTrace,
+                                        providers: Trace.Extensions.ToProviders(providerString));
+            var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
+            EventPipeEventSource source = new EventPipeEventSource(binaryReader);
+            source.Dynamic.All += Dynamic_All;
+            source.Process();
         }
 
         private async Task<int> StartMonitor()
@@ -152,22 +191,21 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 providerString = sb.ToString();
             }
 
-            var shouldExit = new ManualResetEvent(false);
+            ManualResetEvent shouldExit = new ManualResetEvent(false);
+            _ct.Register(() => shouldExit.Set());
+
             var terminated = false;
             writer.InitializeDisplay();
 
             Task monitorTask = new Task(() => {
                 try
                 {
-                    var configuration = new SessionConfiguration(
-                        circularBufferSizeMB: 1000,
-                        outputPath: "",
-                        providers: Trace.Extensions.ToProviders(providerString));
-
-                    var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
-                    EventPipeEventSource source = new EventPipeEventSource(binaryReader);
-                    source.Dynamic.All += Dynamic_All;
-                    source.Process();
+                    RequestTracingV2(providerString);
+                }
+                catch (EventPipeUnknownCommandException)
+                {
+                    // If unknown command exception is thrown, it's likely the app being monitored is running an older version of runtime that doesn't support CollectTracingV2. Try again with V1.
+                    RequestTracingV1(providerString);
                 }
                 catch (Exception ex)
                 {
@@ -181,12 +219,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
             });
 
             monitorTask.Start();
-            while(true)
+
+            while(!shouldExit.WaitOne(250))
             {
                 while (true)
                 {
                     if (shouldExit.WaitOne(250))
                     {
+                        StopMonitor();
                         return 0;
                     }
                     if (Console.KeyAvailable)
@@ -208,18 +248,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     pauseCmdSet = false;
                 }
             }
-
             if (!terminated)
             {
-                try
-                {
-                    EventPipeClient.StopTracing(_processId, _sessionId);    
-                }
-                catch (EndOfStreamException ex)
-                {
-                    // If the app we're monitoring exits abruptly, this may throw in which case we just swallow the exception and exit gracefully.
-                    Debug.WriteLine($"[ERROR] {ex.ToString()}");
-                } 
+                StopMonitor();
             }
             
             return await Task.FromResult(0);

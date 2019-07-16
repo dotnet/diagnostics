@@ -4,7 +4,6 @@
 
 bpmd
 ClrStack
-CreateDump
 DumpArray
 DumpAssembly
 DumpAsync
@@ -43,6 +42,7 @@ HistStats
 IP2MD
 Name2EE
 PrintException
+PathTo
 StopOnCatch
 SetHostRuntime
 SetSymbolServer

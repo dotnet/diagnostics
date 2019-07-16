@@ -74,21 +74,11 @@ ICorDebugProcess *g_pCorDebugProcess = NULL;
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
 #endif
 
-#ifndef IfFailGoto
-#define IfFailGoto(EXPR, label) do { Status = (EXPR); if(FAILED(Status)) { goto label; } } while (0)
-#endif // IfFailGoto
-
-#ifndef IfFailGo
-#define IfFailGo(EXPR) IfFailGoto(EXPR, Error)
-#endif // IfFailGo
-
 // Max number of reverted rejit versions that !dumpmd and !ip2md will print
 const UINT kcMaxRevertedRejitData   = 10;
 const UINT kcMaxTieredVersions      = 10;
 
 #ifndef FEATURE_PAL
-
-extern LPCSTR GetHostRuntimeDirectory();
 
 // ensure we always allocate on the process heap
 void* __cdecl operator new(size_t size) throw()
@@ -100,334 +90,6 @@ void* __cdecl operator new[](size_t size) throw()
 { return HeapAlloc(GetProcessHeap(), 0, size); }
 void __cdecl operator delete[](void* pObj) throw()
 { HeapFree(GetProcessHeap(), 0, pObj); }
-
-/**********************************************************************\
-* Here we define types and functions that support custom COM           *
-* activation rules, as defined by the CIOptions enum.                  *
-*                                                                      *
-\**********************************************************************/
-
-typedef unsigned __int64 QWORD;
-
-namespace com_activation
-{
-    //
-    // Forward declarations for the implementation methods
-    //
-
-    HRESULT CreateInstanceCustomImpl(
-                            REFCLSID clsid,
-                            REFIID   iid,
-                            LPCWSTR  dllName,
-                            CIOptions cciOptions,
-                            void** ppItf);
-
-    HRESULT CreateInstanceFromPath(
-                            REFCLSID clsid, 
-                            REFIID iid, 
-                            LPCWSTR path, 
-                            void** ppItf);
-
-    BOOL GetPathFromModule(
-                            HMODULE hModule, 
-                            __in_ecount(cFqPath) LPWSTR fqPath,
-                            DWORD  cFqPath);
-
-    void CleanupClsidHmodMap();
-
-    // Helper structures for defining the CLSID -> HMODULE hash table we
-    // use for caching already activated objects
-    class hash_compareGUID
-    {
-    public:
-        static const size_t bucket_size = 4;
-        static const size_t min_buckets = 8;
-        hash_compareGUID()
-        { }
-
-        size_t operator( )(const GUID& _Key) const
-        {
-            DWORD *pdw = (DWORD*)&_Key;
-            return (size_t)(pdw[0] ^ pdw[1] ^ pdw[2] ^ pdw[3]);
-        }
-
-        bool operator( )(const GUID& _Key1, const GUID& _Key2) const
-        { return memcmp(&_Key1, &_Key2, sizeof(GUID)) == -1; }
-    };
-
-    static std::unordered_map<GUID, HMODULE, hash_compareGUID> *g_pClsidHmodMap = NULL;
-
-
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-* CreateInstanceCustomImpl() provides a way to activate a COM object   *
-* w/o triggering the FeatureOnDemand dialog. In order to do this we    *
-* must avoid using  the CoCreateInstance() API, which, on a machine    *
-* with v4+ installed and w/o v2, would trigger this.                   *
-* CreateInstanceCustom() activates the requested COM object according  *
-* to the specified passed in CIOptions, in the following order         *
-* (skipping the steps not enabled in the CIOptions flags passed in):   *
-*    1. Attempt to activate the COM object using a framework install:  *
-*       a. If the debugger machine has a V4+ shell shim use the shim   *
-*          to activate the object                                      *
-*       b. Otherwise simply call CoCreateInstance                      *
-*    2. If unsuccessful attempt to activate looking for the dllName in *
-*       the same folder as the DAC was loaded from                     *
-*    3. If unsuccessful attempt to activate the COM object looking in  *
-*       every path specified in the debugger's .exepath and .sympath   *
-\**********************************************************************/
-HRESULT CreateInstanceCustomImpl(
-                        REFCLSID clsid,
-                        REFIID   iid,
-                        LPCWSTR  dllName,
-                        CIOptions cciOptions,
-                        void** ppItf)
-{
-    _ASSERTE(ppItf != NULL);
-    _ASSERTE(dllName != NULL);
-
-    if (ppItf == NULL || dllName == NULL)
-        return E_POINTER;
-
-    WCHAR wszClsid[64] = W("<CLSID>");
-
-    // Step 1: attempt activation using the host runtime directory
-    LPCSTR hostRuntimeDirectory = GetHostRuntimeDirectory();
-    if (hostRuntimeDirectory != nullptr)
-    {
-        ArrayHolder<WCHAR> path = new WCHAR[MAX_LONGPATH];
-        int length = MultiByteToWideChar(CP_ACP, 0, hostRuntimeDirectory, -1, path, MAX_LONGPATH);
-        if (length > 0)
-        {
-            if (wcscat_s(path, MAX_LONGPATH, W("\\")) == 0 && wcscat_s(path, MAX_LONGPATH, dllName) == 0 &&
-                SUCCEEDED(CreateInstanceFromPath(clsid, iid, path, ppItf)))
-            {
-                return S_OK;
-            }
-        }
-    }
-
-    // Step 2: attempt activation using the folder the DAC was loaded from
-    if ((cciOptions & cciDacColocated) != 0)
-    {
-        HMODULE hDac = NULL;
-        ArrayHolder<WCHAR> path = new WCHAR[MAX_LONGPATH];
-
-        if (SUCCEEDED(g_sos->GetDacModuleHandle(&hDac)) && 
-            GetPathFromModule(hDac, path, MAX_LONGPATH))
-        {
-            // build the fully qualified file name and attempt instantiation
-            if (wcscat_s(path, MAX_LONGPATH, dllName) == 0 && 
-                SUCCEEDED(CreateInstanceFromPath(clsid, iid, path, ppItf)))
-            {
-                return S_OK;
-            }
-        }
-
-        ExtDbgOut("Failed to instantiate {%ls} from DAC location.\n", wszClsid);
-    }
-
-    // Step 3: attempt activation using the debugger's .exepath and .sympath
-    if ((cciOptions & cciDbgPath) != 0)
-    {
-        ToRelease<IDebugSymbols3> spSym3(NULL);
-        HRESULT hr = g_ExtSymbols->QueryInterface(__uuidof(IDebugSymbols3), (void**)&spSym3);
-        if (FAILED(hr))
-        {
-            ExtDbgOut("Unable to query IDebugSymbol3 HRESULT=0x%x.\n", hr);
-            goto ErrDbgPath;
-        }
-
-        typedef HRESULT (__stdcall IDebugSymbols3::*GetPathFunc)(LPWSTR , ULONG, ULONG*);
-
-        {
-            // Handle both the image path and the symbol path
-            GetPathFunc rgGetPathFuncs[] = 
-                { &IDebugSymbols3::GetImagePathWide, &IDebugSymbols3::GetSymbolPathWide };
-
-            for (int i = 0; i < _countof(rgGetPathFuncs); ++i)
-            {
-                ULONG pathSize = 0;
-
-                // get the path buffer size
-                if ((spSym3.GetPtr()->*rgGetPathFuncs[i])(NULL, 0, &pathSize) != S_OK)
-                {
-                    continue;
-                }
-
-                ArrayHolder<WCHAR> imgPath = new WCHAR[pathSize+MAX_LONGPATH+1];
-
-                // actually get the path
-                if ((spSym3.GetPtr()->*rgGetPathFuncs[i])(imgPath, pathSize, NULL) != S_OK)
-                {
-                    continue;
-                }
-
-                LPWSTR ctx;
-                LPCWSTR pathElem = wcstok_s(imgPath, W(";"), &ctx);
-                while (pathElem != NULL)
-                {
-                    ArrayHolder<WCHAR> path = new WCHAR[MAX_LONGPATH];
-                    wcscpy_s(path, MAX_LONGPATH, pathElem);
-                    if (wcscat_s(path, MAX_LONGPATH, W("\\")) == 0 && wcscat_s(path, MAX_LONGPATH, dllName) == 0) 
-                    {
-                        if (SUCCEEDED(CreateInstanceFromPath(clsid, iid, path, ppItf)))
-                        {
-                            return S_OK;
-                        }
-                    }
-
-                    pathElem = wcstok_s(NULL, W(";"), &ctx);
-                }
-            }
-        }
-
-    ErrDbgPath:
-        ExtDbgOut("Failed to instantiate {%ls} from debugger's image path.\n", wszClsid);
-    }
-
-    return REGDB_E_CLASSNOTREG;
-}
-
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-* CreateInstanceFromPath() instantiates a COM object using a passed in *
-* fully-qualified path and a CLSID.                                    *
-*                                                                      *
-* Note:                                                                *
-*                                                                      *
-* It uses a unordered_map to cache the mapping between a CLSID and the      *
-* HMODULE that is successfully used to activate the CLSID from. When   *
-* SOS is unloaded (in DebugExtensionUninitialize()) we call            *
-* FreeLibrary() for all cached HMODULEs.                               *
-\**********************************************************************/
-HRESULT CreateInstanceFromPath(
-                        REFCLSID clsid, 
-                        REFIID iid, 
-                        LPCWSTR path, 
-                        void** ppItf)
-{
-    HRESULT Status = S_OK;
-    HRESULT (__stdcall *pfnDllGetClassObject)(REFCLSID rclsid, REFIID riid, LPVOID *ppv) = NULL;
-
-    HMODULE hmod = NULL;
-
-    if (g_pClsidHmodMap == NULL)
-    {
-        g_pClsidHmodMap = new std::unordered_map<GUID, HMODULE, hash_compareGUID>();
-        OnUnloadTask::Register(CleanupClsidHmodMap);
-    }
-
-    auto it = g_pClsidHmodMap->find(clsid);
-    if (it != g_pClsidHmodMap->end())
-        hmod = it->second;
-
-    if (!GetProcAddressT("DllGetClassObject", path, &pfnDllGetClassObject, &hmod))
-        return REGDB_E_CLASSNOTREG;
-
-    ToRelease<IClassFactory> pFactory;
-    IfFailGo(pfnDllGetClassObject(clsid, IID_IClassFactory, (void**)&pFactory));
-
-    IfFailGo(pFactory->CreateInstance(NULL, iid, ppItf));
-
-    // only cache the HMODULE if we successfully created the COM object
-    (*g_pClsidHmodMap)[clsid] = hmod;
-
-    return S_OK;
-
-Error:
-    if (hmod != NULL)
-        FreeLibrary(hmod);
-
-    return Status;
-}
-
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-* CleanupClsidHmodMap() cleans up the CLSID -> HMODULE map used to     *
-* cache successful activations from specific paths. This is registered *
-* as an OnUnloadTask in CreateInstanceFromPath(), and executes when    *
-* SOS is unloaded, in DebugExtensionUninitialize().                    *
-\**********************************************************************/
-void CleanupClsidHmodMap()
-{
-    if (g_pClsidHmodMap != NULL)
-    {
-        for (auto it = g_pClsidHmodMap->begin(); it != g_pClsidHmodMap->end(); ++it)
-        {
-            _ASSERTE(it->second != NULL);
-            FreeLibrary(it->second);
-        }
-
-        delete g_pClsidHmodMap;
-        g_pClsidHmodMap = NULL;
-    }
-}
-
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-* GetPathFromModule() returns the name of the folder containing the    *
-* file associated with hModule.                                        *
- \**********************************************************************/
-BOOL GetPathFromModule(
-                        HMODULE hModule, 
-                        __in_ecount(cFqPath) LPWSTR fqPath, 
-                        DWORD  cFqPath)
-{
-    int len = GetModuleFileNameW(hModule, fqPath, cFqPath);
-    if (len == 0 || len == cFqPath)
-        return FALSE;
-
-    WCHAR *pLastSep = _wcsrchr(fqPath, DIRECTORY_SEPARATOR_CHAR_W);
-    if (pLastSep == NULL || pLastSep+1 >= fqPath+cFqPath)
-        return FALSE;
-
-    *(pLastSep+1) = L'\0';
-
-    return TRUE;
-}
-
-}
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-* CreateInstanceCustom() provides a way to activate a COM object w/o   *
-* triggering the FeatureOnDemand dialog. In order to do this we        *
-* must avoid using  the CoCreateInstance() API, which, on a machine    *
-* with v4+ installed and w/o v2, would trigger this.                   *
-* CreateInstanceCustom() activates the requested COM object according  *
-* to the specified passed in CIOptions, in the following order         *
-* (skipping the steps not enabled in the CIOptions flags passed in):   *
-*    1. Attempt to activate the COM object using a framework install:  *
-*       a. If the debugger machine has a V4+ shell shim use the shim   *
-*          to activate the object                                      *
-*       b. Otherwise simply call CoCreateInstance                      *
-*    2. If unsuccessful attempt to activate looking for the dllName in *
-*       the same folder as the DAC was loaded from                     *
-*    3. If unsuccessful attempt to activate the COM object looking in  *
-*       every path specified in the debugger's .exepath and .sympath   *
-\**********************************************************************/
-HRESULT CreateInstanceCustom(
-                        REFCLSID clsid,
-                        REFIID   iid,
-                        LPCWSTR  dllName,
-                        CIOptions cciOptions,
-                        void** ppItf)
-{
-    return com_activation::CreateInstanceCustomImpl(clsid, iid, dllName, cciOptions, ppItf);
-}
-
-
-
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -517,12 +179,10 @@ HRESULT CheckEEDll()
                 g_ExtSymbols->Reload("/f " MAIN_CLR_DLL_NAME_A);
                 g_ExtSymbols->GetModuleParameters(1, &g_moduleInfo[MSCORWKS].baseAddr, 0, &Params);
             }
-
             if (Params.SymbolType == SymPdb || Params.SymbolType == SymDia)
             {
                 g_moduleInfo[MSCORWKS].hasPdb = TRUE;
             }
-
             g_moduleInfo[MSCORWKS].size = Params.Size;
         }
         if (g_moduleInfo[MSCORWKS].baseAddr != 0 && g_moduleInfo[MSCORWKS].hasPdb == FALSE) 
@@ -530,7 +190,6 @@ HRESULT CheckEEDll()
             ExtOut("PDB symbol for coreclr.dll not loaded\n");
         }
     }
-    
     return (g_moduleInfo[MSCORWKS].baseAddr != 0) ? S_OK : E_FAIL;
 #else
     return S_OK;
@@ -1461,7 +1120,7 @@ int GetValueFieldOffset(CLRDATA_ADDRESS cdaMT, __in_z LPCWSTR wszFieldName, Dacp
     if (dmtd.ParentMethodTable)
     {
         DWORD retVal = GetValueFieldOffset(dmtd.ParentMethodTable, wszFieldName, pDacpFieldDescData);
-        if (retVal != NOT_FOUND)
+        if (retVal != (DWORD)NOT_FOUND)
         {
             // Return in case of error or success. Fall through for field-not-found.
             return retVal;
@@ -2472,8 +2131,7 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
         return NULL;
     }
 
-    WCHAR StringData[MAX_LONGPATH];
-    char fileName[sizeof(StringData)/2];
+    ArrayHolder<char> fileName = new char[MAX_LONGPATH];
     
     // Search all domains to find a module
     for (int n = 0; n < adsData.DomainCount+numSpecialDomains; n++)
@@ -2553,13 +2211,14 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
                         goto Failure;
                     }
 
-                    FileNameForModule ((DWORD_PTR)ModuleAddr, StringData);
-                    int m;
-                    for (m = 0; StringData[m] != L'\0'; m++)
+                    if (mName != NULL)
                     {
-                        fileName[m] = (char)StringData[m];
+                        ArrayHolder<WCHAR> moduleName = new WCHAR[MAX_LONGPATH];
+                        FileNameForModule((DWORD_PTR)ModuleAddr, moduleName);
+
+                        int bytesWritten = WideCharToMultiByte(CP_ACP, 0, moduleName, -1, fileName, MAX_LONGPATH, NULL, NULL);
+                        _ASSERTE(bytesWritten > 0);
                     }
-                    fileName[m] = '\0';
                     
                     if ((mName == NULL) || 
                         IsSameModuleName(fileName, mName) ||
@@ -3058,20 +2717,55 @@ void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersi
     for(int i = cTieredVersionData - 1; i >= 0; --i)
     {
         const char *descriptor = NULL;
-        switch(pTieredVersionData[i].TieredInfo)
+        switch(pTieredVersionData[i].OptimizationTier)
         {
-        case DacpTieredVersionData::TIERED_UNKNOWN:
+        case DacpTieredVersionData::OptimizationTier_Unknown:
         default:
-            _ASSERTE(!"Update SOS to understand the new tier");
             descriptor = "Unknown Tier";
             break;
-        case DacpTieredVersionData::NON_TIERED:
+        case DacpTieredVersionData::OptimizationTier_MinOptJitted:
+            descriptor = "MinOptJitted";
+            break;
+        case DacpTieredVersionData::OptimizationTier_Optimized:
+            descriptor = "Optimized";
+            break;
+        case DacpTieredVersionData::OptimizationTier_QuickJitted:
+            descriptor = "QuickJitted";
+            break;
+        case DacpTieredVersionData::OptimizationTier_OptimizedTier1:
+            descriptor = "OptimizedTier1";
+            break;
+        case DacpTieredVersionData::OptimizationTier_ReadyToRun:
+            descriptor = "ReadyToRun";
+            break;
+        }
+
+        DMLOut("  CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
+        ExtOut("  NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
+    }
+}
+
+// 2.1 version
+void DumpTieredNativeCodeAddressInfo_21(struct DacpTieredVersionData_21 * pTieredVersionData, const UINT cTieredVersionData)
+{
+    ExtOut("Code Version History:\n");
+
+    for(int i = cTieredVersionData - 1; i >= 0; --i)
+    {
+        const char *descriptor = NULL;
+        switch(pTieredVersionData[i].TieredInfo)
+        {
+        case DacpTieredVersionData_21::TIERED_UNKNOWN:
+        default:
+            descriptor = "Unknown Tier";
+            break;
+        case DacpTieredVersionData_21::NON_TIERED:
             descriptor = "Non-Tiered";
             break;
-        case DacpTieredVersionData::TIERED_0:
+        case DacpTieredVersionData_21::TIERED_0:
             descriptor = "Tier 0";
             break;
-        case DacpTieredVersionData::TIERED_1:
+        case DacpTieredVersionData_21::TIERED_1:
             descriptor = "Tier 1";
             break;
         }
@@ -4067,6 +3761,11 @@ HRESULT LoadClrDebugDll(void)
 #ifdef FEATURE_PAL
         return hr;
 #else
+        // Fail if ExtensionApis wasn't initialized because we are hosted under dotnet-dump
+        if (Ioctl == nullptr)
+        {
+            return hr;
+        }
         // Try getting the DAC interface from dbgeng if the above fails on Windows
         WDBGEXTS_CLR_DATA_INTERFACE Query;
 
@@ -4091,78 +3790,50 @@ HRESULT LoadClrDebugDll(void)
 
 #ifndef FEATURE_PAL
 
-// This structure carries some input/output data to the FindFileInPathCallback below
-typedef struct _FindFileCallbackData
+HMODULE
+LoadLibraryAndCheck(
+    PCWSTR filename,
+    DWORD timestamp,
+    DWORD filesize)
 {
-    DWORD timestamp;
-    DWORD filesize;
-    HMODULE hModule;
-} FindFileCallbackData;
-
-
-// A callback used by SymFindFileInPath - called once for each file that matches
-// the initial search criteria and allows the user to do arbitrary processing
-// This implementation checks that filesize and timestamp are correct, then
-// saves the loaded module handle
-// Parameters
-//           filename - the full path the file which was found
-//           context - a user specified pointer to arbitrary data, in this case a FindFileCallbackData
-// Return Value
-//           TRUE if the search should continue (the file is no good)
-//           FALSE if the search should stop (the file is good)
-BOOL
-FindFileInPathCallback(
-    ___in PCWSTR filename,
-    ___in PVOID context
-    )
-{
-    FindFileCallbackData* pCallbackData = (FindFileCallbackData*)context;
-    if (pCallbackData == NULL)
-    {
-        return TRUE;
-    }
-
-    pCallbackData->hModule = LoadLibraryExW(
+    HMODULE hModule = LoadLibraryExW(
         filename,
         NULL,                               //  __reserved
         LOAD_WITH_ALTERED_SEARCH_PATH);     // Ensure we check the dir in wszFullPath first
 
-    if (pCallbackData->hModule == NULL)
+    if (hModule == NULL)
     {
         ExtOut("Unable to load '%S'. hr = 0x%x.\n", filename, HRESULT_FROM_WIN32(GetLastError()));
-        return TRUE;
+        return NULL;
     }
     
     // Did we load the right one?
     MODULEINFO modInfo = {0};
     if (!GetModuleInformation(
         GetCurrentProcess(),
-        pCallbackData->hModule,
+        hModule,
         &modInfo,
         sizeof(modInfo)))
     {
         ExtOut("Failed to read module information for '%S'. hr = 0x%x.\n", filename, HRESULT_FROM_WIN32(GetLastError()));
-        FreeLibrary(pCallbackData->hModule);
-        pCallbackData->hModule = NULL;
-        return TRUE;
+        FreeLibrary(hModule);
+        return NULL;
     }
 
     IMAGE_DOS_HEADER * pDOSHeader = (IMAGE_DOS_HEADER *) modInfo.lpBaseOfDll;
     IMAGE_NT_HEADERS * pNTHeaders = (IMAGE_NT_HEADERS *) (((LPBYTE) modInfo.lpBaseOfDll) + pDOSHeader->e_lfanew);
     DWORD dwSizeActual = pNTHeaders->OptionalHeader.SizeOfImage;
     DWORD dwTimeStampActual = pNTHeaders->FileHeader.TimeDateStamp;
-    if ((dwSizeActual != pCallbackData->filesize) || (dwTimeStampActual != pCallbackData->timestamp))
+    if ((dwSizeActual != filesize) || (dwTimeStampActual != timestamp))
     {
         ExtOut("Found '%S', but it does not match the CLR being debugged.\n", filename);
-        ExtOut("Size: Expected '0x%x', Actual '0x%x'\n", pCallbackData->filesize, dwSizeActual);
-        ExtOut("Time stamp: Expected '0x%x', Actual '0x%x'\n", pCallbackData->timestamp, dwTimeStampActual);
-        FreeLibrary(pCallbackData->hModule);
-        pCallbackData->hModule = NULL;
-        return TRUE;
+        ExtOut("Size: Expected '0x%x', Actual '0x%x'\n", filesize, dwSizeActual);
+        ExtOut("Time stamp: Expected '0x%x', Actual '0x%x'\n", timestamp, dwTimeStampActual);
+        FreeLibrary(hModule);
+        return NULL;
     }
 
-    ExtOut("Loaded %S\n", filename);
-    return FALSE;
+    return hModule;
 }
 
 #endif // FEATURE_PAL
@@ -4222,25 +3893,6 @@ public:
         return ref;
     }
 
-    struct CoTaskStringHolder
-    {
-    private:
-        WCHAR* m_string;
-    public:
-        const int Length = MAX_LONGPATH;
-
-        CoTaskStringHolder() : m_string((WCHAR*)CoTaskMemAlloc(MAX_LONGPATH + 1)) { }
-        ~CoTaskStringHolder() { if (m_string != NULL) CoTaskMemFree(m_string); }
-        operator WCHAR* () { return m_string; }
-
-        WCHAR* Detach()
-        {
-            WCHAR* ret = m_string;
-            m_string = NULL;
-            return ret;
-        }
-    };
-
     HRESULT ProvideLibraryInternal(
         const WCHAR* pwszFileName,
         DWORD dwTimestamp,
@@ -4248,92 +3900,6 @@ public:
         HMODULE* phModule,
         LPWSTR* ppResolvedModulePath)
     {
-#ifndef FEATURE_PAL
-        HRESULT hr = S_OK;
-        FindFileCallbackData callbackData;
-        callbackData.hModule = NULL;
-        callbackData.timestamp = dwTimestamp;
-        callbackData.filesize = dwSizeOfImage;
-
-        // if we are looking for the DAC, just load the one windbg already found
-        if (_wcsncmp(pwszFileName, MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W), _wcslen(MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W))) == 0)
-        {
-            HMODULE dacModule;
-            if (g_sos == NULL)
-            {
-                // we ensure that windbg loads DAC first so that we can be sure to use the same one
-                return E_UNEXPECTED;
-            }
-            if (FAILED(hr = g_sos->GetDacModuleHandle(&dacModule)))
-            {
-                ExtErr("Failed to get the dac module handle. hr=0x%x.\n", hr);
-                return hr;
-            }
-            CoTaskStringHolder dacPath;
-            DWORD len = GetModuleFileNameW(dacModule, dacPath, dacPath.Length);
-            if (len == 0 || len == MAX_LONGPATH)
-            {
-                hr = HRESULT_FROM_WIN32(GetLastError());
-                ExtErr("GetModuleFileName(dacModuleHandle) failed. hr=0x%x.\n", hr);
-                return hr;
-            }
-            FindFileInPathCallback(dacPath, &callbackData);
-            if (ppResolvedModulePath != NULL)
-            {
-                *ppResolvedModulePath = dacPath.Detach();
-            }
-        }
-        else {
-            ULONG64 hProcess;
-            hr = g_ExtSystem->GetCurrentProcessHandle(&hProcess);
-            if (FAILED(hr))
-            {
-                ExtErr("IDebugSystemObjects::GetCurrentProcessHandle hr=0x%x.\n", hr);
-                return hr;
-            }
-            ToRelease<IDebugSymbols3> spSym3(NULL);
-            hr = g_ExtSymbols->QueryInterface(__uuidof(IDebugSymbols3), (void**)&spSym3);
-            if (FAILED(hr))
-            {
-                ExtErr("Unable to query IDebugSymbol3 hr=0x%x.\n", hr);
-                return hr;
-            }
-            ArrayHolder<WCHAR> symbolPath = new WCHAR[MAX_LONGPATH + 1];
-            hr = spSym3->GetSymbolPathWide(symbolPath, MAX_LONGPATH, NULL);
-            if (FAILED(hr))
-            {
-                ExtErr("Unable to get symbol path. IDebugSymbols3::GetSymbolPathWide hr=0x%x.\n", hr);
-                return hr;
-            }
-            CoTaskStringHolder foundPath;
-            if (!SymFindFileInPathW(
-                (HANDLE)hProcess,
-                symbolPath,
-                pwszFileName,
-                (PVOID)(ULONG_PTR)dwTimestamp,
-                dwSizeOfImage,
-                0,
-                SSRVOPT_DWORD,
-                foundPath,
-                (PFINDFILEINPATHCALLBACKW)&FindFileInPathCallback,
-                (PVOID)&callbackData))
-            {
-                hr = HRESULT_FROM_WIN32(GetLastError());
-                ExtErr("SymFindFileInPath failed for %S. hr=0x%x.\nPlease ensure that %S is on your symbol path.\n", pwszFileName, hr, pwszFileName);
-                return hr;
-            }
-            if (ppResolvedModulePath != NULL)
-            {
-                *ppResolvedModulePath = foundPath.Detach();
-            }
-        }
-        if (phModule != NULL)
-        {
-            *phModule = callbackData.hModule;
-        }
-        return S_OK;
-#else
-        _ASSERTE(phModule == NULL);
         const char* filePath = nullptr;
 
         if (_wcsncmp(pwszFileName, MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W), _wcslen(MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W))) == 0)
@@ -4352,34 +3918,32 @@ public:
             if (0 >= length)
             {
                 ExtErr("MultiByteToWideChar(filePath) failed. Last error = 0x%x\n", GetLastError());
-                return E_FAIL;
+                return HRESULT_FROM_WIN32(GetLastError());
             }
         }
         else
         {
-            LPCSTR coreclrDirectory = g_ExtServices->GetCoreClrDirectory();
-            if (coreclrDirectory == NULL)
+            HRESULT hr = GetCoreClrDirectory(modulePath, MAX_LONGPATH);
+            if (FAILED(hr))
             {
-                ExtErr("Runtime module (%s) not loaded yet\n", MAKEDLLNAME_A("coreclr"));
-                return E_FAIL;
-            }
-            int length = MultiByteToWideChar(CP_ACP, 0, coreclrDirectory, -1, modulePath, MAX_LONGPATH);
-            if (0 >= length)
-            {
-                ExtErr("MultiByteToWideChar(coreclrDirectory) failed. Last error = 0x%x\n", GetLastError());
-                return E_FAIL;
+                return hr;
             }
             wcscat_s(modulePath, MAX_LONGPATH, pwszFileName);
         }
 
         ExtOut("Loaded %S\n", modulePath.GetPtr());
 
+#ifndef FEATURE_PAL
+        if (phModule != NULL)
+        {
+            *phModule = LoadLibraryAndCheck(modulePath.GetPtr(), dwTimestamp, dwSizeOfImage);
+        }
+#endif
         if (ppResolvedModulePath != NULL)
         {
             *ppResolvedModulePath = modulePath.Detach();
         }
         return S_OK;
-#endif // FEATURE_PAL
     }
 
     // Called by the shim to locate and load mscordaccore and mscordbi
@@ -4525,6 +4089,22 @@ public:
         {
             return E_UNEXPECTED;
         }
+#ifdef FEATURE_PAL
+        if (g_sos != nullptr)
+        {
+            // LLDB synthesizes memory (returns 0's) for missing pages (in this case the missing metadata  pages) 
+            // in core dumps. This functions creates a list of the metadata regions and caches the metadata if 
+            // available from the local or downloaded assembly. If the read would be in the metadata of a loaded 
+            // assembly, the metadata from the this cache will be returned.
+            HRESULT hr = GetMetadataMemory(address, request, pBuffer);
+            if (SUCCEEDED(hr)) {
+                if (pcbRead != nullptr) {
+                    *pcbRead = request;
+                }
+                return hr;
+            }
+        }
+#endif
         return g_ExtData->ReadVirtual(address, pBuffer, request, (PULONG) pcbRead);
     }
 
@@ -4568,7 +4148,7 @@ public:
         ((CONTEXT*) context)->ContextFlags = contextFlags;
 
         // Ok, do it!
-        hr = g_ExtAdvanced3->GetThreadContext((LPVOID) context, contextSize);
+        hr = g_ExtAdvanced->GetThreadContext((LPVOID) context, contextSize);
 
         // This is cleanup; failure here doesn't mean GetThreadContext should fail
         // (that's determined by hr).
@@ -5223,6 +4803,43 @@ size_t CountHexCharacters(CLRDATA_ADDRESS val)
     }
 
     return ret;
+} 
+
+HRESULT 
+OutputVaList(
+    ULONG mask,
+    PCSTR format,
+    va_list args)
+{
+#ifndef FEATURE_PAL
+    if (IsInitializedByDbgEng())
+    {
+        return g_ExtControl->OutputVaList(DEBUG_OUTPUT_NORMAL, format, args);
+    }
+    else
+#endif
+    {
+        ArrayHolder<char> str = new char[8192];
+        int length = _vsnprintf_s(str, 8192, _TRUNCATE, format, args);
+        if (length > 0)
+        {
+            return g_ExtControl->OutputVaList(DEBUG_OUTPUT_NORMAL, str, args);
+        }
+        return E_FAIL;
+    }
+}
+
+HRESULT 
+OutputText(
+    ULONG mask,
+    PCSTR format,
+    ...)
+{
+    va_list args;
+    va_start (args, format);
+    HRESULT result = OutputVaList(mask, format, args);
+    va_end (args);
+    return result;
 }
 
 void WhitespaceOut(int count)
@@ -5238,10 +4855,10 @@ void WhitespaceOut(int count)
     count &= ~0x3F;
 
     if (mod > 0)
-        g_ExtControl->Output(DEBUG_OUTPUT_NORMAL, "%.*s", mod, FixedIndentString);
+        OutputText(DEBUG_OUTPUT_NORMAL, "%.*s", mod, FixedIndentString);
 
     for ( ; count > 0; count -= FixedIndentWidth)
-        g_ExtControl->Output(DEBUG_OUTPUT_NORMAL, FixedIndentString);
+        OutputText(DEBUG_OUTPUT_NORMAL, FixedIndentString);
 }
 
 void DMLOut(PCSTR format, ...)
@@ -5261,7 +4878,7 @@ void DMLOut(PCSTR format, ...)
     else
 #endif
     {
-        g_ExtControl->OutputVaList(DEBUG_OUTPUT_NORMAL, format, args);
+        OutputVaList(DEBUG_OUTPUT_NORMAL, format, args);
     }
 
     va_end(args);
@@ -5291,7 +4908,7 @@ void ExtOut(PCSTR Format, ...)
     
     va_start(Args, Format);
     ExtOutIndent();
-    g_ExtControl->OutputVaList(DEBUG_OUTPUT_NORMAL, Format, Args);
+    OutputVaList(DEBUG_OUTPUT_NORMAL, Format, Args);
     va_end(Args);
 }
 
@@ -5303,7 +4920,7 @@ void ExtWarn(PCSTR Format, ...)
     va_list Args;
     
     va_start(Args, Format);
-    g_ExtControl->OutputVaList(DEBUG_OUTPUT_WARNING, Format, Args);
+    OutputVaList(DEBUG_OUTPUT_WARNING, Format, Args);
     va_end(Args);
 }
 
@@ -5312,7 +4929,7 @@ void ExtErr(PCSTR Format, ...)
     va_list Args;
     
     va_start(Args, Format);
-    g_ExtControl->OutputVaList(DEBUG_OUTPUT_ERROR, Format, Args);
+    OutputVaList(DEBUG_OUTPUT_ERROR, Format, Args);
     va_end(Args);
 }
 
@@ -5326,7 +4943,7 @@ void ExtDbgOut(PCSTR Format, ...)
 
         va_start(Args, Format);
         ExtOutIndent();
-        g_ExtControl->OutputVaList(DEBUG_OUTPUT_NORMAL, Format, Args);
+        OutputVaList(DEBUG_OUTPUT_NORMAL, Format, Args);
         va_end(Args);
     }
 #endif
@@ -5512,7 +5129,7 @@ EnableDMLHolder::~EnableDMLHolder()
 
 bool IsDMLEnabled()
 {
-    return Output::g_DMLEnable > 0;
+    return IsInitializedByDbgEng() && Output::g_DMLEnable > 0;
 }
 
 NoOutputHolder::NoOutputHolder(BOOL bSuppress)
@@ -6264,24 +5881,67 @@ struct MemoryRegion
 private:
     uint64_t m_startAddress;
     uint64_t m_endAddress;
+    CLRDATA_ADDRESS m_peFile;
+    BYTE* m_metadataMemory;
+    volatile LONG m_busy;
 
-public:
-    MemoryRegion(uint64_t start, uint64_t end) : 
-        m_startAddress(start),
-        m_endAddress(end)
+    HRESULT CacheMetadata()
     {
+        if (m_metadataMemory == nullptr)
+        {
+            HRESULT hr;
+            CLRDATA_ADDRESS baseAddress;
+            if (FAILED(hr = g_sos->GetPEFileBase(m_peFile, &baseAddress))) {
+                return hr;
+            }
+            ArrayHolder<WCHAR> imagePath = new WCHAR[MAX_LONGPATH];
+            if (FAILED(hr = g_sos->GetPEFileName(m_peFile, MAX_LONGPATH, imagePath.GetPtr(), NULL))) {
+                return hr;
+            }
+            IMAGE_DOS_HEADER DosHeader;
+            if (FAILED(hr = g_ExtData->ReadVirtual(baseAddress, &DosHeader, sizeof(DosHeader), NULL))) {
+                return hr;
+            }
+            IMAGE_NT_HEADERS Header;
+            if (FAILED(hr = g_ExtData->ReadVirtual(baseAddress + DosHeader.e_lfanew, &Header, sizeof(Header), NULL))) {
+                return hr;
+            }
+            // If there is no COMHeader, this can not be managed code.
+            if (Header.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_COMHEADER].VirtualAddress == 0) {
+                return E_ACCESSDENIED;
+            }
+            ULONG32 imageSize = Header.OptionalHeader.SizeOfImage;
+            ULONG32 timeStamp = Header.FileHeader.TimeDateStamp;
+            ULONG32 bufferSize = (ULONG32)Size();
+
+            ArrayHolder<BYTE> buffer = new NOTHROW BYTE[bufferSize];
+            if (buffer == nullptr) {
+                return E_OUTOFMEMORY;
+            }
+            ULONG32 actualSize = 0;
+            if (FAILED(hr = GetMetadataLocator(imagePath, timeStamp, imageSize, nullptr, 0, 0, bufferSize, buffer, &actualSize))) {
+                return hr;
+            }
+            m_metadataMemory = buffer.Detach();
+        }
+        return S_OK;
     }
 
-    // copy constructor
-    MemoryRegion(const MemoryRegion& region) : 
-        m_startAddress(region.m_startAddress),
-        m_endAddress(region.m_endAddress)
+public:
+    MemoryRegion(uint64_t start, uint64_t end, CLRDATA_ADDRESS peFile) : 
+        m_startAddress(start),
+        m_endAddress(end),
+        m_peFile(peFile),
+        m_metadataMemory(nullptr),
+        m_busy(0)
     {
     }
 
     uint64_t StartAddress() const { return m_startAddress; }
     uint64_t EndAddress() const { return m_endAddress; }
     uint64_t Size() const { return m_endAddress - m_startAddress; }
+
+    CLRDATA_ADDRESS const PEFile() { return m_peFile; }
 
     bool operator<(const MemoryRegion& rhs) const
     {
@@ -6293,6 +5953,47 @@ public:
     {
         return (m_startAddress <= rhs.m_startAddress) && (m_endAddress >= rhs.m_endAddress);
     }
+
+    HRESULT ReadMetadata(CLRDATA_ADDRESS address, ULONG32 bufferSize, BYTE* buffer)
+    {
+        _ASSERTE((m_startAddress <= address) && (m_endAddress >= (address + bufferSize)));
+
+        HRESULT hr = E_ACCESSDENIED;
+
+        // Skip in-memory and dynamic modules or if CacheMetadata failed
+        if (m_peFile != 0)
+        {
+            if (InterlockedIncrement(&m_busy) == 1)
+            {
+                // Attempt to get the assembly metadata from local file or by downloading from a symbol server
+                hr = CacheMetadata();
+                if (FAILED(hr)) {
+                    // If we can get the metadata from the assembly, mark this region to always fail.
+                    m_peFile = 0;
+                }
+            }
+            InterlockedDecrement(&m_busy);
+        }
+
+        if (FAILED(hr)) {
+            return hr;
+        }
+
+        // Read the memory from the cached metadata blob
+        _ASSERTE(m_metadataMemory != nullptr);
+        uint64_t offset = address - m_startAddress;
+        memcpy(buffer, m_metadataMemory + offset, bufferSize);
+        return S_OK;
+    }
+
+    void Dispose()
+    {
+        if (m_metadataMemory != nullptr)
+        {
+            delete[] m_metadataMemory;
+            m_metadataMemory = nullptr;
+        }
+    }
 };
 
 std::set<MemoryRegion> g_metadataRegions;
@@ -6300,20 +6001,12 @@ bool g_metadataRegionsPopulated = false;
 
 void FlushMetadataRegions()
 {
+    for (const MemoryRegion& region : g_metadataRegions)
+    {
+        const_cast<MemoryRegion&>(region).Dispose();
+    }
     g_metadataRegionsPopulated = false;
 }
-
-//-------------------------------------------------------------------------------
-// Lifted from "..\md\inc\mdfileformat.h"
-#define STORAGE_MAGIC_SIG   0x424A5342  // BSJB
-struct STORAGESIGNATURE
-{
-    ULONG       lSignature;             // "Magic" signature.
-    USHORT      iMajorVer;              // Major file version.
-    USHORT      iMinorVer;              // Minor file version.
-    ULONG       iExtraData;             // Offset to next structure of information
-    ULONG       iVersionString;         // Length of version string
-};
 
 void PopulateMetadataRegions()
 {
@@ -6333,29 +6026,8 @@ void PopulateMetadataRegions()
                 {
                     if (moduleData.metadataStart != 0)
                     {
-                        bool add = false;
-                        STORAGESIGNATURE header;
-                        if (SUCCEEDED(g_ExtData->ReadVirtual(moduleData.metadataStart, (PVOID)&header, sizeof(header), NULL)))
-                        {
-                            add = header.lSignature != STORAGE_MAGIC_SIG;
-                        }
-                        else {
-                            add = true;
-                        }
-                        if (add)
-                        {
-                            MemoryRegion region(moduleData.metadataStart, moduleData.metadataStart + moduleData.metadataSize);
-                            g_metadataRegions.insert(region);
-                        }
-#ifdef METADATA_REGION_LOGGING
-                        ArrayHolder<WCHAR> name = new WCHAR[MAX_LONGPATH];
-                        name[0] = '\0';
-                        if (moduleData.File != 0)
-                        {
-                            g_sos->GetPEFileName(moduleData.File, MAX_LONGPATH, name.GetPtr(), NULL);
-                        }
-                        ExtOut("%c%016x %016x %016x %S\n", add ? '*' : ' ', moduleData.metadataStart, moduleData.metadataStart + moduleData.metadataSize, moduleData.metadataSize, name.GetPtr());
-#endif // METADATA_REGION_LOGGING
+                        MemoryRegion region(moduleData.metadataStart, moduleData.metadataStart + moduleData.metadataSize, moduleData.File);
+                        g_metadataRegions.insert(region);
                     }
                 }
             }
@@ -6363,20 +6035,21 @@ void PopulateMetadataRegions()
     }
 }
 
-bool IsMetadataMemory(CLRDATA_ADDRESS address, ULONG32 size)
+HRESULT GetMetadataMemory(CLRDATA_ADDRESS address, ULONG32 bufferSize, BYTE* buffer)
 {
+    // Populate the metadata memory region map
     if (!g_metadataRegionsPopulated)
     {
         g_metadataRegionsPopulated = true;
         PopulateMetadataRegions();
     }
-    MemoryRegion region(address, address + size);
+    // Check if the memory address is in a metadata memory region
+    MemoryRegion region(address, address + bufferSize, 0);
     const auto& found = g_metadataRegions.find(region);
-    if (found != g_metadataRegions.end())
-    {
-        return found->Contains(region);
+    if (found != g_metadataRegions.end() && found->Contains(region)) {
+        return const_cast<MemoryRegion&>(*found).ReadMetadata(address, bufferSize, buffer);
     }
-    return false;
+    return E_ACCESSDENIED;
 }
 
 #endif // FEATURE_PAL

@@ -17,8 +17,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         public static int ConvertFile(IConsole console, FileInfo inputFilename, TraceFileFormat format, FileInfo output)
         {
-                if (format == TraceFileFormat.Netperf)
-                    throw new ArgumentException("Cannot convert to netperf format.");
+                if (format == TraceFileFormat.NetTrace)
+                    throw new ArgumentException("Cannot convert to nettrace format.");
                 
                 if (!inputFilename.Exists)
                     throw new FileNotFoundException($"File '{inputFilename}' does not exist.");
@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Command ConvertCommand() =>
             new Command(
                 name: "convert",
-                description: "Converts traces to alternate formats for use with alternate trace analysis tools. Can only convert from the netperf format.",
+                description: "Converts traces to alternate formats for use with alternate trace analysis tools. Can only convert from the nettrace format.",
                 argument: (new Argument<FileInfo>(defaultValue: new FileInfo(CollectCommandHandler.DefaultTraceName)) { 
                     Name = "input-filename",
                     Description = $"Input trace file to be converted.  Defaults to '{CollectCommandHandler.DefaultTraceName}'."

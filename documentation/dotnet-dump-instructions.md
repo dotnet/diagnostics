@@ -23,7 +23,7 @@ The next step is to collect a dump. This can be skipped if a core dump has alrea
 
 On Linux, the runtime version must be 3.0 or greater.
      
-    $ dotnet dump collect --process-id 1902
+    $ dotnet-dump collect --process-id 1902
     Writing minidump to file ./core_20190226_135837
     Written 98983936 bytes (24166 pages) to core file
     Complete

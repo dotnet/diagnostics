@@ -36,7 +36,6 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             int size = 0;
 
             size += Marshal.SizeOf(@this.CircularBufferSizeInMB.GetType());
-            size += @this.OutputPath.GetByteCount();
             size += Marshal.SizeOf(typeof(int));
 
             foreach (var provider in @this.Providers)
