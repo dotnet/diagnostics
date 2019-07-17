@@ -7,9 +7,9 @@ The dotnet-trace tool is a cross-platform CLI global tool that enables the colle
 The first step is to install the dotnet-trace CLI global tool.
 
 ```cmd
-$ dotnet tool install --global dotnet-trace --version 1.0.4-preview6.19311.1
+$ dotnet tool install --global dotnet-trace --version 3.0.0-preview7.19365.2
 You can invoke the tool using the following command: dotnet-trace
-Tool 'dotnet-trace' (version '1.0.4-preview6.19311.1') was successfully installed.
+Tool 'dotnet-trace' (version '3.0.0-preview7.19365.2') was successfully installed.
 ```
 
 ## Using dotnet-trace
