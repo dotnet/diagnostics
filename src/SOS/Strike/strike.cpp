@@ -8991,89 +8991,46 @@ DECLARE_API(GCInfo)
     return Status;
 }
 
-#if !defined(FEATURE_PAL)
+GCEncodingInfo g_gcEncodingInfo; // The constructor should run to create the initial buffer allocation.
 
 void DecodeGCTableEntry (const char *fmt, ...)
 {
-    GCEncodingInfo *pInfo = (GCEncodingInfo*)GetFiberData();
     va_list va;
 
     //
-    // Append the new data to the buffer
+    // Append the new data to the buffer. If it doesn't fit, allocate a new buffer that is bigger and try again.
     //
 
     va_start(va, fmt);
 
-    int cch = _vsnprintf_s(&pInfo->buf[pInfo->cch], _countof(pInfo->buf) - pInfo->cch, _countof(pInfo->buf) - pInfo->cch - 1, fmt, va);
-    if (cch >= 0)
-        pInfo->cch += cch;
-
-    va_end(va);
-
-    pInfo->buf[pInfo->cch] = '\0';
-
-    //
-    // If there are complete lines in the buffer, decode them.
-    //
-
-    for (;;)
+    while (true)
     {
-        char *pNewLine = strchr(pInfo->buf, '\n');
-
-        if (!pNewLine)
-            break;
-
-        //
-        // The line should start with a 16-bit (x86) or 32-bit (non-x86) hex
-        // offset.  strtoul returns ULONG_MAX or 0 on failure.  0 is a valid
-        // offset for the first encoding, or while the last offset was 0.
-        //
-
-        if (isxdigit(pInfo->buf[0]))
+        char* buffer = &g_gcEncodingInfo.buf[g_gcEncodingInfo.cchBuf];
+        size_t sizeOfBuffer = g_gcEncodingInfo.cchBufAllocation - g_gcEncodingInfo.cchBuf;
+        size_t maxCchToWrite = sizeOfBuffer - 1; // -1 to leave space for the null terminator
+        int cch = _vsnprintf_s(buffer, sizeOfBuffer, maxCchToWrite, fmt, va);
+        if ((cch == -1) && (errno == ERANGE))
         {
-            char *pEnd;
-            ULONG ofs = strtoul(pInfo->buf, &pEnd, 16);
-
-            if (   isspace(*pEnd)
-                && -1 != ofs 
-                && (   -1 == pInfo->ofs
-                    || 0 == pInfo->ofs
-                    || ofs > 0))
+            if (!g_gcEncodingInfo.ReallocBuf())
             {
-                pInfo->ofs = ofs;
-                *pNewLine = '\0';
-
-                SwitchToFiber(pInfo->pvMainFiber);
+                // We couldn't reallocate the buffer; skip the rest of the text.
+                ExtOut("Could not allocate memory for GC info\n");
+                break;
             }
         }
-        else if (0 == strncmp(pInfo->buf, "Untracked:", 10))
+        else
         {
-            pInfo->ofs = 0;
-            *pNewLine = '\0';
-
-            SwitchToFiber(pInfo->pvMainFiber);
+            if (cch >= 0)
+            {
+                // cch is the number of characters written, not including the terminating null.
+                g_gcEncodingInfo.cchBuf += cch;
+            }
+            break;
         }
-
-        //
-        // Shift the remaining data to the start of the buffer
-        //
-
-        strcpy_s(pInfo->buf, _countof(pInfo->buf), pNewLine+1);
-        pInfo->cch = (int)strlen(pInfo->buf);
     }
+
+    va_end(va);
 }
-
-
-VOID CALLBACK DumpGCTableFiberEntry (LPVOID pvGCEncodingInfo)
-{
-    GCEncodingInfo *pInfo = (GCEncodingInfo*)pvGCEncodingInfo;
-    GCInfoToken gcInfoToken = { pInfo->table, GCINFO_VERSION };
-    g_targetMachine->DumpGCInfo(gcInfoToken, pInfo->methodSize, DecodeGCTableEntry, false /*encBytes*/, false /*bPrintHeader*/);
-
-    pInfo->fDoneDecoding = true;
-    SwitchToFiber(pInfo->pvMainFiber);
-}
-#endif // !FEATURE_PAL
 
 BOOL gatherEh(UINT clauseIndex,UINT totalClauses,DACEHInfo *pEHInfo,LPVOID token)
 {
@@ -9124,9 +9081,7 @@ DECLARE_API(u)
 
     CMDOption option[] = 
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"-gcinfo", &fWithGCInfo, COBOOL, FALSE},
-#endif
         {"-ehinfo", &fWithEHInfo, COBOOL, FALSE},
         {"-n", &bSuppressLines, COBOOL, FALSE},
         {"-o", &bDisplayOffsets, COBOOL, FALSE},
@@ -9241,17 +9196,74 @@ DECLARE_API(u)
         ExtOut("Begin %p, size %x\n", SOS_PTR(codeHeaderData.MethodStart), codeHeaderData.MethodSize);
     }
 
-#if !defined(FEATURE_PAL)
     //
-    // Set up to mix gc info with the code if requested
+    // Set up to mix gc info with the code if requested. To do this, we first generate all the textual
+    // gc info up front. This text is the same as the "!gcinfo" command, and looks like:
     //
-
-    GCEncodingInfo gcEncodingInfo = {0};
+    // Prolog size: 0
+    // Security object: <none>
+    // GS cookie: <none>
+    // PSPSym: <none>
+    // Generics inst context: <none>
+    // PSP slot: <none>
+    // GenericInst slot: <none>
+    // Varargs: 0
+    // Frame pointer: rbp
+    // Wants Report Only Leaf: 0
+    // Size of parameter area: 20
+    // Return Kind: Scalar
+    // Code size: 1ec
+    // Untracked: +rbp-10 +rbp-30 +rbp-48 +rbp-50 +rbp-58 +rbp-60 +rbp-68 +rbp-70
+    // 0000001e interruptible
+    // 0000003c +rax
+    // 0000004d +rdx
+    // 00000051 +rcx
+    // 00000056 -rdx -rcx -rax
+    // 0000005a +rcx
+    // 00000067 -rcx
+    // 00000080 +rcx
+    // 00000085 -rcx
+    // 0000009e +rcx
+    // 000000a3 -rcx
+    // 000000bc +rcx
+    // 000000c1 -rcx
+    // 000000d7 +rcx
+    // 000000e5 -rcx
+    // 000000ef +rax
+    // 0000010a +r8
+    // 00000119 +rcx
+    // 00000120 -r8 -rcx -rax
+    // 0000012f +rax
+    // 00000137 +r8
+    // 00000146 +rcx
+    // 00000150 -r8 -rcx -rax
+    // 0000015f +rax
+    // 00000167 +r8
+    // 00000176 +rcx
+    // 00000180 -r8 -rcx -rax
+    // 0000018f +rax
+    // 00000197 +r8
+    // 000001a6 +rcx
+    // 000001b0 -r8 -rcx -rax
+    // 000001b4 +rcx
+    // 000001b8 +rdx
+    // 000001bd -rdx -rcx
+    // 000001c8 +rcx
+    // 000001cd -rcx
+    // 000001d2 +rcx
+    // 000001d7 -rcx
+    // 000001e5 not interruptible
+    //
+    // For the entries without offset prefixes, we output them before the first offset of code.
+    // (Previously, we only displayed the "Untracked:" element, but displaying all this additional
+    // GC info is useful, and then the user doesn't need to also do a "!gcinfo" to see it.)
+    // For the entries with offset prefixes, we parse the offset, and display all relevant information
+    // before the current instruction offset being disassembled, that is, all the lines of GC info
+    // with an offset greater than the previous instruction and with an offset less than or equal
+    // to the offset of the current instruction.
 
     // The actual GC Encoding Table, this is updated during the course of the function.
-    gcEncodingInfo.table = NULL;
-
-    // The holder to make sure we clean up the memory for the table
+    // Use a holder to make sure we clean up the memory for the table.
     ArrayHolder<BYTE> table = NULL;
 
     if (fWithGCInfo)
@@ -9265,20 +9277,18 @@ DECLARE_API(u)
             return E_FAIL;
         }
 
-
         // Assign the new array to the mutable gcEncodingInfo table and to the
         // table ArrayHolder to clean this up when the function exits.
-        table = gcEncodingInfo.table = new NOTHROW BYTE[tableSize];
-        
-        if (gcEncodingInfo.table == NULL)
+        table = new NOTHROW BYTE[tableSize];
+        if (table == NULL)
         {
             ExtOut("Could not allocate memory to read the gc info.\n");
             return E_OUTOFMEMORY;
         }
         
-        memset (gcEncodingInfo.table, 0, tableSize);
+        memset (table, 0, tableSize);
         // We avoid using move here, because we do not want to return
-        if (!SafeReadMemory(TO_TADDR(codeHeaderData.GCInfo), gcEncodingInfo.table, tableSize, NULL))
+        if (!SafeReadMemory(TO_TADDR(codeHeaderData.GCInfo), table, tableSize, NULL))
         {
             ExtOut("Could not read memory %p\n", SOS_PTR(codeHeaderData.GCInfo));
             return Status;
@@ -9287,34 +9297,16 @@ DECLARE_API(u)
         //
         // Skip the info header
         //
-        gcEncodingInfo.methodSize = (unsigned int)codeHeaderData.MethodSize;
+        unsigned int methodSize = (unsigned int)codeHeaderData.MethodSize;
 
-        //
-        // DumpGCTable will call gcPrintf for each encoding.  We'd like a "give
-        // me the next encoding" interface, but we're stuck with the callback.
-        // To reconcile this without messing up too much code, we'll create a
-        // fiber to dump the gc table.  When we need the next gc encoding,
-        // we'll switch to this fiber.  The callback will note the next offset,
-        // and switch back to the main fiber.
-        //
-
-        gcEncodingInfo.ofs = -1;
-        gcEncodingInfo.hotSizeToAdd = 0;
+        if (!g_gcEncodingInfo.Initialize())
+        {
+            return E_OUTOFMEMORY;
+        }
         
-        gcEncodingInfo.pvMainFiber = ConvertThreadToFiber(NULL);
-        if (!gcEncodingInfo.pvMainFiber && ERROR_ALREADY_FIBER == GetLastError())
-            gcEncodingInfo.pvMainFiber = GetCurrentFiber();
-        
-        if (!gcEncodingInfo.pvMainFiber)
-            return Status;
-
-        gcEncodingInfo.pvGCTableFiber = CreateFiber(0, DumpGCTableFiberEntry, &gcEncodingInfo);
-        if (!gcEncodingInfo.pvGCTableFiber)
-            return Status;
-
-        SwitchToFiber(gcEncodingInfo.pvGCTableFiber);
+        GCInfoToken gcInfoToken = { table, GCINFO_VERSION };
+        g_targetMachine->DumpGCInfo(gcInfoToken, methodSize, DecodeGCTableEntry, false /*encBytes*/, false /*bPrintHeader*/);
     }    
-#endif
 
     SOSEHInfo *pInfo = NULL;
     if (fWithEHInfo)
@@ -9339,10 +9331,7 @@ DECLARE_API(u)
                 ((DWORD_PTR)codeHeaderData.MethodStart) + codeHeaderData.MethodSize,
                 dwStartAddr,
                 (DWORD_PTR) MethodDescData.GCStressCodeCopy,
-#if !defined(FEATURE_PAL)
-                fWithGCInfo ? &gcEncodingInfo : 
-#endif            
-                NULL,
+                fWithGCInfo ? &g_gcEncodingInfo : NULL,
                 pInfo,
                 bSuppressLines,
                 bDisplayOffsets
@@ -9356,10 +9345,7 @@ DECLARE_API(u)
                 ((DWORD_PTR)codeHeaderData.MethodStart) + codeHeaderData.HotRegionSize,
                 dwStartAddr,
                 (DWORD_PTR) MethodDescData.GCStressCodeCopy,
-#if !defined(FEATURE_PAL)
-                fWithGCInfo ? &gcEncodingInfo : 
-#endif            
-                NULL,
+                fWithGCInfo ? &g_gcEncodingInfo : NULL,
                 pInfo,
                 bSuppressLines,
                 bDisplayOffsets
@@ -9367,20 +9353,16 @@ DECLARE_API(u)
 
         ExtOut("Cold region:\n");
         
-#if !defined(FEATURE_PAL)
         // Displaying gcinfo for a cold region requires knowing the size of
         // the hot region preceeding.
-        gcEncodingInfo.hotSizeToAdd = codeHeaderData.HotRegionSize;
-#endif            
+        g_gcEncodingInfo.hotSizeToAdd = codeHeaderData.HotRegionSize;
+
         g_targetMachine->Unassembly (
                 (DWORD_PTR) codeHeaderData.ColdRegionStart,
                 ((DWORD_PTR)codeHeaderData.ColdRegionStart) + codeHeaderData.ColdRegionSize,
                 dwStartAddr,
                 ((DWORD_PTR) MethodDescData.GCStressCodeCopy) + codeHeaderData.HotRegionSize,                
-#if !defined(FEATURE_PAL)
-                fWithGCInfo ? &gcEncodingInfo : 
-#endif            
-                NULL,
+                fWithGCInfo ? &g_gcEncodingInfo : NULL,
                 pInfo,
                 bSuppressLines,
                 bDisplayOffsets
@@ -9393,12 +9375,12 @@ DECLARE_API(u)
         delete pInfo;
         pInfo = NULL;
     }
-    
-#if !defined(FEATURE_PAL)
-    if (fWithGCInfo)
-        DeleteFiber(gcEncodingInfo.pvGCTableFiber);
-#endif
 
+    if (fWithGCInfo)
+    {
+        g_gcEncodingInfo.Deinitialize();
+    }
+    
     return Status;
 }
 

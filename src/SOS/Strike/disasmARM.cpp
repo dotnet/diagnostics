@@ -24,7 +24,6 @@
 #include "../../../inc/cor.h"
 #include "../../../inc/dacprivate.h"
 
-#ifndef FEATURE_PAL
 namespace ARMGCDump
 {
 #undef _TARGET_X86_
@@ -39,7 +38,6 @@ namespace ARMGCDump
 #define DAC_ARG(x)
 #include "gcdumpnonx86.cpp"
 }
-#endif // !FEATURE_PAL
 
 #if defined(_TARGET_WIN64_)
 #error This file does not support SOS targeting ARM from a 64-bit debugger
@@ -385,22 +383,15 @@ void ARMMachine::Unassembly (
             }
         }
 
-#ifndef FEATURE_PAL
         //
         // Print out any GC information corresponding to the current instruction offset.
         //
         if (pGCEncodingInfo)
         {
             SIZE_T curOffset = (PC - PCBegin) + pGCEncodingInfo->hotSizeToAdd;
-            while (   !pGCEncodingInfo->fDoneDecoding
-                   && pGCEncodingInfo->ofs <= curOffset)
-            {
-                ExtOut(pGCEncodingInfo->buf);
-                ExtOut("\n");
-                SwitchToFiber(pGCEncodingInfo->pvGCTableFiber);
-            }
+            pGCEncodingInfo->DumpGCInfoThrough(curOffset);
         }
-#endif //!FEATURE_PAL
+
         //
         // Print out any EH info corresponding to the current offset
         //
@@ -532,6 +523,22 @@ void ARMMachine::Unassembly (
 
         ExtOut ("\n");
     }
+
+    //
+    // Print out any "end" GC info
+    //
+    if (pGCEncodingInfo)
+    {
+        pGCEncodingInfo->DumpGCInfoThrough(PC - PCBegin);
+    }
+
+    //
+    // Print out any "end" EH info (where the end address is the byte immediately following the last instruction)
+    //
+    if (pEHInfo)
+    {
+        pEHInfo->FormatForDisassembly(PC - PCBegin);
+    }
 }
 
 #if 0 // @ARMTODO: Figure out how to extract this information under CoreARM
@@ -611,7 +618,6 @@ BOOL ARMMachine::GetExceptionContext (TADDR stack, TADDR PC, TADDR *cxrAddr, CRO
 ///
 void ARMMachine::DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const
 {
-#ifndef FEATURE_PAL
     if (bPrintHeader)
     {
         ExtOut("Pointer table:\n");
@@ -621,7 +627,6 @@ void ARMMachine::DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printf
     gcDump.gcPrintf = gcPrintf;
 
     gcDump.DumpGCTable(dac_cast<PTR_BYTE>(gcInfoToken.Info), methodSize, 0);
-#endif // !FEATURE_PAL
 }
 
 #endif // SOS_TARGET_ARM

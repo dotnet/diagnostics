@@ -41,14 +41,6 @@ namespace ARM64GCDump
 #include "gcdumpnonx86.cpp"
 }
 
-#ifdef FEATURE_PAL
-void SwitchToFiber(void*)
-{
-    // TODO: Fix for linux
-    assert(false);
-}
-#endif
-
 #if !defined(_TARGET_WIN64_)
 #error This file only supports SOS targeting ARM64 from a 64-bit debugger
 #endif
@@ -224,13 +216,7 @@ void ARM64Machine::Unassembly (
         if (pGCEncodingInfo)
         {
             SIZE_T curOffset = (currentPC - PCBegin) + pGCEncodingInfo->hotSizeToAdd;
-            while (   !pGCEncodingInfo->fDoneDecoding
-                   && pGCEncodingInfo->ofs <= curOffset)
-            {
-                ExtOut(pGCEncodingInfo->buf);
-                ExtOut("\n");
-                SwitchToFiber(pGCEncodingInfo->pvGCTableFiber);
-            }
+            pGCEncodingInfo->DumpGCInfoThrough(curOffset);
         }
 
         //
@@ -363,6 +349,22 @@ void ARM64Machine::Unassembly (
                 
     }
     ExtOut ("\n");
+
+    //
+    // Print out any "end" GC info
+    //
+    if (pGCEncodingInfo)
+    {
+        pGCEncodingInfo->DumpGCInfoThrough(PC - PCBegin);
+    }
+
+    //
+    // Print out any "end" EH info (where the end address is the byte immediately following the last instruction)
+    //
+    if (pEHInfo)
+    {
+        pEHInfo->FormatForDisassembly(PC - PCBegin);
+    }
 }
 
 
