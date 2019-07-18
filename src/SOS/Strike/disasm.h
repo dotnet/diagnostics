@@ -44,8 +44,12 @@ struct GCEncodingInfo
     // This is also called to initialize the buffer the first time.
     bool ReallocBuf();
 
+    // Ensure there are at least 'count' characters available in the buffer, by reallocating
+    // if necessary. Returns 'true' on success, 'false' on failure (e.g., failure to allocate memory).
+    bool EnsureAdequateBufferSpace(SIZE_T count);
+
     // Output all GC info from the current position up to and including 'curOffset'.
-    void DumpGCInfoThrough(size_t curOffset);
+    void DumpGCInfoThrough(SIZE_T curOffset);
 
     char* buf;                 // GC info textual output memory.
     SIZE_T cchBufAllocation;   // Number of characters allocated to buf.

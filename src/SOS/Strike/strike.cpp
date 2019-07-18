@@ -9003,28 +9003,46 @@ void DecodeGCTableEntry (const char *fmt, ...)
 
     va_start(va, fmt);
 
+    // Make sure there's at least a minimum amount of free space in the buffer. We need to minimally
+    // ensure that 'maxCchToWrite' is >0. 20 is an arbitrary smallish number.
+    if (!g_gcEncodingInfo.EnsureAdequateBufferSpace(20))
+    {
+        ExtOut("Could not allocate memory for GC info\n");
+        return;
+    }
+
     while (true)
     {
         char* buffer = &g_gcEncodingInfo.buf[g_gcEncodingInfo.cchBuf];
         size_t sizeOfBuffer = g_gcEncodingInfo.cchBufAllocation - g_gcEncodingInfo.cchBuf;
         size_t maxCchToWrite = sizeOfBuffer - 1; // -1 to leave space for the null terminator
         int cch = _vsnprintf_s(buffer, sizeOfBuffer, maxCchToWrite, fmt, va);
-        if ((cch == -1) && (errno == ERANGE))
+
+        // cch == -1 should be the only negative result, but checking < 0 is defensive in case some runtime returns something else.
+        // We should also check "errno == ERANGE", but it seems that some runtimes don't set that properly.
+        if (cch < 0)
         {
-            if (!g_gcEncodingInfo.ReallocBuf())
+            if (sizeOfBuffer > 1000)
+            {
+                // There must be some unexpected problem if we can't write the GC info into such a large buffer, so bail.
+                ExtOut("Error generating GC info\n");
+                break;
+            }
+            else if (!g_gcEncodingInfo.ReallocBuf())
             {
                 // We couldn't reallocate the buffer; skip the rest of the text.
                 ExtOut("Could not allocate memory for GC info\n");
                 break;
             }
+
+            // If we get here, we successfully reallocated the buffer larger, so we'll try again to write this entry
+            // into the larger buffer.
         }
         else
         {
-            if (cch >= 0)
-            {
-                // cch is the number of characters written, not including the terminating null.
-                g_gcEncodingInfo.cchBuf += cch;
-            }
+            // We successfully added this entry to the GC info we're accumulating.
+            // cch is the number of characters written, not including the terminating null.
+            g_gcEncodingInfo.cchBuf += cch;
             break;
         }
     }

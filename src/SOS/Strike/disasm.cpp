@@ -1196,7 +1196,18 @@ bool GCEncodingInfo::ReallocBuf()
     return true;
 }
 
-void GCEncodingInfo::DumpGCInfoThrough(size_t curOffset)
+bool GCEncodingInfo::EnsureAdequateBufferSpace(SIZE_T count)
+{
+    while (cchBuf + count + 1 > cchBufAllocation) // +1 for null terminator
+    {
+        if (!ReallocBuf())
+            return false;
+    }
+
+    return true;
+}
+
+void GCEncodingInfo::DumpGCInfoThrough(SIZE_T curOffset)
 {
     if (done)
     {
