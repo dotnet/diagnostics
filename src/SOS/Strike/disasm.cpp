@@ -1174,7 +1174,7 @@ bool GCEncodingInfo::ReallocBuf()
         return false;
     }
 
-    newSize = max(1000, newSize);
+    newSize = _max(1000, newSize);
     char* newbuffer = new char[newSize];
     if (newbuffer == NULL)
     {
