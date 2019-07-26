@@ -900,6 +900,10 @@ DECLARE_API(DumpIL)
         }
         else
         {
+            // Factor this so that it returns a map from IL offset to the textual representation of the decoding
+            // to be consumed by !u -il
+            // The disassemble function can give a MethodDescData as well as the set of keys IL offsets
+
             // This is not a dynamic method, print the IL for it.
             // Get the module
             DacpModuleData dmd;    
@@ -9075,6 +9079,10 @@ BOOL gatherEh(UINT clauseIndex,UINT totalClauses,DACEHInfo *pEHInfo,LPVOID token
     return TRUE;
 }
 
+HRESULT
+GetClrMethodInstance(
+    ___in ULONG64 NativeOffset,
+    ___out IXCLRDataMethodInstance** Method);
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -9094,6 +9102,7 @@ DECLARE_API(u)
     BOOL fWithEHInfo = FALSE;
     BOOL bSuppressLines = FALSE;
     BOOL bDisplayOffsets = FALSE;
+    BOOL bIL = FALSE;
     BOOL dml = FALSE;
     size_t nArg;
 
@@ -9103,6 +9112,7 @@ DECLARE_API(u)
         {"-ehinfo", &fWithEHInfo, COBOOL, FALSE},
         {"-n", &bSuppressLines, COBOOL, FALSE},
         {"-o", &bDisplayOffsets, COBOOL, FALSE},
+        {"-il", &bIL, COBOOL, FALSE},
 #ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
 #endif
@@ -9202,7 +9212,42 @@ DECLARE_API(u)
     }
 
     NameForMD_s(methodDesc, g_mdName, mdNameLen);
-    ExtOut("%S\n", g_mdName);   
+    ExtOut("%S\n", g_mdName);
+
+    if (bIL)
+    {
+        ToRelease<IXCLRDataMethodInstance> pMethodInst(NULL);
+
+        if ((Status = GetClrMethodInstance(codeHeaderData.MethodStart, &pMethodInst)) != S_OK)
+        {
+            return Status;
+        }
+
+        CLRDATA_IL_ADDRESS_MAP* map = nullptr;
+        ULONG32 mapCount = 0;
+
+        if ((Status = pMethodInst->GetILAddressMap(mapCount, &mapCount, map)) != S_OK)
+        {
+            return Status;
+        }
+
+        map = new CLRDATA_IL_ADDRESS_MAP[mapCount];
+
+        if ((Status = pMethodInst->GetILAddressMap(mapCount, &mapCount, map)) != S_OK)
+        {
+            return Status;
+        }
+
+        for (ULONG32 i = 0; i < mapCount; i++)
+        {
+            // TODO: These information should be interleaved with the disassembly
+            // Decoded IL can be obtained through refactoring DumpIL code.
+            ExtOut("%04x %p %p\n", map[i].ilOffset, map[i].startAddress, map[i].endAddress);
+        }
+
+        delete[] map;
+    }
+
     if (codeHeaderData.ColdRegionStart != NULL)
     {
         ExtOut("Begin %p, size %x. Cold region begin %p, size %x\n",
