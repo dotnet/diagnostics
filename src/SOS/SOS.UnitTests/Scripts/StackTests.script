@@ -56,13 +56,37 @@ IFDEF:PROJECTK
 SOSCOMMAND:ClrStack -r
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 8\s*\]\s+
-VERIFY:\s+[r|e]sp=<HEXVAL>\s+[r|e]bp=<HEXVAL>\s+[r|e]ip=<HEXVAL>\s+
-VERIFY:\s+[r|e]ax=<HEXVAL>\s+[r|e]bx=<HEXVAL>\s+[r|e]cx=<HEXVAL>\s+
+IFDEF:arm
+VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
+ENDIF:arm
+IFDEF:arm64
+VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
+ENDIF:arm64
+VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
+IFDEF:x64
+VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
+ENDIF:x64
+IFDEF:x86
+VERIFY:\s+eax=<HEXVAL>\s+ebx=<HEXVAL>\s+ecx=<HEXVAL>\s+
+ENDIF:x86
+
 IFDEF:64BIT
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 13\s*\]\s+
-VERIFY:\s+[r|e]sp=<HEXVAL>\s+[r|e]bp=<HEXVAL>\s+[r|e]ip=<HEXVAL>\s+
-VERIFY:\s+[r|e]ax=<HEXVAL>\s+[r|e]bx=<HEXVAL>\s+[r|e]cx=<HEXVAL>\s+
+IFDEF:arm
+VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
+ENDIF:arm
+IFDEF:arm64
+VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
+ENDIF:arm64
+VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
+IFDEF:x64
+VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
+ENDIF:x64
+IFDEF:x86
+VERIFY:\s+eax=<HEXVAL>\s+ebx=<HEXVAL>\s+ecx=<HEXVAL>\s+
+ENDIF:x86
 ENDIF:64BIT
 ENDIF:PROJECTK
 
@@ -96,7 +120,7 @@ ENDIF:ALPINE
 IFDEF:PROJECTK
 SOSCOMMAND:DumpStackObjects
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:\s+[R|E]SP/REG\s+Object\s+Name\s+
+VERIFY:\s+([R|E])*SP/REG\s+Object\s+Name\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.FormatException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.InvalidOperationException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
@@ -106,29 +130,31 @@ ENDIF:PROJECTK
 IFDEF:PROJECTK
 SOSCOMMAND:DumpStackObjects -verify
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:\s+[R|E]SP/REG\s+Object\s+Name\s+
+VERIFY:\s+([R|E])*SP/REG\s+Object\s+Name\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.FormatException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.InvalidOperationException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
 ENDIF:PROJECTK
 
 !IFDEF:DOTNETDUMP
+!IFDEF:arm
 
 # 9) Verify DumpStack works
 SOSCOMMAND:DumpStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:.*Child(-SP|EBP)\s+RetAddr\s+Caller, Callee\s+
+VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+\+\s*0x<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(System\.String\[\]\)\),\s+calling.*
 
 # 10) Verify DumpStack -EE works
 SOSCOMMAND:DumpStack -EE
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:.*Child(-SP|EBP)\s+RetAddr\s+Caller, Callee\s+
+VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+\+\s*0x<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(System\.String\[\]\)\)\s+
 
 # 11) Verify EEStack works
 SOSCOMMAND:EEStack
-VERIFY:.*Child(-SP|EBP)\s+RetAddr\s+Caller, Callee\s+
+VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+\+\s*0x<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(System\.String\[\]\)\),\s+calling.*
 
+ENDIF:arm
 ENDIF:DOTNETDUMP

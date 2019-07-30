@@ -336,22 +336,9 @@ LLDBServices::Output(
 {
     va_list args;
     va_start (args, format);
-    HRESULT result = OutputVaList(mask, format, args);
-    va_end (args);
-    return result;
-}
 
-HRESULT 
-LLDBServices::OutputVaList(
-    ULONG mask,
-    PCSTR format,
-    va_list args)
-{
     HRESULT result = S_OK;
     char str[1024];
-
-    va_list args_copy;
-    va_copy (args_copy, args);
 
     // Try and format our string into a fixed buffer first and see if it fits
     size_t length = ::vsnprintf(str, sizeof(str), format, args);
@@ -364,7 +351,7 @@ LLDBServices::OutputVaList(
         // Our stack buffer wasn't big enough to contain the entire formatted
         // string, so lets let vasprintf create the string for us!
         char *str_ptr = nullptr;
-        length = ::vasprintf(&str_ptr, format, args_copy);
+        length = ::vasprintf(&str_ptr, format, args);
         if (str_ptr)
         {
             OutputString(mask, str_ptr);
@@ -376,9 +363,19 @@ LLDBServices::OutputVaList(
         }
     }
 
-    va_end (args_copy);
-
+    va_end (args);
     return result;
+}
+
+HRESULT 
+LLDBServices::OutputVaList(
+    ULONG mask,
+    PCSTR format,
+    va_list args)
+{
+    // Just output the string; ignore args. It is always formatted by SOS.
+    OutputString(mask, format);
+    return S_OK;
 }
 
 // The following methods allow direct control
@@ -1603,6 +1600,42 @@ LLDBServices::GetContextFromFrame(
     dtcontext->R10 = GetRegister(frame, "r10");
     dtcontext->R11 = GetRegister(frame, "r11");
     dtcontext->R12 = GetRegister(frame, "r12");
+#elif DBG_TARGET_ARM64
+    dtcontext->Pc = frame.GetPC();
+    dtcontext->Sp = frame.GetSP();
+    dtcontext->Lr = GetRegister(frame, "x30");
+    dtcontext->Fp = GetRegister(frame, "x29");
+    dtcontext->Cpsr = GetRegister(frame, "cpsr");
+
+    dtcontext->X0 = GetRegister(frame, "x0");
+    dtcontext->X1 = GetRegister(frame, "x1");
+    dtcontext->X2 = GetRegister(frame, "x2");
+    dtcontext->X3 = GetRegister(frame, "x3");
+    dtcontext->X4 = GetRegister(frame, "x4");
+    dtcontext->X5 = GetRegister(frame, "x5");
+    dtcontext->X6 = GetRegister(frame, "x6");
+    dtcontext->X7 = GetRegister(frame, "x7");
+    dtcontext->X8 = GetRegister(frame, "x8");
+    dtcontext->X9 = GetRegister(frame, "x9");
+    dtcontext->X10 = GetRegister(frame, "x10");
+    dtcontext->X11 = GetRegister(frame, "x11");
+    dtcontext->X12 = GetRegister(frame, "x12");
+    dtcontext->X13 = GetRegister(frame, "x13");
+    dtcontext->X14 = GetRegister(frame, "x14");
+    dtcontext->X15 = GetRegister(frame, "x15");
+    dtcontext->X16 = GetRegister(frame, "x16");
+    dtcontext->X17 = GetRegister(frame, "x17");
+    dtcontext->X18 = GetRegister(frame, "x18");
+    dtcontext->X19 = GetRegister(frame, "x19");
+    dtcontext->X20 = GetRegister(frame, "x20");
+    dtcontext->X21 = GetRegister(frame, "x21");
+    dtcontext->X22 = GetRegister(frame, "x22");
+    dtcontext->X23 = GetRegister(frame, "x23");
+    dtcontext->X24 = GetRegister(frame, "x24");
+    dtcontext->X25 = GetRegister(frame, "x25");
+    dtcontext->X26 = GetRegister(frame, "x26");
+    dtcontext->X27 = GetRegister(frame, "x27");
+    dtcontext->X28 = GetRegister(frame, "x28");
 #elif DBG_TARGET_X86
     dtcontext->Eip = frame.GetPC();
     dtcontext->Esp = frame.GetSP();
