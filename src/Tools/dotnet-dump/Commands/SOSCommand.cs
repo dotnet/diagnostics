@@ -60,7 +60,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 SOSHost.ExecuteCommand(AliasExpansion, arguments);
             }
             catch (Exception ex) when (ex is FileNotFoundException || ex is EntryPointNotFoundException || ex is InvalidOperationException) {
-                Console.Error.WriteLine(ex.Message);
+                WriteLineError(ex.Message);
             }
         }
 

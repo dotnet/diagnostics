@@ -7,8 +7,6 @@ using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
-using System.Collections.Generic;
-using System.CommandLine;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -151,12 +149,12 @@ namespace SOS
         };
 
         internal readonly IDataReader DataReader;
-        internal readonly AnalyzeContext AnalyzeContext;
-        internal readonly RegisterService RegisterService;
-        internal readonly IConsole Console;
 
         private static readonly string s_coreclrModuleName;
 
+        private readonly AnalyzeContext _analyzeContext;
+        private readonly RegisterService _registerService;
+        private readonly IConsoleService _console;
         private readonly COMCallableIUnknown _ccw;  
         private readonly IntPtr _interface;
         private IntPtr _sosLibrary = IntPtr.Zero;
@@ -192,9 +190,9 @@ namespace SOS
         {
             DataTarget dataTarget = serviceProvider.GetService<DataTarget>();
             DataReader = dataTarget.DataReader;
-            Console = serviceProvider.GetService<IConsole>();
-            AnalyzeContext = serviceProvider.GetService<AnalyzeContext>();
-            RegisterService = serviceProvider.GetService<RegisterService>();
+            _console = serviceProvider.GetService<IConsoleService>();
+            _analyzeContext = serviceProvider.GetService<AnalyzeContext>();
+            _registerService = serviceProvider.GetService<RegisterService>();
 
             string rid = InstallHelper.GetRid();
             SOSPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
@@ -330,7 +328,7 @@ namespace SOS
         internal int GetInterrupt(
             IntPtr self)
         {
-            return AnalyzeContext.CancellationToken.IsCancellationRequested ? S_OK : E_FAIL;
+            return _analyzeContext.CancellationToken.IsCancellationRequested ? S_OK : E_FAIL;
         }
 
         internal int OutputVaList(
@@ -342,7 +340,7 @@ namespace SOS
             try
             {
                 // The text has already been formated by sos
-                Console.Out.Write(format);
+                _console.Write(format);
             }
             catch (OperationCanceledException)
             {
@@ -698,7 +696,7 @@ namespace SOS
             IntPtr context,
             uint contextSize)
         {
-            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
+            uint threadId = (uint)_analyzeContext.CurrentThreadId;
             if (!DataReader.GetThreadContext(threadId, uint.MaxValue, contextSize, context)) {
                 return E_FAIL;
             }
@@ -746,7 +744,7 @@ namespace SOS
             IntPtr self,
             out uint id)
         {
-            return GetThreadIdBySystemId(self, (uint)AnalyzeContext.CurrentThreadId, out id);
+            return GetThreadIdBySystemId(self, (uint)_analyzeContext.CurrentThreadId, out id);
         }
 
         internal int SetCurrentThreadId(
@@ -756,7 +754,7 @@ namespace SOS
             try
             {
                 unchecked {
-                    AnalyzeContext.CurrentThreadId = (int)DataReader.EnumerateAllThreads().ElementAt((int)id);
+                    _analyzeContext.CurrentThreadId = (int)DataReader.EnumerateAllThreads().ElementAt((int)id);
                 }
             }
             catch (ArgumentOutOfRangeException)
@@ -770,7 +768,7 @@ namespace SOS
             IntPtr self,
             out uint sysId)
         {
-            sysId = (uint)AnalyzeContext.CurrentThreadId;
+            sysId = (uint)_analyzeContext.CurrentThreadId;
             return S_OK;
         }
 
@@ -826,7 +824,7 @@ namespace SOS
             IntPtr self,
             ulong* offset)
         {
-            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
+            uint threadId = (uint)_analyzeContext.CurrentThreadId;
             ulong teb = DataReader.GetThreadTeb(threadId);
             Write(offset, teb);
             return S_OK;
@@ -836,21 +834,21 @@ namespace SOS
             IntPtr self,
             out ulong offset)
         {
-            return GetRegister(RegisterService.InstructionPointerIndex, out offset);
+            return GetRegister(_registerService.InstructionPointerIndex, out offset);
         }
 
         internal int GetStackOffset(
             IntPtr self,
             out ulong offset)
         {
-            return GetRegister(RegisterService.StackPointerIndex, out offset);
+            return GetRegister(_registerService.StackPointerIndex, out offset);
         }
 
         internal int GetFrameOffset(
             IntPtr self,
             out ulong offset)
         {
-            return GetRegister(RegisterService.FramePointerIndex, out offset);
+            return GetRegister(_registerService.FramePointerIndex, out offset);
         }
 
         internal int GetIndexByName(
@@ -858,7 +856,7 @@ namespace SOS
             string name,
             out uint index)
         {
-            if (RegisterService.GetRegisterIndexByName(name, out int value)) {
+            if (_registerService.GetRegisterIndexByName(name, out int value)) {
                 index = 0;
                 return E_INVALIDARG;
             }
@@ -872,10 +870,30 @@ namespace SOS
             out DEBUG_VALUE value)
         {
             int hr = GetRegister((int)register, out ulong offset);
-            value = new DEBUG_VALUE {
-                Type = DEBUG_VALUE_TYPE.INT64,
-                I64 = offset
-            };
+
+            // SOS expects the DEBUG_VALUE field to be set based on the 
+            // processor architecture instead of the register size.
+            switch (DataReader.GetPointerSize())
+            {
+                case 8:
+                    value = new DEBUG_VALUE {
+                        Type = DEBUG_VALUE_TYPE.INT64,
+                        I64 = offset
+                    };
+                    break;
+
+                case 4:
+                    value = new DEBUG_VALUE {
+                        Type = DEBUG_VALUE_TYPE.INT32,
+                        I32 = (uint)offset
+                    };
+                    break;
+
+                default:
+                    value = new DEBUG_VALUE();
+                    hr = E_FAIL;
+                    break;
+            }
             return hr;
         }
 
@@ -884,7 +902,7 @@ namespace SOS
             out ulong value)
         {
             value = 0;
-            if (!RegisterService.GetRegisterIndexByName(register, out int index)) {
+            if (!_registerService.GetRegisterIndexByName(register, out int index)) {
                 return E_INVALIDARG;
             }
             return GetRegister(index, out value);
@@ -894,8 +912,8 @@ namespace SOS
             int index, 
             out ulong value)
         {
-            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
-            if (!RegisterService.GetRegisterValue(threadId, index, out value)) {
+            uint threadId = (uint)_analyzeContext.CurrentThreadId;
+            if (!_registerService.GetRegisterValue(threadId, index, out value)) {
                 return E_FAIL;
             }
             return S_OK;

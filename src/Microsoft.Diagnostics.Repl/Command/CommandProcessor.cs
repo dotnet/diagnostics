@@ -3,10 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.CommandLine;
-using System.CommandLine.Binding;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 using System.Diagnostics;
@@ -21,19 +19,22 @@ namespace Microsoft.Diagnostics.Repl
         private readonly Parser _parser;
         private readonly Command _rootCommand;
         private readonly IServiceProvider _serviceProvider;
+        private readonly IConsole _console;
         private readonly Dictionary<string, Handler> _commandHandlers = new Dictionary<string, Handler>();
 
         /// <summary>
         /// Create an instance of the command processor;
         /// </summary>
         /// <param name="serviceProvider">service provider interface</param>
+        /// <param name="console">console instance</param>
         /// <param name="assemblies">Optional list of assemblies to look for commands</param>
         /// <param name="types">Optional list of types to look for commands</param>
-        public CommandProcessor(IServiceProvider serviceProvider, IEnumerable<Assembly> assemblies = null, IEnumerable<Type> types = null)
+        public CommandProcessor(IServiceProvider serviceProvider, IConsole console, IEnumerable<Assembly> assemblies = null, IEnumerable<Type> types = null)
         {
             Debug.Assert(serviceProvider != null);
             Debug.Assert(assemblies != null);
             _serviceProvider = serviceProvider;
+            _console = console;
 
             var rootBuilder = new CommandLineBuilder(new Command(">"));
             rootBuilder.UseHelp()
@@ -69,7 +70,7 @@ namespace Microsoft.Diagnostics.Repl
         public Task<int> Parse(string commandLine)
         {
             ParseResult result = _parser.Parse(commandLine);
-            return _parser.InvokeAsync(result, GetService<IConsole>());
+            return _parser.InvokeAsync(result, _console);
         }
 
         /// <summary>
@@ -361,7 +362,7 @@ namespace Microsoft.Diagnostics.Repl
                         return;
                     }
                 }
-                var helpBuilder = new HelpBuilder(_commandProcessor.GetService<IConsole>(), maxWidth: Console.WindowWidth);
+                var helpBuilder = new HelpBuilder(_commandProcessor._console, maxWidth: Console.WindowWidth);
                 helpBuilder.Write(command);
             }
         }

@@ -44,12 +44,12 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _serviceProvider = new ServiceProvider();
             _consoleProvider = new ConsoleProvider();
             Type type = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? typeof(SOSCommandForWindows) : typeof(SOSCommand);
-            _commandProcessor = new CommandProcessor(_serviceProvider, new Assembly[] { typeof(Analyzer).Assembly }, new Type[] { type });
+            _commandProcessor = new CommandProcessor(_serviceProvider, _consoleProvider, new Assembly[] { typeof(Analyzer).Assembly }, new Type[] { type });
         }
 
         public async Task<int> Analyze(FileInfo dump_path, string[] command)
         {
-            _consoleProvider.Out.WriteLine($"Loading core dump: {dump_path} ...");
+            _consoleProvider.WriteLine($"Loading core dump: {dump_path} ...");
 
             try
             { 
@@ -66,8 +66,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
                 using (target)
                 {
-                    _consoleProvider.Out.WriteLine("Ready to process analysis commands. Type 'help' to list available commands or 'help [command]' to get detailed help on a command.");
-                    _consoleProvider.Out.WriteLine("Type 'quit' or 'exit' to exit the session.");
+                    _consoleProvider.WriteLine("Ready to process analysis commands. Type 'help' to list available commands or 'help [command]' to get detailed help on a command.");
+                    _consoleProvider.WriteLine("Type 'quit' or 'exit' to exit the session.");
 
                     // Add all the services needed by commands and other services
                     AddServices(target);
@@ -101,7 +101,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                  ex is InvalidOperationException ||
                  ex is NotSupportedException)
             {
-                _consoleProvider.Error.WriteLine($"{ex.Message}");
+                _consoleProvider.WriteLine(OutputType.Error, $"{ex.Message}");
                 return 1;
             }
 
@@ -114,8 +114,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private void AddServices(DataTarget target)
         {
             _serviceProvider.AddService(target);
-            _serviceProvider.AddService<IConsole>(_consoleProvider);
-            _serviceProvider.AddService(_consoleProvider);
+            _serviceProvider.AddService<IConsoleService>(_consoleProvider);
             _serviceProvider.AddService(_commandProcessor);
             _serviceProvider.AddServiceFactory(typeof(IHelpBuilder), _commandProcessor.CreateHelpBuilder);
 

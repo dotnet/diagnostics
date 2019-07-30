@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -12,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Repl
 {
-    public sealed class ConsoleProvider : IConsole
+    public sealed class ConsoleProvider : IConsole, IConsoleService
     {
         private readonly List<StringBuilder> m_history;
 
@@ -123,9 +124,17 @@ namespace Microsoft.Diagnostics.Repl
         /// <summary>
         /// Writes a message with a new line to console.
         /// </summary>
+        public void WriteLine(string format, params object[] parameters)
+        {
+            WriteLine(OutputType.Normal, format, parameters);
+        }
+
+        /// <summary>
+        /// Writes a message with a new line to console.
+        /// </summary>
         public void WriteLine(OutputType type, string format, params object[] parameters)
         {
-            WriteOutput(type, string.Format(format + Environment.NewLine, parameters));
+            WriteOutput(type, string.Format(format, parameters) + Environment.NewLine);
         }
 
         /// <summary>
@@ -504,6 +513,16 @@ namespace Microsoft.Diagnostics.Repl
 
             void IStandardStreamWriter.Write(string value) => _write(value);
         }
+
+        #endregion
+
+        #region IConsoleService
+
+        void IConsoleService.Write(string text) => WriteOutput(OutputType.Normal, text);
+
+        void IConsoleService.WriteError(string text) => WriteOutput(OutputType.Error, text);
+
+        void IConsoleService.Exit() => Stop();
 
         #endregion
     }
