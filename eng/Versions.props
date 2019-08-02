@@ -25,7 +25,7 @@
     <MicrosoftSymbolStoreVersion>1.0.0-dev-64131-02</MicrosoftSymbolStoreVersion>
     <MicrosoftDiagnosticsRuntimeVersion>1.1.37504</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
-    <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.43</MicrosoftDiagnosticsTracingTraceEventVersion>
+    <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.44</MicrosoftDiagnosticsTracingTraceEventVersion>
     <SystemCommandLineExperimentalVersion>0.2.0-alpha.19254.1</SystemCommandLineExperimentalVersion>
     <SystemCommandLineRenderingVersion>0.2.0-alpha.19254.1</SystemCommandLineRenderingVersion>
 
