@@ -284,7 +284,7 @@ COLLECT
         A provider consists of the name and optionally the keywords, verbosity level, and custom key/value pairs.
 
         The string is written 'Provider[,Provider]'
-            Provider format: (KnownProviderName)[:Keywords[:Level][:KeyValueArgs]]
+            Provider format: KnownProviderName[:Keywords[:Level][:KeyValueArgs]]
                 KnownProviderName       - The provider's name
                 Keywords                - 8 character hex number bit mask
                 Level                   - A number in the range [0, 5]
