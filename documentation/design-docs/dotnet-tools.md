@@ -11,8 +11,8 @@ These are some quick examples of the work we'd expect a .Net developer to want t
     > dotnet tool install -g dotnet-counters
     You can invoke the tool using the following command: dotnet-counters
     Tool 'dotnet-counters' (version '1.0.0') was successfully installed.
-    > dotnet-counters monitor --process-id 1902 --refresh-interval 1 System.Runtime 
-    
+    > dotnet-counters monitor --process-id 1902 --refresh-interval 1 System.Runtime
+
     Press p to pause, r to resume, q to quit.
     System.Runtime:
         CPU Usage (%)                                 24
@@ -175,7 +175,7 @@ MONITOR
 
     1. Monitoring all counters from `System.Runtime` at a refresh interval of 3 seconds:
 
-      > dotnet-counters monitor --process-id 1902 --refresh-interval 3 System.Runtime 
+      > dotnet-counters monitor --process-id 1902 --refresh-interval 3 System.Runtime
     Press p to pause, r to resume, q to quit.
       System.Runtime:
         CPU Usage (%)                                 24
@@ -189,7 +189,7 @@ MONITOR
 
     2. Monitoring just CPU usage and GC heap size from `System.Runtime` at a refresh interval of 5 seconds:
 
-      > dotnet-counters monitor --process-id 1902 --refresh-interval 5 System.Runtime[cpu-usage,gc-heap-size] 
+      > dotnet-counters monitor --process-id 1902 --refresh-interval 5 System.Runtime[cpu-usage,gc-heap-size]
     Press p to pause, r to resume, q to quit.
       System.Runtime:
         CPU Usage (%)                                 24
@@ -284,8 +284,8 @@ COLLECT
         A provider consists of the name and optionally the keywords, verbosity level, and custom key/value pairs.
 
         The string is written 'Provider[,Provider]'
-            Provider format: (GUID|KnownProviderName)[:Keywords[:Level][:KeyValueArgs]]
-                GUID|KnownProviderName  - The provider's name
+            Provider format: KnownProviderName[:Keywords[:Level][:KeyValueArgs]]
+                KnownProviderName       - The provider's name
                 Keywords                - 8 character hex number bit mask
                 Level                   - A number in the range [0, 5]
                 KeyValueArgs            - A semicolon separated list of key=value
@@ -364,12 +364,12 @@ COLLECT
     Options:
       -p, --process-id
           The process to collect a memory dump from.
-     
+
       -h, --help
           Show command line help
 
       -o, --output
-          The path where collected dumps should be written. Defaults to '.\dump_YYYYMMDD_HHMMSS.dmp' on Windows and 
+          The path where collected dumps should be written. Defaults to '.\dump_YYYYMMDD_HHMMSS.dmp' on Windows and
           './core_YYYYMMDD_HHMMSS' on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full
           path and file name of the dump.
 
@@ -409,7 +409,7 @@ ANALYZE
       -h, --help
           Show command line help
 
-      -c, --command <command>    
+      -c, --command <command>
           Run the command on start.
 
 Examples:
