@@ -37,6 +37,23 @@ Collecting to file: <Full-Path-To-Trace>/trace.nettrace
 
 - Finally, stop collection by pressing the \<Enter> key, and *dotnet-trace* will finish logging events to *trace.nettrace* file.
 
+### Using dotnet-trace to collect counter values over time
+
+If you are trying to use EventCounter for basic health monitoring in  performance-sensitive settings like production environments and you want to collect traces to digest them in other machines, you can do that with `dotnet-trace` as well. 
+
+For example, if you want to enable and collect runtime performance counter values, you can use the following command:
+```cmd
+dotnet-trace collect --process-id <PID> --providers System.Runtime:0:1:EventCounterIntervalSec=1
+```
+
+This will tell the runtime counters to be reported once every second for lightweight health monitoring. Replacing `EventCounterIntervalSec=1` with a higher value (say 60) will allow you to collect a smaller trace with less granularity in the counter data.
+
+If you want to disable runtime events to reduce the overhead (and trace size) even further, you can use the following command to disable runtime events and managed stack profiler.
+```cmd
+dotnet-trace collect --process-id <PID> --providers System.Runtime:0:1:EventCounterIntervalSec=1,Microsoft-Windows-DotNETRuntime:0:1,Microsoft-DotNETCore-SampleProfiler:0:1
+```
+ 
+
 ## Viewing the trace captured from dotnet-trace
 
 On Windows, `.nettrace` files can be viewed on PerfView (https://github.com/microsoft/perfview) for analysis, just like traces collected with ETW or LTTng. For traces collected on Linux, you can either move the trace to a Windows machine to be viewed on PerfView.
