@@ -39,7 +39,7 @@ Collecting to file: <Full-Path-To-Trace>/trace.nettrace
 
 ### Using dotnet-trace to collect counter values over time
 
-If you are trying to use EventCounter for basic health monitoring in  performance-sensitive settings like production environments and you want to collect traces to digest them in other machines, you can do that with `dotnet-trace` as well. 
+If you are trying to use EventCounter for basic health monitoring in  performance-sensitive settings like production environments and you want to collect traces instead of watching them in real-time, you can do that with `dotnet-trace` as well.
 
 For example, if you want to enable and collect runtime performance counter values, you can use the following command:
 ```cmd
