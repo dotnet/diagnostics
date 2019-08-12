@@ -783,7 +783,7 @@ HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* 
     IfFailRet(InitializeHosting());
     _ASSERTE(g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate != nullptr);
 
-    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(logging, msdl, symweb, symbolServer, cacheDirectory, nullptr))
+    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(logging, msdl, symweb, GetTempDirectory(), symbolServer, cacheDirectory, nullptr))
     {
         ExtErr("Error initializing symbol server support\n");
         return E_FAIL;
@@ -809,7 +809,7 @@ void InitializeSymbolStore()
         {
             if (strlen(symbolPath) > 0)
             {
-                if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(false, false, false, nullptr, nullptr, symbolPath))
+                if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(false, false, false, GetTempDirectory(), nullptr, nullptr, symbolPath))
                 {
                     ExtErr("Windows symbol path parsing FAILED\n");
                 }
@@ -856,7 +856,7 @@ static void LoadNativeSymbolsCallback(void* param, const char* moduleFilePath, U
 {
     _ASSERTE(g_hostingInitialized);
     _ASSERTE(g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate != nullptr);
-    g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(SymbolFileCallback, param, GetTempDirectory(), moduleFilePath, moduleAddress, moduleSize, ReadMemoryForSymbols);
+    g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(SymbolFileCallback, param, moduleFilePath, moduleAddress, moduleSize, ReadMemoryForSymbols);
 }
 
 /**********************************************************************\

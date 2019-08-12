@@ -6,12 +6,17 @@ using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
+using Microsoft.SymbolStore;
+using Microsoft.SymbolStore.KeyGenerators;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -54,6 +59,7 @@ namespace SOS
             bool logging,
             bool msdl,
             bool symweb,
+            string tempDirectory,
             string symbolServerPath,
             string symbolCachePath,
             string windowsSymbolPath);
@@ -65,7 +71,6 @@ namespace SOS
         private delegate void LoadNativeSymbolsDelegate(
             SymbolReader.SymbolFileCallback callback,
             IntPtr parameter,
-            string tempDirectory,
             string moduleFilePath,
             ulong address,
             int size,
@@ -158,6 +163,7 @@ namespace SOS
         private readonly COMCallableIUnknown _ccw;  
         private readonly IntPtr _interface;
         private IntPtr _sosLibrary = IntPtr.Zero;
+        private Dictionary<string, PEReader> _pathToPeReader = new Dictionary<string, PEReader>();
 
         /// <summary>
         /// Enable the assembly resolver to get the right SOS.NETCore version (the one
@@ -186,6 +192,7 @@ namespace SOS
         /// <summary>
         /// Create an instance of the hosting class
         /// </summary>
+        /// <param name="serviceProvider">Service provider</param>
         public SOSHost(IServiceProvider serviceProvider)
         {
             DataTarget dataTarget = serviceProvider.GetService<DataTarget>();
@@ -251,7 +258,7 @@ namespace SOS
                 // SOS depends on that the temp directory ends with "/".
                 if (!string.IsNullOrEmpty(tempDirectory) && tempDirectory[tempDirectory.Length - 1] != Path.DirectorySeparatorChar)
                 {
-                    tempDirectory = tempDirectory + Path.DirectorySeparatorChar;
+                    tempDirectory += Path.DirectorySeparatorChar;
                 }
 
                 int result = initializeFunc(
@@ -453,6 +460,93 @@ namespace SOS
                 return S_OK;
             }
             return E_FAIL;
+        }
+
+        internal unsafe int ReadVirtualForWindows(
+            IntPtr self,
+            ulong address,
+            IntPtr buffer,
+            uint bytesRequested,
+            uint* pbytesRead)
+        {
+            if (DataReader.ReadMemory(address, buffer, unchecked((int)bytesRequested), out int bytesRead))
+            {
+                Write(pbytesRead, (uint)bytesRead);
+                return S_OK;
+            }
+
+            foreach (ModuleInfo module in DataReader.EnumerateModules())
+            {
+                ulong start = module.ImageBase;
+                ulong end = start + module.FileSize;
+                if (start <= address && end > address)
+                {
+                    PEReader reader = GetPEReader(module);
+                    if (reader != null)
+                    {
+                        int rva = (int)(address - start);
+                        try
+                        {
+                            PEMemoryBlock block = reader.GetSectionData(rva);
+                            if (block.Pointer == null)
+                            {
+                                block = reader.GetEntireImage();
+                            }
+                            BlobReader blob = block.GetReader();
+                            byte[] data = blob.ReadBytes((int)bytesRequested);
+
+                            Marshal.Copy(data, 0, buffer, data.Length);
+                            Write(pbytesRead, (uint)data.Length);
+                            return S_OK;
+                        }
+                        catch (Exception e) when (e is BadImageFormatException || e is InvalidOperationException || e is IOException)
+                        {
+                        }
+                    }
+                    break;
+                }
+            }
+
+            return E_FAIL;
+        }
+
+        private PEReader GetPEReader(ModuleInfo module)
+        {
+            if (!_pathToPeReader.TryGetValue(module.FileName, out PEReader reader))
+            {
+                Stream stream = null;
+
+                string downloadFilePath = module.FileName;
+                if (!File.Exists(downloadFilePath)) 
+                {
+                    if (SymbolReader.IsSymbolStoreEnabled())
+                    {
+                        SymbolStoreKey key = PEFileKeyGenerator.GetKey(Path.GetFileName(downloadFilePath), module.TimeStamp, module.FileSize);
+                        if (key != null)
+                        {
+                            // Now download the module from the symbol server
+                            downloadFilePath = SymbolReader.GetSymbolFile(key);
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(downloadFilePath))
+                {
+                    try
+                    {
+                        stream = File.OpenRead(downloadFilePath);
+                    }
+                    catch (Exception e) when (e is DirectoryNotFoundException || e is FileNotFoundException || e is UnauthorizedAccessException || e is IOException)
+                    {
+                    }
+                    if (stream != null)
+                    {
+                        reader = new PEReader(stream);
+                        _pathToPeReader.Add(module.FileName, reader);
+                    }
+                }
+            }
+            return reader;
         }
 
         internal unsafe int WriteVirtual(

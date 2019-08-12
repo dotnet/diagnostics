@@ -24,7 +24,7 @@ namespace SOS
 
         private static void AddDebugDataSpaces(VTableBuilder builder, SOSHost soshost)
         {
-            builder.AddMethod(new ReadVirtualDelegate(soshost.ReadVirtual));
+            builder.AddMethod(new ReadVirtualDelegate(soshost.ReadVirtualForWindows));
             builder.AddMethod(new WriteVirtualDelegate(soshost.WriteVirtual));
             builder.AddMethod(new SearchVirtualDelegate((self, offset, length, pattern, patternSize, patternGranularity, matchOffset) => DebugClient.NotImplemented));
             builder.AddMethod(new ReadVirtualUncachedDelegate((self, offset, buffer, bufferSize, bytesRead) => DebugClient.NotImplemented));
