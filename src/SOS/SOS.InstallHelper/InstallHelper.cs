@@ -330,7 +330,7 @@ namespace SOS
             {
                 throw new SOSInstallerException($"Unsupported operating system {RuntimeInformation.OSDescription}");
             }
-            string architecture = RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant();
+            string architecture = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
             return $"{os}-{architecture}";
         }
 

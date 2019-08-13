@@ -1138,4 +1138,148 @@ LPCSTR ARM64Machine::s_SPName           = "sp";
 
 #endif // SOS_TARGET_ARM64
 
+//
+// GCEncodingInfo class member implementations
+//
 
+bool GCEncodingInfo::Initialize()
+{
+    buf = nullptr;
+    cchBufAllocation = 0;
+    cchBuf = 0;
+    curPtr = nullptr;
+    done = false;
+    hotSizeToAdd = 0;
+
+    return ReallocBuf();
+}
+
+void GCEncodingInfo::Deinitialize()
+{
+    delete[] buf;
+    buf = nullptr;
+    cchBufAllocation = 0;
+    cchBuf = 0;
+    curPtr = nullptr;
+    done = false;
+    hotSizeToAdd = 0;
+}
+
+bool GCEncodingInfo::ReallocBuf()
+{
+    size_t newSize;
+    if (!ClrSafeInt<size_t>::multiply(cchBufAllocation, 2, newSize))
+    {
+        ExtOut("<integer overflow>\n");
+        return false;
+    }
+
+    newSize = _max(1000, newSize);
+    char* newbuffer = new char[newSize];
+    if (newbuffer == NULL)
+    {
+        ExtOut("Could not allocate memory for the gc info dump.\n");
+        return false;
+    }
+
+    if (buf != nullptr)
+    {
+        memcpy(newbuffer, buf, cchBufAllocation);
+        delete[] buf;
+    }
+    buf = newbuffer;
+    cchBufAllocation = newSize;
+
+    // Make sure it is null terminated. It should already be, unless this is the first time.
+    buf[cchBuf] = '\0';
+
+    return true;
+}
+
+bool GCEncodingInfo::EnsureAdequateBufferSpace(SIZE_T count)
+{
+    while (cchBuf + count + 1 > cchBufAllocation) // +1 for null terminator
+    {
+        if (!ReallocBuf())
+            return false;
+    }
+
+    return true;
+}
+
+void GCEncodingInfo::DumpGCInfoThrough(SIZE_T curOffset)
+{
+    if (done)
+    {
+        // We've already output all the GC info
+        return;
+    }
+
+    if (curPtr == nullptr)
+    {
+        // We're just starting iteration.
+        curPtr = buf;
+    }
+
+    for (;;)
+    {
+        char *pNewLine = strchr(curPtr, '\n');
+        if (pNewLine != nullptr)
+            *pNewLine = '\0';
+        SIZE_T cchLine = strlen(curPtr);
+
+        // There are two kinds of lines: those that start with an offset, and
+        // those that don't. It should be the case that all lines without
+        // offset come first, but that's certainly not guaranteed.
+        //
+        // For the lines with offset, it will be a 16-bit (x86) or 32-bit (non-x86) hex
+        // offset.  strtoul returns ULONG_MAX or 0 on failure.  0 is a valid
+        // offset for the first encoding.
+
+        char *pEnd;
+        ULONG ofs = strtoul(curPtr, &pEnd, /* base */ 16);
+
+        if ((pEnd != curPtr) && isspace(*pEnd) && (ULONG_MAX != ofs))
+        {
+            // We got a number. Assume it's an offset.
+            if (ofs <= curOffset)
+            {
+                ExtOut(curPtr);
+                ExtOut("\n");
+                curPtr += cchLine + 1; // +1 to pass the terminating null
+            }
+            else
+            {
+                // We'll come back and output this one later. Restore the newline, if any.
+                // Leave curPtr alone.
+                if (pNewLine != nullptr)
+                    *pNewLine = '\n';
+                break;
+            }
+        }
+        else
+        {
+            // This is something else. Output it.
+            ExtOut(curPtr);
+            ExtOut("\n");
+            curPtr += cchLine + 1; // +1 to pass the terminating null
+        }
+
+        if (pNewLine == nullptr)
+        {
+            // There was no trailing newline, and we output some text; we must be done
+            // (if we didn't output any text, we wouldn't get here).
+            done = true;
+            break;
+        }
+        else if (*curPtr == '\0')
+        {
+            // We must have output a line with a newline, and now we're pointing at the
+            // trailing null.
+            done = true;
+            break;
+        }
+
+        // Otherwise, we have text left to output.
+    }
+}

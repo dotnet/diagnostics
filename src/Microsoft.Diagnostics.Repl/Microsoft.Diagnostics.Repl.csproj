@@ -13,4 +13,8 @@
     <PackageReference Include="System.CommandLine.Experimental" Version="$(SystemCommandLineExperimentalVersion)" />
   </ItemGroup>
   
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
+  </ItemGroup>
+  
 </Project>

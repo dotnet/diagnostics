@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
@@ -21,9 +22,9 @@ namespace Microsoft.Diagnostics.Repl
         public InvocationContext InvocationContext { get; set; }
 
         /// <summary>
-        /// Console instance
+        /// Console service
         /// </summary>
-        public IConsole Console { get; set; }
+        public IConsoleService Console { get; set; }
 
         /// <summary>
         /// The AliasExpansion value from the CommandAttribute or null if none.
@@ -42,7 +43,7 @@ namespace Microsoft.Diagnostics.Repl
         /// <param name="message">text message</param>
         protected void WriteLine(string message)
         {
-            Console.Out.WriteLine(message);
+            Console.Write(message + Environment.NewLine);
         }
 
         /// <summary>
@@ -52,7 +53,17 @@ namespace Microsoft.Diagnostics.Repl
         /// <param name="args">arguments</param>
         protected void WriteLine(string format, params object[] args)
         {
-            Console.Out.WriteLine(string.Format(format, args));
+            Console.Write(string.Format(format, args) + Environment.NewLine);
+        }
+
+        /// <summary>
+        /// Display formatted error text
+        /// </summary>
+        /// <param name="format">format string</param>
+        /// <param name="args">arguments</param>
+        protected void WriteLineError(string format, params object[] args)
+        {
+            Console.WriteError(string.Format(format, args) + Environment.NewLine);
         }
     }
 }

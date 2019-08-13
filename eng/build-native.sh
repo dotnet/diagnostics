@@ -364,7 +364,7 @@ initTargetDistroRid()
     local passedRootfsDir=""
 
     # Only pass ROOTFS_DIR if cross is specified.
-    if [ "$__CrossBuild" == true ]; then
+    if [ $__CrossBuild == true ]; then
         passedRootfsDir=${ROOTFS_DIR}
     fi
 
@@ -438,7 +438,7 @@ fi
 
 # Run SOS/lldbplugin tests
 if [ $__Test == true ]; then
-   if [[ "$__BuildArch" != "arm" && "$__BuildArch" != "armel" && "$__BuildArch" != "arm64" ]]; then
+   if [ $__CrossBuild != true ]; then
 
       # Install the other versions of .NET Core runtime we are going to test on
       "$__ProjectRoot/eng/install-test-runtimes.sh" --dotnet-directory "$__ProjectRoot/.dotnet" --runtime-version-21 "$__DotNetRuntimeVersion" --temp-directory "$__IntermediatesDir" --architecture "$__BuildArch" $__DailyTest

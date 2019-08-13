@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 HelpBuilder.Write(command);
             }
             else {
-                Console.Error.WriteLine($"Help for {Command} not found.");
+                WriteLineError($"Help for {Command} not found.");
             }
         }
     }

@@ -125,9 +125,13 @@ ArchQuery(void)
     }
 #endif // SOS_TARGET_X86
 #ifdef SOS_TARGET_ARM
-    if (targetArchitecture == IMAGE_FILE_MACHINE_ARMNT)
+    switch (targetArchitecture)
     {
-        targetMachine = ARMMachine::GetInstance();
+        case IMAGE_FILE_MACHINE_ARM:
+        case IMAGE_FILE_MACHINE_THUMB:
+        case IMAGE_FILE_MACHINE_ARMNT:
+            targetMachine = ARMMachine::GetInstance();
+            break;
     }
 #endif // SOS_TARGET_ARM
 #ifdef SOS_TARGET_ARM64
@@ -140,7 +144,7 @@ ArchQuery(void)
     if (targetMachine == NULL)
     {
         g_targetMachine = NULL;
-        ExtErr("SOS does not support the current target architecture 0x%llx.\n", targetArchitecture);
+        ExtErr("SOS does not support the current target architecture 0x%08x\n", targetArchitecture);
         return E_FAIL;
     }
 

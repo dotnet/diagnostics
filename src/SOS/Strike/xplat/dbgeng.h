@@ -60,24 +60,6 @@ public:
         return m_lldbservices->GetInterrupt();
     }
 
-    // Sends output through clients
-    // output callbacks if the mask is allowed
-    // by the current output control mask and
-    // according to the output distribution
-    // settings.
-    HRESULT 
-    Output(
-        ULONG mask,
-        PCSTR format,
-        ...)
-    {
-        va_list args;
-        va_start (args, format);
-        HRESULT result = OutputVaList(mask, format, args);
-        va_end (args);
-        return result;
-    }
-
     HRESULT 
     OutputVaList(
         ULONG mask,
@@ -85,26 +67,6 @@ public:
         va_list args)
     {
         return m_lldbservices->OutputVaList(mask, format, args);
-    }
-
-    // The following methods allow direct control
-    // over the distribution of the given output
-    // for situations where something other than
-    // the default is desired.  These methods require
-    // extra work in the engine so they should
-    // only be used when necessary.
-    HRESULT 
-    ControlledOutput(
-        ULONG outputControl,
-        ULONG mask,
-        PCSTR format,
-        ...)
-    {
-        va_list args;
-        va_start (args, format);
-        HRESULT result = ControlledOutputVaList(outputControl, mask, format, args);
-        va_end (args);
-        return result;
     }
 
     HRESULT 

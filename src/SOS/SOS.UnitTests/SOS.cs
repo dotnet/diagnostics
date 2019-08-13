@@ -22,7 +22,6 @@ public class SOS
     ITestOutputHelper Output { get; set; }
 
     public static IEnumerable<object[]> Configurations => TestRunConfiguration.Instance.Configurations.Select(c => new[] { c });
-
     private void SkipIfArm(TestConfiguration config)
     {
         if (config.TargetArchitecture == "arm" || config.TargetArchitecture == "arm64")
@@ -48,8 +47,6 @@ public class SOS
 
     private async Task RunTest(TestConfiguration config, string testName, string debuggeeName, string scriptName, string debuggeeArguments = null, bool useCreateDump = true)
     {
-        SkipIfArm(config);
-
         if (!SOSRunner.IsAlpine())
         {
             // Live
@@ -101,8 +98,9 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task GCTests(TestConfiguration config)
     {
-        // Live only
         SkipIfArm(config);
+
+        // Live only
         if (SOSRunner.IsAlpine())
         {
             throw new SkipTestException("lldb tests not supported on Alpine");
@@ -153,7 +151,6 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task StackAndOtherTests(TestConfiguration config)
     {
-        SkipIfArm(config);
         if (config.RuntimeFrameworkVersionMajor == 1)
         {
             throw new SkipTestException("The debuggee (SymbolTestApp) doesn't work on .NET Core 1.1 because of a AssemblyLoadContext problem");
