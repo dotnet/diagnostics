@@ -18,11 +18,11 @@ namespace Microsoft.Diagnostics.Tools.Dump
         [OptionAlias(Name = "-v")]
         public bool Verbose { get; set; }
 
-        public AnalyzeContext AnalyzeContext { get; set; }
+        public DataTarget DataTarget { get; set; }
 
         public override void Invoke()
         {
-            foreach (ModuleInfo module in AnalyzeContext.Target.DataReader.EnumerateModules())
+            foreach (ModuleInfo module in DataTarget.DataReader.EnumerateModules())
             {
                 if (Verbose)
                 {

@@ -100,11 +100,7 @@
 #define INITGUID
 #include "guiddef.h"
 
-#ifdef FEATURE_PAL
 #define SOS_PTR(x) (size_t)(x)
-#else // FEATURE_PAL
-#define SOS_PTR(x) (unsigned __int64)(x)
-#endif // FEATURE_PAL else
 
 #include "exts.h"
 

@@ -12,11 +12,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [CommandAlias(Name = "quit")]
     public class ExitCommand : CommandBase
     {
-        public ConsoleProvider ConsoleProvider { get; set; }
-
         public override void Invoke()
         {
-            ConsoleProvider.Stop();
+            Console.Exit();
         }
     }
 }

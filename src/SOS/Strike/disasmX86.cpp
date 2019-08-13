@@ -545,21 +545,11 @@ void
         // Print out any GC information corresponding to the current instruction offset.
         //
 
-#ifndef FEATURE_PAL
         if (pGCEncodingInfo)
         {
             SIZE_T curOffset = (IP - IPBegin) + pGCEncodingInfo->hotSizeToAdd;
-            while (   !pGCEncodingInfo->fDoneDecoding
-                   && pGCEncodingInfo->ofs <= curOffset)
-            {
-                ExtOut(pGCEncodingInfo->buf);
-                ExtOut("\n");
-                SwitchToFiber(pGCEncodingInfo->pvGCTableFiber);
-            }
+            pGCEncodingInfo->DumpGCInfoThrough(curOffset);
         }
-#endif // FEATURE_PAL        
-
-        ULONG_PTR InstrAddr = IP;
 
         //
         // Print out any EH info corresponding to the current offset
@@ -581,6 +571,8 @@ void
         {
             ExtOut("%04x ", IP - IPBegin);
         }
+
+        ULONG_PTR InstrAddr = IP;
 
         DisasmAndClean (IP, line, _countof(line));
 
@@ -739,6 +731,14 @@ void
                 reg[dest].bValid = FALSE;
         }
         ExtOut ("\n");
+    }
+
+    //
+    // Print out any "end" GC info
+    //
+    if (pGCEncodingInfo)
+    {
+        pGCEncodingInfo->DumpGCInfoThrough(IP - IPBegin);
     }
 
     //

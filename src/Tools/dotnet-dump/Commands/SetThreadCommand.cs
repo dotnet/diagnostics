@@ -2,7 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Repl;
+using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -17,13 +19,15 @@ namespace Microsoft.Diagnostics.Tools.Dump
         [Argument(Help = "The thread index to set, otherwise displays the list of threads.")]
         public int? ThreadIndex { get; set; } = null;
 
+        public DataTarget DataTarget { get; set; }
+
         public AnalyzeContext AnalyzeContext { get; set; }
 
         public override void Invoke()
         {
             if (ThreadIndex.HasValue)
             {
-                IEnumerable<uint> threads = AnalyzeContext.Target.DataReader.EnumerateAllThreads();
+                IEnumerable<uint> threads = DataTarget.DataReader.EnumerateAllThreads();
                 if (ThreadIndex.Value >= threads.Count()) {
                     throw new InvalidOperationException($"Invalid thread index {ThreadIndex.Value}");
                 }
@@ -32,7 +36,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             else
             {
                 int index = 0;
-                foreach (uint threadId in AnalyzeContext.Target.DataReader.EnumerateAllThreads())
+                foreach (uint threadId in DataTarget.DataReader.EnumerateAllThreads())
                 {
                     WriteLine("{0}{1} 0x{2:X4} ({2})", threadId == AnalyzeContext.CurrentThreadId ? "*" : " ", index, threadId);
                     index++;

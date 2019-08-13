@@ -26,21 +26,41 @@ struct DumpStackFlag
 
 struct GCEncodingInfo
 {
-    LPVOID pvMainFiber;
-    LPVOID pvGCTableFiber;
+    GCEncodingInfo() : buf(nullptr), cchBufAllocation(0), cchBuf(0), curPtr(nullptr), done(false), hotSizeToAdd(0)
+    {
+        // We don't call Initialize() here because we want to call it somewhere
+        // we can handle memory allocation or other failures.
+    }
 
-    BYTE *table;
-    unsigned int methodSize;
+    ~GCEncodingInfo()
+    {
+        Deinitialize();
+    }
 
-    char buf[1000];
-    int cch;
+    bool Initialize();
+    void Deinitialize();
+    
+    // Reallocate the buffer. Double the size. Returns 'true' on success, 'false' on failure.
+    // This is also called to initialize the buffer the first time.
+    bool ReallocBuf();
 
-    SIZE_T ofs;
+    // Ensure there are at least 'count' characters available in the buffer, by reallocating
+    // if necessary. Returns 'true' on success, 'false' on failure (e.g., failure to allocate memory).
+    bool EnsureAdequateBufferSpace(SIZE_T count);
+
+    // Output all GC info from the current position up to and including 'curOffset'.
+    void DumpGCInfoThrough(SIZE_T curOffset);
+
+    char* buf;                 // GC info textual output memory.
+    SIZE_T cchBufAllocation;   // Number of characters allocated to buf.
+    SIZE_T cchBuf;             // Number of characters stored in 'buf' (not including terminating null).
+
+    char* curPtr;              // Current pointer in 'buf', when iterating through the GC info.
+    bool done;                 // Have we output all the GC info?
     
     // When decoding a cold region, set this to the size of the hot region to keep offset
     // calculations working.
     SIZE_T hotSizeToAdd;    
-    bool fDoneDecoding;
 };
 
 // Returns:

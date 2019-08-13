@@ -19,7 +19,7 @@ In order to collect traces using dotnet-trace, you will need to:
 - First, find out the process identifier (pid) of the .NET Core 3.0 application (using builds Preview 5 or after) to collect traces from.
 
   - On Windows, there are options such as using the task manager or the `tasklist` command on the cmd window.
-  - On Linux, the trivial option could be using `pidof` on the terminal window. 
+  - On Linux, the trivial option could be using `pidof` on the terminal window.
 
 You may also use the command `dotnet-trace list-processes` command to find out what .NET Core processes are running, along with their process IDs.
 
@@ -37,9 +37,26 @@ Collecting to file: <Full-Path-To-Trace>/trace.nettrace
 
 - Finally, stop collection by pressing the \<Enter> key, and *dotnet-trace* will finish logging events to *trace.nettrace* file.
 
+### Using dotnet-trace to collect counter values over time
+
+If you are trying to use EventCounter for basic health monitoring in  performance-sensitive settings like production environments and you want to collect traces instead of watching them in real-time, you can do that with `dotnet-trace` as well.
+
+For example, if you want to enable and collect runtime performance counter values, you can use the following command:
+```cmd
+dotnet-trace collect --process-id <PID> --providers System.Runtime:0:1:EventCounterIntervalSec=1
+```
+
+This will tell the runtime counters to be reported once every second for lightweight health monitoring. Replacing `EventCounterIntervalSec=1` with a higher value (say 60) will allow you to collect a smaller trace with less granularity in the counter data.
+
+If you want to disable runtime events to reduce the overhead (and trace size) even further, you can use the following command to disable runtime events and managed stack profiler.
+```cmd
+dotnet-trace collect --process-id <PID> --providers System.Runtime:0:1:EventCounterIntervalSec=1,Microsoft-Windows-DotNETRuntime:0:1,Microsoft-DotNETCore-SampleProfiler:0:1
+```
+ 
+
 ## Viewing the trace captured from dotnet-trace
 
-On Windows, `.nettrace` files can be viewed on PerfView (https://github.com/microsoft/perfview) for analysis, just like traces collected with ETW or LTTng. For traces collected on Linux, you can either move the trace to a Windows machine to be viewed on PerfView. 
+On Windows, `.nettrace` files can be viewed on PerfView (https://github.com/microsoft/perfview) for analysis, just like traces collected with ETW or LTTng. For traces collected on Linux, you can either move the trace to a Windows machine to be viewed on PerfView.
 
 If you would rather view the trace on a Linux machine, you can do this by changing the output format of `dotnet-trace` to `speedscope`. You can change the output file format using the `-f|--format` option - `-f speedscope` will make `dotnet-trace` to produce a speedscope file. You can currently choose between `nettrace` (the default option) and `speedscope`. Speedscope files can be opened at https://www.speedscope.app.
 
@@ -145,8 +162,8 @@ Options:
     A provider consists of the name and optionally the keywords, verbosity level, and custom key/value pairs.
 
     The string is written 'Provider[,Provider]'
-        Provider format: (GUID|KnownProviderName)[:Keywords[:Level][:KeyValueArgs]]
-            GUID|KnownProviderName  - The provider's name
+        Provider format: KnownProviderName[:Keywords[:Level][:KeyValueArgs]]
+            KnownProviderName       - The provider's name
             Keywords                - 8 character hex number bit mask
             Level                   - A number in the range [0, 5]
                 0 - Always
@@ -160,6 +177,6 @@ Options:
 
   --buffersize <Size>
     Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
-  
+
   -f, --format
     The format of the output trace file.  This defaults to "nettrace" on Windows and "speedscope" on other OSes.

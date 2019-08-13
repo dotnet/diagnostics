@@ -332,8 +332,7 @@ REM ============================================================================
 echo %__MsgPrefix%Repo successfully built. Finished at %TIME%
 echo %__MsgPrefix%Product binaries are available at !__BinDir!
 
-if /i "%__BuildArch%" == "arm" goto Done
-if /i "%__BuildArch%" == "arm64" goto Done
+if /i %__BuildCrossArch% EQU 1 goto Done
 
 :: Test components
 if %__Test% EQU 1 (

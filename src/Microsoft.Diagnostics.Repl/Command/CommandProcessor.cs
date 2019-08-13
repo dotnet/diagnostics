@@ -3,10 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.CommandLine;
-using System.CommandLine.Binding;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 using System.Diagnostics;
@@ -20,22 +18,24 @@ namespace Microsoft.Diagnostics.Repl
     {
         private readonly Parser _parser;
         private readonly Command _rootCommand;
-        private readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();
+        private readonly IServiceProvider _serviceProvider;
+        private readonly IConsole _console;
         private readonly Dictionary<string, Handler> _commandHandlers = new Dictionary<string, Handler>();
 
         /// <summary>
         /// Create an instance of the command processor;
         /// </summary>
-        /// <param name="console">console instance to use for commands</param>
+        /// <param name="serviceProvider">service provider interface</param>
+        /// <param name="console">console instance</param>
         /// <param name="assemblies">Optional list of assemblies to look for commands</param>
         /// <param name="types">Optional list of types to look for commands</param>
-        public CommandProcessor(IConsole console, IEnumerable<Assembly> assemblies = null, IEnumerable<Type> types = null)
+        public CommandProcessor(IServiceProvider serviceProvider, IConsole console, IEnumerable<Assembly> assemblies = null, IEnumerable<Type> types = null)
         {
-            Debug.Assert(console != null);
+            Debug.Assert(serviceProvider != null);
             Debug.Assert(assemblies != null);
-            _services.Add(typeof(CommandProcessor), this);
-            _services.Add(typeof(IConsole), console);
-            _services.Add(typeof(IHelpBuilder), new LocalHelpBuilder(this));
+            _serviceProvider = serviceProvider;
+            _console = console;
+
             var rootBuilder = new CommandLineBuilder(new Command(">"));
             rootBuilder.UseHelp()
                        .UseHelpBuilder((bindingContext) => GetService<IHelpBuilder>())
@@ -43,6 +43,7 @@ namespace Microsoft.Diagnostics.Repl
                        .UseSuggestDirective()
                        .UseParseErrorReporting()
                        .UseExceptionHandler();
+
             if (assemblies != null) {
                 BuildCommands(rootBuilder, assemblies);
             }
@@ -54,23 +55,11 @@ namespace Microsoft.Diagnostics.Repl
         }
 
         /// <summary>
-        /// Adds a service or context to inject into an command.
+        /// Creates a new instance of the command help builder
         /// </summary>
-        /// <typeparam name="T">type of service</typeparam>
-        /// <param name="instance">service instance</param>
-        public void AddService<T>(T instance)
+        public IHelpBuilder CreateHelpBuilder()
         {
-            AddService(typeof(T), instance);
-        }
-
-        /// <summary>
-        /// Adds a service or context to inject into an command.
-        /// </summary>
-        /// <param name="type">service type</param>
-        /// <param name="instance">service instance</param>
-        public void AddService(Type type, object instance)
-        {
-            _services.Add(type, instance);
+            return new LocalHelpBuilder(this);
         }
 
         /// <summary>
@@ -81,7 +70,7 @@ namespace Microsoft.Diagnostics.Repl
         public Task<int> Parse(string commandLine)
         {
             ParseResult result = _parser.Parse(commandLine);
-            return _parser.InvokeAsync(result, GetService<IConsole>());
+            return _parser.InvokeAsync(result, _console);
         }
 
         /// <summary>
@@ -188,11 +177,16 @@ namespace Microsoft.Diagnostics.Repl
             }
         }
 
+        private object GetService(Type serviceType)
+        {
+            return _serviceProvider.GetService(serviceType);
+        }
+
         private T GetService<T>()
         {
-            _services.TryGetValue(typeof(T), out object service);
+            T service = (T)_serviceProvider.GetService(typeof(T));
             Debug.Assert(service != null);
-            return (T)service;
+            return service;
         }
 
         private static string BuildAlias(string parameterName)
@@ -293,7 +287,8 @@ namespace Microsoft.Diagnostics.Repl
                     else 
                     {
                         Type propertyType = property.Property.PropertyType;
-                        if (TryGetService(propertyType, context, out object service)) {
+                        object service = GetService(propertyType, context);
+                        if (service != null) {
                             value = service;
                         }
                         else if (context != null && property.Option != null)
@@ -330,23 +325,23 @@ namespace Microsoft.Diagnostics.Repl
                 object[] arguments = new object[parameters.Length];
                 for (int i = 0; i < parameters.Length; i++) {
                     Type parameterType = parameters[i].ParameterType;
-                    // Ignoring false: the parameter will passed as null to allow for "optional"
-                    // services. The invoked method needs to check for possible null parameters.
-                    TryGetService(parameterType, context, out arguments[i]);
+                    // The parameter will passed as null to allow for "optional" services. The invoked 
+                    // method needs to check for possible null parameters.
+                    arguments[i] = GetService(parameterType, context);
                 }
                 return arguments;
             }
 
-            private bool TryGetService(Type type, InvocationContext context, out object service)
+            private object GetService(Type type, InvocationContext context)
             {
+                object service;
                 if (type == typeof(InvocationContext)) {
                     service = context;
                 }
-                else if (!_commandProcessor._services.TryGetValue(type, out service)) {
-                    service = null;
-                    return false;
+                else {
+                    service = _commandProcessor.GetService(type);
                 }
-                return true;
+                return service;
             }
         }
 
@@ -367,7 +362,7 @@ namespace Microsoft.Diagnostics.Repl
                         return;
                     }
                 }
-                var helpBuilder = new HelpBuilder(_commandProcessor.GetService<IConsole>(), maxWidth: Console.WindowWidth);
+                var helpBuilder = new HelpBuilder(_commandProcessor._console, maxWidth: Console.WindowWidth);
                 helpBuilder.Write(command);
             }
         }

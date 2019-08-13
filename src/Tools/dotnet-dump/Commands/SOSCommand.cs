@@ -2,7 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Repl;
+using SOS;
 using System;
 using System.CommandLine;
 using System.IO;
@@ -46,7 +48,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         [Argument(Name = "arguments", Help = "Arguments to SOS command.")]
         public string[] Arguments { get; set; }
 
-        public AnalyzeContext AnalyzeContext { get; set; }
+        public SOSHost SOSHost { get; set; }
 
         public override void Invoke()
         {
@@ -55,17 +57,17 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 if (Arguments.Length > 0) {
                     arguments = string.Concat(Arguments.Select((arg) => arg + " "));
                 }
-                AnalyzeContext.SOSHost.ExecuteCommand(AliasExpansion, arguments);
+                SOSHost.ExecuteCommand(AliasExpansion, arguments);
             }
             catch (Exception ex) when (ex is FileNotFoundException || ex is EntryPointNotFoundException || ex is InvalidOperationException) {
-                Console.Error.WriteLine(ex.Message);
+                WriteLineError(ex.Message);
             }
         }
 
         [HelpInvoke]
         public void InvokeHelp()
         {
-            AnalyzeContext.SOSHost.ExecuteCommand("Help", AliasExpansion);
+            SOSHost.ExecuteCommand("Help", AliasExpansion);
         }
     }
 }

@@ -43,7 +43,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="threadpool-completed-items-count", Description="ThreadPool Completed Work Items Count", DisplayName="ThreadPool Completed Work Items / sec" },
                     new CounterProfile{ Name="active-timer-count", Description="Active Timers Count", DisplayName="Number of Active Timers" },
                 });
-            // TODO: Add more providers (ex. ASP.NET ones)
+            yield return new CounterProvider(
+                "Microsoft.AspNetCore.Hosting", // Name
+                "A set of performance counters provided by ASP.NET Core.", // Description
+                "0x0", // Keywords
+                "4", // Level 
+                new[] { // Counters
+                    new CounterProfile{ Name="requests-per-second", Description="Request rate", DisplayName="Request / sec" },
+                    new CounterProfile{ Name="total-requests", Description="Total number of requests", DisplayName="Total Requests" },
+                    new CounterProfile{ Name="current-requests", Description="Current number of requests", DisplayName="Current Requests" },
+                    new CounterProfile{ Name="failed-requests", Description="Failed number of requests", DisplayName="Failed Requests" },
+                });
         }
 
         public static IReadOnlyList<CounterProvider> GetAllProviders() => _knownProviders.Values.ToList();

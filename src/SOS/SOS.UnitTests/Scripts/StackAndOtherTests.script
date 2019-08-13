@@ -54,12 +54,37 @@ IFDEF:PROJECTK
 SOSCOMMAND:ClrStack -r
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 54\]\s*
-VERIFY:\s+[r|e]sp=<HEXVAL>\s+[r|e]bp=<HEXVAL>\s+[r|e]ip=<HEXVAL>\s+
-VERIFY:\s+|r|e]ax=<HEXVAL>\s+[r|e]bx=<HEXVAL>\s+[r|e]cx=<HEXVAL>\s+
+IFDEF:arm
+VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
+ENDIF:arm
+IFDEF:arm64
+VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
+ENDIF:arm64
+VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
+IFDEF:x64
+VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
+ENDIF:x64
+IFDEF:x86
+VERIFY:\s+eax=<HEXVAL>\s+ebx=<HEXVAL>\s+ecx=<HEXVAL>\s+
+ENDIF:x86
+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
-VERIFY:\s+[r|e]sp=<HEXVAL>\s+[r|e]bp=<HEXVAL>\s+[r|e]ip=<HEXVAL>\s+
-VERIFY:\s+[r|e]ax=<HEXVAL>\s+[r|e]bx=<HEXVAL>\s+[r|e]cx=<HEXVAL>\s+
+IFDEF:arm
+VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
+ENDIF:arm
+IFDEF:arm64
+VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
+ENDIF:arm64
+VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
+IFDEF:x64
+VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
+ENDIF:x64
+IFDEF:x86
+VERIFY:\s+eax=<HEXVAL>\s+ebx=<HEXVAL>\s+ecx=<HEXVAL>\s+
+ENDIF:x86
+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 24\]\s*
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
 ENDIF:PROJECTK
@@ -100,7 +125,7 @@ ENDIF:PROJECTK
 IFDEF:PROJECTK
 SOSCOMMAND:DumpStackObjects
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:\s+[R|E]SP/REG\s+Object\s+Name\s+
+VERIFY:\s+([R|E])*SP/REG\s+Object\s+Name\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
 ENDIF:PROJECTK
@@ -109,7 +134,7 @@ ENDIF:PROJECTK
 IFDEF:PROJECTK
 SOSCOMMAND:DumpStackObjects -verify
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:\s+[R|E]SP/REG\s+Object\s+Name\s+
+VERIFY:\s+([R|E])*SP/REG\s+Object\s+Name\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
 ENDIF:PROJECTK
@@ -117,26 +142,28 @@ ENDIF:PROJECTK
 ENDIF:ALPINE
 
 !IFDEF:DOTNETDUMP
+!IFDEF:arm
 IFDEF:PROJECTK
 
 # Verify DumpStack works
 SOSCOMMAND:DumpStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:.*Child(-SP|EBP)\s+RetAddr\s+Caller, Callee\s+
+VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\),\s+calling.*\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\),\s+calling.*\s+)
 
 # Verify DumpStack -EE works
 SOSCOMMAND:DumpStack -EE
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:.*Child(-SP|EBP)\s+RetAddr\s+Caller, Callee\s+
+VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\)\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\)\s+)
 
 # Verify EEStack works
 SOSCOMMAND:EEStack
-VERIFY:.*Child(-SP|EBP)\s+RetAddr\s+Caller, Callee\s+
+VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\),\s+calling.*\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\),\s+calling.*\s+)
 
 ENDIF:PROJECTK
+ENDIF:arm
 ENDIF:DOTNETDUMP
 
 # Verify that IP2MD works (uses IP from ClrStack)
