@@ -4,6 +4,7 @@
 
 using System;
 using System.Diagnostics.Tracing;
+using System.Text.RegularExpressions;
 
 namespace Microsoft.Diagnostics.Tools.RuntimeClient
 {
@@ -20,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             Name = name;
             Keywords = keywords;
             EventLevel = eventLevel;
-            FilterData = string.IsNullOrWhiteSpace(filterData) ? null : filterData;
+            FilterData = string.IsNullOrWhiteSpace(filterData) ? null : Regex.Unescape(filterData);
         }
 
         public ulong Keywords { get; }
