@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             // In case these properties are not provided, set them to appropriate values.
             m_DisplayName = m_DisplayName.Length == 0 ? m_Name : m_DisplayName;
-            m_DisplayRateTimeScale = m_DisplayRateTimeScale.Length == 0 ? $"{interval} sec" : m_DisplayRateTimeScale;
+            m_DisplayRateTimeScale = m_DisplayRateTimeScale.Length == 0 ? $"{interval} sec" : TimeSpan.Parse(m_DisplayRateTimeScale).ToString("%s' sec'");
         }
 
         public string GetName()
