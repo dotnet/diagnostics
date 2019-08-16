@@ -12,12 +12,12 @@
 
 struct SymbolModuleInfo;
 
-typedef void (*OutputDelegate)(const char*);
+typedef void (*WriteLineDelegate)(const char*);
 typedef  int (*ReadMemoryDelegate)(ULONG64, uint8_t*, int);
 typedef void (*SymbolFileCallbackDelegate)(void*, const char* moduleFileName, const char* symbolFilePath);
 
 typedef  BOOL (*InitializeSymbolStoreDelegate)(BOOL, BOOL, BOOL, const char*, const char*, const char*, const char*);
-typedef  void (*DisplaySymbolStoreDelegate)();
+typedef  void (*DisplaySymbolStoreDelegate)(WriteLineDelegate);
 typedef  void (*DisableSymbolStoreDelegate)();
 typedef  void (*LoadNativeSymbolsDelegate)(SymbolFileCallbackDelegate, void*, const char*, ULONG64, int, ReadMemoryDelegate);
 typedef  PVOID (*LoadSymbolsForModuleDelegate)(const char*, BOOL, ULONG64, int, ULONG64, int, ReadMemoryDelegate);

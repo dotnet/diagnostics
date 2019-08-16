@@ -64,7 +64,8 @@ namespace SOS
             string symbolCachePath,
             string windowsSymbolPath);
 
-        private delegate void DisplaySymbolStoreDelegate();
+        private delegate void DisplaySymbolStoreDelegate(
+            SymbolReader.WriteLine writeLine);
 
         private delegate void DisableSymbolStoreDelegate();
 
@@ -273,6 +274,7 @@ namespace SOS
                 {
                     throw new InvalidOperationException($"SOS initialization FAILED 0x{result:X8}");
                 }
+                Trace.TraceInformation("SOS initialized: tempDirectory '{0}' dacFilePath '{1}' sosPath '{2}'", tempDirectory, dacFilePath, sosPath);
             }
         }
 
@@ -475,21 +477,32 @@ namespace SOS
                 return S_OK;
             }
 
+            // The memory read failed. Check if there is a module that contains the 
+            // address range being read and map it into the virtual address space.
             foreach (ModuleInfo module in DataReader.EnumerateModules())
             {
                 ulong start = module.ImageBase;
                 ulong end = start + module.FileSize;
                 if (start <= address && end > address)
                 {
+                    Trace.TraceInformation("ReadVirtualForWindows: address {0:X16} size {1:X8} found module {2}", address, bytesRequested, module.FileName);
+
+                    // We found a module that contains the memory requested. Now find or download the PE image.
                     PEReader reader = GetPEReader(module);
                     if (reader != null)
                     {
+                        // Read the memory from the PE image. There are a few limitions:
+                        // 1) Fix ups are NOT applied to the sections
+                        // 2) Memory regions that cross/contain heap memory into module image memory
                         int rva = (int)(address - start);
                         try
                         {
                             PEMemoryBlock block = reader.GetSectionData(rva);
                             if (block.Pointer == null)
                             {
+                                Trace.TraceInformation("ReadVirtualForWindows: rva {0:X8} not in any section; reading from entire image", rva);
+
+                                // If the address isn't contained in one of the sections, assume that SOS is reader the PE headers directly.
                                 block = reader.GetEntireImage();
                             }
                             BlobReader blob = block.GetReader();
@@ -499,8 +512,9 @@ namespace SOS
                             Write(pbytesRead, (uint)data.Length);
                             return S_OK;
                         }
-                        catch (Exception e) when (e is BadImageFormatException || e is InvalidOperationException || e is IOException)
+                        catch (Exception ex) when (ex is BadImageFormatException || ex is InvalidOperationException || ex is IOException)
                         {
+                            Trace.TraceError("ReadVirtualForWindows: exception {0}", ex);
                         }
                     }
                     break;
@@ -536,8 +550,9 @@ namespace SOS
                     {
                         stream = File.OpenRead(downloadFilePath);
                     }
-                    catch (Exception e) when (e is DirectoryNotFoundException || e is FileNotFoundException || e is UnauthorizedAccessException || e is IOException)
+                    catch (Exception ex) when (ex is DirectoryNotFoundException || ex is FileNotFoundException || ex is UnauthorizedAccessException || ex is IOException)
                     {
+                        Trace.TraceError("GetPEReader: exception {0}", ex);
                     }
                     if (stream != null)
                     {

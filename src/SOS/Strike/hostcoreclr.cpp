@@ -902,6 +902,7 @@ HRESULT LoadNativeSymbols(bool runtimeOnly)
     return hr;
 }
 
+
 /**********************************************************************\
  * Displays the symbol server and cache status.
 \**********************************************************************/
@@ -910,7 +911,10 @@ void DisplaySymbolStore()
     if (g_symbolStoreInitialized)
     {
         _ASSERTE(g_SOSNetCoreCallbacks.DisplaySymbolStoreDelegate != nullptr);
-        g_SOSNetCoreCallbacks.DisplaySymbolStoreDelegate();
+        g_SOSNetCoreCallbacks.DisplaySymbolStoreDelegate([] (const char* message) {
+            ExtOut(message);
+            ExtOut("\n");
+        });
     }
 }
 
