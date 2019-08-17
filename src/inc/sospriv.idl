@@ -375,5 +375,15 @@ interface ISOSDacInterface5 : IUnknown
 ]
 interface ISOSDacInterface6 : IUnknown
 {
-    HRESULT GetMethodTableFieldData(CLRDATA_ADDRESS mt, struct DacpMethodTableFieldData *data);
+    HRESULT GetMethodTableCollectibleData(CLRDATA_ADDRESS mt, struct DacpMethodTableCollectibleData *data);
+};
+
+[
+    object,
+    local,
+    uuid(c1020dde-fe98-4536-a53b-f35a74c327eb)
+]
+interface ISOSDacInterface7 : IUnknown
+{
+    HRESULT GetILForMethod(CLRDATA_ADDRESS methodDesc, int rejitId, CLRDATA_ADDRESS *il);
 };
