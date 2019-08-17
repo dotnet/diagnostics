@@ -6095,7 +6095,7 @@ DECLARE_API(DumpModule)
                                                              kcMaxMethodDescsForProfiler,
                                                              &cMethodDescs)))
         {
-            if (cMethodDescs >0)
+            if (cMethodDescs > 0)
             {
                 ExtOut("\nMethods in this module with profiler modified IL:\n");
                 for (int i = 0; i < cMethodDescs; ++i)
@@ -6124,6 +6124,11 @@ DECLARE_API(DumpModule)
                     }
 
                     ExtOut("\n");
+                }
+
+                if (cMethodDescs == kcMaxMethodDescsForProfiler)
+                {
+                    ExtOut("Profiler modified methods truncated, reached max value.\n");
                 }
             }
             else
