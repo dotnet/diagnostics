@@ -537,10 +537,24 @@ struct MSLAYOUT DacpReJitData2 : ZeroInit<DacpReJitData2>
         kReverted,
     };
 
-    CLRDATA_ADDRESS                 rejitID;
+    ULONG                           rejitID;
     Flags                           flags;
     CLRDATA_ADDRESS                 il;
     CLRDATA_ADDRESS                 ilCodeVersionNodePtr;
+};
+
+struct MSLAYOUT DacpProfilerILData : ZeroInit<DacpProfilerILData>
+{
+    enum ModificationType
+    {
+        Unmodified,
+        ILModified,
+        ReJITModified,
+    };
+
+    ModificationType                type;
+    CLRDATA_ADDRESS                 il;
+    ULONG                           rejitID;
 };
 
 struct MSLAYOUT DacpMethodDescData : ZeroInit<DacpMethodDescData>

@@ -2814,7 +2814,7 @@ void DumpRejitData(CLRDATA_ADDRESS pMethodDesc, DacpReJitData * pReJitData)
     struct DacpReJitData2 rejitData;
     ReleaseHolder<ISOSDacInterface7> sos7;
     if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface7), &sos7)) && 
-        SUCCEEDED(sos7->GetRejitInformation(pMethodDesc, 
+        SUCCEEDED(sos7->GetReJITInformation(pMethodDesc, 
                                             (int)pReJitData->rejitID,
                                             &rejitData)))
     {
