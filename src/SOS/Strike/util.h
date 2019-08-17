@@ -362,6 +362,7 @@ namespace Output
         DML_CCWrapper,
         DML_ManagedVar,
         DML_Async,
+        DML_IL,
     };
 
     /**********************************************************************\
@@ -466,6 +467,7 @@ inline void ExtOutIndent()  { WhitespaceOut(Output::g_Indent << 2); }
 #define DMLCCWrapper(addr) Output::BuildHexValue(addr, Output::DML_CCWrapper).GetPtr()
 #define DMLManagedVar(expansionName,frame,simpleName) Output::BuildManagedVarValue(expansionName, frame, simpleName, Output::DML_ManagedVar).GetPtr()
 #define DMLAsync(addr) Output::BuildHexValue(addr, Output::DML_Async).GetPtr()
+#define DMLIL(addr) Output::BuildHexValue(addr, Output::DML_IL).GetPtr()
 
 bool IsDMLEnabled();
 
@@ -1058,6 +1060,7 @@ DefineFormatClass(ThreadID, Formats::Hex, Output::DML_ThreadID);
 DefineFormatClass(RCWrapper, Formats::Pointer, Output::DML_RCWrapper);
 DefineFormatClass(CCWrapper, Formats::Pointer, Output::DML_CCWrapper);
 DefineFormatClass(InstructionPtr, Formats::Pointer, Output::DML_IP);
+DefineFormatClass(ILPtr, Formats::Pointer, Output::DML_IL);
 DefineFormatClass(NativePtr, Formats::Pointer, Output::DML_None);
 
 DefineFormatClass(Decimal, Formats::Decimal, Output::DML_None);

@@ -2707,7 +2707,7 @@ const char *EHTypeName(EHClauseType et)
 
 void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersionData, const UINT cTieredVersionData)
 {
-    ExtOut("Code Version History:\n");
+    ExtOut("    Code Version History:\n");
 
     for(int i = cTieredVersionData - 1; i >= 0; --i)
     {
@@ -2735,8 +2735,8 @@ void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersi
             break;
         }
 
-        DMLOut("  CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
-        ExtOut("  NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
+        DMLOut("      CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
+        ExtOut("      NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
     }
 }
 
@@ -2772,21 +2772,10 @@ void DumpTieredNativeCodeAddressInfo_21(struct DacpTieredVersionData_21 * pTiere
 
 void DumpRejitData(CLRDATA_ADDRESS pMethodDesc, DacpReJitData * pReJitData)
 {
-    ExtOut("    ReJITID %p: ", SOS_PTR(pReJitData->rejitID));
+    ExtOut("  ReJITID %p: ", SOS_PTR(pReJitData->rejitID));
 
     struct DacpTieredVersionData codeAddrs[kcMaxTieredVersions];
     int cCodeAddrs;
-
-    ReleaseHolder<ISOSDacInterface5> sos5;
-    if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface5), &sos5)) && 
-        SUCCEEDED(sos5->GetTieredVersions(pMethodDesc, 
-                                            (int)pReJitData->rejitID,
-                                            codeAddrs,
-                                            kcMaxTieredVersions,
-                                            &cCodeAddrs)))
-    {
-        DumpTieredNativeCodeAddressInfo(codeAddrs, cCodeAddrs);
-    }
 
     LPCSTR szFlags;
     switch (pReJitData->flags)
@@ -2809,6 +2798,19 @@ void DumpRejitData(CLRDATA_ADDRESS pMethodDesc, DacpReJitData * pReJitData)
         break;
     }
     
+    ExtOut("%s\n", szFlags);
+
+    ReleaseHolder<ISOSDacInterface5> sos5;
+    if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface5), &sos5)) && 
+        SUCCEEDED(sos5->GetTieredVersions(pMethodDesc, 
+                                            (int)pReJitData->rejitID,
+                                            codeAddrs,
+                                            kcMaxTieredVersions,
+                                            &cCodeAddrs)))
+    {
+        DumpTieredNativeCodeAddressInfo(codeAddrs, cCodeAddrs);
+    }
+
     struct DacpReJitData2 rejitData;
     ReleaseHolder<ISOSDacInterface7> sos7;
     if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface7), &sos7)) && 
@@ -2816,11 +2818,10 @@ void DumpRejitData(CLRDATA_ADDRESS pMethodDesc, DacpReJitData * pReJitData)
                                             (int)pReJitData->rejitID,
                                             &rejitData)))
     {
-        DMLOut("  IL Addr:            %s\n", DMLIP(rejitData.il));
-        ExtOut("  NativeCodeVersion:  %p\n", SOS_PTR(rejitData.ilCodeVersionNodePtr));
+        ExtOut("    ReJIT Information:\n");
+        DMLOut("      IL Addr:            %s\n", DMLIL(rejitData.il));
+        ExtOut("      ILCodeVersion:      %p\n", SOS_PTR(rejitData.ilCodeVersionNodePtr));
     }
-
-    ExtOut("%s\n", szFlags);
 }
 
 // For !ip2md requests, this function helps us ensure that rejitted version corresponding
@@ -4988,6 +4989,7 @@ const char * const DMLFormats[] =
     "<exec cmd=\"!DumpCCW /d %s\">%s</exec>",       // DML_CCWrapper
     "<exec cmd=\"!ClrStack -i %S %d\">%S</exec>",   // DML_ManagedVar
     "<exec cmd=\"!DumpAsync -addr %s -tasks -completed -fields -stacks -roots\">%s</exec>", // DML_Async
+    "<exec cmd=\"!DumpIL /i %s\">%s</exec>",         // DML_IL
 };
 
 void ConvertToLower(__out_ecount(len) char *buffer, size_t len)
