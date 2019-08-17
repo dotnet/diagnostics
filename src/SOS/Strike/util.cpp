@@ -2809,6 +2809,17 @@ void DumpRejitData(CLRDATA_ADDRESS pMethodDesc, DacpReJitData * pReJitData)
         break;
     }
     
+    struct DacpReJitData2 rejitData;
+    ReleaseHolder<ISOSDacInterface7> sos7;
+    if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface7), &sos7)) && 
+        SUCCEEDED(sos7->GetRejitInformation(pMethodDesc, 
+                                            (int)pReJitData->rejitID,
+                                            &rejitData)))
+    {
+        DMLOut("  IL Addr:            %s\n", DMLIP(rejitData.il));
+        ExtOut("  NativeCodeVersion:  %p\n", SOS_PTR(rejitData.ilCodeVersionNodePtr));
+    }
+
     ExtOut("%s\n", szFlags);
 }
 
