@@ -34,7 +34,11 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
             {
                 string pipeName = $"dotnet-diagnostic-{processId}";
                 var namedPipe = new NamedPipeClientStream(
-                    ".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation);
+                    ".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation)
+                    {
+                        ReadTimeout = (int)ConnectTimeoutMilliseconds,
+                        WriteTimeout = (int)ConnectTimeoutMilliseconds
+                    };
                 namedPipe.Connect((int)ConnectTimeoutMilliseconds);
                 return namedPipe;
             }
@@ -52,7 +56,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
 
                 var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
                 socket.Connect(remoteEP);
-                return new NetworkStream(socket);
+                return new NetworkStream(socket) { ReadTimeout = (int)ConnectTimeoutMilliseconds, WriteTimeout = (int)ConnectTimeoutMilliseconds };
             }
         }
 
@@ -81,7 +85,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
         /// <returns>The response DiagnosticsIpc Message from the dotnet process</returns>
         public static Stream SendMessage(int processId, IpcMessage message, out IpcMessage response)
         {
-            var stream = GetTransport(processId);
+            Stream stream = GetTransport(processId);
             Write(stream, message);
             response = Read(stream);
             return stream;
