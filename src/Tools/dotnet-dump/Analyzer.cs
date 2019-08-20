@@ -28,8 +28,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private readonly CommandProcessor _commandProcessor;
         private string _dacFilePath;
 
-        private static string s_tempDirectory;
-
         /// <summary>
         /// Enable the assembly resolver to get the right SOS.NETCore version (the one
         /// in the same directory as this assembly).
@@ -73,7 +71,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     AddServices(target);
 
                     // Automatically enable symbol server support
-                    SymbolReader.InitializeSymbolStore(logging: false, msdl: true, symweb: false, symbolServerPath: null, symbolCachePath: null, windowsSymbolPath: null);
+                    SymbolReader.InitializeSymbolStore(logging: false, msdl: true, symweb: false, tempDirectory: null, symbolServerPath: null, symbolCachePath: null, windowsSymbolPath: null);
 
                     // Run the commands from the dotnet-dump command line
                     if (command != null)
@@ -132,7 +130,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             _serviceProvider.AddServiceFactory(typeof(SOSHost), () => {
                 var sosHost = new SOSHost(_serviceProvider);
-                sosHost.InitializeSOSHost(s_tempDirectory, _dacFilePath, dbiFilePath: null);
+                sosHost.InitializeSOSHost(SymbolReader.TempDirectory, _dacFilePath, dbiFilePath: null);
                 return sosHost;
             });
         }
@@ -199,13 +197,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
                         if (key != null)
                         {
-                            if (s_tempDirectory == null)
-                            {
-                                int processId = Process.GetCurrentProcess().Id;
-                                s_tempDirectory = Path.Combine(Path.GetTempPath(), "analyze" + processId.ToString());
-                            }
                             // Now download the DAC module from the symbol server
-                            _dacFilePath = SymbolReader.GetSymbolFile(key, s_tempDirectory);
+                            _dacFilePath = SymbolReader.GetSymbolFile(key);
                         }
                     }
                 }

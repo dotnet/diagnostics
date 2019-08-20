@@ -159,25 +159,37 @@ namespace SOS
         /// <param name="symbolFileName">symbol file name and path</param>
         public delegate void SymbolFileCallback(IntPtr parameter, [MarshalAs(UnmanagedType.LPStr)] string moduleFileName, [MarshalAs(UnmanagedType.LPStr)] string symbolFileName);
 
+        /// <summary>
+        /// Temporary directory for dac/symbols
+        /// </summary>
+        public static string TempDirectory { get; private set; }
+
+        static readonly ITracer s_tracer = new Tracer();
         static SymbolStore s_symbolStore = null;
         static bool s_symbolCacheAdded = false;
-        static ITracer s_tracer = null;
 
         /// <summary>
         /// Initializes symbol loading. Adds the symbol server and/or the cache path (if not null) to the list of
         /// symbol servers. This API can be called more than once to add more servers to search.
         /// </summary>
-        /// <param name="logging">if true, logging diagnostics to console</param>
+        /// <param name="logging">if true, enable logging diagnostics to console</param>
         /// <param name="msdl">if true, use the public microsoft server</param>
         /// <param name="symweb">if true, use symweb internal server and protocol (file.ptr)</param>
+        /// <param name="tempDirectory">temp directory unique to this instance of SOS</param>
         /// <param name="symbolServerPath">symbol server url (optional)</param>
         /// <param name="symbolCachePath">symbol cache directory path (optional)</param>
         /// <param name="windowsSymbolPath">windows symbol path (optional)</param>
-        /// <returns></returns>
-        public static bool InitializeSymbolStore(bool logging, bool msdl, bool symweb, string symbolServerPath, string symbolCachePath, string windowsSymbolPath)
+        /// <returns>if false, failure</returns>
+        public static bool InitializeSymbolStore(bool logging, bool msdl, bool symweb, string tempDirectory, string symbolServerPath, string symbolCachePath, string windowsSymbolPath)
         {
-            if (s_tracer == null) {
-                s_tracer = new Tracer(enabled: logging, enabledVerbose: logging, Console.WriteLine);
+            if (logging) {
+                // Uses the standard console to do the logging instead of sending it to the hosting debugger console
+                // because windbg/cdb can only output on the client thread without dead locking. Microsoft.SymbolStore
+                // can log on any thread.
+                Trace.Listeners.Add(new TextWriterTraceListener(Console.OpenStandardOutput()));
+            }
+            if (TempDirectory == null) {
+                TempDirectory = tempDirectory;
             }
             SymbolStore store = s_symbolStore;
 
@@ -202,24 +214,21 @@ namespace SOS
         /// <summary>
         /// Displays the symbol server and cache configuration
         /// </summary>
-        public static void DisplaySymbolStore()
+        public static void DisplaySymbolStore(WriteLine writeLine)
         {
-            if (s_tracer != null)
+            SymbolStore symbolStore = s_symbolStore;
+            while (symbolStore != null)
             {
-                SymbolStore symbolStore = s_symbolStore;
-                while (symbolStore != null)
-                {
-                    if (symbolStore is CacheSymbolStore cache) {
-                        s_tracer.WriteLine("Cache: {0}", cache.CacheDirectory);
-                    }
-                    else if (symbolStore is HttpSymbolStore http)  {
-                        s_tracer.WriteLine("Server: {0}", http.Uri);
-                    }
-                    else {
-                        s_tracer.WriteLine("Unknown symbol store");
-                    }
-                    symbolStore = symbolStore.BackingStore;
+                if (symbolStore is CacheSymbolStore cache) {
+                    writeLine($"Cache: {cache.CacheDirectory}");
                 }
+                else if (symbolStore is HttpSymbolStore http)  {
+                    writeLine($"Server: {http.Uri}");
+                }
+                else {
+                    writeLine("Unknown symbol store");
+                }
+                symbolStore = symbolStore.BackingStore;
             }
         }
 
@@ -228,7 +237,6 @@ namespace SOS
         /// </summary>
         public static void DisableSymbolStore()
         {
-            s_tracer = null;
             s_symbolStore = null;
             s_symbolCacheAdded = false;
         }
@@ -238,16 +246,14 @@ namespace SOS
         /// </summary>
         /// <param name="callback">called back for each symbol file loaded</param>
         /// <param name="parameter">callback parameter</param>
-        /// <param name="tempDirectory">temp directory unique to this instance of SOS</param>
         /// <param name="moduleFilePath">module path</param>
         /// <param name="address">module base address</param>
         /// <param name="size">module size</param>
         /// <param name="readMemory">read memory callback delegate</param>
-        public static void LoadNativeSymbols(SymbolFileCallback callback, IntPtr parameter, string tempDirectory, string moduleFilePath, ulong address, int size, ReadMemoryDelegate readMemory)
+        public static void LoadNativeSymbols(SymbolFileCallback callback, IntPtr parameter, string moduleFilePath, ulong address, int size, ReadMemoryDelegate readMemory)
         {
             if (IsSymbolStoreEnabled())
             {
-                Debug.Assert(s_tracer != null);
                 Stream stream = new TargetStream(address, size, readMemory);
                 KeyTypeFlags flags = KeyTypeFlags.SymbolKey | KeyTypeFlags.ClrKeys;
                 KeyGenerator generator = null;
@@ -282,7 +288,7 @@ namespace SOS
                         // Don't download the sos binaries that come with the runtime
                         if (moduleFileName != "SOS.NETCore.dll" && !moduleFileName.StartsWith("libsos."))
                         {
-                            string downloadFilePath = GetSymbolFile(key, tempDirectory);
+                            string downloadFilePath = GetSymbolFile(key);
                             if (downloadFilePath != null)
                             {
                                 s_tracer.Information("{0}: {1}", moduleFileName, downloadFilePath);
@@ -302,10 +308,8 @@ namespace SOS
         /// Download a symbol from the symbol stores/server.
         /// </summary>
         /// <param name="key">index of the file to download</param>
-        /// <param name="tempDirectory">temp directory to put the file. This directory is only created if 
-        /// the file is NOT already in the cache and is downloaded.</param>
         /// <returns>Path to the downloaded file either in the cache or in the temp directory</returns>
-        public static string GetSymbolFile(SymbolStoreKey key, string tempDirectory)
+        public static string GetSymbolFile(SymbolStoreKey key)
         {
             string downloadFilePath = null;
 
@@ -322,8 +326,13 @@ namespace SOS
                             // If the downloaded doesn't already exists on disk in the cache, then write it to a temporary location.
                             if (!File.Exists(downloadFilePath))
                             {
-                                Directory.CreateDirectory(tempDirectory);
-                                downloadFilePath = Path.Combine(tempDirectory, Path.GetFileName(key.FullPathName));
+                                if (TempDirectory == null)
+                                {
+                                    int processId = Process.GetCurrentProcess().Id;
+                                    TempDirectory = Path.Combine(Path.GetTempPath(), "sos" + processId.ToString());
+                                    Directory.CreateDirectory(TempDirectory);
+                                }
+                                downloadFilePath = Path.Combine(TempDirectory, Path.GetFileName(key.FullPathName));
 
                                 using (Stream destinationStream = File.OpenWrite(downloadFilePath)) {
                                     file.Stream.CopyTo(destinationStream);
