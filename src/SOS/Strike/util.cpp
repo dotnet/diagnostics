@@ -2710,7 +2710,7 @@ void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersi
 {
     for(int i = cTieredVersionData - 1; i >= 0; --i)
     {
-        ExtOut("NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
+        ExtOut("  NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
 
         const char *descriptor = NULL;
         switch(pTieredVersionData[i].OptimizationTier)
@@ -2736,10 +2736,10 @@ void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersi
             break;
         }
 
-        ExtOut("      ReJIT ID:           %d\n", rejitID);
-        DMLOut("      CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
-        DMLOut("      IL Addr:            %s\n", DMLIL(ilAddr));
-        ExtOut("      ILCodeVersion:      %p\n", SOS_PTR(ilNodeAddr));
+        ExtOut("    ReJIT ID:           %d\n", rejitID);
+        DMLOut("    CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
+        DMLOut("    IL Addr:            %s\n", DMLIL(ilAddr));
+        ExtOut("    ILCodeVersion:      %p\n", SOS_PTR(ilNodeAddr));
 
     }
 }
@@ -2855,6 +2855,8 @@ void DumpMDInfoFromMethodDescData(DacpMethodDescData * pMethodDescData, DacpReJi
         CLRDATA_ADDRESS ilAddr = 0;
         CLRDATA_ADDRESS ilNodeAddr = 0;
 
+        ExtOut("Version History:\n");
+
         struct DacpReJitData2 rejitData;
         ReleaseHolder<ISOSDacInterface7> sos7;
         if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface7), &sos7)))
@@ -2873,9 +2875,9 @@ void DumpMDInfoFromMethodDescData(DacpMethodDescData * pMethodDescData, DacpReJi
                 SUCCEEDED(sos7->GetReJITInformation(pMethodDescData->MethodDescPtr, pendingRejitID, &pendingRejitData)))
             {
                 // Special case, there is no jitted code yet but still need to output the IL information
-                ExtOut("ILCodeVersion:      %p (pending)\n", SOS_PTR(pendingRejitData.ilCodeVersionNodePtr));
-                ExtOut("      ReJIT ID:           %d\n", pendingRejitID);
-                DMLOut("      IL Addr:            %s\n", DMLIL(pendingRejitData.il));
+                ExtOut("  ILCodeVersion:      %p (pending)\n", SOS_PTR(pendingRejitData.ilCodeVersionNodePtr));
+                ExtOut("    ReJIT ID:           %d\n", pendingRejitID);
+                DMLOut("    IL Addr:            %s\n", DMLIL(pendingRejitData.il));
             }
         }
 
