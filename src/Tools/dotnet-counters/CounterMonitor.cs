@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.Diagnostics;
 using System.IO;
+using System.Globalization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,6 +28,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private CounterFilter filter;
         private ulong _sessionId;
         private bool pauseCmdSet;
+        private ManualResetEvent shouldExit;
 
         public CounterMonitor()
         {
@@ -40,28 +42,24 @@ namespace Microsoft.Diagnostics.Tools.Counters
             // If we are paused, ignore the event. 
             // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
             writer.ToggleStatus(pauseCmdSet);
-
-            if (obj.EventName.Equals("EventCounters"))
+            try
             {
-                IDictionary<string, object> payloadVal = (IDictionary<string, object>)(obj.PayloadValue(0));
-                IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
-
-                // If it's not a counter we asked for, ignore it.
-                if (!filter.Filter(obj.ProviderName, payloadFields["Name"].ToString())) return;
-
-                // There really isn't a great way to tell whether an EventCounter payload is an instance of 
-                // IncrementingCounterPayload or CounterPayload, so here we check the number of fields 
-                // to distinguish the two.
-                ICounterPayload payload;
-                if (payloadFields.ContainsKey("CounterType"))
+                if (obj.EventName.Equals("EventCounters"))
                 {
-                    payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
+                    IDictionary<string, object> payloadVal = (IDictionary<string, object>)(obj.PayloadValue(0));
+                    IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
+
+                    // If it's not a counter we asked for, ignore it.
+                    if (!filter.Filter(obj.ProviderName, payloadFields["Name"].ToString())) return;
+
+                    ICounterPayload payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
+                    writer.Update(obj.ProviderName, payload, pauseCmdSet);
                 }
-                else
-                {
-                    payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
-                }
-                writer.Update(obj.ProviderName, payload, pauseCmdSet);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+                shouldExit.Set();
             }
         }
 
@@ -191,7 +189,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 providerString = sb.ToString();
             }
 
-            ManualResetEvent shouldExit = new ManualResetEvent(false);
+            shouldExit = new ManualResetEvent(false);
             _ct.Register(() => shouldExit.Set());
 
             var terminated = false;
@@ -200,7 +198,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             Task monitorTask = new Task(() => {
                 try
                 {
-                    RequestTracingV2(providerString);
+                    RequestTracingV1(providerString);
                 }
                 catch (EventPipeUnknownCommandException)
                 {

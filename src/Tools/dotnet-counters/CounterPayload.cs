@@ -15,16 +15,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
         string GetDisplay();
     }
 
-
     class CounterPayload : ICounterPayload
     {
         public string m_Name;
         public string m_Value;
         public string m_DisplayName;
+
         public CounterPayload(IDictionary<string, object> payloadFields)
         {
             m_Name = payloadFields["Name"].ToString();
-            m_Value = payloadFields["Mean"].ToString();
+            m_Value = Int32.Parse(payloadFields["Mean"].ToString()).ToString("N0");
             m_DisplayName = payloadFields["DisplayName"].ToString();
         }
 
@@ -50,10 +50,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
         public string m_Value;
         public string m_DisplayName;
         public string m_DisplayRateTimeScale;
+
         public IncrementingCounterPayload(IDictionary<string, object> payloadFields)
         {
             m_Name = payloadFields["Name"].ToString();
-            m_Value = payloadFields["Increment"].ToString();
+            m_Value = Int32.Parse(payloadFields["Increment"].ToString()).ToString("N0");
             m_DisplayName = payloadFields["DisplayName"].ToString();
             m_DisplayRateTimeScale = TimeSpan.Parse(payloadFields["DisplayRateTimeScale"].ToString()).ToString("%s' sec'");
         }
