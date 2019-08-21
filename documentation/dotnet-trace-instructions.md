@@ -7,9 +7,9 @@ The dotnet-trace tool is a cross-platform CLI global tool that enables the colle
 The first step is to install the dotnet-trace CLI global tool.
 
 ```cmd
-$ dotnet tool install --global dotnet-trace --version 3.0.0-preview7.19365.2
+$ dotnet tool install --global dotnet-trace --version 3.0.0-preview8.19412.1
 You can invoke the tool using the following command: dotnet-trace
-Tool 'dotnet-trace' (version '3.0.0-preview7.19365.2') was successfully installed.
+Tool 'dotnet-trace' (version '3.0.0-preview8.19412.1') was successfully installed.
 ```
 
 ## Using dotnet-trace
@@ -36,6 +36,23 @@ Collecting to file: <Full-Path-To-Trace>/trace.nettrace
 ```
 
 - Finally, stop collection by pressing the \<Enter> key, and *dotnet-trace* will finish logging events to *trace.nettrace* file.
+
+### Using dotnet-trace to collect counter values over time
+
+If you are trying to use EventCounter for basic health monitoring in  performance-sensitive settings like production environments and you want to collect traces instead of watching them in real-time, you can do that with `dotnet-trace` as well.
+
+For example, if you want to enable and collect runtime performance counter values, you can use the following command:
+```cmd
+dotnet-trace collect --process-id <PID> --providers System.Runtime:0:1:EventCounterIntervalSec=1
+```
+
+This will tell the runtime counters to be reported once every second for lightweight health monitoring. Replacing `EventCounterIntervalSec=1` with a higher value (say 60) will allow you to collect a smaller trace with less granularity in the counter data.
+
+If you want to disable runtime events to reduce the overhead (and trace size) even further, you can use the following command to disable runtime events and managed stack profiler.
+```cmd
+dotnet-trace collect --process-id <PID> --providers System.Runtime:0:1:EventCounterIntervalSec=1,Microsoft-Windows-DotNETRuntime:0:1,Microsoft-DotNETCore-SampleProfiler:0:1
+```
+ 
 
 ## Viewing the trace captured from dotnet-trace
 
@@ -156,7 +173,8 @@ Options:
                 4 - Informational
                 5 - Verbose
             KeyValueArgs            - A semicolon separated list of key=value
-        KeyValueArgs format: '[key1=value1][;key2=value2]'
+        KeyValueArgs format: '[key1=value1][;key2=value2]' 
+            note: values that contain ';' or '=' characters should be surrounded by double quotes ("), e.g., 'key="value;with=symbols";key2=value2'
 
   --buffersize <Size>
     Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
