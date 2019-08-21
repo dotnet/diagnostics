@@ -7,6 +7,8 @@ Dumps created with gdb or gcore do not have all the managed state so various SOS
 
 ### Getting symbols ###
 
+Because SOS now has symbol download support, this step can be skipped if the matching version of the "host" program is available on the machine loading the dump. Usually the host program is "dotnet" but each .NET Core SDK has a different version.
+
 First install the dotnet CLI symbol tool. This only needs to be down once. See this [link](https://github.com/dotnet/symstore/tree/master/src/dotnet-symbol#install) for more details.
 
     ~$ dotnet tool install -g dotnet-symbol
@@ -30,15 +32,24 @@ See the instructions on the main [README.md](../README.md) under "Installing SOS
 
 ### Launch lldb under Linux ###
 
-    ~$ lldb
-    (lldb) target create --core /tmp/dump/coredump.32232
+    ~$ lldb --core /tmp/dump/coredump.32232 <host-program>
+    Core file '/tmp/dump/coredump.32232' (x86_64) was loaded.
+    (lldb)
+
+The `<host-program>` is the native program that started the .NET Core application. It is usually `dotnet` unless the application is self contained and then it is the name of application without the .dll.
+
+Add the directory with the core dump and symbols to the symbol search path:
+
+     (lldb) setsymbolserver -directory /tmp/dump
+     Added symbol directory path: /tmp/dump
+     (lldb)
 
 Even if the core dump was not generated on this machine, the native and managed .NET Core symbols should be available along with all the SOS commands.
 
 ### Launch lldb under MacOS ###
 
-    ~$ lldb
-    (lldb) target create --core /cores/core.32232
+    ~$ lldb --core /cores/core.32232 <host-program>
+    (lldb)
 
 The MacOS lldb has a bug that prevents SOS clrstack from properly working. Because of this bug SOS can't properly match the lldb native with with the managed thread OSID displayed by `clrthreads`. The `setsostid` command is a work around for this lldb bug. This command maps the OSID from this command:
 

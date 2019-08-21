@@ -577,6 +577,8 @@ Threads (clrthreads) lists all the mananaged threads in the process.
            output. Example of special threads include: GC threads (in 
            concurrent GC and server GC), Debugger helper threads, Finalizer 
            threads, AppDomain Unload threads, and Threadpool timer threads.
+-managedexception: optional. Sets the current thread to first thread with 
+                   an managed exception for the "printexception" command.
 
 Each thread has many attributes, many of which can be ignored. The important 
 ones are discussed below:
@@ -622,6 +624,10 @@ for -l and -p combined.
 The -f option (full mode) displays the native frames intermixing them with
 the managed frames and the assembly name and function offset for the managed
 frames.
+
+The -r option dumps the registers for each stack frame.
+
+The -all option dumps all the managed threads' stacks.
 
 If the debugger has the option SYMOPT_LOAD_LINES specified (either by the
 .lines or .symopt commands), SOS will look up the symbols for every managed 
@@ -1887,11 +1893,14 @@ You can use the "dotnet --info" in a command shell to find the path of an instal
 
 COMMAND: setsymbolserver.
 COMMAND: loadsymbols.
-SetSymbolServer [-ms] [-disable] [-log] [-cache <cache-path>] [-loadsymbols] [<symbol-server-URL>]
+COMMAND: sympath.
+SetSymbolServer [-ms] [-disable] [-log]  [-loadsymbols] [-cache <cache-path>] [-directory <search-directory>] [-sympath <windows-symbol-path>] [<symbol-server-URL>]
 
 -ms - Use the public Microsoft symbol server.
 -disable - Disable symbol download support.
+-directory - Directory to search for symbols. Can be more than one.
 -cache - Specific a symbol cache directory. The default is $HOME/.dotnet/symbolcache if not specified.
+-sympath - Add server, cache and directory paths in the Windows symbol path format.
 -log - Enable symbol download logging.
 -loadsymbols - Attempts to download the native .NET Core symbols for the runtime
 <symbol-server-URL> - Symbol server URL.
@@ -1905,9 +1914,20 @@ To enable downloading symbols from the Microsoft symbol server:
 
 This command may take some time without any output while it attempts to download the symbol files. 
 
-To disable download:
+To disable downloading or clear the current SOS symbol settings allowing new symbol paths to be set:
 
     (lldb) setsymbolserver -disable
+
+To add a directory to search for symbols:
+
+    (lldb) setsymbolserver -directory /home/mikem/symbols
+
+This command can be used so the module/symbol file structure does not have to match the machine 
+file structure that the core dump was generated.
+
+The "sympath" option/command alias allows Windows symbol paths to be parsed:
+
+    (lldb) sympath "/home/mikem/localsymbols;srv*/home/mikem/symbolcache*https://msdl.microsoft.com/download/symbols".
 
 To clear the default cache run "rm -r $HOME/.dotnet/symbolcache" in a command shell.
 

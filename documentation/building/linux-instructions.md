@@ -78,11 +78,11 @@ Install the required packages:
 
 See the section below on how to clone, build and test the repo.
 
-#### Alpine 3.6 ####
+#### Alpine 3.8/3.9 ####
 
-Currently there is no lldb that works on Alpine.
+Install the required packages:
 
-Issue https://github.com/dotnet/diagnostics/issues/73
+    sudo apk add autoconf bash clang clang-dev cmake coreutils curl gcc gettext-dev git icu-dev krb5-dev libunwind-dev llvm make openssl openssl-dev python which
 
 #### CentOS 6 ####
 
