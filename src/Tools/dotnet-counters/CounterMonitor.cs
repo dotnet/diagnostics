@@ -198,7 +198,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             Task monitorTask = new Task(() => {
                 try
                 {
-                    RequestTracingV1(providerString);
+                    RequestTracingV2(providerString);
                 }
                 catch (EventPipeUnknownCommandException)
                 {
