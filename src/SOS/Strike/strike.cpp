@@ -15527,6 +15527,8 @@ DECLARE_API(SetSymbolServer)
     INIT_API_EXT();
 
     StringHolder symbolCache;
+    StringHolder searchDirectory;
+    StringHolder windowsSymbolPath;
     BOOL disable = FALSE;
     BOOL loadNative = FALSE;
     BOOL msdl = FALSE;
@@ -15535,11 +15537,13 @@ DECLARE_API(SetSymbolServer)
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-disable", &disable, COBOOL, FALSE},
-        {"-cache", &symbolCache.data, COSTRING, FALSE},
+        {"-cache", &symbolCache.data, COSTRING, TRUE},
+        {"-directory", &searchDirectory.data, COSTRING, TRUE},
         {"-ms", &msdl, COBOOL, FALSE},
         {"-log", &logging, COBOOL, FALSE},
 #ifdef FEATURE_PAL
         {"-loadsymbols", &loadNative, COBOOL, FALSE},
+        {"-sympath", &windowsSymbolPath.data, COSTRING, TRUE},
 #else
         {"-mi", &symweb, COBOOL, FALSE},
 #endif
@@ -15555,11 +15559,6 @@ DECLARE_API(SetSymbolServer)
         return E_FAIL;
     }
 
-    if (disable) {
-        DisableSymbolStore();
-        return S_OK;
-    }
-
     if (msdl && symweb)
     {
         ExtErr("Cannot have both -ms and -mi options\n");
@@ -15572,9 +15571,13 @@ DECLARE_API(SetSymbolServer)
         return E_FAIL;
     }
 
-    if (msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr)
+    if (disable) {
+        DisableSymbolStore();
+    }
+
+    if (msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr || searchDirectory.data != nullptr || windowsSymbolPath.data != nullptr)
     {
-        Status = InitializeSymbolStore(logging, msdl, symweb, symbolServer.data, symbolCache.data);
+        Status = InitializeSymbolStore(logging, msdl, symweb, symbolServer.data, symbolCache.data, searchDirectory.data, windowsSymbolPath.data);
         if (FAILED(Status))
         {
             return Status;
@@ -15593,7 +15596,15 @@ DECLARE_API(SetSymbolServer)
         }
         if (symbolCache.data != nullptr)
         {
-            ExtOut("Symbol cache path: %s\n", symbolCache.data);
+            ExtOut("Added symbol cache path: %s\n", symbolCache.data);
+        }
+        if (searchDirectory.data != nullptr)
+        {
+            ExtOut("Added symbol directory path: %s\n", searchDirectory.data);
+        }
+        if (windowsSymbolPath.data != nullptr)
+        {
+            ExtOut("Added Windows symbol path: %s\n", windowsSymbolPath.data);
         }
     }
     else if (loadNative)
