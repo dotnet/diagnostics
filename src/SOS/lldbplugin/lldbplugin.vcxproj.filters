@@ -2,10 +2,10 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="services.cpp" />
-    <ClCompile Include="setclrpathcommand.cpp" />
     <ClCompile Include="setsostidcommand.cpp" />
     <ClCompile Include="soscommand.cpp" />
     <ClCompile Include="sosplugin.cpp" />
+    <ClCompile Include="sethostruntimecommand.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="mstypes.h" />

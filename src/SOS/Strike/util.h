@@ -33,11 +33,12 @@ inline void RestoreSOToleranceState() {}
 #include "cordebug.h"
 #include "static_assert.h"
 #include <string>
+#include "extensions.h"
 #include "releaseholder.h"
 #include "hostimpl.h"
 #include "targetimpl.h"
 #include "runtimeimpl.h"
-#include "hostcoreclr.h"
+#include "symbols.h"
 
 typedef LPCSTR  LPCUTF8;
 typedef LPSTR   LPUTF8;

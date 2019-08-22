@@ -3,23 +3,27 @@
 // See the LICENSE file in the project root for more information.
 
 #include <cstdarg>
+#include <string>
+#include <set>
 
 #define CACHE_SIZE  4096
 
-class LLDBServices : public ILLDBServices, public ILLDBServices2
+class LLDBServices : public ILLDBServices, public ILLDBServices2, public IDebuggerServices
 {
 private:
     LONG m_ref;
     lldb::SBDebugger m_debugger;
+    lldb::SBCommandInterpreter m_interpreter;
     lldb::SBProcess *m_currentProcess;
     lldb::SBThread *m_currentThread;
+    uint32_t m_currentStopId;
+    std::set<std::string> m_commands;
 
     BYTE m_cache[CACHE_SIZE];
     ULONG64 m_startCache;
     bool m_cacheValid;
     ULONG m_cacheSize;
 
-    void OutputString(ULONG mask, PCSTR str);
     ULONG64 GetModuleBase(lldb::SBTarget& target, lldb::SBModule& module);
     ULONG64 GetModuleSize(lldb::SBModule& module);
     ULONG64 GetExpression(lldb::SBFrame& frame, lldb::SBError& error, PCSTR exp);
@@ -36,14 +40,26 @@ private:
         m_cacheSize = CACHE_SIZE;
     }
 
+    void LoadNativeSymbols(lldb::SBTarget target, lldb::SBModule module, PFN_MODULE_LOAD_CALLBACK callback);
+
     lldb::SBProcess GetCurrentProcess();
     lldb::SBThread GetCurrentThread();
     lldb::SBFrame GetCurrentFrame();
 
 public:
-    LLDBServices(lldb::SBDebugger debugger, lldb::SBProcess *process = nullptr, lldb::SBThread *thread = nullptr);
+    LLDBServices(lldb::SBDebugger debugger);
     ~LLDBServices();
  
+    lldb::SBProcess* SetCurrentProcess(lldb::SBProcess* process)
+    {
+        return (lldb::SBProcess*)InterlockedExchangePointer(&m_currentProcess, process);
+    }
+
+    lldb::SBThread* SetCurrentThread(lldb::SBThread* thread) 
+    { 
+        return (lldb::SBThread*)InterlockedExchangePointer(&m_currentThread, thread);
+    }
+
     //----------------------------------------------------------------------------
     // IUnknown
     //----------------------------------------------------------------------------
@@ -311,13 +327,52 @@ public:
         PFN_RUNTIME_LOADED_CALLBACK callback);
 
     //----------------------------------------------------------------------------
+    // IDebuggerServices
+    //----------------------------------------------------------------------------
+
+    HRESULT STDMETHODCALLTYPE GetOperatingSystem(
+        IDebuggerServices::OperatingSystem* operatingSystem);
+
+    HRESULT STDMETHODCALLTYPE AddCommand(
+        PCSTR command,
+        PCSTR help,
+        PCSTR aliases[],
+        int numberOfAliases);
+
+    void STDMETHODCALLTYPE OutputString(
+        ULONG mask,
+        PCSTR str);
+
+    HRESULT STDMETHODCALLTYPE GetNumberThreads(
+        PULONG number);
+
+    HRESULT STDMETHODCALLTYPE GetThreadIdsByIndex(
+        ULONG start,
+        ULONG count,
+        PULONG ids,
+        PULONG sysIds);
+
+    HRESULT STDMETHODCALLTYPE SetCurrentThreadSystemId(
+        ULONG sysId);
+
+    HRESULT STDMETHODCALLTYPE GetThreadTeb(
+        ULONG sysId,
+        PULONG64 pteb);
+
+    HRESULT STDMETHODCALLTYPE GetSymbolPath(
+        PSTR buffer,
+        ULONG bufferSize,
+        PULONG pathSize);
+ 
+    //----------------------------------------------------------------------------
     // LLDBServices (internal)
     //----------------------------------------------------------------------------
 
-    void LoadNativeSymbols(
-        lldb::SBTarget target,
-        lldb::SBModule module,
-        PFN_MODULE_LOAD_CALLBACK callback);
-
     PCSTR GetPluginModuleDirectory();
+
+    void FlushCheck();
+
+    lldb::SBCommand AddCommand(const char *name, lldb::SBCommandPluginInterface *impl, const char *help);
+
+    HRESULT InternalOutputVaList(ULONG mask, PCSTR format, va_list args);
 };

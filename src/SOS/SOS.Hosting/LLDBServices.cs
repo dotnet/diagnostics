@@ -35,7 +35,7 @@ namespace SOS.Hosting
             VTableBuilder builder = AddInterface(IID_ILLDBServices, validate: false);
 
             builder.AddMethod(new GetCoreClrDirectoryDelegate(GetCoreClrDirectory));
-            builder.AddMethod(new GetExpressionDelegate((self, expression) => SOSHost.GetExpression(expression)));
+            builder.AddMethod(new GetExpressionDelegate((self, expression) => SymbolServiceWrapper.GetExpressionValue(IntPtr.Zero, expression)));
             builder.AddMethod(new VirtualUnwindDelegate(VirtualUnwind));
             builder.AddMethod(new SetExceptionCallbackDelegate(SetExceptionCallback));
             builder.AddMethod(new ClearExceptionCallbackDelegate(ClearExceptionCallback));

@@ -18,6 +18,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly IMemoryService _memoryService;
         private readonly IModuleService _moduleService;
         private readonly MemoryCache _memoryCache;
+        private readonly IDisposable _onFlushEvent;
 
         /// <summary>
         /// Memory service constructor
@@ -29,10 +30,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _memoryService = memoryService;
             _moduleService = target.Services.GetService<IModuleService>();
             _memoryCache = new MemoryCache(ReadMemoryFromModule);
-
-            target.OnFlushEvent += (object sender, EventArgs e) => {
-                _memoryCache.FlushCache();
-            };
+            _onFlushEvent = target.OnFlushEvent.Register(_memoryCache.FlushCache);
         }
 
         #region IMemoryService

@@ -28,6 +28,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             Host = host;
             _dumpPath = dumpPath;
 
+            OnFlushEvent = new ServiceEvent();
+
             // Initialize the per-target services
             ServiceProvider = new ServiceProvider(host.Services);
 
@@ -46,7 +48,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Invoked when this target is flushed (via the Flush() call).
         /// </summary>
-        public event ITarget.FlushEventHandler OnFlushEvent;
+        public IServiceEvent OnFlushEvent { get; }
 
         /// <summary>
         /// The target id
@@ -101,7 +103,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public void Flush()
         {
             Trace.TraceInformation($"Flushing target #{Id}");
-            OnFlushEvent?.Invoke(this, EventArgs.Empty);
+            OnFlushEvent.Fire();
         }
 
         /// <summary>

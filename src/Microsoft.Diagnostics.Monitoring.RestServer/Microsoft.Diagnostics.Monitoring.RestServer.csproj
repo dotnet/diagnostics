@@ -15,6 +15,7 @@
     <OutputType>Library</OutputType>
     <!-- Version information -->
     <VersionPrefix>5.0.0</VersionPrefix>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">

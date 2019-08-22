@@ -2621,10 +2621,12 @@ investigating lifetime issues of interop-heavy applications.
 \\
 
 COMMAND: sethostruntime.
-!SetHostRuntime [-netcore] [-netfx] <runtime-directory>
+!SetHostRuntime [-c][-netcore] [-f][-netfx] [-none] [-clear] <runtime-directory>
 
--netcore - switch to hosting on the .NET Core runtime
--netfx   - switch to hosting on the desktop .NET Framework runtime if loaded.
+-c, -netcore - switch to hosting on the .NET Core runtime
+-f, -netfx   - switch to hosting on the desktop .NET Framework runtime if loaded.
+-none        - disable hosting managed code (for testing).
+-clear       - clear the .NET Core host runtime path.
 
 This command controls the runtime that is used to host the maanged code that
 runs as part of SOS in the debugger (cdb/windbg). The default is the desktop
@@ -2655,7 +2657,7 @@ You can use the "dotnet --info" in a command shell to find the path of an instal
 \\
 
 COMMAND: setsymbolserver.
-!SetSymbolServer [-ms] [-mi] [-disable] [-log] [-cache <cache-path>] [-directory <search-directory>] [-pat <token>] [<symbol-server-URL>]
+!SetSymbolServer [-ms] [-mi] [-disable] [-log] [-cache <cache-path>] [-directory <search-directory>] [-timeout <minutes> ] [-pat <token>] [<symbol-server-URL>]
 
 -ms - Use the public Microsoft symbol server.
 -mi - Use the internal symweb symbol server.
@@ -2664,7 +2666,6 @@ COMMAND: setsymbolserver.
 -timeout - Specify the symbol server timeout in minutes
 -pat - Access token to the authenticated server.
 -cache - Specific a symbol cache directory. The default is %%TEMP%%\SymbolCache if not specified.
--log - Enable symbol download logging.
 <symbol-server-URL> - Symbol server URL.
 
 This commands enables symbol server support for portable PDBs in SOS. If the .sympath is set, this

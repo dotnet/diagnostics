@@ -13,7 +13,6 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\SOS.NETCore\SOS.NETCore.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\SOS.InstallHelper\SOS.InstallHelper.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
   </ItemGroup>

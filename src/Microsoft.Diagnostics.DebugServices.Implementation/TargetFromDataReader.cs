@@ -19,6 +19,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     public class TargetFromDataReader : Target
     {
         private readonly IDataReader _dataReader;
+        private readonly IDisposable _onFlushEvent;
 
         /// <summary>
         /// Create a target instance from IDataReader
@@ -34,9 +35,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             OperatingSystem = targetOS;
             IsDump = true;
-            OnFlushEvent += (object sender, EventArgs e) => {
-                dataReader.FlushCachedData();
-            };
+            _onFlushEvent = OnFlushEvent.Register(dataReader.FlushCachedData);
 
             Architecture = dataReader.Architecture switch
             {

@@ -13,7 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netstandard2.0\publish\*.pdb" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\netstandard2.0\publish\*.pdb" Pack="true" Visible="false">
       <PackagePath>$(SOSPackagePathPrefix)</PackagePath>
     </None>
 

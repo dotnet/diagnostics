@@ -214,6 +214,21 @@ public class SOS
                 DebuggeeName = "SymbolTestApp",
                 DebuggeeArguments = "%DEBUG_ROOT%",
             });
+
+            // This tests using regular Windows PDBs with no managed hosting. SOS should fallback 
+            // to using native implementations of the host/target/runtime.
+            if (currentConfig.AllSettings["DebugType"] == "full")
+            {
+                var settings = new Dictionary<string, string>(currentConfig.AllSettings) {
+                    ["SetHostRuntime"] = "-none"
+                };
+                await RunTest("StackAndOtherTests.script", information: new SOSRunner.TestInformation {
+                    TestConfiguration = new TestConfiguration(settings),
+                    TestName = "SOS.StackAndOtherTests",
+                    DebuggeeName = "SymbolTestApp",
+                    DebuggeeArguments = "%DEBUG_ROOT%",
+                });
+            }
         }
     }
 

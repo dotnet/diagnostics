@@ -8,7 +8,6 @@ using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -30,34 +29,23 @@ namespace SOS.Hosting
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SOSInitializeDelegate(
-            [In, MarshalAs(UnmanagedType.Struct)] ref SymbolReader.SOSNetCoreCallbacks callbacks,
-            int callbacksSize,
-            [In, MarshalAs(UnmanagedType.LPStr)] string tempDirectory,
-            [In, MarshalAs(UnmanagedType.LPStr)] string runtimeModulePath,
-            bool isDesktop,
-            [In, MarshalAs(UnmanagedType.LPStr)] string dacFilePath,
-            [In, MarshalAs(UnmanagedType.LPStr)] string dbiFilePath,
-            bool symbolStoreEnabled);
+            IntPtr IHost);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate void SOSUninitializeDelegate();
 
         private const string SOSInitialize = "SOSInitializeByHost";
+        private const string SOSUninitialize = "SOSUninitializeByHost";
 
         internal readonly ITarget Target;
         internal readonly IConsoleService ConsoleService;
         internal readonly IModuleService ModuleService;
         internal readonly IThreadService ThreadService;
         internal readonly IMemoryService MemoryService;
-        private readonly ulong _ignoreAddressBitsMask;
         private readonly IntPtr _interface;
+        private readonly HostWrapper _hostWrapper;
+        private readonly ulong _ignoreAddressBitsMask;
         private IntPtr _sosLibrary = IntPtr.Zero;
-
-        /// <summary>
-        /// Enable the assembly resolver to get the right SOS.NETCore version (the one
-        /// in the same directory as SOS.Hosting).
-        /// </summary>
-        static SOSHost()
-        {
-            AssemblyResolver.Enable();
-        }
 
         /// <summary>
         /// The native SOS binaries path. Default is OS/architecture (RID) named directory in the same directory as this assembly.
@@ -90,6 +78,8 @@ namespace SOS.Hosting
                 var lldbServices = new LLDBServices(this);
                 _interface = lldbServices.ILLDBServices;
             }
+            _hostWrapper = new HostWrapper(target.Host);
+            _hostWrapper.AddServiceWrapper(SymbolServiceWrapper.IID_ISymbolService, () => new SymbolServiceWrapper(target.Host));
         }
 
         /// <summary>
@@ -138,31 +128,24 @@ namespace SOS.Hosting
                 {
                     throw new EntryPointNotFoundException($"Can not find SOS module initialization function: {SOSInitialize}");
                 }
-            
-                // SOS depends on that the temp directory ends with "/".
-                string tempDirectory = Target.GetTempDirectory();
-                if (!string.IsNullOrEmpty(tempDirectory) && tempDirectory[tempDirectory.Length - 1] != Path.DirectorySeparatorChar)
-                {
-                    tempDirectory += Path.DirectorySeparatorChar;
-                }
-
-                var runtimeService = Target.Services.GetService<IRuntimeService>();
-                int result = initializeFunc(
-                    ref SymbolReader.SymbolCallbacks,
-                    Marshal.SizeOf<SymbolReader.SOSNetCoreCallbacks>(),
-                    tempDirectory,
-                    runtimeService.RuntimeModuleDirectory,
-                    false,
-                    null,
-                    null,
-                    SymbolReader.IsSymbolStoreEnabled());
-
+                Target.Host.OnShutdownEvent.Register(OnShutdownEvent);
+                int result = initializeFunc(_hostWrapper.IHost);
                 if (result != 0)
                 {
                     throw new InvalidOperationException($"SOS initialization FAILED 0x{result:X8}");
                 }
-                Trace.TraceInformation("SOS initialized: tempDirectory '{0}' sosPath '{1}'", tempDirectory, sosPath);
+                Trace.TraceInformation("SOS initialized: sosPath '{0}'", sosPath);
             }
+        }
+
+        /// <summary>
+        /// Shutdown/clean up the native SOS.
+        /// </summary>
+        private void OnShutdownEvent()
+        {
+            Trace.TraceInformation("SOSHost: OnShutdownEvent");
+            var uninitializeFunc = GetDelegateFunction<SOSUninitializeDelegate>(_sosLibrary, SOSUninitialize);
+            uninitializeFunc?.Invoke();
         }
 
         /// <summary>
@@ -205,19 +188,6 @@ namespace SOS.Hosting
         }
 
         #region Reverse PInvoke Implementations
-
-        internal static ulong GetExpression(
-            string expression)
-        {
-            if (expression != null)
-            {
-                if (ulong.TryParse(expression.Replace("0x", ""), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ulong result))
-                {
-                    return result;
-                }
-            }
-            return 0;
-        }
 
         internal int GetInterrupt(
             IntPtr self)
@@ -357,9 +327,13 @@ namespace SOS.Hosting
             uint bytesRequested,
             uint* pbytesWritten)
         {
-            // This gets used by MemoryBarrier() calls in the dac, which really shouldn't matter what we do here.
-            Write(pbytesWritten, bytesRequested);
-            return HResult.S_OK;
+            address &= _ignoreAddressBitsMask;
+            if (MemoryService.WriteMemory(address, new Span<byte>(buffer.ToPointer(), unchecked((int)bytesRequested)), out int bytesWritten))
+            {
+                Write(pbytesWritten, (uint)bytesWritten);
+                return HResult.S_OK;
+            }
+            return HResult.E_FAIL;
         }
 
         internal int GetSymbolOptions(
@@ -453,18 +427,12 @@ namespace SOS.Hosting
             {
                 return HResult.E_INVALIDARG;
             }
-            // This causes way too many problems on Linux because of various
-            // bugs in the CLRMD ELF dump reader module enumeration and isn't
-            // necessary on linux anyway.
-            if (Target.OperatingSystem == OSPlatform.Windows)
+            IModule module = ModuleService.GetModuleFromAddress(offset);
+            if (module != null)
             {
-                IModule module = ModuleService.GetModuleFromAddress(offset);
-                if (module != null)
-                {
-                    Write(index, (uint)module.ModuleIndex);
-                    Write(baseAddress, module.ImageBase);
-                    return HResult.S_OK;
-                }
+                Write(index, (uint)module.ModuleIndex);
+                Write(baseAddress, module.ImageBase);
+                return HResult.S_OK;
             }
             return HResult.E_FAIL;
         }

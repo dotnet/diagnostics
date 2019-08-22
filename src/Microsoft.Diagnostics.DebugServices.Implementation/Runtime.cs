@@ -23,6 +23,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly ITarget _target;
         private readonly IRuntimeService _runtimeService;
         private readonly ClrInfo _clrInfo;
+        private IDisposable _onChangeEvent;
         private IMemoryService _memoryService;
         private ISymbolService _symbolService;
         private MetadataMappingMemoryService _metadataMappingMemoryService;
@@ -67,7 +68,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     if (_metadataMappingMemoryService == null)
                     {
                         _metadataMappingMemoryService = new MetadataMappingMemoryService(this, MemoryService, SymbolService);
-                        SymbolService.OnChangeEvent += (object sender, EventArgs e) => _metadataMappingMemoryService?.Flush();
+                        _onChangeEvent = SymbolService.OnChangeEvent.Register(_metadataMappingMemoryService.Flush);
                     }
                     return _metadataMappingMemoryService;
                 });

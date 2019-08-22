@@ -14,14 +14,9 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface ITarget
     {
         /// <summary>
-        /// Flush event handler delegate. The sender is the target instance.
-        /// </summary>
-        public delegate void FlushEventHandler(object sender, EventArgs e);
-
-        /// <summary>
         /// Invoked when this target is flushed (via the Flush() call).
         /// </summary>
-        event FlushEventHandler OnFlushEvent;
+        IServiceEvent OnFlushEvent { get; }
 
         /// <summary>
         /// Returns the host interface instance

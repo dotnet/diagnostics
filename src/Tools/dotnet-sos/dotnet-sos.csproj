@@ -22,4 +22,10 @@
   </ItemGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.props" />
+    
+  <ItemGroup>
+    <None Include="$(SOSExtensionsBinaries)" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/lib</PackagePath>
+    </None>
+  </ItemGroup>
 </Project>

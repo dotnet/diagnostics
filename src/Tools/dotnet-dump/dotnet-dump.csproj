@@ -20,7 +20,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
     <PackageReference Include="Microsoft.SymbolStore" Version="$(MicrosoftSymbolStoreVersion)" />
-    <PackageReference Include="ParallelStacks.Runtime" Version="$(ParallelStacksRuntimeVersion)" />
   </ItemGroup>
 
   <ItemGroup>
@@ -33,9 +32,9 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.Repl\Microsoft.Diagnostics.Repl.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\SOS\SOS.Hosting\SOS.Hosting.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\SOS\SOS.NETCore\SOS.NETCore.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices.Implementation\Microsoft.Diagnostics.DebugServices.Implementation.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.ExtensionCommands\Microsoft.Diagnostics.ExtensionCommands.csproj" />
   </ItemGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.props" />

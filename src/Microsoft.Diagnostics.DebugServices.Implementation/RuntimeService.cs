@@ -21,6 +21,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     public class RuntimeService : IRuntimeService, IDataReader
     {
         private readonly ITarget _target;
+        private readonly IDisposable _onFlushEvent;
         private DataTarget _dataTarget;
         private string _runtimeModuleDirectory;
         private List<Runtime> _runtimes;
@@ -32,7 +33,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public RuntimeService(ITarget target)
         {
             _target = target;
-            target.OnFlushEvent += (object sender, EventArgs e) => {
+            _onFlushEvent = target.OnFlushEvent.Register(() => {
                 if (_runtimes != null)
                 {
                     if (_runtimes.Count > 0)
@@ -50,7 +51,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         _dataTarget = null;
                     }
                 }
-            };
+            });
         }
 
         /// <summary>

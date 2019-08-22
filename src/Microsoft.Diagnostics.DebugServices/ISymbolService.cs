@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.SymbolStore;
-using System;
 using System.Collections.Immutable;
 
 namespace Microsoft.Diagnostics.DebugServices
@@ -11,14 +10,9 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface ISymbolService
     {
         /// <summary>
-        /// Symbol store change event. The sender is the symbol store instance.
-        /// </summary>
-        public delegate void ChangeEventHandler(object sender, EventArgs e);
-
-        /// <summary>
         /// Invoked when anything changes in the symbol service (adding servers, caches, or directories, clearing store, etc.)
         /// </summary>
-        event ChangeEventHandler OnChangeEvent;
+        public IServiceEvent OnChangeEvent { get; }
 
         /// <summary>
         /// Returns true if symbol download has been enabled.

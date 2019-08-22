@@ -80,22 +80,27 @@ Target::CreateInstance(IRuntime **ppRuntime)
     {
         hr = Runtime::CreateInstance(this, IRuntime::Core, &m_netcore);
 #ifdef FEATURE_PAL
-        *ppRuntime = m_netcore;
+        * ppRuntime = m_netcore;
 #else
         ITarget::OperatingSystem os = this->GetOperatingSystem();
-        if (FAILED(hr))
+        switch (os)
         {
-            if (os == ITarget::OperatingSystem::Linux || os == ITarget::OperatingSystem::OSX)
-            {
-                hr = Runtime::CreateInstance(this, IRuntime::UnixCore, &m_netcore);
-            }
-        }
-        if (FAILED(hr))
-        {
-            if (os == ITarget::OperatingSystem::Windows)
-            {
-                hr = Runtime::CreateInstance(this, IRuntime::WindowsDesktop, &m_desktop);
-            }
+            case ITarget::OperatingSystem::Linux:
+            case ITarget::OperatingSystem::OSX:
+                // Only attempt to create linux/OSX core runtime if above failed
+                if (m_netcore == nullptr)
+                {
+                    hr = Runtime::CreateInstance(this, IRuntime::UnixCore, &m_netcore);
+                }
+                break;
+            case ITarget::OperatingSystem::Windows:
+                // Always attempt to create desktop clr, but only return result the if the .NET Core create failed
+                HRESULT hrDesktop = Runtime::CreateInstance(this, IRuntime::WindowsDesktop, &m_desktop);
+                if (m_netcore == nullptr)
+                {
+                    hr = hrDesktop;
+                }
+                break;
         }
         *ppRuntime = m_netcore != nullptr ? m_netcore : m_desktop;
 #endif
@@ -110,13 +115,6 @@ Target::CreateInstance(IRuntime **ppRuntime)
 #ifndef FEATURE_PAL
 bool Target::SwitchRuntimeInstance(bool desktop)
 {
-    if (desktop) 
-    {
-        if (this->GetOperatingSystem() != ITarget::OperatingSystem::Windows) {
-            return false;
-        }
-        Runtime::CreateInstance(this, IRuntime::WindowsDesktop, &m_desktop);
-    }
     IRuntime* runtime = desktop ? m_desktop : m_netcore;
     if (runtime == nullptr) {
         return false;
@@ -318,33 +316,12 @@ void Target::Close()
     }
 }
 
-static IHost* g_pHost = nullptr;
-
-IHost* GetHost()
+bool IsWindowsTarget()
 {
-    if (g_pHost == nullptr)
+    ITarget* target = GetTarget();
+    if (target != nullptr)
     {
-        g_pHost = Host::GetInstance();
+        return target->GetOperatingSystem() == ITarget::OperatingSystem::Windows;
     }
-    return g_pHost;
-}
-
-static ITarget* g_pTarget = nullptr;
-
-ITarget* GetTarget()
-{
-    if (g_pTarget == nullptr)
-    {
-        GetHost()->GetCurrentTarget(&g_pTarget);
-    }
-    return g_pTarget;
-}
-
-void ReleaseTarget()
-{
-    if (g_pTarget != nullptr)
-    {
-        g_pTarget->Release();
-        g_pTarget = nullptr;
-    }
+    return ITarget::OperatingSystem::Unknown;
 }

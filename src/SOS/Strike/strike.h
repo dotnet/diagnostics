@@ -72,6 +72,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "host.h"
+#include "hostservices.h"
 
 #ifndef PAL_STDCPP_COMPAT
 #include <malloc.h>

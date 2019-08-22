@@ -29,6 +29,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             InitializeProductVersion = 0x40,
         }
 
+        private IDisposable _onChangeEvent;
         private Flags _flags;
         private PdbInfo _pdbInfo;
         private ImmutableArray<byte> _buildId;
@@ -42,8 +43,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             ServiceProvider = new ServiceProvider();
             ServiceProvider.AddServiceFactoryWithNoCaching<PEImage>(() => GetPEInfo());
             ServiceProvider.AddServiceFactory<PEReader>(() => {
-                // BUGBUG - this can leak OnChangeEvent handlers
-                ModuleService.SymbolService.OnChangeEvent += (object sender, EventArgs e) => ServiceProvider.RemoveService(typeof(PEReader));
+                _onChangeEvent = ModuleService.SymbolService.OnChangeEvent.Register(() => ServiceProvider.RemoveService(typeof(PEReader)));
                 return ModuleService.GetPEReader(this);
             });
         }

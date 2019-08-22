@@ -2,9 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.ExtensionCommands;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
-using Microsoft.Diagnostics.ExtensionCommands;
 using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
 using SOS.Hosting;
@@ -25,28 +25,21 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private readonly SymbolService _symbolService;
         private Target _target;
 
-        /// <summary>
-        /// Enable the assembly resolver to get the right SOS.NETCore version (the one
-        /// in the same directory as this assembly).
-        /// </summary>
-        static Analyzer()
-        {
-            AssemblyResolver.Enable();
-        }
-
         public Analyzer()
         {
             _serviceProvider = new ServiceProvider();
             _consoleProvider = new ConsoleProvider();
             _commandProcessor = new CommandProcessor();
             _symbolService = new SymbolService(this);
-     
+
             _serviceProvider.AddService<IHost>(this);
             _serviceProvider.AddService<IConsoleService>(_consoleProvider);
             _serviceProvider.AddService<ICommandService>(_commandProcessor);
             _serviceProvider.AddService<ISymbolService>(_symbolService);
 
             _commandProcessor.AddCommands(new Assembly[] { typeof(Analyzer).Assembly });
+            _commandProcessor.AddCommands(new Assembly[] { typeof(ClrMDHelper).Assembly });
+            _commandProcessor.AddCommands(new Assembly[] { typeof(SOSHost).Assembly });
             _commandProcessor.AddCommands(typeof(HelpCommand), (services) => new HelpCommand(_commandProcessor, services));
             _commandProcessor.AddCommands(typeof(ExitCommand), (services) => new ExitCommand(_consoleProvider.Stop));
         }
@@ -56,7 +49,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _consoleProvider.WriteLine($"Loading core dump: {dump_path} ...");
 
             try
-            {
+            { 
                 using DataTarget dataTarget = DataTarget.LoadDump(dump_path.FullName);
 
                 OSPlatform targetPlatform = dataTarget.DataReader.TargetPlatform;
@@ -71,10 +64,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     return sosHost;
                 });
 
-                // Set the default symbol cache to match Visual Studio's when running on Windows
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                    _symbolService.DefaultSymbolCache = Path.Combine(Path.GetTempPath(), "SymbolCache");
-                }
                 // Automatically enable symbol server support
                 _symbolService.AddSymbolServer(msdl: true, symweb: false, symbolServerPath: null, authToken: null, timeoutInMinutes: 0);
                 _symbolService.AddCachePath(_symbolService.DefaultSymbolCache);
@@ -123,7 +112,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     _target = null;
                 }
                 // Send shutdown event on exit
-                OnShutdownEvent?.Invoke(this, new EventArgs());
+                OnShutdownEvent.Fire();
             }
             return Task.FromResult(0);
         }
@@ -160,7 +149,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         #region IHost
 
-        public event IHost.ShutdownEventHandler OnShutdownEvent;
+        public IServiceEvent OnShutdownEvent { get; } = new ServiceEvent();
 
         HostType IHost.HostType => HostType.DotnetDump;
 
