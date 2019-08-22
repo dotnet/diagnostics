@@ -24,6 +24,15 @@ VERIFY:Break instruction exception - code 80000003
 ENDIF:CDB
 
 SOSCOMMAND:DumpStackObjects
+VERIFY:<HEXVAL>\s+<HEXVAL>\s+System.IO.StringWriter\s+
+
+SOSCOMMAND:DumpObj <POUT>\w+\s+(<HEXVAL>)\s+(System.IO.StringWriter!\$0_)*System.IO.StringWriter\s+<POUT>
+IFDEF:MAJOR_RUNTIME_VERSION_2
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.IO.TextWriter\s+<DECVAL>\s+shared\s+static\s+Null\s+
+VERIFY:\s+>>\s+Domain:Value\s+<HEXVAL>:<HEXVAL>\s+<<\s+
+ENDIF:MAJOR_RUNTIME_VERSION_2
+
+SOSCOMMAND:DumpStackObjects
 VERIFY:<HEXVAL>\s<HEXVAL>\s([Gg][Cc]where!\$0_)*GCWhere\s+
 
 SOSCOMMAND:GCWhere <POUT>\w+\s+(<HEXVAL>)\s+([Gg][Cc]where!\$0_)*GCWhere\s+<POUT>
@@ -32,18 +41,19 @@ VERIFY:<HEXVAL>\s+0\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+34\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+39\]\s+
 
 SOSCOMMAND:GCRoot -all <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+34\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+39\]\s+
 
 SOSCOMMAND:DumpObj <PREVPOUT>
 VERIFY:\s*Name:\s+GCWhere\s+
 VERIFY:\s+MethodTable:\s+<HEXVAL>\s+
 VERIFY:\s+EEClass:\s+<HEXVAL>\s+
 VERIFY:\s+Fields:\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<DECVAL>\s+System\.String.*_string\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*_string\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.UInt64.*52704621242434 _static\s+
 
 SOSCOMMAND:DumpObj -nofields <PREVPOUT>
 VERIFY:\s*Name:\s+GCWhere\s+
@@ -55,7 +65,8 @@ VERIFY:\s*Name:\s+GCWhere\s+
 VERIFY:\s+MethodTable:\s+<HEXVAL>\s+
 VERIFY:\s+EEClass:\s+<HEXVAL>\s+
 VERIFY:\s+Fields:\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<DECVAL>\s+System\.String.*_string\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*_string\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.UInt64.*52704621242434 _static\s+
 VERIFY:\s+GC Refs:\s+
 VERIFY:\s+offset\s+object\s+
 VERIFY:\s+<DECVAL>\s+<HEXVAL>\s+
@@ -103,18 +114,19 @@ VERIFY:<HEXVAL>\s+1\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+37\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+42\]\s+
 
 SOSCOMMAND:GCRoot -all <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+37\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+42\]\s+
 
 SOSCOMMAND:DumpObj <PREVPOUT>
 VERIFY:\s*Name:\s+GCWhere\s+
 VERIFY:\s+MethodTable:\s+<HEXVAL>\s+
 VERIFY:\s+EEClass:\s+<HEXVAL>\s+
 VERIFY:\s+Fields:\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<DECVAL>\s+System\.String.*_string\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*_string\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.UInt64.*52704621242434 _static\s+
 
 SOSCOMMAND:DumpObj -nofields <PREVPOUT>
 VERIFY:\s*Name:\s+GCWhere\s+
@@ -126,7 +138,8 @@ VERIFY:\s*Name:\s+GCWhere\s+
 VERIFY:\s+MethodTable:\s+<HEXVAL>\s+
 VERIFY:\s+EEClass:\s+<HEXVAL>\s+
 VERIFY:\s+Fields:\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<DECVAL>\s+System\.String.*_string\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*_string\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.UInt64.*52704621242434 _static\s+
 VERIFY:\s+GC Refs:\s+
 VERIFY:\s+offset\s+object\s+
 VERIFY:\s+<DECVAL>\s+<HEXVAL>\s+
@@ -145,7 +158,7 @@ VERIFY:<HEXVAL>\s+2\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+40\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+45\]\s+
 
 # Continue to the next DebugBreak
 CONTINUE
@@ -161,7 +174,7 @@ VERIFY:<HEXVAL>\s+[02]\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+44\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+49\]\s+
 
 # Continue to the next DebugBreak
 CONTINUE

@@ -14,6 +14,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 {
     [Command(Name = "clrstack",         AliasExpansion = "ClrStack",            Help = "Provides a stack trace of managed code only.")]
     [Command(Name = "clrthreads",       AliasExpansion = "Threads",             Help = "List the managed threads running.")]
+    [Command(Name = "dumparray",        AliasExpansion = "DumpArray",           Help = "Displays details about a managed array.")]
     [Command(Name = "dumpasync",        AliasExpansion = "DumpAsync",           Help = "Displays info about async state machines on the garbage-collected heap.")]
     [Command(Name = "dumpassembly",     AliasExpansion = "DumpAssembly",        Help = "Displays details about an assembly.")]
     [Command(Name = "dumpclass",        AliasExpansion = "DumpClass",           Help = "Displays information about a EE class structure at the specified address.")]
