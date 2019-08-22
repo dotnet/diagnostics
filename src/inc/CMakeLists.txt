@@ -11,7 +11,6 @@ set( CORGUIDS_IDL_SOURCES
   xclrdata.idl
   corprof.idl
   corpub.idl
-  gchost.idl
   mscorsvc.idl
   clrprivappxhosting.idl
   clrprivbinding.idl
@@ -47,7 +46,7 @@ set_source_files_properties(${CORGUIDS_SOURCES}
                             PROPERTIES GENERATED TRUE)
 
 # Compile *_i.c as C files
-add_compile_options(/TC)
+#add_compile_options(/TC)
 
 else()
 

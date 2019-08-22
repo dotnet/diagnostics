@@ -62,6 +62,7 @@ namespace SOS
             string tempDirectory,
             string symbolServerPath,
             string symbolCachePath,
+            string symbolDirectoryPath,
             string windowsSymbolPath);
 
         private delegate void DisplaySymbolStoreDelegate(

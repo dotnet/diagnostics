@@ -42,6 +42,7 @@
 
 static bool g_hostingInitialized = false;
 static bool g_symbolStoreInitialized = false;
+static bool g_windowsSymbolPathInitialized = false;
 LPCSTR g_hostRuntimeDirectory = nullptr;
 LPCSTR g_dacFilePath = nullptr;
 LPCSTR g_dbiFilePath = nullptr;
@@ -777,13 +778,13 @@ static int ReadMemoryForSymbols(ULONG64 address, uint8_t *buffer, int cb)
 /**********************************************************************\
  * Setup and initialize the symbol server support.
 \**********************************************************************/
-HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* symbolServer, const char* cacheDirectory)
+HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* symbolServer, const char* cacheDirectory, const char* searchDirectory, const char* windowsSymbolPath)
 {
     HRESULT Status = S_OK;
     IfFailRet(InitializeHosting());
     _ASSERTE(g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate != nullptr);
 
-    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(logging, msdl, symweb, GetTempDirectory(), symbolServer, cacheDirectory, nullptr))
+    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(logging, msdl, symweb, GetTempDirectory(), symbolServer, cacheDirectory, searchDirectory, windowsSymbolPath))
     {
         ExtErr("Error initializing symbol server support\n");
         return E_FAIL;
@@ -791,6 +792,7 @@ HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* 
     g_symbolStoreInitialized = true;
     return S_OK;
 }
+
 
 /**********************************************************************\
  * Setup and initialize the symbol server support using the .sympath
@@ -800,19 +802,20 @@ void InitializeSymbolStore()
     _ASSERTE(g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate != nullptr);
 
 #ifndef FEATURE_PAL
-    if (!g_symbolStoreInitialized)
+    if (!g_windowsSymbolPathInitialized)
     {
-        g_symbolStoreInitialized = true;
-
         ArrayHolder<char> symbolPath = new char[MAX_LONGPATH];
         if (SUCCEEDED(g_ExtSymbols->GetSymbolPath(symbolPath, MAX_LONGPATH, nullptr)))
         {
             if (strlen(symbolPath) > 0)
             {
-                if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(false, false, false, GetTempDirectory(), nullptr, nullptr, symbolPath))
+                if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(false, false, false, GetTempDirectory(), nullptr, nullptr, nullptr, symbolPath))
                 {
                     ExtErr("Windows symbol path parsing FAILED\n");
+                    return;
                 }
+                g_windowsSymbolPathInitialized = true;
+                g_symbolStoreInitialized = true;
             }
         }
     }
@@ -926,6 +929,7 @@ void DisableSymbolStore()
     if (g_symbolStoreInitialized)
     {
         g_symbolStoreInitialized = false;
+        g_windowsSymbolPathInitialized = false;
 
         _ASSERTE(g_SOSNetCoreCallbacks.DisableSymbolStoreDelegate != nullptr);
         g_SOSNetCoreCallbacks.DisableSymbolStoreDelegate();

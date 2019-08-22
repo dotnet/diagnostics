@@ -8,6 +8,7 @@ using System.CommandLine;
 namespace Microsoft.Diagnostics.Tools.Dump
 {
     [Command(Name = "help", Help = "Display help for a command.")]
+    [CommandAlias(Name = "soshelp")]
     public class HelpCommand : CommandBase
     {
         [Argument(Help = "Command to find help.")]
