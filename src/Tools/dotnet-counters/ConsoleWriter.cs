@@ -41,22 +41,22 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private bool paused = false;
         private bool initialized = false;
 
-        private void UpdateStatus(string msg)
+        private void UpdateStatus()
         {
             Console.SetCursorPosition(0, STATUS_ROW);
-            Console.Write(new String(' ', 42)); // Length of the initial string we print on the console..
-            Console.SetCursorPosition(0, STATUS_ROW);
-            Console.Write(msg);
+            Console.Write($"    Status: {GetStatus()}{new string(' ', 40)}"); // Write enough blanks to clear previous status.
         }
+
+        private string GetStatus() => !initialized ? "Waiting for initial payload..." : (paused ? "Paused" : "Running");
 
         /// <summary>Clears display and writes out category and counter name layout.</summary>
         public void AssignRowsAndInitializeDisplay()
         {
             Console.Clear();
             int row = Console.CursorTop;
-            Console.WriteLine("Press p to pause, r to resume, q to quit.");               row++;
-            Console.WriteLine("    Status: Waiting for initial payload..."); STATUS_ROW = row++;
-            Console.WriteLine();                                                          row++; // Blank line.
+            Console.WriteLine("Press p to pause, r to resume, q to quit."); row++;
+            Console.WriteLine($"    Status: {GetStatus()}");                STATUS_ROW = row++;
+            Console.WriteLine();                                            row++; // Blank line.
 
             foreach (ObservedProvider provider in providers.Values.OrderBy(p => p.KnownProvider == null).ThenBy(p => p.Name)) // Known providers first.
             {
@@ -75,24 +75,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 return;
             }
-            else if (pauseCmdSet)
-            {
-                UpdateStatus("    Status: Paused");
-            }
-            else
-            {
-                UpdateStatus("    Status: Running");
-            }
+
             paused = pauseCmdSet;
+            UpdateStatus();
         }
 
         public void Update(string providerName, ICounterPayload payload, bool pauseCmdSet)
         {
             if (!initialized)
             {
-                AssignRowsAndInitializeDisplay();
                 initialized = true;
-                UpdateStatus("    Status: Running");
+                AssignRowsAndInitializeDisplay();
             }
 
             if (pauseCmdSet)
