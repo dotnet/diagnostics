@@ -2705,12 +2705,13 @@ const char *EHTypeName(EHClauseType et)
         return "UNKNOWN";
 }
 
-void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersionData, const UINT cTieredVersionData)
+void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersionData,
+    const UINT cTieredVersionData, ULONG rejitID, CLRDATA_ADDRESS ilAddr, CLRDATA_ADDRESS ilNodeAddr)
 {
-    ExtOut("Code Version History:\n");
-
     for(int i = cTieredVersionData - 1; i >= 0; --i)
     {
+        ExtOut("  NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
+
         const char *descriptor = NULL;
         switch(pTieredVersionData[i].OptimizationTier)
         {
@@ -2735,44 +2736,30 @@ void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersi
             break;
         }
 
-        DMLOut("  CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
-        ExtOut("  NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
-    }
-}
+        ExtOut("    ReJIT ID:           %d\n", rejitID);
+        DMLOut("    CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
+        DMLOut("    IL Addr:            %s\n", DMLIL(ilAddr));
+        ExtOut("    ILCodeVersion:      %p\n", SOS_PTR(ilNodeAddr));
 
-// 2.1 version
-void DumpTieredNativeCodeAddressInfo_21(struct DacpTieredVersionData_21 * pTieredVersionData, const UINT cTieredVersionData)
-{
-    ExtOut("Code Version History:\n");
-
-    for(int i = cTieredVersionData - 1; i >= 0; --i)
-    {
-        const char *descriptor = NULL;
-        switch(pTieredVersionData[i].TieredInfo)
-        {
-        case DacpTieredVersionData_21::TIERED_UNKNOWN:
-        default:
-            descriptor = "Unknown Tier";
-            break;
-        case DacpTieredVersionData_21::NON_TIERED:
-            descriptor = "Non-Tiered";
-            break;
-        case DacpTieredVersionData_21::TIERED_0:
-            descriptor = "Tier 0";
-            break;
-        case DacpTieredVersionData_21::TIERED_1:
-            descriptor = "Tier 1";
-            break;
-        }
-
-        DMLOut("  CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
-        ExtOut("  NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
     }
 }
 
 void DumpRejitData(CLRDATA_ADDRESS pMethodDesc, DacpReJitData * pReJitData)
-{
-    ExtOut("    ReJITID %p: ", SOS_PTR(pReJitData->rejitID));
+{   
+    int rejitID = (int)pReJitData->rejitID;
+    CLRDATA_ADDRESS ilAddr = 0;
+    CLRDATA_ADDRESS ilNodeAddr = 0;
+
+    struct DacpReJitData2 rejitData;
+    ReleaseHolder<ISOSDacInterface7> sos7;
+    if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface7), &sos7)) && 
+        SUCCEEDED(sos7->GetReJITInformation(pMethodDesc, 
+                                            rejitID,
+                                            &rejitData)))
+    {
+        ilAddr = rejitData.il;
+        ilNodeAddr = rejitData.ilCodeVersionNodePtr;
+    }
 
     struct DacpTieredVersionData codeAddrs[kcMaxTieredVersions];
     int cCodeAddrs;
@@ -2780,36 +2767,13 @@ void DumpRejitData(CLRDATA_ADDRESS pMethodDesc, DacpReJitData * pReJitData)
     ReleaseHolder<ISOSDacInterface5> sos5;
     if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface5), &sos5)) && 
         SUCCEEDED(sos5->GetTieredVersions(pMethodDesc, 
-                                            (int)pReJitData->rejitID,
+                                            rejitID,
                                             codeAddrs,
                                             kcMaxTieredVersions,
                                             &cCodeAddrs)))
     {
-        DumpTieredNativeCodeAddressInfo(codeAddrs, cCodeAddrs);
+        DumpTieredNativeCodeAddressInfo(codeAddrs, cCodeAddrs, rejitID, ilAddr, ilNodeAddr);
     }
-
-    LPCSTR szFlags;
-    switch (pReJitData->flags)
-    {
-    default:
-    case DacpReJitData::kUnknown:
-        szFlags = "";
-        break;
-
-    case DacpReJitData::kRequested:
-        szFlags = " (READY to jit on next call)";
-        break;
-
-    case DacpReJitData::kActive:
-        szFlags = " (CURRENT)";
-        break;
-
-    case DacpReJitData::kReverted:
-        szFlags = " (reverted)";
-        break;
-    }
-    
-    ExtOut("%s\n", szFlags);
 }
 
 // For !ip2md requests, this function helps us ensure that rejitted version corresponding
@@ -2843,10 +2807,6 @@ void DumpAllRejitDataIfNecessary(DacpMethodDescData * pMethodDescData, DacpReJit
     {
         return;
     }
-    ExtOut("ReJITed versions:\n");
-
-    // Dump CURRENT rejit info
-    DumpRejitData(pMethodDescData->MethodDescPtr, &pMethodDescData->rejitDataCurrent);
 
     // Dump reverted rejit infos
     for (ULONG i=0; i < cRevertedRejitData; i++)
@@ -2891,20 +2851,50 @@ void DumpMDInfoFromMethodDescData(DacpMethodDescData * pMethodDescData, DacpReJi
 
         DMLOut("Current CodeAddr:     %s\n", DMLIP(pMethodDescData->NativeCodeAddr));                
 
+        int rejitID = (int)pMethodDescData->rejitDataCurrent.rejitID;
+        CLRDATA_ADDRESS ilAddr = 0;
+        CLRDATA_ADDRESS ilNodeAddr = 0;
+
+        ExtOut("Version History:\n");
+
+        struct DacpReJitData2 rejitData;
+        ReleaseHolder<ISOSDacInterface7> sos7;
+        if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface7), &sos7)))
+        {
+            if SUCCEEDED(sos7->GetReJITInformation(pMethodDescData->MethodDescPtr, 
+                                                   rejitID,
+                                                   &rejitData))
+            {
+                ilAddr = rejitData.il;
+                ilNodeAddr = rejitData.ilCodeVersionNodePtr;
+            }
+
+            int pendingRejitID;
+            struct DacpReJitData2 pendingRejitData;
+            if (sos7->GetPendingReJITID(pMethodDescData->MethodDescPtr, &pendingRejitID) == S_OK &&
+                SUCCEEDED(sos7->GetReJITInformation(pMethodDescData->MethodDescPtr, pendingRejitID, &pendingRejitData)))
+            {
+                // Special case, there is no jitted code yet but still need to output the IL information
+                ExtOut("  ILCodeVersion:      %p (pending)\n", SOS_PTR(pendingRejitData.ilCodeVersionNodePtr));
+                ExtOut("    ReJIT ID:           %d\n", pendingRejitID);
+                DMLOut("    IL Addr:            %s\n", DMLIL(pendingRejitData.il));
+            }
+        }
+
         struct DacpTieredVersionData codeAddrs[kcMaxTieredVersions];
         int cCodeAddrs;
 
         ReleaseHolder<ISOSDacInterface5> sos5;
         if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface5), &sos5)) && 
             SUCCEEDED(sos5->GetTieredVersions(pMethodDescData->MethodDescPtr, 
-                                                                (int)pMethodDescData->rejitDataCurrent.rejitID,
+                                                                rejitID,
                                                                 codeAddrs,
                                                                 kcMaxTieredVersions,
                                                                 &cCodeAddrs)))
         {
-            DumpTieredNativeCodeAddressInfo(codeAddrs, cCodeAddrs);
+            DumpTieredNativeCodeAddressInfo(codeAddrs, cCodeAddrs, rejitID, ilAddr, ilNodeAddr);
         }
-        
+
         DumpAllRejitDataIfNecessary(pMethodDescData, pRevertedRejitData, cRevertedRejitData);
     }
     else
@@ -4977,6 +4967,7 @@ const char * const DMLFormats[] =
     "<exec cmd=\"!DumpCCW /d %s\">%s</exec>",       // DML_CCWrapper
     "<exec cmd=\"!ClrStack -i %S %d\">%S</exec>",   // DML_ManagedVar
     "<exec cmd=\"!DumpAsync -addr %s -tasks -completed -fields -stacks -roots\">%s</exec>", // DML_Async
+    "<exec cmd=\"!DumpIL /i %s\">%s</exec>",         // DML_IL
 };
 
 void ConvertToLower(__out_ecount(len) char *buffer, size_t len)

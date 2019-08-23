@@ -147,6 +147,9 @@ const PROCESSINFOCLASS ProcessVmCounters = static_cast<PROCESSINFOCLASS>(3);
 
 #endif // !FEATURE_PAL
 
+// Max number of methods that !dumpmodule -prof will print
+const UINT kcMaxMethodDescsForProfiler = 100;
+
 #include <set>
 #include <vector>
 #include <map>
@@ -900,6 +903,19 @@ DECLARE_API(DumpIL)
         }
         else
         {
+            TADDR ilAddr = NULL;
+            struct DacpProfilerILData ilData;
+            ReleaseHolder<ISOSDacInterface7> sos7;
+            if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface7), &sos7)) && 
+                SUCCEEDED(sos7->GetProfilerModifiedILInformation(MethodDescData.MethodDescPtr, &ilData)))
+            {
+                if (ilData.type == DacpProfilerILData::ILModified)
+                {
+                    ExtOut("Found profiler modified IL\n");
+                    ilAddr = TO_TADDR(ilData.il);
+                }
+            }
+
             // Factor this so that it returns a map from IL offset to the textual representation of the decoding
             // to be consumed by !u -il
             // The disassemble function can give a MethodDescData as well as the set of keys IL offsets
@@ -920,22 +936,31 @@ DECLARE_API(DumpIL)
                 return Status;
             }
 
-            ULONG pRva;
-            DWORD dwFlags;
-            if (pImport->GetRVA(MethodDescData.MDToken, &pRva, &dwFlags) != S_OK)
-            {
-                ExtOut("error in import\n");
-                return Status;
-            }    
+            if (ilAddr == NULL)
+            { 
+                ULONG pRva;
+                DWORD dwFlags;
+                if (pImport->GetRVA(MethodDescData.MDToken, &pRva, &dwFlags) != S_OK)
+                {
+                    ExtOut("error in import\n");
+                    return Status;
+                }    
 
-            CLRDATA_ADDRESS ilAddrClr;
-            if (g_sos->GetILForModule(MethodDescData.ModulePtr, pRva, &ilAddrClr) != S_OK)
-            {
-                ExtOut("FindIL failed\n");
-                return Status;
+                CLRDATA_ADDRESS ilAddrClr;
+                if (g_sos->GetILForModule(MethodDescData.ModulePtr, pRva, &ilAddrClr) != S_OK)
+                {
+                    ExtOut("FindIL failed\n");
+                    return Status;
+                }
+
+                ilAddr = TO_TADDR(ilAddrClr);
             }
 
-            TADDR ilAddr = TO_TADDR(ilAddrClr);
+            if (ilAddr == NULL)
+            {
+                ExtOut("Unkown error in reading function IL\n");
+                return E_FAIL;
+            }
             IfFailRet(DecodeILFromAddress(pImport, ilAddr));
         }
     }
@@ -5979,14 +6004,16 @@ DECLARE_API(DumpModule)
     
     DWORD_PTR p_ModuleAddr = NULL;
     BOOL bMethodTables = FALSE;
+    BOOL bProfilerModified = FALSE;
     BOOL dml = FALSE;
 
     CMDOption option[] = 
     {   // name, vptr, type, hasValue
         {"-mt", &bMethodTables, COBOOL, FALSE},
 #ifndef FEATURE_PAL
-        {"/d", &dml, COBOOL, FALSE}
+        {"/d", &dml, COBOOL, FALSE},
 #endif
+        {"-prof", &bProfilerModified, COBOOL, FALSE},
     };
     CMDValue arg[] = 
     {   // vptr, type
@@ -6056,6 +6083,69 @@ DECLARE_API(DumpModule)
         g_sos->TraverseModuleMap(TYPEREFTOMETHODTABLE, TO_CDADDR(p_ModuleAddr), ModuleMapTraverse, (LPVOID)mdTypeDefNil);     
     }
     
+    if (bProfilerModified)
+    {
+        CLRDATA_ADDRESS methodDescs[kcMaxMethodDescsForProfiler];
+        int cMethodDescs;
+
+        ReleaseHolder<ISOSDacInterface7> sos7;
+        if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface7), &sos7)) && 
+            SUCCEEDED(sos7->GetMethodsWithProfilerModifiedIL(TO_CDADDR(p_ModuleAddr),
+                                                             methodDescs,
+                                                             kcMaxMethodDescsForProfiler,
+                                                             &cMethodDescs)))
+        {
+            if (cMethodDescs > 0)
+            {
+                ExtOut("\nMethods in this module with profiler modified IL:\n");
+                for (int i = 0; i < cMethodDescs; ++i)
+                {
+                    CLRDATA_ADDRESS md = methodDescs[i];
+
+                    DMLOut("MethodDesc: %s ", DMLMethodDesc(md));
+
+                    // Easiest to get full parameterized method name from ..::GetMethodName
+                    if (g_sos->GetMethodDescName(md, mdNameLen, g_mdName, NULL) == S_OK)
+                    {
+                        ExtOut("Name: %S", g_mdName);
+                    }
+
+                    struct DacpProfilerILData ilData;
+                    if (SUCCEEDED(sos7->GetProfilerModifiedILInformation(md, &ilData)))
+                    {
+                        if (ilData.type == DacpProfilerILData::ILModified)
+                        {
+                            ExtOut(" (IL Modified)");
+                        }
+                        else if (ilData.type == DacpProfilerILData::ReJITModified)
+                        {
+                            ExtOut(" (ReJIT Modified)");
+                        }
+                    }
+
+                    ExtOut("\n");
+                }
+
+                if (cMethodDescs == kcMaxMethodDescsForProfiler)
+                {
+                    ExtOut("Profiler modified methods truncated, reached max value.\n");
+                }
+            }
+            else
+            {
+                ExtOut("\nThis module has no methods with profiler modified IL.\n");
+            }
+        }
+        else
+        {
+            ExtOut("\nThis runtime version does not support listing the profiler modified functions.\n");
+        }
+
+
+
+    HRESULT GetMethodsWithProfilerModifiedIL(CLRDATA_ADDRESS module, CLRDATA_ADDRESS *methodDescs, int cMethodDescs, int *pcMethodDescs);
+    }
+
     return Status;
 }
 
