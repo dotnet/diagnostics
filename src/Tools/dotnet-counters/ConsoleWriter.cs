@@ -4,24 +4,43 @@
 
 using System;
 using System.Collections.Generic;
-
+using System.Globalization;
+using System.Linq;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
     public class ConsoleWriter
     {
-        private Dictionary<string, (int, int)> displayPosition; // Display position (x-y coordiates) of each counter values.
-        private Dictionary<string, int> displayLength; // Length of the counter values displayed for each counter.
-        private int origRow;
-        private int origCol;
-        private int maxRow;  // Running maximum of row number
-        private int maxCol;  // Running maximum of col number
+        /// <summary>Information about an observed provider.</summary>
+        private class ObservedProvider
+        {
+            public ObservedProvider(string name)
+            {
+                Name = name;
+                KnownData.TryGetProvider(name, out KnownProvider);
+            }
+
+            public string Name { get; } // Name of the category.
+            public Dictionary<string, ObservedCounter> Counters { get; } = new Dictionary<string, ObservedCounter>(); // Counters in this category.
+            public readonly CounterProvider KnownProvider;
+        }
+
+        /// <summary>Information about an observed counter.</summary>
+        private class ObservedCounter
+        {
+            public ObservedCounter(string displayName) => DisplayName = displayName;
+            public string DisplayName { get; } // Display name for this counter.
+            public int Row { get; set; } // Assigned row for this counter. May change during operation.
+        }
+
+        private readonly Dictionary<string, ObservedProvider> providers = new Dictionary<string, ObservedProvider>(); // Tracks observed providers and counters.
+        private const int Indent = 4; // Counter name indent size.
+        private int maxNameLength = 40; // Allow room for 40 character counter names by default.
+        private int maxPreDecimalDigits = 11; // Allow room for values up to 999 million by default.
+
         private int STATUS_ROW; // Row # of where we print the status of dotnet-counters
-        private int leftAlign;
         private bool paused = false;
         private bool initialized = false;
-        private Dictionary<string, int> knownProvidersRowNum;
-        private Dictionary<string, int> unknownProvidersRowNum;
 
         private void UpdateStatus(string msg)
         {
@@ -29,42 +48,26 @@ namespace Microsoft.Diagnostics.Tools.Counters
             Console.Write(new String(' ', 42)); // Length of the initial string we print on the console..
             Console.SetCursorPosition(0, STATUS_ROW);
             Console.Write(msg);
-            Console.SetCursorPosition(maxRow, maxCol);
         }
 
-        public ConsoleWriter()
-        {
-            displayPosition = new Dictionary<string, (int, int)>();
-            displayLength = new Dictionary<string, int>();
-            knownProvidersRowNum = new Dictionary<string, int>();
-            unknownProvidersRowNum = new Dictionary<string, int>();
-
-            int maxNameWidth = -1;
-            foreach(CounterProvider provider in KnownData.GetAllProviders())
-            {
-                foreach(CounterProfile counterProfile in provider.GetAllCounters())
-                {
-                    if (counterProfile.DisplayName.Length > maxNameWidth)
-                    {
-                        maxNameWidth = counterProfile.DisplayName.Length;
-                    }
-                }
-                knownProvidersRowNum[provider.Name] = -1;
-            }
-            leftAlign = maxNameWidth + 15;
-        }
-
-        public void InitializeDisplay()
+        /// <summary>Clears display and writes out category and counter name layout.</summary>
+        public void AssignRowsAndInitializeDisplay()
         {
             Console.Clear();
-            origRow = Console.CursorTop;
-            origCol = Console.CursorLeft;
-            Console.WriteLine("Press p to pause, r to resume, q to quit.");
-            Console.WriteLine("    Status: Waiting for initial payload...");
+            int row = Console.CursorTop;
+            Console.WriteLine("Press p to pause, r to resume, q to quit.");               row++;
+            Console.WriteLine("    Status: Waiting for initial payload..."); STATUS_ROW = row++;
+            Console.WriteLine();                                                          row++; // Blank line.
 
-            STATUS_ROW = origRow+1;
-            maxRow = origRow+2;
-            maxCol = origCol;
+            foreach (ObservedProvider provider in providers.Values.OrderBy(p => p.KnownProvider == null).ThenBy(p => p.Name)) // Known providers first.
+            {
+                Console.WriteLine($"[{provider.Name}]"); row++;
+                foreach (ObservedCounter counter in provider.Counters.Values.OrderBy(c => c.DisplayName))
+                {
+                    Console.WriteLine($"{new string(' ', Indent)}{counter.DisplayName}");
+                    counter.Row = row++;
+                }
+            }
         }
 
         public void ToggleStatus(bool pauseCmdSet)
@@ -84,17 +87,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
             paused = pauseCmdSet;
         }
 
-        // Generates a string using providerName and counterName that can be used as a dictionary key to prevent key collision
-        private string CounterNameString(string providerName, string counterName)
-        {
-            return $"{providerName}:{counterName}";
-        }
-
         public void Update(string providerName, ICounterPayload payload, bool pauseCmdSet)
         {
-
             if (!initialized)
             {
+                AssignRowsAndInitializeDisplay();
                 initialized = true;
                 UpdateStatus("    Status: Running");
             }
@@ -103,99 +100,47 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 return;
             }
+
             string name = payload.GetName();
-            string keyName = CounterNameString(providerName, name);
-            const string indent = "    ";
-            const int indentLength = 4;
-            // We already know what this counter is! Just update the value string on the console.
-            if (displayPosition.ContainsKey(keyName))
+
+            bool redraw = false;
+            if (!providers.TryGetValue(providerName, out ObservedProvider provider))
             {
-                (int left, int row) = displayPosition[keyName];
-                string payloadVal = payload.GetValue();
-
-                int clearLength = Math.Max(displayLength[keyName], payloadVal.Length); // Compute how long we need to clear out.
-                displayLength[keyName] = clearLength;
-                Console.SetCursorPosition(left, row); 
-                Console.Write(new String(' ', clearLength));
-
-                if (left < leftAlign)
-                {
-                    displayPosition[keyName] = (leftAlign, row);
-                    Console.SetCursorPosition(leftAlign, row);
-                }
-                else
-                {
-                    Console.SetCursorPosition(left, row);
-                }
-                Console.Write(payloadVal);
+                providers[providerName] = provider = new ObservedProvider(providerName);
+                redraw = true;
             }
-            // Got a payload from a new counter that hasn't been written to the console yet.
-            else
+
+            if (!provider.Counters.TryGetValue(name, out ObservedCounter counter))
             {
-                bool isWellKnownProvider = knownProvidersRowNum.ContainsKey(providerName);
-
-                if (isWellKnownProvider)
-                {
-                    if (knownProvidersRowNum[providerName] < 0)
-                    {
-                        knownProvidersRowNum[providerName] = maxRow + 1;
-                        Console.SetCursorPosition(0, maxRow);
-                        Console.WriteLine($"[{providerName}]");
-                        maxRow += 1;
-                    }
-
-                    KnownData.TryGetProvider(providerName, out CounterProvider counterProvider);
-                    string displayName = counterProvider.TryGetDisplayName(name);
-                    
-                    if (displayName == null)
-                    {
-                        displayName = payload.GetDisplay();
-                    }
-                    
-                    int left = displayName.Length;
-                    string spaces = new String(' ', leftAlign-left-indentLength);
-                    int row = maxRow;
-                    string val = payload.GetValue();
-                    displayPosition[keyName] = (leftAlign, row); 
-                    displayLength[keyName] = val.Length;
-                    Console.WriteLine($"{indent}{displayName}{spaces}{val}");
-                    maxRow += 1;
-                }
-                else
-                {
-                    // If it's from an unknown provider, just append it at the end.
-                    if (!unknownProvidersRowNum.ContainsKey(providerName))
-                    {
-                        unknownProvidersRowNum[providerName] = maxRow + 1;
-                        Console.SetCursorPosition(0, maxRow);
-                        Console.WriteLine($"[{providerName}]");
-                        maxRow += 1;
-                    }
-
-                    string displayName = payload.GetDisplay();
-                    
-                    if (string.IsNullOrEmpty(displayName))
-                    {
-                        displayName = payload.GetName();
-                    }
-                    
-                    int left = displayName.Length;
-
-                    // If counter name is exceeds position of counter values, move values to the right
-                    if (left+indentLength+4 > leftAlign) // +4 so that the counter value does not start right where the counter name ends
-                    {
-                        leftAlign = left+indentLength+4;
-                    }
-
-                    string spaces = new String(' ', leftAlign-left-indentLength);
-                    int row = maxRow;
-                    string val = payload.GetValue();
-                    displayPosition[keyName] = (leftAlign, row); 
-                    displayLength[keyName] = val.Length;
-                    Console.WriteLine($"{indent}{displayName}{spaces}{val}");
-                    maxRow += 1;
-                }
+                string displayName = provider.KnownProvider?.TryGetDisplayName(name) ?? payload.GetDisplay() ?? name;
+                provider.Counters[name] = counter = new ObservedCounter(displayName);
+                maxNameLength = Math.Max(maxNameLength, displayName.Length);
+                redraw = true;
             }
+
+            const string DecimalPlaces = "###";
+            string payloadVal = payload.GetValue().ToString("#,0." + DecimalPlaces);
+            int decimalIndex = payloadVal.IndexOf(NumberFormatInfo.CurrentInfo.NumberDecimalSeparator);
+            if (decimalIndex == -1)
+            {
+                decimalIndex = payloadVal.Length;
+            }
+
+            if (decimalIndex > maxPreDecimalDigits)
+            {
+                maxPreDecimalDigits = decimalIndex;
+                redraw = true;
+            }
+
+            if (redraw)
+            {
+                AssignRowsAndInitializeDisplay();
+            }
+
+            Console.SetCursorPosition(Indent + maxNameLength + 1, counter.Row);
+            int prefixSpaces = maxPreDecimalDigits - decimalIndex;
+            int postfixSpaces = DecimalPlaces.Length - (payloadVal.Length - decimalIndex - 1);
+            Console.Write($"{new string(' ', prefixSpaces)}{payloadVal}{new string(' ', postfixSpaces)}");
         }
     }
 }
