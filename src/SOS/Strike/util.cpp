@@ -470,9 +470,9 @@ void DisplayDataMember (DacpFieldDescData* pFD, DWORD_PTR dwAddr, BOOL fAlign=TR
                     break;
                 case ELEMENT_TYPE_I8:
                     if (fAlign)
-	                    ExtOut("%" POINTERSIZE "I64d", value.Int64);
-					else
-	                    ExtOut("%I64d", value.Int64);
+                        ExtOut("%" POINTERSIZE "I64d", value.Int64);
+                    else
+                        ExtOut("%I64d", value.Int64);
                     break;
                 case ELEMENT_TYPE_U1:
                 case ELEMENT_TYPE_BOOLEAN:
@@ -498,9 +498,9 @@ void DisplayDataMember (DacpFieldDescData* pFD, DWORD_PTR dwAddr, BOOL fAlign=TR
                     break;
                 case ELEMENT_TYPE_U8:
                     if (fAlign)
-	                    ExtOut("%" POINTERSIZE "I64u", value.UInt64);
-					else
-	                    ExtOut("%I64u", value.UInt64);
+                        ExtOut("%" POINTERSIZE "I64u", value.UInt64);
+                    else
+                        ExtOut("%I64u", value.UInt64);
                     break;
                 case ELEMENT_TYPE_I:
                 case ELEMENT_TYPE_U:
@@ -684,12 +684,12 @@ void DisplaySharedStatic(ULONG64 dwModuleDomainID, DacpMethodTableData* pMT, Dac
         DacpDomainLocalModuleData vDomainLocalModule;
         if (g_sos->GetDomainLocalModuleDataFromAppDomain(appdomainData.AppDomainPtr, (int)dwModuleDomainID, &vDomainLocalModule) != S_OK)
         {
-			// On .NET Core, dwModuleDomainID is the address of the DomainLocalModule.
-			if (vDomainLocalModule.Request(g_sos, dwModuleDomainID) != S_OK)
-			{
-				DMLOut(" %s:NotInit ", DMLDomain(pArray[i]));
-				continue;
-			}
+            // On .NET Core, dwModuleDomainID is the address of the DomainLocalModule.
+            if (vDomainLocalModule.Request(g_sos, dwModuleDomainID) != S_OK)
+            {
+                DMLOut(" %s:NotInit ", DMLDomain(pArray[i]));
+                continue;
+            }
         }
 
         DWORD_PTR dwTmp;
@@ -744,13 +744,13 @@ void DisplayThreadStatic (DacpModuleData* pModule, DacpMethodTableData* pMT, Dac
             {
                 if (g_sos->GetDomainLocalModuleDataFromAppDomain(appDomainAddr, (int)dwModuleDomainID, &vDomainLocalModule) != S_OK)
                 {
-					// On .NET Core, dwModuleDomainID is the address of the DomainLocalModule.
-					if (vDomainLocalModule.Request(g_sos, dwModuleDomainID) != S_OK)
-					{
-	                    // Not initialized, go to next thread and continue looping
-	                    CurThread = vThread.nextThread;
-	                    continue;
-					}
+                    // On .NET Core, dwModuleDomainID is the address of the DomainLocalModule.
+                    if (vDomainLocalModule.Request(g_sos, dwModuleDomainID) != S_OK)
+                    {
+                        // Not initialized, go to next thread and continue looping
+                        CurThread = vThread.nextThread;
+                        continue;
+                    }
                 }
             }
             else
@@ -1023,7 +1023,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
                 }
                 else if (vFieldDesc.bIsContextLocal)
                 {
-				    ExtOut("\nDisplay of context static variables is not implemented\n");
+                    ExtOut("\nDisplay of context static variables is not implemented\n");
                 }
             }
     
