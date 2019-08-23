@@ -195,7 +195,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _ct.Register(() => shouldExit.Set());
 
             var terminated = false;
-            writer.InitializeDisplay();
+            writer.AssignRowsAndInitializeDisplay();
 
             Task monitorTask = new Task(() => {
                 try
