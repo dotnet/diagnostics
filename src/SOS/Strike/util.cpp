@@ -469,7 +469,10 @@ void DisplayDataMember (DacpFieldDescData* pFD, DWORD_PTR dwAddr, BOOL fAlign=TR
                         ExtOut("%d", value.Int);
                     break;
                 case ELEMENT_TYPE_I8:
-                    ExtOut("%I64d", value.Int64);
+                    if (fAlign)
+                        ExtOut("%" POINTERSIZE "I64d", value.Int64);
+                    else
+                        ExtOut("%I64d", value.Int64);
                     break;
                 case ELEMENT_TYPE_U1:
                 case ELEMENT_TYPE_BOOLEAN:
@@ -494,7 +497,10 @@ void DisplayDataMember (DacpFieldDescData* pFD, DWORD_PTR dwAddr, BOOL fAlign=TR
                         ExtOut("%u", value.UInt);
                     break;
                 case ELEMENT_TYPE_U8:
-                    ExtOut("%I64u", value.UInt64);
+                    if (fAlign)
+                        ExtOut("%" POINTERSIZE "I64u", value.UInt64);
+                    else
+                        ExtOut("%I64u", value.UInt64);
                     break;
                 case ELEMENT_TYPE_I:
                 case ELEMENT_TYPE_U:
@@ -566,6 +572,16 @@ void GetStaticFieldPTR(DWORD_PTR* pOutPtr, DacpDomainLocalModuleData* pDLMD, Dac
     }
     else
     {
+        if (pFlags && pMTD->bIsShared)
+        {
+            BYTE flags;
+            DWORD_PTR pTargetFlags = (DWORD_PTR) pDLMD->pClassData + RidFromToken(pMTD->cl) - 1;            
+            move_xp (flags, pTargetFlags);
+
+            *pFlags = flags;
+        }
+               
+        
         *pOutPtr = dwTmp;            
     }
     return;
@@ -668,8 +684,12 @@ void DisplaySharedStatic(ULONG64 dwModuleDomainID, DacpMethodTableData* pMT, Dac
         DacpDomainLocalModuleData vDomainLocalModule;
         if (g_sos->GetDomainLocalModuleDataFromAppDomain(appdomainData.AppDomainPtr, (int)dwModuleDomainID, &vDomainLocalModule) != S_OK)
         {
-            DMLOut(" %s:NotInit ", DMLDomain(pArray[i]));
-            continue;
+            // On .NET Core, dwModuleDomainID is the address of the DomainLocalModule.
+            if (vDomainLocalModule.Request(g_sos, dwModuleDomainID) != S_OK)
+            {
+                DMLOut(" %s:NotInit ", DMLDomain(pArray[i]));
+                continue;
+            }
         }
 
         DWORD_PTR dwTmp;
@@ -693,7 +713,7 @@ void DisplaySharedStatic(ULONG64 dwModuleDomainID, DacpMethodTableData* pMT, Dac
     ExtOut(" <<\n");
 }
 
-void DisplayThreadStatic(DacpModuleData* pModule, DacpMethodTableData* pMT, DacpFieldDescData *pFD)
+void DisplayThreadStatic (DacpModuleData* pModule, DacpMethodTableData* pMT, DacpFieldDescData *pFD, BOOL fIsShared)
 {
     SIZE_T dwModuleIndex = (SIZE_T)pModule->dwModuleIndex;
     SIZE_T dwModuleDomainID = (SIZE_T)pModule->dwModuleID;
@@ -715,6 +735,34 @@ void DisplayThreadStatic(DacpModuleData* pModule, DacpMethodTableData* pMT, Dacp
         if (vThread.osThreadId != 0)
         {   
             CLRDATA_ADDRESS appDomainAddr = vThread.domain;
+
+            // Get the DLM (we need this to check the ClassInit flags).
+            // It's annoying that we have to issue one request for
+            // domain-neutral modules and domain-specific modules.
+            DacpDomainLocalModuleData vDomainLocalModule;                
+            if (fIsShared)
+            {
+                if (g_sos->GetDomainLocalModuleDataFromAppDomain(appDomainAddr, (int)dwModuleDomainID, &vDomainLocalModule) != S_OK)
+                {
+                    // On .NET Core, dwModuleDomainID is the address of the DomainLocalModule.
+                    if (vDomainLocalModule.Request(g_sos, dwModuleDomainID) != S_OK)
+                    {
+                        // Not initialized, go to next thread and continue looping
+                        CurThread = vThread.nextThread;
+                        continue;
+                    }
+                }
+            }
+            else
+            {
+                if (g_sos->GetDomainLocalModuleDataFromModule(pMT->Module, &vDomainLocalModule) != S_OK)
+                {
+                    // Not initialized, go to next thread
+                    // and continue looping
+                    CurThread = vThread.nextThread;
+                    continue;
+                }
+            }
 
             // Get the TLM
             DacpThreadLocalModuleData vThreadLocalModule;
@@ -738,6 +786,17 @@ void DisplayThreadStatic(DacpModuleData* pModule, DacpMethodTableData* pMT, Dacp
                 continue;
             }
 
+            Flags = 0;
+            GetDLMFlags(&vDomainLocalModule, pMT, &Flags);
+
+            if ((Flags&1) == 0) 
+            {
+                // Not initialized, go to next thread
+                // and continue looping
+                CurThread = vThread.nextThread;
+                continue;
+            }
+            
             ExtOut(" %x:", vThread.osThreadId);
             DisplayDataMember(pFD, dwTmp, FALSE);               
         }
@@ -849,6 +908,8 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
         numInstanceFields = 0;
     }
     
+    BOOL fIsShared = pMTD->bIsShared;
+
     if (pMTD->ParentMethodTable)
     {
         DacpMethodTableData vParentMethTable;
@@ -896,7 +957,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
         dwAddr = vFieldDesc.NextField;
 
         DWORD offset = vFieldDesc.dwOffset;
-        if(!(vFieldDesc.bIsThreadLocal && vFieldDesc.bIsStatic))
+        if(!((vFieldDesc.bIsThreadLocal || vFieldDesc.bIsContextLocal || fIsShared) && vFieldDesc.bIsStatic))
         {
             if (!bValueClass)
             {
@@ -935,10 +996,13 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
         
         ExtOut("%2s ", (IsElementValueType(vFieldDesc.Type)) ? "1" : "0");
 
-        if (vFieldDesc.bIsStatic && vFieldDesc.bIsThreadLocal)
+        if (vFieldDesc.bIsStatic && (vFieldDesc.bIsThreadLocal || vFieldDesc.bIsContextLocal))
         {
             numStaticFields ++;
-            ExtOut("%8s ", vFieldDesc.bIsThreadLocal ? "TLstatic" : "CLstatic");
+            if (fIsShared)
+                ExtOut("%8s %" POINTERSIZE "s", "shared", vFieldDesc.bIsThreadLocal ? "TLstatic" : "CLstatic");
+            else
+                ExtOut("%8s ", vFieldDesc.bIsThreadLocal ? "TLstatic" : "CLstatic");
 
             NameForToken_s(TokenFromRid(vFieldDesc.mb, mdtFieldDef), pImport, g_mdName, mdNameLen, false);
             ExtOut(" %S\n", g_mdName);
@@ -954,8 +1018,12 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
                     DacpModuleData vModule;
                     if (vModule.Request(g_sos,pMTD->Module) == S_OK)
                     {
-                        DisplayThreadStatic(&vModule, pMTD, &vFieldDesc);
+                        DisplayThreadStatic(&vModule, pMTD, &vFieldDesc, fIsShared);
                     }
+                }
+                else if (vFieldDesc.bIsContextLocal)
+                {
+                    ExtOut("\nDisplay of context static variables is not implemented\n");
                 }
             }
     
@@ -964,24 +1032,47 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
         {
             numStaticFields ++;
 
-            ExtOut("%8s ", "static");
-
-            DacpDomainLocalModuleData vDomainLocalModule;
-
-            // The MethodTable isn't shared, so the module must not be loaded domain neutral.  We can
-            // get the specific DomainLocalModule instance without needing to know the AppDomain in advance.
-            if (g_sos->GetDomainLocalModuleDataFromModule(pMTD->Module, &vDomainLocalModule) != S_OK)
+            if (fIsShared)
             {
-                ExtOut(" <no information>\n");
-            }
-            else
-            {
-                DWORD_PTR dwTmp;
-                GetStaticFieldPTR(&dwTmp, &vDomainLocalModule, pMTD, &vFieldDesc);
-                DisplayDataMember(&vFieldDesc, dwTmp);
+                ExtOut("%8s %" POINTERSIZE "s", "shared", "static");
 
                 NameForToken_s(TokenFromRid(vFieldDesc.mb, mdtFieldDef), pImport, g_mdName, mdNameLen, false);
                 ExtOut(" %S\n", g_mdName);
+
+                if (IsMiniDumpFile())
+                {
+                    ExtOut(" <no information>\n");
+                }
+                else
+                {
+                    DacpModuleData vModule;
+                    if (vModule.Request(g_sos,pMTD->Module) == S_OK)
+                    {
+                        DisplaySharedStatic(vModule.dwModuleID, pMTD, &vFieldDesc);
+                    }
+                }
+            }
+            else
+            {
+                ExtOut("%8s ", "static");
+                
+                DacpDomainLocalModuleData vDomainLocalModule;
+                
+                // The MethodTable isn't shared, so the module must not be loaded domain neutral.  We can
+                // get the specific DomainLocalModule instance without needing to know the AppDomain in advance.
+                if (g_sos->GetDomainLocalModuleDataFromModule(pMTD->Module, &vDomainLocalModule) != S_OK)
+                {
+                    ExtOut(" <no information>\n");
+                }
+                else
+                {
+                    DWORD_PTR dwTmp;
+                    GetStaticFieldPTR(&dwTmp, &vDomainLocalModule, pMTD, &vFieldDesc);
+                    DisplayDataMember(&vFieldDesc, dwTmp);
+
+                    NameForToken_s(TokenFromRid(vFieldDesc.mb, mdtFieldDef), pImport, g_mdName, mdNameLen, false);
+                    ExtOut(" %S\n", g_mdName);
+                }
             }
         }
         else

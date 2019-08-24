@@ -4,12 +4,14 @@
 // the object to pass though the GC generations until it hits
 // Gen 2 where it should stay.
 using System;
+using System.IO;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 class GCWhere
 {
     private string _string;
+    private static ulong _static = 52704621242434;
 
     public GCWhere(string inputString)
     {
@@ -17,10 +19,11 @@ class GCWhere
     }
     string TempString
     {
-        get
-        {
-            return _string;
-        }
+        get { return _string; }
+    }
+    public ulong TempStatic
+    {
+        get { return _static; }
     }
 
     // Create an object, ensure that it is kept alive and force
@@ -30,6 +33,8 @@ class GCWhere
     static int Main() 
     {
         GCWhere temp = new GCWhere("This is a string!!");
+        StringWriter textWriter = new StringWriter();
+        ulong staticValue = temp.TempStatic;
         int genFirstTime = GC.GetGeneration(temp);
         Debugger.Break();   // GCWhere should temp in Gen0        
         GC.Collect();
