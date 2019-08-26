@@ -68,7 +68,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new Profile(
                 "gc-verbose",
                 new Provider[] {
-                    new Provider("Microsoft-DotNETCore-SampleProfiler"),
                     new Provider(
                         name: "Microsoft-Windows-DotNETRuntime",
                         keywords: (ulong)ClrTraceEventParser.Keywords.GC |
