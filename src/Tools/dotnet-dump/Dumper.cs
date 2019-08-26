@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
         }
 
-        public async Task<int> Collect(IConsole console, int processId, string output, DumpTypeOption type)
+        public async Task<int> Collect(IConsole console, int processId, string output, bool diag, DumpTypeOption type)
         {
             if (processId == 0) {
                 console.Error.WriteLine("ProcessId is required.");
@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     DiagnosticsHelpers.DumpType dumpType = type == DumpTypeOption.Heap ? DiagnosticsHelpers.DumpType.WithHeap : DiagnosticsHelpers.DumpType.Normal;
 
                     // Send the command to the runtime to initiate the core dump
-                    var hr = DiagnosticsHelpers.GenerateCoreDump(processId, output, dumpType, diagnostics: false);
+                    var hr = DiagnosticsHelpers.GenerateCoreDump(processId, output, dumpType, diag);
                     if (hr != 0)
                     {
                         throw new InvalidOperationException($"Core dump generation FAILED 0x{hr:X8}");
