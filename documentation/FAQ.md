@@ -7,6 +7,6 @@ Frequently Asked Questions
  
 * If dump analysis (`dotnet-dump analyze`) on Microsoft .NET Core SDK Linux docker images fails with an`Unhandled exception: System.DllNotFoundException: Unable to load shared library 'libdl.so' or one of its dependencies` exception. Try installing the "libc6-dev" package.
  
-* If dump collection (`dotnet-dump collect`) fails with something like `Permission denied /tmp/dotnet-diagnostic-19668-22628141-socket error`, the target process is a different user or root so `sudo` is needed to run the command.
+* During dump collection (`dotnet-dump collect`) a failure ending in a message like `Permission denied /tmp/dotnet-diagnostic-19668-22628141-socket error` hints you don't have access to use such a socket. Verify the target process is owned by the user trying to create the dump, or trigger dump creation command with `sudo`
 
-* If dump collection (`dotnet-dump collect`) fails with `Core dump generation FAILED 0x80004005`, look for error message output on the target process's console (not the console executing the dotnet-dump collect). To enable dump collection logging add the `--diag` option the dotnet-dump collect command and also look for diagnostic logging on the target process's console.
+* If dump collection (`dotnet-dump collect`) fails with `Core dump generation FAILED 0x80004005` look for error message output on the target process's console (not the console executing the dotnet-dump collect). This error may be caused by writing the core dump to a protected, inaccessible or non-existent location. To get more information about the core dump generation add the `--diag` option the dotnet-dump collect command and look for the diagnostic logging on the target process's console.
