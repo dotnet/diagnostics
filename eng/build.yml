@@ -130,7 +130,7 @@ phases:
       inputs:
         pathtoPublish: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
         artifactName: $(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
-      condition: and(succeeded(), ne(variables['_PublishArtifacts'], ''))
+      condition: ne(variables['_PublishArtifacts'], '')
 
     - task: CopyFiles@2
       displayName: Gather Build Logs

@@ -24,14 +24,19 @@ class DebugClient
 {
 private:
     LONG m_ref;
-    ILLDBServices *m_lldbservices;
+    ILLDBServices* m_lldbservices;
+    ILLDBServices2* m_lldbservices2;
 
 public:
-    DebugClient(ILLDBServices *lldbservices) : 
+    DebugClient(ILLDBServices* lldbservices, ILLDBServices2* lldbservices2) : 
         m_ref(1),
-        m_lldbservices(lldbservices)
+        m_lldbservices(lldbservices),
+        m_lldbservices2(lldbservices2)
     {
         m_lldbservices->AddRef();
+        if (m_lldbservices2 != nullptr) {
+            m_lldbservices2->AddRef();
+        }
     }
 
     //----------------------------------------------------------------------------
@@ -268,6 +273,21 @@ public:
     }
 
     HRESULT 
+    GetModuleVersionInformation(
+        ULONG index,
+        ULONG64 base,
+        PCSTR item,
+        PVOID buffer,
+        ULONG bufferSize,
+        PULONG versionInfoSize)
+    {
+        if (m_lldbservices2 == nullptr) {
+            return E_NOINTERFACE;
+        }
+        return m_lldbservices2->GetModuleVersionInformation(index, base, item, buffer, bufferSize, versionInfoSize);
+    }
+
+    HRESULT 
     GetLineByOffset(
         ULONG64 offset,
         PULONG line,
@@ -407,6 +427,11 @@ IDebugSymbols : DebugClient
 {
 };
 
+MIDL_INTERFACE("3a707211-afdd-4495-ad4f-56fecdf8163f")
+IDebugSymbols2 : DebugClient
+{
+};
+
 MIDL_INTERFACE("6b86fe2c-2c4f-4f0c-9da2-174311acc327")
 IDebugSystemObjects : DebugClient
 {
@@ -422,6 +447,7 @@ typedef interface IDebugControl2* PDEBUG_CONTROL2;
 typedef interface IDebugControl4* PDEBUG_CONTROL4;
 typedef interface IDebugDataSpaces* PDEBUG_DATA_SPACES;
 typedef interface IDebugSymbols* PDEBUG_SYMBOLS;
+typedef interface IDebugSymbols2* PDEBUG_SYMBOLS2;
 typedef interface IDebugSystemObjects* PDEBUG_SYSTEM_OBJECTS;
 typedef interface IDebugRegisters* PDEBUG_REGISTERS;
 

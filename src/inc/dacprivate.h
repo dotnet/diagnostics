@@ -631,8 +631,8 @@ struct MSLAYOUT DacpTieredVersionData
     CLRDATA_ADDRESS NativeCodeVersionNodePtr;
 };
 
-// 2.1 version
-struct MSLAYOUT DacpTieredVersionData_21
+// 2.x version
+struct MSLAYOUT DacpTieredVersionData_2x
 {
     enum TieredState 
     {

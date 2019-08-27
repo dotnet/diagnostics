@@ -164,6 +164,7 @@ namespace SOS
         private readonly IConsoleService _console;
         private readonly COMCallableIUnknown _ccw;  
         private readonly IntPtr _interface;
+        private readonly ReadVirtualCache _versionCache;
         private IntPtr _sosLibrary = IntPtr.Zero;
         private Dictionary<string, PEReader> _pathToPeReader = new Dictionary<string, PEReader>();
 
@@ -202,6 +203,7 @@ namespace SOS
             _console = serviceProvider.GetService<IConsoleService>();
             _analyzeContext = serviceProvider.GetService<AnalyzeContext>();
             _registerService = serviceProvider.GetService<RegisterService>();
+            _versionCache = new ReadVirtualCache(this);
 
             string rid = InstallHelper.GetRid();
             SOSPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
@@ -593,7 +595,7 @@ namespace SOS
             uint* nameSize,
             ulong* displacement)
         {
-            nameBuffer.Clear();
+            nameBuffer?.Clear();
             Write(nameSize);
             Write(displacement);
             return E_NOTIMPL;
@@ -691,15 +693,11 @@ namespace SOS
             {
                 if (index != uint.MaxValue && i == index || index == uint.MaxValue && baseAddress == module.ImageBase)
                 {
-                    if (imageNameBuffer != null) {
-                        imageNameBuffer.Append(module.FileName);
-                    }
+                    imageNameBuffer?.Append(module.FileName);
                     Write(imageNameSize, (uint)module.FileName.Length + 1);
 
                     string moduleName = GetModuleName(module);
-                    if (moduleNameBuffer != null) {
-                        moduleNameBuffer.Append(moduleName);
-                    }
+                    moduleNameBuffer?.Append(moduleName);
                     Write(moduleNameSize, (uint)moduleName.Length + 1);
                     return S_OK;
                 }
@@ -745,6 +743,158 @@ namespace SOS
                 }
             }
             return S_OK;
+        }
+
+        internal unsafe int GetModuleVersionInformation(
+            IntPtr self,
+            uint index,
+            ulong baseAddress,
+            [MarshalAs(UnmanagedType.LPStr)] string item,
+            byte* buffer,
+            uint bufferSize,
+            uint* verInfoSize)
+        {
+            Debug.Assert(buffer != null);
+            Debug.Assert(verInfoSize == null);
+
+            uint i = 0;
+            foreach (ModuleInfo module in DataReader.EnumerateModules())
+            {
+                if (index != uint.MaxValue && i == index || index == uint.MaxValue && baseAddress == module.ImageBase)
+                {
+                    if (item == "\\")
+                    {
+                        uint versionSize = (uint)Marshal.SizeOf(typeof(VS_FIXEDFILEINFO));
+                        Write(verInfoSize, versionSize);
+                        if (bufferSize < versionSize)
+                        {
+                            return E_INVALIDARG;
+                        }
+                        VS_FIXEDFILEINFO* fileInfo = (VS_FIXEDFILEINFO*)buffer;
+                        fileInfo->dwSignature = 0;
+                        fileInfo->dwStrucVersion = 0;
+                        fileInfo->dwFileFlagsMask = 0;
+                        fileInfo->dwFileFlags = 0;
+
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        {
+                            VersionInfo versionInfo = module.Version;
+                            fileInfo->dwFileVersionMS = (uint)versionInfo.Minor | (uint)versionInfo.Major << 16;
+                            fileInfo->dwFileVersionLS = (uint)versionInfo.Patch | (uint)versionInfo.Revision << 16;
+                            return S_OK;
+                        }
+                        else
+                        {
+                            if (SearchVersionString(module, out string versionString))
+                            {
+                                int spaceIndex = versionString.IndexOf(' ');
+                                if (spaceIndex > 0)
+                                {
+                                    if (versionString[spaceIndex - 1] == '.')
+                                    {
+                                        spaceIndex--;
+                                    }
+                                    string versionToParse = versionString.Substring(0, spaceIndex);
+                                    try
+                                    {
+                                        Version versionInfo = Version.Parse(versionToParse);
+                                        fileInfo->dwFileVersionMS = (uint)versionInfo.Minor | (uint)versionInfo.Major << 16;
+                                        fileInfo->dwFileVersionLS = (uint)versionInfo.Revision | (uint)versionInfo.Build << 16;
+                                        return S_OK;
+                                    }
+                                    catch (ArgumentException ex)
+                                    {
+                                        Trace.TraceError($"GetModuleVersion FAILURE: '{versionToParse}' '{versionString}' {ex.ToString()}");
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    else if (item == "\\StringFileInfo\\040904B0\\FileVersion")
+                    {
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        {
+                            return E_INVALIDARG;
+                        }
+                        else
+                        {
+                            if (SearchVersionString(module, out string versionString))
+                            {
+                                byte[] source = Encoding.ASCII.GetBytes(versionString + '\0');
+                                Marshal.Copy(source, 0, new IntPtr(buffer), Math.Min(source.Length, (int)bufferSize));
+                                return S_OK;
+                            }
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        return E_INVALIDARG;
+                    }
+                }
+                i++;
+            }
+
+            return E_FAIL;
+        }
+
+        private static readonly byte[] s_versionString = Encoding.ASCII.GetBytes("@(#)Version ");
+        private static readonly uint s_versionLength = (uint)s_versionString.Length;
+
+        private bool SearchVersionString(ModuleInfo moduleInfo, out string fileVersion)
+        {
+            byte[] buffer = new byte[s_versionString.Length];
+            ulong address = moduleInfo.ImageBase;
+            uint size = moduleInfo.FileSize;
+
+            _versionCache.Clear();
+
+            while (size > 0) {
+                bool result = _versionCache.Read(address, buffer, s_versionString.Length, out int cbBytesRead);
+                if (result && cbBytesRead >= s_versionLength)
+                {
+                    if (s_versionString.SequenceEqual(buffer))
+                    {
+                        address += s_versionLength;
+                        size -= s_versionLength;
+
+                        var sb = new StringBuilder();
+                        byte[] ch = new byte[1];
+                        while (true)
+                        {
+                            // Now read the version string a char/byte at a time
+                            result = _versionCache.Read(address, ch, ch.Length, out cbBytesRead);
+
+                            // Return not found if there are any failures or problems while reading the version string.
+                            if (!result || cbBytesRead < ch.Length || size <= 0) {
+                                break;
+                            }
+
+                            // Found the end of the string
+                            if (ch[0] == '\0') {
+                                fileVersion = sb.ToString();
+                                return true;
+                            }
+                            sb.Append(Encoding.ASCII.GetChars(ch));
+                            address++;
+                            size--;
+                        }
+                        // Return not found if overflowed the fileVersionBuffer (not finding a null).
+                        break;
+                    }
+                    address++;
+                    size--;
+                }
+                else
+                {
+                    address += s_versionLength;
+                    size -= s_versionLength;
+                }
+            }
+
+            fileVersion = null;
+            return false;
         }
 
         internal unsafe int GetLineByOffset(
@@ -1069,5 +1219,58 @@ namespace SOS
         }
 
         #endregion
+    }
+
+    class ReadVirtualCache
+    {
+        private const int CACHE_SIZE = 4096;
+
+        private readonly SOSHost _soshost;
+        private readonly byte[] _cache = new byte[CACHE_SIZE];
+        private ulong _startCache;
+        private bool _cacheValid;
+        private int _cacheSize;
+
+        internal ReadVirtualCache(SOSHost soshost)
+        {
+            _soshost = soshost;
+            Clear();
+        }
+
+        internal bool Read(ulong address, byte[] buffer, int bufferSize, out int bytesRead)
+        {
+            bytesRead = 0;
+
+            if (bufferSize == 0) {
+                return true;
+            }
+
+            if (bufferSize > CACHE_SIZE) 
+            {
+                // Don't even try with the cache
+                return _soshost.DataReader.ReadMemory(address, buffer, bufferSize, out bytesRead);
+            }
+
+            if (!_cacheValid || (address < _startCache) || (address > (_startCache + (ulong)(_cacheSize - bufferSize))))
+            {
+                _cacheValid = false;
+                _startCache = address;
+                if (!_soshost.DataReader.ReadMemory(_startCache, _cache, CACHE_SIZE, out int cbBytesRead)) {
+                    return false;
+                }
+                _cacheSize = cbBytesRead;
+                _cacheValid = true;
+            }
+
+            Array.Copy(_cache, (int)(address - _startCache), buffer, 0, bufferSize);
+            bytesRead = bufferSize;
+            return true;
+        }
+
+        internal void Clear() 
+        { 
+            _cacheValid = false;
+            _cacheSize = CACHE_SIZE;
+        }
     }
 }

@@ -18,7 +18,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [Command(Name = "watsonbuckets",        AliasExpansion = "WatsonBuckets",       Help = "Displays the Watson buckets.")]
     [Command(Name = "threadpool",           AliasExpansion = "ThreadPool",          Help = "Lists basic information about the thread pool.")]
     [Command(Name = "comstate",             AliasExpansion = "COMState",            Help = "Lists the COM apartment model for each thread.")]
-    [Command(Name = "eeversion",            AliasExpansion = "EEVersion",           Help = "This prints the runtiem and SOS versions.")]
     [Command(Name = "gchandles",            AliasExpansion = "GCHandles",           Help = "Provides statistics about GCHandles in the process.")]
     [Command(Name = "objsize",              AliasExpansion = "ObjSize",             Help = "Lists the sizes of the all the objects found on managed threads.")]
     [Command(Name = "gchandleleaks",        AliasExpansion = "GCHandleLeaks",       Help = "Helps in tracking down GCHandle leaks")]

@@ -562,6 +562,19 @@ public:
     virtual HRESULT AddModuleSymbol(
         void* param, 
         const char* symbolFilePath) = 0;
+
+    virtual HRESULT GetModuleInfo(
+        ULONG index,
+        PULONG64 base,
+        PULONG64 size) = 0;
+
+    virtual HRESULT GetModuleVersionInformation(
+        ULONG index,
+        ULONG64 base,
+        PCSTR item,
+        PVOID buffer,
+        ULONG bufferSize,
+        PULONG versionInfoSize) = 0;
 };
 
 #ifdef __cplusplus

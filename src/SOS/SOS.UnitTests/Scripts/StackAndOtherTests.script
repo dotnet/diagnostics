@@ -23,6 +23,10 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[\\
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
 SOSCOMMAND:SetSymbolServer -disable
 
+# Test eeversion command
+SOSCOMMAND:EEVersion
+VERIFY:\s+<DECVAL>.<DECVAL>.<DECVAL>.<DECVAL>.*
+
 # Verify that ClrStack with managed/native mixed works
 IFDEF:PROJECTK
 SOSCOMMAND:ClrStack -f

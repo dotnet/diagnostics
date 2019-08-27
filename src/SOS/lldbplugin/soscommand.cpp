@@ -134,6 +134,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     interpreter.AddCommand("clrstack", new sosCommand("ClrStack"), "Provides a stack trace of managed code only.");
     interpreter.AddCommand("clrthreads", new sosCommand("Threads"), "List the managed threads running.");
     interpreter.AddCommand("clru", new sosCommand("u"), "Displays an annotated disassembly of a managed method.");
+    interpreter.AddCommand("dumparray", new sosCommand("DumpArray"), "Displays details about a managed array.");
     interpreter.AddCommand("dumpasync", new sosCommand("DumpAsync"), "Displays info about async state machines on the garbage-collected heap.");
     interpreter.AddCommand("dumpassembly", new sosCommand("DumpAssembly"), "Displays details about an assembly.");
     interpreter.AddCommand("dumpclass", new sosCommand("DumpClass"), "Displays information about a EE class structure at the specified address.");
@@ -150,6 +151,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     interpreter.AddCommand("dso", new sosCommand("DumpStackObjects"), "Displays all managed objects found within the bounds of the current stack.");
     interpreter.AddCommand("eeheap", new sosCommand("EEHeap"), "Displays info about process memory consumed by internal runtime data structures.");
     interpreter.AddCommand("eestack", new sosCommand("EEStack"), "Runs dumpstack on all threads in the process.");
+    interpreter.AddCommand("eeversion", new sosCommand("EEVersion"), "Displays information about the runtime version.");
     interpreter.AddCommand("finalizequeue", new sosCommand("FinalizeQueue"), "Displays all objects registered for finalization.");
     interpreter.AddCommand("gcroot", new sosCommand("GCRoot"), "Displays info about references (or roots) to an object at the specified address.");
     interpreter.AddCommand("gcwhere", new sosCommand("GCWhere"), "Displays the location in the GC heap of the argument passed in.");

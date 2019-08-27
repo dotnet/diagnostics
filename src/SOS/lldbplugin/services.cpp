@@ -9,6 +9,7 @@
 #include <string>
 #include <dlfcn.h>
 #include <pthread.h>
+#include <arrayholder.h>
 
 #define CONVERT_FROM_SIGN_EXTENDED(offset) ((ULONG_PTR)(offset))
 
@@ -24,6 +25,7 @@ LLDBServices::LLDBServices(lldb::SBDebugger &debugger, lldb::SBCommandReturnObje
     m_currentProcess(process),
     m_currentThread(thread)
 {
+    ClearCache();
     returnObject.SetStatus(lldb::eReturnStatusSuccessFinishResult);
 }
 
@@ -968,31 +970,31 @@ HRESULT LLDBServices::GetModuleByIndex(
     ULONG index,
     PULONG64 base)
 {
-    ULONG64 moduleBase = UINT64_MAX;
-
     lldb::SBTarget target;
     lldb::SBModule module;
     
     target = m_debugger.GetSelectedTarget();
     if (!target.IsValid())
     {
-        goto exit;
+        return E_INVALIDARG;
     }
 
     module = target.GetModuleAtIndex(index);
     if (!module.IsValid())
     {
-        goto exit;
+        return E_INVALIDARG;
     }
 
-    moduleBase = GetModuleBase(target, module);
-
-exit:
     if (base)
     {
+        ULONG64 moduleBase = GetModuleBase(target, module);
+        if (moduleBase == UINT64_MAX)
+        {
+            return E_INVALIDARG;
+        }
         *base = moduleBase;
     }
-    return moduleBase == UINT64_MAX ? E_FAIL : S_OK;
+    return S_OK;
 }
 
 HRESULT 
@@ -1002,9 +1004,6 @@ LLDBServices::GetModuleByModuleName(
     PULONG index,
     PULONG64 base)
 {
-    ULONG64 moduleBase = UINT64_MAX;
-    ULONG moduleIndex = UINT32_MAX;
-
     lldb::SBTarget target;
     lldb::SBModule module;
     lldb::SBFileSpec fileSpec;
@@ -1013,16 +1012,24 @@ LLDBServices::GetModuleByModuleName(
     target = m_debugger.GetSelectedTarget();
     if (!target.IsValid())
     {
-        goto exit;
+        return E_INVALIDARG;
     }
 
     module = target.FindModule(fileSpec);
     if (!module.IsValid())
     {
-        goto exit;
+        return E_INVALIDARG;
     }
 
-    moduleBase = GetModuleBase(target, module);
+    if (base)
+    {
+        ULONG64 moduleBase = GetModuleBase(target, module);
+        if (moduleBase == UINT64_MAX)
+        {
+            return E_INVALIDARG;
+        }
+        *base = moduleBase;
+    }
 
     if (index)
     {
@@ -1032,22 +1039,13 @@ LLDBServices::GetModuleByModuleName(
             lldb::SBModule mod = target.GetModuleAtIndex(mi);
             if (module == mod)
             {
-                moduleIndex = mi;
+                *index = mi;
                 break;
             }
         }
     }
 
-exit:
-    if (index)
-    {
-        *index = moduleIndex;
-    }
-    if (base)
-    {
-        *base = moduleBase;
-    }
-    return moduleBase == UINT64_MAX ? E_FAIL : S_OK;
+    return S_OK;
 }
 
 HRESULT 
@@ -1057,9 +1055,6 @@ LLDBServices::GetModuleByOffset(
     PULONG index,
     PULONG64 base)
 {
-    ULONG64 moduleBase = UINT64_MAX;
-    ULONG moduleIndex = UINT32_MAX;
-
     lldb::SBTarget target;
     int numModules;
 
@@ -1069,7 +1064,7 @@ LLDBServices::GetModuleByOffset(
     target = m_debugger.GetSelectedTarget();
     if (!target.IsValid())
     {
-        goto exit;
+        return E_INVALIDARG;
     }
 
     numModules = target.GetNumModules();
@@ -1086,13 +1081,19 @@ LLDBServices::GetModuleByOffset(
                 lldb::addr_t baseAddress = section.GetLoadAddress(target);
                 if (baseAddress != LLDB_INVALID_ADDRESS)
                 {
-                    if (offset > baseAddress)
+                    if (offset >= baseAddress)
                     {
                         if ((offset - baseAddress) < section.GetByteSize())
                         {
-                            moduleIndex = mi;
-                            moduleBase = baseAddress - section.GetFileOffset();
-                            goto exit;
+                            if (index)
+                            {
+                                *index = mi;
+                            }
+                            if (base)
+                            {
+                                *base = baseAddress - section.GetFileOffset();
+                            }
+                            return S_OK;
                         }
                     }
                 }
@@ -1100,16 +1101,7 @@ LLDBServices::GetModuleByOffset(
         }
     }
 
-exit:
-    if (index)
-    {
-        *index = moduleIndex;
-    }
-    if (base)
-    {
-        *base = moduleBase;
-    }
-    return moduleBase == UINT64_MAX ? E_FAIL : S_OK;
+    return E_FAIL;
 }
 
 HRESULT 
@@ -1128,7 +1120,6 @@ LLDBServices::GetModuleNames(
 {
     lldb::SBTarget target;
     lldb::SBFileSpec fileSpec;
-    HRESULT hr = S_OK;
 
     // lldb doesn't expect sign-extended address
     base = CONVERT_FROM_SIGN_EXTENDED(base);
@@ -1136,10 +1127,8 @@ LLDBServices::GetModuleNames(
     target = m_debugger.GetSelectedTarget();
     if (!target.IsValid())
     {
-        hr = E_FAIL;
-        goto exit;
+        return E_INVALIDARG;
     }
-
     if (index != DEBUG_ANY_ID)
     {
         lldb::SBModule module = target.GetModuleAtIndex(index);
@@ -1165,14 +1154,10 @@ LLDBServices::GetModuleNames(
             }
         }
     }
-
     if (!fileSpec.IsValid())
     {
-        hr = E_FAIL;
-        goto exit;
+        return E_INVALIDARG;
     }
-
-exit:
     if (imageNameBuffer)
     {
         int size = fileSpec.GetPath(imageNameBuffer, imageNameBufferSize);
@@ -1202,7 +1187,7 @@ exit:
             *loadedImageNameSize = size;
         }
     }
-    return hr;
+    return S_OK;
 }
 
 HRESULT 
@@ -1346,6 +1331,26 @@ LLDBServices::GetModuleBase(
     }
 
     return UINT64_MAX;
+}
+
+ULONG64
+LLDBServices::GetModuleSize(
+    /* const */ lldb::SBModule& module)
+{
+    ULONG64 size = 0;
+
+    // Find the first section with an valid base address
+    int numSections = module.GetNumSections();
+    for (int si = 0; si < numSections; si++)
+    {
+        lldb::SBSection section = module.GetSectionAtIndex(si);
+        if (section.IsValid())
+        {
+            size += section.GetByteSize();
+        }
+    }
+
+    return size;
 }
 
 //----------------------------------------------------------------------------
@@ -1777,12 +1782,13 @@ LLDBServices::LoadNativeSymbols(
         if (directory != nullptr && filename != nullptr)
         {
             ULONG64 moduleAddress = GetModuleBase(target, module);
-            int moduleSize = INT32_MAX;
             if (moduleAddress != UINT64_MAX)
             {
                 std::string path(directory);
                 path.append("/");
                 path.append(filename);
+
+                int moduleSize = GetModuleSize(module);
 
                 callback(&module, path.c_str(), moduleAddress, moduleSize);
             }
@@ -1838,6 +1844,141 @@ LLDBServices::AddModuleSymbol(
     command.append(symbolFileName);
 
     return Execute(DEBUG_EXECUTE_NOT_LOGGED, command.c_str(), 0);
+}
+
+HRESULT LLDBServices::GetModuleInfo(
+    ULONG index,
+    PULONG64 pBase,
+    PULONG64 pSize)
+{
+    lldb::SBTarget target; 
+    lldb::SBModule module;
+
+    target = m_debugger.GetSelectedTarget();
+    if (!target.IsValid())
+    {
+        return E_INVALIDARG;
+    }
+
+    module = target.GetModuleAtIndex(index);
+    if (!module.IsValid())
+    {
+        return E_INVALIDARG;
+    }
+
+    if (pBase)
+    {
+        ULONG64 moduleBase = GetModuleBase(target, module);
+        if (moduleBase == UINT64_MAX)
+        {
+            return E_INVALIDARG;
+        }
+        *pBase = moduleBase;
+    }
+
+    if (pSize)
+    {
+        *pSize = GetModuleSize(module);
+    }
+
+    return S_OK;
+}
+
+#define VersionBufferSize 1024
+
+HRESULT 
+LLDBServices::GetModuleVersionInformation(
+    ULONG index,
+    ULONG64 base,
+    PCSTR item,
+    PVOID buffer,
+    ULONG bufferSize,
+    PULONG versionInfoSize)
+{
+    // Only support a narrow set of argument values
+    if (index == DEBUG_ANY_ID || buffer == nullptr || versionInfoSize != nullptr)
+    {
+        return E_INVALIDARG;
+    }
+    lldb::SBTarget target = m_debugger.GetSelectedTarget();
+    if (!target.IsValid())
+    {
+        return E_INVALIDARG;
+    }
+    lldb::SBModule module = target.GetModuleAtIndex(index);
+    if (!module.IsValid())
+    {
+        return E_INVALIDARG;
+    }
+    const char* versionString = nullptr;
+    lldb::SBValue value;
+    lldb::SBData data;
+
+    value = module.FindFirstGlobalVariable(target, "sccsid");
+    if (value.IsValid())
+    {
+        data = value.GetData();
+        if (data.IsValid())
+        {
+            lldb::SBError error;
+            versionString = data.GetString(error, 0);
+            if (error.Fail())
+            {
+                versionString = nullptr;
+            }
+        }
+    }
+
+    ArrayHolder<char> versionBuffer = nullptr;
+    if (versionString == nullptr)
+    {
+        versionBuffer = new char[VersionBufferSize];
+
+        int numSections = module.GetNumSections();
+        for (int si = 0; si < numSections; si++)
+        {
+            lldb::SBSection section = module.GetSectionAtIndex(si);
+            if (GetVersionStringFromSection(target, section, versionBuffer.GetPtr()))
+            {
+                versionString = versionBuffer;
+                break;
+            }
+        }
+    }
+
+    if (versionString == nullptr)
+    {
+        return E_FAIL;
+    }
+
+    if (strcmp(item, "\\") == 0)
+    {
+        if (bufferSize < sizeof(VS_FIXEDFILEINFO))
+        {
+            return E_INVALIDARG;
+        }
+        DWORD major, minor, build, revision;
+        if (sscanf(versionString, "@(#)Version %u.%u.%u.%u", &major, &minor, &build, &revision) != 4)
+        {
+            return E_FAIL;
+        }
+        memset(buffer, 0, sizeof(VS_FIXEDFILEINFO));
+        ((VS_FIXEDFILEINFO*)buffer)->dwFileVersionMS = MAKELONG(minor, major);
+        ((VS_FIXEDFILEINFO*)buffer)->dwFileVersionLS = MAKELONG(revision, build);
+    }
+    else if (strcmp(item, "\\StringFileInfo\\040904B0\\FileVersion") == 0)
+    {
+        if (bufferSize < (strlen(versionString) - sizeof("@(#)Version")))
+        {
+            return E_INVALIDARG;
+        }
+        stpncpy((char*)buffer, versionString + sizeof("@(#)Version"), bufferSize);
+    }
+    else
+    {
+        return E_INVALIDARG;
+    }
+    return S_OK;
 }
 
 //----------------------------------------------------------------------------
@@ -1926,4 +2067,129 @@ LLDBServices::GetPluginModuleDirectory()
         }
     }
     return g_pluginModuleDirectory;
+}
+
+bool
+LLDBServices::GetVersionStringFromSection(lldb::SBTarget& target, lldb::SBSection& section, char* versionBuffer)
+{
+    if (section.IsValid())
+    {
+        lldb::SectionType sectionType = section.GetSectionType();
+
+        if (sectionType == lldb::eSectionTypeContainer)
+        {
+            int numSubSections = section.GetNumSubSections();
+            for (int subsi = 0; subsi < numSubSections; subsi++)
+            {
+                lldb::SBSection subSection = section.GetSubSectionAtIndex(subsi);
+                if (GetVersionStringFromSection(target, subSection, versionBuffer)) {
+                    return true;
+                }
+            }
+        }
+        else if (sectionType == lldb::eSectionTypeData)
+        {
+            lldb::addr_t address = section.GetLoadAddress(target);
+            uint32_t size = section.GetByteSize();
+            if (SearchVersionString(address, size, versionBuffer, VersionBufferSize)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+#define VersionLength 12
+static const char* g_versionString = "@(#)Version ";
+
+bool 
+LLDBServices::SearchVersionString(
+    ULONG64 address, 
+    ULONG64 size, 
+    char* versionBuffer,
+    int versionBufferSize)
+{
+    BYTE buffer[VersionLength];
+    ULONG cbBytesRead;
+    bool result;
+
+    ClearCache();
+
+    while (size > 0) 
+    {
+        result = ReadVirtualCache(address, buffer, VersionLength, &cbBytesRead);
+        if (result && cbBytesRead >= VersionLength)
+        {
+            if (memcmp(buffer, g_versionString, VersionLength) == 0)
+            {
+                for (int i = 0; i < versionBufferSize; i++)
+                {
+                    // Now read the version string a char/byte at a time
+                    result = ReadVirtualCache(address, &versionBuffer[i], 1, &cbBytesRead);
+
+                    // Return not found if there are any failures or problems while reading the version string.
+                    if (!result || cbBytesRead < 1 || size <= 0) {
+                        break;
+                    }
+                    // Found the end of the string
+                    if (versionBuffer[i] == '\0') {
+                        return true;
+                    }
+                    address++;
+                    size--;
+                }
+                // Return not found if overflowed the versionBuffer (not finding a null).
+                break;
+            }
+            address++;
+            size--;
+        }
+        else
+        {
+            address += VersionLength;
+            size -= VersionLength;
+        }
+    }
+
+    return false;
+}
+
+bool
+LLDBServices::ReadVirtualCache(ULONG64 address, PVOID buffer, ULONG bufferSize, PULONG pcbBytesRead)
+{
+    if (bufferSize == 0)
+    {
+        return true;
+    }
+
+    if (bufferSize > CACHE_SIZE)
+    {
+        // Don't even try with the cache
+        return ReadVirtual(address, buffer, bufferSize, pcbBytesRead) == S_OK;
+    }
+
+    if (!m_cacheValid || (address < m_startCache) || (address > (m_startCache + m_cacheSize - bufferSize)))
+    {
+        m_cacheValid = false;
+        m_startCache = address;
+
+        ULONG cbBytesRead = 0;
+        HRESULT hr = ReadVirtual(m_startCache, m_cache, CACHE_SIZE, &cbBytesRead);
+        if (hr != S_OK)
+        {
+            return false;
+        }
+
+        m_cacheSize = cbBytesRead;
+        m_cacheValid = true;
+    }
+
+    memcpy(buffer, (LPVOID)((ULONG64)m_cache + (address - m_startCache)), bufferSize);
+
+    if (pcbBytesRead != NULL)
+    {
+        *pcbBytesRead = bufferSize;
+    }
+
+    return true;
 }
