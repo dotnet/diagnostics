@@ -65,8 +65,8 @@ extern LPCSTR g_dbiFilePath;
 extern LPCSTR g_tmpPath;
 extern SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
 
-extern HRESULT GetCoreClrDirectory(LPWSTR modulePath, int modulePathSize);
-extern HRESULT GetCoreClrDirectory(std::string& coreClrDirectory);
+extern HRESULT GetRuntimeDirectory(std::string& runtimeDirectory);
+extern HRESULT GetRuntimeDirectory(LPWSTR modulePath, int modulePathSize);
 extern LPCSTR GetDacFilePath();
 extern LPCSTR GetDbiFilePath();
 extern BOOL IsHostingInitialized();

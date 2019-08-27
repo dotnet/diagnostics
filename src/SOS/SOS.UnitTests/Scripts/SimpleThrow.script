@@ -54,11 +54,6 @@ SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+(\*\*\* WARNING: Unable to verify checksum for SimpleThrow.exe\s*)?UserObject\.UseObject.*\s+
-# Desktop sos has a bug that prevents the line number/source file info from being printed.
-IFDEF:PROJECTK
 VERIFY:[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?SimpleThrow[\\|/]UserObject\.cs @ 18\s*\]
-ENDIF:PROJECTK
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+Simple\.Main\(\)\s+
-IFDEF:PROJECTK
 VERIFY:[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?SimpleThrow[\\|/]SimpleThrow\.cs @ 9\s*\]
-ENDIF:PROJECTK

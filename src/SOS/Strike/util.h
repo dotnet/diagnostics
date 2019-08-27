@@ -1389,7 +1389,10 @@ private:
     int *mWidths;
     Alignment *mAlignments;
 };
-
+ 
+#ifndef FEATURE_PAL
+HRESULT GetClrModuleImages(__in IXCLRDataModule* module, __in CLRDataModuleExtentType desiredType, __out PULONG64 firstAdd);
+#endif
 HRESULT GetMethodDefinitionsFromName(DWORD_PTR ModulePtr, IXCLRDataModule* mod, const char* name, IXCLRDataMethodDefinition **ppMethodDefinitions, int numMethods, int *numMethodsNeeded);
 HRESULT GetMethodDescsFromName(DWORD_PTR ModulePtr, IXCLRDataModule* mod, const char* name, DWORD_PTR **pOut, int *numMethodDescs);
 
@@ -1536,6 +1539,115 @@ private:
     T* m_ptr;    
 };
 
+// SOS's runtime, dac and dbi module name defines. *MODULE* is just the 
+// module name on Windows, *DLL* has the .dll extension. On Linux/MacOS, 
+// *MODULE* and *DLL* are the same.
+
+#ifdef FEATURE_PAL
+
+#define NETCORE_RUNTIME_MODULE_NAME_W   MAKEDLLNAME_W(W("coreclr"))
+#define NETCORE_RUNTIME_MODULE_NAME_A   MAKEDLLNAME_A("coreclr")
+#define NETCORE_RUNTIME_DLL_NAME_W      NETCORE_RUNTIME_MODULE_NAME_W
+#define NETCORE_RUNTIME_DLL_NAME_A      NETCORE_RUNTIME_MODULE_NAME_A
+
+#define NETCORE_DAC_MODULE_NAME_W       MAKEDLLNAME_W(W("mscordaccore"))
+#define NETCORE_DAC_MODULE_NAME_A       MAKEDLLNAME_A("mscordaccore")
+#define NETCORE_DAC_DLL_NAME_W          NETCORE_DAC_MODULE_NAME_W
+#define NETCORE_DAC_DLL_NAME_A          NETCORE_DAC_MODULE_NAME_A
+
+#define NET_DBI_MODULE_NAME_W           MAKEDLLNAME_W(W("mscordbi"))
+#define NET_DBI_MODULE_NAME_A           MAKEDLLNAME_A("mscordbi")
+#define NET_DBI_DLL_NAME_W              NET_DBI_MODULE_NAME_W       
+#define NET_DBI_DLL_NAME_A              NET_DBI_MODULE_NAME_A       
+
+#else
+
+#define NETCORE_RUNTIME_MODULE_NAME_W   W("coreclr")
+#define NETCORE_RUNTIME_MODULE_NAME_A   "coreclr"
+#define NETCORE_RUNTIME_DLL_NAME_W      MAKEDLLNAME_W(NETCORE_RUNTIME_MODULE_NAME_W)
+#define NETCORE_RUNTIME_DLL_NAME_A      MAKEDLLNAME_A(NETCORE_RUNTIME_MODULE_NAME_A)
+
+#define NETCORE_DAC_MODULE_NAME_W       W("mscordaccore")
+#define NETCORE_DAC_MODULE_NAME_A       "mscordaccore"
+#define NETCORE_DAC_DLL_NAME_W          MAKEDLLNAME_W(NETCORE_DAC_MODULE_NAME_W)
+#define NETCORE_DAC_DLL_NAME_A          MAKEDLLNAME_A(NETCORE_DAC_MODULE_NAME_A)
+
+#define NET_DBI_MODULE_NAME_W           W("mscordbi")
+#define NET_DBI_MODULE_NAME_A           "mscordbi"
+#define NET_DBI_DLL_NAME_W              MAKEDLLNAME_W(W("mscordbi"))
+#define NET_DBI_DLL_NAME_A              MAKEDLLNAME_A("mscordbi")
+
+#define DESKTOP_RUNTIME_MODULE_NAME_W   W("clr")
+#define DESKTOP_RUNTIME_MODULE_NAME_A   "clr"
+#define DESKTOP_RUNTIME_DLL_NAME_W      MAKEDLLNAME_W(DESKTOP_RUNTIME_MODULE_NAME_W)
+#define DESKTOP_RUNTIME_DLL_NAME_A      MAKEDLLNAME_A(DESKTOP_RUNTIME_MODULE_NAME_A)
+
+#define DESKTOP_DAC_MODULE_NAME_W       W("mscordacwks")
+#define DESKTOP_DAC_MODULE_NAME_A       "mscordacwks"
+#define DESKTOP_DAC_DLL_NAME_W          MAKEDLLNAME_W(W("mscordacwks"))
+#define DESKTOP_DAC_DLL_NAME_A          MAKEDLLNAME_A("mscordacwks")
+
+#endif // FEATURE_PAL
+
+#ifndef FEATURE_PAL
+// This is set as a side-effect of CheckEEDll()/GetRuntimeModuleInfo().
+extern bool g_isDesktopRuntime;
+#endif
+
+inline const char* GetRuntimeModuleName()
+{
+    return 
+#ifndef FEATURE_PAL
+        g_isDesktopRuntime ? DESKTOP_RUNTIME_MODULE_NAME_A : 
+#endif
+            NETCORE_RUNTIME_MODULE_NAME_A;
+}
+
+inline const char* GetRuntimeDllName()
+{
+    return 
+#ifndef FEATURE_PAL
+        g_isDesktopRuntime ? DESKTOP_RUNTIME_DLL_NAME_A : 
+#endif
+            NETCORE_RUNTIME_DLL_NAME_A;
+}
+
+inline const char* GetDacModuleName()
+{
+    return 
+#ifndef FEATURE_PAL
+        g_isDesktopRuntime ? DESKTOP_DAC_MODULE_NAME_A : 
+#endif
+            NETCORE_DAC_MODULE_NAME_A;
+}
+
+inline const char* GetDacDllName()
+{
+    return 
+#ifndef FEATURE_PAL
+        g_isDesktopRuntime ? DESKTOP_DAC_DLL_NAME_A : 
+#endif
+            NETCORE_DAC_DLL_NAME_A;
+}
+
+inline const WCHAR* GetDacModuleNameW()
+{
+    return 
+#ifndef FEATURE_PAL
+        g_isDesktopRuntime ? DESKTOP_DAC_MODULE_NAME_W : 
+#endif
+            NETCORE_DAC_MODULE_NAME_W;
+}
+
+inline const WCHAR* GetDacDllNameW()
+{
+    return 
+#ifndef FEATURE_PAL
+        g_isDesktopRuntime ? DESKTOP_DAC_DLL_NAME_W : 
+#endif
+            NETCORE_DAC_DLL_NAME_W;
+}
+
 struct ModuleInfo
 {
     ULONG64 baseAddr;
@@ -1543,6 +1655,7 @@ struct ModuleInfo
     ULONG index;
     BOOL hasPdb;
 };
+
 extern ModuleInfo g_moduleInfo[];
 
 BOOL InitializeHeapData();
@@ -3067,11 +3180,6 @@ struct Flags
 
 private:
     UnderlyingType m_val;
-};
-
-struct ImageInfo
-{
-    ULONG64 modBase;
 };
 
 // Helper class used in ClrStackFromPublicInterface() to keep track of explicit EE Frames

@@ -5,6 +5,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
@@ -33,11 +34,22 @@ namespace Microsoft.Diagnostics.Tools.Dump
                             NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
                             NativeMethods.MINIDUMP_TYPE.MiniDumpWithTokenInformation;
 
-                        // Dump the process!
-                        if (!NativeMethods.MiniDumpWriteDump(process.Handle, (uint)process.Id, stream.SafeFileHandle, dumpType, ref exceptionInfo, IntPtr.Zero, IntPtr.Zero))
+                        // Retry the write dump on ERROR_PARTIAL_COPY
+                        for (int i = 0; i < 5; i++)
                         {
-                            int err = Marshal.GetHRForLastWin32Error();
-                            Marshal.ThrowExceptionForHR(err);
+                            // Dump the process!
+                            if (NativeMethods.MiniDumpWriteDump(process.Handle, (uint)process.Id, stream.SafeFileHandle, dumpType, ref exceptionInfo, IntPtr.Zero, IntPtr.Zero))
+                            {
+                                break;
+                            }
+                            else
+                            {
+                                int err = Marshal.GetHRForLastWin32Error();
+                                if (err != NativeMethods.ERROR_PARTIAL_COPY)
+                                {
+                                    Marshal.ThrowExceptionForHR(err);
+                                }
+                            }
                         }
                     }
                 });
@@ -45,7 +57,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             private static class NativeMethods
             {
-                [DllImport("Dbghelp.dll")]
+                public const int ERROR_PARTIAL_COPY = unchecked((int)0x8007012b);
+
+                [DllImport("Dbghelp.dll", SetLastError = true)]
                 public static extern bool MiniDumpWriteDump(IntPtr hProcess, uint ProcessId, SafeFileHandle hFile, MINIDUMP_TYPE DumpType, ref MINIDUMP_EXCEPTION_INFORMATION ExceptionParam, IntPtr UserStreamParam, IntPtr CallbackParam);
 
                 [StructLayout(LayoutKind.Sequential, Pack = 4)]

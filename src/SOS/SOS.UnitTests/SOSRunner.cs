@@ -282,9 +282,9 @@ public class SOSRunner : IDisposable
                     ITestOutputHelper dotnetDumpOutputHelper = new IndentedTestOutputHelper(outputHelper, "        ");
                     try
                     {
-                        if (string.IsNullOrWhiteSpace(config.HostExe) || string.IsNullOrWhiteSpace(config.DotNetDumpPath()))
+                        if (string.IsNullOrWhiteSpace(config.DotNetDumpHost()) || string.IsNullOrWhiteSpace(config.DotNetDumpPath()))
                         {
-                            throw new SkipTestException("dotnet-dump collect needs HostExe and DotNetDumpPath config variables");
+                            throw new SkipTestException("dotnet-dump collect needs DotNetDumpHost and DotNetDumpPath config variables");
                         }
 
                         // Wait until the debuggee gets started. It needs time to spin up before generating the core dump.
@@ -300,7 +300,7 @@ public class SOSRunner : IDisposable
                         dotnetDumpArguments.Append(config.DotNetDumpPath());
                         dotnetDumpArguments.AppendFormat(" collect --process-id {0} --output %DUMP_NAME%", processRunner.ProcessId);
 
-                        ProcessRunner dotnetDumpRunner = new ProcessRunner(config.HostExe, ReplaceVariables(variables, dotnetDumpArguments.ToString())).
+                        ProcessRunner dotnetDumpRunner = new ProcessRunner(config.DotNetDumpHost(), ReplaceVariables(variables, dotnetDumpArguments.ToString())).
                             WithLog(new TestRunner.TestLogger(dotnetDumpOutputHelper)).
                             WithTimeout(TimeSpan.FromMinutes(5)).
                             WithExpectedExitCode(0);
@@ -447,6 +447,9 @@ public class SOSRunner : IDisposable
                     // Turn off warnings that can happen in the middle of a command's output
                     initialCommands.Add(".outmask- 0x244");
                     initialCommands.Add("!sym quiet");
+
+                    // Turn on source/line numbers
+                    initialCommands.Add(".lines");
                     break;
 
                 case NativeDebugger.Lldb:
@@ -532,15 +535,15 @@ public class SOSRunner : IDisposable
                     {
                         throw new ArgumentException($"{action} not supported for dotnet-dump testing");
                     }
-                    if (string.IsNullOrWhiteSpace(config.HostExe))
+                    if (string.IsNullOrWhiteSpace(config.DotNetDumpHost()))
                     {
-                        throw new ArgumentException("No HostExe in configuration");
+                        throw new ArgumentException("No DotNetDumpHost in configuration");
                     }
                     initialCommands.Add("setsymbolserver -directory %DEBUG_ROOT%");
 
                     arguments.Append(debuggerPath);
                     arguments.Append(@" analyze %DUMP_NAME%");
-                    debuggerPath = config.HostExe;
+                    debuggerPath = config.DotNetDumpHost();
                     break;
             }
 
@@ -619,19 +622,19 @@ public class SOSRunner : IDisposable
                     }
                     else if (line.StartsWith("IFDEF:"))
                     {
-                        string define = line.Substring("IFDEF:".Length);
+                        string define = line.Substring("IFDEF:".Length).Trim();
                         activeDefines.Add(define, true);
                         isActiveDefineRegionEnabled = IsActiveDefineRegionEnabled(activeDefines, enabledDefines);
                     }
                     else if (line.StartsWith("!IFDEF:"))
                     {
-                        string define = line.Substring("!IFDEF:".Length);
+                        string define = line.Substring("!IFDEF:".Length).Trim();
                         activeDefines.Add(define, false);
                         isActiveDefineRegionEnabled = IsActiveDefineRegionEnabled(activeDefines, enabledDefines);
                     }
                     else if (line.StartsWith("ENDIF:"))
                     {
-                        string define = line.Substring("ENDIF:".Length);
+                        string define = line.Substring("ENDIF:".Length).Trim();
                         if (!activeDefines.Last().Key.Equals(define))
                         {
                             throw new Exception("Mismatched IFDEF/ENDIF. IFDEF: " + activeDefines.Last().Key + " ENDIF: " + define);
@@ -718,10 +721,15 @@ public class SOSRunner : IDisposable
         switch (Debugger)
         {
             case NativeDebugger.Cdb:
-                commands.Add($".unload sos.dll");
+                if (_config.IsDesktop)
+                {
+                    // Force the desktop sos to be loaded and then unload it.
+                    commands.Add(".cordll -l");
+                    commands.Add(".unload sos");
+                }
                 commands.Add($".load {sosPath}");
-                commands.Add(".lines");
                 commands.Add(".reload");
+                commands.Add(".chain");
                 if (sosHostRuntime != null)
                 {
                     commands.Add($"!SetHostRuntime {sosHostRuntime}");
@@ -1133,6 +1141,11 @@ public class SOSRunner : IDisposable
         {
             defines.Add("ALPINE");
         }
+        // This is a special "OR" of two conditions. Add this is easier than changing the parser to support "OR".
+        if (_config.IsNETCore || Debugger == NativeDebugger.DotNetDump)
+        {
+            defines.Add("NETCORE_OR_DOTNETDUMP");
+        }
         return defines;
     }
 
@@ -1343,6 +1356,12 @@ public static class TestConfigurationExtensions
             gdbPath = Environment.GetEnvironmentVariable("GDB_PATH");
         }
         return TestConfiguration.MakeCanonicalPath(gdbPath);
+    }
+
+    public static string DotNetDumpHost(this TestConfiguration config)
+    {
+        string dotnetDumpHost = config.GetValue("DotNetDumpHost");
+        return TestConfiguration.MakeCanonicalPath(dotnetDumpHost);
     }
 
     public static string DotNetDumpPath(this TestConfiguration config)

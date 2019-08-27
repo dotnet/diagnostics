@@ -157,6 +157,8 @@ namespace SOS
 
         internal readonly IDataReader DataReader;
 
+        const string DesktopRuntimeModuleName = "clr";
+
         private static readonly string s_coreclrModuleName;
 
         private readonly AnalyzeContext _analyzeContext;
@@ -1109,6 +1111,9 @@ namespace SOS
 
         internal static bool IsRuntimeModule(ModuleInfo module)
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && IsModuleEqual(module, DesktopRuntimeModuleName)) {
+                return true;
+            }
             return IsModuleEqual(module, s_coreclrModuleName);
         }
 

@@ -5,25 +5,48 @@
 LOADSOS
 
 # Verify that bpmd works
-IFDEF:PROJECTK
 IFDEF:LIVE
 !IFDEF:MAJOR_RUNTIME_VERSION_1
 
+IFDEF:DESKTOP
+SOSCOMMAND:bpmd SymbolTestApp.exe SymbolTestApp.Program.Main
+ENDIF:DESKTOP
+!IFDEF:DESKTOP
 SOSCOMMAND:bpmd SymbolTestApp.dll SymbolTestApp.Program.Main
+ENDIF:DESKTOP
+
 CONTINUE
+
+# Unloads desktop sos and reloads new SOS
+IFDEF:DESKTOP
+LOADSOS
+ENDIF:DESKTOP
+
 SOSCOMMAND:ClrStack
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 16\]\s*
 
 SOSCOMMAND:bpmd SymbolTestApp.cs:29
+IFDEF:DESKTOP
+SOSCOMMAND:bpmd SymbolTestApp.exe SymbolTestApp.Program.Foo4
+ENDIF:DESKTOP
+!IFDEF:DESKTOP
 SOSCOMMAND:bpmd SymbolTestApp.dll SymbolTestApp.Program.Foo4
+ENDIF:DESKTOP
 
+IFDEF:PROJECTK
 CONTINUE
 SOSCOMMAND:ClrStack
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 16\]\s*
+ENDIF:PROJECTK
 
 CONTINUE
 SOSCOMMAND:ClrStack
+IFDEF:DESKTOP
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
+ENDIF:DESKTOP
+!IFDEF:DESKTOP
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 28\]\s*
+ENDIF:DESKTOP
 
 CONTINUE
 SOSCOMMAND:ClrStack
@@ -31,16 +54,13 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(.*\)\s+\[(?i:.*[\\
 
 ENDIF:MAJOR_RUNTIME_VERSION_1
 ENDIF:LIVE
-ENDIF:PROJECTK
 
 CONTINUE
 
-IFDEF:PROJECTK
 SOSCOMMAND:SetSymbolServer -ms
 !IFDEF:DOTNETDUMP
 SOSCOMMAND:SetHostRuntime
 ENDIF:DOTNETDUMP
-ENDIF:PROJECTK
 
 IFDEF:DOTNETDUMP
 COMMAND:clrmodules
@@ -76,10 +96,8 @@ VERIFY:\s*Parent Domain:\s+<HEXVAL>\s+
 VERIFY:\s*Name:\s+.*(System\.Private\.CoreLib(\.ni)?\.dll|mscorlib.dll)\s+
 
 SOSCOMMAND:DumpModule <POUT>\s+Module Name\s+(<HEXVAL>)\s+.*<POUT>
-!IFDEF:DESKTOP
 VERIFY:\s*PEFile:\s+<HEXVAL>\s+
 VERIFY:\s*ModuleId:\s+<HEXVAL>\s+
-ENDIF:DESKTOP
 VERIFY:\s*LoaderHeap:\s+<HEXVAL>\s+
 VERIFY:\s*TypeDefToMethodTableMap:\s+<HEXVAL>\s+
 

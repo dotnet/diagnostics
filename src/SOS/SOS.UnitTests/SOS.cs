@@ -75,7 +75,7 @@ public class SOS
                 }
 
                 // With the dotnet-dump analyze tool
-                if (information.TestConfiguration.DotNetDumpPath() != null)
+                if (information.TestConfiguration.DotNetDumpPath() != null && (information.TestConfiguration.IsNETCore || information.DumpType != SOSRunner.DumpType.Triage))
                 {
                     using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDumpWithDotNetDump))
                     {

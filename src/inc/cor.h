@@ -134,17 +134,6 @@ typedef UNALIGNED void const *UVCP_CONSTANT;
 #define INVALID_TASK_ID         0x0 
 #define MAX_CONNECTION_NAME     MAX_PATH
 
-
-#define MAIN_CLR_MODULE_NAME_W        W("coreclr")
-#define MAIN_CLR_MODULE_NAME_A         "coreclr"
-
-#define MAIN_CLR_DLL_NAME_W           MAKEDLLNAME_W(MAIN_CLR_MODULE_NAME_W)
-#define MAIN_CLR_DLL_NAME_A           MAKEDLLNAME_A(MAIN_CLR_MODULE_NAME_A)
-
-
-#define MSCOREE_SHIM_W               MAIN_CLR_DLL_NAME_W
-#define MSCOREE_SHIM_A               MAIN_CLR_DLL_NAME_A
-
 #define SWITCHOUT_HANDLE_VALUE ((HANDLE)(LONG_PTR)-2)
 
 //

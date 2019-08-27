@@ -227,18 +227,18 @@ static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutabl
 #endif // FEATURE_PAL
 
 /**********************************************************************\
- * Returns the coreclr module/runtime directory of the target.
+ * Returns the runtime module/runtime directory of the target.
 \**********************************************************************/
-HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
+HRESULT GetRuntimeDirectory(std::string& runtimeDirectory)
 {
 #ifdef FEATURE_PAL
     LPCSTR directory = g_ExtServices->GetCoreClrDirectory();
     if (directory == NULL)
     {
-        ExtErr("Error: Runtime module (%s) not loaded yet\n", MAKEDLLNAME_A("coreclr"));
+        ExtErr("Error: Runtime module (%s) not loaded yet\n", NETCORE_RUNTIME_DLL_NAME_A);
         return E_FAIL;
     }
-    if (!GetAbsolutePath(directory, coreClrDirectory))
+    if (!GetAbsolutePath(directory, runtimeDirectory))
     {
         ExtDbgOut("Error: Runtime directory %s doesn't exist\n", directory);
         return E_FAIL;
@@ -248,14 +248,14 @@ HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
     HRESULT Status = GetRuntimeModuleInfo(&index, NULL);
     if (FAILED(Status))
     {
-        ExtErr("Error: Runtime module (%s) not loaded yet\n", MAKEDLLNAME_A("coreclr"));
+        ExtErr("Error: Runtime module (%s) not loaded yet\n", GetRuntimeDllName());
         return Status;
     }
     ArrayHolder<char> szModuleName = new char[MAX_LONGPATH + 1];
     Status = g_ExtSymbols->GetModuleNames(index, 0, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
     if (FAILED(Status))
     {
-        ExtErr("Error: Failed to get coreclr module name\n");
+        ExtErr("Error: Failed to get runtime module name\n");
         return Status;
     }
     if (GetFileAttributesA(szModuleName) == INVALID_FILE_ATTRIBUTES)
@@ -264,35 +264,35 @@ HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
         ExtDbgOut("Error: Runtime module %s doesn't exist %08x\n", szModuleName, Status);
         return Status;
     }
-    coreClrDirectory = szModuleName;
+    runtimeDirectory = szModuleName;
 
     // Parse off the module name to get just the path
-    size_t lastSlash = coreClrDirectory.rfind(DIRECTORY_SEPARATOR_CHAR_A);
+    size_t lastSlash = runtimeDirectory.rfind(DIRECTORY_SEPARATOR_CHAR_A);
     if (lastSlash == std::string::npos)
     {
         ExtDbgOut("Error: Runtime module %s has no directory separator\n", szModuleName);
         return E_FAIL;
     }
-    coreClrDirectory.assign(coreClrDirectory, 0, lastSlash);
+    runtimeDirectory.assign(runtimeDirectory, 0, lastSlash);
 #endif
     return S_OK;
 }
 
 /**********************************************************************\
- * Returns the coreclr module/runtime directory of the target.
+ * Returns the runtime module/runtime directory of the target.
 \**********************************************************************/
-HRESULT GetCoreClrDirectory(LPWSTR modulePath, int modulePathSize)
+HRESULT GetRuntimeDirectory(LPWSTR modulePath, int modulePathSize)
 {
-    std::string coreclrDirectory;
-    HRESULT hr = GetCoreClrDirectory(coreclrDirectory);
+    std::string runtimeDirectory;
+    HRESULT hr = GetRuntimeDirectory(runtimeDirectory);
     if (FAILED(hr))
     {
         return hr;
     }
-    int length = MultiByteToWideChar(CP_ACP, 0, coreclrDirectory.c_str(), -1, modulePath, modulePathSize);
+    int length = MultiByteToWideChar(CP_ACP, 0, runtimeDirectory.c_str(), -1, modulePath, modulePathSize);
     if (0 >= length)
     {
-        ExtErr("MultiByteToWideChar(coreclrDirectory) failed. Last error = 0x%x\n", GetLastError());
+        ExtErr("MultiByteToWideChar(runtimeDirectory) failed. Last error = 0x%x\n", GetLastError());
         return HRESULT_FROM_WIN32(GetLastError());
     }
     return S_OK;
@@ -409,7 +409,7 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
                     if (!FindDotNetVersion(3, 1, hostRuntimeDirectory))
                     {
                         // If an installed runtime can not be found, use the target coreclr version
-                        HRESULT hr = GetCoreClrDirectory(hostRuntimeDirectory);
+                        HRESULT hr = GetRuntimeDirectory(hostRuntimeDirectory);
                         if (FAILED(hr))
                         {
                             return hr;
@@ -425,28 +425,9 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
     hostRuntimeDirectory.assign(g_hostRuntimeDirectory);
     coreClrPath.assign(g_hostRuntimeDirectory);
     coreClrPath.append(DIRECTORY_SEPARATOR_STR_A);
-    coreClrPath.append(MAIN_CLR_DLL_NAME_A);
+    coreClrPath.append(NETCORE_RUNTIME_DLL_NAME_A);
     return S_OK;
 }
-
-#ifndef FEATURE_PAL
-/**********************************************************************\
- * Returns the path to the runtime directory to use for hosting. 
-\**********************************************************************/
-LPCSTR
-GetHostRuntimeDirectory()
-{
-    std::string hostRuntimeDirectory;
-    std::string coreClrPath;
-
-    HRESULT Status = GetHostRuntime(coreClrPath, hostRuntimeDirectory);
-    if (FAILED(Status))
-    {
-        return nullptr;
-    }
-    return hostRuntimeDirectory.c_str();
-}
-#endif // FEATURE_PAL
 
 //
 // Returns the unique temporary directory for this instnace of SOS
@@ -519,11 +500,11 @@ LPCSTR GetDacFilePath()
     if (g_dacFilePath == nullptr)
     {
         std::string dacModulePath;
-        HRESULT hr = GetCoreClrDirectory(dacModulePath);
+        HRESULT hr = GetRuntimeDirectory(dacModulePath);
         if (SUCCEEDED(hr))
         {
             dacModulePath.append(DIRECTORY_SEPARATOR_STR_A);
-            dacModulePath.append(MAKEDLLNAME_A("mscordaccore"));
+            dacModulePath.append(GetDacDllName());
 #ifdef FEATURE_PAL
             // If DAC file exists in the runtime directory
             if (access(dacModulePath.c_str(), F_OK) == 0)
@@ -539,7 +520,7 @@ LPCSTR GetDacFilePath()
                 if (tmpPath != nullptr) 
                 {
                     std::string dacSymLink(tmpPath);
-                    dacSymLink.append(MAKEDLLNAME_A("mscordaccore"));
+                    dacSymLink.append(NETCORE_DAC_DLL_NAME_A);
 
                     int error = symlink(dacModulePath.c_str(), dacSymLink.c_str());
                     if (error == 0)
@@ -573,11 +554,11 @@ LPCSTR GetDbiFilePath()
     if (g_dbiFilePath == nullptr)
     {
         std::string dbiModulePath;
-        HRESULT hr = GetCoreClrDirectory(dbiModulePath);
+        HRESULT hr = GetRuntimeDirectory(dbiModulePath);
         if (SUCCEEDED(hr))
         {
             dbiModulePath.append(DIRECTORY_SEPARATOR_STR_A);
-            dbiModulePath.append(MAKEDLLNAME_A("mscordbi"));
+            dbiModulePath.append(NET_DBI_DLL_NAME_A);
 #ifdef FEATURE_PAL
             // If DBI file exists in the runtime directory
             if (access(dbiModulePath.c_str(), F_OK) == 0)
@@ -848,16 +829,16 @@ void InitializeSymbolStoreFromSymPath()
 //
 static void SymbolFileCallback(void* param, const char* moduleFileName, const char* symbolFilePath)
 {
-    if (strcmp(moduleFileName, MAIN_CLR_DLL_NAME_A) == 0) {
+    if (strcmp(moduleFileName, GetRuntimeDllName()) == 0) {
         return;
     }
-    if (strcmp(moduleFileName, MAKEDLLNAME_A("mscordaccore")) == 0) {
+    if (strcmp(moduleFileName, GetDacDllName()) == 0) {
         if (g_dacFilePath == nullptr) {
             g_dacFilePath = _strdup(symbolFilePath);
         }
         return;
     }
-    if (strcmp(moduleFileName, MAKEDLLNAME_A("mscordbi")) == 0) {
+    if (strcmp(moduleFileName, NET_DBI_DLL_NAME_A) == 0) {
         if (g_dbiFilePath == nullptr) {
             g_dbiFilePath = _strdup(symbolFilePath);
         }
@@ -1068,14 +1049,6 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
         return E_FAIL;
     }
 
-    DacpGetModuleData moduleData;
-    hr = moduleData.Request(pModule);
-    if (FAILED(hr))
-    {
-        ExtOut("LoadSymbols moduleData.Request FAILED 0x%08x\n", hr);
-        return hr;
-    }
-
     ArrayHolder<WCHAR> pModuleName = new WCHAR[MAX_LONGPATH + 1];
     ULONG32 nameLen = 0;
     hr = pModule->GetFileName(MAX_LONGPATH, &nameLen, pModuleName);
@@ -1083,6 +1056,31 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
     {
         ExtOut("LoadSymbols: IXCLRDataModule->GetFileName FAILED 0x%08x\n", hr);
         return hr;
+    }
+
+    DacpGetModuleData moduleData;
+    hr = moduleData.Request(pModule);
+    if (FAILED(hr))
+    {
+#ifdef FEATURE_PAL
+        ExtOut("LoadSymbols moduleData.Request FAILED 0x%08x\n", hr);
+        return hr;
+#else
+        ULONG64 modBase;
+        hr = GetClrModuleImages(pModule, CLRDATA_MODULE_PE_FILE, &modBase);
+        if (FAILED(hr))
+        {
+            ExtOut("LoadSymbols GetClrModuleImages FAILED 0x%08x\n", hr);
+            return hr;
+        }
+        hr = LoadSymbolsForWindowsPDB(pMD, modBase, pModuleName, FALSE);
+        if (SUCCEEDED(hr))
+        {
+            return hr;
+        }
+        moduleData.LoadedPEAddress = modBase;
+        moduleData.IsFileLayout = TRUE;
+#endif
     }
 
 #ifndef FEATURE_PAL

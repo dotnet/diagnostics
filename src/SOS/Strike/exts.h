@@ -196,7 +196,7 @@ public:
 
 inline void EENotLoadedMessage(HRESULT Status)
 {
-    ExtOut("Failed to find runtime module (%s), 0x%08x\n", MAKEDLLNAME_A("coreclr"), Status);
+    ExtOut("Failed to find runtime module (%s), 0x%08x\n", GetRuntimeDllName(), Status);
     ExtOut("Extension commands need it in order to have something to do.\n");
 }
 
@@ -205,30 +205,30 @@ inline void DACMessage(HRESULT Status)
     ExtOut("Failed to load data access module, 0x%08x\n", Status);
 #ifndef FEATURE_PAL
     ExtOut("Verify that 1) you have a recent build of the debugger (6.2.14 or newer)\n");
-    ExtOut("            2) the file mscordaccore.dll that matches your version of coreclr.dll is\n");
+    ExtOut("            2) the file %s that matches your version of %s is\n", GetDacDllName(), GetRuntimeDllName());
     ExtOut("                in the version directory or on the symbol path\n");
     ExtOut("            3) or, if you are debugging a dump file, verify that the file \n");
-    ExtOut("                mscordaccore_<arch>_<arch>_<version>.dll is on your symbol path.\n");
+    ExtOut("                %s_<arch>_<arch>_<version>.dll is on your symbol path.\n", GetDacModuleName());
     ExtOut("            4) you are debugging on supported cross platform architecture as \n");
     ExtOut("                the dump file. For example, an ARM dump file must be debugged\n");
     ExtOut("                on an X86 or an ARM machine; an AMD64 dump file must be\n");
     ExtOut("                debugged on an AMD64 machine.\n");
     ExtOut("\n");
     ExtOut("You can also run the debugger command .cordll to control the debugger's\n");
-    ExtOut("load of mscordaccore.dll.  .cordll -ve -u -l will do a verbose reload.\n");
+    ExtOut("load of %s.dll. .cordll -ve -u -l will do a verbose reload.\n", GetDacDllName());
     ExtOut("If that succeeds, the SOS command should work on retry.\n");
     ExtOut("\n");
     ExtOut("If you are debugging a minidump, you need to make sure that your executable\n");
-    ExtOut("path is pointing to coreclr.dll as well.\n");
+    ExtOut("path is pointing to %s as well.\n", GetRuntimeDllName());
 #else // FEATURE_PAL
     if (Status == CORDBG_E_MISSING_DEBUGGER_EXPORTS)
     {
-        ExtOut("You can run the debugger command 'setclrpath' to control the load of %s.\n", MAKEDLLNAME_A("mscordaccore"));
+        ExtOut("You can run the debugger command 'setclrpath' to control the load of %s.\n", GetDacDllName());
         ExtOut("If that succeeds, the SOS command should work on retry.\n");
     }
     else
     {
-        ExtOut("Can not load or initialize %s. The target runtime may not be initialized.\n", MAKEDLLNAME_A("mscordaccore"));
+        ExtOut("Can not load or initialize %s. The target runtime may not be initialized.\n", GetDacDllName());
     }
 #endif // FEATURE_PAL
 }
@@ -288,12 +288,12 @@ HRESULT CheckEEDll();
     INIT_API_NOEE()                                             \
     if ((Status = CheckEEDll()) != S_OK)                        \
     {                                                           \
-        ExtOut("Failed to find runtime module (%s), 0x%08x\n", MAKEDLLNAME_A("coreclr"), Status); \
+        ExtOut("Failed to find runtime module (%s), 0x%08x\n", GetRuntimeDllName(), Status); \
         ExtOut("Some functionality may be impaired\n");         \
     }                                                           \
     else if ((Status = LoadClrDebugDll()) != S_OK)              \
     {                                                           \
-        ExtOut("Failed to load data access module (%s), 0x%08x\n", MAKEDLLNAME_A("mscordaccore"), Status); \
+        ExtOut("Failed to load data access module (%s), 0x%08x\n", GetDacDllName(), Status); \
         ExtOut("Some functionality may be impaired\n");         \
     }                                                           \
     else                                                        \
