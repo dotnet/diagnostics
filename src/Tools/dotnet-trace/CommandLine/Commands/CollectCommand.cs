@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, int duration);
 
         /// <summary>
         /// Collects a diagnostic trace from a currently running process.
@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="profile">A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.</param>
         /// <param name="format">The desired format of the created trace file.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, int duration)
         {
             try
             {
@@ -99,6 +99,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 var shouldExit = new ManualResetEvent(false);
                 var failed = false;
                 var terminated = false;
+                System.Timers.Timer durationTimer = null;
 
                 ct.Register(() => shouldExit.Set());
 
@@ -112,9 +113,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return ErrorCodes.SessionCreationError;
                     }
 
-                    var collectingTask = new Task(() => {
+                    if (duration != -1)
+                    {
+                        durationTimer = new System.Timers.Timer(duration * 1000);
+                        durationTimer.Elapsed += (s, e) => EventPipeClient.StopTracing(processId, sessionId);
+                        durationTimer.AutoReset = false;
+                    }
+
+                    var collectingTask = new Task(() =>
+                    {
                         try
                         {
+                            var stopwatch = new Stopwatch();
+                            durationTimer?.Start();
+                            stopwatch.Start();
+
                             using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                             {
                                 Console.Out.WriteLine($"Process     : {process.MainModule.FileName}");
@@ -131,7 +144,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     fs.Write(buffer, 0, nBytesRead);
 
                                     ResetCurrentConsoleLine(vTermMode.IsEnabled);
-                                    Console.Out.Write($"\tRecording trace {GetSize(fs.Length)}");
+                                    Console.Out.Write($"[{stopwatch.Elapsed.Seconds,3}s]\tRecording trace {GetSize(fs.Length)}");
 
                                     Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
                                 }
@@ -152,12 +165,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
 
-                    do {
+                    do
+                    {
                         while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
                     } while (!shouldExit.WaitOne(0) && Console.ReadKey(true).Key != ConsoleKey.Enter);
 
                     if (!terminated)
                     {
+                        durationTimer?.Stop();
                         EventPipeClient.StopTracing(processId, sessionId);
                     }
                     await collectingTask;
@@ -206,9 +221,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     prevBufferWidth = Console.BufferWidth;
                     clearLineString = new string(' ', Console.BufferWidth - 1);
                 }
-                Console.SetCursorPosition(0,lineToClear);
+                Console.SetCursorPosition(0, lineToClear);
                 Console.Out.Write(clearLineString);
-                Console.SetCursorPosition(0,lineToClear);
+                Console.SetCursorPosition(0, lineToClear);
             }
         }
 
@@ -235,6 +250,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     ProvidersOption(),
                     ProfileOption(),
                     CommonOptions.FormatOption(),
+                    DurationOption()
                 },
                 handler: HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler());
 
@@ -268,6 +284,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 alias: "--profile",
                 description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.",
                 argument: new Argument<string>(defaultValue: "runtime-basic") { Name = "profile_name" },
+                isHidden: false);
+
+        private static Option DurationOption() =>
+            new Option(
+                alias: "--duration",
+                description: @"When specified, will trace for the given number of seconds and automatically stop the trace.",
+                argument: new Argument<int>(defaultValue: -1) { Name = "duration_time_in_seconds" },
                 isHidden: false);
     }
 }
