@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     Description = $"Input trace file to be converted.  Defaults to '{CollectCommandHandler.DefaultTraceName}'."
                 }).ExistingOnly(),
                 symbols: new Option[] {
-                    CommonOptions.FormatOption(),
+                    CommonOptions.ConvertFormatOption(),
                     OutputOption()
                 },
                 handler: System.CommandLine.Invocation.CommandHandler.Create<IConsole, FileInfo, TraceFileFormat, FileInfo>(ConvertFile),

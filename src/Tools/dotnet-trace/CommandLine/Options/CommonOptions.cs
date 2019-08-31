@@ -25,5 +25,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 description: $"Sets the output format for the trace file.  Default is {DefaultTraceFileFormat}",
                 argument: new Argument<TraceFileFormat>(defaultValue: DefaultTraceFileFormat) { Name = "trace-file-format" },
                 isHidden: false);
+
+        public static Option ConvertFormatOption() =>
+            new Option(
+                aliases: new[] { "--format" },
+                description: $"Sets the output format for the trace file.  Default is {TraceFileFormat.Speedscope}",
+                argument: new Argument<TraceFileFormat>(defaultValue: TraceFileFormat.Speedscope ) { Name = "trace-file-format" },
+                isHidden: false);
     }
 }
