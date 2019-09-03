@@ -9313,7 +9313,7 @@ DECLARE_API(u)
             return Status;
         }
 
-        CLRDATA_IL_ADDRESS_MAP* map = nullptr;
+        ArrayHolder<CLRDATA_IL_ADDRESS_MAP> map(nullptr);
         ULONG32 mapCount = 0;
 
         if ((Status = pMethodInst->GetILAddressMap(mapCount, &mapCount, map)) != S_OK)
@@ -9321,7 +9321,12 @@ DECLARE_API(u)
             return Status;
         }
 
-        map = new CLRDATA_IL_ADDRESS_MAP[mapCount];
+        map = new NOTHROW CLRDATA_IL_ADDRESS_MAP[mapCount];
+        if (map == NULL)
+        {
+            ReportOOM();
+            return E_OUTOFMEMORY;
+        }
 
         if ((Status = pMethodInst->GetILAddressMap(mapCount, &mapCount, map)) != S_OK)
         {
@@ -9334,8 +9339,6 @@ DECLARE_API(u)
             // Decoded IL can be obtained through refactoring DumpIL code.
             ExtOut("%04x %p %p\n", map[i].ilOffset, map[i].startAddress, map[i].endAddress);
         }
-
-        delete[] map;
     }
 
     if (codeHeaderData.ColdRegionStart != NULL)
