@@ -173,7 +173,8 @@ Options:
                 4 - Informational
                 5 - Verbose
             KeyValueArgs            - A semicolon separated list of key=value
-        KeyValueArgs format: '[key1=value1][;key2=value2]'
+        KeyValueArgs format: '[key1=value1][;key2=value2]' 
+            note: values that contain ';' or '=' characters should be surrounded by double quotes ("), e.g., 'key="value;with=symbols";key2=value2'
 
   --buffersize <Size>
     Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.

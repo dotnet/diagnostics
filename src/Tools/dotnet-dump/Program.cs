@@ -27,15 +27,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
             new Command(
                 "collect", 
                 "Capture dumps from a process", 
-                new Option[] { ProcessIdOption(), OutputOption(), TypeOption() },
-                handler: CommandHandler.Create<IConsole, int, string, Dumper.DumpTypeOption>(new Dumper().Collect));
+                new Option[] { ProcessIdOption(), OutputOption(), DiagnosticLoggingOption(), TypeOption() },
+                handler: CommandHandler.Create<IConsole, int, string, bool, Dumper.DumpTypeOption>(new Dumper().Collect));
 
         private static Option ProcessIdOption() =>
             new Option(
                 new[] { "-p", "--process-id" }, 
                 "The process to collect a memory dump from.",
                 new Argument<int> { Name = "pid" });
-
 
         private static Option OutputOption() =>
             new Option(
@@ -44,6 +43,12 @@ namespace Microsoft.Diagnostics.Tools.Dump
 './core_YYYYMMDD_HHMMSS' on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full
 path and file name of the dump.",
                 new Argument<string>() { Name = "output_dump_path" });
+
+        private static Option DiagnosticLoggingOption() =>
+            new Option(
+                new[] { "--diag" }, 
+                "Enable dump collection diagnostic logging.",
+                new Argument<bool> { Name = "diag" });
 
         private static Option TypeOption() =>
             new Option(

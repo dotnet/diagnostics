@@ -2,7 +2,7 @@
 <Project>
   <PropertyGroup>
     <RepositoryUrl>https://github.com/dotnet/diagnostics</RepositoryUrl>
-    <PreReleaseVersionLabel>preview8</PreReleaseVersionLabel>
+    <PreReleaseVersionLabel>preview9</PreReleaseVersionLabel>
     <VersionPrefix>3.0.0</VersionPrefix>
     <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
     <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
@@ -22,7 +22,7 @@
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
 
     <!-- Other libs -->
-    <MicrosoftSymbolStoreVersion>1.0.0-dev-64131-02</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.41901</MicrosoftSymbolStoreVersion>
     <MicrosoftDiagnosticsRuntimeVersion>1.1.37504</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.44</MicrosoftDiagnosticsTracingTraceEventVersion>
@@ -40,7 +40,6 @@
     <RestoreSources>
       $(RestoreSources);
       https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json;
-      https://dotnet.myget.org/F/symstore/api/v3/index.json;
       https://dotnet.myget.org/F/dotnet-core/api/v3/index.json;
       https://dotnet.myget.org/F/dotnet-buildtools/api/v3/index.json;
       https://dotnet.myget.org/F/system-commandline/api/v3/index.json

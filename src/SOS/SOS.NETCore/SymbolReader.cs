@@ -137,8 +137,8 @@ namespace SOS
         /// <summary>
         /// Symbol server URLs
         /// </summary>
-        const string MsdlsymbolServer = "http://msdl.microsoft.com/download/symbols/";
-        const string SymwebSymbolService = "http://symweb.corp.microsoft.com/";
+        const string MsdlSymbolServer = "http://msdl.microsoft.com/download/symbols/";
+        const string SymwebSymbolServer = "http://symweb.corp.microsoft.com/";
 
         /// <summary>
         /// Read memory callback
@@ -159,25 +159,37 @@ namespace SOS
         /// <param name="symbolFileName">symbol file name and path</param>
         public delegate void SymbolFileCallback(IntPtr parameter, [MarshalAs(UnmanagedType.LPStr)] string moduleFileName, [MarshalAs(UnmanagedType.LPStr)] string symbolFileName);
 
+        /// <summary>
+        /// Temporary directory for dac/symbols
+        /// </summary>
+        public static string TempDirectory { get; private set; }
+
+        static readonly ITracer s_tracer = new Tracer();
         static SymbolStore s_symbolStore = null;
-        static bool s_symbolCacheAdded = false;
-        static ITracer s_tracer = null;
 
         /// <summary>
         /// Initializes symbol loading. Adds the symbol server and/or the cache path (if not null) to the list of
         /// symbol servers. This API can be called more than once to add more servers to search.
         /// </summary>
-        /// <param name="logging">if true, logging diagnostics to console</param>
+        /// <param name="logging">if true, enable logging diagnostics to console</param>
         /// <param name="msdl">if true, use the public microsoft server</param>
         /// <param name="symweb">if true, use symweb internal server and protocol (file.ptr)</param>
+        /// <param name="tempDirectory">temp directory unique to this instance of SOS</param>
         /// <param name="symbolServerPath">symbol server url (optional)</param>
         /// <param name="symbolCachePath">symbol cache directory path (optional)</param>
+        /// <param name="symbolDirectoryPath">symbol directory path to search (optional)</param>
         /// <param name="windowsSymbolPath">windows symbol path (optional)</param>
-        /// <returns></returns>
-        public static bool InitializeSymbolStore(bool logging, bool msdl, bool symweb, string symbolServerPath, string symbolCachePath, string windowsSymbolPath)
+        /// <returns>if false, failure</returns>
+        public static bool InitializeSymbolStore(bool logging, bool msdl, bool symweb, string tempDirectory, string symbolServerPath, string symbolCachePath, string symbolDirectoryPath, string windowsSymbolPath)
         {
-            if (s_tracer == null) {
-                s_tracer = new Tracer(enabled: logging, enabledVerbose: logging, Console.WriteLine);
+            if (logging) {
+                // Uses the standard console to do the logging instead of sending it to the hosting debugger console
+                // because windbg/cdb can only output on the client thread without dead locking. Microsoft.SymbolStore
+                // can log on any thread.
+                Trace.Listeners.Add(new TextWriterTraceListener(Console.OpenStandardOutput()));
+            }
+            if (TempDirectory == null) {
+                TempDirectory = tempDirectory;
             }
             SymbolStore store = s_symbolStore;
 
@@ -189,8 +201,15 @@ namespace SOS
                 }
             }
             else {
+                // Add the default symbol cache if no cache specified and adding server
+                if (symbolCachePath == null)
+                {
+                    if (msdl || symweb || symbolServerPath != null) {
+                        symbolCachePath = GetDefaultSymbolCache();
+                    }
+                }
                 // Build the symbol stores using the other parameters
-                if (!GetServerSymbolStore(ref store, msdl, symweb, symbolServerPath, symbolCachePath)) {
+                if (!GetServerSymbolStore(ref store, msdl, symweb, symbolServerPath, symbolCachePath, symbolDirectoryPath)) {
                     return false;
                 }
             }
@@ -202,24 +221,24 @@ namespace SOS
         /// <summary>
         /// Displays the symbol server and cache configuration
         /// </summary>
-        public static void DisplaySymbolStore()
+        public static void DisplaySymbolStore(WriteLine writeLine)
         {
-            if (s_tracer != null)
+            SymbolStore symbolStore = s_symbolStore;
+            while (symbolStore != null)
             {
-                SymbolStore symbolStore = s_symbolStore;
-                while (symbolStore != null)
-                {
-                    if (symbolStore is CacheSymbolStore cache) {
-                        s_tracer.WriteLine("Cache: {0}", cache.CacheDirectory);
-                    }
-                    else if (symbolStore is HttpSymbolStore http)  {
-                        s_tracer.WriteLine("Server: {0}", http.Uri);
-                    }
-                    else {
-                        s_tracer.WriteLine("Unknown symbol store");
-                    }
-                    symbolStore = symbolStore.BackingStore;
+                if (symbolStore is CacheSymbolStore cache) {
+                    writeLine($"Cache: {cache.CacheDirectory}");
                 }
+                else if (symbolStore is HttpSymbolStore http) {
+                    writeLine($"Server: {http.Uri}");
+                }
+                else if (symbolStore is DirectorySymbolStore directory) {
+                    writeLine($"Directory: {directory.Directory}");
+                }
+                else {
+                    writeLine("Unknown symbol store");
+                }
+                symbolStore = symbolStore.BackingStore;
             }
         }
 
@@ -228,9 +247,7 @@ namespace SOS
         /// </summary>
         public static void DisableSymbolStore()
         {
-            s_tracer = null;
             s_symbolStore = null;
-            s_symbolCacheAdded = false;
         }
 
         /// <summary>
@@ -238,16 +255,14 @@ namespace SOS
         /// </summary>
         /// <param name="callback">called back for each symbol file loaded</param>
         /// <param name="parameter">callback parameter</param>
-        /// <param name="tempDirectory">temp directory unique to this instance of SOS</param>
         /// <param name="moduleFilePath">module path</param>
         /// <param name="address">module base address</param>
         /// <param name="size">module size</param>
         /// <param name="readMemory">read memory callback delegate</param>
-        public static void LoadNativeSymbols(SymbolFileCallback callback, IntPtr parameter, string tempDirectory, string moduleFilePath, ulong address, int size, ReadMemoryDelegate readMemory)
+        public static void LoadNativeSymbols(SymbolFileCallback callback, IntPtr parameter, string moduleFilePath, ulong address, int size, ReadMemoryDelegate readMemory)
         {
             if (IsSymbolStoreEnabled())
             {
-                Debug.Assert(s_tracer != null);
                 Stream stream = new TargetStream(address, size, readMemory);
                 KeyTypeFlags flags = KeyTypeFlags.SymbolKey | KeyTypeFlags.ClrKeys;
                 KeyGenerator generator = null;
@@ -282,7 +297,7 @@ namespace SOS
                         // Don't download the sos binaries that come with the runtime
                         if (moduleFileName != "SOS.NETCore.dll" && !moduleFileName.StartsWith("libsos."))
                         {
-                            string downloadFilePath = GetSymbolFile(key, tempDirectory);
+                            string downloadFilePath = GetSymbolFile(key);
                             if (downloadFilePath != null)
                             {
                                 s_tracer.Information("{0}: {1}", moduleFileName, downloadFilePath);
@@ -302,10 +317,8 @@ namespace SOS
         /// Download a symbol from the symbol stores/server.
         /// </summary>
         /// <param name="key">index of the file to download</param>
-        /// <param name="tempDirectory">temp directory to put the file. This directory is only created if 
-        /// the file is NOT already in the cache and is downloaded.</param>
         /// <returns>Path to the downloaded file either in the cache or in the temp directory</returns>
-        public static string GetSymbolFile(SymbolStoreKey key, string tempDirectory)
+        public static string GetSymbolFile(SymbolStoreKey key)
         {
             string downloadFilePath = null;
 
@@ -322,8 +335,13 @@ namespace SOS
                             // If the downloaded doesn't already exists on disk in the cache, then write it to a temporary location.
                             if (!File.Exists(downloadFilePath))
                             {
-                                Directory.CreateDirectory(tempDirectory);
-                                downloadFilePath = Path.Combine(tempDirectory, Path.GetFileName(key.FullPathName));
+                                if (TempDirectory == null)
+                                {
+                                    int processId = Process.GetCurrentProcess().Id;
+                                    TempDirectory = Path.Combine(Path.GetTempPath(), "sos" + processId.ToString());
+                                    Directory.CreateDirectory(TempDirectory);
+                                }
+                                downloadFilePath = Path.Combine(TempDirectory, Path.GetFileName(key.FullPathName));
 
                                 using (Stream destinationStream = File.OpenWrite(downloadFilePath)) {
                                     file.Stream.CopyTo(destinationStream);
@@ -983,11 +1001,6 @@ namespace SOS
         {
             try
             {
-                // Add the default symbol cache if it hasn't already been added
-                if (!s_symbolCacheAdded) {
-                    s_symbolStore = new CacheSymbolStore(s_tracer, s_symbolStore, GetDefaultSymbolCache());
-                    s_symbolCacheAdded = true;
-                }
                 return s_symbolStore.GetFile(key, CancellationToken.None).GetAwaiter().GetResult();
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException || ex is BadImageFormatException || ex is IOException)
@@ -1016,6 +1029,7 @@ namespace SOS
                 {
                     string symbolServerPath = null;
                     string symbolCachePath = null;
+                    string symbolDirectoryPath = null;
                     bool msdl = false;
 
                     switch (parts[0].ToLowerInvariant())
@@ -1025,6 +1039,7 @@ namespace SOS
                             { 
                                 case 1:
                                     msdl = true;
+                                    symbolCachePath = GetDefaultSymbolCache();
                                     break;
                                 case 2:
                                     symbolServerPath = parts[1];
@@ -1053,12 +1068,20 @@ namespace SOS
                             break;
 
                         default:
-                            // Directory path search (currently ignored)
+                            // Directory path search
+                            switch (parts.Length)
+                            {
+                                case 1:
+                                    symbolDirectoryPath = parts[0];
+                                    break;
+                                default:
+                                    return false;
+                            }
                             break;
                     }
 
                     // Add the symbol stores to the chain
-                    if (!GetServerSymbolStore(ref store, msdl, false, symbolServerPath, symbolCachePath))
+                    if (!GetServerSymbolStore(ref store, msdl, false, symbolServerPath, symbolCachePath, symbolDirectoryPath))
                     {
                         return false;
                     }
@@ -1068,7 +1091,7 @@ namespace SOS
             return true;
         }
 
-        private static bool GetServerSymbolStore(ref SymbolStore store, bool msdl, bool symweb, string symbolServerPath, string symbolCachePath)
+        private static bool GetServerSymbolStore(ref SymbolStore store, bool msdl, bool symweb, string symbolServerPath, string symbolCachePath, string symbolDirectoryPath)
         {
             bool internalServer = false;
 
@@ -1077,11 +1100,11 @@ namespace SOS
             {
                 if (msdl)
                 {
-                    symbolServerPath = MsdlsymbolServer;
+                    symbolServerPath = MsdlSymbolServer;
                 }
                 else if (symweb)
                 {
-                    symbolServerPath = SymwebSymbolService;
+                    symbolServerPath = SymwebSymbolServer;
                     internalServer = true;
                 }
             }
@@ -1096,31 +1119,67 @@ namespace SOS
 
             if (symbolServerPath != null)
             {
+                // Validate symbol server path
                 if (!Uri.TryCreate(symbolServerPath, UriKind.Absolute, out Uri uri) || uri.IsFile)
                 {
                     return false;
                 }
 
-                // Create symbol server store
-                if (internalServer)
+                if (!IsDuplicateSymbolStore<HttpSymbolStore >(store, (httpSymbolStore) => uri.Equals(httpSymbolStore.Uri)))
                 {
-                    store = new SymwebHttpSymbolStore(s_tracer, store, uri);
-                }
-                else
-                {
-                    store = new HttpSymbolStore(s_tracer, store, uri);
+                    // Create symbol server store
+                    if (internalServer)
+                    {
+                        store = new SymwebHttpSymbolStore(s_tracer, store, uri);
+                    }
+                    else
+                    {
+                        store = new HttpSymbolStore(s_tracer, store, uri);
+                    }
                 }
             }
 
             if (symbolCachePath != null)
             {
-                store = new CacheSymbolStore(s_tracer, store, symbolCachePath);
+                symbolCachePath = Path.GetFullPath(symbolCachePath);
 
-                // Don't add the default cache later
-                s_symbolCacheAdded = true;
+                // Check only the first symbol store for duplication. The same cache directory can be
+                // added more than once but just not more than once in a row.
+                if (!(store is CacheSymbolStore cacheSymbolStore && IsPathEqual(symbolCachePath, cacheSymbolStore.CacheDirectory)))
+                {
+                    store = new CacheSymbolStore(s_tracer, store, symbolCachePath);
+                }
+            }
+
+            if (symbolDirectoryPath != null)
+            {
+                symbolDirectoryPath = Path.GetFullPath(symbolDirectoryPath);
+
+                if (!IsDuplicateSymbolStore<DirectorySymbolStore>(store, (directorySymbolStore) => IsPathEqual(symbolDirectoryPath, directorySymbolStore.Directory)))
+                {
+                    store = new DirectorySymbolStore(s_tracer, store, symbolDirectoryPath);
+                }
             }
 
             return true;
+        }
+
+        private static bool IsDuplicateSymbolStore<T>(SymbolStore symbolStore, Func<T, bool> match) 
+            where T : SymbolStore
+        {
+            while (symbolStore != null)
+            {
+                if (symbolStore is T store)
+                {
+                    // TODO: replace this by adding an Equal override to the symbol stores
+                    if (match(store))
+                    {
+                        return true;
+                    }
+                }
+                symbolStore = symbolStore.BackingStore;
+            }
+            return false;
         }
 
         private static string GetDefaultSymbolCache()
@@ -1142,17 +1201,31 @@ namespace SOS
         /// <returns>stream or null if doesn't exist or error</returns>
         internal static Stream TryOpenFile(string path)
         {
-            if (!File.Exists(path))
+            if (File.Exists(path))
             {
-                return null;
+                try
+                {
+                    return File.OpenRead(path);
+                }
+                catch (Exception ex) when (ex is UnauthorizedAccessException || ex is NotSupportedException || ex is IOException)
+                {
+                }
             }
-            try
+            return null;
+        }
+
+        /// <summary>
+        /// Compares two file paths using OS specific casing.
+        /// </summary>
+        private static bool IsPathEqual(string path1, string path2)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) 
             {
-                return File.OpenRead(path);
+                return StringComparer.OrdinalIgnoreCase.Equals(path1, path2);
             }
-            catch
+            else 
             {
-                return null;
+                return string.Equals(path1, path2);
             }
         }
 

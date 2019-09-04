@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
     public interface ICounterPayload
     {
         string GetName();
-        string GetValue();
+        double GetValue();
         string GetDisplay();
     }
 
@@ -19,12 +19,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
     class CounterPayload : ICounterPayload
     {
         public string m_Name;
-        public string m_Value;
+        public double m_Value;
         public string m_DisplayName;
         public CounterPayload(IDictionary<string, object> payloadFields)
         {
             m_Name = payloadFields["Name"].ToString();
-            m_Value = payloadFields["Mean"].ToString();
+            m_Value = (double)payloadFields["Mean"];
             m_DisplayName = payloadFields["DisplayName"].ToString();
         }
 
@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             return m_Name;
         }
 
-        public string GetValue()
+        public double GetValue()
         {
             return m_Value;
         }
@@ -47,15 +47,19 @@ namespace Microsoft.Diagnostics.Tools.Counters
     class IncrementingCounterPayload : ICounterPayload
     {
         public string m_Name;
-        public string m_Value;
+        public double m_Value;
         public string m_DisplayName;
         public string m_DisplayRateTimeScale;
-        public IncrementingCounterPayload(IDictionary<string, object> payloadFields)
+        public IncrementingCounterPayload(IDictionary<string, object> payloadFields, int interval)
         {
             m_Name = payloadFields["Name"].ToString();
-            m_Value = payloadFields["Increment"].ToString();
+            m_Value = (double)payloadFields["Increment"];
             m_DisplayName = payloadFields["DisplayName"].ToString();
-            m_DisplayRateTimeScale = TimeSpan.Parse(payloadFields["DisplayRateTimeScale"].ToString()).ToString("%s' sec'");
+            m_DisplayRateTimeScale = payloadFields["DisplayRateTimeScale"].ToString();
+
+            // In case these properties are not provided, set them to appropriate values.
+            m_DisplayName = m_DisplayName.Length == 0 ? m_Name : m_DisplayName;
+            m_DisplayRateTimeScale = m_DisplayRateTimeScale.Length == 0 ? $"{interval} sec" : TimeSpan.Parse(m_DisplayRateTimeScale).ToString("%s' sec'");
         }
 
         public string GetName()
@@ -63,7 +67,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             return m_Name;
         }
 
-        public string GetValue()
+        public double GetValue()
         {
             return m_Value;
         }

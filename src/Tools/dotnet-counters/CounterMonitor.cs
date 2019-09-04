@@ -55,11 +55,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ICounterPayload payload;
                 if (payloadFields.ContainsKey("CounterType"))
                 {
-                    payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
+                    payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields, _interval) : (ICounterPayload)new CounterPayload(payloadFields);
                 }
                 else
                 {
-                    payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
+                    payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields, _interval) : (ICounterPayload)new CounterPayload(payloadFields);
                 }
                 writer.Update(obj.ProviderName, payload, pauseCmdSet);
             }
@@ -195,7 +195,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _ct.Register(() => shouldExit.Set());
 
             var terminated = false;
-            writer.InitializeDisplay();
+            writer.AssignRowsAndInitializeDisplay();
 
             Task monitorTask = new Task(() => {
                 try

@@ -862,7 +862,8 @@ public class SOSRunner : IDisposable
             DebuggerToString,
             OS.Kind.ToString().ToUpperInvariant(),
             _config.TestProduct.ToUpperInvariant(),
-            _config.TargetArchitecture.ToLowerInvariant()
+            _config.TargetArchitecture.ToUpperInvariant(),
+            "MAJOR_RUNTIME_VERSION_" + _config.RuntimeFrameworkVersionMajor.ToString()
         };
         if (_isDump)
         {
