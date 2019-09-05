@@ -17,18 +17,29 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         public static int ConvertFile(IConsole console, FileInfo inputFilename, TraceFileFormat format, FileInfo output)
         {
-                if (format == TraceFileFormat.NetTrace)
-                    throw new ArgumentException("Cannot convert to nettrace format.");
-                
-                if (!inputFilename.Exists)
-                    throw new FileNotFoundException($"File '{inputFilename}' does not exist.");
-                
-                if (output == null)
-                    output = inputFilename;
+            if ((int)format <= 0)
+            {
+                Console.Error.WriteLine("--format is required.");
+                return ErrorCodes.ArgumentError;
+            }
 
-                TraceFileFormatConverter.ConvertToFormat(format, inputFilename.FullName, output.FullName);
+            if (format == TraceFileFormat.NetTrace)
+            {
+                Console.Error.WriteLine("Cannot convert a nettrace file to nettrace format.");
+                return ErrorCodes.ArgumentError;
+            }
 
-                return 0;
+            if (!inputFilename.Exists)
+            {
+                Console.Error.WriteLine($"File '{inputFilename}' does not exist.");
+                return ErrorCodes.ArgumentError;
+            }
+
+            if (output == null)
+                output = inputFilename;
+
+            TraceFileFormatConverter.ConvertToFormat(format, inputFilename.FullName, output.FullName);
+            return 0;
         }
 
         public static Command ConvertCommand() =>
@@ -40,7 +51,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     Description = $"Input trace file to be converted.  Defaults to '{CollectCommandHandler.DefaultTraceName}'."
                 }).ExistingOnly(),
                 symbols: new Option[] {
-                    CommonOptions.FormatOption(),
+                    CommonOptions.ConvertFormatOption(),
                     OutputOption()
                 },
                 handler: System.CommandLine.Invocation.CommandHandler.Create<IConsole, FileInfo, TraceFileFormat, FileInfo>(ConvertFile),
