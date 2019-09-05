@@ -411,7 +411,7 @@ followed by a report listing all the types found, their size and number:
 	...
 
 "Free" objects are simply regions of space the garbage collector can use later.
-If 30% or more of the heap contains "Free" objects, the process may suffer from
+If 30%% or more of the heap contains "Free" objects, the process may suffer from
 heap fragmentation. This is usually caused by pinning objects for a long time 
 combined with a high rate of allocation. Here is example output where !DumpHeap
 provides a warning about fragmentation:
@@ -815,6 +815,8 @@ COMMAND: threads.
            output. Example of special threads include: GC threads (in 
            concurrent GC and server GC), Debugger helper threads, Finalizer 
            threads, AppDomain Unload threads, and Threadpool timer threads.
+-managedexception: optional. Sets the current thread to first thread with 
+                   an managed exception for the "printexception" command.
 
 Each thread has many attributes, many of which can be ignored. The important 
 ones are discussed below:
@@ -846,7 +848,7 @@ exceptions by switching to the thread in question, and running
 \\
 
 COMMAND: clrstack.
-!CLRStack [-a] [-l] [-p] [-n] [-f]
+!CLRStack [-a] [-l] [-p] [-n] [-f] [-r] [-all]
 !CLRStack [-a] [-l] [-p] [-i] [variable name] [frame]
 
 CLRStack attempts to provide a true stack trace for managed code only. It is
@@ -860,6 +862,10 @@ for -l and -p combined.
 The -f option (full mode) displays the native frames intermixing them with
 the managed frames and the assembly name and function offset for the managed
 frames.
+
+The -r option dumps the registers for each stack frame.
+
+The -all option dumps all the managed threads' stacks.
 
 If the debugger has the option SYMOPT_LOAD_LINES specified (either by the
 .lines or .symopt commands), SOS will look up the symbols for every managed 
@@ -1992,8 +1998,8 @@ Sample output:
 	Total    337556       24           306968       8800        
 
 	Free space:                                                 Percentage
-	Heap0    28           12           12           64          SOH:  0% LOH:  0%
-	Heap1    104          12           12           16          SOH:  0% LOH:100%
+	Heap0    28           12           12           64          SOH:  0%% LOH:  0%%
+	Heap1    104          12           12           16          SOH:  0%% LOH:100%%
 	Total    132          24           24           80          
 
 	0:002> !heapstat -inclUnrooted
@@ -2003,13 +2009,13 @@ Sample output:
 	Total    337556       24           306968       8800        
 
 	Free space:                                                 Percentage
-	Heap0    28           12           12           64          SOH:  0% LOH:  0%
-	Heap1    104          12           12           16          SOH:  0% LOH:100%
+	Heap0    28           12           12           64          SOH:  0%% LOH:  0%%
+	Heap1    104          12           12           16          SOH:  0%% LOH:100%%
 	Total    132          24           24           80          
 
 	Unrooted objects:                                           Percentage
-	Heap0    152212       0            306196       0           SOH: 94% LOH:  0%
-	Heap1    155704       0            0            0           SOH: 97% LOH:  0%
+	Heap0    152212       0            306196       0           SOH: 94%% LOH:  0%%
+	Heap1    155704       0            0            0           SOH: 97%% LOH:  0%%
 	Total    307916       0            306196       0           
 
 The percentage column contains a breakout of free or unrooted bytes to total bytes.
@@ -2051,7 +2057,7 @@ is if the system is running out physical memory (+ page file if you have one) so
 GC can not commit memory it needs. You can look at these scenarios by using performance
 counters or debugger commands. For example for the former scenario the "!address 
 -summary" debugger command will show you the largest free region in the VM. For
-the latter scenario you can look at the "Memory\% Committed Bytes In Use" see
+the latter scenario you can look at the "Memory%% Committed Bytes In Use" see
 if you are running low on commit space. One important thing to keep in mind is
 when you do this kind of memory analysis it could an aftereffect and doesn't 
 completely agree with what this command tells you, in which case the command should
@@ -2605,14 +2611,19 @@ You can use the "dotnet --info" in a command shell to find the path of an instal
 \\
 
 COMMAND: setsymbolserver.
-SetSymbolServer [-ms] [-mi] [-disable] [-log] [-cache <cache-path>] [<symbol-server-URL>]
+SetSymbolServer [-ms] [-mi] [-disable] [-log] [-cache <cache-path>] [-directory <search-directory>] [<symbol-server-URL>]
 
 -ms - Use the public Microsoft symbol server.
 -mi - Use the internal symweb symbol server.
 -disable - Disable symbol download support.
--cache - Specific a symbol cache directory. The default is %TEMP%\SymbolCache if not specified.
+-directory - Directory to search for symbols. Can be more than one.
+-cache - Specific a symbol cache directory. The default is %%TEMP%%\SymbolCache if not specified.
 -log - Enable symbol download logging.
 <symbol-server-URL> - Symbol server URL.
 
 This commands enables symbol server support for portable PDBs in SOS. If the .sympath is set, this
 symbol server support is automatically enabled.
+
+To disable downloading or clear the current SOS symbol settings allowing new symbol paths to be set:
+
+    0:000> !setsymbolserver -disable

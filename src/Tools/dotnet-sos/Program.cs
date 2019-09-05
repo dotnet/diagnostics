@@ -7,6 +7,8 @@ using System;
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.SOS
@@ -28,19 +30,26 @@ namespace Microsoft.Diagnostics.Tools.SOS
             new Command(
                 "install", 
                 "Installs SOS and configures LLDB to load it on startup.", 
-                handler: CommandHandler.Create<IConsole>((console) => InvokeAsync(console, install: true)));
+                new Option[] { ArchitectureOption() },
+                handler: CommandHandler.Create<IConsole, Architecture?>((console, architecture) => InvokeAsync(console, architecture, install: true)));
+
+        private static Option ArchitectureOption() =>
+            new Option(
+                new[] { "--architecture" }, 
+                "The process to collect a memory dump from.",
+                new Argument<Architecture>() { Name = "architecture" });
 
         private static Command UninstallCommand() =>
             new Command(
                 "uninstall",
                 "Uninstalls SOS and reverts any configuration changes to LLDB.",
-                handler: CommandHandler.Create<IConsole>((console) => InvokeAsync(console, install: false)));
+                handler: CommandHandler.Create<IConsole>((console) => InvokeAsync(console, architecture: null, install: false)));
 
-        private static Task<int> InvokeAsync(IConsole console, bool install)
+        private static Task<int> InvokeAsync(IConsole console, Architecture? architecture, bool install)
         {
             try
             {
-                var sosInstaller = new InstallHelper((message) => console.Out.WriteLine(message));
+                var sosInstaller = new InstallHelper((message) => console.Out.WriteLine(message), architecture);
                 if (install) {
                     sosInstaller.Install();
                 }

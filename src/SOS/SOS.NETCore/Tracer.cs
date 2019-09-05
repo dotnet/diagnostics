@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Diagnostics;
 
 namespace SOS
 {
@@ -11,22 +12,14 @@ namespace SOS
     /// </summary>
     internal sealed class Tracer : Microsoft.SymbolStore.ITracer
     {
-        readonly bool m_enabled;
-        readonly bool m_enabledVerbose;
-        readonly SymbolReader.WriteLine m_output;
-
-        public Tracer(bool enabled, bool enabledVerbose, SymbolReader.WriteLine output)
+        public Tracer()
         {
-            m_enabled = enabled;
-            m_enabledVerbose = enabledVerbose;
-            m_output = output;
         }
 
         public void WriteLine(string message)
         {
-            lock (this) {
-                m_output?.Invoke(message);
-            }
+            Trace.WriteLine(message);
+            Trace.Flush();
         }
 
         public void WriteLine(string format, params object[] arguments)
@@ -36,66 +29,48 @@ namespace SOS
 
         public void Information(string message)
         {
-            if (m_enabled)
-            {
-                WriteLine(message);
-            }
+            Trace.TraceInformation(message);
+            Trace.Flush();
         }
 
         public void Information(string format, params object[] arguments)
         {
-            if (m_enabled)
-            {
-                WriteLine(format, arguments);
-            }
+            Trace.TraceInformation(format, arguments);
+            Trace.Flush();
         }
 
         public void Warning(string message)
         {
-            if (m_enabled)
-            {
-                WriteLine("WARNING: " + message); 
-            }
+            Trace.TraceWarning(message);
+            Trace.Flush();
         }
             
         public void Warning(string format, params object[] arguments)
         {
-            if (m_enabled)
-            {
-                WriteLine("WARNING: " + format, arguments);
-            }
+            Trace.TraceWarning(format, arguments);
+            Trace.Flush();
         }
 
         public void Error(string message)
         {
-            if (m_enabled) 
-            {
-                WriteLine("ERROR: " + message);
-            }
+            Trace.TraceError(message);
+            Trace.Flush();
         }
 
         public void Error(string format, params object[] arguments)
         {
-            if (m_enabled)
-            {
-                WriteLine("ERROR: " + format, arguments);
-            }
+            Trace.TraceError(format, arguments);
+            Trace.Flush();
         }
 
         public void Verbose(string message)
         {
-            if (m_enabledVerbose)
-            {
-                WriteLine(message);
-            }
+            Information(message);
         }
 
         public void Verbose(string format, params object[] arguments)
         {
-            if (m_enabledVerbose)
-            {
-                WriteLine(format, arguments);
-            }
+            Information(format, arguments);
         }
     }
 }

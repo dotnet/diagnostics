@@ -6,12 +6,17 @@ using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
+using Microsoft.SymbolStore;
+using Microsoft.SymbolStore.KeyGenerators;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -54,18 +59,20 @@ namespace SOS
             bool logging,
             bool msdl,
             bool symweb,
+            string tempDirectory,
             string symbolServerPath,
             string symbolCachePath,
+            string symbolDirectoryPath,
             string windowsSymbolPath);
 
-        private delegate void DisplaySymbolStoreDelegate();
+        private delegate void DisplaySymbolStoreDelegate(
+            SymbolReader.WriteLine writeLine);
 
         private delegate void DisableSymbolStoreDelegate();
 
         private delegate void LoadNativeSymbolsDelegate(
             SymbolReader.SymbolFileCallback callback,
             IntPtr parameter,
-            string tempDirectory,
             string moduleFilePath,
             ulong address,
             int size,
@@ -158,6 +165,7 @@ namespace SOS
         private readonly COMCallableIUnknown _ccw;  
         private readonly IntPtr _interface;
         private IntPtr _sosLibrary = IntPtr.Zero;
+        private Dictionary<string, PEReader> _pathToPeReader = new Dictionary<string, PEReader>();
 
         /// <summary>
         /// Enable the assembly resolver to get the right SOS.NETCore version (the one
@@ -186,6 +194,7 @@ namespace SOS
         /// <summary>
         /// Create an instance of the hosting class
         /// </summary>
+        /// <param name="serviceProvider">Service provider</param>
         public SOSHost(IServiceProvider serviceProvider)
         {
             DataTarget dataTarget = serviceProvider.GetService<DataTarget>();
@@ -251,7 +260,7 @@ namespace SOS
                 // SOS depends on that the temp directory ends with "/".
                 if (!string.IsNullOrEmpty(tempDirectory) && tempDirectory[tempDirectory.Length - 1] != Path.DirectorySeparatorChar)
                 {
-                    tempDirectory = tempDirectory + Path.DirectorySeparatorChar;
+                    tempDirectory += Path.DirectorySeparatorChar;
                 }
 
                 int result = initializeFunc(
@@ -266,6 +275,7 @@ namespace SOS
                 {
                     throw new InvalidOperationException($"SOS initialization FAILED 0x{result:X8}");
                 }
+                Trace.TraceInformation("SOS initialized: tempDirectory '{0}' dacFilePath '{1}' sosPath '{2}'", tempDirectory, dacFilePath, sosPath);
             }
         }
 
@@ -453,6 +463,106 @@ namespace SOS
                 return S_OK;
             }
             return E_FAIL;
+        }
+
+        internal unsafe int ReadVirtualForWindows(
+            IntPtr self,
+            ulong address,
+            IntPtr buffer,
+            uint bytesRequested,
+            uint* pbytesRead)
+        {
+            if (DataReader.ReadMemory(address, buffer, unchecked((int)bytesRequested), out int bytesRead))
+            {
+                Write(pbytesRead, (uint)bytesRead);
+                return S_OK;
+            }
+
+            // The memory read failed. Check if there is a module that contains the 
+            // address range being read and map it into the virtual address space.
+            foreach (ModuleInfo module in DataReader.EnumerateModules())
+            {
+                ulong start = module.ImageBase;
+                ulong end = start + module.FileSize;
+                if (start <= address && end > address)
+                {
+                    Trace.TraceInformation("ReadVirtualForWindows: address {0:X16} size {1:X8} found module {2}", address, bytesRequested, module.FileName);
+
+                    // We found a module that contains the memory requested. Now find or download the PE image.
+                    PEReader reader = GetPEReader(module);
+                    if (reader != null)
+                    {
+                        // Read the memory from the PE image. There are a few limitions:
+                        // 1) Fix ups are NOT applied to the sections
+                        // 2) Memory regions that cross/contain heap memory into module image memory
+                        int rva = (int)(address - start);
+                        try
+                        {
+                            PEMemoryBlock block = reader.GetSectionData(rva);
+                            if (block.Pointer == null)
+                            {
+                                Trace.TraceInformation("ReadVirtualForWindows: rva {0:X8} not in any section; reading from entire image", rva);
+
+                                // If the address isn't contained in one of the sections, assume that SOS is reader the PE headers directly.
+                                block = reader.GetEntireImage();
+                            }
+                            BlobReader blob = block.GetReader();
+                            byte[] data = blob.ReadBytes((int)bytesRequested);
+
+                            Marshal.Copy(data, 0, buffer, data.Length);
+                            Write(pbytesRead, (uint)data.Length);
+                            return S_OK;
+                        }
+                        catch (Exception ex) when (ex is BadImageFormatException || ex is InvalidOperationException || ex is IOException)
+                        {
+                            Trace.TraceError("ReadVirtualForWindows: exception {0}", ex);
+                        }
+                    }
+                    break;
+                }
+            }
+
+            return E_FAIL;
+        }
+
+        private PEReader GetPEReader(ModuleInfo module)
+        {
+            if (!_pathToPeReader.TryGetValue(module.FileName, out PEReader reader))
+            {
+                Stream stream = null;
+
+                string downloadFilePath = module.FileName;
+                if (!File.Exists(downloadFilePath)) 
+                {
+                    if (SymbolReader.IsSymbolStoreEnabled())
+                    {
+                        SymbolStoreKey key = PEFileKeyGenerator.GetKey(Path.GetFileName(downloadFilePath), module.TimeStamp, module.FileSize);
+                        if (key != null)
+                        {
+                            // Now download the module from the symbol server
+                            downloadFilePath = SymbolReader.GetSymbolFile(key);
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(downloadFilePath))
+                {
+                    try
+                    {
+                        stream = File.OpenRead(downloadFilePath);
+                    }
+                    catch (Exception ex) when (ex is DirectoryNotFoundException || ex is FileNotFoundException || ex is UnauthorizedAccessException || ex is IOException)
+                    {
+                        Trace.TraceError("GetPEReader: exception {0}", ex);
+                    }
+                    if (stream != null)
+                    {
+                        reader = new PEReader(stream);
+                        _pathToPeReader.Add(module.FileName, reader);
+                    }
+                }
+            }
+            return reader;
         }
 
         internal unsafe int WriteVirtual(

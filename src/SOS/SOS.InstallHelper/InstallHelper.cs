@@ -45,12 +45,14 @@ namespace SOS
         /// <summary>
         /// Create an instance of the installer.
         /// </summary>
+        /// <param name="writeLine">console output delegate</param>
+        /// <param name="architecture">architecture to install or if null using the current process architecture</param>
         /// <exception cref="SOSInstallerException">environment variable not found</exception>
-        public InstallHelper(Action<string> writeLine)
+        public InstallHelper(Action<string> writeLine, Architecture? architecture = null)
         {
             m_writeLine = writeLine;
-            string home = null;
-            string rid = GetRid();
+            string rid = GetRid(architecture);
+            string home;
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) 
             {
@@ -300,7 +302,8 @@ namespace SOS
         /// <summary>
         /// Returns the RID
         /// </summary>
-        public static string GetRid()
+        /// <param name="architecture">architecture to install or if null using the current process architecture</param>
+        public static string GetRid(Architecture? architecture = null)
         {
             string os = null;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -330,8 +333,8 @@ namespace SOS
             {
                 throw new SOSInstallerException($"Unsupported operating system {RuntimeInformation.OSDescription}");
             }
-            string architecture = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
-            return $"{os}-{architecture}";
+            string architectureString = (architecture.HasValue ? architecture : RuntimeInformation.ProcessArchitecture).ToString().ToLowerInvariant();
+            return $"{os}-{architectureString}";
         }
 
         private void WriteLine(string format, params object[] args)

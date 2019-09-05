@@ -165,6 +165,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     interpreter.AddCommand("histroot", new sosCommand("HistRoot"), "Displays information related to both promotions and relocations of the specified root.");
     interpreter.AddCommand("sethostruntime", new sosCommand("SetHostRuntime"), "Sets or displays the .NET Core runtime directory to use to run managed code in SOS.");
     interpreter.AddCommand("setsymbolserver", new sosCommand("SetSymbolServer"), "Enables the symbol server support ");
+    interpreter.AddCommand("sympath", new sosCommand("SetSymbolServer", "-sympath"), "Add server, cache and directory paths in the Windows symbol path format.");
     interpreter.AddCommand("soshelp", new sosCommand("Help"), "Displays all available commands when no parameter is specified, or displays detailed help information about the specified command. soshelp <command>");
     return true;
 }
