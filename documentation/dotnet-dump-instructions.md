@@ -1,7 +1,7 @@
 Dump collection and analysis utility (dotnet-dump)
 ==================================================
 
-The dotnet-dump CLI global tool is way to collect and analyze Windows and Linux dumps all without any native debugger involved like lldb on Linux. This is important on platforms like Alpine Linux where a fully working lldb isn't available. The dotnet-dump tool will allow you to run SOS commands to analyze crashes and the GC, but it isn't a native debugger so things like displaying the native stack frames isn't supported.
+The dotnet-dump CLI global tool is way to collect and analyze Windows and Linux dumps all without any native debugger involved like lldb on Linux. This is important on platforms like Alpine Linux or Linux ARM32/ARM64 where a fully working lldb isn't available. The dotnet-dump tool will allow you to run SOS commands to analyze crashes and the GC, but it isn't a native debugger so things like displaying the native stack frames isn't supported.
 
 Currently not supported on macOS.
 
@@ -9,9 +9,9 @@ Currently not supported on macOS.
 
 The first step is to install the dotnet-dump CLI global tool. This requires at least the 2.1 or greater .NET Core SDK to be installed. If you see the error message `Tool 'dotnet-dump' is already installed`, you will need to uninstall the global tool (see below). 
 
-    $ dotnet tool install -g dotnet-dump --version 3.0.0-preview8.19412.1
+    $ dotnet tool install -g dotnet-dump --version 3.0.0-preview9.19454.1
     You can invoke the tool using the following command: dotnet-dump
-    Tool 'dotnet-dump' (version '3.0.0-preview8.19412.1') was successfully installed.
+    Tool 'dotnet-dump' (version '3.0.0-preview9.19454.1') was successfully installed.
 
 If this is the first global tool installed or you get message `Could not execute because the specified command or file was not found.` you need to add `$HOME/.dotnet/tools` to your path.
 
@@ -118,4 +118,4 @@ This command on Microsoft .NET Core SDK Linux docker images can throw `Unhandled
 ## Uninstalling dotnet-dump 
 
     $ dotnet tool uninstall -g dotnet-dump
-    Tool 'dotnet-dump' (version '3.0.0-preview8.19412.1') was successfully uninstalled.
+    Tool 'dotnet-dump' (version '3.0.0-preview9.19454.1') was successfully uninstalled.
