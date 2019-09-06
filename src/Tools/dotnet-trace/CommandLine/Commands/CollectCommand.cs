@@ -292,7 +292,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new Option(
                 alias: "--duration",
                 description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.",
-                argument: new Argument<TimeSpan>(defaultValue: null) { Name = "duration-time-in-seconds" },
+                argument: new Argument<TimeSpan>(defaultValue: null) { Name = "duration-timespan" },
                 isHidden: true);
     }
 }
