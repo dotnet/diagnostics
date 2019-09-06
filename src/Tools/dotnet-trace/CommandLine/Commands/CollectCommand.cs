@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration);
 
         /// <summary>
         /// Collects a diagnostic trace from a currently running process.
@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="profile">A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.</param>
         /// <param name="format">The desired format of the created trace file.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration)
         {
             try
             {
@@ -99,6 +99,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 var shouldExit = new ManualResetEvent(false);
                 var failed = false;
                 var terminated = false;
+                System.Timers.Timer durationTimer = null;
 
                 ct.Register(() => shouldExit.Set());
 
@@ -112,14 +113,28 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return ErrorCodes.SessionCreationError;
                     }
 
-                    var collectingTask = new Task(() => {
+                    if (duration != null)
+                    {
+                        durationTimer = new System.Timers.Timer(duration.TotalMilliseconds);
+                        durationTimer.Elapsed += (s, e) => shouldExit.Set();
+                        durationTimer.AutoReset = false;
+                    }
+
+                    var collectingTask = new Task(() =>
+                    {
                         try
                         {
+                            var stopwatch = new Stopwatch();
+                            durationTimer?.Start();
+                            stopwatch.Start();
+
                             using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                             {
                                 Console.Out.WriteLine($"Process     : {process.MainModule.FileName}");
                                 Console.Out.WriteLine($"Output File : {fs.Name}");
                                 Console.Out.WriteLine($"\tSession Id: 0x{sessionId:X16}");
+                                if (duration != null)
+                                    Console.WriteLine($"Tracing for {duration.ToString(@"dd\:hh\:mm\:ss")}");
                                 lineToClear = Console.CursorTop;
                                 var buffer = new byte[16 * 1024];
 
@@ -131,7 +146,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     fs.Write(buffer, 0, nBytesRead);
 
                                     ResetCurrentConsoleLine(vTermMode.IsEnabled);
-                                    Console.Out.Write($"\tRecording trace {GetSize(fs.Length)}");
+                                    Console.Out.Write($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
 
                                     Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
                                 }
@@ -152,12 +167,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
 
-                    do {
+                    do
+                    {
                         while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
                     } while (!shouldExit.WaitOne(0) && Console.ReadKey(true).Key != ConsoleKey.Enter);
 
                     if (!terminated)
                     {
+                        durationTimer?.Stop();
                         EventPipeClient.StopTracing(processId, sessionId);
                     }
                     await collectingTask;
@@ -206,9 +223,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     prevBufferWidth = Console.BufferWidth;
                     clearLineString = new string(' ', Console.BufferWidth - 1);
                 }
-                Console.SetCursorPosition(0,lineToClear);
+                Console.SetCursorPosition(0, lineToClear);
                 Console.Out.Write(clearLineString);
-                Console.SetCursorPosition(0,lineToClear);
+                Console.SetCursorPosition(0, lineToClear);
             }
         }
 
@@ -235,6 +252,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     ProvidersOption(),
                     ProfileOption(),
                     CommonOptions.FormatOption(),
+                    DurationOption()
                 },
                 handler: HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler());
 
@@ -267,7 +285,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new Option(
                 alias: "--profile",
                 description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.",
-                argument: new Argument<string>(defaultValue: "runtime-basic") { Name = "profile_name" },
+                argument: new Argument<string>(defaultValue: "runtime-basic") { Name = "profile-name" },
                 isHidden: false);
+
+        private static Option DurationOption() =>
+            new Option(
+                alias: "--duration",
+                description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.",
+                argument: new Argument<TimeSpan>(defaultValue: null) { Name = "duration-timespan" },
+                isHidden: true);
     }
 }
