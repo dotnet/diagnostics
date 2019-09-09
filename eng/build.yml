@@ -126,14 +126,32 @@ phases:
         condition: succeeded()
  
     - task: PublishBuildArtifacts@1
-      displayName: Upload Artifacts
+      displayName: Publish Build Artifacts
       inputs:
         pathtoPublish: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
         artifactName: $(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
       condition: ne(variables['_PublishArtifacts'], '')
 
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Artifacts on failure
+      inputs:
+        PathtoPublish: '$(Build.SourcesDirectory)/artifacts/bin'
+        PublishLocation: Container
+        ArtifactName: Artifacts_$(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
+      continueOnError: true
+      condition: failed()
+
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Dump Artifacts on failure
+      inputs:
+        PathtoPublish: '$(Build.SourcesDirectory)/artifacts/tmp/$(_BuildConfig)/dumps'
+        PublishLocation: Container
+        ArtifactName: Dumps_$(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
+      continueOnError: true
+      condition: failed()
+
     - task: CopyFiles@2
-      displayName: Gather Build Logs
+      displayName: Gather Logs
       inputs:
         sourceFolder: '$(Build.SourcesDirectory)/artifacts'
         contents: '?(log|TestResults)/**'
@@ -142,7 +160,7 @@ phases:
       condition: always()
 
     - task: PublishBuildArtifacts@1
-      displayName: Publish Logs to VSTS
+      displayName: Publish Logs
       inputs:
         PathtoPublish: '$(Build.StagingDirectory)/BuildLogs'
         PublishLocation: Container

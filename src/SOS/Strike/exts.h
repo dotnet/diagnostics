@@ -166,10 +166,6 @@ ArchQuery(void);
 void
 ExtRelease(void);
 
-#ifdef _DEBUG
-extern DWORD_PTR g_filterHint;
-#endif
-
 extern BOOL ControlC;
 
 inline BOOL IsInterrupt()

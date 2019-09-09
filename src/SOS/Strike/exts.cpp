@@ -27,8 +27,6 @@ OnUnloadTask *OnUnloadTask::s_pUnloadTaskList = NULL;
 // Valid for the lifetime of the debug session.
 //
 
-DWORD_PTR g_filterHint = 0;
-
 PDEBUG_CLIENT         g_ExtClient;    
 PDEBUG_DATA_SPACES2   g_ExtData2;
 PDEBUG_ADVANCED       g_ExtAdvanced;

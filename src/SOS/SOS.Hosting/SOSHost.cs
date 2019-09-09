@@ -669,9 +669,27 @@ namespace SOS
             uint* index,
             ulong* baseAddress)
         {
-            Write(index);
-            Write(baseAddress);
-            return E_NOTIMPL;
+            Debug.Assert(startIndex == 0);
+
+            // This causes way too many problems on Linux because of various
+            // bugs in the CLRMD ELF dump reader module enumeration and isn't
+            // necessary on linux anyway.
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                // Find the module that contains the offset.
+                uint i = 0;
+                foreach (ModuleInfo module in DataReader.EnumerateModules())
+                {
+                    if (offset >= module.ImageBase && offset < (module.ImageBase + module.FileSize))
+                    {
+                        Write(index, i);
+                        Write(baseAddress, module.ImageBase);
+                        return S_OK;
+                    }
+                    i++;
+                }
+            }
+            return E_FAIL;
         }
 
         internal unsafe int GetModuleNames(

@@ -1,0 +1,86 @@
+#
+# Tests the various SOS commands with the SymbolTestApp debuggee
+#
+
+CONTINUE
+
+LOADSOS
+
+IFDEF:DOTNETDUMP
+COMMAND:clrmodules
+VERIFY:\s*<HEXVAL>.*
+COMMAND:modules
+VERIFY:\s*<HEXVAL>\s+<HEXVAL>.*
+COMMAND:threads
+VERIFY:\s*<DECVAL>\s+0x<HEXVAL>\s+\(<DECVAL>\)\s+
+COMMAND:registers
+VERIFY:\s*([r|e]ip|pc) = <HEXVAL>\s+
+ENDIF:DOTNETDUMP
+
+# Issue: https://github.com/dotnet/diagnostics/issues/503
+!IFDEF:ALPINE
+SOSCOMMAND:DumpHeap
+VERIFY:\s+Address\s+MT\s+Size\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<DECVAL>.*
+VERIFY:\s*Statistics:\s+
+VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
+VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
+ENDIF:ALPINE
+
+SOSCOMMAND:DumpDomain
+VERIFY:\s*System Domain:\s+<HEXVAL>\s+
+VERIFY:\s*LowFrequencyHeap:\s+<HEXVAL>\s+
+VERIFY:\s*HighFrequencyHeap:\s+<HEXVAL>\s+
+VERIFY:\s*Domain 1:\s+<HEXVAL>\s+
+VERIFY:\s*Assembly:\s+<HEXVAL>\s+\[.*(System\.Private\.CoreLib(\.ni)?\.dll|mscorlib.dll)\]\s+
+
+SOSCOMMAND:DumpAssembly <POUT>\s*Assembly:\s+(<HEXVAL>)\s+\[.*<POUT>
+VERIFY:\s*Parent Domain:\s+<HEXVAL>\s+
+VERIFY:\s*Name:\s+.*(System\.Private\.CoreLib(\.ni)?\.dll|mscorlib.dll)\s+
+
+SOSCOMMAND:DumpModule <POUT>\s+Module Name\s+(<HEXVAL>)\s+.*<POUT>
+!IFDEF:DESKTOP
+VERIFY:\s*PEFile:\s+<HEXVAL>\s+
+VERIFY:\s*ModuleId:\s+<HEXVAL>\s+
+ENDIF:DESKTOP
+VERIFY:\s*LoaderHeap:\s+<HEXVAL>\s+
+VERIFY:\s*TypeDefToMethodTableMap:\s+<HEXVAL>\s+
+
+# Verify that IP2MD, DumpMD, DumpClass and DumpMT (uses IP from ClrStack)
+SOSCOMMAND:ClrStack
+SOSCOMMAND:IP2MD <POUT>.*\s+(<HEXVAL>)\s+SymbolTestApp\.Program\.Foo1.*\s+<POUT>
+VERIFY:.*\s+Method Name:\s+SymbolTestApp\.Program\.Foo1\(Int32, System\.String\)\s+
+VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 24\s+
+
+# Verify DumpMD
+SOSCOMMAND:DumpMD <POUT>\s+MethodDesc:\s+(<HEXVAL>)\s+<POUT>
+VERIFY:.*\s+Method Name:\s+SymbolTestApp\.Program\.Foo1\(Int32, System\.String\)\s+
+
+# Verify DumpClass
+SOSCOMMAND:DumpClass <POUT>\s*Class:\s+(<HEXVAL>)\s+<POUT>
+VERIFY:\s*Class Name:\s+SymbolTestApp.Program\s+
+VERIFY:\s*File:\s+.*SymbolTestApp\.(dll|exe)\s+
+
+# Verify DumpMT
+SOSCOMMAND:DumpMT <POUT>\s*Method Table:\s+(<HEXVAL>)\s+<POUT>
+VERIFY:\s*Name:\s+SymbolTestApp.Program\s+
+VERIFY:\s*File:\s+.*SymbolTestApp\.(dll|exe)\s+
+
+SOSCOMMAND:FinalizeQueue
+VERIFY:\s*SyncBlocks to be cleaned up:\s+<DECVAL>\s+
+VERIFY:(\s*Free-Threaded Interfaces to be released:\s+<DECVAL>\s+)?
+VERIFY:\s*Statistics for all finalizable objects.*:\s+
+VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
+VERIFY:(\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*)?
+VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
+
+SOSCOMMAND:SyncBlk
+!IFDEF:LINUX
+VERIFY:\s*Index\s+SyncBlock\s+MonitorHeld\s+Recursion\s+Owning\s+Thread\s+Info\s+SyncBlock\s+Owner\s+
+VERIFY:\s*Total\s+<DECVAL>
+IFDEF:WINDOWS
+VERIFY:\s*CCW\s+<DECVAL>
+VERIFY:\s*RCW\s+<DECVAL>
+ENDIF:WINDOWS
+ENDIF:LINUX

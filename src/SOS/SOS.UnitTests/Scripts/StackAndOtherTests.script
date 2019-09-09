@@ -1,13 +1,12 @@
 #
 # Tests the various SOS stack and other commands with the Windows/Portable PDB debuggee
 #
-# Commands Verified: ClrStack, DumpStackObjects, DumpStack, EEStack, IP2MD, u, Name2EE, Threads (clrthreads)
+# Commands Verified: ClrStack, DumpStackObjects, DumpStack, EEStack, IP2MD, u, Name2EE, Threads (clrthreads) and others
 #
-LOADSOS
 
-IFDEF:LIVE
 CONTINUE
-ENDIF:LIVE
+
+LOADSOS
 
 # Verify that ClrStack with no options works
 SOSCOMMAND:SetSymbolServer -ms
@@ -17,7 +16,7 @@ ENDIF:DOTNETDUMP
 SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 54\]\s*
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (50|54)\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 24\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
@@ -32,7 +31,7 @@ IFDEF:PROJECTK
 SOSCOMMAND:ClrStack -f
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 54\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (50|54)\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo2\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo1\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 24\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
@@ -43,7 +42,7 @@ IFDEF:PROJECTK
 SOSCOMMAND:ClrStack -a
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 54\]\s*
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (50|54)\]\s*
 VERIFY:\s+PARAMETERS:\s+
 VERIFY:\s+dllPath \(0x<HEXVAL>\) = 0x<HEXVAL>\s+
 VERIFY:.*\s+LOCALS:\s+
@@ -59,7 +58,7 @@ SOSCOMMAND:ClrStack -r
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 54\]\s*
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (50|54)\]\s*
 IFDEF:ARM
 VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
 ENDIF:ARM
@@ -106,6 +105,7 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void SymbolTestApp\.Program\.Main\
 VERIFY:.*\s+Stack walk complete.\s+
 ENDIF:PROJECTK
 
+# Issue: https://github.com/dotnet/diagnostics/issues/504
 !IFDEF:ALPINE
 
 # Verify that ClrStack with the ICorDebug options and all option (locals/params) works
@@ -118,7 +118,9 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void SymbolTestApp\.Program\.Foo4\
 VERIFY:\s+PARAMETERS:\s+
 VERIFY:\s+\+ string dllPath\s+=\s+".*"\s+
 VERIFY:\s+LOCALS:\s+
+!IFDEF:MAJOR_RUNTIME_VERSION_1
 VERIFY:\s+\+ System.RuntimeType dllType @ 0x<HEXVAL>
+ENDIF:MAJOR_RUNTIME_VERSION_1
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] I4 SymbolTestApp\.Program\.Foo2\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] I4 SymbolTestApp\.Program\.Foo1\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void SymbolTestApp\.Program\.Main\(.*\)\s+\(.*\)\s+
@@ -174,11 +176,17 @@ ENDIF:DOTNETDUMP
 SOSCOMMAND:ClrStack
 SOSCOMMAND:IP2MD <POUT>.*\s+(<HEXVAL>)\s+SymbolTestApp\.Program\.Foo4.*\s+<POUT>
 VERIFY:.*\s+Method Name:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
-VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 54\s+
+VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ (50|54)\s+
 
 # Verify that DumpIL works (depends on the IP2MD right above)
 SOSCOMMAND:DumpIL <POUT>\s*MethodDesc:\s+(<HEXVAL>)\s*<POUT>
-VERIFY:.*IL_<HEXVAL>: call class \[System.Runtime\]System\.Reflection\.Assembly System\.Reflection\.Assembly::Load\(uint8\[\],uint8\[\]\)
+!IFDEF:DESKTOP
+VERIFY:.*IL_<HEXVAL>: callvirt class \[System\.(Runtime|Reflection)\]System\.Reflection\.Assembly System\.Runtime\.Loader\.AssemblyLoadContext::LoadFromStream\(class \[System\.(Runtime|IO)\]System\.IO\.Stream,class \[System\.(Runtime|IO)\]System\.IO\.Stream\)
+ENDIF:DESKTOP
+IFDEF:DESKTOP
+# Disable until the new SOS supports desktop clr
+# VERIFY:.*IL_<HEXVAL>: call class \[System.Runtime\]System\.Reflection\.Assembly System\.Reflection\.Assembly::Load\(uint8\[\],uint8\[\]\)
+ENDIF:DESKTOP
 
 !IFDEF:DOTNETDUMP
 IFDEF:PROJECTK
@@ -190,7 +198,7 @@ SOSCOMMAND:u <POUT>\s*MethodDesc:\s+(<HEXVAL>)\s*<POUT>
 VERIFY:\s*Normal JIT generated code\s+
 VERIFY:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:\s+Begin\s+<HEXVAL>,\s+size\s+<HEXVAL>\s+
-VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 54:\s+
+VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ (50|54):\s+
 
 # Verify that "u" with no line info works
 SOSCOMMAND:u -n <PREVPOUT>
@@ -203,7 +211,7 @@ SOSCOMMAND:u -o <PREVPOUT>
 VERIFY:\s*Normal JIT generated code\s+
 VERIFY:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:\s+Begin\s+<HEXVAL>,\s+size\s+<HEXVAL>\s+
-VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 54:\s+
+VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ (50|54):\s+
 
 ENDIF:PROJECTK
 ENDIF:DOTNETDUMP

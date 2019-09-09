@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
@@ -21,7 +22,13 @@ public class SOS
 
     ITestOutputHelper Output { get; set; }
 
-    public static IEnumerable<object[]> Configurations => TestRunConfiguration.Instance.Configurations.Select(c => new[] { c });
+    public static IEnumerable<object[]> GetConfigurations(string key, string value)
+    {
+        return TestRunConfiguration.Instance.Configurations.Where((c) => key == null || c.AllSettings.GetValueOrDefault(key) == value).Select(c => new[] { c });
+    }
+
+    public static IEnumerable<object[]> Configurations => GetConfigurations("TestName", null);
+
     private void SkipIfArm(TestConfiguration config)
     {
         if (config.TargetArchitecture == "arm" || config.TargetArchitecture == "arm64")
@@ -30,61 +37,75 @@ public class SOS
         }
     }
 
-    private static bool IsCreateDumpConfig(TestConfiguration config)
+    private async Task RunTest(string scriptName, bool testLive = true, bool testDump = true, SOSRunner.TestInformation information = null)
     {
-        return config.DebuggeeDumpOutputRootDir() != null;
-    }
+        information.OutputHelper = Output;
 
-    private static bool IsOpenDumpConfig(TestConfiguration config)
-    {
-        return config.DebuggeeDumpInputRootDir() != null;
-    }
-
-    private Task RunTest(TestConfiguration config, string debuggeeName, string scriptName, bool useCreateDump = true)
-    {
-        return RunTest(config, "SOS." + debuggeeName, debuggeeName, scriptName, useCreateDump: useCreateDump);
-    }
-
-    private async Task RunTest(TestConfiguration config, string testName, string debuggeeName, string scriptName, string debuggeeArguments = null, bool useCreateDump = true)
-    {
-        if (!SOSRunner.IsAlpine())
+        if (testLive && !SOSRunner.IsAlpine())
         {
             // Live
-            using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName, debuggeeName, debuggeeArguments))
+            using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.Live))
             {
                 await runner.RunScript(scriptName);
             }
         }
 
-        // Generate a crash dump.
-        if (IsCreateDumpConfig(config))
+        if (testDump)
         {
-            if (!useCreateDump && SOSRunner.IsAlpine())
+            // Generate a crash dump.
+            if (information.TestConfiguration.DebuggeeDumpOutputRootDir() != null)
             {
-                throw new SkipTestException("lldb tests not supported on Alpine");
+                if (information.DumpGenerator == SOSRunner.DumpGenerator.NativeDebugger && SOSRunner.IsAlpine())
+                {
+                    throw new SkipTestException("lldb tests not supported on Alpine");
+                }
+                await SOSRunner.CreateDump(information);
             }
-            await SOSRunner.CreateDump(config, Output, testName, debuggeeName, debuggeeArguments, useCreateDump);
+
+            // Test against a crash dump.
+            if (information.TestConfiguration.DebuggeeDumpInputRootDir() != null)
+            {
+                if (!SOSRunner.IsAlpine())
+                {
+                    // With cdb (Windows) or lldb (Linux or OSX)
+                    using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDump))
+                    {
+                        await runner.RunScript(scriptName);
+                    }
+                }
+
+                // With the dotnet-dump analyze tool
+                if (information.TestConfiguration.DotNetDumpPath() != null)
+                {
+                    using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDumpWithDotNetDump))
+                    {
+                        await runner.RunScript(scriptName);
+                    }
+                }
+            }
         }
+    }
 
-        // Test against a crash dump.
-        if (IsOpenDumpConfig(config))
+    private async Task RunTest(TestConfiguration config, string debuggeeName, string scriptName, string testName = null, bool testLive = true, bool testDump = true, bool testTriage = false)
+    {
+        await RunTest(scriptName, testLive, testDump, new SOSRunner.TestInformation {
+            TestConfiguration = config,
+            TestName = testName,
+            DebuggeeName = debuggeeName,
+            DumpType = SOSRunner.DumpType.Heap
+        });
+
+        // Temporarily restrict triage dump to only 2.x runtimes until the DAC fix hits 3.0/5.0
+        if (config.IsDesktop || config.RuntimeFrameworkVersionMajor == 2)
         {
-            if (!SOSRunner.IsAlpine())
+            if (testTriage)
             {
-                // With cdb (Windows) or lldb (Linux or OSX)
-                using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName, debuggeeName, debuggeeArguments, SOSRunner.Options.LoadDump))
-                {
-                    await runner.RunScript(scriptName);
-                }
-            }
-
-            // With the dotnet-dump analyze tool
-            if (config.DotNetDumpPath() != null)
-            { 
-                using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName, debuggeeName, debuggeeArguments, SOSRunner.Options.LoadDumpWithDotNetDump))
-                {
-                    await runner.RunScript(scriptName);
-                }
+                await RunTest(scriptName, testLive: false, testDump, new SOSRunner.TestInformation {
+                    TestConfiguration = config,
+                    TestName = testName,
+                    DebuggeeName = debuggeeName,
+                    DumpType = SOSRunner.DumpType.Triage
+                });
             }
         }
     }
@@ -92,7 +113,7 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task DivZero(TestConfiguration config)
     {
-        await RunTest(config, "DivZero", "DivZero.script");
+        await RunTest(config, "DivZero", "DivZero.script", testTriage: true);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
@@ -101,64 +122,183 @@ public class SOS
         SkipIfArm(config);
 
         // Live only
-        if (SOSRunner.IsAlpine())
-        {
-            throw new SkipTestException("lldb tests not supported on Alpine");
-        }
-        using (SOSRunner runner = await SOSRunner.StartDebugger(config, Output, testName: "SOS.GCTests", debuggeeName: "GCWhere"))
-        {
-            await runner.RunScript("GCTests.script");
-        }
+        await RunTest(config, "GCWhere", "GCTests.script", testName: "SOS.GCTests", testDump: false);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task Overflow(TestConfiguration config)
     {
         // The .NET Core createdump facility may not catch stack overflow so use gdb to generate dump
-        await RunTest(config, "Overflow", "Overflow.script", useCreateDump: config.StackOverflowCreatesDump);
+        await RunTest("Overflow.script", information: new SOSRunner.TestInformation {
+            TestConfiguration = config,
+            DebuggeeName = "Overflow",
+            DumpGenerator = config.StackOverflowCreatesDump ? SOSRunner.DumpGenerator.CreateDump : SOSRunner.DumpGenerator.NativeDebugger
+        });
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task Reflection(TestConfiguration config)
     {
-        await RunTest(config, "ReflectionTest", "Reflection.script");
+        await RunTest(config, "ReflectionTest", "Reflection.script", testTriage: true);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task SimpleThrow(TestConfiguration config)
     {
-        await RunTest(config, "SimpleThrow", "SimpleThrow.script");
+        await RunTest(config, "SimpleThrow", "SimpleThrow.script", testTriage: true);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task NestedExceptionTest(TestConfiguration config)
     {
-        await RunTest(config, "NestedExceptionTest", "NestedExceptionTest.script");
+        await RunTest(config, "NestedExceptionTest", "NestedExceptionTest.script", testTriage: true);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task TaskNestedException(TestConfiguration config)
     {
-        await RunTest(config, "TaskNestedException", "TaskNestedException.script");
+        await RunTest(config, "TaskNestedException", "TaskNestedException.script", testTriage: true);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task StackTests(TestConfiguration config)
     {
-        await RunTest(config, "SOS.StackTests", "NestedExceptionTest", "StackTests.script");
+        await RunTest(config, "NestedExceptionTest", "StackTests.script", testName: "SOS.StackTests");
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
+    public async Task OtherCommands(TestConfiguration config)
+    {
+        // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.
+        await RunTest("OtherCommands.script", information: new SOSRunner.TestInformation {
+            TestConfiguration = config,
+            TestName = "SOS.OtherCommands",
+            DebuggeeName = "SymbolTestApp",
+            DebuggeeArguments = "%DEBUG_ROOT%",
+        });
+    }
+
+    [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "SOS.StackAndOtherTests")]
     public async Task StackAndOtherTests(TestConfiguration config)
     {
-        if (config.RuntimeFrameworkVersionMajor == 1)
-        {
-            throw new SkipTestException("The debuggee (SymbolTestApp) doesn't work on .NET Core 1.1 because of a AssemblyLoadContext problem");
-        }
         foreach (TestConfiguration currentConfig in TestRunner.EnumeratePdbTypeConfigs(config))
         {
             // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.
-            await RunTest(currentConfig, "SOS.StackAndOtherTests", "SymbolTestApp", "StackAndOtherTests.script", debuggeeArguments: "%DEBUG_ROOT%");
+            await RunTest("StackAndOtherTests.script", information: new SOSRunner.TestInformation {
+                TestConfiguration = currentConfig,
+                TestName = "SOS.StackAndOtherTests",
+                DebuggeeName = "SymbolTestApp",
+                DebuggeeArguments = "%DEBUG_ROOT%",
+            });
+        }
+    }
+
+    [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "SOS.WebApp")]
+    public async Task WebApp(TestConfiguration config)
+    {
+        await RunTest("WebApp.script", testLive: false, information: new SOSRunner.TestInformation {
+            TestConfiguration = config,
+            DebuggeeName = "WebApp",
+            UsePipeSync = true,
+            DumpGenerator = SOSRunner.DumpGenerator.DotNetDump
+        });
+    }
+
+    [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "SOS.WebApp3")]
+    public async Task WebApp3(TestConfiguration config)
+    {
+        await RunTest("WebApp.script", testLive: false, information: new SOSRunner.TestInformation {
+            TestConfiguration = config,
+            DebuggeeName = "WebApp3",
+            UsePipeSync = true,
+            DumpGenerator = SOSRunner.DumpGenerator.DotNetDump
+        });
+    }
+
+    [SkippableTheory, MemberData(nameof(Configurations))]
+    public async Task LLDBPluginTests(TestConfiguration config)
+    {
+        if (OS.Kind == OSKind.Windows || config.IsDesktop || config.RuntimeFrameworkVersionMajor == 1 || SOSRunner.IsAlpine())
+        {
+            throw new SkipTestException("lldb plugin tests not supported on Windows, Alpine Linux or .NET Core 1.1");
+        }
+        string testName = "SOS." + nameof(LLDBPluginTests);
+        TestRunner.OutputHelper outputHelper = null;
+        try
+        {
+            // Setup the logging from the options in the config file
+            outputHelper = TestRunner.ConfigureLogging(config, Output, testName);
+
+            outputHelper.WriteLine("Starting {0}", testName);
+            outputHelper.WriteLine("{");
+
+            string program = "/usr/bin/python";
+            if (!File.Exists(program))
+            {
+                throw new ArgumentException($"{program} does not exists");
+            }
+            var arguments = new StringBuilder();
+            string repoRootDir = TestConfiguration.MakeCanonicalPath(config.AllSettings["RepoRootDir"]);
+
+            // Get test python script path
+            string scriptDir = Path.Combine(repoRootDir, "src", "SOS", "lldbplugin.tests");
+            arguments.Append(Path.Combine(scriptDir, "test_libsosplugin.py"));
+            arguments.Append(" ");
+            
+            // Get lldb path
+            arguments.AppendFormat("--lldb {0} ", Environment.GetEnvironmentVariable("LLDB_PATH") ?? throw new ArgumentException("LLDB_PATH environment variable not set"));
+
+            // Add dotnet host program and arguments
+            arguments.Append("--host \"");
+            arguments.Append(config.HostExe);
+            arguments.Append(" ");
+            if (!string.IsNullOrWhiteSpace(config.HostArgs))
+            {
+                arguments.Append(config.HostArgs);
+                arguments.Append(" ");
+            }
+            arguments.Append("\" ");
+
+            // Add lldb plugin path
+            arguments.AppendFormat("--plugin {0} ", config.SOSPath() ?? throw new ArgumentException("SOSPath config not set"));
+
+            // Add log directory
+            string logFileDir = Path.Combine(config.LogDirPath, config.RuntimeFrameworkVersion);
+            Directory.CreateDirectory(logFileDir);
+            arguments.AppendFormat("--logfiledir {0} ", logFileDir);
+
+            // Add test debuggee assembly
+            string testDebuggee = Path.Combine(repoRootDir, "artifacts", "bin", "TestDebuggee", config.TargetConfiguration, config.BuildProjectFramework, "TestDebuggee.dll");
+            arguments.AppendFormat("--assembly {0}", testDebuggee);
+
+            // Create the python script process runner
+            ProcessRunner processRunner = new ProcessRunner(program, arguments.ToString()).
+                WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
+                WithTimeout(TimeSpan.FromMinutes(5)).
+                WithExpectedExitCode(0).
+                WithWorkingDirectory(scriptDir).
+                // Turn on stress logging so the dumplog and histinit commands pass
+                WithEnvironmentVariable("COMPlus_LogFacility", "0xffffffbf").
+                WithEnvironmentVariable("COMPlus_LogLevel", "6").
+                WithEnvironmentVariable("COMPlus_StressLog", "1").
+                WithEnvironmentVariable("COMPlus_StressLogSize", "65536");
+
+            // Start the process runner
+            processRunner.Start();
+
+            // Wait for the debuggee to finish
+            await processRunner.WaitForExit();
+        }
+        catch (Exception ex)
+        {
+            // Log the exception
+            outputHelper?.WriteLine(ex.ToString());
+            throw;
+        }
+        finally
+        {
+            outputHelper?.WriteLine("}");
+            outputHelper?.Dispose();
         }
     }
 }

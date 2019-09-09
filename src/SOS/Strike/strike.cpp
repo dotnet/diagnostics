@@ -7260,7 +7260,7 @@ public:
         IfFailRet(g_sos->GetModule(mod, &pModule));
 
         ToRelease<IMetaDataImport> pMDImport = NULL;
-        IfFailRet(pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport));
+        pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport);
 
         IfFailRet(pSymbolReader->LoadSymbols(pMDImport, pModule));
 
@@ -14383,7 +14383,8 @@ end:
     return Status;
 }
 
-#ifdef _DEBUG
+#endif // FEATURE_PAL
+
 DECLARE_API(dbgout)
 {
     INIT_API();
@@ -14401,41 +14402,9 @@ DECLARE_API(dbgout)
     }    
 
     Output::SetDebugOutputEnabled(!bOff);
+    ExtOut("Debug output logging %s\n", Output::IsDebugOutputEnabled() ? "enabled" : "disabled");
     return Status;
 }
-DECLARE_API(filthint)
-{
-    INIT_API();
-
-    BOOL bOff = FALSE;
-    DWORD_PTR filter = 0;
-
-    CMDOption option[] = 
-    {   // name, vptr, type, hasValue
-        {"-off", &bOff, COBOOL, FALSE},
-    };
-    CMDValue arg[] = 
-    {   // vptr, type
-        {&filter, COHEX}
-    };
-    size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option),
-                      arg, _countof(arg), &nArg)) 
-    {
-        return Status;
-    }    
-    if (bOff)
-    {
-        g_filterHint = 0;
-        return Status;
-    }
-
-    g_filterHint = filter;
-    return Status;
-}
-#endif // _DEBUG
-
-#endif // FEATURE_PAL
 
 static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp, 
         ULONG64 IPAddr, StringOutput& so)
@@ -15908,6 +15877,10 @@ DECLARE_API(SetSymbolServer)
         if (windowsSymbolPath.data != nullptr)
         {
             ExtOut("Added Windows symbol path: %s\n", windowsSymbolPath.data);
+        }
+        if (logging)
+        {
+            ExtOut("Symbol download logging enabled\n");
         }
     }
     else if (loadNative)
