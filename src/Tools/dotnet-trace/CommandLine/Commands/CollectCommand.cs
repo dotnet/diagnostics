@@ -97,6 +97,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     providers: providerCollection);
 
                 var shouldExit = new ManualResetEvent(false);
+                var shouldStopAfterDuration = duration != default(TimeSpan);
                 var failed = false;
                 var terminated = false;
                 System.Timers.Timer durationTimer = null;
@@ -113,7 +114,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return ErrorCodes.SessionCreationError;
                     }
 
-                    if (duration != null)
+                    if (shouldStopAfterDuration)
                     {
                         durationTimer = new System.Timers.Timer(duration.TotalMilliseconds);
                         durationTimer.Elapsed += (s, e) => shouldExit.Set();
@@ -130,11 +131,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                             using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                             {
-                                Console.Out.WriteLine($"Process     : {process.MainModule.FileName}");
-                                Console.Out.WriteLine($"Output File : {fs.Name}");
-                                Console.Out.WriteLine($"\tSession Id: 0x{sessionId:X16}");
-                                if (duration != null)
-                                    Console.WriteLine($"Tracing for {duration.ToString(@"dd\:hh\:mm\:ss")}");
+                                Console.Out.WriteLine($"Process        : {process.MainModule.FileName}");
+                                Console.Out.WriteLine($"Output File    : {fs.Name}");
+                                if (shouldStopAfterDuration)
+                                    Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
+                                Console.Out.WriteLine($"\tSession Id: 0x{sessionId:X16}\n");
                                 lineToClear = Console.CursorTop;
                                 var buffer = new byte[16 * 1024];
 
@@ -292,7 +293,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new Option(
                 alias: "--duration",
                 description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.",
-                argument: new Argument<TimeSpan>(defaultValue: null) { Name = "duration-timespan" },
+                argument: new Argument<TimeSpan>(defaultValue: default(TimeSpan)) { Name = "duration-timespan" },
                 isHidden: true);
     }
 }
