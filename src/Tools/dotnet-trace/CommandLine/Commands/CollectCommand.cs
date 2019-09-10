@@ -185,7 +185,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     do
                     {
-                        while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
+                        while (Console.In.Peek() == -1 && !shouldExit.WaitOne(250)) { }
                     } while (!shouldExit.WaitOne(0) && Console.ReadKey(true).Key != ConsoleKey.Enter);
 
                     if (!terminated)
@@ -231,6 +231,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static void ResetCurrentConsoleLine(bool isVTerm)
         {
+            if (Console.IsOutputRedirected)
+                return;
+
             if (isVTerm)
             {
                 // ANSI escape codes:
