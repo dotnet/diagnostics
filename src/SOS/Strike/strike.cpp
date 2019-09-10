@@ -9308,7 +9308,6 @@ DECLARE_API(u)
     }
 
 	ExtractionCodeHeaderResult p = ExtractCodeHeaderData(methodDesc, dwStartAddr);
-	// codeHeaderData =
 	Status = std::get<2>(p);
 	if (Status != S_OK)
 	{
