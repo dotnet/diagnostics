@@ -9516,11 +9516,10 @@ HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData
 
         memset(table, 0, tableSize);
         // We avoid using move here, because we do not want to return
-        HRESULT Status = SafeReadMemory(TO_TADDR(codeHeaderData.GCInfo), table, tableSize, NULL);
-        if (!Status)
+        if (!SafeReadMemory(TO_TADDR(codeHeaderData.GCInfo), table, tableSize, NULL))
         {
             ExtOut("Could not read memory %p\n", SOS_PTR(codeHeaderData.GCInfo));
-            return Status;
+            return ERROR_INVALID_DATA;
         }
 
         //
