@@ -9237,6 +9237,8 @@ inline ExtractionCodeHeaderResult ExtractCodeHeaderData(DWORD_PTR methodDesc, DW
     return ExtractionCodeHeaderResult(std::move(MethodDescData), std::move(codeHeaderData), S_OK);
 }
 
+inline ExtractionCodeHeaderResult ExtractCodeHeaderData(DWORD_PTR methodDesc, DWORD_PTR dwStartAddr);
+HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData);
 HRESULT displayIntermediateLanguage(BOOL bIL, const DacpCodeHeaderData& codeHeaderData);
 
 /**********************************************************************\
@@ -9338,6 +9340,90 @@ DECLARE_API(u)
         ExtOut("Begin %p, size %x\n", SOS_PTR(codeHeaderData.MethodStart), codeHeaderData.MethodSize);
     }
 
+    Status = displayGcInfo(fWithGCInfo, codeHeaderData);
+    if (Status != S_OK)
+    {
+        return Status;
+    }
+
+    SOSEHInfo *pInfo = NULL;
+    if (fWithEHInfo)
+    {
+        pInfo = new NOTHROW SOSEHInfo;
+        if (pInfo == NULL)
+        {
+            ReportOOM();                
+        }
+        else if (g_sos->TraverseEHInfo(codeHeaderData.MethodStart, gatherEh, (LPVOID)pInfo) != S_OK)
+        {
+            ExtOut("Failed to gather EHInfo data\n");
+            delete pInfo;
+            pInfo = NULL;            
+        }
+    }
+    
+    if (codeHeaderData.ColdRegionStart == NULL)
+    {
+        g_targetMachine->Unassembly (
+                (DWORD_PTR) codeHeaderData.MethodStart,
+                ((DWORD_PTR)codeHeaderData.MethodStart) + codeHeaderData.MethodSize,
+                dwStartAddr,
+                (DWORD_PTR) MethodDescData.GCStressCodeCopy,
+                fWithGCInfo ? &g_gcEncodingInfo : NULL,
+                pInfo,
+                bSuppressLines,
+                bDisplayOffsets
+                );
+    }
+    else
+    {
+        ExtOut("Hot region:\n");
+        g_targetMachine->Unassembly (
+                (DWORD_PTR) codeHeaderData.MethodStart,
+                ((DWORD_PTR)codeHeaderData.MethodStart) + codeHeaderData.HotRegionSize,
+                dwStartAddr,
+                (DWORD_PTR) MethodDescData.GCStressCodeCopy,
+                fWithGCInfo ? &g_gcEncodingInfo : NULL,
+                pInfo,
+                bSuppressLines,
+                bDisplayOffsets
+                );
+
+        ExtOut("Cold region:\n");
+        
+        // Displaying gcinfo for a cold region requires knowing the size of
+        // the hot region preceeding.
+        g_gcEncodingInfo.hotSizeToAdd = codeHeaderData.HotRegionSize;
+
+        g_targetMachine->Unassembly (
+                (DWORD_PTR) codeHeaderData.ColdRegionStart,
+                ((DWORD_PTR)codeHeaderData.ColdRegionStart) + codeHeaderData.ColdRegionSize,
+                dwStartAddr,
+                ((DWORD_PTR) MethodDescData.GCStressCodeCopy) + codeHeaderData.HotRegionSize,                
+                fWithGCInfo ? &g_gcEncodingInfo : NULL,
+                pInfo,
+                bSuppressLines,
+                bDisplayOffsets
+                );
+
+    }
+
+    if (pInfo)
+    {
+        delete pInfo;
+        pInfo = NULL;
+    }
+
+    if (fWithGCInfo)
+    {
+        g_gcEncodingInfo.Deinitialize();
+    }
+    
+    return Status;
+}
+
+HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData)
+{
     //
     // Set up to mix gc info with the code if requested. To do this, we first generate all the textual
     // gc info up front. This text is the same as the "!gcinfo" command, and looks like:
@@ -9428,9 +9514,10 @@ DECLARE_API(u)
             return E_OUTOFMEMORY;
         }
 
-        memset (table, 0, tableSize);
+        memset(table, 0, tableSize);
         // We avoid using move here, because we do not want to return
-        if (!SafeReadMemory(TO_TADDR(codeHeaderData.GCInfo), table, tableSize, NULL))
+        HRESULT Status = SafeReadMemory(TO_TADDR(codeHeaderData.GCInfo), table, tableSize, NULL);
+        if (!Status)
         {
             ExtOut("Could not read memory %p\n", SOS_PTR(codeHeaderData.GCInfo));
             return Status;
@@ -9449,81 +9536,7 @@ DECLARE_API(u)
         GCInfoToken gcInfoToken = { table, GCINFO_VERSION };
         g_targetMachine->DumpGCInfo(gcInfoToken, methodSize, DecodeGCTableEntry, false /*encBytes*/, false /*bPrintHeader*/);
     }
-
-    SOSEHInfo *pInfo = NULL;
-    if (fWithEHInfo)
-    {
-        pInfo = new NOTHROW SOSEHInfo;
-        if (pInfo == NULL)
-        {
-            ReportOOM();                
-        }
-        else if (g_sos->TraverseEHInfo(codeHeaderData.MethodStart, gatherEh, (LPVOID)pInfo) != S_OK)
-        {
-            ExtOut("Failed to gather EHInfo data\n");
-            delete pInfo;
-            pInfo = NULL;            
-        }
-    }
-    
-    if (codeHeaderData.ColdRegionStart == NULL)
-    {
-        g_targetMachine->Unassembly (
-                (DWORD_PTR) codeHeaderData.MethodStart,
-                ((DWORD_PTR)codeHeaderData.MethodStart) + codeHeaderData.MethodSize,
-                dwStartAddr,
-                (DWORD_PTR) MethodDescData.GCStressCodeCopy,
-                fWithGCInfo ? &g_gcEncodingInfo : NULL,
-                pInfo,
-                bSuppressLines,
-                bDisplayOffsets
-                );
-    }
-    else
-    {
-        ExtOut("Hot region:\n");
-        g_targetMachine->Unassembly (
-                (DWORD_PTR) codeHeaderData.MethodStart,
-                ((DWORD_PTR)codeHeaderData.MethodStart) + codeHeaderData.HotRegionSize,
-                dwStartAddr,
-                (DWORD_PTR) MethodDescData.GCStressCodeCopy,
-                fWithGCInfo ? &g_gcEncodingInfo : NULL,
-                pInfo,
-                bSuppressLines,
-                bDisplayOffsets
-                );
-
-        ExtOut("Cold region:\n");
-        
-        // Displaying gcinfo for a cold region requires knowing the size of
-        // the hot region preceeding.
-        g_gcEncodingInfo.hotSizeToAdd = codeHeaderData.HotRegionSize;
-
-        g_targetMachine->Unassembly (
-                (DWORD_PTR) codeHeaderData.ColdRegionStart,
-                ((DWORD_PTR)codeHeaderData.ColdRegionStart) + codeHeaderData.ColdRegionSize,
-                dwStartAddr,
-                ((DWORD_PTR) MethodDescData.GCStressCodeCopy) + codeHeaderData.HotRegionSize,                
-                fWithGCInfo ? &g_gcEncodingInfo : NULL,
-                pInfo,
-                bSuppressLines,
-                bDisplayOffsets
-                );
-
-    }
-
-    if (pInfo)
-    {
-        delete pInfo;
-        pInfo = NULL;
-    }
-
-    if (fWithGCInfo)
-    {
-        g_gcEncodingInfo.Deinitialize();
-    }
-    
-    return Status;
+    return S_OK;
 }
 
 HRESULT displayIntermediateLanguage(BOOL bIL, const DacpCodeHeaderData& codeHeaderData)
