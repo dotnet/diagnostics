@@ -9177,7 +9177,7 @@ GetClrMethodInstance(
 
 typedef std::tuple<DacpMethodDescData, DacpCodeHeaderData, HRESULT> ExtractionCodeHeaderResult;
 
-ExtractionCodeHeaderResult ExtractCodeHeaderData(DWORD_PTR methodDesc, DWORD_PTR dwStartAddr);
+ExtractionCodeHeaderResult extractCodeHeaderData(DWORD_PTR methodDesc, DWORD_PTR dwStartAddr);
 HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData);
 HRESULT displayIntermediateLanguage(BOOL bIL, const DacpCodeHeaderData& codeHeaderData);
 
@@ -9251,7 +9251,7 @@ DECLARE_API(u)
         }
     }
 
-	ExtractionCodeHeaderResult p = ExtractCodeHeaderData(methodDesc, dwStartAddr);
+	ExtractionCodeHeaderResult p = extractCodeHeaderData(methodDesc, dwStartAddr);
 	Status = std::get<2>(p);
 	if (Status != S_OK)
 	{
@@ -9362,7 +9362,7 @@ DECLARE_API(u)
     return Status;
 }
 
-inline ExtractionCodeHeaderResult ExtractCodeHeaderData(DWORD_PTR methodDesc, DWORD_PTR dwStartAddr)
+inline ExtractionCodeHeaderResult extractCodeHeaderData(DWORD_PTR methodDesc, DWORD_PTR dwStartAddr)
 {
     DacpMethodDescData MethodDescData;
     HRESULT Status =
