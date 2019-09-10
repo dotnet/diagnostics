@@ -153,6 +153,7 @@ const UINT kcMaxMethodDescsForProfiler = 100;
 #include <set>
 #include <vector>
 #include <map>
+#include <tuple>
 
 BOOL CallStatus;
 BOOL ControlC = FALSE;
@@ -9174,6 +9175,68 @@ GetClrMethodInstance(
     ___in ULONG64 NativeOffset,
     ___out IXCLRDataMethodInstance** Method);
 
+typedef std::tuple<DacpMethodDescData, DacpCodeHeaderData, HRESULT> ExtractionCodeHeaderResult;
+
+inline ExtractionCodeHeaderResult ExtractCodeHeaderData(DWORD_PTR methodDesc, DWORD_PTR dwStartAddr)
+{
+	DacpMethodDescData MethodDescData;
+	HRESULT Status =
+		g_sos->GetMethodDescData(
+			TO_CDADDR(methodDesc),
+			dwStartAddr == methodDesc ? NULL : dwStartAddr,
+			&MethodDescData,
+			0, // cRevertedRejitVersions
+			NULL, // rgRevertedRejitData
+			NULL); // pcNeededRevertedRejitData
+	if (Status != S_OK)
+	{
+		ExtOut("Failed to get method desc for %p.\n", SOS_PTR(dwStartAddr));
+		return ExtractionCodeHeaderResult(std::move(MethodDescData), DacpCodeHeaderData(), Status);
+	}
+
+	if (!MethodDescData.bHasNativeCode)
+	{
+		ExtOut("Not jitted yet\n");
+		return ExtractionCodeHeaderResult(std::move(MethodDescData), DacpCodeHeaderData(), S_FALSE);
+	}
+
+	// Get the appropriate code header. If we were passed an MD, then use
+	// MethodDescData.NativeCodeAddr to find the code header; if we were passed an IP, use
+	// that IP to find the code header. This ensures that, for rejitted functions, we
+	// disassemble the rejit version that the user explicitly specified with their IP.
+	DacpCodeHeaderData codeHeaderData;
+	if (codeHeaderData.Request(
+		g_sos,
+		TO_CDADDR(
+		(dwStartAddr == methodDesc) ? MethodDescData.NativeCodeAddr : dwStartAddr)
+	) != S_OK)
+	{
+		ExtOut("Unable to get codeHeader information\n");
+		return ExtractionCodeHeaderResult(std::move(MethodDescData), DacpCodeHeaderData(), S_FALSE);
+	}
+
+	if (codeHeaderData.MethodStart == 0)
+	{
+		ExtOut("not a valid MethodDesc\n");
+		return ExtractionCodeHeaderResult(std::move(MethodDescData), DacpCodeHeaderData(), S_FALSE);
+	}
+
+	if (codeHeaderData.JITType == TYPE_UNKNOWN)
+	{
+		ExtOut("unknown Jit\n");
+		return ExtractionCodeHeaderResult(std::move(MethodDescData), DacpCodeHeaderData(), S_FALSE);
+	}
+	else if (codeHeaderData.JITType == TYPE_JIT)
+	{
+		ExtOut("Normal JIT generated code\n");
+	}
+	else if (codeHeaderData.JITType == TYPE_PJIT)
+	{
+		ExtOut("preJIT generated code\n");
+	}
+	return ExtractionCodeHeaderResult(std::move(MethodDescData), std::move(codeHeaderData), S_OK);
+}
+
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -9244,66 +9307,19 @@ DECLARE_API(u)
         }
     }
 
-    DacpMethodDescData MethodDescData;
-    Status =
-        g_sos->GetMethodDescData(
-            TO_CDADDR(methodDesc),
-            dwStartAddr == methodDesc ? NULL : dwStartAddr,
-            &MethodDescData,
-            0, // cRevertedRejitVersions
-            NULL, // rgRevertedRejitData
-            NULL); // pcNeededRevertedRejitData
-    if (Status != S_OK)
-    {
-        ExtOut("Failed to get method desc for %p.\n", SOS_PTR(dwStartAddr));
-        return Status;
-    }    
-
-    if (!MethodDescData.bHasNativeCode)
-    {
-        ExtOut("Not jitted yet\n");
-        return Status;
-    }
-
-    // Get the appropriate code header. If we were passed an MD, then use
-    // MethodDescData.NativeCodeAddr to find the code header; if we were passed an IP, use
-    // that IP to find the code header. This ensures that, for rejitted functions, we
-    // disassemble the rejit version that the user explicitly specified with their IP.
-    DacpCodeHeaderData codeHeaderData;
-    if (codeHeaderData.Request(
-        g_sos, 
-        TO_CDADDR(
-            (dwStartAddr == methodDesc) ? MethodDescData.NativeCodeAddr : dwStartAddr)
-            ) != S_OK)
-
-    {
-        ExtOut("Unable to get codeHeader information\n");
-        return Status;
-    }                
-    
-    if (codeHeaderData.MethodStart == 0)
-    {
-        ExtOut("not a valid MethodDesc\n");
-        return Status;
-    }
-    
-    if (codeHeaderData.JITType == TYPE_UNKNOWN)
-    {
-        ExtOut("unknown Jit\n");
-        return Status;
-    }
-    else if (codeHeaderData.JITType == TYPE_JIT)
-    {
-        ExtOut("Normal JIT generated code\n");
-    }
-    else if (codeHeaderData.JITType == TYPE_PJIT)
-    {
-        ExtOut("preJIT generated code\n");
-    }
+	ExtractionCodeHeaderResult p = ExtractCodeHeaderData(methodDesc, dwStartAddr);
+	// codeHeaderData =
+	Status = std::get<2>(p);
+	if (Status != S_OK)
+	{
+		return Status;
+	}
 
     NameForMD_s(methodDesc, g_mdName, mdNameLen);
     ExtOut("%S\n", g_mdName);
 
+	DacpMethodDescData& MethodDescData = std::get<0>(p);
+	DacpCodeHeaderData& codeHeaderData = std::get<1>(p);
     if (bIL)
     {
         ToRelease<IXCLRDataMethodInstance> pMethodInst(NULL);
