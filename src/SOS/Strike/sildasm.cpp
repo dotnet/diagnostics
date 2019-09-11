@@ -66,9 +66,6 @@ static OpCode opcodes[] =
 #include "opcode.def"
 };
 
-static ULONG g_position = 0;
-static BYTE *g_pBuffer = NULL;
-
 // The UNALIGNED is because on IA64 alignment rules would prevent
 // us from reading a pointer from an unaligned source.
 // I am not particularly happy about this but the value of
@@ -410,13 +407,12 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
     COR_ILMETHOD *pHeader = (COR_ILMETHOD *) buffer;    
     COR_ILMETHOD_DECODER header(pHeader);    
 
-    // Set globals
-    g_position = 0;	
-    g_pBuffer = (BYTE *) header.Code;
+    ULONG position = 0;
+    BYTE* pBuffer = const_cast<BYTE*>(header.Code);
 
     UINT indentCount = 0;
     ULONG endCodePosition = header.GetCodeSize();
-    while(g_position < endCodePosition)
+    while (position < endCodePosition)
     {	
         for (unsigned e=0;e<header.EHCount();e++)
         {
@@ -424,18 +420,18 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
             const IMAGE_COR_ILMETHOD_SECT_EH_CLAUSE_FAT* ehInfo;
             
             ehInfo = header.EH->EHClause(e,&ehBuff);
-            if (ehInfo->TryOffset == g_position)
+            if (ehInfo->TryOffset == position)
             {
                 printf ("%*s.try\n%*s{\n", indentCount, "", indentCount, "");
                 indentCount+=2;
             }
-            else if ((ehInfo->TryOffset + ehInfo->TryLength) == g_position)
+            else if ((ehInfo->TryOffset + ehInfo->TryLength) == position)
             {
                 indentCount-=2;
                 printf("%*s} // end .try\n", indentCount, "");
             }
 
-            if (ehInfo->HandlerOffset == g_position)
+            if (ehInfo->HandlerOffset == position)
             {
                 if (ehInfo->Flags == COR_ILEXCEPTION_CLAUSE_FINALLY)
                     printf("%*s.finally\n%*s{\n", indentCount, "", indentCount, "");
@@ -444,7 +440,7 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
 
                 indentCount+=2;
             }
-            else if ((ehInfo->HandlerOffset + ehInfo->HandlerLength) == g_position)
+            else if ((ehInfo->HandlerOffset + ehInfo->HandlerLength) == position)
             {
                 indentCount-=2;
                 
@@ -465,7 +461,7 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
             }
         };
 
-        displayILOperation(indentCount, g_pBuffer, g_position, func);
+        displayILOperation(indentCount, pBuffer, position, func);
 
         printf("\n");
     }
@@ -639,19 +635,18 @@ void DisassembleToken(DacpObjectData& tokenArray,
 void DecodeDynamicIL(BYTE *data, ULONG Size, DacpObjectData& tokenArray)
 {
     // There is no header for this dynamic guy.
-    // Set globals
-    g_position = 0;	
-    g_pBuffer = data;
+    ULONG position = 0;	
+    BYTE *pBuffer = data;
 
     // At this time no exception information will be displayed (fix soon)
     UINT indentCount = 0;
     ULONG endCodePosition = Size;
-    while(g_position < endCodePosition)
+    while(position < endCodePosition)
     {
         std::function<void(DWORD)> func = [&tokenArray](DWORD l) {
             DisassembleToken(tokenArray, l);
         };
-        displayILOperation(indentCount, g_pBuffer, g_position, func);
+        displayILOperation(indentCount, pBuffer, position, func);
         printf("\n");
     }
 }
