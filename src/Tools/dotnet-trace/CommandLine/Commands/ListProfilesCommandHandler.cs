@@ -48,28 +48,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     new Provider("Microsoft-Windows-DotNETRuntime", (ulong)ClrTraceEventParser.Keywords.Default, EventLevel.Informational),
                 },
                 "Useful for tracking CPU usage and general runtime information. This the default option if no profile is specified."),
-#if DEBUG // Coming soon: Preview6
             new Profile(
-                "gc",
+                "gc-verbose",
                 new Provider[] {
-                    new Provider("Microsoft-DotNETCore-SampleProfiler"),
                     new Provider(
                         name: "Microsoft-Windows-DotNETRuntime",
                         keywords: (ulong)ClrTraceEventParser.Keywords.GC |
-                                  (ulong)ClrTraceEventParser.Keywords.GCHeapSurvivalAndMovement |
-                                  (ulong)ClrTraceEventParser.Keywords.Stack |
-                                  (ulong)ClrTraceEventParser.Keywords.Jit |
-                                  (ulong)ClrTraceEventParser.Keywords.StopEnumeration |
-                                  (ulong)ClrTraceEventParser.Keywords.SupressNGen |
-                                  (ulong)ClrTraceEventParser.Keywords.Loader |
+                                  (ulong)ClrTraceEventParser.Keywords.GCHandle |
                                   (ulong)ClrTraceEventParser.Keywords.Exception,
-                        eventLevel: EventLevel.Verbose),
+                        eventLevel: EventLevel.Verbose
+                    ),
                 },
-                "Tracks allocation and collection performance."),
+                "Tracks GC and GC handle events at verbose level, and samples the allocation events as well."),
             new Profile(
                 "gc-collect",
                 new Provider[] {
-                    new Provider("Microsoft-DotNETCore-SampleProfiler"),
                     new Provider(
                         name: "Microsoft-Windows-DotNETRuntime",
                         keywords:   (ulong)ClrTraceEventParser.Keywords.GC |
@@ -77,7 +70,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         eventLevel: EventLevel.Informational),
                 },
                 "Tracks GC collection only at very low overhead."),
-#endif // DEBUG
             new Profile(
                 "none",
                 null,
