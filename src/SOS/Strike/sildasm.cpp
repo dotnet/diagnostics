@@ -324,7 +324,33 @@ void DisassembleToken(IMetaDataImport *i,
             methodPrettyPrinter.HandleArguments(); // Safe to call in all cases if HandleReturnType hasn't been called. Will do nothing.
         }
         break;
+
+    case mdtString:
+    {
+        ULONG numChars;
+        WCHAR str[84];
+
+        if (i->GetUserString((mdString)token, str, 80, &numChars) == S_OK)
+        {
+            if (numChars < 80)
+                str[numChars] = 0;
+            wcscpy_s(&str[79], 4, W("..."));
+            WCHAR* ptr = str;
+            while (*ptr != 0) {
+                if (*ptr < 0x20 || *ptr >= 0x80) {
+                    *ptr = '.';
+                }
+                ptr++;
+            }
+
+            printf("\"%S\"", str);
+        }
+        else
+        {
+            printf("STRING %x", token);
+        }
     }
+    break;
 }
 
 ULONG GetILSize(DWORD_PTR ilAddr)
@@ -467,6 +493,7 @@ void displayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG& position, 
     case InlineType:
     case InlineTok:
     case InlineSig:
+    case InlineString:
     {
         LONG l = readData<LONG>(pBuffer, position);
         if (pImport != NULL)
@@ -476,35 +503,6 @@ void displayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG& position, 
         else
         {
             printf("TOKEN %x", l);
-        }
-        break;
-    }
-
-    case InlineString:
-    {
-        LONG l = readData<LONG>(pBuffer, position);
-
-        ULONG numChars;
-        WCHAR str[84];
-
-        if ((pImport != NULL) && (pImport->GetUserString((mdString)l, str, 80, &numChars) == S_OK))
-        {
-            if (numChars < 80)
-                str[numChars] = 0;
-            wcscpy_s(&str[79], 4, W("..."));
-            WCHAR* ptr = str;
-            while (*ptr != 0) {
-                if (*ptr < 0x20 || *ptr >= 0x80) {
-                    *ptr = '.';
-                }
-                ptr++;
-            }
-
-            printf("\"%S\"", str);
-        }
-        else
-        {
-            printf("STRING %x", l);
         }
         break;
     }
