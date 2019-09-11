@@ -64,24 +64,28 @@ static OpCode opcodes[] =
 #include "opcode.def"
 };
 
-static ULONG position = 0;
-static BYTE *pBuffer = NULL;
+static ULONG g_position = 0;
+static BYTE *g_pBuffer = NULL;
 
 // The UNALIGNED is because on IA64 alignment rules would prevent
 // us from reading a pointer from an unaligned source.
+// I am not particularly happy about this but the value of
+// position changes after this call.
 template <typename T>
-T readData ( ) {
+T readData (const BYTE* const pBuffer, ULONG& position) {
     T val = *((T UNALIGNED*)(pBuffer+position));
     position += sizeof(T);
     return val;
 }
 
-unsigned int readOpcode()
+// I am not particularly happy about this but the value of
+// position can change after this call.
+unsigned int readOpcode(const BYTE* const pBuffer, ULONG& position)
 {
-    unsigned int c = readData<BYTE>();
+    unsigned int c = readData<BYTE>(pBuffer, position);
     if (c == 0xFE)
     {
-        c = readData<BYTE>();
+        c = readData<BYTE>(pBuffer, position);
         c |= 0x100;
     }
     return c;
@@ -368,7 +372,9 @@ HRESULT DecodeILFromAddress(IMetaDataImport *pImport, TADDR ilAddr)
 
     return Status;
 }
-            
+
+void displayILOperation(const UINT indentCount, BYTE* pBuffer, ULONG& position, IMetaDataImport* pImport);
+
 void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
 {
     // First decode the header
@@ -376,12 +382,12 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
     COR_ILMETHOD_DECODER header(pHeader);    
 
     // Set globals
-    position = 0;	
-    pBuffer = (BYTE *) header.Code;
+    g_position = 0;	
+    g_pBuffer = (BYTE *) header.Code;
 
     UINT indentCount = 0;
     ULONG endCodePosition = header.GetCodeSize();
-    while(position < endCodePosition)
+    while(g_position < endCodePosition)
     {	
         for (unsigned e=0;e<header.EHCount();e++)
         {
@@ -389,18 +395,18 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
             const IMAGE_COR_ILMETHOD_SECT_EH_CLAUSE_FAT* ehInfo;
             
             ehInfo = header.EH->EHClause(e,&ehBuff);
-            if (ehInfo->TryOffset == position)
+            if (ehInfo->TryOffset == g_position)
             {
                 printf ("%*s.try\n%*s{\n", indentCount, "", indentCount, "");
                 indentCount+=2;
             }
-            else if ((ehInfo->TryOffset + ehInfo->TryLength) == position)
+            else if ((ehInfo->TryOffset + ehInfo->TryLength) == g_position)
             {
                 indentCount-=2;
                 printf("%*s} // end .try\n", indentCount, "");
             }
 
-            if (ehInfo->HandlerOffset == position)
+            if (ehInfo->HandlerOffset == g_position)
             {
                 if (ehInfo->Flags == COR_ILEXCEPTION_CLAUSE_FINALLY)
                     printf("%*s.finally\n%*s{\n", indentCount, "", indentCount, "");
@@ -409,7 +415,7 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
 
                 indentCount+=2;
             }
-            else if ((ehInfo->HandlerOffset + ehInfo->HandlerLength) == position)
+            else if ((ehInfo->HandlerOffset + ehInfo->HandlerLength) == g_position)
             {
                 indentCount-=2;
                 
@@ -420,107 +426,114 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
             }
         }        
         
-        printf("%*sIL_%04x: ", indentCount, "", position);
-        unsigned int c = readOpcode();
-        OpCode opcode = opcodes[c];
-        printf("%s ", opcode.name);
-
-        switch(opcode.args)
-        {
-        case InlineNone: break;
-        
-        case ShortInlineVar:
-            printf("VAR OR ARG %d",readData<BYTE>()); break;
-        case InlineVar:
-            printf("VAR OR ARG %d",readData<WORD>()); break;
-        case InlineI:
-            printf("%d",readData<LONG>());
-            break;
-        case InlineR:
-            printf("%f",readData<double>());
-            break;
-        case InlineBrTarget:
-            printf("IL_%04x",readData<LONG>() + position); break;
-        case ShortInlineBrTarget:
-            printf("IL_%04x",readData<BYTE>()  + position); break;
-        case InlineI8:
-            printf("%ld", readData<__int64>()); break;
-            
-        case InlineMethod:
-        case InlineField:
-        case InlineType:
-        case InlineTok:
-        case InlineSig:        
-        {
-            LONG l = readData<LONG>();
-            if (pImport != NULL)
-            {
-                DisassembleToken(pImport, l);
-            }
-            else
-            {
-                printf("TOKEN %x", l); 
-            }
-            break;
-        }
-            
-        case InlineString:
-        {
-            LONG l = readData<LONG>();
-
-            ULONG numChars;
-            WCHAR str[84];
-
-            if ((pImport != NULL) && (pImport->GetUserString((mdString) l, str, 80, &numChars) == S_OK))
-            {
-                if (numChars < 80)
-                    str[numChars] = 0;
-                wcscpy_s(&str[79], 4, W("..."));
-                WCHAR* ptr = str;
-                while(*ptr != 0) {
-                    if (*ptr < 0x20 || * ptr >= 0x80) {
-                        *ptr = '.';
-                    }
-                    ptr++;
-                }
-
-                printf("\"%S\"", str);
-            }
-            else
-            {
-                printf("STRING %x", l); 
-            }
-            break;
-        }
-            
-        case InlineSwitch:
-        {
-            LONG cases = readData<LONG>();
-            LONG *pArray = new LONG[cases];
-            LONG i=0;
-            for(i=0;i<cases;i++)
-            {
-                pArray[i] = readData<LONG>();
-            }
-            printf("(");
-            for(i=0;i<cases;i++)
-            {
-                if (i != 0)
-                    printf(", ");
-                printf("IL_%04x",pArray[i] + position);
-            }
-            printf(")");
-            delete [] pArray;
-            break;
-        }
-        case ShortInlineI:
-            printf("%d", readData<BYTE>()); break;
-        case ShortInlineR:		
-            printf("%f", readData<float>()); break;
-        default: printf("Error, unexpected opcode type\n"); break;
-        }
+        displayILOperation(indentCount, g_pBuffer, g_position, pImport);
 
         printf("\n");
+    }
+}
+
+// I am not particularly happy about this but the value of
+// position can change after this call.
+void displayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG& position, IMetaDataImport* pImport)
+{
+    printf("%*sIL_%04x: ", indentCount, "", position);
+    unsigned int c = readOpcode(pBuffer, position);
+    OpCode opcode = opcodes[c];
+    printf("%s ", opcode.name);
+
+    switch (opcode.args)
+    {
+    case InlineNone: break;
+
+    case ShortInlineVar:
+        printf("VAR OR ARG %d", readData<BYTE>(pBuffer, position)); break;
+    case InlineVar:
+        printf("VAR OR ARG %d", readData<WORD>(pBuffer, position)); break;
+    case InlineI:
+        printf("%d", readData<LONG>(pBuffer, position));
+        break;
+    case InlineR:
+        printf("%f", readData<double>(pBuffer, position));
+        break;
+    case InlineBrTarget:
+        printf("IL_%04x", readData<LONG>(pBuffer, position) + position); break;
+    case ShortInlineBrTarget:
+        printf("IL_%04x", readData<BYTE>(pBuffer, position) + position); break;
+    case InlineI8:
+        printf("%ld", readData<__int64>(pBuffer, position)); break;
+
+    case InlineMethod:
+    case InlineField:
+    case InlineType:
+    case InlineTok:
+    case InlineSig:
+    {
+        LONG l = readData<LONG>(pBuffer, position);
+        if (pImport != NULL)
+        {
+            DisassembleToken(pImport, l);
+        }
+        else
+        {
+            printf("TOKEN %x", l);
+        }
+        break;
+    }
+
+    case InlineString:
+    {
+        LONG l = readData<LONG>(pBuffer, position);
+
+        ULONG numChars;
+        WCHAR str[84];
+
+        if ((pImport != NULL) && (pImport->GetUserString((mdString)l, str, 80, &numChars) == S_OK))
+        {
+            if (numChars < 80)
+                str[numChars] = 0;
+            wcscpy_s(&str[79], 4, W("..."));
+            WCHAR* ptr = str;
+            while (*ptr != 0) {
+                if (*ptr < 0x20 || *ptr >= 0x80) {
+                    *ptr = '.';
+                }
+                ptr++;
+            }
+
+            printf("\"%S\"", str);
+        }
+        else
+        {
+            printf("STRING %x", l);
+        }
+        break;
+    }
+
+    case InlineSwitch:
+    {
+        LONG cases = readData<LONG>(pBuffer, position);
+        LONG* pArray = new LONG[cases];
+        LONG i = 0;
+        for (i = 0;i<cases;i++)
+        {
+            pArray[i] = readData<LONG>(pBuffer, position);
+        }
+        printf("(");
+        for (i = 0;i<cases;i++)
+        {
+            if (i != 0)
+                printf(", ");
+            printf("IL_%04x", pArray[i] + position);
+        }
+        printf(")");
+        delete[] pArray;
+        break;
+    }
+    case ShortInlineI:
+        printf("%d", readData<BYTE>(pBuffer, position)); break;
+    case ShortInlineR:
+        printf("%f", readData<float>(pBuffer, position)); break;
+    default: printf("Error, unexpected opcode type\n"); break;
     }
 }
 
@@ -623,16 +636,16 @@ void DecodeDynamicIL(BYTE *data, ULONG Size, DacpObjectData& tokenArray)
 {
     // There is no header for this dynamic guy.
     // Set globals
-    position = 0;	
-    pBuffer = data;
+    g_position = 0;	
+    g_pBuffer = data;
 
     // At this time no exception information will be displayed (fix soon)
     UINT indentCount = 0;
     ULONG endCodePosition = Size;
-    while(position < endCodePosition)
+    while(g_position < endCodePosition)
     {	        
-        printf("%*sIL_%04x: ", indentCount, "", position);
-        unsigned int c = readOpcode();
+        printf("%*sIL_%04x: ", indentCount, "", g_position);
+        unsigned int c = readOpcode(g_pBuffer, g_position);
         OpCode opcode = opcodes[c];
         printf("%s ", opcode.name);
 
@@ -641,21 +654,21 @@ void DecodeDynamicIL(BYTE *data, ULONG Size, DacpObjectData& tokenArray)
         case InlineNone: break;
         
         case ShortInlineVar:
-            printf("VAR OR ARG %d",readData<BYTE>()); break;
+            printf("VAR OR ARG %d",readData<BYTE>(g_pBuffer, g_position)); break;
         case InlineVar:
-            printf("VAR OR ARG %d",readData<WORD>()); break;
+            printf("VAR OR ARG %d",readData<WORD>(g_pBuffer, g_position)); break;
         case InlineI:
-            printf("%d",readData<LONG>());
+            printf("%d",readData<LONG>(g_pBuffer, g_position));
             break;
         case InlineR:
-            printf("%f",readData<double>());
+            printf("%f",readData<double>(g_pBuffer, g_position));
             break;
         case InlineBrTarget:
-            printf("IL_%04x",readData<LONG>() + position); break;
+            printf("IL_%04x",readData<LONG>(g_pBuffer, g_position) + g_position); break;
         case ShortInlineBrTarget:
-            printf("IL_%04x",readData<BYTE>()  + position); break;
+            printf("IL_%04x",readData<BYTE>(g_pBuffer, g_position)  + g_position); break;
         case InlineI8:
-            printf("%ld", readData<__int64>()); break;
+            printf("%ld", readData<__int64>(g_pBuffer, g_position)); break;
             
         case InlineMethod:
         case InlineField:
@@ -664,35 +677,35 @@ void DecodeDynamicIL(BYTE *data, ULONG Size, DacpObjectData& tokenArray)
         case InlineSig:        
         case InlineString:            
         {
-            LONG l = readData<LONG>();
+            LONG l = readData<LONG>(g_pBuffer, g_position);
             DisassembleToken(tokenArray, l);            
             break;
         }
                         
         case InlineSwitch:
         {
-            LONG cases = readData<LONG>();
+            LONG cases = readData<LONG>(g_pBuffer, g_position);
             LONG *pArray = new LONG[cases];
             LONG i=0;
             for(i=0;i<cases;i++)
             {
-                pArray[i] = readData<LONG>();
+                pArray[i] = readData<LONG>(g_pBuffer, g_position);
             }
             printf("(");
             for(i=0;i<cases;i++)
             {
                 if (i != 0)
                     printf(", ");
-                printf("IL_%04x",pArray[i] + position);
+                printf("IL_%04x",pArray[i] + g_position);
             }
             printf(")");
             delete [] pArray;
             break;
         }
         case ShortInlineI:
-            printf("%d", readData<BYTE>()); break;
+            printf("%d", readData<BYTE>(g_pBuffer, g_position)); break;
         case ShortInlineR:		
-            printf("%f", readData<float>()); break;
+            printf("%f", readData<float>(g_pBuffer, g_position)); break;
         default: printf("Error, unexpected opcode type\n"); break;
         }
 
