@@ -36,6 +36,8 @@
 #include "corhlpr.h"
 #include "corhlpr.cpp"
 
+#include <functional>
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 #undef printf
 #define printf ExtOut
@@ -285,22 +287,22 @@ void DisassembleToken(IMetaDataImport *i,
             ULONG cLen;
             WCHAR szName[50];
 
-            if(TypeFromToken(cr) == mdtTypeRef)
+            if (TypeFromToken(cr) == mdtTypeRef)
             {
                 if (FAILED(i->GetTypeRefProps(cr, NULL, szName, 50, &cLen)))
                 {
                     StringCchCopyW(szName, COUNTOF(szName), W("<unknown type ref>"));
                 }
             }
-            else if(TypeFromToken(cr) == mdtTypeDef)
+            else if (TypeFromToken(cr) == mdtTypeDef)
             {
                 if (FAILED(i->GetTypeDefProps(cr, szName, 49, &cLen,
-                                              NULL, NULL)))
+                    NULL, NULL)))
                 {
                     StringCchCopyW(szName, COUNTOF(szName), W("<unknown type def>"));
                 }
             }
-            else if(TypeFromToken(cr) == mdtTypeSpec)
+            else if (TypeFromToken(cr) == mdtTypeSpec)
             {
                 CQuickBytes out;
                 ULONG cSig;
@@ -312,45 +314,46 @@ void DisassembleToken(IMetaDataImport *i,
                 else
                 {
                     PrettyPrintType(sig, &out, i);
-                    MultiByteToWideChar (CP_ACP, 0, asString(&out), -1, szName, 50);
+                    MultiByteToWideChar(CP_ACP, 0, asString(&out), -1, szName, 50);
                 }
             }
             else
             {
                 StringCchCopyW(szName, COUNTOF(szName), W("<unknown type token>"));
             }
-            
+
             printf("%S::%S", szName, pMemberName);
             methodPrettyPrinter.HandleArguments(); // Safe to call in all cases if HandleReturnType hasn't been called. Will do nothing.
         }
         break;
 
     case mdtString:
-    {
-        ULONG numChars;
-        WCHAR str[84];
-
-        if (i->GetUserString((mdString)token, str, 80, &numChars) == S_OK)
         {
-            if (numChars < 80)
-                str[numChars] = 0;
-            wcscpy_s(&str[79], 4, W("..."));
-            WCHAR* ptr = str;
-            while (*ptr != 0) {
-                if (*ptr < 0x20 || *ptr >= 0x80) {
-                    *ptr = '.';
+            ULONG numChars;
+            WCHAR str[84];
+
+            if (i->GetUserString((mdString)token, str, 80, &numChars) == S_OK)
+            {
+                if (numChars < 80)
+                    str[numChars] = 0;
+                wcscpy_s(&str[79], 4, W("..."));
+                WCHAR* ptr = str;
+                while (*ptr != 0) {
+                    if (*ptr < 0x20 || *ptr >= 0x80) {
+                        *ptr = '.';
+                    }
+                    ptr++;
                 }
-                ptr++;
-            }
 
-            printf("\"%S\"", str);
+                printf("\"%S\"", str);
+            }
+            else
+            {
+                printf("STRING %x", token);
+            }
         }
-        else
-        {
-            printf("STRING %x", token);
-        }
+        break;
     }
-    break;
 }
 
 ULONG GetILSize(DWORD_PTR ilAddr)
@@ -399,7 +402,7 @@ HRESULT DecodeILFromAddress(IMetaDataImport *pImport, TADDR ilAddr)
     return Status;
 }
 
-void displayILOperation(const UINT indentCount, BYTE* pBuffer, ULONG& position, IMetaDataImport* pImport);
+void displayILOperation(const UINT indentCount, BYTE* pBuffer, ULONG& position, std::function<void(DWORD)>& func);
 
 void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
 {
@@ -450,9 +453,19 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
                 else
                     printf("%*s} // end .catch\n", indentCount, "");
             }
-        }        
-        
-        displayILOperation(indentCount, g_pBuffer, g_position, pImport);
+        }
+        std::function<void(DWORD)> func = [&pImport](DWORD l) {
+            if (pImport != NULL)
+            {
+                DisassembleToken(pImport, l);
+            }
+            else
+            {
+                printf("TOKEN %x", l);
+            }
+        };
+
+        displayILOperation(indentCount, g_pBuffer, g_position, func);
 
         printf("\n");
     }
@@ -460,7 +473,7 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
 
 // I am not particularly happy about this but the value of
 // position can change after this call.
-void displayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG& position, IMetaDataImport* pImport)
+void displayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG& position, std::function<void(DWORD)>& func)
 {
     printf("%*sIL_%04x: ", indentCount, "", position);
     unsigned int c = readOpcode(pBuffer, position);
@@ -496,14 +509,7 @@ void displayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG& position, 
     case InlineString:
     {
         LONG l = readData<LONG>(pBuffer, position);
-        if (pImport != NULL)
-        {
-            DisassembleToken(pImport, l);
-        }
-        else
-        {
-            printf("TOKEN %x", l);
-        }
+        func(l);
         break;
     }
 
