@@ -49,23 +49,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 },
                 "Useful for tracking CPU usage and general runtime information. This the default option if no profile is specified."),
             new Profile(
-                "gc-with-heapsurvival",
-                new Provider[] {
-                    new Provider("Microsoft-DotNETCore-SampleProfiler"),
-                    new Provider(
-                        name: "Microsoft-Windows-DotNETRuntime",
-                        keywords: (ulong)ClrTraceEventParser.Keywords.GC |
-                                  (ulong)ClrTraceEventParser.Keywords.GCHeapSurvivalAndMovement |
-                                  (ulong)ClrTraceEventParser.Keywords.Stack |
-                                  (ulong)ClrTraceEventParser.Keywords.Jit |
-                                  (ulong)ClrTraceEventParser.Keywords.StopEnumeration |
-                                  (ulong)ClrTraceEventParser.Keywords.SupressNGen |
-                                  (ulong)ClrTraceEventParser.Keywords.Loader |
-                                  (ulong)ClrTraceEventParser.Keywords.Exception,
-                        eventLevel: EventLevel.Verbose),
-                },
-                "Tracks allocation and collection performance at the most verbose level."),
-            new Profile(
                 "gc-verbose",
                 new Provider[] {
                     new Provider(
@@ -76,7 +59,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         eventLevel: EventLevel.Verbose
                     ),
                 },
-                "Tracks GC and GC handle events at a more verbose level"),
+                "Tracks GC and GC handle events at verbose level, and samples the allocation events as well."),
             new Profile(
                 "gc-collect",
                 new Provider[] {
