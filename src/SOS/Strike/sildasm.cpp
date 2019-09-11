@@ -647,72 +647,11 @@ void DecodeDynamicIL(BYTE *data, ULONG Size, DacpObjectData& tokenArray)
     UINT indentCount = 0;
     ULONG endCodePosition = Size;
     while(g_position < endCodePosition)
-    {	        
-        printf("%*sIL_%04x: ", indentCount, "", g_position);
-        unsigned int c = readOpcode(g_pBuffer, g_position);
-        OpCode opcode = opcodes[c];
-        printf("%s ", opcode.name);
-
-        switch(opcode.args)
-        {
-        case InlineNone: break;
-        
-        case ShortInlineVar:
-            printf("VAR OR ARG %d",readData<BYTE>(g_pBuffer, g_position)); break;
-        case InlineVar:
-            printf("VAR OR ARG %d",readData<WORD>(g_pBuffer, g_position)); break;
-        case InlineI:
-            printf("%d",readData<LONG>(g_pBuffer, g_position));
-            break;
-        case InlineR:
-            printf("%f",readData<double>(g_pBuffer, g_position));
-            break;
-        case InlineBrTarget:
-            printf("IL_%04x",readData<LONG>(g_pBuffer, g_position) + g_position); break;
-        case ShortInlineBrTarget:
-            printf("IL_%04x",readData<BYTE>(g_pBuffer, g_position)  + g_position); break;
-        case InlineI8:
-            printf("%ld", readData<__int64>(g_pBuffer, g_position)); break;
-            
-        case InlineMethod:
-        case InlineField:
-        case InlineType:
-        case InlineTok:
-        case InlineSig:        
-        case InlineString:            
-        {
-            LONG l = readData<LONG>(g_pBuffer, g_position);
-            DisassembleToken(tokenArray, l);            
-            break;
-        }
-                        
-        case InlineSwitch:
-        {
-            LONG cases = readData<LONG>(g_pBuffer, g_position);
-            LONG *pArray = new LONG[cases];
-            LONG i=0;
-            for(i=0;i<cases;i++)
-            {
-                pArray[i] = readData<LONG>(g_pBuffer, g_position);
-            }
-            printf("(");
-            for(i=0;i<cases;i++)
-            {
-                if (i != 0)
-                    printf(", ");
-                printf("IL_%04x",pArray[i] + g_position);
-            }
-            printf(")");
-            delete [] pArray;
-            break;
-        }
-        case ShortInlineI:
-            printf("%d", readData<BYTE>(g_pBuffer, g_position)); break;
-        case ShortInlineR:		
-            printf("%f", readData<float>(g_pBuffer, g_position)); break;
-        default: printf("Error, unexpected opcode type\n"); break;
-        }
-
+    {
+        std::function<void(DWORD)> func = [&tokenArray](DWORD l) {
+            DisassembleToken(tokenArray, l);
+        };
+        displayILOperation(indentCount, g_pBuffer, g_position, func);
         printf("\n");
     }
 }
