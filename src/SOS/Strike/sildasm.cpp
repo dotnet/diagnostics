@@ -399,7 +399,7 @@ HRESULT DecodeILFromAddress(IMetaDataImport *pImport, TADDR ilAddr)
     return Status;
 }
 
-void displayILOperation(const UINT indentCount, BYTE* pBuffer, ULONG& position, std::function<void(DWORD)>& func);
+ULONG displayILOperation(const UINT indentCount, BYTE* pBuffer, ULONG position, std::function<void(DWORD)>& func);
 
 void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
 {
@@ -461,15 +461,13 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
             }
         };
 
-        displayILOperation(indentCount, pBuffer, position, func);
+        position = displayILOperation(indentCount, pBuffer, position, func);
 
         printf("\n");
     }
 }
 
-// I am not particularly happy about this but the value of
-// position can change after this call.
-void displayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG& position, std::function<void(DWORD)>& func)
+ULONG displayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG position, std::function<void(DWORD)>& func)
 {
     printf("%*sIL_%04x: ", indentCount, "", position);
     unsigned int c = readOpcode(pBuffer, position);
@@ -535,6 +533,7 @@ void displayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG& position, 
         printf("%f", readData<float>(pBuffer, position)); break;
     default: printf("Error, unexpected opcode type\n"); break;
     }
+    return position;
 }
 
 DWORD_PTR GetObj(DacpObjectData& tokenArray, UINT item)
@@ -646,7 +645,7 @@ void DecodeDynamicIL(BYTE *data, ULONG Size, DacpObjectData& tokenArray)
         std::function<void(DWORD)> func = [&tokenArray](DWORD l) {
             DisassembleToken(tokenArray, l);
         };
-        displayILOperation(indentCount, pBuffer, position, func);
+        position = displayILOperation(indentCount, pBuffer, position, func);
         printf("\n");
     }
 }
