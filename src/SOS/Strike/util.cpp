@@ -2816,8 +2816,6 @@ const char *EHTypeName(EHClauseType et)
 // 2.x version
 void DumpTieredNativeCodeAddressInfo_2x(struct DacpTieredVersionData_2x * pTieredVersionData, const UINT cTieredVersionData)
 {
-    ExtOut("Code Version History:\n");
-
     for(int i = cTieredVersionData - 1; i >= 0; --i)
     {
         const char *descriptor = NULL;
@@ -2837,20 +2835,21 @@ void DumpTieredNativeCodeAddressInfo_2x(struct DacpTieredVersionData_2x * pTiere
             descriptor = "Tier 1";
             break;
         }
-
-        DMLOut("  CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
-        ExtOut("  NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
+        DMLOut("     CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
+        ExtOut("     NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
     }
 }
 
-void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersionData,
-    const UINT cTieredVersionData, ULONG rejitID, CLRDATA_ADDRESS ilAddr, CLRDATA_ADDRESS ilNodeAddr)
+void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersionData, const UINT cTieredVersionData, 
+    ULONG rejitID, CLRDATA_ADDRESS ilAddr, CLRDATA_ADDRESS ilNodeAddr)
 {
+    ExtOut("  ILCodeVersion:      %p\n", SOS_PTR(ilNodeAddr));
+    ExtOut("  ReJIT ID:           %d\n", rejitID);
+    DMLOut("  IL Addr:            %s\n", DMLIL(ilAddr));
+
     if (IsRuntimeVersion(3)) {
         for(int i = cTieredVersionData - 1; i >= 0; --i)
         {
-            ExtOut("  NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
-
             const char *descriptor = NULL;
             switch(pTieredVersionData[i].OptimizationTier)
             {
@@ -2874,12 +2873,8 @@ void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersi
                 descriptor = "ReadyToRun";
                 break;
             }
-
-            ExtOut("    ReJIT ID:           %d\n", rejitID);
-            DMLOut("    CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
-            DMLOut("    IL Addr:            %s\n", DMLIL(ilAddr));
-            ExtOut("    ILCodeVersion:      %p\n", SOS_PTR(ilNodeAddr));
-
+            DMLOut("     CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
+            ExtOut("     NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
         }
     }
     else {
@@ -3019,8 +3014,8 @@ void DumpMDInfoFromMethodDescData(DacpMethodDescData * pMethodDescData, DacpReJi
             {
                 // Special case, there is no jitted code yet but still need to output the IL information
                 ExtOut("  ILCodeVersion:      %p (pending)\n", SOS_PTR(pendingRejitData.ilCodeVersionNodePtr));
-                ExtOut("    ReJIT ID:           %d\n", pendingRejitID);
-                DMLOut("    IL Addr:            %s\n", DMLIL(pendingRejitData.il));
+                ExtOut("  ReJIT ID:           %d\n", pendingRejitID);
+                DMLOut("  IL Addr:            %s\n", DMLIL(pendingRejitData.il));
             }
         }
 
@@ -3280,7 +3275,7 @@ size_t FunctionType (size_t EIP)
 //
 // Gets version info for the CLR in the debuggee process.
 //
-BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSize)
+BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes)
 {
     _ASSERTE(pFileInfo);
     if (g_ExtSymbols2 == nullptr) {
@@ -3300,19 +3295,20 @@ BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int file
     // Attempt to get the the FileVersion string that contains version and the "built by" and commit id info
     if (fileVersionBuffer != nullptr)
     {
-        if (fileVersionBufferSize > 0) {
+        if (fileVersionBufferSizeInBytes > 0) {
             fileVersionBuffer[0] = '\0';
         }
         // We can assume the English/CP_UNICODE lang/code page for the runtime modules
         g_ExtSymbols2->GetModuleVersionInformation(
-            moduleInfo.index, 0, "\\StringFileInfo\\040904B0\\FileVersion", fileVersionBuffer, fileVersionBufferSize, NULL);
+            moduleInfo.index, 0, "\\StringFileInfo\\040904B0\\FileVersion", fileVersionBuffer, fileVersionBufferSizeInBytes, NULL);
     }
 
     return SUCCEEDED(hr);
 }
 
 //
-// Return true if major runtime version
+// Return true if major runtime version (logical product version like 2.1, 
+// 3.0 or 5.x). Currently only major versions of 3 or 5 are supported.
 //
 bool IsRuntimeVersion(DWORD major)
 {

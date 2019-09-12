@@ -691,7 +691,7 @@ namespace SOS
             uint i = 0;
             foreach (ModuleInfo module in DataReader.EnumerateModules())
             {
-                if (index != uint.MaxValue && i == index || index == uint.MaxValue && baseAddress == module.ImageBase)
+                if ((index != uint.MaxValue && i == index) || (index == uint.MaxValue && baseAddress == module.ImageBase))
                 {
                     imageNameBuffer?.Append(module.FileName);
                     Write(imageNameSize, (uint)module.FileName.Length + 1);
@@ -760,7 +760,7 @@ namespace SOS
             uint i = 0;
             foreach (ModuleInfo module in DataReader.EnumerateModules())
             {
-                if (index != uint.MaxValue && i == index || index == uint.MaxValue && baseAddress == module.ImageBase)
+                if ((index != uint.MaxValue && i == index) || (index == uint.MaxValue && baseAddress == module.ImageBase))
                 {
                     if (item == "\\")
                     {

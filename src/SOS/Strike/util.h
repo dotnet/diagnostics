@@ -1556,7 +1556,7 @@ HRESULT GetRuntimeModuleInfo(PULONG moduleIndex, PULONG64 moduleBase);
 EEFLAVOR GetEEFlavor ();
 HRESULT InitCorDebugInterface();
 VOID UninitCorDebugInterface();
-BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSize);
+BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes);
 bool IsRuntimeVersion(DWORD major);
 #ifndef FEATURE_PAL
 BOOL IsRetailBuild (size_t base);
