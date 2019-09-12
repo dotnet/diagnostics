@@ -8,6 +8,7 @@ using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -79,6 +80,8 @@ namespace SOS
             builder = AddInterface(IID_ILLDBServices2, validate: false);
             builder.AddMethod(new LoadNativeSymbolsDelegate2(LoadNativeSymbols2));
             builder.AddMethod(new AddModuleSymbolDelegate(AddModuleSymbol));
+            builder.AddMethod(new GetModuleInfoDelegate(GetModuleInfo));
+            builder.AddMethod(new GetModuleVersionInformationDelegate(soshost.GetModuleVersionInformation));
             builder.Complete();
 
             AddRef();
@@ -191,6 +194,28 @@ namespace SOS
             IntPtr parameter,
             string symbolFilename)
         {
+            return S_OK;
+        }
+
+        unsafe int GetModuleInfo(
+            IntPtr self,
+            uint index,
+            ulong *moduleBase,
+            ulong *moduleSize)
+        {
+            try
+            {
+                ModuleInfo module = _soshost.DataReader.EnumerateModules().ElementAt((int)index);
+                if (module == null) {
+                    return E_FAIL;
+                }
+                SOSHost.Write(moduleBase, module.ImageBase);
+                SOSHost.Write(moduleSize, module.FileSize);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return E_FAIL;
+            }
             return S_OK;
         }
 
@@ -462,21 +487,38 @@ namespace SOS
         /// </summary>
         public delegate void ModuleLoadCallback(
             IntPtr parameter,
-            [MarshalAs(UnmanagedType.LPStr)] string moduleFilePath,
-            ulong moduleAddress,
-            int moduleSize);
+            [In, MarshalAs(UnmanagedType.LPStr)] string moduleFilePath,
+            [In] ulong moduleAddress,
+            [In] int moduleSize);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate int LoadNativeSymbolsDelegate2(
             IntPtr self,
-            bool runtimeOnly,
-            ModuleLoadCallback callback);
+            [In] bool runtimeOnly,
+            [In] ModuleLoadCallback callback);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate int AddModuleSymbolDelegate(
             IntPtr self,
-            IntPtr parameter,
-            [MarshalAs(UnmanagedType.LPStr)] string symbolFilename);
+            [In] IntPtr parameter,
+            [In, MarshalAs(UnmanagedType.LPStr)] string symbolFilename);
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        private unsafe delegate int GetModuleInfoDelegate(
+            IntPtr self,
+            [In] uint index,
+            [Out] ulong *moduleBase,
+            [Out] ulong *moduleSize);
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        private delegate int GetModuleVersionInformationDelegate(
+            IntPtr self,
+            [In] uint Index,
+            [In] ulong Base,
+            [In][MarshalAs(UnmanagedType.LPStr)] string Item,
+            [Out] byte* Buffer,
+            [In] uint BufferSize,
+            [Out] uint* VerInfoSize);
 
         #endregion
     }

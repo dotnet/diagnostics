@@ -30,6 +30,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [Command(Name = "dumpstackobjects", AliasExpansion = "DumpStackObjects",    Help = "Displays all managed objects found within the bounds of the current stack.")]
     [CommandAlias(Name = "dso")]
     [Command(Name = "eeheap",           AliasExpansion = "EEHeap",              Help = "Displays info about process memory consumed by internal runtime data structures.")]
+    [Command(Name = "eeversion",        AliasExpansion = "EEVersion",           Help = "Displays information about the runtime version.")]
     [Command(Name = "finalizequeue",    AliasExpansion = "FinalizeQueue",       Help = "Displays all objects registered for finalization.")]
     [Command(Name = "gcroot",           AliasExpansion = "GCRoot",              Help = "Displays info about references (or roots) to an object at the specified address.")]
     [Command(Name = "gcwhere",          AliasExpansion = "GCWhere",             Help = "Displays the location in the GC heap of the argument passed in.")]

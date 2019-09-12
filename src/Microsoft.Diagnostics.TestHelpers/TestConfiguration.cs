@@ -480,6 +480,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// <summary>
         /// The major portion of the runtime framework version
         /// </summary>
+        /// <exception cref="SkipTestException">the RuntimeFrameworkVersion property doesn't exist</exception>
         public int RuntimeFrameworkVersionMajor
         {
             get {

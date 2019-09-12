@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
+using Xunit.Extensions;
 
 public class SOSRunner : IDisposable
 {
@@ -157,6 +158,12 @@ public class SOSRunner : IDisposable
                     WithTimeout(TimeSpan.FromMinutes(5)).
                     WithEnvironmentVariable("COMPlus_DbgEnableMiniDump", "1").
                     WithEnvironmentVariable("COMPlus_DbgMiniDumpName", ReplaceVariables(variables,"%DUMP_NAME%"));
+
+                // Exit codes on Windows should always be 0, but not on Linux/OSX for the faulting test apps.
+                if (OS.Kind == OSKind.Windows)
+                {
+                    processRunner.WithExpectedExitCode(0);
+                }
 
                 processRunner.Start();
 
@@ -377,6 +384,12 @@ public class SOSRunner : IDisposable
                 WithLog(scriptLogger).
                 WithTimeout(TimeSpan.FromMinutes(10));
 
+            // Exit codes on Windows should always be 0, but not on Linux/OSX for the faulting test apps.
+            if (OS.Kind == OSKind.Windows)
+            {
+                processRunner.WithExpectedExitCode(0);
+            }
+
             // Create the sos runner instance
             sosRunner = new SOSRunner(debugger, config, outputHelper, variables, scriptLogger, processRunner, options == Options.LoadDump || options == Options.LoadDumpWithDotNetDump);
 
@@ -411,104 +424,111 @@ public class SOSRunner : IDisposable
 
     public async Task RunScript(string scriptRelativePath)
     {
-        string scriptFile = Path.Combine(_config.ScriptRootDir, scriptRelativePath);
-        if (!File.Exists(scriptFile))
-        {
-            throw new FileNotFoundException("Script file does not exist: " + scriptFile);
-        }
-        HashSet<string> enabledDefines = GetEnabledDefines();
-        LogProcessingReproInfo(scriptFile, enabledDefines);
-        string[] scriptLines = File.ReadAllLines(scriptFile);
-        Dictionary<string, bool> activeDefines = new Dictionary<string, bool>();
-        bool isActiveDefineRegionEnabled = IsActiveDefineRegionEnabled(activeDefines, enabledDefines);
-        int i = 0;
         try
         {
-            for (; i < scriptLines.Length; i++)
+            string scriptFile = Path.Combine(_config.ScriptRootDir, scriptRelativePath);
+            if (!File.Exists(scriptFile))
             {
-                string line = scriptLines[i].TrimStart();
-                if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
-                {
-                    continue;
-                }
-                else if (line.StartsWith("IFDEF:"))
-                {
-                    string define = line.Substring("IFDEF:".Length);
-                    activeDefines.Add(define, true);
-                    isActiveDefineRegionEnabled = IsActiveDefineRegionEnabled(activeDefines, enabledDefines);
-                }
-                else if (line.StartsWith("!IFDEF:"))
-                {
-                    string define = line.Substring("!IFDEF:".Length);
-                    activeDefines.Add(define, false);
-                    isActiveDefineRegionEnabled = IsActiveDefineRegionEnabled(activeDefines, enabledDefines);
-                }
-                else if (line.StartsWith("ENDIF:"))
-                {
-                    string define = line.Substring("ENDIF:".Length);
-                    if (!activeDefines.Last().Key.Equals(define))
-                    {
-                        throw new Exception("Mismatched IFDEF/ENDIF. IFDEF: " + activeDefines.Last().Key + " ENDIF: " + define);
-                    }
-                    activeDefines.Remove(define);
-                    isActiveDefineRegionEnabled = IsActiveDefineRegionEnabled(activeDefines, enabledDefines);
-                }
-                else if (!isActiveDefineRegionEnabled)
-                {
-                    WriteLine("    SKIPPING: {0}", line);
-                    continue;
-                }
-                else if (line.StartsWith("LOADSOS"))
-                {
-                    await LoadSosExtension();
-                }
-                else if (line.StartsWith("CONTINUE"))
-                {
-                    await ContinueExecution();
-                }
-                else if (line.StartsWith("SOSCOMMAND:"))
-                {
-                    string input = line.Substring("SOSCOMMAND:".Length).TrimStart();
-                    if (!await RunSosCommand(input))
-                    {
-                        throw new Exception($"SOS command FAILED: {input}");
-                    }
-                }
-                else if (line.StartsWith("COMMAND:"))
-                {
-                    string input = line.Substring("COMMAND:".Length).TrimStart();
-                    if (!await RunCommand(input))
-                    {
-                        throw new Exception($"Debugger command FAILED: {input}");
-                    }
-                }
-                else if (line.StartsWith("VERIFY:"))
-                {
-                    string verifyLine = line.Substring("VERIFY:".Length);
-                    VerifyOutput(verifyLine);
-                }
-                else
-                {
-                    continue;
-                }
+                throw new FileNotFoundException("Script file does not exist: " + scriptFile);
             }
-
-            if (activeDefines.Count != 0)
+            HashSet<string> enabledDefines = GetEnabledDefines();
+            LogProcessingReproInfo(scriptFile, enabledDefines);
+            string[] scriptLines = File.ReadAllLines(scriptFile);
+            Dictionary<string, bool> activeDefines = new Dictionary<string, bool>();
+            bool isActiveDefineRegionEnabled = IsActiveDefineRegionEnabled(activeDefines, enabledDefines);
+            int i = 0;
+            try
             {
-                throw new Exception("Error unbalanced IFDEFs. " + activeDefines.First().Key + " has no ENDIF.");
-            }
+                for (; i < scriptLines.Length; i++)
+                {
+                    string line = scriptLines[i].TrimStart();
+                    if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
+                    {
+                        continue;
+                    }
+                    else if (line.StartsWith("IFDEF:"))
+                    {
+                        string define = line.Substring("IFDEF:".Length);
+                        activeDefines.Add(define, true);
+                        isActiveDefineRegionEnabled = IsActiveDefineRegionEnabled(activeDefines, enabledDefines);
+                    }
+                    else if (line.StartsWith("!IFDEF:"))
+                    {
+                        string define = line.Substring("!IFDEF:".Length);
+                        activeDefines.Add(define, false);
+                        isActiveDefineRegionEnabled = IsActiveDefineRegionEnabled(activeDefines, enabledDefines);
+                    }
+                    else if (line.StartsWith("ENDIF:"))
+                    {
+                        string define = line.Substring("ENDIF:".Length);
+                        if (!activeDefines.Last().Key.Equals(define))
+                        {
+                            throw new Exception("Mismatched IFDEF/ENDIF. IFDEF: " + activeDefines.Last().Key + " ENDIF: " + define);
+                        }
+                        activeDefines.Remove(define);
+                        isActiveDefineRegionEnabled = IsActiveDefineRegionEnabled(activeDefines, enabledDefines);
+                    }
+                    else if (!isActiveDefineRegionEnabled)
+                    {
+                        WriteLine("    SKIPPING: {0}", line);
+                        continue;
+                    }
+                    else if (line.StartsWith("LOADSOS"))
+                    {
+                        await LoadSosExtension();
+                    }
+                    else if (line.StartsWith("CONTINUE"))
+                    {
+                        await ContinueExecution();
+                    }
+                    else if (line.StartsWith("SOSCOMMAND:"))
+                    {
+                        string input = line.Substring("SOSCOMMAND:".Length).TrimStart();
+                        if (!await RunSosCommand(input))
+                        {
+                            throw new Exception($"SOS command FAILED: {input}");
+                        }
+                    }
+                    else if (line.StartsWith("COMMAND:"))
+                    {
+                        string input = line.Substring("COMMAND:".Length).TrimStart();
+                        if (!await RunCommand(input))
+                        {
+                            throw new Exception($"Debugger command FAILED: {input}");
+                        }
+                    }
+                    else if (line.StartsWith("VERIFY:"))
+                    {
+                        string verifyLine = line.Substring("VERIFY:".Length);
+                        VerifyOutput(verifyLine);
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
 
-            await QuitDebugger();
+                if (activeDefines.Count != 0)
+                {
+                    throw new Exception("Error unbalanced IFDEFs. " + activeDefines.First().Key + " has no ENDIF.");
+                }
+
+                await QuitDebugger();
+            }
+            catch (Exception)
+            {
+                WriteLine("SOSRunner error at " + scriptFile + ":" + (i + 1));
+                WriteLine("Excerpt from " + scriptFile + ":");
+                for (int j = Math.Max(0, i - 2); j < Math.Min(i + 3, scriptLines.Length); j++)
+                {
+                    WriteLine((j + 1).ToString().PadLeft(5) + " " + scriptLines[j]);
+                }
+                throw;
+            }
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            WriteLine("SOSRunner error at " + scriptFile + ":" + (i + 1));
-            WriteLine("Excerpt from " + scriptFile + ":");
-            for (int j = Math.Max(0, i - 2); j < Math.Min(i + 3, scriptLines.Length); j++)
-            {
-                WriteLine((j + 1).ToString().PadLeft(5) + " " + scriptLines[j]);
-            }
-            WriteLine(e.ToString());
+            WriteLine(ex.ToString());
             throw;
         }
     }
@@ -863,8 +883,14 @@ public class SOSRunner : IDisposable
             OS.Kind.ToString().ToUpperInvariant(),
             _config.TestProduct.ToUpperInvariant(),
             _config.TargetArchitecture.ToUpperInvariant(),
-            "MAJOR_RUNTIME_VERSION_" + _config.RuntimeFrameworkVersionMajor.ToString()
         };
+        try
+        {
+            defines.Add("MAJOR_RUNTIME_VERSION_" + _config.RuntimeFrameworkVersionMajor.ToString());
+        }
+        catch (SkipTestException)
+        {
+        }
         if (_isDump)
         {
             defines.Add("DUMP");

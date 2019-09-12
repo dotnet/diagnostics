@@ -246,7 +246,7 @@ static HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
     }
 #else
     ULONG index;
-    HRESULT Status = g_ExtSymbols->GetModuleByModuleName(MAIN_CLR_MODULE_NAME_A, 0, &index, NULL);
+    HRESULT Status = GetRuntimeModuleInfo(&index, NULL);
     if (FAILED(Status))
     {
         ExtErr("Error: Runtime module (%s) not loaded yet\n", MAKEDLLNAME_A("coreclr"));
@@ -519,7 +519,7 @@ LPCSTR GetDacFilePath()
             dacModulePath.append(DIRECTORY_SEPARATOR_STR_A);
             dacModulePath.append(MAKEDLLNAME_A("mscordaccore"));
 #ifdef FEATURE_PAL
-            // if DAC file exists
+            // If DAC file exists in the runtime directory
             if (access(dacModulePath.c_str(), F_OK) == 0)
 #endif
             {
@@ -573,7 +573,7 @@ LPCSTR GetDbiFilePath()
             dbiModulePath.append(DIRECTORY_SEPARATOR_STR_A);
             dbiModulePath.append(MAKEDLLNAME_A("mscordbi"));
 #ifdef FEATURE_PAL
-            // if DBI file exists
+            // If DBI file exists in the runtime directory
             if (access(dbiModulePath.c_str(), F_OK) == 0)
 #endif
             {
@@ -843,11 +843,9 @@ static void SymbolFileCallback(void* param, const char* moduleFileName, const ch
         return;
     }
 #ifdef FEATURE_PAL
-    ToRelease<ILLDBServices2> services2(NULL);
-    HRESULT Status = g_ExtServices->QueryInterface(__uuidof(ILLDBServices2), (void**)&services2);
-    if (SUCCEEDED(Status))
+    if (g_ExtServices2 != nullptr) 
     {
-        services2->AddModuleSymbol(param, symbolFilePath);
+        g_ExtServices2->AddModuleSymbol(param, symbolFilePath);
     }
 #endif
 }
@@ -873,18 +871,13 @@ HRESULT LoadNativeSymbols(bool runtimeOnly)
     if (g_symbolStoreInitialized)
     {
 #ifdef FEATURE_PAL
-        ToRelease<ILLDBServices2> services2(NULL);
-        hr = g_ExtServices->QueryInterface(__uuidof(ILLDBServices2), (void**)&services2);
-        if (SUCCEEDED(hr))
-        {
-            hr = services2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback);
-        }
+        hr = g_ExtServices2 ? g_ExtServices2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback) : E_NOINTERFACE;
 #else
         if (runtimeOnly)
         {
             ULONG index;
             ULONG64 moduleAddress;
-            HRESULT hr = g_ExtSymbols->GetModuleByModuleName(MAIN_CLR_MODULE_NAME_A, 0, &index, &moduleAddress);
+            HRESULT hr = GetRuntimeModuleInfo(&index, &moduleAddress);
             if (SUCCEEDED(hr))
             {
                 ArrayHolder<char> moduleFilePath = new char[MAX_LONGPATH + 1];
