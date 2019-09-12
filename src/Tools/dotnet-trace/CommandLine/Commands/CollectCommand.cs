@@ -50,7 +50,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     profile = "cpu-sampling";
                 }
 
+                Dictionary<string, string> enabledBy = new Dictionary<string, string>();
+
                 var providerCollection = Extensions.ToProviders(providers);
+                foreach (Provider providerCollectionProvider in providerCollection)
+                {
+                    enabledBy[providerCollectionProvider.Name] = "--providers " + providers;
+                }
 
                 if (profile.Length != 0)
                 {
@@ -83,6 +89,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                             if (shouldAdd)
                             {
+                                enabledBy[selectedProfileProvider.Name] = "--profile " + profile;
                                 profileProviders.Add(selectedProfileProvider);
                             }
                         }
@@ -97,7 +104,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     return ErrorCodes.ArgumentError;
                 }
 
-                PrintProviders(providerCollection);
+                PrintProviders(providerCollection, enabledBy);
 
                 var process = Process.GetProcessById(processId);
                 var configuration = new SessionConfiguration(
@@ -205,12 +212,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        [Conditional("DEBUG")]
-        private static void PrintProviders(IReadOnlyList<Provider> providers)
+        private static void PrintProviders(IReadOnlyList<Provider> providers, Dictionary<string, string> enabledBy)
         {
-            Console.Out.WriteLine("Enabling the following providers");
+            Console.Out.WriteLine("Configuration:");
+            Console.Out.Write(String.Format("{0, -40}","  Provider Name"));  // +4 is for the tab
+            Console.Out.Write(String.Format("{0, -20}","  Keywords"));
+            Console.Out.Write(String.Format("{0, -20}","  Level"));
+            Console.Out.Write("Enabled By\n");
             foreach (var provider in providers)
-                Console.Out.WriteLine($"\t{provider.ToString()}");
+                Console.Out.WriteLine(String.Format("{0, -80}", $"  {provider.ToDisplayString()}") + $"{enabledBy[provider.Name]}");
         }
 
         private static int prevBufferWidth = 0;
@@ -287,7 +297,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option ProvidersOption() =>
             new Option(
                 alias: "--providers",
-                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'",
+                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'. These providers are in addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the configuration here takes precedence over the implicit configuration from the profile.",
                 argument: new Argument<string>(defaultValue: "") { Name = "list-of-comma-separated-providers" }, // TODO: Can we specify an actual type?
                 isHidden: false);
 

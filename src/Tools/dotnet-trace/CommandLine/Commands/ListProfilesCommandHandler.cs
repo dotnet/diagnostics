@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     new Provider("Microsoft-DotNETCore-SampleProfiler"),
                     new Provider("Microsoft-Windows-DotNETRuntime", (ulong)ClrTraceEventParser.Keywords.Default, EventLevel.Informational),
                 },
-                "Useful for tracking CPU usage and general runtime information. This the default option if no profile is specified."),
+                "Useful for tracking CPU usage and general .NET runtime information. This the default option if no profile or providers are specified."),
             new Profile(
                 "gc-verbose",
                 new Provider[] {
@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         eventLevel: EventLevel.Verbose
                     ),
                 },
-                "Tracks GC and GC handle events at verbose level, and samples the allocation events as well."),
+                "Tracks GC collection and sampled object allocations."),
             new Profile(
                 "gc-collect",
                 new Provider[] {
