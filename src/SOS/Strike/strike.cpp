@@ -835,6 +835,12 @@ BOOL GatherDynamicInfo(TADDR DynamicMethodObj, DacpObjectData *codeArray,
     return bRet;
 }
 
+/**********************************************************************\
+* Routine Description:                                                 *
+*                                                                      *
+*    Displays the Microsoft intermediate language (MSIL) that is       *
+*    associated with a managed method.                                 *
+\**********************************************************************/
 DECLARE_API(DumpIL)
 {
     INIT_API();
@@ -4446,14 +4452,14 @@ void ExtOutTaskStateFlagsDescription(int stateFlags)
 
 void ExtOutStateMachineFields(AsyncRecord& ar)
 {
-	DacpMethodTableData mtabledata;
-	DacpMethodTableFieldData vMethodTableFields;
-	if (mtabledata.Request(g_sos, ar.StateMachineMT) == S_OK &&
-		vMethodTableFields.Request(g_sos, ar.StateMachineMT) == S_OK &&
-		vMethodTableFields.wNumInstanceFields + vMethodTableFields.wNumStaticFields > 0)
-	{
-		DisplayFields(ar.StateMachineMT, &mtabledata, &vMethodTableFields, (DWORD_PTR)ar.StateMachineAddr, TRUE, ar.IsValueType);
-	}
+    DacpMethodTableData mtabledata;
+    DacpMethodTableFieldData vMethodTableFields;
+    if (mtabledata.Request(g_sos, ar.StateMachineMT) == S_OK &&
+        vMethodTableFields.Request(g_sos, ar.StateMachineMT) == S_OK &&
+        vMethodTableFields.wNumInstanceFields + vMethodTableFields.wNumStaticFields > 0)
+    {
+        DisplayFields(ar.StateMachineMT, &mtabledata, &vMethodTableFields, (DWORD_PTR)ar.StateMachineAddr, TRUE, ar.IsValueType);
+    }
 }
 
 void FindStateMachineTypes(DWORD_PTR* corelibModule, mdTypeDef* stateMachineBox, mdTypeDef* debugStateMachineBox, mdTypeDef* task)
@@ -4820,8 +4826,8 @@ DECLARE_API(DumpAsync)
                             sos::MethodTable contMT = TO_TADDR(contAsyncRecord->second.StateMachineMT);
                             if (contAsyncRecord->second.IsStateMachine) ExtOut("(%d) ", contAsyncRecord->second.StateValue);
                             ExtOut("%S\n", contMT.GetName());
-							if (contAsyncRecord->second.IsStateMachine && dumpFields) ExtOutStateMachineFields(contAsyncRecord->second);
-						}
+                            if (contAsyncRecord->second.IsStateMachine && dumpFields) ExtOutStateMachineFields(contAsyncRecord->second);
+                        }
                         else
                         {
                             ExtOut("%S\n", cont.GetTypeName());
@@ -9251,18 +9257,18 @@ DECLARE_API(u)
         }
     }
 
-	ExtractionCodeHeaderResult p = extractCodeHeaderData(methodDesc, dwStartAddr);
-	Status = std::get<2>(p);
-	if (Status != S_OK)
-	{
-		return Status;
-	}
+    ExtractionCodeHeaderResult p = extractCodeHeaderData(methodDesc, dwStartAddr);
+    Status = std::get<2>(p);
+    if (Status != S_OK)
+    {
+        return Status;
+    }
 
     NameForMD_s(methodDesc, g_mdName, mdNameLen);
     ExtOut("%S\n", g_mdName);
 
-	DacpMethodDescData& MethodDescData = std::get<0>(p);
-	DacpCodeHeaderData& codeHeaderData = std::get<1>(p);
+    DacpMethodDescData& MethodDescData = std::get<0>(p);
+    DacpCodeHeaderData& codeHeaderData = std::get<1>(p);
     Status = displayIntermediateLanguage(bIL, codeHeaderData);
     if (Status != S_OK)
     {

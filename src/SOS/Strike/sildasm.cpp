@@ -413,7 +413,7 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
     UINT indentCount = 0;
     ULONG endCodePosition = header.GetCodeSize();
     while (position < endCodePosition)
-    {	
+    {
         for (unsigned e=0;e<header.EHCount();e++)
         {
             IMAGE_COR_ILMETHOD_SECT_EH_CLAUSE_FAT ehBuff;
@@ -634,7 +634,7 @@ void DisassembleToken(DacpObjectData& tokenArray,
 void DecodeDynamicIL(BYTE *data, ULONG Size, DacpObjectData& tokenArray)
 {
     // There is no header for this dynamic guy.
-    ULONG position = 0;	
+    ULONG position = 0;
     BYTE *pBuffer = data;
 
     // At this time no exception information will be displayed (fix soon)
@@ -659,7 +659,7 @@ static char* asString(CQuickBytes *out) {
     out->ReSize(oldSize + 1);
     char* cur = &((char*) out->Ptr())[oldSize]; 
     *cur = 0;   
-    out->ReSize(oldSize);   		// Don't count the null character
+    out->ReSize(oldSize);           // Don't count the null character
     return((char*) out->Ptr()); 
 }
 
@@ -898,7 +898,7 @@ PCCOR_SIGNATURE PrettyPrintType(
               break;
             }
 
-            case ELEMENT_TYPE_PINNED	:
+            case ELEMENT_TYPE_PINNED:
                 str = " pinned"; goto MODIFIER;
             case ELEMENT_TYPE_PTR           :
                 str = "*"; goto MODIFIER;
@@ -958,7 +958,7 @@ swprintf_s(sz,16,W("$%s$%X"),szStdNamePrefix[tk>>24],tk&0x00FFFFFF); psz = sz; }
 
 const char* PrettyPrintClass(
     CQuickBytes *out,                   // where to put the pretty printed string   
-    mdToken tk,					 		// The class token to look up 
+    mdToken tk,                         // The class token to look up 
     IMetaDataImport *pIMD,           // ptr to IMetaDataImport class with ComSig
     DWORD formatFlags /*= formatILDasm*/)
 {
@@ -1059,7 +1059,7 @@ const char* PrettyPrintClass(
 
         case mdtAssemblyRef:
             {
-                LPCSTR	szName = NULL;
+                LPCSTR szName = NULL;
                 ULONG unused;
                 ToRelease<IMetaDataAssemblyImport> pAsmImport;
                 if (SUCCEEDED(pIMD->QueryInterface(IID_IMetaDataAssemblyImport, (LPVOID *)&pAsmImport)))
