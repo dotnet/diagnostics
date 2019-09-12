@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         eventLevel: EventLevel.Verbose
                     ),
                 },
-                "Tracks GC collection and sampled object allocations."),
+                "Tracks GC collections and samples object allocations."),
             new Profile(
                 "gc-collect",
                 new Provider[] {
@@ -69,7 +69,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     (ulong)ClrTraceEventParser.Keywords.Exception,
                         eventLevel: EventLevel.Informational),
                 },
-                "Tracks GC collection only at very low overhead."),
+                "Tracks GC collections only at very low overhead."),
         };
     }
 }

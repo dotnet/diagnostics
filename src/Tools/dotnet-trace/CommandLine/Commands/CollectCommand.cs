@@ -46,7 +46,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (profile.Length == 0 && providers.Length == 0)
                 {
-                    Console.WriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
+                    Console.Out.WriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
                     profile = "cpu-sampling";
                 }
 
