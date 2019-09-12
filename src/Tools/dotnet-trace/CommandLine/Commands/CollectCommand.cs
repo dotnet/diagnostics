@@ -44,43 +44,52 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     return ErrorCodes.ArgumentError;
                 }
 
-                var selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
-                    .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
-                if (selectedProfile == null)
+                if (profile.Length == 0 && providers.Length == 0)
                 {
-                    Console.Error.WriteLine($"Invalid profile name: {profile}");
-                    return ErrorCodes.ArgumentError;
+                    Console.WriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
+                    profile = "cpu-sampling";
                 }
 
                 var providerCollection = Extensions.ToProviders(providers);
-                var profileProviders = new List<Provider>();
 
-                // If user defined a different key/level on the same provider via --providers option that was specified via --profile option,
-                // --providers option takes precedence. Go through the list of providers specified and only add it if it wasn't specified
-                // via --providers options.
-                if (selectedProfile.Providers != null)
+                if (profile.Length != 0)
                 {
-                    foreach (Provider selectedProfileProvider in selectedProfile.Providers)
+                    var profileProviders = new List<Provider>();
+                    var selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
+                        .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
+                    if (selectedProfile == null)
                     {
-                        bool shouldAdd = true;
+                        Console.Error.WriteLine($"Invalid profile name: {profile}");
+                        return ErrorCodes.ArgumentError;
+                    }
 
-                        foreach (Provider providerCollectionProvider in providerCollection)
+                    // If user defined a different key/level on the same provider via --providers option that was specified via --profile option,
+                    // --providers option takes precedence. Go through the list of providers specified and only add it if it wasn't specified
+                    // via --providers options.
+                    if (selectedProfile.Providers != null)
+                    {
+                        foreach (Provider selectedProfileProvider in selectedProfile.Providers)
                         {
-                            if (providerCollectionProvider.Name.Equals(selectedProfileProvider.Name))
+                            bool shouldAdd = true;
+
+                            foreach (Provider providerCollectionProvider in providerCollection)
                             {
-                                shouldAdd = false;
-                                break;
+                                if (providerCollectionProvider.Name.Equals(selectedProfileProvider.Name))
+                                {
+                                    shouldAdd = false;
+                                    break;
+                                }
+                            }
+
+                            if (shouldAdd)
+                            {
+                                profileProviders.Add(selectedProfileProvider);
                             }
                         }
-
-                        if (shouldAdd)
-                        {
-                            profileProviders.Add(selectedProfileProvider);
-                        }
                     }
+                    providerCollection.AddRange(profileProviders);
                 }
 
-                providerCollection.AddRange(profileProviders);
 
                 if (providerCollection.Count <= 0)
                 {
@@ -286,7 +295,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new Option(
                 alias: "--profile",
                 description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.",
-                argument: new Argument<string>(defaultValue: "runtime-basic") { Name = "profile-name" },
+                argument: new Argument<string>(defaultValue: "") { Name = "profile-name" },
                 isHidden: false);
 
         private static Option DurationOption() =>
