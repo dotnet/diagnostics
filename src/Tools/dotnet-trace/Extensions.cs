@@ -31,15 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string providerName = tokens.Length > 0 ? tokens[0] : null;
 
             // Check if the supplied provider is a GUID and not a name.
-            bool isGuid = false;
-            try
-            {
-                Guid g = new Guid(providerName);
-                isGuid = true;    
-            }
-            catch (Exception) {}
-
-            if (isGuid)
+            if (Guid.TryParse(providerName, out _))
             {
                 Console.WriteLine($"Warning: --provider argument {providerName} appears to be a GUID which is supported by dotnet-trace. Providers need to be referenced by their textual name.");
             }
