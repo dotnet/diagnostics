@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     new Provider("Microsoft-DotNETCore-SampleProfiler"),
                     new Provider("Microsoft-Windows-DotNETRuntime", (ulong)ClrTraceEventParser.Keywords.Default, EventLevel.Informational),
                 },
-                "Useful for tracking CPU usage and general .NET runtime information. This the default option if no profile or providers are specified."),
+                "Useful for tracking CPU usage and general .NET runtime information. This is the default option if no profile or providers are specified."),
             new Profile(
                 "gc-verbose",
                 new Provider[] {

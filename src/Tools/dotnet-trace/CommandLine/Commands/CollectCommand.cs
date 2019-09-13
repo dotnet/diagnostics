@@ -151,8 +151,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 Console.Out.WriteLine($"Output File    : {fs.Name}");
                                 if (shouldStopAfterDuration)
                                     Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
-                                Console.Out.WriteLine($"\tSession Id: 0x{sessionId:X16}\n");
-                                lineToClear = Console.CursorTop;
+
+                                Console.Out.WriteLine("\n\n");
                                 var buffer = new byte[16 * 1024];
 
                                 while (true)
@@ -161,10 +161,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     if (nBytesRead <= 0)
                                         break;
                                     fs.Write(buffer, 0, nBytesRead);
-
+                                    lineToClear = Console.CursorTop-1;
                                     ResetCurrentConsoleLine(vTermMode.IsEnabled);
-                                    Console.Out.Write($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
-
+                                    Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
+                                    Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
                                     Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
                                 }
                             }
@@ -181,8 +181,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         }
                     });
                     collectingTask.Start();
-
-                    Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
 
                     do
                     {
@@ -214,13 +212,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static void PrintProviders(IReadOnlyList<Provider> providers, Dictionary<string, string> enabledBy)
         {
-            Console.Out.WriteLine("Configuration:");
-            Console.Out.Write(String.Format("{0, -40}","  Provider Name"));  // +4 is for the tab
-            Console.Out.Write(String.Format("{0, -20}","  Keywords"));
-            Console.Out.Write(String.Format("{0, -20}","  Level"));
+            Console.Out.WriteLine("");
+            Console.Out.Write(String.Format("{0, -40}","Provider Name"));  // +4 is for the tab
+            Console.Out.Write(String.Format("{0, -20}","Keywords"));
+            Console.Out.Write(String.Format("{0, -20}","Level"));
             Console.Out.Write("Enabled By\n");
             foreach (var provider in providers)
-                Console.Out.WriteLine(String.Format("{0, -80}", $"  {provider.ToDisplayString()}") + $"{enabledBy[provider.Name]}");
+            {
+                Console.Out.WriteLine(String.Format("{0, -80}", $"{provider.ToDisplayString()}") + $"{enabledBy[provider.Name]}");
+            }
+            Console.Out.WriteLine();
         }
 
         private static int prevBufferWidth = 0;
@@ -258,7 +259,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             else if (length > 1e3)
                 return String.Format("{0,-8} (KB)", $"{length / 1e3:0.00##}");
             else
-                return String.Format("{0,-8} (byte)", $"{length / 1.0:0.00##}");
+                return String.Format("{0,-8} (B)", $"{length / 1.0:0.00##}");
         }
 
         public static Command CollectCommand() =>
