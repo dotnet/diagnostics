@@ -32,7 +32,7 @@
     <XUnitVersion>2.4.1</XUnitVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
 
-    <cdbsosversion>1.1.0</cdbsosversion>
+    <cdbsosversion>10.0.18362</cdbsosversion>
 
   </PropertyGroup>
 

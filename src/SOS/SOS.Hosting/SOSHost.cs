@@ -508,7 +508,11 @@ namespace SOS
                                 // If the address isn't contained in one of the sections, assume that SOS is reader the PE headers directly.
                                 block = reader.GetEntireImage();
                             }
-                            BlobReader blob = block.GetReader();
+                            else
+                            {
+                                rva = 0;
+                            }
+                            BlobReader blob = block.GetReader(rva, (int)bytesRequested);
                             byte[] data = blob.ReadBytes((int)bytesRequested);
 
                             Marshal.Copy(data, 0, buffer, data.Length);
@@ -957,8 +961,17 @@ namespace SOS
             uint contextSize)
         {
             uint threadId = (uint)_analyzeContext.CurrentThreadId;
-            if (!DataReader.GetThreadContext(threadId, uint.MaxValue, contextSize, context)) {
+            byte[] registerContext = _registerService.GetThreadContext(threadId);
+            if (registerContext == null) {
                 return E_FAIL;
+            }
+            try
+            {
+                Marshal.Copy(registerContext, 0, context, (int)contextSize);
+            }
+            catch (Exception ex) when (ex is ArgumentOutOfRangeException || ex is ArgumentNullException)
+            {
+                return E_INVALIDARG;
             }
             return S_OK;
         }
