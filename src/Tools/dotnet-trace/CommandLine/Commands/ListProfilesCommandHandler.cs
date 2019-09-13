@@ -42,12 +42,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
         // FIXME: Read from a config file!
         internal static IEnumerable<Profile> DotNETRuntimeProfiles { get; } = new[] {
             new Profile(
-                "runtime-basic",
+                "cpu-sampling",
                 new Provider[] {
                     new Provider("Microsoft-DotNETCore-SampleProfiler"),
                     new Provider("Microsoft-Windows-DotNETRuntime", (ulong)ClrTraceEventParser.Keywords.Default, EventLevel.Informational),
                 },
-                "Useful for tracking CPU usage and general runtime information. This the default option if no profile is specified."),
+                "Useful for tracking CPU usage and general .NET runtime information. This is the default option if no profile or providers are specified."),
             new Profile(
                 "gc-verbose",
                 new Provider[] {
@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         eventLevel: EventLevel.Verbose
                     ),
                 },
-                "Tracks GC and GC handle events at verbose level, and samples the allocation events as well."),
+                "Tracks GC collections and samples object allocations."),
             new Profile(
                 "gc-collect",
                 new Provider[] {
@@ -69,11 +69,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     (ulong)ClrTraceEventParser.Keywords.Exception,
                         eventLevel: EventLevel.Informational),
                 },
-                "Tracks GC collection only at very low overhead."),
-            new Profile(
-                "none",
-                null,
-                "Tracks nothing. Only providers specified by the --providers option will be available."),
+                "Tracks GC collections only at very low overhead."),
         };
     }
 }
