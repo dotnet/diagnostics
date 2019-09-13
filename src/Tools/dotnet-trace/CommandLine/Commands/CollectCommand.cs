@@ -56,7 +56,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 var providerCollection = Extensions.ToProviders(providers);
                 foreach (Provider providerCollectionProvider in providerCollection)
                 {
-                    enabledBy[providerCollectionProvider.Name] = "--providers " + providers;
+                    enabledBy[providerCollectionProvider.Name] = "--providers ";
                 }
 
                 if (profile.Length != 0)
@@ -90,7 +90,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                             if (shouldAdd)
                             {
-                                enabledBy[selectedProfileProvider.Name] = "--profile " + profile;
+                                enabledBy[selectedProfileProvider.Name] = "--profile ";
                                 profileProviders.Add(selectedProfileProvider);
                             }
                         }
