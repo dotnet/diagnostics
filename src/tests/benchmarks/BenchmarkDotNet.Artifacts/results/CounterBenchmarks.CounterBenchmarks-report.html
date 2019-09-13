@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CounterBenchmarks.CounterBenchmarks-20190912-060140</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet=v0.11.5, OS=Windows 10.0.18362
+Intel Core i7-6700 CPU 3.40GHz (Skylake), 1 CPU, 8 logical and 4 physical cores
+.NET Core SDK=3.0.100-preview8-013656
+  [Host] : .NET Core 3.0.0-preview8-28405-07 (CoreCLR 5.0.19.46101, CoreFX 4.700.19.40503), 64bit RyuJIT
+  Core   : .NET Core 3.0.0-preview8-28405-07 (CoreCLR 5.0.19.46101, CoreFX 4.700.19.40503), 64bit RyuJIT
+</code></pre>
+<pre><code>Job=Core  Runtime=Core  
+</code></pre>
+
+<table>
+<thead><tr><th>       Method</th><th>N</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Rank</th>
+</tr>
+</thead><tbody><tr><td>Gen0Count</td><td>10000</td><td>4.446 ns</td><td>0.1261 ns</td><td>0.2337 ns</td><td>2</td>
+</tr><tr><td>Gen1Count</td><td>10000</td><td>4.435 ns</td><td>0.1051 ns</td><td>0.1329 ns</td><td>2</td>
+</tr><tr><td>Gen2Count</td><td>10000</td><td>4.464 ns</td><td>0.1620 ns</td><td>0.2474 ns</td><td>2</td>
+</tr><tr><td>Gen0Size</td><td>10000</td><td>162.791 ns</td><td>3.2151 ns</td><td>4.1805 ns</td><td>10</td>
+</tr><tr><td>Gen1Size</td><td>10000</td><td>161.405 ns</td><td>3.2433 ns</td><td>3.3306 ns</td><td>10</td>
+</tr><tr><td>Gen2Size</td><td>10000</td><td>162.072 ns</td><td>3.2885 ns</td><td>4.2759 ns</td><td>10</td>
+</tr><tr><td>LOHSize</td><td>10000</td><td>165.976 ns</td><td>3.3668 ns</td><td>7.7358 ns</td><td>10</td>
+</tr><tr><td>TimeInGC</td><td>10000</td><td>95.135 ns</td><td>1.9815 ns</td><td>4.2654 ns</td><td>7</td>
+</tr><tr><td>AssemblyCount</td><td>10000</td><td>95.845 ns</td><td>1.9887 ns</td><td>5.3082 ns</td><td>7</td>
+</tr><tr><td>ExceptionCount</td><td>10000</td><td>100.712 ns</td><td>2.1900 ns</td><td>6.3884 ns</td><td>8</td>
+</tr><tr><td>Workingset</td><td>10000</td><td>954.102 ns</td><td>19.0832 ns</td><td>28.5628 ns</td><td>11</td>
+</tr><tr><td>ThreadPoolCount</td><td>10000</td><td>1.983 ns</td><td>0.0406 ns</td><td>0.0360 ns</td><td>1</td>
+</tr><tr><td>LockContentionCount</td><td>10000</td><td>76.126 ns</td><td>2.1486 ns</td><td>6.2675 ns</td><td>6</td>
+</tr><tr><td>PendingItemCount</td><td>10000</td><td>10.108 ns</td><td>0.2342 ns</td><td>0.3127 ns</td><td>4</td>
+</tr><tr><td>CompletedItemCount</td><td>10000</td><td>61.904 ns</td><td>1.3143 ns</td><td>3.0980 ns</td><td>5</td>
+</tr><tr><td>TotalAllocatedBytes</td><td>10000</td><td>4.815 ns</td><td>0.1129 ns</td><td>0.1056 ns</td><td>3</td>
+</tr><tr><td>ActiveTimerCount</td><td>10000</td><td>144.403 ns</td><td>2.1828 ns</td><td>2.0418 ns</td><td>9</td>
+</tr></tbody></table>
+</body>
+</html>
