@@ -36,18 +36,19 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             try
             {
+                var systemConsole = new SystemConsoleTerminal(console);
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
                 Console.Clear();
                 if (processId <= 0)
                 {
-                    Console.Error.WriteLine("Process ID should not be negative.");
+                    systemConsole.Error.WriteLine("Process ID should not be negative.");
                     return ErrorCodes.ArgumentError;
                 }
 
                 if (profile.Length == 0 && providers.Length == 0)
                 {
-                    Console.Out.WriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
+                    systemConsole.Out.WriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
                     profile = "cpu-sampling";
                 }
 
@@ -101,7 +102,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (providerCollection.Count <= 0)
                 {
-                    Console.Error.WriteLine("No providers were specified to start a trace.");
+                    systemConsole.Error.WriteLine("No providers were specified to start a trace.");
                     return ErrorCodes.ArgumentError;
                 }
 
@@ -127,7 +128,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 {
                     if (sessionId == 0)
                     {
-                        Console.Error.WriteLine("Unable to create session.");
+                        systemConsole.Error.WriteLine("Unable to create session.");
                         return ErrorCodes.SessionCreationError;
                     }
 
@@ -148,13 +149,25 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                             using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                             {
-                                Console.Out.WriteLine($"Process        : {process.MainModule.FileName}");
-                                Console.Out.WriteLine($"Output File    : {fs.Name}");
+                                systemConsole.Out.WriteLine($"Process        : {process.MainModule.FileName}");
+                                systemConsole.Out.WriteLine($"Output File    : {fs.Name}");
                                 if (shouldStopAfterDuration)
-                                    Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
+                                    systemConsole.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
 
-                                Console.Out.WriteLine("\n\n");
+                                systemConsole.Out.WriteLine("\n\n");
+
+                                var region = new Region(0, systemConsole.CursorTop - 1, Console.WindowWidth - 2, 1, true);
+                                var renderer = new ConsoleRenderer(systemConsole, resetAfterRender: true);
+
                                 var buffer = new byte[16 * 1024];
+
+                                Task.Run(() =>
+                                {
+                                    while (true)
+                                    {
+                                        renderer.RenderToRegion($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}", region);
+                                    }
+                                });
 
                                 while (true)
                                 {
@@ -162,10 +175,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     if (nBytesRead <= 0)
                                         break;
                                     fs.Write(buffer, 0, nBytesRead);
-                                    lineToClear = Console.CursorTop-1;
-                                    ResetCurrentConsoleLine(vTermMode.IsEnabled);
-                                    Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
-                                    Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
                                     Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
                                 }
                             }
@@ -173,7 +182,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         catch (Exception ex)
                         {
                             failed = true;
-                            Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
+                            systemConsole.Error.WriteLine($"[ERROR] {ex.ToString()}");
                         }
                         finally
                         {
@@ -183,10 +192,26 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     });
                     collectingTask.Start();
 
-                    do
+                    if (systemConsole.IsInputRedirected)
                     {
-                        while (Console.In.Peek() == -1 && !shouldExit.WaitOne(250)) { }
-                    } while (!shouldExit.WaitOne(0) && (char)Console.In.Read() != (char)ConsoleKey.Enter);
+                        // if stdin is redirected, look for 'q' to indicate we should stop
+                        // tracing.  Generally, we would expect people to use the runtime client
+                        // library directly or the hidden duration flag rather than this option...
+                        //
+                        // Need to use In.Peek() and In.Read() because KeyAvailable and ReadKey
+                        // don't work under redirection.
+                        do
+                        {
+                           while (Console.In.Peek() == -1 && !shouldExit.WaitOne(250)) { }
+                        } while (!shouldExit.WaitOne(0) && (char)Console.In.Read() != 'q');
+                    }
+                    else
+                    {
+                        do
+                        {
+                            while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
+                        } while (!shouldExit.WaitOne(0) && Console.ReadKey(true).Key != ConsoleKey.Enter);
+                    }
 
                     if (!terminated)
                     {
@@ -196,8 +221,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     await collectingTask;
                 }
 
-                Console.Out.WriteLine();
-                Console.Out.WriteLine("Trace completed.");
+                systemConsole.Out.WriteLine();
+                systemConsole.Out.WriteLine("Trace completed.");
 
                 if (format != TraceFileFormat.NetTrace)
                     TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
@@ -206,7 +231,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
+                console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                 return ErrorCodes.UnknownError;
             }
         }
@@ -223,36 +248,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Console.Out.WriteLine(String.Format("{0, -80}", $"{provider.ToDisplayString()}") + $"{enabledBy[provider.Name]}");
             }
             Console.Out.WriteLine();
-        }
-
-        private static int prevBufferWidth = 0;
-        private static string clearLineString = "";
-        private static int lineToClear = 0;
-
-        private static void ResetCurrentConsoleLine(bool isVTerm)
-        {
-            if (Console.IsOutputRedirected)
-            {
-                Console.Out.WriteLine();
-            }
-            else if (isVTerm)
-            {
-                // ANSI escape codes:
-                //  [2K => clear current line
-                //  [{lineToClear};0H => move cursor to column 0 of row `lineToClear`
-                Console.Out.Write($"\u001b[2K\u001b[{lineToClear};0H");
-            }
-            else
-            {
-                if (prevBufferWidth != Console.BufferWidth)
-                {
-                    prevBufferWidth = Console.BufferWidth;
-                    clearLineString = new string(' ', Console.BufferWidth - 1);
-                }
-                Console.SetCursorPosition(0, lineToClear);
-                Console.Out.Write(clearLineString);
-                Console.SetCursorPosition(0, lineToClear);
-            }
         }
 
         private static string GetSize(long length)
