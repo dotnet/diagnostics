@@ -194,6 +194,8 @@ HMODULE g_hInstance = NULL;
 #pragma warning(default:4189)
 #endif
 
+#include "sildasm.h"
+
 #ifndef FEATURE_PAL
 #include "ntinfo.h"
 #endif // FEATURE_PAL
@@ -217,8 +219,6 @@ HMODULE g_hInstance = NULL;
     }
 
 #include "safemath.h"
-
-#include "sildasm.h"
 
 DECLARE_API (MinidumpMode)
 {
