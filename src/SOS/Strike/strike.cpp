@@ -194,8 +194,6 @@ HMODULE g_hInstance = NULL;
 #pragma warning(default:4189)
 #endif
 
-#include "sildasm.h"
-
 #ifndef FEATURE_PAL
 #include "ntinfo.h"
 #endif // FEATURE_PAL
@@ -2247,7 +2245,7 @@ struct StackTraceElement
 
 #include "sos_stacktrace.h"
 
-// #include "sildasm.h"
+#include "sildasm.h"
 
 class StringOutput
 {
