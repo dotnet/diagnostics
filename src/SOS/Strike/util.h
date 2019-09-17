@@ -37,6 +37,7 @@ inline void RestoreSOToleranceState() {}
 
 #include "cordebug.h"
 #include "static_assert.h"
+#include <string>
 #include "hostcoreclr.h"
 
 typedef LPCSTR  LPCUTF8;
@@ -1561,6 +1562,7 @@ HRESULT InitCorDebugInterface();
 VOID UninitCorDebugInterface();
 BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes);
 bool IsRuntimeVersion(DWORD major);
+bool IsRuntimeVersion(VS_FIXEDFILEINFO& fileInfo, DWORD major);
 #ifndef FEATURE_PAL
 BOOL IsRetailBuild (size_t base);
 BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo);
