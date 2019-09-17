@@ -6,7 +6,7 @@
     <OutputType>Exe</OutputType>
     <IsPackable>true</IsPackable>
     <PackAsTool>true</PackAsTool>
-    <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;osx-x64</PackAsToolShimRuntimeIdentifiers>
+    <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;win-arm;osx-x64</PackAsToolShimRuntimeIdentifiers>
     <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
