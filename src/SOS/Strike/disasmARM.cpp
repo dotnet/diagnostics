@@ -355,7 +355,8 @@ void ARMMachine::Unassembly (
     GCEncodingInfo *pGCEncodingInfo, 
     SOSEHInfo *pEHInfo,
     BOOL bSuppressLines,
-    BOOL bDisplayOffsets) const
+    BOOL bDisplayOffsets,
+    std::function<void(ULONG*, UINT*, BYTE*)> displayIL) const
 {
     ULONG_PTR PC = PCBegin;
     char line[1024];

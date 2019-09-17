@@ -21,6 +21,7 @@ inline void RestoreSOToleranceState() {}
 #include <palclr.h>
 #include <metahost.h>
 #include <new>
+#include <functional>
 
 #if !defined(FEATURE_PAL)
 #include <dia2.h>
@@ -1546,10 +1547,12 @@ UINT GetMaxGeneration();
 UINT GetGcHeapCount();
 BOOL GetGcStructuresValid();
 
+void DisassembleToken(IMetaDataImport* i, DWORD token);
 ULONG GetILSize(DWORD_PTR ilAddr); // REturns 0 if error occurs
 HRESULT DecodeILFromAddress(IMetaDataImport *pImport, TADDR ilAddr);
 void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize);
 void DecodeDynamicIL(BYTE *data, ULONG Size, DacpObjectData& tokenArray);
+ULONG DisplayILOperation(const UINT indentCount, BYTE* pBuffer, ULONG position, std::function<void(DWORD)>& func);
 
 BOOL IsRetailBuild (size_t base);
 EEFLAVOR GetEEFlavor ();
@@ -3087,6 +3090,5 @@ public:
 private:
     HRESULT PrintCurrentInternalFrame();
 };
-
 #include "sigparser.h"
 #endif // __util_h__

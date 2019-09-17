@@ -36,6 +36,8 @@
 #include "corhlpr.h"
 #include "corhlpr.cpp"
 
+#include "sildasm.h"
+
 #include <functional>
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -399,8 +401,6 @@ HRESULT DecodeILFromAddress(IMetaDataImport *pImport, TADDR ilAddr)
     return Status;
 }
 
-ULONG displayILOperation(const UINT indentCount, BYTE* pBuffer, ULONG position, std::function<void(DWORD)>& func);
-
 void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
 {
     // First decode the header
@@ -412,62 +412,73 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
 
     UINT indentCount = 0;
     ULONG endCodePosition = header.GetCodeSize();
+
     while (position < endCodePosition)
     {
-        for (unsigned e=0;e<header.EHCount();e++)
-        {
-            IMAGE_COR_ILMETHOD_SECT_EH_CLAUSE_FAT ehBuff;
-            const IMAGE_COR_ILMETHOD_SECT_EH_CLAUSE_FAT* ehInfo;
-            
-            ehInfo = header.EH->EHClause(e,&ehBuff);
-            if (ehInfo->TryOffset == position)
-            {
-                printf ("%*s.try\n%*s{\n", indentCount, "", indentCount, "");
-                indentCount+=2;
-            }
-            else if ((ehInfo->TryOffset + ehInfo->TryLength) == position)
-            {
-                indentCount-=2;
-                printf("%*s} // end .try\n", indentCount, "");
-            }
-
-            if (ehInfo->HandlerOffset == position)
-            {
-                if (ehInfo->Flags == COR_ILEXCEPTION_CLAUSE_FINALLY)
-                    printf("%*s.finally\n%*s{\n", indentCount, "", indentCount, "");
-                else
-                    printf("%*s.catch\n%*s{\n", indentCount, "", indentCount, "");
-
-                indentCount+=2;
-            }
-            else if ((ehInfo->HandlerOffset + ehInfo->HandlerLength) == position)
-            {
-                indentCount-=2;
-                
-                if (ehInfo->Flags == COR_ILEXCEPTION_CLAUSE_FINALLY)
-                    printf("%*s} // end .finally\n", indentCount, "");
-                else
-                    printf("%*s} // end .catch\n", indentCount, "");
-            }
-        }
-        std::function<void(DWORD)> func = [&pImport](DWORD l) {
-            if (pImport != NULL)
-            {
-                DisassembleToken(pImport, l);
-            }
-            else
-            {
-                printf("TOKEN %x", l);
-            }
-        };
-
-        position = displayILOperation(indentCount, pBuffer, position, func);
-
+        std::tuple<ULONG, UINT> r = DecodeILAtPosition(
+                pImport, pBuffer, bufSize,
+                position, indentCount, header);
+        position = std::get<0>(r);
+        indentCount = std::get<1>(r);
         printf("\n");
     }
 }
 
-ULONG displayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG position, std::function<void(DWORD)>& func)
+std::tuple<ULONG, UINT> DecodeILAtPosition(
+        IMetaDataImport *pImport, BYTE *pBuffer, ULONG bufSize,
+        ULONG position, UINT indentCount, COR_ILMETHOD_DECODER& header)
+{
+    for (unsigned e=0;e<header.EHCount();e++)
+    {
+        IMAGE_COR_ILMETHOD_SECT_EH_CLAUSE_FAT ehBuff;
+        const IMAGE_COR_ILMETHOD_SECT_EH_CLAUSE_FAT* ehInfo;
+
+        ehInfo = header.EH->EHClause(e,&ehBuff);
+        if (ehInfo->TryOffset == position)
+        {
+            printf ("%*s.try\n%*s{\n", indentCount, "", indentCount, "");
+            indentCount+=2;
+        }
+        else if ((ehInfo->TryOffset + ehInfo->TryLength) == position)
+        {
+            indentCount-=2;
+            printf("%*s} // end .try\n", indentCount, "");
+        }
+
+        if (ehInfo->HandlerOffset == position)
+        {
+            if (ehInfo->Flags == COR_ILEXCEPTION_CLAUSE_FINALLY)
+                printf("%*s.finally\n%*s{\n", indentCount, "", indentCount, "");
+            else
+                printf("%*s.catch\n%*s{\n", indentCount, "", indentCount, "");
+
+            indentCount+=2;
+        }
+        else if ((ehInfo->HandlerOffset + ehInfo->HandlerLength) == position)
+        {
+            indentCount-=2;
+
+            if (ehInfo->Flags == COR_ILEXCEPTION_CLAUSE_FINALLY)
+                printf("%*s} // end .finally\n", indentCount, "");
+            else
+                printf("%*s} // end .catch\n", indentCount, "");
+        }
+    }
+    std::function<void(DWORD)> func = [&pImport](DWORD l) {
+        if (pImport != NULL)
+        {
+            DisassembleToken(pImport, l);
+        }
+        else
+        {
+            printf("TOKEN %x", l);
+        }
+    };
+    position = DisplayILOperation(indentCount, pBuffer, position, func);
+    return std::make_tuple(position, indentCount);
+}
+
+ULONG DisplayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG position, std::function<void(DWORD)>& func)
 {
     printf("%*sIL_%04x: ", indentCount, "", position);
     unsigned int c = readOpcode(pBuffer, position);
@@ -645,7 +656,7 @@ void DecodeDynamicIL(BYTE *data, ULONG Size, DacpObjectData& tokenArray)
         std::function<void(DWORD)> func = [&tokenArray](DWORD l) {
             DisassembleToken(tokenArray, l);
         };
-        position = displayILOperation(indentCount, pBuffer, position, func);
+        position = DisplayILOperation(indentCount, pBuffer, position, func);
         printf("\n");
     }
 }

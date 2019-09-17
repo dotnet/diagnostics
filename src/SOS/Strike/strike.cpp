@@ -85,6 +85,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
+#include <stdexcept>
 
 #include "strike.h"
 #include "sos.h"
@@ -154,6 +155,8 @@ const UINT kcMaxMethodDescsForProfiler = 100;
 #include <vector>
 #include <map>
 #include <tuple>
+#include <memory>
+#include <functional>
 
 BOOL CallStatus;
 BOOL ControlC = FALSE;
@@ -214,6 +217,8 @@ HMODULE g_hInstance = NULL;
     }
 
 #include "safemath.h"
+
+#include "sildasm.h"
 
 DECLARE_API (MinidumpMode)
 {
@@ -835,6 +840,9 @@ BOOL GatherDynamicInfo(TADDR DynamicMethodObj, DacpObjectData *codeArray,
     return bRet;
 }
 
+typedef std::tuple<TADDR, std::shared_ptr<IMetaDataImport> > GetILAddressResult;
+GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData);
+
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -910,65 +918,16 @@ DECLARE_API(DumpIL)
         }
         else
         {
-            TADDR ilAddr = NULL;
-            struct DacpProfilerILData ilData;
-            ReleaseHolder<ISOSDacInterface7> sos7;
-            if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface7), &sos7)) && 
-                SUCCEEDED(sos7->GetProfilerModifiedILInformation(MethodDescData.MethodDescPtr, &ilData)))
+            GetILAddressResult result = GetILAddress(MethodDescData);
+            if (std::get<0>(result) == NULL)
             {
-                if (ilData.type == DacpProfilerILData::ILModified)
-                {
-                    ExtOut("Found profiler modified IL\n");
-                    ilAddr = TO_TADDR(ilData.il);
-                }
-            }
-
-            // Factor this so that it returns a map from IL offset to the textual representation of the decoding
-            // to be consumed by !u -il
-            // The disassemble function can give a MethodDescData as well as the set of keys IL offsets
-
-            // This is not a dynamic method, print the IL for it.
-            // Get the module
-            DacpModuleData dmd;    
-            if (dmd.Request(g_sos, MethodDescData.ModulePtr) != S_OK)
-            {
-                ExtOut("Unable to get module\n");
-                return Status;
-            }
-
-            ToRelease<IMetaDataImport> pImport = MDImportForModule(&dmd);
-            if (pImport == NULL)
-            {
-                ExtOut("bad import\n");
-                return Status;
-            }
-
-            if (ilAddr == NULL)
-            { 
-                ULONG pRva;
-                DWORD dwFlags;
-                if (pImport->GetRVA(MethodDescData.MDToken, &pRva, &dwFlags) != S_OK)
-                {
-                    ExtOut("error in import\n");
-                    return Status;
-                }    
-
-                CLRDATA_ADDRESS ilAddrClr;
-                if (g_sos->GetILForModule(MethodDescData.ModulePtr, pRva, &ilAddrClr) != S_OK)
-                {
-                    ExtOut("FindIL failed\n");
-                    return Status;
-                }
-
-                ilAddr = TO_TADDR(ilAddrClr);
-            }
-
-            if (ilAddr == NULL)
-            {
-                ExtOut("Unkown error in reading function IL\n");
+                ExtOut("ilAddr is %p\n", SOS_PTR(std::get<0>(result)));
                 return E_FAIL;
             }
-            IfFailRet(DecodeILFromAddress(pImport, ilAddr));
+            ExtOut("ilAddr is %p pImport is %p\n", SOS_PTR(std::get<0>(result)), SOS_PTR(std::get<1>(result).get()));
+            TADDR ilAddr = std::get<0>(result);
+            std::shared_ptr<IMetaDataImport> pImport(std::move(std::get<1>(result)));
+            IfFailRet(DecodeILFromAddress(pImport.get(), ilAddr));
         }
     }
     
@@ -2287,6 +2246,8 @@ struct StackTraceElement
 };
 
 #include "sos_stacktrace.h"
+
+// #include "sildasm.h"
 
 class StringOutput
 {
@@ -9185,7 +9146,74 @@ typedef std::tuple<DacpMethodDescData, DacpCodeHeaderData, HRESULT> ExtractionCo
 
 ExtractionCodeHeaderResult extractCodeHeaderData(DWORD_PTR methodDesc, DWORD_PTR dwStartAddr);
 HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData);
-HRESULT displayIntermediateLanguage(BOOL bIL, const DacpCodeHeaderData& codeHeaderData);
+HRESULT displayIntermediateLanguage(BOOL bIL, const DacpCodeHeaderData& codeHeaderData,
+                                    std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]>& map,
+                                    ULONG32& mapCount);
+
+GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData)
+{
+    GetILAddressResult error = std::make_tuple(NULL, std::shared_ptr<IMetaDataImport>(nullptr));
+    TADDR ilAddr = NULL;
+    struct DacpProfilerILData ilData;
+    ReleaseHolder<ISOSDacInterface7> sos7;
+    if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface7), &sos7)) &&
+        SUCCEEDED(sos7->GetProfilerModifiedILInformation(MethodDescData.MethodDescPtr, &ilData)))
+    {
+        if (ilData.type == DacpProfilerILData::ILModified)
+        {
+            ExtOut("Found profiler modified IL\n");
+            ilAddr = TO_TADDR(ilData.il);
+        }
+    }
+
+    // Factor this so that it returns a map from IL offset to the textual representation of the decoding
+    // to be consumed by !u -il
+    // The disassemble function can give a MethodDescData as well as the set of keys IL offsets
+
+    // This is not a dynamic method, print the IL for it.
+    // Get the module
+    DacpModuleData dmd;    
+    if (dmd.Request(g_sos, MethodDescData.ModulePtr) != S_OK)
+    {
+        ExtOut("Unable to get module\n");
+        return error;
+    }
+
+    std::shared_ptr<IMetaDataImport> pImport(MDImportForModule(&dmd));
+    if (pImport.get() == nullptr)
+    {
+        ExtOut("bad import\n");
+        return error;
+    }
+
+    if (ilAddr == NULL)
+    { 
+        ULONG pRva;
+        DWORD dwFlags;
+        if (pImport->GetRVA(MethodDescData.MDToken, &pRva, &dwFlags) != S_OK)
+        {
+            ExtOut("error in import\n");
+            return error;
+        }    
+
+        CLRDATA_ADDRESS ilAddrClr;
+        if (g_sos->GetILForModule(MethodDescData.ModulePtr, pRva, &ilAddrClr) != S_OK)
+        {
+            ExtOut("FindIL failed\n");
+            return error;
+        }
+
+        ilAddr = TO_TADDR(ilAddrClr);
+    }
+
+    if (ilAddr == NULL)
+    {
+        ExtOut("Unkown error in reading function IL\n");
+        return error;
+    }
+    GetILAddressResult result = std::make_tuple(ilAddr, std::move(pImport));
+    return result;
+}
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -9269,11 +9297,84 @@ DECLARE_API(u)
 
     DacpMethodDescData& MethodDescData = std::get<0>(p);
     DacpCodeHeaderData& codeHeaderData = std::get<1>(p);
-    Status = displayIntermediateLanguage(bIL, codeHeaderData);
+    std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]> map(nullptr);
+    ULONG32 mapCount = 0;
+    Status = displayIntermediateLanguage(bIL, codeHeaderData, map /*out*/, mapCount /* out */);
     if (Status != S_OK)
     {
         return Status;
     }
+
+    // ///////////////////////////////////////////////////////////////////////////
+    // This can be reused with sildasm but kept as-is largely since it just
+    // works so it can be fixed later.
+    // ///////////////////////////////////////////////////////////////////////////
+
+    if (MethodDescData.bIsDynamic && MethodDescData.managedDynamicMethodObject)
+    {
+        ExtOut("Can only work with dynamic not implemented\n");
+        return Status;
+    }
+
+    GetILAddressResult result = GetILAddress(MethodDescData);
+    if (std::get<0>(result) == NULL)
+    {
+        ExtOut("ilAddr is %p\n", SOS_PTR(std::get<0>(result)));
+        return E_FAIL;
+    }
+    ExtOut("ilAddr is %p pImport is %p\n", SOS_PTR(std::get<0>(result)), SOS_PTR(std::get<1>(result).get()));
+    TADDR ilAddr = std::get<0>(result);
+    std::shared_ptr<IMetaDataImport> pImport(std::move(std::get<1>(result)));
+    /// Taken from DecodeILFromAddress(IMetaDataImport *pImport, TADDR ilAddr)
+    ULONG Size = GetILSize(ilAddr);
+    if (Size == 0)
+    {
+        ExtOut("error decoding IL\n");
+        return Status;
+    }
+    // Read the memory into a local buffer
+    ArrayHolder<BYTE> pArray = new BYTE[Size];
+    Status = g_ExtData->ReadVirtual(TO_CDADDR(ilAddr), pArray, Size, NULL);
+    if (Status != S_OK)
+    {
+        ExtOut("Failed to read memory\n");
+        return Status;
+    }
+    /// Taken from DecodeIL(pImport, pArray, Size);
+    // First decode the header
+    BYTE *buffer = pArray;
+    ULONG bufSize = Size;
+    COR_ILMETHOD *pHeader = (COR_ILMETHOD *) buffer;
+    COR_ILMETHOD_DECODER header(pHeader);
+    ULONG position = 0;
+    BYTE* pBuffer = const_cast<BYTE*>(header.Code);
+    UINT indentCount = 0;
+    ULONG endCodePosition = header.GetCodeSize();
+    std::function<void(ULONG*, UINT*, BYTE*)> displayILFun =
+        [&pImport, &pBuffer, bufSize, &header, &map, &mapCount](ULONG *pPosition, UINT *pIndentCount,
+                                                BYTE *pIp) -> void {
+                // tight loop should be performent enough to justify the sequential search.
+                // Additionally, I dont know if map is ordered so this is a reasonable
+                // mechanism unless the map is too large to iterate sequentially always.
+                ULONG mapIndex = 0;
+                while ((mapIndex < mapCount) && ((BYTE*)(map[mapIndex].startAddress) != pIp))
+                {
+                    ++mapIndex;
+                }
+                // I know that using the weird mask of 0xff000000 is hackish but
+                // I don't know how to detect invalid positions anyways.
+                if ((mapIndex < mapCount) && (!(map[mapIndex].ilOffset & 0xff000000)))
+                {
+                    ULONG position = map[mapIndex].ilOffset;
+                    ExtOut("\n");
+                    std::tuple<ULONG, UINT> r = DecodeILAtPosition(
+                        pImport.get(), pBuffer, bufSize,
+                        position, *pIndentCount, header);
+                    *pPosition = position;
+                    *pIndentCount = std::get<1>(r);
+                    ExtOut("\n");
+                }
+    };
 
     if (codeHeaderData.ColdRegionStart != NULL)
     {
@@ -9307,7 +9408,7 @@ DECLARE_API(u)
             pInfo = NULL;            
         }
     }
-    
+
     if (codeHeaderData.ColdRegionStart == NULL)
     {
         g_targetMachine->Unassembly (
@@ -9318,8 +9419,8 @@ DECLARE_API(u)
                 fWithGCInfo ? &g_gcEncodingInfo : NULL,
                 pInfo,
                 bSuppressLines,
-                bDisplayOffsets
-                );
+                bDisplayOffsets,
+                displayILFun);
     }
     else
     {
@@ -9332,8 +9433,8 @@ DECLARE_API(u)
                 fWithGCInfo ? &g_gcEncodingInfo : NULL,
                 pInfo,
                 bSuppressLines,
-                bDisplayOffsets
-                );
+                bDisplayOffsets,
+                displayILFun);
 
         ExtOut("Cold region:\n");
         
@@ -9349,8 +9450,8 @@ DECLARE_API(u)
                 fWithGCInfo ? &g_gcEncodingInfo : NULL,
                 pInfo,
                 bSuppressLines,
-                bDisplayOffsets
-                );
+                bDisplayOffsets,
+                displayILFun);
 
     }
 
@@ -9544,7 +9645,9 @@ HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData
     return S_OK;
 }
 
-HRESULT displayIntermediateLanguage(BOOL bIL, const DacpCodeHeaderData& codeHeaderData)
+HRESULT displayIntermediateLanguage(BOOL bIL, const DacpCodeHeaderData& codeHeaderData,
+                                    std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]>& map,
+                                    ULONG32& mapCount)
 {
     HRESULT Status = S_OK;
     if (bIL)
@@ -9556,22 +9659,19 @@ HRESULT displayIntermediateLanguage(BOOL bIL, const DacpCodeHeaderData& codeHead
             return Status;
         }
 
-        ArrayHolder<CLRDATA_IL_ADDRESS_MAP> map(nullptr);
-        ULONG32 mapCount = 0;
-
-        if ((Status = pMethodInst->GetILAddressMap(mapCount, &mapCount, map)) != S_OK)
+        if ((Status = pMethodInst->GetILAddressMap(mapCount, &mapCount, map.get())) != S_OK)
         {
             return Status;
         }
 
-        map = new NOTHROW CLRDATA_IL_ADDRESS_MAP[mapCount];
-        if (map == NULL)
+        map.reset(new NOTHROW CLRDATA_IL_ADDRESS_MAP[mapCount]);
+        if (map.get() == NULL)
         {
             ReportOOM();
             return E_OUTOFMEMORY;
         }
 
-        if ((Status = pMethodInst->GetILAddressMap(mapCount, &mapCount, map)) != S_OK)
+        if ((Status = pMethodInst->GetILAddressMap(mapCount, &mapCount, map.get())) != S_OK)
         {
             return Status;
         }
