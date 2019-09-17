@@ -10,6 +10,7 @@
 #ifndef __sildasm_h__
 #define __sildasm_h__
 
+#define _BLD_CLR 1
 #include "corhlpr.h"
 #include "daccess.h"
 #include "dacprivate.h"
