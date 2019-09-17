@@ -156,7 +156,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                                 systemConsole.Out.WriteLine("\n\n");
 
-                                var region = new Region(0, systemConsole.CursorTop - 1, Console.WindowWidth - 2, 1, true);
+                                var region = new Region(0, systemConsole.CursorTop, 55, 1, true);
                                 var renderer = new ConsoleRenderer(systemConsole, resetAfterRender: true);
 
                                 var buffer = new byte[16 * 1024];
@@ -165,6 +165,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 {
                                     while (true)
                                     {
+                                        if (!fs.CanWrite)
+                                            break;
                                         renderer.RenderToRegion($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}", region);
                                     }
                                 });
