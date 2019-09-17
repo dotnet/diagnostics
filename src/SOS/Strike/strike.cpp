@@ -838,7 +838,7 @@ BOOL GatherDynamicInfo(TADDR DynamicMethodObj, DacpObjectData *codeArray,
     return bRet;
 }
 
-typedef std::tuple<TADDR, std::shared_ptr<IMetaDataImport> > GetILAddressResult;
+typedef std::tuple<TADDR, IMetaDataImport* > GetILAddressResult;
 GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData);
 
 /**********************************************************************\
@@ -922,10 +922,10 @@ DECLARE_API(DumpIL)
                 ExtOut("ilAddr is %p\n", SOS_PTR(std::get<0>(result)));
                 return E_FAIL;
             }
-            ExtOut("ilAddr is %p pImport is %p\n", SOS_PTR(std::get<0>(result)), SOS_PTR(std::get<1>(result).get()));
+            ExtOut("ilAddr is %p pImport is %p\n", SOS_PTR(std::get<0>(result)), SOS_PTR(std::get<1>(result)));
             TADDR ilAddr = std::get<0>(result);
-            std::shared_ptr<IMetaDataImport> pImport(std::move(std::get<1>(result)));
-            IfFailRet(DecodeILFromAddress(pImport.get(), ilAddr));
+            ToRelease<IMetaDataImport> pImport(std::get<1>(result));
+            IfFailRet(DecodeILFromAddress(pImport, ilAddr));
         }
     }
     
@@ -9150,7 +9150,7 @@ HRESULT displayIntermediateLanguage(BOOL bIL, const DacpCodeHeaderData& codeHead
 
 GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData)
 {
-    GetILAddressResult error = std::make_tuple(NULL, std::shared_ptr<IMetaDataImport>(nullptr));
+    GetILAddressResult error = std::make_tuple(NULL, nullptr);
     TADDR ilAddr = NULL;
     struct DacpProfilerILData ilData;
     ReleaseHolder<ISOSDacInterface7> sos7;
@@ -9177,8 +9177,8 @@ GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData)
         return error;
     }
 
-    std::shared_ptr<IMetaDataImport> pImport(MDImportForModule(&dmd));
-    if (pImport.get() == nullptr)
+    ToRelease<IMetaDataImport> pImport(MDImportForModule(&dmd));
+    if (pImport == NULL)
     {
         ExtOut("bad import\n");
         return error;
@@ -9209,7 +9209,7 @@ GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData)
         ExtOut("Unkown error in reading function IL\n");
         return error;
     }
-    GetILAddressResult result = std::make_tuple(ilAddr, std::move(pImport));
+    GetILAddressResult result = std::make_tuple(ilAddr, pImport.Detach());
     return result;
 }
 
@@ -9320,7 +9320,7 @@ DECLARE_API(u)
         ExtOut("ilAddr is %p\n", SOS_PTR(std::get<0>(result)));
         return E_FAIL;
     }
-    ExtOut("ilAddr is %p pImport is %p\n", SOS_PTR(std::get<0>(result)), SOS_PTR(std::get<1>(result).get()));
+    ExtOut("ilAddr is %p pImport is %p\n", SOS_PTR(std::get<0>(result)), SOS_PTR(std::get<1>(result)));
     TADDR ilAddr = std::get<0>(result);
     std::shared_ptr<IMetaDataImport> pImport(std::move(std::get<1>(result)));
     /// Taken from DecodeILFromAddress(IMetaDataImport *pImport, TADDR ilAddr)
