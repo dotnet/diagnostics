@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 var systemConsole = new SystemConsoleTerminal(console);
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
-                Console.Clear();
+                systemConsole.Clear();
                 if (processId <= 0)
                 {
                     systemConsole.Error.WriteLine("Process ID should not be negative.");
@@ -154,10 +154,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 if (shouldStopAfterDuration)
                                     systemConsole.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
 
-                                systemConsole.Out.WriteLine("\n\n");
+                                systemConsole.Out.WriteLine("\n");
 
                                 var region = new Region(0, systemConsole.CursorTop, 55, 1, true);
                                 var renderer = new ConsoleRenderer(systemConsole, resetAfterRender: true);
+                                systemConsole.Out.WriteLine("\nPress <Enter> or <Ctrl+C> to exit...");
 
                                 var buffer = new byte[16 * 1024];
 
@@ -196,7 +197,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     if (systemConsole.IsInputRedirected)
                     {
-                        // if stdin is redirected, look for 'q' to indicate we should stop
+                        var exitCharacters = new char[] { 'q', '\r', '\n' };
+                        // if stdin is redirected, look for 'q', '\r', or '\n' to indicate we should stop
                         // tracing.  Generally, we would expect people to use the runtime client
                         // library directly or the hidden duration flag rather than this option...
                         //
@@ -205,7 +207,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         do
                         {
                            while (Console.In.Peek() == -1 && !shouldExit.WaitOne(250)) { }
-                        } while (!shouldExit.WaitOne(0) && (char)Console.In.Read() != 'q');
+                        } while (!shouldExit.WaitOne(0) && !exitCharacters.Contains((char)Console.In.Read()));
                     }
                     else
                     {
@@ -223,8 +225,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     await collectingTask;
                 }
 
-                systemConsole.Out.WriteLine();
-                systemConsole.Out.WriteLine("Trace completed.");
+                systemConsole.Out.WriteLine("\n\n\nTrace completed.");
 
                 if (format != TraceFileFormat.NetTrace)
                     TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
