@@ -9322,7 +9322,7 @@ DECLARE_API(u)
     }
     ExtOut("ilAddr is %p pImport is %p\n", SOS_PTR(std::get<0>(result)), SOS_PTR(std::get<1>(result)));
     TADDR ilAddr = std::get<0>(result);
-    std::shared_ptr<IMetaDataImport> pImport(std::move(std::get<1>(result)));
+    ToRelease<IMetaDataImport> pImport(std::get<1>(result));
     /// Taken from DecodeILFromAddress(IMetaDataImport *pImport, TADDR ilAddr)
     ULONG Size = GetILSize(ilAddr);
     if (Size == 0)
@@ -9366,7 +9366,7 @@ DECLARE_API(u)
                     ULONG position = map[mapIndex].ilOffset;
                     ExtOut("\n");
                     std::tuple<ULONG, UINT> r = DecodeILAtPosition(
-                        pImport.get(), pBuffer, bufSize,
+                        pImport, pBuffer, bufSize,
                         position, *pIndentCount, header);
                     *pPosition = position;
                     *pIndentCount = std::get<1>(r);
