@@ -26,6 +26,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private ConsoleWriter writer;
         private CounterFilter filter;
         private ulong _sessionId;
+        private string _format;
+        private string _sortBy;
         private bool pauseCmdSet;
 
         public CounterMonitor()
@@ -52,15 +54,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // There really isn't a great way to tell whether an EventCounter payload is an instance of 
                 // IncrementingCounterPayload or CounterPayload, so here we check the number of fields 
                 // to distinguish the two.
-                ICounterPayload payload;
-                if (payloadFields.ContainsKey("CounterType"))
-                {
-                    payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields, _interval) : (ICounterPayload)new CounterPayload(payloadFields);
-                }
-                else
-                {
-                    payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields, _interval) : (ICounterPayload)new CounterPayload(payloadFields);
-                }
+                ICounterPayload payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields, _interval) : (ICounterPayload)new CounterPayload(payloadFields);
                 writer.Update(obj.ProviderName, payload, pauseCmdSet);
             }
         }
@@ -88,7 +82,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _processId = processId;
                 _interval = refreshInterval;
 
-                return await StartMonitor();
+                return await Start(true);
             }
 
             catch (OperationCanceledException)
@@ -103,6 +97,29 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 return 1;
             }
         }
+
+        public async Task<int> Export(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, string format, string sortBy, string output)
+        {
+            try
+            {
+                _ct = ct;
+                _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
+                _console = console;
+                _processId = processId;
+                _interval = refreshInterval;
+                _format = format;
+                _sortBy = sortBy;
+                _output = output;
+
+                return await Start(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+
+            return 1;
+        }
+
 
         // Use EventPipe CollectTracing2 command to start monitoring. This may throw.
         private void RequestTracingV2(string providerString)
@@ -130,14 +147,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
             source.Process();
         }
 
-        private async Task<int> StartMonitor()
+        private string buildProviderString()
         {
-            if (_processId == 0) {
-                _console.Error.WriteLine("ProcessId is required.");
-                return 1;
-            }
-
-            String providerString;
+            string providerString;
 
             if (_counterList.Count == 0)
             {
@@ -190,6 +202,19 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 providerString = sb.ToString();
             }
+            return providerString;
+        }
+        
+
+        private async Task<int> Start(bool liveMonitor)
+        {
+            if (_processId == 0)
+            {
+                _console.Error.WriteLine("ProcessId is required.");
+                return 1;
+            }
+
+            string providerString = buildProviderString();
 
             ManualResetEvent shouldExit = new ManualResetEvent(false);
             _ct.Register(() => shouldExit.Set());

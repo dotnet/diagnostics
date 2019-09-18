@@ -25,6 +25,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 argument: CounterList(),
                 handler: CommandHandler.Create<CancellationToken, List<string>, IConsole, int, int>(new CounterMonitor().Monitor));
 
+        private static Command ExportCommand() =>
+            new Command(
+                "export", 
+                "Monitor counters in a .NET application and export the result into a file", 
+                new Option[] { ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportSortOption() },
+                argument: CounterList(),
+                handler: CommandHandler.Create<CancellationToken, List<string>, IConsole, int, int, string, string>(new CounterMonitor().Export));
+
         private static Option ProcessIdOption() =>
             new Option(
                 new[] { "-p", "--process-id" }, 
@@ -36,6 +44,24 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 new[] { "--refresh-interval" }, 
                 "The number of seconds to delay between updating the displayed counters.",
                 new Argument<int>(defaultValue: 1) { Name = "refresh-interval" });
+
+        private static Option ExportFormatOption() => 
+            new Option(
+                new[] { "--format" },
+                "The format of exported counter data.",
+                new Argument<string>(defaultValue: "csv") { Name = "format" });
+
+        private static Option ExportSortOption() => 
+            new Option(
+                new[] { "--sort-by" },
+                "The option to sort the data by.",
+                new Argument<string>(defaultValue: "timestamp") { Name = "sort-by" });
+
+        private static Option ExportFileNameOption() => 
+            new Option(
+                new[] { "--output" },
+                "The output file name."
+                new Argument<string>(defaultValue: "counter") { Name = "output" });
 
         private static Argument CounterList() =>
             new Argument<List<string>> {
@@ -119,6 +145,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             var parser = new CommandLineBuilder()
                 .AddCommand(MonitorCommand())
+                .AddCommand(ExportCommand())
                 .AddCommand(ListCommand())
                 .AddCommand(ListProcessesCommand())
                 .UseDefaults()
