@@ -23,7 +23,7 @@
 
     <!-- Other libs -->
     <MicrosoftSymbolStoreVersion>1.0.41901</MicrosoftSymbolStoreVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>1.1.37504</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>1.1.46104</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.44</MicrosoftDiagnosticsTracingTraceEventVersion>
     <SystemCommandLineExperimentalVersion>0.2.0-alpha.19254.1</SystemCommandLineExperimentalVersion>
@@ -32,7 +32,7 @@
     <XUnitVersion>2.4.1</XUnitVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
 
-    <cdbsosversion>1.1.0</cdbsosversion>
+    <cdbsosversion>10.0.18362</cdbsosversion>
 
   </PropertyGroup>
 

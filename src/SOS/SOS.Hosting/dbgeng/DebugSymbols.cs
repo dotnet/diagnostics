@@ -83,7 +83,7 @@ namespace SOS
         private static void AddDebugSymbols2(VTableBuilder builder, SOSHost soshost)
         {
             AddDebugSymbols(builder, soshost);
-            builder.AddMethod(new GetModuleVersionInformationDelegate((self, index, baseAddress, item, buffer, bufferSize, verInfoSize) => DebugClient.NotImplemented));
+            builder.AddMethod(new GetModuleVersionInformationDelegate(soshost.GetModuleVersionInformation));
             builder.AddMethod(new GetModuleNameStringDelegate((self, which, index, baseAddress, buffer, bufferSize, nameSize) => DebugClient.NotImplemented));
             builder.AddMethod(new GetConstantNameDelegate((self, module, typeId, value, buffer, bufferSize, nameSize) => DebugClient.NotImplemented));
             builder.AddMethod(new GetFieldNameDelegate((self, module, typeId, fieldIndex, buffer, bufferSize, nameSize) => DebugClient.NotImplemented));

@@ -1536,6 +1536,7 @@ struct ModuleInfo
 {
     ULONG64 baseAddr;
     ULONG64 size;
+    ULONG index;
     BOOL hasPdb;
 };
 extern ModuleInfo g_moduleInfo[];
@@ -1551,12 +1552,14 @@ HRESULT DecodeILFromAddress(IMetaDataImport *pImport, TADDR ilAddr);
 void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize);
 void DecodeDynamicIL(BYTE *data, ULONG Size, DacpObjectData& tokenArray);
 
-BOOL IsRetailBuild (size_t base);
+HRESULT GetRuntimeModuleInfo(PULONG moduleIndex, PULONG64 moduleBase);
 EEFLAVOR GetEEFlavor ();
 HRESULT InitCorDebugInterface();
 VOID UninitCorDebugInterface();
+BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes);
+bool IsRuntimeVersion(DWORD major);
 #ifndef FEATURE_PAL
-BOOL GetEEVersion(VS_FIXEDFILEINFO *pFileInfo);
+BOOL IsRetailBuild (size_t base);
 BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo);
 #endif
 

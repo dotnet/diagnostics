@@ -440,6 +440,7 @@ void DumpStackInternal(DumpStackFlag *pDSFlag)
     DumpStackWorker(*pDSFlag);
 }
 
+ 
 DECLARE_API(DumpStack)
 {
     INIT_API_NO_RET_ON_FAILURE();
@@ -1276,6 +1277,14 @@ DECLARE_API(DumpClass)
             ExtOut("NumThreadStaticFields: %x\n", vMethodTableFields.wNumThreadStaticFields);
         }
 
+
+        if (vMethodTableFields.wContextStaticsSize)
+        {
+            ExtOut("ContextStaticOffset: %x\n", vMethodTableFields.wContextStaticOffset);
+            ExtOut("ContextStaticsSize:  %x\n", vMethodTableFields.wContextStaticsSize);
+        }
+
+    
         if (vMethodTableFields.wNumInstanceFields + vMethodTableFields.wNumStaticFields > 0)
         {
             DisplayFields(methodTable, &mtdata, &vMethodTableFields, NULL, TRUE, FALSE);
@@ -7996,11 +8005,7 @@ DECLARE_API(bpmd)
         // did we get dll and type name or file:line#? Search for a colon in the first arg
         // to see if it is in fact a file:line#
         CHAR* pColon = strchr(DllName.data, ':');
-#ifndef FEATURE_PAL 
-        if (FAILED(g_ExtSymbols->GetModuleByModuleName(MAIN_CLR_MODULE_NAME_A, 0, NULL, NULL))) {
-#else
-        if (FAILED(g_ExtSymbols->GetModuleByModuleName(MAIN_CLR_DLL_NAME_A, 0, NULL, NULL))) {
-#endif
+        if (FAILED(GetRuntimeModuleInfo(NULL, NULL))) {
            ExtOut("%s not loaded yet\n", MAIN_CLR_DLL_NAME_A);
            return Status;
         }
@@ -10028,7 +10033,6 @@ DECLARE_API(DumpGCData)
 #endif //GC_CONFIG_DRIVEN
 }
 
-#ifndef FEATURE_PAL
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -10045,39 +10049,42 @@ DECLARE_API (EEVersion)
         ExtOut("CLR not loaded\n");
         return Status;
     }
-    
-    if (g_ExtSymbols2) {
-        VS_FIXEDFILEINFO version;
-        
-        BOOL ret = GetEEVersion(&version);
-            
-        if (ret) 
+    static const int fileVersionBufferSize = 1024;
+    ArrayHolder<char> fileVersionBuffer = new char[fileVersionBufferSize];
+    VS_FIXEDFILEINFO version;
+
+    BOOL ret = GetEEVersion(&version, fileVersionBuffer.GetPtr(), fileVersionBufferSize);
+    if (ret) 
+    {
+        if (version.dwFileVersionMS != (DWORD)-1)
         {
-            if (version.dwFileVersionMS != (DWORD)-1)
-            {
-                ExtOut("%u.%u.%u.%u",
-                       HIWORD(version.dwFileVersionMS),
-                       LOWORD(version.dwFileVersionMS),
-                       HIWORD(version.dwFileVersionLS),
-                       LOWORD(version.dwFileVersionLS));
-                if (version.dwFileFlags & VS_FF_DEBUG) 
-                {                    
-                    ExtOut(" Checked or debug build");
-                }
+            ExtOut("%u.%u.%u.%u",
+                   HIWORD(version.dwFileVersionMS),
+                   LOWORD(version.dwFileVersionMS),
+                   HIWORD(version.dwFileVersionLS),
+                   LOWORD(version.dwFileVersionLS));
+#ifndef FEATURE_PAL
+            if (version.dwFileFlags & VS_FF_DEBUG) 
+            {                    
+                ExtOut(" checked or debug build");
+            }
+            else
+            { 
+                BOOL fRet = IsRetailBuild ((size_t)g_moduleInfo[eef].baseAddr);
+                if (fRet)
+                    ExtOut(" retail");
                 else
-                { 
-                    BOOL fRet = IsRetailBuild ((size_t)g_moduleInfo[eef].baseAddr);
+                    ExtOut(" free");
+            }
+#endif
+            ExtOut("\n");
 
-                    if (fRet)
-                        ExtOut(" retail");
-                    else
-                        ExtOut(" free");
-                }
-
-                ExtOut("\n");
+            if (fileVersionBuffer[0] != '\0')
+            {
+                ExtOut("%s\n", fileVersionBuffer.GetPtr());
             }
         }
-    }    
+    }
     
     if (!InitializeHeapData ())
         ExtOut("GC Heap not initialized, so GC mode is not determined yet.\n");
@@ -10091,6 +10098,7 @@ DECLARE_API (EEVersion)
         ExtOut("In plan phase of garbage collection\n");
     }
 
+#ifndef FEATURE_PAL
     // Print SOS version
     VS_FIXEDFILEINFO sosVersion;
     if (GetSOSVersion(&sosVersion))
@@ -10102,21 +10110,21 @@ DECLARE_API (EEVersion)
                    LOWORD(sosVersion.dwFileVersionMS),
                    HIWORD(sosVersion.dwFileVersionLS),
                    LOWORD(sosVersion.dwFileVersionLS));
+
             if (sosVersion.dwFileFlags & VS_FF_DEBUG) 
             {                    
-                ExtOut(" Checked or debug build");                    
+                ExtOut(" debug build");                    
             }
             else
             { 
                 ExtOut(" retail build");                    
             }
-
             ExtOut("\n");
         }
     }
+#endif // FEATURE_PAL
     return Status;
 }
-#endif // FEATURE_PAL
 
 #ifndef FEATURE_PAL
 /**********************************************************************\
@@ -11386,8 +11394,7 @@ DECLARE_API(TraceToCode)
         {
             if(g_clrBaseAddr == 0)
             {
-                g_ExtSymbols->GetModuleByModuleName (MAIN_CLR_MODULE_NAME_A,0,NULL,
-                    &g_clrBaseAddr);
+                GetRuntimeModuleInfo(NULL, &g_clrBaseAddr);
             }
             if(g_clrBaseAddr == base)
             {
@@ -11522,7 +11529,7 @@ DECLARE_API(GetCodeTypeFlags)
     else if(g_ExtSymbols->GetModuleByOffset (ip, 0, NULL, &base) == S_OK)
     {
         ULONG64 clrBaseAddr = 0;
-        if(SUCCEEDED(g_ExtSymbols->GetModuleByModuleName (MAIN_CLR_MODULE_NAME_A,0,NULL, &clrBaseAddr)) && base==clrBaseAddr)
+        if(SUCCEEDED(GetRuntimeModuleInfo(NULL, &clrBaseAddr)) && base==clrBaseAddr)
         {
             ExtOut("Compiled code in CLR");
             codeType = 4;

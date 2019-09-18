@@ -25,6 +25,7 @@ DumpStack
 DumpStackObjects
 DumpVC
 EEHeap
+EEVersion
 GCWhere
 EEStack
 EHInfo

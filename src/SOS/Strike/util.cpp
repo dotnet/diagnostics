@@ -150,45 +150,63 @@ DWORD_PTR GetValueFromExpression(___in __in_z const char *const instr)
 
 #endif // FEATURE_PAL
 
-ModuleInfo g_moduleInfo[MSCOREND] = {{0, FALSE, 0}, {0, FALSE, 0}, {0, FALSE, 0}};
+ModuleInfo g_moduleInfo[MSCOREND] = {{0, 0, DEBUG_ANY_ID, FALSE}, {0, 0, DEBUG_ANY_ID, FALSE}, {0, 0, DEBUG_ANY_ID, FALSE}};
 
 void ReportOOM()
 {
     ExtOut("SOS Error: Out of memory\n");
 }
 
+HRESULT GetRuntimeModuleInfo(PULONG moduleIndex, PULONG64 moduleBase)
+{
+#ifdef FEATURE_PAL
+    return g_ExtSymbols->GetModuleByModuleName(MAIN_CLR_DLL_NAME_A, 0, moduleIndex, moduleBase);
+#else
+    return g_ExtSymbols->GetModuleByModuleName(MAIN_CLR_MODULE_NAME_A, 0, moduleIndex, moduleBase);
+#endif
+}
+
 HRESULT CheckEEDll()
 {
-#ifndef FEATURE_PAL
-    // Do we have coreclr.dll
+    HRESULT hr = S_OK;
+
+    // Do we have runtime module info?
     if (g_moduleInfo[MSCORWKS].baseAddr == 0)
     {
-        DEBUG_MODULE_PARAMETERS Params;
-
-        g_ExtSymbols->GetModuleByModuleName(MAIN_CLR_MODULE_NAME_A, 0, NULL, &g_moduleInfo[MSCORWKS].baseAddr);
+        hr = GetRuntimeModuleInfo(&g_moduleInfo[MSCORWKS].index, &g_moduleInfo[MSCORWKS].baseAddr);
+#ifdef FEATURE_PAL
+        if (SUCCEEDED(hr))
+        {
+            if (g_ExtServices2 != nullptr)
+            {
+                g_ExtServices2->GetModuleInfo(g_moduleInfo[MSCORWKS].index, nullptr, &g_moduleInfo[MSCORWKS].size);
+            }
+        }
+#else
         if (g_moduleInfo[MSCORWKS].baseAddr != 0 && g_moduleInfo[MSCORWKS].hasPdb == FALSE)
         {
-            g_ExtSymbols->GetModuleParameters(1, &g_moduleInfo[MSCORWKS].baseAddr, 0, &Params);
-            if (Params.SymbolType == SymDeferred)
+            DEBUG_MODULE_PARAMETERS params;
+            if (SUCCEEDED(g_ExtSymbols->GetModuleParameters(1, &g_moduleInfo[MSCORWKS].baseAddr, 0, &params)))
             {
-                g_ExtSymbols->Reload("/f " MAIN_CLR_DLL_NAME_A);
-                g_ExtSymbols->GetModuleParameters(1, &g_moduleInfo[MSCORWKS].baseAddr, 0, &Params);
+                if (params.SymbolType == SymDeferred)
+                {
+                    g_ExtSymbols->Reload("/f " MAIN_CLR_DLL_NAME_A);
+                    g_ExtSymbols->GetModuleParameters(1, &g_moduleInfo[MSCORWKS].baseAddr, 0, &params);
+                }
+                if (params.SymbolType == SymPdb || params.SymbolType == SymDia)
+                {
+                    g_moduleInfo[MSCORWKS].hasPdb = TRUE;
+                }
+                g_moduleInfo[MSCORWKS].size = params.Size;
             }
-            if (Params.SymbolType == SymPdb || Params.SymbolType == SymDia)
-            {
-                g_moduleInfo[MSCORWKS].hasPdb = TRUE;
-            }
-            g_moduleInfo[MSCORWKS].size = Params.Size;
         }
         if (g_moduleInfo[MSCORWKS].baseAddr != 0 && g_moduleInfo[MSCORWKS].hasPdb == FALSE) 
         {
             ExtOut("PDB symbol for coreclr.dll not loaded\n");
         }
-    }
-    return (g_moduleInfo[MSCORWKS].baseAddr != 0) ? S_OK : E_FAIL;
-#else
-    return S_OK;
 #endif // FEATURE_PAL
+    }
+    return hr;
 }
 
 EEFLAVOR GetEEFlavor()
@@ -197,8 +215,7 @@ EEFLAVOR GetEEFlavor()
     return MSCORWKS;
 #else // FEATUER_PAL
     EEFLAVOR flavor = UNKNOWNEE;    
-    
-    if (SUCCEEDED(g_ExtSymbols->GetModuleByModuleName(MAIN_CLR_MODULE_NAME_A,0,NULL,NULL))) {
+    if (SUCCEEDED(GetRuntimeModuleInfo(NULL, NULL))) {
         flavor = MSCORWKS;
     }
     return flavor;
@@ -2796,42 +2813,72 @@ const char *EHTypeName(EHClauseType et)
         return "UNKNOWN";
 }
 
-void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersionData,
-    const UINT cTieredVersionData, ULONG rejitID, CLRDATA_ADDRESS ilAddr, CLRDATA_ADDRESS ilNodeAddr)
+// 2.x version
+void DumpTieredNativeCodeAddressInfo_2x(struct DacpTieredVersionData_2x * pTieredVersionData, const UINT cTieredVersionData)
 {
     for(int i = cTieredVersionData - 1; i >= 0; --i)
     {
-        ExtOut("  NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
-
         const char *descriptor = NULL;
-        switch(pTieredVersionData[i].OptimizationTier)
+        switch(pTieredVersionData[i].TieredInfo)
         {
-        case DacpTieredVersionData::OptimizationTier_Unknown:
+        case DacpTieredVersionData_2x::TIERED_UNKNOWN:
         default:
             descriptor = "Unknown Tier";
             break;
-        case DacpTieredVersionData::OptimizationTier_MinOptJitted:
-            descriptor = "MinOptJitted";
+        case DacpTieredVersionData_2x::NON_TIERED:
+            descriptor = "Non-Tiered";
             break;
-        case DacpTieredVersionData::OptimizationTier_Optimized:
-            descriptor = "Optimized";
+        case DacpTieredVersionData_2x::TIERED_0:
+            descriptor = "Tier 0";
             break;
-        case DacpTieredVersionData::OptimizationTier_QuickJitted:
-            descriptor = "QuickJitted";
-            break;
-        case DacpTieredVersionData::OptimizationTier_OptimizedTier1:
-            descriptor = "OptimizedTier1";
-            break;
-        case DacpTieredVersionData::OptimizationTier_ReadyToRun:
-            descriptor = "ReadyToRun";
+        case DacpTieredVersionData_2x::TIERED_1:
+            descriptor = "Tier 1";
             break;
         }
+        DMLOut("     CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
+        ExtOut("     NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
+    }
+}
 
-        ExtOut("    ReJIT ID:           %d\n", rejitID);
-        DMLOut("    CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
-        DMLOut("    IL Addr:            %s\n", DMLIL(ilAddr));
-        ExtOut("    ILCodeVersion:      %p\n", SOS_PTR(ilNodeAddr));
+void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersionData, const UINT cTieredVersionData, 
+    ULONG rejitID, CLRDATA_ADDRESS ilAddr, CLRDATA_ADDRESS ilNodeAddr)
+{
+    ExtOut("  ILCodeVersion:      %p\n", SOS_PTR(ilNodeAddr));
+    ExtOut("  ReJIT ID:           %d\n", rejitID);
+    DMLOut("  IL Addr:            %s\n", DMLIL(ilAddr));
 
+    if (IsRuntimeVersion(3)) {
+        for(int i = cTieredVersionData - 1; i >= 0; --i)
+        {
+            const char *descriptor = NULL;
+            switch(pTieredVersionData[i].OptimizationTier)
+            {
+            case DacpTieredVersionData::OptimizationTier_Unknown:
+            default:
+                descriptor = "Unknown Tier";
+                break;
+            case DacpTieredVersionData::OptimizationTier_MinOptJitted:
+                descriptor = "MinOptJitted";
+                break;
+            case DacpTieredVersionData::OptimizationTier_Optimized:
+                descriptor = "Optimized";
+                break;
+            case DacpTieredVersionData::OptimizationTier_QuickJitted:
+                descriptor = "QuickJitted";
+                break;
+            case DacpTieredVersionData::OptimizationTier_OptimizedTier1:
+                descriptor = "OptimizedTier1";
+                break;
+            case DacpTieredVersionData::OptimizationTier_ReadyToRun:
+                descriptor = "ReadyToRun";
+                break;
+            }
+            DMLOut("     CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
+            ExtOut("     NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
+        }
+    }
+    else {
+        DumpTieredNativeCodeAddressInfo_2x((DacpTieredVersionData_2x*)pTieredVersionData, cTieredVersionData);
     }
 }
 
@@ -2967,8 +3014,8 @@ void DumpMDInfoFromMethodDescData(DacpMethodDescData * pMethodDescData, DacpReJi
             {
                 // Special case, there is no jitted code yet but still need to output the IL information
                 ExtOut("  ILCodeVersion:      %p (pending)\n", SOS_PTR(pendingRejitData.ilCodeVersionNodePtr));
-                ExtOut("    ReJIT ID:           %d\n", pendingRejitID);
-                DMLOut("    IL Addr:            %s\n", DMLIL(pendingRejitData.il));
+                ExtOut("  ReJIT ID:           %d\n", pendingRejitID);
+                DMLOut("  IL Addr:            %s\n", DMLIL(pendingRejitData.il));
             }
         }
 
@@ -3225,20 +3272,64 @@ size_t FunctionType (size_t EIP)
     return (size_t) pMD;
 }
 
-#ifndef FEATURE_PAL
-
 //
 // Gets version info for the CLR in the debuggee process.
 //
-BOOL GetEEVersion(VS_FIXEDFILEINFO *pFileInfo)
+BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes)
 {
-    _ASSERTE(g_ExtSymbols2);
     _ASSERTE(pFileInfo);
+    if (g_ExtSymbols2 == nullptr) {
+        return FALSE;
+    }
+    ModuleInfo moduleInfo = g_moduleInfo[GetEEFlavor()];
+    _ASSERTE(moduleInfo.index != DEBUG_ANY_ID);
 
-    // Grab the version info directly from the module.
-    return g_ExtSymbols2->GetModuleVersionInformation(
-        DEBUG_ANY_ID, g_moduleInfo[GetEEFlavor()].baseAddr, "\\", pFileInfo, sizeof(VS_FIXEDFILEINFO), NULL) == S_OK;
+#ifdef FEATURE_PAL
+    // Load the symbols for runtime. On Linux we are looking for the "sccsid" 
+    // global so "libcoreclr.so/.dylib" symbols need to be loaded.
+    LoadNativeSymbols(true);
+#endif
+
+    HRESULT hr = g_ExtSymbols2->GetModuleVersionInformation(moduleInfo.index, 0, "\\", pFileInfo, sizeof(VS_FIXEDFILEINFO), NULL);
+
+    // Attempt to get the the FileVersion string that contains version and the "built by" and commit id info
+    if (fileVersionBuffer != nullptr)
+    {
+        if (fileVersionBufferSizeInBytes > 0) {
+            fileVersionBuffer[0] = '\0';
+        }
+        // We can assume the English/CP_UNICODE lang/code page for the runtime modules
+        g_ExtSymbols2->GetModuleVersionInformation(
+            moduleInfo.index, 0, "\\StringFileInfo\\040904B0\\FileVersion", fileVersionBuffer, fileVersionBufferSizeInBytes, NULL);
+    }
+
+    return SUCCEEDED(hr);
 }
+
+//
+// Return true if major runtime version (logical product version like 2.1, 
+// 3.0 or 5.x). Currently only major versions of 3 or 5 are supported.
+//
+bool IsRuntimeVersion(DWORD major)
+{
+    VS_FIXEDFILEINFO fileInfo;
+    if (GetEEVersion(&fileInfo, nullptr, 0))
+    {
+        switch (major)
+        {
+            case 5:
+                return HIWORD(fileInfo.dwFileVersionMS) == 5;
+            case 3:
+                return HIWORD(fileInfo.dwFileVersionMS) == 4 && LOWORD(fileInfo.dwFileVersionMS) == 700;
+            default:
+                _ASSERTE(FALSE);
+                break;
+        }
+    }
+    return false;
+}
+
+#ifndef FEATURE_PAL
 
 BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo)
 {
@@ -4450,7 +4541,7 @@ HRESULT InitCorDebugInterface()
     return E_FAIL;
 #else
     ULONG64 ulBase;
-    hr = g_ExtSymbols->GetModuleByModuleName(MAIN_CLR_DLL_NAME_A, 0, NULL, &ulBase);
+    hr = GetRuntimeModuleInfo(NULL, &ulBase);
     if (SUCCEEDED(hr))
     {
         hr = InitCorDebugInterfaceFromModule(ulBase, pClrDebugging);

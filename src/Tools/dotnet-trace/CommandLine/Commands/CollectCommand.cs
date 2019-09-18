@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration);
 
         /// <summary>
         /// Collects a diagnostic trace from a currently running process.
@@ -32,55 +32,72 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="profile">A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.</param>
         /// <param name="format">The desired format of the created trace file.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration)
         {
             try
             {
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
+                Console.Clear();
                 if (processId <= 0)
                 {
                     Console.Error.WriteLine("Process ID should not be negative.");
                     return ErrorCodes.ArgumentError;
                 }
 
-                var selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
-                    .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
-                if (selectedProfile == null)
+                if (profile.Length == 0 && providers.Length == 0)
                 {
-                    Console.Error.WriteLine($"Invalid profile name: {profile}");
-                    return ErrorCodes.ArgumentError;
+                    Console.Out.WriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
+                    profile = "cpu-sampling";
                 }
+
+                Dictionary<string, string> enabledBy = new Dictionary<string, string>();
 
                 var providerCollection = Extensions.ToProviders(providers);
-                var profileProviders = new List<Provider>();
-
-                // If user defined a different key/level on the same provider via --providers option that was specified via --profile option,
-                // --providers option takes precedence. Go through the list of providers specified and only add it if it wasn't specified
-                // via --providers options.
-                if (selectedProfile.Providers != null)
+                foreach (Provider providerCollectionProvider in providerCollection)
                 {
-                    foreach (Provider selectedProfileProvider in selectedProfile.Providers)
-                    {
-                        bool shouldAdd = true;
-
-                        foreach (Provider providerCollectionProvider in providerCollection)
-                        {
-                            if (providerCollectionProvider.Name.Equals(selectedProfileProvider.Name))
-                            {
-                                shouldAdd = false;
-                                break;
-                            }
-                        }
-
-                        if (shouldAdd)
-                        {
-                            profileProviders.Add(selectedProfileProvider);
-                        }
-                    }
+                    enabledBy[providerCollectionProvider.Name] = "--providers ";
                 }
 
-                providerCollection.AddRange(profileProviders);
+                if (profile.Length != 0)
+                {
+                    var profileProviders = new List<Provider>();
+                    var selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
+                        .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
+                    if (selectedProfile == null)
+                    {
+                        Console.Error.WriteLine($"Invalid profile name: {profile}");
+                        return ErrorCodes.ArgumentError;
+                    }
+
+                    // If user defined a different key/level on the same provider via --providers option that was specified via --profile option,
+                    // --providers option takes precedence. Go through the list of providers specified and only add it if it wasn't specified
+                    // via --providers options.
+                    if (selectedProfile.Providers != null)
+                    {
+                        foreach (Provider selectedProfileProvider in selectedProfile.Providers)
+                        {
+                            bool shouldAdd = true;
+
+                            foreach (Provider providerCollectionProvider in providerCollection)
+                            {
+                                if (providerCollectionProvider.Name.Equals(selectedProfileProvider.Name))
+                                {
+                                    shouldAdd = false;
+                                    break;
+                                }
+                            }
+
+                            if (shouldAdd)
+                            {
+                                enabledBy[selectedProfileProvider.Name] = "--profile ";
+                                profileProviders.Add(selectedProfileProvider);
+                            }
+                        }
+                    }
+                    providerCollection.AddRange(profileProviders);
+                }
+
 
                 if (providerCollection.Count <= 0)
                 {
@@ -88,7 +105,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     return ErrorCodes.ArgumentError;
                 }
 
-                PrintProviders(providerCollection);
+                PrintProviders(providerCollection, enabledBy);
 
                 var process = Process.GetProcessById(processId);
                 var configuration = new SessionConfiguration(
@@ -97,8 +114,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     providers: providerCollection);
 
                 var shouldExit = new ManualResetEvent(false);
+                var shouldStopAfterDuration = duration != default(TimeSpan);
                 var failed = false;
                 var terminated = false;
+                System.Timers.Timer durationTimer = null;
 
                 ct.Register(() => shouldExit.Set());
 
@@ -112,15 +131,29 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return ErrorCodes.SessionCreationError;
                     }
 
-                    var collectingTask = new Task(() => {
+                    if (shouldStopAfterDuration)
+                    {
+                        durationTimer = new System.Timers.Timer(duration.TotalMilliseconds);
+                        durationTimer.Elapsed += (s, e) => shouldExit.Set();
+                        durationTimer.AutoReset = false;
+                    }
+
+                    var collectingTask = new Task(() =>
+                    {
                         try
                         {
+                            var stopwatch = new Stopwatch();
+                            durationTimer?.Start();
+                            stopwatch.Start();
+
                             using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                             {
-                                Console.Out.WriteLine($"Process     : {process.MainModule.FileName}");
-                                Console.Out.WriteLine($"Output File : {fs.Name}");
-                                Console.Out.WriteLine($"\tSession Id: 0x{sessionId:X16}");
-                                lineToClear = Console.CursorTop;
+                                Console.Out.WriteLine($"Process        : {process.MainModule.FileName}");
+                                Console.Out.WriteLine($"Output File    : {fs.Name}");
+                                if (shouldStopAfterDuration)
+                                    Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
+
+                                Console.Out.WriteLine("\n\n");
                                 var buffer = new byte[16 * 1024];
 
                                 while (true)
@@ -129,10 +162,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     if (nBytesRead <= 0)
                                         break;
                                     fs.Write(buffer, 0, nBytesRead);
-
+                                    lineToClear = Console.CursorTop-1;
                                     ResetCurrentConsoleLine(vTermMode.IsEnabled);
-                                    Console.Out.Write($"\tRecording trace {GetSize(fs.Length)}");
-
+                                    Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
+                                    Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
                                     Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
                                 }
                             }
@@ -150,14 +183,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     });
                     collectingTask.Start();
 
-                    Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
-
-                    do {
+                    do
+                    {
                         while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
                     } while (!shouldExit.WaitOne(0) && Console.ReadKey(true).Key != ConsoleKey.Enter);
 
                     if (!terminated)
                     {
+                        durationTimer?.Stop();
                         EventPipeClient.StopTracing(processId, sessionId);
                     }
                     await collectingTask;
@@ -178,12 +211,18 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        [Conditional("DEBUG")]
-        private static void PrintProviders(IReadOnlyList<Provider> providers)
+        private static void PrintProviders(IReadOnlyList<Provider> providers, Dictionary<string, string> enabledBy)
         {
-            Console.Out.WriteLine("Enabling the following providers");
+            Console.Out.WriteLine("");
+            Console.Out.Write(String.Format("{0, -40}","Provider Name"));  // +4 is for the tab
+            Console.Out.Write(String.Format("{0, -20}","Keywords"));
+            Console.Out.Write(String.Format("{0, -20}","Level"));
+            Console.Out.Write("Enabled By\n");
             foreach (var provider in providers)
-                Console.Out.WriteLine($"\t{provider.ToString()}");
+            {
+                Console.Out.WriteLine(String.Format("{0, -80}", $"{provider.ToDisplayString()}") + $"{enabledBy[provider.Name]}");
+            }
+            Console.Out.WriteLine();
         }
 
         private static int prevBufferWidth = 0;
@@ -206,9 +245,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     prevBufferWidth = Console.BufferWidth;
                     clearLineString = new string(' ', Console.BufferWidth - 1);
                 }
-                Console.SetCursorPosition(0,lineToClear);
+                Console.SetCursorPosition(0, lineToClear);
                 Console.Out.Write(clearLineString);
-                Console.SetCursorPosition(0,lineToClear);
+                Console.SetCursorPosition(0, lineToClear);
             }
         }
 
@@ -221,7 +260,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             else if (length > 1e3)
                 return String.Format("{0,-8} (KB)", $"{length / 1e3:0.00##}");
             else
-                return String.Format("{0,-8} (byte)", $"{length / 1.0:0.00##}");
+                return String.Format("{0,-8} (B)", $"{length / 1.0:0.00##}");
         }
 
         public static Command CollectCommand() =>
@@ -235,6 +274,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     ProvidersOption(),
                     ProfileOption(),
                     CommonOptions.FormatOption(),
+                    DurationOption()
                 },
                 handler: HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler());
 
@@ -259,7 +299,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option ProvidersOption() =>
             new Option(
                 alias: "--providers",
-                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'",
+                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'. These providers are in addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the configuration here takes precedence over the implicit configuration from the profile.",
                 argument: new Argument<string>(defaultValue: "") { Name = "list-of-comma-separated-providers" }, // TODO: Can we specify an actual type?
                 isHidden: false);
 
@@ -267,7 +307,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new Option(
                 alias: "--profile",
                 description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.",
-                argument: new Argument<string>(defaultValue: "runtime-basic") { Name = "profile_name" },
+                argument: new Argument<string>(defaultValue: "") { Name = "profile-name" },
                 isHidden: false);
+
+        private static Option DurationOption() =>
+            new Option(
+                alias: "--duration",
+                description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.",
+                argument: new Argument<TimeSpan>(defaultValue: default(TimeSpan)) { Name = "duration-timespan" },
+                isHidden: true);
     }
 }

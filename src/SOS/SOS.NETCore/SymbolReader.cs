@@ -332,6 +332,9 @@ namespace SOS
                         {
                             downloadFilePath = file.FileName;
 
+                            // Make sure the stream is at the beginning of the module
+                            file.Stream.Position = 0;
+
                             // If the downloaded doesn't already exists on disk in the cache, then write it to a temporary location.
                             if (!File.Exists(downloadFilePath))
                             {
@@ -931,6 +934,8 @@ namespace SOS
                     {
                         return null;
                     }
+                    // Make sure the stream is at the beginning of the pdb.
+                    pdbStream.Position = 0;
                 }
 
                 provider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);

@@ -86,7 +86,7 @@
 #define VER_FILESUBTYPE             VFT2_UNKNOWN
 
 /* default is nodebug */
-#if DBG
+#if _DEBUG
 #define VER_DEBUG                   VS_FF_DEBUG
 #else
 #define VER_DEBUG                   0

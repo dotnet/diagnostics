@@ -1,4 +1,4 @@
-# Dotnet Diagnostic Tools CLI Design
+﻿# Dotnet Diagnostic Tools CLI Design
 
 ## User workflows
 
@@ -34,6 +34,7 @@ For analyzing CPU usage, IO, lock contention, allocation rate, etc the investiga
     You can invoke the tool using the following command: dotnet-trace
     Tool 'dotnet-trace' (version '1.0.0') was successfully installed.
     > dotnet trace collect --process-id 1902
+    No profile or providers specified, defaulting to trace profile 'cpu-sampling'
     Recording trace 38MB
 
     's' - stop tracing
@@ -41,6 +42,7 @@ For analyzing CPU usage, IO, lock contention, allocation rate, etc the investiga
 ...Hit 's'...
 
     > dotnet trace collect --process-id 1902
+    No profile or providers specified, defaulting to trace profile 'cpu-sampling'
     Recording trace 107MB
     Recording complete
     Trace complete: ~/trace.nettrace
@@ -272,15 +274,16 @@ COLLECT
     --profile
         A named pre-defined set of provider configurations that allows common tracing scenarios to be specified
         succinctly. The options are:
-        runtime-basic   Useful for tracking CPU usage and general runtime information. This the default option
-                        if no profile is specified.
-        gc              Tracks allocation and collection performance
+        cpu-sampling    Useful for tracking CPU usage and general .NET runtime information. This is the default 
+                        option if no profile or providers are specified.
+        gc-verbose      Tracks GC collection and sampled object allocations
         gc-collect      Tracks GC collection only at very low overhead
-        none            Tracks nothing. Only providers specified by the --providers option will be available.
 
     --providers
         A list of comma separated EventPipe providers to be enabled.
-        This option adds to the configuration already provided via the --profile argument. If the same provider is configured in both places, this option takes precedence.
+        These providers are in addition to any providers implied by the --profile argument. If there is any
+        discrepancy for a particular provider, the configuration here takes precedence over the implicit
+        configuration from the profile.
         A provider consists of the name and optionally the keywords, verbosity level, and custom key/value pairs.
 
         The string is written 'Provider[,Provider]'
@@ -300,6 +303,7 @@ COLLECT
 
     Examples:
       > dotnet trace collect --process-id 1902
+      No profile or providers specified, defaulting to trace profile 'cpu-sampling'
       Recording trace 38MB
 
       's' - stop tracing

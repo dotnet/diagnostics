@@ -37,7 +37,7 @@ if [ "$__osname" == "Linux" ]; then
     fi
 fi
 
-"$scriptroot/build.sh" --restore --build --build-native --test --publish --ci $@
+"$scriptroot/build.sh" --restore --build --build-native --test --publish --ci --stripsymbols $@
 if [[ $? != 0 ]]; then
     exit 1
 fi

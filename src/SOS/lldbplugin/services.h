@@ -4,6 +4,8 @@
 
 #include <cstdarg>
 
+#define CACHE_SIZE  4096
+
 class LLDBServices : public ILLDBServices, public ILLDBServices2
 {
 private:
@@ -14,11 +16,27 @@ private:
     lldb::SBProcess *m_currentProcess;
     lldb::SBThread *m_currentThread;
 
+    BYTE m_cache[CACHE_SIZE];
+    ULONG64 m_startCache;
+    bool m_cacheValid;
+    ULONG m_cacheSize;
+
     void OutputString(ULONG mask, PCSTR str);
     ULONG64 GetModuleBase(lldb::SBTarget& target, lldb::SBModule& module);
+    ULONG64 GetModuleSize(lldb::SBModule& module);
     DWORD_PTR GetExpression(lldb::SBFrame& frame, lldb::SBError& error, PCSTR exp);
     void GetContextFromFrame(lldb::SBFrame& frame, DT_CONTEXT *dtcontext);
     DWORD_PTR GetRegister(lldb::SBFrame& frame, const char *name);
+
+    bool GetVersionStringFromSection(lldb::SBTarget& target, lldb::SBSection& section, char* versionBuffer);
+    bool SearchVersionString(ULONG64 address, ULONG64 size, char* versionBuffer, int versionBufferSize);
+    bool ReadVirtualCache(ULONG64 address, PVOID buffer, ULONG bufferSize, PULONG pcbBytesRead);
+
+    void ClearCache()
+    { 
+        m_cacheValid = false;
+        m_cacheSize = CACHE_SIZE;
+    }
 
     lldb::SBProcess GetCurrentProcess();
     lldb::SBThread GetCurrentThread();
@@ -276,6 +294,19 @@ public:
     HRESULT AddModuleSymbol(
         void* param, 
         const char* symbolFileName);
+
+    HRESULT GetModuleInfo(
+        ULONG index,
+        PULONG64 base,
+        PULONG64 size);
+
+    HRESULT GetModuleVersionInformation(
+        ULONG index,
+        ULONG64 base,
+        PCSTR item,
+        PVOID buffer,
+        ULONG bufferSize,
+        PULONG versionInfoSize);
 
     //----------------------------------------------------------------------------
     // LLDBServices (internal)
