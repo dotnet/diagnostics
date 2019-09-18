@@ -3,7 +3,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <AssemblyName>Microsoft.NETCore.SOS</AssemblyName>
+    <AssemblyName>Microsoft.NETCore.SOS.Symbols</AssemblyName>
     <Description>.NET Core SOS symbols</Description>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <IsPackable>true</IsPackable>
