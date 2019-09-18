@@ -11,7 +11,7 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SOSPackagePathPrefix>tools</SOSPackagePathPrefix>
     <GalleryManifestName>$(ArtifactsPackagesDir)\GalleryManifest.xml</GalleryManifestName>
-    <BeforePack>GenerateGalleryZip</BeforePack>
+    <BeforePack>GenerateGalleryZip;GenerateSymbolsZip</BeforePack>
   </PropertyGroup>
 
   <ItemGroup>
@@ -115,6 +115,35 @@
     <Copy SourceFiles="@(ZipSourceFiles)" DestinationFolder="%(ZipSourceFiles.TargetPath)" />
 
     <ZipDirectory DestinationFile="$(ArtifactsPackagesDir)$(FileVersion).zip" SourceDirectory="$(GalleryDir)" Overwrite="true" />
+  </Target>
+
+  <Target Name="GenerateSymbolsZip">
+    <PropertyGroup>
+      <SymbolsDir>$(ArtifactsBinDir)\symbols</SymbolsDir>
+      <SOSNETCorePath>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netstandard2.0\publish</SOSNETCorePath>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ZipSymbolFiles Include="$(SOSNETCorePath)\*.pdb">
+         <TargetPath>$(SymbolsDir)</TargetPath>
+      </ZipSymbolFiles>
+
+      <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.x64.$(Configuration)\sos.pdb">
+         <TargetPath>$(SymbolsDir)\win-x64</TargetPath>
+      </ZipSymbolFiles>
+
+      <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.x86.$(Configuration)\sos.pdb">
+         <TargetPath>$(SymbolsDir)\win-x86</TargetPath>
+      </ZipSymbolFiles>
+
+      <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.arm.$(Configuration)\sos.pdb">
+         <TargetPath>$(SymbolsDir)\win-arm</TargetPath>
+      </ZipSymbolFiles>
+    </ItemGroup>
+
+    <Copy SourceFiles="@(ZipSymbolFiles)" DestinationFolder="%(ZipSymbolFiles.TargetPath)" />
+
+    <ZipDirectory DestinationFile="$(ArtifactsPackagesDir)$(FileVersion).symbols.zip" SourceDirectory="$(SymbolsDir)" Overwrite="true" />
   </Target>
 
 </Project>

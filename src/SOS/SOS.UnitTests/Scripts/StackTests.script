@@ -7,6 +7,10 @@ IFDEF:LIVE
 CONTINUE
 ENDIF:LIVE
 
+# Test eeversion command
+SOSCOMMAND:EEVersion
+VERIFY:\s+<DECVAL>.<DECVAL>.<DECVAL>.<DECVAL>.*
+
 # 1) Verifying that ClrStack with no options works
 SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*

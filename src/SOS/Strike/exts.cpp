@@ -31,7 +31,6 @@ DWORD_PTR g_filterHint = 0;
 
 PDEBUG_CLIENT         g_ExtClient;    
 PDEBUG_DATA_SPACES2   g_ExtData2;
-PDEBUG_SYMBOLS2       g_ExtSymbols2;
 PDEBUG_ADVANCED       g_ExtAdvanced;
 PDEBUG_CLIENT         g_pCallbacksClient;
 
@@ -39,6 +38,7 @@ PDEBUG_CLIENT         g_pCallbacksClient;
 
 DebugClient*          g_DebugClient;
 ILLDBServices*        g_ExtServices;    
+ILLDBServices2*       g_ExtServices2;    
 bool                  g_palInitialized = false;
 
 #endif // FEATURE_PAL
@@ -50,6 +50,7 @@ PDEBUG_CONTROL2       g_ExtControl;
 PDEBUG_DATA_SPACES    g_ExtData;
 PDEBUG_REGISTERS      g_ExtRegisters;
 PDEBUG_SYMBOLS        g_ExtSymbols;
+PDEBUG_SYMBOLS2       g_ExtSymbols2;
 PDEBUG_SYSTEM_OBJECTS g_ExtSystem;
 
 #define SOS_ExtQueryFailGo(var, riid)                       \
@@ -80,7 +81,9 @@ ExtQuery(ILLDBServices* services)
         g_palInitialized = true;
     }
     g_ExtServices = services;
-    DebugClient* client = new DebugClient(services);
+    services->QueryInterface(__uuidof(ILLDBServices2), (void**)&g_ExtServices2);
+
+    DebugClient* client = new DebugClient(services, g_ExtServices2);
     g_DebugClient = client;
 #endif
     HRESULT Status;
@@ -88,10 +91,10 @@ ExtQuery(ILLDBServices* services)
     SOS_ExtQueryFailGo(g_ExtData, IDebugDataSpaces);
     SOS_ExtQueryFailGo(g_ExtRegisters, IDebugRegisters);
     SOS_ExtQueryFailGo(g_ExtSymbols, IDebugSymbols);
+    SOS_ExtQueryFailGo(g_ExtSymbols2, IDebugSymbols2);
     SOS_ExtQueryFailGo(g_ExtSystem, IDebugSystemObjects);
 #ifndef FEATURE_PAL
     SOS_ExtQueryFailGo(g_ExtData2, IDebugDataSpaces2);
-    SOS_ExtQueryFailGo(g_ExtSymbols2, IDebugSymbols2);
     SOS_ExtQueryFailGo(g_ExtAdvanced, IDebugAdvanced);
 #endif // FEATURE_PAL
     return S_OK;
@@ -160,14 +163,15 @@ ExtRelease(void)
     EXT_RELEASE(g_ExtData);
     EXT_RELEASE(g_ExtRegisters);
     EXT_RELEASE(g_ExtSymbols);
+    EXT_RELEASE(g_ExtSymbols2);
     EXT_RELEASE(g_ExtSystem);
 #ifndef FEATURE_PAL
     EXT_RELEASE(g_ExtData2);
-    EXT_RELEASE(g_ExtSymbols2);
     EXT_RELEASE(g_ExtAdvanced);
     g_ExtClient = NULL;
 #else 
     EXT_RELEASE(g_DebugClient);
+    EXT_RELEASE(g_ExtServices2);
     g_ExtServices = NULL;
 #endif // FEATURE_PAL
 }
@@ -328,6 +332,7 @@ DebugClient::QueryInterface(
         InterfaceId == __uuidof(IDebugControl4) ||
         InterfaceId == __uuidof(IDebugDataSpaces) ||
         InterfaceId == __uuidof(IDebugSymbols) ||
+        InterfaceId == __uuidof(IDebugSymbols2) ||
         InterfaceId == __uuidof(IDebugSystemObjects) ||
         InterfaceId == __uuidof(IDebugRegisters))
     {
@@ -356,6 +361,9 @@ DebugClient::Release()
     if (ref == 0)
     {
         m_lldbservices->Release();
+        if (m_lldbservices2 != nullptr) {
+            m_lldbservices2->Release();
+        }
         delete this;
     }
     return ref;

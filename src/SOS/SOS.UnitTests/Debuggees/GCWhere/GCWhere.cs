@@ -49,7 +49,7 @@ class GCWhere
         Debugger.Break();   // GCWhere should temp in Gen2                
         PrintIt(temp);
         GC.KeepAlive(temp);
-        return 100;
+        return 0;
     }
 
     // This is here because without calling something with the object as an argument it'll get optimized away

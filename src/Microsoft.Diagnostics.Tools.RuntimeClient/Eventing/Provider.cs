@@ -34,5 +34,8 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
         public override string ToString() =>
             $"{Name}:0x{Keywords:X16}:{(uint)EventLevel}{(FilterData == null ? "" : $":{FilterData}")}";
+
+        public string ToDisplayString() =>
+            String.Format("{0, -40}", Name) + String.Format("0x{0, -18}", $"{Keywords:X16}") + String.Format("{0, -8}", EventLevel.ToString() + $"({(int)EventLevel})");
     }
 }

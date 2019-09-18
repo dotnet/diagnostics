@@ -42,46 +42,34 @@ namespace Microsoft.Diagnostics.Tools.Trace
         // FIXME: Read from a config file!
         internal static IEnumerable<Profile> DotNETRuntimeProfiles { get; } = new[] {
             new Profile(
-                "runtime-basic",
+                "cpu-sampling",
                 new Provider[] {
                     new Provider("Microsoft-DotNETCore-SampleProfiler"),
                     new Provider("Microsoft-Windows-DotNETRuntime", (ulong)ClrTraceEventParser.Keywords.Default, EventLevel.Informational),
                 },
-                "Useful for tracking CPU usage and general runtime information. This the default option if no profile is specified."),
-#if DEBUG // Coming soon: Preview6
+                "Useful for tracking CPU usage and general .NET runtime information. This is the default option if no profile or providers are specified."),
             new Profile(
-                "gc",
+                "gc-verbose",
                 new Provider[] {
-                    new Provider("Microsoft-DotNETCore-SampleProfiler"),
                     new Provider(
                         name: "Microsoft-Windows-DotNETRuntime",
                         keywords: (ulong)ClrTraceEventParser.Keywords.GC |
-                                  (ulong)ClrTraceEventParser.Keywords.GCHeapSurvivalAndMovement |
-                                  (ulong)ClrTraceEventParser.Keywords.Stack |
-                                  (ulong)ClrTraceEventParser.Keywords.Jit |
-                                  (ulong)ClrTraceEventParser.Keywords.StopEnumeration |
-                                  (ulong)ClrTraceEventParser.Keywords.SupressNGen |
-                                  (ulong)ClrTraceEventParser.Keywords.Loader |
+                                  (ulong)ClrTraceEventParser.Keywords.GCHandle |
                                   (ulong)ClrTraceEventParser.Keywords.Exception,
-                        eventLevel: EventLevel.Verbose),
+                        eventLevel: EventLevel.Verbose
+                    ),
                 },
-                "Tracks allocation and collection performance."),
+                "Tracks GC collections and samples object allocations."),
             new Profile(
                 "gc-collect",
                 new Provider[] {
-                    new Provider("Microsoft-DotNETCore-SampleProfiler"),
                     new Provider(
                         name: "Microsoft-Windows-DotNETRuntime",
                         keywords:   (ulong)ClrTraceEventParser.Keywords.GC |
                                     (ulong)ClrTraceEventParser.Keywords.Exception,
                         eventLevel: EventLevel.Informational),
                 },
-                "Tracks GC collection only at very low overhead."),
-#endif // DEBUG
-            new Profile(
-                "none",
-                null,
-                "Tracks nothing. Only providers specified by the --providers option will be available."),
+                "Tracks GC collections only at very low overhead."),
         };
     }
 }
