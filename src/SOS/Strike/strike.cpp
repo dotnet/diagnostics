@@ -9393,7 +9393,7 @@ DECLARE_API(u)
     position = 0;
     indentCount = 0;
     std::function<void(ULONG*, UINT*, BYTE*)> displayILFun =
-        [&pImport, &pBuffer, bufSize, &header, &map, &mapCount, &ilCodePositions](ULONG *pPosition, UINT *pIndentCount,
+        [&pImport, &pBuffer, bufSize, &header, &ilCodePositions](ULONG *pPosition, UINT *pIndentCount,
                                                 BYTE *pIp) -> void {
                 for (auto iter = ilCodePositions.begin(); iter != ilCodePositions.end(); ++iter)
                 {
