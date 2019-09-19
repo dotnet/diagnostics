@@ -22,13 +22,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
             { TraceFileFormat.Speedscope,   "speedscope.json" }
         };
 
-        public static void ConvertToFormat(TraceFileFormat format, string fileToConvert, string outputFilename = "")
+        private static void Log(string message) => Console.Out.WriteLine(message);
+
+        public static void ConvertToFormat(TraceFileFormat format, string fileToConvert, string outputFilename = "", Action<string> logger = null)
         {
             if (string.IsNullOrWhiteSpace(outputFilename))
                 outputFilename = fileToConvert;
+            if (logger == null)
+                logger = Log;
 
             outputFilename = Path.ChangeExtension(outputFilename, TraceFileFormatExtensions[format]);
-            Console.Out.WriteLine($"Writing:\t{outputFilename}");
+            logger($"Writing:\t{outputFilename}");
 
             switch (format)
             {
@@ -38,10 +42,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     ConvertToSpeedscope(fileToConvert, outputFilename);
                     break;
                 default:
-                    // Validation happened way before this, so we shoud never reach this...
+                    // Validation happened way before this, so we should never reach this...
                     throw new ArgumentException($"Invalid TraceFileFormat \"{format}\"");
             }
-            Console.Out.WriteLine("Conversion complete");
+            logger("Conversion complete");
         }
 
         private static void ConvertToSpeedscope(string fileToConvert, string outputFilename)

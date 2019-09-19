@@ -8,9 +8,11 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Binding;
 using System.CommandLine.Rendering;
+using System.CommandLine.Rendering.Views;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -36,201 +38,236 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             try
             {
-                var systemConsole = new SystemConsoleTerminal(console);
-                Debug.Assert(output != null);
-                Debug.Assert(profile != null);
-                systemConsole.Clear();
-                if (processId <= 0)
+                using (VirtualTerminalMode vTermMode = VirtualTerminalMode.TryEnable())
+                using (var systemConsole = new SystemConsoleTerminal(console))
+                using (var screenView = new ScreenView(new ConsoleRenderer(systemConsole, resetAfterRender: true)))
                 {
-                    systemConsole.Error.WriteLine("Process ID should not be negative.");
-                    return ErrorCodes.ArgumentError;
-                }
+                    
+                    var region = new Region(0, 0, Console.WindowWidth, Console.WindowHeight, true);
+                    var parentStackView = new StackLayoutView(Orientation.Vertical);
+                    screenView.Child = parentStackView;
+                    var completionObservable = new BehaviorSubject<string>("");
 
-                if (profile.Length == 0 && providers.Length == 0)
-                {
-                    systemConsole.Out.WriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
-                    profile = "cpu-sampling";
-                }
-
-                Dictionary<string, string> enabledBy = new Dictionary<string, string>();
-
-                var providerCollection = Extensions.ToProviders(providers);
-                foreach (Provider providerCollectionProvider in providerCollection)
-                {
-                    enabledBy[providerCollectionProvider.Name] = "--providers ";
-                }
-
-                if (profile.Length != 0)
-                {
-                    var profileProviders = new List<Provider>();
-                    var selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
-                        .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
-                    if (selectedProfile == null)
+                    Debug.Assert(output != null);
+                    Debug.Assert(profile != null);
+                    systemConsole.Clear();
+                    if (processId <= 0)
                     {
-                        Console.Error.WriteLine($"Invalid profile name: {profile}");
+                        systemConsole.Error.WriteLine("Process ID should not be negative.");
                         return ErrorCodes.ArgumentError;
                     }
 
-                    // If user defined a different key/level on the same provider via --providers option that was specified via --profile option,
-                    // --providers option takes precedence. Go through the list of providers specified and only add it if it wasn't specified
-                    // via --providers options.
-                    if (selectedProfile.Providers != null)
+                    if (profile.Length == 0 && providers.Length == 0)
                     {
-                        foreach (Provider selectedProfileProvider in selectedProfile.Providers)
-                        {
-                            bool shouldAdd = true;
+                        parentStackView.Add(new ContentView("No profile or providers specified, defaulting to trace profile 'cpu-sampling'"));
+                        // systemConsole.Out.WriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
+                        profile = "cpu-sampling";
+                    }
 
-                            foreach (Provider providerCollectionProvider in providerCollection)
+                    Dictionary<string, string> enabledBy = new Dictionary<string, string>();
+
+                    var providerCollection = Extensions.ToProviders(providers);
+                    foreach (Provider providerCollectionProvider in providerCollection)
+                    {
+                        enabledBy[providerCollectionProvider.Name] = "--providers ";
+                    }
+
+                    if (profile.Length != 0)
+                    {
+                        var profileProviders = new List<Provider>();
+                        var selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
+                            .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
+                        if (selectedProfile == null)
+                        {
+                            Console.Error.WriteLine($"Invalid profile name: {profile}");
+                            return ErrorCodes.ArgumentError;
+                        }
+
+                        // If user defined a different key/level on the same provider via --providers option that was specified via --profile option,
+                        // --providers option takes precedence. Go through the list of providers specified and only add it if it wasn't specified
+                        // via --providers options.
+                        if (selectedProfile.Providers != null)
+                        {
+                            foreach (Provider selectedProfileProvider in selectedProfile.Providers)
                             {
-                                if (providerCollectionProvider.Name.Equals(selectedProfileProvider.Name))
+                                bool shouldAdd = true;
+
+                                foreach (Provider providerCollectionProvider in providerCollection)
                                 {
-                                    shouldAdd = false;
-                                    break;
+                                    if (providerCollectionProvider.Name.Equals(selectedProfileProvider.Name))
+                                    {
+                                        shouldAdd = false;
+                                        break;
+                                    }
+                                }
+
+                                if (shouldAdd)
+                                {
+                                    enabledBy[selectedProfileProvider.Name] = "--profile ";
+                                    profileProviders.Add(selectedProfileProvider);
                                 }
                             }
-
-                            if (shouldAdd)
-                            {
-                                enabledBy[selectedProfileProvider.Name] = "--profile ";
-                                profileProviders.Add(selectedProfileProvider);
-                            }
                         }
-                    }
-                    providerCollection.AddRange(profileProviders);
-                }
-
-
-                if (providerCollection.Count <= 0)
-                {
-                    systemConsole.Error.WriteLine("No providers were specified to start a trace.");
-                    return ErrorCodes.ArgumentError;
-                }
-
-                PrintProviders(providerCollection, enabledBy);
-
-                var process = Process.GetProcessById(processId);
-                var configuration = new SessionConfiguration(
-                    circularBufferSizeMB: buffersize,
-                    format: EventPipeSerializationFormat.NetTrace,
-                    providers: providerCollection);
-
-                var shouldExit = new ManualResetEvent(false);
-                var shouldStopAfterDuration = duration != default(TimeSpan);
-                var failed = false;
-                var terminated = false;
-                System.Timers.Timer durationTimer = null;
-
-                ct.Register(() => shouldExit.Set());
-
-                ulong sessionId = 0;
-                using (Stream stream = EventPipeClient.CollectTracing(processId, configuration, out sessionId))
-                using (VirtualTerminalMode vTermMode = VirtualTerminalMode.TryEnable())
-                {
-                    if (sessionId == 0)
-                    {
-                        systemConsole.Error.WriteLine("Unable to create session.");
-                        return ErrorCodes.SessionCreationError;
+                        providerCollection.AddRange(profileProviders);
                     }
 
-                    if (shouldStopAfterDuration)
+
+                    if (providerCollection.Count <= 0)
                     {
-                        durationTimer = new System.Timers.Timer(duration.TotalMilliseconds);
-                        durationTimer.Elapsed += (s, e) => shouldExit.Set();
-                        durationTimer.AutoReset = false;
+                        systemConsole.Error.WriteLine("No providers were specified to start a trace.");
+                        return ErrorCodes.ArgumentError;
                     }
 
-                    var collectingTask = new Task(() =>
+                    PrintProviders(providerCollection, enabledBy, parentStackView);
+
+                    var process = Process.GetProcessById(processId);
+                    var configuration = new SessionConfiguration(
+                        circularBufferSizeMB: buffersize,
+                        format: EventPipeSerializationFormat.NetTrace,
+                        providers: providerCollection);
+
+                    var shouldExit = new ManualResetEvent(false);
+                    var shouldStopAfterDuration = duration != default(TimeSpan);
+                    var failed = false;
+                    var terminated = false;
+                    System.Timers.Timer durationTimer = null;
+
+                    ct.Register(() => shouldExit.Set());
+
+                    ulong sessionId = 0;
+                    using (Stream stream = EventPipeClient.CollectTracing(processId, configuration, out sessionId))
                     {
-                        try
+                        if (sessionId == 0)
                         {
-                            var stopwatch = new Stopwatch();
-                            durationTimer?.Start();
-                            stopwatch.Start();
+                            systemConsole.Error.WriteLine("Unable to create session.");
+                            return ErrorCodes.SessionCreationError;
+                        }
 
-                            using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
+                        if (shouldStopAfterDuration)
+                        {
+                            durationTimer = new System.Timers.Timer(duration.TotalMilliseconds);
+                            durationTimer.Elapsed += (s, e) => shouldExit.Set();
+                            durationTimer.AutoReset = false;
+                        }
+
+                        parentStackView.Add(new ContentView($"Process        : {process.MainModule.FileName}"));
+                        parentStackView.Add(new ContentView($"Output File    : {output.Name}"));
+                        if (shouldStopAfterDuration)
+                            parentStackView.Add(new ContentView($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}"));
+
+                        parentStackView.Add(new ContentView(""));
+
+                        var horizontalStackView = new StackLayoutView(Orientation.Horizontal);
+
+                        var timeObservable = new BehaviorSubject<TimeSpan>(default(TimeSpan));
+                        var timeView = ContentView.FromObservable(timeObservable, ts => $"[{ts.ToString(@"dd\:hh\:mm\:ss")}]\t");
+
+                        var fileSizeObservable = new BehaviorSubject<long>(0);
+                        var fileSizeView = ContentView.FromObservable(fileSizeObservable, fs => $"Recording trace {GetSize(fs)}");
+
+                        horizontalStackView.Add(timeView);
+                        horizontalStackView.Add(fileSizeView);
+                        parentStackView.Add(horizontalStackView);
+                        parentStackView.Add(new ContentView("Press <Enter> or <Ctrl+C> to exit..."));
+
+                        var completionView = ContentView.FromObservable(completionObservable);
+                        parentStackView.Add(completionView);
+
+                        // Must happen _after_ all data has been added to children views
+                        screenView.Render(region);
+
+                        var collectingTask = new Task(() =>
+                        {
+                            try
                             {
-                                systemConsole.Out.WriteLine($"Process        : {process.MainModule.FileName}");
-                                systemConsole.Out.WriteLine($"Output File    : {fs.Name}");
-                                if (shouldStopAfterDuration)
-                                    systemConsole.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
+                                var stopwatch = new Stopwatch();
+                                durationTimer?.Start();
+                                stopwatch.Start();
 
-                                systemConsole.Out.WriteLine("\n");
-
-                                var region = new Region(0, systemConsole.CursorTop, 55, 1, true);
-                                var renderer = new ConsoleRenderer(systemConsole, resetAfterRender: true);
-                                systemConsole.Out.WriteLine("\nPress <Enter> or <Ctrl+C> to exit...");
-
-                                var buffer = new byte[16 * 1024];
-
-                                Task.Run(() =>
+                                using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                                 {
+                                    var buffer = new byte[16 * 1024];
+
+                                    Task.Run(() =>
+                                    {
+                                        var prevTime = stopwatch.Elapsed;
+                                        while (!terminated)
+                                        {
+                                            if (stopwatch.Elapsed - prevTime > TimeSpan.FromSeconds(1))
+                                            {
+                                                prevTime = stopwatch.Elapsed;
+                                                timeObservable.OnNext(stopwatch.Elapsed);
+                                            }
+                                        }
+                                    });
+
                                     while (true)
                                     {
-                                        if (!fs.CanWrite)
+                                        int nBytesRead = stream.Read(buffer, 0, buffer.Length);
+                                        if (nBytesRead <= 0)
                                             break;
-                                        renderer.RenderToRegion($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}", region);
+                                        fs.Write(buffer, 0, nBytesRead);
+                                        fileSizeObservable.OnNext(fs.Length);
+                                        Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
                                     }
-                                });
-
-                                while (true)
-                                {
-                                    int nBytesRead = stream.Read(buffer, 0, buffer.Length);
-                                    if (nBytesRead <= 0)
-                                        break;
-                                    fs.Write(buffer, 0, nBytesRead);
-                                    Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
                                 }
                             }
-                        }
-                        catch (Exception ex)
-                        {
-                            failed = true;
-                            systemConsole.Error.WriteLine($"[ERROR] {ex.ToString()}");
-                        }
-                        finally
-                        {
-                            terminated = true;
-                            shouldExit.Set();
-                        }
-                    });
-                    collectingTask.Start();
+                            catch (Exception ex)
+                            {
+                                failed = true;
+                                systemConsole.Error.WriteLine($"[ERROR] {ex.ToString()}");
+                            }
+                            finally
+                            {
+                                terminated = true;
+                                shouldExit.Set();
+                            }
+                        });
+                        collectingTask.Start();
 
-                    if (systemConsole.IsInputRedirected)
-                    {
-                        var exitCharacters = new char[] { 'q', '\r', '\n' };
-                        // if stdin is redirected, look for 'q', '\r', or '\n' to indicate we should stop
-                        // tracing.  Generally, we would expect people to use the runtime client
-                        // library directly or the hidden duration flag rather than this option...
-                        //
-                        // Need to use In.Peek() and In.Read() because KeyAvailable and ReadKey
-                        // don't work under redirection.
-                        do
+                        if (systemConsole.IsInputRedirected)
                         {
-                           while (Console.In.Peek() == -1 && !shouldExit.WaitOne(250)) { }
-                        } while (!shouldExit.WaitOne(0) && !exitCharacters.Contains((char)Console.In.Read()));
-                    }
-                    else
-                    {
-                        do
+                            var exitCharacters = new char[] { 'q', '\r', '\n' };
+                            // if stdin is redirected, look for 'q', '\r', or '\n' to indicate we should stop
+                            // tracing.  Generally, we would expect people to use the runtime client
+                            // library directly or the hidden duration flag rather than this option...
+                            //
+                            // Need to use In.Peek() and In.Read() because KeyAvailable and ReadKey
+                            // don't work under redirection.
+                            do
+                            {
+                            while (Console.In.Peek() == -1 && !shouldExit.WaitOne(250)) { }
+                            } while (!shouldExit.WaitOne(0) && !exitCharacters.Contains((char)Console.In.Read()));
+                        }
+                        else
                         {
-                            while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
-                        } while (!shouldExit.WaitOne(0) && Console.ReadKey(true).Key != ConsoleKey.Enter);
+                            do
+                            {
+                                while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
+                            } while (!shouldExit.WaitOne(0) && Console.ReadKey(true).Key != ConsoleKey.Enter);
+                        }
+
+                        if (!terminated)
+                        {
+                            durationTimer?.Stop();
+                            EventPipeClient.StopTracing(processId, sessionId);
+                        }
+                        await collectingTask;
                     }
 
-                    if (!terminated)
+                    var completionText = "Trace completed.";
+                    completionObservable.OnNext(completionText);
+                    Action<string> postCompletionLogger = message => 
                     {
-                        durationTimer?.Stop();
-                        EventPipeClient.StopTracing(processId, sessionId);
-                    }
-                    await collectingTask;
+                        completionText += $"\n{message}";
+                        completionObservable.OnNext(completionText);
+                    };
+
+                    if (format != TraceFileFormat.NetTrace)
+                        TraceFileFormatConverter.ConvertToFormat(format, output.FullName, logger: postCompletionLogger);
+
+                    return failed ? ErrorCodes.TracingError : 0;
                 }
-
-                systemConsole.Out.WriteLine("\n\n\nTrace completed.");
-
-                if (format != TraceFileFormat.NetTrace)
-                    TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
-
-                return failed ? ErrorCodes.TracingError : 0;
             }
             catch (Exception ex)
             {
@@ -239,18 +276,28 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        private static void PrintProviders(IReadOnlyList<Provider> providers, Dictionary<string, string> enabledBy)
+        private static void PrintProviders(IReadOnlyList<Provider> providers, Dictionary<string, string> enabledBy, StackLayoutView stackView = null)
         {
-            Console.Out.WriteLine("");
-            Console.Out.Write(String.Format("{0, -40}","Provider Name"));  // +4 is for the tab
-            Console.Out.Write(String.Format("{0, -20}","Keywords"));
-            Console.Out.Write(String.Format("{0, -20}","Level"));
-            Console.Out.Write("Enabled By\n");
-            foreach (var provider in providers)
-            {
-                Console.Out.WriteLine(String.Format("{0, -80}", $"{provider.ToDisplayString()}") + $"{enabledBy[provider.Name]}");
-            }
-            Console.Out.WriteLine();
+            var providerTableView = new TableView<Provider>();
+            providerTableView.AddColumn(p => p.Name, "Provider Name", ColumnDefinition.SizeToContent());
+            providerTableView.AddColumn(p => $"{p.Keywords:X16}", "Keywords", ColumnDefinition.SizeToContent());
+            providerTableView.AddColumn(p => $"{p.EventLevel.ToString()}({(int)p.EventLevel})", "Level", ColumnDefinition.SizeToContent());
+            providerTableView.Items = providers;
+
+            stackView.Add(new ContentView(""));
+            stackView.Add(providerTableView);
+            stackView.Add(new ContentView(""));
+
+            // Console.Out.WriteLine("");
+            // Console.Out.Write(String.Format("{0, -40}","Provider Name"));  // +4 is for the tab
+            // Console.Out.Write(String.Format("{0, -20}","Keywords"));
+            // Console.Out.Write(String.Format("{0, -20}","Level"));
+            // Console.Out.Write("Enabled By\n");
+            // foreach (var provider in providers)
+            // {
+            //     Console.Out.WriteLine(String.Format("{0, -80}", $"{provider.ToDisplayString()}") + $"{enabledBy[provider.Name]}");
+            // }
+            // Console.Out.WriteLine();
         }
 
         private static string GetSize(long length)
