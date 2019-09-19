@@ -287,17 +287,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             stackView.Add(new ContentView(""));
             stackView.Add(providerTableView);
             stackView.Add(new ContentView(""));
-
-            // Console.Out.WriteLine("");
-            // Console.Out.Write(String.Format("{0, -40}","Provider Name"));  // +4 is for the tab
-            // Console.Out.Write(String.Format("{0, -20}","Keywords"));
-            // Console.Out.Write(String.Format("{0, -20}","Level"));
-            // Console.Out.Write("Enabled By\n");
-            // foreach (var provider in providers)
-            // {
-            //     Console.Out.WriteLine(String.Format("{0, -80}", $"{provider.ToDisplayString()}") + $"{enabledBy[provider.Name]}");
-            // }
-            // Console.Out.WriteLine();
         }
 
         private static string GetSize(long length)
