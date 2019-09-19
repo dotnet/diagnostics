@@ -86,6 +86,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <stdexcept>
+#include <deque>
 
 #include "strike.h"
 #include "sos.h"
@@ -126,7 +127,6 @@
 #include "WatchCmd.h"
 
 #include <algorithm>
-#include <deque>
 
 #include "tls.h"
 
