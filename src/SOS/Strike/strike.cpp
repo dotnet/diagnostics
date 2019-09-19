@@ -126,6 +126,7 @@
 #include "WatchCmd.h"
 
 #include <algorithm>
+#include <deque>
 
 #include "tls.h"
 
@@ -9348,29 +9349,70 @@ DECLARE_API(u)
     BYTE* pBuffer = const_cast<BYTE*>(header.Code);
     UINT indentCount = 0;
     ULONG endCodePosition = header.GetCodeSize();
+    struct ILLocationRange {
+        ULONG mStartPosition;
+        ULONG mEndPosition;
+        BYTE* mStartAddress;
+        BYTE* mEndAddress;
+    };
+    std::deque<ILLocationRange> ilCodePositions;
+
+    while (position < endCodePosition)
+    {
+        ULONG mapIndex = 0;
+        while ((mapIndex < mapCount) && (position != map[mapIndex].ilOffset))
+        {
+            ++mapIndex;
+        }
+        std::tuple<ULONG, UINT> r = DecodeILAtPosition(
+            pImport, pBuffer, bufSize,
+            position, indentCount, header);
+        ExtOut("\n");
+        if (mapIndex < mapCount)
+        {
+            ILLocationRange entry = {
+                position,
+                std::get<0>(r) - 1,
+                (BYTE*)map[mapIndex].startAddress,
+                (BYTE*)map[mapIndex].endAddress
+            };
+            ilCodePositions.push_back(std::move(entry));
+        }
+        else
+        {
+            if (!ilCodePositions.empty())
+            {
+                auto& entry = ilCodePositions.back();
+                entry.mEndPosition = position;
+            }
+        }
+        position = std::get<0>(r);
+        indentCount = std::get<1>(r);
+    }
+
+    position = 0;
+    indentCount = 0;
     std::function<void(ULONG*, UINT*, BYTE*)> displayILFun =
-        [&pImport, &pBuffer, bufSize, &header, &map, &mapCount](ULONG *pPosition, UINT *pIndentCount,
+        [&pImport, &pBuffer, bufSize, &header, &map, &mapCount, &ilCodePositions](ULONG *pPosition, UINT *pIndentCount,
                                                 BYTE *pIp) -> void {
-                // tight loop should be performent enough to justify the sequential search.
-                // Additionally, I dont know if map is ordered so this is a reasonable
-                // mechanism unless the map is too large to iterate sequentially always.
-                ULONG mapIndex = 0;
-                while ((mapIndex < mapCount) && ((BYTE*)(map[mapIndex].startAddress) != pIp))
+                for (auto iter = ilCodePositions.begin(); iter != ilCodePositions.end(); ++iter)
                 {
-                    ++mapIndex;
-                }
-                // I know that using the weird mask of 0xff000000 is hackish but
-                // I don't know how to detect invalid positions anyways.
-                if ((mapIndex < mapCount) && (!(map[mapIndex].ilOffset & 0xff000000)))
-                {
-                    ULONG position = map[mapIndex].ilOffset;
-                    ExtOut("\n");
-                    std::tuple<ULONG, UINT> r = DecodeILAtPosition(
-                        pImport, pBuffer, bufSize,
-                        position, *pIndentCount, header);
-                    *pPosition = position;
-                    *pIndentCount = std::get<1>(r);
-                    ExtOut("\n");
+                    if ((pIp >= iter->mStartAddress) && (pIp < iter->mEndAddress))
+                    {
+                        ULONG position = iter->mStartPosition;
+                        ULONG endPosition = iter->mEndPosition;
+                        while (position <= endPosition)
+                        {
+                            std::tuple<ULONG, UINT> r = DecodeILAtPosition(
+                                pImport, pBuffer, bufSize,
+                                position, *pIndentCount, header);
+                            ExtOut("\n");
+                            position = std::get<0>(r);
+                            *pIndentCount = std::get<1>(r);
+                        }
+                        ilCodePositions.erase(iter);
+                        break;
+                    }
                 }
     };
 
