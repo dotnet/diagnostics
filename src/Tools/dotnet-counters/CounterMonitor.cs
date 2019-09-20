@@ -76,6 +76,23 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // If the app we're monitoring exits abruptly, this may throw in which case we just swallow the exception and exit gracefully.
                 Debug.WriteLine($"[ERROR] {ex.ToString()}");
             }
+            // We may time out if the process ended before we sent StopTracing command. We can just exit in that case.
+            catch (TimeoutException)
+            {
+                console.Out.WriteLine("Complete");
+                return 1;
+            }
+            // On Unix platforms, we may actually get a PNSE since the pipe is gone with the process, and Runtime Client Library
+            // does not know how to distinguish a situation where there is no pipe to begin with, or where the process has exited
+            // before dotnet-counters and got rid of a pipe that once existed.
+            // Since we are catching this in StopMonitor() we know that the pipe once existed (otherwise the exception would've 
+            // been thrown in StartMonitor directly)
+            catch (PlatformNotSupportedException)
+            {
+                console.Out.WriteLine("Complete");
+                return 1;
+            }
+
         }
 
         public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval)
@@ -100,20 +117,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 catch (Exception) {} // Swallow all exceptions for now.
                 
                 console.Out.WriteLine($"Complete");
-                return 1;
-            }
-            // We may time out if the process ended before we sent StopTracing command. We can just exit in that case.
-            catch (TimeoutException)
-            {
-                console.Out.WriteLine("Complete");
-                return 1;
-            }
-            // On Unix platforms, we may actually get a PNSE since the pipe is gone with the process, and Runtime Client Library
-            // does not know how to distinguish a situation where there is no pipe to begin with, or where the process has exited
-            // before dotnet-counters and got rid of a pipe that once existed.
-            catch (PlatformNotSupportedException)
-            {
-                console.Out.WriteLine("Complete");
                 return 1;
             }
         }
