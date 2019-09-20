@@ -108,6 +108,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 console.Out.WriteLine("Complete");
                 return 1;
             }
+            // On Unix platforms, we may actually get a PNSE since the pipe is gone with the process, and Runtime Client Library
+            // does not know how to distinguish a situation where there is no pipe to begin with, or where the process has exited
+            // before dotnet-counters and got rid of a pipe that once existed.
+            catch (PlatformNotSupportedException)
+            {
+                console.Out.WriteLine("Complete");
+                return 1;
+            }
         }
 
         // Use EventPipe CollectTracing2 command to start monitoring. This may throw.
