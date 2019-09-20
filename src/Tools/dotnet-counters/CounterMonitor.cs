@@ -102,6 +102,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 console.Out.WriteLine($"Complete");
                 return 1;
             }
+            // We may time out if the process ended before we sent StopTracing command. We can just exit in that case.
+            catch (TimeoutException)
+            {
+                console.Out.WriteLine("Complete");
+                return 1;
+            }
         }
 
         // Use EventPipe CollectTracing2 command to start monitoring. This may throw.
