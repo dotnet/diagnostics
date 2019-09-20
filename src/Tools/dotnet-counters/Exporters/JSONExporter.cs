@@ -14,6 +14,13 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         public void Initialize(string _output, string _processName)
         {
             output = _output + ".json";
+
+            if (File.Exists(output))
+            {
+                Console.WriteLine($"[Warning] {output} already exists. This file will be overwritten.");
+                File.Delete(output);
+            }
+
             processName = _processName;
             builder = new StringBuilder();
             builder.Append($"{{ \"Target Process\": \"{processName}\", ");
