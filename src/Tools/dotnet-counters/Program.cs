@@ -4,6 +4,8 @@
 
 using System;
 using System.CommandLine;
+using System.CommandLine.Binding;
+
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 using System.Diagnostics;
@@ -17,6 +19,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
 {
     internal class Program
     {
+        delegate Task<int> ExportDelegate(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, string format, string output);
+
         private static Command MonitorCommand() =>
             new Command(
                 "monitor", 
@@ -27,11 +31,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private static Command ExportCommand() =>
             new Command(
-                "export", 
-                "Monitor counters in a .NET application and export the result into a file", 
-                new Option[] { ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportSortOption() },
+                "export",
+                "Monitor counters in a .NET application and export the result into a file",
+                new Option[] { ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption() },
                 argument: CounterList(),
-                handler: CommandHandler.Create<CancellationToken, List<string>, IConsole, int, int, string, string>(new CounterMonitor().Export));
+                handler: HandlerDescriptor.FromDelegate((ExportDelegate)new CounterMonitor().Export).GetCommandHandler());
 
         private static Option ProcessIdOption() =>
             new Option(
@@ -51,16 +55,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "The format of exported counter data.",
                 new Argument<string>(defaultValue: "csv") { Name = "format" });
 
-        private static Option ExportSortOption() => 
-            new Option(
-                new[] { "--sort-by" },
-                "The option to sort the data by.",
-                new Argument<string>(defaultValue: "timestamp") { Name = "sort-by" });
-
         private static Option ExportFileNameOption() => 
             new Option(
                 new[] { "--output" },
-                "The output file name."
+                "The output file name.",
                 new Argument<string>(defaultValue: "counter") { Name = "output" });
 
         private static Argument CounterList() =>
