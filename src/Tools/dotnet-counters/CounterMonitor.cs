@@ -79,8 +79,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
             // We may time out if the process ended before we sent StopTracing command. We can just exit in that case.
             catch (TimeoutException)
             {
-                console.Out.WriteLine("Complete");
-                return 1;
             }
             // On Unix platforms, we may actually get a PNSE since the pipe is gone with the process, and Runtime Client Library
             // does not know how to distinguish a situation where there is no pipe to begin with, or where the process has exited
@@ -89,10 +87,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             // been thrown in StartMonitor directly)
             catch (PlatformNotSupportedException)
             {
-                console.Out.WriteLine("Complete");
-                return 1;
             }
-
         }
 
         public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval)
