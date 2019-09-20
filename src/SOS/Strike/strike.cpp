@@ -9324,6 +9324,7 @@ DECLARE_API(u)
     ExtOut("ilAddr is %p pImport is %p\n", SOS_PTR(std::get<0>(result)), SOS_PTR(std::get<1>(result)));
     TADDR ilAddr = std::get<0>(result);
     ToRelease<IMetaDataImport> pImport(std::get<1>(result));
+
     /// Taken from DecodeILFromAddress(IMetaDataImport *pImport, TADDR ilAddr)
     ULONG Size = GetILSize(ilAddr);
     if (Size == 0)
