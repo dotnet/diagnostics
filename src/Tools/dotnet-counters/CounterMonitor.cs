@@ -70,9 +70,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     // If it's not a counter we asked for, ignore it.
                     if (!filter.Filter(obj.ProviderName, payloadFields["Name"].ToString())) return;
 
-                    // There really isn't a great way to tell whether an EventCounter payload is an instance of 
-                    // IncrementingCounterPayload or CounterPayload, so here we check the number of fields 
-                    // to distinguish the two.
                     ICounterPayload payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields, _interval) : (ICounterPayload)new CounterPayload(payloadFields);
                     exporter.Write(obj.ProviderName, payload);
                 }
@@ -168,7 +165,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             return new EventPipeEventSource(binaryReader);
         }
 
-        private string buildProviderString()
+        private string BuildProviderString()
         {
             string providerString;
 
@@ -243,11 +240,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     _console.Error.WriteLine("Output cannot be an empty string");
                     return 1;
                 }
-                if (_sortBy != "timestamp" && _sortBy != "counter")
-                {
-                    _console.Error.WriteLine($"Sorting by {_sortBy} is not supported.");
-                    return 1;
-                }
 
                 if (_format == "csv")
                 {
@@ -261,17 +253,33 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     _console.Error.WriteLine($"The output format {_format} is not a valid output format.");
                 }
-                exporter.Initialize(_output, "TestProcessName");
+
+                // Try getting the process name.
+                string processName = "";
+                try
+                {
+                    processName = Process.GetProcessById(_processId).ProcessName;
+                }
+                catch (Exception) {}
+                exporter.Initialize(_output, processName);
             }
 
-            string providerString = buildProviderString();
+            string providerString = BuildProviderString();
+            if (providerString.Length == 0)
+            {
+                return 1;
+            }
 
             ManualResetEvent shouldExit = new ManualResetEvent(false);
             _ct.Register(() => shouldExit.Set());
 
             var terminated = false;
-            writer.AssignRowsAndInitializeDisplay();
-
+            
+            if (liveMonitor)
+            {
+                writer.AssignRowsAndInitializeDisplay();
+            }
+            
             Task monitorTask = new Task(() => {
                 try
                 {
@@ -282,6 +290,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     {
                         Debug.Assert(exporter != null, "exporter object should not be null if we are exporting");
                         source.Dynamic.All += DynamicAllExport;
+
+                        Console.WriteLine("Starting a counter session. Press Q to quit.");
                     }
                     source.Process();
                 }
@@ -295,6 +305,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     {
                         Debug.Assert(exporter != null, "exporter object should not be null if we are exporting");
                         source.Dynamic.All += DynamicAllExport;
+
+                        Console.WriteLine("Starting a counter session. Press Q to quit.");
                     }
                     source.Process();
                 }

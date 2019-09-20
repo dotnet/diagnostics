@@ -13,8 +13,14 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         public void Initialize(string _output, string processName)
         {
             output = _output + ".csv";
+
+            if (File.Exists(output))
+            {
+                Console.WriteLine($"[Warning] {output} already exists. This file will be overwritten.");
+                File.Delete(output);
+            }
             builder = new StringBuilder();
-            builder.AppendLine("DateTime,Provider,CounterName,Type,Mean/Increment");
+            builder.AppendLine("Timestamp,Provider,Counter Name,Counter Type,Mean/Increment");
         }
 
         public void Write(string providerName, ICounterPayload counterPayload)
@@ -27,6 +33,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             builder.Append(DateTime.UtcNow.ToString() + ",");
             builder.Append(providerName + ",");
             builder.Append(counterPayload.GetDisplay() + ",");
+            builder.Append(counterPayload.GetCounterType()+",");
             builder.Append(counterPayload.GetValue() + "\n");
         }
 

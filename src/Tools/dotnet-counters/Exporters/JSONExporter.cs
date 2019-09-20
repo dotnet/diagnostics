@@ -30,6 +30,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             builder.Append($"{{ \"timestamp\": \"{DateTime.Now.ToString()}\", ");
             builder.Append($" \"provider\": \"{providerName}\", ");
             builder.Append($" \"name\": \"{counterPayload.GetDisplay()}\", ");
+            builder.Append($" \"counter type\": \"{counterPayload.GetCounterType()}\", ");
             builder.Append($" \"value\": {counterPayload.GetValue()} }},");
         }
 
