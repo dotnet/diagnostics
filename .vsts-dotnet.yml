@@ -322,7 +322,7 @@ phases:
       displayName: Publish Symbols
       inputs:
         filePath: eng\common\sdk-task.ps1
-        arguments: -task PublishToSymbolServers -restore -msbuildEngine dotnet -configuration Release
+        arguments: -task PublishToSymbolServers -restore -msbuildEngine dotnet -configuration Release -verbosity detailed
           /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
           /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
           /p:BlobBasePath='$(Build.SourcesDirectory)/artifacts/packages/Release/NonShipping'
