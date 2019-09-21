@@ -18,11 +18,4 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <EnableSourceControlManagerQueries>true</EnableSourceControlManagerQueries>
   </PropertyGroup>
-
-  <PropertyGroup Condition="'$(OS)' == 'Unix'">
-    <!-- Disable source link until issue https://github.com/dotnet/roslyn/issues/29289#issuecomment-413294637 is fixed -->
-    <EnableSourceLink>false</EnableSourceLink>
-    <DeterministicSourcePaths>false</DeterministicSourcePaths>
-    <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
-  </PropertyGroup>
 </Project>
