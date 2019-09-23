@@ -9361,7 +9361,8 @@ DECLARE_API(u)
     while (position < endCodePosition)
     {
         ULONG mapIndex = 0;
-        while ((mapIndex < mapCount) && (position != map[mapIndex].ilOffset))
+        while (((mapIndex < mapCount) && (position != map[mapIndex].ilOffset)) &&
+            (map[mapIndex].endAddress <= map[mapIndex].startAddress))
         {
             ++mapIndex;
         }
