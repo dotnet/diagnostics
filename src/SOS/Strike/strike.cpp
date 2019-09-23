@@ -9358,38 +9358,48 @@ DECLARE_API(u)
     };
     std::deque<ILLocationRange> ilCodePositions;
 
-    while (position < endCodePosition)
+    if (mapCount > 0)
     {
-        ULONG mapIndex = 0;
-        while (((mapIndex < mapCount) && (position != map[mapIndex].ilOffset)) &&
-            (map[mapIndex].endAddress <= map[mapIndex].startAddress))
+        while (position < endCodePosition)
         {
-            ++mapIndex;
-        }
-        std::tuple<ULONG, UINT> r = DecodeILAtPosition(
-            pImport, pBuffer, bufSize,
-            position, indentCount, header);
-        ExtOut("\n");
-        if (mapIndex < mapCount)
-        {
-            ILLocationRange entry = {
-                position,
-                std::get<0>(r) - 1,
-                (BYTE*)map[mapIndex].startAddress,
-                (BYTE*)map[mapIndex].endAddress
-            };
-            ilCodePositions.push_back(std::move(entry));
-        }
-        else
-        {
-            if (!ilCodePositions.empty())
+            ULONG mapIndex = 0;
+            do
             {
-                auto& entry = ilCodePositions.back();
-                entry.mEndPosition = position;
+                while ((mapIndex < mapCount) && (position != map[mapIndex].ilOffset))
+                {
+                    ++mapIndex;
+                }
+                if (map[mapIndex].endAddress > map[mapIndex].startAddress)
+                {
+                    break;
+                }
+                ++mapIndex;
+            } while (mapIndex < mapCount);
+            std::tuple<ULONG, UINT> r = DecodeILAtPosition(
+                pImport, pBuffer, bufSize,
+                position, indentCount, header);
+            ExtOut("\n");
+            if (mapIndex < mapCount)
+            {
+                ILLocationRange entry = {
+                    position,
+                    std::get<0>(r) - 1,
+                    (BYTE*)map[mapIndex].startAddress,
+                    (BYTE*)map[mapIndex].endAddress
+                };
+                ilCodePositions.push_back(std::move(entry));
             }
+            else
+            {
+                if (!ilCodePositions.empty())
+                {
+                    auto& entry = ilCodePositions.back();
+                    entry.mEndPosition = position;
+                }
+            }
+            position = std::get<0>(r);
+            indentCount = std::get<1>(r);
         }
-        position = std::get<0>(r);
-        indentCount = std::get<1>(r);
     }
 
     position = 0;
