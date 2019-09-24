@@ -2,8 +2,8 @@
 {
     public interface ICounterExporter
     {
-        public void Write(string providerName, ICounterPayload counterPayload);
-        public void Initialize(string _output, string processName);
-        public void Flush();
+        void Write(string providerName, ICounterPayload counterPayload);
+        void Initialize(string _output, string processName);
+        void Flush();
     }
 }

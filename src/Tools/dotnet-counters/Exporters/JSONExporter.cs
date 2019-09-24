@@ -4,48 +4,60 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
-    class JSONExporter : ICounterExporter
+    class JSONExporter : ICounterRenderer
     {
-        private string processName;
-        private string output;
+        private string _output;
+        private string _processName;
         private StringBuilder builder;
         private int flushLength = 10_000; // Arbitrary length to flush
 
-        public void Initialize(string _output, string _processName)
+        public JSONExporter(string output, string processName)
         {
-            output = _output + ".json";
-
-            if (File.Exists(output))
+            _output = output + ".json";
+            _processName = processName;
+        }
+        public void Initialize()
+        {
+            if (File.Exists(_output))
             {
-                Console.WriteLine($"[Warning] {output} already exists. This file will be overwritten.");
-                File.Delete(output);
+                Console.WriteLine($"[Warning] {_output} already exists. This file will be overwritten.");
+                File.Delete(_output);
             }
 
-            processName = _processName;
             builder = new StringBuilder();
-            builder.Append($"{{ \"Target Process\": \"{processName}\", ");
+            builder.Append($"{{ \"Target Process\": \"{_processName}\", ");
             builder.Append($"\"Start Time\": \"{DateTime.Now.ToString()}\", ");
             builder.Append($"\"Events\": [");
         }
-        public void Write(string providerName, ICounterPayload counterPayload)
+
+        public void EventPipeSourceConnected()
+        {
+            Console.WriteLine("Starting a counter session. Press Q to quit.");
+        }
+        public void ToggleStatus(bool paused)
+        {
+            // Do nothing
+        }
+
+        public void CounterPayloadReceived(string providerName, ICounterPayload payload, bool _)
         {
             if (builder.Length > flushLength)
             {
-                File.AppendAllText(output, builder.ToString());
+                File.AppendAllText(_output, builder.ToString());
                 builder.Clear();
             }
             builder.Append($"{{ \"timestamp\": \"{DateTime.Now.ToString()}\", ");
             builder.Append($" \"provider\": \"{providerName}\", ");
-            builder.Append($" \"name\": \"{counterPayload.GetDisplay()}\", ");
-            builder.Append($" \"counter type\": \"{counterPayload.GetCounterType()}\", ");
-            builder.Append($" \"value\": {counterPayload.GetValue()} }},");
+            builder.Append($" \"name\": \"{payload.GetDisplay()}\", ");
+            builder.Append($" \"counter type\": \"{payload.GetCounterType()}\", ");
+            builder.Append($" \"value\": {payload.GetValue()} }},");
         }
 
-        public void Flush()
+        public void Stop()
         {
             builder.Append($"] }}");
             // Append all the remaining text to the file.
-            File.AppendAllText(output, builder.ToString());
+            File.AppendAllText(_output, builder.ToString());
         }
     }
 }

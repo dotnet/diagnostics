@@ -28,13 +28,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 argument: CounterList(),
                 handler: CommandHandler.Create<CancellationToken, List<string>, IConsole, int, int>(new CounterMonitor().Monitor));
 
-        private static Command ExportCommand() =>
+        private static Command CollectCommand() =>
             new Command(
-                "export",
+                "collect",
                 "Monitor counters in a .NET application and export the result into a file",
                 new Option[] { ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption() },
                 argument: CounterList(),
-                handler: HandlerDescriptor.FromDelegate((ExportDelegate)new CounterMonitor().Export).GetCommandHandler());
+                handler: HandlerDescriptor.FromDelegate((ExportDelegate)new CounterMonitor().Collect).GetCommandHandler());
 
         private static Option ProcessIdOption() =>
             new Option(
@@ -56,7 +56,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private static Option ExportFileNameOption() => 
             new Option(
-                new[] { "--output" },
+                new[] { "-o", "--output" },
                 "The output file name.",
                 new Argument<string>(defaultValue: "counter") { Name = "output" });
 
@@ -142,7 +142,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             var parser = new CommandLineBuilder()
                 .AddCommand(MonitorCommand())
-                .AddCommand(ExportCommand())
+                .AddCommand(CollectCommand())
                 .AddCommand(ListCommand())
                 .AddCommand(ListProcessesCommand())
                 .UseDefaults()

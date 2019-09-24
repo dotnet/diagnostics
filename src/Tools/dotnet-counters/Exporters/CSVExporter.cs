@@ -4,43 +4,58 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
-    class CSVExporter : ICounterExporter
+    class CSVExporter : ICounterRenderer
     {
-        private string output;
+        private string _output;
         private StringBuilder builder;
         private int flushLength = 10_000; // Arbitrary length to flush
 
-        public void Initialize(string _output, string processName)
-        {
-            output = _output + ".csv";
+        public string Output { get; set; }
 
-            if (File.Exists(output))
+        public CSVExporter(string output)
+        {
+            _output = output + ".csv";
+        }
+
+        public void Initialize()
+        {
+            if (File.Exists(_output))
             {
-                Console.WriteLine($"[Warning] {output} already exists. This file will be overwritten.");
-                File.Delete(output);
+                Console.WriteLine($"[Warning] {_output} already exists. This file will be overwritten.");
+                File.Delete(_output);
             }
             builder = new StringBuilder();
             builder.AppendLine("Timestamp,Provider,Counter Name,Counter Type,Mean/Increment");
         }
 
-        public void Write(string providerName, ICounterPayload counterPayload)
+        public void EventPipeSourceConnected()
+        {
+            Console.WriteLine("Starting a counter session. Press Q to quit.");
+        }
+
+        public void ToggleStatus(bool paused)
+        {
+            // Do nothing
+        }
+
+        public void CounterPayloadReceived(string providerName, ICounterPayload payload, bool _)
         {
             if (builder.Length > flushLength)
             {
-                File.AppendAllText(output, builder.ToString());
+                File.AppendAllText(_output, builder.ToString());
                 builder.Clear();
             }
             builder.Append(DateTime.UtcNow.ToString() + ",");
             builder.Append(providerName + ",");
-            builder.Append(counterPayload.GetDisplay() + ",");
-            builder.Append(counterPayload.GetCounterType()+",");
-            builder.Append(counterPayload.GetValue() + "\n");
+            builder.Append(payload.GetDisplay() + ",");
+            builder.Append(payload.GetCounterType() + ",");
+            builder.Append(payload.GetValue() + "\n");
         }
 
-        public void Flush()
+        public void Stop()
         {
             // Append all the remaining text to the file.
-            File.AppendAllText(output, builder.ToString());
+            File.AppendAllText(_output, builder.ToString());
         }
     }
 }

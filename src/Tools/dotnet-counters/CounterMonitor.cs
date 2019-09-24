@@ -24,8 +24,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private List<string> _counterList;
         private CancellationToken _ct;
         private IConsole _console;
-        private ICounterExporter exporter;
-        private ConsoleWriter writer;
+        private ICounterRenderer renderer;
         private CounterFilter filter;
         private ulong _sessionId;
         private string _format;
@@ -34,7 +33,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public CounterMonitor()
         {
-            writer = new ConsoleWriter();
             filter = new CounterFilter();
             pauseCmdSet = false;
         }
@@ -43,7 +41,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             // If we are paused, ignore the event. 
             // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
-            writer.ToggleStatus(pauseCmdSet);
+            renderer.ToggleStatus(pauseCmdSet);
 
             if (obj.EventName.Equals("EventCounters"))
             {
@@ -54,29 +52,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 if (!filter.Filter(obj.ProviderName, payloadFields["Name"].ToString())) return;
 
                 ICounterPayload payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields, _interval) : (ICounterPayload)new CounterPayload(payloadFields);
-                writer.Update(obj.ProviderName, payload, pauseCmdSet);
+                renderer.CounterPayloadReceived(obj.ProviderName, payload, pauseCmdSet);
             }
         }
 
-        // Writes out the counter data as a user-specified file format.
-        private void DynamicAllExport(TraceEvent obj)
-        {
-            if (obj.EventName.Equals("EventCounters"))
-            {
-                IDictionary<string, object> payloadVal = (IDictionary<string, object>)(obj.PayloadValue(0));
-                IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
-                if (obj.EventName.Equals("EventCounters"))
-                {
-                    // If it's not a counter we asked for, ignore it.
-                    if (!filter.Filter(obj.ProviderName, payloadFields["Name"].ToString())) return;
-
-                    ICounterPayload payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields, _interval) : (ICounterPayload)new CounterPayload(payloadFields);
-                    exporter.Write(obj.ProviderName, payload);
-                }
-            }
-        }
-
-        private void StopMonitor(bool liveMonitor)
+        private void StopMonitor()
         {
             try
             {
@@ -88,10 +68,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 Debug.WriteLine($"[ERROR] {ex.ToString()}");
             }
 
-            if (liveMonitor)
-            {
-                exporter.Flush();
-            }
+            renderer.Stop();
         }
 
         public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval)
@@ -103,8 +80,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _console = console;
                 _processId = processId;
                 _interval = refreshInterval;
+                renderer = new ConsoleWriter();
 
-                return await Start(true);
+                return await Start();
             }
 
             catch (OperationCanceledException)
@@ -120,7 +98,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        public async Task<int> Export(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, string format, string output)
+        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, string format, string output)
         {
             try
             {
@@ -132,7 +110,33 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _format = format;
                 _output = output;
 
-                return await Start(false);
+                if (_output.Length == 0)
+                {
+                    _console.Error.WriteLine("Output cannot be an empty string");
+                    return 0;
+                }
+
+                if (_format == "csv")
+                {
+                    renderer = new CSVExporter(output);
+                }
+                else if (_format == "json")
+                {
+                    // Try getting the process name.
+                    string processName = "";
+                    try
+                    {
+                        processName = Process.GetProcessById(_processId).ProcessName;
+                    }
+                    catch (Exception) { }
+                    renderer = new JSONExporter(output, processName); ;
+                }
+                else
+                {
+                    _console.Error.WriteLine($"The output format {_format} is not a valid output format.");
+                    return 0;
+                }
+                return await Start();
             }
             catch (OperationCanceledException)
             {
@@ -224,44 +228,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
         }
         
 
-        private async Task<int> Start(bool liveMonitor)
+        private async Task<int> Start()
         {
             if (_processId == 0)
             {
                 _console.Error.WriteLine("ProcessId is required.");
                 return 1;
-            }
-
-            // If we are exporting the counter data as file, do some more sanity checks.
-            if (!liveMonitor)
-            {
-                if (_output.Length == 0)
-                {
-                    _console.Error.WriteLine("Output cannot be an empty string");
-                    return 1;
-                }
-
-                if (_format == "csv")
-                {
-                    exporter = new CSVExporter();
-                }
-                else if (_format == "json")
-                {
-                    exporter = new JSONExporter();
-                }
-                else
-                {
-                    _console.Error.WriteLine($"The output format {_format} is not a valid output format.");
-                }
-
-                // Try getting the process name.
-                string processName = "";
-                try
-                {
-                    processName = Process.GetProcessById(_processId).ProcessName;
-                }
-                catch (Exception) {}
-                exporter.Initialize(_output, processName);
             }
 
             string providerString = BuildProviderString();
@@ -270,44 +242,29 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 return 1;
             }
 
+            renderer.Initialize();
+
             ManualResetEvent shouldExit = new ManualResetEvent(false);
             _ct.Register(() => shouldExit.Set());
-
             var terminated = false;
-            
-            if (liveMonitor)
-            {
-                writer.AssignRowsAndInitializeDisplay();
-            }
-            
             Task monitorTask = new Task(() => {
                 try
                 {
-                    EventPipeEventSource source = RequestTracingV2(providerString);
-                    if (liveMonitor)
-                        source.Dynamic.All += DynamicAllMonitor;
-                    else
-                    {
-                        Debug.Assert(exporter != null, "exporter object should not be null if we are exporting");
-                        source.Dynamic.All += DynamicAllExport;
+                    EventPipeEventSource source = null;
 
-                        Console.WriteLine("Starting a counter session. Press Q to quit.");
-                    }
-                    source.Process();
-                }
-                catch (EventPipeUnknownCommandException)
-                {
-                    // If unknown command exception is thrown, it's likely the app being monitored is running an older version of runtime that doesn't support CollectTracingV2. Try again with V1.
-                    EventPipeEventSource source = RequestTracingV1(providerString);
-                    if (liveMonitor)
-                        source.Dynamic.All += DynamicAllMonitor;
-                    else
+                    try
                     {
-                        Debug.Assert(exporter != null, "exporter object should not be null if we are exporting");
-                        source.Dynamic.All += DynamicAllExport;
-
-                        Console.WriteLine("Starting a counter session. Press Q to quit.");
+                        source = RequestTracingV2(providerString);
                     }
+                    catch (EventPipeUnknownCommandException)
+                    {
+                        // If unknown command exception is thrown, it's likely the app being monitored is 
+                        // running an older version of runtime that doesn't support CollectTracingV2. Try again with V1.
+                        source = RequestTracingV1(providerString);
+                    }
+
+                    source.Dynamic.All += DynamicAllMonitor;
+                    renderer.EventPipeSourceConnected();
                     source.Process();
                 }
                 catch (Exception ex)
@@ -329,7 +286,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     if (shouldExit.WaitOne(250))
                     {
-                        StopMonitor(liveMonitor);
+                        StopMonitor();
                         return 0;
                     }
                     if (Console.KeyAvailable)
@@ -340,10 +297,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ConsoleKey cmd = Console.ReadKey(true).Key;
                 if (cmd == ConsoleKey.Q)
                 {
-                    if (!liveMonitor)
-                    {
-                        exporter.Flush();
-                    }
+                    StopMonitor();
                     break;
                 }
                 else if (cmd == ConsoleKey.P)
@@ -357,7 +311,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             if (!terminated)
             {
-                StopMonitor(liveMonitor);
+                renderer.Stop();
             }
             
             return await Task.FromResult(0);
