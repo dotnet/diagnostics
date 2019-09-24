@@ -9145,9 +9145,10 @@ typedef std::tuple<DacpMethodDescData, DacpCodeHeaderData, HRESULT> ExtractionCo
 
 ExtractionCodeHeaderResult extractCodeHeaderData(DWORD_PTR methodDesc, DWORD_PTR dwStartAddr);
 HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData);
-HRESULT displayIntermediateLanguage(BOOL bIL, const DacpCodeHeaderData& codeHeaderData,
-                                    std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]>& map,
-                                    ULONG32& mapCount);
+HRESULT GetIntermediateLangMap(BOOL bIL, const DacpCodeHeaderData& codeHeaderData,
+                               std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]>& map,
+                               ULONG32& mapCount,
+                               BOOL dumpMap);
 
 GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData)
 {
@@ -9298,7 +9299,7 @@ DECLARE_API(u)
     DacpCodeHeaderData& codeHeaderData = std::get<1>(p);
     std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]> map(nullptr);
     ULONG32 mapCount = 0;
-    Status = displayIntermediateLanguage(bIL, codeHeaderData, map /*out*/, mapCount /* out */);
+    Status = GetIntermediateLangMap(bIL, codeHeaderData, map /*out*/, mapCount /* out */, false);
     if (Status != S_OK)
     {
         return Status;
@@ -9697,9 +9698,10 @@ HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData
     return S_OK;
 }
 
-HRESULT displayIntermediateLanguage(BOOL bIL, const DacpCodeHeaderData& codeHeaderData,
-                                    std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]>& map,
-                                    ULONG32& mapCount)
+HRESULT GetIntermediateLangMap(BOOL bIL, const DacpCodeHeaderData& codeHeaderData,
+                               std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]>& map,
+                               ULONG32& mapCount,
+                               BOOL dumpMap)
 {
     HRESULT Status = S_OK;
     if (bIL)
@@ -9728,11 +9730,14 @@ HRESULT displayIntermediateLanguage(BOOL bIL, const DacpCodeHeaderData& codeHead
             return Status;
         }
 
-        for (ULONG32 i = 0; i < mapCount; i++)
+        if (dumpMap)
         {
-            // TODO: These information should be interleaved with the disassembly
-            // Decoded IL can be obtained through refactoring DumpIL code.
-            ExtOut("%04x %p %p\n", map[i].ilOffset, map[i].startAddress, map[i].endAddress);
+            for (ULONG32 i = 0; i < mapCount; i++)
+            {
+                // TODO: These information should be interleaved with the disassembly
+                // Decoded IL can be obtained through refactoring DumpIL code.
+                ExtOut("%04x %p %p\n", map[i].ilOffset, map[i].startAddress, map[i].endAddress);
+            }
         }
     }
     return S_OK;
