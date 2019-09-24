@@ -478,7 +478,7 @@ std::tuple<ULONG, UINT> DecodeILAtPosition(
     return std::make_tuple(position, indentCount);
 }
 
-ULONG DisplayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG position, std::function<void(DWORD)>& func)
+ULONG DisplayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG position, std::function<void(DWORD)>& disassembleTokenFunc)
 {
     printf("%*sIL_%04x: ", indentCount, "", position);
     unsigned int c = readOpcode(pBuffer, position);
@@ -514,7 +514,7 @@ ULONG DisplayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG position, 
     case InlineString:
     {
         LONG l = readData<LONG>(pBuffer, position);
-        func(l);
+        disassembleTokenFunc(l);
         break;
     }
 

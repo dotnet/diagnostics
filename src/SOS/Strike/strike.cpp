@@ -9207,7 +9207,7 @@ GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData)
 
     if (ilAddr == NULL)
     {
-        ExtOut("Unkown error in reading function IL\n");
+        ExtOut("Unknown error in reading function IL\n");
         return error;
     }
     GetILAddressResult result = std::make_tuple(ilAddr, pImport.Detach());
