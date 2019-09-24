@@ -70,23 +70,19 @@ static OpCode opcodes[] =
 
 // The UNALIGNED is because on IA64 alignment rules would prevent
 // us from reading a pointer from an unaligned source.
-// I am not particularly happy about this but the value of
-// position changes after this call.
 template <typename T>
-T readData (const BYTE* const pBuffer, ULONG& position) {
+T ReadData (const BYTE* const pBuffer, ULONG& position) {
     T val = *((T UNALIGNED*)(pBuffer+position));
     position += sizeof(T);
     return val;
 }
 
-// I am not particularly happy about this but the value of
-// position can change after this call.
-unsigned int readOpcode(const BYTE* const pBuffer, ULONG& position)
+unsigned int ReadOpcode(const BYTE* const pBuffer, ULONG& position)
 {
-    unsigned int c = readData<BYTE>(pBuffer, position /* byref */);
+    unsigned int c = ReadData<BYTE>(pBuffer, /* byref */position);
     if (c == 0xFE)
     {
-        c = readData<BYTE>(pBuffer, position /* byref */);
+        c = ReadData<BYTE>(pBuffer, /* byref */ position);
         c |= 0x100;
     }
     return c;
@@ -481,7 +477,7 @@ std::tuple<ULONG, UINT> DecodeILAtPosition(
 ULONG DisplayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG position, std::function<void(DWORD)>& disassembleTokenFunc)
 {
     printf("%*sIL_%04x: ", indentCount, "", position);
-    unsigned int c = readOpcode(pBuffer, position);
+    unsigned int c = ReadOpcode(pBuffer, position);
     OpCode opcode = opcodes[c];
     printf("%s ", opcode.name);
 
@@ -490,21 +486,21 @@ ULONG DisplayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG position, 
     case InlineNone: break;
 
     case ShortInlineVar:
-        printf("VAR OR ARG %d", readData<BYTE>(pBuffer, position /* byref */)); break;
+        printf("VAR OR ARG %d", ReadData<BYTE>(pBuffer, /* byref */ position)); break;
     case InlineVar:
-        printf("VAR OR ARG %d", readData<WORD>(pBuffer, position /* byref */)); break;
+        printf("VAR OR ARG %d", ReadData<WORD>(pBuffer, /* byref */ position)); break;
     case InlineI:
-        printf("%d", readData<LONG>(pBuffer, position /* byref */));
+        printf("%d", ReadData<LONG>(pBuffer, /* byref */ position));
         break;
     case InlineR:
-        printf("%f", readData<double>(pBuffer, position /* byref */));
+        printf("%f", ReadData<double>(pBuffer, /* byref */ position));
         break;
     case InlineBrTarget:
-        printf("IL_%04x", readData<LONG>(pBuffer, position /* byref */) + position); break;
+        printf("IL_%04x", ReadData<LONG>(pBuffer, /* byref */ position) + position); break;
     case ShortInlineBrTarget:
-        printf("IL_%04x", readData<BYTE>(pBuffer, position /* byref */) + position); break;
+        printf("IL_%04x", ReadData<BYTE>(pBuffer, /* byref */ position) + position); break;
     case InlineI8:
-        printf("%ld", readData<__int64>(pBuffer, position /* byref */)); break;
+        printf("%ld", ReadData<__int64>(pBuffer, /* byref */ position)); break;
 
     case InlineMethod:
     case InlineField:
@@ -513,19 +509,19 @@ ULONG DisplayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG position, 
     case InlineSig:
     case InlineString:
     {
-        LONG l = readData<LONG>(pBuffer, position /* byref */);
+        LONG l = ReadData<LONG>(pBuffer, /* byref */ position);
         disassembleTokenFunc(l);
         break;
     }
 
     case InlineSwitch:
     {
-        LONG cases = readData<LONG>(pBuffer, position /* byref */);
+        LONG cases = ReadData<LONG>(pBuffer, /* byref */ position);
         LONG* pArray = new LONG[cases];
         LONG i = 0;
         for (i = 0;i<cases;i++)
         {
-            pArray[i] = readData<LONG>(pBuffer, position /* byref */);
+            pArray[i] = ReadData<LONG>(pBuffer, /* byref */ position);
         }
         printf("(");
         for (i = 0;i<cases;i++)
@@ -539,9 +535,9 @@ ULONG DisplayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG position, 
         break;
     }
     case ShortInlineI:
-        printf("%d", readData<BYTE>(pBuffer, position /* byref */)); break;
+        printf("%d", ReadData<BYTE>(pBuffer, /* byref */ position)); break;
     case ShortInlineR:
-        printf("%f", readData<float>(pBuffer, position /* byref */)); break;
+        printf("%f", ReadData<float>(pBuffer, /* byref */ position)); break;
     default: printf("Error, unexpected opcode type\n"); break;
     }
     return position;
