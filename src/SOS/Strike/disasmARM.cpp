@@ -367,6 +367,8 @@ void ARMMachine::Unassembly (
     ULONG curLine = -1;
     WCHAR filename[MAX_LONGPATH];
     ULONG linenum;
+    ULONG ilPosition = 0;
+    UINT ilIndentCount = 0;
 
     while (PC < PCEnd)
     {
@@ -383,6 +385,7 @@ void ARMMachine::Unassembly (
                 ExtOut("\n%S @ %d:\n", filename, linenum);
             }
         }
+        displayIL(&ilPosition, &ilIndentCount, (BYTE*)PC);
 
         //
         // Print out any GC information corresponding to the current instruction offset.
