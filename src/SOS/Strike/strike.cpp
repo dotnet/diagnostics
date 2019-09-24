@@ -10066,7 +10066,7 @@ DECLARE_API (EEVersion)
 #ifndef FEATURE_PAL
             if (version.dwFileFlags & VS_FF_DEBUG) 
             {                    
-                ExtOut(" Checked or debug build");
+                ExtOut(" checked or debug build");
             }
             else
             { 
@@ -10113,7 +10113,7 @@ DECLARE_API (EEVersion)
 
             if (sosVersion.dwFileFlags & VS_FF_DEBUG) 
             {                    
-                ExtOut(" Checked or debug build");                    
+                ExtOut(" debug build");                    
             }
             else
             { 

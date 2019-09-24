@@ -44,6 +44,7 @@ usage()
     echo "--architecture <x64|x86|arm|armel|arm64>"
     echo "--configuration <debug|release>"
     echo "--rootfs <ROOTFS_DIR>"
+    echo "--stripsymbols - strip symbols into .dbg files"
     echo "--clangx.y - optional argument to build using clang version x.y"
     echo "--ci - CI lab build"
     echo "--verbosity <q[uiet]|m[inimal]|n[ormal]|d[etailed]|diag[nostic]>"
@@ -204,6 +205,10 @@ while :; do
             __PortableBuild=0
             ;;
 
+        --stripsymbols)
+            __ExtraCmakeArgs="$__ExtraCmakeArgs -DSTRIP_SYMBOLS=true"
+            ;;
+
         --clang3.5)
             __ClangMajorVersion=3
             __ClangMinorVersion=5
@@ -275,7 +280,7 @@ __LogDir=$__RootBinDir/log/$__BuildOS.$__BuildArch.$__BuildType
 __IntermediatesDir=$__RootBinDir/obj/$__BuildOS.$__BuildArch.$__BuildType
 __ResultsDir=$__RootBinDir/TestResults/$__BuildType
 __PackagesBinDir=$__RootBinDir/packages/$__BuildType/Shipping
-__ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=$__RootBinDir/bin -DCLR_BUILD_TYPE=$__BuildType"
+__ExtraCmakeArgs="$__ExtraCmakeArgs -DCLR_MANAGED_BINARY_DIR=$__RootBinDir/bin -DCLR_BUILD_TYPE=$__BuildType"
 __DotNetCli=$__ProjectRoot/.dotnet/dotnet
 __DotNetRuntimeVersion=2.1.11
 
@@ -334,8 +339,8 @@ build_native()
     scriptDir="$__ProjectRoot/eng"
 
     pushd "$intermediatesForBuild"
-    echo "Invoking \"$scriptDir/gen-buildsys-clang.sh\" \"$__ProjectRoot\" $__ClangMajorVersion \"$__ClangMinorVersion\" $platformArch "$scriptDir" $__BuildType $generator $extraCmakeArguments $__cmakeargs"
-    "$scriptDir/gen-buildsys-clang.sh" "$__ProjectRoot" $__ClangMajorVersion "$__ClangMinorVersion" $platformArch "$scriptDir" $__BuildType $generator "$extraCmakeArguments" "$__cmakeargs"
+    echo "Invoking \"$scriptDir/gen-buildsys-clang.sh\" \"$__ProjectRoot\" $__ClangMajorVersion \"$__ClangMinorVersion\" $platformArch "$scriptDir" $__BuildType $generator $extraCmakeArguments"
+    "$scriptDir/gen-buildsys-clang.sh" "$__ProjectRoot" $__ClangMajorVersion "$__ClangMinorVersion" $platformArch "$scriptDir" $__BuildType $generator "$extraCmakeArguments"
     popd
 
     if [ ! -f "$intermediatesForBuild/$buildFile" ]; then
@@ -407,8 +412,11 @@ fi
 if [ $__Build == true ]; then
     if [[ $__CI == true ]]; then
         echo "Generating Version Source File"
+        __GenerateVersionRestoreLog="$__LogDir/GenerateVersionRestore.binlog"
+        $__DotNetCli msbuild $__ProjectRoot/eng/CreateVersionFile.csproj /v:$__Verbosity /bl:$__GenerateVersionRestoreLog /t:Restore /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
+
         __GenerateVersionLog="$__LogDir/GenerateVersion.binlog"
-        $__DotNetCli msbuild $__ProjectRoot/eng/CreateVersionFile.proj /v:$__Verbosity /bl:$__GenerateVersionLog /t:GenerateVersionFiles /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
+        $__DotNetCli msbuild $__ProjectRoot/eng/CreateVersionFile.csproj /v:$__Verbosity /bl:$__GenerateVersionLog /t:GenerateVersionFiles /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
         if [ $? != 0 ]; then
             echo "Generating Version Source File FAILED"
             exit 1

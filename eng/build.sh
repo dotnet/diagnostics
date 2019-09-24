@@ -39,7 +39,7 @@ while :; do
         --rootfs)
             shift
             ;;
-        --build-native|--test|--daily-test)
+        --build-native|--test|--daily-test|--stripsymbols)
             ;;
         --clang3.5|--clang3.6|--clang3.7|--clang3.8|--clang3.9|--clang4.0|--clang5.0)
             ;;

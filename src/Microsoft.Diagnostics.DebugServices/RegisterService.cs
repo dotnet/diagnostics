@@ -5,6 +5,7 @@
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -56,7 +57,8 @@ namespace Microsoft.Diagnostics.DebugServices
             switch (target.Architecture)
             {
                 case Architecture.Amd64:
-                    _contextSize = AMD64Context.Size;
+                    // Dumps generated with newer dbgeng have bigger context buffers and clrmd requires the context size to at least be that size.
+                    _contextSize = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 0x700 : AMD64Context.Size;
                     _contextFlags = AMD64Context.ContextControl | AMD64Context.ContextInteger | AMD64Context.ContextSegments;
                     contextType = typeof(AMD64Context);
                     break;
@@ -160,7 +162,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="index">register index</param>
         /// <param name="value">value returned</param>
         /// <returns>true if value found</returns>
-        public unsafe bool GetRegisterValue(uint threadId, int index, out ulong value)
+        public bool GetRegisterValue(uint threadId, int index, out ulong value)
         {
             value = 0;
 
@@ -169,22 +171,25 @@ namespace Microsoft.Diagnostics.DebugServices
                 byte[] threadContext = GetThreadContext(threadId);
                 if (threadContext != null)
                 {
-                    fixed (byte* ptr = threadContext)
+                    unsafe
                     {
-                        switch (info.RegisterSize)
+                        fixed (byte* ptr = threadContext)
                         {
-                            case 1:
-                                value = *((byte*)(ptr + info.RegisterOffset));
-                                return true;
-                            case 2:
-                                value = *((ushort*)(ptr + info.RegisterOffset));
-                                return true;
-                            case 4:
-                                value = *((uint*)(ptr + info.RegisterOffset));
-                                return true;
-                            case 8:
-                                value = *((ulong*)(ptr + info.RegisterOffset));
-                                return true;
+                            switch (info.RegisterSize)
+                            {
+                                case 1:
+                                    value = *((byte*)(ptr + info.RegisterOffset));
+                                    return true;
+                                case 2:
+                                    value = *((ushort*)(ptr + info.RegisterOffset));
+                                    return true;
+                                case 4:
+                                    value = *((uint*)(ptr + info.RegisterOffset));
+                                    return true;
+                                case 8:
+                                    value = *((ulong*)(ptr + info.RegisterOffset));
+                                    return true;
+                            }
                         }
                     }
                 }
@@ -192,7 +197,12 @@ namespace Microsoft.Diagnostics.DebugServices
             return false;
         }
 
-        private unsafe byte[] GetThreadContext(uint threadId)
+        /// <summary>
+        /// Returns the raw context buffer bytes for the specified thread.
+        /// </summary>
+        /// <param name="threadId">thread id</param>
+        /// <returns>register context or null if error</returns>
+        public byte[] GetThreadContext(uint threadId)
         {
             if (_threadContextCache.TryGetValue(threadId, out byte[] threadContext))
             {
@@ -200,13 +210,23 @@ namespace Microsoft.Diagnostics.DebugServices
             }
             else
             {
-                threadContext = new byte[_contextSize];
-                fixed (byte* ptr = threadContext)
+                unsafe
                 {
-                    if (_target.DataReader.GetThreadContext(threadId, _contextFlags, (uint)_contextSize, new IntPtr(ptr)))
+                    threadContext = new byte[_contextSize];
+                    fixed (byte* ptr = threadContext)
                     {
-                        _threadContextCache.Add(threadId, threadContext);
-                        return threadContext;
+                        try
+                        {
+                            if (_target.DataReader.GetThreadContext(threadId, _contextFlags, (uint)_contextSize, new IntPtr(ptr)))
+                            {
+                                _threadContextCache.Add(threadId, threadContext);
+                                return threadContext;
+                            }
+                        }
+                        catch (ClrDiagnosticsException ex)
+                        {
+                            Trace.TraceError(ex.ToString());
+                        }
                     }
                 }
             }
