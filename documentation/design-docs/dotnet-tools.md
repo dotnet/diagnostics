@@ -149,6 +149,7 @@ COMMANDS
 
     list      Display a list of counter names and descriptions
     monitor   Display periodically refreshing values of selected counters
+    collect   Periodically collect selected counter values and export them into a specified file format for post-processing.
 
 LIST
 
@@ -228,6 +229,55 @@ MONITOR
         provider and counter names, use the list command.
 
 
+COLLECT
+
+
+    Examples:
+
+    1. Collect the runtime performance counters at a refresh interval of 10 seconds and export it as a JSON file named "test.json".
+```
+    dotnet run collect --process-id 863148 --refresh-interval 10 --output test --format json
+```
+
+    2. Collect the runtime performance counters as well as the ASP.NET hosting performance counters at the default refresh interval (1 second) and export it as a CSV file named "mycounter.csv". 
+```
+    dotnet run collect --process-id 863148 --output mycounter --format csv System.Runtime Microsoft.AspNetCore.Hosting
+```
+
+
+    Syntax:
+
+```
+    dotnet-counters collect [-h||--help]
+                            [-p|--process-id <pid>]
+                            [-o|--output <name>]
+                            [--format <csv|json>]
+                            [--refreshInterval <sec>]
+                            counter_list
+    
+    Periodically collect selected counter values and export them into a specified file format for post-processing.
+    
+    -h, --help
+        Show command line help
+    
+    -p,--process-id
+        The ID of the process that will be monitored
+
+    -o, --output
+        The name of the output file
+
+    --format
+        The format to be exported. Currently available: csv, json
+
+    --refresh-interval
+        The number of seconds to delay between updating the displayed counters
+    
+    counter_list
+        A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the
+        provider_name is used without a qualifying counter_name then all counters will be shown. To discover
+        provider and counter names, use the list command.
+
+```
 
 
 ### dotnet-trace
