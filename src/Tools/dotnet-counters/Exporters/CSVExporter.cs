@@ -18,7 +18,14 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         public CSVExporter(string output)
         {
-            _output = output + ".csv";
+            if (output.EndsWith(".csv"))
+            {
+                _output = output;
+            }
+            else
+            {
+                _output = output + ".csv";
+            }
         }
 
         public void Initialize()

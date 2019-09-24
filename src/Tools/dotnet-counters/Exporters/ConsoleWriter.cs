@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         public void EventPipeSourceConnected()
         {
-            // TODO
+            // Do nothing
         }
 
         private void UpdateStatus()

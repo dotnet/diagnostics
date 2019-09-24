@@ -17,7 +17,14 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         public JSONExporter(string output, string processName)
         {
-            _output = output + ".json";
+            if (output.EndsWith(".json"))
+            {
+                _output = output;
+            }
+            else
+            {
+                _output = output + ".json";
+            }
             _processName = processName;
         }
         public void Initialize()

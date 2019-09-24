@@ -309,11 +309,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     pauseCmdSet = false;
                 }
             }
-            if (!terminated)
-            {
-                renderer.Stop();
-            }
-            
+
             return await Task.FromResult(0);
         }
     }
