@@ -39,9 +39,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
                 Console.Clear();
-                if (processId <= 0)
+                if (processId < 0)
                 {
                     Console.Error.WriteLine("Process ID should not be negative.");
+                    return ErrorCodes.ArgumentError;
+                }
+                else if (processId == 0)
+                {
+                    Console.Error.WriteLine("--process-id is required");
                     return ErrorCodes.ArgumentError;
                 }
 
