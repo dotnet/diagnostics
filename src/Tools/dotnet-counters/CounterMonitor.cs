@@ -145,7 +145,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private async Task<int> StartMonitor()
         {
             if (_processId == 0) {
-                _console.Error.WriteLine("ProcessId is required.");
+                _console.Error.WriteLine("--process-id is required.");
                 return 1;
             }
 
