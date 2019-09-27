@@ -95,18 +95,14 @@ public class SOS
             DumpType = SOSRunner.DumpType.Heap
         });
 
-        // Temporarily restrict triage dump to only 2.x runtimes until the DAC fix hits 3.0/5.0
-        if (config.IsDesktop || config.RuntimeFrameworkVersionMajor == 2)
+        if (testTriage)
         {
-            if (testTriage)
-            {
-                await RunTest(scriptName, testLive: false, testDump, new SOSRunner.TestInformation {
-                    TestConfiguration = config,
-                    TestName = testName,
-                    DebuggeeName = debuggeeName,
-                    DumpType = SOSRunner.DumpType.Triage
-                });
-            }
+            await RunTest(scriptName, testLive: false, testDump, new SOSRunner.TestInformation {
+                TestConfiguration = config,
+                TestName = testName,
+                DebuggeeName = debuggeeName,
+                DumpType = SOSRunner.DumpType.Triage
+            });
         }
     }
 
