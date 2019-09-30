@@ -575,14 +575,14 @@ COLLECT
 
     dotnet-gcheapdump collect -p|--process-id <pid> [-h|--help] [-o|--output <output_dump_path>]
 
-    Capture GC Heap dumps from a dotnet core process
+    Capture GC Heap dumps from a dotnet process
 
     Usage:
       dotnet-gcheapdump collect [options]
 
     Options:
       -p, --process-id
-          The process to collect a memory dump from.
+          The process to collect a gcheap dump from.
 
       -h, --help
           Show command line help
