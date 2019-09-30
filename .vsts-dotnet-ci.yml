@@ -1,10 +1,17 @@
-phases:
+trigger:
+- master
+- release/*
+
+pr:
+- master
+- release/*
+
+jobs:
 - template: /eng/build.yml
   parameters:
     name: Windows
-    agentOs: Windows_NT
-    queue: 
-      name: Hosted VS2017
+    osGroup: Windows_NT
+    strategy:
       parallel: 2
       matrix:
         Build_Debug:
@@ -17,10 +24,9 @@ phases:
 - template: /eng/build.yml
   parameters:
     name: CentOS_7
-    agentOs: Linux
+    osGroup: Linux
     dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-3e800f1-20190501005343
-    queue:
-      name: Hosted Ubuntu 1604
+    strategy:
       parallel: 2
       matrix:
         Build_Debug:
@@ -33,9 +39,8 @@ phases:
 - template: /eng/build.yml
   parameters:
     name: MacOS
-    agentOs: Darwin
-    queue: 
-      name: Hosted macOS
+    osGroup: MacOS
+    strategy:
       parallel: 2
       matrix:
         Build_Debug:
