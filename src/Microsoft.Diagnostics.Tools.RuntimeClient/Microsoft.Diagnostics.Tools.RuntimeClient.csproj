@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>Microsoft.Diagnostics.Tools.RuntimeClient</RootNamespace>
     <Description>.NET Core Diagnostics Runtime Client</Description>
     <IsPackable>True</IsPackable>
