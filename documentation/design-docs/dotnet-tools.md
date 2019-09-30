@@ -551,6 +551,53 @@ UNINSTALL
       Uninstalling SOS from ~/.dotnet/sos
       Complete
 
+### dotnet-gcheapdump
+
+SYNOPSIS
+
+    dotnet-gcheapdump [--version]
+                      [-h, --help]
+                      <command> [<args>]
+
+OPTIONS
+
+    --version
+        Display the version of the dotnet-dump utility.
+
+    -h, --help
+        Show command line help
+
+COMMANDS
+
+    collect   Capture dumps from a process
+
+COLLECT
+
+    dotnet-gcheapdump collect -p|--process-id <pid> [-h|--help] [-o|--output <output_dump_path>]
+
+    Capture GC Heap dumps from a dotnet core process
+
+    Usage:
+      dotnet-gcheapdump collect [options]
+
+    Options:
+      -p, --process-id
+          The process to collect a memory dump from.
+
+      -h, --help
+          Show command line help
+
+      -o, --output
+          The path where collected dumps should be written. Defaults to '.\YYYYMMDD_HHMMSS.gcheapdump' where YYYYMMDD is Year/Month/Day
+          and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.
+
+Examples:
+
+    $ dotnet gcheapdump collect --process-id 1902
+    Writing gcheapdump to file ./20190226_135837.gcheapdump
+    Written 98983936 bytes file
+    Complete
+
 ## Future suggestions
 
 Work described in here captures potential future directions these tools could take given time and customer interest. Some of these might come relatively soon, others feel quite speculative or duplicative with existing technology. Regardless, understanding potential future options helps to ensure that we don't unknowingly paint ourselves into a corner or build an incoherent offering.
