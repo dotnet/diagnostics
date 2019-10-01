@@ -81,11 +81,11 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             switch ((DiagnosticsServerCommandId)response.Header.CommandId)
             {
                 case DiagnosticsServerCommandId.OK:
-                    sessionId = BitConverter.ToUInt64(response.Payload);
+                    sessionId = BitConverter.ToUInt64(response.Payload, 0);
                     break;
                 case DiagnosticsServerCommandId.Error:
                     // bad...
-                    var hr = BitConverter.ToInt32(response.Payload);
+                    var hr = BitConverter.ToInt32(response.Payload, 0);
                     throw new Exception($"Session start FAILED 0x{hr:X8}");
                 default:
                     break;
@@ -103,11 +103,11 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             switch ((DiagnosticsServerCommandId)response.Header.CommandId)
             {
                 case DiagnosticsServerCommandId.OK:
-                    sessionId = BitConverter.ToUInt64(response.Payload);
+                    sessionId = BitConverter.ToUInt64(response.Payload, 0);
                     break;
                 case DiagnosticsServerCommandId.Error:
                     // bad...
-                    uint hr = BitConverter.ToUInt32(response.Payload);
+                    uint hr = BitConverter.ToUInt32(response.Payload, 0);
                     Exception ex = ConvertHRToException(hr, $"Session start FAILED 0x{hr:X8}");
                     throw ex;
                 default:
@@ -135,7 +135,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             switch ((DiagnosticsServerCommandId)response.Header.CommandId)
             {
                 case DiagnosticsServerCommandId.OK:
-                    return BitConverter.ToUInt64(response.Payload);
+                    return BitConverter.ToUInt64(response.Payload, 0);
                 case DiagnosticsServerCommandId.Error:
                     return 0;
                 default:
