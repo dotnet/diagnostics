@@ -88,12 +88,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.True(providerOne.EventLevel == System.Diagnostics.Tracing.EventLevel.Critical);
             Assert.True(providerOne.FilterData == "FilterAndPayloadSpecs=\"QuotedValue\"");
 
-            Assert.True(providerTwo.Name == "providerTwo");
+            Assert.True(providerTwo.Name == "ProviderTwo");
             Assert.True(providerTwo.Keywords == 2);
             Assert.True(providerTwo.EventLevel == System.Diagnostics.Tracing.EventLevel.Error);
             Assert.True(providerTwo.FilterData == "key=value");
 
-            Assert.True(providerThree.Name == "providerThree");
+            Assert.True(providerThree.Name == "ProviderThree");
             Assert.True(providerThree.Keywords == 3);
             Assert.True(providerThree.EventLevel == System.Diagnostics.Tracing.EventLevel.Warning);
             Assert.True(providerThree.FilterData == "key=value");
