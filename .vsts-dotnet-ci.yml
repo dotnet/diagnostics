@@ -12,7 +12,6 @@ jobs:
     name: Windows
     osGroup: Windows_NT
     strategy:
-      parallel: 2
       matrix:
         Build_Debug:
           _BuildConfig: Debug
@@ -27,7 +26,6 @@ jobs:
     osGroup: Linux
     dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-3e800f1-20190501005343
     strategy:
-      parallel: 2
       matrix:
         Build_Debug:
           _BuildConfig: Debug
@@ -41,7 +39,6 @@ jobs:
     name: MacOS
     osGroup: MacOS
     strategy:
-      parallel: 2
       matrix:
         Build_Debug:
           _BuildConfig: Debug
