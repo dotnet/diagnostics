@@ -3465,7 +3465,7 @@ void StringObjectContent(size_t obj, BOOL fLiteral, const int length)
     DWORD_PTR dwAddr = (DWORD_PTR)pwszBuf.GetPtr();
     if (g_sos->GetObjectStringData(TO_CDADDR(obj), stInfo.m_StringLength+1, pwszBuf, NULL)!=S_OK)
     {
-        ExtOut("Error getting string data\n");
+        ExtOut("<Invalid Object>");
         return;
     }
 
@@ -5112,10 +5112,8 @@ void ExtErr(PCSTR Format, ...)
     va_end(Args);
 }
 
-
 void ExtDbgOut(PCSTR Format, ...)
 {
-#ifdef _DEBUG
     if (Output::g_bDbgOutput)
     {
         va_list Args;
@@ -5125,7 +5123,6 @@ void ExtDbgOut(PCSTR Format, ...)
         OutputVaList(DEBUG_OUTPUT_NORMAL, Format, Args);
         va_end(Args);
     }
-#endif
 }
 
 const char * const DMLFormats[] =
@@ -5487,7 +5484,7 @@ GetLineByOffset(
     IfFailRet(ConvertNativeToIlOffset(offset, &pModule, &methodToken, &methodOffs));
 
     ToRelease<IMetaDataImport> pMDImport(NULL);
-    IfFailRet(pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport));
+    pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport);
 
     SymbolReader symbolReader;
     IfFailRet(symbolReader.LoadSymbols(pMDImport, pModule));

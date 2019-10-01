@@ -122,6 +122,10 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         protected static string GetDebuggeeNativeLibDirPath(TestConfiguration config, string debuggeeName)
         {
+            if (config.DebuggeeNativeLibRoot == null)
+            {
+                return null;
+            }
             return Path.Combine(config.DebuggeeNativeLibRoot, debuggeeName);
         }
 

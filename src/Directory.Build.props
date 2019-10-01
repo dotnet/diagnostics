@@ -17,11 +17,11 @@
     <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net461'">
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net462'">
     <DebugType>full</DebugType>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TargetFramework)' != 'net461'">
+  <PropertyGroup Condition="'$(TargetFramework)' != 'net462'">
     <DebugType>portable</DebugType>
   </PropertyGroup>
 </Project>

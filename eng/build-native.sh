@@ -175,7 +175,7 @@ while :; do
             __TestArgs="$__TestArgs $1"
             ;;
 
-        --solution)
+        --projects)
             __TestArgs="$__TestArgs $1 $2"
             shift
             ;;
@@ -245,7 +245,7 @@ while :; do
             ;;
 
         # Ignored for a native build
-        --build|--rebuild|--sign|--restore|--pack|--publish|--preparemachine|--projects|--solution)
+        --build|--rebuild|--sign|--restore|--pack|--publish|--preparemachine)
             ;;
 
         *)
@@ -282,7 +282,6 @@ __ResultsDir=$__RootBinDir/TestResults/$__BuildType
 __PackagesBinDir=$__RootBinDir/packages/$__BuildType/Shipping
 __ExtraCmakeArgs="$__ExtraCmakeArgs -DCLR_MANAGED_BINARY_DIR=$__RootBinDir/bin -DCLR_BUILD_TYPE=$__BuildType"
 __DotNetCli=$__ProjectRoot/.dotnet/dotnet
-__DotNetRuntimeVersion=2.1.11
 
 if [ ! -e $__DotNetCli ]; then
    echo "dotnet cli not installed $__DotNetCli"
@@ -379,6 +378,7 @@ initTargetDistroRid()
 # Init the target distro name
 initTargetDistroRid
 
+
 echo "RID: $__DistroRid"
 
 if [ "$__HostOS" == "OSX" ]; then
@@ -449,7 +449,7 @@ if [ $__Test == true ]; then
    if [ $__CrossBuild != true ]; then
 
       # Install the other versions of .NET Core runtime we are going to test on
-      "$__ProjectRoot/eng/install-test-runtimes.sh" --dotnet-directory "$__ProjectRoot/.dotnet" --runtime-version-21 "$__DotNetRuntimeVersion" --temp-directory "$__IntermediatesDir" --architecture "$__BuildArch" $__DailyTest
+      "$__ProjectRoot/eng/install-test-runtimes.sh" --dotnet-directory "$__ProjectRoot/.dotnet" --temp-directory "$__IntermediatesDir" --architecture "$__BuildArch" $__DailyTest
 
       if [ "$LLDB_PATH" == "" ]; then
           export LLDB_PATH="$(which lldb-3.9.1 2> /dev/null)"
@@ -477,21 +477,6 @@ if [ $__Test == true ]; then
       "$__ProjectRoot/eng/common/build.sh" --test --configuration "$__BuildType" $__TestArgs
       if [ $? != 0 ]; then
           exit 1
-      fi
-
-      # Skip Alpine because lldb doesn't work
-      if [ $__Alpine == false ]; then
-          if [ "$__BuildOS" == "OSX" ]; then
-              __Plugin=$__CMakeBinDir/libsosplugin.dylib
-          else
-              __Plugin=$__CMakeBinDir/libsosplugin.so
-          fi
-
-          # Run lldb python tests
-          "$__ProjectRoot/src/SOS/lldbplugin.tests/testsos.sh" "$__ProjectRoot" "$__Plugin" "$__DotNetRuntimeVersion" "$__RootBinDir/bin/TestDebuggee/$__BuildType/netcoreapp2.0/TestDebuggee.dll" "$__ResultsDir"
-          if [ $? != 0 ]; then
-              exit 1
-          fi
       fi
    fi
 fi

@@ -242,6 +242,7 @@ static HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
     }
     if (!GetAbsolutePath(directory, coreClrDirectory))
     {
+        ExtDbgOut("Error: Runtime directory %s doesn't exist\n", directory);
         return E_FAIL;
     }
 #else
@@ -261,7 +262,9 @@ static HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
     }
     if (GetFileAttributesA(szModuleName) == INVALID_FILE_ATTRIBUTES)
     {
-        return HRESULT_FROM_WIN32(GetLastError());
+        Status = HRESULT_FROM_WIN32(GetLastError());
+        ExtDbgOut("Error: Runtime module %s doesn't exist %08x\n", szModuleName, Status);
+        return Status;
     }
     coreClrDirectory = szModuleName;
 
@@ -269,6 +272,7 @@ static HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
     size_t lastSlash = coreClrDirectory.rfind(DIRECTORY_SEPARATOR_CHAR_A);
     if (lastSlash == std::string::npos)
     {
+        ExtDbgOut("Error: Runtime module %s has no directory separator\n", szModuleName);
         return E_FAIL;
     }
     coreClrDirectory.assign(coreClrDirectory, 0, lastSlash);
@@ -648,6 +652,7 @@ HRESULT InitializeHosting()
     HRESULT Status = GetHostRuntime(coreClrPath, hostRuntimeDirectory);
     if (FAILED(Status))
     {
+        ExtDbgOut("Error: Failed to get host runtime directory\n");
         return Status;
     }
 #ifdef FEATURE_PAL
@@ -1111,6 +1116,9 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
 
     if (m_pSymReader != NULL) 
         return S_OK;
+
+    if (pMD == nullptr)
+        return E_INVALIDARG;
 
     if (g_pSymBinder == nullptr)
     {

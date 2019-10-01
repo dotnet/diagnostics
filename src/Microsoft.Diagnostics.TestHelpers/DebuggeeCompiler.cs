@@ -16,20 +16,24 @@ namespace Microsoft.Diagnostics.TestHelpers
     {
         async public static Task<DebuggeeConfiguration> Execute(TestConfiguration config, string debuggeeName, ITestOutputHelper output)
         {
-            IDebuggeeCompiler compiler = null;
-            if (config.DebuggeeBuildProcess == "prebuilt")
+            IDebuggeeCompiler compiler;
+            switch (config.DebuggeeBuildProcess)
             {
-                compiler = new PrebuiltDebuggeeCompiler(config, debuggeeName);
+                case "prebuilt":
+                    // Backwards compatibility for the diagnostics test repo
+                    compiler = new PrebuiltDebuggeeCompiler(config, debuggeeName);
+                    break;
+                case "sdk.prebuilt":
+                    // The .NET Core SDK layout
+                    compiler = new SdkPrebuiltDebuggeeCompiler(config, debuggeeName);
+                    break;
+                case "cli":
+                    // Builds the debuggee with the .NET Core CLI
+                    compiler = new CliDebuggeeCompiler(config, debuggeeName);
+                    break;
+                default:
+                    throw new Exception("Invalid DebuggeeBuildProcess configuration value. Expected 'prebuilt', actual \'" + config.DebuggeeBuildProcess + "\'");
             }
-            else if (config.DebuggeeBuildProcess == "cli")
-            {
-                compiler = new CliDebuggeeCompiler(config, debuggeeName);
-            }
-            else
-            {
-                throw new Exception("Invalid DebuggeeBuildProcess configuration value. Expected 'prebuilt', actual \'" + config.DebuggeeBuildProcess + "\'");
-            }
-
             return await compiler.Execute(output);
         }
     }

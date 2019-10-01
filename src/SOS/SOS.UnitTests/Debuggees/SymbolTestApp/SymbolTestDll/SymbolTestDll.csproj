@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>$(BuildProjectFramework)</TargetFramework>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TargetFramework Condition="'$(BuildProjectFramework)' != ''">$(BuildProjectFramework)</TargetFramework>
+    <TargetFrameworks Condition="'$(BuildProjectFramework)' == ''">netcoreapp1.1;netcoreapp2.1;netcoreapp3.0</TargetFrameworks>
   </PropertyGroup>
 </Project>

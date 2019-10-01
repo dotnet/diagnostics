@@ -134,6 +134,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     interpreter.AddCommand("clrstack", new sosCommand("ClrStack"), "Provides a stack trace of managed code only.");
     interpreter.AddCommand("clrthreads", new sosCommand("Threads"), "List the managed threads running.");
     interpreter.AddCommand("clru", new sosCommand("u"), "Displays an annotated disassembly of a managed method.");
+    interpreter.AddCommand("dbgout", new sosCommand("dbgout"), "Enable/disable (-off) internal SOS logging.");
     interpreter.AddCommand("dumparray", new sosCommand("DumpArray"), "Displays details about a managed array.");
     interpreter.AddCommand("dumpasync", new sosCommand("DumpAsync"), "Displays info about async state machines on the garbage-collected heap.");
     interpreter.AddCommand("dumpassembly", new sosCommand("DumpAssembly"), "Displays details about an assembly.");

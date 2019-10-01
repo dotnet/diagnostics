@@ -182,10 +182,9 @@ EXPORTS
     DumpPermissionSet
     dps=DumpPermissionSet
     dumppermissionset=DumpPermissionSet
-    dbgout
-    filthint
 #endif
 
+    dbgout
     _EFN_GetManagedExcepStack
     _EFN_GetManagedExcepStackW
     _EFN_GetManagedObjectFieldInfo    
