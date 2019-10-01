@@ -27,8 +27,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         [Theory]
-        [InlineData("")]
-        [InlineData(" ")]
+        [InlineData(null)]
+        [InlineData(",")]
         public void EmptyProvider_CorrectlyThrows(string providerToParse)
         {
             Assert.Throws<ArgumentNullException>(() => Extensions.ToProviders(providerToParse));
@@ -45,9 +45,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         [Theory]
-        [InlineData("VeryCoolProvider:0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:5:FilterAndPayloadSpecs=\"QuotedValue\"")]
-        [InlineData("VeryCoolProvider:-1:5:FilterAndPayloadSpecs=\"QuotedValue\"")]
-        [InlineData("VeryCoolProvider:18446744073709551615:5:FilterAndPayloadSpecs=\"QuotedValue\"")]
+        [InlineData("VeryCoolProvider:0xFFFFFFFFFFFFFFFF:5:FilterAndPayloadSpecs=\"QuotedValue\"")]
         [InlineData("VeryCoolProvider::5:FilterAndPayloadSpecs=\"QuotedValue\"")]
         public void ValidProviderKeyword_CorrectlyParses(string providerToParse)
         {
