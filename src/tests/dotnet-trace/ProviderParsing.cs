@@ -73,8 +73,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         [Theory]
-        [InlineData("ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:2:2:key=value,ProviderThree:3:3:key=value")]
-        [InlineData("ProviderOne:1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:0x2:2:key=value,ProviderThree:0x3:3:key=value")]
+        [InlineData("ProviderOne:0x1:1:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:2:2:key=value,ProviderThree:3:3:key=value")]
+        [InlineData("ProviderOne:1:1:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:0x2:2:key=value,ProviderThree:0x3:3:key=value")]
         public void MultipleValidProviders_CorrectlyParses(string providersToParse)
         {
             List<Provider> parsedProviders = Extensions.ToProviders(providersToParse);
