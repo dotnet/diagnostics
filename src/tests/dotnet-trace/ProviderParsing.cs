@@ -35,8 +35,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         [Theory]
-        // [InlineData("VeryCool;Provider:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\"")]
-        // [InlineData("VeryCool;Provider:1:5:FilterAndPayloadSpecs=\"QuotedValue\"")]
         [InlineData(":::")]
         [InlineData(":1:1")]
         public void InvalidProvider_CorrectlyThrows(string providerToParse)
