@@ -4,9 +4,11 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <RootNamespace>Microsoft.Diagnostics.Tools.RuntimeClient</RootNamespace>
     <Description>.NET Core Diagnostics Runtime Client</Description>
-    <IsPackable>True</IsPackable>
+    <IsPackable>true</IsPackable>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <IsShippingAssembly>true</IsShippingAssembly>
   </PropertyGroup>
 </Project>

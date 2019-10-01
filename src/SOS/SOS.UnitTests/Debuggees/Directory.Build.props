@@ -5,6 +5,7 @@
   <PropertyGroup>
     <DebugType Condition="'$(TargetFramework)' == 'net462'">full</DebugType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsShippingAssembly>false</IsShippingAssembly>
     <Optimize>false</Optimize>
   </PropertyGroup>
 </Project>
