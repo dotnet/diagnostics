@@ -46,10 +46,14 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient.DiagnosticsIpc
                     .SingleOrDefault(input => Regex.IsMatch(input, $"^dotnet-diagnostic-{processId}-(\\d+)-socket$"));
                 if (ipcPort == null)
                 {
-                    throw new PlatformNotSupportedException($"Process {processId} not running compatible .NET Core runtime");
+                    throw new PlatformNotSupportedException($"Process {processId} is not running a compatible .NET Core runtime");
                 }
                 string path = Path.Combine(Path.GetTempPath(), ipcPort);
                 Type unixDomainSocketEndPointType = typeof(Socket).Assembly.GetType("System.Net.Sockets.UnixDomainSocketEndPoint");
+                if (unixDomainSocketEndPointType == null)
+                {
+                    throw new PlatformNotSupportedException($"Current process is not running a compatible .NET Core runtime");
+                }
                 var remoteEP = (EndPoint)Activator.CreateInstance(unixDomainSocketEndPointType, new object[]{path});
 
                 var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
