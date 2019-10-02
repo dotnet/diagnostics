@@ -551,11 +551,11 @@ UNINSTALL
       Uninstalling SOS from ~/.dotnet/sos
       Complete
 
-### dotnet-gcheapdump
+### dotnet-gcdump
 
 SYNOPSIS
 
-    dotnet-gcheapdump [--version]
+    dotnet-gcdump [--version]
                       [-h, --help]
                       <command> [<args>]
 
@@ -573,29 +573,29 @@ COMMANDS
 
 COLLECT
 
-    dotnet-gcheapdump collect -p|--process-id <pid> [-h|--help] [-o|--output <output_dump_path>]
+    dotnet-gcdump collect -p|--process-id <pid> [-h|--help] [-o|--output <output_dump_path>]
 
-    Capture GC Heap dumps from a dotnet process
+    Capture GC dumps from a dotnet process
 
     Usage:
-      dotnet-gcheapdump collect [options]
+      dotnet-gcdump collect [options]
 
     Options:
       -p, --process-id
-          The process to collect a gcheap dump from.
+          The process to collect a gc dump from.
 
       -h, --help
           Show command line help
 
       -o, --output
-          The path where collected dumps should be written. Defaults to '.\YYYYMMDD_HHMMSS.gcheapdump' where YYYYMMDD is Year/Month/Day
+          The path where collected dumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump' where YYYYMMDD is Year/Month/Day
           and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.
 
 Examples:
 
-    $ dotnet gcheapdump collect --process-id 1902
-    Writing gcheapdump to file ./20190226_135837.gcheapdump
-    Written 98983936 bytes file
+    $ dotnet gcdump collect --process-id 1902
+    Writing gcdump to file ./20190226_135837_1902.gcdump
+    Wrote 12576 bytes to file
     Complete
 
 ## Future suggestions
