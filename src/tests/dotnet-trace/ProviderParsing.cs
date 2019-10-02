@@ -28,7 +28,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         [Theory]
         [InlineData("VeryCoolProvider:0x1:5:FilterAndPayloadSpecs=\"QuotedValue:-\r\nQuoted/Value\"")]
-        [InlineData("VeryCoolProvider:1:5:FilterAndPayloadSpecs=\"QuotedValue:-\r\n\"")]
         public void ValidProviderFilter_CorrectlyParses(string providerToParse)
         {
             List<Provider> parsedProviders = Extensions.ToProviders(providerToParse);
@@ -87,14 +86,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [Theory]
         [InlineData("VeryCoolProvider:0xFFFFFFFFFFFFFFFFF:5:FilterAndPayloadSpecs=\"QuotedValue\"")]
         [InlineData("VeryCoolProvider:0x10000000000000000::FilterAndPayloadSpecs=\"QuotedValue\"")]
-        [InlineData("VeryCoolProvider:-1::FilterAndPayloadSpecs=\"QuotedValue\"")]
         public void OutOfRangekeyword_CorrectlyThrows(string providerToParse)
         {
             Assert.Throws<OverflowException>(() => Extensions.ToProviders(providerToParse));
         }
 
         [Theory]
-        [InlineData("VeryCoolProvider:0b10101010:5:FilterAndPayloadSpecs=\"QuotedValue\"")]
+        [InlineData("VeryCoolProvider:--:5:FilterAndPayloadSpecs=\"QuotedValue\"")]
         [InlineData("VeryCoolProvider:gh::FilterAndPayloadSpecs=\"QuotedValue\"")]
         public void Invalidkeyword_CorrectlyThrows(string providerToParse)
         {
@@ -143,7 +141,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [InlineData("ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:-1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderThree:3:3:key=value")]
         public void MultipleValidProvidersWithOneOutOfRangeKeyword_CorrectlyThrows(string providersToParse)
         {
-            Assert.Throws<ArgumentException>(() => Extensions.ToProviders(providersToParse));
+            Assert.Throws<OverflowException>(() => Extensions.ToProviders(providersToParse));
         }
 
         [Theory]
@@ -152,11 +150,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [InlineData("ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:$:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderThree:3:3:key=value")]
         public void MultipleValidProvidersWithOneInvalidKeyword_CorrectlyThrows(string providersToParse)
         {
-            Assert.Throws<ArgumentException>(() => Extensions.ToProviders(providersToParse));
+            Assert.Throws<FormatException>(() => Extensions.ToProviders(providersToParse));
         }
 
         [Theory]
-        [InlineData("ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue:-\r\nQuoted/Value:-A=B;C=D;\",ProviderTwo:2:2:FilterAndPayloadSpecs=\"QuotedValue\",ProviderThree:3:3:FilterAndPayloadSpecs=\"QuotedValue:-\r\nQuoted/Value:-A=B;C=D;\"")]
+        [InlineData("ProviderOne:0x1:1:FilterAndPayloadSpecs=\"QuotedValue:-\r\nQuoted/Value:-A=B;C=D;\",ProviderTwo:2:2:FilterAndPayloadSpecs=\"QuotedValue\",ProviderThree:3:3:FilterAndPayloadSpecs=\"QuotedValue:-\r\nQuoted/Value:-A=B;C=D;\"")]
         public void MultipleProvidersWithComplexFilters_CorrectlyParse(string providersToParse)
         {
             List<Provider> parsedProviders = Extensions.ToProviders(providersToParse);
