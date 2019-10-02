@@ -30,7 +30,6 @@
 
 #include <coreclrhost.h>
 #include <set>
-#include <string>
 
 #if defined(__APPLE__)
 #include <mach-o/dyld.h>
@@ -231,7 +230,7 @@ static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutabl
 /**********************************************************************\
  * Returns the coreclr module/runtime directory of the target.
 \**********************************************************************/
-static HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
+HRESULT GetCoreClrDirectory(std::string& coreClrDirectory)
 {
 #ifdef FEATURE_PAL
     LPCSTR directory = g_ExtServices->GetCoreClrDirectory();

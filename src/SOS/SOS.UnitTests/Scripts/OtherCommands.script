@@ -76,11 +76,10 @@ VERIFY:(\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*)?
 VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
 
 SOSCOMMAND:SyncBlk
-!IFDEF:LINUX
+# On Linux/MacOS we sometimes get "Error requesting SyncBlk data" error from the DAC.
+IFDEF:WINDOWS
 VERIFY:\s*Index\s+SyncBlock\s+MonitorHeld\s+Recursion\s+Owning\s+Thread\s+Info\s+SyncBlock\s+Owner\s+
 VERIFY:\s*Total\s+<DECVAL>
-IFDEF:WINDOWS
 VERIFY:\s*CCW\s+<DECVAL>
 VERIFY:\s*RCW\s+<DECVAL>
 ENDIF:WINDOWS
-ENDIF:LINUX

@@ -49,6 +49,7 @@ StopOnCatch
 SetHostRuntime
 SetSymbolServer
 SOSFlush
+SOSStatus
 SyncBlk
 Threads
 ThreadState
