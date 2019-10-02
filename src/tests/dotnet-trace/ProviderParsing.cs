@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.True(provider.Name == "VeryCoolProvider");
             Assert.True(provider.Keywords == 1);
             Assert.True(provider.EventLevel == System.Diagnostics.Tracing.EventLevel.Verbose);
-            Assert.True(provider.FilterData == "FilterAndPayloadSpecs=\"QuotedValue:-\r\n\"");
+            Assert.True(provider.FilterData == "FilterAndPayloadSpecs=\"QuotedValue:-\r\nQuoted/Value\"");
         }
 
         [Theory]
@@ -92,7 +92,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         [Theory]
-        [InlineData("VeryCoolProvider:--:5:FilterAndPayloadSpecs=\"QuotedValue\"")]
+        [InlineData("VeryCoolProvider:__:5:FilterAndPayloadSpecs=\"QuotedValue\"")]
         [InlineData("VeryCoolProvider:gh::FilterAndPayloadSpecs=\"QuotedValue\"")]
         public void Invalidkeyword_CorrectlyThrows(string providerToParse)
         {
@@ -138,14 +138,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [Theory]
         [InlineData("ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:0xFFFFFFFFFFFFFFFFF:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderThree:3:3:key=value")]
         [InlineData("ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:0x10000000000000000:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderThree:3:3:key=value")]
-        [InlineData("ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:-1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderThree:3:3:key=value")]
+        [InlineData("ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:18446744073709551615:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderThree:3:3:key=value")]
         public void MultipleValidProvidersWithOneOutOfRangeKeyword_CorrectlyThrows(string providersToParse)
         {
             Assert.Throws<OverflowException>(() => Extensions.ToProviders(providersToParse));
         }
 
         [Theory]
-        [InlineData("ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:--:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderThree:3:3:key=value")]
+        [InlineData("ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:__:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderThree:3:3:key=value")]
         [InlineData("ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:gh:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderThree:3:3:key=value")]
         [InlineData("ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:$:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderThree:3:3:key=value")]
         public void MultipleValidProvidersWithOneInvalidKeyword_CorrectlyThrows(string providersToParse)
