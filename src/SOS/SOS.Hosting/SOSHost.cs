@@ -318,7 +318,7 @@ namespace SOS
             int result = commandFunc(_interface, arguments ?? "");
             if (result != 0)
             {
-                throw new InvalidOperationException($"SOS command FAILED 0x{result:X8}");
+                Trace.TraceError($"SOS command FAILED 0x{result:X8}");
             }
         }
 

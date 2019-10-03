@@ -212,6 +212,8 @@ EXPORTS
     pathto=PathTo
     ProcInfo
     procinfo=ProcInfo
+    SOSStatus
+    sosstatus=SOSStatus
     VerifyStackTrace
     WatsonBuckets
 
