@@ -120,11 +120,10 @@
   <Target Name="GenerateSymbolsZip">
     <PropertyGroup>
       <SymbolsDir>$(ArtifactsBinDir)\symbols</SymbolsDir>
-      <SOSNETCorePath>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netstandard2.0\publish</SOSNETCorePath>
     </PropertyGroup>
 
     <ItemGroup>
-      <ZipSymbolFiles Include="$(SOSNETCorePath)\*.pdb">
+      <ZipSymbolFiles Include="$(ArtifactsSymStoreDirectory)\SOS.NETCore\netstandard2.0\*.pdb">
          <TargetPath>$(SymbolsDir)</TargetPath>
       </ZipSymbolFiles>
 

@@ -12,6 +12,7 @@
     <!-- Opt-out repo features -->
     <UsingToolXliff>false</UsingToolXliff>
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
+    <UsingToolSymbolUploader>true</UsingToolSymbolUploader>
 
     <!-- Build tools -->
     <MicrosoftNetCompilersVersion>3.0.0</MicrosoftNetCompilersVersion>
@@ -22,7 +23,7 @@
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
 
     <!-- Other libs -->
-    <MicrosoftSymbolStoreVersion>1.0.41901</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.50701</MicrosoftSymbolStoreVersion>
     <MicrosoftDiagnosticsRuntimeVersion>1.1.46104</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.44</MicrosoftDiagnosticsTracingTraceEventVersion>

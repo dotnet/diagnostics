@@ -5,6 +5,8 @@
   
   <PropertyGroup>
     <IsShipping>true</IsShipping>
+    <IsShippingAssembly>false</IsShippingAssembly>
+    <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
