@@ -106,10 +106,6 @@ VERIFY:\s+Hosted Runtime:\s+no\s+
 VERIFY:\s+ID\s+OSID\s+ThreadOBJ\s+State.*\s+
 VERIFY:\s+<DECVAL>\s+<DECVAL>\s+<HEXVAL>\s+<HEXVAL>.*\s+
 
-# dumpheap, dumpasync may not work on Windows and Alpine dotnet-dump
-# Issue: https://github.com/dotnet/diagnostics/issues/503
-!IFDEF:DOTNETDUMP
-
 SOSCOMMAND:DumpHeap -stat
 VERIFY:\s*Statistics:\s+
 VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
@@ -130,34 +126,3 @@ VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
 VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
 
 SOSCOMMAND:DumpAsync -mt <PREVOUT> -fields
-
-ENDIF:DOTNETDUMP
-
-# This duplication allows these commands to run on lldb/xplat
-# Issue: https://github.com/dotnet/diagnostics/issues/503
-!IFDEF:ALPINE
-!IFDEF:WINDOWS
-
-SOSCOMMAND:DumpHeap -stat
-VERIFY:\s*Statistics:\s+
-VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
-VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
-VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
-!VERIFY:.*UNKNOWN.*
-
-SOSCOMMAND:DumpAsync
-VERIFY:\s*Statistics:\s+
-VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
-VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
-VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
-
-SOSCOMMAND:DumpAsync -mt <POUT>\s+MT\s+Count\s+TotalSize\s+Class Name\s+(<HEXVAL>)\s+<DECVAL>\s+<DECVAL>\s+.*<POUT>
-VERIFY:\s*Statistics:\s+
-VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
-VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
-VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
-
-SOSCOMMAND:DumpAsync -mt <PREVOUT> -fields
-
-ENDIF:WINDOWS
-ENDIF:ALPINE

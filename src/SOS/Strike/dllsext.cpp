@@ -53,7 +53,10 @@ static void DllsNameFromPeb(
     )
 {
     ULONG64 ProcessPeb;
-    g_ExtSystem->GetCurrentProcessPeb (&ProcessPeb);
+    if (FAILED(g_ExtSystem->GetCurrentProcessPeb(&ProcessPeb)))
+    {
+        return;
+    }
 
     ULONG64 pLdrEntry;
     ULONG64 PebLdrAddress;

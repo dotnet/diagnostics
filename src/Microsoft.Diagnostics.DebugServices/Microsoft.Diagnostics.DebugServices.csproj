@@ -15,5 +15,11 @@
   
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
+    <PackageReference Include="System.Reflection.Metadata" Version="$(SystemReflectionMetadataVersion)" />
+    <PackageReference Include="System.Memory" Version="4.5.3" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\SOS\SOS.NETCore\SOS.NETCore.csproj" />
   </ItemGroup>
 </Project>
