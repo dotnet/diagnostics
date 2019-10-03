@@ -46,7 +46,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static void ConvertToSpeedscope(string fileToConvert, string outputFilename)
         {
-            var etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert);
+            var etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert, null, new TraceLogOptions() { ContinueOnError = true } );
             using (var symbolReader = new SymbolReader(System.IO.TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
             using (var eventLog = new TraceLog(etlxFilePath))
             {
