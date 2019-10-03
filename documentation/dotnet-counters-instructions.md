@@ -96,7 +96,7 @@ dotnet tool install --global dotnet-counters
 
     dotnet-counters monitor [-h||--help]
                             [-p|--process-id <pid>]
-                            [--refreshInterval <sec>]
+                            [--refresh-interval <sec>]
                             counter_list
     
     Display periodically refreshing values of selected counters
