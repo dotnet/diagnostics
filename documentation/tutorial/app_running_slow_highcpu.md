@@ -90,7 +90,7 @@ If you generated the traces using the Linux perf command, you can use the same p
 > sudo perf report -f
 > ```
 
-Alternatively, you can also generate a flamegrah by using the following commands:
+Alternatively, you can also generate a flamegraph by using the following commands:
 
 > ```bash
 > git clone --depth=1 https://github.com/BrendanGregg/FlameGraph
