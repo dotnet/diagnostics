@@ -7293,7 +7293,7 @@ public:
         IfFailRet(g_sos->GetModule(mod, &pModule));
 
         ToRelease<IMetaDataImport> pMDImport = NULL;
-        IfFailRet(pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport));
+        pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport);
 
         IfFailRet(pSymbolReader->LoadSymbols(pMDImport, pModule));
 

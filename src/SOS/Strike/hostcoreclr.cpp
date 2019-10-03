@@ -1111,6 +1111,9 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
     if (m_pSymReader != NULL) 
         return S_OK;
 
+    if (pMD == nullptr)
+        return E_INVALIDARG;
+
     if (g_pSymBinder == nullptr)
     {
         // Ignore errors to be able to run under a managed host (dotnet-dump).

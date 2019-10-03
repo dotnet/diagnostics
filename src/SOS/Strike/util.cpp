@@ -5489,7 +5489,7 @@ GetLineByOffset(
     IfFailRet(ConvertNativeToIlOffset(offset, &pModule, &methodToken, &methodOffs));
 
     ToRelease<IMetaDataImport> pMDImport(NULL);
-    IfFailRet(pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport));
+    pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport);
 
     SymbolReader symbolReader;
     IfFailRet(symbolReader.LoadSymbols(pMDImport, pModule));
