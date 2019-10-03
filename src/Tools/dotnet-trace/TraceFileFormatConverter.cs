@@ -35,7 +35,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 case TraceFileFormat.NetTrace:
                     break;
                 case TraceFileFormat.Speedscope:
-                    ConvertToSpeedscope(fileToConvert, outputFilename);
+                    try
+                    {
+                        ConvertToSpeedscope(fileToConvert, outputFilename);
+                    }
+                    catch (Exception)
+                    {
+                        Console.WriteLine("Detected a potentially broken trace. Continuing with best-efforts to convert the trace, but resulting speedscope file may contain broken stacks as a result.");
+                        ConvertToSpeedscope(fileToConvert, outputFilename, true);
+                    }
                     break;
                 default:
                     // Validation happened way before this, so we shoud never reach this...
@@ -44,9 +52,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console.Out.WriteLine("Conversion complete");
         }
 
-        private static void ConvertToSpeedscope(string fileToConvert, string outputFilename)
+        private static void ConvertToSpeedscope(string fileToConvert, string outputFilename, bool continueOnError=false)
         {
-            var etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert, null, new TraceLogOptions() { ContinueOnError = true } );
+            var etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert, null, new TraceLogOptions() { ContinueOnError = continueOnError } );
             using (var symbolReader = new SymbolReader(System.IO.TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
             using (var eventLog = new TraceLog(etlxFilePath))
             {
