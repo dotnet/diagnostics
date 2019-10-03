@@ -348,7 +348,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
             if (openedStepState.RunState == TestStepRunState.Complete)
             {
-                return "succesful steps are always reused";
+                return "successful steps are always reused";
             }
             else if(!IsPreviousMachineSame(openedStepState))
             {
