@@ -122,18 +122,11 @@ jobs:
 
     - ${{ if eq(parameters.osGroup, 'Linux') }}:
       - ${{ if eq(parameters.testOnly, 'true') }}:
-        - task: DownloadBuildArtifacts@0
-          displayName: Download Linux-x64 Artifacts
+        - task: DownloadPipelineArtifact@2
+          displayName: Download Linux Artifacts
           inputs:
             artifactName: $(_PortableLinuxBuild)
-            downloadPath: '$(System.ArtifactsDirectory)'
-          condition: succeeded()
-
-        - task: CopyFiles@2
-          displayName: Place Linux-x64 Artifacts
-          inputs:
-            sourceFolder: '$(System.ArtifactsDirectory)/$(_PortableLinuxBuild)'
-            targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Linux.x64.$(_BuildConfig)'
+            targetPath: '$(Build.SourcesDirectory)/artifacts/bin/Linux.$(_BuildArch).$(_BuildConfig)'
           condition: succeeded()
 
       - script: $(Build.SourcesDirectory)/eng/docker-build.sh 

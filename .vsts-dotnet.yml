@@ -300,6 +300,7 @@ jobs:
     - script: $(Build.SourcesDirectory)\eng\cipack.cmd
         -configuration Release
         -prepareMachine 
+        -verbosity normal
         /p:TeamName=$(_TeamName)
         /p:DotNetSignType=$(SignType) 
         /p:DotNetPublishBlobFeedKey=$(dotnetfeed-storage-access-key-1) 
@@ -319,10 +320,10 @@ jobs:
         arguments: -task PublishToSymbolServers -restore -msbuildEngine dotnet -configuration Release -verbosity normal
           /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
           /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
-          /p:BlobBasePath='$(Build.SourcesDirectory)/artifacts/packages/Release/NonShipping'
+          /p:PDBArtifactsDirectory='$(Build.SourcesDirectory)/artifacts/SymStore/**'
+          /p:BlobBasePath='$(Build.SourcesDirectory)/artifacts/packages/Release/**'
       continueOnError: true
       condition: and(succeeded(), eq(variables['PublishSymbols'], 'true'))
-
     # Publish package and log build artifacts
 
     - task: PublishBuildArtifacts@1
