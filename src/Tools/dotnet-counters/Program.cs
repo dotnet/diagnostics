@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Diagnostics.Tools.RuntimeClient;
+using Microsoft.Internal.Common.Commands;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -54,30 +55,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 new Option[] { },
                 handler: CommandHandler.Create<IConsole>(List));
 
-        private static Command ListProcessesCommand() =>
+        private static Command ProcessStatusCommand() =>
             new Command(
                 "ps",
                 "Display a list of dotnet processes that can be monitored.",
                 new Option[] { },
-                handler: CommandHandler.Create<IConsole>(ListProcesses));
-
-        private static int ListProcesses(IConsole console)
-        {
-            Console.Out.WriteLine(EventPipeClient.GetProcessStatus());
-            return 0;
-        }
-
-        private static System.Diagnostics.Process GetProcess(int processId)
-        {
-            try
-            {
-                return System.Diagnostics.Process.GetProcessById(processId);
-            }
-            catch (ArgumentException)
-            {
-                return null;
-            }
-        }
+                handler: CommandHandler.Create<IConsole>(ProcessStatusCommandHandler.PrintProcessStatus));
 
         public static int List(IConsole console)
         {
@@ -103,7 +86,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             var parser = new CommandLineBuilder()
                 .AddCommand(MonitorCommand())
                 .AddCommand(ListCommand())
-                .AddCommand(ListProcessesCommand())
+                .AddCommand(ProcessStatusCommand())
                 .UseDefaults()
                 .Build();
             return parser.InvokeAsync(args);

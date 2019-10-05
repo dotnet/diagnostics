@@ -3,10 +3,9 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Tools.RuntimeClient;
+using Microsoft.Internal.Common.Commands;
 using System;
 using System.CommandLine;
-using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Trace
@@ -15,7 +14,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         public static async Task<int> GetActivePorts(IConsole console)
         {
-            Console.Out.WriteLine(EventPipeClient.GetProcessStatus());
+            ProcessStatusCommandHandler.PrintProcessStatus(console);
             await Task.FromResult(0);
             return 0;
         }

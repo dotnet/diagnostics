@@ -20,6 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Common\Commands\ListProcesses.cs" Link="ListProcesses.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="DotnetTrace.UnitTests" />
   </ItemGroup>
 

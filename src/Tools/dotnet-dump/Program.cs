@@ -8,6 +8,7 @@ using System.CommandLine.Invocation;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Tools.RuntimeClient;
+using Microsoft.Internal.Common.Commands;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -23,12 +24,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 .Build();
 
             return parser.InvokeAsync(args);
-        }
-
-        private static int ListProcesses(IConsole console)
-        {
-            console.Out.WriteLine(EventPipeClient.GetProcessStatus());
-            return 0;
         }
 
         private static Command CollectCommand() =>
@@ -93,6 +88,6 @@ If not specified 'heap' is the default.",
                 "ps",
                 "Display a list of dotnet processes to create dump from.",
                 new Option[] { },
-                handler: CommandHandler.Create<IConsole>(ListProcesses));
+                handler: CommandHandler.Create<IConsole>(ProcessStatusCommandHandler.PrintProcessStatus));
     }
 }
