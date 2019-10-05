@@ -13,10 +13,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [Command(Name = "logging", Help = "Enable/disable internal logging")]
     public class LoggingCommand : CommandBase
     {
-        [Option(Name = "enable", Help = "Enable internal loggging.")]
+        [Option(Name = "enable", Help = "Enable internal logging.")]
         public bool Enable { get; set; }
 
-        [Option(Name = "disable", Help = "Disable internal loggging.")]
+        [Option(Name = "disable", Help = "Disable internal logging.")]
         public bool Disable { get; set; }
 
         private const string ListenerName = "Analyze.LoggingListener";
