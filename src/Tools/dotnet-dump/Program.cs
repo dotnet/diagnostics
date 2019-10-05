@@ -86,7 +86,7 @@ If not specified 'heap' is the default.",
         private static Command ProcessStatusCommand() =>
             new Command(
                 "ps",
-                "Display a list of dotnet processes to create dump from.",
+                "Display a list of dotnet processes to create dump from",
                 new Option[] { },
                 handler: CommandHandler.Create<IConsole>(ProcessStatusCommandHandler.PrintProcessStatus));
     }
