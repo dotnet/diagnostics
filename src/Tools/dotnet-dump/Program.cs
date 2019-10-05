@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             var parser = new CommandLineBuilder()
                 .AddCommand(CollectCommand())
                 .AddCommand(AnalyzeCommand())
-                .AddCommand(ListProcessesCommand())
+                .AddCommand(ProcessStatusCommand())
                 .UseDefaults()
                 .Build();
 
@@ -83,7 +83,7 @@ If not specified 'heap' is the default.",
                 "Run the command on start.",
                 new Argument<string[]>() { Name = "command", Arity = ArgumentArity.ZeroOrMore });
 
-        private static Command ListProcessesCommand() =>
+        private static Command ProcessStatusCommand() =>
             new Command(
                 "ps",
                 "Display a list of dotnet processes to create dump from.",

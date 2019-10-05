@@ -15,11 +15,8 @@ namespace Microsoft.Internal.Common.Commands
     public class ProcessStatusCommandHandler
     {
         /// <summary>
-        /// Get all active process ports
+        /// Print the current list of available .NET core processes for diagnosis and their statuses
         /// </summary>
-        /// <returns>
-        /// A collection of string identifiers that show the current processes
-        /// </returns>
         public static void PrintProcessStatus(IConsole console)
         {
             try
