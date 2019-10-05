@@ -39,10 +39,19 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     {
                         ConvertToSpeedscope(fileToConvert, outputFilename);
                     }
-                    catch (Exception)
+                    // TODO: On a broken/truncated trace, the exception we get from TraceEvent is a plain System.Exception type because it gets caught and rethrown inside TraceEvent.
+                    // We should probably modify TraceEvent to throw a better exception.
+                    catch (Exception ex)
                     {
-                        Console.WriteLine("Detected a potentially broken trace. Continuing with best-efforts to convert the trace, but resulting speedscope file may contain broken stacks as a result.");
-                        ConvertToSpeedscope(fileToConvert, outputFilename, true);
+                        if (ex.ToString().Contains("Read past end of stream."))
+                        {
+                            Console.WriteLine("Detected a potentially broken trace. Continuing with best-efforts to convert the trace, but resulting speedscope file may contain broken stacks as a result.");
+                            ConvertToSpeedscope(fileToConvert, outputFilename, true);
+                        }
+                        else
+                        {
+                            Console.WriteLine(ex);
+                        }
                     }
                     break;
                 default:
