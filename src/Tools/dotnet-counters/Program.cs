@@ -56,31 +56,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private static Command ListProcessesCommand() =>
             new Command(
-                "list-processes",
+                "ps",
                 "Display a list of dotnet processes that can be monitored.",
                 new Option[] { },
                 handler: CommandHandler.Create<IConsole>(ListProcesses));
 
         private static int ListProcesses(IConsole console)
         {
-            var processes = EventPipeClient.ListAvailablePorts()
-                .Select(GetProcess)
-                .Where(process => process != null)
-                .OrderBy(process => process.ProcessName)
-                .ThenBy(process => process.Id);
-
-            foreach (var process in processes)
-            {
-                try
-                {
-                    console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}");
-                }
-                catch (Exception)
-                {
-                    console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]");
-                }
-            }
-
+            Console.Out.WriteLine(EventPipeClient.GetProcessStatus());
             return 0;
         }
 

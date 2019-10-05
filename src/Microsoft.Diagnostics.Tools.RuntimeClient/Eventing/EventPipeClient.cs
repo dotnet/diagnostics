@@ -13,6 +13,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Microsoft.Diagnostics.Tools.RuntimeClient
@@ -63,6 +64,43 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                 .Select(namedPipe => (new FileInfo(namedPipe)).Name)
                 .Where(input => Regex.IsMatch(input, DiagnosticsPortPattern))
                 .Select(input => int.Parse(Regex.Match(input, DiagnosticsPortPattern).Groups[1].Value, NumberStyles.Integer));
+        }
+
+        /// <summary>
+        /// Get all active process ports
+        /// </summary>
+        /// <returns>
+        /// A collection of string identifiers that show the current processes
+        /// </returns>
+        public static string GetProcessStatus()
+        {
+            try
+            {
+                StringBuilder sb = new StringBuilder();
+                var processes = ListAvailablePorts()
+                    .Select(GetProcessById)
+                    .Where(process => process != null)
+                    .OrderBy(process => process.ProcessName)
+                    .ThenBy(process => process.Id);
+
+
+                foreach (var process in processes)
+                {
+                    try
+                    {
+                        sb.Append($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}\n");
+                    }
+                    catch (Exception)
+                    {
+                        sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
+                    }
+                }
+                return sb.ToString();
+            }
+            catch (Exception ex)
+            {
+                return ex.ToString();
+            }
         }
 
         /// <summary>
@@ -140,6 +178,18 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
                     return 0;
                 default:
                     return 0;
+            }
+        }
+
+        private static Process GetProcessById(int processId)
+        {
+            try
+            {
+                return Process.GetProcessById(processId);
+            }
+            catch (ArgumentException)
+            {
+                return null;
             }
         }
 

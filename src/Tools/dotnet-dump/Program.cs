@@ -7,6 +7,7 @@ using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Tools.RuntimeClient;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -17,10 +18,17 @@ namespace Microsoft.Diagnostics.Tools.Dump
             var parser = new CommandLineBuilder()
                 .AddCommand(CollectCommand())
                 .AddCommand(AnalyzeCommand())
+                .AddCommand(ListProcessesCommand())
                 .UseDefaults()
                 .Build();
 
             return parser.InvokeAsync(args);
+        }
+
+        private static int ListProcesses(IConsole console)
+        {
+            console.Out.WriteLine(EventPipeClient.GetProcessStatus());
+            return 0;
         }
 
         private static Command CollectCommand() =>
@@ -79,5 +87,12 @@ If not specified 'heap' is the default.",
                 new[] { "-c", "--command" },
                 "Run the command on start.",
                 new Argument<string[]>() { Name = "command", Arity = ArgumentArity.ZeroOrMore });
+
+        private static Command ListProcessesCommand() =>
+            new Command(
+                "ps",
+                "Display a list of dotnet processes to create dump from.",
+                new Option[] { },
+                handler: CommandHandler.Create<IConsole>(ListProcesses));
     }
 }
