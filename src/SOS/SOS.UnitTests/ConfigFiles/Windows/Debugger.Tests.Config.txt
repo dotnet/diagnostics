@@ -107,14 +107,14 @@
         <!--
             SOS.WebApp (runs only on Windows 2.x aspnetcore)
           -->
-        <Option>
+        <Option Condition="'$(DailyTest)' != 'true'">
           <TestName>SOS.WebApp</TestName>
           <Options>
-            <Option Condition="'$(DailyTest)' != 'true'">
+            <Option>
               <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersion22)</RuntimeFrameworkVersion>
             </Option>
-            <Option Condition="'$(DailyTest)' != 'true'">
+            <Option>
               <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
             </Option>
