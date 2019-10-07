@@ -13,6 +13,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Microsoft.Diagnostics.Tools.RuntimeClient
