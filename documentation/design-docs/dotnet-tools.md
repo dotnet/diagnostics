@@ -148,6 +148,7 @@ OPTIONS
 COMMANDS
 
     list      Display a list of counter names and descriptions
+    ps        Display a list of dotnet processes that can be monitored
     monitor   Display periodically refreshing values of selected counters
 
 LIST
@@ -247,7 +248,7 @@ OPTIONS
 COMMANDS
 
     collect         Collects a diagnostic trace from a currently running process
-    list-processes  Lists dotnet processes that can be attached to.
+    ps              Lists dotnet processes that can be attached to.
     list-profiles   Lists pre-built tracing profiles with a description of what providers and filters are in each profile.
     convert         Converts traces to alternate formats for use with alternate trace analysis tools
 
@@ -355,6 +356,7 @@ COMMANDS
 
     collect   Capture dumps from a process
     analyze   Starts an interactive shell with debugging commands to explore a dump
+    ps        Display a list of dotnet processes to create dump from
 
 COLLECT
 
