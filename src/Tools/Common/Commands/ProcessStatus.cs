@@ -34,14 +34,14 @@ namespace Microsoft.Internal.Common.Commands
                     {
                         sb.Append($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}\n");
                     }
-                    catch (Exception)
+                    catch (InvalidOperationException)
                     {
                         sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
                     }
                 }
                 console.Out.WriteLine(sb.ToString());
             }
-            catch (Exception ex)
+            catch (InvalidOperationException ex)
             {
                 console.Out.WriteLine(ex.ToString());
             }
