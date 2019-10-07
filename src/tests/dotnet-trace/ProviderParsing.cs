@@ -181,6 +181,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         [Theory]
         [InlineData("ProviderOne:0x1:Verbose")]
+        [InlineData("ProviderOne:0x1:verbose")]
         public void TextLevelProviderSpecVerbose_CorrectlyParse(string providerToParse)
         {
             List<Provider> parsedProviders = Extensions.ToProviders(providerToParse);
@@ -192,6 +193,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         [Theory]
         [InlineData("ProviderOne:0x1:Informational")]
+        [InlineData("ProviderOne:0x1:INFORMATIONAL")]
         public void TextLevelProviderSpecInformational_CorrectlyParse(string providerToParse)
         {
             List<Provider> parsedProviders = Extensions.ToProviders(providerToParse);
@@ -203,6 +205,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         [Theory]
         [InlineData("ProviderOne:0x1:LogAlways")]
+        [InlineData("ProviderOne:0x1:LogAlwayS")]        
         public void TextLevelProviderSpecLogAlways_CorrectlyParse(string providerToParse)
         {
             List<Provider> parsedProviders = Extensions.ToProviders(providerToParse);
@@ -214,6 +217,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         [Theory]
         [InlineData("ProviderOne:0x1:Error")]
+        [InlineData("ProviderOne:0x1:ERRor")]
         public void TextLevelProviderSpecError_CorrectlyParse(string providerToParse)
         {
             List<Provider> parsedProviders = Extensions.ToProviders(providerToParse);
@@ -225,6 +229,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         [Theory]
         [InlineData("ProviderOne:0x1:Critical")]
+        [InlineData("ProviderOne:0x1:CRITICAL")]
         public void TextLevelProviderSpecCritical_CorrectlyParse(string providerToParse)
         {
             List<Provider> parsedProviders = Extensions.ToProviders(providerToParse);
@@ -236,6 +241,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         [Theory]
         [InlineData("ProviderOne:0x1:Warning")]
+        [InlineData("ProviderOne:0x1:warning")]
         public void TextLevelProviderSpecWarning_CorrectlyParse(string providerToParse)
         {
             List<Provider> parsedProviders = Extensions.ToProviders(providerToParse);

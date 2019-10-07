@@ -13,6 +13,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
     internal static class Extensions
     {
         private static EventLevel defaultEventLevel = EventLevel.Verbose;
+
         public static List<Provider> ToProviders(string providers)
         {
             if (providers == null)
@@ -30,19 +31,19 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             else
             {
-                switch (token)
+                switch (token.ToLower())
                 {
-                    case "Critical":
+                    case "critical":
                         return EventLevel.Critical;
-                    case "Error":
+                    case "error":
                         return EventLevel.Error;
-                    case "Informational":
+                    case "informational":
                         return EventLevel.Informational;
-                    case "LogAlways":
+                    case "logalways":
                         return EventLevel.LogAlways;
-                    case "Verbose":
+                    case "verbose":
                         return EventLevel.Verbose;
-                    case "Warning":
+                    case "warning":
                         return EventLevel.Warning;
                     default:
                         throw new ArgumentException($"Unknown EventLevel: {token}");
