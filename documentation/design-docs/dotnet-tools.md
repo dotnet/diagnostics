@@ -290,7 +290,7 @@ COLLECT
             Provider format: KnownProviderName[:Keywords[:Level][:KeyValueArgs]]
                 KnownProviderName       - The provider's name
                 Keywords                - 8 character hex number bit mask
-                Level                   - A number in the range [0, 5]
+                Level                   - A number in the range [0, 5], or their corresponding text values (refer to https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.tracing.eventlevel?view=netframework-4.8).
                 KeyValueArgs            - A semicolon separated list of key=value
             KeyValueArgs format: '[key1=value1][;key2=value2]'
 
