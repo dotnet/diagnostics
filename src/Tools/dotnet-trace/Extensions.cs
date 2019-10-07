@@ -45,7 +45,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     case "Warning":
                         return EventLevel.Warning;
                     default:
-                        return defaultEventLevel;
+                        throw new ArgumentException($"Unknown EventLevel: {token}");
                 }
             }
         }
