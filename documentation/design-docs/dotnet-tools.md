@@ -302,11 +302,21 @@ COLLECT
 
 
     Examples:
+      
+      To perform a default `cpu-tracing` profiling:
+
       > dotnet trace collect --process-id 1902
       No profile or providers specified, defaulting to trace profile 'cpu-sampling'
       Recording trace 38MB
 
       's' - stop tracing
+
+
+      To collect just the GC keyword events from the .NET runtime at informational level:
+
+      > dotnet trace collect --process-id 1902 --providers Microsoft-Windows-DotNETRuntime:0x1:Informational
+
+
 
 CONVERT
 
