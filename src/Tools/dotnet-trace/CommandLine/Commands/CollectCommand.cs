@@ -305,13 +305,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new Option(
                 alias: "--providers",
                 description: @"A comma delimitted list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]'," +
-                             @"where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: " +
+                             @"where Provider is in the form: 'KnownProviderName[:[Flags][:[Level][:[KeyValueArgs]]]]', and KeyValueArgs is in the form: " +
                              @"'[key1=value1][;key2=value2]'.  Values in KeyValueArgs that contain ';' or '=' characters need to be surrounded by '""', " +
                              @"e.g., FilterAndPayloadSpecs=""MyProvider/MyEvent:-Prop1=Prop1;Prop2=Prop2.A.B;"".  Depending on your shell, you may need to " +
                              @"escape the '""' characters and/or surround the entire provider specification in quotes, e.g., " +
                              @"--providers 'Name:1:1:FilterSpec=\""MyProvider/MyEvent:-Prop1=Prop1;Prop2=Prop2.A.B;\""'. These providers are in " +
                              @"addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the " +
-                             @"configuration here takes precedence over the implicit configuration from the profile.",
+                             @"configuration here takes precedence over the implicit configuration from the profile.  See documentation for examples.",
                 argument: new Argument<string>(defaultValue: "") { Name = "list-of-comma-separated-providers" }, // TODO: Can we specify an actual type?
                 isHidden: false);
 
