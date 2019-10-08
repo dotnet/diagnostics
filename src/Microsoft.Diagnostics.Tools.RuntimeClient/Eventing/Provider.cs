@@ -51,15 +51,8 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             return !(left == right);
         }
 
-        // override object.Equals
         public override bool Equals(object obj)
         {
-            //
-            // See the full list of guidelines at
-            //   http://go.microsoft.com/fwlink/?LinkID=85237
-            // and also the guidance for operator== at
-            //   http://go.microsoft.com/fwlink/?LinkId=85238
-            //
             
             if (obj == null || GetType() != obj.GetType())
             {
@@ -68,11 +61,15 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             
             return this == (Provider)obj;
         }
-        
-        // override object.GetHashCode
+
         public override int GetHashCode()
         {
-            return base.GetHashCode();
+            int hash = 0;
+            hash ^= this.Name.GetHashCode();
+            hash ^= this.Keywords.GetHashCode();
+            hash ^= this.EventLevel.GetHashCode();
+            hash ^= this.FilterData.GetHashCode();
+            return hash;
         }
     }
 }
