@@ -35,7 +35,24 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 case TraceFileFormat.NetTrace:
                     break;
                 case TraceFileFormat.Speedscope:
-                    ConvertToSpeedscope(fileToConvert, outputFilename);
+                    try
+                    {
+                        ConvertToSpeedscope(fileToConvert, outputFilename);
+                    }
+                    // TODO: On a broken/truncated trace, the exception we get from TraceEvent is a plain System.Exception type because it gets caught and rethrown inside TraceEvent.
+                    // We should probably modify TraceEvent to throw a better exception.
+                    catch (Exception ex)
+                    {
+                        if (ex.ToString().Contains("Read past end of stream."))
+                        {
+                            Console.WriteLine("Detected a potentially broken trace. Continuing with best-efforts to convert the trace, but resulting speedscope file may contain broken stacks as a result.");
+                            ConvertToSpeedscope(fileToConvert, outputFilename, true);
+                        }
+                        else
+                        {
+                            Console.WriteLine(ex);
+                        }
+                    }
                     break;
                 default:
                     // Validation happened way before this, so we shoud never reach this...
@@ -44,9 +61,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console.Out.WriteLine("Conversion complete");
         }
 
-        private static void ConvertToSpeedscope(string fileToConvert, string outputFilename)
+        private static void ConvertToSpeedscope(string fileToConvert, string outputFilename, bool continueOnError=false)
         {
-            var etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert);
+            var etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert, null, new TraceLogOptions() { ContinueOnError = continueOnError } );
             using (var symbolReader = new SymbolReader(System.IO.TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
             using (var eventLog = new TraceLog(etlxFilePath))
             {
