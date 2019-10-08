@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return ErrorCodes.ArgumentError;
                     }
 
-                    Extensions.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
+                    Profile.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
                 }
 
 

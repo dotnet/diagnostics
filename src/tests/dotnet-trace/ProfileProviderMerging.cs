@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 .FirstOrDefault(p => p.Name.Equals(profileName, StringComparison.OrdinalIgnoreCase));
             Assert.NotNull(selectedProfile);
 
-            Extensions.MergeProfileAndProviders(selectedProfile, parsedProviders, enabledBy);
+            Profile.MergeProfileAndProviders(selectedProfile, parsedProviders, enabledBy);
 
             var enabledProvider = parsedProviders.SingleOrDefault(p => p.Name == "Microsoft-Windows-DotNETRuntime");
             Assert.True(enabledProvider != default(Provider));
