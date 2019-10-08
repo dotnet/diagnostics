@@ -178,5 +178,84 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.True(providerThree.EventLevel == System.Diagnostics.Tracing.EventLevel.Warning);
             Assert.True(providerThree.FilterData == "FilterAndPayloadSpecs=\"QuotedValue:-\r\nQuoted/Value:-A=B;C=D;\"");
         }
+
+        [Theory]
+        [InlineData("ProviderOne:0x1:Verbose")]
+        [InlineData("ProviderOne:0x1:verbose")]
+        public void TextLevelProviderSpecVerbose_CorrectlyParse(string providerToParse)
+        {
+            List<Provider> parsedProviders = Extensions.ToProviders(providerToParse);
+            Assert.True(parsedProviders.Count == 1);
+            Assert.True(parsedProviders[0].Name == "ProviderOne");
+            Assert.True(parsedProviders[0].Keywords == 1);
+            Assert.True(parsedProviders[0].EventLevel == System.Diagnostics.Tracing.EventLevel.Verbose);
+        }
+
+        [Theory]
+        [InlineData("ProviderOne:0x1:Informational")]
+        [InlineData("ProviderOne:0x1:INFORMATIONAL")]
+        public void TextLevelProviderSpecInformational_CorrectlyParse(string providerToParse)
+        {
+            List<Provider> parsedProviders = Extensions.ToProviders(providerToParse);
+            Assert.True(parsedProviders.Count == 1);
+            Assert.True(parsedProviders[0].Name == "ProviderOne");
+            Assert.True(parsedProviders[0].Keywords == 1);
+            Assert.True(parsedProviders[0].EventLevel == System.Diagnostics.Tracing.EventLevel.Informational);
+        }
+
+        [Theory]
+        [InlineData("ProviderOne:0x1:LogAlways")]
+        [InlineData("ProviderOne:0x1:LogAlwayS")]        
+        public void TextLevelProviderSpecLogAlways_CorrectlyParse(string providerToParse)
+        {
+            List<Provider> parsedProviders = Extensions.ToProviders(providerToParse);
+            Assert.True(parsedProviders.Count == 1);
+            Assert.True(parsedProviders[0].Name == "ProviderOne");
+            Assert.True(parsedProviders[0].Keywords == 1);
+            Assert.True(parsedProviders[0].EventLevel == System.Diagnostics.Tracing.EventLevel.LogAlways);
+        }
+
+        [Theory]
+        [InlineData("ProviderOne:0x1:Error")]
+        [InlineData("ProviderOne:0x1:ERRor")]
+        public void TextLevelProviderSpecError_CorrectlyParse(string providerToParse)
+        {
+            List<Provider> parsedProviders = Extensions.ToProviders(providerToParse);
+            Assert.True(parsedProviders.Count == 1);
+            Assert.True(parsedProviders[0].Name == "ProviderOne");
+            Assert.True(parsedProviders[0].Keywords == 1);
+            Assert.True(parsedProviders[0].EventLevel == System.Diagnostics.Tracing.EventLevel.Error);
+        }
+
+        [Theory]
+        [InlineData("ProviderOne:0x1:Critical")]
+        [InlineData("ProviderOne:0x1:CRITICAL")]
+        public void TextLevelProviderSpecCritical_CorrectlyParse(string providerToParse)
+        {
+            List<Provider> parsedProviders = Extensions.ToProviders(providerToParse);
+            Assert.True(parsedProviders.Count == 1);
+            Assert.True(parsedProviders[0].Name == "ProviderOne");
+            Assert.True(parsedProviders[0].Keywords == 1);
+            Assert.True(parsedProviders[0].EventLevel == System.Diagnostics.Tracing.EventLevel.Critical);
+        }
+
+        [Theory]
+        [InlineData("ProviderOne:0x1:Warning")]
+        [InlineData("ProviderOne:0x1:warning")]
+        public void TextLevelProviderSpecWarning_CorrectlyParse(string providerToParse)
+        {
+            List<Provider> parsedProviders = Extensions.ToProviders(providerToParse);
+            Assert.True(parsedProviders.Count == 1);
+            Assert.True(parsedProviders[0].Name == "ProviderOne");
+            Assert.True(parsedProviders[0].Keywords == 1);
+            Assert.True(parsedProviders[0].EventLevel == System.Diagnostics.Tracing.EventLevel.Warning);
+        }
+
+        [Theory]
+        [InlineData("ProviderOne:0x1:UnknownLevel")]
+        public void TextLevelProviderSpec_CorrectlyThrows(string providerToParse)
+        {
+            Assert.Throws<ArgumentException>(() => Extensions.ToProviders(providerToParse));
+        }
     }
 }

@@ -291,7 +291,7 @@ COLLECT
             Provider format: KnownProviderName[:Keywords[:Level][:KeyValueArgs]]
                 KnownProviderName       - The provider's name
                 Keywords                - 8 character hex number bit mask
-                Level                   - A number in the range [0, 5]
+                Level                   - A number in the range [0, 5], or their corresponding text values (refer to https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.tracing.eventlevel?view=netframework-4.8).
                 KeyValueArgs            - A semicolon separated list of key=value
             KeyValueArgs format: '[key1=value1][;key2=value2]'
 
@@ -303,11 +303,21 @@ COLLECT
 
 
     Examples:
+      
+      To perform a default `cpu-tracing` profiling:
+
       > dotnet trace collect --process-id 1902
       No profile or providers specified, defaulting to trace profile 'cpu-sampling'
       Recording trace 38MB
 
       's' - stop tracing
+
+
+      To collect just the GC keyword events from the .NET runtime at informational level:
+
+      > dotnet trace collect --process-id 1902 --providers Microsoft-Windows-DotNETRuntime:0x1:Informational
+
+
 
 CONVERT
 
