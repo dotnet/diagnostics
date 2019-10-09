@@ -4,11 +4,9 @@
 # 3) Take a dump of the executable.
 # 4) Open the dump and compare the output
 
-LOADSOS
-
-IFDEF:LIVE
 CONTINUE
-ENDIF:LIVE
+
+LOADSOS
 
 # Verifying that PrintException gives us the right exception in the format above.
 SOSCOMMAND:PrintException
@@ -25,3 +23,28 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Dd]iv[Zz]ero.*!C\.F2(\(.*\))?\+0x<HEXVAL>\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Dd]iv[Zz]ero.*!C\.Main(\(.*\))?\+0x<HEXVAL>\s+
 VERIFY:(StackTraceString: <none>\s+)?\s+
 VERIFY:HResult:\s+80020012\s+
+
+# Verify that Threads (clrthreads) works
+IFDEF:DOTNETDUMP
+SOSCOMMAND:clrthreads
+ENDIF:DOTNETDUMP
+!IFDEF:DOTNETDUMP
+SOSCOMMAND:Threads
+ENDIF:DOTNETDUMP
+VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
+VERIFY:\s+UnstartedThread:\s+<DECVAL>\s+
+VERIFY:\s+BackgroundThread:\s+<DECVAL>\s+
+VERIFY:\s+PendingThread:\s+<DECVAL>\s+
+VERIFY:\s+DeadThread:\s+<DECVAL>\s+
+VERIFY:\s+Hosted Runtime:\s+no\s+
+VERIFY:\s+ID\s+OSID\s+ThreadOBJ\s+State.*\s+
+VERIFY:\s+<DECVAL>\s+<DECVAL>\s+<HEXVAL>\s+<HEXVAL>.*\s+
+
+# Verify that ClrStack with no options works
+SOSCOMMAND:ClrStack
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+(\*\*\* WARNING: Unable to verify checksum for DivZero.exe\s*)?C\.DivideByZero(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ 12\s*\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+C\.F3(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ 21\s*\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+C\.F2(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ 33\s*\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+C\.Main(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ 54\s*\]\s+

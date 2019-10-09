@@ -8,7 +8,8 @@
     <Description>Diagnostic test support</Description>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <PackageTags>tests</PackageTags>
-    <DebugType>embedded</DebugType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <IsShippingAssembly>true</IsShippingAssembly>
   </PropertyGroup>
   
   <ItemGroup>

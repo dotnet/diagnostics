@@ -103,7 +103,7 @@ namespace SOS
             builder.AddMethod(new GetExtensionFunctionDelegate((self, handle, functionName, function) => DebugClient.NotImplemented));
             builder.AddMethod(new GetWindbgExtensionApis32Delegate((self, api) => DebugClient.NotImplemented));
             builder.AddMethod(new GetWindbgExtensionApis64Delegate((self, api) => DebugClient.NotImplemented));
-            builder.AddMethod(new GetNumberEventFiltersDelegate((self, specificEvents, specificExceptions, arbitaryExceptions) => DebugClient.NotImplemented));
+            builder.AddMethod(new GetNumberEventFiltersDelegate((self, specificEvents, specificExceptions, arbitraryExceptions) => DebugClient.NotImplemented));
             builder.AddMethod(new GetEventFilterTextDelegate((self, index, buffer, bufferSize, textSize) => DebugClient.NotImplemented));
             builder.AddMethod(new GetEventFilterCommandDelegate((self, index, buffer, bufferSize, commandSize) => DebugClient.NotImplemented));
             builder.AddMethod(new SetEventFilterCommandDelegate((self, index, command) => DebugClient.NotImplemented));

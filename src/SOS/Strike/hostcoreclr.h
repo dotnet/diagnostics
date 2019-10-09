@@ -60,9 +60,13 @@ static const char *MetadataHelperClassName = "SOS.MetadataHelper";
 
 extern HMODULE g_hInstance;
 extern LPCSTR g_hostRuntimeDirectory;
+extern LPCSTR g_dacFilePath;
+extern LPCSTR g_dbiFilePath;
+extern LPCSTR g_tmpPath;
 extern SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
 
 extern HRESULT GetCoreClrDirectory(LPWSTR modulePath, int modulePathSize);
+extern HRESULT GetCoreClrDirectory(std::string& coreClrDirectory);
 extern LPCSTR GetDacFilePath();
 extern LPCSTR GetDbiFilePath();
 extern BOOL IsHostingInitialized();

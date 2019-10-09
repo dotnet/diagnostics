@@ -118,7 +118,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
             if (!provider.Counters.TryGetValue(name, out ObservedCounter counter))
             {
-                string displayName = provider.KnownProvider?.TryGetDisplayName(name) ?? payload.GetDisplay() ?? name;
+                string displayName = provider.KnownProvider?.TryGetDisplayName(name) ?? (string.IsNullOrWhiteSpace(payload.GetDisplay()) ? name : payload.GetDisplay());
                 provider.Counters[name] = counter = new ObservedCounter(displayName);
                 maxNameLength = Math.Max(maxNameLength, displayName.Length);
                 redraw = true;

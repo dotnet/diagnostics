@@ -150,7 +150,8 @@ public:
                 GCEncodingInfo * pGCEncodingInfo, 
                 SOSEHInfo *pEHInfo,
                 BOOL bSuppressLines,
-                BOOL bDisplayOffsets) const;
+                BOOL bDisplayOffsets,
+                std::function<void(ULONG*, UINT*, BYTE*)> displayIL) const;
     virtual void IsReturnAddress(
                 TADDR retAddr, 
                 TADDR* whereCalled) const;
@@ -215,7 +216,8 @@ public:
                 GCEncodingInfo *pGCEncodingInfo, 
                 SOSEHInfo *pEHInfo,
                 BOOL bSuppressLines,
-                BOOL bDisplayOffsets) const;
+                BOOL bDisplayOffsets,
+                std::function<void(ULONG*, UINT*, BYTE*)> displayIL) const;
     virtual void IsReturnAddress(
                 TADDR retAddr, 
                 TADDR* whereCalled) const;
@@ -282,7 +284,8 @@ public:
                 GCEncodingInfo *pGCEncodingInfo, 
                 SOSEHInfo *pEHInfo,
                 BOOL bSuppressLines,
-                BOOL bDisplayOffsets) const;
+                BOOL bDisplayOffsets,
+                std::function<void(ULONG*, UINT*, BYTE*)> displayIL) const;
 
     virtual void IsReturnAddress(
                 TADDR retAddr, 
@@ -348,7 +351,8 @@ public:
                 GCEncodingInfo *pGCEncodingInfo, 
                 SOSEHInfo *pEHInfo,
                 BOOL bSuppressLines,
-                BOOL bDisplayOffsets) const;
+                BOOL bDisplayOffsets,
+                std::function<void(ULONG*, UINT*, BYTE*)> displayIL) const;
     virtual void IsReturnAddress(
                 TADDR retAddr, 
                 TADDR* whereCalled) const;

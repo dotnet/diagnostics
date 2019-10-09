@@ -20,9 +20,8 @@
   <DumpDir>$(RootBinDir)/tmp/$(TargetConfiguration)\dumps</DumpDir>
   
   <DebuggeeSourceRoot>$(RepoRootDir)/src/SOS/SOS.UnitTests/Debuggees</DebuggeeSourceRoot>
-  <DebuggeeBuildRoot>$(RootBinDir)/Debuggees</DebuggeeBuildRoot>
-  <DebuggeeNativeLibRoot>$(DebuggeeBuildRoot)/native</DebuggeeNativeLibRoot>
-  <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
+  <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
+  <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
   <CliPath>$(RepoRootDir)/.dotnet/dotnet</CliPath>
 
   <NuGetPackageFeeds>
@@ -31,31 +30,83 @@
   </NuGetPackageFeeds>
 
   <Options>
+    <!--
+        Default (prebuilt)
+      -->
     <Option>
-      <!-- Build the debuggee for 2.1 but run it on latest -->
-      <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion21)</BuildProjectMicrosoftNetCoreAppVersion>
-      <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
+      <!-- The debuggee built for 3.0 but run it on latest -->
+      <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
     </Option>
+    <Option>
+      <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+      <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
+    </Option>
     <Option Condition="'$(DailyTest)' != 'true'">
-      <!-- Build the debuggee for 2.1 but run it on 2.2 -->
+      <!-- The debuggee built for 2.1 but run it on 2.2 -->
       <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-      <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion22)</BuildProjectMicrosoftNetCoreAppVersion>
       <RuntimeFrameworkVersion>$(RuntimeVersion22)</RuntimeFrameworkVersion>
     </Option>
     <Option Condition="'$(DailyTest)' != 'true'">
       <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-      <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion21)</BuildProjectMicrosoftNetCoreAppVersion>
       <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
     </Option>
     <Option Condition="Exists('$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/$(RuntimeVersion11)')">
       <BuildProjectFramework>netcoreapp1.1</BuildProjectFramework>
-      <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion11)</BuildProjectMicrosoftNetCoreAppVersion>
       <RuntimeFrameworkVersion>$(RuntimeVersion11)</RuntimeFrameworkVersion>
       <!-- createdump doesn't exists in 1.1 -->
       <GenerateDumpWithGDB>true</GenerateDumpWithGDB>
       <!-- SOS needs at least 2.0 to run. The default without this is to use the runtime being debuggged to host SOS.NETCore -->
       <SOSHostRuntime>$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/$(RuntimeVersion21)</SOSHostRuntime>
+    </Option>
+    <!--
+        SOS.StackAndOtherTests (cli because tested with embedded and portable PDBs)
+      -->
+    <Option>
+      <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
+      <DebuggeeBuildRoot>$(RootBinDir)/Debuggees</DebuggeeBuildRoot>
+      <TestName>SOS.StackAndOtherTests</TestName>
+      <Options>
+        <Option>
+          <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+          <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
+          <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
+        </Option>
+        <Option>
+          <!-- Build the debuggee for 3.0 but run it on latest -->
+          <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+          <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
+          <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+        </Option>
+        <Option Condition="'$(DailyTest)' != 'true'">
+          <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
+          <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion21)</BuildProjectMicrosoftNetCoreAppVersion>
+          <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
+        </Option>
+        <Option Condition="'$(DailyTest)' != 'true'">
+          <!-- The debuggee built for 2.1 but run it on 2.2 -->
+          <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
+          <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion21)</BuildProjectMicrosoftNetCoreAppVersion>
+          <RuntimeFrameworkVersion>$(RuntimeVersion22)</RuntimeFrameworkVersion>
+        </Option>
+        <Option Condition="Exists('$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/$(RuntimeVersion11)')">
+          <BuildProjectFramework>netcoreapp1.1</BuildProjectFramework>
+          <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion11)</BuildProjectMicrosoftNetCoreAppVersion>
+          <RuntimeFrameworkVersion>$(RuntimeVersion11)</RuntimeFrameworkVersion>
+          <!-- createdump doesn't exists in 1.1 -->
+          <GenerateDumpWithGDB>true</GenerateDumpWithGDB>
+          <!-- SOS needs at least 2.0 to run. The default without this is to use the runtime being debuggged to host SOS.NETCore -->
+          <SOSHostRuntime>$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/$(RuntimeVersion21)</SOSHostRuntime>
+        </Option>
+      </Options>
+    </Option>
+    <!--
+        SOS.WebApp3 (runs only on 3.0 aspnetcore)
+      -->
+    <Option>
+      <TestName>SOS.WebApp3</TestName>
+      <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+      <RuntimeFrameworkVersion>$(AspNetCoreVersion30)</RuntimeFrameworkVersion>
     </Option>
   </Options>
 

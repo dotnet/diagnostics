@@ -284,18 +284,23 @@ namespace Microsoft.Diagnostics.TestHelpers
             get { return _settings; }
         }
 
+        /// <summary>
+        /// Creates a new test config with the new PDB type (full, portable or embedded)
+        /// </summary>
+        /// <param name="pdbType">new pdb type</param>
+        /// <returns>new test config</returns>
         public TestConfiguration CloneWithNewDebugType(string pdbType)
         {
             Debug.Assert(!string.IsNullOrWhiteSpace(pdbType));
 
-            var currentSettings = new Dictionary<string, string>(_settings);
+            var currentSettings = new Dictionary<string, string>(_settings) {
 
-            // Set or replace if the pdb debug type
-            currentSettings[DebugTypeKey] = pdbType;
+                // Set or replace if the pdb debug type
+                [DebugTypeKey] = pdbType,
 
-            // The debuggee build root must exist. Append the pdb type to make it unique.
-            currentSettings[DebuggeeBuildRootKey] = Path.Combine(currentSettings[DebuggeeBuildRootKey], pdbType);
-
+                // The debuggee build root must exist. Append the pdb type to make it unique.
+                [DebuggeeBuildRootKey] = Path.Combine(_settings[DebuggeeBuildRootKey], pdbType)
+            };
             return new TestConfiguration(currentSettings);
         }
 
@@ -649,7 +654,17 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public override string ToString()
         {
-            return TestProduct + "." + DebuggeeBuildProcess;
+            var sb = new StringBuilder();
+            sb.Append(TestProduct);
+            sb.Append(".");
+            sb.Append(DebuggeeBuildProcess);
+            string version = RuntimeFrameworkVersion;
+            if (!string.IsNullOrEmpty(version))
+            {
+                sb.Append(".");
+                sb.Append(version);
+            }
+            return sb.ToString();
         }
     }
 

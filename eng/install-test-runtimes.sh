@@ -10,8 +10,10 @@ branch="master"
 uncached_feed="https://dotnetcli.blob.core.windows.net/dotnet"
 
 runtime_version_11="1.1.13"
-runtime_version_21=
-runtime_version_22="2.2.5"
+runtime_version_21="2.1.12"
+runtime_version_22="2.2.6"
+runtime_version_30="3.0.0"
+aspnetcore_version_30="3.0.0"
 
 while [ $# -ne 0 ]; do
     name=$1
@@ -19,10 +21,6 @@ while [ $# -ne 0 ]; do
         --dotnet-directory)
             shift
             dotnet_dir=$1
-            ;;
-        --runtime-version-21)
-            shift
-            runtime_version_21=$1
             ;;
         --temp-directory)
             shift
@@ -51,7 +49,7 @@ daily_test_text="true"
 # Always install 2.1 for the daily test (scheduled builds) scenario because xunit needs it
 bash "$dotnet_dir/dotnet-install.sh" --version "$runtime_version_21" --architecture "$build_arch" --skip-non-versioned-files --runtime dotnet --install-dir "$dotnet_dir"
 
-# Install the other versions of .NET Core runtime we are going to test. 1.1.x, 2.1.x, 2.2.x
+# Install the other versions of .NET Core runtime we are going to test. 1.1.x, 2.1.x, 2.2.x, 3.0.x
 # and latest. Only install the latest master for daily jobs and leave the RuntimeVersion* 
 # config properties blank.
 if [ $daily_test == 0 ]; then
@@ -61,6 +59,7 @@ if [ $daily_test == 0 ]; then
 fi
 
 bash "$dotnet_dir/dotnet-install.sh" --channel $branch --version latest --architecture "$build_arch" --skip-non-versioned-files --runtime dotnet --install-dir "$dotnet_dir"
+bash "$dotnet_dir/dotnet-install.sh" --channel $branch --version latest --architecture "$build_arch" --skip-non-versioned-files --runtime aspnetcore --install-dir "$dotnet_dir"
 
 # Now download the latest runtime version and create a config file containing it
 version_file_url="$uncached_feed/Runtime/$branch/latest.version"
@@ -75,15 +74,17 @@ else
 fi
 
 if [ -f "$version_file" ]; then
-    runtime_version_latest=$(cat $version_file | tail -n 1 | sed 's/\r$//')
+    runtime_version_latest=$(cat $version_file | tail -n 1 | tr -d "\r")
 
-    echo "Latest version: $runtime_version_latest"
+    echo "Latest $branch version: '$runtime_version_latest'"
 
     echo "<Configuration>
 <DailyTest>$daily_test_text</DailyTest>
 <RuntimeVersion11>$runtime_version_11</RuntimeVersion11>
 <RuntimeVersion21>$runtime_version_21</RuntimeVersion21>
 <RuntimeVersion22>$runtime_version_22</RuntimeVersion22>
+<RuntimeVersion30>$runtime_version_30</RuntimeVersion30>
+<AspNetCoreVersion30>$aspnetcore_version_30</AspNetCoreVersion30>
 <RuntimeVersionLatest>$runtime_version_latest</RuntimeVersionLatest>
 </Configuration>" > $config_file
 

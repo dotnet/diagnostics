@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [Command(Name = "traverseheap",         AliasExpansion = "TraverseHeap",        Help = "Writes out a file in a format understood by the CLR Profiler.")]
     [Command(Name = "analyzeoom",           AliasExpansion = "AnalyzeOOM",          Help = "Displays the info of the last OOM occurred on an allocation request to the GC heap.")]
     [Command(Name = "verifyobj",            AliasExpansion = "VerifyObj",           Help = "Checks the object for signs of corruption.")]
-    [Command(Name = "listnearobj",          AliasExpansion = "ListNearObj",         Help = "Displays the object preceeding and succeeding the address specified.")]
+    [Command(Name = "listnearobj",          AliasExpansion = "ListNearObj",         Help = "Displays the object preceding and succeeding the address specified.")]
     [Command(Name = "gcheapstat",           AliasExpansion = "GCHeapStat",          Help = "Display various GC heap stats.")]
     [Command(Name = "watsonbuckets",        AliasExpansion = "WatsonBuckets",       Help = "Displays the Watson buckets.")]
     [Command(Name = "threadpool",           AliasExpansion = "ThreadPool",          Help = "Lists basic information about the thread pool.")]

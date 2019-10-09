@@ -4,6 +4,7 @@
 
 bpmd
 ClrStack
+dbgout
 DumpArray
 DumpAssembly
 DumpAsync
@@ -48,6 +49,7 @@ StopOnCatch
 SetHostRuntime
 SetSymbolServer
 SOSFlush
+SOSStatus
 SyncBlk
 Threads
 ThreadState

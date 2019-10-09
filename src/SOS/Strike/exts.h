@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <functional>
 
 // wdbgexts.h defines StackTrace which interferes with other parts of the
 // system that use the StackTrace identifier
@@ -164,10 +165,6 @@ ArchQuery(void);
 
 void
 ExtRelease(void);
-
-#ifdef _DEBUG
-extern DWORD_PTR g_filterHint;
-#endif
 
 extern BOOL ControlC;
 
@@ -351,7 +348,8 @@ public:
                 GCEncodingInfo *pGCEncodingInfo, 
                 SOSEHInfo *pEHInfo,
                 BOOL bSuppressLines,
-                BOOL bDisplayOffsets) const = 0;
+                BOOL bDisplayOffsets,
+                std::function<void(ULONG*, UINT*, BYTE*)> displayIL) const = 0;
 
     // Validates whether retAddr represents a return address by unassembling backwards.
     // If the instruction before retAddr represents a target-specific call instruction

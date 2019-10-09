@@ -32,8 +32,20 @@ dotnet tool install --global dotnet-counters
 *COMMANDS*
 
     list      Display a list of counter names and descriptions
+    ps        Display a list of dotnet processes that can be monitored
     monitor   Display periodically refreshing values of selected counters
     collect   Periodically collect selected counter values and export them into a specified file format for post-processing.
+
+*PS*
+    dotnet-counters ps
+
+    Display a list of dotnet processes that can be monitored.
+
+    Examples:
+      > dotnet-counters ps
+
+     15683 WebApi     /home/suwhang/repos/WebApi/WebApi
+     16324 dotnet     /usr/local/share/dotnet/dotnet
 
 *LIST*
 
@@ -97,7 +109,7 @@ dotnet tool install --global dotnet-counters
 
     dotnet-counters monitor [-h||--help]
                             [-p|--process-id <pid>]
-                            [--refreshInterval <sec>]
+                            [--refresh-interval <sec>]
                             counter_list
     
     Display periodically refreshing values of selected counters

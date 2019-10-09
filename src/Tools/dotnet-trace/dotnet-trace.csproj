@@ -19,4 +19,12 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.Tools.RuntimeClient\Microsoft.Diagnostics.Tools.RuntimeClient.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\Common\Commands\ProcessStatus.cs" Link="ProcessStatus.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DotnetTrace.UnitTests" />
+  </ItemGroup>
+
 </Project>

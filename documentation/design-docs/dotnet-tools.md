@@ -148,6 +148,7 @@ OPTIONS
 COMMANDS
 
     list      Display a list of counter names and descriptions
+    ps        Display a list of dotnet processes that can be monitored
     monitor   Display periodically refreshing values of selected counters
     collect   Periodically collect selected counter values and export them into a specified file format for post-processing.
 
@@ -297,7 +298,7 @@ OPTIONS
 COMMANDS
 
     collect         Collects a diagnostic trace from a currently running process
-    list-processes  Lists dotnet processes that can be attached to.
+    ps              Lists dotnet processes that can be attached to.
     list-profiles   Lists pre-built tracing profiles with a description of what providers and filters are in each profile.
     convert         Converts traces to alternate formats for use with alternate trace analysis tools
 
@@ -405,6 +406,7 @@ COMMANDS
 
     collect   Capture dumps from a process
     analyze   Starts an interactive shell with debugging commands to explore a dump
+    ps        Display a list of dotnet processes to create dump from
 
 COLLECT
 
@@ -621,7 +623,7 @@ Add a --process-id to the list command in order to dynamically determine a full 
         private-memory                 Amount of private virtual memory used by the process (MB)
         working-set                    Amount of working set used by the process (MB)
         virtual-memory                 Amount of virtual memory used by the process (MB)
-        gc-total-memory                Amount of commited virtual memory used by the GC (MB)
+        gc-total-memory                Amount of committed virtual memory used by the GC (MB)
         exceptions-thrown-rate         Number of exceptions thrown in a recent 1 minute window (exceptions/min)
         lock-contention-rate           Number of instances of lock contention on runtime implemented locks in a
                                        recent 1 minute window (contentions/min)

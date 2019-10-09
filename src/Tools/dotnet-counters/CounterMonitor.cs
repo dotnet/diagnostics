@@ -182,8 +182,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private string BuildProviderString()
         {
-            string providerString;
+            if (_processId == 0) {
+                _console.Error.WriteLine("--process-id is required.");
+                return 1;
+            }
 
+            string providerString;
             if (_counterList.Count == 0)
             {
                 CounterProvider defaultProvider = null;

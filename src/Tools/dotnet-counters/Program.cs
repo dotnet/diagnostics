@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Diagnostics.Tools.RuntimeClient;
+using Microsoft.Internal.Common.Commands;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -76,47 +77,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 new Option[] { },
                 handler: CommandHandler.Create<IConsole>(List));
 
-        private static Command ListProcessesCommand() =>
+        private static Command ProcessStatusCommand() =>
             new Command(
-                "list-processes",
+                "ps",
                 "Display a list of dotnet processes that can be monitored.",
                 new Option[] { },
-                handler: CommandHandler.Create<IConsole>(ListProcesses));
-
-        private static int ListProcesses(IConsole console)
-        {
-            var processes = EventPipeClient.ListAvailablePorts()
-                .Select(GetProcess)
-                .Where(process => process != null)
-                .OrderBy(process => process.ProcessName)
-                .ThenBy(process => process.Id);
-
-            foreach (var process in processes)
-            {
-                try
-                {
-                    console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}");
-                }
-                catch (Exception)
-                {
-                    console.Out.WriteLine($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]");
-                }
-            }
-
-            return 0;
-        }
-
-        private static System.Diagnostics.Process GetProcess(int processId)
-        {
-            try
-            {
-                return System.Diagnostics.Process.GetProcessById(processId);
-            }
-            catch (ArgumentException)
-            {
-                return null;
-            }
-        }
+                handler: CommandHandler.Create<IConsole>(ProcessStatusCommandHandler.PrintProcessStatus));
 
         public static int List(IConsole console)
         {
@@ -143,7 +109,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 .AddCommand(MonitorCommand())
                 .AddCommand(CollectCommand())
                 .AddCommand(ListCommand())
-                .AddCommand(ListProcessesCommand())
+                .AddCommand(ProcessStatusCommand())
                 .UseDefaults()
                 .Build();
             return parser.InvokeAsync(args);

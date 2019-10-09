@@ -510,7 +510,8 @@ void
     GCEncodingInfo *pGCEncodingInfo, 
     SOSEHInfo *pEHInfo,
     BOOL bSuppressLines,
-    BOOL bDisplayOffsets) const
+    BOOL bDisplayOffsets,
+    std::function<void(ULONG*, UINT*, BYTE*)> displayIL) const
 {
     ULONG_PTR IP = IPBegin;
     char line[1024];
@@ -524,6 +525,8 @@ void
     ULONG curLine = -1;
     WCHAR filename[MAX_LONGPATH];
     ULONG linenum;
+    ULONG ilPosition = 0;
+    UINT ilIndentCount = 0;
 
     while (IP < IPEnd)
     {
@@ -540,6 +543,7 @@ void
                 ExtOut("\n%S @ %d:\n", filename, linenum);
             }
         }
+        displayIL(&ilPosition, &ilIndentCount, (BYTE*)IP);
 
         //
         // Print out any GC information corresponding to the current instruction offset.

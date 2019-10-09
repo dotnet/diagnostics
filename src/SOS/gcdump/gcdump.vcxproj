@@ -19,9 +19,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="CMakeLists.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="gcdump.cpp" />
     <ClCompile Include="gcdumpnonx86.cpp" />
     <ClCompile Include="gcinfodecoder.cpp" />

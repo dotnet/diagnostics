@@ -134,6 +134,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     interpreter.AddCommand("clrstack", new sosCommand("ClrStack"), "Provides a stack trace of managed code only.");
     interpreter.AddCommand("clrthreads", new sosCommand("Threads"), "List the managed threads running.");
     interpreter.AddCommand("clru", new sosCommand("u"), "Displays an annotated disassembly of a managed method.");
+    interpreter.AddCommand("dbgout", new sosCommand("dbgout"), "Enable/disable (-off) internal SOS logging.");
     interpreter.AddCommand("dumparray", new sosCommand("DumpArray"), "Displays details about a managed array.");
     interpreter.AddCommand("dumpasync", new sosCommand("DumpAsync"), "Displays info about async state machines on the garbage-collected heap.");
     interpreter.AddCommand("dumpassembly", new sosCommand("DumpAssembly"), "Displays details about an assembly.");
@@ -147,6 +148,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     interpreter.AddCommand("dumpmodule", new sosCommand("DumpModule"), "Displays information about a EE module structure at the specified address.");
     interpreter.AddCommand("dumpmt", new sosCommand("DumpMT"), "Displays information about a method table at the specified address.");
     interpreter.AddCommand("dumpobj", new sosCommand("DumpObj"), "Displays info about an object at the specified address.");
+    interpreter.AddCommand("dumpvc", new sosCommand("DumpVC"), "Displays info about the fields of a value class.");
     interpreter.AddCommand("dumpstack", new sosCommand("DumpStack"), "Displays a native and managed stack trace.");
     interpreter.AddCommand("dso", new sosCommand("DumpStackObjects"), "Displays all managed objects found within the bounds of the current stack.");
     interpreter.AddCommand("eeheap", new sosCommand("EEHeap"), "Displays info about process memory consumed by internal runtime data structures.");
@@ -169,5 +171,6 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     interpreter.AddCommand("setsymbolserver", new sosCommand("SetSymbolServer"), "Enables the symbol server support ");
     interpreter.AddCommand("sympath", new sosCommand("SetSymbolServer", "-sympath"), "Add server, cache and directory paths in the Windows symbol path format.");
     interpreter.AddCommand("soshelp", new sosCommand("Help"), "Displays all available commands when no parameter is specified, or displays detailed help information about the specified command. soshelp <command>");
+    interpreter.AddCommand("sosstatus", new sosCommand("SOSStatus"), "Displays the global SOS status.");
     return true;
 }

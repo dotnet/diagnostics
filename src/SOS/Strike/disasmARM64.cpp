@@ -149,7 +149,8 @@ void ARM64Machine::Unassembly (
     GCEncodingInfo *pGCEncodingInfo, 
     SOSEHInfo *pEHInfo,
     BOOL bSuppressLines,
-    BOOL bDisplayOffsets) const
+    BOOL bDisplayOffsets,
+    std::function<void(ULONG*, UINT*, BYTE*)> displayIL) const
 {
     TADDR PC = PCBegin;
     char line[1024];
@@ -161,6 +162,8 @@ void ARM64Machine::Unassembly (
     BOOL loBitsSet = FALSE;
     BOOL hiBitsSet = FALSE;
     char *szConstant = NULL;
+    ULONG ilPosition = 0;
+    UINT ilIndentCount = 0;
 
 
     while(PC < PCEnd)
@@ -209,6 +212,7 @@ void ARM64Machine::Unassembly (
                 ExtOut("\n%S @ %d:\n", fileName, lineNum);
             }
         }
+        displayIL(&ilPosition, &ilIndentCount, (BYTE*)PC);
 
         //
         // Print out any GC information corresponding to the current instruction offset.

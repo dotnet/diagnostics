@@ -63,7 +63,7 @@ namespace SOS
             builder.AddMethod(new GetScopeSymbolGroupDelegate((self, flags, update, symbols) => DebugClient.NotImplemented));
             builder.AddMethod(new CreateSymbolGroupDelegate((self, group) => DebugClient.NotImplemented));
             builder.AddMethod(new StartSymbolMatchDelegate((self, pattern, handle) => DebugClient.NotImplemented));
-            builder.AddMethod(new GetNextSymbolMatchDelegate((self, handle, buffer, buffesSize, matchSize, offset) => DebugClient.NotImplemented));
+            builder.AddMethod(new GetNextSymbolMatchDelegate((self, handle, buffer, bufferSize, matchSize, offset) => DebugClient.NotImplemented));
             builder.AddMethod(new EndSymbolMatchDelegate((self, handle) => DebugClient.NotImplemented));
             builder.AddMethod(new ReloadDelegate((self, module) => DebugClient.NotImplemented));
             builder.AddMethod(new GetSymbolPathDelegate(soshost.GetSymbolPath));
