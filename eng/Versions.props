@@ -21,6 +21,13 @@
     <SystemReflectionMetadataVersion>1.6.0</SystemReflectionMetadataVersion>
     <SystemCollectionsImmutableVersion>1.5.0</SystemCollectionsImmutableVersion>
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
+    <SystemThreadingChannelsVersion>4.6.0</SystemThreadingChannelsVersion>
+
+
+    <!-- Microsoft.Extensions.* -->
+    <MicrosoftExtensionsConfigurationJsonVersion>2.1.1</MicrosoftExtensionsConfigurationJsonVersion>
+    <MicrosoftExtensionsHostingVersion>2.1.1</MicrosoftExtensionsHostingVersion>
+    <MicrosoftExtensionsLoggingConsoleVersion>2.1.1</MicrosoftExtensionsLoggingConsoleVersion>
 
     <!-- Other libs -->
     <MicrosoftSymbolStoreVersion>1.0.50701</MicrosoftSymbolStoreVersion>
