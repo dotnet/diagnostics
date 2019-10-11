@@ -151,7 +151,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         public void Stop()
         {
-            // TODO
+            // Nothing to do here.
         }
     }
 }
