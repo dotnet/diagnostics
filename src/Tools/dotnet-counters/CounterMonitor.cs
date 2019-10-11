@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private List<string> _counterList;
         private CancellationToken _ct;
         private IConsole _console;
-        private ICounterRenderer renderer;
+        private ICounterRenderer _renderer;
         private CounterFilter filter;
         private ulong _sessionId;
         private string _format;
@@ -41,7 +41,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             // If we are paused, ignore the event. 
             // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
-            renderer.ToggleStatus(pauseCmdSet);
+            _renderer.ToggleStatus(pauseCmdSet);
 
             if (obj.EventName.Equals("EventCounters"))
             {
@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 if (!filter.Filter(obj.ProviderName, payloadFields["Name"].ToString())) return;
 
                 ICounterPayload payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields, _interval) : (ICounterPayload)new CounterPayload(payloadFields);
-                renderer.CounterPayloadReceived(obj.ProviderName, payload, pauseCmdSet);
+                _renderer.CounterPayloadReceived(obj.ProviderName, payload, pauseCmdSet);
             }
         }
 
@@ -79,7 +79,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             catch (PlatformNotSupportedException)
             {
             }
-            renderer.Stop();
+            _renderer.Stop();
         }
 
         public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval)
@@ -91,7 +91,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _console = console;
                 _processId = processId;
                 _interval = refreshInterval;
-                renderer = new ConsoleWriter();
+                _renderer = new ConsoleWriter();
 
                 return await Start();
             }
@@ -129,7 +129,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                 if (_format == "csv")
                 {
-                    renderer = new CSVExporter(output);
+                    _renderer = new CSVExporter(output);
                 }
                 else if (_format == "json")
                 {
@@ -140,7 +140,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         processName = Process.GetProcessById(_processId).ProcessName;
                     }
                     catch (Exception) { }
-                    renderer = new JSONExporter(output, processName); ;
+                    _renderer = new JSONExporter(output, processName); ;
                 }
                 else
                 {
@@ -182,11 +182,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private string BuildProviderString()
         {
-            if (_processId == 0) {
-                _console.Error.WriteLine("--process-id is required.");
-                return 1;
-            }
-
             string providerString;
             if (_counterList.Count == 0)
             {
@@ -247,7 +242,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             if (_processId == 0)
             {
-                _console.Error.WriteLine("ProcessId is required.");
+                _console.Error.WriteLine("--process-id is required.");
                 return 1;
             }
 
@@ -257,7 +252,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 return 1;
             }
 
-            renderer.Initialize();
+            _renderer.Initialize();
 
             ManualResetEvent shouldExit = new ManualResetEvent(false);
             _ct.Register(() => shouldExit.Set());
@@ -278,7 +273,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
 
                     source.Dynamic.All += DynamicAllMonitor;
-                    renderer.EventPipeSourceConnected();
+                    _renderer.EventPipeSourceConnected();
                     source.Process();
                 }
                 catch (Exception ex)
