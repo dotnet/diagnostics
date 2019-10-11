@@ -63,6 +63,7 @@ const char * const CorElementTypeNamespace[ELEMENT_TYPE_MAX]=
 
 IXCLRDataProcess *g_clrData = NULL;
 ISOSDacInterface *g_sos = NULL;
+IXCLRDataProcess *g_clrDataProcess = NULL;
 ICorDebugProcess *g_pCorDebugProcess = NULL;
 
 #ifndef IfFailRet
@@ -3315,16 +3316,22 @@ bool IsRuntimeVersion(DWORD major)
     VS_FIXEDFILEINFO fileInfo;
     if (GetEEVersion(&fileInfo, nullptr, 0))
     {
-        switch (major)
-        {
-            case 5:
-                return HIWORD(fileInfo.dwFileVersionMS) == 5;
-            case 3:
-                return HIWORD(fileInfo.dwFileVersionMS) == 4 && LOWORD(fileInfo.dwFileVersionMS) == 700;
-            default:
-                _ASSERTE(FALSE);
-                break;
-        }
+        return IsRuntimeVersion(fileInfo, major);
+    }
+    return false;
+}
+
+bool IsRuntimeVersion(VS_FIXEDFILEINFO& fileInfo, DWORD major)
+{
+    switch (major)
+    {
+        case 5:
+            return HIWORD(fileInfo.dwFileVersionMS) == 5;
+        case 3:
+            return HIWORD(fileInfo.dwFileVersionMS) == 4 && LOWORD(fileInfo.dwFileVersionMS) == 700;
+        default:
+            _ASSERTE(FALSE);
+            break;
     }
     return false;
 }
@@ -3872,10 +3879,9 @@ void ResetGlobals(void)
 
 static HRESULT GetClrDataProcess()
 {
-    static IXCLRDataProcess* clrDataProcess = NULL;
     HRESULT hr = S_OK;
 
-    if (clrDataProcess == NULL)
+    if (g_clrDataProcess == NULL)
     {
         LPCSTR dacFilePath = GetDacFilePath();
         if (dacFilePath == nullptr)
@@ -3894,18 +3900,18 @@ static HRESULT GetClrDataProcess()
             return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
         }
         ICLRDataTarget *target = new DataTarget();
-        hr = pfnCLRDataCreateInstance(__uuidof(IXCLRDataProcess), target, (void**)&clrDataProcess);
+        hr = pfnCLRDataCreateInstance(__uuidof(IXCLRDataProcess), target, (void**)&g_clrDataProcess);
         if (FAILED(hr))
         {
-            clrDataProcess = NULL;
+            g_clrDataProcess = NULL;
             return hr;
         }
         ULONG32 flags = 0;
-        clrDataProcess->GetOtherNotificationFlags(&flags);
+        g_clrDataProcess->GetOtherNotificationFlags(&flags);
         flags |= (CLRDATA_NOTIFY_ON_MODULE_LOAD | CLRDATA_NOTIFY_ON_MODULE_UNLOAD | CLRDATA_NOTIFY_ON_EXCEPTION);
-        clrDataProcess->SetOtherNotificationFlags(flags);
+        g_clrDataProcess->SetOtherNotificationFlags(flags);
     }
-    g_clrData = clrDataProcess;
+    g_clrData = g_clrDataProcess;
     g_clrData->AddRef();
     g_clrData->Flush();
 
@@ -3921,7 +3927,6 @@ static HRESULT GetClrDataProcess()
 //
 HRESULT LoadClrDebugDll(void)
 {
-    static IXCLRDataProcess* clrDataProcess = NULL;
     HRESULT hr = GetClrDataProcess();
     if (FAILED(hr)) 
     {
@@ -3929,23 +3934,20 @@ HRESULT LoadClrDebugDll(void)
         return hr;
 #else
         // Fail if ExtensionApis wasn't initialized because we are hosted under dotnet-dump
-        if (Ioctl == nullptr)
-        {
+        if (Ioctl == nullptr) {
             return hr;
         }
         // Try getting the DAC interface from dbgeng if the above fails on Windows
         WDBGEXTS_CLR_DATA_INTERFACE Query;
 
         Query.Iid = &__uuidof(IXCLRDataProcess);
-        if (!Ioctl(IG_GET_CLR_DATA_INTERFACE, &Query, sizeof(Query)))
-        {
+        if (!Ioctl(IG_GET_CLR_DATA_INTERFACE, &Query, sizeof(Query))) {
             return hr;
         }
         g_clrData = (IXCLRDataProcess*)Query.Iface;
         g_clrData->Flush();
 #endif
     }
-
     hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface), (void**)&g_sos);
     if (FAILED(hr))
     {
@@ -5487,7 +5489,7 @@ GetLineByOffset(
     IfFailRet(ConvertNativeToIlOffset(offset, &pModule, &methodToken, &methodOffs));
 
     ToRelease<IMetaDataImport> pMDImport(NULL);
-    IfFailRet(pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport));
+    pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport);
 
     SymbolReader symbolReader;
     IfFailRet(symbolReader.LoadSymbols(pMDImport, pModule));

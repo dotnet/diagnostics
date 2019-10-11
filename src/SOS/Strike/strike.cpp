@@ -7293,7 +7293,7 @@ public:
         IfFailRet(g_sos->GetModule(mod, &pModule));
 
         ToRelease<IMetaDataImport> pMDImport = NULL;
-        IfFailRet(pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport));
+        pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport);
 
         IfFailRet(pSymbolReader->LoadSymbols(pMDImport, pModule));
 
@@ -10037,10 +10037,10 @@ DECLARE_API(DumpGCData)
 * Routine Description:                                                 *
 *                                                                      *
 *    This function is called to dump the build number and type of the  *  
-*    mscoree.dll                                                       *
+*    runtime and SOS.                                                  *
 *                                                                      *
 \**********************************************************************/
-DECLARE_API (EEVersion)
+DECLARE_API(EEVersion)
 {
     INIT_API();
 
@@ -10054,23 +10054,27 @@ DECLARE_API (EEVersion)
     VS_FIXEDFILEINFO version;
 
     BOOL ret = GetEEVersion(&version, fileVersionBuffer.GetPtr(), fileVersionBufferSize);
-    if (ret) 
+    if (ret)
     {
         if (version.dwFileVersionMS != (DWORD)-1)
         {
             ExtOut("%u.%u.%u.%u",
-                   HIWORD(version.dwFileVersionMS),
-                   LOWORD(version.dwFileVersionMS),
-                   HIWORD(version.dwFileVersionLS),
-                   LOWORD(version.dwFileVersionLS));
+                HIWORD(version.dwFileVersionMS),
+                LOWORD(version.dwFileVersionMS),
+                HIWORD(version.dwFileVersionLS),
+                LOWORD(version.dwFileVersionLS));
+
+            if (IsRuntimeVersion(version, 3)) {
+                ExtOut(" (3.x runtime)");
+            }
+
 #ifndef FEATURE_PAL
-            if (version.dwFileFlags & VS_FF_DEBUG) 
-            {                    
+            if (version.dwFileFlags & VS_FF_DEBUG) {
                 ExtOut(" checked or debug build");
             }
             else
-            { 
-                BOOL fRet = IsRetailBuild ((size_t)g_moduleInfo[eef].baseAddr);
+            {
+                BOOL fRet = IsRetailBuild((size_t)g_moduleInfo[eef].baseAddr);
                 if (fRet)
                     ExtOut(" retail");
                 else
@@ -10079,22 +10083,20 @@ DECLARE_API (EEVersion)
 #endif
             ExtOut("\n");
 
-            if (fileVersionBuffer[0] != '\0')
-            {
+            if (fileVersionBuffer[0] != '\0') {
                 ExtOut("%s\n", fileVersionBuffer.GetPtr());
             }
         }
     }
-    
-    if (!InitializeHeapData ())
+
+    if (!InitializeHeapData())
         ExtOut("GC Heap not initialized, so GC mode is not determined yet.\n");
-    else if (IsServerBuild()) 
-        ExtOut("Server mode with %d gc heaps\n", GetGcHeapCount()); 
+    else if (IsServerBuild())
+        ExtOut("Server mode with %d gc heaps\n", GetGcHeapCount());
     else
         ExtOut("Workstation mode\n");
 
-    if (!GetGcStructuresValid())
-    {
+    if (!GetGcStructuresValid()) {
         ExtOut("In plan phase of garbage collection\n");
     }
 
@@ -10106,23 +10108,55 @@ DECLARE_API (EEVersion)
         if (sosVersion.dwFileVersionMS != (DWORD)-1)
         {
             ExtOut("SOS Version: %u.%u.%u.%u",
-                   HIWORD(sosVersion.dwFileVersionMS),
-                   LOWORD(sosVersion.dwFileVersionMS),
-                   HIWORD(sosVersion.dwFileVersionLS),
-                   LOWORD(sosVersion.dwFileVersionLS));
+                HIWORD(sosVersion.dwFileVersionMS),
+                LOWORD(sosVersion.dwFileVersionMS),
+                HIWORD(sosVersion.dwFileVersionLS),
+                LOWORD(sosVersion.dwFileVersionLS));
 
-            if (sosVersion.dwFileFlags & VS_FF_DEBUG) 
-            {                    
-                ExtOut(" debug build");                    
+            if (sosVersion.dwFileFlags & VS_FF_DEBUG) {
+                ExtOut(" debug build");
             }
-            else
-            { 
-                ExtOut(" retail build");                    
+            else {
+                ExtOut(" retail build");
             }
             ExtOut("\n");
         }
     }
 #endif // FEATURE_PAL
+    return Status;
+}
+
+/**********************************************************************\
+* Routine Description:                                                 *
+*                                                                      *
+*    This function the global SOS status                               *
+*                                                                      *
+\**********************************************************************/
+DECLARE_API(SOSStatus)
+{
+    INIT_API_NOEE();
+
+    if (g_targetMachine != nullptr) {
+        ExtOut("Target platform: %04x Context size %04x\n", g_targetMachine->GetPlatform(), g_targetMachine->GetContextSize());
+    }
+    if (g_tmpPath != nullptr) {
+        ExtOut("Temp path: %s\n", g_tmpPath);
+    }
+    if (g_dacFilePath != nullptr) {
+        ExtOut("DAC file path: %s\n", g_dacFilePath);
+    }
+    if (g_dbiFilePath != nullptr) {
+        ExtOut("DBI file path: %s\n", g_dbiFilePath);
+    }
+    if (g_hostRuntimeDirectory != nullptr) {
+        ExtOut("Host runtime path: %s\n", g_hostRuntimeDirectory);
+    }
+    std::string coreclrDirectory;
+    if (SUCCEEDED(GetCoreClrDirectory(coreclrDirectory))) {
+        ExtOut("Runtime path: %s\n", coreclrDirectory.c_str());
+    }
+    DisplaySymbolStore();
+
     return Status;
 }
 

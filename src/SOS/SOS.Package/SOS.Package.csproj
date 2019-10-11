@@ -73,7 +73,7 @@
     <PropertyGroup>
       <GalleryDir>$(ArtifactsBinDir)\gallery</GalleryDir>
       <GallerySubDir>$(GalleryDir)\$(FileVersion)</GallerySubDir>
-      <SOSNETCorePath>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netstandard2.0\publish</SOSNETCorePath>
+      <SOSNETCorePath>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\$(TargetFramework)\publish</SOSNETCorePath>
     </PropertyGroup>
 
     <ItemGroup>
@@ -120,11 +120,10 @@
   <Target Name="GenerateSymbolsZip">
     <PropertyGroup>
       <SymbolsDir>$(ArtifactsBinDir)\symbols</SymbolsDir>
-      <SOSNETCorePath>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netstandard2.0\publish</SOSNETCorePath>
     </PropertyGroup>
 
     <ItemGroup>
-      <ZipSymbolFiles Include="$(SOSNETCorePath)\*.pdb">
+      <ZipSymbolFiles Include="$(ArtifactsSymStoreDirectory)\SOS.NETCore\$(TargetFramework)\*.pdb">
          <TargetPath>$(SymbolsDir)</TargetPath>
       </ZipSymbolFiles>
 
