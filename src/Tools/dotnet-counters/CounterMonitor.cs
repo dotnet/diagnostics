@@ -27,7 +27,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private ICounterRenderer _renderer;
         private CounterFilter filter;
         private ulong _sessionId;
-        private string _format;
         private string _output;
         private bool pauseCmdSet;
 
@@ -109,7 +108,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, string format, string output)
+        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output)
         {
             try
             {
@@ -118,7 +117,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _console = console;
                 _processId = processId;
                 _interval = refreshInterval;
-                _format = format;
                 _output = output;
 
                 if (_output.Length == 0)
@@ -127,11 +125,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     return 0;
                 }
 
-                if (_format == "csv")
+                if (format == CountersExportFormat.csv)
                 {
                     _renderer = new CSVExporter(output);
                 }
-                else if (_format == "json")
+                else if (format == CountersExportFormat.json)
                 {
                     // Try getting the process name.
                     string processName = "";
@@ -144,7 +142,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 else
                 {
-                    _console.Error.WriteLine($"The output format {_format} is not a valid output format.");
+                    _console.Error.WriteLine($"The output format {format} is not a valid output format.");
                     return 0;
                 }
                 return await Start();

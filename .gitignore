@@ -120,3 +120,4 @@ StressLog.txt
 *.netperf
 *.nettrace
 *.speedscope.json
+*.csv

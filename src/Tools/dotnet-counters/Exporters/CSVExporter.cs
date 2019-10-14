@@ -67,6 +67,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         {
             // Append all the remaining text to the file.
             File.AppendAllText(_output, builder.ToString());
+            Console.WriteLine("File saved to " + _output);
         }
     }
 }

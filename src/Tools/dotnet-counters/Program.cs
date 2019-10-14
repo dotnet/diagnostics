@@ -16,9 +16,11 @@ using Microsoft.Internal.Common.Commands;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
+    public enum CountersExportFormat { csv, json };
+
     internal class Program
     {
-        delegate Task<int> ExportDelegate(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, string format, string output);
+        delegate Task<int> ExportDelegate(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output);
 
         private static Command MonitorCommand() =>
             new Command(
@@ -52,7 +54,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             new Option(
                 new[] { "--format" },
                 "The format of exported counter data.",
-                new Argument<string>(defaultValue: "csv") { Name = "format" });
+                new Argument<CountersExportFormat>(defaultValue: CountersExportFormat.csv) { Name = "format" });
 
         private static Option ExportFileNameOption() => 
             new Option(
