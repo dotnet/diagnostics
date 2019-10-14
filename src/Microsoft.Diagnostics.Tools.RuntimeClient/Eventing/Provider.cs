@@ -37,5 +37,39 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
 
         public string ToDisplayString() =>
             String.Format("{0, -40}", Name) + String.Format("0x{0, -18}", $"{Keywords:X16}") + String.Format("{0, -8}", EventLevel.ToString() + $"({(int)EventLevel})");
+        
+        public static bool operator ==(Provider left, Provider right)
+        {
+            return left.Name == right.Name &&
+                left.Keywords == right.Keywords &&
+                left.EventLevel == right.EventLevel &&
+                left.FilterData == right.FilterData;
+        }
+
+        public static bool operator !=(Provider left, Provider right)
+        {
+            return !(left == right);
+        }
+
+        public override bool Equals(object obj)
+        {
+            
+            if (obj == null || GetType() != obj.GetType())
+            {
+                return false;
+            }
+            
+            return this == (Provider)obj;
+        }
+
+        public override int GetHashCode()
+        {
+            int hash = 0;
+            hash ^= this.Name.GetHashCode();
+            hash ^= this.Keywords.GetHashCode();
+            hash ^= this.EventLevel.GetHashCode();
+            hash ^= this.FilterData.GetHashCode();
+            return hash;
+        }
     }
 }
