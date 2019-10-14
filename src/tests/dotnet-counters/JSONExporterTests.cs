@@ -9,7 +9,7 @@ using Xunit;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Newtonsoft.Json;
 
-namespace Microsoft.Diagnostics.Tools.Counters
+namespace DotnetCounters.UnitTests
 {
     /// <summary>
     /// These test the some of the known providers that we provide as a default configuration for customers to use.
@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             exporter.Initialize();
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived("myProvider", GenerateCounterPayload(true, "incrementingCounterOne", 1.0, 1, "Incrementing Counter One"), false);
+                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(true, "incrementingCounterOne", 1.0, 1, "Incrementing Counter One"), false);
             }
             exporter.Stop();
 
@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             exporter.Initialize();
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived("myProvider", GenerateCounterPayload(false, "counterOne", 1.0, 1, "Counter One"), false);
+                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(false, "counterOne", 1.0, 1, "Counter One"), false);
             }
             exporter.Stop();
 
@@ -71,35 +71,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     Assert.Equal("Metric", payload.counterType);
                     Assert.Equal(1.0, payload.value);
                 }
-            }
-        }
-
-
-        private ICounterPayload GenerateCounterPayload(
-            bool isIncrementingCounter,
-            string counterName,
-            double counterValue,
-            int displayRateTimeScaleSeconds = 0,
-            string displayName = "")
-        {
-            if (isIncrementingCounter)
-            {
-                Dictionary<string, object> payloadFields = new Dictionary<string, object>();
-                payloadFields["Name"] = counterName;
-                payloadFields["Increment"] = counterValue;
-                payloadFields["DisplayName"] = displayName;
-                payloadFields["DisplayRateTimeScale"] = displayRateTimeScaleSeconds == 0 ? "" : TimeSpan.FromSeconds(displayRateTimeScaleSeconds).ToString();
-                ICounterPayload payload = new IncrementingCounterPayload(payloadFields, 1);
-                return payload;
-            }
-            else
-            {
-                Dictionary<string, object> payloadFields = new Dictionary<string, object>();
-                payloadFields["Name"] = counterName;
-                payloadFields["Mean"] = counterValue;
-                payloadFields["DisplayName"] = displayName;
-                ICounterPayload payload = new CounterPayload(payloadFields);
-                return payload;
             }
         }
     }

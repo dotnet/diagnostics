@@ -3,13 +3,15 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.IO;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
 using Xunit;
 using Microsoft.Diagnostics.Tools.Counters;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 
-namespace Microsoft.Diagnostics.Tools.Counters
+namespace DotnetCounters.UnitTests
 {
     /// <summary>
     /// These test the some of the known providers that we provide as a default configuration for customers to use.
@@ -22,27 +24,39 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string fileName = "IncrementingCounterTest.csv";
         	CSVExporter exporter = new CSVExporter(fileName);
             exporter.Initialize();
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 100; i++)
             {
-                exporter.CounterPayloadReceived("myProvider", GenerateCounterPayload(true, "incrementingCounterOne", 1.0, 1, "Incrementing Counter One"), false);
+                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(true, "incrementingCounterOne", i, 1, "Incrementing Counter One: " + i.ToString()), false);
             }
             exporter.Stop();
 
             Assert.True(File.Exists(fileName));
 
-            int lineCount = 0;
-            foreach(string line in File.ReadLines(fileName))
+            try
             {
-                lineCount += 1;
-                string[] tokens = line.Split(',');
-                Assert.True("myProvider" == tokens[1] || "Provider" == tokens[1]);
-                Assert.True("Incrementing Counter One / 1 sec" == tokens[2] || "Counter Name" == tokens[2]);
-                Assert.True("Rate" == tokens[3] || "Counter Type" == tokens[3]);
-                Assert.True("1" == tokens[4] || "Mean/Increment" == tokens[4]);
-            }
-            Assert.Equal(11, lineCount);
+                List<string> lines = File.ReadLines(fileName).ToList();
+                Assert.Equal(101, lines.Count); // should be 101 including the headers
 
-            File.Delete(fileName);
+                string[] headerTokens = lines[0].Split(',');
+                Assert.Equal("Provider", headerTokens[1]);
+                Assert.Equal("Counter Name", headerTokens[2]);
+                Assert.Equal("Counter Type", headerTokens[3]);
+                Assert.Equal("Mean/Increment", headerTokens[4]);
+
+                for (int i = 1; i < lines.Count; i++)
+                {
+                    string[] tokens = lines[i].Split(',');
+
+                    Assert.Equal("myProvider", tokens[1]);
+                    Assert.Equal($"Incrementing Counter One: {i-1} / 1 sec", tokens[2]);
+                    Assert.Equal("Rate", tokens[3]);
+                    Assert.Equal((i - 1).ToString(), tokens[4]);
+                }
+            }
+            finally
+            {
+                File.Delete(fileName);
+            }
         }
 
         [Fact]
@@ -53,52 +67,39 @@ namespace Microsoft.Diagnostics.Tools.Counters
             exporter.Initialize();
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived("myProvider", GenerateCounterPayload(false, "counterOne", 1.0, 1, "Counter One"), false);
+                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(false, "counterOne", i, 1, "Counter One: " + i.ToString()), false);
             }
             exporter.Stop();
 
             Assert.True(File.Exists(fileName));
 
-            int lineCount = 0;
-            foreach (string line in File.ReadLines(fileName))
+            try
             {
-                lineCount += 1;
-                string[] tokens = line.Split(',');
+                List<string> lines = File.ReadLines(fileName).ToList();
+                Assert.Equal(11, lines.Count); // should be 11 including the headers
 
-                Assert.True("myProvider" == tokens[1] || "Provider" == tokens[1]);
-                Assert.True("Counter One" == tokens[2] || "Counter Name" == tokens[2]);
-                Assert.True("Metric" == tokens[3] || "Counter Type" == tokens[3]);
-                Assert.True("1" == tokens[4] || "Mean/Increment" == tokens[4]);
-            }
-            File.Delete(fileName);
-        }
+                string[] headerTokens = lines[0].Split(',');
+                Assert.Equal("Provider", headerTokens[1]);
+                Assert.Equal("Counter Name", headerTokens[2]);
+                Assert.Equal("Counter Type", headerTokens[3]);
+                Assert.Equal("Mean/Increment", headerTokens[4]);
 
-        private ICounterPayload GenerateCounterPayload(
-            bool isIncrementingCounter,
-            string counterName,
-            double counterValue,
-            int displayRateTimeScaleSeconds=0,
-            string displayName="")
-        {
-            if (isIncrementingCounter)
-            {
-                Dictionary<string, object> payloadFields = new Dictionary<string, object>();
-                payloadFields["Name"] = counterName;
-                payloadFields["Increment"] = counterValue;
-                payloadFields["DisplayName"] = displayName;
-                payloadFields["DisplayRateTimeScale"] = displayRateTimeScaleSeconds == 0 ? "" : TimeSpan.FromSeconds(displayRateTimeScaleSeconds).ToString();
-                ICounterPayload payload = new IncrementingCounterPayload(payloadFields, 1);
-                return payload;
+
+                for (int i = 1; i < lines.Count; i++)
+                {
+                    string[] tokens = lines[i].Split(',');
+
+                    Assert.Equal("myProvider", tokens[1]);
+                    Assert.Equal("Counter One: " + (i - 1).ToString(), tokens[2]);
+                    Assert.Equal("Metric", tokens[3]);
+                    Assert.Equal((i - 1).ToString(), tokens[4]);
+                }
             }
-            else
+            finally
             {
-                Dictionary<string, object> payloadFields = new Dictionary<string, object>();
-                payloadFields["Name"] = counterName;
-                payloadFields["Mean"] = counterValue;
-                payloadFields["DisplayName"] = displayName;
-                ICounterPayload payload = new CounterPayload(payloadFields);
-                return payload;
+                File.Delete(fileName);
             }
+
         }
     }
 }
