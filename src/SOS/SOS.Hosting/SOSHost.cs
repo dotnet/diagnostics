@@ -161,12 +161,12 @@ namespace SOS
 
         private readonly AnalyzeContext _analyzeContext;
         private readonly RegisterService _registerService;
+        private readonly MemoryService _memoryService;
         private readonly IConsoleService _console;
         private readonly COMCallableIUnknown _ccw;  
         private readonly IntPtr _interface;
         private readonly ReadVirtualCache _versionCache;
         private IntPtr _sosLibrary = IntPtr.Zero;
-        private Dictionary<string, PEReader> _pathToPeReader = new Dictionary<string, PEReader>();
 
         /// <summary>
         /// Enable the assembly resolver to get the right SOS.NETCore version (the one
@@ -202,8 +202,9 @@ namespace SOS
             DataReader = dataTarget.DataReader;
             _console = serviceProvider.GetService<IConsoleService>();
             _analyzeContext = serviceProvider.GetService<AnalyzeContext>();
+            _memoryService = serviceProvider.GetService<MemoryService>();
             _registerService = serviceProvider.GetService<RegisterService>();
-            _versionCache = new ReadVirtualCache(this);
+            _versionCache = new ReadVirtualCache(_memoryService);
 
             string rid = InstallHelper.GetRid();
             SOSPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
@@ -459,116 +460,12 @@ namespace SOS
             uint bytesRequested,
             uint* pbytesRead)
         {
-            if (DataReader.ReadMemory(address, buffer, unchecked((int)bytesRequested), out int bytesRead))
+            if (_memoryService.ReadMemory(address, buffer, unchecked((int)bytesRequested), out int bytesRead))
             {
                 Write(pbytesRead, (uint)bytesRead);
                 return S_OK;
             }
             return E_FAIL;
-        }
-
-        internal unsafe int ReadVirtualForWindows(
-            IntPtr self,
-            ulong address,
-            IntPtr buffer,
-            uint bytesRequested,
-            uint* pbytesRead)
-        {
-            if (DataReader.ReadMemory(address, buffer, unchecked((int)bytesRequested), out int bytesRead))
-            {
-                Write(pbytesRead, (uint)bytesRead);
-                return S_OK;
-            }
-
-            // The memory read failed. Check if there is a module that contains the 
-            // address range being read and map it into the virtual address space.
-            foreach (ModuleInfo module in DataReader.EnumerateModules())
-            {
-                ulong start = module.ImageBase;
-                ulong end = start + module.FileSize;
-                if (start <= address && end > address)
-                {
-                    Trace.TraceInformation("ReadVirtualForWindows: address {0:X16} size {1:X8} found module {2}", address, bytesRequested, module.FileName);
-
-                    // We found a module that contains the memory requested. Now find or download the PE image.
-                    PEReader reader = GetPEReader(module);
-                    if (reader != null)
-                    {
-                        // Read the memory from the PE image. There are a few limitions:
-                        // 1) Fix ups are NOT applied to the sections
-                        // 2) Memory regions that cross/contain heap memory into module image memory
-                        int rva = (int)(address - start);
-                        try
-                        {
-                            PEMemoryBlock block = reader.GetSectionData(rva);
-                            if (block.Pointer == null)
-                            {
-                                Trace.TraceInformation("ReadVirtualForWindows: rva {0:X8} not in any section; reading from entire image", rva);
-
-                                // If the address isn't contained in one of the sections, assume that SOS is reader the PE headers directly.
-                                block = reader.GetEntireImage();
-                            }
-                            else
-                            {
-                                rva = 0;
-                            }
-                            BlobReader blob = block.GetReader(rva, (int)bytesRequested);
-                            byte[] data = blob.ReadBytes((int)bytesRequested);
-
-                            Marshal.Copy(data, 0, buffer, data.Length);
-                            Write(pbytesRead, (uint)data.Length);
-                            return S_OK;
-                        }
-                        catch (Exception ex) when (ex is BadImageFormatException || ex is InvalidOperationException || ex is IOException)
-                        {
-                            Trace.TraceError("ReadVirtualForWindows: exception {0}", ex);
-                        }
-                    }
-                    break;
-                }
-            }
-
-            return E_FAIL;
-        }
-
-        private PEReader GetPEReader(ModuleInfo module)
-        {
-            if (!_pathToPeReader.TryGetValue(module.FileName, out PEReader reader))
-            {
-                Stream stream = null;
-
-                string downloadFilePath = module.FileName;
-                if (!File.Exists(downloadFilePath)) 
-                {
-                    if (SymbolReader.IsSymbolStoreEnabled())
-                    {
-                        SymbolStoreKey key = PEFileKeyGenerator.GetKey(Path.GetFileName(downloadFilePath), module.TimeStamp, module.FileSize);
-                        if (key != null)
-                        {
-                            // Now download the module from the symbol server
-                            downloadFilePath = SymbolReader.GetSymbolFile(key);
-                        }
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(downloadFilePath))
-                {
-                    try
-                    {
-                        stream = File.OpenRead(downloadFilePath);
-                    }
-                    catch (Exception ex) when (ex is DirectoryNotFoundException || ex is FileNotFoundException || ex is UnauthorizedAccessException || ex is IOException)
-                    {
-                        Trace.TraceError("GetPEReader: exception {0}", ex);
-                    }
-                    if (stream != null)
-                    {
-                        reader = new PEReader(stream);
-                        _pathToPeReader.Add(module.FileName, reader);
-                    }
-                }
-            }
-            return reader;
         }
 
         internal unsafe int WriteVirtual(
@@ -1256,15 +1153,15 @@ namespace SOS
     {
         private const int CACHE_SIZE = 4096;
 
-        private readonly SOSHost _soshost;
+        private readonly MemoryService _memoryService;
         private readonly byte[] _cache = new byte[CACHE_SIZE];
         private ulong _startCache;
         private bool _cacheValid;
         private int _cacheSize;
 
-        internal ReadVirtualCache(SOSHost soshost)
+        internal ReadVirtualCache(MemoryService memoryService)
         {
-            _soshost = soshost;
+            _memoryService = memoryService;
             Clear();
         }
 
@@ -1279,22 +1176,23 @@ namespace SOS
             if (bufferSize > CACHE_SIZE) 
             {
                 // Don't even try with the cache
-                return _soshost.DataReader.ReadMemory(address, buffer, bufferSize, out bytesRead);
+                return _memoryService.ReadMemory(address, buffer, bufferSize, out bytesRead);
             }
 
             if (!_cacheValid || (address < _startCache) || (address > (_startCache + (ulong)(_cacheSize - bufferSize))))
             {
                 _cacheValid = false;
                 _startCache = address;
-                if (!_soshost.DataReader.ReadMemory(_startCache, _cache, CACHE_SIZE, out int cbBytesRead)) {
+                if (!_memoryService.ReadMemory(_startCache, _cache, _cache.Length, out int cbBytesRead)) {
                     return false;
                 }
                 _cacheSize = cbBytesRead;
                 _cacheValid = true;
             }
 
-            Array.Copy(_cache, (int)(address - _startCache), buffer, 0, bufferSize);
-            bytesRead = bufferSize;
+            int size = Math.Min(bufferSize, _cacheSize);
+            Array.Copy(_cache, (int)(address - _startCache), buffer, 0, size);
+            bytesRead = size;
             return true;
         }
 

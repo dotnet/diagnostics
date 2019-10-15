@@ -415,16 +415,17 @@ void DumpStackInternal(DumpStackFlag *pDSFlag)
     if (pDSFlag->end == 0) {
         // Find the current stack range
         NT_TIB teb;
-        ULONG64 dwTebAddr=0;
-
-        g_ExtSystem->GetCurrentThreadTeb(&dwTebAddr);
-        if (SafeReadMemory(TO_TADDR(dwTebAddr), &teb, sizeof(NT_TIB), NULL))
+        ULONG64 dwTebAddr = 0;
+        if (SUCCEEDED(g_ExtSystem->GetCurrentThreadTeb(&dwTebAddr)))
         {
-            if (pDSFlag->top > TO_TADDR(teb.StackLimit)
-            && pDSFlag->top <= TO_TADDR(teb.StackBase))
+            if (SafeReadMemory(TO_TADDR(dwTebAddr), &teb, sizeof(NT_TIB), NULL))
             {
-                if (pDSFlag->end == 0 || pDSFlag->end > TO_TADDR(teb.StackBase))
-                    pDSFlag->end = TO_TADDR(teb.StackBase);
+                if (pDSFlag->top > TO_TADDR(teb.StackLimit)
+                    && pDSFlag->top <= TO_TADDR(teb.StackBase))
+                {
+                    if (pDSFlag->end == 0 || pDSFlag->end > TO_TADDR(teb.StackBase))
+                        pDSFlag->end = TO_TADDR(teb.StackBase);
+                }
             }
         }
     }
@@ -10402,10 +10403,13 @@ DECLARE_API (ProcInfo)
     }
 
     if (fProcInfo & INFO_ENV) {
+        ULONG64 pPeb;
+        if (FAILED(g_ExtSystem->GetCurrentProcessPeb(&pPeb)))
+        {
+            return Status;
+        }
         ExtOut("---------------------------------------\n");
         ExtOut("Environment\n");
-        ULONG64 pPeb;
-        g_ExtSystem->GetCurrentProcessPeb(&pPeb);
 
         static ULONG Offset_ProcessParam = -1;
         static ULONG Offset_Environment = -1;
@@ -10487,7 +10491,10 @@ DECLARE_API (ProcInfo)
     HANDLE hProcess = INVALID_HANDLE_VALUE;
     if (fProcInfo & (INFO_TIME | INFO_MEM)) {
         ULONG64 handle;
-        g_ExtSystem->GetCurrentProcessHandle(&handle);
+        if (FAILED(g_ExtSystem->GetCurrentProcessHandle(&handle)))
+        {
+            return Status;
+        }
         hProcess = (HANDLE)handle;
     }
     
