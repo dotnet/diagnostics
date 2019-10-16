@@ -150,11 +150,10 @@ Options:
   --profile
       A named pre-defined set of provider configurations that allows common tracing scenarios to be specified
       succinctly. The options are:
-      runtime-basic   Useful for tracking CPU usage and general runtime information. This the default option
-                      if no profile is specified.
-      gc              Tracks allocation and collection performance
+      cpu-sampling    Useful for tracking CPU usage and general .NET runtime information. This is the default 
+                      option if no profile or providers are specified.
+      gc-verbose      Tracks GC collection and sampled object allocations
       gc-collect      Tracks GC collection only at very low overhead
-      none            Tracks nothing. Only providers specified by the --providers option will be available.
 
   --providers <list-of-comma-separated-providers>
     A list of comma separated EventPipe providers to be enabled.
