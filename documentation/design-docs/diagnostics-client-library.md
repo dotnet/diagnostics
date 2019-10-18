@@ -213,17 +213,17 @@ namespace Microsoft.Diagnostics.Client.EventPipe
 
         public string FilterData { get; }
 
-        public string ToDisplayString() =>
+        public string ToDisplayString();
 
-        public override string ToString() =>
+        public override string ToString();
         
-        public static bool operator ==(Provider left, Provider right)
+        public override bool Equals(object obj);
 
-        public static bool operator !=(Provider left, Provider right)
+        public override int GetHashCode();
 
-        public override bool Equals(object obj)
+        public static bool operator ==(Provider left, Provider right);
 
-        public override int GetHashCode()
+        public static bool operator !=(Provider left, Provider right);
     }
 }
 ```
