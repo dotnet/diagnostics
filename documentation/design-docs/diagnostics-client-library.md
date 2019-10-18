@@ -154,11 +154,11 @@ This is a CommandHandler class for sending Profiler commands across the diagnost
 ```cs
     namespace Microsoft.Diagnostics.Client.Exceptions
     {
-        public class UnknownCommandException : Exception
-        public class UnknownMagicException : Exception
-        public class EventPipeInvalidArgumentException : Exception
-        public class DumpInvalidArgumentException : Exception
-        public class ProfilerInvalidArgumentException : Exception
+        public class UnknownCommandException : Exception {}
+        public class UnknownMagicException : Exception {}
+        public class EventPipeInvalidArgumentException : Exception {}
+        public class DumpInvalidArgumentException : Exception {}
+        public class ProfilerInvalidArgumentException : Exception {}
     }
 }
 ```
