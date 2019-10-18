@@ -76,6 +76,9 @@ namespace Microsoft.Diagnostics.Client
         /// </returns>
         public static IEnumerable<int> GetActiveProcesses();
 
+        // The default path that the diagnostics client library looks for the IPC socket (default: /tmp)
+        public static string DefaultIPCSocketPath { get; set; } 
+
         /// <summary>
         /// Get all the supported commands by this version of the diagnostics IPC.
         /// </summary>
@@ -99,6 +102,7 @@ namespace Microsoft.Diagnostics.Client
         /// Corresponding command name for the given command code. This may throw UnknownCommandException
         /// </returns>
         public static string GetCommandNameFromCommandCode(int commandCode);
+
     }
 }
 ```
@@ -127,6 +131,11 @@ namespace Microsoft.Diagnostics.Client
             ulong keywords=ulong.MaxValue,
             EventLevel=EventLevel.Verbose,
             string filterData=null)
+
+        /// <summary>
+        /// Add a path that this instances looks for the IPC socket.
+        /// </summary>
+        public void AddIPCSocketPath(string path)
 
         /// <summary>
         /// Start tracing the application via CollectTracing1 command.
