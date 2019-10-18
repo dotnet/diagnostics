@@ -19,9 +19,11 @@ The goal of this library is as following:
 
 ## API Descriptions
 
-At a high level, the DiagnosticsClient library provides a `CommandHandler` class for each of the command specified as part of the diagnostics IPC protocol described here: https://github.com/dotnet/diagnostics/blob/master/documentation/design-docs/ipc-protocol.md#commands. For example, `EventPipeCommandHandler` handles all the `EventPipe` commands that are specified, such as `CollectTracing` and `CollectTracing2`. 
+At a high level, the DiagnosticsClient library provides a `CommandHandler` class for each of the command specified as part of the diagnostics IPC protocol described here: https://github.com/dotnet/diagnostics/blob/master/documentation/design-docs/ipc-protocol.md#commands. For example, `EventPipeCommandHandler` handles all the `EventPipe` commands that are specified, such as `CollectTracing` and `CollectTracing2`.  For each of these commands, there should be a method that handles 
 
-On top of this, there are helper methods that contain various util methods for talking to the IPC channel. These are included in the `DiagnosticsIPCHelper` class.
+Currently the handler classes are scattered across in different format. On top of that they are all static methods. To make it cleaner and allow a single instance of the CommandHandler class to be responsible for handling communication with a *single process*, I propose that these CommandHandler methods become instance methods and their constructor to take in the process ID of the process they are responsible for communicating with.
+
+There are also helper methods that contain various util methods for talking to the IPC channel. These are included in the `DiagnosticsIPCHelper` class.
 
 We may create additional namespaces under Microsoft.Diagnostics.Client for command-specific classes that may be useful. i.e. `Microsoft.Diagnostics.Client.EventPipe`.
 
@@ -60,6 +62,7 @@ namespace Microsoft.Diagnostics.Client
 This is a class that contains some utility methods for various purposes.
 ```cs
 namespace Microsoft.Diagnostics.Client
+{
     /// <summary>
     /// A utility class that contain various helper methods to interact with the diagnostics IPC.
     /// </summary>
@@ -71,7 +74,31 @@ namespace Microsoft.Diagnostics.Client
         /// <returns>
         /// IEnumerable of all the active process IDs.
         /// </returns>
-        public static IEnumerable<int> GetActiveProcesses()
+        public static IEnumerable<int> GetActiveProcesses();
+
+        /// <summary>
+        /// Get all the supported commands by this version of the diagnostics IPC.
+        /// </summary>
+        /// <returns>
+        /// IEnumerable of all supported commands Command Code.
+        /// </returns>
+        public static IEnumerable<int> GetAvailableCommands();
+
+        /// <summary>
+        /// Convert a command name in the right format (CommandSet:Command) - i.e. EventPipe.CollectTracing - to corresponding command code.
+        /// </summary>
+        /// <returns>
+        /// Corresponding command code for the given command name. This may throw UnknownCommandException.
+        /// </returns>
+        public static int GetCommandCodeFromCommandName(string commandName);
+
+        /// <summary>
+        /// Convert a command code to its string representation
+        /// </summary>
+        /// <returns>
+        /// Corresponding command name for the given command code. This may throw UnknownCommandException
+        /// </returns>
+        public static string GetCommandNameFromCommandCode(int commandCode);
     }
 }
 ```
@@ -251,7 +278,7 @@ public static void Main(String[] args)
 
     // Start tracing
     Stream stream = handler.CollectTracing1();
-    
+
     // Use TraceEvent to read & parse the stream here.
 }
 ```
