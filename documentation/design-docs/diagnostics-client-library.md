@@ -131,35 +131,40 @@ namespace Microsoft.Diagnostics.Client
 ### DumpCommandHandler
 This is a CommandHandler class for sending Dump commands across the diagnostics IPC channel.
 ```cs
+namespace Microsoft.Diagnostics.Client
+{
     public class DumpCommandHandler
     {
-        public DumpCommandHandler(int processId)
-        public int GenerateCoreDump()
+        public DumpCommandHandler(int processId);
+        public int GenerateCoreDump();
     }
+}
 ```
 
 
 ### ProfilerCommandHandler
 This is a CommandHandler class for sending Profiler commands across the diagnostics IPC channel.
 ```cs
+namespace Microsoft.Diagnostics.Client
+{
     public class ProfilerCommandHandler
     {
         public ProfilerCommandHandler(int processId);
         public int AttachProfiler(uint attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData);
     }
+}
 ```
 
 
 ### Exceptions that can be thrown 
 ```cs
-    namespace Microsoft.Diagnostics.Client.Exceptions
-    {
-        public class UnknownCommandException : Exception {}
-        public class UnknownMagicException : Exception {}
-        public class EventPipeInvalidArgumentException : Exception {}
-        public class DumpInvalidArgumentException : Exception {}
-        public class ProfilerInvalidArgumentException : Exception {}
-    }
+namespace Microsoft.Diagnostics.Client.Exceptions
+{
+    public class UnknownCommandException : Exception {}
+    public class UnknownMagicException : Exception {}
+    public class EventPipeInvalidArgumentException : Exception {}
+    public class DumpInvalidArgumentException : Exception {}
+    public class ProfilerInvalidArgumentException : Exception {}
 }
 ```
 
