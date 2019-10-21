@@ -19,15 +19,15 @@ The goal of this library is as following:
 
 ## API Descriptions
 
-At a high level, the DiagnosticsClient library provides a `CommandHandler` class for each of the command specified as part of the diagnostics IPC protocol described here: https://github.com/dotnet/diagnostics/blob/master/documentation/design-docs/ipc-protocol.md#commands. For example, `EventPipeCommandHandler` handles all the `EventPipe` commands that are specified, such as `CollectTracing` and `CollectTracing2`.  For each of these commands, there should be a method that handles 
+At a high level, the DiagnosticsClient library provides a `CommandHandler` class for each of the command specified as part of the diagnostics IPC protocol described here: https://github.com/dotnet/diagnostics/blob/master/documentation/design-docs/ipc-protocol.md#commands. For example, `EventPipeCommandHandler` handles all the `EventPipe` commands that are specified, such as `CollectTracing` and `CollectTracing2`.  For each of these commands, there should be a method that handles it. 
 
 Currently the handler classes are scattered across in different format. On top of that they are all static methods. To make it cleaner and allow a single instance of the CommandHandler class to be responsible for handling communication with a *single process*, I propose that these CommandHandler methods become instance methods and their constructor to take in the process ID of the process they are responsible for communicating with.
 
-There are also helper methods that contain various util methods for talking to the IPC channel. These are included in the `DiagnosticsIPCHelper` class.
+There are also helper methods that contain various util methods for talking to the IPC channel. These are included in the `DiagnosticsIpcHelper` class.
 
 We may create additional namespaces under Microsoft.Diagnostics.Client for command-specific classes that may be useful. i.e. `Microsoft.Diagnostics.Client.EventPipe`.
 
-### DiagnosticsIPCVersion
+### VersionInfo
 This is a helper class that encodes the minimum and maximum supported versions of the diagnostics IPC protocol. This helps the developer to programmatically opt in/out of certain features easily. Currently both min/max would be 1.
 
 ```cs
@@ -58,7 +58,7 @@ namespace Microsoft.Diagnostics.Client
 }
 ```
 
-### DiagnosticsIPCHelper
+### DiagnosticsIpcHelper
 This is a class that contains some utility methods for various purposes.
 ```cs
 namespace Microsoft.Diagnostics.Client
@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.Client
     /// <summary>
     /// A utility class that contain various helper methods to interact with the diagnostics IPC.
     /// </summary>
-    public class DiagnosticsIPCHelper
+    public class DiagnosticsIpcHelper
     {
         /// <summary>
         /// Get all the active processes that can be attached to.
@@ -77,7 +77,7 @@ namespace Microsoft.Diagnostics.Client
         public static IEnumerable<int> GetActiveProcesses();
 
         // The default path that the diagnostics client library looks for the IPC socket (default: /tmp)
-        public static string DefaultIPCSocketPath { get; set; } 
+        public static string DefaultIpcSocketPath { get; set; } 
 
         /// <summary>
         /// Get all the supported commands by this version of the diagnostics IPC.
@@ -135,7 +135,7 @@ namespace Microsoft.Diagnostics.Client
         /// <summary>
         /// Add a path that this instances looks for the IPC socket.
         /// </summary>
-        public void AddIPCSocketPath(string path)
+        public void AddIpcSocketPath(string path)
 
         /// <summary>
         /// Start tracing the application via CollectTracing1 command.
