@@ -256,6 +256,8 @@ namespace Microsoft.Diagnostics.Client.EventPipe
 
         public string ToDisplayString();
 
+        public void AddFilterData(string key, string value);
+
         public override string ToString();
         
         public override bool Equals(object obj);
