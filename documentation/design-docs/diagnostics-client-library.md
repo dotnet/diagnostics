@@ -252,7 +252,7 @@ namespace Microsoft.Diagnostics.Client.EventPipe
 
         public string Name { get; }
 
-        public string FilterData { get; }
+        public IEnumerable<KeyValuePair<string, string>> FilterData { get; }
 
         public string ToDisplayString();
 
