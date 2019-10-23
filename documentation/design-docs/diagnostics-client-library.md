@@ -21,6 +21,7 @@ The goal of this library is as following:
 
 ### 1. Attaching to a process and dumping out all the event name in real time to the console
 ```cs
+using Microsoft.Diagnostics.NETCore.Client;
 
 public void PrintEvents(int processId, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferSizeMB)
 {
@@ -47,6 +48,9 @@ public void PrintEvents(int processId, IEnumerable<EventPipeProvider> providers,
 
 #### 2. Trigger dump if CPU usage goes above a certain threshold
 ```cs
+
+using Microsoft.Diagnostics.NETCore.Client;
+
 public void TriggerDumpOnCPUUsage(int usage, int processId, int threshold)
 {
     EventPipeSession session = DiagnosticsClient.StartTracing(processId, providers);
@@ -200,24 +204,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
 ## Micorosft.Diagnostics.Client.EventPipe namespace
 
-### EventPipeCommandSet
-An enum for all EventPipe commands.
-``` cs
-namespace Micorosft.Diagnostics.Client.EventPipe
-{
-    public enum EventPipeCommandSet
-    {
-        StopTracing,
-        CollectTracing,
-        CollectTracing2
-    }
-}
-```
-
 ### EventPipeProvider
 A class that describes an EventPipe provider.
 ```cs
-namespace Microsoft.Diagnostics.Client.EventPipe
+namespace Microsoft.Diagnostics.Client
 {
     public class EventPipeProvider
     {
@@ -247,5 +237,16 @@ namespace Microsoft.Diagnostics.Client.EventPipe
 
         public static bool operator !=(Provider left, Provider right);
     }
+}
+```
+
+### EventPipeSession
+This is a class to represent an EventPipeSession. It is meant to be immutable and acts as a handle to each session that has been started. 
+
+```cs
+namespace Microsoft.Diagnostics.Client
+{
+    public class EventPipeSession
+    
 }
 ```
