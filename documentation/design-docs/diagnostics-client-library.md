@@ -71,13 +71,17 @@ public void TriggerDumpOnCPUUsage(int usage, int processId, int threshold)
         source.Process();
         shouldExit.WaitOne();
     }
-    catch (Exception e) { } // TraceEvent throws a generic Exception when the target process exists first. This also needs some fix on TraceEvent side.
+    // TraceEvent throws a generic Exception when the target process exists first. 
+    // This also needs some fix on TraceEvent side.
+    catch (Exception e) { } 
     finally
     {
         DiagnosticsClient.StopTracing(session);
     }
 }
 ```
+
+
 
 
 ## API Descriptions
@@ -138,7 +142,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         /// <summary>
         /// Start tracing the application via CollectTracing2 command.
-        /// </summary> 
+        /// </summary>
+        /// <param name="processId">Target process' ID</param>
+        /// <param name="providers">An IEnumerable containing the list of Providers to turn on.</param>
+        /// <param name="circularBufferMB">The size of the runtime's buffer for collecting events in MB</param>
+        /// <param name="requestRundown">If true, request rundown events from the runtime</param>
         /// <returns>
         /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns> 
@@ -146,7 +154,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         /// <summary>
         /// Stop the EventPipe session provided as an argument.
-        /// </summary> 
+        /// </summary>
+        /// <param name="session">The EventPipeSession to be stopped.
         /// <returns>
         /// true if stopping the tracing session succeeded. false otherwise. 
         /// </returns> 
@@ -163,33 +172,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// true if stopping the tracing session succeeded. false otherwise. 
         /// </returns> 
         public static GenerateCoreDump(int processId, string dumpName, DumpType dumpType, bool logDumpGeneration)
-    }
-}
-```
 
-### DumpCommandHandler
-This is a CommandHandler class for sending Dump commands across the diagnostics IPC channel.
-```cs
-namespace Microsoft.Diagnostics.Client
-{
-    public class DumpCommandHandler
-    {
-        public DumpCommandHandler(int processId);
-        public int GenerateCoreDump();
-    }
-}
-```
+        /// <summary>
+        /// Attach a profiler.
+        /// </summary>
+        /// <param name="processId">Target process' ID</param>
+        /// <param name="attachTimeout">Timeout in seconds</param>
+        /// <param name="attachTimeout">
+        public static int AttachProfiler(int processId, uint attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData);
 
-
-### ProfilerCommandHandler
-This is a CommandHandler class for sending Profiler commands across the diagnostics IPC channel.
-```cs
-namespace Microsoft.Diagnostics.Client
-{
-    public class ProfilerCommandHandler
-    {
-        public ProfilerCommandHandler(int processId);
-        public int AttachProfiler(uint attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData);
     }
 }
 ```
@@ -197,7 +188,7 @@ namespace Microsoft.Diagnostics.Client
 
 ### Exceptions that can be thrown 
 ```cs
-namespace Microsoft.Diagnostics.Client.Exceptions
+namespace Microsoft.Diagnostics.NETCore.Client
 {
     public class UnknownCommandException : Exception {}
     public class UnknownMagicException : Exception {}
@@ -219,19 +210,6 @@ namespace Micorosft.Diagnostics.Client.EventPipe
         StopTracing,
         CollectTracing,
         CollectTracing2
-    }
-}
-```
-
-### EventPipeSerializationFormat
-An enum for all EventPipe serialization format.
-```cs
-namespace Microsoft.Diagnostics.Client.EventPipe
-{
-    public enum EventPipeSerializationFormat
-    {
-        NetPerf,
-        NetTrace
     }
 }
 ```
@@ -269,23 +247,5 @@ namespace Microsoft.Diagnostics.Client.EventPipe
 
         public static bool operator !=(Provider left, Provider right);
     }
-}
-```
-
-#### 3. Maintain multiple tracing sessions to the same process for different purposes
-```cs
-public void GetGCTrace()
-{
-    Stream pipe = EventPipeClient.Start(processId, )
-}
-
-public void GetCounterTrace()
-{
-
-}
-
-public static void Main()
-{
-
 }
 ```
