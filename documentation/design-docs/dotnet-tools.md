@@ -562,7 +562,7 @@ SYNOPSIS
 OPTIONS
 
     --version
-        Display the version of the dotnet-dump utility.
+        Display the version of the dotnet-gcdump utility.
 
     -h, --help
         Show command line help
