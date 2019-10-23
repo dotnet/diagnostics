@@ -17,6 +17,69 @@ The goal of this library is as following:
 * Provide tool-specific functionalities that are too high-level (i.e. dumping the GC heap, parsing counter payload, etc.) This will broaden the scope of this library too far and will cause complexity 
 * Parse event payloads (i.e. - This is also command-specific and can be done by other libraries.
 
+## Sample Code:
+
+### 1. Attaching to a process and dumping out all the event name in real time to the console
+```cs
+
+public void PrintEvents(int processId, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferSizeMB)
+{
+    EventPipeSession session = DiagnosticsClient.StartTracing(processId, providers, requestRundown, circularBufferSizeMB);
+    EventPipeEventSource source = new EventPipeEventSource(session.stream);
+
+    source.Dynamic.All += (TraceEvent obj) => {
+        Console.WriteLine(obj.EventName);
+    }
+    try
+    {
+        source.Process();
+        ShouldExit.WaitOne();
+    }
+    catch (Exception e)
+    {
+    }
+    finally
+    {
+        DiagnosticsClient.StopTracing(session); // Cleanup
+    }
+}
+```
+
+#### 2. Trigger dump if CPU usage goes above a certain threshold
+```cs
+public void TriggerDumpOnCPUUsage(int usage, int processId, int threshold)
+{
+    EventPipeSession session = DiagnosticsClient.StartTracing(processId, providers);
+    EventPipeEventSource source = new EventPipeEventSource(session.stream)
+    source.Dynamic.All += (TraceEvent obj) => {
+        if (obj.EventName.Equals("EventCounters"))
+        {
+            // I know this part is ugly. But this is all TraceEvent.
+            IDictionary<string, object> payloadFields = (IDictionary<string, object>)(obj.GetPayloadValueByName("Payload"));
+            if (payloadFields["Name"].ToString().Equals("cpu-usage"))
+            {
+                double cpuUsage = Double.Parse(payloadFields["Mean"]);
+                if (cpuUsage > (double)threshold)
+                {
+                    DiagnosticsClient.CollectCoreDump(processId);
+                }
+            }
+        }
+    }
+    try
+    {
+        source.Process();
+        shouldExit.WaitOne();
+    }
+    catch (Exception e) { } // TraceEvent throws a generic Exception when the target process exists first. This also needs some fix on TraceEvent side.
+    finally
+    {
+        DiagnosticsClient.StopTracing(session);
+    }
+}
+```
+
+
 ## API Descriptions
 
 At a high level, the DiagnosticsClient library provides a `CommandHandler` class for each of the command specified as part of the diagnostics IPC protocol described here: https://github.com/dotnet/diagnostics/blob/master/documentation/design-docs/ipc-protocol.md#commands. For example, `EventPipeCommandHandler` handles all the `EventPipe` commands that are specified, such as `CollectTracing` and `CollectTracing2`.  For each of these commands, there should be a method that handles it. 
@@ -27,46 +90,15 @@ There are also helper methods that contain various util methods for talking to t
 
 We may create additional namespaces under Microsoft.Diagnostics.Client for command-specific classes that may be useful. i.e. `Microsoft.Diagnostics.Client.EventPipe`.
 
-### VersionInfo
-This is a helper class that encodes the minimum and maximum supported versions of the diagnostics IPC protocol. This helps the developer to programmatically opt in/out of certain features easily. Currently both min/max would be 1.
-
+### ProcessLocator
+This is a helper class that finds processes to attach to.
 ```cs
-namespace Microsoft.Diagnostics.Client
-{
-    public class VersionInfo
-    {
-        public static const int MIN_SUPPORTED_VERSION;
-        public static const int MAX_SUPPORTED_VERSION;
-    }
-}
-```
-
-### DiagnosticsCommand
-This is an enum for all the diagnostics command supported in the current version of the library.
-```cs
-namespace Microsoft.Diagnostics.Client
-{
-    /// <summary>
-    /// An enum for all the supported diagnostics IPC command
-    /// </summary>
-    public enum DiagnosticsCommand
-    {
-        Dump,
-        EventPipe
-        Profiler
-    }
-}
-```
-
-### DiagnosticsIpcHelper
-This is a class that contains some utility methods for various purposes.
-```cs
-namespace Microsoft.Diagnostics.Client
+namespace Microsoft.Diagnostics.NETCore.Client
 {
     /// <summary>
     /// A utility class that contain various helper methods to interact with the diagnostics IPC.
     /// </summary>
-    public class DiagnosticsIpcHelper
+    public class ProcessLocator
     {
         /// <summary>
         /// Get all the active processes that can be attached to.
@@ -74,92 +106,63 @@ namespace Microsoft.Diagnostics.Client
         /// <returns>
         /// IEnumerable of all the active process IDs.
         /// </returns>
-        public static IEnumerable<int> GetActiveProcesses();
-
-        // The default path that the diagnostics client library looks for the IPC socket (default: /tmp)
-        public static string DefaultIpcSocketPath { get; set; } 
-
-        /// <summary>
-        /// Get all the supported commands by this version of the diagnostics IPC.
-        /// </summary>
-        /// <returns>
-        /// IEnumerable of all supported commands Command Code.
-        /// </returns>
-        public static IEnumerable<int> GetAvailableCommands();
-
-        /// <summary>
-        /// Convert a command name in the right format (CommandSet:Command) - i.e. EventPipe.CollectTracing - to corresponding command code.
-        /// </summary>
-        /// <returns>
-        /// Corresponding command code for the given command name. This may throw UnknownCommandException.
-        /// </returns>
-        public static int GetCommandCodeFromCommandName(string commandName);
-
-        /// <summary>
-        /// Convert a command code to its string representation
-        /// </summary>
-        /// <returns>
-        /// Corresponding command name for the given command code. This may throw UnknownCommandException
-        /// </returns>
-        public static string GetCommandNameFromCommandCode(int commandCode);
-
+        public static IEnumerable<int> GetPublishedProcesses();
     }
 }
 ```
 
-### EventPipeCommandHandler
-This is a CommandHandler class for sending EventPipe commands across the diagnostics IPC channel.
+
+### DumpType (enum)
+This is an enum for the dump type
+
 ```cs
-namespace Microsoft.Diagnostics.Client
+namespace Microsoft.Diagnostics.NETCore.Client
 {
-    /// <summary>
-    /// A class for handling EventPipe commands.
-    /// </summary>
-    public class EventPipeCommandHandler
+    public enum DumpType
     {
-        public ulong SessionId { get; }  /// A ulong representing the current session ID. Defaults to ulong.Max
-        public uint CircularBufferSizeMB { get; set; }   /// The maximum buffer size in MB. Defaults to 
-        public EventPipeSerializationFormat SerializationFormat { get; set; }  /// Serialization format. Defaults to NetTrace
-        
-        public EventPipeCommandHandler(int processId)
+        Normal = 1,
+        WithHeap = 2,
+        Triage = 3,
+        Full = 4
+    }
+}
+```
 
-        /// <summary>
-        /// Add a provider to the EventPipe command
-        /// </summary>
-        public void AddProvider(
-            string name,
-            ulong keywords=ulong.MaxValue,
-            EventLevel=EventLevel.Verbose,
-            string filterData=null)
 
-        /// <summary>
-        /// Add a path that this instances looks for the IPC socket.
-        /// </summary>
-        public void AddIpcSocketPath(string path)
-
-        /// <summary>
-        /// Start tracing the application via CollectTracing1 command.
-        /// </summary> 
-        /// <returns>
-        /// A Stream object to read
-        /// </returns> 
-        public Stream CollectTracing1(SessionConfiguration configuration)
-
+### DiagnosticsClient
+This is a top-level class with static methods to send various diagnostics command to the runtime.
+```cs
+namespace Microsoft.Diagnostics.NETCore.Client
+{
+    public class DiagnosticsClient
+    {
         /// <summary>
         /// Start tracing the application via CollectTracing2 command.
         /// </summary> 
         /// <returns>
-        /// A Stream object to read
+        /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns> 
-        public Stream CollectTracing2()
+        public static EventPipeSession StartTracing(int processId, IEnumerable<EventPipeProvider> providers, int circularBufferMB=256, bool requestRundown=true)
 
         /// <summary>
-        /// Stop tracing the applicating via the StopTracing command.
+        /// Stop the EventPipe session provided as an argument.
         /// </summary> 
         /// <returns>
         /// true if stopping the tracing session succeeded. false otherwise. 
         /// </returns> 
-        public bool StopTracing()
+        public static bool StopTracing(EventPipeSession session)
+
+        /// <summary>
+        /// Trigger a core dump generation.
+        /// </summary> 
+        /// <param name="processId">Target process' ID</param>
+        /// <param name="dumpName">Name of the dump to be generated</param>
+        /// <param name="dumpType">Type of the dump to be generated</param>
+        /// <param name="logDumpGeneration">When set to true, display the dump generation debug log to the console</param>
+        /// <returns>
+        /// true if stopping the tracing session succeeded. false otherwise. 
+        /// </returns> 
+        public static GenerateCoreDump(int processId, string dumpName, DumpType dumpType, bool logDumpGeneration)
     }
 }
 ```
@@ -242,11 +245,11 @@ namespace Microsoft.Diagnostics.Client.EventPipe
     {
         public EventPipeProvider(
             string name,
-            ulong keywords = ulong.MaxValue,
+            long keywords = ulong.MaxValue,
             EventLevel eventLevel = EventLevel.Verbose,
             string filterData = null)
 
-        public ulong Keywords { get; }
+        public long Keywords { get; }
 
         public EventLevel EventLevel { get; }
 
@@ -255,8 +258,6 @@ namespace Microsoft.Diagnostics.Client.EventPipe
         public IEnumerable<KeyValuePair<string, string>> FilterData { get; }
 
         public string ToDisplayString();
-
-        public void AddFilterData(string key, string value);
 
         public override string ToString();
         
@@ -270,29 +271,21 @@ namespace Microsoft.Diagnostics.Client.EventPipe
     }
 }
 ```
-## Sample Code:
 
-
-### 1. Attaching to a process and dumping out its event data 
+#### 3. Maintain multiple tracing sessions to the same process for different purposes
 ```cs
-
-public static void Main(String[] args)
+public void GetGCTrace()
 {
-    int processId = Int32.Parse(args[0]);
-    
-    // Create an EventPipe command handler for the given process ID
-    EventPipeCommandHandler handler = new EventPipeCommandHandler(processId);
+    Stream pipe = EventPipeClient.Start(processId, )
+}
 
-    // Add providers that should be turned on
-    handler.AddProvider("Microsoft-Windows-DotNETRuntime", 0x1, EventLevel.Informational);
-    handler.AddProvider("System.Runtime", 0x1, EventLevel.Informational, "EventCounterIntervalSec=1");
+public void GetCounterTrace()
+{
 
-    // Start tracing
-    Stream stream = handler.CollectTracing1();
+}
 
-    // Use TraceEvent to read & parse the stream here.
+public static void Main()
+{
+
 }
 ```
-
-// TODO: MORE TO COME
-
