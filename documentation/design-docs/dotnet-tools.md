@@ -556,8 +556,8 @@ UNINSTALL
 SYNOPSIS
 
     dotnet-gcdump [--version]
-                      [-h, --help]
-                      <command> [<args>]
+                  [-h, --help]
+                  <command> [<args>]
 
 OPTIONS
 
@@ -573,7 +573,7 @@ COMMANDS
 
 COLLECT
 
-    dotnet-gcdump collect -p|--process-id <pid> [-h|--help] [-o|--output <output_dump_path>]
+    dotnet-gcdump collect -p|--process-id <pid> [-h|--help] [-o|--output <output_dump_path>] [-v|--verbose]
 
     Capture GC dumps from a dotnet process
 
@@ -588,8 +588,11 @@ COLLECT
           Show command line help
 
       -o, --output
-          The path where collected dumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump' where YYYYMMDD is Year/Month/Day
+          The path where collected gcdumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump' where YYYYMMDD is Year/Month/Day
           and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.
+      
+      -v, --verbose
+          Turns on logging for gcdump
 
 Examples:
 
