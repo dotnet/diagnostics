@@ -7,20 +7,31 @@ Dumps created with gdb or gcore do not have all the managed state so various SOS
 
 ### Getting symbols ###
 
-Because SOS now has symbol download support, this step can be skipped if the matching version of the "host" program is available on the machine loading the dump. Usually the host program is "dotnet" but each .NET Core SDK has a different version.
+Because SOS now has symbol download support (both managed PDBs and native symbols via `loadsymbols`) all that lldb requires is the host program. The host is usually `dotnet` but for self-contained applications it the .NET Core `apphost` renamed to the program/project name. These steps will handle either case and download the host lldb needs to properly diagnose a core dump. 
 
-First install the dotnet CLI symbol tool. This only needs to be down once. See this [link](https://github.com/dotnet/symstore/tree/master/src/dotnet-symbol#install) for more details.
+First install or update the dotnet CLI symbol tool. This only needs to be down once. See this [link](https://github.com/dotnet/symstore/tree/master/src/dotnet-symbol#install) for more details. We need version 1.0.52901 or greater of dotnet-symbol installed.
 
     ~$ dotnet tool install -g dotnet-symbol
+    You can invoke the tool using the following command: dotnet-symbol
+    Tool 'dotnet-symbol' (version '1.0.52901') was successfully installed.
+
+Or update if already installed:
+
+    ~$ dotnet tool update -g dotnet-symbol
+    Tool 'dotnet-symbol' was successfully updated from version '1.0.51501' to version '1.0.52901'.
 
 Copy the core dump to a tmp directory.
 
     ~$ mkdir /tmp/dump
     ~$ cp ~/coredump.32232 /tmp/dump
 
-Download the modules and symbols for the core dump:
+Download the host program for the core dump:
 
-    ~$ dotnet-symbol /tmp/dump/coredump.32232
+    ~$ dotnet-symbol --host-only /tmp/dump/coredump.32232
+
+If the `--host-only` option is not found, update dotnet-symbol to the latest with the above step.
+
+If your project/program binaries are not on the machine the core dump is being loaded on, copy all them to temporary directory also.
 
 ### Install lldb ###
 
@@ -44,12 +55,18 @@ Add the directory with the core dump and symbols to the symbol search path:
      Added symbol directory path: /tmp/dump
      (lldb)
 
+Optionally load the native symbols. The managed PDBs will be loaded on demand when needed:
+
+     (lldb) loadsymbols
+
 Even if the core dump was not generated on this machine, the native and managed .NET Core symbols should be available along with all the SOS commands.
 
 ### Launch lldb under MacOS ###
 
     ~$ lldb --core /cores/core.32232 <host-program>
     (lldb)
+
+Follow the rest of the above Linux steps to set the symbol server and load native symbols.
 
 The MacOS lldb has a bug that prevents SOS clrstack from properly working. Because of this bug SOS can't properly match the lldb native with with the managed thread OSID displayed by `clrthreads`. The `setsostid` command is a work around for this lldb bug. This command maps the OSID from this command:
 
