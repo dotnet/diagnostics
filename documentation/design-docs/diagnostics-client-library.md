@@ -51,7 +51,7 @@ public void PrintEvents(int processId, IEnumerable<EventPipeProvider> providers,
 
 using Microsoft.Diagnostics.NETCore.Client;
 
-public void TriggerDumpOnCPUUsage(int usage, int processId, int threshold)
+public void TriggerDumpOnCpuU2sage(int processId, int threshold)
 {
     EventPipeSession session = DiagnosticsClient.StartTracing(processId, providers);
     EventPipeEventSource source = new EventPipeEventSource(session.stream)
@@ -85,8 +85,53 @@ public void TriggerDumpOnCPUUsage(int usage, int processId, int threshold)
 }
 ```
 
+3. Trigger a CPU trace when CPU usage goes above a certain threshold
+```cs
 
+using Microsoft.Diagnostics.NETCore.Client;
 
+public void TriggerTraceOnCpuUsage(int processId, int threshold)
+{
+    IEnumerable<EventPipeProvider> runtimeCounterProvider = new List<EventPipeProvider>() { 
+        new EventPipeProvider("System.Runtime", 1, 1, "EventCounterIntervalSec=1")
+    };
+
+    IEnumerable<EventPipeProvider> cpuProvider = new List<EventPipeProvider>() { 
+        new EventPipeProvider("Microsoft-Windows-DotNETRuntime", ClrTraceEventParser.Keywords.Default, EventLevel.Informational)
+    };
+
+    EventPipeSession counterSession = DiagnosticsClient.StartTracing(processId, runtimeCounterProvider);
+    EventPipeEventSource source = new EventPipeEventSource(counterSession.stream)
+    source.Dynamic.All += (TraceEvent obj) => {
+        if (obj.EventName.Equals("EventCounters"))
+        {
+            // I know this part is ugly. But this is all TraceEvent.
+            IDictionary<string, object> payloadFields = (IDictionary<string, object>)(obj.GetPayloadValueByName("Payload"));
+            if (payloadFields["Name"].ToString().Equals("cpu-usage"))
+            {
+                double cpuUsage = Double.Parse(payloadFields["Mean"]);
+                if (cpuUsage > (double)threshold)
+                {
+                    EventPipeSession traceSession = DiagnosticsClient.StartTracing(processId, cpuProvider);
+                    // TODO: Add stuff here
+                }
+            }
+        }
+    }
+    try
+    {
+        source.Process();
+        shouldExit.WaitOne();
+    }
+    // TraceEvent throws a generic Exception when the target process exists first. 
+    // This also needs some fix on TraceEvent side.
+    catch (Exception e) { } 
+    finally
+    {
+        DiagnosticsClient.StopTracing(session);
+    }
+}
+```
 
 ## API Descriptions
 
@@ -247,6 +292,21 @@ This is a class to represent an EventPipeSession. It is meant to be immutable an
 namespace Microsoft.Diagnostics.Client
 {
     public class EventPipeSession
-    
+    {
+        public EventPipeSession(
+            int processId,
+            long sessionId,
+            IEnumerable<EventPipeProvider> providers,
+            int circularBufferMB,
+            bool rundownRequested,
+            Stream stream
+        )
+        public int ProcessId { get; }
+        public int SessionId { get; } 
+        public IEnumerable<EventPipeProvider> Providers { get ; }
+        public int CircularBufferMB { get; }
+        public bool RundownRequested { get; }
+        public Stream Stream { get; };
+    }
 }
 ```
