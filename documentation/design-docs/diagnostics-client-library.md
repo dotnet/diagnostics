@@ -89,8 +89,11 @@ public void TriggerDumpOnCpuU2sage(int processId, int threshold)
 ```cs
 
 using Microsoft.Diagnostics.NETCore.Client;
+using System.Diagnostics;
+using System.IO;
+using System.Threading.Task;
 
-public void TriggerTraceOnCpuUsage(int processId, int threshold)
+public void TriggerTraceOnCpuUsage(int processId, int threshold, int traceDuration, string traceName)
 {
     IEnumerable<EventPipeProvider> runtimeCounterProvider = new List<EventPipeProvider>() { 
         new EventPipeProvider("System.Runtime", 1, 1, "EventCounterIntervalSec=1")
@@ -113,7 +116,24 @@ public void TriggerTraceOnCpuUsage(int processId, int threshold)
                 if (cpuUsage > (double)threshold)
                 {
                     EventPipeSession traceSession = DiagnosticsClient.StartTracing(processId, cpuProvider);
-                    // TODO: Add stuff here
+                    if (traceSesssion != null)
+                    {
+                        await Task.Run(() => {
+                            var buffer = new byte[16 * 1024];
+                            var fs = new FileStream(traceName, FileMode.Create, FileAccess.Write))
+                            Stopwatch sw = new Stopwatch();
+                            sw.Start();
+                            while (sw.Elapsed.Seconds < traceDuration)
+                            {
+                                int nBytesRead = traceSession.Stream.Read(buffer, 0, buffer.Length);
+                                if (nBytesRead <= 0)
+                                    break;
+                                fs.Write(buffer, 0, nBytesRead);
+                            }
+                            DiagnosticsClient.StopTracing(traceSession);
+                            shouldExit.Set();
+                        });
+                    }
                 }
             }
         }
@@ -123,12 +143,10 @@ public void TriggerTraceOnCpuUsage(int processId, int threshold)
         source.Process();
         shouldExit.WaitOne();
     }
-    // TraceEvent throws a generic Exception when the target process exists first. 
-    // This also needs some fix on TraceEvent side.
     catch (Exception e) { } 
     finally
     {
-        DiagnosticsClient.StopTracing(session);
+        DiagnosticsClient.StopTracing(counterSession);
     }
 }
 ```
