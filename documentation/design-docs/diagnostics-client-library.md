@@ -289,8 +289,6 @@ namespace Microsoft.Diagnostics.Client
 
         public IEnumerable<KeyValuePair<string, string>> FilterData { get; }
 
-        public string ToDisplayString();
-
         public override string ToString();
         
         public override bool Equals(object obj);
@@ -322,7 +320,7 @@ namespace Microsoft.Diagnostics.Client
         )
         public int ProcessId { get; }
         public int SessionId { get; } 
-        public IEnumerable<EventPipeProvider> Providers { get ; }
+        public ReadOnlyList<EventPipeProvider> Providers { get ; }
         public int CircularBufferMB { get; }
         public bool RundownRequested { get; }
         public Stream Stream { get; };
