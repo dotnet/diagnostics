@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Security;
 using System.Text.RegularExpressions;
 using System.Xml;
 using Address = System.UInt64;
@@ -109,7 +110,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
         var ret = new Dictionary<int, ProcessInfo>();
 
         // Do the 64 bit processes first, then do us   
-        if (EnvironmentUtilities.Is64BitOperatingSystem && !EnvironmentUtilities.Is64BitProcess)
+        if (System.Environment.Is64BitOperatingSystem && !System.Environment.Is64BitProcess)
         {
             GetProcessesWithGCHeapsFromHeapDump(ret);
         }
@@ -847,7 +848,7 @@ internal class XmlGcHeapDump
         writer.WriteLine("<TimeCollected>{0}</TimeCollected>", gcDump.TimeCollected);
         if (!string.IsNullOrWhiteSpace(gcDump.CollectionLog))
         {
-            writer.WriteLine("<CollectionLog>{0}</CollectionLog>", XmlUtilities.XmlEscape(gcDump.CollectionLog));
+            writer.WriteLine("<CollectionLog>{0}</CollectionLog>", SecurityElement.Escape(gcDump.CollectionLog));
         }
 
         if (!string.IsNullOrWhiteSpace(gcDump.MachineName))
@@ -857,7 +858,7 @@ internal class XmlGcHeapDump
 
         if (!string.IsNullOrWhiteSpace(gcDump.ProcessName))
         {
-            writer.WriteLine("<ProcessName>{0}</ProcessName>", XmlUtilities.XmlEscape(gcDump.ProcessName));
+            writer.WriteLine("<ProcessName>{0}</ProcessName>", SecurityElement.Escape(gcDump.ProcessName));
         }
 
         if (gcDump.ProcessID != 0)
@@ -882,7 +883,7 @@ internal class XmlGcHeapDump
             for (int i = 0; i < gcDump.CountMultipliersByType.Length; i++)
             {
                 writer.WriteLine("<CountMultipliers TypeIndex=\"{0}\" TypeName=\"{1}\" Value=\"{2:f4}\"/>", i,
-                    XmlUtilities.XmlEscape(gcDump.MemoryGraph.GetType((NodeTypeIndex)i, typeStorage).Name),
+                    SecurityElement.Escape(gcDump.MemoryGraph.GetType((NodeTypeIndex)i, typeStorage).Name),
                     gcDump.CountMultipliersByType[i]);
             }
 
@@ -1086,4 +1087,3 @@ internal class XmlGcHeapDump
 
 
 }
-
