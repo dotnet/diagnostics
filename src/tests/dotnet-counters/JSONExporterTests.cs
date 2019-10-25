@@ -35,6 +35,7 @@ namespace DotnetCounters.UnitTests
                 JSONCounterTrace counterTrace = JsonConvert.DeserializeObject<JSONCounterTrace>(json);
 
                 Assert.Equal("myProcess.exe", counterTrace.targetProcess);
+                Assert.Equal(10, counterTrace.events.Length);
                 foreach (JSONCounterPayload payload in counterTrace.events)
                 {
                     Assert.Equal("myProvider", payload.provider);
@@ -64,6 +65,7 @@ namespace DotnetCounters.UnitTests
                 JSONCounterTrace counterTrace = JsonConvert.DeserializeObject<JSONCounterTrace>(json);
 
                 Assert.Equal("myProcess.exe", counterTrace.targetProcess);
+                Assert.Equal(10, counterTrace.events.Length);
                 foreach (JSONCounterPayload payload in counterTrace.events)
                 {
                     Assert.Equal("myProvider", payload.provider);

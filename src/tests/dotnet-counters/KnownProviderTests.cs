@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         }
 
         [Fact]
-        public void UnknwonProvider()
+        public void UnknownProvider()
         {
             KnownData.TryGetProvider("SomeRandomProvider", out CounterProvider randomProvider);
 
