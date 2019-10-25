@@ -131,6 +131,7 @@ public void TriggerTraceOnCpuUsage(int processId, int threshold, int traceDurati
                                 fs.Write(buffer, 0, nBytesRead);
                             }
                             DiagnosticsClient.StopTracing(traceSession);
+                            DiagnosticsClient.StopTracing(counterSession);
                             shouldExit.Set();
                         });
                     }
@@ -144,10 +145,6 @@ public void TriggerTraceOnCpuUsage(int processId, int threshold, int traceDurati
         shouldExit.WaitOne();
     }
     catch (Exception e) { } 
-    finally
-    {
-        DiagnosticsClient.StopTracing(counterSession);
-    }
 }
 ```
 
@@ -318,9 +315,10 @@ namespace Microsoft.Diagnostics.Client
             bool rundownRequested,
             Stream stream
         )
+
         public int ProcessId { get; }
         public int SessionId { get; } 
-        public ReadOnlyList<EventPipeProvider> Providers { get ; }
+        public IReadOnlyList<EventPipeProvider> Providers { get ; }
         public int CircularBufferMB { get; }
         public bool RundownRequested { get; }
         public Stream Stream { get; };
