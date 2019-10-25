@@ -4,9 +4,9 @@
 
 using System;
 using System.CommandLine;
+using System.CommandLine.Binding;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,8 +16,12 @@ using Microsoft.Internal.Common.Commands;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
+    public enum CountersExportFormat { csv, json };
+
     internal class Program
     {
+        delegate Task<int> ExportDelegate(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output);
+
         private static Command MonitorCommand() =>
             new Command(
                 "monitor", 
@@ -25,6 +29,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 new Option[] { ProcessIdOption(), RefreshIntervalOption() },
                 argument: CounterList(),
                 handler: CommandHandler.Create<CancellationToken, List<string>, IConsole, int, int>(new CounterMonitor().Monitor));
+
+        private static Command CollectCommand() =>
+            new Command(
+                "collect",
+                "Monitor counters in a .NET application and export the result into a file",
+                new Option[] { ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption() },
+                argument: CounterList(),
+                handler: HandlerDescriptor.FromDelegate((ExportDelegate)new CounterMonitor().Collect).GetCommandHandler());
 
         private static Option ProcessIdOption() =>
             new Option(
@@ -37,6 +49,18 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 new[] { "--refresh-interval" }, 
                 "The number of seconds to delay between updating the displayed counters.",
                 new Argument<int>(defaultValue: 1) { Name = "refresh-interval" });
+
+        private static Option ExportFormatOption() => 
+            new Option(
+                new[] { "--format" },
+                "The format of exported counter data.",
+                new Argument<CountersExportFormat>(defaultValue: CountersExportFormat.csv) { Name = "format" });
+
+        private static Option ExportFileNameOption() => 
+            new Option(
+                new[] { "-o", "--output" },
+                "The output file name.",
+                new Argument<string>(defaultValue: "counter") { Name = "output" });
 
         private static Argument CounterList() =>
             new Argument<List<string>> {
@@ -85,6 +109,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             var parser = new CommandLineBuilder()
                 .AddCommand(MonitorCommand())
+                .AddCommand(CollectCommand())
                 .AddCommand(ListCommand())
                 .AddCommand(ProcessStatusCommand())
                 .UseDefaults()
