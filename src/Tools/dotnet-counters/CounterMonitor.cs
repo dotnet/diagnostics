@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tools.Counters.Exporters;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -23,23 +24,23 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private List<string> _counterList;
         private CancellationToken _ct;
         private IConsole _console;
-        private ConsoleWriter writer;
+        private ICounterRenderer _renderer;
         private CounterFilter filter;
         private ulong _sessionId;
+        private string _output;
         private bool pauseCmdSet;
 
         public CounterMonitor()
         {
-            writer = new ConsoleWriter();
             filter = new CounterFilter();
             pauseCmdSet = false;
         }
 
-        private void Dynamic_All(TraceEvent obj)
+        private void DynamicAllMonitor(TraceEvent obj)
         {
             // If we are paused, ignore the event. 
             // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
-            writer.ToggleStatus(pauseCmdSet);
+            _renderer.ToggleStatus(pauseCmdSet);
 
             if (obj.EventName.Equals("EventCounters"))
             {
@@ -49,19 +50,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // If it's not a counter we asked for, ignore it.
                 if (!filter.Filter(obj.ProviderName, payloadFields["Name"].ToString())) return;
 
-                // There really isn't a great way to tell whether an EventCounter payload is an instance of 
-                // IncrementingCounterPayload or CounterPayload, so here we check the number of fields 
-                // to distinguish the two.
-                ICounterPayload payload;
-                if (payloadFields.ContainsKey("CounterType"))
-                {
-                    payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields, _interval) : (ICounterPayload)new CounterPayload(payloadFields);
-                }
-                else
-                {
-                    payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields, _interval) : (ICounterPayload)new CounterPayload(payloadFields);
-                }
-                writer.Update(obj.ProviderName, payload, pauseCmdSet);
+                ICounterPayload payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields, _interval) : (ICounterPayload)new CounterPayload(payloadFields);
+                _renderer.CounterPayloadReceived(obj.ProviderName, payload, pauseCmdSet);
             }
         }
 
@@ -88,6 +78,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             catch (PlatformNotSupportedException)
             {
             }
+            _renderer.Stop();
         }
 
         public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval)
@@ -99,8 +90,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _console = console;
                 _processId = processId;
                 _interval = refreshInterval;
+                _renderer = new ConsoleWriter();
 
-                return await StartMonitor();
+                return await Start();
             }
 
             catch (OperationCanceledException)
@@ -116,8 +108,55 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
+        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output)
+        {
+            try
+            {
+                _ct = ct;
+                _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
+                _console = console;
+                _processId = processId;
+                _interval = refreshInterval;
+                _output = output;
+
+                if (_output.Length == 0)
+                {
+                    _console.Error.WriteLine("Output cannot be an empty string");
+                    return 0;
+                }
+
+                if (format == CountersExportFormat.csv)
+                {
+                    _renderer = new CSVExporter(output);
+                }
+                else if (format == CountersExportFormat.json)
+                {
+                    // Try getting the process name.
+                    string processName = "";
+                    try
+                    {
+                        processName = Process.GetProcessById(_processId).ProcessName;
+                    }
+                    catch (Exception) { }
+                    _renderer = new JSONExporter(output, processName); ;
+                }
+                else
+                {
+                    _console.Error.WriteLine($"The output format {format} is not a valid output format.");
+                    return 0;
+                }
+                return await Start();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+
+            return 1;
+        }
+
+
         // Use EventPipe CollectTracing2 command to start monitoring. This may throw.
-        private void RequestTracingV2(string providerString)
+        private EventPipeEventSource RequestTracingV2(string providerString)
         {
             var configuration = new SessionConfigurationV2(
                                         circularBufferSizeMB: 1000,
@@ -125,32 +164,27 @@ namespace Microsoft.Diagnostics.Tools.Counters
                                         requestRundown: false,
                                         providers: Trace.Extensions.ToProviders(providerString));
             var binaryReader = EventPipeClient.CollectTracing2(_processId, configuration, out _sessionId);
-            EventPipeEventSource source = new EventPipeEventSource(binaryReader);
-            source.Dynamic.All += Dynamic_All;
-            source.Process();
+            return new EventPipeEventSource(binaryReader);
         }
+
         // Use EventPipe CollectTracing command to start monitoring. This may throw.
-        private void RequestTracingV1(string providerString)
+        private EventPipeEventSource RequestTracingV1(string providerString)
         {
             var configuration = new SessionConfiguration(
                                         circularBufferSizeMB: 1000,
                                         format: EventPipeSerializationFormat.NetTrace,
                                         providers: Trace.Extensions.ToProviders(providerString));
             var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
-            EventPipeEventSource source = new EventPipeEventSource(binaryReader);
-            source.Dynamic.All += Dynamic_All;
-            source.Process();
+            return new EventPipeEventSource(binaryReader);
         }
 
-        private async Task<int> StartMonitor()
+        private string BuildProviderString()
         {
             if (_processId == 0) {
                 _console.Error.WriteLine("ProcessId is required.");
                 return 1;
             }
-
-            String providerString;
-
+            string providerString;
             if (_counterList.Count == 0)
             {
                 CounterProvider defaultProvider = null;
@@ -160,7 +194,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 if (!KnownData.TryGetProvider("System.Runtime", out defaultProvider))
                 {
                     _console.Error.WriteLine("No providers or profiles were specified and there is no default profile available.");
-                    return 1;
+                    return "";
                 }
                 providerString = defaultProvider.ToProviderString(_interval);
                 filter.AddFilter("System.Runtime");
@@ -202,22 +236,47 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 providerString = sb.ToString();
             }
+            return providerString;
+        }
+        
+
+        private async Task<int> Start()
+        {
+            if (_processId == 0)
+            {
+                _console.Error.WriteLine("--process-id is required.");
+                return 1;
+            }
+
+            string providerString = BuildProviderString();
+            if (providerString.Length == 0)
+            {
+                return 1;
+            }
+
+            _renderer.Initialize();
 
             ManualResetEvent shouldExit = new ManualResetEvent(false);
             _ct.Register(() => shouldExit.Set());
-
-            var terminated = false;
-            writer.AssignRowsAndInitializeDisplay();
-
             Task monitorTask = new Task(() => {
                 try
                 {
-                    RequestTracingV2(providerString);
-                }
-                catch (EventPipeUnknownCommandException)
-                {
-                    // If unknown command exception is thrown, it's likely the app being monitored is running an older version of runtime that doesn't support CollectTracingV2. Try again with V1.
-                    RequestTracingV1(providerString);
+                    EventPipeEventSource source = null;
+
+                    try
+                    {
+                        source = RequestTracingV2(providerString);
+                    }
+                    catch (EventPipeUnknownCommandException)
+                    {
+                        // If unknown command exception is thrown, it's likely the app being monitored is 
+                        // running an older version of runtime that doesn't support CollectTracingV2. Try again with V1.
+                        source = RequestTracingV1(providerString);
+                    }
+
+                    source.Dynamic.All += DynamicAllMonitor;
+                    _renderer.EventPipeSourceConnected();
+                    source.Process();
                 }
                 catch (Exception ex)
                 {
@@ -225,7 +284,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 finally
                 {
-                    terminated = true; // This indicates that the runtime is done. We shouldn't try to talk to it anymore.
                     shouldExit.Set();
                 }
             });
@@ -249,6 +307,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ConsoleKey cmd = Console.ReadKey(true).Key;
                 if (cmd == ConsoleKey.Q)
                 {
+                    StopMonitor();
                     break;
                 }
                 else if (cmd == ConsoleKey.P)
@@ -260,11 +319,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     pauseCmdSet = false;
                 }
             }
-            if (!terminated)
-            {
-                StopMonitor();
-            }
-            
+
             return await Task.FromResult(0);
         }
     }

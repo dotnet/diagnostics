@@ -13,6 +13,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         string GetName();
         double GetValue();
         string GetDisplay();
+        string GetCounterType();
     }
 
 
@@ -41,6 +42,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
         public string GetDisplay()
         {
             return m_DisplayName;
+        }
+
+        public string GetCounterType()
+        {
+            return "Metric";
         }
     }
 
@@ -75,6 +81,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
         public string GetDisplay()
         {
             return $"{m_DisplayName} / {m_DisplayRateTimeScale}";
+        }
+
+        public string GetCounterType()
+        {
+            return "Rate";
         }
     }
 }

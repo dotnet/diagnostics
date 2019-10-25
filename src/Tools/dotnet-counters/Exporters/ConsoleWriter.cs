@@ -6,9 +6,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Microsoft.Diagnostics.Tools.Counters
+namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
-    public class ConsoleWriter
+    /// <summary>
+    /// ConsoleWriter is an implementation of ICounterRenderer for rendering the counter values in real-time
+    /// to the console. This is the renderer for the `dotnet-counters monitor` command.
+    /// </summary>
+    public class ConsoleWriter : ICounterRenderer
     {
         /// <summary>Information about an observed provider.</summary>
         private class ObservedProvider
@@ -40,6 +44,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private int STATUS_ROW; // Row # of where we print the status of dotnet-counters
         private bool paused = false;
         private bool initialized = false;
+
+        public void Initialize()
+        {
+            AssignRowsAndInitializeDisplay();
+        }
+
+        public void EventPipeSourceConnected()
+        {
+            // Do nothing
+        }
 
         private void UpdateStatus()
         {
@@ -80,7 +94,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             UpdateStatus();
         }
 
-        public void Update(string providerName, ICounterPayload payload, bool pauseCmdSet)
+        public void CounterPayloadReceived(string providerName, ICounterPayload payload, bool pauseCmdSet)
         {
             if (!initialized)
             {
@@ -133,6 +147,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
             int prefixSpaces = maxPreDecimalDigits - decimalIndex;
             int postfixSpaces = DecimalPlaces.Length - (payloadVal.Length - decimalIndex - 1);
             Console.Write($"{new string(' ', prefixSpaces)}{payloadVal}{new string(' ', postfixSpaces)}");
+        }
+
+        public void Stop()
+        {
+            // Nothing to do here.
         }
     }
 }
