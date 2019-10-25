@@ -19,7 +19,7 @@ The goal of this library is as following:
 
 ## Sample Code:
 
-### 1. Attaching to a process and dumping out all the event name in real time to the console
+#### 1. Attaching to a process and dumping out all the event name in real time to the console
 ```cs
 using Microsoft.Diagnostics.NETCore.Client;
 
@@ -41,12 +41,12 @@ public void PrintEvents(int processId, IEnumerable<EventPipeProvider> providers,
     }
     finally
     {
-        DiagnosticsClient.StopTracing(session); // Cleanup
+        DiagnosticsClient.StopTracing(session);
     }
 }
 ```
 
-#### 2. Trigger dump if CPU usage goes above a certain threshold
+#### 2. Trigger a core dump when CPU usage goes above a certain threshold
 ```cs
 
 using Microsoft.Diagnostics.NETCore.Client;
@@ -85,7 +85,7 @@ public void TriggerDumpOnCpuU2sage(int processId, int threshold)
 }
 ```
 
-3. Trigger a CPU trace when CPU usage goes above a certain threshold
+#### 3. Trigger a CPU trace when CPU usage goes above a certain threshold
 ```cs
 
 using Microsoft.Diagnostics.NETCore.Client;
@@ -248,14 +248,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
 
 ### Exceptions that can be thrown 
+
 ```cs
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    public class UnknownCommandException : Exception {}
-    public class UnknownMagicException : Exception {}
-    public class EventPipeInvalidArgumentException : Exception {}
-    public class DumpInvalidArgumentException : Exception {}
-    public class ProfilerInvalidArgumentException : Exception {}
+    // Generic wrapper for exceptions thrown by this library
+    public class DiagnosticsClientExcpetion : Exception {} 
+
+    // When a certian command is not supported by either the library or the target process' runtime
+    public class UnsupportedProtocolException : DiagnosticsClientException {} 
+
+    // When the runtime is no longer availble for attaching.
+    public class ServerNotAvailableException : DiagnosticsClientException {} 
+
+    // When the runtime responded with an error
+    public class ServerThrownException : DiagnosticsClientException {} 
 }
 ```
 
