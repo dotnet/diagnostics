@@ -9,7 +9,7 @@ Dumps created with gdb or gcore do not have all the managed state so various SOS
 
 Because SOS now has symbol download support (both managed PDBs and native symbols via `loadsymbols`) all that lldb requires is the host program. The host is usually `dotnet` but for self-contained applications it the .NET Core `apphost` renamed to the program/project name. These steps will handle either case and download the host lldb needs to properly diagnose a core dump. 
 
-First install or update the dotnet CLI symbol tool. This only needs to be down once. See this [link](https://github.com/dotnet/symstore/tree/master/src/dotnet-symbol#install) for more details. We need version 1.0.52901 or greater of dotnet-symbol installed.
+First install or update the dotnet CLI symbol tool. This only needs to be done once. See this [link](https://github.com/dotnet/symstore/tree/master/src/dotnet-symbol#install) for more details. We need version 1.0.52901 or greater of dotnet-symbol installed.
 
     ~$ dotnet tool install -g dotnet-symbol
     You can invoke the tool using the following command: dotnet-symbol
@@ -31,7 +31,7 @@ Download the host program for the core dump:
 
 If the `--host-only` option is not found, update dotnet-symbol to the latest with the above step.
 
-If your project/program binaries are not on the machine the core dump is being loaded on, copy all them to temporary directory also.
+If your project/program binaries are not on the machine the core dump is being loaded on, copy them to a temporary directory. You can use the lldb/SOS command `setsymbolserver -directory <temp-dir>` to add this directory to the search path.
 
 ### Install lldb ###
 
