@@ -1,7 +1,7 @@
 # Diagnostics Client Library API Design 
 
 ## Intro
-The Diagnostics Client Library (currently named as "Runtime Client Library") is a managed library that can be used to interact with the .NET runtime via the diagnostics IPC protocol as documented in https://github.com/dotnet/diagnostics/blob/master/documentation/design-docs/ipc-protocol.md. It provides managed classes for invoking the diagnostics IPC commands programmatically, and can be extended to write various diagnostics tools. It also comes with various classes that should facilitate interacting with the diagnostics IPC commands.
+The Diagnostics Client Library (currently named as "Runtime Client Library") - `Microsoft.Diagnostics.NetCore.Client.dll` - is a managed library that can be used to interact with the .NET runtime via the diagnostics IPC protocol as documented in https://github.com/dotnet/diagnostics/blob/master/documentation/design-docs/ipc-protocol.md. It provides managed classes for invoking the diagnostics IPC commands programmatically, and can be extended to write various diagnostics tools. It also comes with various classes that should facilitate interacting with the diagnostics IPC commands.
 
 The name "Diagnostics Client Library" comes from the fact that we call the runtime (CoreCLR) component responsible for accepting and handling the diagnostics IPC commands the "diagnostics server" - https://github.com/dotnet/coreclr/blob/master/src/vm/diagnosticserver.h. Since this library is a managed library on the other side of the IPC protocol responsible for communicating with the runtime's "diagnostics server", calling this the "Diagnostics Client Library" made sense.
 
