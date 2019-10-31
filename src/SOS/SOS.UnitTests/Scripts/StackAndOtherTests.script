@@ -1,12 +1,48 @@
 #
 # Tests the various SOS stack and other commands with the Windows/Portable PDB debuggee
 #
-# Commands Verified: ClrStack, DumpStackObjects, DumpStack, EEStack, IP2MD, u, Name2EE, Threads (clrthreads) and others
+# Commands Verified: ClrStack, DumpStackObjects, DumpStack, EEStack, IP2MD, u, Name2EE, Threads (clrthreads), bpmd and others
 #
+
+LOADSOS
+
+# Verify that bpmd works
+IFDEF:PROJECTK
+IFDEF:LIVE
+!IFDEF:MAJOR_RUNTIME_VERSION_1
+
+SOSCOMMAND:bpmd SymbolTestApp.dll SymbolTestApp.Program.Main
+CONTINUE
+SOSCOMMAND:ClrStack
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 16\]\s*
+
+SOSCOMMAND:bpmd SymbolTestApp.cs:29
+SOSCOMMAND:bpmd SymbolTestApp.dll SymbolTestApp.Program.Foo4
+
+CONTINUE
+SOSCOMMAND:ClrStack
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 16\]\s*
+
+CONTINUE
+SOSCOMMAND:ClrStack
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 28\]\s*
+
+CONTINUE
+SOSCOMMAND:ClrStack
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 34\]\s*
+
+ENDIF:MAJOR_RUNTIME_VERSION_1
+ENDIF:LIVE
+ENDIF:PROJECTK
 
 CONTINUE
 
-LOADSOS
+IFDEF:PROJECTK
+SOSCOMMAND:SetSymbolServer -ms
+!IFDEF:DOTNETDUMP
+SOSCOMMAND:SetHostRuntime
+ENDIF:DOTNETDUMP
+ENDIF:PROJECTK
 
 # Verify that ClrStack with no options works
 SOSCOMMAND:SetSymbolServer -ms

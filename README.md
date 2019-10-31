@@ -56,6 +56,14 @@ Getting a version of lldb that works for your platform can be a problem sometime
 
 ## New Features
 
+The `bpmd` command can now be used before the runtime is loaded. You can load SOS or the sos plugin on Linux and execute bpmd. Always add the module extension for the first parameter.
+
+    bpmd SymbolTestApp.dll SymbolTestApp.Program.Main
+
+You can set a source file/line number breakpoint like this (the fully qualified source file path is usually not necessary):
+
+    bpmd SymbolTestApp.cs:24
+
 Symbol server support - The `setsymbolserver` command enables downloading the symbol files (portable PDBs) for managed assemblies during commands like `clrstack`, etc. See `soshelp setsymbolserver` for more details.
 
     (lldb) setsymbolserver -ms

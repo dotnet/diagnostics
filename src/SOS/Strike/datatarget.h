@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-class DataTarget : public ICLRDataTarget, ICorDebugDataTarget4, ICLRMetadataLocator
+class DataTarget : public ICLRDataTarget2, ICorDebugDataTarget4, ICLRMetadataLocator
 {
 private:
     LONG m_ref;                         // Reference count.
@@ -80,6 +80,20 @@ public:
         /* [size_is][in] */ BYTE *inBuffer,
         /* [in] */ ULONG32 outBufferSize,
         /* [size_is][out] */ BYTE *outBuffer);
+
+    // ICLRDataTarget2
+
+    virtual HRESULT STDMETHODCALLTYPE AllocVirtual( 
+            /* [in] */ CLRDATA_ADDRESS addr,
+            /* [in] */ ULONG32 size,
+            /* [in] */ ULONG32 typeFlags,
+            /* [in] */ ULONG32 protectFlags,
+            /* [out] */ CLRDATA_ADDRESS *virt);
+        
+    virtual HRESULT STDMETHODCALLTYPE FreeVirtual( 
+            /* [in] */ CLRDATA_ADDRESS addr,
+            /* [in] */ ULONG32 size,
+            /* [in] */ ULONG32 typeFlags);
 
     // ICorDebugDataTarget4
 

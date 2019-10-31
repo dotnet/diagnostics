@@ -226,18 +226,7 @@ namespace SOS
             SymbolStore symbolStore = s_symbolStore;
             while (symbolStore != null)
             {
-                if (symbolStore is CacheSymbolStore cache) {
-                    writeLine($"Cache: {cache.CacheDirectory}");
-                }
-                else if (symbolStore is HttpSymbolStore http) {
-                    writeLine($"Server: {http.Uri}");
-                }
-                else if (symbolStore is DirectorySymbolStore directory) {
-                    writeLine($"Directory: {directory.Directory}");
-                }
-                else {
-                    writeLine("Unknown symbol store");
-                }
+                writeLine(symbolStore.ToString());
                 symbolStore = symbolStore.BackingStore;
             }
         }
@@ -1130,7 +1119,7 @@ namespace SOS
                     return false;
                 }
 
-                if (!IsDuplicateSymbolStore<HttpSymbolStore >(store, (httpSymbolStore) => uri.Equals(httpSymbolStore.Uri)))
+                if (!IsDuplicateSymbolStore<HttpSymbolStore>(store, (httpSymbolStore) => uri.Equals(httpSymbolStore.Uri)))
                 {
                     // Create symbol server store
                     if (internalServer)
