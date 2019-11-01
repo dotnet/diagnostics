@@ -222,7 +222,7 @@ namespace Microsoft.Diagnostics.Client
             string name,
             EventLevel eventLevel,
             long keywords = 0,
-            IDictionary<string., string> arguments = null)
+            IDictionary<string, string> arguments = null)
 
         public long Keywords { get; }
 
@@ -258,8 +258,7 @@ namespace Microsoft.Diagnostics.Client
             long sessionId,
             IEnumerable<EventPipeProvider> providers,
             int circularBufferMB,
-            bool rundownRequested,
-            Stream stream
+            bool rundownRequested
         )
 
         public Stream EventStream { get; };
