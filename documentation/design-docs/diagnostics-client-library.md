@@ -98,7 +98,7 @@ public void TriggerDumpOnCpuUsage(int processId, int threshold)
 }
 ```
 
-#### 3. Trigger a CPU trace for 20 seconds
+#### 3. Trigger a CPU trace for given number of seconds
 ```cs
 
 using Microsoft.Diagnostics.NETCore.Client;
@@ -106,7 +106,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Task;
 
-public void TriggerTraceOnCpuUsage(int processId, string traceName)
+public void TraceProcessForDuration(int processId, int duration, string traceName)
 {
     List<EventPipeProvider> cpuProviders = new List<EventPipeProvider>() {
         new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, ClrTraceEventParser.Keywords.Default),
@@ -120,7 +120,7 @@ public void TriggerTraceOnCpuUsage(int processId, string traceName)
             await traceSession.stream.CopyToAsync(fs);
         }
     }
-    await Task.Delay(20 * 1000); // 20 seconds
+    await Task.Delay(duration * 1000);
     DiagnosticsClient.StopTracing(traceSession);
     await copyTask;
     try
