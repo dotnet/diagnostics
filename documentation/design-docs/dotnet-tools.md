@@ -613,6 +613,56 @@ UNINSTALL
       Uninstalling SOS from ~/.dotnet/sos
       Complete
 
+### dotnet-gcdump
+
+SYNOPSIS
+
+    dotnet-gcdump [--version]
+                  [-h, --help]
+                  <command> [<args>]
+
+OPTIONS
+
+    --version
+        Display the version of the dotnet-gcdump utility.
+
+    -h, --help
+        Show command line help
+
+COMMANDS
+
+    collect   Capture dumps from a process
+
+COLLECT
+
+    dotnet-gcdump collect -p|--process-id <pid> [-h|--help] [-o|--output <output_dump_path>] [-v|--verbose]
+
+    Capture GC dumps from a dotnet process
+
+    Usage:
+      dotnet-gcdump collect [options]
+
+    Options:
+      -p, --process-id
+          The process to collect a gc dump from.
+
+      -h, --help
+          Show command line help
+
+      -o, --output
+          The path where collected gcdumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump' where YYYYMMDD is Year/Month/Day
+          and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.
+      
+      -v, --verbose
+          Turns on logging for gcdump
+
+Examples:
+
+    $ dotnet gcdump collect --process-id 1902
+    Writing gcdump to file ./20190226_135837_1902.gcdump
+    Wrote 12576 bytes to file
+    Complete
+
 ## Future suggestions
 
 Work described in here captures potential future directions these tools could take given time and customer interest. Some of these might come relatively soon, others feel quite speculative or duplicative with existing technology. Regardless, understanding potential future options helps to ensure that we don't unknowingly paint ourselves into a corner or build an incoherent offering.
