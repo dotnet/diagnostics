@@ -382,11 +382,13 @@ initTargetDistroRid
 echo "RID: $__DistroRid"
 
 if [ "$__HostOS" == "OSX" ]; then
-    export LLDB_H=$__ProjectRoot/src/SOS/lldbplugin/swift-4.0
+    export LLDB_H=$__ProjectRoot/src/SOS/lldbplugin/swift-4.1
     export LLDB_LIB=/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/LLDB
     export LLDB_PATH=/Applications/Xcode.app/Contents/Developer/usr/bin/lldb
 
     export MACOSX_DEPLOYMENT_TARGET=10.12
+
+    ls /Applications/Xcode*
 
     # If Xcode 9.2 exists (like on the CI/build machines), use that. Xcode 9.3 or 
     # greater (swift 4.1 lldb) doesn't work that well (seg faults on exit).
