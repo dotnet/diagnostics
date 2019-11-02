@@ -74,4 +74,5 @@ Options:
                                      where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path
                                      and file name of the dump.
   -v, --verbose                      Output the log while collecting the gcdump
+  -t, --timeout <timeout>            Give up on collecting the gcdump if it takes longer the this many seconds. The default value is 30s
 ```

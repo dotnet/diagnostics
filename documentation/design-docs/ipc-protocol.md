@@ -578,7 +578,7 @@ Header: `{ Magic; Size; 0x0101; 0x0000 }`
   * WithHeap = 2,
   * Triage = 3,
   * Full = 4
-* `uint diagnostics`: The providers to turn on for the streaming session
+* `uint diagnostics`: If set to 1, log to console the dump generation diagnostics
   * `0` or `1` for on or off
 
 #### Returns (as an IPC Message Payload):

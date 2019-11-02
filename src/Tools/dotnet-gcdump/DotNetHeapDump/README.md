@@ -1,11 +1,13 @@
 # DotNetHeapDump
 
-The following code files were copied in entirety with minimal changes from the Microsoft/Perfview repository on github: https://github.com/Microsoft/PerfView.
+The following code files were copied in their entirety from the Microsoft/Perfview repository on github: https://github.com/Microsoft/PerfView.
 
 This was done simply because refactoring the TraceEvent library to include these classes proved to be too disruptive. Diamond dependency refactoring and
 mismatched target frameworks made the refactoring too disruptive to the TraceEvent library.
 
 This code should be treated as read-only.  Any changes that _do_ need to be made should be mirrored to Microsoft/PerfView _and_ documented here.
+
+The intent is to unify these code files with the code in Microsoft/PerfView, either via automated mirroring, or exposing the logic through TraceEvent.
 
 ## Files:
 

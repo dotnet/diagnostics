@@ -11,14 +11,16 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
 {
     public static class EventPipeDotNetHeapDumper
     {
+        internal static volatile bool eventPipeDataPresent = false;
+        internal static volatile bool dumpComplete = false;
+
         /// <summary>
         /// Given a factory for creating an EventPipe session with the appropriate provider and keywords turned on,
         /// generate a GCHeapDump using the resulting events.  The correct keywords and provider name
@@ -30,121 +32,115 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="log"></param>
         /// <param name="dotNetInfo"></param>
         /// <returns></returns>
-        public static bool DumpFromEventPipe(CancellationToken ct, int processID, MemoryGraph memoryGraph, TextWriter log, DotNetHeapInfo dotNetInfo = null)
+        public static bool DumpFromEventPipe(CancellationToken ct, int processID, MemoryGraph memoryGraph, TextWriter log, int timeout, DotNetHeapInfo dotNetInfo = null)
         {
-            var sw = Stopwatch.StartNew();
+            var startTicks = Stopwatch.GetTimestamp();
+            Func<TimeSpan> getElapsed = () => TimeSpan.FromTicks(Stopwatch.GetTimestamp() - startTicks);
+
             var dumper = new DotNetHeapDumpGraphReader(log)
             {
                 DotNetHeapInfo = dotNetInfo
             };
-            bool dumpComplete = false;
-            bool listening = false;
 
-            EventPipeSession gcDumpSession = null;
-            Task readerTask = null;
             try
             {
-                bool eventPipeDataPresent = false;
-                TimeSpan lastEventPipeUpdate = sw.Elapsed;
-                EventPipeSession typeFlushSession = null;
+                TimeSpan lastEventPipeUpdate = getElapsed();
                 bool fDone = false;
-                var otherListening = false;
-                log.WriteLine("{0,5:n1}s: Creating type table flushing task", sw.Elapsed.TotalSeconds);
-                var typeTableFlushTask = Task.Factory.StartNew(() =>
+                log.WriteLine("{0,5:n1}s: Creating type table flushing task", getElapsed().TotalSeconds);
+
+                using (EventPipeSession typeFlushSession = new EventPipeSession(processID, new List<Provider> { new Provider("Microsoft-DotNETCore-SampleProfiler") }, false))
                 {
-                    typeFlushSession = new EventPipeSession(processID, new List<Provider> { new Provider("Microsoft-DotNETCore-SampleProfiler") }, false);
-                    otherListening = true;
-                    log.WriteLine("{0,5:n1}s: Flushing the type table", sw.Elapsed.TotalSeconds);
-                    typeFlushSession.Source.AllEvents += Task.Run(() => 
-                    {
+                    log.WriteLine("{0,5:n1}s: Flushing the type table", getElapsed().TotalSeconds);
+                    typeFlushSession.Source.AllEvents += (traceEvent) => {
                         if (!fDone)
                         {
                             fDone = true;
-                            typeFlushSession.EndSession();
+                            Task.Run(() => typeFlushSession.EndSession())
+                                .ContinueWith(_ => typeFlushSession.Source.StopProcessing());
                         }
-                    });
+                    };
+
                     typeFlushSession.Source.Process();
-                    log.WriteLine("{0,5:n1}s: Done flushing the type table", sw.Elapsed.TotalSeconds);
-                });
+                    log.WriteLine("{0,5:n1}s: Done flushing the type table", getElapsed().TotalSeconds);
+                }
 
-                await typeTableFlushTask;
 
-                // Set up a separate thread that will listen for EventPipe events coming back telling us we succeeded. 
-                readerTask = Task.Factory.StartNew(delegate
+                // Start the providers and trigger the GCs.  
+                log.WriteLine("{0,5:n1}s: Requesting a .NET Heap Dump", getElapsed().TotalSeconds);
+
+                using EventPipeSession gcDumpSession = new EventPipeSession(processID, new List<Provider> { new Provider("Microsoft-Windows-DotNETRuntime", (ulong)(ClrTraceEventParser.Keywords.GCHeapSnapshot)) });
+                log.WriteLine("{0,5:n1}s: gcdump EventPipe Session started", getElapsed().TotalSeconds);
+
+                int gcNum = -1;
+
+                gcDumpSession.Source.Clr.GCStart += delegate (GCStartTraceData data)
                 {
-                    // Start the providers and trigger the GCs.  
-                    log.WriteLine("{0,5:n1}s: Requesting a .NET Heap Dump", sw.Elapsed.TotalSeconds);
-
-                    gcDumpSession = new EventPipeSession(processID, new List<Provider> { new Provider("Microsoft-Windows-DotNETRuntime", (ulong)(ClrTraceEventParser.Keywords.GCHeapSnapshot)) });
-                    int gcNum = -1;
-
-                    gcDumpSession.Source.Clr.GCStart += delegate (GCStartTraceData data)
+                    if (data.ProcessID != processID)
                     {
-                        if (data.ProcessID != processID)
-                        {
-                            return;
-                        }
-
-                        eventPipeDataPresent = true;
-
-                        if (gcNum < 0 && data.Depth == 2 && data.Type != GCType.BackgroundGC)
-                        {
-                            gcNum = data.Count;
-                            log.WriteLine("{0,5:n1}s: .NET Dump Started...", sw.Elapsed.TotalSeconds);
-                        }
-                    };
-
-                    gcDumpSession.Source.Clr.GCStop += delegate (GCEndTraceData data)
-                    {
-                        if (data.ProcessID != processID)
-                        {
-                            return;
-                        }
-
-                        if (data.Count == gcNum)
-                        {
-                            log.WriteLine("{0,5:n1}s: .NET GC Complete.", sw.Elapsed.TotalSeconds);
-                            dumpComplete = true;
-                        }
-                    };
-
-                    gcDumpSession.Source.Clr.GCBulkNode += delegate (GCBulkNodeTraceData data)
-                    {
-                        if (data.ProcessID != processID)
-                        {
-                            return;
-                        }
-
-                        eventPipeDataPresent = true;
-
-                        if ((sw.Elapsed - lastEventPipeUpdate).TotalMilliseconds > 500)
-                        {
-                            log.WriteLine("{0,5:n1}s: Making GC Heap Progress...", sw.Elapsed.TotalSeconds);
-                        }
-
-                        lastEventPipeUpdate = sw.Elapsed;
-                    };
-
-                    if (memoryGraph != null)
-                    {
-                        dumper.SetupCallbacks(memoryGraph, gcDumpSession.Source, processID.ToString());
+                        return;
                     }
 
-                    listening = true;
-                    gcDumpSession.Source.Process();
-                    log.WriteLine("{0,5:n1}s: EventPipe Listener dying", sw.Elapsed.TotalSeconds);
-                });
+                    eventPipeDataPresent = true;
 
-                // Wait for thread above to start listening (should be very fast)
-                while (!listening)
+                    if (gcNum < 0 && data.Depth == 2 && data.Type != GCType.BackgroundGC)
+                    {
+                        gcNum = data.Count;
+                        log.WriteLine("{0,5:n1}s: .NET Dump Started...", getElapsed().TotalSeconds);
+                    }
+                };
+
+                gcDumpSession.Source.Clr.GCStop += delegate (GCEndTraceData data)
                 {
-                    readerTask.Wait(1);
+                    if (data.ProcessID != processID)
+                    {
+                        return;
+                    }
+
+                    if (data.Count == gcNum)
+                    {
+                        log.WriteLine("{0,5:n1}s: .NET GC Complete.", getElapsed().TotalSeconds);
+                        dumpComplete = true;
+                    }
+                };
+
+                gcDumpSession.Source.Clr.GCBulkNode += delegate (GCBulkNodeTraceData data)
+                {
+                    if (data.ProcessID != processID)
+                    {
+                        return;
+                    }
+
+                    eventPipeDataPresent = true;
+
+                    if ((getElapsed() - lastEventPipeUpdate).TotalMilliseconds > 500)
+                    {
+                        log.WriteLine("{0,5:n1}s: Making GC Heap Progress...", getElapsed().TotalSeconds);
+                    }
+
+                    lastEventPipeUpdate = getElapsed();
+                };
+
+                if (memoryGraph != null)
+                {
+                    dumper.SetupCallbacks(memoryGraph, gcDumpSession.Source, processID.ToString());
                 }
+
+                // Set up a separate thread that will listen for EventPipe events coming back telling us we succeeded. 
+                Task readerTask = Task.Run(() =>
+                {
+                    // cancelled before we began
+                    if (ct.IsCancellationRequested)
+                        return;
+                    log.WriteLine("{0,5:n1}s: Starting to process events", getElapsed().TotalSeconds);
+                    gcDumpSession.Source.Process();
+                    log.WriteLine("{0,5:n1}s: EventPipe Listener dying", getElapsed().TotalSeconds);
+                }, ct);
 
                 for (; ; )
                 {
                     if (ct.IsCancellationRequested)
                     {
+                        log.WriteLine("{0,5:n1}s: Cancelling...", getElapsed().TotalSeconds);
                         break;
                     }
 
@@ -153,15 +149,15 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                         break;
                     }
 
-                    if (!eventPipeDataPresent && sw.Elapsed.TotalSeconds > 5)      // Assume it started within 5 seconds.  
+                    if (!eventPipeDataPresent && getElapsed().TotalSeconds > 5)      // Assume it started within 5 seconds.  
                     {
-                        log.WriteLine("{0,5:n1}s: Assume no .NET Heap", sw.Elapsed.TotalSeconds);
+                        log.WriteLine("{0,5:n1}s: Assume no .NET Heap", getElapsed().TotalSeconds);
                         break;
                     }
 
-                    if (sw.Elapsed.TotalSeconds > 30)       // Time out after 30 seconds. 
+                    if (getElapsed().TotalSeconds > timeout)       // Time out after `timeout` seconds. defaults to 30s.
                     {
-                        log.WriteLine("{0,5:n1}s: Timed out after 20 seconds", sw.Elapsed.TotalSeconds);
+                        log.WriteLine("{0,5:n1}s: Timed out after {1} seconds", getElapsed().TotalSeconds, timeout);
                         break;
                     }
 
@@ -171,11 +167,33 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     }
                 }
 
-                log.WriteLine("{0,5:n1}s: Shutting down EventPipe session", sw.Elapsed.TotalSeconds);
-                gcDumpSession.EndSession();
+                var stopTask = Task.Run(() =>
+                {
+                    log.WriteLine("{0,5:n1}s: Shutting down gcdump EventPipe session", getElapsed().TotalSeconds);
+                    gcDumpSession.EndSession();
+                    log.WriteLine("{0,5:n1}s: gcdump EventPipe session shut down", getElapsed().TotalSeconds);
+                }, ct);
 
-                while (!readerTask.Wait(1000))
-                    log.WriteLine("{0,5:n1}s: still reading...", sw.Elapsed.TotalSeconds);
+                try
+                {
+                    while (!Task.WaitAll(new Task[] { readerTask, stopTask }, 1000))
+                        log.WriteLine("{0,5:n1}s: still reading...", getElapsed().TotalSeconds);
+                }
+                catch (AggregateException ae) // no need to throw if we're just cancelling the tasks
+                {
+                    foreach (var e in ae.Flatten().InnerExceptions)
+                    {
+                        if (!(e is TaskCanceledException))
+                        {
+                            throw ae;
+                        }
+                    }
+                }
+
+                log.WriteLine("{0,5:n1}s: gcdump EventPipe Session closed", getElapsed().TotalSeconds);
+
+                if (ct.IsCancellationRequested)
+                    return false;
 
                 if (eventPipeDataPresent)
                 {
@@ -184,16 +202,16 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
             catch (Exception e)
             {
-                log.WriteLine($"{sw.Elapsed.TotalSeconds:0,5:n1}s: [Error] Exception during gcdump: {e.ToString()}");
+                log.WriteLine($"{getElapsed().TotalSeconds,5:n1}s: [Error] Exception during gcdump: {e.ToString()}");
             }
 
-            log.WriteLine("[{0,5:n1}s: Done Dumping .NET heap success={1}]", sw.Elapsed.TotalSeconds, dumpComplete);
+            log.WriteLine("[{0,5:n1}s: Done Dumping .NET heap success={1}]", getElapsed().TotalSeconds, dumpComplete);
 
             return dumpComplete;
         }
     }
 
-    internal class EventPipeSession
+    internal class EventPipeSession : IDisposable
     {
         private List<Provider> _providers;
         private Stream _eventPipeStream;
@@ -223,5 +241,27 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         {
             EventPipeClient.StopTracing(_pid, _sessionId);
         }
+
+        #region IDisposable Support
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    _eventPipeStream?.Dispose();
+                    _source?.Dispose();
+                }
+                disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+        }
+        #endregion
     }
 }
