@@ -19,6 +19,8 @@ The goal of this library is as following:
 
 ## Sample Code:
 
+Here are some sample code showing the usage of this library.
+
 #### 1. Attaching to a process and dumping out all the runtime GC events in real time to the console
 ```cs
 using Microsoft.Diagnostics.NETCore.Client;
@@ -32,26 +34,39 @@ public void PrintRuntimeGCEvents(int processId)
     };
 
     DiagnosticsClient client = new DiagnosticsClient(processId);
-    EventPipeSession session = client.StartEventPipeSession(
-        providers,
-        false, // RequestRundown
-        256 // CircularBufferMB
-    );
-    EventPipeEventSource source = new EventPipeEventSource(session.EventStream);
+    using (EventPipeSession session = client.StartEventPipeSession(providers,
+        false // RequestRundown
+    ) {
+        EventPipeEventSource source = new EventPipeEventSource(session.EventStream);
 
-    source.Dynamic.All += (TraceEvent obj) => {
-        Console.WriteLine(obj.EventName);
+        source.Dynamic.All += (TraceEvent obj) => {
+            Console.WriteLine(obj.EventName);
+        }
+        try
+        {
+            source.Process();
+        }
+        // NOTE: This exception does not currently exist. It is something that needs to be added to TraceEvent.
+        catch (EventStreamException e) {
+            Console.WriteLine("Error encountered while processing events");
+            Console.WriteLine(e.ToString());
+        }
     }
-    try
-    {
-        source.Process();
-    }
-    catch (EventStreamException) {}
-    // NOTE: This exception does not currently exist. It is something that needs to be added to TraceEvent.
 }
 ```
 
-#### 2. Trigger a core dump when CPU usage goes above a certain threshold
+#### 2. Write a core dump. 
+```cs
+using Microsoft.Diagnostics.NetCore.Client;
+
+public void TriggerCoreDump(int processId)
+{
+    DiagnosticsClient client = new DiagnosticsClient(processId);
+    client.WriteDump(DumpType.Normal);
+}
+```
+
+#### 3. Trigger a core dump when CPU usage goes above a certain threshold
 ```cs
 
 using Microsoft.Diagnostics.NETCore.Client;
@@ -85,7 +100,7 @@ public void TriggerDumpOnCpuUsage(int processId, int threshold)
                 double cpuUsage = Double.Parse(payloadFields["Mean"]);
                 if (cpuUsage > (double)threshold)
                 {
-                    DiagnosticsClient.WriteDump(processId, "/tmp/minidump.dmp", DumpType.Normal);
+                    client.WriteDump(DumpType.Normal, "/tmp/minidump.dmp");
                 }
             }
         }
@@ -98,7 +113,7 @@ public void TriggerDumpOnCpuUsage(int processId, int threshold)
 }
 ```
 
-#### 3. Trigger a CPU trace for given number of seconds
+#### 4. Trigger a CPU trace for given number of seconds
 ```cs
 
 using Microsoft.Diagnostics.NETCore.Client;
@@ -112,6 +127,8 @@ public void TraceProcessForDuration(int processId, int duration, string traceNam
         new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, ClrTraceEventParser.Keywords.Default),
         new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational, ClrTraceEventParser.Keywords.None)
     };
+    DiagnosticsClient client = new DiagnosticsClient(processId);
+    EventPipeSession traceSession = client.StartEventPipeSession(providers);
 
     Task copyTask = Task.Run(async () =>
     {
@@ -119,10 +136,10 @@ public void TraceProcessForDuration(int processId, int duration, string traceNam
         {
             await traceSession.stream.CopyToAsync(fs);
         }
-    }
+    };
     await Task.Delay(duration * 1000);
-    DiagnosticsClient.StopTracing(traceSession);
     await copyTask;
+    DiagnosticsClient.StopTracing(traceSession);
     try
     {
         source.Process();
@@ -130,6 +147,29 @@ public void TraceProcessForDuration(int processId, int duration, string traceNam
     catch (EventStreamException) { }
 }
 ```
+
+#### 5. Print names of all .NET processes that published a diagnostics server to connect
+```cs
+using Microsoft.Diagnostics.NETCore.Client;
+using System.Linq;
+
+public static void PrintProcessStatus()
+{
+    var processes = DiagnosticsClient.GetPublishedProcesses()
+        .Select(GetProcessById)
+        .Where(process => process != null)
+
+    foreach (var process in processes)
+    {
+        Console.WriteLine($"{process.ProcessName}");
+    }
+}
+```
+
+
+#### 6. Live-parsing events for a specified period of time. 
+TODO
+
 
 ## API Descriptions
 
@@ -173,12 +213,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Attach a profiler.
         /// </summary>
-        /// <param name="processId">Target process' ID</param>
         /// <param name="attachTimeout">Timeout for attaching the profiler</param>
         /// <param name="profilerGuid">Guid for the profiler to be attached</param>
         /// <param name="profilerPath">Path to the profiler to be attached</param>
         /// <param name="additionalData">Additional data to be passed to the profiler</param>
-        public void AttachProfiler(int processId, TimeSpan attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData=null);
+        public void AttachProfiler(TimeSpan attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData=null);
 
         /// <summary>
         /// Get all the active processes that can be attached to.
@@ -251,17 +290,14 @@ This is a class to represent an EventPipeSession. It is meant to be immutable an
 ```cs
 namespace Microsoft.Diagnostics.Client
 {
-    public class EventPipeSession
+    public class EventPipeSession : IDisposable
     {
-        public EventPipeSession(
-            int processId,
-            long sessionId,
-            IEnumerable<EventPipeProvider> providers,
-            int circularBufferMB,
-            bool rundownRequested
-        )
-
         public Stream EventStream { get; };
+
+        ///<summary>
+        /// Stops the given session
+        ///</summary>
+        public void Stop();
     }
 }
 ```
