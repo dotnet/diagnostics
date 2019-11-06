@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
-using Microsoft.Diagnostics.Tools.RuntimeClient;
+using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Internal.Common.Commands
 {
@@ -22,7 +22,7 @@ namespace Microsoft.Internal.Common.Commands
             try
             {
                 StringBuilder sb = new StringBuilder();
-                var processes = EventPipeClient.ListAvailablePorts()
+                var processes = DiagnosticsClient.GetPublishedProcesses()
                     .Select(GetProcessById)
                     .Where(process => process != null)
                     .OrderBy(process => process.ProcessName)
