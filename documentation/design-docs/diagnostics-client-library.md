@@ -31,13 +31,13 @@ public void PrintRuntimeGCEvents(int processId)
     var providers = new List<EventPipeProvider>()
     {
         new EventPipeProvider("Microsoft-Windows-DotNETRuntime",
-            (int)EventLevel.Informational, (long)ClrTraceEventParser.Keywords.GC)
+            EventLevel.Informational, (long)ClrTraceEventParser.Keywords.GC)
     };
 
     var client = new DiagnosticsClient(processId);
     using (var session = client.StartEventPipeSession(providers, false))
     {
-        EventPipeEventSource source = new EventPipeEventSource(session.EventStream);
+        var source = new EventPipeEventSource(session.EventStream);
 
         source.Dynamic.All += (TraceEvent obj) => {
             Console.WriteLine(obj.EventName);
@@ -97,7 +97,7 @@ public void TriggerDumpOnCpuUsage(int processId, int threshold)
         if (obj.EventName.Equals("EventCounters"))
         {
             // I know this part is ugly. But this is all TraceEvent.
-            IDictionary<string, object> payloadFields = (IDictionary<string, object>)(obj.GetPayloadValueByName("Payload"));
+            var payloadFields = (IDictionary<string, object>)(obj.GetPayloadValueByName("Payload"));
             if (payloadFields["Name"].ToString().Equals("cpu-usage"))
             {
                 double cpuUsage = Double.Parse(payloadFields["Mean"]);
@@ -128,27 +128,22 @@ public void TraceProcessForDuration(int processId, int duration, string traceNam
 {
     var cpuProviders = new List<EventPipeProvider>()
     {
-        new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, ClrTraceEventParser.Keywords.Default),
-        new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational, ClrTraceEventParser.Keywords.None)
+        new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, (long)ClrTraceEventParser.Keywords.Default),
+        new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational, (long)ClrTraceEventParser.Keywords.None)
     };
     var client = new DiagnosticsClient(processId);
-    var traceSession = client.StartEventPipeSession(providers);
+    var traceSession = client.StartEventPipeSession(cpuProviders);
 
     Task copyTask = Task.Run(async () =>
     {
-        using(FileStream fs = new FileStream(traceName, FileMode.Create, FileAccess.Write))
+        using (FileStream fs = new FileStream(traceName, FileMode.Create, FileAccess.Write))
         {
             await traceSession.EventStream.CopyToAsync(fs);
         }
-    };
-    await Task.Delay(duration * 1000);
-    await copyTask;
-    DiagnosticsClient.StopTracing(traceSession);
-    try
-    {
-        source.Process();
-    }
-    catch (EventStreamException) { }
+    });
+
+    copyTask.Wait(duration * 1000);
+    traceSession.Stop();
 }
 ```
 
@@ -172,23 +167,25 @@ public static void PrintProcessStatus()
 
 
 #### 6. Live-parsing events for a specified period of time. 
+
+This sample shows an example where we create two tasks, one that parses the events coming in live with `EventPipeEventSource` and one that sleeps for a certain duration and stops the session. If the target app exists before the duration ends, the app exists gracefully. Otherwise, the task that sleeps will send the Stop command to the pipe and exit gracefully.
+
 ```cs
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing.Parsers;
 
-public void PrintRuntimeCounters(int processId, int duration)
+public void PrintEventsLive(int processId, int duration)
 {
     var providers = new List<EventPipeProvider>()
     {
         new EventPipeProvider("Microsoft-Windows-DotNETRuntime",
-            (int)EventLevel.Informational, (long)ClrTraceEventParser.Keywords.GC)
+            EventLevel.Informational, (long)ClrTraceEventParser.Keywords.GC)
     };
-
     var client = new DiagnosticsClient(processId);
     using (var session = client.StartEventPipeSession(providers, false))
     {
 
-        Task streamTask = new Task(() => 
+        Task streamTask = Task.Run(() =>
         {
             var source = new EventPipeEventSource(session.EventStream);
             source.Dynamic.All += (TraceEvent obj) =>
@@ -199,25 +196,34 @@ public void PrintRuntimeCounters(int processId, int duration)
             {
                 source.Process();
             }
+            // NOTE: This exception does not currently exist. It is something that needs to be added to TraceEvent.
+            catch (EventStreamException e)
+            {
+                Console.WriteLine("Error encountered while processing events");
+                Console.WriteLine(e.ToString());
+            }
         });
 
-        Task sleepTask = new Task(() => 
+        Task sleepTask = Task.Run(() =>
         {
             Thread.Sleep(1000 * duration);
+            session.Stop();
         });
 
-        Task.WaitOne(streamTask, sleepTask);
-        
-        // NOTE: This exception does not currently exist. It is something that needs to be added to TraceEvent.
-        catch (EventStreamException e)
-        {
-            Console.WriteLine("Error encountered while processing events");
-            Console.WriteLine(e.ToString());
-        }
+        Task.WaitAny(streamTask, sleepTask);
     }
 }
 ```
 
+#### 7. Attach a ICorProfiler profiler
+
+```cs
+public static int AttachProfiler(int processId, Guid profilerGuid, string profilerPath)
+{
+    var client = new DiagnosticsClient(processId);
+    return client.AttachProfiler(TimeSpan.FromSeconds(10), profilerGuid, profilerPath);
+}
+```
 
 ## API Descriptions
 
