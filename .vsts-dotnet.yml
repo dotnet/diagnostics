@@ -33,7 +33,7 @@ jobs:
   parameters:
     name: CentOS_7
     osGroup: Linux
-    dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-3e800f1-20190501005343
+    dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-f39df28-20191023143754
     strategy:
       matrix:
         Build_Debug:
@@ -49,7 +49,7 @@ jobs:
   parameters:
     name: Linux_cross
     osGroup: Linux
-    dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-14.04-cross-1735d26-20190521133857
+    dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-14.04-23cacb0-20191023143847
     crossrootfsDir: '/crossrootfs/arm'
     strategy:
       matrix:
@@ -62,7 +62,7 @@ jobs:
   parameters:
     name: Linux_cross64
     osGroup: Linux
-    dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-a3ae44b-20180315221921
+    dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-cfdd435-20191023143847
     crossrootfsDir: '/crossrootfs/arm64'
     strategy:
       matrix:
@@ -73,9 +73,9 @@ jobs:
 
 - template: /eng/build.yml
   parameters:
-    name: Alpine3_6
+    name: Alpine3_9
     osGroup: Linux
-    dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.6-WithNode-f4d3fe3-20181220200247
+    dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.9-WithNode-0fc54a3-20190918214015
     strategy:
       matrix:
         Build_Release:
@@ -208,7 +208,7 @@ jobs:
     dependsOn:
     - Windows
     - CentOS_7
-    - Alpine3_6
+    - Alpine3_9
     - MacOS
     - Linux_cross
     - Linux_cross64
@@ -264,7 +264,7 @@ jobs:
     - task: DownloadPipelineArtifact@2
       displayName: Download Linux Musl Artifacts
       inputs:
-        artifactName: Alpine3_6_x64_Release
+        artifactName: Alpine3_9_x64_Release
         targetPath: '$(Build.SourcesDirectory)/artifacts/bin/Linux-musl.x64.Release'
       condition: succeeded()
 
