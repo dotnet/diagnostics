@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <RootNamespace>Microsoft.Diagnostics.NETCore.Client</RootNamespace>
+    <Description>.NET Core Diagnostics Client Library</Description>
+    <IsPackable>true</IsPackable>
+    <PackageTags>Diagnostic</PackageTags>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <IsShippingAssembly>true</IsShippingAssembly>
+  </PropertyGroup>
+</Project>

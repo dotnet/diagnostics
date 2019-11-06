@@ -1,0 +1,109 @@
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Runtime.InteropServices;
+
+namespace Microsoft.Diagnostics.NETCore.Client
+{
+    /// <summary>
+    /// Different diagnostic message types that are handled by the runtime.
+    /// </summary>
+    internal enum DiagnosticsMessageType : uint
+    {
+        /// <summary>
+        /// Initiates core dump generation 
+        /// </summary>
+        GenerateCoreDump = 1,
+        /// <summary>
+        /// Starts an EventPipe session that writes events to a file when the session is stopped or the application exits.
+        /// </summary>
+        StartEventPipeTracing = 1024,
+        /// <summary>
+        /// Stops an EventPipe session.
+        /// </summary>
+        StopEventPipeTracing,
+        /// <summary>
+        /// Starts an EventPipe session that sends events out-of-proc through IPC.
+        /// </summary>
+        CollectEventPipeTracing,
+        /// <summary>
+        /// Attaches a profiler to an existing process
+        /// </summary>
+        AttachProfiler = 2048,
+    }
+
+
+    /// <summary>
+    /// Message header used to send commands to the .NET Core runtime through IPC.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct MessageHeader
+    {
+        /// <summary>
+        /// Request type.
+        /// </summary>
+        public DiagnosticsMessageType RequestType;
+
+        /// <summary>
+        /// Remote process Id.
+        /// </summary>
+        public uint Pid;
+    }
+
+
+    internal class IpcMessage
+    {
+        public IpcMessage()
+        { }
+
+        public IpcMessage(IpcHeader header, byte[] payload)
+        {
+            Payload = payload;
+            Header = header;
+        }
+
+        internal IpcMessage(DiagnosticsServerCommandSet commandSet, byte commandId, byte[] payload = null)
+        {
+            Header = new IpcHeader(commandSet, commandId);
+            Payload = payload;
+        }
+
+        public byte[] Payload { get; private set; } = null;
+        public IpcHeader Header { get; private set; } = default;
+
+        public byte[] Serialize()
+        { 
+            byte[] serializedData = null;
+            // Verify things will fit in the size capacity
+            Header.Size = checked((UInt16)(IpcHeader.HeaderSizeInBytes + Payload.Length)); ;
+            byte[] headerBytes = Header.Serialize();
+
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write(headerBytes);
+                writer.Write(Payload);
+                writer.Flush();
+                serializedData = stream.ToArray();
+            }
+
+            return serializedData;
+        }
+
+        public static IpcMessage Parse(Stream stream)
+        {
+            IpcMessage message = new IpcMessage();
+            using (var reader = new BinaryReader(stream, Encoding.UTF8, true))
+            {
+                message.Header = IpcHeader.TryParse(reader);
+                message.Payload = reader.ReadBytes(message.Header.Size - IpcHeader.HeaderSizeInBytes);
+                return message;
+            }
+        }
+    }
+}
