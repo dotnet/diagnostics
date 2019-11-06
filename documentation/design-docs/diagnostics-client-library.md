@@ -168,18 +168,18 @@ public static void PrintProcessStatus()
 
 #### 6. Live-parsing events for a specified period of time. 
 
-This sample shows an example where we create two tasks, one that parses the events coming in live with `EventPipeEventSource` and one that sleeps for a certain duration and stops the session. If the target app exists before the duration ends, the app exists gracefully. Otherwise, the task that sleeps will send the Stop command to the pipe and exit gracefully.
+This sample shows an example where we create two tasks, one that parses the events coming in live with `EventPipeEventSource` and one that reads the console input for a user input signaling the program to end. If the target app exists before the users presses enter, the app exists gracefully. Otherwise, `inputTask` will send the Stop command to the pipe and exit gracefully.
 
 ```cs
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing.Parsers;
 
-public void PrintEventsLive(int processId, int duration)
+public static void PrintEventsLive(int processId)
 {
     var providers = new List<EventPipeProvider>()
     {
         new EventPipeProvider("Microsoft-Windows-DotNETRuntime",
-            EventLevel.Informational, (long)ClrTraceEventParser.Keywords.GC)
+            EventLevel.Informational, (long)ClrTraceEventParser.Keywords.Default)
     };
     var client = new DiagnosticsClient(processId);
     using (var session = client.StartEventPipeSession(providers, false))
@@ -191,22 +191,26 @@ public void PrintEventsLive(int processId, int duration)
             source.Dynamic.All += (TraceEvent obj) =>
             {
                 Console.WriteLine(obj.EventName);
-            }
+            };
             try
             {
                 source.Process();
             }
             // NOTE: This exception does not currently exist. It is something that needs to be added to TraceEvent.
-            catch (EventStreamException e)
+            catch (Exception e)
             {
                 Console.WriteLine("Error encountered while processing events");
                 Console.WriteLine(e.ToString());
             }
         });
 
-        Task sleepTask = Task.Run(() =>
+        Task inputTask = Task.Run(() =>
         {
-            Thread.Sleep(1000 * duration);
+            Console.WriteLine("Press Enter to exit");
+            while (Console.ReadKey().Key != ConsoleKey.Enter)
+            { 
+                Thread.Sleep(100);
+            }
             session.Stop();
         });
 
@@ -249,12 +253,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns> 
         public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown=true, int circularBufferMB=256)
-
-        /// <summary>
-        /// Stop the EventPipe session provided as an argument.
-        /// </summary>
-        /// <param name="session">The EventPipeSession to be stopped.
-        public void StopEventPipeSession(EventPipeSession session)
 
         /// <summary>
         /// Trigger a core dump generation.
