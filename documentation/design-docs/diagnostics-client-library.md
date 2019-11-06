@@ -28,16 +28,14 @@ using Microsoft.Diagnostics.Tracing.Parsers;
 
 public void PrintRuntimeGCEvents(int processId)
 {
-    List<EventPipeProvider> providers = new List<EventPipeProvider>()
+    var providers = new List<EventPipeProvider>()
     {
         new EventPipeProvider("Microsoft-Windows-DotNETRuntime",
             (int)EventLevel.Informational, (long)ClrTraceEventParser.Keywords.GC)
     };
 
-    DiagnosticsClient client = new DiagnosticsClient(processId);
-    using (EventPipeSession session = client.StartEventPipeSession(providers,
-        false // RequestRundown
-    )
+    var client = new DiagnosticsClient(processId);
+    using (var session = client.StartEventPipeSession(providers, false))
     {
         EventPipeEventSource source = new EventPipeEventSource(session.EventStream);
 
@@ -64,7 +62,7 @@ using Microsoft.Diagnostics.NetCore.Client;
 
 public void TriggerCoreDump(int processId)
 {
-    DiagnosticsClient client = new DiagnosticsClient(processId);
+    var client = new DiagnosticsClient(processId);
     client.WriteDump(DumpType.Normal);
 }
 ```
@@ -76,7 +74,7 @@ using Microsoft.Diagnostics.NETCore.Client;
 
 public void TriggerDumpOnCpuUsage(int processId, int threshold)
 {
-    List<EventPipeProvider> providers = new List<EventPipeProvider>()
+    var providers = new List<EventPipeProvider>()
     {
         new EventPipeProvider(
             "System.Runtime",
@@ -91,9 +89,9 @@ public void TriggerDumpOnCpuUsage(int processId, int threshold)
             EventLevel.Informational
         ),
     };
-    DiagnosticsClient client = new DiagnosticsClient(processId);
-    EventPipeSession session = client.StartEventPipeSession(providers);
-    EventPipeEventSource source = new EventPipeEventSource(session.EventStream)
+    var client = new DiagnosticsClient(processId);
+    var session = client.StartEventPipeSession(providers);
+    var source = new EventPipeEventSource(session.EventStream)
     source.Dynamic.All += (TraceEvent obj) =>
     {
         if (obj.EventName.Equals("EventCounters"))
@@ -128,13 +126,13 @@ using System.Threading.Task;
 
 public void TraceProcessForDuration(int processId, int duration, string traceName)
 {
-    List<EventPipeProvider> cpuProviders = new List<EventPipeProvider>()
+    var cpuProviders = new List<EventPipeProvider>()
     {
         new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, ClrTraceEventParser.Keywords.Default),
         new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational, ClrTraceEventParser.Keywords.None)
     };
-    DiagnosticsClient client = new DiagnosticsClient(processId);
-    EventPipeSession traceSession = client.StartEventPipeSession(providers);
+    var client = new DiagnosticsClient(processId);
+    var traceSession = client.StartEventPipeSession(providers);
 
     Task copyTask = Task.Run(async () =>
     {
@@ -180,19 +178,19 @@ using Microsoft.Diagnostics.Tracing.Parsers;
 
 public void PrintRuntimeCounters(int processId, int duration)
 {
-    List<EventPipeProvider> providers = new List<EventPipeProvider>()
+    var providers = new List<EventPipeProvider>()
     {
         new EventPipeProvider("Microsoft-Windows-DotNETRuntime",
             (int)EventLevel.Informational, (long)ClrTraceEventParser.Keywords.GC)
     };
 
-    DiagnosticsClient client = new DiagnosticsClient(processId);
-    using (EventPipeSession session = client.StartEventPipeSession(providers, false))
+    var client = new DiagnosticsClient(processId);
+    using (var session = client.StartEventPipeSession(providers, false))
     {
 
         Task streamTask = new Task(() => 
         {
-            EventPipeEventSource source = new EventPipeEventSource(session.EventStream);
+            var source = new EventPipeEventSource(session.EventStream);
             source.Dynamic.All += (TraceEvent obj) =>
             {
                 Console.WriteLine(obj.EventName);
