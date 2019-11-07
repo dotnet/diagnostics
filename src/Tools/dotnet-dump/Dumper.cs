@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Tools.RuntimeClient;
+using Microsoft.Diagnostics.NETCore.Client;
 using System;
 using System.CommandLine;
 using System.Diagnostics;
@@ -61,14 +61,11 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    DiagnosticsHelpers.DumpType dumpType = type == DumpTypeOption.Heap ? DiagnosticsHelpers.DumpType.WithHeap : DiagnosticsHelpers.DumpType.Normal;
+                    var client = new DiagnosticsClient(processId);
+                    DumpType dumpType = type == DumpTypeOption.Heap ? DumpType.WithHeap : DumpType.Normal;
 
                     // Send the command to the runtime to initiate the core dump
-                    var hr = DiagnosticsHelpers.GenerateCoreDump(processId, output, dumpType, diag);
-                    if (hr != 0)
-                    {
-                        throw new InvalidOperationException($"Core dump generation FAILED 0x{hr:X8}");
-                    }
+                    client.WriteDump(dumpType, output, diag);
                 }
                 else {
                     throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
