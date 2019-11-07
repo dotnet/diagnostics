@@ -6,7 +6,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Globalization;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -16,6 +19,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
     public class DiagnosticsClient
     {
         private int _processId;
+        private static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
+        private static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
 
         public DiagnosticsClient(int processId)
         {
@@ -119,10 +124,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </returns>
         public static IEnumerable<int> GetPublishedProcesses()
         {
-            return null;
-
+             return Directory.GetFiles(IpcRootPath)
+                .Select(namedPipe => (new FileInfo(namedPipe)).Name)
+                .Where(input => Regex.IsMatch(input, DiagnosticsPortPattern))
+                .Select(input => int.Parse(Regex.Match(input, DiagnosticsPortPattern).Groups[1].Value, NumberStyles.Integer));
         }
-
         private static byte[] SerializeCoreDump(string dumpName, DumpType dumpType, bool diagnostics)
         {
             using (var stream = new MemoryStream())
