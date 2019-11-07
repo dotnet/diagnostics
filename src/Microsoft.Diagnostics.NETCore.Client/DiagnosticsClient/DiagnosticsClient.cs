@@ -34,15 +34,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Stop the EventPipe session provided as an argument.
-        /// </summary>
-        /// <param name="session">The EventPipeSession to be stopped.</param>
-        public void StopEventPipeSession(EventPipeSession session)
-        {
-
-        }
-
-        /// <summary>
         /// Trigger a core dump generation.
         /// </summary> 
         /// <param name="dumpType">Type of the dump to be generated</param>

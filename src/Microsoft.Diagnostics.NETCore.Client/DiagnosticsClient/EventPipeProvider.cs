@@ -67,6 +67,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal string GetArgumentString()
         {
+            if (Arguments == null)
+            {
+                return "";
+            }
             StringBuilder sb = new StringBuilder();
             foreach(var argument in Arguments)
             {

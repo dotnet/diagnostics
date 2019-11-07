@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Tools.RuntimeClient;
+using Microsoft.Diagnostics.NETCore.Client;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Dictionary<string, string> enabledBy = new Dictionary<string, string>();
 
                 var providerCollection = Extensions.ToProviders(providers);
-                foreach (Provider providerCollectionProvider in providerCollection)
+                foreach (EventPipeProvider providerCollectionProvider in providerCollection)
                 {
                     enabledBy[providerCollectionProvider.Name] = "--providers ";
                 }
@@ -87,11 +87,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 PrintProviders(providerCollection, enabledBy);
 
                 var process = Process.GetProcessById(processId);
-                var configuration = new SessionConfiguration(
-                    circularBufferSizeMB: buffersize,
-                    format: EventPipeSerializationFormat.NetTrace,
-                    providers: providerCollection);
-
                 var shouldExit = new ManualResetEvent(false);
                 var shouldStopAfterDuration = duration != default(TimeSpan);
                 var failed = false;
@@ -100,79 +95,81 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 ct.Register(() => shouldExit.Set());
 
-                ulong sessionId = 0;
-                using (Stream stream = EventPipeClient.CollectTracing(processId, configuration, out sessionId))
-                using (VirtualTerminalMode vTermMode = VirtualTerminalMode.TryEnable())
+                var diagnosticsClient = new DiagnosticsClient(processId);
+                using (EventPipeSession session = diagnosticsClient.StartEventPipeSession(providerCollection, true))
                 {
-                    if (sessionId == 0)
+                    using (VirtualTerminalMode vTermMode = VirtualTerminalMode.TryEnable())
                     {
-                        Console.Error.WriteLine("Unable to create session.");
-                        return ErrorCodes.SessionCreationError;
-                    }
-
-                    if (shouldStopAfterDuration)
-                    {
-                        durationTimer = new System.Timers.Timer(duration.TotalMilliseconds);
-                        durationTimer.Elapsed += (s, e) => shouldExit.Set();
-                        durationTimer.AutoReset = false;
-                    }
-
-                    var collectingTask = new Task(() =>
-                    {
-                        try
+                        if (session == null)
                         {
-                            var stopwatch = new Stopwatch();
-                            durationTimer?.Start();
-                            stopwatch.Start();
+                            Console.Error.WriteLine("Unable to create session.");
+                            return ErrorCodes.SessionCreationError;
+                        }
 
-                            using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
+                        if (shouldStopAfterDuration)
+                        {
+                            durationTimer = new System.Timers.Timer(duration.TotalMilliseconds);
+                            durationTimer.Elapsed += (s, e) => shouldExit.Set();
+                            durationTimer.AutoReset = false;
+                        }
+
+                        var collectingTask = new Task(() =>
+                        {
+                            try
                             {
-                                Console.Out.WriteLine($"Process        : {process.MainModule.FileName}");
-                                Console.Out.WriteLine($"Output File    : {fs.Name}");
-                                if (shouldStopAfterDuration)
-                                    Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
+                                var stopwatch = new Stopwatch();
+                                durationTimer?.Start();
+                                stopwatch.Start();
 
-                                Console.Out.WriteLine("\n\n");
-                                var buffer = new byte[16 * 1024];
-
-                                while (true)
+                                using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                                 {
-                                    int nBytesRead = stream.Read(buffer, 0, buffer.Length);
-                                    if (nBytesRead <= 0)
-                                        break;
-                                    fs.Write(buffer, 0, nBytesRead);
-                                    lineToClear = Console.CursorTop-1;
-                                    ResetCurrentConsoleLine(vTermMode.IsEnabled);
-                                    Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
-                                    Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
-                                    Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
+                                    Console.Out.WriteLine($"Process        : {process.MainModule.FileName}");
+                                    Console.Out.WriteLine($"Output File    : {fs.Name}");
+                                    if (shouldStopAfterDuration)
+                                        Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
+
+                                    Console.Out.WriteLine("\n\n");
+                                    var buffer = new byte[16 * 1024];
+
+                                    while (true)
+                                    {
+                                        int nBytesRead = session.EventStream.Read(buffer, 0, buffer.Length);
+                                        if (nBytesRead <= 0)
+                                            break;
+                                        fs.Write(buffer, 0, nBytesRead);
+                                        lineToClear = Console.CursorTop-1;
+                                        ResetCurrentConsoleLine(vTermMode.IsEnabled);
+                                        Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
+                                        Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
+                                        Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
+                                    }
                                 }
                             }
-                        }
-                        catch (Exception ex)
-                        {
-                            failed = true;
-                            Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
-                        }
-                        finally
-                        {
-                            terminated = true;
-                            shouldExit.Set();
-                        }
-                    });
-                    collectingTask.Start();
+                            catch (Exception ex)
+                            {
+                                failed = true;
+                                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
+                            }
+                            finally
+                            {
+                                terminated = true;
+                                shouldExit.Set();
+                            }
+                        });
+                        collectingTask.Start();
 
-                    do
-                    {
-                        while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
-                    } while (!shouldExit.WaitOne(0) && Console.ReadKey(true).Key != ConsoleKey.Enter);
+                        do
+                        {
+                            while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
+                        } while (!shouldExit.WaitOne(0) && Console.ReadKey(true).Key != ConsoleKey.Enter);
 
-                    if (!terminated)
-                    {
-                        durationTimer?.Stop();
-                        EventPipeClient.StopTracing(processId, sessionId);
+                        if (!terminated)
+                        {
+                            durationTimer?.Stop();
+                            session.Stop();
+                        }
+                        await collectingTask;
                     }
-                    await collectingTask;
                 }
 
                 Console.Out.WriteLine();
@@ -190,7 +187,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        private static void PrintProviders(IReadOnlyList<Provider> providers, Dictionary<string, string> enabledBy)
+        private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, string> enabledBy)
         {
             Console.Out.WriteLine("");
             Console.Out.Write(String.Format("{0, -40}","Provider Name"));  // +4 is for the tab
@@ -199,10 +196,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console.Out.Write("Enabled By\n");
             foreach (var provider in providers)
             {
-                Console.Out.WriteLine(String.Format("{0, -80}", $"{provider.ToDisplayString()}") + $"{enabledBy[provider.Name]}");
+                Console.Out.WriteLine(String.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + $"{enabledBy[provider.Name]}");
             }
             Console.Out.WriteLine();
         }
+        private static string GetProviderDisplayString(EventPipeProvider provider) =>
+            String.Format("{0, -40}", provider.Name) + String.Format("0x{0, -18}", $"{provider.Keywords:X16}") + String.Format("{0, -8}", provider.EventLevel.ToString() + $"({(int)provider.EventLevel})");
 
         private static int prevBufferWidth = 0;
         private static string clearLineString = "";

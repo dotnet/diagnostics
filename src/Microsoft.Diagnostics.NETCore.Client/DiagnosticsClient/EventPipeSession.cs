@@ -14,9 +14,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private bool _requestRundown;
         private int _circularBufferMB;
         private long _sessionId;
+        private int _processId;
 
         internal EventPipeSession(int processId, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB)
         {
+            _processId = processId;
             _providers = providers;
             _requestRundown = requestRundown;
             _circularBufferMB = circularBufferMB;
@@ -47,7 +49,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public void Stop()
         {
             // TODO
-            return;
+            if (_sessionId == 0)
+                return; // TODO: Throw here instead?
+
+            byte[] payload = BitConverter.GetBytes(_sessionId);
+
+            var response = IpcClient.SendMessage(_processId, new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.StopTracing, payload));
+
+            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
+            {
+                case DiagnosticsServerCommandId.OK:
+                    return;
+                case DiagnosticsServerCommandId.Error:
+                    //TODO: THROW HERE?
+                    return;
+                default:
+                    //TODO: THROW HERE?
+                    return;
+            }
         }
 
         public void Dispose()
