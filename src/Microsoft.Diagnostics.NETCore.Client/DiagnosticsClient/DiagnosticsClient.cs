@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -62,7 +63,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 default:
                     return;
             }
-
             return;
         }
 
@@ -75,7 +75,40 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="additionalData">Additional data to be passed to the profiler</param>
         public void AttachProfiler(TimeSpan attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData=null)
         {
+            if (profilerGuid == null || profilerGuid == Guid.Empty)
+            {
+                throw new ArgumentException($"{nameof(profilerGuid)} must be a valid Guid");
+            }
 
+            if (String.IsNullOrEmpty(profilerPath))
+            {
+                throw new ArgumentException($"{nameof(profilerPath)} must be non-null");
+            }
+
+            var header = new MessageHeader {
+                RequestType = DiagnosticsMessageType.AttachProfiler,
+                Pid = (uint)Process.GetCurrentProcess().Id,
+            };
+
+            byte[] serializedConfiguration = SerializeProfilerAttach((uint)attachTimeout.TotalSeconds, profilerGuid, profilerPath, additionalData);
+            var message = new IpcMessage(DiagnosticsServerCommandSet.Profiler, (byte)ProfilerCommandId.AttachProfiler, serializedConfiguration);
+            var response = IpcClient.SendMessage(_processId, message);
+            var hr = 0;
+            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
+            {
+                case DiagnosticsServerCommandId.Error:
+                case DiagnosticsServerCommandId.OK:
+                    hr = BitConverter.ToInt32(response.Payload, 0);
+                    break;
+                default:
+                    hr = -1;
+                    break;
+            }
+
+            // TODO: the call to set up the pipe and send the message operates on a different timeout than attachTimeout, which is for the runtime.
+            // We should eventually have a configurable timeout for the message passing, potentially either separately from the 
+            // runtime timeout or respect attachTimeout as one total duration.
+            return;
         }
 
         /// <summary>
@@ -98,6 +131,30 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 writer.WriteString(dumpName);
                 writer.Write((uint)dumpType);
                 writer.Write((uint)(diagnostics ? 1 : 0));
+
+                writer.Flush();
+                return stream.ToArray();
+            }
+        }
+
+        private static byte[] SerializeProfilerAttach(uint attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData)
+        {
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write(attachTimeout);
+                writer.Write(profilerGuid.ToByteArray());
+                writer.WriteString(profilerPath);
+
+                if (additionalData == null)
+                {
+                    writer.Write(0);
+                }
+                else
+                {
+                    writer.Write(additionalData.Length);
+                    writer.Write(additionalData);
+                }
 
                 writer.Flush();
                 return stream.ToArray();
