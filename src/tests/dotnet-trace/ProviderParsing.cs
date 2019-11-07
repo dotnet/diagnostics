@@ -59,14 +59,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         [Theory]
         [InlineData("VeryCoolProvider:0xFFFFFFFFFFFFFFFF:5:FilterAndPayloadSpecs=\"QuotedValue\"")]
-        [InlineData("VeryCoolProvider::5:FilterAndPayloadSpecs=\"QuotedValue\"")]
         public void ValidProviderKeyword_CorrectlyParses(string providerToParse)
         {
             List<EventPipeProvider> parsedProviders = Extensions.ToProviders(providerToParse);
             Assert.True(parsedProviders.Count == 1);
             EventPipeProvider provider = parsedProviders.First();
             Assert.True(provider.Name == "VeryCoolProvider");
-            Assert.True(provider.Keywords == long.MaxValue);
+            Assert.True(provider.Keywords == (long)(-1));
             Assert.True(provider.EventLevel == System.Diagnostics.Tracing.EventLevel.Verbose);
             Assert.True(provider.Arguments.Count == 1);
             Assert.True(provider.Arguments["FilterAndPayloadSpecs"] == "\"QuotedValue\"");
