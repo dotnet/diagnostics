@@ -61,11 +61,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             // Provider name
             string providerName = tokens.Length > 0 ? tokens[0] : null;
 
-            // Check if the supplied provider is a GUID and not a name.
-            if (Guid.TryParse(providerName, out _))
-            {
-                Console.WriteLine($"Warning: --provider argument {providerName} appears to be a GUID which is not supported by dotnet-trace. Providers need to be referenced by their textual name.");
-            }
+            // Check if the supplied provider is a GUID and not a name. if (Guid.TryParse(providerName, out _))
+            { Console.WriteLine($"Warning: --provider argument {providerName} appears to be a GUID which is not supported by dotnet-trace. Providers need to be referenced by their textual name.");
+                           }
 
             if (string.IsNullOrWhiteSpace(providerName))
                 throw new ArgumentException("Provider name was not specified.");
@@ -86,13 +84,50 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static Dictionary<string, string> ParseArgumentString(string argument)
         {
-            var argumentDict = new Dictionary<string, string>();
-            var tokens = argument.Split(";");
-            foreach(var token in tokens)
+            if (argument == "")
             {
-                var kv = token.Split("=");
-                argumentDict.Add(kv[0], kv[1]);
+                return null;
             }
+            var argumentDict = new Dictionary<string, string>();
+
+            int keyStart = 0;
+            int keyEnd = 0;
+            int valStart = 0;
+            int valEnd = 0;
+            int curIdx = 0;
+            bool inQuote = false;
+            foreach (var c in argument)
+            {
+                if (inQuote)
+                {
+                    if (c == '\"')
+                    {
+                        inQuote = false;
+                    }
+                }
+                else
+                {
+                    if (c == '=')
+                    {
+                        keyEnd = curIdx;
+                        valStart = curIdx+1;
+                    }
+                    else if (c == ';')
+                    {
+                        valEnd = curIdx;
+                        argumentDict.Add(argument.Substring(keyStart, keyEnd-keyStart), argument.Substring(valStart, valEnd-valStart));
+                        keyStart = curIdx+1; // new key starts
+                    }
+                    else if (c == '\"')
+                    {
+                        inQuote = true;
+                    }
+                }
+                curIdx += 1;
+            }
+            string key = argument.Substring(keyStart, keyEnd - keyStart);
+            string val = argument.Substring(valStart);
+            argumentDict.Add(key, val);
             return argumentDict;
         }
     }
