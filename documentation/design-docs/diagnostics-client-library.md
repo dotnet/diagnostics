@@ -22,6 +22,8 @@ The goal of this library is as following:
 Here are some sample code showing the usage of this library.
 
 #### 1. Attaching to a process and dumping out all the runtime GC events in real time to the console
+This sample shows an example where we trigger an EventPipe session with the .NET runtime provider with the GC keyword at informational level, and use `EventPipeEventSource` (provided by the TraceEvent library) to parse the events coming in and print the name of each event to the console in real time.
+
 ```cs
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing.Parsers;
@@ -57,6 +59,7 @@ public void PrintRuntimeGCEvents(int processId)
 ```
 
 #### 2. Write a core dump. 
+This sample shows how to trigger a dump using `DiagnosticsClient`.
 ```cs
 using Microsoft.Diagnostics.NetCore.Client;
 
@@ -68,6 +71,7 @@ public void TriggerCoreDump(int processId)
 ```
 
 #### 3. Trigger a core dump when CPU usage goes above a certain threshold
+This sample shows an example where we monitor the `cpu-usage` counter published by the .NET runtime and use the `WriteDump` API to write out a dump when the CPU usage grows beyond a certain threshold.
 ```cs
 
 using Microsoft.Diagnostics.NETCore.Client;
@@ -86,33 +90,39 @@ public void TriggerDumpOnCpuUsage(int processId, int threshold)
         )
     };
     var client = new DiagnosticsClient(processId);
-    var session = client.StartEventPipeSession(providers);
-    var source = new EventPipeEventSource(session.EventStream)
-    source.Dynamic.All += (TraceEvent obj) =>
+    using(var session = client.StartEventPipeSession(providers))
     {
-        if (obj.EventName.Equals("EventCounters"))
+        var source = new EventPipeEventSource(session.EventStream);
+        source.Dynamic.All += (TraceEvent obj) =>
         {
-            // I know this part is ugly. But this is all TraceEvent.
-            var payloadFields = (IDictionary<string, object>)(obj.GetPayloadValueByName("Payload"));
-            if (payloadFields["Name"].ToString().Equals("cpu-usage"))
+            if (obj.EventName.Equals("EventCounters"))
             {
-                double cpuUsage = Double.Parse(payloadFields["Mean"]);
-                if (cpuUsage > (double)threshold)
+                // I know this part is ugly. But this is all TraceEvent.
+                var payloadFields = (IDictionary<string, object>)(obj.GetPayloadValueByName("Payload"));
+                if (payloadFields["Name"].ToString().Equals("cpu-usage"))
                 {
-                    client.WriteDump(DumpType.Normal, "/tmp/minidump.dmp");
+                    double cpuUsage = Double.Parse(payloadFields["Mean"]);
+                    if (cpuUsage > (double)threshold)
+                    {
+                        client.WriteDump(DumpType.Normal, "/tmp/minidump.dmp");
+                    }
                 }
             }
         }
+        try
+        {
+            source.Process();
+        }
+        catch (EventStreamException) {}
+
+        }
     }
-    try
-    {
-        source.Process();
-    }
-    catch (EventStreamException) {}
 }
 ```
 
 #### 4. Trigger a CPU trace for given number of seconds
+This sample shows an example where we trigger an EventPipe session for certain period of time, with the default CLR trace keyword as well as the sample profiler, and read from the stream that gets created as a result and write the bytes out to a file. Essentially this is what `dotnet-trace` uses internally to write a trace file.
+
 ```cs
 
 using Microsoft.Diagnostics.NETCore.Client;
@@ -128,22 +138,26 @@ public void TraceProcessForDuration(int processId, int duration, string traceNam
         new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational, (long)ClrTraceEventParser.Keywords.None)
     };
     var client = new DiagnosticsClient(processId);
-    var traceSession = client.StartEventPipeSession(cpuProviders);
-
-    Task copyTask = Task.Run(async () =>
+    using (var traceSession = client.StartEventPipeSession(cpuProviders))
     {
-        using (FileStream fs = new FileStream(traceName, FileMode.Create, FileAccess.Write))
+        Task copyTask = Task.Run(async () =>
         {
-            await traceSession.EventStream.CopyToAsync(fs);
-        }
-    });
+            using (FileStream fs = new FileStream(traceName, FileMode.Create, FileAccess.Write))
+            {
+                await traceSession.EventStream.CopyToAsync(fs);
+            }
+        });
 
-    copyTask.Wait(duration * 1000);
-    traceSession.Stop();
+        copyTask.Wait(duration * 1000);
+        traceSession.Stop();
+    }
 }
 ```
 
 #### 5. Print names of all .NET processes that published a diagnostics server to connect
+
+This sample shows how to use `DiagnosticsClient.GetPublishedProcesses` API to print the names of the .NET processes that published a diagnostics IPC channel. 
+
 ```cs
 using Microsoft.Diagnostics.NETCore.Client;
 using System.Linq;
@@ -217,6 +231,7 @@ public static void PrintEventsLive(int processId)
 
 #### 7. Attach a ICorProfiler profiler
 
+This sample shows how to attach an ICorProfiler to a process (profiler attach).
 ```cs
 public static int AttachProfiler(int processId, Guid profilerGuid, string profilerPath)
 {
