@@ -24,7 +24,7 @@ jobs:
   parameters:
     name: CentOS_7
     osGroup: Linux
-    dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-f39df28-20191023143754
+    dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-3e800f1-20190501005343
     strategy:
       matrix:
         Build_Debug:
