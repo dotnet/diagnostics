@@ -5,11 +5,13 @@ EventCounters are lightweight, cross-platform, and near real-time EventCounters 
 
 EventCounters were initially added in .NET Core 2.2 (*CHECK THIS*) but they have been changed and extended starting in .NET Core 3.0. In addition to that, the .NET Core runtime (CoreCLR) and few .NET libraries have started publishing basic diagnostics information using EventCounters starting in .NET Core 3.0. 
 
-This document serves to explain some of the concepts behind EventCounters, and how they can be consumed both in-proc and out-of-proc with some sample code.
+This document serves to explain some of the concepts and design choices behind EventCounters API, how to use them, and how they can be consumed both in-proc and out-of-proc with some sample code.
 
 
 ## Conceptual Overview
+Conceptually, EventCounters collect numeric values over time, and report them. The .NET Core runtime (CoreCLR) has several EventCounters, which collect and publish basic performance metrics related to CPU usage, memory usage, GC heap statistics, threads and locks statistics, etc. These serve as a basic performance guideline that can be easily consumed at a relatively cheap cost (that is, turning them on does not cause performance regression, so they can be used in production scenarios). 
 
+Apart from the EventCounters that are already provided by the .NET runtime or the rest of the framework (i.e. ASP.NET, gRPC, etc.), you may choose to implement your own EventCounters to keep track of various metrics for your service. 
 
 ## Adding your own EventCounters
 
@@ -29,6 +31,17 @@ First, `EventCounter` and `IncrementingEventCounter` capture metrics of differen
 /* some more fields */
 ```
 
+This is not very useful - we have to do an additional computation of multiplying the count by the mean to find out how many requests were received in during the second, not to mention the meaninglessness of "standard deviation", "min", and "max", since we are just logging "1" every time we receive a request. 
+
+An `IncrementingEventCounter` is a type of EventCounter that is designed to capture such metrics that are ever-increasing. `IncrementingEventCounter` reports the total increment over the period of time it reports value. For example, if the value was incremented by 50 over the past second, it will report `50` as its payload, so that no additional computation is needed on the consumption side. The payload of an `IncrementingEventCounter` looks like:
+
+```
+
+```
+
+Note that `IncrementingEventCounter` does not capture the total count over the lifetime of the process. (i.e. how many requests has been served since the process started). It only reports the *difference* over the period of the time it reports value. When monitoring performance, it is not very interesting to see the aggregate metric over the process' lifetime, since that does not provide any insights about the performance. For example, the total number of exceptions thrown since the process started does not indicate anything about the process' state. The actual interesting metric is the *rate* of the exception. (i.e. A process throwing 100 exceptions per second and has been running for 10 seconds is probably at a worse state than a process that throws 1 exception per hour and has been running for 5000 hours, even though the *total* exceptions is 1000 for the former and 5000 for the latter.)
+
+
 
 ## Consuming EventCounters
 
@@ -45,16 +58,18 @@ protected override void OnEventSourceCreated(EventSource source)
 {
     if (source.Name.Equals("System.Runtime"))
     {
-        Dictionary<string, string> refreshInterval = new Dictionary<string, string>();
-        refreshInterval.Add("EventCounterIntervalSec", "1");
+        Dictionary<string, string> refreshInterval = new Dictionary<string, string>()
+        {
+            { "EventCounterIntervalSec", "1" }
+        };
         EnableEvents(source, 1, 1, refreshInterval);
     }
 }
 ```
 
-#### Sample Code
+### Sample Code
 
-This is a sample `EventListener` class that simply prints out all the counter names and values from a specified EventSource at some interval.
+This is a sample `EventListener` class that simply prints out all the counter names and values from a the .NET runtime's EventSource for publishing its internal counters (`System.Runtime`) at some interval.
 
 ```cs
 public class SimpleEventListener : EventListener
@@ -63,19 +78,17 @@ public class SimpleEventListener : EventListener
 
     public int EventCount { get; private set; } = 0;
 
-    private string _counterSource;
     private int _intervalSec;
 
-    public SimpleEventListener(string counterSource, int intervalSec)
+    public SimpleEventListener(int intervalSec)
     {
-        _counterSource = counterSource;
         _intervalSec = intervalSec;
     }
 
 
     protected override void OnEventSourceCreated(EventSource source)
     {
-        if (source.Name.Equals(counterSource))
+        if (source.Name.Equals("System.Runtime"))
         {
             Dictionary<string, string> refreshInterval = new Dictionary<string, string>() 
             {
