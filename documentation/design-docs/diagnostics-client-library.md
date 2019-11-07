@@ -83,11 +83,7 @@ public void TriggerDumpOnCpuUsage(int processId, int threshold)
             new Dictionary<string, string>() {
                 { "EventCounterIntervalSec", "1" }
             }
-        ),
-        new EventPipeProvider(
-            "Microsoft-DotNETCore-SampleProfiler",
-            EventLevel.Informational
-        ),
+        )
     };
     var client = new DiagnosticsClient(processId);
     var session = client.StartEventPipeSession(providers);
