@@ -15,6 +15,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private int _circularBufferMB;
         private long _sessionId;
         private int _processId;
+        private bool disposedValue = false; // To detect redundant calls
 
         internal EventPipeSession(int processId, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB)
         {
@@ -69,16 +70,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        public void Dispose()
-        {
-            // TODO
-            return;
-        }
-
         protected virtual void Dispose(bool disposing)
         {
-            // TODO
-            return;
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    EventStream?.Dispose();
+                }
+                disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
         }
     }
 }
