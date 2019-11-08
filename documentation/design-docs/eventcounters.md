@@ -148,7 +148,7 @@ protected override void OnEventSourceCreated(EventSource source)
 }
 ```
 
-### Sample Code
+#### Sample Code
 
 This is a sample `EventListener` class that simply prints out all the counter names and values from a the .NET runtime's EventSource for publishing its internal counters (`System.Runtime`) at some interval.
 
