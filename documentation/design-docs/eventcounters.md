@@ -46,7 +46,7 @@ An `IncrementingEventCounter` is a type of EventCounter that is designed to capt
 /* some more fields */
 ```
 
-Most notable difference is that there is only `Increment`, and the statistical data such as `Min`, `Max`, `Mean`, and `StandardDeviation` no longer makes sense to be reported, so they don't exist. The `CounterType` is also reported as `Sum`, which is different from `EventCounter` payloads, which report it as `Mean`. 
+Most notable difference is that there is only `Increment`, and the statistical data such as `Min`, `Max`, `Mean`, and `StandardDeviation` no longer makes sense to be reported, so they don't exist. The `CounterType` is also reported as `Sum`, which is different from `EventCounter` payloads, which report it as `Mean`. An easy way determine whether a counter should be an `IncrementingEventCounter` over `EventCounter` is whether it represents a type of `rate`. If the metric being reported is a type of `rate`, it makes more sense for it to be implemented using `IncrementingEventCounter`.
 
 Note that `IncrementingEventCounter` does not capture the total count over the lifetime of the process. (i.e. how many requests has been served since the process started). It only reports the *difference* over the period of the time it reports value. When monitoring performance, it is not very interesting to see the aggregate metric over the process' lifetime, since that does not provide any insights about the performance. For example, the total number of exceptions thrown since the process started does not indicate anything about the process' state. The actual interesting metric is the *rate* of the exception. (i.e. A process throwing 100 exceptions per second and has been running for 10 seconds is probably at a worse state than a process that throws 1 exception per hour and has been running for 5000 hours, even though the *total* exceptions is 1000 for the former and 5000 for the latter.)
 
@@ -77,6 +77,52 @@ PollingCounter workingSetCounter = new PollingCounter(
 This counter reports the current working set of the app. It is a `PollingCounter`, since it captures a metric at a moment in time. The callback for polling the values is `() => (double)(Environment.WorkingSet / 1_000_000)` which is simply just a call to `Environment.WorkingSet` API. The `DisplayName` and `DisplayUnits` is an optional property that can be set to help the consumer side of the counter to display the value more easily/accurately. For example `dotnet-counters` uses these properties to display the more "pretty" version of the counter names. 
 
 And that's it! For `PollingCounter` (or `IncrementingPollingCounter`), there is nothing else that needs to be done since they poll the values themselves at the interval requested by the consumer.
+
+Here is another example of runtime counter implemented using `IncrementingPollingCounter`.
+
+```cs
+IncrementingPollingCounter monitorContentionCounter = new IncrementingPollingCounter(
+    "monitor-lock-contention-count",
+    this,
+    () => Monitor.LockContentionCount
+)
+{
+    DisplayName = "Monitor Lock Contention Count",
+    DisplayRateTimeScale = new TimeSpan(0, 0, 1)
+};
+```
+
+This counter uses the [Monitor.LockContentionCount](https://docs.microsoft.com/en-us/dotnet/api/system.threading.monitor.lockcontentioncount?view=netcore-3.0) API to report the increment of the total lock contention count. The `DisplayRateTimeScale` property is an optional `TimeSpan` which can be set to provide a hint of what time interval this counter is best displayed at. For example, the lock contention count is best displayed as *count per second*, so its `DisplayRateTimeScale` is set to 1 second. This can be adjusted for different types of rate counters.
+
+There are more runtime counter implementation to use as a reference in the [CoreCLR](https://github.com/dotnet/coreclr/blob/master/src/System.Private.CoreLib/src/System/Diagnostics/Eventing/RuntimeEventSource.cs) repo.
+
+Here is a sample code for a full `EventSource` implementation that uses `EventCounter`:
+```
+// Give your event sources a descriptive name using the EventSourceAttribute, otherwise the name of the class is used. 
+[EventSource(Name = "Samples-EventCounterDemos-Minimal")]
+public sealed class MinimalEventCounterSource : EventSource
+{
+    // define the singleton instance of the event source
+    public static MinimalEventCounterSource Log = new MinimalEventCounterSource();
+    private EventCounter requestCounter;
+
+    private MinimalEventCounterSource() : base(EventSourceSettings.EtwSelfDescribingEventFormat) 
+    {
+        this.requestCounter = new EventCounter("request", this);
+    }
+
+    /// <summary>
+    /// Call this method to indicate that a request for a URL was made which took a particular amount of time
+    public void Request(string url, float elapsedMSec)
+    {
+        // Notes:
+        //   1. Each counter supports a single float value, so conceptually it maps to a single
+        //      measurement in the code.
+        this.requestCounter.WriteMetric(elapsedMSec);  // This adds it to the called 'Request' if PerfCounters are on
+    }
+}
+```
+
 
 ## Consuming EventCounters
 
@@ -190,5 +236,30 @@ As shown above, you *must* make sure the `"EventCounterIntervalSec"` argument is
 
 ### Consuming out-of-proc
 
-Consuming EventCounters out-of-proc is also possible. For those that are familiar with ETW (Event Tracing for Windows), you can use ETW to capture counter data as events and view them on your ETW trace viewer (PerfView, WPA, etc.). You may also use `dotnet-counters` to consume it cross-platform via EventPipe.
+Consuming EventCounters out-of-proc is also possible. For those that are familiar with ETW (Event Tracing for Windows), you can use ETW to capture counter data as events and view them on your ETW trace viewer (PerfView, WPA, etc.). You may also use `dotnet-counters` to consume it cross-platform via EventPipe. 
 
+#### dotnet-counters
+
+dotnet-counters is a cross-platform dotnet CLI tool that can be used to monitor the counter values. To find out how to use `dotnet-counters` to monitor your counters, refer to the [dotnet-counters documentation](https://github.com/dotnet/diagnostics/blob/master/documentation/dotnet-counters-instructions.md).
+
+
+#### ETW/PerfView
+
+Since EventCounter payloads are reported as `EventSource` events, you can use PerfView to collect/view these counter-data.
+
+Here is a command that can be passed to PerfView to collect an ETW trace with the counters.
+```
+PerfView.exe /onlyProviders=*Samples-EventCounterDemos-Minimal:EventCounterIntervalSec=1 collect
+```
+
+
+#### dotnet-trace
+
+Similar to how PerfView can be used to consume the counter data through ETW, dotnet-trace can be used to consume the counter data through EventPipe. 
+
+Here is an example of using dotnet-trace to get the same counter data.
+```
+dotnet-trace collect --process-id <pid> --providers Samples-EventCounterDemos-Minimal:0:0:EventCounterIntervalSec=1
+```
+
+The official dotnet-trace documentation contains a [section](https://github.com/dotnet/diagnostics/blob/master/documentation/dotnet-trace-instructions.md#using-dotnet-trace-to-collect-counter-values-over-time) on how to do this in more detail.
