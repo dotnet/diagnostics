@@ -130,7 +130,7 @@ There are two main ways of consuming EventCounters: in-proc and out-of-proc.
 
 ### Consuming in-proc
 
-You can consume the counter values via the `EventListener` API. `EventListener` is an in-proc way of consuming any Events written by all instances of EventSources in your application. For more details on how to use the EventListener API, visit https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.tracing.eventlistener.
+You can consume the counter values via the `EventListener` API. `EventListener` is an in-proc way of consuming any Events written by all instances of EventSources in your application. For more details on how to use the EventListener API, refer to the [EventListener documentation](https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.tracing.eventlistener).
 
 First, the EventSource that produces the counter value needs to be enabled. To do this, you can override the `OnEventSourceCreated` method to get a notification when an EventSource is created, and if this is the correct EventSource with your EventCounters, then you can call Enable on it. Here is an example of such override:
 
