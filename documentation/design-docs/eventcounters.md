@@ -63,16 +63,20 @@ Similar to how `PollingCounter` is a pull model for `EventCounter`, `Incrementin
 Let's begin by looking at a couple of sample EventCounter implementation in the .NET Core runtime (CoreCLR). Here is the runtime implementation for the rate of exceptions thrown:
 
 ```cs
-    IncrementingPollingCounter exceptionCounter = new IncrementingPollingCounter(
-        "exception-count",
-        this, 
-        () => Exception.GetExceptionCount()
-    ) 
-    {
-        DisplayName = "Exception Count",
-        DisplayRateTimeScale = new TimeSpan(0, 0, 1)
-    };
+PollingCounter workingSetCounter = new PollingCounter(
+    "working-set",
+    this,
+    () => (double)(Environment.WorkingSet / 1_000_000)
+) 
+{
+    DisplayName = "Working Set",
+    DisplayUnits = "MB"
+};
 ```
+
+This counter reports the current working set of the app. It is a `PollingCounter`, since it captures a metric at a moment in time. The callback for polling the values is `() => (double)(Environment.WorkingSet / 1_000_000)` which is simply just a call to `Environment.WorkingSet` API. The `DisplayName` and `DisplayUnits` is an optional property that can be set to help the consumer side of the counter to display the value more easily/accurately. For example `dotnet-counters` uses these properties to display the more "pretty" version of the counter names. 
+
+And that's it! For `PollingCounter` (or `IncrementingPollingCounter`), there is nothing else that needs to be done since they poll the values themselves at the interval requested by the consumer.
 
 ## Consuming EventCounters
 
