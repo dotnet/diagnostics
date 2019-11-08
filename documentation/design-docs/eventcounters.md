@@ -97,7 +97,7 @@ This counter uses the [Monitor.LockContentionCount](https://docs.microsoft.com/e
 There are more runtime counter implementation to use as a reference in the [CoreCLR](https://github.com/dotnet/coreclr/blob/master/src/System.Private.CoreLib/src/System/Diagnostics/Eventing/RuntimeEventSource.cs) repo.
 
 Here is a sample code for a full `EventSource` implementation that uses `EventCounter`:
-```
+```cs
 // Give your event sources a descriptive name using the EventSourceAttribute, otherwise the name of the class is used. 
 [EventSource(Name = "Samples-EventCounterDemos-Minimal")]
 public sealed class MinimalEventCounterSource : EventSource
