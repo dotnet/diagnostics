@@ -104,25 +104,66 @@ public sealed class MinimalEventCounterSource : EventSource
 {
     // define the singleton instance of the event source
     public static MinimalEventCounterSource Log = new MinimalEventCounterSource();
-    private EventCounter requestCounter;
+    private EventCounter requestTimeCounter;
 
     private MinimalEventCounterSource() : base(EventSourceSettings.EtwSelfDescribingEventFormat) 
     {
-        this.requestCounter = new EventCounter("request", this);
+        this.requestTimeCounter = new EventCounter("request-time", this)
+        {
+            DisplayName = "Request Processing Time",
+            DisplayUnit = "MSec"
+        }
     }
 
     /// <summary>
     /// Call this method to indicate that a request for a URL was made which took a particular amount of time
     public void Request(string url, float elapsedMSec)
     {
-        // Notes:
-        //   1. Each counter supports a single float value, so conceptually it maps to a single
-        //      measurement in the code.
-        this.requestCounter.WriteMetric(elapsedMSec);  // This adds it to the called 'Request' if PerfCounters are on
+        this.requestTimeCounter.WriteMetric(elapsedMSec);
     }
 }
 ```
 
+## Concurrency 
+It is important to note that the EventCounters API does not guarantee any sort of thread safety. It is the author's responsibility to guarantee the thread-safety of the data being passed to the counter APIs.
+
+Suppose we have the following `EventSource` which keeps track of requests.
+
+```
+public class RequestEventSource : EventSource
+{
+    // singleton instance of the eventsource.
+    public static RequestEventSource Log = new RequestEventSource();
+
+    public IncrementingEventCounter requestRateCounter;
+    private int _requestCnt;
+
+    private RequestEventSource() : base(EventSourceSettings.EtwSelfDescribingEventFormat)
+    {
+        requestCnt = 0;
+        this.requestRateCounter = new IncrementingPollingCounter("request-rate", this, () => _requestCnt)
+        {
+            DisplayName = "Request Rate",
+            DisplayRateTimeScale = TimeSpan.FromSeconds(1);
+        }
+    }
+
+    // Method being called from request handlers to log that a request happened
+    public void Request()
+    {
+        requestCnt += 1;
+    }
+```
+
+`RequestEventSource.Request()` can be called from a request handler, and `requestRateCounter` simply polls this value at the interval specified by the consumer of this counter. However, this method can be called by multiple threads at once, so `requestCnt` can be susceptible to race.
+
+Therefore, this method should be modified to the following to prevent the race.
+```
+public void Request()
+{
+    Interlocked.Increment(ref _requestCnt);
+}
+```
 
 ## Consuming EventCounters
 
