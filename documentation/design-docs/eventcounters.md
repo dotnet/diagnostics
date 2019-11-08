@@ -1,15 +1,15 @@
 # EventCounters
 
 ## Introduction
-EventCounters are lightweight, cross-platform, and near real-time EventCounters are .NET Core APIs that were added to replace the "performance counters" on the .NET Framework days. EventCounters are designed to be lightweight way of measuring quick. This doc serves as a guide on what they are, how they are implemented, how to use them, and how to consume them. 
+EventCounters are .NET Core APIs used for lightweight, cross-platform, and near real-time performance metric collection. EventCounters that were added to replace the "performance counters" on the .NET Framework. This documentation serves as a guide on what they are, how they are implemented, how to use them, and how to consume them. 
 
-EventCounters were initially added in .NET Core 2.2 (*CHECK THIS*) but they have been changed and extended starting in .NET Core 3.0. In addition to that, the .NET Core runtime (CoreCLR) and few .NET libraries have started publishing basic diagnostics information using EventCounters starting in .NET Core 3.0. 
+EventCounters have existed for a while (and is actually supported in .NET Framework as well) but the API has been extended starting in .NET Core 3.0. In addition to that, the .NET Core runtime (CoreCLR) and few .NET libraries have started publishing basic diagnostics information using EventCounters starting in .NET Core 3.0. This document is written targetting versions of .NET Core 3.0 or later.
 
 This document serves to explain some of the concepts and design choices behind EventCounters API, how to use them, and how they can be consumed both in-proc and out-of-proc with some sample code.
 
 
 ## Conceptual Overview
-EventCounters collect numeric values over some time, and report them. The .NET Core runtime (CoreCLR) has several EventCounters, which collect and publish basic performance metrics related to CPU usage, memory usage, GC heap statistics, threads and locks statistics, etc. These serve as a basic performance guideline that can be easily consumed at a relatively cheap cost (that is, turning them on does not cause performance regression, so they can be used in production scenarios). 
+EventCounters collect numeric values over some time and report them. The .NET Core runtime (CoreCLR) has several EventCounters, which collect and publish basic performance metrics related to CPU usage, memory usage, GC heap statistics, threads and locks statistics, etc. These serve as a basic performance guideline that can be easily consumed at a relatively cheap cost (that is, turning them on does not cause performance regression, so they can be used in production scenarios). 
 
 Apart from the EventCounters that are already provided by the .NET runtime or the rest of the framework (i.e. ASP.NET, gRPC, etc.), you may choose to implement your own EventCounters to keep track of various metrics for your service. 
 
@@ -129,7 +129,7 @@ It is important to note that the EventCounters API does not guarantee any sort o
 
 Suppose we have the following `EventSource` which keeps track of requests.
 
-```
+```cs
 public class RequestEventSource : EventSource
 {
     // singleton instance of the eventsource.
@@ -158,7 +158,7 @@ public class RequestEventSource : EventSource
 `RequestEventSource.Request()` can be called from a request handler, and `requestRateCounter` simply polls this value at the interval specified by the consumer of this counter. However, this method can be called by multiple threads at once, so `requestCnt` can be susceptible to race.
 
 Therefore, this method should be modified to the following to prevent the race.
-```
+```cs
 public void Request()
 {
     Interlocked.Increment(ref _requestCnt);
