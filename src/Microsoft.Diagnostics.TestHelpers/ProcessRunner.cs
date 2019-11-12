@@ -403,9 +403,22 @@ namespace Microsoft.Diagnostics.TestHelpers
             },
             TaskCreationOptions.LongRunning);
 
-            DebugTrace("awaiting process {0} exit, stdOut, and stdErr", p.Id);
-            await Task.WhenAll(processExit, stdOutTask, stdErrTask);
+            DebugTrace("awaiting process {0} exit", p.Id);
+            await processExit;
             DebugTrace("await process {0} exit, stdOut, and stdErr complete", p.Id);
+
+            DebugTrace("awaiting to flush stdOut and stdErr for process {0} for up to 15 seconds", p.Id);
+            var streamsTask = Task.WhenAll(stdOutTask, stdErrTask);
+            var completedTask = await Task.WhenAny(streamsTask, Task.Delay(TimeSpan.FromSeconds(15)));
+
+            if (completedTask != streamsTask)
+            {
+                DebugTrace("WARNING: Flushing stdOut and stdErr for process {0} timed out, threads used for the tasks might be leaked", p.Id);
+            }
+            else
+            {
+                DebugTrace("Flushed stdOut and stdErr for process {0}", p.Id);
+            }
 
             foreach (IProcessLogger logger in Loggers)
             {
