@@ -37,6 +37,7 @@ dotnet tool install --global dotnet-counters
     collect   Periodically collect selected counter values and export them into a specified file format for post-processing.
 
 *PS*
+
     dotnet-counters ps
 
     Display a list of dotnet processes that can be monitored.
