@@ -205,7 +205,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     ValidateAndResolveParameters(existsKeyword, 1, paramList);
                     bool exists = Directory.Exists(paramList[0]) || File.Exists(paramList[0]);
-                    return isNegative? !exists : exists;
+                    return isNegative ? !exists : exists;
                 }
 
                 // Check if StartsWith('string', 'prefix')
@@ -214,7 +214,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     ValidateAndResolveParameters(startsWithKeyword, 2, paramList);
                     bool isPrefix = paramList[0].StartsWith(paramList[1]);
-                    return isNegative? !isPrefix : isPrefix;
+                    return isNegative ? !isPrefix : isPrefix;
                 }
 
                 // Check if EndsWith('string', 'postfix')
@@ -223,7 +223,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     ValidateAndResolveParameters(endsWithKeyword, 2, paramList);
                     bool isPostfix = paramList[0].EndsWith(paramList[1]);
-                    return isNegative? !isPostfix : isPostfix;
+                    return isNegative ? !isPostfix : isPostfix;
                 }
 
                 // Check if Contains('string', 'substring')
@@ -232,7 +232,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     ValidateAndResolveParameters(containsKeyword, 2, paramList);
                     bool isInString = paramList[0].Contains(paramList[1]);
-                    return isNegative? !isInString : isInString;
+                    return isNegative ? !isInString : isInString;
                 }
 
                 // Check if equals and not equals
