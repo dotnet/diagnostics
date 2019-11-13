@@ -405,7 +405,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
             DebugTrace("awaiting process {0} exit", p.Id);
             await processExit;
-            DebugTrace("await process {0} exit, stdOut, and stdErr complete", p.Id);
+            DebugTrace("process {0} completed with exit code {1}", p.Id, p.ExitCode);
 
             DebugTrace("awaiting to flush stdOut and stdErr for process {0} for up to 15 seconds", p.Id);
             var streamsTask = Task.WhenAll(stdOutTask, stdErrTask);
