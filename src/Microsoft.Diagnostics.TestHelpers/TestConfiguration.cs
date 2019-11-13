@@ -280,7 +280,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 char currentChar = expression[curParsingIndex];
                 // toggle string nesting on ', except if scaped
-                if (currentChar == '\'' && !(curParsingIndex > 0 && expression[curParsingIndex - 1] != '\\'))
+                if (currentChar == '\'' && !(curParsingIndex > 0 && expression[curParsingIndex - 1] == '\\'))
                 {
                     if (isWithinString)
                     {
