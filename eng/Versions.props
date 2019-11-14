@@ -34,6 +34,8 @@
     <XUnitVersion>2.4.1</XUnitVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
 
+    <MicrosoftDotNetRemoteExecutorVersion>5.0.0-beta.19562.5</MicrosoftDotNetRemoteExecutorVersion>
+
     <cdbsosversion>10.0.18362</cdbsosversion>
 
   </PropertyGroup>
