@@ -62,11 +62,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 case DiagnosticsServerCommandId.OK:
                     return;
                 case DiagnosticsServerCommandId.Error:
-                    //TODO: THROW HERE?
-                    return;
+                    throw new ServerErrorException();
                 default:
-                    //TODO: THROW HERE?
-                    return;
+                    throw new ServerErrorException();
             }
         }
 

@@ -98,16 +98,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
             byte[] serializedConfiguration = SerializeProfilerAttach((uint)attachTimeout.TotalSeconds, profilerGuid, profilerPath, additionalData);
             var message = new IpcMessage(DiagnosticsServerCommandSet.Profiler, (byte)ProfilerCommandId.AttachProfiler, serializedConfiguration);
             var response = IpcClient.SendMessage(_processId, message);
-            var hr = 0;
             switch ((DiagnosticsServerCommandId)response.Header.CommandId)
             {
                 case DiagnosticsServerCommandId.Error:
+                    throw new ServerErrorException();
                 case DiagnosticsServerCommandId.OK:
-                    hr = BitConverter.ToInt32(response.Payload, 0);
-                    break;
+                    return;
                 default:
-                    hr = -1;
-                    break;
+                    // the server really shouldn't be responding with anything else
+                    throw new ServerErrorException();
             }
 
             // TODO: the call to set up the pipe and send the message operates on a different timeout than attachTimeout, which is for the runtime.

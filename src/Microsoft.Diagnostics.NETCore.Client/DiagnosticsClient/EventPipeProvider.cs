@@ -48,16 +48,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             hash ^= this.Name.GetHashCode();
             hash ^= this.Keywords.GetHashCode();
             hash ^= this.EventLevel.GetHashCode();
-            hash ^= this.Arguments.GetHashCode();
+            hash ^= GetArgumentString().GetHashCode();
             return hash;
         }
 
         public static bool operator ==(EventPipeProvider left, EventPipeProvider right)
         {
-            return left.Name == right.Name &&
-                left.Keywords == right.Keywords &&
-                left.EventLevel == right.EventLevel && 
-                left.Arguments == right.Arguments; // TODO: FIX THE ARGUMENT CHECK!!!
+            return left.ToString() == right.ToString();
         }
 
         public static bool operator !=(EventPipeProvider left, EventPipeProvider right)
@@ -76,7 +73,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 sb.Append($"{argument.Key}={argument.Value};");
             }
-            return sb.ToString();
+            return sb.ToString(0, sb.Length-1);
         }
 
     }
