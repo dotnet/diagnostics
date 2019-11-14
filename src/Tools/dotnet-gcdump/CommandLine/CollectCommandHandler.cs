@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 if (processId == 0)
                 {
-                    Console.Out.WriteLine($"Please specify a PID");
+                    Console.Out.WriteLine($"-p|--process-id is required");
                     return -1;
                 }
 
