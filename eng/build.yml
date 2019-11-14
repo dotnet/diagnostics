@@ -193,3 +193,15 @@ jobs:
         ArtifactName: Logs_$(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
       continueOnError: true
       condition: always()
+    
+    # Publish test results to Azure Pipelines
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFormat: xUnit
+        testResultsFiles: '**/*UnitTests*.xml' 
+        searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults'
+        failTaskOnFailedTests: true
+        testRunTitle: 'Tests $(_PhaseName) $(_BuildArch) $(_BuildConfig)'
+        publishRunAttachments: true
+      continueOnError: true
+      condition: always()
