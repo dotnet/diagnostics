@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 
 namespace Microsoft.Diagnostics.NETCore.Client
@@ -38,7 +39,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     throw new ServerErrorException($"EventPipe session start failed (HRESULT: 0x{hr:X8})");
                 default:
                     throw new ServerErrorException($"EventPipe session start failed - Server responded with unknown command");
-                    break;
             }
         }
 

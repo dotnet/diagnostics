@@ -78,7 +78,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
                  ex is PlatformNotSupportedException || 
                  ex is InvalidDataException ||
                  ex is InvalidOperationException ||
-                 ex is NotSupportedException)
+                 ex is NotSupportedException ||
+                 ex is DiagnosticsClientException)
             {
                 console.Error.WriteLine($"{ex.Message}");
                 return 1;

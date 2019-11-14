@@ -62,14 +62,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             switch ((DiagnosticsServerCommandId)response.Header.CommandId)
             {
                 case DiagnosticsServerCommandId.Error:
+                    hr = BitConverter.ToInt32(response.Payload, 0);
                     throw new ServerErrorException($"Writing dump failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerCommandId.OK:
-                    hr = BitConverter.ToInt32(response.Payload, 0);
-                    break;
+                    return;
                 default:
                     throw new ServerErrorException($"Writing dump failed - server responded with unknown command");
             }
-            return;
         }
 
         /// <summary>
@@ -108,13 +107,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     return;
                 default:
                     throw new ServerErrorException($"Profiler attach failed - server responded with unknown command");
-                    break;
             }
 
             // TODO: the call to set up the pipe and send the message operates on a different timeout than attachTimeout, which is for the runtime.
             // We should eventually have a configurable timeout for the message passing, potentially either separately from the 
             // runtime timeout or respect attachTimeout as one total duration.
-            return;
         }
 
         /// <summary>
