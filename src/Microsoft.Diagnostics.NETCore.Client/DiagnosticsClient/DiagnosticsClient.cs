@@ -62,11 +62,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             switch ((DiagnosticsServerCommandId)response.Header.CommandId)
             {
                 case DiagnosticsServerCommandId.Error:
+                    throw new ServerErrorException($"Writing dump failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerCommandId.OK:
                     hr = BitConverter.ToInt32(response.Payload, 0);
                     break;
                 default:
-                    return;
+                    throw new ServerErrorException($"Writing dump failed - server responded with unknown command");
             }
             return;
         }
@@ -101,12 +102,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             switch ((DiagnosticsServerCommandId)response.Header.CommandId)
             {
                 case DiagnosticsServerCommandId.Error:
-                    throw new ServerErrorException();
+                    var hr = BitConverter.ToInt32(response.Payload, 0);
+                    throw new ServerErrorException($"Profiler attach failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerCommandId.OK:
                     return;
                 default:
-                    // the server really shouldn't be responding with anything else
-                    throw new ServerErrorException();
+                    throw new ServerErrorException($"Profiler attach failed - server responded with unknown command");
+                    break;
             }
 
             // TODO: the call to set up the pipe and send the message operates on a different timeout than attachTimeout, which is for the runtime.
@@ -128,6 +130,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 .Where(input => Regex.IsMatch(input, DiagnosticsPortPattern))
                 .Select(input => int.Parse(Regex.Match(input, DiagnosticsPortPattern).Groups[1].Value, NumberStyles.Integer));
         }
+
         private static byte[] SerializeCoreDump(string dumpName, DumpType dumpType, bool diagnostics)
         {
             using (var stream = new MemoryStream())

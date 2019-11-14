@@ -34,10 +34,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     _sessionId = BitConverter.ToInt64(response.Payload, 0);
                     break;
                 case DiagnosticsServerCommandId.Error:
-                    // bad...
                     var hr = BitConverter.ToInt32(response.Payload, 0);
-                    throw new Exception($"Session start FAILED 0x{hr:X8}");
+                    throw new ServerErrorException($"EventPipe session start failed (HRESULT: 0x{hr:X8})");
                 default:
+                    throw new ServerErrorException($"EventPipe session start failed - Server responded with unknown command");
                     break;
             }
         }
@@ -49,12 +49,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         ///</summary>
         public void Stop()
         {
-            // TODO
-            if (_sessionId == 0)
-                return; // TODO: Throw here instead?
+            Debug.Assert(_sessionId != 0);
 
             byte[] payload = BitConverter.GetBytes(_sessionId);
-
             var response = IpcClient.SendMessage(_processId, new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.StopTracing, payload));
 
             switch ((DiagnosticsServerCommandId)response.Header.CommandId)
@@ -62,9 +59,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 case DiagnosticsServerCommandId.OK:
                     return;
                 case DiagnosticsServerCommandId.Error:
-                    throw new ServerErrorException();
+                    var hr = BitConverter.ToInt32(response.Payload, 0);
+                    throw new ServerErrorException($"EventPipe session stop failed (HRESULT: 0x{hr:X8})");
                 default:
-                    throw new ServerErrorException();
+                    throw new ServerErrorException($"EventPipe session stop failed - Server responded with unknown command");
             }
         }
 
