@@ -203,5 +203,7 @@ jobs:
         failTaskOnFailedTests: true
         testRunTitle: 'Tests $(_PhaseName) $(_BuildArch) $(_BuildConfig)'
         publishRunAttachments: true
+        mergeTestResults: true
+        buildConfiguration: ${{ parameters.name }}
       continueOnError: true
       condition: always()
