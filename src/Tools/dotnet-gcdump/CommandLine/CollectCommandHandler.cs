@@ -32,6 +32,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         {
             try
             {
+                if (processId < 0)
+                {
+                    Console.Out.WriteLine($"The PID cannot be negative: {processId}");
+                    return -1;
+                }
+
                 output = string.IsNullOrEmpty(output) ? 
                     $"{DateTime.Now.ToString(@"yyyyMMdd\_hhmmss")}_{processId}.gcdump" :
                     output;
@@ -102,7 +108,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             new Option(
                 aliases: new[] { "-p", "--process-id" },
                 description: "The process to collect the trace from",
-                argument: new Argument<int> { Name = "pid" },
+                argument: new Argument<int>(defaultValue: -1) { Name = "pid" },
                 isHidden: false);
 
         private static Option OutputPathOption() =>
