@@ -242,6 +242,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     _renderer.EventPipeSourceConnected();
                     source.Process();
                 }
+                catch (DiagnosticsClientException ex)
+                {
+                    Console.WriteLine($"Failed to start the counter session: {ex.ToString()}");
+                }
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"[ERROR] {ex.ToString()}");
