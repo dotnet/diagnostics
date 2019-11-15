@@ -64,7 +64,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 Reserved = reader.ReadUInt16()
             };
 
-            // TODO: Validate it is correct!
+            Debug.Assert(header.Magic == ASCIIEncoding.ASCII.GetBytes("DOTNET_IPC_V1" + '\0'));
+            Debug.Assert(header.Size == 20);
+            Debug.Assert(header.CommandSet == DiagnosticsServerCommandSet.Server);
 
             return header;
         }
