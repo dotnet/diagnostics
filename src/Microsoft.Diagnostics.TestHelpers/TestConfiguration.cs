@@ -4,11 +4,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Xunit;
 using Xunit.Extensions;
@@ -83,7 +85,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 initialConfig["WinDir"] = Path.GetFullPath(Environment.GetEnvironmentVariable("WINDIR"));
             }
             IEnumerable<Dictionary<string, string>> configs = ParseConfigFile(path, new Dictionary<string, string>[] { initialConfig });
-            Configurations = configs.Select(c => new TestConfiguration(c));
+            Configurations = configs.Select(c => new TestConfiguration(c)).ToList();
         }
 
         Dictionary<string, string>[] ParseConfigFile(string path, Dictionary<string, string>[] templates)
@@ -362,19 +364,74 @@ namespace Microsoft.Diagnostics.TestHelpers
     {
         const string DebugTypeKey = "DebugType";
         const string DebuggeeBuildRootKey = "DebuggeeBuildRoot";
-
+        
         internal static readonly string BaseDir = Path.GetFullPath(".");
+        private static readonly Regex versionRegex = new Regex(@"^(\d+\.\d+\.\d+)(-.*)?", RegexOptions.Compiled);
+        
+        private ReadOnlyDictionary<string, string> _settings;
+        private readonly string _configStringView;
+        private readonly string _truncatedRuntimeFrameworkVersion;
 
-        private Dictionary<string, string> _settings;
 
         public TestConfiguration()
         {
-            _settings = new Dictionary<string, string>();
+            _settings = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
+            _truncatedRuntimeFrameworkVersion = null;
+            _configStringView = string.Empty;
         }
 
         public TestConfiguration(Dictionary<string, string> initialSettings)
         {
-            _settings = new Dictionary<string, string>(initialSettings);
+            _settings = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(initialSettings));
+            _truncatedRuntimeFrameworkVersion = GetTruncatedRuntimeFrameworkVersion();
+            _configStringView = GetStringViewWithVersion(RuntimeFrameworkVersion); 
+        }
+
+        private string GetTruncatedRuntimeFrameworkVersion()
+        {
+            string version = RuntimeFrameworkVersion;
+            if (string.IsNullOrEmpty(version))
+            {
+                return null;
+            }
+
+            Match matchingVer = versionRegex.Match(version);
+            if (!matchingVer.Success)
+            {
+                throw new InvalidDataException($"{version} is not a valid version string according to SemVer.");
+            }
+
+            return matchingVer.Groups[1].Value;
+        }
+
+        private string GetStringViewWithVersion(string version)
+        {
+            var sb = new StringBuilder();
+            sb.Append(TestProduct);
+            sb.Append(".");
+            sb.Append(DebuggeeBuildProcess);
+            if (!string.IsNullOrEmpty(version))
+            {
+                sb.Append(".");
+                sb.Append(version);
+            }
+            return sb.ToString();
+        }
+
+        internal string GetLogSuffix()
+        {
+            string version = RuntimeFrameworkVersion;
+
+            // The log name can't contain wild cards, which are used in some testing scenarios.
+            // TODO: The better solution would be to sanitize the file name properly, in case
+            // there's a key being used that contains a character that is not a valid file
+            // name charater.
+            if (!string.IsNullOrEmpty(version) && version.Contains('*'))
+            {
+                version = _truncatedRuntimeFrameworkVersion;
+            }
+
+            return GetStringViewWithVersion(version);
         }
 
         public IReadOnlyDictionary<string, string> AllSettings
@@ -752,17 +809,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public override string ToString()
         {
-            var sb = new StringBuilder();
-            sb.Append(TestProduct);
-            sb.Append(".");
-            sb.Append(DebuggeeBuildProcess);
-            string version = RuntimeFrameworkVersion;
-            if (!string.IsNullOrEmpty(version))
-            {
-                sb.Append(".");
-                sb.Append(version);
-            }
-            return sb.ToString();
+            return _configStringView;
         }
     }
 
