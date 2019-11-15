@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             Debug.Assert(header.Magic == ASCIIEncoding.ASCII.GetBytes("DOTNET_IPC_V1" + '\0'));
             Debug.Assert(header.Size == 20);
-            Debug.Assert(header.CommandSet == DiagnosticsServerCommandSet.Server);
+            Debug.Assert(header.CommandSet == (byte)DiagnosticsServerCommandSet.Server);
 
             return header;
         }

@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             // Keywords
             long keywords = tokens.Length > 1 && !string.IsNullOrWhiteSpace(tokens[1]) ?
-                Convert.ToInt64(tokens[1], 16) : long.MaxValue;
+                Convert.ToInt64(tokens[1], 16) : (long)(-1);
 
             // Level
             EventLevel eventLevel = tokens.Length > 2 && !string.IsNullOrWhiteSpace(tokens[2]) ?

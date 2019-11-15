@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             var enabledProvider = parsedProviders.SingleOrDefault(p => p.Name == "Microsoft-Windows-DotNETRuntime");
 
             // Assert that our specified provider overrides the version in the profile
-            Assert.True(enabledProvider.Keywords == Int64.MaxValue);
+            Assert.True(enabledProvider.Keywords == (long)(-1));
             Assert.True(enabledProvider.EventLevel == EventLevel.Verbose);
             Assert.True(enabledBy[enabledProvider.Name] == "--providers");
         }
