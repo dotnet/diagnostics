@@ -96,80 +96,87 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 ct.Register(() => shouldExit.Set());
 
                 var diagnosticsClient = new DiagnosticsClient(processId);
-                using (EventPipeSession session = diagnosticsClient.StartEventPipeSession(providerCollection, true))
+                using (VirtualTerminalMode vTermMode = VirtualTerminalMode.TryEnable())
                 {
-                    using (VirtualTerminalMode vTermMode = VirtualTerminalMode.TryEnable())
+                    EventPipeSession session = null;
+                    try
                     {
-                        if (session == null)
-                        {
-                            Console.Error.WriteLine("Unable to create session.");
-                            return ErrorCodes.SessionCreationError;
-                        }
+                        session = diagnosticsClient.StartEventPipeSession(providerCollection, true))
+                    }
+                    catch (DiagnosticsClientException e)
+                    {
+                        Console.Error.WriteLine($"Unable to start a tracing session: {e.ToString()}");
+                    }
 
-                        if (shouldStopAfterDuration)
-                        {
-                            durationTimer = new System.Timers.Timer(duration.TotalMilliseconds);
-                            durationTimer.Elapsed += (s, e) => shouldExit.Set();
-                            durationTimer.AutoReset = false;
-                        }
+                    if (session == null)
+                    {
+                        Console.Error.WriteLine("Unable to create session.");
+                        return ErrorCodes.SessionCreationError;
+                    }
 
-                        var collectingTask = new Task(() =>
+                    if (shouldStopAfterDuration)
+                    {
+                        durationTimer = new System.Timers.Timer(duration.TotalMilliseconds);
+                        durationTimer.Elapsed += (s, e) => shouldExit.Set();
+                        durationTimer.AutoReset = false;
+                    }
+
+                    var collectingTask = new Task(() =>
+                    {
+                        try
                         {
-                            try
+                            var stopwatch = new Stopwatch();
+                            durationTimer?.Start();
+                            stopwatch.Start();
+
+                            using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                             {
-                                var stopwatch = new Stopwatch();
-                                durationTimer?.Start();
-                                stopwatch.Start();
+                                Console.Out.WriteLine($"Process        : {process.MainModule.FileName}");
+                                Console.Out.WriteLine($"Output File    : {fs.Name}");
+                                if (shouldStopAfterDuration)
+                                    Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
 
-                                using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
+                                Console.Out.WriteLine("\n\n");
+                                var buffer = new byte[16 * 1024];
+
+                                while (true)
                                 {
-                                    Console.Out.WriteLine($"Process        : {process.MainModule.FileName}");
-                                    Console.Out.WriteLine($"Output File    : {fs.Name}");
-                                    if (shouldStopAfterDuration)
-                                        Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
-
-                                    Console.Out.WriteLine("\n\n");
-                                    var buffer = new byte[16 * 1024];
-
-                                    while (true)
-                                    {
-                                        int nBytesRead = session.EventStream.Read(buffer, 0, buffer.Length);
-                                        if (nBytesRead <= 0)
-                                            break;
-                                        fs.Write(buffer, 0, nBytesRead);
-                                        lineToClear = Console.CursorTop-1;
-                                        ResetCurrentConsoleLine(vTermMode.IsEnabled);
-                                        Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
-                                        Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
-                                        Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
-                                    }
+                                    int nBytesRead = session.EventStream.Read(buffer, 0, buffer.Length);
+                                    if (nBytesRead <= 0)
+                                        break;
+                                    fs.Write(buffer, 0, nBytesRead);
+                                    lineToClear = Console.CursorTop-1;
+                                    ResetCurrentConsoleLine(vTermMode.IsEnabled);
+                                    Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
+                                    Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
+                                    Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
                                 }
                             }
-                            catch (Exception ex)
-                            {
-                                failed = true;
-                                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
-                            }
-                            finally
-                            {
-                                terminated = true;
-                                shouldExit.Set();
-                            }
-                        });
-                        collectingTask.Start();
-
-                        do
-                        {
-                            while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
-                        } while (!shouldExit.WaitOne(0) && Console.ReadKey(true).Key != ConsoleKey.Enter);
-
-                        if (!terminated)
-                        {
-                            durationTimer?.Stop();
-                            session.Stop();
                         }
-                        await collectingTask;
+                        catch (Exception ex)
+                        {
+                            failed = true;
+                            Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
+                        }
+                        finally
+                        {
+                            terminated = true;
+                            shouldExit.Set();
+                        }
+                    });
+                    collectingTask.Start();
+
+                    do
+                    {
+                        while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
+                    } while (!shouldExit.WaitOne(0) && Console.ReadKey(true).Key != ConsoleKey.Enter);
+
+                    if (!terminated)
+                    {
+                        durationTimer?.Stop();
+                        session.Stop();
                     }
+                    await collectingTask;
                 }
 
                 Console.Out.WriteLine();
