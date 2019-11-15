@@ -191,84 +191,80 @@ namespace Microsoft.Diagnostics.EventPipe.Common
             });
             sentinelTask.Start();
 
-            int processId = Process.GetCurrentProcess().Id;;
+            int processId = Process.GetCurrentProcess().Id;
             object threadSync = new object(); // for locking eventpipeSessionId access
             ulong eventpipeSessionId = 0;
             Func<int> optionalTraceValidationCallback = null;
             var readerTask = new Task(() =>
             {
                 Logger.logger.Log("Connecting to EventPipe...");
-                using (var eventPipeStream = new StreamProxy(EventPipeClient.CollectTracing(processId, _sessionConfiguration, out var sessionId)))
+                using var eventPipeStream = new StreamProxy(EventPipeClient.CollectTracing(processId, _sessionConfiguration, out var sessionId));
+                if (sessionId == 0)
                 {
-                    if (sessionId == 0)
-                    {
-                        Logger.logger.Log("Failed to connect to EventPipe!");
-                        throw new ApplicationException("Failed to connect to EventPipe");
-                    }
-                    Logger.logger.Log($"Connected to EventPipe with sessionID '0x{sessionId:x}'");
-
-                    lock (threadSync)
-                    {
-                        eventpipeSessionId = sessionId;
-                    }
-
-                    Logger.logger.Log("Creating EventPipeEventSource...");
-                    using (EventPipeEventSource source = new EventPipeEventSource(eventPipeStream))
-                    {
-                        Logger.logger.Log("EventPipeEventSource created");
-
-                        source.Dynamic.All += (eventData) =>
-                        {
-                            try
-                            {
-                                if (eventData.ProviderName == "SentinelEventSource")
-                                {
-                                    if (!sentinelEventReceived.WaitOne(0))
-                                        Logger.logger.Log("Saw sentinel event");
-                                    sentinelEventReceived.Set();
-                                }
-
-                                else if (_actualEventCounts.TryGetValue(eventData.ProviderName, out _))
-                                {
-                                    _actualEventCounts[eventData.ProviderName]++;
-                                }
-                                else
-                                {
-                                    Logger.logger.Log($"Saw new provider '{eventData.ProviderName}'");
-                                    _actualEventCounts[eventData.ProviderName] = 1;
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                Logger.logger.Log("Exception in Dynamic.All callback " + e.ToString());
-                            }
-                        };
-                        Logger.logger.Log("Dynamic.All callback registered");
-
-                        if (_optionalTraceValidator != null)
-                        {
-                            Logger.logger.Log("Running optional trace validator");
-                            optionalTraceValidationCallback = _optionalTraceValidator(source);
-                            Logger.logger.Log("Finished running optional trace validator");
-                        }
-
-                        Logger.logger.Log("Starting stream processing...");
-                        try
-                        {
-                            source.Process();
-                            _droppedEvents = source.EventsLost;
-                        }
-                        catch (Exception e)
-                        {
-                            Logger.logger.Log($"Exception thrown while reading; dumping culprit stream to disk...");
-                            eventPipeStream.DumpStreamToDisk();
-                            // rethrow it to fail the test
-                            throw e;
-                        }
-                        Logger.logger.Log("Stopping stream processing");
-                        Logger.logger.Log($"Dropped {source.EventsLost} events");
-                    }
+                    Logger.logger.Log("Failed to connect to EventPipe!");
+                    throw new ApplicationException("Failed to connect to EventPipe");
                 }
+                Logger.logger.Log($"Connected to EventPipe with sessionID '0x{sessionId:x}'");
+
+                lock (threadSync)
+                {
+                    eventpipeSessionId = sessionId;
+                }
+
+                Logger.logger.Log("Creating EventPipeEventSource...");
+                using EventPipeEventSource source = new EventPipeEventSource(eventPipeStream);
+                Logger.logger.Log("EventPipeEventSource created");
+
+                source.Dynamic.All += (eventData) =>
+                {
+                    try
+                    {
+                        if (eventData.ProviderName == "SentinelEventSource")
+                        {
+                            if (!sentinelEventReceived.WaitOne(0))
+                                Logger.logger.Log("Saw sentinel event");
+                            sentinelEventReceived.Set();
+                        }
+
+                        else if (_actualEventCounts.TryGetValue(eventData.ProviderName, out _))
+                        {
+                            _actualEventCounts[eventData.ProviderName]++;
+                        }
+                        else
+                        {
+                            Logger.logger.Log($"Saw new provider '{eventData.ProviderName}'");
+                            _actualEventCounts[eventData.ProviderName] = 1;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.logger.Log("Exception in Dynamic.All callback " + e.ToString());
+                    }
+                };
+                Logger.logger.Log("Dynamic.All callback registered");
+
+                if (_optionalTraceValidator != null)
+                {
+                    Logger.logger.Log("Running optional trace validator");
+                    optionalTraceValidationCallback = _optionalTraceValidator(source);
+                    Logger.logger.Log("Finished running optional trace validator");
+                }
+
+                Logger.logger.Log("Starting stream processing...");
+                try
+                {
+                    source.Process();
+                    _droppedEvents = source.EventsLost;
+                }
+                catch (Exception e)
+                {
+                    Logger.logger.Log($"Exception thrown while reading; dumping culprit stream to disk...");
+                    eventPipeStream.DumpStreamToDisk();
+                    // rethrow it to fail the test
+                    throw e;
+                }
+                Logger.logger.Log("Stopping stream processing");
+                Logger.logger.Log($"Dropped {source.EventsLost} events");
             });
 
             readerTask.Start();
@@ -278,6 +274,22 @@ namespace Microsoft.Diagnostics.EventPipe.Common
             _eventGeneratingAction();
             Logger.logger.Log("Stopping event generating action");
 
+            // Should throw if the reader task throws any exceptions
+            var tokenSource = new CancellationTokenSource();
+            CancellationToken ct = tokenSource.Token;
+            readerTask.ContinueWith((task) =>
+            {
+                // if our reader task died earlier, we need to break the infinite wait below.
+                // We'll allow the AggregateException to be thrown and fail the test though.
+                Logger.logger.Log($"Task stats: isFaulted: {task.IsFaulted}, Exception == null: {task.Exception == null}");
+                if (task.IsFaulted || task.Exception != null)
+                {
+                    tokenSource.Cancel();
+                }
+
+                return task;
+            });
+
             var stopTask = Task.Run(() => 
             {
                 Logger.logger.Log("Sending StopTracing command...");
@@ -286,10 +298,23 @@ namespace Microsoft.Diagnostics.EventPipe.Common
                     EventPipeClient.StopTracing(processId, eventpipeSessionId);
                 }
                 Logger.logger.Log("Finished StopTracing command");
-            });
+            }, ct);
 
-            // Should throw if the reader task throws any exceptions
-            Task.WaitAll(readerTask, stopTask);
+            try
+            {
+                Task.WaitAll(new Task[] { readerTask, stopTask }, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                Logger.logger.Log($"A task faulted");
+                Logger.logger.Log($"\treaderTask.IsFaulted = {readerTask.IsFaulted}");
+                if (readerTask.Exception != null)
+                {
+                    throw readerTask.Exception;
+                }
+                return -1;
+            }
+
             Logger.logger.Log("Reader task finished");
             Logger.logger.Log($"Dropped {_droppedEvents} events");
 
@@ -388,21 +413,12 @@ namespace Microsoft.Diagnostics.EventPipe.Common
         {
             Logger.logger.Log("==TEST STARTING==");
             var test = new IpcTraceTest(expectedEventCounts, eventGeneratingAction, sessionConfiguration, optionalTraceValidator);
-            try
-            {
-                var ret = test.Validate();
-                if (ret == 100)
-                    Logger.logger.Log("==TEST FINISHED: PASSED!==");
-                else
-                    Logger.logger.Log("==TEST FINISHED: FAILED!==");
-                return ret;
-            }
-            catch (Exception e)
-            {
-                Logger.logger.Log(e.ToString());
+            var ret = test.Validate();
+            if (ret == 100)
+                Logger.logger.Log("==TEST FINISHED: PASSED!==");
+            else
                 Logger.logger.Log("==TEST FINISHED: FAILED!==");
-                return -1;
-            }
+            return ret;
         }
     }
 }

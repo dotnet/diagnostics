@@ -10,6 +10,10 @@ using System.Linq;
 using System.Diagnostics.Tracing;
 using Microsoft.DotNet.RemoteExecutor;
 using Microsoft.Diagnostics.EventPipe.Common;
+using System.Reflection.Metadata.Ecma335;
+
+// Use this test as an example of how to write tests for EventPipe in
+// the dotnet/diagnostics repo
 
 namespace Microsoft.Diagnostics.EventPipe.ProviderValidation
 {
@@ -26,7 +30,7 @@ namespace Microsoft.Diagnostics.EventPipe.ProviderValidation
         public void UserDefinedEventSource_ProducesEvents()
         {
             RemoteExecutor.Invoke(() => {
-                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
+                Dictionary<string, ExpectedEventCount> expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     { "MyEventSource", new ExpectedEventCount(100_000, 0.30f) },
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 },
@@ -39,7 +43,7 @@ namespace Microsoft.Diagnostics.EventPipe.ProviderValidation
                     new Provider("Microsoft-DotNETCore-SampleProfiler")
                 };
 
-                Action _eventGeneratingAction = () => 
+                Action eventGeneratingAction = () => 
                 {
                     for (int i = 0; i < 100_000; i++)
                     {
@@ -51,7 +55,7 @@ namespace Microsoft.Diagnostics.EventPipe.ProviderValidation
 
                 var config = new SessionConfiguration(circularBufferSizeMB: (uint)Math.Pow(2, 10), format: EventPipeSerializationFormat.NetTrace,  providers: providers);
 
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, config);
+                var ret = IpcTraceTest.RunAndValidateEventCounts(expectedEventCounts, eventGeneratingAction, config);
                 Assert.Equal(100, ret);
             }).Dispose();
         }
