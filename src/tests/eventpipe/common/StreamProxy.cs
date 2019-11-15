@@ -97,17 +97,14 @@ namespace Microsoft.Diagnostics.EventPipe.Common
 
         public void DumpStreamToDisk()
         {
-            var helixWorkItemDirectory = System.Environment.GetEnvironmentVariable("HELIX_WORKITEM_UPLOAD_ROOT");
-            if (helixWorkItemDirectory != null && Directory.Exists(helixWorkItemDirectory))
+            var streamDumpDir = System.Environment.GetEnvironmentVariable("_PIPELINE_STREAMDUMPDIR") ?? Path.GetTempPath();
+            Logger.logger.Log($"\t streamDumpDir = {streamDumpDir}");
+            var filePath = Path.Combine(streamDumpDir, Path.GetRandomFileName() + ".nettrace");
+            using (var streamDumpFile = File.Create(filePath))
             {
-                Logger.logger.Log($"\t HELIX_WORKITEM_UPLOAD_ROOT = {helixWorkItemDirectory}");
-                var filePath = Path.Combine(helixWorkItemDirectory, "streamdump.nettrace");
-                using (var streamDumpFile = File.Create(filePath))
-                {
-                    Logger.logger.Log($"\t Writing stream to {filePath}");
-                    InternalStream.Seek(0, SeekOrigin.Begin);
-                    InternalStream.CopyTo(streamDumpFile);
-                }
+                Logger.logger.Log($"\t Writing stream for PID {System.Diagnostics.Process.GetCurrentProcess().Id} to {filePath}");
+                InternalStream.Seek(0, SeekOrigin.Begin);
+                InternalStream.CopyTo(streamDumpFile);
             }
         }
     }
