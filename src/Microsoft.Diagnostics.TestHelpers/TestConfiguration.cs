@@ -196,7 +196,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
             foreach (XAttribute attr in node.Attributes("Condition"))
             {
-                string conditionText = attr.Value;
+                string conditionText = attr.Value.Trim();
                 bool isNegative = conditionText.Length > 0 && conditionText[0] == '!';
 
                 // Check if Exists('<directory or file>')
@@ -264,7 +264,10 @@ namespace Microsoft.Diagnostics.TestHelpers
                 return false;
             }
 
-            if (functionKeyworkIndex != 0 || functionKeyworkIndex >= 1 && expression[0] != '!' || !expression.EndsWith(')'))
+            if ((functionKeyworkIndex != 0 
+                    && functionKeyworkIndex == 1 && expression[0] != '!')
+                || functionKeyworkIndex > 1
+                || !expression.EndsWith(')'))
             {
                 throw new InvalidDataException($"Condition {expression} malformed. Currently only single-function conditions are supported.");
             }
