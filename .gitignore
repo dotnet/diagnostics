@@ -121,3 +121,5 @@ StressLog.txt
 *.nettrace
 *.speedscope.json
 *.csv
+*.gcdump
+*.binlog
