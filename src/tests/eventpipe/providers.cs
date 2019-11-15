@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.EventPipe.ProviderValidation
             RemoteExecutor.Invoke(() => {
                 Dictionary<string, ExpectedEventCount> expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
-                    { "MyEventSource", new ExpectedEventCount(1, 0.30f) },
+                    { "MyEventSource", new ExpectedEventCount(100_000, 0.30f) },
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 },
                     { "Microsoft-DotNETCore-SampleProfiler", -1 }
                 };
