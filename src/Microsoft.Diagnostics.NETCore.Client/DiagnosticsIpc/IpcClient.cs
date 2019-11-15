@@ -17,8 +17,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     internal class IpcClient
     {
-        private static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
-
         private static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
 
         private static double ConnectTimeoutMilliseconds { get; } = TimeSpan.FromSeconds(3).TotalMilliseconds;
@@ -45,7 +43,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     .SingleOrDefault(input => Regex.IsMatch(input, $"^dotnet-diagnostic-{processId}-(\\d+)-socket$"));
                 if (ipcPort == null)
                 {
-                    throw new PlatformNotSupportedException($"Process {processId} not running compatible .NET Core runtime");
+                    throw new ServerNotAvailableException($"Process {processId} not running compatible .NET Core runtime");
                 }
                 string path = Path.Combine(Path.GetTempPath(), ipcPort);
                 var remoteEP = new UnixDomainSocketEndPoint(path);
