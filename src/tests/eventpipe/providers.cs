@@ -7,14 +7,8 @@ using Xunit;
 using Xunit.Abstractions;
 using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System.Collections.Generic;
-using System.Linq;
 using System.Diagnostics.Tracing;
-using System.Diagnostics;
-using Microsoft.DotNet.RemoteExecutor;
-using Microsoft.Diagnostics.EventPipe.Common;
-using System.Reflection.Metadata.Ecma335;
-using System.Threading.Tasks;
-using eventpipe.UnitTests.common;
+using EventPipe.UnitTests.Common;
 
 // Use this test as an example of how to write tests for EventPipe in
 // the dotnet/diagnostics repo

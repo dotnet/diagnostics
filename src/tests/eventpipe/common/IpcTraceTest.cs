@@ -15,7 +15,7 @@ using System.Runtime.InteropServices;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace Microsoft.Diagnostics.EventPipe.Common
+namespace EventPipe.UnitTests.Common
 {
     public class Logger
     {
