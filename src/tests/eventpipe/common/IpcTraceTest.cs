@@ -13,9 +13,7 @@ using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System.Runtime.InteropServices;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.EventPipe.Common
 {
@@ -36,20 +34,6 @@ namespace Microsoft.Diagnostics.EventPipe.Common
                 _sw.Start();
             _log.WriteLine($"{_sw.Elapsed.TotalSeconds,5:f1}s: {message}");
         }
-    }
-
-    public class TestOutputHelperWrapper : TextWriter
-    {
-        private readonly ITestOutputHelper output;
-
-        public TestOutputHelperWrapper(ITestOutputHelper outputHelper)
-        {
-            output = outputHelper;
-        }
-
-        public override Encoding Encoding => Encoding.UTF8;
-
-        public override void WriteLine(string message) => output.WriteLine(message);
     }
 
     public class ExpectedEventCount

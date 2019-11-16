@@ -9,9 +9,12 @@ using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics.Tracing;
+using System.Diagnostics;
 using Microsoft.DotNet.RemoteExecutor;
 using Microsoft.Diagnostics.EventPipe.Common;
 using System.Reflection.Metadata.Ecma335;
+using System.Threading.Tasks;
+using eventpipe.UnitTests.common;
 
 // Use this test as an example of how to write tests for EventPipe in
 // the dotnet/diagnostics repo
@@ -32,16 +35,16 @@ namespace Microsoft.Diagnostics.EventPipe.ProviderValidation
         public ProviderTests(ITestOutputHelper outputHelper)
         {
             output = outputHelper;
-            Logger.logger = new Logger(new TestOutputHelperWrapper(output));
         }
 
         [Fact]
-        public void UserDefinedEventSource_ProducesEvents()
+        public async void UserDefinedEventSource_ProducesEvents()
         {
-            RemoteExecutor.Invoke(() => {
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => 
+            {
                 Dictionary<string, ExpectedEventCount> expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
-                    { "MyEventSource", new ExpectedEventCount(1, 0.30f) },
+                    { "MyEventSource", new ExpectedEventCount(100_000, 0.30f) },
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 },
                     { "Microsoft-DotNETCore-SampleProfiler", -1 }
                 };
@@ -66,7 +69,7 @@ namespace Microsoft.Diagnostics.EventPipe.ProviderValidation
 
                 var ret = IpcTraceTest.RunAndValidateEventCounts(expectedEventCounts, eventGeneratingAction, config);
                 Assert.Equal(100, ret);
-            }).Dispose();
+            }, output);
         }
     }
 }
