@@ -4,6 +4,7 @@
 
 using System;
 using Xunit;
+using Xunit.Abstractions;
 using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,6 +27,14 @@ namespace Microsoft.Diagnostics.EventPipe.ProviderValidation
 
     public class ProviderTests
     {
+        private readonly ITestOutputHelper output;
+
+        public ProviderTests(ITestOutputHelper outputHelper)
+        {
+            output = outputHelper;
+            Logger.logger = new Logger(new TestOutputHelperWrapper(output));
+        }
+
         [Fact]
         public void UserDefinedEventSource_ProducesEvents()
         {
