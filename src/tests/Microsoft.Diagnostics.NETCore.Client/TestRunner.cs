@@ -18,6 +18,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public TestRunner(string testExePath)
         {
             startInfo = new ProcessStartInfo(testExePath);
+            startInfo.UseShellExecute = false;
+            startInfo.RedirectStandardOutput = true;
         }
 
         public void AddEnvVar(string key, string value)
@@ -32,7 +34,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public void Stop()
         {
-            testProcess.Kill();
+            testProcess.Close();
         }
 
         public int Pid {

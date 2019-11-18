@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using System.Runtime.InteropServices;
 using Xunit;
 
 using Microsoft.Diagnostics.TestHelpers;
@@ -10,16 +11,25 @@ using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-
+    
     /// <summary>
     /// Suite of tests that test top-level commands
     /// </summary>
     public class BasicTests
     {
+        private string GetTraceePath()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return "../../../Tracee/Debug/netcoreapp3.0/Tracee.exe";
+            }
+            return @"../../../Tracee/Debug/netcoreapp3.0/Tracee";
+        }
+
         [Fact]
         public void PublishedProcessTest1()
         {
-            TestRunner runner = new TestRunner(@"../../../WebApp3/Debug/netcoreapp3.0/WebApp3.exe");
+            TestRunner runner = new TestRunner(GetTraceePath());
             runner.Start();
 
             // Sleeping some arbitrary time to let the web app launch and set up the diagnostics server.
@@ -30,7 +40,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             runner.Stop();
         }
 
-        /*
         [Fact]
         public void MultiplePublishedProcessTest()
         {
@@ -39,7 +48,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             for (var i = 0; i < 3; i++)
             {
-                runner[i] = new TestRunner(@"../../../WebApp3/Debug/netcoreapp3.0/WebApp3.exe");
+                runner[i] = new TestRunner(GetTraceePath());
                 runner[i].Start();
                 pids[i] = runner[i].Pid;
             }
@@ -58,6 +67,5 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 runner[i].Stop();
             }
         }
-        */
     }
 }
