@@ -10,7 +10,6 @@ using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-
     public class TestRunner
     {
         private Process testProcess;
