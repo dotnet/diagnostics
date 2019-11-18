@@ -80,5 +80,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
+        /// <summary>
+        /// Tries to start an EventPipe session on a non-existent process
+        /// </summary>
+        [Fact]
+        public void EventPipeSessionUnavailableTest()
+        {
+            List<int> pids = new List<int>(DiagnosticsClient.GetPublishedProcesses());
+            int arbitraryPid = 1;
+
+            DiagnosticsClient client = new DiagnosticsClient(arbitraryPid);
+
+            Assert.Throws<ServerNotAvailableException>(() => client.StartEventPipeSession(new List<EventPipeProvider>()
+            {
+                new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational)
+            }));
+        }
     }
 }

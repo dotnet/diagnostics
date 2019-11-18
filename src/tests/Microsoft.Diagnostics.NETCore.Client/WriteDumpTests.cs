@@ -92,7 +92,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// A test that tries to write a dump of an non-existent process
+        /// A test that tries to write a dump of a non-existent process
         /// </summary>
         [Fact]
         public void WriteDumpFailTest()
@@ -112,7 +112,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             else
             {
-                Assert.Throws<ServerErrorException>(() => client.WriteDump(DumpType.Normal, "./myDump.dmp"));
+                Assert.Throws<ServerNotAvailableException>(() => client.WriteDump(DumpType.Normal, "./myDump.dmp"));
             }
         }
     }
