@@ -4,9 +4,24 @@
 # 3) load sos
 # We are only verifying the main PrintException fields and for the stacktrace, source lines in the program.
 
-CONTINUE
-
 LOADSOS
+
+# Verify that bpmd works
+IFDEF:PROJECTK
+IFDEF:LIVE
+!IFDEF:MAJOR_RUNTIME_VERSION_1
+
+SOSCOMMAND:bpmd NestedExceptionTest.dll NestedExceptionTest.Program.Main
+CONTINUE
+SOSCOMMAND:ClrStack
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main(\(.*\))?\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ 8\s*\]\s*
+
+ENDIF:MAJOR_RUNTIME_VERSION_1
+ENDIF:LIVE
+ENDIF:PROJECTK
+
+CONTINUE
 
 # 4) Verifying that !pe gives us the right exception in the format above.
 SOSCOMMAND:PrintException

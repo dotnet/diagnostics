@@ -7470,7 +7470,7 @@ private:
         // This function only works with pending breakpoints that are not module bound.
         if (pCur->pModule == NULL)
         {
-            if(pCur->szModuleName[0] != L'\0')
+            if (pCur->szModuleName[0] != L'\0')
             {
                 return ResolvePendingNonModuleBoundBreakpoint(pCur->szModuleName, pCur->szFunctionName, mod, pCur->ilOffset);
             }
@@ -7516,6 +7516,11 @@ private:
 };
 
 Breakpoints g_bpoints;
+
+// If true, call the HandleRuntimeLoadedNotification function to enable the assembly load and JIT exceptions
+#ifndef FEATURE_PAL
+bool g_breakOnRuntimeModuleLoad = true;
+#endif
 
 // Controls whether optimizations are disabled on module load and whether NGEN can be used
 BOOL g_fAllowJitOptimization = TRUE;
@@ -7642,20 +7647,20 @@ public:
             g_bpoints.Update(TO_TADDR(dgma.ModulePtr), TRUE);
         }
 
-        if(!g_fAllowJitOptimization)
+        if (!g_fAllowJitOptimization)
         {
             HRESULT hr;
             ToRelease<IXCLRDataModule2> mod2;
-            if(FAILED(mod->QueryInterface(__uuidof(IXCLRDataModule2), (void**) &mod2)))
+            if (FAILED(mod->QueryInterface(__uuidof(IXCLRDataModule2), (void**) &mod2)))
             {
                 ExtOut("SOS: warning, optimizations for this module could not be suppressed because this CLR version doesn't support the functionality\n");
             }
             else if(FAILED(hr = mod2->SetJITCompilerFlags(CORDEBUG_JIT_DISABLE_OPTIMIZATION)))
             {
                 if(hr == CORDBG_E_CANT_CHANGE_JIT_SETTING_FOR_ZAP_MODULE)
-                    ExtOut("SOS: warning, optimizations for this module could not be surpressed because an optimized prejitted image was loaded\n");
+                    ExtOut("SOS: warning, optimizations for this module could not be suppressed because an optimized prejitted image was loaded\n");
                 else
-                    ExtOut("SOS: warning, optimizations for this module could not be surpressed hr=0x%x\n", hr);
+                    ExtOut("SOS: warning, optimizations for this module could not be suppressed hr=0x%x\n", hr);
             }
         }
         
@@ -7864,14 +7869,30 @@ HRESULT HandleCLRNotificationEvent()
     return S_OK;
 }
 
+void EnableModuleLoadUnloadCallbacks()
+{
+    _ASSERTE(g_clrData != nullptr);
+
+    ULONG32 flags = 0;
+    g_clrData->GetOtherNotificationFlags(&flags);
+    flags |= (CLRDATA_NOTIFY_ON_MODULE_LOAD | CLRDATA_NOTIFY_ON_MODULE_UNLOAD);
+    g_clrData->SetOtherNotificationFlags(flags);
+}
+
 #ifndef FEATURE_PAL
 
 DECLARE_API(HandleCLRN)
 {
     INIT_API();    
     MINIDUMP_NOT_SUPPORTED();    
-
     return HandleCLRNotificationEvent();
+}
+
+HRESULT HandleRuntimeLoadedNotification(IDebugClient* client)
+{
+    INIT_API();
+    EnableModuleLoadUnloadCallbacks();
+    return g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!HandleCLRN\" clrn", 0);
 }
 
 #else // FEATURE_PAL
@@ -7880,6 +7901,13 @@ HRESULT HandleExceptionNotification(ILLDBServices *client)
 {
     INIT_API();
     return HandleCLRNotificationEvent();
+}
+
+HRESULT HandleRuntimeLoadedNotification(ILLDBServices *client)
+{
+    INIT_API();
+    EnableModuleLoadUnloadCallbacks();
+    return g_ExtServices->SetExceptionCallback(HandleExceptionNotification);
 }
 
 #endif // FEATURE_PAL
@@ -7973,11 +8001,6 @@ DECLARE_API(bpmd)
         // did we get dll and type name or file:line#? Search for a colon in the first arg
         // to see if it is in fact a file:line#
         CHAR* pColon = strchr(DllName.data, ':');
-        if (FAILED(GetRuntimeModuleInfo(NULL, NULL))) {
-           ExtOut("%s not loaded yet\n", MAIN_CLR_DLL_NAME_A);
-           return Status;
-        }
-
         if(NULL != pColon)
         {
             fIsFilename = true;
@@ -8084,8 +8107,10 @@ DECLARE_API(bpmd)
         // If LoadClrDebugDll() succeeded make sure we release g_clrData
         ToRelease<IXCLRDataProcess> spIDP(g_clrData);
         ToRelease<ISOSDacInterface> spISD(g_sos);
-        ResetGlobals();
-        
+        if (g_sos != nullptr)
+        {
+            ResetGlobals();
+        }
         // we can get here with EE not loaded => 0 modules
         //                      EE is loaded => 0 or more modules
         ArrayHolder<DWORD_PTR> pMDs = NULL;
@@ -8174,12 +8199,19 @@ DECLARE_API(bpmd)
             {
                 g_bpoints.Add(Filename, lineNumber, NULL);
             }
-            bNeedNotificationExceptions = TRUE;
-
-            ULONG32 flags = 0;
-            g_clrData->GetOtherNotificationFlags(&flags);
-            flags |= (CLRDATA_NOTIFY_ON_MODULE_LOAD | CLRDATA_NOTIFY_ON_MODULE_UNLOAD);
-            g_clrData->SetOtherNotificationFlags(flags);
+            if (g_clrData != nullptr)
+            {
+                bNeedNotificationExceptions = TRUE;
+                EnableModuleLoadUnloadCallbacks();
+            }
+            else 
+            {
+#ifdef FEATURE_PAL
+                Status = g_ExtServices2->SetRuntimeLoadedCallback(HandleRuntimeLoadedNotification);
+#else
+                g_breakOnRuntimeModuleLoad = true;
+#endif
+            }
         }
     }
     else /* We were given a MethodDesc already */
@@ -8251,8 +8283,7 @@ DECLARE_API(bpmd)
     {
         ExtOut("Adding pending breakpoints...\n");
 #ifndef FEATURE_PAL
-        sprintf_s(buffer, _countof(buffer), "sxe -c \"!HandleCLRN\" clrn");
-        Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);        
+        Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!HandleCLRN\" clrn", 0);
 #else
         Status = g_ExtServices->SetExceptionCallback(HandleExceptionNotification);
 #endif // FEATURE_PAL
@@ -15410,16 +15441,18 @@ DECLARE_API(SuppressJitOptimization)
         return E_FAIL;
     }
 
-    if(nArg == 1 && (_stricmp(onOff.data, "On") == 0))
+    if (nArg == 1 && (_stricmp(onOff.data, "On") == 0))
     {
         // if CLR is already loaded, try to change the flags now
-        if(CheckEEDll() == S_OK)
+        if (CheckEEDll() == S_OK)
         {
             SetNGENCompilerFlags(CORDEBUG_JIT_DISABLE_OPTIMIZATION);
         }
 
-        if(!g_fAllowJitOptimization)
+        if (!g_fAllowJitOptimization)
+        {
             ExtOut("JIT optimization is already suppressed\n");
+        }
         else
         {
             g_fAllowJitOptimization = FALSE;

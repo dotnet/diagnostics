@@ -1440,11 +1440,13 @@ int bitidx(SCALAR bitflag)
     return -1;
 }
 
+#ifndef FEATURE_PAL
 HRESULT
 DllsName(
     ULONG_PTR addrContaining,
     __out_ecount (MAX_LONGPATH) WCHAR *dllName
     );
+#endif
 
 inline
 BOOL IsElementValueType (CorElementType cet)
