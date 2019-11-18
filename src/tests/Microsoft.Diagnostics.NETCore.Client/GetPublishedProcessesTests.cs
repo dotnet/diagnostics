@@ -15,7 +15,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// <summary>
     /// Suite of tests that test top-level commands
     /// </summary>
-    public class BasicTests
+    public class GetPublishedProcessesTest
     {
         private string GetTraceePath()
         {
@@ -30,11 +30,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public void PublishedProcessTest1()
         {
             TestRunner runner = new TestRunner(GetTraceePath());
-            runner.Start();
-
-            // Sleeping some arbitrary time to let the web app launch and set up the diagnostics server.
-            Thread.Sleep(3000);
-
+            runner.Start(3000);
             List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
             Assert.Contains(publishedProcesses, p => p == runner.Pid);
             runner.Stop();
@@ -49,14 +45,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             for (var i = 0; i < 3; i++)
             {
                 runner[i] = new TestRunner(GetTraceePath());
-                runner[i].Start();
+                runner[i].Start(500);
                 pids[i] = runner[i].Pid;
             }
-
-            Thread.Sleep(3000);
-
             List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
-
             for (var i = 0; i < 3; i++)
             {
                 Assert.Contains(publishedProcesses, p => p == pids[i]);

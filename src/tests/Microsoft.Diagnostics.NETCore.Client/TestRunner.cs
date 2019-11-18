@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using Xunit;
 
 using Microsoft.Diagnostics.TestHelpers;
@@ -27,9 +28,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             startInfo.EnvironmentVariables[key] = value;
         }
 
-        public void Start()
+        public void Start(int timeoutInMS=0)
         {
             testProcess = Process.Start(startInfo);
+            Thread.Sleep(timeoutInMS);
         }
 
         public void Stop()
