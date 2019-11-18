@@ -55,7 +55,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dotnet-gcdump", "src\Tools\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetCounters.UnitTests", "src\tests\dotnet-counters\DotnetCounters.UnitTests.csproj", "{E5A7DC6C-BF8D-418A-BCBD-094EB748FA82}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "eventpipe.UnitTests", "src\tests\eventpipe\eventpipe.UnitTests.csproj", "{CED9ABBA-861E-4C0A-9359-22351208EF27}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventPipe.UnitTests", "src\tests\eventpipe\EventPipe.UnitTests.csproj", "{CED9ABBA-861E-4C0A-9359-22351208EF27}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

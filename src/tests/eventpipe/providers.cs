@@ -13,7 +13,7 @@ using EventPipe.UnitTests.Common;
 // Use this test as an example of how to write tests for EventPipe in
 // the dotnet/diagnostics repo
 
-namespace Microsoft.Diagnostics.EventPipe.ProviderValidation
+namespace EventPipe.UnitTests.ProviderValidation
 {
     public sealed class MyEventSource : EventSource
     {
