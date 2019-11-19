@@ -84,6 +84,7 @@ jobs:
     - _PhaseName : ${{ parameters.name }}
     - _HelixType: build/product
     - _HelixBuildConfig: $(_BuildConfig)
+    - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/$(_BuildConfig)/streams
 
     # Only enable publishing in non-public, non PR scenarios.
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
@@ -173,6 +174,15 @@ jobs:
         PathtoPublish: '$(Build.SourcesDirectory)/artifacts/tmp/$(_BuildConfig)/dumps'
         PublishLocation: Container
         ArtifactName: Dumps_$(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
+      continueOnError: true
+      condition: failed()
+
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Stream Artifacts on failure
+      inputs:
+        PathtoPublish: $(_Pipeline_StreamDumpDir)
+        PublishLocation: Container
+        ArtifactName: Streams_$(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
       continueOnError: true
       condition: failed()
 
