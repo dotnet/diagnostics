@@ -290,6 +290,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                     if (isWithinString)
                     {
                         exprParams.Add(resolvedValue.ToString());
+                        resolvedValue.Clear();
                         expectDelimiter = true;
                     }
 
