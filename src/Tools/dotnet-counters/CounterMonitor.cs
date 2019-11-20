@@ -180,10 +180,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private string BuildProviderString()
         {
-            if (_processId == 0) {
-                _console.Error.WriteLine("ProcessId is required.");
-                return 1;
-            }
             string providerString;
             if (_counterList.Count == 0)
             {
