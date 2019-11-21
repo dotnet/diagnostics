@@ -47,23 +47,17 @@
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
         </Option>
         <Option>
+          <!-- The debuggee built for 3.0 but run it on 3.1 -->
+          <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
+        </Option>
+        <Option Condition="'$(DailyTest)' != 'true'">
           <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
         </Option>
         <Option Condition="'$(DailyTest)' != 'true'">
-          <!-- The debuggee built for 2.1 but run it on 2.2 -->
-          <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion22)</RuntimeFrameworkVersion>
-        </Option>
-        <Option Condition="'$(DailyTest)' != 'true'">
           <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
-        </Option>
-        <Option Condition="'$(DailyTest)' != 'true'">
-          <BuildProjectFramework>netcoreapp1.1</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion11)</RuntimeFrameworkVersion>
-          <!-- SOS needs at least 2.0 to run. The default without this is to use the runtime being debuggged to host SOS.NETCore -->
-          <SOSHostRuntime>$(HostRuntimeDir)</SOSHostRuntime>
         </Option>
         <!--
             SOS.StackAndOtherTests (cli because tested with full, embedded and portable PDBs)
@@ -74,33 +68,26 @@
           <TestName>SOS.StackAndOtherTests</TestName>
           <Options>
             <Option>
-              <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-              <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
-              <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
-            </Option>
-            <Option>
               <!-- Build the debuggee for 3.0 but run it on latest -->
               <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
               <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
             </Option>
+            <Option>
+              <!-- Build the debuggee for 3.0 but run it on 3.1 -->
+              <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+              <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
+              <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
+            </Option>
+            <Option Condition="'$(DailyTest)' != 'true'">
+              <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+              <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
+              <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
+            </Option>
             <Option Condition="'$(DailyTest)' != 'true'">
               <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
               <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion21)</BuildProjectMicrosoftNetCoreAppVersion>
               <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
-            </Option>
-            <Option Condition="'$(DailyTest)' != 'true'">
-              <!-- The debuggee built for 2.1 but run it on 2.2 -->
-              <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-              <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion21)</BuildProjectMicrosoftNetCoreAppVersion>
-              <RuntimeFrameworkVersion>$(RuntimeVersion22)</RuntimeFrameworkVersion>
-            </Option>
-            <Option Condition="'$(DailyTest)' != 'true'">
-              <BuildProjectFramework>netcoreapp1.1</BuildProjectFramework>
-              <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion11)</BuildProjectMicrosoftNetCoreAppVersion>
-              <RuntimeFrameworkVersion>$(RuntimeVersion11)</RuntimeFrameworkVersion>
-              <!-- SOS needs at least 2.0 to run. The default without this is to use the runtime being debuggged to host SOS.NETCore -->
-              <SOSHostRuntime>$(HostRuntimeDir)</SOSHostRuntime>
             </Option>
           </Options>
         </Option>
@@ -109,24 +96,32 @@
           -->
         <Option Condition="'$(DailyTest)' != 'true'">
           <TestName>SOS.WebApp</TestName>
-          <Options>
-            <Option>
-              <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersion22)</RuntimeFrameworkVersion>
-            </Option>
-            <Option>
-              <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
-            </Option>
-          </Options>
+          <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(AspNetCoreVersion21)</RuntimeFrameworkVersion>
         </Option>
         <!--
-            SOS.WebApp3 (runs only on 3.0 aspnetcore)
+            SOS.WebApp3 (runs on 3.0, 3.1 and latest aspnetcore)
           -->
         <Option>
           <TestName>SOS.WebApp3</TestName>
-          <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(AspNetCoreVersion30)</RuntimeFrameworkVersion>
+          <Options>
+            <!-- Build the debuggee for 3.0 but run it on latest -->
+            <!--
+            <Option>
+              <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(AspNetCoreVersionLatest)</RuntimeFrameworkVersion>
+            </Option>
+            -->
+            <Option>
+              <!-- Build the debuggee for 3.0 but run it on 3.1 -->
+              <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(AspNetCoreVersion31)</RuntimeFrameworkVersion>
+            </Option>
+            <Option Condition="'$(DailyTest)' != 'true'">
+              <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(AspNetCoreVersion30)</RuntimeFrameworkVersion>
+            </Option>
+          </Options>
         </Option>
       </Options>
 
