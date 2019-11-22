@@ -7519,7 +7519,7 @@ Breakpoints g_bpoints;
 
 // If true, call the HandleRuntimeLoadedNotification function to enable the assembly load and JIT exceptions
 #ifndef FEATURE_PAL
-bool g_breakOnRuntimeModuleLoad = true;
+bool g_breakOnRuntimeModuleLoad = false;
 #endif
 
 // Controls whether optimizations are disabled on module load and whether NGEN can be used
