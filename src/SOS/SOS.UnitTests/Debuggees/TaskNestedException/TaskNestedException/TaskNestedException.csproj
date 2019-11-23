@@ -1,13 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>$(BuildProjectFramework)</TargetFramework>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TargetFramework Condition="'$(BuildProjectFramework)' != ''">$(BuildProjectFramework)</TargetFramework>
+    <TargetFrameworks Condition="'$(BuildProjectFramework)' == ''">netcoreapp1.1;netcoreapp2.1;netcoreapp3.0</TargetFrameworks>
   </PropertyGroup>
-
-  <ItemGroup>
-    <AdditionalSourceCopy Include="..\TaskNestedException.sln" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\RandomUserLibrary\RandomUserLibrary.csproj" />

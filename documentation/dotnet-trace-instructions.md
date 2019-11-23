@@ -9,7 +9,7 @@ The first step is to install the dotnet-trace CLI global tool.
 ```cmd
 $ dotnet tool install --global dotnet-trace
 You can invoke the tool using the following command: dotnet-trace
-Tool 'dotnet-trace' (version '3.0.0.47001') was successfully installed.
+Tool 'dotnet-trace' (version '3.0.47001') was successfully installed.
 ```
 
 ## Using dotnet-trace
@@ -21,7 +21,7 @@ In order to collect traces using dotnet-trace, you will need to:
   - On Windows, there are options such as using the task manager or the `tasklist` command on the cmd window.
   - On Linux, the trivial option could be using `pidof` on the terminal window.
 
-You may also use the command `dotnet-trace list-processes` command to find out what .NET Core processes are running, along with their process IDs.
+You may also use the command `dotnet-trace ps` command to find out what .NET Core processes are running, along with their process IDs.
 
 - Then, run the following command:
 
@@ -150,11 +150,10 @@ Options:
   --profile
       A named pre-defined set of provider configurations that allows common tracing scenarios to be specified
       succinctly. The options are:
-      runtime-basic   Useful for tracking CPU usage and general runtime information. This the default option
-                      if no profile is specified.
-      gc              Tracks allocation and collection performance
+      cpu-sampling    Useful for tracking CPU usage and general .NET runtime information. This is the default 
+                      option if no profile or providers are specified.
+      gc-verbose      Tracks GC collection and sampled object allocations
       gc-collect      Tracks GC collection only at very low overhead
-      none            Tracks nothing. Only providers specified by the --providers option will be available.
 
   --providers <list-of-comma-separated-providers>
     A list of comma separated EventPipe providers to be enabled.

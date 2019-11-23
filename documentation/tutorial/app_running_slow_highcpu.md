@@ -49,7 +49,7 @@ In order to generate profiler traces of a .net core application, we can use the 
 > dotnet-trace collect -p 2266  --providers Microsoft-DotNETCore-SampleProfiler
 > ```
 
-2266 is the process identifier which can be found using dotnet-trace list-processes. Let dotnet-trace run for about 20-30 seconds and then hit enter to exit the collection. The result is a nettrace file located in the same folder. nettrace files are a great way to use existing analysis tools on Windows (such as PerfView) to diagose performance problems. 
+2266 is the process identifier which can be found using dotnet-trace list-processes. Let dotnet-trace run for about 20-30 seconds and then hit enter to exit the collection. The result is a nettrace file located in the same folder. nettrace files are a great way to use existing analysis tools on Windows (such as PerfView) to diagnose performance problems. 
 
 Alternatively, you can get the perf and LTTng trace data in nettrace format by using the perfcollect tool (please see Installing the tools section). Once installed, run the following command:
 
@@ -90,7 +90,7 @@ If you generated the traces using the Linux perf command, you can use the same p
 > sudo perf report -f
 > ```
 
-Alternatively, you can also generate a flamegrah by using the following commands:
+Alternatively, you can also generate a flamegraph by using the following commands:
 
 > ```bash
 > git clone --depth=1 https://github.com/BrendanGregg/FlameGraph

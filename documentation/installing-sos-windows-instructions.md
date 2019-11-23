@@ -49,12 +49,12 @@ It is recommended that you update to the newer versions of the Windows debugger,
 
     C:\Users\mikem>dotnet tool install -g dotnet-sos
     You can invoke the tool using the following command: dotnet-sos
-    Tool 'dotnet-sos' (version '3.0.0.47001') was successfully installed.
+    Tool 'dotnet-sos' (version '3.0.47001') was successfully installed.
 
 Run the installer:
 
     C:\Users\mikem>dotnet-sos install
-    Installing SOS to C:\Users\mikem\.dotnet\sos from C:\Users\mikem\.dotnet\tools\.store\dotnet-sos\3.0.0.47001\dotnet-sos\3.0.0.47001\tools\netcoreapp2.1\any\win-x64
+    Installing SOS to C:\Users\mikem\.dotnet\sos from C:\Users\mikem\.dotnet\tools\.store\dotnet-sos\3.0.47001\dotnet-sos\3.0.47001\tools\netcoreapp2.1\any\win-x64
     Creating installation directory...
     Copying files...
     Execute '.load C:\Users\mikem\.dotnet\sos\sos.dll' to load SOS in your Windows debugger.

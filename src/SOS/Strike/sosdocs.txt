@@ -32,7 +32,7 @@ DumpHeap                           EEStack
 DumpVC                             CLRStack
 GCRoot                             GCInfo
 ObjSize                            EHInfo
-FinalizeQueue                      BPMD
+FinalizeQueue                      BPMD (bpmd)
 PrintException (pe)                COMState
 TraverseHeap                       
 
@@ -144,6 +144,7 @@ Not all SOS commands support DML output.
 
 \\
 
+COMMAND: soe.
 COMMAND: stoponexception.
 !StopOnException [-derived] 
                  [-create | -create2] 
@@ -211,6 +212,7 @@ By default, MinidumpMode is 0, so there is no restriction on commands that will
 run against a minidump.
 \\
 
+COMMAND: do.
 COMMAND: dumpobj.
 !DumpObj [-nofields] <object address>
 
@@ -254,6 +256,7 @@ The arguments in detail:
                   String
 \\
 
+COMMAND: da.
 COMMAND: dumparray.
 !DumpArray 
 	[-start <startIndex>]
@@ -614,6 +617,7 @@ Please note the -aggregate parameter to !ObjSize has been removed.  Please see
 
 \\
 
+COMMAND: fq.
 COMMAND: finalizequeue.
 !FinalizeQueue [-detail] | [-allReady] [-short]
 
@@ -1138,12 +1142,12 @@ pointer if provided.
 \\
 
 COMMAND: bpmd.
-!BPMD [-nofuturemodule] <module name> <method name> [<il offset>]
-!BPMD <source file name>:<line number>
-!BPMD -md <MethodDesc>
-!BPMD -list
-!BPMD -clear <pending breakpoint number>
-!BPMD -clearall
+!bpmd [-nofuturemodule] <module name> <method name> [<il offset>]
+!bpmd <source file name>:<line number>
+!bpmd -md <MethodDesc>
+!bpmd -list
+!bpmd -clear <pending breakpoint number>
+!bpmd -clearall
 
 !BPMD provides managed breakpoint support. If it can resolve the method name
 to a loaded, jitted or ngen'd function it will create a breakpoint with "bp".
@@ -1154,34 +1158,25 @@ receive news of module loads and JITs, at which time it will try to resolve
 the function to a breakpoint. -nofuturemodule can be used to suppress 
 creating a breakpoint against a module that has not yet been loaded.
 
-Management of the list of pending breakpoints can be done via !BPMD -list,
-!BPMD -clear, and !BPMD -clearall commands. !BPMD -list generates a list of 
-all of the pending breakpoints. If the pending breakpoint has a non-zero 
-module id, then that pending breakpoint is specific to function in that 
+Management of the list of pending breakpoints can be done via !bpmd -list,
+!bpmd -clear, and !bpmd -clearall commands. !bpmd -list generates a list of
+all of the pending breakpoints. If the pending breakpoint has a non-zero
+module id, then that pending breakpoint is specific to function in that
 particular loaded module. If the pending breakpoint has a zero module id, then
 the breakpoint applies to modules that have not yet been loaded. Use 
-!BPMD -clear or !BPMD -clearall to remove pending breakpoints from the list.
+!bpmd -clear or !bpmd -clearall to remove pending breakpoints from the list.
+
+The !bpmd command can now be used before the runtime is loaded. You can execute
+!bpmd right after SOS is loaded. Always add the module extension for the module
+name parameter.
 
 This brings up a good question: "I want to set a breakpoint on the main
 method of my application. How can I do this?"
 
-  1) If you know the full path to SOS, use this command and skip to step 6
-       .load <the full path to sos.dll>
-
-  2) If you don't know the full path to sos, its usually next to coreclr.dll
-     You can wait for clr to load and then find it.
-     Start the debugger and type: 
-       sxe -c "" clrn
-  3) g
-  4) You'll get the following notification from the debugger:
-     "CLR notification: module 'mscorlib' loaded"
-  5) Now you can load SOS. Type
-       .loadby sos clr
-
-  6) Add the breakpoint with command such as:
+  1) Add the breakpoint with command such as:
        !bpmd myapp.exe MyApp.Main
-  7) g
-  8) You will stop at the start of MyApp.Main. If you type "bl" you will 
+  2) g
+  3) You will stop at the start of MyApp.Main. If you type "bl" you will 
      see the breakpoint listed.
 
 You can specify breakpoints by file and line number if:
@@ -1191,7 +1186,6 @@ You can specify breakpoints by file and line number if:
       path points to those PDBs.
 This is often easier than module and method name syntax. For example:
    !bpmd Demo.cs:15
-
 
 To correctly specify explicitly implemented methods make sure to retrieve the
 method name from the metadata, or from the output of the "!dumpmt -md" command. 
@@ -1211,7 +1205,7 @@ For example:
 	!bpmd myapp.exe ExplicitItfImpl.I1.M1
 
 
-!BPMD works equally well with generic types. Adding a breakpoint on a generic 
+!bpmd works equally well with generic types. Adding a breakpoint on a generic 
 type sets breakpoints on all already JIT-ted generic methods and sets a pending 
 breakpoint for any instantiation that will be JIT-ted in the future.
 
@@ -1267,7 +1261,7 @@ Additional examples:
 
 	!bpmd bpmd.exe NS.Outer+ExplicitItfImpl`1.NS.Outer.IT1<U>.M1
 
-!BPMD does not accept offsets nor parameters in the method name. You can add
+!bpmd does not accept offsets nor parameters in the method name. You can add
 an IL offset as an optional parameter seperate from the name. If there are overloaded
 methods, !bpmd will set a breakpoint for all of them.
 
@@ -2022,6 +2016,7 @@ The percentage column contains a breakout of free or unrooted bytes to total byt
 
 \\
 
+COMMAND: ao.
 COMMAND: analyzeoom.
 !AnalyzeOOM
 
@@ -2098,6 +2093,7 @@ the "size" is displayed as 0:
 
 \\
 
+COMMAND: lno.
 COMMAND: listnearobj.
 !ListNearObj <object address>
 

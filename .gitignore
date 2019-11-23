@@ -119,3 +119,7 @@ StressLog.txt
 *.etlx
 *.netperf
 *.nettrace
+*.speedscope.json
+*.csv
+*.gcdump
+*.binlog

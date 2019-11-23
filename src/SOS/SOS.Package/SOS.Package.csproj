@@ -123,7 +123,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ZipSymbolFiles Include="$(ArtifactsSymStoreDirectory)\SOS.NETCore\$(TargetFramework)\*.pdb">
+      <ZipSymbolFiles Include="$(ArtifactsSymStoreDirectory)\SOS.NETCore\netstandard2.0\*.pdb">
          <TargetPath>$(SymbolsDir)</TargetPath>
       </ZipSymbolFiles>
 

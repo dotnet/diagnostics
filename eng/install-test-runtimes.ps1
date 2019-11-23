@@ -11,48 +11,89 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
 
-$RuntimeVersion11="1.1.13"
-$RuntimeVersion21="2.1.11"
-$RuntimeVersion22="2.2.5"
-$DailyTestText="true"
+function Get-Latest-Version([string]$channel, [string]$runtime = "", [bool]$coherent = $false) {
 
-# Always install 2.1 for the daily test (scheduled builds) scenario because xunit needs it
-. $DotNetDir\dotnet-install.ps1 -Version $RuntimeVersion21 -Architecture $BuildArch -SkipNonVersionedFiles -Runtime dotnet -InstallDir $DotNetDir
+    $VersionFileUrl = $null
+    if ($runtime -eq "dotnet") {
+        $VersionFileUrl = "$UncachedFeed/Runtime/$channel/latest.version"
+    }
+    elseif ($runtime -eq "aspnetcore") {
+        $VersionFileUrl = "$UncachedFeed/aspnetcore/Runtime/$channel/latest.version"
+    }
+    elseif ($runtime -eq "") {
+        if ($coherent) {
+            $VersionFileUrl = "$UncachedFeed/Sdk/$Channel/latest.coherent.version"
+        }
+        else {
+            $VersionFileUrl = "$UncachedFeed/Sdk/$Channel/latest.version"
+        }
+    }
+    else {
+        throw "Invalid value for $runtime"
+    }
 
-# Install the other versions of .NET Core runtime we are going to test. 1.1.x, 2.1.x, 2.2.x
-# and latest. Only install the latest master for daily jobs and leave the RuntimeVersion* 
-# config properties blank.
-if (!$DailyTest) {
-    $DailyTestText="false"
-    . $DotNetDir\dotnet-install.ps1 -Version $RuntimeVersion11 -Architecture $BuildArch -SkipNonVersionedFiles -Runtime dotnet -InstallDir $DotNetDir
-    . $DotNetDir\dotnet-install.ps1 -Version $RuntimeVersion22 -Architecture $BuildArch -SkipNonVersionedFiles -Runtime dotnet -InstallDir $DotNetDir
+    $VersionFile = Join-Path -Path $TempDir latest.version
+
+    try {
+        Invoke-WebRequest $VersionFileUrl -OutFile $VersionFile
+    }
+    catch {
+        return ""
+    }
+
+    if (Test-Path $VersionFile) {
+        $VersionText = cat $VersionFile
+        $Data = @($VersionText.Split([char[]]@(), [StringSplitOptions]::RemoveEmptyEntries));
+        return $Data[1].Trim()
+    }
+
+    return ""
 }
 
-. $DotNetDir\dotnet-install.ps1 -Channel $Branch -Version latest -Architecture $BuildArch -SkipNonVersionedFiles -Runtime dotnet -InstallDir $DotNetDir
-
-# Now download the latest runtime version and create a config file containing it
-$VersionFileUrl = "$UncachedFeed/Runtime/$Branch/latest.version"
-$VersionFile = Join-Path -Path $TempDir latest.version
 $ConfigFile = Join-Path -Path $DotNetDir Debugger.Tests.Versions.txt
 
-Invoke-WebRequest $VersionFileUrl -OutFile $VersionFile
+$RuntimeVersion21="2.1.12"
+$AspNetCoreVersion21="2.1.12"
+$RuntimeVersion30="3.0.0"
+$AspNetCoreVersion30="3.0.0"
+$RuntimeVersion31="3.1.0"
+$AspNetCoreVersion31="3.1.0"
+$RuntimeVersionLatest=""
+$AspNetCoreVersionLatest=""
 
-if (Test-Path $VersionFile) {
-    $VersionText = cat $VersionFile
-    $Data = @($VersionText.Split([char[]]@(), [StringSplitOptions]::RemoveEmptyEntries));
-    $RuntimeVersionLatest = $Data[1].Trim()
+$DailyTestText="true"
+if (!$DailyTest) {
+    $DailyTestText="false"
+}
 
-    Write-Host "Latest version: $RuntimeVersionLatest"
+# Get the latest runtime versions for master and create a config file containing it
+try {
+    $RuntimeVersionLatest = Get-Latest-Version $Branch dotnet
+    $AspNetCoreVersionLatest = Get-Latest-Version $Branch aspnetcore
+    Write-Host "Latest $Branch runtime: $RuntimeVersionLatest aspnetcore: $AspNetCoreVersionLatest"
+}
+catch {
+    Write-Host "Could not download latest $Branch runtime version"
+}
 
-    '<Configuration>
-<DailyTest>' + $DailyTestText  +'</DailyTest>
-<RuntimeVersion11>' + $RuntimeVersion11 + '</RuntimeVersion11>
-<RuntimeVersion21>' + $RuntimeVersion21 + '</RuntimeVersion21>
-<RuntimeVersion22>' + $RuntimeVersion22 + '</RuntimeVersion22>
-<RuntimeVersionLatest>' + $RuntimeVersionLatest + '</RuntimeVersionLatest>
+# Install the other versions of .NET Core runtime we are going to test. 2.1.x, 3.0.x, 3.1.x and latest.
+. $DotNetDir\dotnet-install.ps1 -Version $RuntimeVersion21 -Architecture $BuildArch -SkipNonVersionedFiles -Runtime dotnet -InstallDir $DotNetDir
+. $DotNetDir\dotnet-install.ps1 -Version $AspNetCoreVersion21 -Architecture $BuildArch -SkipNonVersionedFiles -Runtime aspnetcore -InstallDir $DotNetDir
+
+. $DotNetDir\dotnet-install.ps1 -Version $RuntimeVersion31 -Architecture $BuildArch -SkipNonVersionedFiles -Runtime dotnet -InstallDir $DotNetDir
+. $DotNetDir\dotnet-install.ps1 -Version $AspNetCoreVersion31 -Architecture $BuildArch -SkipNonVersionedFiles -Runtime aspnetcore -InstallDir $DotNetDir
+
+. $DotNetDir\dotnet-install.ps1 -Version $RuntimeVersionLatest -Architecture $BuildArch -SkipNonVersionedFiles -Runtime dotnet -InstallDir $DotNetDir
+. $DotNetDir\dotnet-install.ps1 -Version $AspNetCoreVersionLatest -Architecture $BuildArch -SkipNonVersionedFiles -Runtime aspnetcore -InstallDir $DotNetDir
+
+'<Configuration>
+  <DailyTest>' + $DailyTestText  +'</DailyTest>
+  <RuntimeVersion21>' + $RuntimeVersion21 + '</RuntimeVersion21>
+  <AspNetCoreVersion21>' + $AspNetCoreVersion21 + '</AspNetCoreVersion21>
+  <RuntimeVersion30>' + $RuntimeVersion30 + '</RuntimeVersion30>
+  <AspNetCoreVersion30>' + $AspNetCoreVersion30 + '</AspNetCoreVersion30>
+  <RuntimeVersion31>' + $RuntimeVersion31 + '</RuntimeVersion31>
+  <AspNetCoreVersion31>' + $AspNetCoreVersion31 + '</AspNetCoreVersion31>
+  <RuntimeVersionLatest>' + $RuntimeVersionLatest + '</RuntimeVersionLatest>
+  <AspNetCoreVersionLatest>' + $AspNetCoreVersionLatest + '</AspNetCoreVersionLatest>
 </Configuration>' | Set-Content $ConfigFile
-
-}
-else {
-    Write-Host "Could not download latest runtime version file"
-}

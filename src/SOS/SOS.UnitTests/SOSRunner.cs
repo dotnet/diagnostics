@@ -5,7 +5,9 @@
 using Microsoft.Diagnostics.TestHelpers;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Pipes;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -16,24 +18,40 @@ using Xunit.Extensions;
 
 public class SOSRunner : IDisposable
 {
-    readonly TestConfiguration _config;
-    readonly TestRunner.OutputHelper _outputHelper;
-    readonly Dictionary<string, string> _variables;
-    readonly ScriptLogger _scriptLogger;
-    readonly ProcessRunner _processRunner;
-    readonly bool _isDump;
-
-    string _lastCommandOutput;
-    string _previousCommandCapture;
-
-    public enum Options
+    /// <summary>
+    /// What to use to generate the dump
+    /// </summary>
+    public enum DumpGenerator
     {
-        None,
+        NativeDebugger,
+        CreateDump,
+        DotNetDump,
+    }
+
+    /// <summary>
+    /// Dump type
+    /// </summary>
+    public enum DumpType
+    {
+        Triage,
+        Heap,
+        Full
+    }
+
+    /// <summary>
+    /// What action should the debugger do
+    /// </summary>
+    public enum DebuggerAction
+    {
+        Live,
         GenerateDump,
         LoadDump,
         LoadDumpWithDotNetDump,
     }
 
+    /// <summary>
+    /// Which debugger to use
+    /// </summary>
     public enum NativeDebugger
     {
         Unknown,
@@ -41,6 +59,39 @@ public class SOSRunner : IDisposable
         Lldb,
         Gdb,
         DotNetDump,
+    }
+
+    /// <summary>
+    /// SOS test runner config information
+    /// </summary>
+    public class TestInformation
+    {
+        private string _testName;
+
+        public TestConfiguration TestConfiguration { get; set; }
+
+        public ITestOutputHelper OutputHelper { get; set; }
+
+        public string TestName
+        { 
+            get { return _testName ?? "SOS." + DebuggeeName; }
+            set { _testName = value; }
+        }
+
+        public string DebuggeeName { get; set; }
+
+        public string DebuggeeArguments { get; set; }
+
+        public DumpGenerator DumpGenerator { get; set; } = DumpGenerator.CreateDump;
+
+        public DumpType DumpType { get; set; } = DumpType.Heap;
+
+        public bool UsePipeSync { get; set; } = false;
+
+        public bool IsValid()
+        {
+            return TestConfiguration != null && OutputHelper != null && DebuggeeName != null;
+        }
     }
 
     public const string HexValueRegEx = "[A-Fa-f0-9]+(`[A-Fa-f0-9]+)?";
@@ -53,8 +104,18 @@ public class SOSRunner : IDisposable
         get { return Debugger.ToString().ToUpperInvariant(); }
     }
 
-    private SOSRunner(NativeDebugger debugger, TestConfiguration config, TestRunner.OutputHelper outputHelper, 
-        Dictionary<string, string> variables, ScriptLogger scriptLogger, ProcessRunner processRunner, bool isDump)
+    readonly TestConfiguration _config;
+    readonly TestRunner.OutputHelper _outputHelper;
+    readonly Dictionary<string, string> _variables;
+    readonly ScriptLogger _scriptLogger;
+    readonly ProcessRunner _processRunner;
+    readonly DumpType? _dumpType;
+
+    string _lastCommandOutput;
+    string _previousCommandCapture;
+
+    private SOSRunner(NativeDebugger debugger, TestConfiguration config, TestRunner.OutputHelper outputHelper, Dictionary<string, string> variables, 
+        ScriptLogger scriptLogger, ProcessRunner processRunner, DumpType? dumpType)
     {
         Debugger = debugger;
         _config = config;
@@ -62,73 +123,96 @@ public class SOSRunner : IDisposable
         _variables = variables;
         _scriptLogger = scriptLogger;
         _processRunner = processRunner;
-        _isDump = isDump;
+        _dumpType = dumpType;
     }
 
     /// <summary>
     /// Run a debuggee and create a dump.
     /// </summary>
-    /// <param name="config">test configuration</param>
-    /// <param name="output">output instance</param>
-    /// <param name="testName">name of test</param>
-    /// <param name="debuggeeName">debuggee name</param>
-    /// <param name="debuggeeArguments">optional args to pass to debuggee</param>
-    /// <param name="useCreateDump">if true, use "createdump" to generate core dump</param>
-    public static async Task CreateDump(TestConfiguration config, ITestOutputHelper output, string testName, string debuggeeName, 
-        string debuggeeArguments = null, bool useCreateDump = true)
+    /// <param name="information">test info</param>
+    public static async Task CreateDump(TestInformation information)
     {
+        if (!information.IsValid()) {
+            throw new ArgumentException("Invalid TestInformation");
+        }
+        TestConfiguration config = information.TestConfiguration;
+        DumpGenerator dumpGeneration = information.DumpGenerator;
+
         Directory.CreateDirectory(config.DebuggeeDumpOutputRootDir());
 
-        if (!config.CreateDumpExists || !useCreateDump || config.GenerateDumpWithLLDB() || config.GenerateDumpWithGDB())
+        if (dumpGeneration == DumpGenerator.CreateDump)
         {
-            using (SOSRunner runner = await SOSRunner.StartDebugger(config, output, testName, debuggeeName, debuggeeArguments, Options.GenerateDump))
+            if (!config.CreateDumpExists || config.GenerateDumpWithLLDB() || config.GenerateDumpWithGDB())
             {
-                try
-                {
-                    await runner.LoadSosExtension();
+                dumpGeneration = DumpGenerator.NativeDebugger;
+            }
+        }
 
-                    string command = null;
-                    switch (runner.Debugger)
-                    {
-                        case SOSRunner.NativeDebugger.Cdb:
-                            await runner.ContinueExecution();
-                            // On desktop create triage dump. On .NET Core, create full dump.
-                            command = config.IsDesktop ? ".dump /o /mshuRp %DUMP_NAME%" : ".dump /o /ma %DUMP_NAME%";
-                            break;
-                        case SOSRunner.NativeDebugger.Gdb:
-                            command = "generate-core-file %DUMP_NAME%";
-                            break;
-                        case SOSRunner.NativeDebugger.Lldb:
-                            await runner.ContinueExecution();
-                            command = "sos CreateDump %DUMP_NAME%";
-                            break;
-                        default:
-                            throw new Exception(runner.Debugger.ToString() + " does not support creating dumps");
-                    }
+        if (dumpGeneration == DumpGenerator.NativeDebugger)
+        {
+            // Force the dump type to full for .NET Core 1.1 because the heap dumps are broken (can't read ThreadStore).
+            if (config.IsNETCore && config.RuntimeFrameworkVersionMajor == 1)
+            {
+                information.DumpType = DumpType.Full;
+            }
+            using SOSRunner runner = await SOSRunner.StartDebugger(information, DebuggerAction.GenerateDump);
+            try
+            {
+                await runner.LoadSosExtension();
 
-                    await runner.RunCommand(command);
-                    await runner.QuitDebugger();
-                }
-                catch (Exception ex)
+                string command = null;
+                switch (runner.Debugger)
                 {
-                    runner.WriteLine(ex.ToString());
-                    throw;
+                    case SOSRunner.NativeDebugger.Cdb:
+                        await runner.ContinueExecution();
+                        switch (information.DumpType)
+                        {
+                            case DumpType.Heap:
+                                command = ".dump /o /mw %DUMP_NAME%";
+                                break;
+                            case DumpType.Triage:
+                                command = ".dump /o /mshuRp %DUMP_NAME%";
+                                break;
+                            case DumpType.Full:
+                                command = ".dump /o /ma %DUMP_NAME%";
+                                break;
+                        }
+                        break;
+                    case SOSRunner.NativeDebugger.Gdb:
+                        command = "generate-core-file %DUMP_NAME%";
+                        break;
+                    default:
+                        throw new Exception(runner.Debugger.ToString() + " does not support creating dumps");
                 }
+
+                await runner.RunCommand(command);
+            }
+            catch (Exception ex)
+            {
+                runner.WriteLine(ex.ToString());
+                throw;
+            }
+            finally
+            {
+                await runner.QuitDebugger();
             }
         }
         else
         {
             TestRunner.OutputHelper outputHelper = null;
+            NamedPipeServerStream pipeServer = null;
+            string pipeName = null;
             try
             {
                 // Setup the logging from the options in the config file
-                outputHelper = TestRunner.ConfigureLogging(config, output, testName);
+                outputHelper = TestRunner.ConfigureLogging(config, information.OutputHelper, information.TestName);
 
                 // Restore and build the debuggee. The debuggee name is lower cased because the 
                 // source directory name has been lowercased by the build system.
-                DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, debuggeeName, outputHelper);
+                DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, information.DebuggeeName, outputHelper);
+                Dictionary<string, string> variables = GenerateVariables(information, debuggeeConfig, DebuggerAction.GenerateDump);
 
-                outputHelper.WriteLine("Starting {0}", testName);
+                outputHelper.WriteLine("Starting {0}", information.TestName);
                 outputHelper.WriteLine("{");
 
                 // Get the full debuggee launch command line (includes the host if required)
@@ -144,28 +228,101 @@ public class SOSRunner : IDisposable
                     }
                     arguments.Append(debuggeeConfig.BinaryExePath);
                 }
-                if (!string.IsNullOrWhiteSpace(debuggeeArguments))
+                if (!string.IsNullOrWhiteSpace(information.DebuggeeArguments))
                 {
                     arguments.Append(" ");
-                    arguments.Append(debuggeeArguments);
+                    arguments.Append(information.DebuggeeArguments);
                 }
 
-                // Run the debuggee with the createdump environment variables set to generate a coredump on unhandled exception
-                var testLogger = new TestRunner.TestLogger(outputHelper.IndentedOutput);
-                var variables = GenerateVariables(config, debuggeeConfig, Options.GenerateDump);
-                ProcessRunner processRunner = new ProcessRunner(exePath, ReplaceVariables(variables, arguments.ToString())).
-                    WithLog(testLogger).
-                    WithTimeout(TimeSpan.FromMinutes(5)).
-                    WithEnvironmentVariable("COMPlus_DbgEnableMiniDump", "1").
-                    WithEnvironmentVariable("COMPlus_DbgMiniDumpName", ReplaceVariables(variables,"%DUMP_NAME%"));
-
-                // Exit codes on Windows should always be 0, but not on Linux/OSX for the faulting test apps.
-                if (OS.Kind == OSKind.Windows)
+                // Setup a pipe server for the debuggee to connect to sync when to take a dump
+                if (information.UsePipeSync)
                 {
-                    processRunner.WithExpectedExitCode(0);
+                    int runnerId = Process.GetCurrentProcess().Id;
+                    pipeName = $"SOSRunner.{runnerId}.{information.DebuggeeName}";
+                    pipeServer = new NamedPipeServerStream(pipeName);
+                    arguments.Append(" ");
+                    arguments.Append(pipeName);
                 }
 
+                // Create the debuggee process runner
+                ProcessRunner processRunner = new ProcessRunner(exePath, ReplaceVariables(variables, arguments.ToString())).
+                    WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
+                    WithTimeout(TimeSpan.FromMinutes(5));
+
+                if (dumpGeneration == DumpGenerator.CreateDump)
+                {
+                    if (OS.Kind != OSKind.Linux)
+                    {
+                        throw new SkipTestException("Createdump doesn't exists on Windows or macOS");
+                    }
+                    // Run the debuggee with the createdump environment variables set to generate a coredump on unhandled exception
+                    processRunner.
+                        WithEnvironmentVariable("COMPlus_DbgEnableMiniDump", "1").
+                        WithEnvironmentVariable("COMPlus_DbgMiniDumpName", ReplaceVariables(variables, "%DUMP_NAME%"));
+
+                    switch (information.DumpType)
+                    {
+                        case DumpType.Heap:
+                            processRunner.WithEnvironmentVariable("COMPlus_DbgMiniDumpType", "2");
+                            break;
+                        case DumpType.Triage:
+                            processRunner.WithEnvironmentVariable("COMPlus_DbgMiniDumpType", "3");
+                            break;
+                        case DumpType.Full:
+                            processRunner.WithEnvironmentVariable("COMPlus_DbgMiniDumpType", "4");
+                            break;
+                    }
+                }
+
+                // Start the debuggee
                 processRunner.Start();
+
+                if (dumpGeneration == DumpGenerator.DotNetDump)
+                {
+                    ITestOutputHelper dotnetDumpOutputHelper = new IndentedTestOutputHelper(outputHelper, "        ");
+                    try
+                    {
+                        if (string.IsNullOrWhiteSpace(config.HostExe) || string.IsNullOrWhiteSpace(config.DotNetDumpPath()))
+                        {
+                            throw new SkipTestException("dotnet-dump collect needs HostExe and DotNetDumpPath config variables");
+                        }
+
+                        // Wait until the debuggee gets started. It needs time to spin up before generating the core dump.
+                        if (pipeServer != null)
+                        {
+                            dotnetDumpOutputHelper.WriteLine("Waiting for connection on pipe {0}", pipeName);
+                            var source = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                            await pipeServer.WaitForConnectionAsync(source.Token);
+                        }
+
+                        // Start dotnet-dump collect
+                        var dotnetDumpArguments = new StringBuilder();
+                        dotnetDumpArguments.Append(config.DotNetDumpPath());
+                        dotnetDumpArguments.AppendFormat(" collect --process-id {0} --output %DUMP_NAME%", processRunner.ProcessId);
+
+                        ProcessRunner dotnetDumpRunner = new ProcessRunner(config.HostExe, ReplaceVariables(variables, dotnetDumpArguments.ToString())).
+                            WithLog(new TestRunner.TestLogger(dotnetDumpOutputHelper)).
+                            WithTimeout(TimeSpan.FromMinutes(5)).
+                            WithExpectedExitCode(0);
+
+                        dotnetDumpRunner.Start();
+
+                        // Wait until dotnet-dump collect finishes generating the dump
+                        await dotnetDumpRunner.WaitForExit();
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log the exception
+                        dotnetDumpOutputHelper.WriteLine(ex.ToString());
+                    }
+                    finally
+                    {
+                        dotnetDumpOutputHelper.WriteLine("}");
+
+                        // Shutdown the debuggee
+                        processRunner.Kill();
+                    }
+                }
 
                 // Wait for the debuggee to finish
                 await processRunner.WaitForExit();
@@ -180,6 +337,7 @@ public class SOSRunner : IDisposable
             {
                 outputHelper?.WriteLine("}");
                 outputHelper?.Dispose();
+                pipeServer?.Dispose();
             }
         }
     }
@@ -187,40 +345,40 @@ public class SOSRunner : IDisposable
     /// <summary>
     /// Start a debuggee under a native debugger returning a sos runner instance.
     /// </summary>
-    /// <param name="config">test configuration</param>
-    /// <param name="output">output instance</param>
-    /// <param name="testName">name of test</param>
-    /// <param name="debuggeeName">debuggee name</param>
-    /// <param name="debuggeeArguments">optional args to pass to debuggee</param>
-    /// <param name="options">dump options</param>
+    /// <param name="information">test info</param>
+    /// <param name="action">debugger action</param>
     /// <returns>sos runner instance</returns>
-    public static async Task<SOSRunner> StartDebugger(TestConfiguration config, ITestOutputHelper output, string testName, string debuggeeName, 
-        string debuggeeArguments = null, Options options = Options.None)
+    public static async Task<SOSRunner> StartDebugger(TestInformation information, DebuggerAction action)
     {
+        if (!information.IsValid())
+        {
+            throw new ArgumentException("Invalid TestInformation");
+        }
+        TestConfiguration config = information.TestConfiguration;
         TestRunner.OutputHelper outputHelper = null;
         SOSRunner sosRunner = null;
-
-        // Figure out which native debugger to use
-        NativeDebugger debugger = GetNativeDebuggerToUse(config, options);
 
         try
         {
             // Setup the logging from the options in the config file
-            outputHelper = TestRunner.ConfigureLogging(config, output, testName);
+            outputHelper = TestRunner.ConfigureLogging(config, information.OutputHelper, information.TestName);
+
+            // Figure out which native debugger to use
+            NativeDebugger debugger = GetNativeDebuggerToUse(config, action);
 
             // Restore and build the debuggee.
-            DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, debuggeeName, outputHelper);
+            DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, information.DebuggeeName, outputHelper);
 
-            outputHelper.WriteLine("SOSRunner processing {0}", testName);
+            outputHelper.WriteLine("SOSRunner processing {0}", information.TestName);
             outputHelper.WriteLine("{");
 
-            var variables = GenerateVariables(config, debuggeeConfig, options);
-            var scriptLogger = new ScriptLogger(debugger, outputHelper.IndentedOutput);
+            var variables = GenerateVariables(information, debuggeeConfig, action);
+            var scriptLogger = new ScriptLogger(outputHelper.IndentedOutput);
 
-            if (options == Options.LoadDump || options == Options.LoadDumpWithDotNetDump)
+            // Make sure the dump file exists
+            if (action == DebuggerAction.LoadDump || action == DebuggerAction.LoadDumpWithDotNetDump)
             {
-                if (!variables.TryGetValue("%DUMP_NAME%", out string dumpName) || !File.Exists(dumpName))
-                {
+                if (!variables.TryGetValue("%DUMP_NAME%", out string dumpName) || !File.Exists(dumpName)) {
                     throw new FileNotFoundException($"Dump file does not exist: {dumpName ?? ""}");
                 }
             }
@@ -238,10 +396,10 @@ public class SOSRunner : IDisposable
                 }
             }
             debuggeeCommandLine.Append(debuggeeConfig.BinaryExePath);
-            if (!string.IsNullOrWhiteSpace(debuggeeArguments))
+            if (!string.IsNullOrWhiteSpace(information.DebuggeeArguments))
             {
                 debuggeeCommandLine.Append(" ");
-                debuggeeCommandLine.Append(debuggeeArguments);
+                debuggeeCommandLine.Append(information.DebuggeeArguments);
             }
 
             // Get the native debugger path
@@ -265,7 +423,7 @@ public class SOSRunner : IDisposable
                     }
                     arguments.AppendFormat(@"-c "".load {0}""", helperExtension);
 
-                    if (options == Options.LoadDump)
+                    if (action == DebuggerAction.LoadDump)
                     {
                         arguments.Append(" -z %DUMP_NAME%");
                     }
@@ -287,8 +445,10 @@ public class SOSRunner : IDisposable
                         initialCommands.Add(".sympath+ " + runtimeSymbolsPath);
                     }
                     // Turn off warnings that can happen in the middle of a command's output
-                    initialCommands.Add(".outmask- 4");
+                    initialCommands.Add(".outmask- 0x244");
+                    initialCommands.Add("!sym quiet");
                     break;
+
                 case NativeDebugger.Lldb:
                     // Get the lldb python script file path necessary to capture the output of commands
                     // by printing a prompt after all the command output is printed.
@@ -300,7 +460,7 @@ public class SOSRunner : IDisposable
                     arguments.AppendFormat(@"--no-lldbinit -o ""settings set interpreter.prompt-on-quit false"" -o ""command script import {0}"" -o ""version""", lldbHelperScript);
 
                     // Load the dump or launch the debuggee process
-                    if (options == Options.LoadDump)
+                    if (action == DebuggerAction.LoadDump)
                     {
                         initialCommands.Add($@"target create --core ""%DUMP_NAME%"" ""{config.HostExe}""");
                     }
@@ -316,9 +476,9 @@ public class SOSRunner : IDisposable
                             }
                         }
                         sb.AppendFormat(@" ""{0}""", debuggeeConfig.BinaryExePath);
-                        if (!string.IsNullOrWhiteSpace(debuggeeArguments))
+                        if (!string.IsNullOrWhiteSpace(information.DebuggeeArguments))
                         {
-                            string[] args = ReplaceVariables(variables, debuggeeArguments).Trim().Split(' ');
+                            string[] args = ReplaceVariables(variables, information.DebuggeeArguments).Trim().Split(' ');
                             foreach (string arg in args)
                             {
                                 sb.AppendFormat(@" ""{0}""", arg);
@@ -341,12 +501,15 @@ public class SOSRunner : IDisposable
                         initialCommands.Add("process handle -s true -n true -p true SIGABRT");
                     }
                     break;
+
                 case NativeDebugger.Gdb:
-                    if (options == Options.LoadDump || options == Options.LoadDumpWithDotNetDump)
+                    if (action == DebuggerAction.LoadDump || action == DebuggerAction.LoadDumpWithDotNetDump)
                     {
                         throw new ArgumentException("GDB not meant for loading core dumps");
                     }
-                    arguments.AppendFormat("--args {0}", debuggeeCommandLine);
+
+                    arguments.Append(@"--init-eval-command=""set prompt <END_COMMAND_OUTPUT>\n""");
+                    arguments.AppendFormat(" --args {0}", debuggeeCommandLine);
 
                     // .NET Core 1.1 or less don't catch stack overflow and abort so need to catch SIGSEGV 
                     if (config.StackOverflowSIGSEGV)
@@ -365,14 +528,16 @@ public class SOSRunner : IDisposable
                     break;
 
                 case NativeDebugger.DotNetDump:
-                    if (options != Options.LoadDumpWithDotNetDump)
+                    if (action != DebuggerAction.LoadDumpWithDotNetDump)
                     {
-                        throw new ArgumentException($"{options} not supported for dotnet-dump testing");
+                        throw new ArgumentException($"{action} not supported for dotnet-dump testing");
                     }
                     if (string.IsNullOrWhiteSpace(config.HostExe))
                     {
                         throw new ArgumentException("No HostExe in configuration");
                     }
+                    initialCommands.Add("setsymbolserver -directory %DEBUG_ROOT%");
+
                     arguments.Append(debuggerPath);
                     arguments.Append(@" analyze %DUMP_NAME%");
                     debuggerPath = config.HostExe;
@@ -384,14 +549,20 @@ public class SOSRunner : IDisposable
                 WithLog(scriptLogger).
                 WithTimeout(TimeSpan.FromMinutes(10));
 
-            // Exit codes on Windows should always be 0, but not on Linux/OSX for the faulting test apps.
+            // Exit codes on Windows should always be 0, but not on Linux/OSX for the faulting debuggees.
             if (OS.Kind == OSKind.Windows)
             {
                 processRunner.WithExpectedExitCode(0);
             }
 
+            DumpType? dumpType = null;
+            if (action == DebuggerAction.LoadDump || action == DebuggerAction.LoadDumpWithDotNetDump)
+            {
+                dumpType = information.DumpType;
+            }
+
             // Create the sos runner instance
-            sosRunner = new SOSRunner(debugger, config, outputHelper, variables, scriptLogger, processRunner, options == Options.LoadDump || options == Options.LoadDumpWithDotNetDump);
+            sosRunner = new SOSRunner(debugger, config, outputHelper, variables, scriptLogger, processRunner, dumpType);
 
             // Start the native debugger
             processRunner.Start();
@@ -500,7 +671,12 @@ public class SOSRunner : IDisposable
                     else if (line.StartsWith("VERIFY:"))
                     {
                         string verifyLine = line.Substring("VERIFY:".Length);
-                        VerifyOutput(verifyLine);
+                        VerifyOutput(verifyLine, match: true);
+                    }
+                    else if (line.StartsWith("!VERIFY:"))
+                    {
+                        string verifyLine = line.Substring("!VERIFY:".Length);
+                        VerifyOutput(verifyLine, match: false);
                     }
                     else
                     {
@@ -542,12 +718,23 @@ public class SOSRunner : IDisposable
         switch (Debugger)
         {
             case NativeDebugger.Cdb:
+                commands.Add($".unload sos.dll");
                 commands.Add($".load {sosPath}");
                 commands.Add(".lines");
                 commands.Add(".reload");
                 if (sosHostRuntime != null)
                 {
                     commands.Add($"!SetHostRuntime {sosHostRuntime}");
+                }
+                // Because Windows triage dumps don't have the target coreclr.dll module path the 
+                // fallback of using this target runtime for hosting SOS's managed doesn't work.
+                if (_dumpType.HasValue && _dumpType.Value == DumpType.Triage)
+                {
+                    string hostRuntimeDir = _config.HostRuntimeDir();
+                    if (hostRuntimeDir != null)
+                    {
+                        commands.Add($"!SetHostRuntime {hostRuntimeDir}");
+                    }
                 }
                 break;
             case NativeDebugger.Lldb:
@@ -571,7 +758,8 @@ public class SOSRunner : IDisposable
         // Helper function to switch to the thread with an exception
         void SwitchToExceptionThread()
         {
-            if (_isDump)
+            // If dump session
+            if (_dumpType.HasValue)
             {
                 // lldb/dotnet-dump don't load dump with the initial thread set to one
                 // with the exception. This SOS command looks for a thread with a managed
@@ -583,30 +771,34 @@ public class SOSRunner : IDisposable
 
     public async Task ContinueExecution()
     {
-        string command = null;
-        bool addPrefix = true;
-        switch (Debugger)
+        // If live session
+        if (!_dumpType.HasValue)
         {
-            case NativeDebugger.Cdb:
-                command = "g";
-                // Don't add the !runcommand prefix because it gets printed when cdb stops
-                // again because the helper extension used .pcmd to set a stop command.
-                addPrefix = false;
-                break;
-            case NativeDebugger.Lldb:
-                command = "process continue";
-                break;
-            case NativeDebugger.Gdb:
-                command = "continue";
-                break;
-            case NativeDebugger.DotNetDump:
-                break;
-        }
-        if (command != null)
-        {
-            if (!await RunCommand(command, addPrefix))
+            string command = null;
+            bool addPrefix = true;
+            switch (Debugger)
             {
-                throw new Exception($"'{command}' FAILED");
+                case NativeDebugger.Cdb:
+                    command = "g";
+                    // Don't add the !runcommand prefix because it gets printed when cdb stops
+                    // again because the helper extension used .pcmd to set a stop command.
+                    addPrefix = false;
+                    break;
+                case NativeDebugger.Lldb:
+                    command = "process continue";
+                    break;
+                case NativeDebugger.Gdb:
+                    command = "continue";
+                    break;
+                case NativeDebugger.DotNetDump:
+                    break;
+            }
+            if (command != null)
+            {
+                if (!await RunCommand(command, addPrefix))
+                {
+                    throw new Exception($"'{command}' FAILED");
+                }
             }
         }
     }
@@ -683,7 +875,7 @@ public class SOSRunner : IDisposable
         await _processRunner.WaitForExit();
     }
 
-    public void VerifyOutput(string verifyLine)
+    public void VerifyOutput(string verifyLine, bool match)
     {
         string regex = ReplaceVariables(verifyLine.TrimStart());
 
@@ -691,18 +883,19 @@ public class SOSRunner : IDisposable
         {
             throw new Exception("VerifyOutput: no last command output or debugger exited unexpectedly: " + regex);
         }
-        if (!new Regex(regex, RegexOptions.Multiline).IsMatch(_lastCommandOutput))
+
+        if (new Regex(regex, RegexOptions.Multiline).IsMatch(_lastCommandOutput) != match)
         {
             throw new Exception("Debugger output did not match the expression: " + regex);
         }
     }
 
-    public static string GenerateDumpFileName(TestConfiguration config, string debuggeeName, Options options)
+    public static string GenerateDumpFileName(TestInformation information, string debuggeeName, DebuggerAction action)
     {
-        string dumpRoot = options == Options.GenerateDump ? config.DebuggeeDumpOutputRootDir() : config.DebuggeeDumpInputRootDir();
-        if (dumpRoot != null)
-        {
-            return Path.Combine(dumpRoot, Path.GetFileNameWithoutExtension(debuggeeName) + ".dmp");
+        TestConfiguration config = information.TestConfiguration;
+        string dumpRoot = action == DebuggerAction.GenerateDump ? config.DebuggeeDumpOutputRootDir() : config.DebuggeeDumpInputRootDir();
+        if (!string.IsNullOrEmpty(dumpRoot)) {
+            return Path.Combine(dumpRoot, Path.GetFileNameWithoutExtension(debuggeeName) + "." + information.DumpType.ToString() + ".dmp");
         }
         return null;
     }
@@ -723,8 +916,6 @@ public class SOSRunner : IDisposable
         {
             _processRunner.Kill();
         }
-        _processRunner.WaitForExit().GetAwaiter().GetResult();
-
         _outputHelper.WriteLine("}");
         _outputHelper.Dispose();
     }
@@ -745,13 +936,13 @@ public class SOSRunner : IDisposable
         return false;
     }
 
-    private static NativeDebugger GetNativeDebuggerToUse(TestConfiguration config, Options options)
+    private static NativeDebugger GetNativeDebuggerToUse(TestConfiguration config, DebuggerAction action)
     {
         switch (OS.Kind)
         {
             case OSKind.Windows:
-                switch (options) {
-                    case Options.LoadDumpWithDotNetDump:
+                switch (action) {
+                    case DebuggerAction.LoadDumpWithDotNetDump:
                         return NativeDebugger.DotNetDump;
                     default:
                         return NativeDebugger.Cdb;
@@ -759,17 +950,17 @@ public class SOSRunner : IDisposable
 
             case OSKind.Linux:
             case OSKind.OSX:
-                switch (options) {
-                    case Options.GenerateDump: 
+                switch (action) {
+                    case DebuggerAction.GenerateDump: 
                         return config.GenerateDumpWithLLDB() ? NativeDebugger.Lldb : NativeDebugger.Gdb;
-                    case Options.LoadDumpWithDotNetDump:
+                    case DebuggerAction.LoadDumpWithDotNetDump:
                         return NativeDebugger.DotNetDump;
                     default:
                         return NativeDebugger.Lldb;
                 }
 
             default:
-                throw new Exception(OS.Kind.ToString() + " not supported");
+                throw new PlatformNotSupportedException(OS.Kind.ToString() + " not supported");
         }
     }
 
@@ -852,7 +1043,7 @@ public class SOSRunner : IDisposable
         string command = ReplaceVariables(input);
         if (addPrefix)
         {
-            command = _scriptLogger.ProcessCommand(command);
+            command = ProcessCommand(command);
         }
         _processRunner.StandardInputWriteLine(command);
 
@@ -860,6 +1051,21 @@ public class SOSRunner : IDisposable
         _lastCommandOutput = result.CommandOutput;
 
         return result.CommandSucceeded;
+    }
+
+    private string ProcessCommand(string command)
+    {
+        switch (Debugger)
+        {
+            case NativeDebugger.Cdb:
+                command = string.Format("!runcommand {0}", command);
+                break;
+
+            case NativeDebugger.Lldb:
+                command = string.Format("runcommand {0}", command);
+                break;
+        }
+        return command;
     }
 
     private void LogProcessingReproInfo(string scriptFile, HashSet<string> enabledDefines)
@@ -882,7 +1088,7 @@ public class SOSRunner : IDisposable
             DebuggerToString,
             OS.Kind.ToString().ToUpperInvariant(),
             _config.TestProduct.ToUpperInvariant(),
-            _config.TargetArchitecture.ToUpperInvariant(),
+            _config.TargetArchitecture.ToUpperInvariant()
         };
         try
         {
@@ -891,8 +1097,20 @@ public class SOSRunner : IDisposable
         catch (SkipTestException)
         {
         }
-        if (_isDump)
+        if (_dumpType.HasValue)
         {
+            switch (_dumpType.Value)
+            {
+                case DumpType.Triage:
+                    defines.Add("TRIAGE_DUMP");
+                    break;
+                case DumpType.Heap:
+                    defines.Add("HEAP_DUMP");
+                    break;
+                case DumpType.Full:
+                    defines.Add("FULL_DUMP");
+                    break;
+            }
             defines.Add("DUMP");
         }
         else
@@ -931,11 +1149,11 @@ public class SOSRunner : IDisposable
         return true;
     }
 
-    private static Dictionary<string, string> GenerateVariables(TestConfiguration config, DebuggeeConfiguration debuggeeConfig, Options options)
+    private static Dictionary<string, string> GenerateVariables(TestInformation information, DebuggeeConfiguration debuggeeConfig, DebuggerAction action)
     {
         var vars = new Dictionary<string, string>();
         string debuggeeExe = debuggeeConfig.BinaryExePath;
-        string dumpFileName = GenerateDumpFileName(config, Path.GetFileNameWithoutExtension(debuggeeExe), options);
+        string dumpFileName = GenerateDumpFileName(information, debuggeeExe, action);
 
         vars.Add("%DEBUGGEE_EXE%", debuggeeExe);
         if (dumpFileName != null)
@@ -943,7 +1161,7 @@ public class SOSRunner : IDisposable
             vars.Add("%DUMP_NAME%", dumpFileName);
         }
         vars.Add("%DEBUG_ROOT%", debuggeeConfig.BinaryDirPath);
-        vars.Add("%SOS_PATH%", config.SOSPath());
+        vars.Add("%SOS_PATH%", information.TestConfiguration.SOSPath());
 
         // Can be used in an RegEx expression
         vars.Add("<DEBUGGEE_EXE>", debuggeeExe.Replace(@"\", @"\\"));
@@ -986,19 +1204,19 @@ public class SOSRunner : IDisposable
             }
         }
 
-        readonly NativeDebugger _debugger;
         readonly List<Task<CommandResult>> _taskQueue;
+        readonly StringBuilder _lineBuffer;
         readonly StringBuilder _lastCommandOutput;
         TaskCompletionSource<CommandResult> _taskSource;
 
         public bool HasProcessExited { get; private set; }
 
-        public ScriptLogger(NativeDebugger debugger, ITestOutputHelper output)
+        public ScriptLogger(ITestOutputHelper output)
             : base(output)
         {
             lock (this)
             {
-                _debugger = debugger;
+                _lineBuffer = new StringBuilder();
                 _lastCommandOutput = new StringBuilder();
                 _taskQueue = new List<Task<CommandResult>>();
                 AddTask();
@@ -1032,21 +1250,6 @@ public class SOSRunner : IDisposable
             return currentTask;
         }
 
-        public string ProcessCommand(string command)
-        {
-            switch (_debugger)
-            {
-                case NativeDebugger.Cdb:
-                    command = string.Format("!runcommand {0}", command);
-                    break;
-
-                case NativeDebugger.Lldb:
-                    command = string.Format("runcommand {0}", command);
-                    break;
-            }
-            return command;
-        }
-
         public override void Write(ProcessRunner runner, string data, ProcessStream stream)
         {
             lock (this)
@@ -1054,37 +1257,13 @@ public class SOSRunner : IDisposable
                 base.Write(runner, data, stream);
                 if (stream == ProcessStream.StandardOut)
                 {
-                    _lastCommandOutput.Append(data);
-
-                    string lastCommandOutput = _lastCommandOutput.ToString();
-                    bool commandError = false;
-                    bool commandEnd = false;
-
-                    switch (_debugger)
-                    {
-                        case NativeDebugger.Cdb:
-                        case NativeDebugger.Lldb:
-                        case NativeDebugger.DotNetDump:
-                            commandError = lastCommandOutput.EndsWith("<END_COMMAND_ERROR>");
-                            commandEnd = commandError || lastCommandOutput.EndsWith("<END_COMMAND_OUTPUT>");
-                            break;
-                        case NativeDebugger.Gdb:
-                            commandEnd = lastCommandOutput.EndsWith("(gdb) ");
-                            break;
-                        default:
-                            throw new Exception("Debugger prompt not supported");
-                    }
-
-                    if (commandEnd)
-                    {
-                        FlushOutput();
-                        _taskSource.TrySetResult(new CommandResult(lastCommandOutput, !commandError));
-                        _lastCommandOutput.Clear();
-                        AddTask();
-                    }
+                    _lineBuffer.Append(data);
                 }
             }
         }
+
+        static readonly string s_endCommandOutput = "<END_COMMAND_OUTPUT>";
+        static readonly string s_endCommandError = "<END_COMMAND_ERROR>";
 
         public override void WriteLine(ProcessRunner runner, string data, ProcessStream stream)
         {
@@ -1093,7 +1272,25 @@ public class SOSRunner : IDisposable
                 base.WriteLine(runner, data, stream);
                 if (stream == ProcessStream.StandardOut)
                 {
-                    _lastCommandOutput.AppendLine(data);
+                    _lineBuffer.Append(data);
+                    string lineBuffer = _lineBuffer.ToString();
+                    _lineBuffer.Clear();
+
+                    bool commandError = lineBuffer.EndsWith(s_endCommandError);
+                    bool commandEnd = commandError || lineBuffer.EndsWith(s_endCommandOutput);
+                    if (commandEnd)
+                    {
+                        FlushOutput();
+                        _lastCommandOutput.AppendLine();
+                        string lastCommandOutput = _lastCommandOutput.ToString();
+                        _lastCommandOutput.Clear();
+                        _taskSource.TrySetResult(new CommandResult(lastCommandOutput, !commandError));
+                        AddTask();
+                    }
+                    else
+                    {
+                        _lastCommandOutput.AppendLine(lineBuffer);
+                    }
                 }
             }
         }
@@ -1162,6 +1359,11 @@ public static class TestConfigurationExtensions
     public static string SOSHostRuntime(this TestConfiguration config)
     {
         return TestConfiguration.MakeCanonicalPath(config.GetValue("SOSHostRuntime"));
+    }
+
+    public static string HostRuntimeDir(this TestConfiguration config)
+    {
+        return TestConfiguration.MakeCanonicalPath(config.GetValue("HostRuntimeDir"));
     }
 
     public static bool GenerateDumpWithLLDB(this TestConfiguration config)

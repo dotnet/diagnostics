@@ -122,9 +122,12 @@ namespace Microsoft.Diagnostics.Tools.Dump
             };
             _serviceProvider.AddService(analyzeContext);
 
-            // Add the register, SOSHost and ClrRuntime services
+            // Add the register, memory, SOSHost and ClrRuntime services
             var registerService = new RegisterService(target);
             _serviceProvider.AddService(registerService);
+
+            var memoryService = new MemoryService(target.DataReader);
+            _serviceProvider.AddService(memoryService);
 
             _serviceProvider.AddServiceFactory(typeof(ClrRuntime), () => CreateRuntime(target));
 

@@ -81,6 +81,12 @@ namespace Microsoft.Diagnostics.Repl
             m_interactiveConsole = !Console.IsInputRedirected;
             RefreshLine();
 
+            // The special prompts for the test runner are built into this
+            // console provider when the output has been redirected.
+            if (!m_interactiveConsole) {
+                WriteLine(OutputType.Normal, "<END_COMMAND_OUTPUT>");
+            }
+
             // Start keyboard processing
             while (!m_shutdown) {
                 if (m_interactiveConsole)
@@ -91,12 +97,20 @@ namespace Microsoft.Diagnostics.Repl
                 else
                 {
                     // The input has been redirected (i.e. testing or in script)
-                    WriteLine(OutputType.Normal, "<END_COMMAND_OUTPUT>");
                     string line = Console.ReadLine();
                     if (string.IsNullOrEmpty(line)) {
                         continue;
                     }
-                    await Dispatch(line, dispatchCommand);
+                    bool result = await Dispatch(line, dispatchCommand);
+                    if (!m_shutdown)
+                    {
+                        if (result) {
+                            WriteLine(OutputType.Normal, "<END_COMMAND_OUTPUT>");
+                        }
+                        else {
+                            WriteLine(OutputType.Normal, "<END_COMMAND_ERROR>");
+                        }
+                    }
                 }
             }
         }
@@ -410,8 +424,9 @@ namespace Microsoft.Diagnostics.Repl
             }
         }
 
-        private async Task Dispatch(string newCommand, Func<string, CancellationToken, Task> dispatchCommand)
+        private async Task<bool> Dispatch(string newCommand, Func<string, CancellationToken, Task> dispatchCommand)
         {
+            bool result = true;
             CommandStarting();
             m_interruptExecutingCommand = new CancellationTokenSource();
             try
@@ -435,6 +450,7 @@ namespace Microsoft.Diagnostics.Repl
                 {
                     WriteLine(OutputType.Error, "ERROR: {0}", ex.Message);
                     m_lastCommandLine = null;
+                    result = false;
                 }
             }
             finally
@@ -442,6 +458,7 @@ namespace Microsoft.Diagnostics.Repl
                 m_interruptExecutingCommand = null;
                 CommandFinished();
             }
+            return result;
         }
 
         private void AppendNewText(string text)

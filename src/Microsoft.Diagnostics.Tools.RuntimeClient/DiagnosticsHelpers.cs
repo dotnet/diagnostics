@@ -50,7 +50,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             {
                 case DiagnosticsServerCommandId.Error:
                 case DiagnosticsServerCommandId.OK:
-                    hr = BitConverter.ToInt32(response.Payload);
+                    hr = BitConverter.ToInt32(response.Payload, 0);
                     break;
                 default:
                     return -1;
@@ -95,7 +95,7 @@ namespace Microsoft.Diagnostics.Tools.RuntimeClient
             {
                 case DiagnosticsServerCommandId.Error:
                 case DiagnosticsServerCommandId.OK:
-                    hr = BitConverter.ToInt32(response.Payload);
+                    hr = BitConverter.ToInt32(response.Payload, 0);
                     break;
                 default:
                     hr = -1;

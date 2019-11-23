@@ -11,7 +11,7 @@ The first step is to install the dotnet-dump CLI global tool. This requires at l
 
     $ dotnet tool install -g dotnet-dump
     You can invoke the tool using the following command: dotnet-dump
-    Tool 'dotnet-dump' (version '3.0.0.47001') was successfully installed.
+    Tool 'dotnet-dump' (version '3.0.47001') was successfully installed.
 
 If this is the first global tool installed or you get message `Could not execute because the specified command or file was not found.` you need to add `$HOME/.dotnet/tools` to your path.
 
@@ -118,4 +118,4 @@ This command on Microsoft .NET Core SDK Linux docker images can throw `Unhandled
 ## Uninstalling dotnet-dump 
 
     $ dotnet tool uninstall -g dotnet-dump
-    Tool 'dotnet-dump' (version '3.0.0.47001') was successfully uninstalled.
+    Tool 'dotnet-dump' (version '3.0.47001') was successfully uninstalled.

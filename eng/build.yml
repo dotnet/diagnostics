@@ -56,7 +56,7 @@ jobs:
 
       # Official Build OSX Pool
       ${{ if and(eq(parameters.osGroup, 'MacOS'), eq(variables['System.TeamProject'], 'public')) }}:
-        name: Hosted MacOS
+        vmImage: macOS-10.13
 
       # Official Build Windows Pool
       ${{ if and(eq(parameters.osGroup, 'Windows_NT'), ne(variables['System.TeamProject'], 'public')) }}:
@@ -84,6 +84,7 @@ jobs:
     - _PhaseName : ${{ parameters.name }}
     - _HelixType: build/product
     - _HelixBuildConfig: $(_BuildConfig)
+    - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/$(_BuildConfig)/streams
 
     # Only enable publishing in non-public, non PR scenarios.
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
@@ -176,6 +177,15 @@ jobs:
       continueOnError: true
       condition: failed()
 
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Stream Artifacts on failure
+      inputs:
+        PathtoPublish: $(_Pipeline_StreamDumpDir)
+        PublishLocation: Container
+        ArtifactName: Streams_$(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
+      continueOnError: true
+      condition: failed()
+
     - task: CopyFiles@2
       displayName: Gather Logs
       inputs:
@@ -191,5 +201,19 @@ jobs:
         PathtoPublish: '$(Build.StagingDirectory)/BuildLogs'
         PublishLocation: Container
         ArtifactName: Logs_$(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
+      continueOnError: true
+      condition: always()
+    
+    # Publish test results to Azure Pipelines
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFormat: xUnit
+        testResultsFiles: '**/*UnitTests*.xml' 
+        searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults'
+        failTaskOnFailedTests: true
+        testRunTitle: 'Tests $(_PhaseName) $(_BuildArch) $(_BuildConfig)'
+        publishRunAttachments: true
+        mergeTestResults: true
+        buildConfiguration: ${{ parameters.name }}
       continueOnError: true
       condition: always()

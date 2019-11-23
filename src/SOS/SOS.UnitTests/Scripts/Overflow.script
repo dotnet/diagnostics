@@ -1,15 +1,13 @@
 # Overflow debugging scenario
-# 1) load the executable
+# 1) Load the executable
 # 2) Run the executable and wait for it to crash
 # 3) Take a dump of the executable.
 # 4) Open the dump and compare the output
 # We do not expect that there is a managed exception since overflow is a special exception.
 
-LOADSOS
-
-IFDEF:LIVE
 CONTINUE
-ENDIF:LIVE
+
+LOADSOS
 
 # 5) Verifying that PrintException gives us the right exception in the format above.
 SOSCOMMAND:PrintException

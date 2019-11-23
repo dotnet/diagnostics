@@ -85,6 +85,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
+#include <stdexcept>
+#include <deque>
 
 #include "strike.h"
 #include "sos.h"
@@ -153,6 +155,9 @@ const UINT kcMaxMethodDescsForProfiler = 100;
 #include <set>
 #include <vector>
 #include <map>
+#include <tuple>
+#include <memory>
+#include <functional>
 
 BOOL CallStatus;
 BOOL ControlC = FALSE;
@@ -410,16 +415,17 @@ void DumpStackInternal(DumpStackFlag *pDSFlag)
     if (pDSFlag->end == 0) {
         // Find the current stack range
         NT_TIB teb;
-        ULONG64 dwTebAddr=0;
-
-        g_ExtSystem->GetCurrentThreadTeb(&dwTebAddr);
-        if (SafeReadMemory(TO_TADDR(dwTebAddr), &teb, sizeof(NT_TIB), NULL))
+        ULONG64 dwTebAddr = 0;
+        if (SUCCEEDED(g_ExtSystem->GetCurrentThreadTeb(&dwTebAddr)))
         {
-            if (pDSFlag->top > TO_TADDR(teb.StackLimit)
-            && pDSFlag->top <= TO_TADDR(teb.StackBase))
+            if (SafeReadMemory(TO_TADDR(dwTebAddr), &teb, sizeof(NT_TIB), NULL))
             {
-                if (pDSFlag->end == 0 || pDSFlag->end > TO_TADDR(teb.StackBase))
-                    pDSFlag->end = TO_TADDR(teb.StackBase);
+                if (pDSFlag->top > TO_TADDR(teb.StackLimit)
+                    && pDSFlag->top <= TO_TADDR(teb.StackBase))
+                {
+                    if (pDSFlag->end == 0 || pDSFlag->end > TO_TADDR(teb.StackBase))
+                        pDSFlag->end = TO_TADDR(teb.StackBase);
+                }
             }
         }
     }
@@ -835,6 +841,15 @@ BOOL GatherDynamicInfo(TADDR DynamicMethodObj, DacpObjectData *codeArray,
     return bRet;
 }
 
+typedef std::tuple<TADDR, IMetaDataImport* > GetILAddressResult;
+GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData);
+
+/**********************************************************************\
+* Routine Description:                                                 *
+*                                                                      *
+*    Displays the Microsoft intermediate language (MSIL) that is       *
+*    associated with a managed method.                                 *
+\**********************************************************************/
 DECLARE_API(DumpIL)
 {
     INIT_API();
@@ -904,64 +919,15 @@ DECLARE_API(DumpIL)
         }
         else
         {
-            TADDR ilAddr = NULL;
-            struct DacpProfilerILData ilData;
-            ReleaseHolder<ISOSDacInterface7> sos7;
-            if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface7), &sos7)) && 
-                SUCCEEDED(sos7->GetProfilerModifiedILInformation(MethodDescData.MethodDescPtr, &ilData)))
+            GetILAddressResult result = GetILAddress(MethodDescData);
+            if (std::get<0>(result) == NULL)
             {
-                if (ilData.type == DacpProfilerILData::ILModified)
-                {
-                    ExtOut("Found profiler modified IL\n");
-                    ilAddr = TO_TADDR(ilData.il);
-                }
-            }
-
-            // Factor this so that it returns a map from IL offset to the textual representation of the decoding
-            // to be consumed by !u -il
-            // The disassemble function can give a MethodDescData as well as the set of keys IL offsets
-
-            // This is not a dynamic method, print the IL for it.
-            // Get the module
-            DacpModuleData dmd;    
-            if (dmd.Request(g_sos, MethodDescData.ModulePtr) != S_OK)
-            {
-                ExtOut("Unable to get module\n");
-                return Status;
-            }
-
-            ToRelease<IMetaDataImport> pImport = MDImportForModule(&dmd);
-            if (pImport == NULL)
-            {
-                ExtOut("bad import\n");
-                return Status;
-            }
-
-            if (ilAddr == NULL)
-            { 
-                ULONG pRva;
-                DWORD dwFlags;
-                if (pImport->GetRVA(MethodDescData.MDToken, &pRva, &dwFlags) != S_OK)
-                {
-                    ExtOut("error in import\n");
-                    return Status;
-                }    
-
-                CLRDATA_ADDRESS ilAddrClr;
-                if (g_sos->GetILForModule(MethodDescData.ModulePtr, pRva, &ilAddrClr) != S_OK)
-                {
-                    ExtOut("FindIL failed\n");
-                    return Status;
-                }
-
-                ilAddr = TO_TADDR(ilAddrClr);
-            }
-
-            if (ilAddr == NULL)
-            {
-                ExtOut("Unkown error in reading function IL\n");
+                ExtOut("ilAddr is %p\n", SOS_PTR(std::get<0>(result)));
                 return E_FAIL;
             }
+            ExtOut("ilAddr is %p pImport is %p\n", SOS_PTR(std::get<0>(result)), SOS_PTR(std::get<1>(result)));
+            TADDR ilAddr = std::get<0>(result);
+            ToRelease<IMetaDataImport> pImport(std::get<1>(result));
             IfFailRet(DecodeILFromAddress(pImport, ilAddr));
         }
     }
@@ -2289,6 +2255,8 @@ struct StackTraceElement
 };
 
 #include "sos_stacktrace.h"
+
+#include "sildasm.h"
 
 class StringOutput
 {
@@ -4454,14 +4422,14 @@ void ExtOutTaskStateFlagsDescription(int stateFlags)
 
 void ExtOutStateMachineFields(AsyncRecord& ar)
 {
-	DacpMethodTableData mtabledata;
-	DacpMethodTableFieldData vMethodTableFields;
-	if (mtabledata.Request(g_sos, ar.StateMachineMT) == S_OK &&
-		vMethodTableFields.Request(g_sos, ar.StateMachineMT) == S_OK &&
-		vMethodTableFields.wNumInstanceFields + vMethodTableFields.wNumStaticFields > 0)
-	{
-		DisplayFields(ar.StateMachineMT, &mtabledata, &vMethodTableFields, (DWORD_PTR)ar.StateMachineAddr, TRUE, ar.IsValueType);
-	}
+    DacpMethodTableData mtabledata;
+    DacpMethodTableFieldData vMethodTableFields;
+    if (mtabledata.Request(g_sos, ar.StateMachineMT) == S_OK &&
+        vMethodTableFields.Request(g_sos, ar.StateMachineMT) == S_OK &&
+        vMethodTableFields.wNumInstanceFields + vMethodTableFields.wNumStaticFields > 0)
+    {
+        DisplayFields(ar.StateMachineMT, &mtabledata, &vMethodTableFields, (DWORD_PTR)ar.StateMachineAddr, TRUE, ar.IsValueType);
+    }
 }
 
 void FindStateMachineTypes(DWORD_PTR* corelibModule, mdTypeDef* stateMachineBox, mdTypeDef* debugStateMachineBox, mdTypeDef* task)
@@ -4828,8 +4796,8 @@ DECLARE_API(DumpAsync)
                             sos::MethodTable contMT = TO_TADDR(contAsyncRecord->second.StateMachineMT);
                             if (contAsyncRecord->second.IsStateMachine) ExtOut("(%d) ", contAsyncRecord->second.StateValue);
                             ExtOut("%S\n", contMT.GetName());
-							if (contAsyncRecord->second.IsStateMachine && dumpFields) ExtOutStateMachineFields(contAsyncRecord->second);
-						}
+                            if (contAsyncRecord->second.IsStateMachine && dumpFields) ExtOutStateMachineFields(contAsyncRecord->second);
+                        }
                         else
                         {
                             ExtOut("%S\n", cont.GetTypeName());
@@ -7502,7 +7470,7 @@ private:
         // This function only works with pending breakpoints that are not module bound.
         if (pCur->pModule == NULL)
         {
-            if(pCur->szModuleName[0] != L'\0')
+            if (pCur->szModuleName[0] != L'\0')
             {
                 return ResolvePendingNonModuleBoundBreakpoint(pCur->szModuleName, pCur->szFunctionName, mod, pCur->ilOffset);
             }
@@ -7548,6 +7516,11 @@ private:
 };
 
 Breakpoints g_bpoints;
+
+// If true, call the HandleRuntimeLoadedNotification function to enable the assembly load and JIT exceptions
+#ifndef FEATURE_PAL
+bool g_breakOnRuntimeModuleLoad = false;
+#endif
 
 // Controls whether optimizations are disabled on module load and whether NGEN can be used
 BOOL g_fAllowJitOptimization = TRUE;
@@ -7674,20 +7647,20 @@ public:
             g_bpoints.Update(TO_TADDR(dgma.ModulePtr), TRUE);
         }
 
-        if(!g_fAllowJitOptimization)
+        if (!g_fAllowJitOptimization)
         {
             HRESULT hr;
             ToRelease<IXCLRDataModule2> mod2;
-            if(FAILED(mod->QueryInterface(__uuidof(IXCLRDataModule2), (void**) &mod2)))
+            if (FAILED(mod->QueryInterface(__uuidof(IXCLRDataModule2), (void**) &mod2)))
             {
                 ExtOut("SOS: warning, optimizations for this module could not be suppressed because this CLR version doesn't support the functionality\n");
             }
             else if(FAILED(hr = mod2->SetJITCompilerFlags(CORDEBUG_JIT_DISABLE_OPTIMIZATION)))
             {
                 if(hr == CORDBG_E_CANT_CHANGE_JIT_SETTING_FOR_ZAP_MODULE)
-                    ExtOut("SOS: warning, optimizations for this module could not be surpressed because an optimized prejitted image was loaded\n");
+                    ExtOut("SOS: warning, optimizations for this module could not be suppressed because an optimized prejitted image was loaded\n");
                 else
-                    ExtOut("SOS: warning, optimizations for this module could not be surpressed hr=0x%x\n", hr);
+                    ExtOut("SOS: warning, optimizations for this module could not be suppressed hr=0x%x\n", hr);
             }
         }
         
@@ -7896,14 +7869,30 @@ HRESULT HandleCLRNotificationEvent()
     return S_OK;
 }
 
+void EnableModuleLoadUnloadCallbacks()
+{
+    _ASSERTE(g_clrData != nullptr);
+
+    ULONG32 flags = 0;
+    g_clrData->GetOtherNotificationFlags(&flags);
+    flags |= (CLRDATA_NOTIFY_ON_MODULE_LOAD | CLRDATA_NOTIFY_ON_MODULE_UNLOAD);
+    g_clrData->SetOtherNotificationFlags(flags);
+}
+
 #ifndef FEATURE_PAL
 
 DECLARE_API(HandleCLRN)
 {
     INIT_API();    
     MINIDUMP_NOT_SUPPORTED();    
-
     return HandleCLRNotificationEvent();
+}
+
+HRESULT HandleRuntimeLoadedNotification(IDebugClient* client)
+{
+    INIT_API();
+    EnableModuleLoadUnloadCallbacks();
+    return g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!HandleCLRN\" clrn", 0);
 }
 
 #else // FEATURE_PAL
@@ -7912,6 +7901,13 @@ HRESULT HandleExceptionNotification(ILLDBServices *client)
 {
     INIT_API();
     return HandleCLRNotificationEvent();
+}
+
+HRESULT HandleRuntimeLoadedNotification(ILLDBServices *client)
+{
+    INIT_API();
+    EnableModuleLoadUnloadCallbacks();
+    return g_ExtServices->SetExceptionCallback(HandleExceptionNotification);
 }
 
 #endif // FEATURE_PAL
@@ -8005,11 +8001,6 @@ DECLARE_API(bpmd)
         // did we get dll and type name or file:line#? Search for a colon in the first arg
         // to see if it is in fact a file:line#
         CHAR* pColon = strchr(DllName.data, ':');
-        if (FAILED(GetRuntimeModuleInfo(NULL, NULL))) {
-           ExtOut("%s not loaded yet\n", MAIN_CLR_DLL_NAME_A);
-           return Status;
-        }
-
         if(NULL != pColon)
         {
             fIsFilename = true;
@@ -8116,8 +8107,10 @@ DECLARE_API(bpmd)
         // If LoadClrDebugDll() succeeded make sure we release g_clrData
         ToRelease<IXCLRDataProcess> spIDP(g_clrData);
         ToRelease<ISOSDacInterface> spISD(g_sos);
-        ResetGlobals();
-        
+        if (g_sos != nullptr)
+        {
+            ResetGlobals();
+        }
         // we can get here with EE not loaded => 0 modules
         //                      EE is loaded => 0 or more modules
         ArrayHolder<DWORD_PTR> pMDs = NULL;
@@ -8206,12 +8199,19 @@ DECLARE_API(bpmd)
             {
                 g_bpoints.Add(Filename, lineNumber, NULL);
             }
-            bNeedNotificationExceptions = TRUE;
-
-            ULONG32 flags = 0;
-            g_clrData->GetOtherNotificationFlags(&flags);
-            flags |= (CLRDATA_NOTIFY_ON_MODULE_LOAD | CLRDATA_NOTIFY_ON_MODULE_UNLOAD);
-            g_clrData->SetOtherNotificationFlags(flags);
+            if (g_clrData != nullptr)
+            {
+                bNeedNotificationExceptions = TRUE;
+                EnableModuleLoadUnloadCallbacks();
+            }
+            else 
+            {
+#ifdef FEATURE_PAL
+                Status = g_ExtServices2->SetRuntimeLoadedCallback(HandleRuntimeLoadedNotification);
+#else
+                g_breakOnRuntimeModuleLoad = true;
+#endif
+            }
         }
     }
     else /* We were given a MethodDesc already */
@@ -8283,8 +8283,7 @@ DECLARE_API(bpmd)
     {
         ExtOut("Adding pending breakpoints...\n");
 #ifndef FEATURE_PAL
-        sprintf_s(buffer, _countof(buffer), "sxe -c \"!HandleCLRN\" clrn");
-        Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);        
+        Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!HandleCLRN\" clrn", 0);
 #else
         Status = g_ExtServices->SetExceptionCallback(HandleExceptionNotification);
 #endif // FEATURE_PAL
@@ -9179,6 +9178,80 @@ GetClrMethodInstance(
     ___in ULONG64 NativeOffset,
     ___out IXCLRDataMethodInstance** Method);
 
+typedef std::tuple<DacpMethodDescData, DacpCodeHeaderData, HRESULT> ExtractionCodeHeaderResult;
+
+ExtractionCodeHeaderResult extractCodeHeaderData(DWORD_PTR methodDesc, DWORD_PTR dwStartAddr);
+HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData);
+HRESULT GetIntermediateLangMap(BOOL bIL, const DacpCodeHeaderData& codeHeaderData,
+                               std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]>& map,
+                               ULONG32& mapCount,
+                               BOOL dumpMap);
+
+GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData)
+{
+    GetILAddressResult error = std::make_tuple(NULL, nullptr);
+    TADDR ilAddr = NULL;
+    struct DacpProfilerILData ilData;
+    ReleaseHolder<ISOSDacInterface7> sos7;
+    if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface7), &sos7)) &&
+        SUCCEEDED(sos7->GetProfilerModifiedILInformation(MethodDescData.MethodDescPtr, &ilData)))
+    {
+        if (ilData.type == DacpProfilerILData::ILModified)
+        {
+            ExtOut("Found profiler modified IL\n");
+            ilAddr = TO_TADDR(ilData.il);
+        }
+    }
+
+    // Factor this so that it returns a map from IL offset to the textual representation of the decoding
+    // to be consumed by !u -il
+    // The disassemble function can give a MethodDescData as well as the set of keys IL offsets
+
+    // This is not a dynamic method, print the IL for it.
+    // Get the module
+    DacpModuleData dmd;    
+    if (dmd.Request(g_sos, MethodDescData.ModulePtr) != S_OK)
+    {
+        ExtOut("Unable to get module\n");
+        return error;
+    }
+
+    ToRelease<IMetaDataImport> pImport(MDImportForModule(&dmd));
+    if (pImport == NULL)
+    {
+        ExtOut("bad import\n");
+        return error;
+    }
+
+    if (ilAddr == NULL)
+    { 
+        ULONG pRva;
+        DWORD dwFlags;
+        if (pImport->GetRVA(MethodDescData.MDToken, &pRva, &dwFlags) != S_OK)
+        {
+            ExtOut("error in import\n");
+            return error;
+        }    
+
+        CLRDATA_ADDRESS ilAddrClr;
+        if (g_sos->GetILForModule(MethodDescData.ModulePtr, pRva, &ilAddrClr) != S_OK)
+        {
+            ExtOut("FindIL failed\n");
+            return error;
+        }
+
+        ilAddr = TO_TADDR(ilAddrClr);
+    }
+
+    if (ilAddr == NULL)
+    {
+        ExtOut("Unknown error in reading function IL\n");
+        return error;
+    }
+    GetILAddressResult result = std::make_tuple(ilAddr, pImport.Detach());
+    return result;
+}
+
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -9249,102 +9322,149 @@ DECLARE_API(u)
         }
     }
 
-    DacpMethodDescData MethodDescData;
-    Status =
-        g_sos->GetMethodDescData(
-            TO_CDADDR(methodDesc),
-            dwStartAddr == methodDesc ? NULL : dwStartAddr,
-            &MethodDescData,
-            0, // cRevertedRejitVersions
-            NULL, // rgRevertedRejitData
-            NULL); // pcNeededRevertedRejitData
+    ExtractionCodeHeaderResult p = extractCodeHeaderData(methodDesc, dwStartAddr);
+    Status = std::get<2>(p);
     if (Status != S_OK)
     {
-        ExtOut("Failed to get method desc for %p.\n", SOS_PTR(dwStartAddr));
         return Status;
-    }    
-
-    if (!MethodDescData.bHasNativeCode)
-    {
-        ExtOut("Not jitted yet\n");
-        return Status;
-    }
-
-    // Get the appropriate code header. If we were passed an MD, then use
-    // MethodDescData.NativeCodeAddr to find the code header; if we were passed an IP, use
-    // that IP to find the code header. This ensures that, for rejitted functions, we
-    // disassemble the rejit version that the user explicitly specified with their IP.
-    DacpCodeHeaderData codeHeaderData;
-    if (codeHeaderData.Request(
-        g_sos, 
-        TO_CDADDR(
-            (dwStartAddr == methodDesc) ? MethodDescData.NativeCodeAddr : dwStartAddr)
-            ) != S_OK)
-
-    {
-        ExtOut("Unable to get codeHeader information\n");
-        return Status;
-    }                
-    
-    if (codeHeaderData.MethodStart == 0)
-    {
-        ExtOut("not a valid MethodDesc\n");
-        return Status;
-    }
-    
-    if (codeHeaderData.JITType == TYPE_UNKNOWN)
-    {
-        ExtOut("unknown Jit\n");
-        return Status;
-    }
-    else if (codeHeaderData.JITType == TYPE_JIT)
-    {
-        ExtOut("Normal JIT generated code\n");
-    }
-    else if (codeHeaderData.JITType == TYPE_PJIT)
-    {
-        ExtOut("preJIT generated code\n");
     }
 
     NameForMD_s(methodDesc, g_mdName, mdNameLen);
     ExtOut("%S\n", g_mdName);
 
-    if (bIL)
+    DacpMethodDescData& MethodDescData = std::get<0>(p);
+    DacpCodeHeaderData& codeHeaderData = std::get<1>(p);
+    std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]> map(nullptr);
+    ULONG32 mapCount = 0;
+    Status = GetIntermediateLangMap(bIL, codeHeaderData, map /*out*/, mapCount /* out */, false);
+    if (Status != S_OK)
     {
-        ToRelease<IXCLRDataMethodInstance> pMethodInst(NULL);
+        return Status;
+    }
 
-        if ((Status = GetClrMethodInstance(codeHeaderData.MethodStart, &pMethodInst)) != S_OK)
+    // ///////////////////////////////////////////////////////////////////////////
+    // This can be reused with sildasm but kept as-is largely since it just
+    // works so it can be fixed later.
+    // ///////////////////////////////////////////////////////////////////////////
+
+    if (MethodDescData.bIsDynamic && MethodDescData.managedDynamicMethodObject)
+    {
+        ExtOut("Can only work with dynamic not implemented\n");
+        return Status;
+    }
+
+    GetILAddressResult result = GetILAddress(MethodDescData);
+    if (std::get<0>(result) == NULL)
+    {
+        ExtOut("ilAddr is %p\n", SOS_PTR(std::get<0>(result)));
+        return E_FAIL;
+    }
+    ExtOut("ilAddr is %p pImport is %p\n", SOS_PTR(std::get<0>(result)), SOS_PTR(std::get<1>(result)));
+    TADDR ilAddr = std::get<0>(result);
+    ToRelease<IMetaDataImport> pImport(std::get<1>(result));
+
+    /// Taken from DecodeILFromAddress(IMetaDataImport *pImport, TADDR ilAddr)
+    ULONG Size = GetILSize(ilAddr);
+    if (Size == 0)
+    {
+        ExtOut("error decoding IL\n");
+        return Status;
+    }
+    // Read the memory into a local buffer
+    ArrayHolder<BYTE> pArray = new BYTE[Size];
+    Status = g_ExtData->ReadVirtual(TO_CDADDR(ilAddr), pArray, Size, NULL);
+    if (Status != S_OK)
+    {
+        ExtOut("Failed to read memory\n");
+        return Status;
+    }
+    /// Taken from DecodeIL(pImport, pArray, Size);
+    // First decode the header
+    BYTE *buffer = pArray;
+    ULONG bufSize = Size;
+    COR_ILMETHOD *pHeader = (COR_ILMETHOD *) buffer;
+    COR_ILMETHOD_DECODER header(pHeader);
+    ULONG position = 0;
+    BYTE* pBuffer = const_cast<BYTE*>(header.Code);
+    UINT indentCount = 0;
+    ULONG endCodePosition = header.GetCodeSize();
+    struct ILLocationRange {
+        ULONG mStartPosition;
+        ULONG mEndPosition;
+        BYTE* mStartAddress;
+        BYTE* mEndAddress;
+    };
+    std::deque<ILLocationRange> ilCodePositions;
+
+    if (mapCount > 0)
+    {
+        while (position < endCodePosition)
         {
-            return Status;
-        }
-
-        ArrayHolder<CLRDATA_IL_ADDRESS_MAP> map(nullptr);
-        ULONG32 mapCount = 0;
-
-        if ((Status = pMethodInst->GetILAddressMap(mapCount, &mapCount, map)) != S_OK)
-        {
-            return Status;
-        }
-
-        map = new NOTHROW CLRDATA_IL_ADDRESS_MAP[mapCount];
-        if (map == NULL)
-        {
-            ReportOOM();
-            return E_OUTOFMEMORY;
-        }
-
-        if ((Status = pMethodInst->GetILAddressMap(mapCount, &mapCount, map)) != S_OK)
-        {
-            return Status;
-        }
-
-        for (ULONG32 i = 0; i < mapCount; i++)
-        {
-            // TODO: These information should be interleaved with the disassembly
-            // Decoded IL can be obtained through refactoring DumpIL code.
-            ExtOut("%04x %p %p\n", map[i].ilOffset, map[i].startAddress, map[i].endAddress);
+            ULONG mapIndex = 0;
+            do
+            {
+                while ((mapIndex < mapCount) && (position != map[mapIndex].ilOffset))
+                {
+                    ++mapIndex;
+                }
+                if (map[mapIndex].endAddress > map[mapIndex].startAddress)
+                {
+                    break;
+                }
+                ++mapIndex;
+            } while (mapIndex < mapCount);
+            std::tuple<ULONG, UINT> r = DecodeILAtPosition(
+                pImport, pBuffer, bufSize,
+                position, indentCount, header);
+            ExtOut("\n");
+            if (mapIndex < mapCount)
+            {
+                ILLocationRange entry = {
+                    position,
+                    std::get<0>(r) - 1,
+                    (BYTE*)map[mapIndex].startAddress,
+                    (BYTE*)map[mapIndex].endAddress
+                };
+                ilCodePositions.push_back(std::move(entry));
+            }
+            else
+            {
+                if (!ilCodePositions.empty())
+                {
+                    auto& entry = ilCodePositions.back();
+                    entry.mEndPosition = position;
+                }
+            }
+            position = std::get<0>(r);
+            indentCount = std::get<1>(r);
         }
     }
+
+    position = 0;
+    indentCount = 0;
+    std::function<void(ULONG*, UINT*, BYTE*)> displayILFun =
+        [&pImport, &pBuffer, bufSize, &header, &ilCodePositions](ULONG *pPosition, UINT *pIndentCount,
+                                                BYTE *pIp) -> void {
+                for (auto iter = ilCodePositions.begin(); iter != ilCodePositions.end(); ++iter)
+                {
+                    if ((pIp >= iter->mStartAddress) && (pIp < iter->mEndAddress))
+                    {
+                        ULONG position = iter->mStartPosition;
+                        ULONG endPosition = iter->mEndPosition;
+                        while (position <= endPosition)
+                        {
+                            std::tuple<ULONG, UINT> r = DecodeILAtPosition(
+                                pImport, pBuffer, bufSize,
+                                position, *pIndentCount, header);
+                            ExtOut("\n");
+                            position = std::get<0>(r);
+                            *pIndentCount = std::get<1>(r);
+                        }
+                        ilCodePositions.erase(iter);
+                        break;
+                    }
+                }
+    };
 
     if (codeHeaderData.ColdRegionStart != NULL)
     {
@@ -9357,6 +9477,150 @@ DECLARE_API(u)
         ExtOut("Begin %p, size %x\n", SOS_PTR(codeHeaderData.MethodStart), codeHeaderData.MethodSize);
     }
 
+    Status = displayGcInfo(fWithGCInfo, codeHeaderData);
+    if (Status != S_OK)
+    {
+        return Status;
+    }
+
+    SOSEHInfo *pInfo = NULL;
+    if (fWithEHInfo)
+    {
+        pInfo = new NOTHROW SOSEHInfo;
+        if (pInfo == NULL)
+        {
+            ReportOOM();                
+        }
+        else if (g_sos->TraverseEHInfo(codeHeaderData.MethodStart, gatherEh, (LPVOID)pInfo) != S_OK)
+        {
+            ExtOut("Failed to gather EHInfo data\n");
+            delete pInfo;
+            pInfo = NULL;            
+        }
+    }
+
+    if (codeHeaderData.ColdRegionStart == NULL)
+    {
+        g_targetMachine->Unassembly (
+                (DWORD_PTR) codeHeaderData.MethodStart,
+                ((DWORD_PTR)codeHeaderData.MethodStart) + codeHeaderData.MethodSize,
+                dwStartAddr,
+                (DWORD_PTR) MethodDescData.GCStressCodeCopy,
+                fWithGCInfo ? &g_gcEncodingInfo : NULL,
+                pInfo,
+                bSuppressLines,
+                bDisplayOffsets,
+                displayILFun);
+    }
+    else
+    {
+        ExtOut("Hot region:\n");
+        g_targetMachine->Unassembly (
+                (DWORD_PTR) codeHeaderData.MethodStart,
+                ((DWORD_PTR)codeHeaderData.MethodStart) + codeHeaderData.HotRegionSize,
+                dwStartAddr,
+                (DWORD_PTR) MethodDescData.GCStressCodeCopy,
+                fWithGCInfo ? &g_gcEncodingInfo : NULL,
+                pInfo,
+                bSuppressLines,
+                bDisplayOffsets,
+                displayILFun);
+
+        ExtOut("Cold region:\n");
+        
+        // Displaying gcinfo for a cold region requires knowing the size of
+        // the hot region preceeding.
+        g_gcEncodingInfo.hotSizeToAdd = codeHeaderData.HotRegionSize;
+
+        g_targetMachine->Unassembly (
+                (DWORD_PTR) codeHeaderData.ColdRegionStart,
+                ((DWORD_PTR)codeHeaderData.ColdRegionStart) + codeHeaderData.ColdRegionSize,
+                dwStartAddr,
+                ((DWORD_PTR) MethodDescData.GCStressCodeCopy) + codeHeaderData.HotRegionSize,                
+                fWithGCInfo ? &g_gcEncodingInfo : NULL,
+                pInfo,
+                bSuppressLines,
+                bDisplayOffsets,
+                displayILFun);
+
+    }
+
+    if (pInfo)
+    {
+        delete pInfo;
+        pInfo = NULL;
+    }
+
+    if (fWithGCInfo)
+    {
+        g_gcEncodingInfo.Deinitialize();
+    }
+    
+    return Status;
+}
+
+inline ExtractionCodeHeaderResult extractCodeHeaderData(DWORD_PTR methodDesc, DWORD_PTR dwStartAddr)
+{
+    DacpMethodDescData MethodDescData;
+    HRESULT Status =
+        g_sos->GetMethodDescData(
+            TO_CDADDR(methodDesc),
+            dwStartAddr == methodDesc ? NULL : dwStartAddr,
+            &MethodDescData,
+            0, // cRevertedRejitVersions
+            NULL, // rgRevertedRejitData
+            NULL); // pcNeededRevertedRejitData
+    if (Status != S_OK)
+    {
+        ExtOut("Failed to get method desc for %p.\n", SOS_PTR(dwStartAddr));
+        return ExtractionCodeHeaderResult(std::move(MethodDescData), DacpCodeHeaderData(), Status);
+    }
+
+    if (!MethodDescData.bHasNativeCode)
+    {
+        ExtOut("Not jitted yet\n");
+        return ExtractionCodeHeaderResult(std::move(MethodDescData), DacpCodeHeaderData(), S_FALSE);
+    }
+
+    // Get the appropriate code header. If we were passed an MD, then use
+    // MethodDescData.NativeCodeAddr to find the code header; if we were passed an IP, use
+    // that IP to find the code header. This ensures that, for rejitted functions, we
+    // disassemble the rejit version that the user explicitly specified with their IP.
+    DacpCodeHeaderData codeHeaderData;
+    if (codeHeaderData.Request(
+        g_sos,
+        TO_CDADDR(
+        (dwStartAddr == methodDesc) ? MethodDescData.NativeCodeAddr : dwStartAddr)
+    ) != S_OK)
+    {
+        ExtOut("Unable to get codeHeader information\n");
+        return ExtractionCodeHeaderResult(std::move(MethodDescData), DacpCodeHeaderData(), S_FALSE);
+    }
+
+    if (codeHeaderData.MethodStart == 0)
+    {
+        ExtOut("not a valid MethodDesc\n");
+        return ExtractionCodeHeaderResult(std::move(MethodDescData), DacpCodeHeaderData(), S_FALSE);
+    }
+
+    if (codeHeaderData.JITType == TYPE_UNKNOWN)
+    {
+        ExtOut("unknown Jit\n");
+        return ExtractionCodeHeaderResult(std::move(MethodDescData), DacpCodeHeaderData(), S_FALSE);
+    }
+    else if (codeHeaderData.JITType == TYPE_JIT)
+    {
+        ExtOut("Normal JIT generated code\n");
+    }
+    else if (codeHeaderData.JITType == TYPE_PJIT)
+    {
+        ExtOut("preJIT generated code\n");
+    }
+    return ExtractionCodeHeaderResult(std::move(MethodDescData), std::move(codeHeaderData), S_OK);
+}
+
+HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData)
+{
     //
     // Set up to mix gc info with the code if requested. To do this, we first generate all the textual
     // gc info up front. This text is the same as the "!gcinfo" command, and looks like:
@@ -9446,13 +9710,13 @@ DECLARE_API(u)
             ExtOut("Could not allocate memory to read the gc info.\n");
             return E_OUTOFMEMORY;
         }
-        
-        memset (table, 0, tableSize);
+
+        memset(table, 0, tableSize);
         // We avoid using move here, because we do not want to return
         if (!SafeReadMemory(TO_TADDR(codeHeaderData.GCInfo), table, tableSize, NULL))
         {
             ExtOut("Could not read memory %p\n", SOS_PTR(codeHeaderData.GCInfo));
-            return Status;
+            return ERROR_INVALID_DATA;
         }
 
         //
@@ -9464,85 +9728,56 @@ DECLARE_API(u)
         {
             return E_OUTOFMEMORY;
         }
-        
+
         GCInfoToken gcInfoToken = { table, GCINFO_VERSION };
         g_targetMachine->DumpGCInfo(gcInfoToken, methodSize, DecodeGCTableEntry, false /*encBytes*/, false /*bPrintHeader*/);
-    }    
+    }
+    return S_OK;
+}
 
-    SOSEHInfo *pInfo = NULL;
-    if (fWithEHInfo)
+HRESULT GetIntermediateLangMap(BOOL bIL, const DacpCodeHeaderData& codeHeaderData,
+                               std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]>& map,
+                               ULONG32& mapCount,
+                               BOOL dumpMap)
+{
+    HRESULT Status = S_OK;
+    if (bIL)
     {
-        pInfo = new NOTHROW SOSEHInfo;
-        if (pInfo == NULL)
+        ToRelease<IXCLRDataMethodInstance> pMethodInst(NULL);
+
+        if ((Status = GetClrMethodInstance(codeHeaderData.MethodStart, &pMethodInst)) != S_OK)
         {
-            ReportOOM();                
+            return Status;
         }
-        else if (g_sos->TraverseEHInfo(codeHeaderData.MethodStart, gatherEh, (LPVOID)pInfo) != S_OK)
+
+        if ((Status = pMethodInst->GetILAddressMap(mapCount, &mapCount, map.get())) != S_OK)
         {
-            ExtOut("Failed to gather EHInfo data\n");
-            delete pInfo;
-            pInfo = NULL;            
+            return Status;
+        }
+
+        map.reset(new NOTHROW CLRDATA_IL_ADDRESS_MAP[mapCount]);
+        if (map.get() == NULL)
+        {
+            ReportOOM();
+            return E_OUTOFMEMORY;
+        }
+
+        if ((Status = pMethodInst->GetILAddressMap(mapCount, &mapCount, map.get())) != S_OK)
+        {
+            return Status;
+        }
+
+        if (dumpMap)
+        {
+            for (ULONG32 i = 0; i < mapCount; i++)
+            {
+                // TODO: These information should be interleaved with the disassembly
+                // Decoded IL can be obtained through refactoring DumpIL code.
+                ExtOut("%04x %p %p\n", map[i].ilOffset, map[i].startAddress, map[i].endAddress);
+            }
         }
     }
-    
-    if (codeHeaderData.ColdRegionStart == NULL)
-    {
-        g_targetMachine->Unassembly (
-                (DWORD_PTR) codeHeaderData.MethodStart,
-                ((DWORD_PTR)codeHeaderData.MethodStart) + codeHeaderData.MethodSize,
-                dwStartAddr,
-                (DWORD_PTR) MethodDescData.GCStressCodeCopy,
-                fWithGCInfo ? &g_gcEncodingInfo : NULL,
-                pInfo,
-                bSuppressLines,
-                bDisplayOffsets
-                );
-    }
-    else
-    {
-        ExtOut("Hot region:\n");
-        g_targetMachine->Unassembly (
-                (DWORD_PTR) codeHeaderData.MethodStart,
-                ((DWORD_PTR)codeHeaderData.MethodStart) + codeHeaderData.HotRegionSize,
-                dwStartAddr,
-                (DWORD_PTR) MethodDescData.GCStressCodeCopy,
-                fWithGCInfo ? &g_gcEncodingInfo : NULL,
-                pInfo,
-                bSuppressLines,
-                bDisplayOffsets
-                );
-
-        ExtOut("Cold region:\n");
-        
-        // Displaying gcinfo for a cold region requires knowing the size of
-        // the hot region preceeding.
-        g_gcEncodingInfo.hotSizeToAdd = codeHeaderData.HotRegionSize;
-
-        g_targetMachine->Unassembly (
-                (DWORD_PTR) codeHeaderData.ColdRegionStart,
-                ((DWORD_PTR)codeHeaderData.ColdRegionStart) + codeHeaderData.ColdRegionSize,
-                dwStartAddr,
-                ((DWORD_PTR) MethodDescData.GCStressCodeCopy) + codeHeaderData.HotRegionSize,                
-                fWithGCInfo ? &g_gcEncodingInfo : NULL,
-                pInfo,
-                bSuppressLines,
-                bDisplayOffsets
-                );
-
-    }
-
-    if (pInfo)
-    {
-        delete pInfo;
-        pInfo = NULL;
-    }
-
-    if (fWithGCInfo)
-    {
-        g_gcEncodingInfo.Deinitialize();
-    }
-    
-    return Status;
+    return S_OK;
 }
 
 /**********************************************************************\
@@ -10199,10 +10434,13 @@ DECLARE_API (ProcInfo)
     }
 
     if (fProcInfo & INFO_ENV) {
+        ULONG64 pPeb;
+        if (FAILED(g_ExtSystem->GetCurrentProcessPeb(&pPeb)))
+        {
+            return Status;
+        }
         ExtOut("---------------------------------------\n");
         ExtOut("Environment\n");
-        ULONG64 pPeb;
-        g_ExtSystem->GetCurrentProcessPeb(&pPeb);
 
         static ULONG Offset_ProcessParam = -1;
         static ULONG Offset_Environment = -1;
@@ -10284,7 +10522,10 @@ DECLARE_API (ProcInfo)
     HANDLE hProcess = INVALID_HANDLE_VALUE;
     if (fProcInfo & (INFO_TIME | INFO_MEM)) {
         ULONG64 handle;
-        g_ExtSystem->GetCurrentProcessHandle(&handle);
+        if (FAILED(g_ExtSystem->GetCurrentProcessHandle(&handle)))
+        {
+            return Status;
+        }
         hProcess = (HANDLE)handle;
     }
     
@@ -14214,7 +14455,8 @@ end:
     return Status;
 }
 
-#ifdef _DEBUG
+#endif // FEATURE_PAL
+
 DECLARE_API(dbgout)
 {
     INIT_API();
@@ -14232,41 +14474,9 @@ DECLARE_API(dbgout)
     }    
 
     Output::SetDebugOutputEnabled(!bOff);
+    ExtOut("Debug output logging %s\n", Output::IsDebugOutputEnabled() ? "enabled" : "disabled");
     return Status;
 }
-DECLARE_API(filthint)
-{
-    INIT_API();
-
-    BOOL bOff = FALSE;
-    DWORD_PTR filter = 0;
-
-    CMDOption option[] = 
-    {   // name, vptr, type, hasValue
-        {"-off", &bOff, COBOOL, FALSE},
-    };
-    CMDValue arg[] = 
-    {   // vptr, type
-        {&filter, COHEX}
-    };
-    size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option),
-                      arg, _countof(arg), &nArg)) 
-    {
-        return Status;
-    }    
-    if (bOff)
-    {
-        g_filterHint = 0;
-        return Status;
-    }
-
-    g_filterHint = filter;
-    return Status;
-}
-#endif // _DEBUG
-
-#endif // FEATURE_PAL
 
 static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp, 
         ULONG64 IPAddr, StringOutput& so)
@@ -15231,16 +15441,18 @@ DECLARE_API(SuppressJitOptimization)
         return E_FAIL;
     }
 
-    if(nArg == 1 && (_stricmp(onOff.data, "On") == 0))
+    if (nArg == 1 && (_stricmp(onOff.data, "On") == 0))
     {
         // if CLR is already loaded, try to change the flags now
-        if(CheckEEDll() == S_OK)
+        if (CheckEEDll() == S_OK)
         {
             SetNGENCompilerFlags(CORDEBUG_JIT_DISABLE_OPTIMIZATION);
         }
 
-        if(!g_fAllowJitOptimization)
+        if (!g_fAllowJitOptimization)
+        {
             ExtOut("JIT optimization is already suppressed\n");
+        }
         else
         {
             g_fAllowJitOptimization = FALSE;
@@ -15739,6 +15951,10 @@ DECLARE_API(SetSymbolServer)
         if (windowsSymbolPath.data != nullptr)
         {
             ExtOut("Added Windows symbol path: %s\n", windowsSymbolPath.data);
+        }
+        if (logging)
+        {
+            ExtOut("Symbol download logging enabled\n");
         }
     }
     else if (loadNative)
