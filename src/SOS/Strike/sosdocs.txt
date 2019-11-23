@@ -144,6 +144,7 @@ Not all SOS commands support DML output.
 
 \\
 
+COMMAND: soe.
 COMMAND: stoponexception.
 !StopOnException [-derived] 
                  [-create | -create2] 
@@ -211,6 +212,7 @@ By default, MinidumpMode is 0, so there is no restriction on commands that will
 run against a minidump.
 \\
 
+COMMAND: do.
 COMMAND: dumpobj.
 !DumpObj [-nofields] <object address>
 
@@ -254,6 +256,7 @@ The arguments in detail:
                   String
 \\
 
+COMMAND: da.
 COMMAND: dumparray.
 !DumpArray 
 	[-start <startIndex>]
@@ -614,6 +617,7 @@ Please note the -aggregate parameter to !ObjSize has been removed.  Please see
 
 \\
 
+COMMAND: fq.
 COMMAND: finalizequeue.
 !FinalizeQueue [-detail] | [-allReady] [-short]
 
@@ -2012,6 +2016,7 @@ The percentage column contains a breakout of free or unrooted bytes to total byt
 
 \\
 
+COMMAND: ao.
 COMMAND: analyzeoom.
 !AnalyzeOOM
 
@@ -2088,6 +2093,7 @@ the "size" is displayed as 0:
 
 \\
 
+COMMAND: lno.
 COMMAND: listnearobj.
 !ListNearObj <object address>
 
