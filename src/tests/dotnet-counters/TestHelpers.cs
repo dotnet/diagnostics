@@ -17,7 +17,8 @@ namespace DotnetCounters.UnitTests
             string counterName,
             double counterValue,
             int displayRateTimeScaleSeconds = 0,
-            string displayName = "")
+            string displayName = "",
+            string displayUnits = "")
         {
             if (isIncrementingCounter)
             {
@@ -27,6 +28,7 @@ namespace DotnetCounters.UnitTests
                     { "Increment", counterValue },
                     { "DisplayName", displayName },
                     { "DisplayRateTimeScale", displayRateTimeScaleSeconds == 0 ? "" : TimeSpan.FromSeconds(displayRateTimeScaleSeconds).ToString() },
+                    { "DisplayUnits", displayUnits },
                 };
                 ICounterPayload payload = new IncrementingCounterPayload(payloadFields, 1);
                 return payload;
@@ -38,6 +40,7 @@ namespace DotnetCounters.UnitTests
                     { "Name", counterName },
                     { "Mean", counterValue },
                     { "DisplayName", displayName },
+                    { "DisplayUnits", displayUnits },
                 };
                 ICounterPayload payload = new CounterPayload(payloadFields);
                 return payload;

@@ -105,6 +105,37 @@ namespace DotnetCounters.UnitTests
                 }
             }
         }
+
+        [Fact]
+        public void DisplayUnitsTest()
+        {
+            string fileName = "displayUnitsTest.json";
+            JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
+            exporter.Initialize();
+
+            for (int i = 0 ; i < 20; i++)
+            {
+                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(false, "heapSize", (double)i, 0, "Heap Size", "MB"), false);
+            }
+            exporter.Stop();
+
+            Assert.True(File.Exists(fileName));
+            using (StreamReader r = new StreamReader(fileName))
+            {
+                string json = r.ReadToEnd();
+                JSONCounterTrace counterTrace = JsonConvert.DeserializeObject<JSONCounterTrace>(json);
+                Assert.Equal("myProcess.exe", counterTrace.targetProcess);
+                Assert.Equal(20, counterTrace.events.Length);
+                var i = 0;
+                foreach(JSONCounterPayload payload in counterTrace.events)
+                {
+                    Assert.Equal("myProvider", payload.provider);
+                    Assert.Equal("Heap Size (MB)", payload.name);
+                    Assert.Equal(i, payload.value);
+                    i += 1;
+                }
+            }
+        }
     }
 
     class JSONCounterPayload
