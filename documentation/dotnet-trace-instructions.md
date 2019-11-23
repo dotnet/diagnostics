@@ -21,7 +21,7 @@ In order to collect traces using dotnet-trace, you will need to:
   - On Windows, there are options such as using the task manager or the `tasklist` command on the cmd window.
   - On Linux, the trivial option could be using `pidof` on the terminal window.
 
-You may also use the command `dotnet-trace list-processes` command to find out what .NET Core processes are running, along with their process IDs.
+You may also use the command `dotnet-trace ps` command to find out what .NET Core processes are running, along with their process IDs.
 
 - Then, run the following command:
 
