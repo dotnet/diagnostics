@@ -142,5 +142,45 @@ namespace DotnetCounters.UnitTests
             }
         }
 
+        [Fact]
+        public void DisplayUnitsTest()
+        {
+            string fileName = "displayUnitsTest.csv";
+            CSVExporter exporter = new CSVExporter(fileName);
+            exporter.Initialize();
+            for (int i = 0; i < 100; i++)
+            {
+                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(true, "allocRateGen", i, 60, "Allocation Rate Gen: " + i.ToString(), "MB"), false);
+            }
+            exporter.Stop();
+
+            Assert.True(File.Exists(fileName));
+
+            try
+            {
+                List<string> lines = File.ReadLines(fileName).ToList();
+                Assert.Equal(101, lines.Count); // should be 101 including the headers
+
+                string[] headerTokens = lines[0].Split(',');
+                Assert.Equal("Provider", headerTokens[1]);
+                Assert.Equal("Counter Name", headerTokens[2]);
+                Assert.Equal("Counter Type", headerTokens[3]);
+                Assert.Equal("Mean/Increment", headerTokens[4]);
+
+                for (int i = 1; i < lines.Count; i++)
+                {
+                    string[] tokens = lines[i].Split(',');
+
+                    Assert.Equal("myProvider", tokens[1]);
+                    Assert.Equal($"Allocation Rate Gen: {i-1} / 60 sec (MB)", tokens[2]);
+                    Assert.Equal("Rate", tokens[3]);
+                    Assert.Equal(((i - 1) * 60).ToString(), tokens[4]);
+                }
+            }
+            finally
+            {
+                File.Delete(fileName);
+            }
+        }
     }
 }
