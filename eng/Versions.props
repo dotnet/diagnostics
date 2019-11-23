@@ -1,4 +1,4 @@
-﻿<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
+<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
 <Project>
   <PropertyGroup>
     <RepositoryUrl>https://github.com/dotnet/diagnostics</RepositoryUrl>
@@ -6,22 +6,20 @@
     <VersionPrefix>3.0.0</VersionPrefix>
     <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
     <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
+    <MicrosoftNETCoreAppVersion>5.0.0-alpha.1.19564.1</MicrosoftNETCoreAppVersion>
+    <MicrosoftAspNetCoreAppRefVersion>5.0.0-alpha1.19572.4</MicrosoftAspNetCoreAppRefVersion>
   </PropertyGroup>
-
   <PropertyGroup>
     <!-- Opt-out repo features -->
     <UsingToolXliff>false</UsingToolXliff>
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
     <UsingToolSymbolUploader>true</UsingToolSymbolUploader>
-
     <!-- Build tools -->
     <MicrosoftNetCompilersVersion>3.0.0</MicrosoftNetCompilersVersion>
-
     <!-- CoreFX -->
     <SystemReflectionMetadataVersion>1.6.0</SystemReflectionMetadataVersion>
     <SystemCollectionsImmutableVersion>1.5.0</SystemCollectionsImmutableVersion>
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
-
     <!-- Other libs -->
     <MicrosoftSymbolStoreVersion>1.0.55801</MicrosoftSymbolStoreVersion>
     <MicrosoftDiagnosticsRuntimeVersion>1.1.46104</MicrosoftDiagnosticsRuntimeVersion>
