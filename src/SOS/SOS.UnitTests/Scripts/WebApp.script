@@ -1,0 +1,128 @@
+#
+# Tests the various SOS stack and other commands against a webapp 3.x app
+#
+# Commands Verified: ClrStack, DumpStackObjects, DumpStack, EEStack, IP2MD, u, Name2EE, Threads (clrthreads)
+#
+
+CONTINUE
+
+LOADSOS
+
+SOSCOMMAND:SetSymbolServer -ms
+
+!IFDEF:DOTNETDUMP
+SOSCOMMAND:SetHostRuntime
+ENDIF:DOTNETDUMP
+
+IFDEF:DOTNETDUMP
+COMMAND:clrmodules
+VERIFY:\s*<HEXVAL>.*
+COMMAND:modules
+VERIFY:\s*<HEXVAL>\s+<HEXVAL>.*
+COMMAND:threads
+VERIFY:\s*<DECVAL>\s+0x<HEXVAL>\s+\(<DECVAL>\)\s+
+COMMAND:registers
+VERIFY:\s*([r|e]ip|pc) = <HEXVAL>\s+
+ENDIF:DOTNETDUMP
+
+# Verify that ClrStack with no options works
+SOSCOMMAND:ClrStack
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+
+# Verify that ClrStack for all threads works
+SOSCOMMAND:ClrStack -all
+
+# Verify that ClrStack with managed/native mixed works
+SOSCOMMAND:ClrStack -f
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+
+# Verify that ClrStack all option works (locals/params)
+SOSCOMMAND:ClrStack -a
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+
+# Verify that ClrStack displays registers
+SOSCOMMAND:ClrStack -r
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+VERIFY:.*\s
+
+IFDEF:ARM
+VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
+ENDIF:ARM
+IFDEF:ARM64
+VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
+ENDIF:ARM64
+VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
+IFDEF:X64
+VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
+ENDIF:X64
+IFDEF:X86
+VERIFY:\s+eax=<HEXVAL>\s+ebx=<HEXVAL>\s+ecx=<HEXVAL>\s+
+ENDIF:X86
+
+VERIFY:.*\s
+
+IFDEF:ARM
+VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
+ENDIF:ARM
+IFDEF:ARM64
+VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
+ENDIF:ARM64
+VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
+IFDEF:X64
+VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
+ENDIF:X64
+IFDEF:X86
+VERIFY:\s+eax=<HEXVAL>\s+ebx=<HEXVAL>\s+ecx=<HEXVAL>\s+
+ENDIF:X86
+
+# Issue: https://github.com/dotnet/diagnostics/issues/504
+!IFDEF:ALPINE
+
+# Verify that ClrStack with the ICorDebug options works
+SOSCOMMAND:ClrStack -i
+VERIFY:.*\s+Dumping managed stack and managed variables using ICorDebug.\s+
+VERIFY:.*\s+Child\s+SP\s+IP\s+Call Site\s+
+VERIFY:.*\s+Stack walk complete.\s+
+
+ENDIF:ALPINE
+
+# Verify that Threads (clrthreads) works
+IFDEF:DOTNETDUMP
+SOSCOMMAND:clrthreads
+ENDIF:DOTNETDUMP
+!IFDEF:DOTNETDUMP
+SOSCOMMAND:Threads
+ENDIF:DOTNETDUMP
+VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
+VERIFY:\s+UnstartedThread:\s+<DECVAL>\s+
+VERIFY:\s+BackgroundThread:\s+<DECVAL>\s+
+VERIFY:\s+PendingThread:\s+<DECVAL>\s+
+VERIFY:\s+DeadThread:\s+<DECVAL>\s+
+VERIFY:\s+Hosted Runtime:\s+no\s+
+VERIFY:\s+ID\s+OSID\s+ThreadOBJ\s+State.*\s+
+VERIFY:\s+<DECVAL>\s+<DECVAL>\s+<HEXVAL>\s+<HEXVAL>.*\s+
+
+SOSCOMMAND:DumpHeap -stat
+VERIFY:\s*Statistics:\s+
+VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
+VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
+!VERIFY:.*UNKNOWN.*
+
+SOSCOMMAND:DumpAsync
+VERIFY:\s*Statistics:\s+
+VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
+VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
+
+SOSCOMMAND:DumpAsync -mt <POUT>\s+MT\s+Count\s+TotalSize\s+Class Name\s+(<HEXVAL>)\s+<DECVAL>\s+<DECVAL>\s+.*<POUT>
+VERIFY:\s*Statistics:\s+
+VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
+VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
+
+SOSCOMMAND:DumpAsync -mt <PREVOUT> -fields

@@ -150,6 +150,7 @@ COMMANDS
     list      Display a list of counter names and descriptions
     ps        Display a list of dotnet processes that can be monitored
     monitor   Display periodically refreshing values of selected counters
+    collect   Periodically collect selected counter values and export them into a specified file format for post-processing.
 
 LIST
 
@@ -229,6 +230,55 @@ MONITOR
         provider and counter names, use the list command.
 
 
+COLLECT
+
+
+    Examples:
+
+    1. Collect the runtime performance counters at a refresh interval of 10 seconds and export it as a JSON file named "test.json".
+```
+    dotnet run collect --process-id 863148 --refresh-interval 10 --output test --format json
+```
+
+    2. Collect the runtime performance counters as well as the ASP.NET hosting performance counters at the default refresh interval (1 second) and export it as a CSV file named "mycounter.csv". 
+```
+    dotnet run collect --process-id 863148 --output mycounter --format csv System.Runtime Microsoft.AspNetCore.Hosting
+```
+
+
+    Syntax:
+
+```
+    dotnet-counters collect [-h||--help]
+                            [-p|--process-id <pid>]
+                            [-o|--output <name>]
+                            [--format <csv|json>]
+                            [--refreshInterval <sec>]
+                            counter_list
+    
+    Periodically collect selected counter values and export them into a specified file format for post-processing.
+    
+    -h, --help
+        Show command line help
+    
+    -p,--process-id
+        The ID of the process that will be monitored
+
+    -o, --output
+        The name of the output file
+
+    --format
+        The format to be exported. Currently available: csv, json
+
+    --refresh-interval
+        The number of seconds to delay between updating the displayed counters
+    
+    counter_list
+        A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the
+        provider_name is used without a qualifying counter_name then all counters will be shown. To discover
+        provider and counter names, use the list command.
+
+```
 
 
 ### dotnet-trace
@@ -291,7 +341,7 @@ COLLECT
             Provider format: KnownProviderName[:Keywords[:Level][:KeyValueArgs]]
                 KnownProviderName       - The provider's name
                 Keywords                - 8 character hex number bit mask
-                Level                   - A number in the range [0, 5]
+                Level                   - A number in the range [0, 5], or their corresponding text values (refer to https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.tracing.eventlevel?view=netframework-4.8).
                 KeyValueArgs            - A semicolon separated list of key=value
             KeyValueArgs format: '[key1=value1][;key2=value2]'
 
@@ -303,11 +353,21 @@ COLLECT
 
 
     Examples:
+      
+      To perform a default `cpu-tracing` profiling:
+
       > dotnet trace collect --process-id 1902
       No profile or providers specified, defaulting to trace profile 'cpu-sampling'
       Recording trace 38MB
 
       's' - stop tracing
+
+
+      To collect just the GC keyword events from the .NET runtime at informational level:
+
+      > dotnet trace collect --process-id 1902 --providers Microsoft-Windows-DotNETRuntime:0x1:Informational
+
+
 
 CONVERT
 
@@ -553,6 +613,56 @@ UNINSTALL
       Uninstalling SOS from ~/.dotnet/sos
       Complete
 
+### dotnet-gcdump
+
+SYNOPSIS
+
+    dotnet-gcdump [--version]
+                  [-h, --help]
+                  <command> [<args>]
+
+OPTIONS
+
+    --version
+        Display the version of the dotnet-gcdump utility.
+
+    -h, --help
+        Show command line help
+
+COMMANDS
+
+    collect   Capture dumps from a process
+
+COLLECT
+
+    dotnet-gcdump collect -p|--process-id <pid> [-h|--help] [-o|--output <output_dump_path>] [-v|--verbose]
+
+    Capture GC dumps from a dotnet process
+
+    Usage:
+      dotnet-gcdump collect [options]
+
+    Options:
+      -p, --process-id
+          The process to collect a gc dump from.
+
+      -h, --help
+          Show command line help
+
+      -o, --output
+          The path where collected gcdumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump' where YYYYMMDD is Year/Month/Day
+          and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.
+      
+      -v, --verbose
+          Turns on logging for gcdump
+
+Examples:
+
+    $ dotnet gcdump collect --process-id 1902
+    Writing gcdump to file ./20190226_135837_1902.gcdump
+    Wrote 12576 bytes to file
+    Complete
+
 ## Future suggestions
 
 Work described in here captures potential future directions these tools could take given time and customer interest. Some of these might come relatively soon, others feel quite speculative or duplicative with existing technology. Regardless, understanding potential future options helps to ensure that we don't unknowingly paint ourselves into a corner or build an incoherent offering.
@@ -573,7 +683,7 @@ Add a --process-id to the list command in order to dynamically determine a full 
         private-memory                 Amount of private virtual memory used by the process (MB)
         working-set                    Amount of working set used by the process (MB)
         virtual-memory                 Amount of virtual memory used by the process (MB)
-        gc-total-memory                Amount of commited virtual memory used by the GC (MB)
+        gc-total-memory                Amount of committed virtual memory used by the GC (MB)
         exceptions-thrown-rate         Number of exceptions thrown in a recent 1 minute window (exceptions/min)
         lock-contention-rate           Number of instances of lock contention on runtime implemented locks in a
                                        recent 1 minute window (contentions/min)

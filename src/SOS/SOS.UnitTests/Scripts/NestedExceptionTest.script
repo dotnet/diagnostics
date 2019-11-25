@@ -1,14 +1,27 @@
-# Overflow debugging scenario
+# Nested exception debugging scenario
 # 1) load the executable
-# 2) load sos
-# 3) run to the exception
+# 2) run to the exception
+# 3) load sos
 # We are only verifying the main PrintException fields and for the stacktrace, source lines in the program.
 
 LOADSOS
 
+# Verify that bpmd works
+IFDEF:PROJECTK
 IFDEF:LIVE
+!IFDEF:MAJOR_RUNTIME_VERSION_1
+
+SOSCOMMAND:bpmd NestedExceptionTest.dll NestedExceptionTest.Program.Main
 CONTINUE
+SOSCOMMAND:ClrStack
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main(\(.*\))?\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ 8\s*\]\s*
+
+ENDIF:MAJOR_RUNTIME_VERSION_1
 ENDIF:LIVE
+ENDIF:PROJECTK
+
+CONTINUE
 
 # 4) Verifying that !pe gives us the right exception in the format above.
 SOSCOMMAND:PrintException
@@ -67,10 +80,36 @@ VERIFY:InnerException:\s+System\.FormatException, Use !PrintException <HEXVAL> t
 VERIFY:StackTrace \(generated\):
 VERIFY:\s+SP\s+IP\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Nn]ested[Ee]xception[Tt]est.*!NestedExceptionTest\.Program\.Main(\(.*\))?\+0x<HEXVAL>\s*
-# Desktop sos has a bug that prevents the line number/source file info from being printed. Fixed in ProjectK.
+# Desktop sos has a bug that prevents the line number/source file info from being printed.
 IFDEF:PROJECTK
 VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ 8\s*\]\s*
 ENDIF:PROJECTK
 VERIFY:(StackTraceString: <none>\s+)?
 VERIFY:HResult:\s+80131509\s+
 VERIFY:There are nested exceptions on this thread. Run with -nested for details
+
+# Verify that Threads (clrthreads) works
+IFDEF:DOTNETDUMP
+SOSCOMMAND:clrthreads
+ENDIF:DOTNETDUMP
+!IFDEF:DOTNETDUMP
+SOSCOMMAND:Threads
+ENDIF:DOTNETDUMP
+VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
+VERIFY:\s+UnstartedThread:\s+<DECVAL>\s+
+VERIFY:\s+BackgroundThread:\s+<DECVAL>\s+
+VERIFY:\s+PendingThread:\s+<DECVAL>\s+
+VERIFY:\s+DeadThread:\s+<DECVAL>\s+
+VERIFY:\s+Hosted Runtime:\s+no\s+
+VERIFY:\s+ID\s+OSID\s+ThreadOBJ\s+State.*\s+
+VERIFY:\s+<DECVAL>\s+<DECVAL>\s+<HEXVAL>\s+<HEXVAL>.*\s+
+
+# Verify that ClrStack with no options works
+SOSCOMMAND:ClrStack
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main(\(.*\))?\s*
+# Desktop sos has a bug that prevents the line number/source file info from being printed.
+IFDEF:PROJECTK
+VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ 8\s*\]\s*
+ENDIF:PROJECTK

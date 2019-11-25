@@ -12,12 +12,43 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class Extensions
     {
+        private static EventLevel defaultEventLevel = EventLevel.Verbose;
+
         public static List<Provider> ToProviders(string providers)
         {
             if (providers == null)
                 throw new ArgumentNullException(nameof(providers));
             return string.IsNullOrWhiteSpace(providers) ?
                 new List<Provider>() : providers.Split(',').Select(ToProvider).ToList();
+        }
+
+        private static EventLevel GetEventLevel(string token)
+        {
+            if (Int32.TryParse(token, out int level) && level >= 0)
+            {
+                return level > (int)EventLevel.Verbose ? EventLevel.Verbose : (EventLevel)level;
+            }
+
+            else
+            {
+                switch (token.ToLower())
+                {
+                    case "critical":
+                        return EventLevel.Critical;
+                    case "error":
+                        return EventLevel.Error;
+                    case "informational":
+                        return EventLevel.Informational;
+                    case "logalways":
+                        return EventLevel.LogAlways;
+                    case "verbose":
+                        return EventLevel.Verbose;
+                    case "warning":
+                        return EventLevel.Warning;
+                    default:
+                        throw new ArgumentException($"Unknown EventLevel: {token}");
+                }
+            }
         }
 
         private static Provider ToProvider(string provider)
@@ -44,10 +75,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Convert.ToUInt64(tokens[1], 16) : ulong.MaxValue;
 
             // Level
-            uint level = tokens.Length > 2 && !string.IsNullOrWhiteSpace(tokens[2]) ?
-                Convert.ToUInt32(tokens[2]) : (uint)EventLevel.Verbose;
-            EventLevel eventLevel = level > (uint)EventLevel.Verbose ?
-                EventLevel.Verbose : (EventLevel)level; // TODO: Should we throw here?
+            EventLevel eventLevel = tokens.Length > 2 && !string.IsNullOrWhiteSpace(tokens[2]) ?
+                GetEventLevel(tokens[2]) : defaultEventLevel;
 
             // Event counters
             string filterData = tokens.Length > 3 ? tokens[3] : null;

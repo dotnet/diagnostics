@@ -355,7 +355,8 @@ void ARMMachine::Unassembly (
     GCEncodingInfo *pGCEncodingInfo, 
     SOSEHInfo *pEHInfo,
     BOOL bSuppressLines,
-    BOOL bDisplayOffsets) const
+    BOOL bDisplayOffsets,
+    std::function<void(ULONG*, UINT*, BYTE*)> displayIL) const
 {
     ULONG_PTR PC = PCBegin;
     char line[1024];
@@ -366,6 +367,8 @@ void ARMMachine::Unassembly (
     ULONG curLine = -1;
     WCHAR filename[MAX_LONGPATH];
     ULONG linenum;
+    ULONG ilPosition = 0;
+    UINT ilIndentCount = 0;
 
     while (PC < PCEnd)
     {
@@ -382,6 +385,7 @@ void ARMMachine::Unassembly (
                 ExtOut("\n%S @ %d:\n", filename, linenum);
             }
         }
+        displayIL(&ilPosition, &ilIndentCount, (BYTE*)PC);
 
         //
         // Print out any GC information corresponding to the current instruction offset.

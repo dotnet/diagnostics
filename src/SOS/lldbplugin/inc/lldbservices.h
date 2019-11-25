@@ -231,6 +231,7 @@ typedef struct _DEBUG_STACK_FRAME_EX
 
 interface ILLDBServices;
 typedef HRESULT (*PFN_EXCEPTION_CALLBACK)(ILLDBServices *services);
+typedef HRESULT (*PFN_RUNTIME_LOADED_CALLBACK)(ILLDBServices *services);
 
 //----------------------------------------------------------------------------
 // ILLDBServices
@@ -575,6 +576,9 @@ public:
         PVOID buffer,
         ULONG bufferSize,
         PULONG versionInfoSize) = 0;
+
+    virtual HRESULT SetRuntimeLoadedCallback(
+        PFN_RUNTIME_LOADED_CALLBACK callback) = 0;
 };
 
 #ifdef __cplusplus

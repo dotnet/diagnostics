@@ -1,37 +1,12 @@
 # PrintException debugging scenario
-# 1) load the executable
+# 1) Load the executable
 # 2) Run the executable and wait for it to crash
 # 3) Take a dump of the executable. (MUST BE AT SECOND CHANCE EXCEPTION!)
 # 4) Open the dump and compare the output
-# [EXPECTED OUTPUT (DESKTOP)]
-# Exception object: <HEXVAL>
-# Exception type:   System.InvalidOperationException
-# Message:          <Invalid Object>
-# InnerException:   <none>
-# StackTrace (generated):
-#    SP               IP               Function
-#    <HEXVAL> <HEXVAL> SimpleThrow!UserObject.UseObject(System.String)+0xc8
-#    <HEXVAL> <HEXVAL> SimpleThrow!Simple.Main()+0x9f
-# StackTraceString: <none>
-# HResult: 80131509
 
-# [EXPECTED OUTPUT (PROJECTN)]
-# Exception type:   System.InvalidOperationException
-# Message:          <Invalid Object>
-# InnerException:   <none>
-# StackTrace (generated):
-#    IP               Function
-#    <HEXVAL> SimpleThrow_<HEXVAL>!$0_UserObject.UseObject+0x8a
-#    <HEXVAL> SimpleThrow_<HEXVAL>!$0_Simple.Main+0x66
-#    <HEXVAL> SimpleThrow_<HEXVAL>!$0_Simple.{ILT$Main}+0xd
-#    <HEXVAL> SimpleThrow_<HEXVAL>!RHBinder__ShimExeMain+0x20
-# HResult: 80131509
+CONTINUE
 
 LOADSOS
-
-IFDEF:LIVE
-CONTINUE
-ENDIF:LIVE
 
 # B) Verifying that !pe gives us the right exception in the format above.
 # For desktop, it has an SP, so we conditionally will match it.  (ProjectN does not though.)
@@ -57,3 +32,33 @@ VERIFY:\s+SP\s+IP\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Ss]imple[Tt]hrow.*!(\$0_)?UserObject\.UseObject.*\+0x<HEXVAL>\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Ss]imple[Tt]hrow.*!(\$0_)?Simple\.Main.*\+0x<HEXVAL>\s+
 VERIFY:HResult:\s+80131509
+
+# Verify that Threads (clrthreads) works
+IFDEF:DOTNETDUMP
+SOSCOMMAND:clrthreads
+ENDIF:DOTNETDUMP
+!IFDEF:DOTNETDUMP
+SOSCOMMAND:Threads
+ENDIF:DOTNETDUMP
+VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
+VERIFY:\s+UnstartedThread:\s+<DECVAL>\s+
+VERIFY:\s+BackgroundThread:\s+<DECVAL>\s+
+VERIFY:\s+PendingThread:\s+<DECVAL>\s+
+VERIFY:\s+DeadThread:\s+<DECVAL>\s+
+VERIFY:\s+Hosted Runtime:\s+no\s+
+VERIFY:\s+ID\s+OSID\s+ThreadOBJ\s+State.*\s+
+VERIFY:\s+<DECVAL>\s+<DECVAL>\s+<HEXVAL>\s+<HEXVAL>.*\s+
+
+# Verify that ClrStack with no options works
+SOSCOMMAND:ClrStack
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+(\*\*\* WARNING: Unable to verify checksum for SimpleThrow.exe\s*)?UserObject\.UseObject.*\s+
+# Desktop sos has a bug that prevents the line number/source file info from being printed.
+IFDEF:PROJECTK
+VERIFY:[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?SimpleThrow[\\|/]UserObject\.cs @ 18\s*\]
+ENDIF:PROJECTK
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+Simple\.Main\(\)\s+
+IFDEF:PROJECTK
+VERIFY:[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?SimpleThrow[\\|/]SimpleThrow\.cs @ 9\s*\]
+ENDIF:PROJECTK

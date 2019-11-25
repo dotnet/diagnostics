@@ -36,6 +36,10 @@
 #include "corhlpr.h"
 #include "corhlpr.cpp"
 
+#include "sildasm.h"
+
+#include <functional>
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 #undef printf
 #define printf ExtOut
@@ -64,24 +68,21 @@ static OpCode opcodes[] =
 #include "opcode.def"
 };
 
-static ULONG position = 0;
-static BYTE *pBuffer = NULL;
-
 // The UNALIGNED is because on IA64 alignment rules would prevent
 // us from reading a pointer from an unaligned source.
 template <typename T>
-T readData ( ) {
+T ReadData (const BYTE* const pBuffer, ULONG& position) {
     T val = *((T UNALIGNED*)(pBuffer+position));
     position += sizeof(T);
     return val;
 }
 
-unsigned int readOpcode()
+unsigned int ReadOpcode(const BYTE* const pBuffer, ULONG& position)
 {
-    unsigned int c = readData<BYTE>();
+    unsigned int c = ReadData<BYTE>(pBuffer, /* byref */position);
     if (c == 0xFE)
     {
-        c = readData<BYTE>();
+        c = ReadData<BYTE>(pBuffer, /* byref */ position);
         c |= 0x100;
     }
     return c;
@@ -281,22 +282,22 @@ void DisassembleToken(IMetaDataImport *i,
             ULONG cLen;
             WCHAR szName[50];
 
-            if(TypeFromToken(cr) == mdtTypeRef)
+            if (TypeFromToken(cr) == mdtTypeRef)
             {
                 if (FAILED(i->GetTypeRefProps(cr, NULL, szName, 50, &cLen)))
                 {
                     StringCchCopyW(szName, COUNTOF(szName), W("<unknown type ref>"));
                 }
             }
-            else if(TypeFromToken(cr) == mdtTypeDef)
+            else if (TypeFromToken(cr) == mdtTypeDef)
             {
                 if (FAILED(i->GetTypeDefProps(cr, szName, 49, &cLen,
-                                              NULL, NULL)))
+                    NULL, NULL)))
                 {
                     StringCchCopyW(szName, COUNTOF(szName), W("<unknown type def>"));
                 }
             }
-            else if(TypeFromToken(cr) == mdtTypeSpec)
+            else if (TypeFromToken(cr) == mdtTypeSpec)
             {
                 CQuickBytes out;
                 ULONG cSig;
@@ -308,16 +309,43 @@ void DisassembleToken(IMetaDataImport *i,
                 else
                 {
                     PrettyPrintType(sig, &out, i);
-                    MultiByteToWideChar (CP_ACP, 0, asString(&out), -1, szName, 50);
+                    MultiByteToWideChar(CP_ACP, 0, asString(&out), -1, szName, 50);
                 }
             }
             else
             {
                 StringCchCopyW(szName, COUNTOF(szName), W("<unknown type token>"));
             }
-            
+
             printf("%S::%S", szName, pMemberName);
             methodPrettyPrinter.HandleArguments(); // Safe to call in all cases if HandleReturnType hasn't been called. Will do nothing.
+        }
+        break;
+
+    case mdtString:
+        {
+            ULONG numChars;
+            WCHAR str[84];
+
+            if (i->GetUserString((mdString)token, str, 80, &numChars) == S_OK)
+            {
+                if (numChars < 80)
+                    str[numChars] = 0;
+                wcscpy_s(&str[79], 4, W("..."));
+                WCHAR* ptr = str;
+                while (*ptr != 0) {
+                    if (*ptr < 0x20 || *ptr >= 0x80) {
+                        *ptr = '.';
+                    }
+                    ptr++;
+                }
+
+                printf("\"%S\"", str);
+            }
+            else
+            {
+                printf("STRING %x", token);
+            }
         }
         break;
     }
@@ -368,160 +396,151 @@ HRESULT DecodeILFromAddress(IMetaDataImport *pImport, TADDR ilAddr)
 
     return Status;
 }
-            
+
 void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize)
 {
     // First decode the header
     COR_ILMETHOD *pHeader = (COR_ILMETHOD *) buffer;    
     COR_ILMETHOD_DECODER header(pHeader);    
 
-    // Set globals
-    position = 0;	
-    pBuffer = (BYTE *) header.Code;
+    ULONG position = 0;
+    BYTE* pBuffer = const_cast<BYTE*>(header.Code);
 
     UINT indentCount = 0;
     ULONG endCodePosition = header.GetCodeSize();
-    while(position < endCodePosition)
-    {	
-        for (unsigned e=0;e<header.EHCount();e++)
-        {
-            IMAGE_COR_ILMETHOD_SECT_EH_CLAUSE_FAT ehBuff;
-            const IMAGE_COR_ILMETHOD_SECT_EH_CLAUSE_FAT* ehInfo;
-            
-            ehInfo = header.EH->EHClause(e,&ehBuff);
-            if (ehInfo->TryOffset == position)
-            {
-                printf ("%*s.try\n%*s{\n", indentCount, "", indentCount, "");
-                indentCount+=2;
-            }
-            else if ((ehInfo->TryOffset + ehInfo->TryLength) == position)
-            {
-                indentCount-=2;
-                printf("%*s} // end .try\n", indentCount, "");
-            }
 
-            if (ehInfo->HandlerOffset == position)
-            {
-                if (ehInfo->Flags == COR_ILEXCEPTION_CLAUSE_FINALLY)
-                    printf("%*s.finally\n%*s{\n", indentCount, "", indentCount, "");
-                else
-                    printf("%*s.catch\n%*s{\n", indentCount, "", indentCount, "");
-
-                indentCount+=2;
-            }
-            else if ((ehInfo->HandlerOffset + ehInfo->HandlerLength) == position)
-            {
-                indentCount-=2;
-                
-                if (ehInfo->Flags == COR_ILEXCEPTION_CLAUSE_FINALLY)
-                    printf("%*s} // end .finally\n", indentCount, "");
-                else
-                    printf("%*s} // end .catch\n", indentCount, "");
-            }
-        }        
-        
-        printf("%*sIL_%04x: ", indentCount, "", position);
-        unsigned int c = readOpcode();
-        OpCode opcode = opcodes[c];
-        printf("%s ", opcode.name);
-
-        switch(opcode.args)
-        {
-        case InlineNone: break;
-        
-        case ShortInlineVar:
-            printf("VAR OR ARG %d",readData<BYTE>()); break;
-        case InlineVar:
-            printf("VAR OR ARG %d",readData<WORD>()); break;
-        case InlineI:
-            printf("%d",readData<LONG>());
-            break;
-        case InlineR:
-            printf("%f",readData<double>());
-            break;
-        case InlineBrTarget:
-            printf("IL_%04x",readData<LONG>() + position); break;
-        case ShortInlineBrTarget:
-            printf("IL_%04x",readData<BYTE>()  + position); break;
-        case InlineI8:
-            printf("%ld", readData<__int64>()); break;
-            
-        case InlineMethod:
-        case InlineField:
-        case InlineType:
-        case InlineTok:
-        case InlineSig:        
-        {
-            LONG l = readData<LONG>();
-            if (pImport != NULL)
-            {
-                DisassembleToken(pImport, l);
-            }
-            else
-            {
-                printf("TOKEN %x", l); 
-            }
-            break;
-        }
-            
-        case InlineString:
-        {
-            LONG l = readData<LONG>();
-
-            ULONG numChars;
-            WCHAR str[84];
-
-            if ((pImport != NULL) && (pImport->GetUserString((mdString) l, str, 80, &numChars) == S_OK))
-            {
-                if (numChars < 80)
-                    str[numChars] = 0;
-                wcscpy_s(&str[79], 4, W("..."));
-                WCHAR* ptr = str;
-                while(*ptr != 0) {
-                    if (*ptr < 0x20 || * ptr >= 0x80) {
-                        *ptr = '.';
-                    }
-                    ptr++;
-                }
-
-                printf("\"%S\"", str);
-            }
-            else
-            {
-                printf("STRING %x", l); 
-            }
-            break;
-        }
-            
-        case InlineSwitch:
-        {
-            LONG cases = readData<LONG>();
-            LONG *pArray = new LONG[cases];
-            LONG i=0;
-            for(i=0;i<cases;i++)
-            {
-                pArray[i] = readData<LONG>();
-            }
-            printf("(");
-            for(i=0;i<cases;i++)
-            {
-                if (i != 0)
-                    printf(", ");
-                printf("IL_%04x",pArray[i] + position);
-            }
-            printf(")");
-            delete [] pArray;
-            break;
-        }
-        case ShortInlineI:
-            printf("%d", readData<BYTE>()); break;
-        case ShortInlineR:		
-            printf("%f", readData<float>()); break;
-        default: printf("Error, unexpected opcode type\n"); break;
-        }
-
+    while (position < endCodePosition)
+    {
+        std::tuple<ULONG, UINT> r = DecodeILAtPosition(
+                pImport, pBuffer, bufSize,
+                position, indentCount, header);
+        position = std::get<0>(r);
+        indentCount = std::get<1>(r);
         printf("\n");
     }
+}
+
+std::tuple<ULONG, UINT> DecodeILAtPosition(
+        IMetaDataImport *pImport, BYTE *pBuffer, ULONG bufSize,
+        ULONG position, UINT indentCount, COR_ILMETHOD_DECODER& header)
+{
+    for (unsigned e=0;e<header.EHCount();e++)
+    {
+        IMAGE_COR_ILMETHOD_SECT_EH_CLAUSE_FAT ehBuff;
+        const IMAGE_COR_ILMETHOD_SECT_EH_CLAUSE_FAT* ehInfo;
+
+        ehInfo = header.EH->EHClause(e,&ehBuff);
+        if (ehInfo->TryOffset == position)
+        {
+            printf ("%*s.try\n%*s{\n", indentCount, "", indentCount, "");
+            indentCount+=2;
+        }
+        else if ((ehInfo->TryOffset + ehInfo->TryLength) == position)
+        {
+            indentCount-=2;
+            printf("%*s} // end .try\n", indentCount, "");
+        }
+
+        if (ehInfo->HandlerOffset == position)
+        {
+            if (ehInfo->Flags == COR_ILEXCEPTION_CLAUSE_FINALLY)
+                printf("%*s.finally\n%*s{\n", indentCount, "", indentCount, "");
+            else
+                printf("%*s.catch\n%*s{\n", indentCount, "", indentCount, "");
+
+            indentCount+=2;
+        }
+        else if ((ehInfo->HandlerOffset + ehInfo->HandlerLength) == position)
+        {
+            indentCount-=2;
+
+            if (ehInfo->Flags == COR_ILEXCEPTION_CLAUSE_FINALLY)
+                printf("%*s} // end .finally\n", indentCount, "");
+            else
+                printf("%*s} // end .catch\n", indentCount, "");
+        }
+    }
+    std::function<void(DWORD)> func = [&pImport](DWORD l) {
+        if (pImport != NULL)
+        {
+            DisassembleToken(pImport, l);
+        }
+        else
+        {
+            printf("TOKEN %x", l);
+        }
+    };
+    position = DisplayILOperation(indentCount, pBuffer, position, func);
+    return std::make_tuple(position, indentCount);
+}
+
+ULONG DisplayILOperation(const UINT indentCount, BYTE *pBuffer, ULONG position, std::function<void(DWORD)>& disassembleTokenFunc)
+{
+    printf("%*sIL_%04x: ", indentCount, "", position);
+    unsigned int c = ReadOpcode(pBuffer, position);
+    OpCode opcode = opcodes[c];
+    printf("%s ", opcode.name);
+
+    switch (opcode.args)
+    {
+    case InlineNone: break;
+
+    case ShortInlineVar:
+        printf("VAR OR ARG %d", ReadData<BYTE>(pBuffer, /* byref */ position)); break;
+    case InlineVar:
+        printf("VAR OR ARG %d", ReadData<WORD>(pBuffer, /* byref */ position)); break;
+    case InlineI:
+        printf("%d", ReadData<LONG>(pBuffer, /* byref */ position));
+        break;
+    case InlineR:
+        printf("%f", ReadData<double>(pBuffer, /* byref */ position));
+        break;
+    case InlineBrTarget:
+        printf("IL_%04x", ReadData<LONG>(pBuffer, /* byref */ position) + position); break;
+    case ShortInlineBrTarget:
+        printf("IL_%04x", ReadData<BYTE>(pBuffer, /* byref */ position) + position); break;
+    case InlineI8:
+        printf("%ld", ReadData<__int64>(pBuffer, /* byref */ position)); break;
+
+    case InlineMethod:
+    case InlineField:
+    case InlineType:
+    case InlineTok:
+    case InlineSig:
+    case InlineString:
+    {
+        LONG l = ReadData<LONG>(pBuffer, /* byref */ position);
+        disassembleTokenFunc(l);
+        break;
+    }
+
+    case InlineSwitch:
+    {
+        LONG cases = ReadData<LONG>(pBuffer, /* byref */ position);
+        LONG* pArray = new LONG[cases];
+        LONG i = 0;
+        for (i = 0;i<cases;i++)
+        {
+            pArray[i] = ReadData<LONG>(pBuffer, /* byref */ position);
+        }
+        printf("(");
+        for (i = 0;i<cases;i++)
+        {
+            if (i != 0)
+                printf(", ");
+            printf("IL_%04x", pArray[i] + position);
+        }
+        printf(")");
+        delete[] pArray;
+        break;
+    }
+    case ShortInlineI:
+        printf("%d", ReadData<BYTE>(pBuffer, /* byref */ position)); break;
+    case ShortInlineR:
+        printf("%f", ReadData<float>(pBuffer, /* byref */ position)); break;
+    default: printf("Error, unexpected opcode type\n"); break;
+    }
+    return position;
 }
 
 DWORD_PTR GetObj(DacpObjectData& tokenArray, UINT item)
@@ -622,80 +641,18 @@ void DisassembleToken(DacpObjectData& tokenArray,
 void DecodeDynamicIL(BYTE *data, ULONG Size, DacpObjectData& tokenArray)
 {
     // There is no header for this dynamic guy.
-    // Set globals
-    position = 0;	
-    pBuffer = data;
+    ULONG position = 0;
+    BYTE *pBuffer = data;
 
     // At this time no exception information will be displayed (fix soon)
     UINT indentCount = 0;
     ULONG endCodePosition = Size;
     while(position < endCodePosition)
-    {	        
-        printf("%*sIL_%04x: ", indentCount, "", position);
-        unsigned int c = readOpcode();
-        OpCode opcode = opcodes[c];
-        printf("%s ", opcode.name);
-
-        switch(opcode.args)
-        {
-        case InlineNone: break;
-        
-        case ShortInlineVar:
-            printf("VAR OR ARG %d",readData<BYTE>()); break;
-        case InlineVar:
-            printf("VAR OR ARG %d",readData<WORD>()); break;
-        case InlineI:
-            printf("%d",readData<LONG>());
-            break;
-        case InlineR:
-            printf("%f",readData<double>());
-            break;
-        case InlineBrTarget:
-            printf("IL_%04x",readData<LONG>() + position); break;
-        case ShortInlineBrTarget:
-            printf("IL_%04x",readData<BYTE>()  + position); break;
-        case InlineI8:
-            printf("%ld", readData<__int64>()); break;
-            
-        case InlineMethod:
-        case InlineField:
-        case InlineType:
-        case InlineTok:
-        case InlineSig:        
-        case InlineString:            
-        {
-            LONG l = readData<LONG>();
-            DisassembleToken(tokenArray, l);            
-            break;
-        }
-                        
-        case InlineSwitch:
-        {
-            LONG cases = readData<LONG>();
-            LONG *pArray = new LONG[cases];
-            LONG i=0;
-            for(i=0;i<cases;i++)
-            {
-                pArray[i] = readData<LONG>();
-            }
-            printf("(");
-            for(i=0;i<cases;i++)
-            {
-                if (i != 0)
-                    printf(", ");
-                printf("IL_%04x",pArray[i] + position);
-            }
-            printf(")");
-            delete [] pArray;
-            break;
-        }
-        case ShortInlineI:
-            printf("%d", readData<BYTE>()); break;
-        case ShortInlineR:		
-            printf("%f", readData<float>()); break;
-        default: printf("Error, unexpected opcode type\n"); break;
-        }
-
+    {
+        std::function<void(DWORD)> func = [&tokenArray](DWORD l) {
+            DisassembleToken(tokenArray, l);
+        };
+        position = DisplayILOperation(indentCount, pBuffer, position, func);
         printf("\n");
     }
 }
@@ -709,7 +666,7 @@ static char* asString(CQuickBytes *out) {
     out->ReSize(oldSize + 1);
     char* cur = &((char*) out->Ptr())[oldSize]; 
     *cur = 0;   
-    out->ReSize(oldSize);   		// Don't count the null character
+    out->ReSize(oldSize);           // Don't count the null character
     return((char*) out->Ptr()); 
 }
 
@@ -948,7 +905,7 @@ PCCOR_SIGNATURE PrettyPrintType(
               break;
             }
 
-            case ELEMENT_TYPE_PINNED	:
+            case ELEMENT_TYPE_PINNED:
                 str = " pinned"; goto MODIFIER;
             case ELEMENT_TYPE_PTR           :
                 str = "*"; goto MODIFIER;
@@ -1008,7 +965,7 @@ swprintf_s(sz,16,W("$%s$%X"),szStdNamePrefix[tk>>24],tk&0x00FFFFFF); psz = sz; }
 
 const char* PrettyPrintClass(
     CQuickBytes *out,                   // where to put the pretty printed string   
-    mdToken tk,					 		// The class token to look up 
+    mdToken tk,                         // The class token to look up 
     IMetaDataImport *pIMD,           // ptr to IMetaDataImport class with ComSig
     DWORD formatFlags /*= formatILDasm*/)
 {
@@ -1109,7 +1066,7 @@ const char* PrettyPrintClass(
 
         case mdtAssemblyRef:
             {
-                LPCSTR	szName = NULL;
+                LPCSTR szName = NULL;
                 ULONG unused;
                 ToRelease<IMetaDataAssemblyImport> pAsmImport;
                 if (SUCCEEDED(pIMD->QueryInterface(IID_IMetaDataAssemblyImport, (LPVOID *)&pAsmImport)))

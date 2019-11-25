@@ -39,9 +39,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
                 Console.Clear();
-                if (processId <= 0)
+                if (processId < 0)
                 {
                     Console.Error.WriteLine("Process ID should not be negative.");
+                    return ErrorCodes.ArgumentError;
+                }
+                else if (processId == 0)
+                {
+                    Console.Error.WriteLine("--process-id is required");
                     return ErrorCodes.ArgumentError;
                 }
 
@@ -61,7 +66,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (profile.Length != 0)
                 {
-                    var profileProviders = new List<Provider>();
                     var selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
                         .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
                     if (selectedProfile == null)
@@ -70,32 +74,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return ErrorCodes.ArgumentError;
                     }
 
-                    // If user defined a different key/level on the same provider via --providers option that was specified via --profile option,
-                    // --providers option takes precedence. Go through the list of providers specified and only add it if it wasn't specified
-                    // via --providers options.
-                    if (selectedProfile.Providers != null)
-                    {
-                        foreach (Provider selectedProfileProvider in selectedProfile.Providers)
-                        {
-                            bool shouldAdd = true;
-
-                            foreach (Provider providerCollectionProvider in providerCollection)
-                            {
-                                if (providerCollectionProvider.Name.Equals(selectedProfileProvider.Name))
-                                {
-                                    shouldAdd = false;
-                                    break;
-                                }
-                            }
-
-                            if (shouldAdd)
-                            {
-                                enabledBy[selectedProfileProvider.Name] = "--profile ";
-                                profileProviders.Add(selectedProfileProvider);
-                            }
-                        }
-                    }
-                    providerCollection.AddRange(profileProviders);
+                    Profile.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
                 }
 
 

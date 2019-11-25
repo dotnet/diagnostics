@@ -3448,16 +3448,14 @@ void StringObjectContent(size_t obj, BOOL fLiteral, const int length)
         return;
     }
     
-    strobjInfo stInfo;
-
-    if (MOVE(stInfo,obj) != S_OK)
+    strobjInfo stInfo { 0, 0 };
+    if (MOVE(stInfo, obj) != S_OK)
     {
         ExtOut ("Error getting string data\n");
         return;
     }
 
-    if (objData.Size > 0x200000 ||
-        stInfo.m_StringLength > 0x200000)
+    if (objData.Size > 0x200000 || stInfo.m_StringLength > 0x200000)
     {
         ExtOut ("<String is invalid or too large to print>\n");
         return;
@@ -3472,7 +3470,7 @@ void StringObjectContent(size_t obj, BOOL fLiteral, const int length)
     DWORD_PTR dwAddr = (DWORD_PTR)pwszBuf.GetPtr();
     if (g_sos->GetObjectStringData(TO_CDADDR(obj), stInfo.m_StringLength+1, pwszBuf, NULL)!=S_OK)
     {
-        ExtOut("Error getting string data\n");
+        ExtOut("<Invalid Object>");
         return;
     }
 
@@ -4675,62 +4673,47 @@ void GetAllocContextPtrs(AllocInfo *pallocInfo)
     }
 }
 
-HRESULT ReadVirtualCache::Read(TADDR taOffset, PVOID Buffer, ULONG BufferSize, PULONG lpcbBytesRead)
+HRESULT ReadVirtualCache::Read(TADDR address, PVOID buffer, ULONG bufferSize, PULONG lpcbBytesRead)
 {
-    // sign extend the passed in Offset so we can use it in when calling 
-    // IDebugDataSpaces::ReadVirtual()
-
-    CLRDATA_ADDRESS Offset = TO_CDADDR(taOffset);
-    // Offset can be any random ULONG64, as it can come from VerifyObjectMember(), and this
+    // address can be any random ULONG64, as it can come from VerifyObjectMember(), and this
     // can pass random pointer values in case of GC heap corruption
-    HRESULT ret;
-    ULONG cbBytesRead = 0;
 
-    if (BufferSize == 0)
+    if (bufferSize == 0)
         return S_OK;
 
-    if (BufferSize > CACHE_SIZE)
+    if (bufferSize > CACHE_SIZE)
     {
         // Don't even try with the cache
-        return g_ExtData->ReadVirtual(Offset, Buffer, BufferSize, lpcbBytesRead);
+        return g_ExtData->ReadVirtual(TO_CDADDR(address), buffer, bufferSize, lpcbBytesRead);
     }
 
-    if ((m_cacheValid)
-        && (taOffset >= m_startCache) 
-        && (taOffset <= m_startCache + m_cacheSize - BufferSize))
-
+    if (!m_cacheValid || (address < m_startCache) || (address > (m_startCache + (m_cacheSize - bufferSize))))
     {
-        // It is within the cache
-        memcpy(Buffer,(LPVOID) ((ULONG64)m_cache + (taOffset - m_startCache)), BufferSize);
+        ULONG cbBytesRead = 0;
 
-        if (lpcbBytesRead != NULL)
+        m_cacheValid = FALSE;
+        m_startCache = address;
+
+        // Avoid an int overflow
+        if (m_startCache + CACHE_SIZE < m_startCache)
+            m_startCache = (TADDR)(-CACHE_SIZE);
+
+        HRESULT hr = g_ExtData->ReadVirtual(TO_CDADDR(m_startCache), m_cache, CACHE_SIZE, &cbBytesRead);
+        if (hr != S_OK)
         {
-           *lpcbBytesRead = BufferSize;
+            return hr;
         }
- 
-        return S_OK;
-    }
- 
-    m_cacheValid = FALSE;
-    m_startCache = taOffset;
 
-    // avoid an int overflow
-    if (m_startCache + CACHE_SIZE < m_startCache)
-        m_startCache = (TADDR)(-CACHE_SIZE);
-
-    ret = g_ExtData->ReadVirtual(TO_CDADDR(m_startCache), m_cache, CACHE_SIZE, &cbBytesRead);
-    if (ret != S_OK)
-    {
-        return ret;
+        m_cacheSize = cbBytesRead;     
+        m_cacheValid = TRUE;
     }
-    
-    m_cacheSize = cbBytesRead;     
-    m_cacheValid = TRUE;
-    memcpy(Buffer, (LPVOID) ((ULONG64)m_cache + (taOffset - m_startCache)), BufferSize);
+
+    int size = _min(bufferSize, m_cacheSize);
+    memcpy(buffer, (LPVOID) ((ULONG64)m_cache + (address - m_startCache)), size);
 
     if (lpcbBytesRead != NULL)
     {
-        *lpcbBytesRead = cbBytesRead;
+        *lpcbBytesRead = size;
     }
 
     return S_OK;
@@ -5114,10 +5097,8 @@ void ExtErr(PCSTR Format, ...)
     va_end(Args);
 }
 
-
 void ExtDbgOut(PCSTR Format, ...)
 {
-#ifdef _DEBUG
     if (Output::g_bDbgOutput)
     {
         va_list Args;
@@ -5127,7 +5108,6 @@ void ExtDbgOut(PCSTR Format, ...)
         OutputVaList(DEBUG_OUTPUT_NORMAL, Format, Args);
         va_end(Args);
     }
-#endif
 }
 
 const char * const DMLFormats[] =
