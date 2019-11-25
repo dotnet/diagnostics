@@ -38,7 +38,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
-                Console.Clear();
+
+                try
+                {
+                    Console.Clear();
+                }
+                catch (IOException)
+                {
+                    // Console not available.
+                }
+
                 if (processId < 0)
                 {
                     Console.Error.WriteLine("Process ID should not be negative.");
