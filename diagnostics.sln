@@ -55,7 +55,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dotnet-gcdump", "src\Tools\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetCounters.UnitTests", "src\tests\dotnet-counters\DotnetCounters.UnitTests.csproj", "{E5A7DC6C-BF8D-418A-BCBD-094EB748FA82}"
 EndProject
-<<<<<<< HEAD
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.NETCore.Client", "src\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj", "{D8BE9C81-194E-43E5-82CF-2080892FBDE7}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.NETCore.Client.UnitTests", "src\tests\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj", "{6F4DD2F8-1C7B-4A87-B7E5-1BEE9F5AC128}"
@@ -897,7 +896,6 @@ Global
 		{E5A7DC6C-BF8D-418A-BCBD-094EB748FA82}.RelWithDebInfo|x64.Build.0 = Release|Any CPU
 		{E5A7DC6C-BF8D-418A-BCBD-094EB748FA82}.RelWithDebInfo|x86.ActiveCfg = Release|Any CPU
 		{E5A7DC6C-BF8D-418A-BCBD-094EB748FA82}.RelWithDebInfo|x86.Build.0 = Release|Any CPU
-<<<<<<< HEAD
 		{D8BE9C81-194E-43E5-82CF-2080892FBDE7}.Checked|Any CPU.ActiveCfg = Debug|Any CPU
 		{D8BE9C81-194E-43E5-82CF-2080892FBDE7}.Checked|Any CPU.Build.0 = Debug|Any CPU
 		{D8BE9C81-194E-43E5-82CF-2080892FBDE7}.Checked|ARM.ActiveCfg = Debug|Any CPU
