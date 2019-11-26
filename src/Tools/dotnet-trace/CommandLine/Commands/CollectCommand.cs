@@ -39,13 +39,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
 
+                bool hasConsole = true;
+
                 try
                 {
                     Console.Clear();
                 }
                 catch (IOException)
                 {
-                    // Console not available.
+                    // The console is not available, probably because it has been redirected.
+                    // See https://docs.microsoft.com/dotnet/api/system.console.clear#remarks
+                    hasConsole = false;
                 }
 
                 if (processId < 0)
@@ -150,8 +154,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     if (nBytesRead <= 0)
                                         break;
                                     fs.Write(buffer, 0, nBytesRead);
-                                    lineToClear = Console.CursorTop-1;
-                                    ResetCurrentConsoleLine(vTermMode.IsEnabled);
+
+                                    if (hasConsole)
+                                    {
+                                        lineToClear = Console.CursorTop - 1;
+                                        ResetCurrentConsoleLine(vTermMode.IsEnabled);
+                                    }
+
                                     Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
                                     Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
                                     Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
