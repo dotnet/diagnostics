@@ -39,18 +39,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
 
-                bool hasConsole = true;
+                bool hasConsole = console.GetTerminal() != null;
 
-                try
-                {
+                if (hasConsole)
                     Console.Clear();
-                }
-                catch (IOException)
-                {
-                    // The console is not available, probably because it has been redirected.
-                    // See https://docs.microsoft.com/dotnet/api/system.console.clear#remarks
-                    hasConsole = false;
-                }
 
                 if (processId < 0)
                 {
