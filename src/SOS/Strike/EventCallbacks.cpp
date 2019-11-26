@@ -67,6 +67,13 @@ HRESULT __stdcall EventCallbacks::ChangeEngineState(ULONG Flags, ULONG64 Argumen
 }
 HRESULT __stdcall EventCallbacks::ChangeSymbolState(ULONG Flags, ULONG64 Argument)
 {
+    if (Flags == DEBUG_CSS_PATHS)
+    {
+        IDebugClient* client = m_pDebugClient;
+        INIT_API_EXT();
+        DisableSymbolStore();
+        InitializeSymbolStoreFromSymPath();
+    }
     return DEBUG_STATUS_NO_CHANGE;
 }
 HRESULT __stdcall EventCallbacks::CreateProcess(ULONG64 ImageFileHandle,
@@ -109,10 +116,12 @@ HRESULT __stdcall EventCallbacks::ExitThread(ULONG ExitCode)
 
 HRESULT __stdcall EventCallbacks::GetInterestMask(PULONG Mask)
 {
-    *Mask = DEBUG_EVENT_LOAD_MODULE | DEBUG_EVENT_EXIT_PROCESS;
+    *Mask = DEBUG_EVENT_LOAD_MODULE | DEBUG_EVENT_EXIT_PROCESS | DEBUG_EVENT_CHANGE_SYMBOL_STATE;
     return S_OK;
 }
 
+extern HRESULT HandleRuntimeLoadedNotification(IDebugClient* client);
+extern bool g_breakOnRuntimeModuleLoad;
 extern BOOL g_fAllowJitOptimization;
 
 HRESULT __stdcall EventCallbacks::LoadModule(ULONG64 ImageFileHandle,
@@ -124,23 +133,29 @@ HRESULT __stdcall EventCallbacks::LoadModule(ULONG64 ImageFileHandle,
     ULONG TimeDateStamp)
 {
     HRESULT handleEventStatus = DEBUG_STATUS_NO_CHANGE;
-    ExtQuery(m_pDebugClient);
 
     if (ModuleName != NULL && _stricmp(ModuleName, MAIN_CLR_MODULE_NAME_A) == 0)
     {
-        // if we don't want the JIT to optimize, we should also disable optimized NGEN images
-        if(!g_fAllowJitOptimization)
+        if (g_breakOnRuntimeModuleLoad)
         {
-            // if we aren't succesful SetNGENCompilerFlags will print relevant error messages
+            g_breakOnRuntimeModuleLoad = false;
+            HandleRuntimeLoadedNotification(m_pDebugClient);
+        }
+        // if we don't want the JIT to optimize, we should also disable optimized NGEN images
+        if (!g_fAllowJitOptimization)
+        {
+            ExtQuery(m_pDebugClient);
+
+            // If we aren't successful SetNGENCompilerFlags will print relevant error messages
             // and then we need to stop the debugger so the user can intervene if desired
-            if(FAILED(SetNGENCompilerFlags(CORDEBUG_JIT_DISABLE_OPTIMIZATION)))
+            if (FAILED(SetNGENCompilerFlags(CORDEBUG_JIT_DISABLE_OPTIMIZATION)))
             {
                 handleEventStatus = DEBUG_STATUS_BREAK;
             }
+            ExtRelease();
         }
     }
 
-    ExtRelease();
     return handleEventStatus;
 }
 

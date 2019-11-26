@@ -8,7 +8,11 @@ using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.TestHelpers;
@@ -18,13 +22,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     public class EventPipeSessionTests
     {
-        private string GetTraceePath()
+        private readonly ITestOutputHelper output;
+
+        public EventPipeSessionTests(ITestOutputHelper outputHelper)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return "../../../Tracee/Debug/netcoreapp3.0/Tracee.exe";
-            }
-            return @"../../../Tracee/Debug/netcoreapp3.0/Tracee";
+            output = outputHelper;
         }
 
         /// <summary>
@@ -33,7 +35,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void BasicEventPipeSessionTest()
         {
-            TestRunner runner = new TestRunner(GetTraceePath());
+            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
             runner.Start(3000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
             using (var session = client.StartEventPipeSession(new List<EventPipeProvider>()
@@ -52,35 +54,45 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void EventPipeSessionStreamTest()
         {
-            TestRunner runner = new TestRunner(GetTraceePath());
-            runner.Start(3000);
+            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
+            runner.Start(5000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
+            runner.PrintStatus();
+            output.WriteLine($"[{DateTime.Now.ToString()}] Trying to start an EventPipe session on process {runner.Pid}");
             using (var session = client.StartEventPipeSession(new List<EventPipeProvider>()
             {
-                new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational)
+                new EventPipeProvider("System.Runtime", EventLevel.Informational, 0, new Dictionary<string, string>() {
+                    { "EventCounterIntervalSec", "1" }
+                })
             }))
             {
-                var source = new EventPipeEventSource(session.EventStream);
                 var evntCnt = 0;
-                source.Dynamic.All += (TraceEvent obj) => {
-                    evntCnt += 1;
-                };
 
-                try
-                {
-                    source.Process();
-                    Assert.True(evntCnt > 0);
-                }
-                // NOTE: This exception does not currently exist. It is something that needs to be added to TraceEvent.
-                catch (Exception e)
-                {
-                    Console.WriteLine("Error encountered while processing events");
-                    Assert.Equal("", e.ToString());
-                }
-                finally
-                {
-                    runner.Stop();
-                }
+                Task streamTask = Task.Run(() => {
+                    var source = new EventPipeEventSource(session.EventStream);
+                    source.Dynamic.All += (TraceEvent obj) => {
+                        output.WriteLine("Got an event");
+                        evntCnt += 1;
+                    };
+                    try
+                    {
+                        source.Process();
+                    }
+                    // NOTE: This exception does not currently exist. It is something that needs to be added to TraceEvent.
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Error encountered while processing events");
+                        Assert.Equal("", e.ToString());
+                    }
+                    finally
+                    {
+                        runner.Stop();
+                    }
+                });
+                output.WriteLine("Waiting for stream Task");
+                streamTask.Wait(10000);
+                output.WriteLine("Done waiting for stream Task");
+                Assert.True(evntCnt > 0);
             }
         }
 

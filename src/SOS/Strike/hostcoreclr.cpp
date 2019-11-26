@@ -41,7 +41,6 @@
 
 static bool g_hostingInitialized = false;
 static bool g_symbolStoreInitialized = false;
-static bool g_windowsSymbolPathInitialized = false;
 LPCSTR g_hostRuntimeDirectory = nullptr;
 LPCSTR g_dacFilePath = nullptr;
 LPCSTR g_dbiFilePath = nullptr;
@@ -797,34 +796,48 @@ HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* 
     return S_OK;
 }
 
-
 /**********************************************************************\
  * Setup and initialize the symbol server support using the .sympath
 \**********************************************************************/
-void InitializeSymbolStore()
+HRESULT InitializeSymbolStore()
 {
-    _ASSERTE(g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate != nullptr);
+    if (!g_symbolStoreInitialized)
+    {
+        HRESULT hr = InitializeHosting();
+        if (FAILED(hr)) {
+            return hr;
+        }
+#ifndef FEATURE_PAL
+        InitializeSymbolStoreFromSymPath();
+#endif
+    }
+    return S_OK;
+}
 
 #ifndef FEATURE_PAL
-    if (!g_windowsSymbolPathInitialized)
+/**********************************************************************\
+ * Setup and initialize the symbol server support using the .sympath
+\**********************************************************************/
+void InitializeSymbolStoreFromSymPath()
+{
+    if (g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate != nullptr)
     {
         ArrayHolder<char> symbolPath = new char[MAX_LONGPATH];
         if (SUCCEEDED(g_ExtSymbols->GetSymbolPath(symbolPath, MAX_LONGPATH, nullptr)))
         {
             if (strlen(symbolPath) > 0)
-            {
+            {   
                 if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(false, false, false, GetTempDirectory(), nullptr, nullptr, nullptr, symbolPath))
                 {
                     ExtErr("Windows symbol path parsing FAILED\n");
                     return;
                 }
-                g_windowsSymbolPathInitialized = true;
                 g_symbolStoreInitialized = true;
             }
         }
     }
-#endif
 }
+#endif // FEATURE_PAL
 
 //
 // Symbol downloader callback
@@ -926,7 +939,6 @@ void DisableSymbolStore()
     if (g_symbolStoreInitialized)
     {
         g_symbolStoreInitialized = false;
-        g_windowsSymbolPathInitialized = false;
 
         _ASSERTE(g_SOSNetCoreCallbacks.DisableSymbolStoreDelegate != nullptr);
         g_SOSNetCoreCallbacks.DisableSymbolStoreDelegate();
@@ -947,11 +959,9 @@ HRESULT GetMetadataLocator(
     BYTE* buffer,
     ULONG32* dataSize)
 {
-    HRESULT hr = InitializeHosting();
-    if (FAILED(hr)) {
-        return hr;
-    }
-    InitializeSymbolStore();
+    HRESULT Status = S_OK;
+    IfFailRet(InitializeSymbolStore());
+
     _ASSERTE(g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate != nullptr);
     return g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate(imagePath, imageTimestamp, imageSize, mvid, mdRva, flags, bufferSize, buffer, dataSize);
 }
@@ -1206,10 +1216,7 @@ HRESULT SymbolReader::LoadSymbolsForPortablePDB(__in_z WCHAR* pModuleName, ___in
     ___in ULONG64 peAddress, ___in ULONG64 peSize, ___in ULONG64 inMemoryPdbAddress, ___in ULONG64 inMemoryPdbSize)
 {
     HRESULT Status = S_OK;
-
-    IfFailRet(InitializeHosting());
-    InitializeSymbolStore();
-
+    IfFailRet(InitializeSymbolStore());
     _ASSERTE(g_SOSNetCoreCallbacks.LoadSymbolsForModuleDelegate != nullptr);
 
     // The module name needs to be null for in-memory PE's.

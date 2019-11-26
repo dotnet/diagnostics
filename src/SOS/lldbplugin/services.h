@@ -308,6 +308,9 @@ public:
         ULONG bufferSize,
         PULONG versionInfoSize);
 
+    HRESULT SetRuntimeLoadedCallback(
+        PFN_RUNTIME_LOADED_CALLBACK callback);
+
     //----------------------------------------------------------------------------
     // LLDBServices (internal)
     //----------------------------------------------------------------------------

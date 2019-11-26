@@ -9,6 +9,7 @@ using System.Diagnostics.Tracing;
 using System.IO;
 using System.Runtime.InteropServices;
 using Xunit;
+using Xunit.Abstractions;
 
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.TestHelpers;
@@ -18,13 +19,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     public class WriteDumpTests
     {
-        private string GetTraceePath()
+        private readonly ITestOutputHelper output;
+
+        public WriteDumpTests(ITestOutputHelper outputHelper)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return "../../../Tracee/Debug/netcoreapp3.0/Tracee.exe";
-            }
-            return @"../../../Tracee/Debug/netcoreapp3.0/Tracee";
+            output = outputHelper;
         }
 
         /// <summary>
@@ -34,16 +33,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public void BasicWriteDumpTest()
         {
             var dumpPath = "./myDump.dmp";
-            TestRunner runner = new TestRunner(GetTraceePath());
+            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
             runner.Start(3000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 Assert.Throws<PlatformNotSupportedException>(() => client.WriteDump(DumpType.Normal, dumpPath));
             }
             else
             {
+                output.WriteLine($"Requesting dump at {DateTime.Now.ToString()}");
                 client.WriteDump(DumpType.Normal, dumpPath);
                 Assert.True(File.Exists(dumpPath));
                 File.Delete(dumpPath);
@@ -61,11 +61,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             var heapDumpPath = "./myDump-heap.dmp";
             var triageDumpPath = "./myDump-triage.dmp";
             var fullDumpPath = "./myDump-full.dmp";
-            TestRunner runner = new TestRunner(GetTraceePath());
+            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
             runner.Start(3000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 Assert.Throws<PlatformNotSupportedException>(() => client.WriteDump(DumpType.Normal, normalDumpPath));
                 Assert.Throws<PlatformNotSupportedException>(() => client.WriteDump(DumpType.WithHeap, heapDumpPath));
@@ -75,6 +75,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             else
             {
                 // Write each type of dump
+                output.WriteLine($"Requesting dump at {DateTime.Now.ToString()}");
                 client.WriteDump(DumpType.Normal, normalDumpPath);
                 client.WriteDump(DumpType.WithHeap, heapDumpPath);
                 client.WriteDump(DumpType.Triage, triageDumpPath);
@@ -110,7 +111,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             var client = new DiagnosticsClient(arbitraryPid);
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 Assert.Throws<PlatformNotSupportedException>(() => client.WriteDump(DumpType.Normal, dumpPath));
             }

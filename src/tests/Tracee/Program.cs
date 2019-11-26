@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 using System.Threading;
 
 namespace Tracee
@@ -7,12 +11,11 @@ namespace Tracee
     {
         static void Main(string[] args)
         {
-            for (var i = 0; i < 10; i++)
+            // Runs for max of 30 sec
+            for(var i = 0; i < 30; i++)
             {
-                Console.WriteLine("Hello World!");
-                Thread.Sleep(500);
+                Thread.Sleep(1000);
             }
-            Thread.Sleep(5000);
         }
     }
 }

@@ -4,11 +4,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Xunit;
 using Xunit.Extensions;
@@ -83,7 +85,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 initialConfig["WinDir"] = Path.GetFullPath(Environment.GetEnvironmentVariable("WINDIR"));
             }
             IEnumerable<Dictionary<string, string>> configs = ParseConfigFile(path, new Dictionary<string, string>[] { initialConfig });
-            Configurations = configs.Select(c => new TestConfiguration(c));
+            Configurations = configs.Select(c => new TestConfiguration(c)).ToList();
         }
 
         Dictionary<string, string>[] ParseConfigFile(string path, Dictionary<string, string>[] templates)
@@ -171,51 +173,150 @@ namespace Microsoft.Diagnostics.TestHelpers
             return templates;
         }
 
+        // Currently we only support single function clauses as follows
+        //  Exists('<string: file or directory name>')
+        //  StartsWith('<string>', '<string: prefix>')
+        //  EndsWith('<string>', '<string: postfix>')
+        //  Contains('<string>', '<string: substring>')
+        //  '<string>' == '<string>'
+        //  '<string>' != '<string>'
+        // strings support variable embedding with $(<var_name>). e.g Exists('$(PropsFile)')
         bool EvaluateConditional(Dictionary<string, string> config, XElement node)
         {
+            void ValidateAndResolveParameters(string funcName, int expectedParamCount, List<string> paramList)
+            {
+                if (paramList.Count != expectedParamCount)
+                {
+                    throw new InvalidDataException($"Expected {expectedParamCount} arguments for {funcName} in condition");
+                }
+
+                for (int i = 0; i < paramList.Count; i++)
+                {
+                    paramList[i] = ResolveProperties(config, paramList[i]);
+                }
+            }
+
             foreach (XAttribute attr in node.Attributes("Condition"))
             {
-                string conditionText = attr.Value;
+                string conditionText = attr.Value.Trim();
+                bool isNegative = conditionText.Length > 0 && conditionText[0] == '!';
 
                 // Check if Exists('<directory or file>')
-                const string existsKeyword = "Exists('";
-                int existsStartIndex = conditionText.IndexOf(existsKeyword);
-                if (existsStartIndex != -1)
+                const string existsKeyword = "Exists";
+                if (TryGetParametersForFunction(conditionText, existsKeyword, out List<string> paramList))
                 {
-                    bool not = (existsStartIndex > 0) && (conditionText[existsStartIndex - 1] == '!');
-
-                    existsStartIndex += existsKeyword.Length;
-                    int existsEndIndex = conditionText.IndexOf("')", existsStartIndex);
-                    Assert.NotEqual(-1, existsEndIndex);
-
-                    string path = conditionText.Substring(existsStartIndex, existsEndIndex - existsStartIndex);
-                    path = Path.GetFullPath(ResolveProperties(config, path));
-                    bool exists = Directory.Exists(path) || File.Exists(path);
-                    return not ? !exists : exists;
+                    ValidateAndResolveParameters(existsKeyword, 1, paramList);
+                    bool exists = Directory.Exists(paramList[0]) || File.Exists(paramList[0]);
+                    return isNegative ? !exists : exists;
                 }
-                else
+
+                // Check if StartsWith('string', 'prefix')
+                const string startsWithKeyword = "StartsWith";
+                if (TryGetParametersForFunction(conditionText, startsWithKeyword, out paramList))
                 {
-                    // Check if equals and not equals
-                    string[] parts = conditionText.Split("==");
-                    bool equal;
-
-                    if (parts.Length == 2)
-                    {
-                        equal = true;
-                    }
-                    else
-                    {
-                        parts = conditionText.Split("!=");
-                        Assert.Equal(2, parts.Length);
-                        equal = false;
-                    }
-                    // Resolve any config values in the condition
-                    string leftValue = ResolveProperties(config, parts[0]).Trim();
-                    string rightValue = ResolveProperties(config, parts[1]).Trim();
-
-                    // Now do the simple string comparison of the left/right sides of the condition
-                    return equal ? leftValue == rightValue : leftValue != rightValue;
+                    ValidateAndResolveParameters(startsWithKeyword, 2, paramList);
+                    bool isPrefix = paramList[0].StartsWith(paramList[1]);
+                    return isNegative ? !isPrefix : isPrefix;
                 }
+
+                // Check if EndsWith('string', 'postfix')
+                const string endsWithKeyword = "EndsWith";
+                if (TryGetParametersForFunction(conditionText, endsWithKeyword, out paramList))
+                {
+                    ValidateAndResolveParameters(endsWithKeyword, 2, paramList);
+                    bool isPostfix = paramList[0].EndsWith(paramList[1]);
+                    return isNegative ? !isPostfix : isPostfix;
+                }
+
+                // Check if Contains('string', 'substring')
+                const string containsKeyword = "Contains";
+                if (TryGetParametersForFunction(conditionText, containsKeyword, out paramList))
+                {
+                    ValidateAndResolveParameters(containsKeyword, 2, paramList);
+                    bool isInString = paramList[0].Contains(paramList[1]);
+                    return isNegative ? !isInString : isInString;
+                }
+
+                // Check if equals and not equals
+                bool isEquals = conditionText.Contains("==");
+                bool isDifferent = conditionText.Contains("!=");
+                
+                if (isEquals == isDifferent) 
+                {
+                    throw new InvalidDataException($"Unknown condition type in {conditionText}. See TestRunConfiguration.EvaluateConditional for supported values.");
+                }
+
+                string[] parts = isEquals ? conditionText.Split("==") : conditionText.Split("!=");
+
+                // Resolve any config values in the condition
+                string leftValue = ResolveProperties(config, parts[0]).Trim();
+                string rightValue = ResolveProperties(config, parts[1]).Trim();
+
+                // Now do the simple string comparison of the left/right sides of the condition
+                return isEquals ? leftValue == rightValue : leftValue != rightValue;
+            }
+            return true;
+        }
+
+        private bool TryGetParametersForFunction(string expression, string targetFunctionName, out List<string> exprParams)
+        {
+            int functionKeyworkIndex = expression.IndexOf($"{targetFunctionName}(");
+            if (functionKeyworkIndex == -1) {
+                exprParams = null;
+                return false;
+            }
+
+            if ((functionKeyworkIndex != 0 
+                    && functionKeyworkIndex == 1 && expression[0] != '!')
+                || functionKeyworkIndex > 1
+                || !expression.EndsWith(')'))
+            {
+                throw new InvalidDataException($"Condition {expression} malformed. Currently only single-function conditions are supported.");
+            }
+
+            exprParams = new List<string>();
+            bool isWithinString = false;
+            bool expectDelimiter = false;
+            int curParsingIndex = functionKeyworkIndex + targetFunctionName.Length + 1;
+            StringBuilder resolvedValue = new StringBuilder();
+
+            // Account for the trailing parenthesis.
+            while(curParsingIndex + 1 < expression.Length)
+            {
+                char currentChar = expression[curParsingIndex];
+                // toggle string nesting on ', except if scaped
+                if (currentChar == '\'' && !(curParsingIndex > 0 && expression[curParsingIndex - 1] == '\\'))
+                {
+                    if (isWithinString)
+                    {
+                        exprParams.Add(resolvedValue.ToString());
+                        resolvedValue.Clear();
+                        expectDelimiter = true;
+                    }
+
+                    isWithinString = !isWithinString;
+                }
+                else if (isWithinString)
+                {
+                    resolvedValue.Append(currentChar);
+                }
+                else if (currentChar == ',')
+                {
+                    if (!expectDelimiter)
+                    {
+                        throw new InvalidDataException($"Unexpected comma found within {expression}");
+                    }
+                    expectDelimiter = false;
+                }
+                else if (!Char.IsWhiteSpace(currentChar))
+                {
+                    throw new InvalidDataException($"Non whitespace, non comma value found outside of string within: {expression}");
+                }
+                curParsingIndex++;
+            }
+
+            if (isWithinString) {
+                throw new InvalidDataException($"Non-terminated string detected within {expression}");
             }
             return true;
         }
@@ -264,19 +365,74 @@ namespace Microsoft.Diagnostics.TestHelpers
     {
         const string DebugTypeKey = "DebugType";
         const string DebuggeeBuildRootKey = "DebuggeeBuildRoot";
-
+        
         internal static readonly string BaseDir = Path.GetFullPath(".");
+        private static readonly Regex versionRegex = new Regex(@"^(\d+\.\d+\.\d+)(-.*)?", RegexOptions.Compiled);
+        
+        private ReadOnlyDictionary<string, string> _settings;
+        private readonly string _configStringView;
+        private readonly string _truncatedRuntimeFrameworkVersion;
 
-        private Dictionary<string, string> _settings;
 
         public TestConfiguration()
         {
-            _settings = new Dictionary<string, string>();
+            _settings = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
+            _truncatedRuntimeFrameworkVersion = null;
+            _configStringView = string.Empty;
         }
 
         public TestConfiguration(Dictionary<string, string> initialSettings)
         {
-            _settings = new Dictionary<string, string>(initialSettings);
+            _settings = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(initialSettings));
+            _truncatedRuntimeFrameworkVersion = GetTruncatedRuntimeFrameworkVersion();
+            _configStringView = GetStringViewWithVersion(RuntimeFrameworkVersion); 
+        }
+
+        private string GetTruncatedRuntimeFrameworkVersion()
+        {
+            string version = RuntimeFrameworkVersion;
+            if (string.IsNullOrEmpty(version))
+            {
+                return null;
+            }
+
+            Match matchingVer = versionRegex.Match(version);
+            if (!matchingVer.Success)
+            {
+                throw new InvalidDataException($"{version} is not a valid version string according to SemVer.");
+            }
+
+            return matchingVer.Groups[1].Value;
+        }
+
+        private string GetStringViewWithVersion(string version)
+        {
+            var sb = new StringBuilder();
+            sb.Append(TestProduct);
+            sb.Append(".");
+            sb.Append(DebuggeeBuildProcess);
+            if (!string.IsNullOrEmpty(version))
+            {
+                sb.Append(".");
+                sb.Append(version);
+            }
+            return sb.ToString();
+        }
+
+        internal string GetLogSuffix()
+        {
+            string version = RuntimeFrameworkVersion;
+
+            // The log name can't contain wild cards, which are used in some testing scenarios.
+            // TODO: The better solution would be to sanitize the file name properly, in case
+            // there's a key being used that contains a character that is not a valid file
+            // name charater.
+            if (!string.IsNullOrEmpty(version) && version.Contains('*'))
+            {
+                version = _truncatedRuntimeFrameworkVersion;
+            }
+
+            return GetStringViewWithVersion(version);
         }
 
         public IReadOnlyDictionary<string, string> AllSettings
@@ -654,17 +810,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public override string ToString()
         {
-            var sb = new StringBuilder();
-            sb.Append(TestProduct);
-            sb.Append(".");
-            sb.Append(DebuggeeBuildProcess);
-            string version = RuntimeFrameworkVersion;
-            if (!string.IsNullOrEmpty(version))
-            {
-                sb.Append(".");
-                sb.Append(version);
-            }
-            return sb.ToString();
+            return _configStringView;
         }
     }
 

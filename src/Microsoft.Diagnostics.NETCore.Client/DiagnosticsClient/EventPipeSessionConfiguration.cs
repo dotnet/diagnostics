@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal class EventPipeSessionConfiguration
     {
-        public EventPipeSessionConfiguration(int circularBufferSizeMB, EventPipeSerializationFormat format, IEnumerable<EventPipeProvider> providers, bool requestRundown)
+        public EventPipeSessionConfiguration(int circularBufferSizeMB, EventPipeSerializationFormat format, IEnumerable<EventPipeProvider> providers)
         {
             if (circularBufferSizeMB == 0)
                 throw new ArgumentException($"Buffer size cannot be zero.");
@@ -25,14 +25,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentException("Unrecognized format");
             if (providers == null)
                 throw new ArgumentNullException(nameof(providers));
-            if (providers.Count() <= 0)
-                throw new ArgumentException($"Specified providers collection is empty.");
 
-            RequestRundown = requestRundown;
             CircularBufferSizeInMB = circularBufferSizeMB;
             Format = format;
             string extension = format == EventPipeSerializationFormat.NetPerf ? ".netperf" : ".nettrace";
             _providers = new List<EventPipeProvider>(providers);
+        }
+        public EventPipeSessionConfiguration(int circularBufferSizeMB, EventPipeSerializationFormat format, IEnumerable<EventPipeProvider> providers, bool requestRundown)
+            : this(circularBufferSizeMB, format, providers)
+        {
+            RequestRundown = requestRundown;
         }
 
         public bool RequestRundown { get; }
@@ -43,7 +45,33 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private readonly List<EventPipeProvider> _providers;
 
-        public virtual byte[] Serialize()
+        public virtual byte[] SerializeV1()
+        {
+            byte[] serializedData = null;
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write(CircularBufferSizeInMB);
+                writer.Write((uint)Format);
+
+                writer.Write(Providers.Count());
+                foreach (var provider in Providers)
+                {
+                    writer.Write(provider.Keywords);
+                    writer.Write((uint)provider.EventLevel);
+
+                    writer.WriteString(provider.Name);
+                    writer.WriteString(provider.GetArgumentString());
+                }
+
+                writer.Flush();
+                serializedData = stream.ToArray();
+            }
+
+            return serializedData;
+        }
+
+        public virtual byte[] SerializeV2()
         {
             byte[] serializedData = null;
             using (var stream = new MemoryStream())
@@ -69,6 +97,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             return serializedData;
         }
+
 
     }
 }

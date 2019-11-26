@@ -9,6 +9,7 @@ using System.IO;
 using System.Threading;
 using System.Runtime.InteropServices;
 using Xunit;
+using Xunit.Abstractions;
 
 using Microsoft.Diagnostics.TestHelpers;
 using Microsoft.Diagnostics.NETCore.Client;
@@ -21,21 +22,23 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     public class GetPublishedProcessesTest
     {
-        private string GetTraceePath()
+        private readonly ITestOutputHelper output;
+
+        public GetPublishedProcessesTest(ITestOutputHelper outputHelper)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return "../../../Tracee/Debug/netcoreapp3.0/Tracee.exe";
-            }
-            return @"../../../Tracee/Debug/netcoreapp3.0/Tracee";
+            output = outputHelper;
         }
 
         [Fact]
         public void PublishedProcessTest1()
         {
-            TestRunner runner = new TestRunner(GetTraceePath());
+            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
             runner.Start(3000);
             List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
+            foreach(int p in publishedProcesses)
+            {
+                output.WriteLine($"[{DateTime.Now.ToString()}] Saw published process {p}");
+            }
             Assert.Contains(publishedProcesses, p => p == runner.Pid);
             runner.Stop();
         }
@@ -48,11 +51,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             for (var i = 0; i < 3; i++)
             {
-                runner[i] = new TestRunner(GetTraceePath());
+                runner[i] = new TestRunner(CommonHelper.GetTraceePath(), output);
                 runner[i].Start(500);
                 pids[i] = runner[i].Pid;
             }
             List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
+            foreach(int p in publishedProcesses)
+            {
+                output.WriteLine($"[{DateTime.Now.ToString()}] Saw published process {p}");
+            }
+
             for (var i = 0; i < 3; i++)
             {
                 Assert.Contains(publishedProcesses, p => p == pids[i]);

@@ -911,10 +911,10 @@ bpmd provides managed breakpoint support. If it can resolve the method name
 to a loaded, jitted or ngen'd function it will create a breakpoint with "bp".
 If not then either the module that contains the method hasn't been loaded yet
 or the module is loaded, but the function is not jitted yet. In these cases,
-bpmd asks the Windows Debugger to receive CLR Notifications, and waits to
-receive news of module loads and JITs, at which time it will try to resolve 
-the function to a breakpoint. -nofuturemodule can be used to suppress 
-creating a breakpoint against a module that has not yet been loaded.
+bpmd asks the Debugger to receive CLR Notifications, and waits to receive news 
+of module loads and JITs, at which time it will try to resolve the function to
+a breakpoint. -nofuturemodule can be used to suppress creating a breakpoint 
+against a module that has not yet been loaded.
 
 Management of the list of pending breakpoints can be done via bpmd -list,
 bpmd -clear, and bpmd -clearall commands. bpmd -list generates a list of 
@@ -924,15 +924,17 @@ particular loaded module. If the pending breakpoint has a zero module id, then
 the breakpoint applies to modules that have not yet been loaded. Use 
 bpmd -clear or bpmd -clearall to remove pending breakpoints from the list.
 
+The bpmd command can now be used before the runtime is loaded. You can execute
+bpmd right after the SOS plug-in is loaded. Always add the module extension for
+the module name parameter.
+
 This brings up a good question: "I want to set a breakpoint on the main
 method of my application. How can I do this?"
 
-  1) Stop after coreclr is loaded - TBD
-
-  2) Add the breakpoint with command such as:
-       bpmd myapp.exe MyApp.Main
-  3) g
-  4) You will stop at the start of MyApp.Main. If you type "bl" you will 
+  1) Add the breakpoint with command such as:
+       bpmd myapp.dll MyApp.Main
+  2) g
+  3) You will stop at the start of MyApp.Main. If you type "bl" you will 
      see the breakpoint listed.
 
 To correctly specify explicitly implemented methods make sure to retrieve the
@@ -950,7 +952,7 @@ For example:
 	    { ... }
 	}
 
-	bpmd myapp.exe ExplicitItfImpl.I1.M1
+	bpmd myapp.dll ExplicitItfImpl.I1.M1
 
 
 bpmd works equally well with generic types. Adding a breakpoint on a generic 
@@ -973,11 +975,11 @@ Example for generics:
 		{ ... }
 	}
 
-	One would issue the following commands to set breapoints on G3.F() and 
+	One would issue the following commands to set breakpoints on G3.F() and 
 	G1.G():
 
-	bpmd myapp.exe G3`3.F
-	bpmd myapp.exe G1`1.G
+	bpmd myapp.dll G3`3.F
+	bpmd myapp.dll G1`1.G
 
 And for explicitly implemented methods on generic interfaces:
 	public interface IT1<T>
@@ -992,7 +994,7 @@ And for explicitly implemented methods on generic interfaces:
 	    { ... }
 	}
 
-	bpmd bpmd.exe ExplicitItfImpl`1.IT1<U>.M1
+	bpmd bpmd.dll ExplicitItfImpl`1.IT1<U>.M1
 
 Additional examples:
 	If IT1 and ExplicitItfImpl are types declared inside another class, 
@@ -1007,10 +1009,10 @@ Additional examples:
 	Furthermore, if the Outer class resides in a namespace, NS, the bpmd 
 	command to use becomes:
 
-	bpmd bpmd.exe NS.Outer+ExplicitItfImpl`1.NS.Outer.IT1<U>.M1
+	bpmd bpmd.dll NS.Outer+ExplicitItfImpl`1.NS.Outer.IT1<U>.M1
 
 bpmd does not accept offsets nor parameters in the method name. You can add
-an IL offset as an optional parameter seperate from the name. If there are overloaded
+an IL offset as an optional parameter separate from the name. If there are overloaded
 methods, bpmd will set a breakpoint for all of them.
 
 In the case of hosted environments such as SQL, the module name may be 

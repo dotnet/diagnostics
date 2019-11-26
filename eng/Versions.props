@@ -23,7 +23,7 @@
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
 
     <!-- Other libs -->
-    <MicrosoftSymbolStoreVersion>1.0.50701</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.55801</MicrosoftSymbolStoreVersion>
     <MicrosoftDiagnosticsRuntimeVersion>1.1.46104</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.44</MicrosoftDiagnosticsTracingTraceEventVersion>
@@ -33,6 +33,8 @@
 
     <XUnitVersion>2.4.1</XUnitVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
+
+    <MicrosoftDotNetRemoteExecutorVersion>5.0.0-beta.19562.5</MicrosoftDotNetRemoteExecutorVersion>
 
     <cdbsosversion>10.0.18362</cdbsosversion>
 

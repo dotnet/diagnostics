@@ -259,13 +259,12 @@ ExceptionBreakpointCallback(
 
     // Send the normal and error output to stdout/stderr since we
     // don't have a return object from the command interpreter.
-    lldb::SBCommandReturnObject result;
-    result.SetImmediateOutputFile(stdout);
-    result.SetImmediateErrorFile(stderr);
+    lldb::SBCommandReturnObject returnObject;
+    returnObject.SetImmediateOutputFile(stdout);
+    returnObject.SetImmediateErrorFile(stderr);
 
-    // Save the process and thread to be used by the current process/thread 
-    // helper functions.
-    LLDBServices* client = new LLDBServices(debugger, result, &process, &thread);
+    // Save the process and thread to be used by the current process/thread helper functions.
+    LLDBServices* client = new LLDBServices(debugger, returnObject, &process, &thread);
     return ((PFN_EXCEPTION_CALLBACK)baton)(client) == S_OK;
 }
 
@@ -1977,6 +1976,69 @@ LLDBServices::GetModuleVersionInformation(
     else
     {
         return E_INVALIDARG;
+    }
+    return S_OK;
+}
+
+lldb::SBBreakpoint g_runtimeLoadedBp;
+
+bool 
+RuntimeLoadedBreakpointCallback(
+    void *baton, 
+    lldb::SBProcess &process,
+    lldb::SBThread &thread, 
+    lldb::SBBreakpointLocation &location)
+{
+    lldb::SBDebugger debugger = process.GetTarget().GetDebugger();
+
+    // Send the normal and error output to stdout/stderr since we
+    // don't have a return object from the command interpreter.
+    lldb::SBCommandReturnObject returnObject;
+    returnObject.SetImmediateOutputFile(stdout);
+    returnObject.SetImmediateErrorFile(stderr);
+
+    // Save the process and thread to be used by the current process/thread helper functions.
+    LLDBServices* client = new LLDBServices(debugger, returnObject, &process, &thread);
+    bool result = ((PFN_RUNTIME_LOADED_CALLBACK)baton)(client) == S_OK;
+
+    // Clear the breakpoint
+    if (g_runtimeLoadedBp.IsValid())
+    {
+        process.GetTarget().BreakpointDelete(g_runtimeLoadedBp.GetID());
+        g_runtimeLoadedBp = lldb::SBBreakpoint();
+    }
+
+    // Continue the process
+    if (result)
+    {
+        lldb::SBError error = process.Continue();
+        result = error.Success();
+    }
+    return result;
+}
+
+HRESULT 
+LLDBServices::SetRuntimeLoadedCallback(
+    PFN_RUNTIME_LOADED_CALLBACK callback)
+{
+    if (!g_runtimeLoadedBp.IsValid())
+    {
+        lldb::SBTarget target = m_debugger.GetSelectedTarget();
+        if (!target.IsValid())
+        {
+            return E_FAIL;
+        }
+        // By the time the host calls coreclr_execute_assembly, the coreclr DAC table should be initialized so DAC can be loaded.
+        lldb::SBBreakpoint runtimeLoadedBp = target.BreakpointCreateByName("coreclr_execute_assembly", MAKEDLLNAME_A("coreclr"));
+        if (!runtimeLoadedBp.IsValid())
+        {
+            return E_FAIL;
+        }
+#ifdef FLAGS_ANONYMOUS_ENUM
+        runtimeLoadedBp.AddName("DoNotDeleteOrDisable");
+#endif
+        runtimeLoadedBp.SetCallback(RuntimeLoadedBreakpointCallback, (void *)callback);
+        g_runtimeLoadedBp = runtimeLoadedBp;
     }
     return S_OK;
 }

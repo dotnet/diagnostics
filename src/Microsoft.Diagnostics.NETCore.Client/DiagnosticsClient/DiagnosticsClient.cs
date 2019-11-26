@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Start tracing the application via CollectTracing2 command.
+        /// Start tracing the application and return an EventPipeSession object
         /// </summary>
         /// <param name="providers">An IEnumerable containing the list of Providers to turn on.</param>
         /// <param name="requestRundown">If true, request rundown events from the runtime</param>
@@ -122,10 +122,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </returns>
         public static IEnumerable<int> GetPublishedProcesses()
         {
-             return Directory.GetFiles(IpcRootPath)
+            return Directory.GetFiles(IpcRootPath)
                 .Select(namedPipe => (new FileInfo(namedPipe)).Name)
                 .Where(input => Regex.IsMatch(input, DiagnosticsPortPattern))
-                .Select(input => int.Parse(Regex.Match(input, DiagnosticsPortPattern).Groups[1].Value, NumberStyles.Integer));
+                .Select(input => int.Parse(Regex.Match(input, DiagnosticsPortPattern).Groups[1].Value, NumberStyles.Integer))
+                .Distinct();
         }
 
         private static byte[] SerializeCoreDump(string dumpName, DumpType dumpType, bool diagnostics)

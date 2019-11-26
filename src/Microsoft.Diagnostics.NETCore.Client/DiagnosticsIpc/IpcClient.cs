@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
@@ -28,6 +29,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <returns>A System.IO.Stream wrapper around the transport</returns>
         private static Stream GetTransport(int processId)
         {
+            try 
+            {
+                var process = Process.GetProcessById(processId);
+            }
+            catch (System.ArgumentException)
+            {
+                throw new ServerNotAvailableException($"Process {processId} is not running.");
+            }
+ 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 string pipeName = $"dotnet-diagnostic-{processId}";
@@ -38,14 +48,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             else
             {
-                string ipcPort = Directory.GetFiles(IpcRootPath) // Try best match.
-                    .Select(namedPipe => (new FileInfo(namedPipe)).Name)
-                    .SingleOrDefault(input => Regex.IsMatch(input, $"^dotnet-diagnostic-{processId}-(\\d+)-socket$"));
-                if (ipcPort == null)
+                string ipcPort;
+                try
                 {
-                    throw new ServerNotAvailableException($"Process {processId} not running compatible .NET Core runtime");
+                    ipcPort = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-{processId}-*-socket") // Try best match.
+                                .OrderByDescending(f => new FileInfo(f).LastWriteTime)
+                                .FirstOrDefault();
+                    if (ipcPort == null)
+                    {
+                        throw new ServerNotAvailableException($"Process {processId} not running compatible .NET Core runtime.");
+                    }
                 }
-                string path = Path.Combine(Path.GetTempPath(), ipcPort);
+                catch (InvalidOperationException)
+                {
+                    throw new ServerNotAvailableException($"Process {processId} not running compatible .NET Core runtime.");
+                }
+                string path = Path.Combine(IpcRootPath, ipcPort);
                 var remoteEP = new UnixDomainSocketEndPoint(path);
 
                 var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
