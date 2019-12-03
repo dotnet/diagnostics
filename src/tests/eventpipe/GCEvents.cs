@@ -233,7 +233,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                         Logger.logger.Log("GCAllocationTickResult: " + GCAllocationTickResult); 
 
                         Logger.logger.Log("GCCreateConcurrentThreadEvents: " + GCCreateConcurrentThreadEvents);
-                        //GCCreateConcurrentThreadEvents not stable, ignore the verification
+                        //GCTerminateConcurrentThreadEvents not stable, ignore the verification
                         Logger.logger.Log("GCTerminateConcurrentThreadEvents: " + GCTerminateConcurrentThreadEvents);
                         bool GCConcurrentResult = GCCreateConcurrentThreadEvents > 0 && GCTerminateConcurrentThreadEvents >= 0;
                         Logger.logger.Log("GCConcurrentResult: " + GCConcurrentResult);
