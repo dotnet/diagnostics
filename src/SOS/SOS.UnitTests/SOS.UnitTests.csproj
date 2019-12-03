@@ -36,4 +36,33 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj" />
   </ItemGroup>
+    
+  <Target Name="GenerateTestConfigFile" AfterTargets="Build">
+    <PropertyGroup>
+      <TestConfigFileName>$([MSBuild]::NormalizeDirectory('$(RepoRoot)', '.dotnet'))Debugger.Tests.Versions.txt</TestConfigFileName>
+      <TestConfigFileLines>
+<![CDATA[
+<Configuration>
+  <RuntimeVersion21>$(MicrosoftNETCoreApp21Version)</RuntimeVersion21>
+  <AspNetCoreVersion21>$(MicrosoftAspNetCoreApp21Version)</AspNetCoreVersion21>
+  <RuntimeVersion30>$(MicrosoftNETCoreApp30Version)</RuntimeVersion30>
+  <AspNetCoreVersion30>$(MicrosoftAspNetCoreApp30Version)</AspNetCoreVersion30>
+  <RuntimeVersion31>$(MicrosoftNETCoreApp31Version)</RuntimeVersion31>
+  <AspNetCoreVersion31>$(MicrosoftAspNetCoreApp31Version)</AspNetCoreVersion31>
+  <RuntimeVersionLatest>$(MicrosoftNETCoreAppVersion)</RuntimeVersionLatest>
+  <AspNetCoreVersionLatest>$(MicrosoftAspNetCoreAppRefVersion)</AspNetCoreVersionLatest>
+</Configuration>
+]]>
+      </TestConfigFileLines>
+    </PropertyGroup>
+
+    <WriteLinesToFile File="$(TestConfigFileName)" Lines="$(TestConfigFileLines.Replace(';', '%3B'))" Overwrite="true" />
+
+    <ItemGroup>
+      <FileWrites Include="$(TestConfigFileName)" />
+    </ItemGroup>
+
+    <Message Importance="High" Text="Created config file $(TestConfigFileName)" />
+  </Target>
+
 </Project>

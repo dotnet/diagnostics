@@ -449,7 +449,7 @@ if [ $__Test == true ]; then
    if [ $__CrossBuild != true ]; then
 
       # Install the other versions of .NET Core runtime we are going to test on
-      "$__ProjectRoot/eng/install-test-runtimes.sh" --dotnet-directory "$__ProjectRoot/.dotnet" --temp-directory "$__IntermediatesDir" --architecture "$__BuildArch" $__DailyTest
+      "$__ProjectRoot/eng/install-test-runtimes.sh" --install-dir "$__ProjectRoot/.dotnet" --architecture "$__BuildArch" $__DailyTest
 
       if [ "$LLDB_PATH" == "" ]; then
           export LLDB_PATH="$(which lldb-3.9.1 2> /dev/null)"
