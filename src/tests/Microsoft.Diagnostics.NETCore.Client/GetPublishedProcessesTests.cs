@@ -4,19 +4,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Threading;
-using System.Runtime.InteropServices;
 using Xunit;
 using Xunit.Abstractions;
 
-using Microsoft.Diagnostics.TestHelpers;
-using Microsoft.Diagnostics.NETCore.Client;
-
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    
+
     /// <summary>
     /// Suite of tests that test top-level commands
     /// </summary>

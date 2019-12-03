@@ -22,24 +22,6 @@ if defined VS160COMNTOOLS (
     set __VSVersion=vs2017
 )
 
-:: Work around Jenkins CI + msbuild problem: Jenkins sometimes creates very large environment
-:: variables, and msbuild can't handle environment blocks with such large variables. So clear
-:: out the variables that might be too large.
-set ghprbCommentBody=
-
-:: Note that the msbuild project files (specifically, dir.proj) will use the following variables, if set:
-::      __BuildArch         -- default: x64
-::      __BuildType         -- default: Debug
-::      __BuildOS           -- default: Windows_NT
-::      __ProjectDir        -- default: directory of the dir.props file
-::      __SourceDir         -- default: %__ProjectDir%\src\
-::      __RootBinDir        -- default: %__ProjectDir%\artifacts\
-::      __IntermediatesDir  -- default: %__RootBinDir%\obj\%__BuildOS%.%__BuildArch.%__BuildType%\
-::      __BinDir            -- default: %__RootBinDir%\bin\%__BuildOS%.%__BuildArch.%__BuildType%\
-::      __LogDir            -- default: %__RootBinDir%\log\%__BuildOS%.%__BuildArch.%__BuildType%\
-::
-:: Thus, these variables are not simply internal to this script!
-
 :: Set the default arguments for build
 
 set __BuildArch=x64
@@ -47,12 +29,9 @@ if /i "%PROCESSOR_ARCHITECTURE%" == "amd64" set __BuildArch=x64
 if /i "%PROCESSOR_ARCHITECTURE%" == "x86" set __BuildArch=x86
 set __BuildType=Debug
 set __BuildOS=Windows_NT
-set __Build=0
-set __Test=0
+set __Build=1
 set __CI=0
-set __DailyTest=
 set __Verbosity=minimal
-set __TestArgs=
 set __BuildCrossArch=0
 set __CrossArch=
 
@@ -63,7 +42,7 @@ if %__ProjectDir:~-1%==\ set "__ProjectDir=%__ProjectDir:~0,-1%"
 set "__ProjectDir=%__ProjectDir%\.."
 set "__SourceDir=%__ProjectDir%\src"
 
-:: __UnprocessedBuildArgs are args that we pass to msbuild (e.g. /p:__BuildArch=x64)
+:: __UnprocessedBuildArgs are args that we pass to msbuild (e.g. /p:OfficialBuildId=xxxxxx)
 set "__args=%*"
 set processedArgs=
 set __UnprocessedBuildArgs=
@@ -76,18 +55,16 @@ if /i "%1" == "-h"    goto Usage
 if /i "%1" == "-help" goto Usage
 if /i "%1" == "--help" goto Usage
 
-if /i "%1" == "-build-native"        (set __Build=1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
-if /i "%1" == "-test"                (set __Test=1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
-if /i "%1" == "-daily-test"          (set __DailyTest=-DailyTest&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-configuration"       (set __BuildType=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
 if /i "%1" == "-architecture"        (set __BuildArch=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
 if /i "%1" == "-verbosity"           (set __Verbosity=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
-:: These options are passed on to the common build script when testing
-if /i "%1" == "-ci"                  (set __CI=1&set __TestArgs=!__TestArgs! %1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
-if /i "%1" == "-solution"            (set __TestArgs=!__TestArgs! %1 %2&set processedArgs=!processedArgs! %1&shift&shift&goto Arg_Loop)
+if /i "%1" == "-ci"                  (set __CI=1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
+
 :: These options are ignored for a native build
+if /i "%1" == "-clean"               (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-build"               (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-rebuild"             (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
+if /i "%1" == "-test"                (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-sign"                (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-restore"             (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-pack"                (set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
@@ -332,8 +309,8 @@ REM Copy the native SOS binaries to where these tools expect for testing
 
 set "__dotnet_sos=%__RootBinDir%\bin\dotnet-sos\%__BuildType%\netcoreapp2.1\publish\win-%__BuildArch%"
 set "__dotnet_dump=%__RootBinDir%\bin\dotnet-dump\%__BuildType%\netcoreapp2.1\publish\win-%__BuildArch%"
-xcopy /y /q /i /s %__BinDir% %__dotnet_sos%
-xcopy /y /q /i /s %__BinDir% %__dotnet_dump%
+xcopy /y /q /i %__BinDir% %__dotnet_sos%
+xcopy /y /q /i %__BinDir% %__dotnet_dump%
 
 REM =========================================================================================
 REM ===
@@ -344,19 +321,6 @@ REM ============================================================================
 echo %__MsgPrefix%Repo successfully built. Finished at %TIME%
 echo %__MsgPrefix%Product binaries are available at !__BinDir!
 
-if /i %__BuildCrossArch% EQU 1 goto Done
-
-:: Test components
-if %__Test% EQU 1 (
-    :: Install the other versions of .NET Core runtime we are going to test on
-    powershell -ExecutionPolicy ByPass -NoProfile -command "& """%__ProjectDir%\eng\install-test-runtimes.ps1""" -DotNetDir %__ProjectDir%\.dotnet -TempDir %__IntermediatesDir% -BuildArch %__BuildArch%" %__DailyTest%
-
-    :: Run the xunit tests
-    powershell -ExecutionPolicy ByPass -NoProfile -command "& """%__ProjectDir%\eng\common\Build.ps1""" -test -configuration %__BuildType% -verbosity %__Verbosity% %__TestArgs%"
-    exit /b !ERRORLEVEL!
-)
-
-:Done
 exit /b 0
 
 REM =========================================================================================
@@ -375,9 +339,6 @@ echo.
 echo All arguments are optional. The options are:
 echo.
 echo.-? -h -help --help: view this message.
-echo -build-native - build native components
-echo -test - test components
-echo -daily-test - test components for daily build job
 echo -architecture <x64|x86|arm|arm64>
 echo -configuration <debug|release>
 echo -verbosity <q[uiet]|m[inimal]|n[ormal]|d[etailed]|diag[nostic]>

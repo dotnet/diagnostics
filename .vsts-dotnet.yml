@@ -212,7 +212,7 @@ jobs:
     - MacOS
     - Linux_cross
     - Linux_cross64
-    condition: ne(variables['Build.Reason'], 'Schedule')
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'Schedule'))
     pool:
       name: NetCoreInternal-Pool
       queue: BuildPool.Windows.10.Amd64.VS2017
