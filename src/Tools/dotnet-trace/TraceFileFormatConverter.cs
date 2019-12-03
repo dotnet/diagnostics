@@ -72,7 +72,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     OnlyManagedCodeStacks = true // EventPipe currently only has managed code stacks.
                 };
 
-                var computer = new SampleProfilerThreadTimeComputer(eventLog, symbolReader);
+                var computer = new SampleProfilerThreadTimeComputer(eventLog, symbolReader)
+                {
+                    IncludeEventSourceEvents = false // SpeedScope handles only CPU samples, events are not supported
+                };
                 computer.GenerateThreadTimeStacks(stackSource);
 
                 SpeedScopeStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename);
