@@ -1,0 +1,105 @@
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Parsers;
+using System;
+using System.Collections.Generic;
+using System.CommandLine;
+using System.CommandLine.Binding;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Microsoft.Diagnostics.Tools.Trace
+{
+    internal static class PrintLiveCommandHandler
+    {
+        delegate Task<int> PrintLiveDelegate(CancellationToken ct, IConsole console, int processId, uint buffersize, string providers, string profile, TimeSpan duration, string @event);
+
+        /// <summary>
+        /// Collects a diagnostic trace from a currently running process.
+        /// </summary>
+        /// <param name="ct">The cancellation token</param>
+        /// <param name="console"></param>
+        /// <param name="processId">The process to collect the trace from.</param>
+        /// <param name="buffersize">Sets the size of the in-memory circular buffer in megabytes.</param>
+        /// <param name="providers">A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'</param>
+        /// <param name="profile">A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.</param>
+        /// <returns></returns>
+        private static Task<int> PrintLive(CancellationToken ct, IConsole console, int processId, uint buffersize, string providers, string profile, TimeSpan duration, string @event)
+        {
+            var eventNames = new HashSet<string>();
+            if (!String.IsNullOrWhiteSpace(@event))
+            {
+                foreach (var eventName in @event.Split(','))
+                {
+                    eventNames.Add(eventName);
+                }
+            }
+
+            Action<TraceEvent> eventCallback =
+                (traceEvent) =>
+                {
+                    if (FilterEvent(traceEvent, eventNames))
+                    {
+                        Console.Out.WriteLine(traceEvent);
+                    }
+                };
+
+            return CommandHelpers.Trace(ct, console, processId, buffersize, providers, profile, duration,
+                onBeforeStart: () => { },
+                onStart: (info) =>
+                {
+                    using (var pipeEventSource = new EventPipeEventSource(info.EventPipeStream))
+                    {
+                        var eventParser = new ClrTraceEventParser(pipeEventSource);
+                        eventParser.All += eventCallback;
+
+                        try
+                        {
+                            pipeEventSource.Process();
+                        }
+                        finally
+                        {
+                            eventParser.All -= eventCallback;
+                        }
+                    }
+                },
+                onSuccess: () => { });
+        }
+
+        public static Command PrintLiveCommand() =>
+            new Command(
+                name: "print-live",
+                description: "Prints a diagnostic trace from a currently running process in real-time",
+                symbols: new Option[] {
+                    CommonOptions.ProcessIdOption(),
+                    CommonOptions.CircularBufferOption(),
+                    CommonOptions.ProvidersOption(),
+                    CommonOptions.ProfileOption(),
+                    CommonOptions.DurationOption(),
+                    EventOption()
+                },
+                handler: HandlerDescriptor.FromDelegate((PrintLiveDelegate)PrintLive).GetCommandHandler());
+
+        private static bool FilterEvent(TraceEvent traceEvent, HashSet<string> eventNames)
+        {
+            if (eventNames.Count > 0)
+            {
+                return eventNames.Contains(traceEvent.EventName);
+            }
+            else
+            {
+                return true;
+            }
+        }
+
+        private static Option EventOption() =>
+            new Option(
+                alias: "--event",
+                description: "Filter only these events. For example: FileIO/Create,Process/Start",
+                argument: new Argument<string>(defaultValue: "") { Name = "event-filter" },
+                isHidden: true);
+    }
+}
