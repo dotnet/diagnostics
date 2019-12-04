@@ -77,7 +77,10 @@ is in the directory set with the above command.
 >> I have a chicken and egg problem. I want to use SOS commands, but the CLR
    isn't loaded yet. What can I do?
 
-There currently isn't any way to get lldb to stop on libcoreclr.so module load.
+There currently isn't any way to get lldb to stop on libcoreclr.so module load, but
+you can now set a breakpoint on Main with "bpmd".
+
+        (lldb) bpmd Foo.dll Program.Main
 
 >> I got the following error message. Now what?
 	
@@ -217,6 +220,7 @@ heap.  This command recognizes async state machines defined as "async void", "as
 any other tasks.
 \\
 
+COMMAND: dso.
 COMMAND: dumpstackobjects.
 DumpStackObjects [-verify] [top stack [bottom stack]]
 
@@ -564,6 +568,7 @@ Possible thread states:
     Failed to Start
     Detached
 \\
+
 COMMAND: threads.
 COMMAND: clrthreads.
 Threads [-live] [-special] 

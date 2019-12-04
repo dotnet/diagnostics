@@ -38,7 +38,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
-                Console.Clear();
+
+                bool hasConsole = console.GetTerminal() != null;
+
+                if (hasConsole)
+                    Console.Clear();
+
                 if (processId < 0)
                 {
                     Console.Error.WriteLine("Process ID should not be negative.");
@@ -145,8 +150,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     if (nBytesRead <= 0)
                                         break;
                                     fs.Write(buffer, 0, nBytesRead);
-                                    lineToClear = Console.CursorTop-1;
-                                    ResetCurrentConsoleLine(vTermMode.IsEnabled);
+
+                                    if (hasConsole)
+                                    {
+                                        lineToClear = Console.CursorTop - 1;
+                                        ResetCurrentConsoleLine(vTermMode.IsEnabled);
+                                    }
+
                                     Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
                                     Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
                                     Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");

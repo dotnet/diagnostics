@@ -349,9 +349,9 @@ static bool FindDotNetVersion(int majorFilter, int minorFilter, std::string& hos
 
 #ifdef FEATURE_PAL
 const char *g_linuxPaths[] = {
-//  "/rh-dotnet22/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
+    "/rh-dotnet31/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
+    "/rh-dotnet30/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
     "/rh-dotnet21/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
-    "/rh-dotnet20/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
     "/usr/share/dotnet/shared/Microsoft.NETCore.App",
 };
 #endif
@@ -405,11 +405,15 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
                 // Find highest 3.0.x version
                 if (!FindDotNetVersion(3, 0, hostRuntimeDirectory))
                 {
-                    // If an installed runtime can not be found, use the target coreclr version
-                    HRESULT hr = GetCoreClrDirectory(hostRuntimeDirectory);
-                    if (FAILED(hr))
+                    // Find highest 3.1.x version
+                    if (!FindDotNetVersion(3, 1, hostRuntimeDirectory))
                     {
-                        return hr;
+                        // If an installed runtime can not be found, use the target coreclr version
+                        HRESULT hr = GetCoreClrDirectory(hostRuntimeDirectory);
+                        if (FAILED(hr))
+                        {
+                            return hr;
+                        }
                     }
                 }
             }
