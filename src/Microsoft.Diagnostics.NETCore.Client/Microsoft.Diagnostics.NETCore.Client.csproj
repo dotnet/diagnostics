@@ -4,7 +4,7 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <RootNamespace>Microsoft.Diagnostics.NETCore.Client</RootNamespace>
     <Description>.NET Core Diagnostics Client Library</Description>
-    <VersionPrefix>1.0.0</VersionPrefix>
+    <VersionPrefix>0.1.0</VersionPrefix>
     <IsPackable>true</IsPackable>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>

@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
+using System.Linq;
 using System.Text;
 
 namespace Microsoft.Diagnostics.NETCore.Client
@@ -68,12 +69,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 return "";
             }
-            StringBuilder sb = new StringBuilder();
-            foreach(var argument in Arguments)
-            {
-                sb.Append($"{argument.Key}={argument.Value};");
-            }
-            return sb.ToString(0, sb.Length-1);
+            return string.Join(";", Arguments.Select(a => $"{a.Key}={a.Value}"));
         }
 
     }

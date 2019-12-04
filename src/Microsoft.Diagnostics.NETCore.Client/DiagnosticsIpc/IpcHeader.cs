@@ -26,7 +26,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public static readonly UInt16 HeaderSizeInBytes = 20;
         private static readonly UInt16 MagicSizeInBytes = 14;
 
-        public byte[] Magic = ASCIIEncoding.ASCII.GetBytes("DOTNET_IPC_V1" + '\0'); // byte[14] in native code
+        public byte[] Magic = DotnetIpcV1; // byte[14] in native code
         public UInt16 Size = HeaderSizeInBytes;
         public byte CommandSet;
         public byte CommandId;
@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         // Helper expression to quickly get V1 magic string for comparison
         // should be 14 bytes long
-        public static byte[] DOTNET_IPC_V1 => ASCIIEncoding.ASCII.GetBytes("DOTNET_IPC_V1" + '\0');
+        public static byte[] DotnetIpcV1 => Encoding.ASCII.GetBytes("DOTNET_IPC_V1" + '\0');
 
         public byte[] Serialize()
         {

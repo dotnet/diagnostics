@@ -78,7 +78,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     {
                         source.Process();
                     }
-                    // NOTE: This exception does not currently exist. It is something that needs to be added to TraceEvent.
                     catch (Exception e)
                     {
                         Console.WriteLine("Error encountered while processing events");

@@ -19,8 +19,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
     public class DiagnosticsClient
     {
         private int _processId;
-        private static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
-        private static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
 
         public DiagnosticsClient(int processId)
         {
@@ -90,11 +88,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentException($"{nameof(profilerPath)} must be non-null");
             }
 
-            var header = new MessageHeader {
-                RequestType = DiagnosticsMessageType.AttachProfiler,
-                Pid = (uint)Process.GetCurrentProcess().Id,
-            };
-
             byte[] serializedConfiguration = SerializeProfilerAttach((uint)attachTimeout.TotalSeconds, profilerGuid, profilerPath, additionalData);
             var message = new IpcMessage(DiagnosticsServerCommandSet.Profiler, (byte)ProfilerCommandId.AttachProfiler, serializedConfiguration);
             var response = IpcClient.SendMessage(_processId, message);
@@ -109,7 +102,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     throw new ServerErrorException($"Profiler attach failed - server responded with unknown command");
             }
 
-            // TODO: the call to set up the pipe and send the message operates on a different timeout than attachTimeout, which is for the runtime.
+            // The call to set up the pipe and send the message operates on a different timeout than attachTimeout, which is for the runtime.
             // We should eventually have a configurable timeout for the message passing, potentially either separately from the 
             // runtime timeout or respect attachTimeout as one total duration.
         }
@@ -122,10 +115,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </returns>
         public static IEnumerable<int> GetPublishedProcesses()
         {
-            return Directory.GetFiles(IpcRootPath)
+            return Directory.GetFiles(IpcClient.IpcRootPath)
                 .Select(namedPipe => (new FileInfo(namedPipe)).Name)
-                .Where(input => Regex.IsMatch(input, DiagnosticsPortPattern))
-                .Select(input => int.Parse(Regex.Match(input, DiagnosticsPortPattern).Groups[1].Value, NumberStyles.Integer))
+                .Where(input => Regex.IsMatch(input, IpcClient.DiagnosticsPortPattern))
+                .Select(input => int.Parse(Regex.Match(input, IpcClient.DiagnosticsPortPattern).Groups[1].Value, NumberStyles.Integer))
                 .Distinct();
         }
 

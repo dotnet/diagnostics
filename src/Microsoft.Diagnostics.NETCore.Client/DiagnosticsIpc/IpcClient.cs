@@ -18,7 +18,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     internal class IpcClient
     {
-        private static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
+        public static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
+        public static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
 
         private static double ConnectTimeoutMilliseconds { get; } = TimeSpan.FromSeconds(3).TotalMilliseconds;
 
@@ -36,6 +37,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             catch (System.ArgumentException)
             {
                 throw new ServerNotAvailableException($"Process {processId} is not running.");
+            }
+            catch (System.InvalidOperationException)
+            {
+                throw new ServerNotAvailableException($"Process {processId} seems to be elevated.");
             }
  
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -105,20 +110,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static void Write(Stream stream, byte[] buffer)
         {
-            using (var writer = new BinaryWriter(stream, Encoding.UTF8, true))
-            {
-                writer.Write(buffer);
-            }
+            stream.Write(buffer, 0, buffer.Length);
         }
 
         private static void Write(Stream stream, IpcMessage message)
         {
-            using (var writer = new BinaryWriter(stream, Encoding.UTF8, true))
-            {
-                writer.Write(message.Serialize());
-            }
+            Write(stream, message.Serialize());
         }
-
 
         private static IpcMessage Read(Stream stream)
         {

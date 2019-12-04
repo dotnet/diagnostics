@@ -9,7 +9,7 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    internal static class Extensions
+    internal static class BinaryWriterExtensions
     {
         public static void WriteString(this BinaryWriter @this, string value)
         {

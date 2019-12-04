@@ -26,11 +26,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Stops an EventPipe session.
         /// </summary>
-        StopEventPipeTracing,
+        StopEventPipeTracing = 1025,
         /// <summary>
         /// Starts an EventPipe session that sends events out-of-proc through IPC.
         /// </summary>
-        CollectEventPipeTracing,
+        CollectEventPipeTracing = 1026,
         /// <summary>
         /// Attaches a profiler to an existing process
         /// </summary>

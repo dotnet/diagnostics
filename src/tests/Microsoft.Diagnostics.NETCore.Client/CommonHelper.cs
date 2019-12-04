@@ -4,7 +4,10 @@
 
 using System;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
+
+using Microsoft.Diagnostics.TestHelpers;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -16,12 +19,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public static string GetTraceePath()
         {
             var curPath = Directory.GetCurrentDirectory();
+;
             var traceePath = curPath.Replace("Microsoft.Diagnostics.NETCore.Client.UnitTests", "Tracee");
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return traceePath + "\\Tracee.dll";
-            }
-            return traceePath + "/Tracee.dll";
+
+            return Path.Combine(traceePath, "Tracee.dll");
         }
     }
 }

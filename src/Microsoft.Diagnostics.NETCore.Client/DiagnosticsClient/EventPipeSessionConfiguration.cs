@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal class EventPipeSessionConfiguration
     {
-        public EventPipeSessionConfiguration(int circularBufferSizeMB, EventPipeSerializationFormat format, IEnumerable<EventPipeProvider> providers)
+        public EventPipeSessionConfiguration(int circularBufferSizeMB, EventPipeSerializationFormat format, IEnumerable<EventPipeProvider> providers, bool requestRundown=true)
         {
             if (circularBufferSizeMB == 0)
                 throw new ArgumentException($"Buffer size cannot be zero.");
@@ -28,13 +28,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             CircularBufferSizeInMB = circularBufferSizeMB;
             Format = format;
-            string extension = format == EventPipeSerializationFormat.NetPerf ? ".netperf" : ".nettrace";
-            _providers = new List<EventPipeProvider>(providers);
-        }
-        public EventPipeSessionConfiguration(int circularBufferSizeMB, EventPipeSerializationFormat format, IEnumerable<EventPipeProvider> providers, bool requestRundown)
-            : this(circularBufferSizeMB, format, providers)
-        {
             RequestRundown = requestRundown;
+            _providers = new List<EventPipeProvider>(providers);
         }
 
         public bool RequestRundown { get; }
@@ -45,33 +40,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private readonly List<EventPipeProvider> _providers;
 
-        public virtual byte[] SerializeV1()
-        {
-            byte[] serializedData = null;
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
-            {
-                writer.Write(CircularBufferSizeInMB);
-                writer.Write((uint)Format);
-
-                writer.Write(Providers.Count());
-                foreach (var provider in Providers)
-                {
-                    writer.Write(provider.Keywords);
-                    writer.Write((uint)provider.EventLevel);
-
-                    writer.WriteString(provider.Name);
-                    writer.WriteString(provider.GetArgumentString());
-                }
-
-                writer.Flush();
-                serializedData = stream.ToArray();
-            }
-
-            return serializedData;
-        }
-
-        public virtual byte[] SerializeV2()
+        public byte[] SerializeV2()
         {
             byte[] serializedData = null;
             using (var stream = new MemoryStream())
