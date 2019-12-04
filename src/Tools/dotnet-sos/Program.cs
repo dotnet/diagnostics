@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Tools.Common;
 using SOS;
 using System;
 using System.CommandLine;
@@ -28,22 +29,24 @@ namespace Microsoft.Diagnostics.Tools.SOS
 
         private static Command InstallCommand() =>
             new Command(
-                "install", 
-                "Installs SOS and configures LLDB to load it on startup.", 
-                new Option[] { ArchitectureOption() },
-                handler: CommandHandler.Create<IConsole, Architecture?>((console, architecture) => InvokeAsync(console, architecture, install: true)));
+                name: "install",
+                description: "Installs SOS and configures LLDB to load it on startup.") {
+                Handler = CommandHandler.Create<IConsole, Architecture?>((console, architecture) => InvokeAsync(console, architecture, install: true))
+            }.AddOptions(ArchitectureOption());
 
         private static Option ArchitectureOption() =>
             new Option(
-                new[] { "--architecture" }, 
-                "The process to collect a memory dump from.",
-                new Argument<Architecture>() { Name = "architecture" });
+                alias: "--architecture",
+                description: "The processor architecture to install.") {
+                Argument = new Argument<Architecture>(name: "architecture")
+            };
 
         private static Command UninstallCommand() =>
             new Command(
-                "uninstall",
-                "Uninstalls SOS and reverts any configuration changes to LLDB.",
-                handler: CommandHandler.Create<IConsole>((console) => InvokeAsync(console, architecture: null, install: false)));
+                name: "uninstall",
+                description: "Uninstalls SOS and reverts any configuration changes to LLDB.") {
+                Handler = CommandHandler.Create<IConsole>((console) => InvokeAsync(console, architecture: null, install: false))
+            };
 
         private static Task<int> InvokeAsync(IConsole console, Architecture? architecture, bool install)
         {

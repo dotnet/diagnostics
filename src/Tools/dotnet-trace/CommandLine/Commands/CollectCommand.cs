@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Tools.Common;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -261,55 +262,56 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Command CollectCommand() =>
             new Command(
                 name: "collect",
-                description: "Collects a diagnostic trace from a currently running process",
-                symbols: new Option[] {
-                    CommonOptions.ProcessIdOption(),
-                    CircularBufferOption(),
-                    OutputPathOption(),
-                    ProvidersOption(),
-                    ProfileOption(),
-                    CommonOptions.FormatOption(),
-                    DurationOption()
-                },
-                handler: HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler());
+                description: "Collects a diagnostic trace from a currently running process") {
+                Handler = HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler()
+            }.AddOptions(new Option[] {
+                CommonOptions.ProcessIdOption(),
+                CircularBufferOption(),
+                OutputPathOption(),
+                ProvidersOption(),
+                ProfileOption(),
+                CommonOptions.FormatOption(),
+                DurationOption()
+            });
 
         private static uint DefaultCircularBufferSizeInMB => 256;
 
         private static Option CircularBufferOption() =>
             new Option(
                 alias: "--buffersize",
-                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB.",
-                argument: new Argument<uint>(defaultValue: DefaultCircularBufferSizeInMB) { Name = "size" },
-                isHidden: false);
+                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB.") {
+                Argument = new Argument<uint>(name: "size", defaultValue: DefaultCircularBufferSizeInMB)
+            };
 
         public static string DefaultTraceName => "trace.nettrace";
 
         private static Option OutputPathOption() =>
             new Option(
                 aliases: new[] { "-o", "--output" },
-                description: $"The output path for the collected trace data. If not specified it defaults to '{DefaultTraceName}'",
-                argument: new Argument<FileInfo>(defaultValue: new FileInfo(DefaultTraceName)) { Name = "trace-file-path" },
-                isHidden: false);
+                description: $"The output path for the collected trace data. If not specified it defaults to '{DefaultTraceName}'.") {
+                Argument = new Argument<FileInfo>(name: "trace-file-path", defaultValue: new FileInfo(DefaultTraceName))
+            };
 
         private static Option ProvidersOption() =>
             new Option(
                 alias: "--providers",
-                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'. These providers are in addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the configuration here takes precedence over the implicit configuration from the profile.",
-                argument: new Argument<string>(defaultValue: "") { Name = "list-of-comma-separated-providers" }, // TODO: Can we specify an actual type?
-                isHidden: false);
+                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'. These providers are in addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the configuration here takes precedence over the implicit configuration from the profile.") {
+                Argument = new Argument<string>(name: "list-of-comma-separated-providers", defaultValue: "") // TODO: Can we specify an actual type?
+            };
 
         private static Option ProfileOption() =>
             new Option(
                 alias: "--profile",
-                description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.",
-                argument: new Argument<string>(defaultValue: "") { Name = "profile-name" },
-                isHidden: false);
+                description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.") {
+                Argument = new Argument<string>(name: "profile-name", defaultValue: "")
+            };
 
         private static Option DurationOption() =>
             new Option(
                 alias: "--duration",
-                description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.",
-                argument: new Argument<TimeSpan>(defaultValue: default(TimeSpan)) { Name = "duration-timespan" },
-                isHidden: true);
+                description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.") {
+                Argument = new Argument<TimeSpan>(name: "duration-timespan", defaultValue: default),
+                IsHidden = true
+            };
     }
 }

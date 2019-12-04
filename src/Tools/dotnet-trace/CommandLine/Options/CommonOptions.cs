@@ -13,24 +13,24 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Option ProcessIdOption() =>
             new Option(
                 aliases: new[] { "-p", "--process-id" },
-                description: "The process to collect the trace from",
-                argument: new Argument<int> { Name = "pid" },
-                isHidden: false);
+                description: "The process id to collect the trace.") {
+                Argument = new Argument<int>(name: "pid")
+            };
 
         public static TraceFileFormat DefaultTraceFileFormat => TraceFileFormat.NetTrace;
 
         public static Option FormatOption() =>
             new Option(
-                aliases: new[] { "--format" },
-                description: $"Sets the output format for the trace file.  Default is {DefaultTraceFileFormat}",
-                argument: new Argument<TraceFileFormat>(defaultValue: DefaultTraceFileFormat) { Name = "trace-file-format" },
-                isHidden: false);
+                alias: "--format",
+                description: $"Sets the output format for the trace file.  Default is {DefaultTraceFileFormat}.") {
+                Argument = new Argument<TraceFileFormat>(name: "trace-file-format", defaultValue: DefaultTraceFileFormat)
+            };
 
         public static Option ConvertFormatOption() =>
             new Option(
-                aliases: new[] { "--format" },
-                description: $"Sets the output format for the trace file conversion.",
-                argument: new Argument<TraceFileFormat> { Name = "trace-file-format" },
-                isHidden: false);
+                alias: "--format",
+                description: $"Sets the output format for the trace file conversion.") {
+                Argument = new Argument<TraceFileFormat>(name: "trace-file-format")
+            };
     }
 }

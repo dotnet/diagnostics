@@ -76,7 +76,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     // Run the commands from the dotnet-dump command line
                     if (command != null)
                     {
-                        foreach (string cmd in command) {
+                        foreach (string cmd in command)
+                        {
                             await _commandProcessor.Parse(cmd);
                         }
                     }
