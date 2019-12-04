@@ -68,9 +68,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         public IpcMessage(DiagnosticsServerCommandSet commandSet, byte commandId, byte[] payload = null)
+        : this(new IpcHeader(commandSet, commandId), payload)
         {
-            Header = new IpcHeader(commandSet, commandId);
-            Payload = payload;
         }
 
         public byte[] Payload { get; private set; } = null;
