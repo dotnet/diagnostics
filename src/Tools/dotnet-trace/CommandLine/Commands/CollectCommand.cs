@@ -7,10 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Binding;
-using System.CommandLine.Rendering;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -32,186 +30,52 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="profile">A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.</param>
         /// <param name="format">The desired format of the created trace file.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration)
+        private static Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration)
         {
-            try
-            {
-                Debug.Assert(output != null);
-                Debug.Assert(profile != null);
-
-                bool hasConsole = console.GetTerminal() != null;
-
-                if (hasConsole)
-                    Console.Clear();
-
-                if (processId < 0)
+            return CommandHelpers.Trace(ct, console, processId, buffersize, providers, profile, duration,
+                onBeforeStart: () =>
                 {
-                    Console.Error.WriteLine("Process ID should not be negative.");
-                    return ErrorCodes.ArgumentError;
-                }
-                else if (processId == 0)
+                    Debug.Assert(output != null);
+                },
+                onStart: (info) =>
                 {
-                    Console.Error.WriteLine("--process-id is required");
-                    return ErrorCodes.ArgumentError;
-                }
-
-                if (profile.Length == 0 && providers.Length == 0)
-                {
-                    Console.Out.WriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
-                    profile = "cpu-sampling";
-                }
-
-                Dictionary<string, string> enabledBy = new Dictionary<string, string>();
-
-                var providerCollection = Extensions.ToProviders(providers);
-                foreach (Provider providerCollectionProvider in providerCollection)
-                {
-                    enabledBy[providerCollectionProvider.Name] = "--providers ";
-                }
-
-                if (profile.Length != 0)
-                {
-                    var selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
-                        .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
-                    if (selectedProfile == null)
+                    using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                     {
-                        Console.Error.WriteLine($"Invalid profile name: {profile}");
-                        return ErrorCodes.ArgumentError;
-                    }
+                        Console.Out.WriteLine($"Process        : {info.ProcessFileName}");
+                        Console.Out.WriteLine($"Output File    : {fs.Name}");
+                        if (info.ShouldStopAfterDuration)
+                            Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
 
-                    Profile.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
-                }
+                        Console.Out.WriteLine("\n\n");
+                        var buffer = new byte[16 * 1024];
 
-
-                if (providerCollection.Count <= 0)
-                {
-                    Console.Error.WriteLine("No providers were specified to start a trace.");
-                    return ErrorCodes.ArgumentError;
-                }
-
-                PrintProviders(providerCollection, enabledBy);
-
-                var process = Process.GetProcessById(processId);
-                var configuration = new SessionConfiguration(
-                    circularBufferSizeMB: buffersize,
-                    format: EventPipeSerializationFormat.NetTrace,
-                    providers: providerCollection);
-
-                var shouldExit = new ManualResetEvent(false);
-                var shouldStopAfterDuration = duration != default(TimeSpan);
-                var failed = false;
-                var terminated = false;
-                System.Timers.Timer durationTimer = null;
-
-                ct.Register(() => shouldExit.Set());
-
-                ulong sessionId = 0;
-                using (Stream stream = EventPipeClient.CollectTracing(processId, configuration, out sessionId))
-                using (VirtualTerminalMode vTermMode = VirtualTerminalMode.TryEnable())
-                {
-                    if (sessionId == 0)
-                    {
-                        Console.Error.WriteLine("Unable to create session.");
-                        return ErrorCodes.SessionCreationError;
-                    }
-
-                    if (shouldStopAfterDuration)
-                    {
-                        durationTimer = new System.Timers.Timer(duration.TotalMilliseconds);
-                        durationTimer.Elapsed += (s, e) => shouldExit.Set();
-                        durationTimer.AutoReset = false;
-                    }
-
-                    var collectingTask = new Task(() =>
-                    {
-                        try
+                        while (true)
                         {
-                            var stopwatch = new Stopwatch();
-                            durationTimer?.Start();
-                            stopwatch.Start();
+                            int nBytesRead = info.EventPipeStream.Read(buffer, 0, buffer.Length);
+                            if (nBytesRead <= 0)
+                                break;
+                            fs.Write(buffer, 0, nBytesRead);
 
-                            using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
+                            if (info.HasConsole)
                             {
-                                Console.Out.WriteLine($"Process        : {process.MainModule.FileName}");
-                                Console.Out.WriteLine($"Output File    : {fs.Name}");
-                                if (shouldStopAfterDuration)
-                                    Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
-
-                                Console.Out.WriteLine("\n\n");
-                                var buffer = new byte[16 * 1024];
-
-                                while (true)
-                                {
-                                    int nBytesRead = stream.Read(buffer, 0, buffer.Length);
-                                    if (nBytesRead <= 0)
-                                        break;
-                                    fs.Write(buffer, 0, nBytesRead);
-
-                                    if (hasConsole)
-                                    {
-                                        lineToClear = Console.CursorTop - 1;
-                                        ResetCurrentConsoleLine(vTermMode.IsEnabled);
-                                    }
-
-                                    Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
-                                    Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
-                                    Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
-                                }
+                                lineToClear = Console.CursorTop - 1;
+                                ResetCurrentConsoleLine(info.IsVirtualTerminalModeEnabled);
                             }
-                        }
-                        catch (Exception ex)
-                        {
-                            failed = true;
-                            Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
-                        }
-                        finally
-                        {
-                            terminated = true;
-                            shouldExit.Set();
-                        }
-                    });
-                    collectingTask.Start();
 
-                    do
-                    {
-                        while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
-                    } while (!shouldExit.WaitOne(0) && Console.ReadKey(true).Key != ConsoleKey.Enter);
-
-                    if (!terminated)
-                    {
-                        durationTimer?.Stop();
-                        EventPipeClient.StopTracing(processId, sessionId);
+                            Console.Out.WriteLine($"[{info.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
+                            Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
+                            Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
+                        }
                     }
-                    await collectingTask;
-                }
+                },
+                onSuccess: () =>
+                {
+                    Console.Out.WriteLine();
+                    Console.Out.WriteLine("Trace completed.");
 
-                Console.Out.WriteLine();
-                Console.Out.WriteLine("Trace completed.");
-
-                if (format != TraceFileFormat.NetTrace)
-                    TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
-
-                return failed ? ErrorCodes.TracingError : 0;
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
-                return ErrorCodes.UnknownError;
-            }
-        }
-
-        private static void PrintProviders(IReadOnlyList<Provider> providers, Dictionary<string, string> enabledBy)
-        {
-            Console.Out.WriteLine("");
-            Console.Out.Write(String.Format("{0, -40}","Provider Name"));  // +4 is for the tab
-            Console.Out.Write(String.Format("{0, -20}","Keywords"));
-            Console.Out.Write(String.Format("{0, -20}","Level"));
-            Console.Out.Write("Enabled By\n");
-            foreach (var provider in providers)
-            {
-                Console.Out.WriteLine(String.Format("{0, -80}", $"{provider.ToDisplayString()}") + $"{enabledBy[provider.Name]}");
-            }
-            Console.Out.WriteLine();
+                    if (format != TraceFileFormat.NetTrace)
+                        TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
+                });
         }
 
         private static int prevBufferWidth = 0;
@@ -258,23 +122,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 description: "Collects a diagnostic trace from a currently running process",
                 symbols: new Option[] {
                     CommonOptions.ProcessIdOption(),
-                    CircularBufferOption(),
+                    CommonOptions.CircularBufferOption(),
                     OutputPathOption(),
-                    ProvidersOption(),
-                    ProfileOption(),
+                    CommonOptions.ProvidersOption(),
+                    CommonOptions.ProfileOption(),
                     CommonOptions.FormatOption(),
-                    DurationOption()
+                    CommonOptions.DurationOption()
                 },
                 handler: HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler());
-
-        private static uint DefaultCircularBufferSizeInMB => 256;
-
-        private static Option CircularBufferOption() =>
-            new Option(
-                alias: "--buffersize",
-                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB.",
-                argument: new Argument<uint>(defaultValue: DefaultCircularBufferSizeInMB) { Name = "size" },
-                isHidden: false);
 
         public static string DefaultTraceName => "trace.nettrace";
 
@@ -284,26 +139,5 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 description: $"The output path for the collected trace data. If not specified it defaults to '{DefaultTraceName}'",
                 argument: new Argument<FileInfo>(defaultValue: new FileInfo(DefaultTraceName)) { Name = "trace-file-path" },
                 isHidden: false);
-
-        private static Option ProvidersOption() =>
-            new Option(
-                alias: "--providers",
-                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'. These providers are in addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the configuration here takes precedence over the implicit configuration from the profile.",
-                argument: new Argument<string>(defaultValue: "") { Name = "list-of-comma-separated-providers" }, // TODO: Can we specify an actual type?
-                isHidden: false);
-
-        private static Option ProfileOption() =>
-            new Option(
-                alias: "--profile",
-                description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.",
-                argument: new Argument<string>(defaultValue: "") { Name = "profile-name" },
-                isHidden: false);
-
-        private static Option DurationOption() =>
-            new Option(
-                alias: "--duration",
-                description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.",
-                argument: new Argument<TimeSpan>(defaultValue: default(TimeSpan)) { Name = "duration-timespan" },
-                isHidden: true);
     }
 }
