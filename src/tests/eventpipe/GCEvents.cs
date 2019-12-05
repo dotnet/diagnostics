@@ -146,12 +146,9 @@ namespace EventPipe.UnitTests.GCEventsValidation
                             Logger.logger.Log($"Called GC.Collect() {i} times...");
                         TestClass testClass = new TestClass();
                         testClass = null;
+                        GC.Collect();
                         GC.WaitForPendingFinalizers();
                     }
-
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-                    GC.Collect();
                 };
 
                 Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => 
