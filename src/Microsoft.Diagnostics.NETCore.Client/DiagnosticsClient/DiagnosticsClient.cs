@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// <summary>
     /// This is a top-level class that contains methods to send various diagnostics command to the runtime.
     /// </summary>
-    public class DiagnosticsClient
+    public sealed class DiagnosticsClient
     {
         private int _processId;
 

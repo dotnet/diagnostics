@@ -9,7 +9,7 @@ using System.IO;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    public class EventPipeSession : IDisposable
+    public class sealed EventPipeSession : IDisposable
     {
         private IEnumerable<EventPipeProvider> _providers;
         private bool _requestRundown;

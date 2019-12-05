@@ -10,7 +10,7 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    public class EventPipeProvider
+    public sealed class EventPipeProvider
     {
         public EventPipeProvider(string name, EventLevel eventLevel, long keywords = 0, IDictionary<string, string> arguments = null)
         {
