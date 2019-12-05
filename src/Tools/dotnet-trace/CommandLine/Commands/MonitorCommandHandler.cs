@@ -12,12 +12,12 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal static class PrintLiveCommandHandler
+    internal static class MonitorCommandHandler
     {
-        delegate Task<int> PrintLiveDelegate(CancellationToken ct, IConsole console, int processId, uint buffersize, string providers, string profile, TimeSpan duration);
+        delegate Task<int> MonitorDelegate(CancellationToken ct, IConsole console, int processId, uint buffersize, string providers, string profile, TimeSpan duration);
 
         /// <summary>
-        /// Collects a diagnostic trace from a currently running process.
+        /// Prints a diagnostic trace from a currently running process in real-time.
         /// </summary>
         /// <param name="ct">The cancellation token</param>
         /// <param name="console"></param>
@@ -26,7 +26,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="providers">A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'</param>
         /// <param name="profile">A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.</param>
         /// <returns></returns>
-        private static Task<int> PrintLive(CancellationToken ct, IConsole console, int processId, uint buffersize, string providers, string profile, TimeSpan duration)
+        private static Task<int> Monitor(CancellationToken ct, IConsole console, int processId, uint buffersize, string providers, string profile, TimeSpan duration)
         {
             Action<TraceEvent> eventCallback =
                 (traceEvent) =>
@@ -56,9 +56,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 onSuccess: () => { });
         }
 
-        public static Command PrintLiveCommand() =>
+        public static Command MonitorCommand() =>
             new Command(
-                name: "print-live",
+                name: "monitor",
                 description: "Prints a diagnostic trace from a currently running process in real-time",
                 symbols: new Option[] {
                     CommonOptions.ProcessIdOption(),
@@ -67,6 +67,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     CommonOptions.ProfileOption(),
                     CommonOptions.DurationOption()
                 },
-                handler: HandlerDescriptor.FromDelegate((PrintLiveDelegate)PrintLive).GetCommandHandler());
+                handler: HandlerDescriptor.FromDelegate((MonitorDelegate)Monitor).GetCommandHandler());
     }
 }

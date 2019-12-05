@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 .AddCommand(StopCommandHandler.StopCommand())
 #endif
                 .AddCommand(CollectCommandHandler.CollectCommand())
-                .AddCommand(PrintLiveCommandHandler.PrintLiveCommand())
+                .AddCommand(MonitorCommandHandler.MonitorCommand())
                 .AddCommand(ListProcessesCommandHandler.ListProcessesCommand())
                 .AddCommand(ListProfilesCommandHandler.ListProfilesCommand())
                 .AddCommand(ConvertCommandHandler.ConvertCommand())
