@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Tools.RuntimeClient;
+using Microsoft.Diagnostics.NETCore.Client;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -26,9 +26,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private IConsole _console;
         private ICounterRenderer _renderer;
         private CounterFilter filter;
-        private ulong _sessionId;
         private string _output;
         private bool pauseCmdSet;
+        private DiagnosticsClient _diagnosticsClient;
+        private EventPipeSession _session;
 
         public CounterMonitor()
         {
@@ -59,7 +60,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             try
             {
-                EventPipeClient.StopTracing(_processId, _sessionId);
+                _session.Stop();
             }
             catch (EndOfStreamException ex)
             {
@@ -91,6 +92,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _processId = processId;
                 _interval = refreshInterval;
                 _renderer = new ConsoleWriter();
+                _diagnosticsClient = new DiagnosticsClient(processId);
 
                 return await Start();
             }
@@ -99,7 +101,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 try
                 {
-                    EventPipeClient.StopTracing(_processId, _sessionId);
+                    _session.Stop();
                 }
                 catch (Exception) {} // Swallow all exceptions for now.
                 
@@ -118,6 +120,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _processId = processId;
                 _interval = refreshInterval;
                 _output = output;
+                _diagnosticsClient = new DiagnosticsClient(processId);
 
                 if (_output.Length == 0)
                 {
@@ -152,30 +155,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
 
             return 1;
-        }
-
-
-        // Use EventPipe CollectTracing2 command to start monitoring. This may throw.
-        private EventPipeEventSource RequestTracingV2(string providerString)
-        {
-            var configuration = new SessionConfigurationV2(
-                                        circularBufferSizeMB: 1000,
-                                        format: EventPipeSerializationFormat.NetTrace,
-                                        requestRundown: false,
-                                        providers: Trace.Extensions.ToProviders(providerString));
-            var binaryReader = EventPipeClient.CollectTracing2(_processId, configuration, out _sessionId);
-            return new EventPipeEventSource(binaryReader);
-        }
-
-        // Use EventPipe CollectTracing command to start monitoring. This may throw.
-        private EventPipeEventSource RequestTracingV1(string providerString)
-        {
-            var configuration = new SessionConfiguration(
-                                        circularBufferSizeMB: 1000,
-                                        format: EventPipeSerializationFormat.NetTrace,
-                                        providers: Trace.Extensions.ToProviders(providerString));
-            var binaryReader = EventPipeClient.CollectTracing(_processId, configuration, out _sessionId);
-            return new EventPipeEventSource(binaryReader);
         }
 
         private string BuildProviderString()
@@ -257,22 +236,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
             Task monitorTask = new Task(() => {
                 try
                 {
-                    EventPipeEventSource source = null;
-
-                    try
-                    {
-                        source = RequestTracingV2(providerString);
-                    }
-                    catch (EventPipeUnknownCommandException)
-                    {
-                        // If unknown command exception is thrown, it's likely the app being monitored is 
-                        // running an older version of runtime that doesn't support CollectTracingV2. Try again with V1.
-                        source = RequestTracingV1(providerString);
-                    }
-
+                    _session = _diagnosticsClient.StartEventPipeSession(Trace.Extensions.ToProviders(providerString), false);
+                    var source = new EventPipeEventSource(_session.EventStream);
                     source.Dynamic.All += DynamicAllMonitor;
                     _renderer.EventPipeSourceConnected();
                     source.Process();
+                }
+                catch (DiagnosticsClientException ex)
+                {
+                    Console.WriteLine($"Failed to start the counter session: {ex.ToString()}");
                 }
                 catch (Exception ex)
                 {
