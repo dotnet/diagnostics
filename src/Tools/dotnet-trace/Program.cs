@@ -13,9 +13,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Task<int> Main(string[] args)
         {
             var parser = new CommandLineBuilder()
-#if DEBUG
-                .AddCommand(StopCommandHandler.StopCommand())
-#endif
                 .AddCommand(CollectCommandHandler.CollectCommand())
                 .AddCommand(ListProcessesCommandHandler.ListProcessesCommand())
                 .AddCommand(ListProfilesCommandHandler.ListProfilesCommand())
