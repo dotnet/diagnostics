@@ -63,6 +63,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tracee", "src\tests\Tracee\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventPipe.UnitTests", "src\tests\eventpipe\EventPipe.UnitTests.csproj", "{CED9ABBA-861E-4C0A-9359-22351208EF27}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{298AE119-6625-4604-BDE5-0765DC34C856}"
+	ProjectSection(SolutionItems) = preProject
+		src\Tools\Common\CommandExtensions.cs = src\Tools\Common\CommandExtensions.cs
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Commands", "Commands", "{C457CBCD-3A8D-4402-9A2B-693A0390D3F9}"
+	ProjectSection(SolutionItems) = preProject
+		src\Tools\Common\Commands\ProcessStatus.cs = src\Tools\Common\Commands\ProcessStatus.cs
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Checked|Any CPU = Checked|Any CPU
@@ -1090,6 +1100,8 @@ Global
 		{6F4DD2F8-1C7B-4A87-B7E5-1BEE9F5AC128} = {03479E19-3F18-49A6-910A-F5041E27E7C0}
 		{C79D6069-2C18-48CB-846E-71F7168C2F7D} = {03479E19-3F18-49A6-910A-F5041E27E7C0}
 		{CED9ABBA-861E-4C0A-9359-22351208EF27} = {03479E19-3F18-49A6-910A-F5041E27E7C0}
+		{298AE119-6625-4604-BDE5-0765DC34C856} = {B62728C8-1267-4043-B46F-5537BBAEC692}
+		{C457CBCD-3A8D-4402-9A2B-693A0390D3F9} = {298AE119-6625-4604-BDE5-0765DC34C856}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {46465737-C938-44FC-BE1A-4CE139EBB5E0}

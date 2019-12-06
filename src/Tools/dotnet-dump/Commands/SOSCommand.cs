@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
             try {
                 string arguments = null;
-                if (Arguments.Length > 0) {
+                if (Arguments != null && Arguments.Length > 0) {
                     arguments = string.Concat(Arguments.Select((arg) => arg + " "));
                 }
                 SOSHost.ExecuteCommand(AliasExpansion, arguments);
