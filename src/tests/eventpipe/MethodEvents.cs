@@ -50,7 +50,7 @@ namespace EventPipe.UnitTests.MethodEventsValidation
                 var providers = new List<Provider>()
                 {
                     new Provider("Microsoft-DotNETCore-SampleProfiler"),
-                    //MethodVerboseKeyword (0x1): 0b10000
+                    //MethodVerboseKeyword (0x10): 0b10000
                     new Provider("Microsoft-Windows-DotNETRuntime", 0b10000, EventLevel.Verbose)
                 };
                 
