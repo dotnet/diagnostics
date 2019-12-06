@@ -4,11 +4,9 @@
 
 using Microsoft.Tools.Common;
 using SOS;
-using System;
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
@@ -30,21 +28,27 @@ namespace Microsoft.Diagnostics.Tools.SOS
         private static Command InstallCommand() =>
             new Command(
                 name: "install",
-                description: "Installs SOS and configures LLDB to load it on startup.") {
-                Handler = CommandHandler.Create<IConsole, Architecture?>((console, architecture) => InvokeAsync(console, architecture, install: true))
-            }.AddOptions(ArchitectureOption());
+                description: "Installs SOS and configures LLDB to load it on startup.")
+            {
+                // Handler
+                CommandHandler.Create<IConsole, Architecture?>((console, architecture) => InvokeAsync(console, architecture, install: true)),
+                // Options
+                ArchitectureOption()
+            };
 
         private static Option ArchitectureOption() =>
             new Option(
                 alias: "--architecture",
-                description: "The processor architecture to install.") {
+                description: "The processor architecture to install.")
+            {
                 Argument = new Argument<Architecture>(name: "architecture")
             };
 
         private static Command UninstallCommand() =>
             new Command(
                 name: "uninstall",
-                description: "Uninstalls SOS and reverts any configuration changes to LLDB.") {
+                description: "Uninstalls SOS and reverts any configuration changes to LLDB.")
+            {
                 Handler = CommandHandler.Create<IConsole>((console) => InvokeAsync(console, architecture: null, install: false))
             };
 

@@ -262,9 +262,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Command CollectCommand() =>
             new Command(
                 name: "collect",
-                description: "Collects a diagnostic trace from a currently running process") {
-                Handler = HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler()
-            }.AddOptions(new Option[] {
+                description: "Collects a diagnostic trace from a currently running process") 
+            {
+                // Handler
+                HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler(),
+                // Options
                 CommonOptions.ProcessIdOption(),
                 CircularBufferOption(),
                 OutputPathOption(),
@@ -272,14 +274,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 ProfileOption(),
                 CommonOptions.FormatOption(),
                 DurationOption()
-            });
+            };
 
         private static uint DefaultCircularBufferSizeInMB => 256;
 
         private static Option CircularBufferOption() =>
             new Option(
                 alias: "--buffersize",
-                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB.") {
+                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB.")
+            {
                 Argument = new Argument<uint>(name: "size", defaultValue: DefaultCircularBufferSizeInMB)
             };
 
@@ -288,28 +291,32 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option OutputPathOption() =>
             new Option(
                 aliases: new[] { "-o", "--output" },
-                description: $"The output path for the collected trace data. If not specified it defaults to '{DefaultTraceName}'.") {
+                description: $"The output path for the collected trace data. If not specified it defaults to '{DefaultTraceName}'.")
+            {
                 Argument = new Argument<FileInfo>(name: "trace-file-path", defaultValue: new FileInfo(DefaultTraceName))
             };
 
         private static Option ProvidersOption() =>
             new Option(
                 alias: "--providers",
-                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'. These providers are in addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the configuration here takes precedence over the implicit configuration from the profile.") {
+                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'. These providers are in addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the configuration here takes precedence over the implicit configuration from the profile.")
+            {
                 Argument = new Argument<string>(name: "list-of-comma-separated-providers", defaultValue: "") // TODO: Can we specify an actual type?
             };
 
         private static Option ProfileOption() =>
             new Option(
                 alias: "--profile",
-                description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.") {
+                description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.")
+            {
                 Argument = new Argument<string>(name: "profile-name", defaultValue: "")
             };
 
         private static Option DurationOption() =>
             new Option(
                 alias: "--duration",
-                description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.") {
+                description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.")
+            {
                 Argument = new Argument<TimeSpan>(name: "duration-timespan", defaultValue: default),
                 IsHidden = true
             };

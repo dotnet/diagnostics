@@ -15,7 +15,8 @@ namespace Microsoft.Internal.Common.Commands
     public class ProcessStatusCommandHandler
     {
         public static Command ProcessStatusCommand(string description) =>
-            new Command(name: "ps", description) {
+            new Command(name: "ps", description)
+            {
                 Handler = CommandHandler.Create<IConsole>(PrintProcessStatus)
             };
 

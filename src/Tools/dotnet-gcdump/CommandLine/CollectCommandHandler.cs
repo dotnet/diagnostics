@@ -4,13 +4,9 @@
 
 using Microsoft.Tools.Common;
 using System;
-using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Binding;
-using System.CommandLine.Rendering;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -101,28 +97,35 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         public static Command CollectCommand() =>
             new Command(
                 name: "collect",
-                description: "Collects a diagnostic trace from a currently running process") {
-                Handler = HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler()
-            }.AddOptions(new Option[] { ProcessIdOption(), OutputPathOption(), VerboseOption(), TimeoutOption() });
+                description: "Collects a diagnostic trace from a currently running process")
+            {
+                // Handler
+                HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler(),
+                // Options
+                ProcessIdOption(), OutputPathOption(), VerboseOption(), TimeoutOption() 
+            };
 
         public static Option ProcessIdOption() =>
             new Option(
                 aliases: new[] { "-p", "--process-id" },
-                description: "The process id to collect the trace.") {
+                description: "The process id to collect the trace.")
+            {
                 Argument = new Argument<int>(name: "pid", defaultValue: 0),
             };
 
         private static Option OutputPathOption() =>
             new Option(
                 aliases: new[] { "-o", "--output" },
-                description: $@"The path where collected gcdumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump' where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.") {
+                description: $@"The path where collected gcdumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump' where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.")
+            {
                 Argument = new Argument<string>(name: "gcdump-file-path", defaultValue: "")
             };
 
         private static Option VerboseOption() =>
             new Option(
                 aliases: new[] { "-v", "--verbose" },
-                description: $"Output the log while collecting the gcdump.") {
+                description: $"Output the log while collecting the gcdump.") 
+            {
                 Argument = new Argument<bool>(name: "verbose", defaultValue: false)
             };
 
@@ -130,7 +133,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         private static Option TimeoutOption() =>
             new Option(
                 aliases: new[] { "-t", "--timeout" },
-                description: $"Give up on collecting the gcdump if it takes longer than this many seconds. The default value is {DefaultTimeout}s.") {
+                description: $"Give up on collecting the gcdump if it takes longer than this many seconds. The default value is {DefaultTimeout}s.")
+            {
                 Argument = new Argument<int>(name: "timeout", defaultValue: DefaultTimeout)
             };
     }

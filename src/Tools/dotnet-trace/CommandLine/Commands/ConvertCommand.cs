@@ -2,15 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Tools.Common;
 using System;
-using System.IO;
 using System.CommandLine;
 using System.CommandLine.Builder;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.Tools.Common;
+using System.IO;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -46,22 +42,27 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Command ConvertCommand() =>
             new Command(
                 name: "convert",
-                description: "Converts traces to alternate formats for use with alternate trace analysis tools. Can only convert from the nettrace format") {
-                Handler = System.CommandLine.Invocation.CommandHandler.Create<IConsole, FileInfo, TraceFileFormat, FileInfo>(ConvertFile)
-            }.AddOptions(
-                new Option[] { 
-                    CommonOptions.ConvertFormatOption(), 
-                    OutputOption() 
-                }
-            ).AddArguments(
-                new Argument<FileInfo>(name: "input-filename", defaultValue: new FileInfo(CollectCommandHandler.DefaultTraceName)) {
-                    Description = $"Input trace file to be converted. Defaults to '{CollectCommandHandler.DefaultTraceName}'."
-                }.ExistingOnly());
+                description: "Converts traces to alternate formats for use with alternate trace analysis tools. Can only convert from the nettrace format")
+            {
+                // Handler
+                System.CommandLine.Invocation.CommandHandler.Create<IConsole, FileInfo, TraceFileFormat, FileInfo>(ConvertFile),
+                // Arguments and Options
+                InputFileArgument(),
+                CommonOptions.ConvertFormatOption(),
+                OutputOption(),
+            };
 
-        public static Option OutputOption() =>
+        private static Argument InputFileArgument() =>
+            new Argument<FileInfo>(name: "input-filename", defaultValue: new FileInfo(CollectCommandHandler.DefaultTraceName))
+            {
+                Description = $"Input trace file to be converted. Defaults to '{CollectCommandHandler.DefaultTraceName}'."
+            }.ExistingOnly();
+
+        private static Option OutputOption() =>
             new Option(
                 aliases: new[] { "-o", "--output" },
-                description: "Output filename. Extension of target format will be added.") {
+                description: "Output filename. Extension of target format will be added.")
+            {
                 Argument = new Argument<FileInfo>(name: "output-filename")
             };
     }

@@ -9,7 +9,6 @@ using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 using System.IO;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Dump
@@ -29,16 +28,19 @@ namespace Microsoft.Diagnostics.Tools.Dump
         }
 
         private static Command CollectCommand() =>
-            new Command(
-                name: "collect", 
-                description: "Capture dumps from a process") {
-                Handler = CommandHandler.Create<IConsole, int, string, bool, Dumper.DumpTypeOption>(new Dumper().Collect)
-            }.AddOptions(new Option[] { ProcessIdOption(), OutputOption(), DiagnosticLoggingOption(), TypeOption() });
+            new Command( name: "collect", description: "Capture dumps from a process")
+            {
+                // Handler
+                CommandHandler.Create<IConsole, int, string, bool, Dumper.DumpTypeOption>(new Dumper().Collect),
+                // Options
+                ProcessIdOption(), OutputOption(), DiagnosticLoggingOption(), TypeOption()
+            };
 
         private static Option ProcessIdOption() =>
             new Option(
                 aliases: new[] { "-p", "--process-id" },
-                description: "The process id to collect a memory dump.") {
+                description: "The process id to collect a memory dump.")
+            {
                 Argument = new Argument<int>(name: "pid")
             };
 
@@ -46,14 +48,16 @@ namespace Microsoft.Diagnostics.Tools.Dump
             new Option( 
                 aliases: new[] { "-o", "--output" },
                 description: @"The path where collected dumps should be written. Defaults to '.\dump_YYYYMMDD_HHMMSS.dmp' on Windows and './core_YYYYMMDD_HHMMSS' 
-on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.") {
+on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.") 
+            {
                 Argument = new Argument<string>(name: "output_dump_path")
             };
 
         private static Option DiagnosticLoggingOption() =>
             new Option(
                 alias: "--diag", 
-                description: "Enable dump collection diagnostic logging.") {
+                description: "Enable dump collection diagnostic logging.") 
+            {
                 Argument = new Argument<bool>(name: "diag")
             };
 
@@ -62,27 +66,35 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
                 alias: "--type",
                 description: @"The dump type determines the kinds of information that are collected from the process. There are two types: heap - A large and 
 relatively comprehensive dump containing module lists, thread lists, all stacks, exception information, handle information, and all memory except for mapped 
-images. mini - A small dump containing module lists, thread lists, exception information and all stacks. If not specified 'heap' is the default.") {
+images. mini - A small dump containing module lists, thread lists, exception information and all stacks. If not specified 'heap' is the default.")
+            {
                 Argument = new Argument<Dumper.DumpTypeOption>(name: "dump_type", defaultValue: Dumper.DumpTypeOption.Heap)
             };
 
         private static Command AnalyzeCommand() =>
             new Command(
                 name: "analyze", 
-                description: "Starts an interactive shell with debugging commands to explore a dump") {
-                Handler = CommandHandler.Create<FileInfo, string[]>(new Analyzer().Analyze)
-            }.AddOptions(RunCommand()).AddArguments(DumpPath());
+                description: "Starts an interactive shell with debugging commands to explore a dump")
+            {
+                // Handler
+                CommandHandler.Create<FileInfo, string[]>(new Analyzer().Analyze),
+                // Arguments and Options
+                DumpPath(),
+                RunCommand() 
+            };
 
         private static Argument DumpPath() =>
-            new Argument<FileInfo> {
-                Name = "dump_path",
+            new Argument<FileInfo>(
+                name: "dump_path")
+            {
                 Description = "Name of the dump file to analyze."
             }.ExistingOnly();
 
         private static Option RunCommand() =>
             new Option(
                 aliases: new[] { "-c", "--command" }, 
-                description: "Run the command on start.") {
+                description: "Run the command on start.") 
+            {
                 Argument = new Argument<string[]>(name: "command", defaultValue: new string[0]) { Arity = ArgumentArity.ZeroOrMore }
             };
     }
