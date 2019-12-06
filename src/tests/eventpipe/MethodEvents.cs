@@ -42,8 +42,7 @@ namespace EventPipe.UnitTests.MethodEventsValidation
             {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
-                   //registering Dynamic_All and Clr event callbacks will override each other, disable the check for the prodider and check the events counts in the callback
-                    //{"Microsoft-Windows_DotNETRuntime", -1 },
+                    //registering Dynamic_All and Clr event callbacks will override each other, disable the check for the provider and check the events counts in the callback
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 },
                     { "Microsoft-DotNETCore-SampleProfiler", -1 }
                 };
@@ -51,7 +50,7 @@ namespace EventPipe.UnitTests.MethodEventsValidation
                 var providers = new List<Provider>()
                 {
                     new Provider("Microsoft-DotNETCore-SampleProfiler"),
-                    //GCKeyword (0x1): 0b10000
+                    //MethodVerboseKeyword (0x1): 0b10000
                     new Provider("Microsoft-Windows-DotNETRuntime", 0b10000, EventLevel.Verbose)
                 };
                 
@@ -68,10 +67,6 @@ namespace EventPipe.UnitTests.MethodEventsValidation
                             verbose.Dispose();
                         }
                     }
-                    
-                    GC.Collect();
-                    GC.Collect();
-                    GC.Collect();
                 };
 
                 Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => 
