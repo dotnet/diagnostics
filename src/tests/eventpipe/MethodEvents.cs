@@ -18,8 +18,7 @@ namespace EventPipe.UnitTests.MethodEventsValidation
     {      
         public bool IsZero(char c)
         {
-            bool i = (c== 0);
-            return i;
+            return c == 0;
         }
         public void Dispose()
         {
