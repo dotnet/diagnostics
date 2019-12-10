@@ -159,10 +159,7 @@ const UINT kcMaxMethodDescsForProfiler = 100;
 #include <memory>
 #include <functional>
 
-BOOL CallStatus;
 BOOL ControlC = FALSE;
-
-IMetaDataDispenserEx *pDisp = NULL;
 WCHAR g_mdName[mdNameLen];
 
 #ifndef FEATURE_PAL
@@ -7587,6 +7584,40 @@ public:
      */
     STDMETHODIMP OnCodeGenerated(IXCLRDataMethodInstance* method)
     {
+#ifndef FEATURE_PAL
+        // This is only needed for desktop runtime because OnCodeGenerated2
+        // isn't supported by the desktop DAC.
+        if (g_isDesktopRuntime)
+        {
+            // Some method has been generated, make a breakpoint and remove it.
+            ULONG32 len = mdNameLen;
+            LPWSTR szModuleName = (LPWSTR)alloca(mdNameLen * sizeof(WCHAR));
+            if (method->GetName(0, mdNameLen, &len, g_mdName) == S_OK)
+            {
+                ToRelease<IXCLRDataModule> pMod;
+                HRESULT hr = method->GetTokenAndScope(NULL, &pMod);
+                if (SUCCEEDED(hr))
+                {
+                    len = mdNameLen;
+                    if (pMod->GetName(mdNameLen, &len, szModuleName) == S_OK)
+                    {
+                        ExtOut("JITTED %S!%S\n", szModuleName, g_mdName);
+
+                        // Add breakpoint, perhaps delete pending breakpoint
+                        DacpGetModuleAddress dgma;
+                        if (SUCCEEDED(dgma.Request(pMod)))
+                        {
+                            g_bpoints.Update(TO_TADDR(dgma.ModulePtr), FALSE);
+                        }
+                        else
+                        {
+                            ExtOut("Failed to request module address.\n");
+                        }
+                    }
+                }
+            }
+        }
+#endif
         m_dbgStatus = DEBUG_STATUS_GO_HANDLED;
         return S_OK;
     }
@@ -7881,7 +7912,7 @@ void EnableModuleLoadUnloadCallbacks()
 
 #ifndef FEATURE_PAL
 
-DECLARE_API(HandleCLRN)
+DECLARE_API(SOSHandleCLRN)
 {
     INIT_API();    
     MINIDUMP_NOT_SUPPORTED();    
@@ -7892,7 +7923,7 @@ HRESULT HandleRuntimeLoadedNotification(IDebugClient* client)
 {
     INIT_API();
     EnableModuleLoadUnloadCallbacks();
-    return g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!HandleCLRN\" clrn", 0);
+    return g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
 }
 
 #else // FEATURE_PAL
@@ -8216,7 +8247,7 @@ DECLARE_API(bpmd)
     }
     else /* We were given a MethodDesc already */
     {
-        // if we've got an explicit MD, then we better have CLR and mscordacwks loaded
+        // if we've got an explicit MD, then we better have runtime and dac loaded
         INIT_API_EE()
         INIT_API_DAC();
 
@@ -8283,7 +8314,7 @@ DECLARE_API(bpmd)
     {
         ExtOut("Adding pending breakpoints...\n");
 #ifndef FEATURE_PAL
-        Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!HandleCLRN\" clrn", 0);
+        Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
 #else
         Status = g_ExtServices->SetExceptionCallback(HandleExceptionNotification);
 #endif // FEATURE_PAL
@@ -9837,7 +9868,7 @@ DECLARE_API(DumpLog)
             return E_FAIL;
 #else
             // Try to find stress log symbols
-            DWORD_PTR dwAddr = GetValueFromExpression(MAIN_CLR_MODULE_NAME_A "!StressLog::theLog");
+            DWORD_PTR dwAddr = GetValueFromExpression("StressLog::theLog");
             StressLogAddress = dwAddr;        
 #endif
         }
@@ -9891,12 +9922,12 @@ DECLARE_API (DumpGCLog)
     if (*args != 0)
         fileName = args;
     
-    DWORD_PTR dwAddr = GetValueFromExpression(MAIN_CLR_MODULE_NAME_A "!SVR::gc_log_buffer");
+    DWORD_PTR dwAddr = GetValueFromExpression("SVR::gc_log_buffer");
     moveN (dwAddr, dwAddr);
 
     if (dwAddr == 0)
     {
-        dwAddr = GetValueFromExpression(MAIN_CLR_MODULE_NAME_A "!WKS::gc_log_buffer");
+        dwAddr = GetValueFromExpression("WKS::gc_log_buffer");
         moveN (dwAddr, dwAddr);
         if (dwAddr == 0)
         {
@@ -10010,13 +10041,13 @@ DECLARE_API (DumpGCConfigLog)
     
     if (fIsServerGC) 
     {
-        dwAddr = GetValueFromExpression(MAIN_CLR_MODULE_NAME_A "!SVR::gc_config_log_buffer");
-        dwAddrOffset = GetValueFromExpression(MAIN_CLR_MODULE_NAME_A "!SVR::gc_config_log_buffer_offset");
+        dwAddr = GetValueFromExpression("SVR::gc_config_log_buffer");
+        dwAddrOffset = GetValueFromExpression("SVR::gc_config_log_buffer_offset");
     }
     else
     {
-        dwAddr = GetValueFromExpression(MAIN_CLR_MODULE_NAME_A "!WKS::gc_config_log_buffer");
-        dwAddrOffset = GetValueFromExpression(MAIN_CLR_MODULE_NAME_A "!WKS::gc_config_log_buffer_offset");
+        dwAddr = GetValueFromExpression("WKS::gc_config_log_buffer");
+        dwAddrOffset = GetValueFromExpression("WKS::gc_config_log_buffer_offset");
     }
 
     moveN (dwAddr, dwAddr);
@@ -10386,9 +10417,9 @@ DECLARE_API(SOSStatus)
     if (g_hostRuntimeDirectory != nullptr) {
         ExtOut("Host runtime path: %s\n", g_hostRuntimeDirectory);
     }
-    std::string coreclrDirectory;
-    if (SUCCEEDED(GetCoreClrDirectory(coreclrDirectory))) {
-        ExtOut("Runtime path: %s\n", coreclrDirectory.c_str());
+    std::string runtimeDirectory;
+    if (SUCCEEDED(GetRuntimeDirectory(runtimeDirectory))) {
+        ExtOut("Runtime path: %s\n", runtimeDirectory.c_str());
     }
     DisplaySymbolStore();
 
@@ -11180,7 +11211,7 @@ DECLARE_API(FindRoots)
         GcEvtArgs gea = { GC_MARK_END, { ((gen == -1) ? 7 : (1 << gen)) } };
         idp2->SetGcNotification(gea);
         // ... and register the notification handler
-        g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!HandleCLRN\" clrn", 0);
+        g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
         // the above notification is removed in CNotification::OnGcEvent()
     }
     else
@@ -12080,7 +12111,7 @@ DECLARE_API(GCHandleLeaks)
     if (LoadClrDebugDll() != S_OK)
     {
         // Try to find stress log symbols
-        DWORD_PTR dwAddr = GetValueFromExpression(MAIN_CLR_MODULE_NAME_A "!StressLog::theLog");
+        DWORD_PTR dwAddr = GetValueFromExpression("StressLog::theLog");
         StressLogAddress = dwAddr;        
         g_bDacBroken = TRUE;
     }
@@ -15456,7 +15487,7 @@ DECLARE_API(SuppressJitOptimization)
         else
         {
             g_fAllowJitOptimization = FALSE;
-            g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!HandleCLRN\" clrn", 0);
+            g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
             ExtOut("JIT optimization will be suppressed\n");
         }
 
@@ -15887,8 +15918,8 @@ DECLARE_API(SetSymbolServer)
         {"-directory", &searchDirectory.data, COSTRING, TRUE},
         {"-ms", &msdl, COBOOL, FALSE},
         {"-log", &logging, COBOOL, FALSE},
-#ifdef FEATURE_PAL
         {"-loadsymbols", &loadNative, COBOOL, FALSE},
+#ifdef FEATURE_PAL
         {"-sympath", &windowsSymbolPath.data, COSTRING, TRUE},
 #else
         {"-mi", &symweb, COBOOL, FALSE},

@@ -134,25 +134,31 @@ HRESULT __stdcall EventCallbacks::LoadModule(ULONG64 ImageFileHandle,
 {
     HRESULT handleEventStatus = DEBUG_STATUS_NO_CHANGE;
 
-    if (ModuleName != NULL && _stricmp(ModuleName, MAIN_CLR_MODULE_NAME_A) == 0)
+    if (ModuleName != NULL) 
     {
-        if (g_breakOnRuntimeModuleLoad)
-        {
-            g_breakOnRuntimeModuleLoad = false;
-            HandleRuntimeLoadedNotification(m_pDebugClient);
-        }
-        // if we don't want the JIT to optimize, we should also disable optimized NGEN images
-        if (!g_fAllowJitOptimization)
-        {
-            ExtQuery(m_pDebugClient);
+        bool isNetCore = _stricmp(ModuleName, NETCORE_RUNTIME_MODULE_NAME_A) == 0;
+        bool isDesktop = _stricmp(ModuleName, DESKTOP_RUNTIME_MODULE_NAME_A) == 0;
 
-            // If we aren't successful SetNGENCompilerFlags will print relevant error messages
-            // and then we need to stop the debugger so the user can intervene if desired
-            if (FAILED(SetNGENCompilerFlags(CORDEBUG_JIT_DISABLE_OPTIMIZATION)))
+        if (isNetCore || isDesktop)
+        {
+            if (g_breakOnRuntimeModuleLoad)
             {
-                handleEventStatus = DEBUG_STATUS_BREAK;
+                g_breakOnRuntimeModuleLoad = false;
+                HandleRuntimeLoadedNotification(m_pDebugClient);
             }
-            ExtRelease();
+            // if we don't want the JIT to optimize, we should also disable optimized NGEN images
+            if (!g_fAllowJitOptimization)
+            {
+                ExtQuery(m_pDebugClient);
+
+                // If we aren't successful SetNGENCompilerFlags will print relevant error messages
+                // and then we need to stop the debugger so the user can intervene if desired
+                if (FAILED(SetNGENCompilerFlags(CORDEBUG_JIT_DISABLE_OPTIMIZATION)))
+                {
+                    handleEventStatus = DEBUG_STATUS_BREAK;
+                }
+                ExtRelease();
+            }
         }
     }
 

@@ -1,5 +1,5 @@
 # Divide By Zero debugging scenario
-# 1) load the executable
+# 1) Load the executable
 # 2) Run the executable and wait for it to crash
 # 3) Take a dump of the executable.
 # 4) Open the dump and compare the output

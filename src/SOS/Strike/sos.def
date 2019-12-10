@@ -203,7 +203,7 @@ EXPORTS
     gchandleleaks=GCHandleLeaks
     Gchandleleaks=GCHandleLeaks
     GCHandleleaks=GCHandleLeaks
-    HandleCLRN
+    SOSHandleCLRN
     MinidumpMode
     minidumpmode=MinidumpMode
     Minidumpmode=MinidumpMode

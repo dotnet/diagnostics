@@ -97,8 +97,13 @@ void __cdecl operator delete[](void* pObj) throw()
 \**********************************************************************/
 DWORD_PTR GetValueFromExpression(___in __in_z const char *const instr)
 {
+    std::string symbol;
+    symbol.append(GetRuntimeModuleName());
+    symbol.append("!");
+    symbol.append(instr);
+
     ULONG64 dwAddr;
-    const char *str = instr;
+    const char* str = symbol.c_str();
     char name[256];
 
     dwAddr = 0;
@@ -158,13 +163,20 @@ void ReportOOM()
     ExtOut("SOS Error: Out of memory\n");
 }
 
+// This is set as a side-effect of CheckEEDll()/GetRuntimeModuleInfo().
+bool g_isDesktopRuntime = false;
+
 HRESULT GetRuntimeModuleInfo(PULONG moduleIndex, PULONG64 moduleBase)
 {
-#ifdef FEATURE_PAL
-    return g_ExtSymbols->GetModuleByModuleName(MAIN_CLR_DLL_NAME_A, 0, moduleIndex, moduleBase);
-#else
-    return g_ExtSymbols->GetModuleByModuleName(MAIN_CLR_MODULE_NAME_A, 0, moduleIndex, moduleBase);
+    g_isDesktopRuntime = false;
+    HRESULT hr = g_ExtSymbols->GetModuleByModuleName(NETCORE_RUNTIME_MODULE_NAME_A, 0, moduleIndex, moduleBase);
+#ifndef FEATURE_PAL
+    if (FAILED(hr)) {
+        hr = g_ExtSymbols->GetModuleByModuleName(DESKTOP_RUNTIME_MODULE_NAME_A, 0, moduleIndex, moduleBase);
+        g_isDesktopRuntime = SUCCEEDED(hr);
+    }
 #endif
+    return hr;
 }
 
 HRESULT CheckEEDll()
@@ -191,7 +203,10 @@ HRESULT CheckEEDll()
             {
                 if (params.SymbolType == SymDeferred)
                 {
-                    g_ExtSymbols->Reload("/f " MAIN_CLR_DLL_NAME_A);
+                    std::string reloadCommand;
+                    reloadCommand.append("/f ");
+                    reloadCommand.append(GetRuntimeDllName());
+                    g_ExtSymbols->Reload(reloadCommand.c_str());
                     g_ExtSymbols->GetModuleParameters(1, &g_moduleInfo[MSCORWKS].baseAddr, 0, &params);
                 }
                 if (params.SymbolType == SymPdb || params.SymbolType == SymDia)
@@ -203,7 +218,7 @@ HRESULT CheckEEDll()
         }
         if (g_moduleInfo[MSCORWKS].baseAddr != 0 && g_moduleInfo[MSCORWKS].hasPdb == FALSE) 
         {
-            ExtOut("PDB symbol for coreclr.dll not loaded\n");
+            ExtOut("PDB symbol for %s not loaded\n", GetRuntimeDllName());
         }
 #endif // FEATURE_PAL
     }
@@ -2255,7 +2270,7 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
             // >sxe ld:clr
             // >g
             // ...
-            // ModLoad: coreclr.dll
+            // ModLoad: runtime dll 
             // >!bpmd Foo.dll Foo.Bar
 
             // we will correctly give the answer that whatever module you were looking for, it isn't loaded yet
@@ -2347,6 +2362,48 @@ Failure:
     return NULL;
 }
 
+#ifndef FEATURE_PAL
+
+/**********************************************************************\
+* Routine Description:                                                 *
+*                                                                      *
+*    Retrieve module base associated with the IXCLRDataModule          *
+*    instance passed in, and the extent type requested.                *
+*                                                                      *
+\**********************************************************************/
+HRESULT GetClrModuleImages(__in IXCLRDataModule* module, __in CLRDataModuleExtentType desiredType, __out PULONG64 firstAdd)
+{
+    CLRDATA_ENUM enumExtents;
+    HRESULT hr;
+
+    _ASSERTE(firstAdd != nullptr);
+    *firstAdd = 0;
+
+    if (FAILED(hr = module->StartEnumExtents(&enumExtents)))
+    {
+        return hr;
+    }
+    CLRDATA_MODULE_EXTENT extent;
+    while (module->EnumExtent(&enumExtents, &extent) == S_OK)
+    {
+        if ((desiredType == CLRDATA_MODULE_OTHER) || (desiredType == extent.type))
+        {
+            ULONG64 modBase;
+            if (FAILED(hr = g_ExtSymbols->GetModuleByOffset(extent.base, 0, nullptr, &modBase)))
+            {
+                break;
+            }
+            *firstAdd = modBase;
+            hr = S_OK;
+            break;
+        }
+    }
+    module->EndEnumExtents(enumExtents);
+    return hr;
+}
+
+#endif // FEATURE_PAL
+
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -2355,7 +2412,6 @@ Failure:
 \**********************************************************************/
 HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataModule** ppModule)
 {
-    HRESULT hr = E_FAIL;
     *ppModule = nullptr;
 
     int numModule;
@@ -2365,9 +2421,9 @@ HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataMo
         for (int i = 0; i < numModule; i++)
         {
             ToRelease<IXCLRDataModule> module;
-            hr = g_sos->GetModule(moduleList[i], &module);
+            HRESULT hr = g_sos->GetModule(moduleList[i], &module);
             if (FAILED(hr)) {
-                break;
+                return hr;
             }
             ULONG32 flags;
             if ((hr = module->GetFlags(&flags)) != S_OK) {
@@ -2377,19 +2433,27 @@ HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataMo
                 continue;
             }
             DacpGetModuleData moduleData;
-            HRESULT hr = moduleData.Request(module);
+            hr = moduleData.Request(module);
             if (FAILED(hr)) {
-                break;
+#ifdef FEATURE_PAL
+                return hr;
+#else
+                hr = GetClrModuleImages(module, CLRDATA_MODULE_PE_FILE, &moduleData.LoadedPEAddress);
+                if (FAILED(hr))
+                {
+                    return hr;
+                }
+#endif
             }
             if (peAddress == moduleData.LoadedPEAddress)
             {
                 *ppModule = module.Detach();
-                break;
+                return S_OK;
             }
         }
     }
 
-    return hr;
+    return E_INVALIDARG;
 }
 
 /**********************************************************************\
@@ -2817,6 +2881,8 @@ const char *EHTypeName(EHClauseType et)
 // 2.x version
 void DumpTieredNativeCodeAddressInfo_2x(struct DacpTieredVersionData_2x * pTieredVersionData, const UINT cTieredVersionData)
 {
+    ExtOut("Code Version History:\n");
+
     for(int i = cTieredVersionData - 1; i >= 0; --i)
     {
         const char *descriptor = NULL;
@@ -3209,13 +3275,18 @@ void ReloadSymbolWithLineInfo()
         if (!(Options & SYMOPT_LOAD_LINES))
         {
             g_ExtSymbols->AddSymbolOptions(SYMOPT_LOAD_LINES);
-            
             if (SUCCEEDED(g_ExtSymbols->GetModuleByModuleName(MSCOREE_SHIM_A, 0, NULL, NULL)))
-                g_ExtSymbols->Reload("/f " MSCOREE_SHIM_A);
-            
+            {
+                g_ExtSymbols->Reload("/f" MSCOREE_SHIM_A);
+            }
             EEFLAVOR flavor = GetEEFlavor();
             if (flavor == MSCORWKS)
-                g_ExtSymbols->Reload("/f " MAIN_CLR_DLL_NAME_A);
+            {
+                std::string reloadCommand;
+                reloadCommand.append("/f ");
+                reloadCommand.append(GetRuntimeDllName());
+                g_ExtSymbols->Reload(reloadCommand.c_str());
+            }
         }
         
         // reload mscoree.pdb and clrjit.pdb to get line info
@@ -3279,9 +3350,8 @@ size_t FunctionType (size_t EIP)
 BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes)
 {
     _ASSERTE(pFileInfo);
-    if (g_ExtSymbols2 == nullptr) {
-        return FALSE;
-    }
+    _ASSERTE(g_ExtSymbols2 != nullptr);
+
     ModuleInfo moduleInfo = g_moduleInfo[GetEEFlavor()];
     _ASSERTE(moduleInfo.index != DEBUG_ANY_ID);
 
@@ -4006,8 +4076,7 @@ LoadLibraryAndCheck(
 #endif // FEATURE_PAL
 
 //---------------------------------------------------------------------------------------
-// Provides a way for the public CLR debugging interface to find the appropriate
-// mscordbi.dll, DAC, etc.
+// Provides a way for the public CLR debugging interface to find the appropriate mscordbi.dll, DAC, etc.
 class SOSLibraryProvider : public ICLRDebuggingLibraryProvider, ICLRDebuggingLibraryProvider2
 {
 public:
@@ -4069,11 +4138,11 @@ public:
     {
         const char* filePath = nullptr;
 
-        if (_wcsncmp(pwszFileName, MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W), _wcslen(MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W))) == 0)
+        if (_wcsncmp(pwszFileName, GetDacDllNameW(), _wcslen(GetDacDllNameW())) == 0)
         {
             filePath = GetDacFilePath();
         }
-        else if (_wcsncmp(pwszFileName, MAKEDLLNAME_W(MAIN_DBI_MODULE_NAME_W), _wcslen(MAKEDLLNAME_W(MAIN_DBI_MODULE_NAME_W))) == 0)
+        else if (_wcsncmp(pwszFileName, NET_DBI_DLL_NAME_W, _wcslen(NET_DBI_DLL_NAME_W)) == 0)
         {
             filePath = GetDbiFilePath();
         }
@@ -4090,7 +4159,7 @@ public:
         }
         else
         {
-            HRESULT hr = GetCoreClrDirectory(modulePath, MAX_LONGPATH);
+            HRESULT hr = GetRuntimeDirectory(modulePath, MAX_LONGPATH);
             if (FAILED(hr))
             {
                 return hr;
@@ -4113,7 +4182,7 @@ public:
         return S_OK;
     }
 
-    // Called by the shim to locate and load mscordaccore and mscordbi
+    // Called by the shim to locate and load dac and dbi
     // Parameters:
     //    pwszFileName - the name of the file to load
     //    dwTimestamp - the expected timestamp of the file
@@ -4272,7 +4341,12 @@ public:
             }
         }
 #endif
-        return g_ExtData->ReadVirtual(address, pBuffer, request, (PULONG) pcbRead);
+        HRESULT hr = g_ExtData->ReadVirtual(address, pBuffer, request, (PULONG) pcbRead);
+        if (FAILED(hr)) 
+        {
+            ExtDbgOut("SOSDataTarget::ReadVirtual FAILED %08x address %p size %08x\n", hr, address, request);
+        }
+        return hr;
     }
 
     virtual HRESULT STDMETHODCALLTYPE GetThreadContext(
@@ -4496,6 +4570,12 @@ HRESULT InitCorDebugInterface()
     GUID skuId = CLR_ID_ONECORE_CLR;
 #else
     GUID skuId = CLR_ID_CORECLR;
+#endif
+#ifndef FEATURE_PAL
+    if (g_isDesktopRuntime)
+    {
+        skuId = CLR_ID_V4_DESKTOP;
+    }
 #endif
     CLRDebuggingImpl* pDebuggingImpl = new CLRDebuggingImpl(skuId);
     hr = pDebuggingImpl->QueryInterface(IID_ICLRDebugging, (LPVOID *)&pClrDebugging);
