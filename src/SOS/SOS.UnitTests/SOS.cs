@@ -74,7 +74,7 @@ public class SOS
                     }
                 }
 
-                // With the dotnet-dump analyze tool
+                // Using the dotnet-dump analyze tool if the path exists in the config file. Don't test dotnet-dump on triage dumps when running on desktop CLR.
                 if (information.TestConfiguration.DotNetDumpPath() != null && (information.TestConfiguration.IsNETCore || information.DumpType != SOSRunner.DumpType.Triage))
                 {
                     using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDumpWithDotNetDump))

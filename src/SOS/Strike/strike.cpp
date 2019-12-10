@@ -7585,6 +7585,8 @@ public:
     STDMETHODIMP OnCodeGenerated(IXCLRDataMethodInstance* method)
     {
 #ifndef FEATURE_PAL
+        // This is only needed for desktop runtime because OnCodeGenerated2
+        // isn't supported by the desktop DAC.
         if (g_isDesktopRuntime)
         {
             // Some method has been generated, make a breakpoint and remove it.

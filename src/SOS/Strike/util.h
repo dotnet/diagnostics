@@ -1589,63 +1589,37 @@ private:
 
 #endif // FEATURE_PAL
 
-#ifndef FEATURE_PAL
 // This is set as a side-effect of CheckEEDll()/GetRuntimeModuleInfo().
 extern bool g_isDesktopRuntime;
-#endif
 
 inline const char* GetRuntimeModuleName()
 {
-    return 
-#ifndef FEATURE_PAL
-        g_isDesktopRuntime ? DESKTOP_RUNTIME_MODULE_NAME_A : 
-#endif
-            NETCORE_RUNTIME_MODULE_NAME_A;
+    return g_isDesktopRuntime ? DESKTOP_RUNTIME_MODULE_NAME_A : NETCORE_RUNTIME_MODULE_NAME_A;
 }
 
 inline const char* GetRuntimeDllName()
 {
-    return 
-#ifndef FEATURE_PAL
-        g_isDesktopRuntime ? DESKTOP_RUNTIME_DLL_NAME_A : 
-#endif
-            NETCORE_RUNTIME_DLL_NAME_A;
+    return g_isDesktopRuntime ? DESKTOP_RUNTIME_DLL_NAME_A : NETCORE_RUNTIME_DLL_NAME_A;
 }
 
 inline const char* GetDacModuleName()
 {
-    return 
-#ifndef FEATURE_PAL
-        g_isDesktopRuntime ? DESKTOP_DAC_MODULE_NAME_A : 
-#endif
-            NETCORE_DAC_MODULE_NAME_A;
+    return g_isDesktopRuntime ? DESKTOP_DAC_MODULE_NAME_A : NETCORE_DAC_MODULE_NAME_A;
 }
 
 inline const char* GetDacDllName()
 {
-    return 
-#ifndef FEATURE_PAL
-        g_isDesktopRuntime ? DESKTOP_DAC_DLL_NAME_A : 
-#endif
-            NETCORE_DAC_DLL_NAME_A;
+    return g_isDesktopRuntime ? DESKTOP_DAC_DLL_NAME_A : NETCORE_DAC_DLL_NAME_A;
 }
 
 inline const WCHAR* GetDacModuleNameW()
 {
-    return 
-#ifndef FEATURE_PAL
-        g_isDesktopRuntime ? DESKTOP_DAC_MODULE_NAME_W : 
-#endif
-            NETCORE_DAC_MODULE_NAME_W;
+    return g_isDesktopRuntime ? DESKTOP_DAC_MODULE_NAME_W : NETCORE_DAC_MODULE_NAME_W;
 }
 
 inline const WCHAR* GetDacDllNameW()
 {
-    return 
-#ifndef FEATURE_PAL
-        g_isDesktopRuntime ? DESKTOP_DAC_DLL_NAME_W : 
-#endif
-            NETCORE_DAC_DLL_NAME_W;
+    return g_isDesktopRuntime ? DESKTOP_DAC_DLL_NAME_W : NETCORE_DAC_DLL_NAME_W;
 }
 
 struct ModuleInfo

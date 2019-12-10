@@ -134,6 +134,9 @@ typedef UNALIGNED void const *UVCP_CONSTANT;
 #define INVALID_TASK_ID         0x0 
 #define MAX_CONNECTION_NAME     MAX_PATH
 
+#define MSCOREE_SHIM_W                L"mscoree.dll"
+#define MSCOREE_SHIM_A                "mscoree.dll"
+
 #define SWITCHOUT_HANDLE_VALUE ((HANDLE)(LONG_PTR)-2)
 
 //

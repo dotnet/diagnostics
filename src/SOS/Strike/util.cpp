@@ -163,16 +163,14 @@ void ReportOOM()
     ExtOut("SOS Error: Out of memory\n");
 }
 
-#ifndef FEATURE_PAL
 // This is set as a side-effect of CheckEEDll()/GetRuntimeModuleInfo().
 bool g_isDesktopRuntime = false;
-#endif
 
 HRESULT GetRuntimeModuleInfo(PULONG moduleIndex, PULONG64 moduleBase)
 {
+    g_isDesktopRuntime = false;
     HRESULT hr = g_ExtSymbols->GetModuleByModuleName(NETCORE_RUNTIME_MODULE_NAME_A, 0, moduleIndex, moduleBase);
 #ifndef FEATURE_PAL
-    g_isDesktopRuntime = false;
     if (FAILED(hr)) {
         hr = g_ExtSymbols->GetModuleByModuleName(DESKTOP_RUNTIME_MODULE_NAME_A, 0, moduleIndex, moduleBase);
         g_isDesktopRuntime = SUCCEEDED(hr);
@@ -3277,9 +3275,9 @@ void ReloadSymbolWithLineInfo()
         if (!(Options & SYMOPT_LOAD_LINES))
         {
             g_ExtSymbols->AddSymbolOptions(SYMOPT_LOAD_LINES);
-            if (SUCCEEDED(g_ExtSymbols->GetModuleByModuleName("mscoree.dll", 0, NULL, NULL)))
+            if (SUCCEEDED(g_ExtSymbols->GetModuleByModuleName(MSCOREE_SHIM_A, 0, NULL, NULL)))
             {
-                g_ExtSymbols->Reload("/f mscoree.dll");
+                g_ExtSymbols->Reload("/f" MSCOREE_SHIM_A);
             }
             EEFLAVOR flavor = GetEEFlavor();
             if (flavor == MSCORWKS)
