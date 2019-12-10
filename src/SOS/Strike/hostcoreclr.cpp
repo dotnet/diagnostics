@@ -807,17 +807,21 @@ void InitializeSymbolStoreFromSymPath()
 {
     if (g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate != nullptr)
     {
-        ArrayHolder<char> symbolPath = new char[MAX_LONGPATH];
-        if (SUCCEEDED(g_ExtSymbols->GetSymbolPath(symbolPath, MAX_LONGPATH, nullptr)))
+        ULONG cchLength = 0;
+        if (SUCCEEDED(g_ExtSymbols->GetSymbolPath(nullptr, 0, &cchLength)))
         {
-            if (strlen(symbolPath) > 0)
-            {   
-                if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(false, false, false, GetTempDirectory(), nullptr, nullptr, nullptr, symbolPath))
+            ArrayHolder<char> symbolPath = new char[cchLength];
+            if (SUCCEEDED(g_ExtSymbols->GetSymbolPath(symbolPath, cchLength, nullptr)))
+            {
+                if (strlen(symbolPath) > 0)
                 {
-                    ExtErr("Windows symbol path parsing FAILED\n");
-                    return;
+                    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(false, false, false, GetTempDirectory(), nullptr, nullptr, nullptr, symbolPath))
+                    {
+                        ExtErr("Windows symbol path parsing FAILED\n");
+                        return;
+                    }
+                    g_symbolStoreInitialized = true;
                 }
-                g_symbolStoreInitialized = true;
             }
         }
     }
