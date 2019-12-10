@@ -1577,6 +1577,8 @@ private:
 #define NET_DBI_DLL_NAME_W              MAKEDLLNAME_W(W("mscordbi"))
 #define NET_DBI_DLL_NAME_A              MAKEDLLNAME_A("mscordbi")
 
+#endif // FEATURE_PAL
+
 #define DESKTOP_RUNTIME_MODULE_NAME_W   W("clr")
 #define DESKTOP_RUNTIME_MODULE_NAME_A   "clr"
 #define DESKTOP_RUNTIME_DLL_NAME_W      MAKEDLLNAME_W(DESKTOP_RUNTIME_MODULE_NAME_W)
@@ -1586,8 +1588,6 @@ private:
 #define DESKTOP_DAC_MODULE_NAME_A       "mscordacwks"
 #define DESKTOP_DAC_DLL_NAME_W          MAKEDLLNAME_W(W("mscordacwks"))
 #define DESKTOP_DAC_DLL_NAME_A          MAKEDLLNAME_A("mscordacwks")
-
-#endif // FEATURE_PAL
 
 // This is set as a side-effect of CheckEEDll()/GetRuntimeModuleInfo().
 extern bool g_isDesktopRuntime;
