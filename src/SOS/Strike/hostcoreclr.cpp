@@ -235,7 +235,7 @@ HRESULT GetRuntimeDirectory(std::string& runtimeDirectory)
     LPCSTR directory = g_ExtServices->GetCoreClrDirectory();
     if (directory == NULL)
     {
-        ExtErr("Error: Runtime module (%s) not loaded yet\n", NETCORE_RUNTIME_DLL_NAME_A);
+        ExtErr("Error: Runtime module (%s) not loaded yet\n", GetRuntimeDllName());
         return E_FAIL;
     }
     if (!GetAbsolutePath(directory, runtimeDirectory))

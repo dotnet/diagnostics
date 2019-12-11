@@ -92,13 +92,17 @@ namespace SOS
         string GetCoreClrDirectory(
             IntPtr self)
         {
-            foreach (ModuleInfo module in _soshost.DataReader.EnumerateModules())
+            if (_soshost.AnalyzeContext.RuntimeModuleDirectory == null)
             {
-                if (SOSHost.IsRuntimeModule(module)) {
-                    return Path.GetDirectoryName(module.FileName) + Path.DirectorySeparatorChar;
+                foreach (ModuleInfo module in _soshost.DataReader.EnumerateModules())
+                {
+                    if (SOSHost.IsRuntimeModule(module))
+                    {
+                        _soshost.AnalyzeContext.RuntimeModuleDirectory = Path.GetDirectoryName(module.FileName) + Path.DirectorySeparatorChar;
+                    }
                 }
             }
-            return null;
+            return _soshost.AnalyzeContext.RuntimeModuleDirectory;
         }
 
         int VirtualUnwind(

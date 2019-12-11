@@ -155,13 +155,13 @@ namespace SOS
             GetExpressionDelegate = SOSHost.GetExpression,
         };
 
-        internal readonly IDataReader DataReader;
-
         const string DesktopRuntimeModuleName = "clr";
 
         private static readonly string s_coreclrModuleName;
 
-        private readonly AnalyzeContext _analyzeContext;
+        internal readonly IDataReader DataReader;
+        internal readonly AnalyzeContext AnalyzeContext;
+
         private readonly RegisterService _registerService;
         private readonly MemoryService _memoryService;
         private readonly IConsoleService _console;
@@ -203,7 +203,7 @@ namespace SOS
             DataTarget dataTarget = serviceProvider.GetService<DataTarget>();
             DataReader = dataTarget.DataReader;
             _console = serviceProvider.GetService<IConsoleService>();
-            _analyzeContext = serviceProvider.GetService<AnalyzeContext>();
+            AnalyzeContext = serviceProvider.GetService<AnalyzeContext>();
             _memoryService = serviceProvider.GetService<MemoryService>();
             _registerService = serviceProvider.GetService<RegisterService>();
             _versionCache = new ReadVirtualCache(_memoryService);
@@ -343,7 +343,7 @@ namespace SOS
         internal int GetInterrupt(
             IntPtr self)
         {
-            return _analyzeContext.CancellationToken.IsCancellationRequested ? S_OK : E_FAIL;
+            return AnalyzeContext.CancellationToken.IsCancellationRequested ? S_OK : E_FAIL;
         }
 
         internal int OutputVaList(
@@ -877,7 +877,7 @@ namespace SOS
             IntPtr context,
             uint contextSize)
         {
-            uint threadId = (uint)_analyzeContext.CurrentThreadId;
+            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
             byte[] registerContext = _registerService.GetThreadContext(threadId);
             if (registerContext == null) {
                 return E_FAIL;
@@ -934,7 +934,7 @@ namespace SOS
             IntPtr self,
             out uint id)
         {
-            return GetThreadIdBySystemId(self, (uint)_analyzeContext.CurrentThreadId, out id);
+            return GetThreadIdBySystemId(self, (uint)AnalyzeContext.CurrentThreadId, out id);
         }
 
         internal int SetCurrentThreadId(
@@ -944,7 +944,7 @@ namespace SOS
             try
             {
                 unchecked {
-                    _analyzeContext.CurrentThreadId = (int)DataReader.EnumerateAllThreads().ElementAt((int)id);
+                    AnalyzeContext.CurrentThreadId = (int)DataReader.EnumerateAllThreads().ElementAt((int)id);
                 }
             }
             catch (ArgumentOutOfRangeException)
@@ -958,7 +958,7 @@ namespace SOS
             IntPtr self,
             out uint sysId)
         {
-            sysId = (uint)_analyzeContext.CurrentThreadId;
+            sysId = (uint)AnalyzeContext.CurrentThreadId;
             return S_OK;
         }
 
@@ -1014,7 +1014,7 @@ namespace SOS
             IntPtr self,
             ulong* offset)
         {
-            uint threadId = (uint)_analyzeContext.CurrentThreadId;
+            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
             ulong teb = DataReader.GetThreadTeb(threadId);
             Write(offset, teb);
             return S_OK;
@@ -1102,7 +1102,7 @@ namespace SOS
             int index, 
             out ulong value)
         {
-            uint threadId = (uint)_analyzeContext.CurrentThreadId;
+            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
             if (!_registerService.GetRegisterValue(threadId, index, out value)) {
                 return E_FAIL;
             }

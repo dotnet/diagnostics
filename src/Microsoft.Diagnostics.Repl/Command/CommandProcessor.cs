@@ -10,6 +10,7 @@ using System.CommandLine.Invocation;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Repl
@@ -116,63 +117,70 @@ namespace Microsoft.Diagnostics.Repl
             {
                 if (baseAttribute is CommandAttribute commandAttribute)
                 {
-                    command = new Command(commandAttribute.Name, commandAttribute.Help);
-                    var properties = new List<(PropertyInfo, Option)>();
-                    var arguments = new List<(PropertyInfo, Argument)>();
-
-                    foreach (PropertyInfo property in type.GetProperties().Where(p => p.CanWrite))
+                    if (IsValidPlatform(commandAttribute))
                     {
-                        var argumentAttribute = (ArgumentAttribute)property.GetCustomAttributes(typeof(ArgumentAttribute), inherit: false).SingleOrDefault();
-                        if (argumentAttribute != null)
-                        {
-                            IArgumentArity arity = property.PropertyType.IsArray ? ArgumentArity.ZeroOrMore : ArgumentArity.ZeroOrOne;
+                        command = new Command(commandAttribute.Name, commandAttribute.Help);
+                        var properties = new List<(PropertyInfo, Option)>();
+                        var arguments = new List<(PropertyInfo, Argument)>();
 
-                            var argument = new Argument {
-                                Name = argumentAttribute.Name ?? property.Name.ToLowerInvariant(),
-                                Description = argumentAttribute.Help,
-                                ArgumentType = property.PropertyType,
-                                Arity = arity
-                            };
-                            command.AddArgument(argument);
-                            arguments.Add((property, argument));
-                        }
-                        else
+                        foreach (PropertyInfo property in type.GetProperties().Where(p => p.CanWrite))
                         {
-                            var optionAttribute = (OptionAttribute)property.GetCustomAttributes(typeof(OptionAttribute), inherit: false).SingleOrDefault();
-                            if (optionAttribute != null)
+                            var argumentAttribute = (ArgumentAttribute)property.GetCustomAttributes(typeof(ArgumentAttribute), inherit: false).SingleOrDefault();
+                            if (argumentAttribute != null)
                             {
-                                var option = new Option(optionAttribute.Name ?? BuildAlias(property.Name), optionAttribute.Help) {
-                                    Argument = new Argument { ArgumentType = property.PropertyType }
-                                };
-                                command.AddOption(option);
-                                properties.Add((property, option));
+                                IArgumentArity arity = property.PropertyType.IsArray ? ArgumentArity.ZeroOrMore : ArgumentArity.ZeroOrOne;
 
-                                foreach (var optionAliasAttribute in (OptionAliasAttribute[])property.GetCustomAttributes(typeof(OptionAliasAttribute), inherit: false))
-                                {
-                                    option.AddAlias(optionAliasAttribute.Name);
-                                }
+                                var argument = new Argument {
+                                    Name = argumentAttribute.Name ?? property.Name.ToLowerInvariant(),
+                                    Description = argumentAttribute.Help,
+                                    ArgumentType = property.PropertyType,
+                                    Arity = arity
+                                };
+                                command.AddArgument(argument);
+                                arguments.Add((property, argument));
                             }
                             else
                             {
-                                // If not an option, add as just a settable properties
-                                properties.Add((property, null));
+                                var optionAttribute = (OptionAttribute)property.GetCustomAttributes(typeof(OptionAttribute), inherit: false).SingleOrDefault();
+                                if (optionAttribute != null)
+                                {
+                                    var option = new Option(optionAttribute.Name ?? BuildAlias(property.Name), optionAttribute.Help) {
+                                        Argument = new Argument { ArgumentType = property.PropertyType }
+                                    };
+                                    command.AddOption(option);
+                                    properties.Add((property, option));
+
+                                    foreach (var optionAliasAttribute in (OptionAliasAttribute[])property.GetCustomAttributes(typeof(OptionAliasAttribute), inherit: false))
+                                    {
+                                        option.AddAlias(optionAliasAttribute.Name);
+                                    }
+                                }
+                                else
+                                {
+                                    // If not an option, add as just a settable properties
+                                    properties.Add((property, null));
+                                }
                             }
                         }
+
+                        var handler = new Handler(this, commandAttribute.AliasExpansion, arguments, properties, type);
+                        _commandHandlers.Add(command.Name, handler);
+                        command.Handler = handler;
+
+                        rootBuilder.AddCommand(command);
                     }
-
-                    var handler = new Handler(this, commandAttribute.AliasExpansion, arguments, properties, type);
-                    _commandHandlers.Add(command.Name, handler);
-                    command.Handler = handler;
-
-                    rootBuilder.AddCommand(command);
                 }
 
                 if (baseAttribute is CommandAliasAttribute commandAliasAttribute)
                 {
-                    if (command == null) {
-                        throw new ArgumentException($"No previous CommandAttribute for this CommandAliasAttribute: {type.Name}");
+                    if (IsValidPlatform(commandAliasAttribute))
+                    {
+                        if (command == null)
+                        {
+                            throw new ArgumentException($"No previous CommandAttribute for this CommandAliasAttribute: {type.Name}");
+                        }
+                        command.AddAlias(commandAliasAttribute.Name);
                     }
-                    command.AddAlias(commandAliasAttribute.Name);
                 }
             }
         }
@@ -187,6 +195,29 @@ namespace Microsoft.Diagnostics.Repl
             T service = (T)_serviceProvider.GetService(typeof(T));
             Debug.Assert(service != null);
             return service;
+        }
+
+        /// <summary>
+        /// Returns true if the command should be added.
+        /// </summary>
+        private static bool IsValidPlatform(CommandBaseAttribute attribute)
+        {
+            if (attribute.Platform != CommandPlatform.All)
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    return (attribute.Platform & CommandPlatform.Windows) != 0;
+                }
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    return (attribute.Platform & CommandPlatform.Linux) != 0;
+                }
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    return (attribute.Platform & CommandPlatform.OSX) != 0;
+                }
+            }
+            return true;
         }
 
         private static string BuildAlias(string parameterName)
