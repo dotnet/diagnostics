@@ -77,7 +77,7 @@ namespace EventPipe.UnitTests.ContentionValidation
                         Logger.logger.Log("Event counts validation");
                         Logger.logger.Log("ContentionStartEvents: " + ContentionStartEvents);
                         Logger.logger.Log("ContentionStopEvents: " + ContentionStopEvents);
-                        return ContentionStartEvents >= 50 && ContentionStopEvents >= 50 ? 100 : -1;
+                        return ContentionStartEvents > 0 && ContentionStopEvents > 0 ? 100 : -1;
                     };
                 };
                 var config = new SessionConfiguration(circularBufferSizeMB: (uint)Math.Pow(2, 10), format: EventPipeSerializationFormat.NetTrace,  providers: providers);
