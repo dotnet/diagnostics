@@ -1106,43 +1106,41 @@ namespace SOS
             {
                 // Use the internal symbol store for symweb
                 internalServer = symbolServerPath.Contains("symweb");
-
-                // Make sure the server Uri ends with "/"
-                symbolServerPath = symbolServerPath.TrimEnd('/') + '/';
             }
 
             if (symbolServerPath != null)
             {
                 // Validate symbol server path
-                if (!Uri.TryCreate(symbolServerPath, UriKind.Absolute, out Uri uri) || uri.IsFile)
+                if (!Uri.TryCreate(symbolServerPath.TrimEnd('/') + '/', UriKind.Absolute, out Uri uri))
                 {
                     return false;
                 }
 
-                if (!IsDuplicateSymbolStore<HttpSymbolStore>(store, (httpSymbolStore) => uri.Equals(httpSymbolStore.Uri)))
+                // Add a cache symbol store if file or UNC path
+                if (uri.IsFile || uri.IsUnc)
                 {
-                    // Create symbol server store
-                    if (internalServer)
+                    AddCachePath(ref store, symbolServerPath);
+                }
+                else
+                {
+                    if (!IsDuplicateSymbolStore<HttpSymbolStore>(store, (httpSymbolStore) => uri.Equals(httpSymbolStore.Uri)))
                     {
-                        store = new SymwebHttpSymbolStore(s_tracer, store, uri);
-                    }
-                    else
-                    {
-                        store = new HttpSymbolStore(s_tracer, store, uri);
+                        // Create symbol server store
+                        if (internalServer)
+                        {
+                            store = new SymwebHttpSymbolStore(s_tracer, store, uri);
+                        }
+                        else
+                        {
+                            store = new HttpSymbolStore(s_tracer, store, uri);
+                        }
                     }
                 }
             }
 
             if (symbolCachePath != null)
             {
-                symbolCachePath = Path.GetFullPath(symbolCachePath);
-
-                // Check only the first symbol store for duplication. The same cache directory can be
-                // added more than once but just not more than once in a row.
-                if (!(store is CacheSymbolStore cacheSymbolStore && IsPathEqual(symbolCachePath, cacheSymbolStore.CacheDirectory)))
-                {
-                    store = new CacheSymbolStore(s_tracer, store, symbolCachePath);
-                }
+                AddCachePath(ref store, symbolCachePath);
             }
 
             if (symbolDirectoryPath != null)
@@ -1156,6 +1154,18 @@ namespace SOS
             }
 
             return true;
+        }
+
+        private static void AddCachePath(ref SymbolStore store, string symbolCachePath)
+        {
+            symbolCachePath = Path.GetFullPath(symbolCachePath);
+
+            // Check only the first symbol store for duplication. The same cache directory can be
+            // added more than once but just not more than once in a row.
+            if (!(store is CacheSymbolStore cacheSymbolStore && IsPathEqual(symbolCachePath, cacheSymbolStore.CacheDirectory)))
+            {
+                store = new CacheSymbolStore(s_tracer, store, symbolCachePath);
+            }
         }
 
         private static bool IsDuplicateSymbolStore<T>(SymbolStore symbolStore, Func<T, bool> match) 
