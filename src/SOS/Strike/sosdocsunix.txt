@@ -617,7 +617,7 @@ exceptions by switching to the thread in question, and running
 \\
 
 COMMAND: clrstack.
-CLRStack [-a] [-l] [-p] [-n] [-f]
+CLRStack [-a] [-l] [-p] [-n] [-f] [-r] [-all]
 CLRStack [-a] [-l] [-p] [-i] [variable name] [frame]
 
 CLRStack attempts to provide a true stack trace for managed code only. It is
