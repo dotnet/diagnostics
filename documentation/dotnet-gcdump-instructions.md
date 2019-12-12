@@ -1,6 +1,6 @@
 # Heap Analysis Tool (dotnet-gcdump)
 
-The dotnet-trace tool is a cross-platform CLI tool that collects gcdumps of live .NET processes. It is built using the EventPipe technology which is a cross-platform alternative to ETW on Windows. Gcdumps are created by triggering a GC
+The dotnet-gcdump tool is a cross-platform CLI tool that collects gcdumps of live .NET processes. It is built using the EventPipe technology which is a cross-platform alternative to ETW on Windows. Gcdumps are created by triggering a GC
 in the target process, turning on special events, and regenerating the graph of object roots from the event stream. This allows for gcdumps to be collected while the process is running with minimal overhead. These dumps are useful for
 several scenarios:
 
