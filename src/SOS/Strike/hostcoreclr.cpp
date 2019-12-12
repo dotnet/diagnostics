@@ -766,13 +766,21 @@ static int ReadMemoryForSymbols(ULONG64 address, uint8_t *buffer, int cb)
 /**********************************************************************\
  * Setup and initialize the symbol server support.
 \**********************************************************************/
-HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* symbolServer, const char* cacheDirectory, const char* searchDirectory, const char* windowsSymbolPath)
+HRESULT InitializeSymbolStore(
+    BOOL logging,
+    BOOL msdl,
+    BOOL symweb,
+    const char* symbolServer,
+    int timeoutInMinutes,
+    const char* cacheDirectory,
+    const char* searchDirectory,
+    const char* windowsSymbolPath)
 {
     HRESULT Status = S_OK;
     IfFailRet(InitializeHosting());
     _ASSERTE(g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate != nullptr);
 
-    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(logging, msdl, symweb, GetTempDirectory(), symbolServer, cacheDirectory, searchDirectory, windowsSymbolPath))
+    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(logging, msdl, symweb, GetTempDirectory(), symbolServer, timeoutInMinutes, cacheDirectory, searchDirectory, windowsSymbolPath))
     {
         ExtErr("Error initializing symbol server support\n");
         return E_FAIL;
@@ -815,7 +823,7 @@ void InitializeSymbolStoreFromSymPath()
             {
                 if (strlen(symbolPath) > 0)
                 {
-                    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(false, false, false, GetTempDirectory(), nullptr, nullptr, nullptr, symbolPath))
+                    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(false, false, false, GetTempDirectory(), nullptr, 0, nullptr, nullptr, symbolPath))
                     {
                         ExtErr("Windows symbol path parsing FAILED\n");
                         return;

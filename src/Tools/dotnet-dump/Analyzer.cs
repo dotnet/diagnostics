@@ -71,7 +71,16 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     AddServices(target);
 
                     // Automatically enable symbol server support
-                    SymbolReader.InitializeSymbolStore(logging: false, msdl: true, symweb: false, tempDirectory: null, symbolServerPath: null, symbolCachePath: null, symbolDirectoryPath: null, windowsSymbolPath: null);
+                    SymbolReader.InitializeSymbolStore(
+                        logging: false, 
+                        msdl: true,
+                        symweb: false,
+                        tempDirectory: null,
+                        symbolServerPath: null,
+                        timeoutInMinutes: 0,
+                        symbolCachePath: null,
+                        symbolDirectoryPath: null,
+                        windowsSymbolPath: null);
 
                     // Run the commands from the dotnet-dump command line
                     if (command != null)

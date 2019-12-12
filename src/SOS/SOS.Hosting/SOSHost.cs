@@ -61,6 +61,7 @@ namespace SOS
             bool symweb,
             string tempDirectory,
             string symbolServerPath,
+            int timeoutInMintues,
             string symbolCachePath,
             string symbolDirectoryPath,
             string windowsSymbolPath);

@@ -16,7 +16,7 @@ typedef void (*WriteLineDelegate)(const char*);
 typedef  int (*ReadMemoryDelegate)(ULONG64, uint8_t*, int);
 typedef void (*SymbolFileCallbackDelegate)(void*, const char* moduleFileName, const char* symbolFilePath);
 
-typedef  BOOL (*InitializeSymbolStoreDelegate)(BOOL, BOOL, BOOL, const char*, const char*, const char*, const char*, const char*);
+typedef  BOOL (*InitializeSymbolStoreDelegate)(BOOL, BOOL, BOOL, const char*, const char*, int, const char*, const char*, const char*);
 typedef  void (*DisplaySymbolStoreDelegate)(WriteLineDelegate);
 typedef  void (*DisableSymbolStoreDelegate)();
 typedef  void (*LoadNativeSymbolsDelegate)(SymbolFileCallbackDelegate, void*, const char*, ULONG64, int, ReadMemoryDelegate);
@@ -71,10 +71,21 @@ extern LPCSTR GetDacFilePath();
 extern LPCSTR GetDbiFilePath();
 extern BOOL IsHostingInitialized();
 extern HRESULT InitializeHosting();
-extern HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* symbolServer, const char* cacheDirectory, const char* searchDirectory, const char* windowsSymbolPath);
+
+extern HRESULT InitializeSymbolStore(
+    BOOL logging, 
+    BOOL msdl,
+    BOOL symweb,
+    const char* symbolServer,
+    int timeoutInMinutes,
+    const char* cacheDirectory,
+    const char* searchDirectory,
+    const char* windowsSymbolPath);
+
 #ifndef FEATURE_PAL
 extern void InitializeSymbolStoreFromSymPath();
 #endif
+
 extern HRESULT LoadNativeSymbols(bool runtimeOnly = false);
 extern void DisplaySymbolStore();
 extern void DisableSymbolStore();
