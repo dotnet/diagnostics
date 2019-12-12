@@ -229,7 +229,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                         bool GCAllocationTickResult = GCAllocationTickEvents > 0;
                         Logger.logger.Log("GCAllocationTickResult: " + GCAllocationTickResult); 
 
-                        bool GCCollectResults = GCSegmentResult && GCAllocationTickResult && GCConcurrentResult;
+                        bool GCCollectResults = GCSegmentResult && GCAllocationTickResult;
                         Logger.logger.Log("GCCollectResults: " + GCCollectResults);
 
                         return GCCollectResults ? 100 : -1;
