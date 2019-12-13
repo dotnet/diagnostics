@@ -1,7 +1,7 @@
 <!--
   The xunit tests in Debugger.Tests aren't truly unit tests - they depend on other stuff that may
   not be in the same directory. This file configures the tests to find what they need. At the moment
-  this file is generated in a hardcoded way to support running from the bin directory on our git 
+  this file is generated in a hard coded way to support running from the bin directory on our git 
   based build, but once we understand the different environments the tests will need to run in we
   can figure out the right build and deployment strategy for each. Hopefully this configuration offers
   enough flexibility that the tests themselves don't need to change.
@@ -9,8 +9,11 @@
 
 <Configuration>
   <RepoRootDir>..\..\..\..\..</RepoRootDir>
+  <DotNetRoot Condition="'$(TargetArchitecture)' != 'x86'">$(RepoRootDir)\.dotnet</DotNetRoot>
+  <DotNetRoot Condition="'$(TargetArchitecture)' == 'x86'">$(RepoRootDir)\.dotnet\x86</DotNetRoot>
+
   <Import ConfigFile="Debugger.Tests.Common.txt" />
-  <Import ConfigFile="$(RepoRootDir)\.dotnet\Debugger.Tests.Versions.txt" />
+  <Import ConfigFile="$(DotNetRoot)\Debugger.Tests.Versions.txt" />
 
   <ScriptRootDir>$(RepoRootDir)\src\SOS\SOS.UnitTests\Scripts</ScriptRootDir>
   <RootBinDir>$(RepoRootDir)\artifacts</RootBinDir>
@@ -19,11 +22,11 @@
   <DumpDir>$(RootBinDir)\tmp\$(TargetConfiguration)\dumps</DumpDir>
   <CDBPath>$(RootBinDir)\bin\SOS.UnitTests\$(TargetConfiguration)\netcoreapp2.0\publish\runtimes\win-$(TargetArchitecture)\native\cdb.exe</CDBPath>
   <CDBHelperExtension>$(InstallDir)\runcommand.dll</CDBHelperExtension>
-  <HostRuntimeDir>$(RepoRootDir)\.dotnet\shared\Microsoft.NETCore.App\$(RuntimeVersion21)</HostRuntimeDir>
 
   <DebuggeeSourceRoot>$(RepoRootDir)\src\SOS\SOS.UnitTests\Debuggees</DebuggeeSourceRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
+  <!-- Always build with x64 bit dotnet -->
   <CliPath>$(RepoRootDir)\.dotnet\dotnet.exe</CliPath>
 
   <NuGetPackageFeeds>
@@ -46,7 +49,7 @@
           <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
         </Option>
-        <Option>
+        <Option Condition="'$(DailyTest)' != 'true'">
           <!-- The debuggee built for 3.0 but run it on 3.1 -->
           <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
@@ -73,7 +76,7 @@
               <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
             </Option>
-            <Option>
+            <Option Condition="'$(DailyTest)' != 'true'">
               <!-- Build the debuggee for 3.0 but run it on 3.1 -->
               <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
               <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
@@ -97,7 +100,8 @@
         <Option Condition="'$(DailyTest)' != 'true'">
           <TestName>SOS.WebApp</TestName>
           <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(AspNetCoreVersion21)</RuntimeFrameworkVersion>
+          <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
+          <FrameworkVersion>$(AspNetCoreVersion21)</FrameworkVersion>
         </Option>
         <!--
             SOS.WebApp3 (runs on 3.0, 3.1 and latest aspnetcore)
@@ -105,29 +109,32 @@
         <Option>
           <TestName>SOS.WebApp3</TestName>
           <Options>
-            <!-- Build the debuggee for 3.0 but run it on latest -->
-            <!--
             <Option>
+              <!-- Build the debuggee for 3.0 but run it on latest -->
               <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(AspNetCoreVersionLatest)</RuntimeFrameworkVersion>
+              <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+              <FrameworkVersion>$(AspNetCoreVersionLatest)</FrameworkVersion>
             </Option>
-            -->
-            <Option>
+            <Option Condition="'$(DailyTest)' != 'true'">
               <!-- Build the debuggee for 3.0 but run it on 3.1 -->
               <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(AspNetCoreVersion31)</RuntimeFrameworkVersion>
+              <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
+              <FrameworkVersion>$(AspNetCoreVersion31)</FrameworkVersion>
             </Option>
             <Option Condition="'$(DailyTest)' != 'true'">
               <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(AspNetCoreVersion30)</RuntimeFrameworkVersion>
+              <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
+              <FrameworkVersion>$(AspNetCoreVersion30)</FrameworkVersion>
             </Option>
           </Options>
         </Option>
       </Options>
 
-      <HostExe>$(RepoRootDir)\.dotnet\dotnet.exe</HostExe>
-      <HostArgs>--fx-version $(RuntimeFrameworkVersion)</HostArgs>
-      <RuntimeSymbolsPath>$(RepoRootDir)\.dotnet\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
+      <FrameworkVersion Condition="'$(FrameworkVersion)' == ''">$(RuntimeFrameworkVersion)</FrameworkVersion>
+      <RuntimeSymbolsPath>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
+      <SOSHostRuntime>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)</SOSHostRuntime>
+      <HostExe>$(DotNetRoot)\dotnet.exe</HostExe>
+      <HostArgs>--fx-version $(FrameworkVersion)</HostArgs>
     </Option>
     <!--
         Desktop Runtime (debuggees cli built)
@@ -149,11 +156,12 @@
       <FrameworkDirPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</FrameworkDirPath>
       <FrameworkDirPath Condition="$(TargetArchitecture) != x64">$(WinDir)\Microsoft.Net\Framework\v4.0.30319\</FrameworkDirPath>
       <RuntimeSymbolsPath>$(FrameworkDirPath)</RuntimeSymbolsPath>
+      <SOSHostRuntime>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeVersion21)</SOSHostRuntime>
     </Option>
   </Options>
 
   <SOSPath>$(InstallDir)\sos.dll</SOSPath>
-  <DotNetDumpHost>$(RepoRootDir)\.dotnet\dotnet.exe</DotNetDumpHost>
+  <DotNetDumpHost>$(DotNetRoot)\dotnet.exe</DotNetDumpHost>
   <DotNetDumpPath>$(RootBinDir)\bin\dotnet-dump\$(TargetConfiguration)\netcoreapp2.1\publish\dotnet-dump.dll</DotNetDumpPath>
   <DebuggeeDumpOutputRootDir>$(DumpDir)\$(TestProduct)\$(RuntimeFrameworkVersion)\$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>
   <DebuggeeDumpInputRootDir>$(DebuggeeDumpOutputRootDir)</DebuggeeDumpInputRootDir>

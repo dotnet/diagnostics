@@ -2,19 +2,18 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.IO;
-using System.Reflection;
 using System.Runtime.InteropServices;
-
-using Microsoft.Diagnostics.TestHelpers;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
     public class CommonHelper
     {
         public static string HostExe = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 
-            "..\\..\\..\\..\\..\\.dotnet\\dotnet.exe" : "../../../../../.dotnet/dotnet";
+            (RuntimeInformation.ProcessArchitecture == Architecture.X86 ? 
+                "..\\..\\..\\..\\..\\.dotnet\\x86\\dotnet.exe" : 
+                "..\\..\\..\\..\\..\\.dotnet\\dotnet.exe") : 
+            "../../../../../.dotnet/dotnet";
         
         public static string GetTraceePath()
         {

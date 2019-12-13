@@ -702,6 +702,14 @@ public class SOSRunner : IDisposable
                 {
                     WriteLine((j + 1).ToString().PadLeft(5) + " " + scriptLines[j]);
                 }
+                try
+                {
+                    await RunSosCommand("sosstatus");
+                }
+                catch (Exception ex)
+                {
+                    WriteLine("Exception executing sosstatus {0}", ex.ToString());
+                }
                 throw;
             }
         }
@@ -733,16 +741,6 @@ public class SOSRunner : IDisposable
                 if (sosHostRuntime != null)
                 {
                     commands.Add($"!SetHostRuntime {sosHostRuntime}");
-                }
-                // Because Windows triage dumps don't have the target coreclr.dll module path the 
-                // fallback of using this target runtime for hosting SOS's managed doesn't work.
-                if (_dumpType.HasValue && _dumpType.Value == DumpType.Triage)
-                {
-                    string hostRuntimeDir = _config.HostRuntimeDir();
-                    if (hostRuntimeDir != null)
-                    {
-                        commands.Add($"!SetHostRuntime {hostRuntimeDir}");
-                    }
                 }
                 break;
             case NativeDebugger.Lldb:
@@ -1378,11 +1376,6 @@ public static class TestConfigurationExtensions
     public static string SOSHostRuntime(this TestConfiguration config)
     {
         return TestConfiguration.MakeCanonicalPath(config.GetValue("SOSHostRuntime"));
-    }
-
-    public static string HostRuntimeDir(this TestConfiguration config)
-    {
-        return TestConfiguration.MakeCanonicalPath(config.GetValue("HostRuntimeDir"));
     }
 
     public static bool GenerateDumpWithLLDB(this TestConfiguration config)

@@ -193,7 +193,7 @@ fi
 
 if [[ "$__LinuxCodeName" == "alpine" ]]; then
     __ApkToolsVersion=2.9.1
-    __AlpineVersion=3.7
+    __AlpineVersion=3.9
     __ApkToolsDir=$(mktemp -d)
     wget https://github.com/alpinelinux/apk-tools/releases/download/v$__ApkToolsVersion/apk-tools-$__ApkToolsVersion-x86_64-linux.tar.gz -P $__ApkToolsDir
     tar -xf $__ApkToolsDir/apk-tools-$__ApkToolsVersion-x86_64-linux.tar.gz -C $__ApkToolsDir
@@ -203,6 +203,7 @@ if [[ "$__LinuxCodeName" == "alpine" ]]; then
       -X http://dl-cdn.alpinelinux.org/alpine/v$__AlpineVersion/main \
       -X http://dl-cdn.alpinelinux.org/alpine/v$__AlpineVersion/community \
       -X http://dl-cdn.alpinelinux.org/alpine/edge/testing \
+      -X http://dl-cdn.alpinelinux.org/alpine/edge/main \
       -U --allow-untrusted --root $__RootfsDir --arch $__AlpineArch --initdb \
       add $__AlpinePackages
     rm -r $__ApkToolsDir

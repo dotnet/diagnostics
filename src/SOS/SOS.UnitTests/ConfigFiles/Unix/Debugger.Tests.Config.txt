@@ -1,7 +1,7 @@
 <!--
   The xunit tests in Debugger.Tests aren't truly unit tests - they depend on other stuff that may
   not be in the same directory. This file configures the tests to find what they need. At the moment
-  this file is generated in a hardcoded way to support running from the bin directory on our git 
+  this file is generated in a hard coded way to support running from the bin directory on our git 
   based build, but once we understand the different environments the tests will need to run in we
   can figure out the right build and deployment strategy for each. Hopefully this configuration offers
   enough flexibility that the tests themselves don't need to change.
@@ -9,8 +9,10 @@
 
 <Configuration>
   <RepoRootDir>../../../../..</RepoRootDir>
+  <DotNetRoot>$(RepoRootDir)/.dotnet</DotNetRoot>
+
   <Import ConfigFile="Debugger.Tests.Common.txt" />
-  <Import ConfigFile="$(RepoRootDir)/.dotnet/Debugger.Tests.Versions.txt" />
+  <Import ConfigFile="$(DotNetRoot)/Debugger.Tests.Versions.txt" />
 
   <TestProduct>ProjectK</TestProduct>
   <ScriptRootDir>$(RepoRootDir)/src/SOS/SOS.UnitTests/Scripts</ScriptRootDir>
@@ -22,7 +24,7 @@
   <DebuggeeSourceRoot>$(RepoRootDir)/src/SOS/SOS.UnitTests/Debuggees</DebuggeeSourceRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
-  <CliPath>$(RepoRootDir)/.dotnet/dotnet</CliPath>
+  <CliPath>$(DotNetRoot)/dotnet</CliPath>
 
   <NuGetPackageFeeds>
       myget.org dotnet-core=https://dotnet.myget.org/F/dotnet-core/api/v3/index.json;
@@ -38,7 +40,7 @@
       <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
     </Option>
-    <Option>
+    <Option Condition="'$(DailyTest)' != 'true'">
       <!-- The debuggee built for 3.0 but run it on 3.1 -->
       <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
@@ -65,7 +67,7 @@
           <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
         </Option>
-        <Option>
+        <Option Condition="'$(DailyTest)' != 'true'">
           <!-- Build the debuggee for 3.0 but run it on 3.1 -->
           <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
           <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
@@ -89,42 +91,45 @@
     <Option>
       <TestName>SOS.WebApp3</TestName>
       <Options>
-        <!-- Build the debuggee for 3.0 but run it on latest -->
-        <!--
         <Option>
+          <!-- Build the debuggee for 3.0 but run it on latest -->
           <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(AspNetCoreVersionLatest)</RuntimeFrameworkVersion>
+          <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+          <FrameworkVersion>$(AspNetCoreVersionLatest)</FrameworkVersion>
         </Option>
-        -->
-        <Option>
+        <Option Condition="'$(DailyTest)' != 'true'">
           <!-- Build the debuggee for 3.0 but run it on 3.1 -->
           <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(AspNetCoreVersion31)</RuntimeFrameworkVersion>
+          <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
+          <FrameworkVersion>$(AspNetCoreVersion31)</FrameworkVersion>
         </Option>
         <Option Condition="'$(DailyTest)' != 'true'">
           <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(AspNetCoreVersion30)</RuntimeFrameworkVersion>
+          <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
+          <FrameworkVersion>$(AspNetCoreVersion30)</FrameworkVersion>
         </Option>
       </Options>
     </Option>
   </Options>
 
-  <HostExe>$(RepoRootDir)/.dotnet/dotnet</HostExe>
-  <HostArgs>--fx-version $(RuntimeFrameworkVersion)</HostArgs>
-  <RuntimeSymbolsPath>$(RepoRootDir)/.dotnet/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
+  <FrameworkVersion Condition="'$(FrameworkVersion)' == ''">$(RuntimeFrameworkVersion)</FrameworkVersion>
+  <RuntimeSymbolsPath>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
+  <SOSHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SOSHostRuntime>
   <LLDBHelperScript>$(ScriptRootDir)/lldbhelper.py</LLDBHelperScript>
+  <HostExe>$(DotNetRoot)/dotnet</HostExe>
+  <HostArgs>--fx-version $(FrameworkVersion)</HostArgs>
 
   <Options>
     <Option Condition="$(OS) == Linux">
       <SOSPath>$(InstallDir)/libsosplugin.so</SOSPath>
-      <DotNetDumpHost>$(RepoRootDir)/.dotnet/dotnet</DotNetDumpHost>
+      <DotNetDumpHost>$(DotNetRoot)/dotnet</DotNetDumpHost>
       <DotNetDumpPath>$(RootBinDir)/bin/dotnet-dump/$(TargetConfiguration)/netcoreapp2.1/publish/dotnet-dump.dll</DotNetDumpPath>
       <DebuggeeDumpOutputRootDir>$(DumpDir)/$(TestProduct)/$(RuntimeFrameworkVersion)/$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>
       <DebuggeeDumpInputRootDir>$(DebuggeeDumpOutputRootDir)</DebuggeeDumpInputRootDir>
     </Option>
     <Option Condition="$(OS) == OSX">
       <SOSPath>$(InstallDir)/libsosplugin.dylib</SOSPath>
-      <!-- Dump testing is disabled on macOS. gdb can't run processes because it needs to be codesigned and lldb on macOS's "process save-core" is too slow -->
+      <!-- Dump testing is disabled on macOS. gdb can't run processes because it needs to be code signed and lldb on macOS's "process save-core" is too slow -->
     </Option>
   </Options>
 
