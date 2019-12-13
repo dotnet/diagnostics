@@ -96,7 +96,7 @@ namespace SOS
             {
                 foreach (ModuleInfo module in _soshost.DataReader.EnumerateModules())
                 {
-                    if (SOSHost.IsRuntimeModule(module))
+                    if (SOSHost.IsCoreClrRuntimeModule(module))
                     {
                         _soshost.AnalyzeContext.RuntimeModuleDirectory = Path.GetDirectoryName(module.FileName) + Path.DirectorySeparatorChar;
                     }
@@ -179,7 +179,7 @@ namespace SOS
             {
                 if (runtimeOnly)
                 {
-                    if (SOSHost.IsRuntimeModule(module))
+                    if (SOSHost.IsCoreClrRuntimeModule(module))
                     {
                         callback(IntPtr.Zero, module.FileName, module.ImageBase, unchecked((int)module.FileSize));
                         break;

@@ -9830,8 +9830,14 @@ DECLARE_API(DumpLog)
 
     MINIDUMP_NOT_SUPPORTED();    
 
+    // Not supported on desktop runtime
+    if (g_isDesktopRuntime)
+    {
+        ExtErr("DumpLog not supported on desktop runtime\n");
+        return E_FAIL;
+    }
+                        
     const char* fileName = "StressLog.txt";
-
     CLRDATA_ADDRESS StressLogAddress = NULL;
     
     StringHolder sFileName, sLogAddr;

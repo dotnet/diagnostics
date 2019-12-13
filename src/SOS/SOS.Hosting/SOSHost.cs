@@ -6,17 +6,12 @@ using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Metadata;
-using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -1110,12 +1105,14 @@ namespace SOS
             return S_OK;
         }
 
-        internal static bool IsRuntimeModule(ModuleInfo module)
+        internal static bool IsCoreClrRuntimeModule(ModuleInfo module)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && IsModuleEqual(module, DesktopRuntimeModuleName)) {
-                return true;
-            }
             return IsModuleEqual(module, s_coreclrModuleName);
+        }
+
+        internal static bool IsDesktopRuntimeModule(ModuleInfo module)
+        {
+            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && IsModuleEqual(module, DesktopRuntimeModuleName);
         }
 
         internal static bool IsModuleEqual(ModuleInfo module, string moduleName)

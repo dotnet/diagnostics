@@ -408,6 +408,11 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
                     // Find highest 3.1.x version
                     if (!FindDotNetVersion(3, 1, hostRuntimeDirectory))
                     {
+                        // Don't use the desktop runtime to host
+                        if (g_isDesktopRuntime)
+                        {
+                            return E_FAIL;
+                        }
                         // If an installed runtime can not be found, use the target coreclr version
                         HRESULT hr = GetRuntimeDirectory(hostRuntimeDirectory);
                         if (FAILED(hr))
