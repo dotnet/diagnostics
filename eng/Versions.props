@@ -8,8 +8,6 @@
     <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
   </PropertyGroup>
   <PropertyGroup>
-    <!-- SDK Version from global.json -->
-    <NETCoreSDKVersion>3.0.100</NETCoreSDKVersion>
     <!-- Runtime versions to test -->
     <MicrosoftNETCoreApp21Version>2.1.12</MicrosoftNETCoreApp21Version>
     <MicrosoftAspNetCoreApp21Version>$(MicrosoftNETCoreApp21Version)</MicrosoftAspNetCoreApp21Version>
