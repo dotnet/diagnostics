@@ -5,7 +5,8 @@ Param(
   [string][Alias('v')] $verbosity = "minimal",
   [switch][Alias('t')] $test,
   [switch] $ci,
-  [switch] $native,
+  [switch] $skipmanaged,
+  [switch] $skipnative,
   [switch] $dailytest,
   [Parameter(ValueFromRemainingArguments=$true)][String[]] $remainingargs
 )
@@ -50,13 +51,15 @@ if ($ci) {
 }
 
 # Install sdk for building, restore and build managed components.
-Invoke-Expression "& `"$engroot\common\build.ps1`" -configuration $configuration -verbosity $verbosity /p:TestArchitectures=$architecture $remainingargs"
-if ($lastExitCode -ne 0) {
-    exit $lastExitCode
+if (-not $skipmanaged) {
+    Invoke-Expression "& `"$engroot\common\build.ps1`" -build -configuration $configuration -verbosity $verbosity /p:TestArchitectures=$architecture $remainingargs"
+    if ($lastExitCode -ne 0) {
+        exit $lastExitCode
+    }
 }
 
 # Build native components
-if ($native) {
+if (-not $skipnative) {
     Invoke-Expression "& `"$engroot\Build-Native.cmd`" -architecture $architecture -configuration $configuration -verbosity $verbosity $remainingargs"
     if ($lastExitCode -ne 0) {
         exit $lastExitCode

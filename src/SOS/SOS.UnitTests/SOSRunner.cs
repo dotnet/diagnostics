@@ -706,8 +706,9 @@ public class SOSRunner : IDisposable
                 {
                     await RunSosCommand("sosstatus");
                 }
-                catch
+                catch (Exception ex)
                 {
+                    WriteLine("Exception executing sosstatus {0}", ex.ToString());
                 }
                 throw;
             }

@@ -25,8 +25,8 @@ __ExtraCmakeArgs=""
 __ClangMajorVersion=0
 __ClangMinorVersion=0
 __NumProc=1
-__Build=false
-__NativeBuild=false
+__ManagedBuild=true
+__NativeBuild=true
 __CrossBuild=false
 __Test=false
 __DailyTest=false
@@ -39,8 +39,8 @@ __UnprocessedBuildArgs=
 usage()
 {
     echo "Usage: $0 [options]"
-    echo "--build - build managed components"
-    echo "--native - build native components"
+    echo "--skipmanaged- Skip building managed components"
+    echo "--skipnative - Skip building native components"
     echo "--test - run xunit tests"
     echo "--dailytest - test components for daily build job"
     echo "--architecture <x64|x86|arm|armel|arm64>"
@@ -54,8 +54,6 @@ usage()
     exit 1
 }
 
-# args:
-# input - $1
 to_lowercase() {
     #eval $invocation
 
@@ -159,12 +157,16 @@ while :; do
             exit 1
             ;;
 
-        -build|-b)
-            __Build=true
+        -skipmanaged)
+            __ManagedBuild=false
             ;;
 
-        -native)
-            __NativeBuild=true
+        -skipnative)
+            __NativeBuild=false
+            ;;
+
+        -build|-b)
+            __ManagedBuild=true
             ;;
 
         -test|-t)
@@ -382,7 +384,7 @@ initTargetDistroRid()
 # Managed build
 #
 
-if [ $__Build == true ]; then
+if [ $__ManagedBuild == true ]; then
     echo "Commencing managed build for $__BuildType in $__RootBinDir/bin"
     "$__ProjectRoot/eng/common/build.sh" --build --configuration "$__BuildType" --verbosity "$__Verbosity" $__ManagedBuildArgs $__UnprocessedBuildArgs
     if [ $? != 0 ]; then

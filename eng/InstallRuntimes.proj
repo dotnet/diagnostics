@@ -54,10 +54,10 @@
 
   <Target Name="InstallRuntimesWindows"
           Condition="$([MSBuild]::IsOsPlatform(Windows))"
-          Inputs="$(VersionsPropsPath)" Outputs="$(TestConfigFileName);$(DotNetRoot)\shared">
+          Inputs="$(VersionsPropsPath)" Outputs="$(TestConfigFileName)">
 
     <!-- Install SDK for the x86 architecture -->
-    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) -version $(NETCoreSDKVersion) -runtime '' }&quot;"
+    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) -version $(NETCoreSDKVersion) }&quot;"
           Condition="'$(BuildArch)' == 'x86'" />
 
     <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) -version %(TestVersions.RuntimeVersion) -runtime dotnet }&quot;"
@@ -69,7 +69,7 @@
 
   <Target Name="InstallRuntimesUnix"
           Condition="!$([MSBuild]::IsOsPlatform(Windows))"
-          Inputs="$(VersionsPropsPath)" Outputs="$(TestConfigFileName);$(DotNetRoot)/shared">
+          Inputs="$(VersionsPropsPath)" Outputs="$(TestConfigFileName)">
 
     <Exec Command="$(DotnetInstallScriptCmd) $(CommonInstallArgs) -version %(TestVersions.RuntimeVersion) -runtime dotnet"
           IgnoreStandardErrorWarningFormat="true"
@@ -80,7 +80,7 @@
           Condition="%(TestVersions.Install)" />
    </Target>
 
-  <Target Name="WriteTestVersionManifest" Inputs="$(VersionsPropsPath" Outputs="$(TestConfigFileName)">
+  <Target Name="WriteTestVersionManifest" Inputs="$(VersionsPropsPath)" Outputs="$(TestConfigFileName)">
     <PropertyGroup>
       <TestConfigFileLines>
 <![CDATA[
