@@ -172,15 +172,25 @@ namespace SOS
         /// symbol servers. This API can be called more than once to add more servers to search.
         /// </summary>
         /// <param name="logging">if true, enable logging diagnostics to console</param>
-        /// <param name="msdl">if true, use the public microsoft server</param>
+        /// <param name="msdl">if true, use the public Microsoft server</param>
         /// <param name="symweb">if true, use symweb internal server and protocol (file.ptr)</param>
         /// <param name="tempDirectory">temp directory unique to this instance of SOS</param>
         /// <param name="symbolServerPath">symbol server url (optional)</param>
+        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional)</param>
         /// <param name="symbolCachePath">symbol cache directory path (optional)</param>
         /// <param name="symbolDirectoryPath">symbol directory path to search (optional)</param>
         /// <param name="windowsSymbolPath">windows symbol path (optional)</param>
         /// <returns>if false, failure</returns>
-        public static bool InitializeSymbolStore(bool logging, bool msdl, bool symweb, string tempDirectory, string symbolServerPath, string symbolCachePath, string symbolDirectoryPath, string windowsSymbolPath)
+        public static bool InitializeSymbolStore(
+            bool logging,
+            bool msdl,
+            bool symweb,
+            string tempDirectory,
+            string symbolServerPath,
+            int timeoutInMinutes,
+            string symbolCachePath,
+            string symbolDirectoryPath,
+            string windowsSymbolPath)
         {
             if (logging) {
                 // Uses the standard console to do the logging instead of sending it to the hosting debugger console
@@ -209,7 +219,7 @@ namespace SOS
                     }
                 }
                 // Build the symbol stores using the other parameters
-                if (!GetServerSymbolStore(ref store, msdl, symweb, symbolServerPath, symbolCachePath, symbolDirectoryPath)) {
+                if (!GetServerSymbolStore(ref store, msdl, symweb, symbolServerPath, timeoutInMinutes, symbolCachePath, symbolDirectoryPath)) {
                     return false;
                 }
             }
@@ -1075,7 +1085,7 @@ namespace SOS
                     }
 
                     // Add the symbol stores to the chain
-                    if (!GetServerSymbolStore(ref store, msdl, false, symbolServerPath, symbolCachePath, symbolDirectoryPath))
+                    if (!GetServerSymbolStore(ref store, msdl, false, symbolServerPath, timeoutInMinutes: 0, symbolCachePath, symbolDirectoryPath))
                     {
                         return false;
                     }
@@ -1085,7 +1095,7 @@ namespace SOS
             return true;
         }
 
-        private static bool GetServerSymbolStore(ref SymbolStore store, bool msdl, bool symweb, string symbolServerPath, string symbolCachePath, string symbolDirectoryPath)
+        private static bool GetServerSymbolStore(ref SymbolStore store, bool msdl, bool symweb, string symbolServerPath, int timeoutInMinutes, string symbolCachePath, string symbolDirectoryPath)
         {
             bool internalServer = false;
 
@@ -1106,43 +1116,47 @@ namespace SOS
             {
                 // Use the internal symbol store for symweb
                 internalServer = symbolServerPath.Contains("symweb");
-
-                // Make sure the server Uri ends with "/"
-                symbolServerPath = symbolServerPath.TrimEnd('/') + '/';
             }
 
             if (symbolServerPath != null)
             {
                 // Validate symbol server path
-                if (!Uri.TryCreate(symbolServerPath, UriKind.Absolute, out Uri uri) || uri.IsFile)
+                if (!Uri.TryCreate(symbolServerPath.TrimEnd('/') + '/', UriKind.Absolute, out Uri uri))
                 {
                     return false;
                 }
 
-                if (!IsDuplicateSymbolStore<HttpSymbolStore>(store, (httpSymbolStore) => uri.Equals(httpSymbolStore.Uri)))
+                // Add a cache symbol store if file or UNC path
+                if (uri.IsFile || uri.IsUnc)
                 {
-                    // Create symbol server store
-                    if (internalServer)
+                    AddCachePath(ref store, symbolServerPath);
+                }
+                else
+                {
+                    if (!IsDuplicateSymbolStore<HttpSymbolStore>(store, (httpSymbolStore) => uri.Equals(httpSymbolStore.Uri)))
                     {
-                        store = new SymwebHttpSymbolStore(s_tracer, store, uri);
-                    }
-                    else
-                    {
-                        store = new HttpSymbolStore(s_tracer, store, uri);
+                        // Create http symbol server store
+                        HttpSymbolStore httpSymbolStore;
+                        if (internalServer)
+                        {
+                            httpSymbolStore = new SymwebHttpSymbolStore(s_tracer, store, uri);
+                        }
+                        else
+                        {
+                            httpSymbolStore = new HttpSymbolStore(s_tracer, store, uri);
+                        }
+                        if (timeoutInMinutes != 0)
+                        {
+                            httpSymbolStore.Timeout = TimeSpan.FromMinutes(timeoutInMinutes);
+                        }
+                        store = httpSymbolStore;
                     }
                 }
             }
 
             if (symbolCachePath != null)
             {
-                symbolCachePath = Path.GetFullPath(symbolCachePath);
-
-                // Check only the first symbol store for duplication. The same cache directory can be
-                // added more than once but just not more than once in a row.
-                if (!(store is CacheSymbolStore cacheSymbolStore && IsPathEqual(symbolCachePath, cacheSymbolStore.CacheDirectory)))
-                {
-                    store = new CacheSymbolStore(s_tracer, store, symbolCachePath);
-                }
+                AddCachePath(ref store, symbolCachePath);
             }
 
             if (symbolDirectoryPath != null)
@@ -1156,6 +1170,18 @@ namespace SOS
             }
 
             return true;
+        }
+
+        private static void AddCachePath(ref SymbolStore store, string symbolCachePath)
+        {
+            symbolCachePath = Path.GetFullPath(symbolCachePath);
+
+            // Check only the first symbol store for duplication. The same cache directory can be
+            // added more than once but just not more than once in a row.
+            if (!(store is CacheSymbolStore cacheSymbolStore && IsPathEqual(symbolCachePath, cacheSymbolStore.CacheDirectory)))
+            {
+                store = new CacheSymbolStore(s_tracer, store, symbolCachePath);
+            }
         }
 
         private static bool IsDuplicateSymbolStore<T>(SymbolStore symbolStore, Func<T, bool> match) 

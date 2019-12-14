@@ -41,8 +41,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
             _serviceProvider = new ServiceProvider();
             _consoleProvider = new ConsoleProvider();
-            Type type = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? typeof(SOSCommandForWindows) : typeof(SOSCommand);
-            _commandProcessor = new CommandProcessor(_serviceProvider, _consoleProvider, new Assembly[] { typeof(Analyzer).Assembly }, new Type[] { type });
+            _commandProcessor = new CommandProcessor(_serviceProvider, _consoleProvider, new Assembly[] { typeof(Analyzer).Assembly });
         }
 
         public async Task<int> Analyze(FileInfo dump_path, string[] command)
@@ -71,7 +70,16 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     AddServices(target);
 
                     // Automatically enable symbol server support
-                    SymbolReader.InitializeSymbolStore(logging: false, msdl: true, symweb: false, tempDirectory: null, symbolServerPath: null, symbolCachePath: null, symbolDirectoryPath: null, windowsSymbolPath: null);
+                    SymbolReader.InitializeSymbolStore(
+                        logging: false, 
+                        msdl: true,
+                        symweb: false,
+                        tempDirectory: null,
+                        symbolServerPath: null,
+                        timeoutInMinutes: 0,
+                        symbolCachePath: null,
+                        symbolDirectoryPath: null,
+                        windowsSymbolPath: null);
 
                     // Run the commands from the dotnet-dump command line
                     if (command != null)

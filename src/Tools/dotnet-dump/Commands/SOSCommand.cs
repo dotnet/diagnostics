@@ -48,7 +48,21 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [Command(Name = "histobjfind",      AliasExpansion = "HistObjFind",         Help = "Displays all the log entries that reference an object at the specified address.")]
     [Command(Name = "histroot",         AliasExpansion = "HistRoot",            Help = "Displays information related to both promotions and relocations of the specified root.")]
     [Command(Name = "setsymbolserver",  AliasExpansion = "SetSymbolServer",     Help = "Enables the symbol server support ")]
-    internal class SOSCommand : CommandBase
+    [Command(Name = "dumprcw",          AliasExpansion = "DumpRCW",             Platform = CommandPlatform.Windows, Help = "Displays information about a Runtime Callable Wrapper.")]
+    [Command(Name = "dumpccw",          AliasExpansion = "DumpCCW",             Platform = CommandPlatform.Windows, Help = "Displays information about a COM Callable Wrapper.")]
+    [Command(Name = "dumppermissionset",AliasExpansion = "DumpPermissionSet",   Platform = CommandPlatform.Windows, Help = "Displays a PermissionSet object (debug build only).")]
+    [Command(Name = "traverseheap",     AliasExpansion = "TraverseHeap",        Platform = CommandPlatform.Windows, Help = "Writes out a file in a format understood by the CLR Profiler.")]
+    [Command(Name = "analyzeoom",       AliasExpansion = "AnalyzeOOM",          Platform = CommandPlatform.Windows, Help = "Displays the info of the last OOM occurred on an allocation request to the GC heap.")]
+    [Command(Name = "verifyobj",        AliasExpansion = "VerifyObj",           Platform = CommandPlatform.Windows, Help = "Checks the object for signs of corruption.")]
+    [Command(Name = "listnearobj",      AliasExpansion = "ListNearObj",         Platform = CommandPlatform.Windows, Help = "Displays the object preceding and succeeding the address specified.")]
+    [Command(Name = "gcheapstat",       AliasExpansion = "GCHeapStat",          Platform = CommandPlatform.Windows, Help = "Display various GC heap stats.")]
+    [Command(Name = "watsonbuckets",    AliasExpansion = "WatsonBuckets",       Platform = CommandPlatform.Windows, Help = "Displays the Watson buckets.")]
+    [Command(Name = "threadpool",       AliasExpansion = "ThreadPool",          Platform = CommandPlatform.Windows, Help = "Lists basic information about the thread pool.")]
+    [Command(Name = "comstate",         AliasExpansion = "COMState",            Platform = CommandPlatform.Windows, Help = "Lists the COM apartment model for each thread.")]
+    [Command(Name = "gchandles",        AliasExpansion = "GCHandles",           Platform = CommandPlatform.Windows, Help = "Provides statistics about GCHandles in the process.")]
+    [Command(Name = "objsize",          AliasExpansion = "ObjSize",             Platform = CommandPlatform.Windows, Help = "Lists the sizes of the all the objects found on managed threads.")]
+    [Command(Name = "gchandleleaks",    AliasExpansion = "GCHandleLeaks",       Platform = CommandPlatform.Windows, Help = "Helps in tracking down GCHandle leaks")]
+    public class SOSCommand : CommandBase
     {
         [Argument(Name = "arguments", Help = "Arguments to SOS command.")]
         public string[] Arguments { get; set; }

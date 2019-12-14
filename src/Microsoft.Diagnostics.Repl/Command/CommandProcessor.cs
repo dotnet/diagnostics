@@ -10,6 +10,7 @@ using System.CommandLine.Invocation;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Repl
@@ -114,7 +115,7 @@ namespace Microsoft.Diagnostics.Repl
             var baseAttributes = (BaseAttribute[])type.GetCustomAttributes(typeof(BaseAttribute), inherit: false);
             foreach (BaseAttribute baseAttribute in baseAttributes)
             {
-                if (baseAttribute is CommandAttribute commandAttribute)
+                if (baseAttribute is CommandAttribute commandAttribute && IsValidPlatform(commandAttribute))
                 {
                     command = new Command(commandAttribute.Name, commandAttribute.Help);
                     var properties = new List<(PropertyInfo, Option)>();
@@ -167,9 +168,10 @@ namespace Microsoft.Diagnostics.Repl
                     rootBuilder.AddCommand(command);
                 }
 
-                if (baseAttribute is CommandAliasAttribute commandAliasAttribute)
+                if (baseAttribute is CommandAliasAttribute commandAliasAttribute && IsValidPlatform(commandAliasAttribute))
                 {
-                    if (command == null) {
+                    if (command == null)
+                    {
                         throw new ArgumentException($"No previous CommandAttribute for this CommandAliasAttribute: {type.Name}");
                     }
                     command.AddAlias(commandAliasAttribute.Name);
@@ -187,6 +189,29 @@ namespace Microsoft.Diagnostics.Repl
             T service = (T)_serviceProvider.GetService(typeof(T));
             Debug.Assert(service != null);
             return service;
+        }
+
+        /// <summary>
+        /// Returns true if the command should be added.
+        /// </summary>
+        private static bool IsValidPlatform(CommandBaseAttribute attribute)
+        {
+            if (attribute.Platform != CommandPlatform.All)
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    return (attribute.Platform & CommandPlatform.Windows) != 0;
+                }
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    return (attribute.Platform & CommandPlatform.Linux) != 0;
+                }
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    return (attribute.Platform & CommandPlatform.OSX) != 0;
+                }
+            }
+            return true;
         }
 
         private static string BuildAlias(string parameterName)

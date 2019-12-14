@@ -235,7 +235,7 @@ HRESULT GetRuntimeDirectory(std::string& runtimeDirectory)
     LPCSTR directory = g_ExtServices->GetCoreClrDirectory();
     if (directory == NULL)
     {
-        ExtErr("Error: Runtime module (%s) not loaded yet\n", NETCORE_RUNTIME_DLL_NAME_A);
+        ExtErr("Error: Runtime module (%s) not loaded yet\n", GetRuntimeDllName());
         return E_FAIL;
     }
     if (!GetAbsolutePath(directory, runtimeDirectory))
@@ -408,6 +408,11 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
                     // Find highest 3.1.x version
                     if (!FindDotNetVersion(3, 1, hostRuntimeDirectory))
                     {
+                        // Don't use the desktop runtime to host
+                        if (g_isDesktopRuntime)
+                        {
+                            return E_FAIL;
+                        }
                         // If an installed runtime can not be found, use the target coreclr version
                         HRESULT hr = GetRuntimeDirectory(hostRuntimeDirectory);
                         if (FAILED(hr))
@@ -766,13 +771,21 @@ static int ReadMemoryForSymbols(ULONG64 address, uint8_t *buffer, int cb)
 /**********************************************************************\
  * Setup and initialize the symbol server support.
 \**********************************************************************/
-HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* symbolServer, const char* cacheDirectory, const char* searchDirectory, const char* windowsSymbolPath)
+HRESULT InitializeSymbolStore(
+    BOOL logging,
+    BOOL msdl,
+    BOOL symweb,
+    const char* symbolServer,
+    int timeoutInMinutes,
+    const char* cacheDirectory,
+    const char* searchDirectory,
+    const char* windowsSymbolPath)
 {
     HRESULT Status = S_OK;
     IfFailRet(InitializeHosting());
     _ASSERTE(g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate != nullptr);
 
-    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(logging, msdl, symweb, GetTempDirectory(), symbolServer, cacheDirectory, searchDirectory, windowsSymbolPath))
+    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(logging, msdl, symweb, GetTempDirectory(), symbolServer, timeoutInMinutes, cacheDirectory, searchDirectory, windowsSymbolPath))
     {
         ExtErr("Error initializing symbol server support\n");
         return E_FAIL;
@@ -807,17 +820,21 @@ void InitializeSymbolStoreFromSymPath()
 {
     if (g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate != nullptr)
     {
-        ArrayHolder<char> symbolPath = new char[MAX_LONGPATH];
-        if (SUCCEEDED(g_ExtSymbols->GetSymbolPath(symbolPath, MAX_LONGPATH, nullptr)))
+        ULONG cchLength = 0;
+        if (SUCCEEDED(g_ExtSymbols->GetSymbolPath(nullptr, 0, &cchLength)))
         {
-            if (strlen(symbolPath) > 0)
-            {   
-                if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(false, false, false, GetTempDirectory(), nullptr, nullptr, nullptr, symbolPath))
+            ArrayHolder<char> symbolPath = new char[cchLength];
+            if (SUCCEEDED(g_ExtSymbols->GetSymbolPath(symbolPath, cchLength, nullptr)))
+            {
+                if (strlen(symbolPath) > 0)
                 {
-                    ExtErr("Windows symbol path parsing FAILED\n");
-                    return;
+                    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(false, false, false, GetTempDirectory(), nullptr, 0, nullptr, nullptr, symbolPath))
+                    {
+                        ExtErr("Windows symbol path parsing FAILED\n");
+                        return;
+                    }
+                    g_symbolStoreInitialized = true;
                 }
-                g_symbolStoreInitialized = true;
             }
         }
     }
@@ -870,33 +887,37 @@ static void LoadNativeSymbolsCallback(void* param, const char* moduleFilePath, U
 HRESULT LoadNativeSymbols(bool runtimeOnly)
 {
     HRESULT hr = S_OK;
+#ifdef FEATURE_PAL
     if (g_symbolStoreInitialized)
     {
-#ifdef FEATURE_PAL
         hr = g_ExtServices2 ? g_ExtServices2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback) : E_NOINTERFACE;
+    }
 #else
-        if (runtimeOnly)
+    if (runtimeOnly)
+    {
+        ULONG index;
+        ULONG64 moduleAddress;
+        HRESULT hr = GetRuntimeModuleInfo(&index, &moduleAddress);
+        if (SUCCEEDED(hr))
         {
-            ULONG index;
-            ULONG64 moduleAddress;
-            HRESULT hr = GetRuntimeModuleInfo(&index, &moduleAddress);
+            ArrayHolder<char> moduleFilePath = new char[MAX_LONGPATH + 1];
+            hr = g_ExtSymbols->GetModuleNames(index, 0, moduleFilePath, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
             if (SUCCEEDED(hr))
             {
-                ArrayHolder<char> moduleFilePath = new char[MAX_LONGPATH + 1];
-                hr = g_ExtSymbols->GetModuleNames(index, 0, moduleFilePath, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
+                DEBUG_MODULE_PARAMETERS moduleParams;
+                hr = g_ExtSymbols->GetModuleParameters(1, &moduleAddress, 0, &moduleParams);
                 if (SUCCEEDED(hr))
                 {
-                    DEBUG_MODULE_PARAMETERS moduleParams;
-                    hr = g_ExtSymbols->GetModuleParameters(1, &moduleAddress, 0, &moduleParams);
-                    if (SUCCEEDED(hr))
+                    hr = InitializeSymbolStore();
+                    if (SUCCEEDED(hr) && g_symbolStoreInitialized)
                     {
                         LoadNativeSymbolsCallback(nullptr, moduleFilePath, moduleAddress, moduleParams.Size);
                     }
                 }
             }
         }
-#endif
     }
+#endif
     return hr;
 }
 

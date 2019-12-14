@@ -24,5 +24,10 @@ namespace Microsoft.Diagnostics.DebugServices
         /// Cancellation token for current command
         /// </summary>
         public CancellationToken CancellationToken { get; set; }
+
+        /// <summary>
+        /// Directory of the runtime module (coreclr.dll, libcoreclr.so, etc.)
+        /// </summary>
+        public string RuntimeModuleDirectory { get; set; }
     }
 }
