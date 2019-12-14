@@ -887,33 +887,37 @@ static void LoadNativeSymbolsCallback(void* param, const char* moduleFilePath, U
 HRESULT LoadNativeSymbols(bool runtimeOnly)
 {
     HRESULT hr = S_OK;
+#ifdef FEATURE_PAL
     if (g_symbolStoreInitialized)
     {
-#ifdef FEATURE_PAL
         hr = g_ExtServices2 ? g_ExtServices2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback) : E_NOINTERFACE;
+    }
 #else
-        if (runtimeOnly)
+    if (runtimeOnly)
+    {
+        ULONG index;
+        ULONG64 moduleAddress;
+        HRESULT hr = GetRuntimeModuleInfo(&index, &moduleAddress);
+        if (SUCCEEDED(hr))
         {
-            ULONG index;
-            ULONG64 moduleAddress;
-            HRESULT hr = GetRuntimeModuleInfo(&index, &moduleAddress);
+            ArrayHolder<char> moduleFilePath = new char[MAX_LONGPATH + 1];
+            hr = g_ExtSymbols->GetModuleNames(index, 0, moduleFilePath, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
             if (SUCCEEDED(hr))
             {
-                ArrayHolder<char> moduleFilePath = new char[MAX_LONGPATH + 1];
-                hr = g_ExtSymbols->GetModuleNames(index, 0, moduleFilePath, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
+                DEBUG_MODULE_PARAMETERS moduleParams;
+                hr = g_ExtSymbols->GetModuleParameters(1, &moduleAddress, 0, &moduleParams);
                 if (SUCCEEDED(hr))
                 {
-                    DEBUG_MODULE_PARAMETERS moduleParams;
-                    hr = g_ExtSymbols->GetModuleParameters(1, &moduleAddress, 0, &moduleParams);
-                    if (SUCCEEDED(hr))
+                    hr = InitializeSymbolStore();
+                    if (SUCCEEDED(hr) && g_symbolStoreInitialized)
                     {
                         LoadNativeSymbolsCallback(nullptr, moduleFilePath, moduleAddress, moduleParams.Size);
                     }
                 }
             }
         }
-#endif
     }
+#endif
     return hr;
 }
 
