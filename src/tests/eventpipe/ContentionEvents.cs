@@ -6,10 +6,10 @@ using System;
 using Xunit;
 using Xunit.Abstractions;
 using System.Threading;
-using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using EventPipe.UnitTests.Common;
+using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
 
 namespace EventPipe.UnitTests.ContentionValidation
@@ -26,11 +26,11 @@ namespace EventPipe.UnitTests.ContentionValidation
             }
         } 
     }
-    public class ProviderTests
+    public class ContentionEventsTests
     {
         private readonly ITestOutputHelper output;
 
-        public ProviderTests(ITestOutputHelper outputHelper)
+        public ContentionEventsTests(ITestOutputHelper outputHelper)
         {
             output = outputHelper;
         }
@@ -45,10 +45,10 @@ namespace EventPipe.UnitTests.ContentionValidation
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 }
                 };
 
-                var providers = new List<Provider>()
+                var providers = new List<EventPipeProvider>()
                 {
                     //ContentionKeyword (0x4000): 0b100_0000_0000_0000                
-                    new Provider("Microsoft-Windows-DotNETRuntime", 0b100_0000_0000_0000, EventLevel.Informational)
+                    new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, 0b100_0000_0000_0000)
                 };
 
                 Action _eventGeneratingAction = () => 
@@ -80,9 +80,7 @@ namespace EventPipe.UnitTests.ContentionValidation
                         return ContentionStartEvents > 0 && ContentionStopEvents > 0 ? 100 : -1;
                     };
                 };
-                var config = new SessionConfiguration(circularBufferSizeMB: (uint)Math.Pow(2, 10), format: EventPipeSerializationFormat.NetTrace,  providers: providers);
-
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, config, _DoesTraceContainEvents);
+                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }

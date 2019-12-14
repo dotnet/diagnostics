@@ -5,10 +5,10 @@
 using System;
 using Xunit;
 using Xunit.Abstractions;
-using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using EventPipe.UnitTests.Common;
+using Microsoft.Diagnostics.NETCore.Client;
 
 // Use this test as an example of how to write tests for EventPipe in
 // the dotnet/diagnostics repo
@@ -43,10 +43,10 @@ namespace EventPipe.UnitTests.ProviderValidation
                     { "Microsoft-DotNETCore-SampleProfiler", -1 }
                 };
 
-                var providers = new List<Provider>()
+                var providers = new List<EventPipeProvider>()
                 {
-                    new Provider("MyEventSource"),
-                    new Provider("Microsoft-DotNETCore-SampleProfiler")
+                    new EventPipeProvider("MyEventSource", EventLevel.Verbose),
+                    new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
                 };
 
                 Action eventGeneratingAction = () => 
@@ -58,10 +58,7 @@ namespace EventPipe.UnitTests.ProviderValidation
                         MyEventSource.Log.MyEvent();
                     }
                 };
-
-                var config = new SessionConfiguration(circularBufferSizeMB: (uint)Math.Pow(2, 10), format: EventPipeSerializationFormat.NetTrace,  providers: providers);
-
-                var ret = IpcTraceTest.RunAndValidateEventCounts(expectedEventCounts, eventGeneratingAction, config);
+                var ret = IpcTraceTest.RunAndValidateEventCounts(expectedEventCounts, eventGeneratingAction, providers, 1024, null);
                 Assert.Equal(100, ret);
             }, output);
         }
