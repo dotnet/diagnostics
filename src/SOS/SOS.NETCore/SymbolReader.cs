@@ -1085,7 +1085,7 @@ namespace SOS
                     }
 
                     // Add the symbol stores to the chain
-                    if (!GetServerSymbolStore(ref store, msdl, false, symbolServerPath, 0, symbolCachePath, symbolDirectoryPath))
+                    if (!GetServerSymbolStore(ref store, msdl, false, symbolServerPath, timeoutInMinutes: 0, symbolCachePath, symbolDirectoryPath))
                     {
                         return false;
                     }
