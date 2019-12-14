@@ -11,7 +11,7 @@
     <!-- Runtime versions to test -->
     <MicrosoftNETCoreApp21Version>2.1.12</MicrosoftNETCoreApp21Version>
     <MicrosoftAspNetCoreApp21Version>$(MicrosoftNETCoreApp21Version)</MicrosoftAspNetCoreApp21Version>
-    <MicrosoftNETCoreApp30Version>3.0.0</MicrosoftNETCoreApp30Version>
+    <MicrosoftNETCoreApp30Version>3.0.1</MicrosoftNETCoreApp30Version>
     <MicrosoftAspNetCoreApp30Version>$(MicrosoftNETCoreApp30Version)</MicrosoftAspNetCoreApp30Version>
     <MicrosoftNETCoreApp31Version>3.1.0</MicrosoftNETCoreApp31Version>
     <MicrosoftAspNetCoreApp31Version>$(MicrosoftNETCoreApp31Version)</MicrosoftAspNetCoreApp31Version>
