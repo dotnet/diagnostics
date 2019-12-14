@@ -99,9 +99,9 @@ jobs:
 
     - ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
       - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
-        - _DailyTest: -daily-test
+        - _DailyTest: -dailytest
       - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
-        - _DailyTest: --daily-test
+        - _DailyTest: --dailytest
     - ${{ if ne(variables['Build.Reason'], 'Schedule') }}:
       - _DailyTest: ''
 
