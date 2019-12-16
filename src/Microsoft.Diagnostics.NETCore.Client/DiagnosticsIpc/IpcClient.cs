@@ -4,15 +4,13 @@
 
 using System;
 using System.Diagnostics;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -69,7 +67,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     throw new ServerNotAvailableException($"Process {processId} not running compatible .NET Core runtime.");
                 }
                 string path = Path.Combine(IpcRootPath, ipcPort);
-                var remoteEP = new UnixDomainSocketEndPoint(path);
+                var remoteEP = CreateUnixDomainSocketEndPoint(path);
 
                 var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
                 socket.Connect(remoteEP);
@@ -121,6 +119,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private static IpcMessage Read(Stream stream)
         {
             return IpcMessage.Parse(stream);
+        }
+
+        private static EndPoint CreateUnixDomainSocketEndPoint(string path)
+        {
+#if NETCOREAPP
+            return new UnixDomainSocketEndPoint(path);
+#elif NETSTANDARD2_0
+            // UnixDomainSocketEndPoint is not part of .NET Standard 2.0
+            var type = typeof(Socket).Assembly.GetType("System.Net.Sockets.UnixDomainSocketEndPoint");
+            var ctor = type.GetConstructor(new[] { typeof(string) });
+            return (EndPoint)ctor.Invoke(new object[] { path });
+#endif
         }
     }
 }

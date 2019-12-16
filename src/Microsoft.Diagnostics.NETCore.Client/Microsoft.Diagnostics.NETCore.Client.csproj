@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFrameworks>netstandard2.0;netcoreapp2.1</TargetFrameworks>
     <RootNamespace>Microsoft.Diagnostics.NETCore.Client</RootNamespace>
     <Description>.NET Core Diagnostics Client Library</Description>
     <VersionPrefix>0.1.0</VersionPrefix>
