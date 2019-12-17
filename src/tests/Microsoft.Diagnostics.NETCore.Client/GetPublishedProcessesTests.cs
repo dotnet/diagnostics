@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
             runner.Start(3000);
             List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
-            foreach(int p in publishedProcesses)
+            foreach (int p in publishedProcesses)
             {
                 output.WriteLine($"[{DateTime.Now.ToString()}] Saw published process {p}");
             }
@@ -45,11 +45,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             for (var i = 0; i < 3; i++)
             {
                 runner[i] = new TestRunner(CommonHelper.GetTraceePath(), output);
-                runner[i].Start(500);
+                runner[i].Start();
                 pids[i] = runner[i].Pid;
             }
+            System.Threading.Thread.Sleep(2000);
             List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
-            foreach(int p in publishedProcesses)
+            foreach (int p in publishedProcesses)
             {
                 output.WriteLine($"[{DateTime.Now.ToString()}] Saw published process {p}");
             }
