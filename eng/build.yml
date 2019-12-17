@@ -84,7 +84,6 @@ jobs:
     - _PhaseName : ${{ parameters.name }}
     - _HelixType: build/product
     - _HelixBuildConfig: $(_BuildConfig)
-    - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/$(_BuildConfig)/streams
 
     # Only enable publishing in non-public, non PR scenarios.
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
@@ -97,14 +96,6 @@ jobs:
     - ${{ if ne(parameters.testOnly, 'true') }}:
       - _LinuxScript: $(Build.SourcesDirectory)/eng/cibuild.sh
 
-    - ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
-      - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
-        - _DailyTest: -dailytest
-      - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
-        - _DailyTest: --dailytest
-    - ${{ if ne(variables['Build.Reason'], 'Schedule') }}:
-      - _DailyTest: ''
-
     # This is only required for cross builds.
     - ${{ if eq(parameters.crossrootfsDir, '') }}:
       - _RootFs: ''
@@ -113,7 +104,7 @@ jobs:
 
     steps:
     - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
-      - script: $(Build.SourcesDirectory)\eng\cibuild.cmd $(_DailyTest)
+      - script: $(Build.SourcesDirectory)\eng\cibuild.cmd
           -configuration $(_BuildConfig) 
           -architecture $(_BuildArch)
           -prepareMachine 
@@ -134,7 +125,7 @@ jobs:
           --docker-image $(_DockerImageName)
           --source-directory $(Build.SourcesDirectory)
           --container-name diagnostics-$(Build.BuildId)
-          $(_LinuxScript) $(_DailyTest) $(_RootFs)
+          $(_LinuxScript) $(_RootFs)
           --configuration $(_BuildConfig) 
           --architecture $(_BuildArch)
           --prepareMachine 
@@ -144,7 +135,7 @@ jobs:
         condition: succeeded()
 
     - ${{ if eq(parameters.osGroup, 'MacOS') }}:
-      - script: $(Build.SourcesDirectory)/eng/cibuild.sh $(_DailyTest)
+      - script: $(Build.SourcesDirectory)/eng/cibuild.sh
           --configuration $(_BuildConfig) 
           --architecture $(_BuildArch)
           --prepareMachine
@@ -180,7 +171,7 @@ jobs:
     - task: PublishBuildArtifacts@1
       displayName: Publish Stream Artifacts on failure
       inputs:
-        PathtoPublish: $(_Pipeline_StreamDumpDir)
+        PathtoPublish: '$(Build.SourcesDirectory)/artifacts/tmp/$(_BuildConfig)/streams'
         PublishLocation: Container
         ArtifactName: Streams_$(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
       continueOnError: true
@@ -216,4 +207,4 @@ jobs:
         mergeTestResults: true
         buildConfiguration: ${{ parameters.name }}
       continueOnError: true
-      condition: always()
+      condition: ne(variables['_BuildOnly'], 'true')

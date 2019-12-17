@@ -29,7 +29,7 @@ DumpAsync (dumpasync)              IP2MD (ip2md)
 DumpDelegate (dumpdelegate)        u (clru)
 DumpStackObjects (dso)             DumpStack (dumpstack)
 DumpHeap (dumpheap)                EEStack (eestack)
-DumpVC                             CLRStack (clrstack)
+DumpVC                             ClrStack (clrstack)
 FinalizeQueue (finalizequeue)      GCInfo
 GCRoot (gcroot)                    EHInfo
 PrintException (pe)                bpmd (bpmd)
@@ -226,7 +226,7 @@ DumpStackObjects [-verify] [top stack [bottom stack]]
 
 This command will display any managed objects it finds within the bounds of 
 the current stack. Combined with the stack tracing commands like K and 
-CLRStack, it is a good aid to determining the values of locals and 
+ClrStack, it is a good aid to determining the values of locals and 
 parameters.
 
 If you use the -verify option, each non-static CLASS field of an object
@@ -469,7 +469,7 @@ places:
 First, all stacks will be searched for roots, then handle tables, and finally
 the reachable queue of the finalizer. Some caution about the stack roots: 
 GCRoot doesn't attempt to determine if a stack root it encountered is valid 
-or is old (discarded) data. You would have to use CLRStack and U to 
+or is old (discarded) data. You would have to use ClrStack and U to 
 disassemble the frame that the local or argument value belongs to in order to 
 determine if it is still in use.
 
@@ -617,10 +617,10 @@ exceptions by switching to the thread in question, and running
 \\
 
 COMMAND: clrstack.
-CLRStack [-a] [-l] [-p] [-n] [-f] [-r] [-all]
-CLRStack [-a] [-l] [-p] [-i] [variable name] [frame]
+ClrStack [-a] [-l] [-p] [-n] [-f] [-r] [-all]
+ClrStack [-a] [-l] [-p] [-i] [variable name] [frame]
 
-CLRStack attempts to provide a true stack trace for managed code only. It is
+ClrStack attempts to provide a true stack trace for managed code only. It is
 handy for clean, simple traces when debugging straightforward managed 
 programs. The -p parameter will show arguments to the managed function. The 
 -l parameter can be used to show information on local variables in a frame.
@@ -656,12 +656,12 @@ in myapp.ini and re-run:
 GenerateTrackingInfo=1
 AllowOptimize=0
 
-The -i option is a new EXPERIMENTAL addition to CLRStack and will use the ICorDebug
+The -i option is a new EXPERIMENTAL addition to ClrStack and will use the ICorDebug
 interfaces to display the managed stack and variables. With this option you can also 
 view and expand arrays and fields for managed variables. If a stack frame number is 
-specified in the command line, CLRStack will show you the parameters and/or locals 
+specified in the command line, ClrStack will show you the parameters and/or locals 
 only for that frame (provided you specify -l or -p or -a of course). If a variable 
-name and a stack frame number are specified in the command line, CLRStack will show 
+name and a stack frame number are specified in the command line, ClrStack will show 
 you the parameters and/or locals for that frame, and will also show you the fields 
 for that variable name you specified. Here are some examples: 
    clrstack -i -a           : This will show you all parameters and locals for all frames

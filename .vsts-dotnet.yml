@@ -25,6 +25,7 @@ jobs:
           _BuildArch: x86
           _PublishArtifacts: bin/Windows_NT.x86.Release
         Build_Release_arm:
+          _BuildOnly: true
           _BuildConfig: Release
           _BuildArch: arm
           _PublishArtifacts: bin/Windows_NT.arm.Release
@@ -54,6 +55,7 @@ jobs:
     strategy:
       matrix:
         Build_Release:
+          _BuildOnly: true
           _BuildConfig: Release
           _BuildArch: arm
           _PublishArtifacts: bin/Linux.arm.Release
@@ -67,6 +69,7 @@ jobs:
     strategy:
       matrix:
         Build_Release:
+          _BuildOnly: true
           _BuildConfig: Release
           _BuildArch: arm64
           _PublishArtifacts: bin/Linux.arm64.Release
@@ -212,7 +215,7 @@ jobs:
     - MacOS
     - Linux_cross
     - Linux_cross64
-    condition: and(succeeded(), ne(variables['Build.Reason'], 'Schedule'))
+    condition: succeeded()
     pool:
       name: NetCoreInternal-Pool
       queue: BuildPool.Windows.10.Amd64.VS2017
@@ -318,12 +321,14 @@ jobs:
       inputs:
         filePath: eng\common\sdk-task.ps1
         arguments: -task PublishToSymbolServers -restore -msbuildEngine dotnet -configuration Release -verbosity normal
+          /p:UsingToolSymbolUploader=true
           /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
           /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
           /p:PDBArtifactsDirectory='$(Build.SourcesDirectory)/artifacts/SymStore/**'
           /p:BlobBasePath='$(Build.SourcesDirectory)/artifacts/packages/Release/**'
       continueOnError: true
       condition: and(succeeded(), eq(variables['PublishSymbols'], 'true'))
+
     # Publish package and log build artifacts
 
     - task: PublishBuildArtifacts@1
