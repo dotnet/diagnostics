@@ -6030,6 +6030,7 @@ DECLARE_API(DumpModule)
 
     ExtOut("PEFile:                  %p\n", SOS_PTR(module.File));
     ExtOut("ModuleId:                %p\n", SOS_PTR(module.dwModuleID));
+    ExtOut("ModuleIndex:             %p\n", SOS_PTR(module.dwModuleIndex));
     ExtOut("LoaderHeap:              %p\n", SOS_PTR(module.pLookupTableHeap));
     ExtOut("TypeDefToMethodTableMap: %p\n", SOS_PTR(module.TypeDefToMethodTableMap));
     ExtOut("TypeRefToMethodTableMap: %p\n", SOS_PTR(module.TypeRefToMethodTableMap));
