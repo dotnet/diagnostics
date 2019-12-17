@@ -10,47 +10,26 @@ You must install several components to build. These instructions were tested on 
 
 ## Visual Studio
 
-Visual Studio must be installed. Supported versions:
-- [Visual Studio 2017](https://www.visualstudio.com/downloads/) (Community, Professional, Enterprise).  The community version is completely free.  
-- [Visual Studio 2019 Preview](https://visualstudio.microsoft.com/vs/preview/) (Community, Professional, Enterprise).  The community version is completely free.  
+- Install [Visual Studio 2019](https://visualstudio.microsoft.com/downloads/). The Community version is completely free.
 
-For Visual Studio 2017:
-* When doing a 'Workloads' based install, the following are the minimum requirements:
-  * .NET Desktop Development
-    * All Required Components
-    * .NET Framework 4-4.6 Development Tools
-  * Desktop Development with C++
-    * All Required Components
-    * VC++ 2017 v141 Toolset (x86, x64)
-    * Windows 8.1 SDK and UCRT SDK
-    * VC++ 2015.3 v140 Toolset (x86, x64)
-* When doing an 'Individual Components' based install, the following are the minimum requirements:
-  * Under ".NET":
-    * .NET Framework 4.6 targeting pack
-    * .NET Portable Library targeting pack
-  * Under "Code tools":
-    * Static analysis tools
-  * Under "Compilers, build tools, and runtimes":
-    * C# and Visual Basic Roslyn Compilers
-    * MSBuild
-    * VC++ 2015.3 v140 toolset (x86, x64)
-    * VC++ 2017 v141 toolset (x86, x64)
-    * Windows Universal CRT SDK
-  * Under "Development activities":
-    * Visual Studio C++ core features
-  * Under "SDKs, libraries, and frameworks":
-    * Windows 10 SDK or Windows 8.1 SDK
-* To build for Arm32, Make sure that you have the Windows 10 SDK installed (or selected to be installed as part of VS installation). To explicitly install Windows SDK, download it from here: [Windows SDK for Windows 10](https://developer.microsoft.com/en-us/windows/downloads).
-  * In addition, ensure you install the ARM tools. In the "Individual components" window, in the "Compilers, build tools, and runtimes" section, check the box for "Visual C++ compilers and libraries for ARM".
-* **Important:** You must have the `msdia120.dll` COM Library registered in order to build the repository.
-  * This binary is registered by default when installing the "VC++ Tools" with Visual Studio 2015
-  * You can also manually register the binary by launching the "Developer Command Prompt for VS2017" with Administrative privileges and running `regsvr32.exe "%VSINSTALLDIR%\Common7\IDE\msdia120.dll"`
+Visual Studio 2019 installation process:
+* It's recommended to use 'Workloads' installation approach. The following are the minimum requirements:
+  * .NET Desktop Development with all default components.
+  * Desktop Development with C++ with all default components.
+* To build for Arm32 or Arm64, Make sure that you have the Windows 10 SDK installed (or selected to be installed as part of VS installation). To explicitly install Windows SDK, download it from here: [Windows SDK for Windows 10](https://developer.microsoft.com/en-us/windows/downloads).
+  * In addition, ensure you install the ARM tools. In the "Individual components" window, in the "Compilers, build tools, and runtimes" section, check the box for "MSVC v142 - VS 2019 C++ ARM build tools (v14.23)".
+  * Also, ensure you install the ARM64 tools. In the "Individual components" window, in the "Compilers, build tools, and runtimes" section, check the box for "MSVC v142 - VS 2019 C++ ARM64 build tools (v14.23)".
+* To build the tests, you will need some additional components:
+  * Windows 10 SDK component version 10.0.18362 or newer. This component is installed by default as a part of 'Desktop Development with C++' workload.
+  * C++/CLI support for v142 build tools (14.23)
+
+The dotnet/diagnostics repository requires at least Visual Studio 2019 16.3.
 
 Visual Studio Express is not supported.
 
 ## CMake
 
-This repo build has been validated using CMake 3.9.3.
+This repo build has been validated using CMake 3.15.5
 
 - Install [CMake](http://www.cmake.org/download) for Windows.
 - Add its location (e.g. C:\Program Files (x86)\CMake\bin) to the PATH environment variable.  
