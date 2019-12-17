@@ -52,9 +52,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             for (var i = 0; i < 3; i++)
             {
                 runner[i] = new TestRunner(CommonHelper.GetTraceePath(), output);
-                runner[i].Start(500);
+                runner[i].Start();
                 pids[i] = runner[i].Pid;
             }
+            Thread.Sleep(3000); 
             List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
             foreach(int p in publishedProcesses)
             {
