@@ -3,13 +3,14 @@
 // See the LICENSE file in the project root for more information.
 
 using Graphs;
-using Microsoft.Diagnostics.Tools.RuntimeClient;
+using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Diagnostics.Tracing.Parsers.Clr;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -48,7 +49,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 bool fDone = false;
                 log.WriteLine("{0,5:n1}s: Creating type table flushing task", getElapsed().TotalSeconds);
 
-                using (EventPipeSession typeFlushSession = new EventPipeSession(processID, new List<Provider> { new Provider("Microsoft-DotNETCore-SampleProfiler") }, false))
+                using (EventPipeSessionController typeFlushSession = new EventPipeSessionController(processID, new List<EventPipeProvider> { 
+                    new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
+                }, false))
                 {
                     log.WriteLine("{0,5:n1}s: Flushing the type table", getElapsed().TotalSeconds);
                     typeFlushSession.Source.AllEvents += (traceEvent) => {
@@ -68,7 +71,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 // Start the providers and trigger the GCs.  
                 log.WriteLine("{0,5:n1}s: Requesting a .NET Heap Dump", getElapsed().TotalSeconds);
 
-                using EventPipeSession gcDumpSession = new EventPipeSession(processID, new List<Provider> { new Provider("Microsoft-Windows-DotNETRuntime", (ulong)(ClrTraceEventParser.Keywords.GCHeapSnapshot)) });
+                using EventPipeSessionController gcDumpSession = new EventPipeSessionController(processID, new List<EventPipeProvider> { 
+                    new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, (long)(ClrTraceEventParser.Keywords.GCHeapSnapshot)) 
+                });
                 log.WriteLine("{0,5:n1}s: gcdump EventPipe Session started", getElapsed().TotalSeconds);
 
                 int gcNum = -1;
@@ -211,35 +216,29 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         }
     }
 
-    internal class EventPipeSession : IDisposable
+    internal class EventPipeSessionController : IDisposable
     {
-        private List<Provider> _providers;
-        private Stream _eventPipeStream;
+        private List<EventPipeProvider> _providers;
+        private DiagnosticsClient _client;
+        private EventPipeSession _session;
         private EventPipeEventSource _source;
-        private ulong _sessionId;
         private int _pid;
 
-        public ulong SessionId => _sessionId;
-        public IReadOnlyList<Provider> Providers => _providers.AsReadOnly();
+        public IReadOnlyList<EventPipeProvider> Providers => _providers.AsReadOnly();
         public EventPipeEventSource Source => _source;
 
-        public EventPipeSession(int pid, List<Provider> providers, bool requestRundown = true)
+        public EventPipeSessionController(int pid, List<EventPipeProvider> providers, bool requestRundown = true)
         {
             _pid = pid;
             _providers = providers;
-            var config = new SessionConfigurationV2(
-                circularBufferSizeMB: 1024,
-                format: EventPipeSerializationFormat.NetTrace,
-                requestRundown: requestRundown,
-                providers
-            );
-            _eventPipeStream = EventPipeClient.CollectTracing2(pid, config, out _sessionId);
-            _source = new EventPipeEventSource(_eventPipeStream);
+            _client = new DiagnosticsClient(pid);
+            _session = _client.StartEventPipeSession(providers, requestRundown, 1024);
+            _source = new EventPipeEventSource(_session.EventStream);
         }
 
         public void EndSession()
         {
-            EventPipeClient.StopTracing(_pid, _sessionId);
+            _session.Stop();
         }
 
         #region IDisposable Support
@@ -251,7 +250,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             {
                 if (disposing)
                 {
-                    _eventPipeStream?.Dispose();
+                    _session?.Dispose();
                     _source?.Dispose();
                 }
                 disposedValue = true;

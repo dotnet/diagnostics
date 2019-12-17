@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Tools.RuntimeClient;
+using Microsoft.Diagnostics.NETCore.Client;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Dictionary<string, string> enabledBy = new Dictionary<string, string>();
 
                 var providerCollection = Extensions.ToProviders(providers);
-                foreach (Provider providerCollectionProvider in providerCollection)
+                foreach (EventPipeProvider providerCollectionProvider in providerCollection)
                 {
                     enabledBy[providerCollectionProvider.Name] = "--providers ";
                 }
@@ -87,11 +87,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 PrintProviders(providerCollection, enabledBy);
 
                 var process = Process.GetProcessById(processId);
-                var configuration = new SessionConfiguration(
-                    circularBufferSizeMB: buffersize,
-                    format: EventPipeSerializationFormat.NetTrace,
-                    providers: providerCollection);
-
                 var shouldExit = new ManualResetEvent(false);
                 var shouldStopAfterDuration = duration != default(TimeSpan);
                 var failed = false;
@@ -100,11 +95,20 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 ct.Register(() => shouldExit.Set());
 
-                ulong sessionId = 0;
-                using (Stream stream = EventPipeClient.CollectTracing(processId, configuration, out sessionId))
+                var diagnosticsClient = new DiagnosticsClient(processId);
                 using (VirtualTerminalMode vTermMode = VirtualTerminalMode.TryEnable())
                 {
-                    if (sessionId == 0)
+                    EventPipeSession session = null;
+                    try
+                    {
+                        session = diagnosticsClient.StartEventPipeSession(providerCollection, true);
+                    }
+                    catch (DiagnosticsClientException e)
+                    {
+                        Console.Error.WriteLine($"Unable to start a tracing session: {e.ToString()}");
+                    }
+
+                    if (session == null)
                     {
                         Console.Error.WriteLine("Unable to create session.");
                         return ErrorCodes.SessionCreationError;
@@ -137,7 +141,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                                 while (true)
                                 {
-                                    int nBytesRead = stream.Read(buffer, 0, buffer.Length);
+                                    int nBytesRead = session.EventStream.Read(buffer, 0, buffer.Length);
                                     if (nBytesRead <= 0)
                                         break;
                                     fs.Write(buffer, 0, nBytesRead);
@@ -170,7 +174,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (!terminated)
                     {
                         durationTimer?.Stop();
-                        EventPipeClient.StopTracing(processId, sessionId);
+                        session.Stop();
                     }
                     await collectingTask;
                 }
@@ -190,7 +194,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        private static void PrintProviders(IReadOnlyList<Provider> providers, Dictionary<string, string> enabledBy)
+        private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, string> enabledBy)
         {
             Console.Out.WriteLine("");
             Console.Out.Write(String.Format("{0, -40}","Provider Name"));  // +4 is for the tab
@@ -199,10 +203,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console.Out.Write("Enabled By\n");
             foreach (var provider in providers)
             {
-                Console.Out.WriteLine(String.Format("{0, -80}", $"{provider.ToDisplayString()}") + $"{enabledBy[provider.Name]}");
+                Console.Out.WriteLine(String.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + $"{enabledBy[provider.Name]}");
             }
             Console.Out.WriteLine();
         }
+        private static string GetProviderDisplayString(EventPipeProvider provider) =>
+            String.Format("{0, -40}", provider.Name) + String.Format("0x{0, -18}", $"{provider.Keywords:X16}") + String.Format("{0, -8}", provider.EventLevel.ToString() + $"({(int)provider.EventLevel})");
 
         private static int prevBufferWidth = 0;
         private static string clearLineString = "";
