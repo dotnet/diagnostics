@@ -28,12 +28,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 {
                     WriteLine("{0}", module.FileName);
                     WriteLine("    Address:   {0:X16}", module.ImageBase);
+                    WriteLine("    IsManaged: {0}", module.IsManaged);
                     WriteLine("    FileSize:  {0:X8}", module.FileSize);
                     WriteLine("    TimeStamp: {0:X8}", module.TimeStamp);
+                    WriteLine("    Version:   {0}", module.Version);
+                    WriteLine("    PdbInfo:   {0}", module.Pdb?.ToString() ?? "<none>");
                     if (module.BuildId != null) {
                         WriteLine("    BuildId:   {0}", string.Concat(module.BuildId.Select((b) => b.ToString("x2"))));
                     }
-                    WriteLine("    IsManaged: {0}", module.IsManaged);
                 }
                 else
                 {
