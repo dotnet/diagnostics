@@ -5,12 +5,11 @@
 using System;
 using Xunit;
 using Xunit.Abstractions;
-using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using EventPipe.UnitTests.Common;
+using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
-using System.Threading;
 
 namespace EventPipe.UnitTests.GCEventsValidation
 {
@@ -26,11 +25,11 @@ namespace EventPipe.UnitTests.GCEventsValidation
             b = "";
         }
     }
-    public class ProviderTests
+    public class GCEventsTests
     {
         private readonly ITestOutputHelper output;
 
-        public ProviderTests(ITestOutputHelper outputHelper)
+        public GCEventsTests(ITestOutputHelper outputHelper)
         {
             output = outputHelper;
         }
@@ -47,11 +46,11 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     { "Microsoft-DotNETCore-SampleProfiler", -1 }
                 };
 
-                var providers = new List<Provider>()
+                var GCProviders = new List<EventPipeProvider>()
                 {
-                    new Provider("Microsoft-DotNETCore-SampleProfiler"),
+                    new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational),
                     //GCKeyword (0x1): 0b1
-                    new Provider("Microsoft-Windows-DotNETRuntime", 0b1, EventLevel.Informational)
+                    new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, 0x1)
                 };
 
                 Action _eventGeneratingAction = () => 
@@ -91,7 +90,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
 
                         Logger.logger.Log("GCStartEvents: " + GCStartEvents);
                         Logger.logger.Log("GCEndEvents: " + GCEndEvents);
-                        bool GCStartStopResult = GCStartEvents >= 50 && GCEndEvents >= 50 && Math.Abs(GCStartEvents - GCEndEvents) <=2;
+                        bool GCStartStopResult = GCStartEvents >= 50 && GCEndEvents >= 50 && Math.Abs(GCStartEvents - GCEndEvents) <= 2;
                         Logger.logger.Log("GCStartStopResult check: " + GCStartStopResult);
 
                         Logger.logger.Log("GCRestartEEStartEvents: " + GCRestartEEStartEvents);
@@ -112,9 +111,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     };
                 };
 
-                var config = new SessionConfiguration(circularBufferSizeMB: (uint)Math.Pow(2, 10), format: EventPipeSerializationFormat.NetTrace,  providers: providers);
-
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, config, _DoesTraceContainEvents);
+                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, GCProviders, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }
@@ -130,12 +127,12 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 },
                     { "Microsoft-DotNETCore-SampleProfiler", -1 }
                 };
-                
-                var providers = new List<Provider>()
+
+                var GCProviders = new List<EventPipeProvider>()
                 {
-                    new Provider("Microsoft-DotNETCore-SampleProfiler"),
+                    new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational),
                     //GCKeyword (0x1): 0b1
-                    new Provider("Microsoft-Windows-DotNETRuntime", 0b1, EventLevel.Informational)
+                    new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, 0x1)
                 };
 
                 Action _eventGeneratingAction = () => 
@@ -164,10 +161,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                         return GCFinalizersEndEvents >= 50 && GCFinalizersStartEvents >= 50 ? 100 : -1;
                     };
                 };
-
-                var config = new SessionConfiguration(circularBufferSizeMB: (uint)Math.Pow(2, 10), format: EventPipeSerializationFormat.NetTrace,  providers: providers);
-
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, config, _DoesTraceContainEvents);
+                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, GCProviders, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }
@@ -183,12 +177,12 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 },
                     { "Microsoft-DotNETCore-SampleProfiler", -1 }
                 };
-                
-                var providers = new List<Provider>()
+
+                var GCProviders = new List<EventPipeProvider>()
                 {
-                    new Provider("Microsoft-DotNETCore-SampleProfiler"),
+                    new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational),
                     //GCKeyword (0x1): 0b1
-                    new Provider("Microsoft-Windows-DotNETRuntime", 0b1, EventLevel.Verbose)
+                    new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, 0x1)
                 };
 
                 Action _eventGeneratingAction = () => 
@@ -236,9 +230,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     };
                 };
 
-                var config = new SessionConfiguration(circularBufferSizeMB: (uint)Math.Pow(2, 10), format: EventPipeSerializationFormat.NetTrace,  providers: providers);
-
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, config, _DoesTraceContainEvents);
+                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, GCProviders, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }

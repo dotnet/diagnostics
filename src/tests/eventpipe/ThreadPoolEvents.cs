@@ -8,19 +8,19 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
-using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using EventPipe.UnitTests.Common;
+using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
 
 namespace EventPipe.UnitTests.ThreadPoolValidation
 {
-    public class ProviderTests
+    public class ThreadPoolEventsTests
     {
         private readonly ITestOutputHelper output;
 
-        public ProviderTests(ITestOutputHelper outputHelper)
+        public ThreadPoolEventsTests(ITestOutputHelper outputHelper)
         {
             output = outputHelper;
         }
@@ -36,10 +36,10 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 }
                 };
 
-                var providers = new List<Provider>()
+                var providers = new List<EventPipeProvider>()
                 {
                     //ThreadingKeyword (0x10000): 0b10000_0000_0000_0000
-                    new Provider("Microsoft-Windows-DotNETRuntime", 0b10000_0000_0000_0000, EventLevel.Informational)
+                    new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, 0b10000_0000_0000_0000)
                 };
 
                 Action _eventGeneratingAction = () => 
@@ -84,10 +84,7 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
                         return ThreadStartStopResult && ThreadAdjustmentResult ? 100 : -1;
                     };
                 };
-
-                var config = new SessionConfiguration(circularBufferSizeMB: (uint)Math.Pow(2, 10), format: EventPipeSerializationFormat.NetTrace,  providers: providers);
-
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, config, _DoesTraceContainEvents);
+                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }
