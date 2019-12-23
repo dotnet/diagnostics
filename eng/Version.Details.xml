@@ -14,9 +14,9 @@
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>77698ebba1ab096ad9580a5d9ebefe0499ba00ce</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.NETCore.App" Version="5.0.0-alpha.1.19621.1">
+    <Dependency Name="Microsoft.NETCore.App" Version="5.0.0-alpha.1.19622.1">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>188427d7e18102c45fc6d0e20c135e226f215992</Sha>
+      <Sha>43cb8c7e9d10d641e4098c420b966b293e06f9e1</Sha>
     </Dependency>
     <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-alpha.1.19614.22">
       <Uri>https://github.com/aspnet/AspNetCore</Uri>
