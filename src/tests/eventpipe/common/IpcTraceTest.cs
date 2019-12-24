@@ -124,7 +124,7 @@ namespace EventPipe.UnitTests.Common
         /// </summary>
         private List<EventPipeProvider> _sentinelProviders = new List<EventPipeProvider>()
         {
-            new EventPipeProvider("SentinelEventSource", EventLevel.Verbose)
+            new EventPipeProvider("SentinelEventSource", EventLevel.Verbose, -1)
         };
 
         IpcTraceTest(
@@ -405,7 +405,7 @@ namespace EventPipe.UnitTests.Common
             Dictionary<string, ExpectedEventCount> expectedEventCounts,
             Action eventGeneratingAction,
             List<EventPipeProvider> providers,
-            int circularBufferMB,
+            int circularBufferMB=1024,
             Func<EventPipeEventSource, Func<int>> optionalTraceValidator = null)
         {
             Logger.logger.Log("==TEST STARTING==");
