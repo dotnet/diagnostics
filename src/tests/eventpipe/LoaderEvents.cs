@@ -6,13 +6,12 @@ using System;
 using Xunit;
 using System.IO;
 using System.Runtime.Loader;
-using System.Threading;
 using System.Reflection;
 using Xunit.Abstractions;
-using Microsoft.Diagnostics.Tools.RuntimeClient;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using EventPipe.UnitTests.Common;
+using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
 
 namespace EventPipe.UnitTests.LoaderEventsValidation
@@ -23,11 +22,11 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
         {
         }
     }
-    public class ProviderTests
+    public class LoaderEventsTests
     {
         private readonly ITestOutputHelper output;
 
-        public ProviderTests(ITestOutputHelper outputHelper)
+        public LoaderEventsTests(ITestOutputHelper outputHelper)
         {
             output = outputHelper;
         }
@@ -43,10 +42,10 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 }
                 };
 
-                var providers = new List<Provider>()
+                var providers = new List<EventPipeProvider>()
                 {
                     //LoaderKeyword (0x8): 0b1000
-                    new Provider("Microsoft-Windows-DotNETRuntime", 0b1000, EventLevel.Informational)
+                    new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, 0b1000)
                 };
 
                 string assemblyPath=null;
@@ -106,10 +105,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                         return LoaderAssemblyResult && LoaderModuleResult ? 100 : -1;
                     };
                 };
-
-                var config = new SessionConfiguration(circularBufferSizeMB: (uint)Math.Pow(2, 10), format: EventPipeSerializationFormat.NetTrace,  providers: providers);
-
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, config, _DoesTraceContainEvents);
+                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }
