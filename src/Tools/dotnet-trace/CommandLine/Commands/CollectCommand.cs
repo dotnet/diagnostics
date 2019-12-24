@@ -97,6 +97,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 var shouldStopAfterDuration = duration != default(TimeSpan);
                 var failed = false;
                 var terminated = false;
+                var rundownRequested = false;
                 System.Timers.Timer durationTimer = null;
 
                 ct.Register(() => shouldExit.Set());
@@ -152,15 +153,18 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                         break;
                                     fs.Write(buffer, 0, nBytesRead);
 
-                                    if (hasConsole)
+                                    if (!rundownRequested)
                                     {
-                                        lineToClear = Console.CursorTop - 1;
-                                        ResetCurrentConsoleLine(vTermMode.IsEnabled);
-                                    }
+                                        if (hasConsole)
+                                        {
+                                            lineToClear = Console.CursorTop - 1;
+                                            ResetCurrentConsoleLine(vTermMode.IsEnabled);
+                                        }
 
-                                    Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
-                                    Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
-                                    Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
+                                        Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
+                                        Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
+                                        Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
+                                    }
                                 }
                             }
                         }
@@ -185,6 +189,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (!terminated)
                     {
                         durationTimer?.Stop();
+                        if (hasConsole)
+                        {
+                            lineToClear = Console.CursorTop;
+                            ResetCurrentConsoleLine(vTermMode.IsEnabled);
+                        }
+                        Console.Out.WriteLine("Stopping the trace. This may take up to minutes depending on the application being traced.");
+                        rundownRequested = true;
                         session.Stop();
                     }
                     await collectingTask;
