@@ -45,7 +45,7 @@ namespace EventPipe.UnitTests.ProviderValidation
 
                 var providers = new List<EventPipeProvider>()
                 {
-                    new EventPipeProvider("MyEventSource", EventLevel.Verbose),
+                    new EventPipeProvider("MyEventSource", EventLevel.Verbose, -1),
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
                 };
 
