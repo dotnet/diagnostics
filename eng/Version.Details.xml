@@ -18,9 +18,9 @@
       <Uri>https://github.com/dotnet/core-setup</Uri>
       <Sha>c77948d92a2f950140f09384f057cb893ec3955a</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-alpha.1.19623.2">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-alpha.1.19626.3">
       <Uri>https://github.com/aspnet/AspNetCore</Uri>
-      <Sha>194b15124c625c8c5a2286b0ee0f86b7187a0bec</Sha>
+      <Sha>654140736c714903c5b39f15b49e884d08afaebb</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>
