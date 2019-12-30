@@ -4,23 +4,23 @@
       <Uri>https://github.com/dotnet/command-line-api</Uri>
       <Sha>166610c56ff732093f0145a2911d4f6c40b786da</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="5.0.0-beta.19615.1">
+    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="5.0.0-beta.19629.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>77698ebba1ab096ad9580a5d9ebefe0499ba00ce</Sha>
+      <Sha>f40849c5bbdfd1f1b99801f5a40343f8d4a192c9</Sha>
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="5.0.0-beta.19615.1">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="5.0.0-beta.19629.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>77698ebba1ab096ad9580a5d9ebefe0499ba00ce</Sha>
+      <Sha>f40849c5bbdfd1f1b99801f5a40343f8d4a192c9</Sha>
     </Dependency>
     <Dependency Name="Microsoft.NETCore.App" Version="5.0.0-alpha.1.19627.5">
       <Uri>https://github.com/dotnet/runtime</Uri>
       <Sha>2ecef0eed6838ffb8053df4354630a26e6a95a11</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-alpha.1.19614.22">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-alpha.1.19627.1">
       <Uri>https://github.com/aspnet/AspNetCore</Uri>
-      <Sha>b028b51e3df7b7bbc78a65d0e1a385c6d81b6325</Sha>
+      <Sha>af9f99299cd4a059cf30483d4f7f551ff38c5a28</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>
