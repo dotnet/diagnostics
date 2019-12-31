@@ -172,7 +172,7 @@ inline BOOL IsInterrupt()
 {
     if (!ControlC && g_ExtControl->GetInterrupt() == S_OK)
     {
-        ExtOut("Command cancelled at the user's request.\n");
+        ExtOut("Command canceled at the user's request.\n");
         ControlC = TRUE;
     }
 

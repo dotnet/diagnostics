@@ -2371,13 +2371,15 @@ Failure:
 *    instance passed in, and the extent type requested.                *
 *                                                                      *
 \**********************************************************************/
-HRESULT GetClrModuleImages(__in IXCLRDataModule* module, __in CLRDataModuleExtentType desiredType, __out PULONG64 firstAdd)
+HRESULT GetClrModuleImages(__in IXCLRDataModule* module, __in CLRDataModuleExtentType desiredType, __out PULONG64 pBase, __out PULONG64 pSize)
 {
     CLRDATA_ENUM enumExtents;
     HRESULT hr;
 
-    _ASSERTE(firstAdd != nullptr);
-    *firstAdd = 0;
+    _ASSERTE(pBase != nullptr);
+    _ASSERTE(pSize != nullptr);
+    *pBase = 0;
+    *pSize = 0;
 
     if (FAILED(hr = module->StartEnumExtents(&enumExtents)))
     {
@@ -2388,12 +2390,24 @@ HRESULT GetClrModuleImages(__in IXCLRDataModule* module, __in CLRDataModuleExten
     {
         if ((desiredType == CLRDATA_MODULE_OTHER) || (desiredType == extent.type))
         {
-            ULONG64 modBase;
-            if (FAILED(hr = g_ExtSymbols->GetModuleByOffset(extent.base, 0, nullptr, &modBase)))
+            ULONG64 moduleBase;
+            if (FAILED(hr = g_ExtSymbols->GetModuleByOffset(extent.base, 0, nullptr, &moduleBase)))
+            {
+                if (desiredType == CLRDATA_MODULE_PE_FILE)
+                {
+                    *pBase = extent.base;
+                    *pSize = extent.length;
+                    hr = S_OK;
+                }
+                break;
+            }
+            DEBUG_MODULE_PARAMETERS params;
+            if (FAILED(hr = g_ExtSymbols->GetModuleParameters(1, &moduleBase, 0, &params)))
             {
                 break;
             }
-            *firstAdd = modBase;
+            *pBase = moduleBase;
+            *pSize = params.Size;
             hr = S_OK;
             break;
         }
@@ -2438,7 +2452,7 @@ HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataMo
 #ifdef FEATURE_PAL
                 return hr;
 #else
-                hr = GetClrModuleImages(module, CLRDATA_MODULE_PE_FILE, &moduleData.LoadedPEAddress);
+                hr = GetClrModuleImages(module, CLRDATA_MODULE_PE_FILE, &moduleData.LoadedPEAddress, &moduleData.LoadedPESize);
                 if (FAILED(hr))
                 {
                     return hr;

@@ -16,7 +16,17 @@ typedef void (*WriteLineDelegate)(const char*);
 typedef  int (*ReadMemoryDelegate)(ULONG64, uint8_t*, int);
 typedef void (*SymbolFileCallbackDelegate)(void*, const char* moduleFileName, const char* symbolFilePath);
 
-typedef  BOOL (*InitializeSymbolStoreDelegate)(BOOL, BOOL, BOOL, const char*, const char*, int, const char*, const char*, const char*);
+typedef  BOOL (*InitializeSymbolStoreDelegate)(
+    BOOL logging,
+    BOOL msdl,
+    BOOL symweb,
+    const char* tempDirectory,
+    const char* symbolServerPath,
+    int timeoutInMinutes,
+    const char* symbolCacehPath,
+    const char* symbolDirectoryPath,
+    const char* windowsSymbolPath);
+
 typedef  void (*DisplaySymbolStoreDelegate)(WriteLineDelegate);
 typedef  void (*DisableSymbolStoreDelegate)();
 typedef  void (*LoadNativeSymbolsDelegate)(SymbolFileCallbackDelegate, void*, const char*, ULONG64, int, ReadMemoryDelegate);
@@ -69,6 +79,8 @@ extern HRESULT GetRuntimeDirectory(std::string& runtimeDirectory);
 extern HRESULT GetRuntimeDirectory(LPWSTR modulePath, int modulePathSize);
 extern LPCSTR GetDacFilePath();
 extern LPCSTR GetDbiFilePath();
+extern LPCSTR GetTempDirectory();
+extern void CleanupTempDirectory();
 extern BOOL IsHostingInitialized();
 extern HRESULT InitializeHosting();
 
