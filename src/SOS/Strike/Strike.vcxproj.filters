@@ -21,6 +21,7 @@
     <ClCompile Include="disasmX86.cpp" />
     <ClCompile Include="disasmARM64.cpp" />
     <ClCompile Include="hostcoreclr.cpp" />
+    <ClCompile Include="runtime.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="data.h" />
@@ -57,6 +58,9 @@
       <Filter>inc</Filter>
     </ClInclude>
     <ClInclude Include="hostcoreclr.h" />
+    <ClInclude Include="runtime.h" />
+    <ClInclude Include="cordebugdatatarget.h" />
+    <ClInclude Include="cordebuglibraryprovider.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Native.rc" />

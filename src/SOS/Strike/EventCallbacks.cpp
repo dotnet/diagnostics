@@ -105,7 +105,8 @@ HRESULT __stdcall EventCallbacks::Exception(PEXCEPTION_RECORD64 Exception, ULONG
 
 HRESULT __stdcall EventCallbacks::ExitProcess(ULONG ExitCode)
 {
-    UninitCorDebugInterface();
+    Runtime::CleanupRuntimes();
+    CleanupTempDirectory();
     return DEBUG_STATUS_NO_CHANGE;
 }
 

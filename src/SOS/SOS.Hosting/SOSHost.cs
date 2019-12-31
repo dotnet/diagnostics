@@ -38,6 +38,7 @@ namespace SOS
             [In, MarshalAs(UnmanagedType.Struct)] ref SOSNetCoreCallbacks callbacks,
             int callbacksSize,
             [In, MarshalAs(UnmanagedType.LPStr)] string tempDirectory,
+            bool isDesktop,
             [In, MarshalAs(UnmanagedType.LPStr)] string dacFilePath,
             [In, MarshalAs(UnmanagedType.LPStr)] string dbiFilePath,
             bool symbolStoreEnabled);
@@ -224,9 +225,10 @@ namespace SOS
         /// Loads and initializes the SOS module.
         /// </summary>
         /// <param name="tempDirectory">Temporary directory created to download DAC module</param>
+        /// <param name="isDesktop">if true, desktop runtime, else .NET Core runtime</param>
         /// <param name="dacFilePath">The path to DAC that CLRMD loaded or downloaded or null</param>
         /// <param name="dbiFilePath">The path to DBI (for future use) or null</param>
-        public void InitializeSOSHost(string tempDirectory, string dacFilePath, string dbiFilePath)
+        public void InitializeSOSHost(string tempDirectory, bool isDesktop, string dacFilePath, string dbiFilePath)
         {
             if (_sosLibrary == IntPtr.Zero)
             {
@@ -268,6 +270,7 @@ namespace SOS
                     ref s_callbacks,
                     Marshal.SizeOf<SOSNetCoreCallbacks>(),
                     tempDirectory,
+                    isDesktop,
                     dacFilePath,
                     dbiFilePath,
                     SymbolReader.IsSymbolStoreEnabled());
