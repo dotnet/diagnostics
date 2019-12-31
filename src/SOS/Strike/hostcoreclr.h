@@ -70,15 +70,14 @@ static const char *MetadataHelperClassName = "SOS.MetadataHelper";
 
 extern HMODULE g_hInstance;
 extern LPCSTR g_hostRuntimeDirectory;
-extern LPCSTR g_dacFilePath;
-extern LPCSTR g_dbiFilePath;
 extern LPCSTR g_tmpPath;
 extern SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
 
-extern HRESULT GetRuntimeDirectory(std::string& runtimeDirectory);
-extern HRESULT GetRuntimeDirectory(LPWSTR modulePath, int modulePathSize);
-extern LPCSTR GetDacFilePath();
-extern LPCSTR GetDbiFilePath();
+#ifdef FEATURE_PAL
+extern bool GetAbsolutePath(const char* path, std::string& absolutePath);
+extern HRESULT LoadNativeSymbols(bool runtimeOnly = false);
+#endif
+
 extern LPCSTR GetTempDirectory();
 extern void CleanupTempDirectory();
 extern BOOL IsHostingInitialized();
@@ -98,7 +97,6 @@ extern HRESULT InitializeSymbolStore(
 extern void InitializeSymbolStoreFromSymPath();
 #endif
 
-extern HRESULT LoadNativeSymbols(bool runtimeOnly = false);
 extern void DisplaySymbolStore();
 extern void DisableSymbolStore();
 

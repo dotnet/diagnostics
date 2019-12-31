@@ -9,6 +9,7 @@
 // ==--==
 #include "sos.h"
 #include "disasm.h"
+#include "runtime.h"
 #include <dbghelp.h>
 
 #include "corhdr.h"
@@ -40,10 +41,8 @@
 #endif
 
 static bool g_hostingInitialized = false;
-static bool g_symbolStoreInitialized = false;
+bool g_symbolStoreInitialized = false;
 LPCSTR g_hostRuntimeDirectory = nullptr;
-LPCSTR g_dacFilePath = nullptr;
-LPCSTR g_dbiFilePath = nullptr;
 LPCSTR g_tmpPath = nullptr;
 SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
 #ifndef FEATURE_PAL
@@ -226,78 +225,6 @@ static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutabl
 
 #endif // FEATURE_PAL
 
-/**********************************************************************\
- * Returns the runtime module/runtime directory of the target.
-\**********************************************************************/
-HRESULT GetRuntimeDirectory(std::string& runtimeDirectory)
-{
-#ifdef FEATURE_PAL
-    LPCSTR directory = g_ExtServices->GetCoreClrDirectory();
-    if (directory == NULL)
-    {
-        ExtErr("Error: Runtime module (%s) not loaded yet\n", GetRuntimeDllName());
-        return E_FAIL;
-    }
-    if (!GetAbsolutePath(directory, runtimeDirectory))
-    {
-        ExtDbgOut("Error: Runtime directory %s doesn't exist\n", directory);
-        return E_FAIL;
-    }
-#else
-    ULONG index;
-    HRESULT Status = GetRuntimeModuleInfo(&index, NULL);
-    if (FAILED(Status))
-    {
-        ExtErr("Error: Runtime module (%s) not loaded yet\n", GetRuntimeDllName());
-        return Status;
-    }
-    ArrayHolder<char> szModuleName = new char[MAX_LONGPATH + 1];
-    Status = g_ExtSymbols->GetModuleNames(index, 0, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
-    if (FAILED(Status))
-    {
-        ExtErr("Error: Failed to get runtime module name\n");
-        return Status;
-    }
-    if (GetFileAttributesA(szModuleName) == INVALID_FILE_ATTRIBUTES)
-    {
-        Status = HRESULT_FROM_WIN32(GetLastError());
-        ExtDbgOut("Error: Runtime module %s doesn't exist %08x\n", szModuleName, Status);
-        return Status;
-    }
-    runtimeDirectory = szModuleName;
-
-    // Parse off the module name to get just the path
-    size_t lastSlash = runtimeDirectory.rfind(DIRECTORY_SEPARATOR_CHAR_A);
-    if (lastSlash == std::string::npos)
-    {
-        ExtDbgOut("Error: Runtime module %s has no directory separator\n", szModuleName);
-        return E_FAIL;
-    }
-    runtimeDirectory.assign(runtimeDirectory, 0, lastSlash);
-#endif
-    return S_OK;
-}
-
-/**********************************************************************\
- * Returns the runtime module/runtime directory of the target.
-\**********************************************************************/
-HRESULT GetRuntimeDirectory(LPWSTR modulePath, int modulePathSize)
-{
-    std::string runtimeDirectory;
-    HRESULT hr = GetRuntimeDirectory(runtimeDirectory);
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-    int length = MultiByteToWideChar(CP_ACP, 0, runtimeDirectory.c_str(), -1, modulePath, modulePathSize);
-    if (0 >= length)
-    {
-        ExtErr("MultiByteToWideChar(runtimeDirectory) failed. Last error = 0x%x\n", GetLastError());
-        return HRESULT_FROM_WIN32(GetLastError());
-    }
-    return S_OK;
-}
-
 //
 // Searches the runtime directory for a .NET Core runtime version
 //
@@ -408,17 +335,22 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
                     // Find highest 3.1.x version
                     if (!FindDotNetVersion(3, 1, hostRuntimeDirectory))
                     {
+                        HRESULT hr = CheckEEDll();
+                        if (FAILED(hr)) {
+                            return hr;
+                        }
                         // Don't use the desktop runtime to host
-                        if (g_isDesktopRuntime)
+                        if (g_pRuntime->IsDesktop())
                         {
                             return E_FAIL;
                         }
                         // If an installed runtime can not be found, use the target coreclr version
-                        HRESULT hr = GetRuntimeDirectory(hostRuntimeDirectory);
-                        if (FAILED(hr))
+                        LPCSTR runtimeDirectory = g_pRuntime->GetRuntimeDirectory();
+                        if (runtimeDirectory == nullptr)
                         {
-                            return hr;
+                            return E_FAIL;
                         }
+                        hostRuntimeDirectory = runtimeDirectory;
                     }
                 }
             }
@@ -495,95 +427,9 @@ void CleanupTempDirectory()
 }
 
 /**********************************************************************\
- * Returns the DAC module path to the rest of SOS.
-\**********************************************************************/
-LPCSTR GetDacFilePath()
-{
-    // If the DAC path hasn't been set by the symbol download support, use the one in the runtime directory.
-    if (g_dacFilePath == nullptr)
-    {
-        std::string dacModulePath;
-        HRESULT hr = GetRuntimeDirectory(dacModulePath);
-        if (SUCCEEDED(hr))
-        {
-            dacModulePath.append(DIRECTORY_SEPARATOR_STR_A);
-            dacModulePath.append(GetDacDllName());
-#ifdef FEATURE_PAL
-            // If DAC file exists in the runtime directory
-            if (access(dacModulePath.c_str(), F_OK) == 0)
-#endif
-            {
-#if defined(__linux__)
-                // We are creating a symlink to the DAC in a temp directory
-                // where libcoreclrtraceptprovider.so doesn't exist so it 
-                // doesn't get loaded by the DAC causing a LTTng-UST exception.
-                //
-                // Issue #https://github.com/dotnet/coreclr/issues/20205
-                LPCSTR tmpPath = GetTempDirectory();
-                if (tmpPath != nullptr) 
-                {
-                    std::string dacSymLink(tmpPath);
-                    dacSymLink.append(NETCORE_DAC_DLL_NAME_A);
-
-                    int error = symlink(dacModulePath.c_str(), dacSymLink.c_str());
-                    if (error == 0)
-                    {
-                        dacModulePath.assign(dacSymLink);
-                    }
-                    else
-                    {
-                        ExtErr("symlink(%s, %s) FAILED %s\n", dacModulePath.c_str(), dacSymLink.c_str(), strerror(errno));
-                    }
-                }
-#endif
-                g_dacFilePath = _strdup(dacModulePath.c_str());
-            }
-        }
-
-        if (g_dacFilePath == nullptr)
-        {
-            // Attempt to only load the DAC/DBI modules
-            LoadNativeSymbols(true);
-        }
-    }
-    return g_dacFilePath;
-}
-
-/**********************************************************************\
- * Returns the DBI module path to the rest of SOS.
-\**********************************************************************/
-LPCSTR GetDbiFilePath()
-{
-    if (g_dbiFilePath == nullptr)
-    {
-        std::string dbiModulePath;
-        HRESULT hr = GetRuntimeDirectory(dbiModulePath);
-        if (SUCCEEDED(hr))
-        {
-            dbiModulePath.append(DIRECTORY_SEPARATOR_STR_A);
-            dbiModulePath.append(NET_DBI_DLL_NAME_A);
-#ifdef FEATURE_PAL
-            // If DBI file exists in the runtime directory
-            if (access(dbiModulePath.c_str(), F_OK) == 0)
-#endif
-            {
-                g_dbiFilePath = _strdup(dbiModulePath.c_str());
-            }
-        }
-
-        if (g_dbiFilePath == nullptr)
-        {
-            // Attempt to only load the DAC/DBI modules
-            LoadNativeSymbols(true);
-        }
-    }
-    return g_dbiFilePath;
-}
-
-/**********************************************************************\
  * Called when the managed SOS Host loads/initializes SOS.
 \**********************************************************************/
-extern "C" HRESULT SOSInitializeByHost(SOSNetCoreCallbacks* callbacks, int callbacksSize, LPCSTR tempDirectory, LPCSTR dacFilePath, LPCSTR dbiFilePath, bool symbolStoreEnabled)
+extern "C" HRESULT SOSInitializeByHost(SOSNetCoreCallbacks* callbacks, int callbacksSize, LPCSTR tempDirectory, bool isDesktop, LPCSTR dacFilePath, LPCSTR dbiFilePath, bool symbolStoreEnabled)
 {
     if (memcpy_s(&g_SOSNetCoreCallbacks, sizeof(g_SOSNetCoreCallbacks), callbacks, callbacksSize) != 0)
     {
@@ -593,14 +439,7 @@ extern "C" HRESULT SOSInitializeByHost(SOSNetCoreCallbacks* callbacks, int callb
     {
         g_tmpPath = _strdup(tempDirectory);
     }
-    if (dacFilePath != nullptr)
-    {
-        g_dacFilePath = _strdup(dacFilePath);
-    }
-    if (dbiFilePath != nullptr)
-    {
-        g_dbiFilePath = _strdup(dbiFilePath);
-    }
+    Runtime::SetDacDbiPath(isDesktop, dacFilePath, dbiFilePath);
 #ifndef FEATURE_PAL
     // When SOS is hosted on dotnet-dump, the ExtensionApis are not set so 
     // the expression evaluation function needs to be supplied.
@@ -756,7 +595,7 @@ HRESULT InitializeHosting()
 // Pass to managed helper code to read in-memory PEs/PDBs.
 // Returns the number of bytes read.
 //
-static int ReadMemoryForSymbols(ULONG64 address, uint8_t *buffer, int cb)
+int ReadMemoryForSymbols(ULONG64 address, uint8_t *buffer, int cb)
 {
     ULONG read;
     if (SafeReadMemory(TO_TADDR(address), (PVOID)buffer, cb, &read))
@@ -857,32 +696,23 @@ void InitializeSymbolStoreFromSymPath()
 }
 #endif // FEATURE_PAL
 
+#ifdef FEATURE_PAL
+
 //
 // Symbol downloader callback
 //
 static void SymbolFileCallback(void* param, const char* moduleFileName, const char* symbolFilePath)
 {
-    if (strcmp(moduleFileName, GetRuntimeDllName()) == 0) {
+    if (strcmp(moduleFileName, NETCORE_RUNTIME_DLL_NAME_A) == 0) {
         return;
     }
-    if (strcmp(moduleFileName, GetDacDllName()) == 0) {
-        if (g_dacFilePath == nullptr) {
-            g_dacFilePath = _strdup(symbolFilePath);
-        }
+    if (strcmp(moduleFileName, NETCORE_DAC_DLL_NAME_A) == 0) {
         return;
     }
     if (strcmp(moduleFileName, NET_DBI_DLL_NAME_A) == 0) {
-        if (g_dbiFilePath == nullptr) {
-            g_dbiFilePath = _strdup(symbolFilePath);
-        }
         return;
     }
-#ifdef FEATURE_PAL
-    if (g_ExtServices2 != nullptr) 
-    {
-        g_ExtServices2->AddModuleSymbol(param, symbolFilePath);
-    }
-#endif
+    g_ExtServices2->AddModuleSymbol(param, symbolFilePath);
 }
 
 //
@@ -903,40 +733,14 @@ static void LoadNativeSymbolsCallback(void* param, const char* moduleFilePath, U
 HRESULT LoadNativeSymbols(bool runtimeOnly)
 {
     HRESULT hr = S_OK;
-#ifdef FEATURE_PAL
     if (g_symbolStoreInitialized)
     {
-        hr = g_ExtServices2 ? g_ExtServices2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback) : E_NOINTERFACE;
+        hr = g_ExtServices2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback);
     }
-#else
-    if (runtimeOnly)
-    {
-        ULONG index;
-        ULONG64 moduleAddress;
-        HRESULT hr = GetRuntimeModuleInfo(&index, &moduleAddress);
-        if (SUCCEEDED(hr))
-        {
-            ArrayHolder<char> moduleFilePath = new char[MAX_LONGPATH + 1];
-            hr = g_ExtSymbols->GetModuleNames(index, 0, moduleFilePath, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
-            if (SUCCEEDED(hr))
-            {
-                DEBUG_MODULE_PARAMETERS moduleParams;
-                hr = g_ExtSymbols->GetModuleParameters(1, &moduleAddress, 0, &moduleParams);
-                if (SUCCEEDED(hr))
-                {
-                    hr = InitializeSymbolStore();
-                    if (SUCCEEDED(hr) && g_symbolStoreInitialized)
-                    {
-                        LoadNativeSymbolsCallback(nullptr, moduleFilePath, moduleAddress, moduleParams.Size);
-                    }
-                }
-            }
-        }
-    }
-#endif
     return hr;
 }
 
+#endif
 
 /**********************************************************************\
  * Displays the symbol server and cache status.

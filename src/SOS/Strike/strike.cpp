@@ -1405,8 +1405,10 @@ DECLARE_API(DumpMT)
                 if (MethodDescData.Request(g_sos, TO_CDADDR(methodDesc)) == S_OK)
                 {
                     // Is it an fcall?
-                    if ((TO_TADDR(MethodDescData.NativeCodeAddr) >=  TO_TADDR(g_moduleInfo[MSCORWKS].baseAddr)) &&
-                        ((TO_TADDR(MethodDescData.NativeCodeAddr) <  TO_TADDR(g_moduleInfo[MSCORWKS].baseAddr + g_moduleInfo[MSCORWKS].size))))
+                    ULONG64 baseAddress = g_pRuntime->GetModuleAddress();
+                    ULONG64 size = g_pRuntime->GetModuleSize();
+                    if ((TO_TADDR(MethodDescData.NativeCodeAddr) >=  TO_TADDR(baseAddress)) &&
+                        ((TO_TADDR(MethodDescData.NativeCodeAddr) <  TO_TADDR(baseAddress + size))))
                     {
                         pszJitType = "FCALL";
                     }
@@ -7578,7 +7580,6 @@ public:
         }
         return m_count;
     }
-
             
     /*
      * New code was generated or discarded for a method.:
@@ -7586,9 +7587,11 @@ public:
     STDMETHODIMP OnCodeGenerated(IXCLRDataMethodInstance* method)
     {
 #ifndef FEATURE_PAL
+        _ASSERTE(g_pRuntime != nullptr);
+
         // This is only needed for desktop runtime because OnCodeGenerated2
         // isn't supported by the desktop DAC.
-        if (g_isDesktopRuntime)
+        if (g_pRuntime->IsDesktop())
         {
             // Some method has been generated, make a breakpoint and remove it.
             ULONG32 len = mdNameLen;
@@ -9831,8 +9834,10 @@ DECLARE_API(DumpLog)
 
     MINIDUMP_NOT_SUPPORTED();    
 
+    _ASSERTE(g_pRuntime != nullptr);
+
     // Not supported on desktop runtime
-    if (g_isDesktopRuntime)
+    if (g_pRuntime->IsDesktop())
     {
         ExtErr("DumpLog not supported on desktop runtime\n");
         return E_FAIL;
@@ -9915,12 +9920,6 @@ DECLARE_API (DumpGCLog)
     INIT_API_NODAC();
     MINIDUMP_NOT_SUPPORTED();    
     
-    if (GetEEFlavor() == UNKNOWNEE) 
-    {
-        ExtOut("CLR not loaded\n");
-        return Status;
-    }
-
     const char* fileName = "GCLog.txt";
 
     while (isspace (*args))
@@ -10020,12 +10019,6 @@ DECLARE_API (DumpGCConfigLog)
     INIT_API();
 #ifdef GC_CONFIG_DRIVEN    
     MINIDUMP_NOT_SUPPORTED();    
-
-    if (GetEEFlavor() == UNKNOWNEE) 
-    {
-        ExtOut("CLR not loaded\n");
-        return Status;
-    }
 
     const char* fileName = "GCConfigLog.txt";
 
@@ -10317,11 +10310,6 @@ DECLARE_API(EEVersion)
 {
     INIT_API();
 
-    EEFLAVOR eef = GetEEFlavor();
-    if (eef == UNKNOWNEE) {
-        ExtOut("CLR not loaded\n");
-        return Status;
-    }
     static const int fileVersionBufferSize = 1024;
     ArrayHolder<char> fileVersionBuffer = new char[fileVersionBufferSize];
     VS_FIXEDFILEINFO version;
@@ -10347,7 +10335,7 @@ DECLARE_API(EEVersion)
             }
             else
             {
-                BOOL fRet = IsRetailBuild((size_t)g_moduleInfo[eef].baseAddr);
+                BOOL fRet = IsRetailBuild((size_t)g_pRuntime->GetModuleAddress());
                 if (fRet)
                     ExtOut(" retail");
                 else
@@ -10407,26 +10395,54 @@ DECLARE_API(EEVersion)
 \**********************************************************************/
 DECLARE_API(SOSStatus)
 {
-    INIT_API_NOEE();
+    INIT_API_EXT();
 
+    BOOL bDesktop = FALSE;
+    BOOL bNetCore = FALSE;
+    BOOL bReset = FALSE;
+    CMDOption option[] = 
+    {   // name, vptr, type, hasValue
+#ifndef FEATURE_PAL
+        {"-desktop", &bDesktop, COBOOL, FALSE},
+        {"-netcore", &bNetCore, COBOOL, FALSE},
+#endif
+        {"-reset", &bReset, COBOOL, FALSE},
+    };
+    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    {
+        return Status;
+    }    
+#ifndef FEATURE_PAL
+    if (bNetCore || bDesktop)
+    {
+        PCSTR name = bDesktop ? "desktop CLR" : ".NET Core";;
+        if (!Runtime::SwitchRuntime(bDesktop))
+        {
+            ExtErr("The %s runtime is not loaded\n", name);
+            return E_FAIL;
+        }
+        ExtOut("Switched to %s runtime successfully\n", name);
+        return S_OK;
+    }
+#endif
+    if (bReset)
+    {
+        Runtime::CleanupRuntimes();
+        CleanupTempDirectory();
+        ExtOut("SOS state reset\n");
+        return S_OK;
+    }
     if (g_targetMachine != nullptr) {
         ExtOut("Target platform: %04x Context size %04x\n", g_targetMachine->GetPlatform(), g_targetMachine->GetContextSize());
+    }
+    if (g_pRuntime != nullptr) {
+        g_pRuntime->DisplayStatus();
     }
     if (g_tmpPath != nullptr) {
         ExtOut("Temp path: %s\n", g_tmpPath);
     }
-    if (g_dacFilePath != nullptr) {
-        ExtOut("DAC file path: %s\n", g_dacFilePath);
-    }
-    if (g_dbiFilePath != nullptr) {
-        ExtOut("DBI file path: %s\n", g_dbiFilePath);
-    }
     if (g_hostRuntimeDirectory != nullptr) {
         ExtOut("Host runtime path: %s\n", g_hostRuntimeDirectory);
-    }
-    std::string runtimeDirectory;
-    if (SUCCEEDED(GetRuntimeDirectory(runtimeDirectory))) {
-        ExtOut("Runtime path: %s\n", runtimeDirectory.c_str());
     }
     DisplaySymbolStore();
 
@@ -11683,10 +11699,8 @@ DECLARE_API(GCHandles)
 #ifndef FEATURE_PAL
 DECLARE_API(TraceToCode)
 {
-    INIT_API_NOEE();
-
-    static ULONG64 g_clrBaseAddr = 0;
-
+    INIT_API_NODAC();
+    _ASSERTE(g_pRuntime != nullptr);
 
     while(true)
     {
@@ -11703,13 +11717,10 @@ DECLARE_API(TraceToCode)
         ULONG64 base = 0;
         CLRDATA_ADDRESS cdaStart = TO_CDADDR(Offset);
         DacpMethodDescData MethodDescData;
-        if(g_ExtSymbols->GetModuleByOffset(Offset, 0, NULL, &base) == S_OK)
+        if (g_ExtSymbols->GetModuleByOffset(Offset, 0, NULL, &base) == S_OK)
         {
-            if(g_clrBaseAddr == 0)
-            {
-                GetRuntimeModuleInfo(NULL, &g_clrBaseAddr);
-            }
-            if(g_clrBaseAddr == base)
+            ULONG64 clrBaseAddr = g_pRuntime->GetModuleAddress();
+            if(clrBaseAddr == base)
             {
                 ExtOut("Compiled code in CLR\n");
                 codeType = 4;
@@ -11774,14 +11785,14 @@ DECLARE_API(TraceToCode)
 
 // This is an experimental and undocumented API that sets a debugger pseudo-register based
 // on the type of code at the given IP. It can be used in scripts to keep stepping until certain
-// kinds of code have been reached. Presumbably its slower than !TraceToCode but at least it
+// kinds of code have been reached. Presumably its slower than !TraceToCode but at least it
 // cancels much better
 #ifndef FEATURE_PAL
 DECLARE_API(GetCodeTypeFlags)
 {
     INIT_API();   
+    _ASSERTE(g_pRuntime != nullptr);
     
-
     char buffer[100+mdNameLen];
     size_t ip;
     StringHolder PReg;
@@ -11822,7 +11833,7 @@ DECLARE_API(GetCodeTypeFlags)
     CLRDATA_ADDRESS cdaStart = TO_CDADDR(ip);
     DWORD codeType = 0;
     CLRDATA_ADDRESS addr;
-    if(g_sos->GetMethodDescPtrFromIP(cdaStart, &addr) == S_OK)
+    if (g_sos->GetMethodDescPtrFromIP(cdaStart, &addr) == S_OK)
     {
         WCHAR wszNameBuffer[1024]; // should be large enough
 
@@ -11841,8 +11852,8 @@ DECLARE_API(GetCodeTypeFlags)
     }
     else if(g_ExtSymbols->GetModuleByOffset (ip, 0, NULL, &base) == S_OK)
     {
-        ULONG64 clrBaseAddr = 0;
-        if(SUCCEEDED(GetRuntimeModuleInfo(NULL, &clrBaseAddr)) && base==clrBaseAddr)
+        ULONG64 clrBaseAddr = g_pRuntime->GetModuleAddress();
+        if (base == clrBaseAddr)
         {
             ExtOut("Compiled code in CLR");
             codeType = 4;
@@ -13175,7 +13186,8 @@ public:
     {
         HRESULT Status;
 
-        IfFailRet(InitCorDebugInterface());
+        ICorDebugProcess* pCorDebugProcess;
+        IfFailRet(g_pRuntime->GetCorDebugInterface(&pCorDebugProcess));
 
         ExtOut("\n\n\nDumping managed stack and managed variables using ICorDebug.\n");
         ExtOut("=============================================================================\n");
@@ -13186,7 +13198,7 @@ public:
         ULONG ulThreadID = 0;
         g_ExtSystem->GetCurrentThreadSystemId(&ulThreadID);
 
-        IfFailRet(g_pCorDebugProcess->GetThread(ulThreadID, &pThread));
+        IfFailRet(pCorDebugProcess->GetThread(ulThreadID, &pThread));
         IfFailRet(pThread->QueryInterface(IID_ICorDebugThread3, (LPVOID *) &pThread3));
         IfFailRet(pThread3->CreateStackWalk(&pStackWalk));
 
@@ -13346,10 +13358,6 @@ public:
         }
         ExtOut("=============================================================================\n");
 
-#ifdef FEATURE_PAL
-        // Temporary until we get a process exit notification plumbed from lldb
-        UninitCorDebugInterface();
-#endif
         return S_OK;
     }
 };
@@ -14265,17 +14273,17 @@ DECLARE_API( VMMap )
 
 #endif // FEATURE_PAL
 
-DECLARE_API( SOSFlush )
+DECLARE_API(SOSFlush)
 {
-    INIT_API();
+    INIT_API_EXT();
 
-    g_clrData->Flush();
+    Runtime::Flush();
 #ifdef FEATURE_PAL
     FlushMetadataRegions();
 #endif
     
     return Status;
-}   // DECLARE_API( SOSFlush )
+}
 
 #ifndef FEATURE_PAL
 
@@ -15465,7 +15473,7 @@ DECLARE_API(VerifyStackTrace)
 // This is an internal-only Apollo extension to de-optimize the code
 DECLARE_API(SuppressJitOptimization)
 {
-    INIT_API_NOEE();    
+    INIT_API_NODAC();    
     MINIDUMP_NOT_SUPPORTED();    
 
     StringHolder onOff;
@@ -15503,12 +15511,12 @@ DECLARE_API(SuppressJitOptimization)
     else if(nArg == 1 && (_stricmp(onOff.data, "Off") == 0))
     {
         // if CLR is already loaded, try to change the flags now
-        if(CheckEEDll() == S_OK)
+        if (CheckEEDll() == S_OK)
         {
             SetNGENCompilerFlags(CORDEBUG_JIT_DEFAULT);
         }
 
-        if(g_fAllowJitOptimization)
+        if (g_fAllowJitOptimization)
             ExtOut("JIT optimization is already permitted\n");
         else
         {
@@ -15531,13 +15539,14 @@ HRESULT SetNGENCompilerFlags(DWORD flags)
     HRESULT hr;
 
     ToRelease<ICorDebugProcess2> proc2;
-    if(FAILED(hr = InitCorDebugInterface()))
+    ICorDebugProcess* pCorDebugProcess;
+    if (FAILED(hr = g_pRuntime->GetCorDebugInterface(&pCorDebugProcess)))
     {
         ExtOut("SOS: warning, prejitted code optimizations could not be changed. Failed to load ICorDebug HR = 0x%x\n", hr);
     }
-    else if(FAILED(g_pCorDebugProcess->QueryInterface(__uuidof(ICorDebugProcess2), (void**) &proc2)))
+    else if (FAILED(pCorDebugProcess->QueryInterface(__uuidof(ICorDebugProcess2), (void**) &proc2)))
     {
-        if(flags != CORDEBUG_JIT_DEFAULT)
+        if (flags != CORDEBUG_JIT_DEFAULT)
         {
             ExtOut("SOS: warning, prejitted code optimizations could not be changed. This CLR version doesn't support the functionality\n");
         }
@@ -15546,7 +15555,7 @@ HRESULT SetNGENCompilerFlags(DWORD flags)
             hr = S_OK;
         }
     }
-    else if(FAILED(hr = proc2->SetDesiredNGENCompilerFlags(flags)))
+    else if (FAILED(hr = proc2->SetDesiredNGENCompilerFlags(flags)))
     {
         // Versions of CLR that don't have SetDesiredNGENCompilerFlags DAC-ized will return E_FAIL.
         // This was first supported in the clr_triton branch around 4/1/12, Apollo release
@@ -15562,9 +15571,9 @@ HRESULT SetNGENCompilerFlags(DWORD flags)
                 hr = S_OK;
             }
         }
-        else if(hr == CORDBG_E_NGEN_NOT_SUPPORTED)
+        else if (hr == CORDBG_E_NGEN_NOT_SUPPORTED)
         {
-            if(flags != CORDEBUG_JIT_DEFAULT)
+            if (flags != CORDEBUG_JIT_DEFAULT)
             {
                 ExtOut("SOS: warning, prejitted code optimizations could not be changed. This CLR version doesn't support NGEN\n");
             }
@@ -15573,14 +15582,14 @@ HRESULT SetNGENCompilerFlags(DWORD flags)
                 hr = S_OK;
             }
         }
-        else if(hr == CORDBG_E_MUST_BE_IN_CREATE_PROCESS)
+        else if (hr == CORDBG_E_MUST_BE_IN_CREATE_PROCESS)
         {
             DWORD currentFlags = 0;
-            if(FAILED(hr = proc2->GetDesiredNGENCompilerFlags(&currentFlags)))
+            if (FAILED(hr = proc2->GetDesiredNGENCompilerFlags(&currentFlags)))
             {
                 ExtOut("SOS: warning, prejitted code optimizations could not be changed. GetDesiredNGENCompilerFlags failed hr=0x%x\n", hr);
             }
-            else if(currentFlags != flags)
+            else if (currentFlags != flags)
             {
                 ExtOut("SOS: warning, prejitted code optimizations could not be changed at this time. This setting is fixed once CLR starts\n");
             }
@@ -15927,8 +15936,8 @@ DECLARE_API(SetSymbolServer)
         {"-timeout", &timeoutInMinutes, COSIZE_T, TRUE},
         {"-ms", &msdl, COBOOL, FALSE},
         {"-log", &logging, COBOOL, FALSE},
-        {"-loadsymbols", &loadNative, COBOOL, FALSE},
 #ifdef FEATURE_PAL
+        {"-loadsymbols", &loadNative, COBOOL, FALSE},
         {"-sympath", &windowsSymbolPath.data, COSTRING, TRUE},
 #else
         {"-mi", &symweb, COBOOL, FALSE},
@@ -15997,10 +16006,12 @@ DECLARE_API(SetSymbolServer)
             ExtOut("Symbol download logging enabled\n");
         }
     }
+#ifdef FEATURE_PAL
     else if (loadNative)
     {
         Status = LoadNativeSymbols();
     }
+#endif
     else
     {
         DisplaySymbolStore();

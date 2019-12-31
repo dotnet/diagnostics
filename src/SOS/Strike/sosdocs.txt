@@ -64,7 +64,8 @@ HistInit                           SetHostRuntime (sethostruntime)
 HistRoot                           SetSymbolServer (setsymbolserver)
 HistObj                            FAQ
 HistObjFind                        SOSFlush
-HistClear                          Help (soshelp)
+HistClear                          SOSStatus (sosstatus)
+                                   Help (soshelp)
 \\
 
 COMMAND: faq.
@@ -2609,7 +2610,7 @@ You can use the "dotnet --info" in a command shell to find the path of an instal
 \\
 
 COMMAND: setsymbolserver.
-SetSymbolServer [-ms] [-mi] [-disable] [-log] [-cache <cache-path>] [-directory <search-directory>] [<symbol-server-URL>]
+!SetSymbolServer [-ms] [-mi] [-disable] [-log] [-cache <cache-path>] [-directory <search-directory>] [<symbol-server-URL>]
 
 -ms - Use the public Microsoft symbol server.
 -mi - Use the internal symweb symbol server.
@@ -2625,3 +2626,22 @@ symbol server support is automatically enabled.
 To disable downloading or clear the current SOS symbol settings allowing new symbol paths to be set:
 
     0:000> !setsymbolserver -disable
+\\
+
+COMMAND: sosstatus.
+!SOSStatus [-desktop] [-netcore] [-reset]
+
+-desktop - switch to the desktop runtime if loaded.
+-netcore - switch to the .NET Core runtime if loaded.
+-reset 	 - reset all the cached internal SOS state.
+
+Display internal SOS status, reset the internal cached state, or change between desktop or 
+netcore runtimes when both are loaded in the process or dump.
+
+0:000> !sosstatus
+Target platform: 8664 Context size 04d0
+.NET Core runtime at 00007FFEE7230000 (005c2000)
+DAC file path: C:\Users\mikem\AppData\Local\Temp\SymbolCache\mscordaccore.dll/5d0707425c2000/mscordaccore.dll
+DBI file path: C:\Users\mikem\AppData\Local\Temp\SymbolCache\mscordbi.dll/5d0707425c2000/mscordbi.dll
+Cache: C:\Users\mikem\AppData\Local\Temp\SymbolCache
+Server: http://msdl.microsoft.com/download/symbols/
