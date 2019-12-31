@@ -83,6 +83,8 @@ namespace SOS
             public TargetStream(ulong address, int size, ReadMemoryDelegate readMemory)
                 : base()
             {
+                Debug.Assert(address != 0);
+                Debug.Assert(size != 0);
                 _address = address;
                 _readMemory = readMemory;
                 Length = size;
@@ -294,7 +296,9 @@ namespace SOS
                         s_tracer.Verbose("{0} {1}", key.FullPathName, key.Index);
 
                         // Don't download the sos binaries that come with the runtime
-                        if (moduleFileName != "SOS.NETCore.dll" && !moduleFileName.StartsWith("libsos."))
+                        if (!IsPathEqual(moduleFileName, "SOS.NETCore.dll") && 
+                            !IsPathEqual(moduleFileName, "sos.dll") && 
+                            !moduleFileName.StartsWith("libsos."))
                         {
                             string downloadFilePath = GetSymbolFile(key);
                             if (downloadFilePath != null)

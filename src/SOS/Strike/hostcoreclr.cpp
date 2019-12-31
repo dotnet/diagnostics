@@ -434,10 +434,10 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
     return S_OK;
 }
 
-//
-// Returns the unique temporary directory for this instnace of SOS
-//
-static LPCSTR GetTempDirectory()
+/**********************************************************************\
+ * Returns the unique temporary directory for this instance of SOS
+\**********************************************************************/
+LPCSTR GetTempDirectory()
 {
     if (g_tmpPath == nullptr)
     {
@@ -454,6 +454,7 @@ static LPCSTR GetTempDirectory()
 
         CreateDirectoryA(tmpPath, NULL);
         g_tmpPath = _strdup(tmpPath);
+        OnUnloadTask::Register(CleanupTempDirectory);
     }
     return g_tmpPath;
 }
@@ -461,10 +462,7 @@ static LPCSTR GetTempDirectory()
 /**********************************************************************\
  * Clean up the temporary directory files and DAC symlink.
 \**********************************************************************/
-#ifdef FEATURE_PAL
-__attribute__((destructor)) 
-#endif
-void SOSShutdown()
+void CleanupTempDirectory()
 {
     LPCSTR tmpPath = (LPCSTR)InterlockedExchangePointer((PVOID *)&g_tmpPath, nullptr);
     if (tmpPath != nullptr)
@@ -785,7 +783,16 @@ HRESULT InitializeSymbolStore(
     IfFailRet(InitializeHosting());
     _ASSERTE(g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate != nullptr);
 
-    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(logging, msdl, symweb, GetTempDirectory(), symbolServer, timeoutInMinutes, cacheDirectory, searchDirectory, windowsSymbolPath))
+    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(
+        logging,
+        msdl,
+        symweb,
+        GetTempDirectory(),
+        symbolServer,
+        timeoutInMinutes,
+        cacheDirectory,
+        searchDirectory,
+        windowsSymbolPath))
     {
         ExtErr("Error initializing symbol server support\n");
         return E_FAIL;
@@ -828,7 +835,16 @@ void InitializeSymbolStoreFromSymPath()
             {
                 if (strlen(symbolPath) > 0)
                 {
-                    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(false, false, false, GetTempDirectory(), nullptr, 0, nullptr, nullptr, symbolPath))
+                    if (!g_SOSNetCoreCallbacks.InitializeSymbolStoreDelegate(
+                        false,                  // logging
+                        false,                  // msdl
+                        false,                  // symweb
+                        GetTempDirectory(),     // tempDirectory
+                        nullptr,                // symbolServerPath
+                        0,                      // timeoutInMinutes
+                        nullptr,                // symbolCachePath
+                        nullptr,                // symbolDirectoryPath
+                        symbolPath))            // windowsSymbolPath
                     {
                         ExtErr("Windows symbol path parsing FAILED\n");
                         return;
@@ -1087,19 +1103,21 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
         ExtOut("LoadSymbols moduleData.Request FAILED 0x%08x\n", hr);
         return hr;
 #else
-        ULONG64 modBase;
-        hr = GetClrModuleImages(pModule, CLRDATA_MODULE_PE_FILE, &modBase);
+        ULONG64 moduleBase;
+        ULONG64 moduleSize;
+        hr = GetClrModuleImages(pModule, CLRDATA_MODULE_PE_FILE, &moduleBase, &moduleSize);
         if (FAILED(hr))
         {
             ExtOut("LoadSymbols GetClrModuleImages FAILED 0x%08x\n", hr);
             return hr;
         }
-        hr = LoadSymbolsForWindowsPDB(pMD, modBase, pModuleName, FALSE);
+        hr = LoadSymbolsForWindowsPDB(pMD, moduleBase, pModuleName, FALSE);
         if (SUCCEEDED(hr))
         {
             return hr;
         }
-        moduleData.LoadedPEAddress = modBase;
+        moduleData.LoadedPEAddress = moduleBase;
+        moduleData.LoadedPESize = moduleSize;
         moduleData.IsFileLayout = TRUE;
 #endif
     }

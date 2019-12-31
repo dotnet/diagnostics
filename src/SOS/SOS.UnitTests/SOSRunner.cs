@@ -704,11 +704,11 @@ public class SOSRunner : IDisposable
                 }
                 try
                 {
-                    await RunSosCommand("sosstatus");
+                    await RunSosCommand("SOSStatus");
                 }
                 catch (Exception ex)
                 {
-                    WriteLine("Exception executing sosstatus {0}", ex.ToString());
+                    WriteLine("Exception executing SOSStatus {0}", ex.ToString());
                 }
                 throw;
             }
@@ -1245,6 +1245,10 @@ public class SOSRunner : IDisposable
             Task<CommandResult> currentTask = null;
             lock (this)
             {
+                if (_taskQueue.Count == 0)
+                {
+                    return false;
+                }
                 currentTask = _taskQueue[0];
                 _taskQueue.RemoveAt(0);
             }
@@ -1256,6 +1260,7 @@ public class SOSRunner : IDisposable
             Task<CommandResult> currentTask = null;
             lock (this)
             {
+                Debug.Assert(_taskQueue.Count > 0);
                 currentTask = _taskQueue[0];
             }
             return currentTask;
