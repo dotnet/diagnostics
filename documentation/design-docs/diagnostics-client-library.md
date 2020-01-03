@@ -41,7 +41,7 @@ public void PrintRuntimeGCEvents(int processId)
     {
         var source = new EventPipeEventSource(session.EventStream);
 
-        source.Dynamic.All += (TraceEvent obj) => {
+        source.Clr.All += (TraceEvent obj) => {
             Console.WriteLine(obj.EventName);
         }
         try
