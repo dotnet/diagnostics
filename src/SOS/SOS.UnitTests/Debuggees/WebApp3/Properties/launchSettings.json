@@ -10,18 +10,20 @@
   "profiles": {
     "IIS Express": {
       "commandName": "IISExpress",
-      "launchBrowser": true,
+      "commandLineArgs": "\"\" \"C:\\ssd\\diagnostics\\artifacts\\bin\\SymbolTestDll\\Debug\\net462\\publish\\SymbolTestDll.dll\" SymbolTestDll.TestClass ThrowException",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      }
+      },
+      "nativeDebugging": false
     },
     "WebApp3": {
       "commandName": "Project",
-      "launchBrowser": true,
-      "applicationUrl": "https://localhost:5001;http://localhost:5000",
+      "commandLineArgs": "\"\" \"C:\\ssd\\diagnostics\\artifacts\\bin\\SymbolTestDll\\Debug\\net462\\publish\\SymbolTestDll.dll\" SymbolTestDll.TestClass ThrowException",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      }
+      },
+      "nativeDebugging": true,
+      "applicationUrl": "https://localhost:5001;http://localhost:5000"
     }
   }
 }

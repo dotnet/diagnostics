@@ -211,6 +211,25 @@ public class SOS
         });
     }
 
+    [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "SOS.DualRuntimes")]
+    public async Task DualRuntimes(TestConfiguration config)
+    {
+        // The assembly path, class and function name of the desktop test code to load/run
+        string desktopTestParameters = TestConfiguration.MakeCanonicalPath(config.GetValue("DesktopTestParameters"));
+        if (string.IsNullOrEmpty(desktopTestParameters))
+        {
+            throw new SkipTestException("DesktopTestParameters config value does not exists");
+        }
+        await RunTest("DualRuntimes.script", testLive: false, information: new SOSRunner.TestInformation {
+            TestConfiguration = config,
+            TestName = "SOS.DualRuntimes",
+            DebuggeeName = "WebApp3",
+            DebuggeeArguments = desktopTestParameters,
+            UsePipeSync = true,
+            DumpGenerator = SOSRunner.DumpGenerator.DotNetDump
+        }); ;
+    }
+
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task LLDBPluginTests(TestConfiguration config)
     {
