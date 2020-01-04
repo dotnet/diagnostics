@@ -22,6 +22,7 @@
   <DumpDir>$(RootBinDir)\tmp\$(TargetConfiguration)\dumps</DumpDir>
   <CDBPath>$(RootBinDir)\bin\SOS.UnitTests\$(TargetConfiguration)\netcoreapp2.0\publish\runtimes\win-$(TargetArchitecture)\native\cdb.exe</CDBPath>
   <CDBHelperExtension>$(InstallDir)\runcommand.dll</CDBHelperExtension>
+  <DesktopFramework>net462</DesktopFramework>
 
   <DebuggeeSourceRoot>$(RepoRootDir)\src\SOS\SOS.UnitTests\Debuggees</DebuggeeSourceRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
@@ -104,10 +105,19 @@
           <FrameworkVersion>$(AspNetCoreVersion21)</FrameworkVersion>
         </Option>
         <!--
-            SOS.WebApp3 (runs on 3.0, 3.1 and latest aspnetcore)
+            SOS.WebApp3 and SOS.DualRuntimes (runs on 3.0, 3.1 and latest aspnetcore)
           -->
         <Option>
-          <TestName>SOS.WebApp3</TestName>
+          <Options>
+            <Option>
+              <TestName>SOS.WebApp3</TestName>
+            </Option>
+            <Option>
+              <TestName>SOS.DualRuntimes</TestName>
+              <!-- The assembly path, class and function name of the desktop test code to load/run -->
+              <DesktopTestParameters>$(RootBinDir)\bin\SymbolTestDll\$(TargetConfiguration)\$(DesktopFramework)\publish\SymbolTestDll.dll SymbolTestDll.TestClass ThrowException</DesktopTestParameters>
+            </Option>
+          </Options>
           <Options>
             <Option>
               <!-- Build the debuggee for 3.0 but run it on latest -->
@@ -150,7 +160,7 @@
       <TestProduct>Desktop</TestProduct>
       <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
       <DebuggeeBuildRoot>$(RootBinDir)\Debuggees</DebuggeeBuildRoot>
-      <BuildProjectFramework>net462</BuildProjectFramework>
+      <BuildProjectFramework>$(DesktopFramework)</BuildProjectFramework>
       <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
       <DebugType>full</DebugType>
       <FrameworkDirPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</FrameworkDirPath>

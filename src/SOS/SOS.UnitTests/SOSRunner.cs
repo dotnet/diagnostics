@@ -228,11 +228,6 @@ public class SOSRunner : IDisposable
                     }
                     arguments.Append(debuggeeConfig.BinaryExePath);
                 }
-                if (!string.IsNullOrWhiteSpace(information.DebuggeeArguments))
-                {
-                    arguments.Append(" ");
-                    arguments.Append(information.DebuggeeArguments);
-                }
 
                 // Setup a pipe server for the debuggee to connect to sync when to take a dump
                 if (information.UsePipeSync)
@@ -242,6 +237,13 @@ public class SOSRunner : IDisposable
                     pipeServer = new NamedPipeServerStream(pipeName);
                     arguments.Append(" ");
                     arguments.Append(pipeName);
+                }
+
+                // Add any additional test specific arguments after the pipe name (if one).
+                if (!string.IsNullOrWhiteSpace(information.DebuggeeArguments))
+                {
+                    arguments.Append(" ");
+                    arguments.Append(information.DebuggeeArguments);
                 }
 
                 // Create the debuggee process runner
@@ -901,7 +903,7 @@ public class SOSRunner : IDisposable
         TestConfiguration config = information.TestConfiguration;
         string dumpRoot = action == DebuggerAction.GenerateDump ? config.DebuggeeDumpOutputRootDir() : config.DebuggeeDumpInputRootDir();
         if (!string.IsNullOrEmpty(dumpRoot)) {
-            return Path.Combine(dumpRoot, Path.GetFileNameWithoutExtension(debuggeeName) + "." + information.DumpType.ToString() + ".dmp");
+            return Path.Combine(dumpRoot, information.TestName + "." + information.DumpType.ToString() + ".dmp");
         }
         return null;
     }
