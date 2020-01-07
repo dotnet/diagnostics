@@ -16,7 +16,7 @@
     <MicrosoftNETCoreApp31Version>3.1.0</MicrosoftNETCoreApp31Version>
     <MicrosoftAspNetCoreApp31Version>$(MicrosoftNETCoreApp31Version)</MicrosoftAspNetCoreApp31Version>
     <MicrosoftNETCoreAppVersion>5.0.0-alpha.1.19627.5</MicrosoftNETCoreAppVersion>
-    <MicrosoftAspNetCoreAppRefVersion>5.0.0-alpha.1.20056.1</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefVersion>5.0.0-alpha.1.20056.6</MicrosoftAspNetCoreAppRefVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
