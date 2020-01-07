@@ -183,7 +183,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
             string dacFilePath = GetDacFile(clrInfo);
             try
             {
-                runtime = clrInfo.CreateRuntime(dacFilePath);
+                // Ignore the DAC version mismatch that can happen on Linux because the clrmd ELF dump 
+                // reader returns 0.0.0.0 for the runtime module that the DAC is matched against. This
+                // will be fixed in clrmd 2.0 but not 1.1.
+                runtime = clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: RuntimeInformation.IsOSPlatform(OSPlatform.Linux));
             }
             catch (DllNotFoundException ex)
             {
@@ -240,7 +243,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
                 if (_dacFilePath == null)
                 {
-                    throw new FileNotFoundException("Could not find matching DAC for this runtime: {0}", clrInfo.ModuleInfo.FileName);
+                    throw new FileNotFoundException($"Could not find matching DAC for this runtime: {clrInfo.ModuleInfo.FileName}");
                 }
                 _isDesktop = clrInfo.Flavor == ClrFlavor.Desktop;
             }

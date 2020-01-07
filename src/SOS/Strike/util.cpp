@@ -5169,7 +5169,7 @@ WString GetFrameFromAddress(TADDR frameAddr, IXCLRDataStackWalk *pStackWalk, BOO
     return frameOutput;
 }
 
-WString MethodNameFromIP(CLRDATA_ADDRESS ip, BOOL bSuppressLines, BOOL bAssemblyName, BOOL bDisplacement)
+WString MethodNameFromIP(CLRDATA_ADDRESS ip, BOOL bSuppressLines, BOOL bAssemblyName, BOOL bDisplacement, BOOL bAdjustIPForLineNumber)
 {
     ULONG linenum;
     WString methodOutput;
@@ -5242,7 +5242,9 @@ WString MethodNameFromIP(CLRDATA_ADDRESS ip, BOOL bSuppressLines, BOOL bAssembly
 
         ArrayHolder<WCHAR> wszFileName = new WCHAR[MAX_LONGPATH];
         if (!bSuppressLines &&
-            SUCCEEDED(GetLineByOffset(TO_CDADDR(ip), &linenum, wszFileName, MAX_LONGPATH)))
+            // If the IP needs to be adjusted, it is a lot simpler to decrement IP instead of trying to figure out 
+            // the beginning of the instruction. It is enough for GetLineByOffset to return the correct line number.
+            SUCCEEDED(GetLineByOffset(TO_CDADDR(bAdjustIPForLineNumber ? ip - g_targetMachine->StackWalkIPAdjustOffset() : ip), &linenum, wszFileName, MAX_LONGPATH)))
         {
             methodOutput += WString(W(" [")) + wszFileName + W(" @ ") + Decimal(linenum) + W("]");
         }

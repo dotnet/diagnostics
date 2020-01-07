@@ -85,8 +85,16 @@ HRESULT Runtime::CreateInstance(bool isDesktop, Runtime **ppRuntime)
         }
         if (SUCCEEDED(hr))
         {
-            *ppRuntime = new Runtime(isDesktop, moduleIndex, moduleAddress, moduleSize);
-            OnUnloadTask::Register(CleanupRuntimes);
+            if (moduleSize > 0) 
+            {
+                *ppRuntime = new Runtime(isDesktop, moduleIndex, moduleAddress, moduleSize);
+                OnUnloadTask::Register(CleanupRuntimes);
+            }
+            else 
+            {
+                ExtOut("Runtime (%s) module size == 0\n", runtimeModuleName);
+                hr = E_INVALIDARG;
+            }
         }
     }
     return hr;

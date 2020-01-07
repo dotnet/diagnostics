@@ -390,6 +390,8 @@ public:
     typedef void (*printfFtn)(const char* fmt, ...);
     // Dumps the GCInfo
     virtual void DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const = 0;
+    // The amount of bytes to adjust the IP for software exception throw instructions (the STACKWALK_CONTROLPC_ADJUST_OFFSET define in the runtime)
+    virtual int StackWalkIPAdjustOffset() const = 0;
 
 protected:
     IMachine()           {}
