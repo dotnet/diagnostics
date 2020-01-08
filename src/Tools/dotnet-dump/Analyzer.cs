@@ -26,6 +26,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private readonly ServiceProvider _serviceProvider;
         private readonly ConsoleProvider _consoleProvider;
         private readonly CommandProcessor _commandProcessor;
+        private bool _isDesktop;
         private string _dacFilePath;
 
         /// <summary>
@@ -142,7 +143,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             _serviceProvider.AddServiceFactory(typeof(SOSHost), () => {
                 var sosHost = new SOSHost(_serviceProvider);
-                sosHost.InitializeSOSHost(SymbolReader.TempDirectory, _dacFilePath, dbiFilePath: null);
+                sosHost.InitializeSOSHost(SymbolReader.TempDirectory, _isDesktop, _dacFilePath, dbiFilePath: null);
                 return sosHost;
             });
         }
@@ -152,11 +153,33 @@ namespace Microsoft.Diagnostics.Tools.Dump
         /// </summary>
         private ClrRuntime CreateRuntime(DataTarget target)
         {
-            ClrRuntime runtime;
-            if (target.ClrVersions.Count != 1) {
-                throw new InvalidOperationException("More or less than 1 CLR version is present");
+            ClrInfo clrInfo = null;
+
+            // First check if there is a .NET Core runtime loaded
+            foreach (ClrInfo clr in target.ClrVersions)
+            {
+                if (clr.Flavor == ClrFlavor.Core)
+                {
+                    clrInfo = clr;
+                    break;
+                }
             }
-            ClrInfo clrInfo = target.ClrVersions[0];
+            // If no .NET Core runtime, then check for desktop runtime
+            if (clrInfo == null)
+            {
+                foreach (ClrInfo clr in target.ClrVersions)
+                {
+                    if (clr.Flavor == ClrFlavor.Desktop)
+                    {
+                        clrInfo = clr;
+                        break;
+                    }
+                }
+            }
+            if (clrInfo == null) {
+                throw new InvalidOperationException("No CLR runtime is present");
+            }
+            ClrRuntime runtime;
             string dacFilePath = GetDacFile(clrInfo);
             try
             {
@@ -219,6 +242,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 {
                     throw new FileNotFoundException("Could not find matching DAC for this runtime: {0}", clrInfo.ModuleInfo.FileName);
                 }
+                _isDesktop = clrInfo.Flavor == ClrFlavor.Desktop;
             }
             return _dacFilePath;
         }

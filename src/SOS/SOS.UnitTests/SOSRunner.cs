@@ -228,11 +228,6 @@ public class SOSRunner : IDisposable
                     }
                     arguments.Append(debuggeeConfig.BinaryExePath);
                 }
-                if (!string.IsNullOrWhiteSpace(information.DebuggeeArguments))
-                {
-                    arguments.Append(" ");
-                    arguments.Append(information.DebuggeeArguments);
-                }
 
                 // Setup a pipe server for the debuggee to connect to sync when to take a dump
                 if (information.UsePipeSync)
@@ -242,6 +237,13 @@ public class SOSRunner : IDisposable
                     pipeServer = new NamedPipeServerStream(pipeName);
                     arguments.Append(" ");
                     arguments.Append(pipeName);
+                }
+
+                // Add any additional test specific arguments after the pipe name (if one).
+                if (!string.IsNullOrWhiteSpace(information.DebuggeeArguments))
+                {
+                    arguments.Append(" ");
+                    arguments.Append(information.DebuggeeArguments);
                 }
 
                 // Create the debuggee process runner
@@ -704,11 +706,11 @@ public class SOSRunner : IDisposable
                 }
                 try
                 {
-                    await RunSosCommand("sosstatus");
+                    await RunSosCommand("SOSStatus");
                 }
                 catch (Exception ex)
                 {
-                    WriteLine("Exception executing sosstatus {0}", ex.ToString());
+                    WriteLine("Exception executing SOSStatus {0}", ex.ToString());
                 }
                 throw;
             }
@@ -901,7 +903,7 @@ public class SOSRunner : IDisposable
         TestConfiguration config = information.TestConfiguration;
         string dumpRoot = action == DebuggerAction.GenerateDump ? config.DebuggeeDumpOutputRootDir() : config.DebuggeeDumpInputRootDir();
         if (!string.IsNullOrEmpty(dumpRoot)) {
-            return Path.Combine(dumpRoot, Path.GetFileNameWithoutExtension(debuggeeName) + "." + information.DumpType.ToString() + ".dmp");
+            return Path.Combine(dumpRoot, information.TestName + "." + information.DumpType.ToString() + ".dmp");
         }
         return null;
     }
@@ -1245,6 +1247,10 @@ public class SOSRunner : IDisposable
             Task<CommandResult> currentTask = null;
             lock (this)
             {
+                if (_taskQueue.Count == 0)
+                {
+                    return false;
+                }
                 currentTask = _taskQueue[0];
                 _taskQueue.RemoveAt(0);
             }
@@ -1256,6 +1262,7 @@ public class SOSRunner : IDisposable
             Task<CommandResult> currentTask = null;
             lock (this)
             {
+                Debug.Assert(_taskQueue.Count > 0);
                 currentTask = _taskQueue[0];
             }
             return currentTask;
