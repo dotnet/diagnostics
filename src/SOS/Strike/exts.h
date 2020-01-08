@@ -79,6 +79,7 @@ typedef struct _TADDR_SEGINFO
 } TADDR_SEGINFO;
 
 #include "util.h"
+#include "runtime.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -172,10 +173,9 @@ inline BOOL IsInterrupt()
 {
     if (!ControlC && g_ExtControl->GetInterrupt() == S_OK)
     {
-        ExtOut("Command cancelled at the user's request.\n");
+        ExtOut("Command canceled at the user's request.\n");
         ControlC = TRUE;
     }
-
     return ControlC;
 }
 
@@ -196,7 +196,11 @@ public:
 
 inline void EENotLoadedMessage(HRESULT Status)
 {
-    ExtOut("Failed to find runtime module (%s), 0x%08x\n", GetRuntimeDllName(), Status);
+#ifdef FEATURE_PAL
+    ExtOut("Failed to find runtime module (%s), 0x%08x\n", NETCORE_RUNTIME_DLL_NAME_A, Status);
+#else
+    ExtOut("Failed to find runtime module (%s or %s), 0x%08x\n", NETCORE_RUNTIME_DLL_NAME_A, DESKTOP_RUNTIME_DLL_NAME_A, Status);
+#endif
     ExtOut("Extension commands need it in order to have something to do.\n");
 }
 
@@ -204,7 +208,7 @@ inline void DACMessage(HRESULT Status)
 {
     ExtOut("Failed to load data access module, 0x%08x\n", Status);
 #ifndef FEATURE_PAL
-    ExtOut("Verify that 1) you have a recent build of the debugger (6.2.14 or newer)\n");
+    ExtOut("Verify that 1) you have a recent build of the debugger (10.0.18317.1001 or newer)\n");
     ExtOut("            2) the file %s that matches your version of %s is\n", GetDacDllName(), GetRuntimeDllName());
     ExtOut("                in the version directory or on the symbol path\n");
     ExtOut("            3) or, if you are debugging a dump file, verify that the file \n");
@@ -251,7 +255,7 @@ HRESULT CheckEEDll();
     if ((Status = ArchQuery()) != S_OK) return Status;
 
 #define INIT_API_EE()                                           \
-    if ((Status = CheckEEDll()) != S_OK)                        \
+    if ((Status = CheckEEDll()) != S_OK)           \
     {                                                           \
         EENotLoadedMessage(Status);                             \
         return Status;                                          \
@@ -285,13 +289,8 @@ HRESULT CheckEEDll();
 // and functions they call should test g_bDacBroken before calling any DAC enabled
 // feature.
 #define INIT_API_NO_RET_ON_FAILURE()                            \
-    INIT_API_NOEE()                                             \
-    if ((Status = CheckEEDll()) != S_OK)                        \
-    {                                                           \
-        ExtOut("Failed to find runtime module (%s), 0x%08x\n", GetRuntimeDllName(), Status); \
-        ExtOut("Some functionality may be impaired\n");         \
-    }                                                           \
-    else if ((Status = LoadClrDebugDll()) != S_OK)              \
+    INIT_API_NODAC()                                             \
+    if ((Status = LoadClrDebugDll()) != S_OK)              \
     {                                                           \
         ExtOut("Failed to load data access module (%s), 0x%08x\n", GetDacDllName(), Status); \
         ExtOut("Some functionality may be impaired\n");         \

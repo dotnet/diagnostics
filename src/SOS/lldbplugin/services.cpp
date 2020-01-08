@@ -1348,8 +1348,10 @@ LLDBServices::GetModuleSize(
             size += section.GetByteSize();
         }
     }
-
-    return size;
+    // For core dumps lldb doesn't return the section sizes when it 
+    // doesn't have access to the actual module file, but SOS (like 
+    // the SymbolReader code) still needs a non-zero module size.
+    return size != 0 ? size : LONG_MAX;
 }
 
 //----------------------------------------------------------------------------

@@ -90,8 +90,6 @@ void DumpStackWorker (DumpStackFlag &DSFlag);
 
 void UnassemblyUnmanaged (DWORD_PTR IP, BOOL bSuppressLines);
 
-HRESULT CheckEEDll ();
-
 BOOL GetCalleeSite (DWORD_PTR IP, DWORD_PTR &IPCallee);
 
 void DisasmAndClean (DWORD_PTR &IP, __out_ecount_opt(length) char *line, ULONG length);

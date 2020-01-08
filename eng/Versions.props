@@ -16,7 +16,7 @@
     <MicrosoftNETCoreApp31Version>3.1.0</MicrosoftNETCoreApp31Version>
     <MicrosoftAspNetCoreApp31Version>$(MicrosoftNETCoreApp31Version)</MicrosoftAspNetCoreApp31Version>
     <MicrosoftNETCoreAppVersion>5.0.0-alpha.1.20057.6</MicrosoftNETCoreAppVersion>
-    <MicrosoftAspNetCoreAppRefVersion>5.0.0-alpha.1.19614.22</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefVersion>5.0.0-alpha.1.19626.3</MicrosoftAspNetCoreAppRefVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
@@ -38,7 +38,7 @@
     <SystemMemoryVersion>4.5.3</SystemMemoryVersion>
     <XUnitVersion>2.4.1</XUnitVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-    <MicrosoftDotNetRemoteExecutorVersion>5.0.0-beta.19629.1</MicrosoftDotNetRemoteExecutorVersion>
+    <MicrosoftDotNetRemoteExecutorVersion>5.0.0-beta.20055.1</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
   </PropertyGroup>
   <PropertyGroup>

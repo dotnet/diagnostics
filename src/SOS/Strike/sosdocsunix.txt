@@ -56,8 +56,9 @@ Examining the GC history           Other
 HistInit (histinit)                SetHostRuntime (sethostruntime)
 HistRoot (histroot)                SetSymbolServer (setsymbolserver, loadsymbols)
 HistObj  (histobj)                 FAQ
-HistObjFind (histobjfind)          SOSFlush
-HistClear (histclear)              Help (soshelp)
+HistObjFind (histobjfind)          SOSFlush (sosflush)
+HistClear (histclear)              SOSStatus (sosstatus)
+                                   Help (soshelp)
 \\
 
 COMMAND: faq.
@@ -1954,3 +1955,11 @@ stack frames).
 
     (lldb) loadsymbols
     (lldb) bt
+\\
+
+COMMAND: sosstatus.
+SOSStatus [-reset]
+
+-reset - reset all the cached internal SOS state.
+
+Display internal SOS status or reset the internal cached state.

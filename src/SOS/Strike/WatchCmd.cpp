@@ -95,7 +95,6 @@ HRESULT WatchCmd::Print(int expansionIndex, __in_z WCHAR* expansionPath, __in_z 
     INIT_API_EE();
     INIT_API_DAC();
     EnableDMLHolder dmlHolder(TRUE);
-    IfFailRet(InitCorDebugInterface());
 
     PersistList* pFilterList = NULL;
     if(pFilterName != NULL)
@@ -208,7 +207,6 @@ HRESULT WatchCmd::SaveList(__in_z WCHAR* pSaveName)
     HRESULT Status = S_OK;
     INIT_API_EE();
     INIT_API_DAC();
-    IfFailRet(InitCorDebugInterface());
 
     RemoveList(pSaveName);
     PersistList* pList = new PersistList();
