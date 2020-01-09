@@ -88,8 +88,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 // Parse --clrevents parameter
                 if (clrevents.Length != 0)
                 {
-                    var p = Extensions.ToCLREventPipeProvider(clrevents);
-                    
+                    // Ignore --clrevents if CLR event provider was already specified via --profile or --providers command.
+                    if (enabledBy.ContainsKey(Extensions.CLREventProviderName))
+                    {
+                        Console.WriteLine($"The argument --clrevents {clrevents} will be ignored because it was specified via either --profile or --providers command.");
+                    }
+                    else
+                    {
+                        var clrProvider = Extensions.ToCLREventPipeProvider(clrevents);
+                        providerCollection.Add(clrProvider);
+                        enabledBy[Extensions.CLREventProviderName] = "--clrevents";
+                    }
                 }
 
 
@@ -225,7 +234,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Console.Out.WriteLine(String.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + $"{enabledBy[provider.Name]}");
             }
-            Console.Out.WriteLine();
         }
         private static string GetProviderDisplayString(EventPipeProvider provider) =>
             String.Format("{0, -40}", provider.Name) + String.Format("0x{0, -18}", $"{provider.Keywords:X16}") + String.Format("{0, -8}", provider.EventLevel.ToString() + $"({(int)provider.EventLevel})");
@@ -336,7 +344,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 alias: "--clrevents",
                 description: @"List of CLR runtime events to emit.")
             {
-                Argument = new Argument<string>(nameof: "clrevents", defaultValue: "")
+                Argument = new Argument<string>(name: "clrevents", defaultValue: "")
+            };
+
+        private static Option CLREventLevelOption() => 
+            new Option(
+                alias: "--clreventlevel",
+                description: @"Verbosity of CLR events to be emitted.")
+            {
+                Argument = new Argument<string>(name: "clreventlevel", defaultValue: "")
             };
     }
 }

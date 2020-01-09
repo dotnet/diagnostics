@@ -12,6 +12,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class Extensions
     {
+        public static string CLREventProviderName = "Microsoft-Windows-DotNETRuntime";
+
         private static EventLevel defaultEventLevel = EventLevel.Verbose;
         // Keep this in sync with runtime repo's clretwall.man
         private static Dictionary<string, long> CLREventKeywords = new Dictionary<string, long>()
@@ -74,7 +76,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     throw new ArgumentException($"{clrevents[i]} is not a valid CLR event keyword");
                 }
             }
-            return new EventPipeProvider("Microsoft-Windows-DotNETRuntime", (EventLevel)4, clrEventsKeywordsMask, null);
+            return new EventPipeProvider(CLREventProviderName, (EventLevel)4, clrEventsKeywordsMask, null);
         }
 
         private static EventLevel GetEventLevel(string token)
