@@ -91,7 +91,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     // Ignore --clrevents if CLR event provider was already specified via --profile or --providers command.
                     if (enabledBy.ContainsKey(Extensions.CLREventProviderName))
                     {
-                        Console.WriteLine($"The argument --clrevents {clrevents} will be ignored because it was specified via either --profile or --providers command.");
+                        Console.WriteLine($"The argument --clrevents {clrevents} will be ignored because the CLR provider was configured via either --profile or --providers command.");
                     }
                     else
                     {
