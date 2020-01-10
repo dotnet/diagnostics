@@ -222,7 +222,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console.Out.Write(String.Format("{0, -40}","Provider Name"));  // +4 is for the tab
             Console.Out.Write(String.Format("{0, -20}","Keywords"));
             Console.Out.Write(String.Format("{0, -20}","Level"));
-            Console.Out.Write("Enabled By\n");
+            Console.Out.Write("Enabled By\r\n");
             foreach (var provider in providers)
             {
                 Console.Out.WriteLine(String.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + $"{enabledBy[provider.Name]}");
