@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel);
 
         /// <summary>
         /// Collects a diagnostic trace from a currently running process.
@@ -32,8 +32,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="providers">A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'</param>
         /// <param name="profile">A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.</param>
         /// <param name="format">The desired format of the created trace file.</param>
+        /// <param name="duration">The duration of trace to be taken. </param>
+        /// <param name="clrevents">A list of CLR events to be emitted.</param>
+        /// <param name="clreventlevel">The verbosity level of CLR events</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel)
         {
             try
             {
@@ -56,7 +59,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     return ErrorCodes.ArgumentError;
                 }
 
-                if (profile.Length == 0 && providers.Length == 0)
+                if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
                 {
                     Console.Out.WriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
                     profile = "cpu-sampling";
@@ -81,6 +84,22 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
 
                     Profile.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
+                }
+
+                // Parse --clrevents parameter
+                if (clrevents.Length != 0)
+                {
+                    // Ignore --clrevents if CLR event provider was already specified via --profile or --providers command.
+                    if (enabledBy.ContainsKey(Extensions.CLREventProviderName))
+                    {
+                        Console.WriteLine($"The argument --clrevents {clrevents} will be ignored because the CLR provider was configured via either --profile or --providers command.");
+                    }
+                    else
+                    {
+                        var clrProvider = Extensions.ToCLREventPipeProvider(clrevents, clreventlevel);
+                        providerCollection.Add(clrProvider);
+                        enabledBy[Extensions.CLREventProviderName] = "--clrevents";
+                    }
                 }
 
 
@@ -284,7 +303,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 ProvidersOption(),
                 ProfileOption(),
                 CommonOptions.FormatOption(),
-                DurationOption()
+                DurationOption(),
+                CLREventsOption(),
+                CLREventLevelOption()
             };
 
         private static uint DefaultCircularBufferSizeInMB => 256;
@@ -330,6 +351,22 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Argument = new Argument<TimeSpan>(name: "duration-timespan", defaultValue: default),
                 IsHidden = true
+            };
+        
+        private static Option CLREventsOption() => 
+            new Option(
+                alias: "--clrevents",
+                description: @"List of CLR runtime events to emit.")
+            {
+                Argument = new Argument<string>(name: "clrevents", defaultValue: "")
+            };
+
+        private static Option CLREventLevelOption() => 
+            new Option(
+                alias: "--clreventlevel",
+                description: @"Verbosity of CLR events to be emitted.")
+            {
+                Argument = new Argument<string>(name: "clreventlevel", defaultValue: "")
             };
     }
 }
