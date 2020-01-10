@@ -56,7 +56,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 new List<EventPipeProvider>() : providers.Split(',').Select(ToProvider).ToList();
         }
 
-        public static EventPipeProvider ToCLREventPipeProvider(string clreventslist)
+        public static EventPipeProvider ToCLREventPipeProvider(string clreventslist, string clreventlevel)
         {
             if (clreventslist == null || clreventslist.Length == 0)
             {
@@ -67,7 +67,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             long clrEventsKeywordsMask = 0;
             for (var i = 0; i < clrevents.Length; i++)
             {
-                if (CLREventKeywords.TryGetValue(clrevents[i], out var keyword))
+                if (CLREventKeywords.TryGetValue(clrevents[i].ToLower(), out var keyword))
                 {
                     clrEventsKeywordsMask |= keyword;
                 }
@@ -76,7 +76,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     throw new ArgumentException($"{clrevents[i]} is not a valid CLR event keyword");
                 }
             }
-            return new EventPipeProvider(CLREventProviderName, (EventLevel)4, clrEventsKeywordsMask, null);
+
+            EventLevel level = (EventLevel)4; // Default event level
+
+            if (clreventlevel.Length != 0)
+            {
+                level = GetEventLevel(clreventlevel);
+            }
+
+            return new EventPipeProvider(CLREventProviderName, level, clrEventsKeywordsMask, null);
         }
 
         private static EventLevel GetEventLevel(string token)
