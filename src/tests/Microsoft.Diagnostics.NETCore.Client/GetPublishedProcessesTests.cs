@@ -48,7 +48,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 runner[i].Start();
                 pids[i] = runner[i].Pid;
             }
-            System.Threading.Thread.Sleep(2000);
             List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
             foreach (int p in publishedProcesses)
             {
