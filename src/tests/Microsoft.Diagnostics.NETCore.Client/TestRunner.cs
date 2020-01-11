@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using Xunit;
 using Xunit.Abstractions;
@@ -12,6 +13,9 @@ using Xunit.Abstractions;
 using Microsoft.Diagnostics.TestHelpers;
 
 using Microsoft.Diagnostics.NETCore.Client;
+using System.Threading.Tasks;
+using System.Runtime.InteropServices;
+using System.IO;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -57,9 +61,30 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 outputHelper.WriteLine($"Have total {testProcess.Modules.Count} modules loaded");
             }
 
-            outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Sleeping for {timeoutInMS} ms.");
-            Thread.Sleep(timeoutInMS);
-            outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Done sleeping. Ready to test.");
+            // Block until we see the IPC channel created, or until timeout specified.
+            Task monitorSocketTask = Task.Run(() =>
+            {
+                while (true)
+                {
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        // On Windows, namedpipe connection will block until the named pipe is ready to connect so no need to block here
+                        break;
+                    }
+                    else
+                    {
+                        // On Linux, we wait until the socket is created.
+                        var matchingFiles = Directory.GetFiles(Path.GetTempPath(), $"dotnet-diagnostic-{testProcess.Id}-*-socket"); // Try best match.
+                        if (matchingFiles.Length > 0)
+                        {
+                            break;
+                        }
+                    }
+                    Thread.Sleep(100);
+                }
+            });
+
+            monitorSocketTask.Wait(TimeSpan.FromMilliseconds(timeoutInMS));
         }
 
         public void Stop()
