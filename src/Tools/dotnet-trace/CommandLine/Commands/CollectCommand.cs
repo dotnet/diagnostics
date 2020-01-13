@@ -65,7 +65,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 else
                 {
 
-                    if (!File.Exists(transportPath) || !File.Exists(@"\\.pipe\" + transportPath))
+                    if (!File.Exists(transportPath) && !File.Exists(@"\\.pipe\" + transportPath))
                     {
                         Console.Error.WriteLine("Requested transport does not exist");
                         return ErrorCodes.ArgumentError;
