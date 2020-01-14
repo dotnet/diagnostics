@@ -2,20 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.TestHelpers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
-
-using Microsoft.Diagnostics.TestHelpers;
-
-using Microsoft.Diagnostics.NETCore.Client;
-using System.Threading.Tasks;
-using System.Runtime.InteropServices;
-using System.IO;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -38,7 +37,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             startInfo.EnvironmentVariables[key] = value;
         }
 
-        public void Start(int timeoutInMS=0)
+        public void Start(int timeoutInMS=15000)
         {
             if (outputHelper != null)
                 outputHelper.WriteLine("$[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName);
@@ -80,7 +79,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                             break;
                         }
                     }
-                    Thread.Sleep(100);
+                    Task.Delay(100);
                 }
             });
 
