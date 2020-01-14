@@ -2469,24 +2469,24 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
                 // To get the source line number of the actual code that threw an exception, the IP needs 
                 // to be adjusted in certain cases. 
                 //
-                // The IP of the leaf node stack frame (i == 0) points to either:
+                // The IP of the stack frame points to either:
                 //
                 // 1) The instruction that caused a hardware exception (div by zero, null ref, etc).
-                // 2) After the call instruction to an internal runtime function (FCALL like IL_Throw,
+                // 2) The instruction after the call to an internal runtime function (FCALL like IL_Throw,
                 //    IL_Rethrow, JIT_OverFlow, etc.) that caused a software exception.
+                // 3) The instruction after the call to a managed function (non-leaf node).
                 //
-                // It is case 2 that needs to adjust IP because these IL calls don't contain any other instructions
-                // after and point to next IL instruction and source line after the throw. We distinguish between #1
-                // and #2 by the bAsync flag which is set to true for hardware exceptions.
-                //
-                // The rest of the stack frame IPs also point to the instruction after the call. The difference 
-                // in this case is that these IL calls consist of more code after the call (at the minimum a nop
-                // sequence point) that is consider part of the IL instruction. The IP doesn't need to be adjusted
-                // in these cases.
+                // #2 and #3 are the cases that need to adjust IP because they point after the call instruction
+                // and may point to the next (incorrect) IL instruction/source line.  We distinguish these from
+                // #1 by the bAsync flag which is set to true for hardware exceptions.
                 //
                 // When the IP needs to be adjusted it is a lot simpler to decrement IP instead of trying to figure
                 // out the beginning of the instruction. It is enough for GetLineByOffset to return the correct line number.
-                SUCCEEDED(GetLineByOffset(TO_CDADDR((i == 0 && !bAsync) ? ste.ip - g_targetMachine->StackWalkIPAdjustOffset() : ste.ip), &linenum, filename, _countof(filename))))
+                //
+                // The unmodified IP is displayed (above by DumpMDInfoBuffer) which points after the exception in most 
+                // cases. This means that the printed IP and the printed line number often will not map to one another
+                // and this is intentional.
+                SUCCEEDED(GetLineByOffset(TO_CDADDR(bAsync ? ste.ip : ste.ip - g_targetMachine->StackWalkIPAdjustOffset()), &linenum, filename, _countof(filename))))
             {
                 swprintf_s(wszLineBuffer, _countof(wszLineBuffer), W("    %s [%s @ %d]\n"), so.String(), filename, linenum);
             }
@@ -13565,24 +13565,22 @@ public:
                     // To get the source line number of the actual code that threw an exception, the IP needs 
                     // to be adjusted in certain cases. 
                     //
-                    // The IP of leaf node stack frame (frameNumber == 0) points to either:
+                    // The IP of stack frame points to either:
                     //
                     // 1) Currently executing instruction (if you hit a breakpoint or are single stepping through).
                     // 2) The instruction that caused a hardware exception (div by zero, null ref, etc).
-                    // 3) After the call to an internal runtime function (FCALL like IL_Throw, IL_Rethrow, 
+                    // 3) The instruction after the call to an internal runtime function (FCALL like IL_Throw,
                     //    JIT_OverFlow, etc.) that caused a software exception.
+                    // 4) The instruction after the call to a managed function (non-leaf node).
                     //
-                    // It is case 3 that needs to adjust IP because these IL calls don't contain any other instructions
-                    // after and point to next IL instruction and source line after the throw. We distinguish this from
-                    // #1 or #2 by the present of an internal stack frame (usually HelperMethodFrame).
-                    //
-                    // The rest of the stack frame IPs also point to the instruction after the call. The difference 
-                    // in this case is that these IL calls consist of more code after the call (at the minimum a nop
-                    // sequence point) that is consider part of the IL instruction. The IP doesn't need to be adjusted
-                    // in these cases.
-                    bool bAdjustIPForLineNumber = frameNumber == 0 && internalFrames > 0;
+                    // #3 and #4 are the cases that need IP adjusted back because they point after the call instruction
+                    // and may point to the next (incorrect) IL instruction/source line.  We distinguish these from #1
+                    // or #2 by either being non-leaf node stack frame (#4) or the present of an internal stack frame (#3).
+                    bool bAdjustIPForLineNumber = frameNumber > 0 || internalFrames > 0;
                     frameNumber++;
-
+                    
+                    // The unmodified IP is displayed which points after the exception in most cases. This means that the
+                    // printed IP and the printed line number often will not map to one another and this is intentional.
                     out.WriteColumn(1, InstructionPtr(ip));
                     out.WriteColumn(2, MethodNameFromIP(ip, bSuppressLines, bFull, bFull, bAdjustIPForLineNumber));
 
