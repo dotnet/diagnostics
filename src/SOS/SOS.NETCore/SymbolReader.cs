@@ -19,6 +19,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace SOS
 {
@@ -309,7 +310,7 @@ namespace SOS
                         }
                     }
                 }
-                catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException)
+                catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException || ex is TaskCanceledException)
                 {
                     s_tracer.Error("{0}/{1:X16}: {2}", moduleFilePath, address, ex.Message);
                 }
