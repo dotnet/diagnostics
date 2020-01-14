@@ -44,6 +44,10 @@ namespace Microsoft.Internal.Common.Commands
                     {
                         sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
                     }
+                    catch (NullReferenceException)
+                    {
+                        sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
+                    }
                 }
                 console.Out.WriteLine(sb.ToString());
             }
