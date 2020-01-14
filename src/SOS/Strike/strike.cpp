@@ -2478,7 +2478,8 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
                 //
                 // #2 and #3 are the cases that need to adjust IP because they point after the call instruction
                 // and may point to the next (incorrect) IL instruction/source line.  We distinguish these from
-                // #1 by the bAsync flag which is set to true for hardware exceptions.
+                // #1 by the bAsync flag which is set to true for hardware exceptions and that it is a leaf node
+                // (i == 0).
                 //
                 // When the IP needs to be adjusted it is a lot simpler to decrement IP instead of trying to figure
                 // out the beginning of the instruction. It is enough for GetLineByOffset to return the correct line number.
@@ -2486,7 +2487,7 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
                 // The unmodified IP is displayed (above by DumpMDInfoBuffer) which points after the exception in most 
                 // cases. This means that the printed IP and the printed line number often will not map to one another
                 // and this is intentional.
-                SUCCEEDED(GetLineByOffset(TO_CDADDR(bAsync ? ste.ip : ste.ip - g_targetMachine->StackWalkIPAdjustOffset()), &linenum, filename, _countof(filename))))
+                SUCCEEDED(GetLineByOffset(TO_CDADDR(bAsync && i == 0 ? ste.ip : ste.ip - g_targetMachine->StackWalkIPAdjustOffset()), &linenum, filename, _countof(filename))))
             {
                 swprintf_s(wszLineBuffer, _countof(wszLineBuffer), W("    %s [%s @ %d]\n"), so.String(), filename, linenum);
             }
