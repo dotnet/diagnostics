@@ -145,6 +145,12 @@ public class SOS
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
+    public async Task LineNums(TestConfiguration config)
+    {
+        await RunTest(config, "LineNums", "LineNums.script", testTriage: true);
+    }
+
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task NestedExceptionTest(TestConfiguration config)
     {
         await RunTest(config, "NestedExceptionTest", "NestedExceptionTest.script", testTriage: true);
