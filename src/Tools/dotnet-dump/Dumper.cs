@@ -29,11 +29,32 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
         }
 
-        public async Task<int> Collect(IConsole console, int processId, string output, bool diag, DumpTypeOption type)
+        public async Task<int> Collect(IConsole console, int processId, string transportPath, string output, bool diag, DumpTypeOption type)
         {
-            if (processId == 0) {
-                console.Error.WriteLine("ProcessId is required.");
-                return 1;
+            if (string.IsNullOrEmpty(transportPath))
+            {
+                if (processId == 0) {
+                    console.Error.WriteLine("ProcessId is required.");
+                    return 1;
+                }
+            }
+            else
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    Console.Error.WriteLine("Cannot create dumps via trasnportPath on Windows");
+                    return 1;
+                }
+                else if (!File.Exists(transportPath) && !File.Exists(@"\\.pipe\" + transportPath))
+                {
+                    Console.Error.WriteLine("Requested transport does not exist");
+                    return 1;
+                }
+                else if (processId != 0)
+                {
+                    Console.Error.WriteLine("Cannot specify both a PID and specific transport");
+                    return 1;
+                }
             }
 
             try
@@ -61,7 +82,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    var client = new DiagnosticsClient(processId);
+                    var client = string.IsNullOrEmpty(transportPath) ? new DiagnosticsClient(processId) : new DiagnosticsClient(transportPath);
                     DumpType dumpType = type == DumpTypeOption.Heap ? DumpType.WithHeap : DumpType.Normal;
 
                     // Send the command to the runtime to initiate the core dump

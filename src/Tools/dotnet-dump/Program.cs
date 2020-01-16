@@ -31,9 +31,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
             new Command( name: "collect", description: "Capture dumps from a process")
             {
                 // Handler
-                CommandHandler.Create<IConsole, int, string, bool, Dumper.DumpTypeOption>(new Dumper().Collect),
+                CommandHandler.Create<IConsole, int, string, string, bool, Dumper.DumpTypeOption>(new Dumper().Collect),
                 // Options
-                ProcessIdOption(), OutputOption(), DiagnosticLoggingOption(), TypeOption()
+                ProcessIdOption(), TransportPathOption(), OutputOption(), DiagnosticLoggingOption(), TypeOption()
             };
 
         private static Option ProcessIdOption() =>
@@ -42,6 +42,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 description: "The process id to collect a memory dump.")
             {
                 Argument = new Argument<int>(name: "pid")
+            };
+
+        private static Option TransportPathOption() =>
+            new Option(
+                alias: "--transport-path",
+                description: "A fully qualified path and filename for the OS transport to communicate over.  Supersedes the pid argument if provided.")
+            {
+                Argument = new Argument<string>(name: "transportPath")
             };
 
         private static Option OutputOption() =>
