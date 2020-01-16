@@ -123,6 +123,9 @@ if NOT "%__CrossArch%" == "" set __CrossComponentBinDir=%__CrossComponentBinDir%
 set "__CMakeBinDir=%__BinDir%"
 set "__CMakeBinDir=%__CMakeBinDir:\=/%"
 
+:: Common msbuild arguments
+set "__CommonBuildArgs=/v:!__Verbosity! /p:Configuration=%__BuildType% /p:BuildArch=%__BuildArch% %__UnprocessedBuildArgs%"
+
 if not exist "%__BinDir%"           md "%__BinDir%"
 if not exist "%__IntermediatesDir%" md "%__IntermediatesDir%"
 if not exist "%__LogDir%"           md "%__LogDir%"
@@ -174,13 +177,13 @@ if /i %__BuildCrossArch% EQU 1 (
 
     echo Generating Version Header
     set __GenerateVersionRestoreLog="%__LogDir%\GenerateVersionRestore.binlog"
-    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.csproj" /v:!__Verbosity! /bl:!__GenerateVersionRestoreLog! /t:Restore /p:Configuration=%__BuildType% /p:BuildArch=%__BuildArch% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
+    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionRestoreLog! /t:Restore %__CommonBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Restore FAILED
         exit /b 1
     )
     set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.csproj" /v:!__Verbosity! /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__CrossCompIntermediatesDir%\_version.h /p:Configuration=%__BuildType% /p:BuildArch=%__BuildArch% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
+    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__CrossCompIntermediatesDir%\_version.h %__CommonBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
         exit /b 1
@@ -209,7 +212,7 @@ if /i %__BuildCrossArch% EQU 1 (
     set __BuildLog="%__LogDir%\Cross.Build.binlog"
 
     :: MSBuild.exe is the only one that has the C++ targets. "%__DotNetCli% msbuild" fails because VCTargetsPath isn't defined.
-    msbuild.exe %__CrossCompIntermediatesDir%\install.vcxproj /v:!__Verbosity! /bl:!__BuildLog! /p:Configuration=%__BuildType% /p:Platform=%__CrossArch% %__UnprocessedBuildArgs%
+    msbuild.exe %__CrossCompIntermediatesDir%\install.vcxproj /bl:!__BuildLog! %__CommonBuildArgs%
 
     if not !ERRORLEVEL! == 0 (
         echo %__MsgPrefix%Error: cross-arch components build failed. Refer to the build log files for details:
@@ -258,13 +261,13 @@ if %__Build% EQU 1 (
 
     echo Generating Version Header
     set __GenerateVersionRestoreLog="%__LogDir%\GenerateVersionRestore.binlog"
-    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.csproj" /v:!__Verbosity! /bl:!__GenerateVersionRestoreLog! /t:Restore /p:Configuration=%__BuildType% /p:BuildArch=%__BuildArch% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
+    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionRestoreLog! /t:Restore %__CommonBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Restore FAILED
         exit /b 1
     )
     set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.csproj" /v:!__Verbosity! /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h /p:Configuration=%__BuildType% /p:BuildArch=%__BuildArch% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
+    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h %__CommonBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
         exit /b 1
@@ -292,7 +295,7 @@ if %__Build% EQU 1 (
     set __BuildLog="%__LogDir%\Native.Build.binlog"
 
     :: MSBuild.exe is the only one that has the C++ targets. "%__DotNetCli% msbuild" fails because VCTargetsPath isn't defined.
-    msbuild.exe %__IntermediatesDir%\install.vcxproj /v:!__Verbosity! /bl:!__BuildLog! /p:Configuration=%__BuildType% /p:BuildArch=%__BuildArch% /p:Platform=%__BuildArch% %__UnprocessedBuildArgs%
+    msbuild.exe %__IntermediatesDir%\install.vcxproj /bl:!__BuildLog! %__CommonBuildArgs%
 
     if not !ERRORLEVEL! == 0 (
         echo %__MsgPrefix%Error: native component build failed. Refer to the build log files for details:
