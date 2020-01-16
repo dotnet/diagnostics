@@ -52,7 +52,7 @@ if ($ci) {
 
 # Install sdk for building, restore and build managed components.
 if (-not $skipmanaged) {
-    Invoke-Expression "& `"$engroot\common\build.ps1`" -build -configuration $configuration -verbosity $verbosity /p:TestArchitectures=$architecture $remainingargs"
+    Invoke-Expression "& `"$engroot\common\build.ps1`" -build -binaryLog -configuration $configuration -verbosity $verbosity /p:BuildArch=$architecture /p:TestArchitectures=$architecture $remainingargs"
     if ($lastExitCode -ne 0) {
         exit $lastExitCode
     }
@@ -69,7 +69,7 @@ if (-not $skipnative) {
 # Run the xunit tests
 if ($test -or $dailytest) {
     if (-not $crossbuild) {
-        & "$engroot\common\build.ps1" -test -configuration $configuration -verbosity $verbosity -ci:$ci /bl:$logdir\Test.binlog /p:TestArchitectures=$architecture /p:BuildArch=$architecture /p:DailyTest=$dailyTest
+        & "$engroot\common\build.ps1" -test -configuration $configuration -verbosity $verbosity -ci:$ci /bl:$logdir\Test.binlog /p:BuildArch=$architecture /p:TestArchitectures=$architecture /p:DailyTest=$dailyTest
         if ($lastExitCode -ne 0) {
             exit $lastExitCode
         }
