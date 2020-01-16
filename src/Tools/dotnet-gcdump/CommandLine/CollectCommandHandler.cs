@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string transportPath, string output, int timeout, bool verbose);
 
         /// <summary>
         /// Collects a gcdump from a currently running process.
@@ -24,24 +24,40 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="processId">The process to collect the gcdump from.</param>
         /// <param name="output">The output path for the collected gcdump.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string transportPath, string output, int timeout, bool verbose)
         {
             try
             {
-                if (processId < 0)
+                if (string.IsNullOrEmpty(transportPath))
                 {
-                    Console.Out.WriteLine($"The PID cannot be negative: {processId}");
-                    return -1;
-                }
+                    if (processId < 0)
+                    {
+                        Console.Out.WriteLine($"The PID cannot be negative: {processId}");
+                        return -1;
+                    }
 
-                if (processId == 0)
+                    if (processId == 0)
+                    {
+                        Console.Out.WriteLine($"-p|--process-id is required");
+                        return -1;
+                    }
+                }
+                else
                 {
-                    Console.Out.WriteLine($"-p|--process-id is required");
-                    return -1;
+                    if (!File.Exists(transportPath) && !File.Exists(@"\\.\pipe\" + transportPath))
+                    {
+                        Console.Error.WriteLine("Requested transport does not exist");
+                        return -1;
+                    }
+                    else if (processId != 0)
+                    {
+                        Console.Error.WriteLine("Cannot specify both a PID and a specific transport");
+                        return -1;
+                    }
                 }
 
                 output = string.IsNullOrEmpty(output) ? 
-                    $"{DateTime.Now.ToString(@"yyyyMMdd\_hhmmss")}_{processId}.gcdump" :
+                    $"{DateTime.Now.ToString(@"yyyyMMdd\_hhmmss")}_{(processId != 0 ? processId.ToString() : (new FileInfo(transportPath)).Name)}.gcdump" :
                     output;
 
                 FileInfo outputFileInfo = new FileInfo(output);
@@ -61,8 +77,16 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 {
                     var memoryGraph = new Graphs.MemoryGraph(50_000);
                     var heapInfo = new DotNetHeapInfo();
-                    if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, memoryGraph, verbose ? Console.Out : TextWriter.Null, timeout, heapInfo))
+                    if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(
+                            ct,
+                            processId != 0 ? processId.ToString() : transportPath,
+                            memoryGraph,
+                            verbose ? Console.Out : TextWriter.Null,
+                            timeout,
+                            heapInfo))
+                    {
                         return false;
+                    }
                     memoryGraph.AllowReading();
                     GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
                     return true;
@@ -102,7 +126,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 // Handler
                 HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler(),
                 // Options
-                ProcessIdOption(), OutputPathOption(), VerboseOption(), TimeoutOption() 
+                ProcessIdOption(), TransportPathOption(), OutputPathOption(), VerboseOption(), TimeoutOption() 
             };
 
         public static Option ProcessIdOption() =>
@@ -111,6 +135,14 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 description: "The process id to collect the trace.")
             {
                 Argument = new Argument<int>(name: "pid", defaultValue: 0),
+            };
+
+        public static Option TransportPathOption() =>
+            new Option(
+                aliases: new[] { "--transport-path" },
+                description: "A fully qualified path and filename for the OS transport to communicate over.  Supersedes the pid argument if provided.")
+            {
+                Argument = new Argument<string>(name: "transportPath"),
             };
 
         private static Option OutputPathOption() =>

@@ -109,11 +109,6 @@ public class DotNetHeapDumpGraphReader
         // Remember the module IDs too.              
         Action<ModuleLoadUnloadTraceData> moduleCallback = delegate (ModuleLoadUnloadTraceData data)
         {
-            if (data.ProcessID != m_processId)
-            {
-                return;
-            }
-
             if (!m_moduleID2Name.ContainsKey((Address)data.ModuleID))
             {
                 m_moduleID2Name[(Address)data.ModuleID] = data.ModuleILPath;
@@ -130,56 +125,7 @@ public class DotNetHeapDumpGraphReader
         var symbolParser = new SymbolTraceEventParser(source);
         symbolParser.ImageIDDbgID_RSDS += delegate (DbgIDRSDSTraceData data)
         {
-            if (data.ProcessID != m_processId)
-            {
-                return;
-            }
-
             lastDbgData = (DbgIDRSDSTraceData)data.Clone();
-        };
-
-        source.Kernel.ImageGroup += delegate (ImageLoadTraceData data)
-        {
-            if (m_processId == 0)
-            {
-                return;
-            }
-
-            if (data.ProcessID != m_processId)
-            {
-                return;
-            }
-
-            Module module = new Module(data.ImageBase);
-            module.Path = data.FileName;
-            module.Size = data.ImageSize;
-            module.BuildTime = data.BuildTime;
-            if (lastDbgData != null && data.TimeStampRelativeMSec == lastDbgData.TimeStampRelativeMSec)
-            {
-                module.PdbGuid = lastDbgData.GuidSig;
-                module.PdbAge = lastDbgData.Age;
-                module.PdbName = lastDbgData.PdbFileName;
-            }
-            m_modules[module.ImageBase] = module;
-        };
-
-        // TODO this does not work in the circular case
-        source.Kernel.ProcessGroup += delegate (ProcessTraceData data)
-        {
-            if (0 <= m_processId || m_processName == null)
-            {
-                return;
-            }
-
-            if (string.Compare(data.ProcessName, processNameOrId, StringComparison.OrdinalIgnoreCase) == 0)
-            {
-                m_log.WriteLine("Found process id {0} for process Name {1}", processNameOrId, data.ProcessName);
-                m_processId = data.ProcessID;
-            }
-            else
-            {
-                m_log.WriteLine("Found process {0} but does not match {1}", data.ProcessName, processNameOrId);
-            }
         };
 
         source.Clr.GCStart += delegate (GCStartTraceData data)
@@ -190,17 +136,6 @@ public class DotNetHeapDumpGraphReader
 
             if (data.TimeStampRelativeMSec < m_ignoreUntilMSec)
             {
-                return;
-            }
-
-            if (m_processId == 0)
-            {
-                m_processId = data.ProcessID;
-                m_log.WriteLine("Process wildcard selects process id {0}", m_processId);
-            }
-            if (data.ProcessID != m_processId)
-            {
-                m_log.WriteLine("GC Start found but Process ID {0} != {1} desired ID", data.ProcessID, m_processId);
                 return;
             }
 
@@ -235,7 +170,7 @@ public class DotNetHeapDumpGraphReader
 
         source.Clr.GCStop += delegate (GCEndTraceData data)
         {
-            if (m_ignoreEvents || data.ProcessID != m_processId)
+            if (m_ignoreEvents)
             {
                 return;
             }
@@ -264,19 +199,12 @@ public class DotNetHeapDumpGraphReader
 
         source.Clr.TypeBulkType += delegate (GCBulkTypeTraceData data)
         {
-            // Don't check m_ignoreEvents here, as BulkType events can be emitted by other events...such as the GC allocation event.
-            // This means that when setting m_processId to 0 in the command line may still lose type events.
-            if (data.ProcessID != m_processId)
-            {
-                return;
-            }
-
             m_typeBlocks.Enqueue((GCBulkTypeTraceData)data.Clone());
         };
 
         source.Clr.GCBulkNode += delegate (GCBulkNodeTraceData data)
         {
-            if (m_ignoreEvents || data.ProcessID != m_processId)
+            if (m_ignoreEvents)
             {
                 return;
             }
@@ -286,7 +214,7 @@ public class DotNetHeapDumpGraphReader
 
         source.Clr.GCBulkEdge += delegate (GCBulkEdgeTraceData data)
         {
-            if (m_ignoreEvents || data.ProcessID != m_processId)
+            if (m_ignoreEvents)
             {
                 return;
             }
@@ -296,7 +224,7 @@ public class DotNetHeapDumpGraphReader
 
         source.Clr.GCBulkRootEdge += delegate (GCBulkRootEdgeTraceData data)
         {
-            if (m_ignoreEvents || data.ProcessID != m_processId)
+            if (m_ignoreEvents)
             {
                 return;
             }
@@ -377,7 +305,7 @@ public class DotNetHeapDumpGraphReader
 
         source.Clr.GCBulkRCW += delegate (GCBulkRCWTraceData data)
         {
-            if (m_ignoreEvents || data.ProcessID != m_processId)
+            if (m_ignoreEvents)
             {
                 return;
             }
@@ -391,7 +319,7 @@ public class DotNetHeapDumpGraphReader
 
         source.Clr.GCBulkRootCCW += delegate (GCBulkRootCCWTraceData data)
         {
-            if (m_ignoreEvents || data.ProcessID != m_processId)
+            if (m_ignoreEvents)
             {
                 return;
             }
@@ -401,7 +329,7 @@ public class DotNetHeapDumpGraphReader
 
         source.Clr.GCBulkRootStaticVar += delegate (GCBulkRootStaticVarTraceData data)
         {
-            if (m_ignoreEvents || data.ProcessID != m_processId)
+            if (m_ignoreEvents)
             {
                 return;
             }
@@ -411,7 +339,7 @@ public class DotNetHeapDumpGraphReader
 
         source.Clr.GCBulkRootConditionalWeakTableElementEdge += delegate (GCBulkRootConditionalWeakTableElementEdgeTraceData data)
         {
-            if (m_ignoreEvents || data.ProcessID != m_processId)
+            if (m_ignoreEvents)
             {
                 return;
             }
@@ -432,7 +360,7 @@ public class DotNetHeapDumpGraphReader
 
         source.Clr.GCGenerationRange += delegate (GCGenerationRangeTraceData data)
         {
-            if (m_ignoreEvents || data.ProcessID != m_processId)
+            if (m_ignoreEvents)
             {
                 return;
             }
