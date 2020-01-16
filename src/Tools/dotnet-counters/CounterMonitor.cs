@@ -20,6 +20,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
     public class CounterMonitor
     {
         private int _processId;
+        private int _transportPath;
         private int _interval;
         private List<string> _counterList;
         private CancellationToken _ct;
@@ -82,7 +83,34 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _renderer.Stop();
         }
 
-        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval)
+        private bool ValidateProcessIdAndTransportPath()
+        {
+            if (string.IsNullOrEmpty(_transportPath))
+            {
+                if (_processId == 0)
+                {
+                    _console.Error.WriteLine("--process-id is required.");
+                    return false;
+                }
+            }
+            else
+            {
+                if (!File.Exists(transportPath) && !File.Exists(@"\\.pipe\" + transportPath))
+                {
+                    Console.Error.WriteLine("Requested transport does not exist");
+                    return false;
+                }
+                else if (processId != 0)
+                {
+                    Console.Error.WriteLine("Cannot specify both a PID and specific transport");
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, string transportPath, int refreshInterval)
         {
             try
             {
@@ -90,9 +118,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
                 _console = console;
                 _processId = processId;
+                _transportPath = transportPath;
                 _interval = refreshInterval;
                 _renderer = new ConsoleWriter();
-                _diagnosticsClient = new DiagnosticsClient(processId);
+
+                if (!ValidateProcessIdAndTransportPath())
+                    return 1;
+
+                _diagnosticsClient = string.IsNullOrEmpty(_transportPath) ? 
+                    new DiagnosticsClient(_processId) : 
+                    new DiagnosticsClient(_transportPath);
 
                 return await Start();
             }
@@ -110,7 +145,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output)
+        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, string transportPath, int refreshInterval, CountersExportFormat format, string output)
         {
             try
             {
@@ -118,6 +153,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
                 _console = console;
                 _processId = processId;
+                _transportPath = transportPath;
                 _interval = refreshInterval;
                 _output = output;
                 _diagnosticsClient = new DiagnosticsClient(processId);
@@ -217,12 +253,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private async Task<int> Start()
         {
-            if (_processId == 0)
-            {
-                _console.Error.WriteLine("--process-id is required.");
-                return 1;
-            }
-
             string providerString = BuildProviderString();
             if (providerString.Length == 0)
             {

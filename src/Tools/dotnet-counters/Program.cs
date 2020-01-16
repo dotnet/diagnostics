@@ -29,9 +29,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 description: "Start monitoring a .NET application")
             {
                 // Handler
-                CommandHandler.Create<CancellationToken, List<string>, IConsole, int, int>(new CounterMonitor().Monitor),
+                CommandHandler.Create<CancellationToken, List<string>, IConsole, int, string, int>(new CounterMonitor().Monitor),
                 // Arguments and Options
-                CounterList(), ProcessIdOption(), RefreshIntervalOption()
+                CounterList(), ProcessIdOption(), TransportPathOption(), RefreshIntervalOption()
             };
 
         private static Command CollectCommand() =>
@@ -42,7 +42,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // Handler
                 HandlerDescriptor.FromDelegate((ExportDelegate)new CounterMonitor().Collect).GetCommandHandler(),
                 // Arguments and Options
-                CounterList(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption()
+                CounterList(), ProcessIdOption(), TransportPathOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption()
             };
 
         private static Option ProcessIdOption() =>
@@ -51,6 +51,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 description: "The process id that will be monitored.")
             {
                 Argument = new Argument<int>(name: "pid")
+            };
+
+        private static Option TransportPathOption() =>
+            new Option(
+                alias: "--transport-path",
+                description: "A fully qualified path and filename for the OS transport to communicate over.  Supersedes the pid argument if provided.")
+            {
+                Argument = new Argument<string>(name: "transportPath")
             };
 
         private static Option RefreshIntervalOption() =>
