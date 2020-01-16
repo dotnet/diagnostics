@@ -345,7 +345,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static Option TransportPathOption() =>
             new Option(
-                alias: "--transportPath",
+                alias: "--transport-path",
                 description: "A fully qualified path and filename for the OS transport to communicate over.  Supersedes the pid argument if provided.")
             {
                 Argument = new Argument<string>(name: "transportPath")
