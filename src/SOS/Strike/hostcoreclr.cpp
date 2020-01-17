@@ -992,7 +992,7 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
         size_t lastSlash = diasymreaderPath.rfind(DIRECTORY_SEPARATOR_CHAR_A);
         if (lastSlash == std::string::npos)
         {
-            ExtErr("Error: Failed to parse sos module name\n");
+            ExtErr("Error: Failed to parse SOS module name\n");
             return E_FAIL;
         }
         diasymreaderPath.erase(lastSlash + 1);
@@ -1001,7 +1001,7 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
         // We now need a binder object that will take the module and return a 
         if (FAILED(Status = CreateInstanceFromPath(CLSID_CorSymBinder_SxS, IID_ISymUnmanagedBinder3, diasymreaderPath.c_str(), &g_hmoduleSymBinder, (void**)&g_pSymBinder)))
         {
-            ExtOut("SOS error: Unable to find the diasymreader module/interface %08x at %s\n", Status, diasymreaderPath.c_str());
+            ExtDbgOut("SOS error: Unable to find the diasymreader module/interface %08x at %s\n", Status, diasymreaderPath.c_str());
             return Status;
         }
         OnUnloadTask::Register(CleanupSymBinder);

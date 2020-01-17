@@ -29,6 +29,11 @@ jobs:
           _BuildConfig: Release
           _BuildArch: arm
           _PublishArtifacts: bin/Windows_NT.arm.Release
+        Build_Release_arm64:
+          _BuildOnly: true
+          _BuildConfig: Release
+          _BuildArch: arm64
+          _PublishArtifacts: bin/Windows_NT.arm64.Release
 
 - template: /eng/build.yml
   parameters:
@@ -251,6 +256,15 @@ jobs:
       inputs:
         artifactName: Windows_arm_Release
         targetPath: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.arm.Release'
+      condition: succeeded()
+
+    # Windows arm64 download
+
+    - task: DownloadPipelineArtifact@2
+      displayName: Download Windows Arm64 Artifacts
+      inputs:
+        artifactName: Windows_arm64_Release
+        targetPath: '$(Build.SourcesDirectory)/artifacts/bin/Windows_NT.arm64.Release'
       condition: succeeded()
 
     # Linux x64 download

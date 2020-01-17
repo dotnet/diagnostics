@@ -97,9 +97,7 @@ DECLARE_HANDLE(OBJECTHANDLE);
 #elif defined(_ARM_)
 #define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.arm.dll"
 #elif defined(_ARM64_)
-// Use diasymreader until the package has an arm64 version - issue #7360
-//#define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.arm64.dll"
-#define NATIVE_SYMBOL_READER_DLL "diasymreader.dll"
+#define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.arm64.dll"
 #endif
 
 // PREFIX macros - Begin
