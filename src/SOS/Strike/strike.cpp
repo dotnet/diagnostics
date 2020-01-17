@@ -14553,7 +14553,7 @@ end:
 
 DECLARE_API(dbgout)
 {
-    INIT_API();
+    INIT_API_EXT();
 
     BOOL bOff = FALSE;
 
@@ -16018,7 +16018,7 @@ DECLARE_API(SetSymbolServer)
         DisableSymbolStore();
     }
 
-    if (msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr || searchDirectory.data != nullptr || windowsSymbolPath.data != nullptr)
+    if (logging || msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr || searchDirectory.data != nullptr || windowsSymbolPath.data != nullptr)
     {
         Status = InitializeSymbolStore(logging, msdl, symweb, symbolServer.data, (int)timeoutInMinutes, symbolCache.data, searchDirectory.data, windowsSymbolPath.data);
         if (FAILED(Status))

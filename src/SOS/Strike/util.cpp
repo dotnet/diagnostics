@@ -1497,7 +1497,7 @@ void AssemblyInfo(DacpAssemblyData *pAssembly)
     ExtOut("ClassLoader:        %p\n", SOS_PTR(pAssembly->ClassLoader));
     if ((ULONG64)pAssembly->AssemblySecDesc != NULL)
         ExtOut("SecurityDescriptor: %p\n", SOS_PTR(pAssembly->AssemblySecDesc));
-    ExtOut("  Module Name\n");
+    ExtOut("  Module\n");
     
     ArrayHolder<CLRDATA_ADDRESS> Modules = new CLRDATA_ADDRESS[pAssembly->ModuleCount];
     if (Modules == NULL 
@@ -1507,17 +1507,16 @@ void AssemblyInfo(DacpAssemblyData *pAssembly)
        return;
     }
     
-    for (UINT n=0;n<pAssembly->ModuleCount;n++)
+    for (UINT n = 0; n < pAssembly->ModuleCount; n++)
     {
         if (IsInterrupt())
         {
             return;
         }
-
         CLRDATA_ADDRESS ModuleAddr = Modules[n];
-        DMLOut("%s    " WIN86_8SPACES, DMLModule(ModuleAddr));
+        DMLOut("  %s    " WIN86_8SPACES, DMLModule(ModuleAddr));
         DacpModuleData moduleData;
-        if (moduleData.Request(g_sos,ModuleAddr)==S_OK)
+        if (moduleData.Request(g_sos, ModuleAddr) == S_OK)
         {
             WCHAR fileName[MAX_LONGPATH];
             FileNameForModule (&moduleData, fileName);
@@ -1530,6 +1529,10 @@ void AssemblyInfo(DacpAssemblyData *pAssembly)
                 ExtOut("%S\n", (moduleData.bIsReflection) ? W("Dynamic Module") : W("Unknown Module"));
             }
         }        
+        else
+        {
+            ExtOut("Request module data FAILED\n");
+        }
     }
 }
 
@@ -2131,7 +2134,7 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
     *numModule = 0;
 
     DacpAppDomainStoreData adsData;
-    if (adsData.Request(g_sos)!=S_OK)
+    if (adsData.Request(g_sos) != S_OK)
         return NULL;
 
     ArrayHolder<CLRDATA_ADDRESS> pAssemblyArray = NULL;
@@ -2144,8 +2147,7 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
         return NULL;
     }
     ArrayHolder<CLRDATA_ADDRESS> pArray = new CLRDATA_ADDRESS[arrayLength];
-
-    if (pArray==NULL)
+    if (pArray == NULL)
     {
         ReportOOM();
         return NULL;
@@ -2156,7 +2158,7 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
     {
         pArray[1] = adsData.sharedDomain;
     }
-    if (g_sos->GetAppDomainList(adsData.DomainCount, pArray.GetPtr()+numSpecialDomains, NULL)!=S_OK)
+    if (g_sos->GetAppDomainList(adsData.DomainCount, pArray.GetPtr() + numSpecialDomains, NULL) != S_OK)
     {
         ExtOut("Unable to get array of AppDomains\n");
         return NULL;
@@ -2167,7 +2169,7 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
     int maxList = arrayLength; // account for system and shared domains
     if (maxList <= 0 || !ClrSafeInt<size_t>::multiply(maxList, sizeof(PVOID), AllocSize))
     {
-        ExtOut("Integer overflow error.\n");
+        ExtOut("<integer overflow>\n");
         return NULL;
     }
     
@@ -2190,7 +2192,7 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
         }
         
         DacpAppDomainData appDomain;
-        if (FAILED(appDomain.Request(g_sos,pArray[n])))
+        if (FAILED(appDomain.Request(g_sos, pArray[n])))
         {
             // Don't print a failure message here, there is a very normal case when checking
             // for modules after clr is loaded but before any AppDomains or assemblies are created
@@ -2216,7 +2218,7 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
 
             if (FAILED(g_sos->GetAssemblyList(appDomain.AppDomainPtr, appDomain.AssemblyCount, pAssemblyArray, NULL)))
             {
-                ExtOut("Unable to get array of Assemblies for the given AppDomain..\n");
+                ExtOut("Unable to get array of Assemblies for the given AppDomain\n");
                 goto Failure;
             }
 
@@ -2231,14 +2233,14 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
                 DacpAssemblyData assemblyData;
                 if (FAILED(assemblyData.Request(g_sos, pAssemblyArray[nAssem])))
                 {
-                    ExtOut("Failed to request assembly.\n");
+                    ExtOut("Failed to request assembly\n");
                     goto Failure;
                 }
 
                 pModules = new CLRDATA_ADDRESS[assemblyData.ModuleCount];
                 if (FAILED(g_sos->GetAssemblyModuleList(assemblyData.AssemblyPtr, assemblyData.ModuleCount, pModules, NULL)))
                 {
-                    ExtOut("Failed to get the modules for the given assembly.\n");
+                    ExtOut("Failed to get the modules for the given assembly\n");
                     goto Failure;
                 }
 
@@ -2252,10 +2254,10 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
 
                     CLRDATA_ADDRESS ModuleAddr = pModules[nModule];
                     DacpModuleData ModuleData;
-                    if (FAILED(ModuleData.Request(g_sos,ModuleAddr)))
+                    if (FAILED(ModuleData.Request(g_sos, ModuleAddr)))
                     {
-                        ExtOut("Failed to request Module data from assembly.\n");
-                        goto Failure;
+                        ExtDbgOut("Failed to request module data from assembly for %p\n", ModuleAddr);
+                        continue;
                     }
 
                     if (mName != NULL)

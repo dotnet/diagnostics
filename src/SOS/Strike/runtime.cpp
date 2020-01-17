@@ -307,14 +307,23 @@ LPCSTR Runtime::GetDacFilePath()
                     std::string dacSymLink(tmpPath);
                     dacSymLink.append(NETCORE_DAC_DLL_NAME_A);
 
-                    int error = symlink(dacModulePath.c_str(), dacSymLink.c_str());
-                    if (error == 0)
+                    // Check if the DAC file already exists in the temp directory because
+                    // of a "loadsymbols" command which downloads everything.
+                    if (access(dacSymLink.c_str(), F_OK) == 0)
                     {
                         dacModulePath.assign(dacSymLink);
                     }
                     else
                     {
-                        ExtErr("symlink(%s, %s) FAILED %s\n", dacModulePath.c_str(), dacSymLink.c_str(), strerror(errno));
+                        int error = symlink(dacModulePath.c_str(), dacSymLink.c_str());
+                        if (error == 0)
+                        {
+                            dacModulePath.assign(dacSymLink);
+                        }
+                        else
+                        {
+                            ExtErr("symlink(%s, %s) FAILED %s\n", dacModulePath.c_str(), dacSymLink.c_str(), strerror(errno));
+                        }
                     }
                 }
 #endif
