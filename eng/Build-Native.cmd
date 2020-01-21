@@ -176,14 +176,8 @@ if /i %__BuildCrossArch% EQU 1 (
     if not exist "%__CrossCompIntermediatesDir%" md "%__CrossCompIntermediatesDir%"
 
     echo Generating Version Header
-    set __GenerateVersionRestoreLog="%__LogDir%\GenerateVersionRestore.binlog"
-    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionRestoreLog! /t:Restore %__CommonBuildArgs%
-    if not !errorlevel! == 0 (
-        echo Generate Version Restore FAILED
-        exit /b 1
-    )
     set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__CrossCompIntermediatesDir%\_version.h %__CommonBuildArgs%
+    powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__ProjectDir%\eng\common\msbuild.ps1" "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /restore /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__CrossCompIntermediatesDir%\_version.h %__CommonBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
         exit /b 1
@@ -260,14 +254,8 @@ if %__Build% EQU 1 (
     )
 
     echo Generating Version Header
-    set __GenerateVersionRestoreLog="%__LogDir%\GenerateVersionRestore.binlog"
-    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionRestoreLog! /t:Restore %__CommonBuildArgs%
-    if not !errorlevel! == 0 (
-        echo Generate Version Restore FAILED
-        exit /b 1
-    )
     set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    "%__DotNetCli%" msbuild "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h %__CommonBuildArgs%
+    powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__ProjectDir%\eng\common\msbuild.ps1" "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /restore /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h %__CommonBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
         exit /b 1
