@@ -95,7 +95,7 @@ SOSCOMMAND:DumpAssembly <POUT>\s*Assembly:\s+(<HEXVAL>)\s+\[.*<POUT>
 VERIFY:\s*Parent Domain:\s+<HEXVAL>\s+
 VERIFY:\s*Name:\s+.*(System\.Private\.CoreLib(\.ni)?\.dll|mscorlib.dll)\s+
 
-SOSCOMMAND:DumpModule <POUT>\s+Module Name\s+(<HEXVAL>)\s+.*<POUT>
+SOSCOMMAND:DumpModule <POUT>\s+Module\s+(<HEXVAL>)\s+.*<POUT>
 VERIFY:\s*PEFile:\s+<HEXVAL>\s+
 VERIFY:\s*ModuleId:\s+<HEXVAL>\s+
 VERIFY:\s*LoaderHeap:\s+<HEXVAL>\s+
