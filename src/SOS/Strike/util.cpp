@@ -2256,7 +2256,7 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
                     DacpModuleData ModuleData;
                     if (FAILED(ModuleData.Request(g_sos, ModuleAddr)))
                     {
-                        ExtDbgOut("Failed to request module data from assembly for %p\n", ModuleAddr);
+                        ExtDbgOut("Failed to request module data from assembly at %p\n", ModuleAddr);
                         continue;
                     }
 
