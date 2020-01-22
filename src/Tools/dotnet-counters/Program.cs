@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
     internal class Program
     {
-        delegate Task<int> ExportDelegate(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output);
+        delegate Task<int> ExportDelegate(CancellationToken ct, List<string> counter_list, IConsole console, int processId, string transportPath, int refreshInterval, CountersExportFormat format, string output);
 
         private static Command MonitorCommand() =>
             new Command(

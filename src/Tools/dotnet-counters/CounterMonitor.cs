@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
     public class CounterMonitor
     {
         private int _processId;
-        private int _transportPath;
+        private string _transportPath;
         private int _interval;
         private List<string> _counterList;
         private CancellationToken _ct;
@@ -95,12 +95,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             else
             {
-                if (!File.Exists(transportPath) && !File.Exists(@"\\.pipe\" + transportPath))
+                if (!File.Exists(_transportPath) && !File.Exists(@"\\.pipe\" + _transportPath))
                 {
                     Console.Error.WriteLine("Requested transport does not exist");
                     return false;
                 }
-                else if (processId != 0)
+                else if (_processId != 0)
                 {
                     Console.Error.WriteLine("Cannot specify both a PID and specific transport");
                     return false;
