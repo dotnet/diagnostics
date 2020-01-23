@@ -2242,15 +2242,23 @@ size_t AddExceptionHeader (__out_ecount_opt(bufferLength) WCHAR *wszBuffer, size
     return _wcslen(wszHeader);
 }
 
+enum StackTraceElementFlags
+{
+    // Set if this element represents the last frame of the foreign exception stack trace
+    STEF_LAST_FRAME_FROM_FOREIGN_STACK_TRACE = 0x0001,
+
+    // Set if the "ip" field has already been adjusted (decremented)
+    STEF_IP_ADJUSTED = 0x0002,
+};
+
+// This struct needs to match the definition in the runtime.
+// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h#L25
 struct StackTraceElement 
 {
     UINT_PTR        ip;
     UINT_PTR        sp;
     DWORD_PTR       pFunc;  // MethodDesc
-    // TRUE if this element represents the last frame of the foreign
-    // exception stack trace.
-    BOOL            fIsLastFrameFromForeignStackTrace;
-
+    INT             flags;  // This is StackTraceElementFlags but it needs to always be "int" sized for backward compatibility.
 };
 
 #include "sos_stacktrace.h"
@@ -2487,7 +2495,7 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
                 // The unmodified IP is displayed (above by DumpMDInfoBuffer) which points after the exception in most 
                 // cases. This means that the printed IP and the printed line number often will not map to one another
                 // and this is intentional.
-                SUCCEEDED(GetLineByOffset(TO_CDADDR(bAsync && i == 0 ? ste.ip : ste.ip - g_targetMachine->StackWalkIPAdjustOffset()), &linenum, filename, _countof(filename))))
+                SUCCEEDED(GetLineByOffset(TO_CDADDR(ste.ip), &linenum, filename, _countof(filename), !bAsync || i > 0)))
             {
                 swprintf_s(wszLineBuffer, _countof(wszLineBuffer), W("    %s [%s @ %d]\n"), so.String(), filename, linenum);
             }
@@ -2665,6 +2673,8 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
 
             if (arrayLen != 0 && hr == S_OK)
             {
+                // This code is accessing the StackTraceInfo class in the runtime.
+                // See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h#L52
 #ifdef _TARGET_WIN64_
                 DWORD_PTR dataPtr = taStackTrace + sizeof(DWORD_PTR) + sizeof(DWORD) + sizeof(DWORD);
 #else
@@ -15207,6 +15217,8 @@ HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
 
         if (arrayLen)
         {
+            // This code is accessing the StackTraceInfo class in the runtime.
+            // See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h#L52
 #ifdef _TARGET_WIN64_
             DWORD_PTR dataPtr = arrayPtr + sizeof(DWORD_PTR) + sizeof(DWORD) + sizeof(DWORD);
 #else

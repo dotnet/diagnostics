@@ -154,14 +154,15 @@ public:
     HRESULT LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataModule* pModule);
     HRESULT GetLineByILOffset(___in mdMethodDef MethodToken, ___in ULONG64 IlOffset, ___out ULONG *pLinenum, __out_ecount(cchFileName) WCHAR* pwszFileName, ___in ULONG cchFileName);
     HRESULT GetNamedLocalVariable(___in ICorDebugFrame * pFrame, ___in ULONG localIndex, __out_ecount(paramNameLen) WCHAR* paramName, ___in ULONG paramNameLen, ___out ICorDebugValue** ppValue);
-    HRESULT ResolveSequencePoint(__in_z WCHAR* pFilename, ___in ULONG32 lineNumber, ___out mdMethodDef* ___out pToken, ___out ULONG32* pIlOffset);
+    HRESULT ResolveSequencePoint(__in_z WCHAR* pFilename, ___in ULONG32 lineNumber, ___out mdMethodDef* pToken, ___out ULONG32* pIlOffset);
 };
 
 HRESULT
 GetLineByOffset(
-        ___in ULONG64 IP,
-        ___out ULONG *pLinenum,
-        __out_ecount(cchFileName) WCHAR* pwszFileName,
-        ___in ULONG cchFileName);
+    ___in ULONG64 nativeOffset,
+    ___out ULONG* pLinenum,
+    __out_ecount(cchFileName) WCHAR* pwszFileName,
+    ___in ULONG cchFileName,
+    ___in BOOL bAdjustOffsetForLineNumber = FALSE);
 
 #endif // __hostcoreclr_h__
