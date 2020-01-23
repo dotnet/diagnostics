@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 output = Path.GetFullPath(output);
 
                 // Display the type of dump and dump path
-                string dumpTypeMessage = type == DumpTypeOption.Mini ? "minidump" : "minidump with heap";
+                string dumpTypeMessage = type == DumpTypeOption.Mini ? "dump" : "dump with heap";
                 console.Out.WriteLine($"Writing {dumpTypeMessage} to {output}");
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
