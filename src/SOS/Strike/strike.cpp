@@ -9338,6 +9338,7 @@ DECLARE_API(u)
     BOOL fWithEHInfo = FALSE;
     BOOL bSuppressLines = FALSE;
     BOOL bDisplayOffsets = FALSE;
+    BOOL bDisplayILMap = FALSE;
     BOOL bIL = FALSE;
     BOOL dml = FALSE;
     size_t nArg;
@@ -9349,6 +9350,7 @@ DECLARE_API(u)
         {"-n", &bSuppressLines, COBOOL, FALSE},
         {"-o", &bDisplayOffsets, COBOOL, FALSE},
         {"-il", &bIL, COBOOL, FALSE},
+        {"-map", &bDisplayILMap, COBOOL, FALSE},
 #ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
 #endif
@@ -9404,7 +9406,7 @@ DECLARE_API(u)
     DacpCodeHeaderData& codeHeaderData = std::get<1>(p);
     std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]> map(nullptr);
     ULONG32 mapCount = 0;
-    Status = GetIntermediateLangMap(bIL, codeHeaderData, map /*out*/, mapCount /* out */, false);
+    Status = GetIntermediateLangMap(bIL, codeHeaderData, map /*out*/, mapCount /* out */, bDisplayILMap);
     if (Status != S_OK)
     {
         return Status;
@@ -9841,7 +9843,7 @@ HRESULT GetIntermediateLangMap(BOOL bIL, const DacpCodeHeaderData& codeHeaderDat
             {
                 // TODO: These information should be interleaved with the disassembly
                 // Decoded IL can be obtained through refactoring DumpIL code.
-                ExtOut("%04x %p %p\n", map[i].ilOffset, map[i].startAddress, map[i].endAddress);
+                ExtOut("%08x %p %p\n", map[i].ilOffset, map[i].startAddress, map[i].endAddress);
             }
         }
     }
