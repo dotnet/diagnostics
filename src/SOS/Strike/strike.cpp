@@ -2252,7 +2252,7 @@ enum StackTraceElementFlags
 };
 
 // This struct needs to match the definition in the runtime.
-// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h#L25
+// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h
 struct StackTraceElement 
 {
     UINT_PTR        ip;
@@ -2674,7 +2674,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
             if (arrayLen != 0 && hr == S_OK)
             {
                 // This code is accessing the StackTraceInfo class in the runtime.
-                // See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h#L52
+                // See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h
 #ifdef _TARGET_WIN64_
                 DWORD_PTR dataPtr = taStackTrace + sizeof(DWORD_PTR) + sizeof(DWORD) + sizeof(DWORD);
 #else
@@ -15218,7 +15218,7 @@ HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
         if (arrayLen)
         {
             // This code is accessing the StackTraceInfo class in the runtime.
-            // See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h#L52
+            // See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h
 #ifdef _TARGET_WIN64_
             DWORD_PTR dataPtr = arrayPtr + sizeof(DWORD_PTR) + sizeof(DWORD) + sizeof(DWORD);
 #else
@@ -15530,10 +15530,49 @@ DECLARE_API(VerifyStackTrace)
     return Status;
 }
 
-// This is an internal-only Apollo extension to de-optimize the code
+// This is an internal-only Apollo extension to save breakpoint/watch state
+DECLARE_API(SaveState)
+{
+    INIT_API_NOEE();    
+    MINIDUMP_NOT_SUPPORTED();    
+
+    StringHolder filePath;
+    CMDValue arg[] = 
+    {   // vptr, type
+        {&filePath.data, COSTRING},
+    };
+    size_t nArg;
+    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg)) 
+    {
+        return E_FAIL;
+    }
+
+    if(nArg == 0)
+    {
+        ExtOut("Usage: !SaveState <file_path>\n");
+    }
+
+    FILE* pFile;
+    errno_t error = fopen_s(&pFile, filePath.data, "w");
+    if(error != 0)
+    {
+        ExtOut("Failed to open file %s, error=0x%x\n", filePath.data, error);
+        return E_FAIL;
+    }
+
+    g_bpoints.SaveBreakpoints(pFile);
+    g_watchCmd.SaveListToFile(pFile);
+
+    fclose(pFile);
+    ExtOut("Session breakpoints and watch expressions saved to %s\n", filePath.data);
+    return S_OK;
+}
+
+#endif // FEATURE_PAL
+
 DECLARE_API(SuppressJitOptimization)
 {
-    INIT_API_NODAC();    
+    INIT_API_NOEE();    
     MINIDUMP_NOT_SUPPORTED();    
 
     StringHolder onOff;
@@ -15565,8 +15604,6 @@ DECLARE_API(SuppressJitOptimization)
             g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
             ExtOut("JIT optimization will be suppressed\n");
         }
-
-
     }
     else if(nArg == 1 && (_stricmp(onOff.data, "Off") == 0))
     {
@@ -15666,47 +15703,6 @@ HRESULT SetNGENCompilerFlags(DWORD flags)
 
     return hr;
 }
-
-
-// This is an internal-only Apollo extension to save breakpoint/watch state
-DECLARE_API(SaveState)
-{
-    INIT_API_NOEE();    
-    MINIDUMP_NOT_SUPPORTED();    
-
-    StringHolder filePath;
-    CMDValue arg[] = 
-    {   // vptr, type
-        {&filePath.data, COSTRING},
-    };
-    size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg)) 
-    {
-        return E_FAIL;
-    }
-
-    if(nArg == 0)
-    {
-        ExtOut("Usage: !SaveState <file_path>\n");
-    }
-
-    FILE* pFile;
-    errno_t error = fopen_s(&pFile, filePath.data, "w");
-    if(error != 0)
-    {
-        ExtOut("Failed to open file %s, error=0x%x\n", filePath.data, error);
-        return E_FAIL;
-    }
-
-    g_bpoints.SaveBreakpoints(pFile);
-    g_watchCmd.SaveListToFile(pFile);
-
-    fclose(pFile);
-    ExtOut("Session breakpoints and watch expressions saved to %s\n", filePath.data);
-    return S_OK;
-}
-
-#endif // FEATURE_PAL
 
 DECLARE_API(StopOnCatch)
 {

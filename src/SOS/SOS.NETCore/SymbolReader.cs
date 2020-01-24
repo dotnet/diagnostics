@@ -535,7 +535,7 @@ namespace SOS
                     if (point.Offset > ilOffset)
                         break;
 
-                    if (point.StartLine != 0 && point.StartLine != SequencePoint.HiddenLine)
+                    if (point.StartLine != 0 && !point.IsHidden)
                         nearestPoint = point;
                 }
 

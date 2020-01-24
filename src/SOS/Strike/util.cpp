@@ -4797,8 +4797,6 @@ GetLastMethodIlOffset(
     HighestOffset = 0;
     for (size_t i = 0; i < MapNeeded; i++)
     {
-        ExtDbgOut("%d il: %08x start: %p end: %p\n", i, Map[i].ilOffset, Map[i].startAddress, Map[i].endAddress);
-
         if (Map[i].ilOffset != (ULONG32)CLRDATA_IL_OFFSET_NO_MAPPING &&
             Map[i].ilOffset != (ULONG32)CLRDATA_IL_OFFSET_PROLOG &&
             Map[i].ilOffset != (ULONG32)CLRDATA_IL_OFFSET_EPILOG &&
