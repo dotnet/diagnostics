@@ -2858,7 +2858,7 @@ void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersi
     ExtOut("  ReJIT ID:           %d\n", rejitID);
     DMLOut("  IL Addr:            %s\n", DMLIL(ilAddr));
 
-    if (IsRuntimeVersion(3)) {
+    if (IsRuntimeVersionAtLeast(3)) {
         for(int i = cTieredVersionData - 1; i >= 0; --i)
         {
             const char *descriptor = NULL;
@@ -3338,6 +3338,43 @@ bool IsRuntimeVersion(VS_FIXEDFILEINFO& fileInfo, DWORD major)
             return HIWORD(fileInfo.dwFileVersionMS) == 5;
         case 3:
             return HIWORD(fileInfo.dwFileVersionMS) == 4 && LOWORD(fileInfo.dwFileVersionMS) == 700;
+        default:
+            _ASSERTE(FALSE);
+            break;
+    }
+    return false;
+}
+
+bool IsRuntimeVersionAtLeast(DWORD major)
+{
+    VS_FIXEDFILEINFO fileInfo;
+    if (GetEEVersion(&fileInfo, nullptr, 0))
+    {
+        return IsRuntimeVersionAtLeast(fileInfo, major);
+    }
+    return false;
+}
+
+bool IsRuntimeVersionAtLeast(VS_FIXEDFILEINFO& fileInfo, DWORD major)
+{
+    switch (major)
+    {
+        case 3:
+            if (HIWORD(fileInfo.dwFileVersionMS) == 4 && LOWORD(fileInfo.dwFileVersionMS) == 700)
+            {
+                return true;
+            }
+            // fall through
+
+        case 5:
+            if (HIWORD(fileInfo.dwFileVersionMS) == 5)
+            {
+                return true;
+            }
+            // fall through
+
+            break;
+
         default:
             _ASSERTE(FALSE);
             break;
