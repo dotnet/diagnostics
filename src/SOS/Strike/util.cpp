@@ -3367,7 +3367,7 @@ bool IsRuntimeVersionAtLeast(VS_FIXEDFILEINFO& fileInfo, DWORD major)
             // fall through
 
         case 5:
-            if (HIWORD(fileInfo.dwFileVersionMS) == 5)
+            if (HIWORD(fileInfo.dwFileVersionMS) >= 5)
             {
                 return true;
             }
