@@ -55,16 +55,16 @@ namespace Microsoft.Internal.Common.Commands
                     try
                     {
                         
-                        if(cmdline)
+                        if (cmdline)
                         {
                             var cmdLineArgs = GetArgs(process);
                             cmdLineArgs = cmdLineArgs == process.MainModule.FileName?"": cmdLineArgs;
-                            sb.Append($"{process.Id,10} {process.ProcessName,-10} {process.MainModule.FileName, -10} {cmdLineArgs, -10}\n");
+                            sb.Append($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName, -10} {cmdLineArgs, -10}\n");
                         }
                         
                         else
                         {
-                            sb.Append($"{process.Id,10} {process.ProcessName,-10} {process.MainModule.FileName}\n");
+                            sb.Append($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}\n");
                         }
                     }
                     catch (InvalidOperationException)
@@ -98,7 +98,7 @@ namespace Microsoft.Internal.Common.Commands
             {
                 using (ManagementObjectSearcher searcher = new ManagementObjectSearcher($"SELECT CommandLine from Win32_Process WHERE ProcessId = {process.Id}"))
                 {
-                    using(ManagementObjectCollection objectCollection = searcher.Get())
+                    using (ManagementObjectCollection objectCollection = searcher.Get())
                     {
                         return objectCollection.Cast<ManagementBaseObject>().SingleOrDefault()?["CommandLine"]?.ToString().Split("  ")?.Last().Replace("\"", "");
                     }
