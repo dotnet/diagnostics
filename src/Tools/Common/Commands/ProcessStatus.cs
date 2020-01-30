@@ -112,9 +112,8 @@ namespace Microsoft.Internal.Common.Commands
                     var cmdArgs = File.ReadAllText($"/proc/{process.Id}/cmdline")?.Split("\0").Skip(1).ToArray();
                     return String.Join("", cmdArgs).Replace("\0", "");
                 }
-                catch (IOException ex)
+                catch (IOException)
                 {
-                    _ = ex.ToString();
                     return "[cannot determine command line arguments]";
                 }
             }
