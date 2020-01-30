@@ -123,3 +123,4 @@ StressLog.txt
 *.csv
 *.gcdump
 *.binlog
+/out/build/x64-Debug

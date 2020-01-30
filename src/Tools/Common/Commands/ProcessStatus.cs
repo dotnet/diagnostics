@@ -7,23 +7,39 @@ using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Management;
 using Process = System.Diagnostics.Process;
+using System.IO;
 
 namespace Microsoft.Internal.Common.Commands
 {
     public class ProcessStatusCommandHandler
     {
-        public static Command ProcessStatusCommand(string description) =>
-            new Command(name: "ps", description)
+        public static Command ProcessStatusCommand(string description)
+        {
+            var cmd = new Command(name: "ps", description)
             {
-                Handler = CommandHandler.Create<IConsole>(PrintProcessStatus)
-            };
+                Handler = CommandHandler.Create<IConsole, bool>(PrintProcessStatus),
+                
 
+            };
+            cmd.AddOption(CommandLineOption());
+            return cmd;
+        }
+
+        private static Option CommandLineOption() =>
+            new Option(
+                aliases: new[] { "-f", "--full", "--cmd-line" },
+                description: "Gets the commandline argument")
+            {
+                Argument = new Argument<bool>(name: "cmdline")
+            };
         /// <summary>
         /// Print the current list of available .NET core processes for diagnosis and their statuses
         /// </summary>
-        public static void PrintProcessStatus(IConsole console)
+        public static void PrintProcessStatus(IConsole console, bool cmdline)
         {
             try
             {
@@ -38,7 +54,18 @@ namespace Microsoft.Internal.Common.Commands
                 {
                     try
                     {
-                        sb.Append($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}\n");
+                        
+                        if(cmdline)
+                        {
+                            var cmdLineArgs = GetArgs(process);
+                            cmdLineArgs = cmdLineArgs == process.MainModule.FileName?"": cmdLineArgs;
+                            sb.Append($"{process.Id,10} {process.ProcessName,-10} {process.MainModule.FileName, -10} {cmdLineArgs, -10}\n");
+                        }
+                        
+                        else
+                        {
+                            sb.Append($"{process.Id,10} {process.ProcessName,-10} {process.MainModule.FileName}\n");
+                        }
                     }
                     catch (InvalidOperationException)
                     {
@@ -63,6 +90,33 @@ namespace Microsoft.Internal.Common.Commands
             {
                 return null;
             }
+        }
+
+        private static string GetArgs(Process process)
+        {
+            if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher($"SELECT CommandLine from Win32_Process WHERE ProcessId = {process.Id}"))
+                {
+                    using(ManagementObjectCollection objectCollection = searcher.Get())
+                    {
+                        return objectCollection.Cast<ManagementBaseObject>().SingleOrDefault()?["CommandLine"]?.ToString().Split("  ")?.Last().Replace("\"", "");
+                    }
+                }
+
+            }
+            else if(RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                try
+                {
+                    return File.ReadAllText($"/proc/{process.Id}/cmdline")?.ToString()?.Skip(0)?.ToString();
+                }
+                catch(IOException ex)
+                {
+                    return ex.ToString();
+                }
+            }
+            return null;
         }
     }
 }
