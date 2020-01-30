@@ -123,5 +123,3 @@ StressLog.txt
 *.csv
 *.gcdump
 *.binlog
-
-**/.idea/
