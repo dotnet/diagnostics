@@ -105,16 +105,17 @@ namespace Microsoft.Internal.Common.Commands
                 }
 
             }
-            else if(RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 try
                 {
-                    var cmdArgs =  File.ReadAllText($"/proc/{process.Id}/cmdline")?.ToString()?.Skip(0)?.ToArray();
-                    return String.Join("", cmdArgs);
+                    var cmdArgs = File.ReadAllText($"/proc/{process.Id}/cmdline")?.Split("\0").Skip(1).ToArray();
+                    return String.Join("", cmdArgs).Replace("\0", "");
                 }
-                catch(IOException ex)
+                catch (IOException ex)
                 {
-                    return ex.ToString();
+                    _ = ex.ToString();
+                    return "[cannot determine command line arguments]";
                 }
             }
             return null;
