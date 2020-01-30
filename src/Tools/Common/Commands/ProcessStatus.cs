@@ -109,7 +109,8 @@ namespace Microsoft.Internal.Common.Commands
             {
                 try
                 {
-                    return File.ReadAllText($"/proc/{process.Id}/cmdline")?.ToString()?.Skip(0)?.ToArray().ToString();
+                    var cmdArgs =  File.ReadAllText($"/proc/{process.Id}/cmdline")?.ToString()?.Skip(0)?.ToArray();
+                    return String.Join(" ", cmdArgs);
                 }
                 catch(IOException ex)
                 {
