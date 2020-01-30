@@ -4,17 +4,20 @@
 
 using Microsoft.Tools.Common;
 using System;
+using System.Buffers;
 using System.CommandLine;
 using System.CommandLine.Binding;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Graphs;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, bool stdOut);
 
         /// <summary>
         /// Collects a gcdump from a currently running process.
@@ -24,7 +27,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="processId">The process to collect the gcdump from.</param>
         /// <param name="output">The output path for the collected gcdump.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, bool stdOut)
         {
             try
             {
@@ -40,23 +43,28 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     return -1;
                 }
 
-                output = string.IsNullOrEmpty(output) ? 
-                    $"{DateTime.Now.ToString(@"yyyyMMdd\_hhmmss")}_{processId}.gcdump" :
-                    output;
-
-                FileInfo outputFileInfo = new FileInfo(output);
-
-                if (outputFileInfo.Exists)
+                FileInfo outputFileInfo = null;
+                if (!stdOut)
                 {
-                    outputFileInfo.Delete();
+                    output = string.IsNullOrEmpty(output)
+                        ? $"{DateTime.Now:yyyyMMdd\\_hhmmss}_{processId}.gcdump"
+                        : output;
+
+                    outputFileInfo = new FileInfo(output);
+
+                    if (outputFileInfo.Exists)
+                    {
+                        outputFileInfo.Delete();
+                    }
+
+                    if (string.IsNullOrEmpty(outputFileInfo.Extension) || outputFileInfo.Extension != ".gcdump")
+                    {
+                        outputFileInfo = new FileInfo(outputFileInfo.FullName + ".gcdump");
+                    }
+                    
+                    Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
                 }
 
-                if (string.IsNullOrEmpty(outputFileInfo.Extension) || outputFileInfo.Extension != ".gcdump")
-                {
-                    outputFileInfo = new FileInfo(outputFileInfo.FullName + ".gcdump");
-                }
-
-                Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
                 var dumpTask = Task.Run(() => 
                 {
                     var memoryGraph = new Graphs.MemoryGraph(50_000);
@@ -64,7 +72,16 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, memoryGraph, verbose ? Console.Out : TextWriter.Null, timeout, heapInfo))
                         return false;
                     memoryGraph.AllowReading();
-                    GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
+
+                    if (stdOut)
+                    {
+                        WriteToStdOut(memoryGraph);
+                    }
+                    else if (outputFileInfo != null)
+                    {
+                        GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
+                    }
+
                     return true;
                 });
 
@@ -72,8 +89,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 if (fDumpSuccess)
                 {
-                    outputFileInfo.Refresh();
-                    Console.Out.WriteLine($"\tFinished writing {outputFileInfo.Length} bytes.");
+                    if (!stdOut)
+                    {
+                        outputFileInfo.Refresh();
+                        Console.Out.WriteLine($"\tFinished writing {outputFileInfo.Length} bytes.");
+                    }
+
                     return 0;
                 }
                 else if (ct.IsCancellationRequested)
@@ -94,15 +115,87 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
         }
 
+        private static void WriteToStdOut(Graph memoryGraph)
+        {
+            var items = ArrayPool<Graph.TypeInfo>.Shared.Rent(memoryGraph.m_types.Count);
+            try
+            {
+                var allocationSize = 0;
+                var index = 0;
+
+                foreach (var type in memoryGraph.m_types)
+                {
+                    items[index++] = type;
+                    allocationSize += Math.Abs(type.Size);
+                }
+                
+                // Calculate the width of the first column
+                var firstColumnWidth = 1;
+                
+                // Width of the column will always be >= sum(all size)
+                firstColumnWidth = AdjustSizeColumnWidth(allocationSize, firstColumnWidth);
+                firstColumnWidth = AdjustSizeColumnWidth(memoryGraph.TotalNumberOfReferences, firstColumnWidth);
+                firstColumnWidth = AdjustSizeColumnWidth(memoryGraph.TotalSize, firstColumnWidth);
+
+                // 1 ',' after every 3 digit
+                firstColumnWidth += (int) Math.Ceiling((decimal) firstColumnWidth % 3) + 1;
+                
+                // Print a total
+                EchoSizeColumn(memoryGraph.TotalSize, firstColumnWidth, endLineWith: " (Dump size)");
+                EchoSizeColumn(allocationSize, firstColumnWidth, endLineWith: " (Total allocations)");
+                EchoSizeColumn(memoryGraph.TotalNumberOfReferences, firstColumnWidth, endLineWith: " (Total number of references)");
+                
+                Console.WriteLine();
+                
+                // Print Details
+                foreach (var type in items
+                                        .Take(index)
+                                        .Where(t => !string.IsNullOrEmpty(t.Name))
+                                        .OrderByDescending(i => i.Size))
+                {
+                    EchoSizeColumn(type.Size, firstColumnWidth);
+                    Console.Out.Write('\t');
+                    Console.Out.Write(type.Name ?? "<null>");
+                    Console.Out.Write('\t');
+                    Console.Out.Write('[');
+                    Console.Out.Write(GetDllName(type.ModuleName ?? ""));
+                    Console.Out.Write(']');
+                    Console.Out.WriteLine();
+                }
+            }
+            finally
+            {
+                ArrayPool<Graph.TypeInfo>.Shared.Return(items);
+            }
+
+            static ReadOnlySpan<char> GetDllName(ReadOnlySpan<char> input) 
+                => input.Slice(input.LastIndexOf(Path.DirectorySeparatorChar)+ 1);
+
+            static int AdjustSizeColumnWidth(long value, int currentValue)
+            {
+                return (int) Math.Max(Math.Floor(Math.Log10(value) + 1), currentValue);
+            }
+
+            static void EchoSizeColumn(long value, int width, string endLineWith = null)
+            {
+                Console.Out.Write(value.ToString("N0").PadLeft(width));
+                if (!string.IsNullOrEmpty(endLineWith))
+                {
+                    Console.Out.Write(endLineWith);
+                    Console.Out.WriteLine();
+                }
+            }
+        }
+
         public static Command CollectCommand() =>
             new Command(
                 name: "collect",
                 description: "Collects a diagnostic trace from a currently running process")
             {
                 // Handler
-                HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler(),
+                HandlerDescriptor.FromDelegate((CollectDelegate) Collect).GetCommandHandler(),
                 // Options
-                ProcessIdOption(), OutputPathOption(), VerboseOption(), TimeoutOption() 
+                ProcessIdOption(), OutputPathOption(), VerboseOption(), TimeoutOption(), ConsoleOutOption()
             };
 
         public static Option ProcessIdOption() =>
@@ -136,6 +229,14 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 description: $"Give up on collecting the gcdump if it takes longer than this many seconds. The default value is {DefaultTimeout}s.")
             {
                 Argument = new Argument<int>(name: "timeout", defaultValue: DefaultTimeout)
+            };
+        
+        private static Option ConsoleOutOption() =>
+            new Option(
+                aliases: new[] { "--std-out" },
+                description: "Writes plaintext results into stdout (overrides -o)")
+            {
+                Argument = new Argument<bool>(name: "stdOut", defaultValue: false)
             };
     }
 }
