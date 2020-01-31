@@ -4822,7 +4822,8 @@ GetLastMethodIlOffset(
 // represent an "IL offset".
 HRESULT
 ConvertNativeToIlOffset(
-    ___in ULONG64 native,
+    ___in ULONG64 nativeOffset,
+    ___in BOOL bAdjustOffsetForLineNumber,
     ___out IXCLRDataModule** ppModule,
     ___out mdMethodDef* methodToken,
     ___out PULONG32 methodOffs)
@@ -4830,12 +4831,24 @@ ConvertNativeToIlOffset(
     ToRelease<IXCLRDataMethodInstance> pMethodInst(NULL);
     HRESULT Status;
 
-    if ((Status = GetClrMethodInstance(native, &pMethodInst)) != S_OK)
+    if ((Status = GetClrMethodInstance(nativeOffset, &pMethodInst)) != S_OK)
     {
         return Status;
     }
 
-    if ((Status = pMethodInst->GetILOffsetsByAddress(native, 1, NULL, methodOffs)) != S_OK)
+    if (bAdjustOffsetForLineNumber)
+    {
+        CLRDATA_ADDRESS startAddr;
+        if (pMethodInst->GetRepresentativeEntryAddress(&startAddr) == S_OK)
+        {
+            if (nativeOffset >= (startAddr + g_targetMachine->StackWalkIPAdjustOffset()))
+            {
+                nativeOffset -= g_targetMachine->StackWalkIPAdjustOffset();
+            }
+        }
+    }
+
+    if ((Status = pMethodInst->GetILOffsetsByAddress(nativeOffset, 1, NULL, methodOffs)) != S_OK)
     {
         *methodOffs = 0;
     }
@@ -4870,18 +4883,19 @@ ConvertNativeToIlOffset(
 // identifies the corresponding source file name and line number.
 HRESULT
 GetLineByOffset(
-    ___in ULONG64 offset,
+    ___in ULONG64 nativeOffset,
     ___out ULONG *pLinenum,
     __out_ecount(cchFileName) WCHAR* pwszFileName,
-    ___in ULONG cchFileName)
+    ___in ULONG cchFileName,
+    ___in BOOL bAdjustOffsetForLineNumber /* = FALSE */)
 {
     HRESULT Status = S_OK;
     ULONG32 methodToken;
     ULONG32 methodOffs;
 
-    // Find the image, method token and IL offset that correspond to "offset"
+    // Find the image, method token and IL offset that correspond to "nativeOffset"
     ToRelease<IXCLRDataModule> pModule(NULL);
-    IfFailRet(ConvertNativeToIlOffset(offset, &pModule, &methodToken, &methodOffs));
+    IfFailRet(ConvertNativeToIlOffset(nativeOffset, bAdjustOffsetForLineNumber, &pModule, &methodToken, &methodOffs));
 
     ToRelease<IMetaDataImport> pMDImport(NULL);
     pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport);
@@ -5281,9 +5295,7 @@ WString MethodNameFromIP(CLRDATA_ADDRESS ip, BOOL bSuppressLines, BOOL bAssembly
 
         ArrayHolder<WCHAR> wszFileName = new WCHAR[MAX_LONGPATH];
         if (!bSuppressLines &&
-            // If the IP needs to be adjusted, it is a lot simpler to decrement IP instead of trying to figure out 
-            // the beginning of the instruction. It is enough for GetLineByOffset to return the correct line number.
-            SUCCEEDED(GetLineByOffset(TO_CDADDR(bAdjustIPForLineNumber ? ip - g_targetMachine->StackWalkIPAdjustOffset() : ip), &linenum, wszFileName, MAX_LONGPATH)))
+            SUCCEEDED(GetLineByOffset(TO_CDADDR(ip), &linenum, wszFileName, MAX_LONGPATH, bAdjustIPForLineNumber)))
         {
             methodOutput += WString(W(" [")) + wszFileName + W(" @ ") + Decimal(linenum) + W("]");
         }

@@ -50,6 +50,7 @@ SetHostRuntime
 SetSymbolServer
 SOSFlush
 SOSStatus
+SuppressJitOptimization
 SyncBlk
 Threads
 ThreadState

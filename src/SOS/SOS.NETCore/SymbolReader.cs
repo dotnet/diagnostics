@@ -529,25 +529,21 @@ namespace SOS
                 MethodDebugInformation methodDebugInfo = reader.GetMethodDebugInformation(methodDebugHandle);
                 SequencePointCollection sequencePoints = methodDebugInfo.GetSequencePoints();
 
-                SequencePoint nearestPoint = sequencePoints.GetEnumerator().Current;
+                SequencePoint? nearestPoint = null;
                 foreach (SequencePoint point in sequencePoints)
                 {
-                    if (point.Offset < ilOffset)
-                    {
+                    if (point.Offset > ilOffset)
+                        break;
+
+                    if (point.StartLine != 0 && !point.IsHidden)
                         nearestPoint = point;
-                    }
-                    else
-                    {
-                        if (point.Offset == ilOffset)
-                            nearestPoint = point;
+                }
 
-                        if (nearestPoint.StartLine == 0 || nearestPoint.StartLine == SequencePoint.HiddenLine)
-                            return false;
-
-                        lineNumber = nearestPoint.StartLine;
-                        fileName = reader.GetString(reader.GetDocument(nearestPoint.Document).Name);
-                        return true;
-                    }
+                if (nearestPoint.HasValue)
+                {
+                    lineNumber = nearestPoint.Value.StartLine;
+                    fileName = reader.GetString(reader.GetDocument(nearestPoint.Value.Document).Name);
+                    return true;
                 }
             }
             catch

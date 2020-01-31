@@ -441,20 +441,12 @@ if [ ! -e $__DotNetCli ]; then
 fi
 
 if [ $__NativeBuild == true ]; then
-    if [[ $__CI == true ]]; then
-        echo "Generating Version Source File"
-        __GenerateVersionRestoreLog="$__LogDir/GenerateVersionRestore.binlog"
-        $__DotNetCli msbuild $__ProjectRoot/eng/CreateVersionFile.csproj /v:$__Verbosity /bl:$__GenerateVersionRestoreLog /t:Restore /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
-
-        __GenerateVersionLog="$__LogDir/GenerateVersion.binlog"
-        $__DotNetCli msbuild $__ProjectRoot/eng/CreateVersionFile.csproj /v:$__Verbosity /bl:$__GenerateVersionLog /t:GenerateVersionFiles /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
-        if [ $? != 0 ]; then
-            echo "Generating Version Source File FAILED"
-            exit 1
-        fi
-    else
-        echo "Generating Empty Version Source File"
-       echo "" > "$__IntermediatesDir/version.cpp"
+    echo "Generating Version Source File"
+    __GenerateVersionLog="$__LogDir/GenerateVersion.binlog"
+    "$__ProjectRoot/eng/common/msbuild.sh" $__ProjectRoot/eng/CreateVersionFile.csproj /v:$__Verbosity /bl:$__GenerateVersionLog /t:GenerateVersionFiles /restore /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
+    if [ $? != 0 ]; then
+        echo "Generating Version Source File FAILED"
+        exit 1
     fi
 
     build_native "$__BuildArch" "$__IntermediatesDir" "$__ExtraCmakeArgs"
