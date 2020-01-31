@@ -109,11 +109,11 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             try
             {
                 var allocationSize = 0;
-                var index = 0;
+                var count = 0;
 
                 foreach (var type in memoryGraph.m_types)
                 {
-                    items[index++] = type;
+                    items[count++] = type;
                     allocationSize += Math.Abs(type.Size);
                 }
                 
@@ -136,10 +136,11 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Console.WriteLine();
                 
                 // Print Details
-                foreach (var type in items
-                                        .Take(index)
-                                        .Where(t => !string.IsNullOrEmpty(t.Name))
-                                        .OrderByDescending(i => i.Size))
+                var filteredTypes = items
+                                    .Take(count)
+                                    .Where(t => !string.IsNullOrEmpty(t.Name))
+                                    .OrderByDescending(t => t.Size);
+                foreach (var type in filteredTypes)
                 {
                     EchoSizeColumn(type.Size, firstColumnWidth);
                     Console.Out.Write('\t');
