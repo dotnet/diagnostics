@@ -42,28 +42,24 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     Console.Out.WriteLine($"-p|--process-id is required");
                     return -1;
                 }
+                
+                output = string.IsNullOrEmpty(output)
+                    ? $"{DateTime.Now:yyyyMMdd\\_hhmmss}_{processId}.gcdump"
+                    : output;
 
-                FileInfo outputFileInfo = null;
-                if (!stdOut)
+                FileInfo outputFileInfo = new FileInfo(output);
+
+                if (outputFileInfo.Exists)
                 {
-                    output = string.IsNullOrEmpty(output)
-                        ? $"{DateTime.Now:yyyyMMdd\\_hhmmss}_{processId}.gcdump"
-                        : output;
-
-                    outputFileInfo = new FileInfo(output);
-
-                    if (outputFileInfo.Exists)
-                    {
-                        outputFileInfo.Delete();
-                    }
-
-                    if (string.IsNullOrEmpty(outputFileInfo.Extension) || outputFileInfo.Extension != ".gcdump")
-                    {
-                        outputFileInfo = new FileInfo(outputFileInfo.FullName + ".gcdump");
-                    }
-                    
-                    Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
+                    outputFileInfo.Delete();
                 }
+
+                if (string.IsNullOrEmpty(outputFileInfo.Extension) || outputFileInfo.Extension != ".gcdump")
+                {
+                    outputFileInfo = new FileInfo(outputFileInfo.FullName + ".gcdump");
+                }
+                
+                Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
 
                 var dumpTask = Task.Run(() => 
                 {
@@ -74,14 +70,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     memoryGraph.AllowReading();
 
                     if (stdOut)
-                    {
                         WriteToStdOut(memoryGraph);
-                    }
-                    else if (outputFileInfo != null)
-                    {
-                        GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
-                    }
 
+                    GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
                     return true;
                 });
 
@@ -89,11 +80,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 if (fDumpSuccess)
                 {
-                    if (!stdOut)
-                    {
-                        outputFileInfo.Refresh();
-                        Console.Out.WriteLine($"\tFinished writing {outputFileInfo.Length} bytes.");
-                    }
+                    outputFileInfo.Refresh();
+                    Console.Out.WriteLine($"\tFinished writing {outputFileInfo.Length} bytes to {outputFileInfo.FullName}");
 
                     return 0;
                 }
@@ -234,7 +222,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         private static Option ConsoleOutOption() =>
             new Option(
                 aliases: new[] { "--std-out" },
-                description: "Writes plaintext results into stdout (overrides -o)")
+                description: "Writes plaintext results into stdout.")
             {
                 Argument = new Argument<bool>(name: "stdOut", defaultValue: false)
             };
