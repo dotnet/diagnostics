@@ -12,34 +12,22 @@ using System.Text;
 using System.Management;
 using Process = System.Diagnostics.Process;
 using System.IO;
+using System.ComponentModel;
 
 namespace Microsoft.Internal.Common.Commands
 {
     public class ProcessStatusCommandHandler
     {
-        public static Command ProcessStatusCommand(string description)
-        {
-            var cmd = new Command(name: "ps", description)
+        public static Command ProcessStatusCommand(string description) =>
+            new Command(name: "ps", description)
             {
-                Handler = CommandHandler.Create<IConsole, bool>(PrintProcessStatus),
-                
-
+                Handler = CommandHandler.Create<IConsole>(PrintProcessStatus)
             };
-            cmd.AddOption(CommandLineOption());
-            return cmd;
-        }
 
-        private static Option CommandLineOption() =>
-            new Option(
-                aliases: new[] { "-f", "--full", "--cmd-line" },
-                description: "Gets the commandline argument")
-            {
-                Argument = new Argument<bool>(name: "cmdline")
-            };
         /// <summary>
-        /// Print the current list of available .NET core processes for diagnosis and their statuses
+        /// Print the current list of available .NET core processes for diagnosis, their statuses and the command line arguments that are passed to them.
         /// </summary>
-        public static void PrintProcessStatus(IConsole console, bool cmdline)
+        public static void PrintProcessStatus(IConsole console)
         {
             try
             {
@@ -54,22 +42,14 @@ namespace Microsoft.Internal.Common.Commands
                 {
                     try
                     {
-                        
-                        if (cmdline)
-                        {
-                            var cmdLineArgs = GetArgs(process);
-                            cmdLineArgs = cmdLineArgs == process.MainModule.FileName?"": cmdLineArgs;
-                            sb.Append($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName, -10} {cmdLineArgs, -10}\n");
-                        }
-                        
-                        else
-                        {
-                            sb.Append($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}\n");
-                        }
+                        String cmdLineArgs = GetArgs(process);
+                        cmdLineArgs = cmdLineArgs == process.MainModule.FileName ? "" : cmdLineArgs;
+                        sb.Append($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName, -10} {cmdLineArgs, -10}\n");
+
                     }
-                    catch (InvalidOperationException)
+                    catch (Exception ex) when (ex is Win32Exception || ex is InvalidOperationException)
                     {
-                        sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
+                        sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path] [Elevated process - cannot determine commandline arguments]\n");
                     }
                 }
                 console.Out.WriteLine(sb.ToString());
@@ -94,14 +74,21 @@ namespace Microsoft.Internal.Common.Commands
 
         private static string GetArgs(Process process)
         {
-            if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher($"SELECT CommandLine from Win32_Process WHERE ProcessId = {process.Id}"))
+                try
                 {
-                    using (ManagementObjectCollection objectCollection = searcher.Get())
+                    using (ManagementObjectSearcher searcher = new ManagementObjectSearcher($"SELECT CommandLine from Win32_Process WHERE ProcessId = {process.Id}"))
                     {
-                        return objectCollection.Cast<ManagementBaseObject>().SingleOrDefault()?["CommandLine"]?.ToString().Split("  ")?.Last().Replace("\"", "");
+                        using (ManagementObjectCollection objectCollection = searcher.Get())
+                        {
+                            return objectCollection.Cast<ManagementBaseObject>().SingleOrDefault()?["CommandLine"]?.ToString().Split("  ")?.Last().Replace("\"", "");
+                        }
                     }
+                }
+                catch (Exception ex) when (ex is Win32Exception || ex is InvalidOperationException)
+                {
+                    return "[Elevated process - cannot determine command line arguments]";
                 }
 
             }
