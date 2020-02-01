@@ -40,6 +40,15 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     }
 
     /// <summary>
+    /// Reads the memory graph from a .gcdump file
+    /// </summary>
+    public static GCHeapDump ReadMemoryGraph(string inputFileName)
+    {
+        var deserializer = new Deserializer(inputFileName);
+        return new GCHeapDump(deserializer);
+    }
+
+    /// <summary>
     /// The 
     /// </summary>
     public MemoryGraph MemoryGraph { get { return m_graph; } internal set { m_graph = value; } }

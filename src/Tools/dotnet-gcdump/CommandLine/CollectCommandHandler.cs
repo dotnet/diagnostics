@@ -4,14 +4,11 @@
 
 using Microsoft.Tools.Common;
 using System;
-using System.Buffers;
 using System.CommandLine;
 using System.CommandLine.Binding;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Graphs;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
 {
@@ -69,10 +66,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                         return false;
                     memoryGraph.AllowReading();
 
-                    if (stdOut)
-                        WriteToStdOut(memoryGraph);
-
                     GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
+                    if (stdOut)
+                        memoryGraph.WriteToStdOut();
                     return true;
                 });
 
@@ -100,79 +96,6 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             {
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                 return -1;
-            }
-        }
-
-        private static void WriteToStdOut(Graph memoryGraph)
-        {
-            var items = ArrayPool<Graph.TypeInfo>.Shared.Rent(memoryGraph.m_types.Count);
-            try
-            {
-                var allocationSize = 0;
-                var count = 0;
-
-                foreach (var type in memoryGraph.m_types)
-                {
-                    items[count++] = type;
-                    allocationSize += Math.Abs(type.Size);
-                }
-                
-                // Calculate the width of the first column
-                var firstColumnWidth = 1;
-                
-                // Width of the column will always be >= sum(all size)
-                firstColumnWidth = AdjustSizeColumnWidth(allocationSize, firstColumnWidth);
-                firstColumnWidth = AdjustSizeColumnWidth(memoryGraph.TotalNumberOfReferences, firstColumnWidth);
-                firstColumnWidth = AdjustSizeColumnWidth(memoryGraph.TotalSize, firstColumnWidth);
-
-                // 1 ',' after every 3 digit
-                firstColumnWidth += (int) Math.Ceiling((decimal) firstColumnWidth % 3) + 1;
-                
-                // Print a total
-                EchoSizeColumn(memoryGraph.TotalSize, firstColumnWidth, endLineWith: " (Dump size)");
-                EchoSizeColumn(allocationSize, firstColumnWidth, endLineWith: " (Total allocations)");
-                EchoSizeColumn(memoryGraph.TotalNumberOfReferences, firstColumnWidth, endLineWith: " (Total number of references)");
-                
-                Console.WriteLine();
-                
-                // Print Details
-                var filteredTypes = items
-                                    .Take(count)
-                                    .Where(t => !string.IsNullOrEmpty(t.Name))
-                                    .OrderByDescending(t => t.Size);
-                foreach (var type in filteredTypes)
-                {
-                    EchoSizeColumn(type.Size, firstColumnWidth);
-                    Console.Out.Write('\t');
-                    Console.Out.Write(type.Name ?? "<null>");
-                    Console.Out.Write('\t');
-                    Console.Out.Write('[');
-                    Console.Out.Write(GetDllName(type.ModuleName ?? ""));
-                    Console.Out.Write(']');
-                    Console.Out.WriteLine();
-                }
-            }
-            finally
-            {
-                ArrayPool<Graph.TypeInfo>.Shared.Return(items);
-            }
-
-            static ReadOnlySpan<char> GetDllName(ReadOnlySpan<char> input) 
-                => input.Slice(input.LastIndexOf(Path.DirectorySeparatorChar)+ 1);
-
-            static int AdjustSizeColumnWidth(long value, int currentValue)
-            {
-                return (int) Math.Max(Math.Floor(Math.Log10(value) + 1), currentValue);
-            }
-
-            static void EchoSizeColumn(long value, int width, string endLineWith = null)
-            {
-                Console.Out.Write(value.ToString("N0").PadLeft(width));
-                if (!string.IsNullOrEmpty(endLineWith))
-                {
-                    Console.Out.Write(endLineWith);
-                    Console.Out.WriteLine();
-                }
             }
         }
 
