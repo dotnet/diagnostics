@@ -27,62 +27,22 @@ To install the platform's prerequisites and build:
  * [MacOS Instructions](documentation/building/osx-instructions.md)
  * [FreeBSD Instructions](documentation/building/freebsd-instructions.md)
  * [NetBSD Instructions](documentation/building/netbsd-instructions.md)
+ * [Testing on private runtime builds](documentation/privatebuildtesting.md)
 
-## Getting lldb
+## SOS and Other Diagnostic Tools
 
-Getting a version of lldb that works for your platform can be a problem sometimes. The version has to be at least 3.9 or greater because of a bug running SOS on a core dump that was fixed. Some Linux distros like Ubuntu it is easy as `sudo apt-get install lldb-3.9 python-lldb-3.9`. On other distros, you will need to build lldb. The directions below should give you some guidance.
-
-* [Linux Instructions](documentation/lldb/linux-instructions.md)
-* [MacOS Instructions](documentation/lldb/osx-instructions.md)
-* [FreeBSD Instructions](documentation/lldb/freebsd-instructions.md)
-* [NetBSD Instructions](documentation/lldb/netbsd-instructions.md)
-
-## Installing SOS
-
-* [Linux and MacOS Instructions](documentation/installing-sos-instructions.md)
-* [Windows Instructions](documentation/installing-sos-windows-instructions.md)
-
-## Using SOS
-
-* [SOS debugging for Linux/MacOS](documentation/sos-debugging-extension.md)
-* [SOS debugging for Windows](documentation/sos-debugging-extension-windows.md)
-* [Debugging a core dump](documentation/debugging-coredump.md)
-
-## Tools
-
+* [SOS](documentation/sos.md) - About the SOS debugger extension.
 * [dotnet-dump](documentation/dotnet-dump-instructions.md) - Dump collection and analysis utility.
 * [dotnet-trace](documentation/dotnet-trace-instructions.md) - Enable the collection of events for a running .NET Core Application to a local trace file.
 * [dotnet-counters](documentation/dotnet-counters-instructions.md) - Monitor performance counters of a .NET Core application in real time. 
-
-## New Features
-
-The `bpmd` command can now be used before the runtime is loaded. You can load SOS or the sos plugin on Linux and execute bpmd. Always add the module extension for the first parameter.
-
-    bpmd SymbolTestApp.dll SymbolTestApp.Program.Main
-
-You can set a source file/line number breakpoint like this (the fully qualified source file path is usually not necessary):
-
-    bpmd SymbolTestApp.cs:24
-
-Symbol server support - The `setsymbolserver` command enables downloading the symbol files (portable PDBs) for managed assemblies during commands like `clrstack`, etc. See `soshelp setsymbolserver` for more details.
-
-    (lldb) setsymbolserver -ms
-
-Before executing the "bt" command to dump native frames to load the native symbols (for live debugging only):
-
-    (lldb) loadsymbols
-
-To add a local directory to search for symbols:
-
-    (lldb) setsymbolserver -directory /tmp/symbols
 
 ## Useful Links
 
 * [FAQ](documentation/FAQ.md) - Frequently asked questions.
 * [The LLDB Debugger](http://lldb.llvm.org/index.html) - More information about lldb.
 * [SOS](https://msdn.microsoft.com/en-us/library/bb190764(v=vs.110).aspx) - More information about SOS.
-* [Debugging CoreCLR](https://github.com/dotnet/coreclr/blob/master/Documentation/building/debugging-instructions.md) - Instructions for debugging .NET Core and the CoreCLR runtime.
-* [dotnet/coreclr](https://github.com/dotnet/coreclr) - Source for the .NET Core runtime.
+* [Debugging CoreCLR](https://github.com/dotnet/runtime/blob/master/docs/workflow/debugging/coreclr/debugging.md) - Instructions for debugging .NET Core and the CoreCLR runtime.
+* [dotnet/runtime](https://github.com/dotnet/runtime) - Source for the .NET Core runtime.
 * [Official Build Instructions](documentation/building/official-build-instructions.md) - Internal official build instructions.
 
 [//]: # (Begin current test results)

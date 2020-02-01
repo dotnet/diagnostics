@@ -10470,6 +10470,9 @@ DECLARE_API(SOSStatus)
     if (g_targetMachine != nullptr) {
         ExtOut("Target platform: %04x Context size %04x\n", g_targetMachine->GetPlatform(), g_targetMachine->GetContextSize());
     }
+    if (g_runtimeModulePath != nullptr) {
+        ExtOut("Runtime module path: %s\n", g_runtimeModulePath);
+    }
     if (g_pRuntime != nullptr) {
         g_pRuntime->DisplayStatus();
     }
@@ -16076,6 +16079,38 @@ DECLARE_API(SetSymbolServer)
     }
 
     return Status;
+}
+
+//
+// Sets the runtime module path
+//
+DECLARE_API(SetClrPath)
+{
+    INIT_API_EXT();
+
+    StringHolder runtimeModulePath;
+    CMDValue arg[] =
+    {
+        {&runtimeModulePath.data, COSTRING},
+    };
+    size_t narg;
+    if (!GetCMDOption(args, nullptr, 0, arg, _countof(arg), &narg))
+    {
+        return E_FAIL;
+    }
+    if (narg > 0)
+    {
+        if (g_runtimeModulePath != nullptr)
+        {
+            free((void*)g_runtimeModulePath);
+        }
+        g_runtimeModulePath = _strdup(runtimeModulePath.data);
+    }
+    if (g_runtimeModulePath != nullptr)
+    {
+        ExtOut("Runtime module path: %s\n", g_runtimeModulePath);
+    }
+    return S_OK;
 }
 
 void PrintHelp (__in_z LPCSTR pszCmdName)

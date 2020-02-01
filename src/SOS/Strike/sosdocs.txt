@@ -62,9 +62,10 @@ Examining the GC history           Other
 -----------------------------      -----------------------------
 HistInit                           SetHostRuntime (sethostruntime)
 HistRoot                           SetSymbolServer (setsymbolserver)
-HistObj                            FAQ
+HistObj                            SetClrPath (setclrpath)
 HistObjFind                        SOSFlush
 HistClear                          SOSStatus (sosstatus)
+                                   FAQ
                                    Help (soshelp)
 \\
 
@@ -2638,10 +2639,21 @@ COMMAND: sosstatus.
 Display internal SOS status, reset the internal cached state, or change between desktop or 
 netcore runtimes when both are loaded in the process or dump.
 
-0:000> !sosstatus
-Target platform: 8664 Context size 04d0
-.NET Core runtime at 00007FFEE7230000 (005c2000)
-DAC file path: C:\Users\mikem\AppData\Local\Temp\SymbolCache\mscordaccore.dll/5d0707425c2000/mscordaccore.dll
-DBI file path: C:\Users\mikem\AppData\Local\Temp\SymbolCache\mscordbi.dll/5d0707425c2000/mscordbi.dll
-Cache: C:\Users\mikem\AppData\Local\Temp\SymbolCache
-Server: http://msdl.microsoft.com/download/symbols/
+    0:000> !sosstatus
+    Target platform: 8664 Context size 04d0
+    .NET Core runtime at 00007FFEE7230000 (005c2000)
+    DAC file path: C:\Users\mikem\AppData\Local\Temp\SymbolCache\mscordaccore.dll/5d0707425c2000/mscordaccore.dll
+    DBI file path: C:\Users\mikem\AppData\Local\Temp\SymbolCache\mscordbi.dll/5d0707425c2000/mscordbi.dll
+    Cache: C:\Users\mikem\AppData\Local\Temp\SymbolCache
+    Server: http://msdl.microsoft.com/download/symbols/
+//
+
+COMMAND: setclrpath.
+!setclrpath <path-to-runtime>
+
+Sets the path to load the runtime DAC/DBI files. This command may be necessary for dumps that were created
+on another machine or for triage dumps because there are no module paths included in the dump to infer the
+runtime directory.
+
+    0:000> !setclrpath "C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.0"
+//

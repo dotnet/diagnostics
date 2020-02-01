@@ -8,6 +8,7 @@ Param(
   [switch] $skipmanaged,
   [switch] $skipnative,
   [switch] $dailytest,
+  [string] $privatebuildpath = "",
   [Parameter(ValueFromRemainingArguments=$true)][String[]] $remainingargs
 )
 
@@ -45,9 +46,14 @@ $engroot = Join-Path $reporoot "eng"
 $artifactsdir = Join-Path $reporoot "artifacts"
 $logdir = Join-Path $artifactsdir "log"
 $logdir = Join-Path $logdir Windows_NT.$architecture.$configuration
+$dailytestproperty = "false"
 
 if ($ci) {
     $remainingargs = "-ci " + $remainingargs
+}
+
+if ($dailytest -or $privatebuildpath -ne "") {
+    $dailytestproperty = "true"
 }
 
 # Install sdk for building, restore and build managed components.
@@ -69,7 +75,7 @@ if (-not $skipnative) {
 # Run the xunit tests
 if ($test -or $dailytest) {
     if (-not $crossbuild) {
-        & "$engroot\common\build.ps1" -test -configuration $configuration -verbosity $verbosity -ci:$ci /bl:$logdir\Test.binlog /p:BuildArch=$architecture /p:TestArchitectures=$architecture /p:DailyTest=$dailyTest
+        & "$engroot\common\build.ps1" -test -configuration $configuration -verbosity $verbosity -ci:$ci /bl:$logdir\Test.binlog /p:BuildArch=$architecture /p:TestArchitectures=$architecture /p:DailyTest=$dailytestproperty /p:PrivateBuildPath=$privatebuildpath
         if ($lastExitCode -ne 0) {
             exit $lastExitCode
         }

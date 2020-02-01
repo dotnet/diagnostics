@@ -37,6 +37,9 @@ bool Runtime::s_isDesktop = false;
 LPCSTR Runtime::s_dacFilePath = nullptr;
 LPCSTR Runtime::s_dbiFilePath = nullptr;
 
+// The runtime module path set by the "setclrpath" command
+LPCSTR g_runtimeModulePath = nullptr;
+
 // Current runtime instance
 IRuntime* g_pRuntime = nullptr;
 
@@ -267,10 +270,17 @@ LPCSTR Runtime::GetRuntimeDirectory()
 {
     if (m_runtimeDirectory == nullptr)
     {
-        std::string runtimeDirectory;
-        if (SUCCEEDED(GetRuntimeDirectory(runtimeDirectory)))
+        if (g_runtimeModulePath != nullptr)
         {
-            m_runtimeDirectory = _strdup(runtimeDirectory.c_str());
+            m_runtimeDirectory = _strdup(g_runtimeModulePath);
+        }
+        else 
+        {
+            std::string runtimeDirectory;
+            if (SUCCEEDED(GetRuntimeDirectory(runtimeDirectory)))
+            {
+                m_runtimeDirectory = _strdup(runtimeDirectory.c_str());
+            }
         }
     }
     return m_runtimeDirectory;

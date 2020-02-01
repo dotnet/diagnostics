@@ -1,7 +1,9 @@
+<!-- All Rights Reserved. Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
 <Project>
   <!--
      $(BuildArch) - architecture to test (x64, x86, arm, arm64). Defaults to x64.
      $(DailyTest) - if true, only install/test the latest (master branch) runtime
+     $(PrivateBuildPath) - if non-empty, path to private runtime build to copy/test
      
      From Versions.props:
 
@@ -22,8 +24,11 @@
     <BuildArch Condition="'$(BuildArch)' == ''">$(Platform)</BuildArch>
     <BuildArch Condition="'$(BuildArch)' == ''">x64</BuildArch>
     <CommonInstallArgs>-architecture $(BuildArch)</CommonInstallArgs>
-    <TestConfigFileName Condition="'$(BuildArch)' != 'x86'">$(DotNetRoot)Debugger.Tests.Versions.txt</TestConfigFileName>
-    <TestConfigFileName Condition="'$(BuildArch)' == 'x86'">$(DotNetRoot)x86\Debugger.Tests.Versions.txt</TestConfigFileName>
+    <DotNetInstallRoot Condition="'$(BuildArch)' != 'x86'">$(DotNetRoot)</DotNetInstallRoot>
+    <DotNetInstallRoot Condition="'$(BuildArch)' == 'x86'">$(DotNetRoot)x86\</DotNetInstallRoot>
+    <DotNetInstallDir>$(DotNetInstallRoot.Replace("\", "\\"))shared\\Microsoft.NETCore.App\\$(MicrosoftNETCoreAppVersion)\\</DotNetInstallDir>
+    <TestConfigFileName>$(DotNetInstallRoot)Debugger.Tests.Versions.txt</TestConfigFileName>
+    <RegeditFileName>$(DotNetInstallRoot)PrivateTesting.reg</RegeditFileName>
   </PropertyGroup>
 
   <Choose>
@@ -45,12 +50,25 @@
     <TestVersions Include="Latest" RuntimeVersion="$(MicrosoftNETCoreAppVersion)" AspNetVersion="$(MicrosoftAspNetCoreAppRefVersion)" Install="true" />
     <TestVersions Include="31" RuntimeVersion="$(MicrosoftNETCoreApp31Version)" AspNetVersion="$(MicrosoftAspNetCoreApp31Version)" Install="!$(DailyTest)" />
     <TestVersions Include="30" RuntimeVersion="$(MicrosoftNETCoreApp30Version)" AspNetVersion="$(MicrosoftAspNetCoreApp30Version)" Install="!$(DailyTest)" />
-    <TestVersions Include="21" RuntimeVersion="$(MicrosoftNETCoreApp21Version)" AspNetVersion="$(MicrosoftAspNetCoreApp21Version)" Install="!$(DailyTest)" />
+    <TestVersions Include="21" RuntimeVersion="$(MicrosoftNETCoreApp21Version)" AspNetVersion="$(MicrosoftAspNetCoreApp21Version)" Install="true" />
   </ItemGroup>
 
   <Target Name="InstallTestRuntimes" 
           BeforeTargets="RunTests"
-          DependsOnTargets="InstallRuntimesWindows;InstallRuntimesUnix;WriteTestVersionManifest" />
+          DependsOnTargets="InstallRuntimesWindows;InstallRuntimesUnix;WriteTestVersionManifest;TestPrivateBuild" />
+
+  <Target Name="TestPrivateBuild"
+          Condition="'$(PrivateBuildPath)' != ''"
+          DependsOnTargets="ModifyRegistry">
+
+    <ItemGroup>
+      <PrivateBuildFiles Include="$(PrivateBuildPath)\*" />
+    </ItemGroup>
+
+    <Message Importance="High" Text="Copying private build binaries from $(PrivateBuildPath) to $(DotNetInstallDir.Replace('\\', '\'))" />
+
+    <Copy SourceFiles="@(PrivateBuildFiles)" DestinationFolder="$(DotNetInstallDir.Replace('\\', '\'))" />
+  </Target>
 
   <Target Name="InstallRuntimesWindows"
           Condition="$([MSBuild]::IsOsPlatform(Windows))"
@@ -76,7 +94,10 @@
           Condition="%(TestVersions.Install)" />
    </Target>
 
-  <Target Name="WriteTestVersionManifest" Inputs="$(VersionsPropsPath)" Outputs="$(TestConfigFileName)">
+  <Target Name="WriteTestVersionManifest" 
+          Inputs="$(VersionsPropsPath)" 
+          Outputs="$(TestConfigFileName)">
+
     <PropertyGroup>
       <TestConfigFileLines>
 <![CDATA[
@@ -92,7 +113,7 @@
   <AspNetCoreVersionLatest>$(MicrosoftAspNetCoreAppRefVersion)</AspNetCoreVersionLatest>
 </Configuration>
 ]]>
-     </TestConfigFileLines>
+      </TestConfigFileLines>
     </PropertyGroup>
 
     <WriteLinesToFile File="$(TestConfigFileName)" Lines="$(TestConfigFileLines)" Overwrite="true" WriteOnlyWhenDifferent="true" />
@@ -102,4 +123,33 @@
       <FileWrites Include="$(TestConfigFileName)" />
     </ItemGroup>
   </Target>
+
+  <Target Name="ModifyRegistry"
+          Condition="$([MSBuild]::IsOsPlatform(Windows))"
+          Inputs="$(VersionsPropsPath)" 
+          Outputs="$(RegeditFileName)">
+
+    <PropertyGroup>
+      <RegeditFileLines>
+<![CDATA[
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\KnownManagedDebuggingDlls]
+"$(DotNetInstallDir)mscordaccore.dll"=dword:0
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\MiniDumpAuxiliaryDlls]
+"$(DotNetInstallDir)coreclr.dll"="$(DotNetInstallDir)mscordaccore.dll"
+]]>
+      </RegeditFileLines>
+    </PropertyGroup>
+
+    <WriteLinesToFile File="$(RegeditFileName)" Lines="$(RegeditFileLines)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+
+    <ItemGroup>
+      <FileWrites Include="$(RegeditFileName)" />
+    </ItemGroup>
+
+    <Exec Command="regedit $(RegeditFileName)" />
+  </Target>
+
 </Project>

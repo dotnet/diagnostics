@@ -30,6 +30,7 @@ __NativeBuild=true
 __CrossBuild=false
 __Test=false
 __DailyTest=false
+__PrivateBuildPath=""
 __CI=false
 __Verbosity=minimal
 __ManagedBuildArgs=
@@ -43,6 +44,7 @@ usage()
     echo "--skipnative - Skip building native components"
     echo "--test - run xunit tests"
     echo "--dailytest - test components for daily build job"
+    echo "--privatebuildpath - path to local private runtime build to test"
     echo "--architecture <x64|x86|arm|armel|arm64>"
     echo "--configuration <debug|release>"
     echo "--rootfs <ROOTFS_DIR>"
@@ -175,6 +177,12 @@ while :; do
 
         -dailytest)
             __DailyTest=true
+            ;;
+
+        -privatebuildpath)
+            __PrivateBuildPath=$2
+            __DailyTest=true
+            shift
             ;;
 
         -ci)
@@ -498,7 +506,7 @@ if [ $__Test == true ]; then
 
       echo "lldb: '$LLDB_PATH' gdb: '$GDB_PATH'"
 
-      "$__ProjectRoot/eng/common/build.sh" --test --configuration "$__BuildType" --verbosity "$__Verbosity" /bl:$__LogDir/Test.binlog /p:BuildArch=$__BuildArch /p:DailyTest=$__DailyTest $__TestArgs
+      "$__ProjectRoot/eng/common/build.sh" --test --configuration "$__BuildType" --verbosity "$__Verbosity" /bl:$__LogDir/Test.binlog /p:BuildArch=$__BuildArch /p:DailyTest=$__DailyTest /p:PrivateBuildPath=$__PrivateBuildPath $__TestArgs
       if [ $? != 0 ]; then
           exit 1
       fi

@@ -48,6 +48,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [Command(Name = "histobjfind",      AliasExpansion = "HistObjFind",         Help = "Displays all the log entries that reference an object at the specified address.")]
     [Command(Name = "histroot",         AliasExpansion = "HistRoot",            Help = "Displays information related to both promotions and relocations of the specified root.")]
     [Command(Name = "setsymbolserver",  AliasExpansion = "SetSymbolServer",     Help = "Enables the symbol server support ")]
+    [Command(Name = "setclrpath",       AliasExpansion = "setclrpath",          Platform = CommandPlatform.Windows, Help = "Set the path to load the runtime DAC/DBI files.")]
     [Command(Name = "dumprcw",          AliasExpansion = "DumpRCW",             Platform = CommandPlatform.Windows, Help = "Displays information about a Runtime Callable Wrapper.")]
     [Command(Name = "dumpccw",          AliasExpansion = "DumpCCW",             Platform = CommandPlatform.Windows, Help = "Displays information about a COM Callable Wrapper.")]
     [Command(Name = "dumppermissionset",AliasExpansion = "DumpPermissionSet",   Platform = CommandPlatform.Windows, Help = "Displays a PermissionSet object (debug build only).")]
