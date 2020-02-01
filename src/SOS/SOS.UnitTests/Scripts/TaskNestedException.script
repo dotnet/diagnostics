@@ -44,7 +44,7 @@ VERIFY:\s+SP\s+IP\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>.+RandomTest(::|\.)RandomUserTask\.InnerException(\(\))?\+0x<HEXVAL>\s*
 !IFDEF:DESKTOP
 !IFDEF:TRIAGE_DUMP
-VERIFY:[.+[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?[Tt]ask[Nn]ested[Ee]xception[\\|/][Rr]andom[Uu]ser[Ll]ibrary[\\|/][Rr]andom[Uu]ser[Tt]ask\.cs @ 34\]
+VERIFY:[.+[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?[Tt]ask[Nn]ested[Ee]xception[\\|/][Rr]andom[Uu]ser[Ll]ibrary[\\|/][Rr]andom[Uu]ser[Tt]ask\.cs @ (34|35)\]
 ENDIF:TRIAGE_DUMP
 ENDIF:DESKTOP
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>.+RandomTest(::|\.)RandomUserTask\.<\.ctor>.+\+0x<HEXVAL>\s*

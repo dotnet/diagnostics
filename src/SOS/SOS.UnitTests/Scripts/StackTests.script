@@ -14,7 +14,7 @@ VERIFY:\s+<DECVAL>.<DECVAL>.<DECVAL>.<DECVAL>.*
 SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>.*\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 8\s*\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>.*\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ (8|17)\s*\]\s+
 IFDEF:64BIT
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 13\s*\]\s+
 ENDIF:64BIT
@@ -27,7 +27,7 @@ ENDIF:DOTNETDUMP
 SOSCOMMAND:ClrStack -f
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+(?i:NestedExceptionTest.*)!NestedExceptionTest\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 8\s*\]\s+
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+(?i:NestedExceptionTest.*)!NestedExceptionTest\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ (8|17)\s*\]\s+
 IFDEF:64BIT
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+(?i:NestedExceptionTest.*)!NestedExceptionTest\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 13\s*\]\s+
 ENDIF:64BIT
@@ -37,7 +37,7 @@ SOSCOMMAND:SetSymbolServer -disable
 SOSCOMMAND:ClrStack -a
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 8\s*\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ (8|17)\s*\]\s+
 VERIFY:\s+PARAMETERS:\s+
 VERIFY:\s+args \(0x<HEXVAL>\) = 0x<HEXVAL>\s+
 VERIFY:\s+LOCALS:\s+
@@ -55,7 +55,7 @@ SOSCOMMAND:ClrStack -r
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 8\s*\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ (8|17)\s*\]\s+
 IFDEF:ARM
 VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
 ENDIF:ARM
