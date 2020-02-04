@@ -16,13 +16,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
             internal static async Task CollectDumpAsync(Process process, string fileName, DumpTypeOption type)
             {
-                // We don't work on WSL :(
-                string ostype = await File.ReadAllTextAsync("/proc/sys/kernel/osrelease");
-                if (ostype.Contains("Microsoft"))
-                {
-                    throw new PlatformNotSupportedException("Cannot collect memory dumps from Windows Subsystem for Linux.");
-                }
-
                 // First step is to find the .NET runtime. To do this we look for coreclr.so
                 ProcessModule coreclr = process.Modules.Cast<ProcessModule>().FirstOrDefault(m => string.Equals(m.ModuleName, "libcoreclr.so"));
                 if (coreclr == null)
