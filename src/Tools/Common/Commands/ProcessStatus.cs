@@ -96,15 +96,24 @@ namespace Microsoft.Internal.Common.Commands
             {
                 try
                 {
-                    string[] cmdArgs = File.ReadAllText($"/proc/{process.Id}/cmdline")?.Split("\0").Skip(1).ToArray();
-                    return String.Join("", cmdArgs).Replace("\0", "");
+                    string commandLine = File.ReadAllText($"/proc/{process.Id}/cmdline");
+                    if(!String.IsNullOrWhiteSpace(commandLine))
+                    {
+                        //The command line may be modified and the first part of the command line may not be /path/to/exe. If that is the case, return the command line as is.Else remove the path to module as we are already displaying that.
+                        if(commandLine.Split('\0').FirstOrDefault() == process.MainModule.FileName)
+                        {
+                            return String.Join("", commandLine.Split('\0').Skip(1)).Replace("\0", "");
+                        }
+                        return commandLine;
+                    }
+                    
                 }
                 catch (IOException)
                 {
                     return "[cannot determine command line arguments]";
                 }
             }
-            return null;
+            return "";
         }
     }
 }
