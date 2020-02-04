@@ -82,7 +82,7 @@ namespace Microsoft.Internal.Common.Commands
                     {
                         using (ManagementObjectCollection objectCollection = searcher.Get())
                         {
-                            return objectCollection.Cast<ManagementBaseObject>().SingleOrDefault()?["CommandLine"]?.ToString().Split("  ")?.Last().Replace("\"", "");
+                            return objectCollection.Cast<ManagementBaseObject>().SingleOrDefault()?["CommandLine"]?.ToString().Split("  ")?.Last().Replace("\"", "") ?? "";
                         }
                     }
                 }
@@ -100,13 +100,14 @@ namespace Microsoft.Internal.Common.Commands
                     if(!String.IsNullOrWhiteSpace(commandLine))
                     {
                         //The command line may be modified and the first part of the command line may not be /path/to/exe. If that is the case, return the command line as is.Else remove the path to module as we are already displaying that.
-                        if(commandLine.Split('\0').FirstOrDefault() == process.MainModule.FileName)
+                        string[] commandLineSplit = commandLine.Split('\0');
+                        if (commandLineSplit.FirstOrDefault() == process.MainModule.FileName)
                         {
-                            return String.Join("", commandLine.Split('\0').Skip(1)).Replace("\0", "");
+                            return String.Join("", commandLineSplit.Skip(1));
                         }
                         return commandLine;
                     }
-                    
+                    return "";
                 }
                 catch (IOException)
                 {
