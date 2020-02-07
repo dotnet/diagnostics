@@ -10,7 +10,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class PrintCommandHandler
     {
-        delegate Task<int> PrintDelegate(CancellationToken ct, IConsole console, string file);
+        delegate Task<int> PrintDelegate(CancellationToken ct, IConsole console, FileInfo file);
         
         public static Command PrintCommand() =>
             new Command(
@@ -23,14 +23,14 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 FileNameOption()
             };
 
-        private static Task<int> Print(CancellationToken ct, IConsole console, string file)
+        private static Task<int> Print(CancellationToken ct, IConsole console, FileInfo file)
         {
-            if (string.IsNullOrEmpty(file))
+            if (file == null)
             {
                 Console.Error.WriteLine($"-f|--file is required");
                 return Task.FromResult(-1);
             }
-            if (!File.Exists(file))
+            if (!file.Exists)
             {
                 Console.Error.WriteLine($"Invalid gcdump file {file}");
                 return Task.FromResult(-1);
@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
             try
             {
-                var dump = GCHeapDump.ReadMemoryGraph(file);
+                var dump = GCHeapDump.ReadMemoryGraph(file.FullName);
                 dump.MemoryGraph.WriteToStdOut();
                 return Task.FromResult(0);
             }
@@ -48,13 +48,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 return Task.FromResult(-1);
             }
         }
-        
-        private static Option FileNameOption() =>
-            new Option(
-                aliases: new[] { "-f", "--file" },
-                description: "The file to read gcdump from.")
-            {
-                Argument = new Argument<string>(name: "file")
-            };
+
+        private static Option<FileInfo> FileNameOption() =>
+            new Option<FileInfo>(new[] {"-f", "--file"}, "The file to read gcdump from.");
     }
 }
