@@ -632,6 +632,7 @@ OPTIONS
 COMMANDS
 
     collect   Capture dumps from a process
+    print     Prints a previously collected gcdump into the stdout
 
 COLLECT
 
@@ -656,12 +657,42 @@ COLLECT
       -v, --verbose
           Turns on logging for gcdump
 
+      --std-out
+          Also writes plaintext results into stdout.
+
 Examples:
 
     $ dotnet gcdump collect --process-id 1902
     Writing gcdump to file ./20190226_135837_1902.gcdump
     Wrote 12576 bytes to file
     Complete
+
+PRINT
+
+    dotnet-gcdump print -f|--file <input_dump_path>
+    
+    Prints a previously collected gcdump into the stdout
+    
+    Usage:
+      dotnet-gcdump print [options]
+    
+    Options:
+      -f, --file <f>    The file to read gcdump from.
+
+Examples:
+
+    $ dotnet gcdump print -f 20200207_094403_19847.gcdump | head -10
+     1,335,288  (Dump size)
+       299,845  (Total allocations)
+    
+        55,898  System.String (Bytes > 10K)  [System.Private.CoreLib.dll]
+        32,664  System.Object[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+        31,128  System.Int32[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+        13,816  Entry<System.Type,Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory+ServiceDescriptorCacheItem>[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+        10,368  Entry<System.String,System.String>[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+         8,960  Node<System.Type,Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite>[] (Bytes > 1K)  [System.Collections.Concurrent.dll]
+         8,216  System.Char[] (Bytes > 1K)  [System.Private.CoreLib.dll]
+
 
 ## Future suggestions
 
