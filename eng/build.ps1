@@ -9,6 +9,7 @@ Param(
   [switch] $skipnative,
   [switch] $dailytest,
   [string] $privatebuildpath = "",
+  [switch] $cleanupprivatebuild,
   [Parameter(ValueFromRemainingArguments=$true)][String[]] $remainingargs
 )
 
@@ -54,6 +55,20 @@ if ($ci) {
 
 if ($dailytest -or $privatebuildpath -ne "") {
     $dailytestproperty = "true"
+}
+
+# Remove the private build registry keys
+if ($cleanupprivatebuild) {
+    $dotnetinstallroot = Join-Path $reporoot ".dotnet"
+    if ($architecture -eq "x86") {
+        $dotnetinstallroot = Join-Path $dotnetinstallroot "x86"
+    }
+    if (Test-Path $dotnetinstallroot\RemovePrivateTesting.reg) {
+        regedit $dotnetinstallroot\RemovePrivateTesting.reg
+        # delete the add reg file so registry is edited again
+        del $dotnetinstallroot\AddPrivateTesting.reg
+    }
+    exit 0
 }
 
 # Install sdk for building, restore and build managed components.
