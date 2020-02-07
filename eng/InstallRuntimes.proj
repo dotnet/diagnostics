@@ -147,6 +147,21 @@
   </Target>
 
 <!--
+    Removes the private build registry keys
+-->
+
+  <Target Name="CleanupPrivateBuild"
+          Condition="Exists($(RemoveRegeditFileName))">
+
+    <Exec Command="regedit $(RemoveRegeditFileName)" />
+    <!-- 
+        Deleting only the add reg key file so ModifyRegistry can run again. Leaving the
+        remove reg key file so this target can be run multiple times.
+    -->
+    <Delete Files="$(AddRegeditFileName)" />
+  </Target>
+
+<!--
     On Windows adds the registry keys to allow the unsigned private build DAC to generate dumps
 -->
 
