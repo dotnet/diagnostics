@@ -1,7 +1,9 @@
+<!-- All Rights Reserved. Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
 <Project>
   <!--
      $(BuildArch) - architecture to test (x64, x86, arm, arm64). Defaults to x64.
      $(DailyTest) - if true, only install/test the latest (master branch) runtime
+     $(PrivateBuildPath) - if non-empty, path to private runtime build to copy/test
      
      From Versions.props:
 
@@ -21,9 +23,25 @@
     <DailyTest Condition="'$(DailyTest)' == ''">false</DailyTest>
     <BuildArch Condition="'$(BuildArch)' == ''">$(Platform)</BuildArch>
     <BuildArch Condition="'$(BuildArch)' == ''">x64</BuildArch>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(BuildArch)' != 'x86'">
+    <DotNetInstallRoot>$(DotNetRoot)</DotNetInstallRoot>
+    <RegistryRoot>HKEY_LOCAL_MACHINE\SOFTWARE</RegistryRoot>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(BuildArch)' == 'x86'">
+    <DotNetInstallRoot>$(DotNetRoot)x86\</DotNetInstallRoot>
+    <RegistryRoot>HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node</RegistryRoot>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <CommonInstallArgs>-architecture $(BuildArch)</CommonInstallArgs>
-    <TestConfigFileName Condition="'$(BuildArch)' != 'x86'">$(DotNetRoot)Debugger.Tests.Versions.txt</TestConfigFileName>
-    <TestConfigFileName Condition="'$(BuildArch)' == 'x86'">$(DotNetRoot)x86\Debugger.Tests.Versions.txt</TestConfigFileName>
+    <DotNetInstallDir>$(DotNetInstallRoot.Replace("\", "\\"))shared\\Microsoft.NETCore.App\\$(MicrosoftNETCoreAppVersion)\\</DotNetInstallDir>
+    <TestConfigFileName>$(DotNetInstallRoot)Debugger.Tests.Versions.txt</TestConfigFileName>
+    <AddRegeditFileName>$(DotNetInstallRoot)AddPrivateTesting.reg</AddRegeditFileName>
+    <RemoveRegeditFileName>$(DotNetInstallRoot)RemovePrivateTesting.reg</RemoveRegeditFileName>
+    <RegeditCommand>regedit.exe</RegeditCommand>
   </PropertyGroup>
 
   <Choose>
@@ -45,12 +63,20 @@
     <TestVersions Include="Latest" RuntimeVersion="$(MicrosoftNETCoreAppVersion)" AspNetVersion="$(MicrosoftAspNetCoreAppRefVersion)" Install="true" />
     <TestVersions Include="31" RuntimeVersion="$(MicrosoftNETCoreApp31Version)" AspNetVersion="$(MicrosoftAspNetCoreApp31Version)" Install="!$(DailyTest)" />
     <TestVersions Include="30" RuntimeVersion="$(MicrosoftNETCoreApp30Version)" AspNetVersion="$(MicrosoftAspNetCoreApp30Version)" Install="!$(DailyTest)" />
-    <TestVersions Include="21" RuntimeVersion="$(MicrosoftNETCoreApp21Version)" AspNetVersion="$(MicrosoftAspNetCoreApp21Version)" Install="!$(DailyTest)" />
+    <TestVersions Include="21" RuntimeVersion="$(MicrosoftNETCoreApp21Version)" AspNetVersion="$(MicrosoftAspNetCoreApp21Version)" Install="true" />
   </ItemGroup>
+
+<!--
+    Installs the runtimes for the SOS tests, handles private runtime build support or cleans up the private build registry keys
+-->
 
   <Target Name="InstallTestRuntimes" 
           BeforeTargets="RunTests"
-          DependsOnTargets="InstallRuntimesWindows;InstallRuntimesUnix;WriteTestVersionManifest" />
+          DependsOnTargets="InstallRuntimesWindows;InstallRuntimesUnix;WriteTestVersionManifest;TestPrivateBuild" />
+
+<!--
+    Installs the test runtimes on Windows
+-->
 
   <Target Name="InstallRuntimesWindows"
           Condition="$([MSBuild]::IsOsPlatform(Windows))"
@@ -62,6 +88,10 @@
     <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) -version %(TestVersions.AspNetVersion) -runtime aspnetcore }&quot;"
           Condition="%(TestVersions.Install)" />
   </Target>
+
+<!--
+    Installs the test runtimes on Linux/MacOS
+-->
 
   <Target Name="InstallRuntimesUnix"
           Condition="!$([MSBuild]::IsOsPlatform(Windows))"
@@ -76,7 +106,14 @@
           Condition="%(TestVersions.Install)" />
    </Target>
 
-  <Target Name="WriteTestVersionManifest" Inputs="$(VersionsPropsPath)" Outputs="$(TestConfigFileName)">
+<!--
+    Writes the Debugger.Tests.Versions.txt file used by the SOS test harness
+-->
+
+  <Target Name="WriteTestVersionManifest" 
+          Inputs="$(VersionsPropsPath)" 
+          Outputs="$(TestConfigFileName)">
+
     <PropertyGroup>
       <TestConfigFileLines>
 <![CDATA[
@@ -92,14 +129,107 @@
   <AspNetCoreVersionLatest>$(MicrosoftAspNetCoreAppRefVersion)</AspNetCoreVersionLatest>
 </Configuration>
 ]]>
-     </TestConfigFileLines>
+      </TestConfigFileLines>
     </PropertyGroup>
 
     <WriteLinesToFile File="$(TestConfigFileName)" Lines="$(TestConfigFileLines)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+
     <Message Importance="High" Text="Created config file $(TestConfigFileName)" />
 
     <ItemGroup>
       <FileWrites Include="$(TestConfigFileName)" />
     </ItemGroup>
   </Target>
+
+<!--
+    Copies the private runtime build binaries and on Windows adds registry keys
+-->
+
+  <Target Name="TestPrivateBuild"
+          Condition="'$(PrivateBuildPath)' != ''"
+          DependsOnTargets="ModifyRegistry">
+
+    <ItemGroup>
+      <PrivateBuildFiles Include="$(PrivateBuildPath)\*" />
+    </ItemGroup>
+
+    <Message Importance="High" Text="Copying private build binaries from $(PrivateBuildPath) to $(DotNetInstallDir.Replace('\\', '\'))" />
+
+    <Copy SourceFiles="@(PrivateBuildFiles)" DestinationFolder="$(DotNetInstallDir.Replace('\\', '\'))" />
+  </Target>
+
+<!--
+    Removes the private build registry keys
+-->
+
+  <Target Name="CleanupPrivateBuild"
+          Condition="Exists($(RemoveRegeditFileName))">
+
+    <Exec Command="$(RegeditCommand) $(RemoveRegeditFileName)" />
+    <!-- 
+        Delete only the AddRegeditFileName so the target ModifyRegistry will run on next 
+        build. Leaving the remove reg key file so this target can be run multiple times.
+    -->
+    <Delete Files="$(AddRegeditFileName)" />
+  </Target>
+
+<!--
+    On Windows adds the registry keys to allow the unsigned private build DAC to generate dumps
+-->
+
+  <Target Name="ModifyRegistry"
+          Condition="$([MSBuild]::IsOsPlatform(Windows))"
+          DependsOnTargets="CreateRemoveRegFile"
+          Inputs="$(VersionsPropsPath)" 
+          Outputs="$(AddRegeditFileName)">
+
+    <PropertyGroup>
+      <AddRegeditFileLines>
+<![CDATA[
+Windows Registry Editor Version 5.00
+
+[$(RegistryRoot)\Microsoft\Windows NT\CurrentVersion\KnownManagedDebuggingDlls]
+"$(DotNetInstallDir)mscordaccore.dll"=dword:0
+
+[$(RegistryRoot)\Microsoft\Windows NT\CurrentVersion\MiniDumpAuxiliaryDlls]
+"$(DotNetInstallDir)coreclr.dll"="$(DotNetInstallDir)mscordaccore.dll"
+]]>
+      </AddRegeditFileLines>
+    </PropertyGroup>
+
+    <WriteLinesToFile File="$(AddRegeditFileName)" Lines="$(AddRegeditFileLines)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+
+    <ItemGroup>
+      <FileWrites Include="$(AddRegeditFileName)" />
+    </ItemGroup>
+
+    <Exec Command="$(RegeditCommand) $(AddRegeditFileName)" />
+  </Target>
+
+<!--
+    Creates the reg file to remove the registry keys added in ModifyRegistry
+-->
+
+  <Target Name="CreateRemoveRegFile">
+    <PropertyGroup>
+      <RemoveRegeditFileLines>
+<![CDATA[
+Windows Registry Editor Version 5.00
+
+[$(RegistryRoot)\Microsoft\Windows NT\CurrentVersion\KnownManagedDebuggingDlls]
+"$(DotNetInstallDir)mscordaccore.dll"=-
+
+[$(RegistryRoot)\Microsoft\Windows NT\CurrentVersion\MiniDumpAuxiliaryDlls]
+"$(DotNetInstallDir)coreclr.dll"=-
+]]>
+      </RemoveRegeditFileLines>
+    </PropertyGroup>
+
+    <WriteLinesToFile File="$(RemoveRegeditFileName)" Lines="$(RemoveRegeditFileLines)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+
+    <ItemGroup>
+      <FileWrites Include="$(RemoveRegeditFileName)" />
+    </ItemGroup>
+  </Target>
+
 </Project>

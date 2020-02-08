@@ -440,11 +440,14 @@ public class SOSRunner : IDisposable
                     initialCommands.Add(".sympath %DEBUG_ROOT%");
                     initialCommands.Add(".extpath " + Path.GetDirectoryName(config.SOSPath()));
 
-                    // Add the path to runtime so cdb/sos can find mscordbi.
-                    string runtimeSymbolsPath = config.RuntimeSymbolsPath;
-                    if (runtimeSymbolsPath != null)
+                    // Add the path to runtime so cdb/SOS can find DAC/DBI for triage dumps
+                    if (information.DumpType == DumpType.Triage)
                     {
-                        initialCommands.Add(".sympath+ " + runtimeSymbolsPath);
+                        string runtimeSymbolsPath = config.RuntimeSymbolsPath;
+                        if (runtimeSymbolsPath != null)
+                        {
+                            initialCommands.Add(".sympath+ " + runtimeSymbolsPath);
+                        }
                     }
                     // Turn off warnings that can happen in the middle of a command's output
                     initialCommands.Add(".outmask- 0x244");
@@ -543,6 +546,15 @@ public class SOSRunner : IDisposable
                     }
                     initialCommands.Add("setsymbolserver -directory %DEBUG_ROOT%");
 
+                    // Add the path to runtime so dotnet-dump/SOS can find DAC/DBI for triage dumps
+                    if (information.DumpType == DumpType.Triage)
+                    {
+                        string runtimeSymbolsPath = config.RuntimeSymbolsPath;
+                        if (runtimeSymbolsPath != null)
+                        {
+                            initialCommands.Add("setclrpath " + runtimeSymbolsPath);
+                        }
+                    }
                     arguments.Append(debuggerPath);
                     arguments.Append(@" analyze %DUMP_NAME%");
                     debuggerPath = config.DotNetDumpHost();
@@ -1175,6 +1187,7 @@ public class SOSRunner : IDisposable
         }
         vars.Add("%DEBUG_ROOT%", debuggeeConfig.BinaryDirPath);
         vars.Add("%SOS_PATH%", information.TestConfiguration.SOSPath());
+        vars.Add("%DESKTOP_RUNTIME_PATH%", information.TestConfiguration.DesktopRuntimePath());
 
         // Can be used in an RegEx expression
         vars.Add("<DEBUGGEE_EXE>", debuggeeExe.Replace(@"\", @"\\"));
@@ -1383,6 +1396,11 @@ public static class TestConfigurationExtensions
     public static string SOSHostRuntime(this TestConfiguration config)
     {
         return TestConfiguration.MakeCanonicalPath(config.GetValue("SOSHostRuntime"));
+    }
+
+    public static string DesktopRuntimePath(this TestConfiguration config)
+    {
+        return TestConfiguration.MakeCanonicalPath(config.GetValue("DesktopRuntimePath"));
     }
 
     public static bool GenerateDumpWithLLDB(this TestConfiguration config)

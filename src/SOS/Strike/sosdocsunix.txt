@@ -55,26 +55,14 @@ Examining the GC history           Other
 -----------------------------      -----------------------------
 HistInit (histinit)                SetHostRuntime (sethostruntime)
 HistRoot (histroot)                SetSymbolServer (setsymbolserver, loadsymbols)
-HistObj  (histobj)                 FAQ
+HistObj  (histobj)                 SetClrPath (setclrpath)
 HistObjFind (histobjfind)          SOSFlush (sosflush)
 HistClear (histclear)              SOSStatus (sosstatus)
+                                   FAQ
                                    Help (soshelp)
 \\
 
 COMMAND: faq.
->> Where can I get the right version of SOS for my build?
-
-If you are running a xplat version of coreclr, the sos module (exact name
-is platform dependent) is installed in the same directory as the main coreclr
-module. There is also an lldb sos plugin command that allows the path where
-the sos, dac and dbi modules are loaded:
-
-    "setclrpath /home/user/coreclr/bin/Product/Linux.x64.Debug""
-
-If you are using a dump file created on another machine, it is a little bit
-more complex. You need to make sure the dac module that came with that install
-is in the directory set with the above command.
-
 >> I have a chicken and egg problem. I want to use SOS commands, but the CLR
    isn't loaded yet. What can I do?
 
@@ -1963,3 +1951,13 @@ SOSStatus [-reset]
 -reset - reset all the cached internal SOS state.
 
 Display internal SOS status or reset the internal cached state.
+\\
+
+COMMAND: setclrpath.
+!setclrpath <path-to-runtime>
+
+Sets the path to load the runtime DAC/DBI files. This command may be necessary for dumps that were created
+on another machine or for triage dumps.
+
+    (lldb) setclrpath /home/user/coreclr/bin/Product/Linux.x64.Debug
+\\

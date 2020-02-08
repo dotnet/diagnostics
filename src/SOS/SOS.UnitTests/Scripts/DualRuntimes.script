@@ -71,6 +71,10 @@ VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
 SOSCOMMAND:SOSStatus
 VERIFY:.*\.NET Core runtime at.*\s+
 
+IFDEF:TRIAGE_DUMP
+SOSCOMMAND:setclrpath %DESKTOP_RUNTIME_PATH%
+ENDIF:TRIAGE_DUMP
+
 SOSCOMMAND:SOSStatus -desktop
 VERIFY:\s*Switched to desktop CLR runtime successfully\s+
 
@@ -83,12 +87,7 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.Foo6\(.*\)\s+\[(?i:.*[
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.Foo5\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 16\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.ThrowException\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 10\]\s*
 
-IFDEF:DOTNETDUMP
 SOSCOMMAND:clrthreads
-ENDIF:DOTNETDUMP
-!IFDEF:DOTNETDUMP
-SOSCOMMAND:Threads
-ENDIF:DOTNETDUMP
 VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
 VERIFY:\s+UnstartedThread:\s+<DECVAL>\s+
 VERIFY:\s+BackgroundThread:\s+<DECVAL>\s+

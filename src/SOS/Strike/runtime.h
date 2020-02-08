@@ -88,6 +88,7 @@ public:
     virtual void DisplayStatus() = 0;
 };
 
+extern LPCSTR g_runtimeModulePath;
 extern IRuntime* g_pRuntime;
 
 /**********************************************************************\

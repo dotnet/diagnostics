@@ -22,6 +22,9 @@
   <DumpDir>$(RootBinDir)\tmp\$(TargetConfiguration)\dumps</DumpDir>
   <CDBPath>$(RootBinDir)\bin\SOS.UnitTests\$(TargetConfiguration)\netcoreapp2.0\publish\runtimes\win-$(TargetArchitecture)\native\cdb.exe</CDBPath>
   <CDBHelperExtension>$(InstallDir)\runcommand.dll</CDBHelperExtension>
+
+  <DesktopFrameworkPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</DesktopFrameworkPath>
+  <DesktopFrameworkPath Condition="$(TargetArchitecture) != x64">$(WinDir)\Microsoft.Net\Framework\v4.0.30319\</DesktopFrameworkPath>
   <DesktopFramework>net462</DesktopFramework>
 
   <DebuggeeSourceRoot>$(RepoRootDir)\src\SOS\SOS.UnitTests\Debuggees</DebuggeeSourceRoot>
@@ -163,9 +166,7 @@
       <BuildProjectFramework>$(DesktopFramework)</BuildProjectFramework>
       <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
       <DebugType>full</DebugType>
-      <FrameworkDirPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</FrameworkDirPath>
-      <FrameworkDirPath Condition="$(TargetArchitecture) != x64">$(WinDir)\Microsoft.Net\Framework\v4.0.30319\</FrameworkDirPath>
-      <RuntimeSymbolsPath>$(FrameworkDirPath)</RuntimeSymbolsPath>
+      <RuntimeSymbolsPath>$(DesktopFrameworkPath)</RuntimeSymbolsPath>
       <SOSHostRuntime>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeVersion21)</SOSHostRuntime>
     </Option>
   </Options>
