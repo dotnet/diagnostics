@@ -23,13 +23,25 @@
     <DailyTest Condition="'$(DailyTest)' == ''">false</DailyTest>
     <BuildArch Condition="'$(BuildArch)' == ''">$(Platform)</BuildArch>
     <BuildArch Condition="'$(BuildArch)' == ''">x64</BuildArch>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(BuildArch)' != 'x86'">
+    <DotNetInstallRoot>$(DotNetRoot)</DotNetInstallRoot>
+    <RegistryRoot>HKEY_LOCAL_MACHINE\SOFTWARE</RegistryRoot>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(BuildArch)' == 'x86'">
+    <DotNetInstallRoot>$(DotNetRoot)x86\</DotNetInstallRoot>
+    <RegistryRoot>HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node</RegistryRoot>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <CommonInstallArgs>-architecture $(BuildArch)</CommonInstallArgs>
-    <DotNetInstallRoot Condition="'$(BuildArch)' != 'x86'">$(DotNetRoot)</DotNetInstallRoot>
-    <DotNetInstallRoot Condition="'$(BuildArch)' == 'x86'">$(DotNetRoot)x86\</DotNetInstallRoot>
     <DotNetInstallDir>$(DotNetInstallRoot.Replace("\", "\\"))shared\\Microsoft.NETCore.App\\$(MicrosoftNETCoreAppVersion)\\</DotNetInstallDir>
     <TestConfigFileName>$(DotNetInstallRoot)Debugger.Tests.Versions.txt</TestConfigFileName>
     <AddRegeditFileName>$(DotNetInstallRoot)AddPrivateTesting.reg</AddRegeditFileName>
     <RemoveRegeditFileName>$(DotNetInstallRoot)RemovePrivateTesting.reg</RemoveRegeditFileName>
+    <RegeditCommand>regedit.exe</RegeditCommand>
   </PropertyGroup>
 
   <Choose>
@@ -153,10 +165,10 @@
   <Target Name="CleanupPrivateBuild"
           Condition="Exists($(RemoveRegeditFileName))">
 
-    <Exec Command="regedit $(RemoveRegeditFileName)" />
+    <Exec Command="$(RegeditCommand) $(RemoveRegeditFileName)" />
     <!-- 
-        Deleting only the add reg key file so ModifyRegistry can run again. Leaving the
-        remove reg key file so this target can be run multiple times.
+        Delete only the AddRegeditFileName so the target ModifyRegistry will run on next 
+        build. Leaving the remove reg key file so this target can be run multiple times.
     -->
     <Delete Files="$(AddRegeditFileName)" />
   </Target>
@@ -176,10 +188,10 @@
 <![CDATA[
 Windows Registry Editor Version 5.00
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\KnownManagedDebuggingDlls]
+[$(RegistryRoot)\Microsoft\Windows NT\CurrentVersion\KnownManagedDebuggingDlls]
 "$(DotNetInstallDir)mscordaccore.dll"=dword:0
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\MiniDumpAuxiliaryDlls]
+[$(RegistryRoot)\Microsoft\Windows NT\CurrentVersion\MiniDumpAuxiliaryDlls]
 "$(DotNetInstallDir)coreclr.dll"="$(DotNetInstallDir)mscordaccore.dll"
 ]]>
       </AddRegeditFileLines>
@@ -191,7 +203,7 @@ Windows Registry Editor Version 5.00
       <FileWrites Include="$(AddRegeditFileName)" />
     </ItemGroup>
 
-    <Exec Command="regedit $(AddRegeditFileName)" />
+    <Exec Command="$(RegeditCommand) $(AddRegeditFileName)" />
   </Target>
 
 <!--
@@ -204,10 +216,10 @@ Windows Registry Editor Version 5.00
 <![CDATA[
 Windows Registry Editor Version 5.00
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\KnownManagedDebuggingDlls]
+[$(RegistryRoot)\Microsoft\Windows NT\CurrentVersion\KnownManagedDebuggingDlls]
 "$(DotNetInstallDir)mscordaccore.dll"=-
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\MiniDumpAuxiliaryDlls]
+[$(RegistryRoot)\Microsoft\Windows NT\CurrentVersion\MiniDumpAuxiliaryDlls]
 "$(DotNetInstallDir)coreclr.dll"=-
 ]]>
       </RemoveRegeditFileLines>
