@@ -43,11 +43,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
 
-                bool hasConsole = console.GetTerminal() != null;
-
-                if (hasConsole)
-                    Console.Clear();
-
                 if (processId < 0)
                 {
                     Console.Error.WriteLine("Process ID should not be negative.");
@@ -58,6 +53,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     Console.Error.WriteLine("--process-id is required");
                     return ErrorCodes.ArgumentError;
                 }
+
+                bool hasConsole = console.GetTerminal() != null;
+
+                if (hasConsole)
+                    Console.Clear();
 
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
                 {
