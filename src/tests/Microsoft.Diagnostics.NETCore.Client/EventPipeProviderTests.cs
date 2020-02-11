@@ -124,7 +124,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     { "FilterAndPayloadSpecs", diagnosticFilterString }
                 });
 
-            Assert.Equal("DiagnosticSourceProvider:0x00000000DEADBEEF:5:FilterAndPayloadSpecs=Microsoft.AspNetCore/Microsoft.AspNetCore.Hosting.HttpRequestIn.Start@Activity1Start:-Request.Path\";\"Request.Method\r\n",
+            Assert.Equal("DiagnosticSourceProvider:0x00000000DEADBEEF:5:FilterAndPayloadSpecs=\"Microsoft.AspNetCore/Microsoft.AspNetCore.Hosting.HttpRequestIn.Start@Activity1Start:-Request.Path;Request.Method\r\n\"",
                 provider.ToString());
         }
     }
