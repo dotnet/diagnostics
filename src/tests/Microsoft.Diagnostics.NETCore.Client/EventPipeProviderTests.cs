@@ -111,7 +111,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         [Fact]
-        public void DiagnosticSourceArgumentStringTest()
+        public void DiagnosticSourceArgumentStringTest1()
         {
             string diagnosticFilterString = "Microsoft.AspNetCore/Microsoft.AspNetCore.Hosting.HttpRequestIn.Start@Activity1Start:-" +
                 "Request.Path" +
@@ -125,6 +125,26 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 });
 
             Assert.Equal("DiagnosticSourceProvider:0x00000000DEADBEEF:5:FilterAndPayloadSpecs=\"Microsoft.AspNetCore/Microsoft.AspNetCore.Hosting.HttpRequestIn.Start@Activity1Start:-Request.Path;Request.Method\r\n\"",
+                provider.ToString());
+        }
+
+
+        [Fact]
+        public void DiagnosticSourceArgumentStringTest2()
+        {
+            string diagnosticFilterString = "Microsoft.AspNetCore/Microsoft.AspNetCore.Hosting.HttpRequestIn.Start@Activity1Start:-" +
+                "Request.Path" +
+                ";Request.Method" +
+                ";RequestName=SomeRequest" +
+                "\r\n";
+
+            var provider = new EventPipeProvider("DiagnosticSourceProvider", EventLevel.Verbose, (long)(0xdeadbeef),
+                new Dictionary<string, string>()
+                {
+                    { "FilterAndPayloadSpecs", diagnosticFilterString }
+                });
+
+            Assert.Equal("DiagnosticSourceProvider:0x00000000DEADBEEF:5:FilterAndPayloadSpecs=\"Microsoft.AspNetCore/Microsoft.AspNetCore.Hosting.HttpRequestIn.Start@Activity1Start:-Request.Path;Request.Method;RequestName=SomeRequest\r\n\"",
                 provider.ToString());
         }
     }
