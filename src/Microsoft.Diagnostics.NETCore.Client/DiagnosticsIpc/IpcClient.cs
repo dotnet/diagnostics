@@ -9,6 +9,7 @@ using System.IO.Pipes;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 
@@ -127,7 +128,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return new UnixDomainSocketEndPoint(path);
 #elif NETSTANDARD2_0
             // UnixDomainSocketEndPoint is not part of .NET Standard 2.0
-            var type = typeof(Socket).Assembly.GetType("System.Net.Sockets.UnixDomainSocketEndPoint");
+            var type = typeof(Socket).Assembly.GetType("System.Net.Sockets.UnixDomainSocketEndPoint")
+                       ?? Assembly.Load("System.Core").GetType("System.Net.Sockets.UnixDomainSocketEndPoint");
             if (type == null)
             {
                 throw new PlatformNotSupportedException("Current process is not running a compatible .NET Core runtime.");
