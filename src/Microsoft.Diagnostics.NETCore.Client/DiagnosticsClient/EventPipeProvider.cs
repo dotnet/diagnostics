@@ -69,7 +69,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 return "";
             }
-            return string.Join(";", Arguments.Select(a => $"{a.Key}={a.Value}"));
+            return string.Join(";", Arguments.Select(a => (a.Value.Contains(";") || a.Value.Contains("=")) ? $"{a.Key}=\"{a.Value}\"" : $"{a.Key}={a.Value}"));
         }
 
     }
