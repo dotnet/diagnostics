@@ -23,7 +23,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             EventPipeProvider provider1 = new EventPipeProvider("myProvider", EventLevel.Informational);
             EventPipeProvider provider2 = new EventPipeProvider("myProvider", EventLevel.Informational);
-            Assert.True(provider1 == provider2); }
+            Assert.True(provider1 == provider2);
+        }
 
         [Fact]
         public void EqualTest2()
