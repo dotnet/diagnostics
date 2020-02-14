@@ -22,9 +22,5 @@
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
       <Sha>91d17f6c2dfcd4bd296a447faffc0893cdad4e9e</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Windows.Compatibility" Version="3.1.0">
-      <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>0f7f38c4fd323b26da10cce95f857f77f0f09b48</Sha>
-    </Dependency>
   </ToolsetDependencies>
 </Dependencies>
