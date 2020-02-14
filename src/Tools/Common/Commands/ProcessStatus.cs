@@ -77,7 +77,16 @@ namespace Microsoft.Internal.Common.Commands
             {
                 try
                 {
-                    return WindowsProcessExtension.GetCommandLine(process);
+                    string commandLine = WindowsProcessExtension.GetCommandLine(process);
+                    if (!String.IsNullOrWhiteSpace(commandLine))
+                    {
+                        string[] commandLineSplit = commandLine.Split(' ');
+                        if (commandLineSplit.FirstOrDefault() == process.ProcessName)
+                        {
+                            return String.Join(" ", commandLineSplit.Skip(1));
+                        }
+                        return commandLine;
+                    }
                 }
                 catch (Exception ex) when (ex is Win32Exception || ex is InvalidOperationException)
                 {
