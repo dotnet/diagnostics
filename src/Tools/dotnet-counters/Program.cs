@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // Handler
                 CommandHandler.Create<CancellationToken, List<string>, IConsole, int, string, int>(new CounterMonitor().Monitor),
                 // Arguments and Options
-                CounterList(), ProcessIdOption(), TransportPathOption(), RefreshIntervalOption()
+                CounterList(), ProcessIdOption(), DiagnosticsServerAddressOption(), RefreshIntervalOption()
             };
 
         private static Command CollectCommand() =>
@@ -53,12 +53,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 Argument = new Argument<int>(name: "pid")
             };
 
-        private static Option TransportPathOption() =>
+        private static Option DiagnosticsServerAddressOption() =>
             new Option(
-                alias: "--transport-path",
-                description: "A fully qualified path and filename for the OS transport to communicate over.  Supersedes the pid argument if provided.")
+                aliases: new string[] { "--address", "--diagnostics-server-address" },
+                description: "A fully qualified path for the OS transport the diagnostics server is using.")
             {
-                Argument = new Argument<string>(name: "transportPath")
+                Argument = new Argument<string>(name: "diagnosticsServerAddress")
             };
 
         private static Option RefreshIntervalOption() =>

@@ -345,7 +345,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option DiagnosticsServerAddressOption() =>
             new Option(
                 aliases: new string[] { "--address", "--diagnostics-server-address" },
-                description: "A fully qualified path for the OS transport the diagnostics server is using. Supersedes the pid argument if provided.")
+                description: "A fully qualified path for the OS transport the diagnostics server is using.")
             {
                 Argument = new Argument<string>(name: "diagnosticsServerAddress")
             };

@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private static Option TransportPathOption() =>
             new Option(
                 alias: "--transport-path",
-                description: "A fully qualified path and filename for the OS transport to communicate over.  Supersedes the pid argument if provided.")
+                description: "A fully qualified path and filename for the OS transport to communicate over. ")
             {
                 Argument = new Argument<string>(name: "transportPath")
             };
