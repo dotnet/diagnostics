@@ -27,13 +27,13 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// generate a GCHeapDump using the resulting events.  The correct keywords and provider name
         /// are given as input to the Func eventPipeEventSourceFactory.
         /// </summary>
-        /// <param name="processIdOrTransportPath"></param>
+        /// <param name="processIdOrDiagnosticsServerAddress"></param>
         /// <param name="eventPipeEventSourceFactory">A delegate for creating and stopping EventPipe sessions</param>
         /// <param name="memoryGraph"></param>
         /// <param name="log"></param>
         /// <param name="dotNetInfo"></param>
         /// <returns></returns>
-        public static bool DumpFromEventPipe(CancellationToken ct, string processIdOrTransportPath, MemoryGraph memoryGraph, TextWriter log, int timeout, DotNetHeapInfo dotNetInfo = null)
+        public static bool DumpFromEventPipe(CancellationToken ct, string processIdOrDiagnosticsServerAddress, MemoryGraph memoryGraph, TextWriter log, int timeout, DotNetHeapInfo dotNetInfo = null)
         {
             var startTicks = Stopwatch.GetTimestamp();
             Func<TimeSpan> getElapsed = () => TimeSpan.FromTicks(Stopwatch.GetTimestamp() - startTicks);
@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 bool fDone = false;
                 log.WriteLine("{0,5:n1}s: Creating type table flushing task", getElapsed().TotalSeconds);
 
-                using (EventPipeSessionController typeFlushSession = new EventPipeSessionController(processIdOrTransportPath, new List<EventPipeProvider> { 
+                using (EventPipeSessionController typeFlushSession = new EventPipeSessionController(processIdOrDiagnosticsServerAddress, new List<EventPipeProvider> { 
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
                 }, false))
                 {
@@ -71,7 +71,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 // Start the providers and trigger the GCs.  
                 log.WriteLine("{0,5:n1}s: Requesting a .NET Heap Dump", getElapsed().TotalSeconds);
 
-                using EventPipeSessionController gcDumpSession = new EventPipeSessionController(processIdOrTransportPath, new List<EventPipeProvider> { 
+                using EventPipeSessionController gcDumpSession = new EventPipeSessionController(processIdOrDiagnosticsServerAddress, new List<EventPipeProvider> { 
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, (long)(ClrTraceEventParser.Keywords.GCHeapSnapshot)) 
                 });
                 log.WriteLine("{0,5:n1}s: gcdump EventPipe Session started", getElapsed().TotalSeconds);
@@ -112,7 +112,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 if (memoryGraph != null)
                 {
-                    dumper.SetupCallbacks(memoryGraph, gcDumpSession.Source, processIdOrTransportPath);
+                    dumper.SetupCallbacks(memoryGraph, gcDumpSession.Source, processIdOrDiagnosticsServerAddress);
                 }
 
                 // Set up a separate thread that will listen for EventPipe events coming back telling us we succeeded. 
@@ -212,9 +212,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         public IReadOnlyList<EventPipeProvider> Providers => _providers.AsReadOnly();
         public EventPipeEventSource Source => _source;
 
-        public EventPipeSessionController(string processIdOrTransportPath, List<EventPipeProvider> providers, bool requestRundown = true)
+        public EventPipeSessionController(string processIdOrDiagnosticsServerAddress, List<EventPipeProvider> providers, bool requestRundown = true)
         {
-            if (int.TryParse(processIdOrTransportPath, out int pid))
+            if (int.TryParse(processIdOrDiagnosticsServerAddress, out int pid))
             {
                 _pid = pid;
                 _providers = providers;
@@ -226,7 +226,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             {
                 _pid = -1;
                 _providers = providers;
-                _client = new DiagnosticsClient(processIdOrTransportPath);
+                _client = new DiagnosticsClient(processIdOrDiagnosticsServerAddress);
                 _session = _client.StartEventPipeSession(providers, requestRundown, 1024);
                 _source = new EventPipeEventSource(_session.EventStream);
             }

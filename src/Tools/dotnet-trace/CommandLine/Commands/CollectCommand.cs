@@ -19,14 +19,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, string transportPath, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, string diagnosticsServerAddress, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel);
 
         /// <summary>
         /// Collects a diagnostic trace from a currently running process.
         /// </summary>
         /// <param name="ct">The cancellation token</param>
         /// <param name="console"></param>
-        /// <param name="transportPath">A path to a named pipe on Windows or a Unix Domain Socket on Linux based systems</param>
+        /// <param name="diagnosticsServerAddress">A path to a named pipe on Windows or a Unix Domain Socket on Linux based systems</param>
         /// <param name="processId">The process to collect the trace from.</param>
         /// <param name="output">The output path for the collected trace data.</param>
         /// <param name="buffersize">Sets the size of the in-memory circular buffer in megabytes.</param>
@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="clrevents">A list of CLR events to be emitted.</param>
         /// <param name="clreventlevel">The verbosity level of CLR events</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, string transportPath, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, string diagnosticsServerAddress, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel)
         {
             try
             {
@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (hasConsole)
                     Console.Clear();
 
-                if (string.IsNullOrEmpty(transportPath))
+                if (string.IsNullOrEmpty(diagnosticsServerAddress))
                 {
                     if (processId < 0)
                     {
@@ -64,10 +64,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
                 else
                 {
-
-                    if (!File.Exists(transportPath) && !File.Exists(@"\\.pipe\" + transportPath))
+                    if (!File.Exists(diagnosticsServerAddress) && !File.Exists(@"\\.\pipe\" + diagnosticsServerAddress))
                     {
-                        Console.Error.WriteLine("Requested transport does not exist");
+                        Console.Error.WriteLine($"Requested transport does not exist: '{(diagnosticsServerAddress.StartsWith(@"\\.\pipe") ? diagnosticsServerAddress : @"\\.\pipe\" + diagnosticsServerAddress)}'");
                         return ErrorCodes.ArgumentError;
                     }
                     else if (processId != 0)
@@ -134,7 +133,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 PrintProviders(providerCollection, enabledBy);
 
-                Process process = string.IsNullOrEmpty(transportPath) ? Process.GetProcessById(processId) : null;
+                Process process = string.IsNullOrEmpty(diagnosticsServerAddress) ? Process.GetProcessById(processId) : null;
                 var shouldExit = new ManualResetEvent(false);
                 var shouldStopAfterDuration = duration != default(TimeSpan);
                 var failed = false;
@@ -144,7 +143,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 ct.Register(() => shouldExit.Set());
 
-                var diagnosticsClient = string.IsNullOrEmpty(transportPath) ? new DiagnosticsClient(processId) : new DiagnosticsClient(transportPath);
+                var diagnosticsClient = string.IsNullOrEmpty(diagnosticsServerAddress) ? new DiagnosticsClient(processId) : new DiagnosticsClient(diagnosticsServerAddress);
                 using (VirtualTerminalMode vTermMode = VirtualTerminalMode.TryEnable())
                 {
                     EventPipeSession session = null;
@@ -322,7 +321,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler(),
                 // Options
                 CommonOptions.ProcessIdOption(),
-                TransportPathOption(),
+                DiagnosticsServerAddressOption(),
                 CircularBufferOption(),
                 OutputPathOption(),
                 ProvidersOption(),
@@ -343,12 +342,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Argument = new Argument<uint>(name: "size", defaultValue: DefaultCircularBufferSizeInMB)
             };
 
-        private static Option TransportPathOption() =>
+        private static Option DiagnosticsServerAddressOption() =>
             new Option(
-                alias: "--transport-path",
-                description: "A fully qualified path and filename for the OS transport to communicate over.  Supersedes the pid argument if provided.")
+                aliases: new string[] { "--address", "--diagnostics-server-address" },
+                description: "A fully qualified path for the OS transport the diagnostics server is using. Supersedes the pid argument if provided.")
             {
-                Argument = new Argument<string>(name: "transportPath")
+                Argument = new Argument<string>(name: "diagnosticsServerAddress")
             };
 
         public static string DefaultTraceName => "trace.nettrace";

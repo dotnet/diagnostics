@@ -25,9 +25,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _transport = new IpcTransport(processId);
         }
 
-        public DiagnosticsClient(string transportPath)
+        public DiagnosticsClient(string address)
         {
-            _transport = new IpcTransport(transportPath);
+            _transport = new IpcTransport(address);
         }
 
         /// <summary>

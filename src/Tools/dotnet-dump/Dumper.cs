@@ -29,9 +29,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
         }
 
-        public async Task<int> Collect(IConsole console, int processId, string transportPath, string output, bool diag, DumpTypeOption type)
+        public async Task<int> Collect(IConsole console, int processId, string diagnosticsServerAddress, string output, bool diag, DumpTypeOption type)
         {
-            if (string.IsNullOrEmpty(transportPath))
+            if (string.IsNullOrEmpty(diagnosticsServerAddress))
             {
                 if (processId == 0) {
                     console.Error.WriteLine("ProcessId is required.");
@@ -42,10 +42,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    Console.Error.WriteLine("Cannot create dumps via trasnportPath on Windows");
+                    Console.Error.WriteLine("Cannot create dumps via the Diagnostics Server on Windows");
                     return 1;
                 }
-                else if (!File.Exists(transportPath) && !File.Exists(@"\\.pipe\" + transportPath))
+                else if (!File.Exists(diagnosticsServerAddress) && !File.Exists(@"\\.\pipe\" + diagnosticsServerAddress))
                 {
                     Console.Error.WriteLine("Requested transport does not exist");
                     return 1;
@@ -82,7 +82,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    var client = string.IsNullOrEmpty(transportPath) ? new DiagnosticsClient(processId) : new DiagnosticsClient(transportPath);
+                    var client = string.IsNullOrEmpty(diagnosticsServerAddress) ? new DiagnosticsClient(processId) : new DiagnosticsClient(diagnosticsServerAddress);
                     DumpType dumpType = type == DumpTypeOption.Heap ? DumpType.WithHeap : DumpType.Normal;
 
                     // Send the command to the runtime to initiate the core dump

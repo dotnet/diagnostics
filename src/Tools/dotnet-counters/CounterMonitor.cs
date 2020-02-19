@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
     public class CounterMonitor
     {
         private int _processId;
-        private string _transportPath;
+        private string _diagnosticsServerAddress;
         private int _interval;
         private List<string> _counterList;
         private CancellationToken _ct;
@@ -83,9 +83,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _renderer.Stop();
         }
 
-        private bool ValidateProcessIdAndTransportPath()
+        private bool ValidateProcessIdAndDiagnosticsServerAddress()
         {
-            if (string.IsNullOrEmpty(_transportPath))
+            if (string.IsNullOrEmpty(_diagnosticsServerAddress))
             {
                 if (_processId == 0)
                 {
@@ -95,7 +95,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             else
             {
-                if (!File.Exists(_transportPath) && !File.Exists(@"\\.pipe\" + _transportPath))
+                if (!File.Exists(_diagnosticsServerAddress) && !File.Exists(@"\\.\pipe\" + _diagnosticsServerAddress))
                 {
                     Console.Error.WriteLine("Requested transport does not exist");
                     return false;
@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             return true;
         }
 
-        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, string transportPath, int refreshInterval)
+        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, string diagnosticsServerAddress, int refreshInterval)
         {
             try
             {
@@ -118,16 +118,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
                 _console = console;
                 _processId = processId;
-                _transportPath = transportPath;
+                _diagnosticsServerAddress = diagnosticsServerAddress;
                 _interval = refreshInterval;
                 _renderer = new ConsoleWriter();
 
-                if (!ValidateProcessIdAndTransportPath())
+                if (!ValidateProcessIdAndDiagnosticsServerAddress())
                     return 1;
 
-                _diagnosticsClient = string.IsNullOrEmpty(_transportPath) ? 
+                _diagnosticsClient = string.IsNullOrEmpty(_diagnosticsServerAddress) ? 
                     new DiagnosticsClient(_processId) : 
-                    new DiagnosticsClient(_transportPath);
+                    new DiagnosticsClient(_diagnosticsServerAddress);
 
                 return await Start();
             }
@@ -145,7 +145,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, string transportPath, int refreshInterval, CountersExportFormat format, string output)
+        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, string diagnosticsServerAddress, int refreshInterval, CountersExportFormat format, string output)
         {
             try
             {
@@ -153,7 +153,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
                 _console = console;
                 _processId = processId;
-                _transportPath = transportPath;
+                _diagnosticsServerAddress = diagnosticsServerAddress;
                 _interval = refreshInterval;
                 _output = output;
                 _diagnosticsClient = new DiagnosticsClient(processId);

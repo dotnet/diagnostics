@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string transportPath, string output, int timeout, bool verbose);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string diagnosticsServerAddress, string output, int timeout, bool verbose);
 
         /// <summary>
         /// Collects a gcdump from a currently running process.
@@ -24,11 +24,11 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="processId">The process to collect the gcdump from.</param>
         /// <param name="output">The output path for the collected gcdump.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string transportPath, string output, int timeout, bool verbose)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string diagnosticsServerAddress, string output, int timeout, bool verbose)
         {
             try
             {
-                if (string.IsNullOrEmpty(transportPath))
+                if (string.IsNullOrEmpty(diagnosticsServerAddress))
                 {
                     if (processId < 0)
                     {
@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 }
                 else
                 {
-                    if (!File.Exists(transportPath) && !File.Exists(@"\\.\pipe\" + transportPath))
+                    if (!File.Exists(diagnosticsServerAddress) && !File.Exists(@"\\.\pipe\" + diagnosticsServerAddress))
                     {
                         Console.Error.WriteLine("Requested transport does not exist");
                         return -1;
@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 }
 
                 output = string.IsNullOrEmpty(output) ? 
-                    $"{DateTime.Now.ToString(@"yyyyMMdd\_hhmmss")}_{(processId != 0 ? processId.ToString() : (new FileInfo(transportPath)).Name)}.gcdump" :
+                    $"{DateTime.Now.ToString(@"yyyyMMdd\_hhmmss")}{(processId != 0 ? "_" + processId.ToString() : "")}.gcdump" :
                     output;
 
                 FileInfo outputFileInfo = new FileInfo(output);
@@ -79,7 +79,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     var heapInfo = new DotNetHeapInfo();
                     if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(
                             ct,
-                            processId != 0 ? processId.ToString() : transportPath,
+                            processId != 0 ? processId.ToString() : diagnosticsServerAddress,
                             memoryGraph,
                             verbose ? Console.Out : TextWriter.Null,
                             timeout,
@@ -126,7 +126,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 // Handler
                 HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler(),
                 // Options
-                ProcessIdOption(), TransportPathOption(), OutputPathOption(), VerboseOption(), TimeoutOption() 
+                ProcessIdOption(), DiagnosticsServerAddressOption(), OutputPathOption(), VerboseOption(), TimeoutOption() 
             };
 
         public static Option ProcessIdOption() =>
@@ -137,12 +137,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Argument = new Argument<int>(name: "pid", defaultValue: 0),
             };
 
-        public static Option TransportPathOption() =>
+        private static Option DiagnosticsServerAddressOption() =>
             new Option(
-                aliases: new[] { "--transport-path" },
-                description: "A fully qualified path and filename for the OS transport to communicate over.  Supersedes the pid argument if provided.")
+                aliases: new string[] { "--address", "--diagnostics-server-address" },
+                description: "A fully qualified path for the OS transport the diagnostics server is using. Supersedes the pid argument if provided.")
             {
-                Argument = new Argument<string>(name: "transportPath"),
+                Argument = new Argument<string>(name: "diagnosticsServerAddress")
             };
 
         private static Option OutputPathOption() =>
