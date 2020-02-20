@@ -34,15 +34,19 @@ Creates a new instance of `DiagnosticsClient` for a compatible .NET process runn
 
 
 
+
+
 ```csharp
 public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown=true, int circularBufferMB=256)
 ```
 
 Starts an EventPipe tracing session using the given providers and settings. 
 
-##### Remarks
+**Remarks** 
 
 `requestRundown` specifies whether we should request for rundown provider events from the target app's runtime. These events contain payloads that may be needed for post analysis, such as resolving method names of thread samples. Unless you know you do not want this, we recommend setting this to true.
+
+
 
 
 
@@ -50,7 +54,9 @@ Starts an EventPipe tracing session using the given providers and settings.
 public void WriteDump(DumpType dumpType, string dumpPath=null, bool logDumpGeneration=false);
 ```
 
-Request a dump for post-mortem debugging of the target application. You may specify the type of the dump using the `DumpType`(#enum-dumptype) enum.
+Request a dump for post-mortem debugging of the target application. The type of the dump can be specified using the [`DumpType`](#enum-dumptype) enum.
+
+
 
 
 
@@ -60,11 +66,19 @@ public void AttachProfiler(TimeSpan attachTimeout, Guid profilerGuid, string pro
 
 Request to attach an ICorProfiler to the target application. 
 
+
+
+
+
 ```csharp
 public static IEnumerable<int> GetPublishedProcesses();
 ```
 
 Get an `IEnumerable` of all active .NET processes that can be attached to.
+
+
+
+
 
 #### class EventPipeProvider
 
@@ -110,23 +124,31 @@ Creates a new instance of `EventPipeProvider` with the given provider name, Even
 
 #### Properties
 
+
+
 ```csharp
 public string Name { get; }
 ```
 
 The name of the Provider
 
+
+
 ```csharp
 public EventLevel EventLevel { get; }
 ```
 
-The EventLevel of the given instance of ```EventPipeProvider```(#class-eventpipeprovider).
+The EventLevel of the given instance of [`EventPipeProvider`](#class-eventpipeprovider).
+
+
 
 ```csharp
 public long Keywords { get; }
 ```
 
 A long that represents bitmask for keywords of the EventSource. 
+
+
 
 ```csharp
 public IDictionary<string, string> Arguments { get; }
@@ -303,7 +325,7 @@ public void PrintRuntimeGCEvents(int processId)
 #### 2. Write a core dump. 
 This sample shows how to trigger a dump using `DiagnosticsClient`.
 ```cs
-using Microsoft.Diagnostics.NetCore.Client;
+using Microsoft.Diagnostics.NETCore.Client;
 
 public void TriggerCoreDump(int processId)
 {
