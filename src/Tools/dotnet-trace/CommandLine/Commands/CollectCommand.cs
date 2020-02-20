@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 {
                     if (!File.Exists(diagnosticsServerAddress) && !File.Exists(@"\\.\pipe\" + diagnosticsServerAddress))
                     {
-                        Console.Error.WriteLine($"Requested transport does not exist: '{(diagnosticsServerAddress.StartsWith(@"\\.\pipe") ? diagnosticsServerAddress : @"\\.\pipe\" + diagnosticsServerAddress)}'");
+                        Console.Error.WriteLine("Requested transport does not exist");
                         return ErrorCodes.ArgumentError;
                     }
                     else if (processId != 0)
