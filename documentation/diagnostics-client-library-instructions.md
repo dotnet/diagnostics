@@ -50,7 +50,7 @@ Starts an EventPipe tracing session using the given providers and settings.
 public void WriteDump(DumpType dumpType, string dumpPath=null, bool logDumpGeneration=false);
 ```
 
-Request a dump for post-mortem debugging of the target application. You may specify the type of the dump using the `DumpType`(#dumptype) enum.
+Request a dump for post-mortem debugging of the target application. You may specify the type of the dump using the `DumpType`(#enum-dumptype) enum.
 
 
 
@@ -136,9 +136,128 @@ An ```IDictionary``` of key-value pair string representing optional arguments to
 
 
 
+#### Methods
+
+```csharp
+public override string ToString();
+```
+
+Returns a string representation of the given `EventPipeProvider` instance.
+
+```csharp
+public override bool Equals(object obj);
+```
+
+Returns true if the given object is an instance of `EventPipeProvider` and represents the same provider configuration as the given instance.
+
+```csharp
+public override int GetHashCode();
+```
+
+Returns a hash of the given `EventPipeProvider` instance.
+
+```csharp
+public static bool operator ==(Provider left, Provider right);
+```
+
+Compares two `EventPipeProvider` instances and checks if they represent the same provider configuration.
+
+```csharp
+public static bool operator !=(Provider left, Provider right);
+```
+
+Compares two `EventPipeProvider` instances and checks if they are not the same provider configuration.
+
+
+
 #### Remarks
 
 This class is immutable, as currently EventPipe does not allow a provider's configuration to be modified during an EventPipe session. 
+
+
+
+### class EventPipeSession
+
+```csharp
+public class EventPipeSession : IDisposable
+{
+    public Stream EventStream { get; }
+    
+    public void Stop();
+}
+```
+
+This class represents an ongoing EventPipe session that has been started. It is immutable and acts as a handle to an EventPipe session of the given runtime.
+
+#### Properties
+
+```csharp
+public Stream EventStream { get; }
+```
+
+Returns a `Stream` that can be used to read the event stream.
+
+#### Methods
+
+```csharp
+public void Stop();
+```
+
+Stops the given EventPipe session. 
+
+
+
+### enum DumpType
+
+```csharp
+public enum DumpType
+{
+    Normal = 1,
+    WithHeap = 2,
+    Triage = 3,
+    Full = 4
+}
+```
+
+Represents the type of dump that can be requested.
+
+
+
+### Exceptions
+
+Either `DiagnosticsClientException` or its subclass can be thrown from the library.  
+
+```csharp
+public class DiagnosticsClientException : Exception
+```
+
+#### UnsupportedProtocolException
+
+```csharp
+public class UnsupportedProtocolException : DiagnosticsClientException
+```
+
+This may be thrown when the command is not supported by either the library or the target process' runtime. 
+
+
+
+#### ServerNotAvailableException
+
+```csharp
+public class ServerNotAvailableException : DiagnosticsClientException
+```
+
+This may be thrown when the runtime is not available for diagnostics IPC commands, such as early during runtime startup before the runtime is ready for diagnostics commands, or when the runtime is shutting down.
+
+#### ServerErrorException
+
+```csharp
+public class ServerErrorException : DiagnosticsClientException
+```
+
+This may be thrown when the runtime responds with an error to a given command.
+
+
 
 ## Sample Code:
 
@@ -360,147 +479,6 @@ public static int AttachProfiler(int processId, Guid profilerGuid, string profil
 {
     var client = new DiagnosticsClient(processId);
     return client.AttachProfiler(TimeSpan.FromSeconds(10), profilerGuid, profilerPath);
-}
-```
-
-## API Descriptions
-
-At a high level, the DiagnosticsClient class provides static methods that the user may call to invoke diagnostics IPC commands (i.e. start an EventPipe session, request a core dump, etc.) The library also provides several classes that may be helpful for invoking these commands. These commands are described in more detail in the diagnostics IPC protocol documentation available here: https://github.com/dotnet/diagnostics/blob/master/documentation/design-docs/ipc-protocol.md#commands. 
-
-
-### DiagnosticsClient
-This is a top-level class that contains methods to send various diagnostics command to the runtime.
-```cs
-namespace Microsoft.Diagnostics.NETCore.Client
-{
-    public class DiagnosticsClient
-    {
-        public DiagnosticsClient(int processId)
-
-        /// <summary>
-        /// Start tracing the application via CollectTracing2 command.
-        /// </summary>
-        /// <param name="providers">An IEnumerable containing the list of Providers to turn on.</param>
-        /// <param name="requestRundown">If true, request rundown events from the runtime</param>
-        /// <param name="circularBufferMB">The size of the runtime's buffer for collecting events in MB</param>
-        /// <returns>
-        /// An EventPipeSession object representing the EventPipe session that just started.
-        /// </returns> 
-        public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown=true, int circularBufferMB=256)
-
-        /// <summary>
-        /// Trigger a core dump generation.
-        /// </summary> 
-        /// <param name="dumpType">Type of the dump to be generated</param>
-        /// <param name="dumpPath">Full path to the dump to be generated. By default it is /tmp/coredump.{pid}</param>
-        /// <param name="logDumpGeneration">When set to true, display the dump generation debug log to the console.</param>
-        public void WriteDump(DumpType dumpType, string dumpPath=null, bool logDumpGeneration=false)
-
-        /// <summary>
-        /// Attach a profiler.
-        /// </summary>
-        /// <param name="attachTimeout">Timeout for attaching the profiler</param>
-        /// <param name="profilerGuid">Guid for the profiler to be attached</param>
-        /// <param name="profilerPath">Path to the profiler to be attached</param>
-        /// <param name="additionalData">Additional data to be passed to the profiler</param>
-        public void AttachProfiler(TimeSpan attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData=null);
-
-        /// <summary>
-        /// Get all the active processes that can be attached to.
-        /// </summary>
-        /// <returns>
-        /// IEnumerable of all the active process IDs.
-        /// </returns>
-        public static IEnumerable<int> GetPublishedProcesses();
-    }
-}
-```
-
-
-### Exceptions that can be thrown 
-
-```cs
-namespace Microsoft.Diagnostics.NETCore.Client
-{
-    // Generic wrapper for exceptions thrown by this library
-    public class DiagnosticsClientException : Exception {}
-
-    // When a certian command is not supported by either the library or the target process' runtime
-    public class UnsupportedProtocolException : DiagnosticsClientException {}
-
-    // When the runtime is no longer availble for attaching.
-    public class ServerNotAvailableException : DiagnosticsClientException {}
-
-    // When the runtime responded with an error
-    public class ServerErrorException : DiagnosticsClientException {}
-}
-```
-
-### EventPipeProvider
-A class that describes an EventPipe provider.
-```cs
-namespace Microsoft.Diagnostics.Client
-{
-    public class EventPipeProvider
-    {
-        public EventPipeProvider(
-            string name,
-            EventLevel eventLevel,
-            long keywords = 0,
-            IDictionary<string, string> arguments = null)
-
-        public long Keywords { get; }
-
-        public EventLevel EventLevel { get; }
-
-        public string Name { get; }
-
-        public IDictionary<string, string> Arguments { get; }
-
-        public override string ToString();
-        
-        public override bool Equals(object obj);
-
-        public override int GetHashCode();
-
-        public static bool operator ==(Provider left, Provider right);
-
-        public static bool operator !=(Provider left, Provider right);
-    }
-}
-```
-
-### EventPipeSession
-This is a class to represent an EventPipeSession. It is meant to be immutable and acts as a handle to each session that has been started. 
-
-```cs
-namespace Microsoft.Diagnostics.Client
-{
-    public class EventPipeSession : IDisposable
-    {
-        public Stream EventStream { get; };
-
-        ///<summary>
-        /// Stops the given session
-        ///</summary>
-        public void Stop();
-    }
-}
-```
-
-### DumpType (enum)
-This is an enum for the dump type
-
-```cs
-namespace Microsoft.Diagnostics.NETCore.Client
-{
-    public enum DumpType
-    {
-        Normal = 1,
-        WithHeap = 2,
-        Triage = 3,
-        Full = 4
-    }
 }
 ```
 
