@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 // Handler
                 CommandHandler.Create<IConsole, int, string, string, bool, Dumper.DumpTypeOption>(new Dumper().Collect),
                 // Options
-                ProcessIdOption(), TransportPathOption(), OutputOption(), DiagnosticLoggingOption(), TypeOption()
+                ProcessIdOption(), DiagnosticsServerAddressOption(), OutputOption(), DiagnosticLoggingOption(), TypeOption()
             };
 
         private static Option ProcessIdOption() =>
@@ -44,12 +44,12 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 Argument = new Argument<int>(name: "pid")
             };
 
-        private static Option TransportPathOption() =>
+        private static Option DiagnosticsServerAddressOption() =>
             new Option(
-                alias: "--transport-path",
-                description: "A fully qualified path and filename for the OS transport to communicate over. ")
+                aliases: new string[] { "--address", "--diagnostics-server-address" },
+                description: "A fully qualified path for the OS transport the diagnostics server is using.")
             {
-                Argument = new Argument<string>(name: "transportPath")
+                Argument = new Argument<string>(name: "diagnosticsServerAddress")
             };
 
         private static Option OutputOption() =>

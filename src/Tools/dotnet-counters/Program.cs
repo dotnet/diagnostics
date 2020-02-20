@@ -42,7 +42,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // Handler
                 HandlerDescriptor.FromDelegate((ExportDelegate)new CounterMonitor().Collect).GetCommandHandler(),
                 // Arguments and Options
-                CounterList(), ProcessIdOption(), TransportPathOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption()
+                CounterList(), ProcessIdOption(), DiagnosticsServerAddressOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption()
             };
 
         private static Option ProcessIdOption() =>
