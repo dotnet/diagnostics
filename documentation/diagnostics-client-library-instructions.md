@@ -4,7 +4,7 @@
 Microsoft.Diagnostics.NETCore.Client (also known as the Diagnostics Client library) is a managed library that lets you interact with .NET Core runtime (CoreCLR) for various diagnostics related tasks, such as tracing, requesting a dump, or attaching an ICorProfiler.
 
 ## Installing Diagnostics Client Library 
-Microsoft.Diagnostics.NETCore.Client is available on NuGet (https://www.nuget.org/packages/Microsoft.Diagnostics.NETCore.Client/). 
+Microsoft.Diagnostics.NETCore.Client is available on [NuGet](https://www.nuget.org/packages/Microsoft.Diagnostics.NETCore.Client/). 
 
 ## API
 
