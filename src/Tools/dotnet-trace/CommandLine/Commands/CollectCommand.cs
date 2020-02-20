@@ -44,11 +44,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
 
-                bool hasConsole = console.GetTerminal() != null;
-
-                if (hasConsole)
-                    Console.Clear();
-
                 if (string.IsNullOrEmpty(diagnosticsServerAddress))
                 {
                     if (processId < 0)
