@@ -85,10 +85,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private bool ValidateProcessIdAndDiagnosticsServerAddress()
         {
-            if (string.IsNullOrEmpty(_diagnosticsServerAddress) && _processId ==0)
+            if (string.IsNullOrEmpty(_diagnosticsServerAddress))
             {
-                _console.Error.WriteLine("--process-id is required.");
-                return false;
+                if (_processId == 0)
+                {
+                    _console.Error.WriteLine("--process-id is required.");
+                    return false;
+                }
             }
             else
             {

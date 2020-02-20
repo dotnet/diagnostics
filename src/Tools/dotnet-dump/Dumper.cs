@@ -31,12 +31,15 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         public async Task<int> Collect(IConsole console, int processId, string diagnosticsServerAddress, string output, bool diag, DumpTypeOption type)
         {
-            if (string.IsNullOrEmpty(diagnosticsServerAddress) && processId == 0)
+            if (string.IsNullOrEmpty(diagnosticsServerAddress))
             {
-                console.Error.WriteLine("ProcessId is required.");
-                return 1;
+                if (processId == 0)
+                {
+                    console.Error.WriteLine("ProcessId is required.");
+                    return 1;
+                }
             }
-            else
+            else if (!string.IsNullOrEmpty(diagnosticsServerAddress))
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
