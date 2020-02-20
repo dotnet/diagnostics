@@ -217,19 +217,16 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             if (int.TryParse(processIdOrDiagnosticsServerAddress, out int pid))
             {
                 _pid = pid;
-                _providers = providers;
                 _client = new DiagnosticsClient(pid);
-                _session = _client.StartEventPipeSession(providers, requestRundown, 1024);
-                _source = new EventPipeEventSource(_session.EventStream);
             }
             else
             {
                 _pid = -1;
-                _providers = providers;
                 _client = new DiagnosticsClient(processIdOrDiagnosticsServerAddress);
-                _session = _client.StartEventPipeSession(providers, requestRundown, 1024);
-                _source = new EventPipeEventSource(_session.EventStream);
             }
+            _providers = providers;
+            _session = _client.StartEventPipeSession(providers, requestRundown, 1024);
+            _source = new EventPipeEventSource(_session.EventStream);
         }
 
         public void EndSession()

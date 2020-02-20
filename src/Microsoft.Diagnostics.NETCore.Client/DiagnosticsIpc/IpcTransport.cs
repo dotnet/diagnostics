@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             else
             {
-                throw new ApplicationException("Cannot connect to Diagnostics IPC Transport without a PID or specific path");
+                throw new DiagnosticsClientException("Cannot connect to Diagnostics IPC Transport without a PID or specific path");
             }
         }
 
@@ -70,7 +70,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                var normalizedPath = _ipcTransportPath.StartsWith(@"\\.\pipe\") ? _ipcTransportPath.Substring(9) : _ipcTransportPath;
+                var normalizedPath = _ipcTransportPath.StartsWith(IpcRootPath) ? _ipcTransportPath.Substring(IpcRootPath.Length) : _ipcTransportPath;
                 var namedPipe = new NamedPipeClientStream(
                     ".", normalizedPath, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation);
                 namedPipe.Connect((int)ConnectTimeoutMilliseconds);
