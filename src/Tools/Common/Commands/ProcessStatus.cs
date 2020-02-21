@@ -71,12 +71,12 @@ namespace Microsoft.Internal.Common.Commands
                         {
                             if(uid == GetProcessUser(process.Id))
                             {
-                                sb.Append($"{process.Id,10} {process.ProcessName,-10} {process.MainModule.FileName}\n");
+                                sb.Append($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}\n");
                             }
                         }
                         else
                         {
-                            sb.Append($"{process.Id,10} {process.ProcessName,-10} {process.MainModule.FileName}\n");
+                            sb.Append($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}\n");
                         }
                     }
                     catch (InvalidOperationException)
