@@ -12,6 +12,9 @@ pr:
     - THIRD-PARTY-NOTICES.TXT
     - LICENSE.TXT
 
+variables:
+- template: /eng/common-variables.yml
+
 stages:
   - stage: build
     displayName: Build and Test Diagnostics
@@ -238,6 +241,7 @@ stages:
         - template: /eng/common/templates/job/job.yml
           parameters:
             name: Sign_Package_Publish
+            displayName: Sign, Package, and Publish to BAR
             dependsOn:
             - Windows
             - CentOS_7
@@ -249,11 +253,12 @@ stages:
             pool:
               name: NetCoreInternal-Pool
               queue: BuildPool.Windows.10.Amd64.VS2017
-            variables:
-            - _PublishBlobFeedUrl: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
-            - _TeamName: DotNetCore
-            - _SignType: $(SignType)
+            enablePublishUsingPipelines: true
             enableMicrobuild: true
+            artifacts:
+              publish:
+                logs:
+                  name: Logs_Packaging_Signing
             steps:
 
             # Windows x64 download. Everything under "bin" is published for the Windows x64 build.
@@ -341,30 +346,10 @@ stages:
                 -configuration Release
                 -prepareMachine
                 -verbosity normal
-                /p:TeamName=$(_TeamName)
-                /p:DotNetSignType=$(SignType)
-                /p:DotNetPublishBlobFeedKey=$(dotnetfeed-storage-access-key-1)
-                /p:DotNetPublishBlobFeedUrl=$(_PublishBlobFeedUrl)
-                /p:DotNetPublishToBlobFeed=$(PublishPackages)
-                /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+                $(_InternalBuildArgs)
               displayName: Sign / Package
               continueOnError: true
               condition: succeeded()
-
-            # Publish symbols
-
-            - task: PowerShell@2
-              displayName: Publish Symbols
-              inputs:
-                filePath: eng\common\sdk-task.ps1
-                arguments: -task PublishToSymbolServers -restore -msbuildEngine dotnet -configuration Release -verbosity normal
-                  /p:UsingToolSymbolUploader=true
-                  /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
-                  /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
-                  /p:PDBArtifactsDirectory='$(Build.SourcesDirectory)/artifacts/SymStore/**'
-                  /p:BlobBasePath='$(Build.SourcesDirectory)/artifacts/packages/Release/**'
-              continueOnError: true
-              condition: and(succeeded(), eq(variables['PublishSymbols'], 'true'))
 
             # Publish package and log build artifacts
 
@@ -377,11 +362,34 @@ stages:
               continueOnError: true
               condition: always()
 
-            - task: PublishBuildArtifacts@1
-              displayName: Publish Logs Artifacts
-              inputs:
-                publishLocation: Container
-                pathtoPublish: '$(Build.SourcesDirectory)/artifacts/log'
-                artifactName: Logs_Packaging_Signing
-              continueOnError: true
-              condition: always()
+        - template: /eng/common/templates/job/publish-build-assets.yml
+          parameters:
+            configuration: Release
+            dependsOn: Sign_Package_Publish
+            publishUsingPipelines: true
+            pool:
+              name: NetCoreInternal-Pool
+              queue: buildpool.windows.10.amd64.vs2017
+
+  - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+    - template: /eng/common/templates/post-build/post-build.yml
+      parameters:
+        # This is to enable SDL runs part of Post-Build Validation Stage.
+        # as well as NuGet, SourceLink, and signing validation.
+        # The variables get imported from group dotnet-diagnostics-sdl-params
+        enableSourceLinkValidation: true
+        SDLValidationParameters:
+          enable: true
+          continueOnError: false
+          params: ' -SourceToolsList @("policheck","credscan")
+          -TsaInstanceURL $(_TsaInstanceURL)
+          -TsaProjectName $(_TsaProjectName)
+          -TsaNotificationEmail $(_TsaNotificationEmail)
+          -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
+          -TsaBugAreaPath $(_TsaBugAreaPath)
+          -TsaIterationPath $(_TsaIterationPath)
+          -TsaRepositoryName "diagnostics"
+          -TsaCodebaseName "diagnostics"
+          -TsaPublish $True'
+          artifactNames:
+          - 'Packages'
