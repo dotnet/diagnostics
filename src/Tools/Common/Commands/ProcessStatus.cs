@@ -38,7 +38,7 @@ namespace Microsoft.Internal.Common.Commands
         /// </summary>
         public static void PrintProcessStatus(IConsole console, string userName = "")
         {
-            int uid = -1;
+            int uid;
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && (userName != "all" || userName != ""))
             {
