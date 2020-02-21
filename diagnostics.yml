@@ -69,6 +69,18 @@ stages:
 
     - template: /eng/build.yml
       parameters:
+        name: Alpine3_6
+        osGroup: Linux
+        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.6-WithNode-f4d3fe3-20181220200247
+        strategy:
+          matrix:
+            Build_Release:
+              _BuildConfig: Release
+              _BuildArch: x64
+              _PublishArtifacts: bin/Linux.x64.Release
+
+    - template: /eng/build.yml
+      parameters:
         name: MacOS
         osGroup: MacOS
         strategy:
@@ -111,17 +123,6 @@ stages:
                 _BuildArch: arm64
                 _PublishArtifacts: bin/Linux.arm64.Release
 
-      - template: /eng/build.yml
-        parameters:
-          name: Alpine3_6
-          osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.6-WithNode-f4d3fe3-20181220200247
-          strategy:
-            matrix:
-              Build_Release:
-                _BuildConfig: Release
-                _BuildArch: x64
-                _PublishArtifacts: bin/Linux.x64.Release
 
       ############################
       #                          #
