@@ -30,7 +30,7 @@ public DiagnosticsClient(int processId);
 
 Creates a new instance of `DiagnosticsClient` for a compatible .NET process running with process ID of `processId`.
 
-
+`processID` : Process ID of the target application.
 
 
 
@@ -40,11 +40,14 @@ public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> pro
 
 Starts an EventPipe tracing session using the given providers and settings. 
 
-**Remarks** 
+* `providers` : An `IEnumerable` of [`EventPipeProvider`](#class-eventpipeprovider)s to be collected.
+* `requestRundown`: A `bool` specifying whether rundown provider events from the target app's runtime should be requested.
 
-`requestRundown` specifies whether we should request for rundown provider events from the target app's runtime. These events contain payloads that may be needed for post analysis, such as resolving method names of thread samples. Unless you know you do not want this, we recommend setting this to true.
+**Remarks**
 
+Rundown events contain payloads that may be needed for post analysis, such as resolving method names of thread samples. Unless you know you do not want this, we recommend setting this to true. In large applications, this may take up to minutes.
 
+* `circularBufferMB` : The size of the circular buffer to be used as a buffer for writing events within the runtime.
 
 
 
@@ -53,6 +56,11 @@ public void WriteDump(DumpType dumpType, string dumpPath=null, bool logDumpGener
 ```
 
 Request a dump for post-mortem debugging of the target application. The type of the dump can be specified using the [`DumpType`](#enum-dumptype) enum.
+
+* `dumpType` : Type of the dump to be requested.
+
+* `dumpPath` : The path to the dump to be written out to.
+* `logDumpGeneration` : If set to `true`, the target application will write out diagnostic logs during dump generation.
 
 
 
@@ -64,7 +72,10 @@ public void AttachProfiler(TimeSpan attachTimeout, Guid profilerGuid, string pro
 
 Request to attach an ICorProfiler to the target application. 
 
-
+* `attachTimeout` : A `TimeSpan` after which attach will be aborted.
+* `profilerGuid` :  `Guid` of the ICorProfiler to be attached.
+* `profilerPath `  : Path to the ICorProfiler dll to be attached.
+* `additionalData` : Optional additional data that can be passed to the runtime during profiler attach.
 
 
 
@@ -72,7 +83,7 @@ Request to attach an ICorProfiler to the target application.
 public static IEnumerable<int> GetPublishedProcesses();
 ```
 
-Get an `IEnumerable` of all active .NET processes that can be attached to.
+Get an `IEnumerable` of process IDs of all the active .NET processes that can be attached to.
 
 
 
@@ -152,7 +163,7 @@ A long that represents bitmask for keywords of the EventSource.
 public IDictionary<string, string> Arguments { get; }
 ```
 
-An ```IDictionary``` of key-value pair string representing optional arguments to be passed to EventSource representing the given `EventPipeProvider`.
+An `IDictionary` of key-value pair string representing optional arguments to be passed to EventSource representing the given `EventPipeProvider`.
 
 
 
@@ -162,7 +173,9 @@ An ```IDictionary``` of key-value pair string representing optional arguments to
 public override string ToString();
 ```
 
-Returns a string representation of the given `EventPipeProvider` instance.
+Returns a string representation of the given `EventPipeProvider` instance. An example representation:
+
+`Microsoft-Windows-DotNETRuntime:ffffffffffffffff:1`.
 
 ```csharp
 public override bool Equals(object obj);
@@ -192,7 +205,7 @@ Compares two `EventPipeProvider` instances and checks if they are not the same p
 
 #### Remarks
 
-This class is immutable, as currently EventPipe does not allow a provider's configuration to be modified during an EventPipe session. 
+This class is immutable, as EventPipe does not allow a provider's configuration to be modified during an EventPipe session (as of .NET Core 3.1).
 
 
 
@@ -241,6 +254,11 @@ public enum DumpType
 
 Represents the type of dump that can be requested.
 
+* `Normal`: Include just the information necessary to capture stack traces for all existing traces for all existing threads in a process. Limited GC heap memory and information.
+* `WithHeap`: Includes the GC heaps and information necessary to capture stack traces for all existing threads in a process.
+* `Triage`: Include just the information necessary to capture stack traces for all existing traces for all existing threads in a process. Limited GC heap memory and information.
+* `Full`: Include all accessible memory in the process. The raw memory data is included at the end, so that the initial structures can be mapped directly without the raw memory information. This option can result in a very large dump file.
+
 
 
 ### Exceptions
@@ -284,7 +302,7 @@ This may be thrown when the runtime responds with an error to a given command.
 Here are some sample code showing the usage of this library.
 
 #### 1. Attaching to a process and dumping out all the runtime GC events in real time to the console
-This sample shows an example where we trigger an EventPipe session with the .NET runtime provider with the GC keyword at informational level, and use `EventPipeEventSource` (provided by the TraceEvent library) to parse the events coming in and print the name of each event to the console in real time.
+This sample shows an example where we trigger an EventPipe session with the .NET runtime provider with the GC keyword at informational level, and use `EventPipeEventSource` (provided by the [TraceEvent library](https://www.nuget.org/packages/Microsoft.Diagnostics.Tracing.TraceEvent/)) to parse the events coming in and print the name of each event to the console in real time.
 
 ```cs
 using Microsoft.Diagnostics.NETCore.Client;
