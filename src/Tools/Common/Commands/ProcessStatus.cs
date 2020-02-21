@@ -21,7 +21,7 @@ namespace Microsoft.Internal.Common.Commands
         {
             Command cmd = new Command(description);
             cmd.Handler = CommandHandler.Create<IConsole, string>(PrintProcessStatus);
-
+            cmd.AddOption(FilterUserOption());
             return cmd;
         }
 
