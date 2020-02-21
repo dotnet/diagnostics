@@ -40,7 +40,7 @@ namespace Microsoft.Internal.Common.Commands
         {
             int uid;
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && (user != "all" || user != ""))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && (user != "all" && user != ""))
             {
                 uid = MapUserNameToId(user.Trim());
                 if (uid == -1)
