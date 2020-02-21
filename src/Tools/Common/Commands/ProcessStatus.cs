@@ -36,13 +36,13 @@ namespace Microsoft.Internal.Common.Commands
         /// <summary>
         /// Print the current list of available .NET core processes for diagnosis and their statuses
         /// </summary>
-        public static void PrintProcessStatus(IConsole console, string userName = "")
+        public static void PrintProcessStatus(IConsole console, string user = "")
         {
             int uid;
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && (userName != "all" || userName != ""))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && (user != "all" || user != ""))
             {
-                uid = MapUserNameToId(userName);
+                uid = MapUserNameToId(user.Trim());
                 if (uid == -1)
                 {
                     console.Error.WriteLine("User name not found. Cannot filter. Showing all dotnet processes");
@@ -114,7 +114,7 @@ namespace Microsoft.Internal.Common.Commands
                 {
                     if (field.Contains("Uid"))
                     {
-                        return int.Parse(field.Split(" ")[1]);
+                        return int.Parse(field.Split("\t")[1]);
                     }
                 }
 
