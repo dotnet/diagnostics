@@ -1,10 +1,16 @@
-trigger:
-- master
-- release/*
+trigger: none
 
 pr:
-- master
-- release/*
+  autoCancel: true
+  branches:
+    include:
+    - master
+    - release/*
+  paths:
+    exclude:
+    - documentation/*
+    - THIRD-PARTY-NOTICES.TXT
+    - LICENSE.TXT
 
 jobs:
 - template: /eng/build.yml
