@@ -19,7 +19,7 @@ namespace Microsoft.Internal.Common.Commands
     {
         public static Command ProcessStatusCommand(string description)
         {
-            Command cmd = new Command(description);
+            Command cmd = new Command(name: "ps", description);
             cmd.Handler = CommandHandler.Create<IConsole, string>(PrintProcessStatus);
             cmd.AddOption(FilterUserOption());
             return cmd;
