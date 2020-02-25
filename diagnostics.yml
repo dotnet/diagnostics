@@ -81,6 +81,10 @@ stages:
               _BuildConfig: Release
               _BuildArch: x64
               _PublishArtifacts: bin/Linux.x64.Release
+            ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+              Build_Debug:
+                _BuildConfig: Debug
+                _BuildArch: x64
 
     - template: /eng/build.yml
       parameters:
@@ -92,7 +96,7 @@ stages:
               _BuildConfig: Release
               _BuildArch: x64
               _PublishArtifacts: bin/OSX.x64.Release
-            ${{ if eq(variables['System.TeamProject'], 'public') }}:
+            ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
               Build_Debug:
                 _BuildConfig: Debug
                 _BuildArch: x64
