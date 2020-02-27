@@ -21,10 +21,11 @@ namespace Microsoft.Diagnostics.Monitoring
     {
         private readonly Microsoft.Extensions.Logging.ILogger _logger;
         private readonly MonitoringSourceConfiguration _sourceConfig;
-        private readonly MonitoringSinkConfiguration _sinkConfig;
+        private readonly ContextConfiguration _context;
+        private readonly List<MonitoringSinkConfiguration> _sinkConfig;
 
         //TODO Make this DI
-        private IMetricsLogger _metricLogger;
+        private List<IMetricsLogger> _metricLoggers;
 
         //TODO localize?
         private static readonly List<string> DimNames = new List<string>{ "Namespace", "Node"};
@@ -32,20 +33,22 @@ namespace Microsoft.Diagnostics.Monitoring
         //These values don't change so we compute them only once
         private readonly List<string> _dimValues = new List<string> {string.Empty, string.Empty};
 
-        public DiagnosticsMonitor(MonitoringSourceConfiguration sourceConfig,
-            MonitoringSinkConfiguration sinkConfig, Microsoft.Extensions.Logging.ILogger logger)
+        public DiagnosticsMonitor(ContextConfiguration context, MonitoringSourceConfiguration sourceConfig,
+            IEnumerable<MonitoringSinkConfiguration> sinkConfig, Microsoft.Extensions.Logging.ILogger logger)
         {
             _logger = logger;
             _sourceConfig = sourceConfig;
-            _sinkConfig = sinkConfig;
+            _context = context;
+            _sinkConfig = new List<MonitoringSinkConfiguration>(sinkConfig);
+            _metricLoggers = new List<IMetricsLogger>();
         }
 
-        public async Task ProcessEvents(string nameSpace, string node, int processId, CancellationToken cancellationToken)
+        public async Task ProcessEvents(int processId, CancellationToken cancellationToken)
         {
             var hasEventPipe = false;
 
-            _dimValues[0] = nameSpace;
-            _dimValues[1] = node;
+            _dimValues[0] = _context.Namespace;
+            _dimValues[1] = _context.Node;
 
             for (int i = 0; i < 10; ++i)
             {
@@ -122,15 +125,19 @@ namespace Microsoft.Diagnostics.Monitoring
                 {
                     var source = new EventPipeEventSource(session.EventStream);
 
+                    // We rely on Dependency Injection to create the ILogger instances and lifetimes
                     ILoggerFactory loggerFactory = LoggerFactory.Create((ILoggingBuilder builder) => 
                     {
-                        _sinkConfig.AddLogger(builder);
+                        foreach(MonitoringSinkConfiguration config in _sinkConfig)
+                        {
+                            config.AddLogger(builder);
+                        }
                     });
 
-                    //TODO Change to DI!
-                    List<IMetricsLogger> metrics = new List<IMetricsLogger>();
-                    _sinkConfig.AddMetricsLogger(metrics);
-                    _metricLogger = metrics.First();
+                    foreach (MonitoringSinkConfiguration config in _sinkConfig)
+                    {
+                        config.AddMetricsLogger(_metricLoggers);
+                    }
 
                     // Metrics
                     HandleEventCounters(source);
@@ -225,7 +232,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
                 Exception exception = null;
 
-                var logger = loggerFactory.CreateLogger(categoryName);
+                ILogger logger = loggerFactory.CreateLogger(categoryName);
 
                 var scopes = new List<IDisposable>();
 
@@ -339,14 +346,25 @@ namespace Microsoft.Diagnostics.Monitoring
 
         private void PostMetric(Metric metric)
         {
-            _metricLogger.LogMetrics(metric);
+            foreach(IMetricsLogger metricLogger in _metricLoggers)
+            {
+                metricLogger.LogMetrics(metric);
+            }
         }
 
         public void Dispose()
         {
+            if (_metricLoggers != null)
+            {
+                foreach(IMetricsLogger logger in _metricLoggers)
+                {
+                    logger?.Dispose();
+                }
+                _metricLoggers.Clear();
+                _metricLoggers = null;
+            }
         }
 
-       
         private class LogActivityItem
         {
             public Guid ActivityID { get; set; }

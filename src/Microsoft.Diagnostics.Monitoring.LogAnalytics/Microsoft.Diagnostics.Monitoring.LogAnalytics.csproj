@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
     <Description>Log Analytics Sink for dotnet monitoring</Description>
     <IsPackable>true</IsPackable>
@@ -11,4 +11,8 @@
     <IncludeSymbols>true</IncludeSymbols>
     <IsShippingAssembly>true</IsShippingAssembly>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Diagnostics.Monitoring\Microsoft.Diagnostics.Monitoring.csproj" />
+  </ItemGroup>
 </Project>

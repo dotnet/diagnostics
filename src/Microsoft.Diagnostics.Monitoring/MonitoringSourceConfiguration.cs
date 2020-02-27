@@ -3,6 +3,7 @@ using Microsoft.Diagnostics.Tracing.Parsers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
+using System.Globalization;
 using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring
@@ -58,6 +59,13 @@ namespace Microsoft.Diagnostics.Monitoring
                 "\r\n" +
 
                 "\"";
+
+        public MonitoringSourceConfiguration(int metricIntervalSeconds = 60)
+        {
+            MetricIntervalSeconds = metricIntervalSeconds.ToString(CultureInfo.InvariantCulture);
+        }
+
+        protected virtual string MetricIntervalSeconds { get; }
 
         public virtual IList<EventPipeProvider> GetProviders()
         {
@@ -125,8 +133,6 @@ namespace Microsoft.Diagnostics.Monitoring
 
             return providers;
         }
-
-        protected virtual string MetricIntervalSeconds => "60";
 
         internal sealed class LoggingEventSource
         {

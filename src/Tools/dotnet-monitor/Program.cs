@@ -4,21 +4,28 @@ using System;
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
+    internal enum SinkType
+    {
+        console,
+        logAnalytics,
+    }
+    
     class Program
     {
         private static Command CollectCommand() =>
               new Command(
                   name: "collect",
-                  description: "Monitor counters in a .NET application and export the result into a file")
+                  description: "Monitor logs and metrics in a .NET application send the results to a chosen destination.")
               {
                 // Handler
-                CommandHandler.Create<IConsole, int, int>(new DiagnosticsMonitorCommandHandler().Start),
+                CommandHandler.Create<CancellationToken, IConsole, int, int, SinkType>(new DiagnosticsMonitorCommandHandler().Start),
                 // Arguments and Options
-                ProcessIdOption(), RefreshIntervalOption()
+                ProcessIdOption(), RefreshIntervalOption(), SinkOption()
               };
 
         private static Option ProcessIdOption() =>
@@ -32,10 +39,19 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         private static Option RefreshIntervalOption() =>
             new Option(
                 alias: "--refresh-interval",
-                description: "The number of seconds to delay between updating the displayed counters.")
+                description: "The number of seconds to delay between updating the counters.")
             {
                 Argument = new Argument<int>(name: "refresh-interval", defaultValue: 1)
             };
+
+        private static Option SinkOption() =>
+            new Option(
+                alias: "--sink",
+                description: "Where to send the data")
+            {
+                Argument = new Argument<SinkType>(name: "sink", defaultValue: SinkType.console)
+            };
+
 
         public static Task<int> Main(string[] args)
         {

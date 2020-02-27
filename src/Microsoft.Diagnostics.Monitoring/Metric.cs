@@ -17,6 +17,7 @@ namespace Microsoft.Diagnostics.Monitoring
     {
         public Metric(DateTime timestamp, string metricNamespace, string name, string displayName, string unit, double value, IReadOnlyList<string> dimNames, IReadOnlyList<string> dimValues, MetricType metricType = MetricType.Avg)
         {
+            Timestamp = timestamp;
             Name = name;
             DisplayName = displayName;
             Unit = unit;

@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.Diagnostics.Monitoring.LogAnalytics\Microsoft.Diagnostics.Monitoring.LogAnalytics.csproj" />
     <ProjectReference Include="..\..\Microsoft.Diagnostics.Monitoring\Microsoft.Diagnostics.Monitoring.csproj" />
   </ItemGroup>
 
