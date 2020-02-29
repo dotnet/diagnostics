@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, bool stdOut);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose);
 
         /// <summary>
         /// Collects a gcdump from a currently running process.
@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="processId">The process to collect the gcdump from.</param>
         /// <param name="output">The output path for the collected gcdump.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, bool stdOut)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose)
         {
             try
             {
@@ -40,63 +40,74 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     return -1;
                 }
                 
-                output = string.IsNullOrEmpty(output)
-                    ? $"{DateTime.Now:yyyyMMdd\\_hhmmss}_{processId}.gcdump"
-                    : output;
+                var (success, _) = await CollectGCDump(ct, processId, output, timeout, verbose, true);
 
-                FileInfo outputFileInfo = new FileInfo(output);
-
-                if (outputFileInfo.Exists)
+                if (success)
                 {
-                    outputFileInfo.Delete();
-                }
-
-                if (string.IsNullOrEmpty(outputFileInfo.Extension) || outputFileInfo.Extension != ".gcdump")
-                {
-                    outputFileInfo = new FileInfo(outputFileInfo.FullName + ".gcdump");
-                }
-                
-                Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
-
-                var dumpTask = Task.Run(() => 
-                {
-                    var memoryGraph = new Graphs.MemoryGraph(50_000);
-                    var heapInfo = new DotNetHeapInfo();
-                    if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, memoryGraph, verbose ? Console.Out : TextWriter.Null, timeout, heapInfo))
-                        return false;
-                    memoryGraph.AllowReading();
-
-                    GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
-                    if (stdOut)
-                        memoryGraph.WriteToStdOut();
-                    return true;
-                });
-
-                var fDumpSuccess = await dumpTask;
-
-                if (fDumpSuccess)
-                {
-                    outputFileInfo.Refresh();
-                    Console.Out.WriteLine($"\tFinished writing {outputFileInfo.Length} bytes to {outputFileInfo.FullName}");
-
                     return 0;
                 }
-                else if (ct.IsCancellationRequested)
+
+                if (ct.IsCancellationRequested)
                 {
                     Console.Out.WriteLine($"\tCancelled.");
                     return -1;
                 }
-                else
-                {
-                    Console.Out.WriteLine($"\tFailed to collect gcdump. Try running with '-v' for more information.");
-                    return -1;
-                }
+
+                Console.Out.WriteLine($"\tFailed to collect gcdump. Try running with '-v' for more information.");
+                return -1;
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                 return -1;
             }
+        }
+
+        internal static async Task<(bool Success, FileInfo OutputFile)> CollectGCDump(CancellationToken ct,
+                                                                                        int processId, 
+                                                                                        string output, 
+                                                                                        int timeout, 
+                                                                                        bool verbose,
+                                                                                        bool log)
+        {
+            output = string.IsNullOrEmpty(output)
+                ? $"{DateTime.Now:yyyyMMdd\\_hhmmss}_{processId}.gcdump"
+                : output;
+
+            var outputFileInfo = new FileInfo(output);
+
+            if (outputFileInfo.Exists)
+            {
+                outputFileInfo.Delete();
+            }
+
+            if (string.IsNullOrEmpty(outputFileInfo.Extension) || outputFileInfo.Extension != ".gcdump")
+            {
+                outputFileInfo = new FileInfo(outputFileInfo.FullName + ".gcdump");
+            }
+
+            if (log) Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
+
+            var dumpTask = Task.Run(() =>
+            {
+                var memoryGraph = new Graphs.MemoryGraph(50_000);
+                var heapInfo = new DotNetHeapInfo();
+                if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, memoryGraph,
+                    verbose ? Console.Out : TextWriter.Null, timeout, heapInfo))
+                    return false;
+                memoryGraph.AllowReading();
+
+                GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
+                return true;
+            }, ct);
+
+            var fDumpSuccess = await dumpTask;
+            if (fDumpSuccess)
+            {
+                outputFileInfo.Refresh();
+                if (log) Console.Out.WriteLine($"Finished writing {outputFileInfo.Length} bytes to {outputFileInfo.FullName}");
+            }
+            return (fDumpSuccess, outputFileInfo); 
         }
 
         public static Command CollectCommand() =>
@@ -107,10 +118,10 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 // Handler
                 HandlerDescriptor.FromDelegate((CollectDelegate) Collect).GetCommandHandler(),
                 // Options
-                ProcessIdOption(), OutputPathOption(), VerboseOption(), TimeoutOption(), ConsoleOutOption()
+                ProcessIdOption(), OutputPathOption(), VerboseOption(), TimeoutOption()
             };
 
-        public static Option ProcessIdOption() =>
+        private static Option ProcessIdOption() =>
             new Option(
                 aliases: new[] { "-p", "--process-id" },
                 description: "The process id to collect the trace.")
@@ -134,21 +145,13 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Argument = new Argument<bool>(name: "verbose", defaultValue: false)
             };
 
-        private static int DefaultTimeout = 30;
+        public static int DefaultTimeout = 30;
         private static Option TimeoutOption() =>
             new Option(
                 aliases: new[] { "-t", "--timeout" },
                 description: $"Give up on collecting the gcdump if it takes longer than this many seconds. The default value is {DefaultTimeout}s.")
             {
                 Argument = new Argument<int>(name: "timeout", defaultValue: DefaultTimeout)
-            };
-        
-        private static Option ConsoleOutOption() =>
-            new Option(
-                aliases: new[] { "--std-out" },
-                description: "Writes plaintext results into stdout.")
-            {
-                Argument = new Argument<bool>(name: "stdOut", defaultValue: false)
             };
     }
 }

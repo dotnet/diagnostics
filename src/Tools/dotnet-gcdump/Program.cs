@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             var parser = new CommandLineBuilder()
                 .AddCommand(CollectCommandHandler.CollectCommand())
                 .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that gcdumps can be collected"))
-                .AddCommand(PrintCommandHandler.PrintCommand())
+                .AddCommand(ReportCommandHandler.ReportCommand())
                 .UseDefaults()
                 .Build();
 

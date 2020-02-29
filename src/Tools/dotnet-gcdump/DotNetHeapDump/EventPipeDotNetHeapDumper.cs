@@ -58,8 +58,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                         if (!fDone)
                         {
                             fDone = true;
-                            Task.Run(() => typeFlushSession.EndSession())
-                                .ContinueWith(_ => typeFlushSession.Source.StopProcessing());
+                            Task.Run(() => typeFlushSession.EndSession(), ct)
+                                .ContinueWith(_ => typeFlushSession.Source.StopProcessing(), ct);
                         }
                     };
 
