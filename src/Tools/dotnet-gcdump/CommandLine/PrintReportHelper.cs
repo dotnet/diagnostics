@@ -23,19 +23,25 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 }
 
                 // Print summary
-                WriteSummaryRow(memoryGraph.TotalSize, "(Dump size)");
-                WriteSummaryRow(allocationSize, "(Total allocations)");
+                WriteSummaryRow(memoryGraph.TotalSize, "GC Heap bytes");
+                WriteSummaryRow(memoryGraph.NodeCount, "GC Heap objects");
+
                 if (memoryGraph.TotalNumberOfReferences > 0)
                 {
-                    WriteSummaryRow(memoryGraph.TotalNumberOfReferences, "(Total number of references)");
+                    WriteSummaryRow(memoryGraph.TotalNumberOfReferences, "Total references");
                 }
 
                 Console.WriteLine();
 
                 // Print Details
+                Console.Out.Write($"{"Object Bytes",15:N0}");
+                Console.Out.Write("  Type");
+                Console.WriteLine();
+
+
                 var filteredTypes = allocations
                     .Take(count)
-                    .Where(t => !string.IsNullOrEmpty(t.Name))
+                    .Where(t => !string.IsNullOrEmpty(t.Name) && t.Size > 0)
                     .OrderByDescending(t => t.Size);
                 foreach (var type in filteredTypes)
                 {
@@ -63,11 +69,11 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 => input.Slice(input.LastIndexOf(Path.DirectorySeparatorChar) + 1);
 
             static void WriteFixedWidth(long value)
-                => Console.Out.Write($"{value,10:N0}");
+                => Console.Out.Write($"{value,15:N0}");
 
             static void WriteSummaryRow(object value, string text)
             {
-                Console.Out.Write($"{value,10:N0}  ");
+                Console.Out.Write($"{value,15:N0}  ");
                 Console.Out.Write(text);
                 Console.Out.WriteLine();
             }
