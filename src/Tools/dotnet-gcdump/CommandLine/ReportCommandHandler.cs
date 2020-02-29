@@ -96,7 +96,6 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
             try
             {
-                Console.Out.WriteLine($"Reading GCDump from {file.FullName}...");
                 var dump = GCHeapDump.ReadMemoryGraph(file.FullName);
                 dump.MemoryGraph.WriteToStdOut();
                 return Task.FromResult(0);
