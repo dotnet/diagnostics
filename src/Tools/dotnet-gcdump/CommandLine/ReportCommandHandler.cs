@@ -1,7 +1,6 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Binding;
-using System.CommandLine.Rendering;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,7 +10,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class ReportCommandHandler
     {
-        delegate Task<int> PrintDelegate(CancellationToken ct, IConsole console, FileInfo file = null, int? processId = null);
+        delegate Task<int> PrintDelegate(CancellationToken ct, IConsole console, FileInfo file = null, int? processId = null, ReportType reportType = ReportType.HeapStat);
         
         public static Command ReportCommand() =>
             new Command(
@@ -21,20 +20,48 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 // Handler
                 HandlerDescriptor.FromDelegate((PrintDelegate) Report).GetCommandHandler(),
                 // Options
-                FileNameOption(), ProcessIdOption()
+                FileNameOption(), ProcessIdOption(), ReportTypeOption()
             };
 
-        private static Task<int> Report(CancellationToken ct, IConsole console, FileInfo file = null, int? processId = null)
+        private static Task<int> Report(CancellationToken ct, IConsole console, FileInfo file = null, int? processId = null, ReportType type = ReportType.HeapStat)
         {
+            //
+            // Validation
+            //
             if (file == null && !processId.HasValue)
             {
                 Console.Error.WriteLine("-f|--file or -p|process-id is required");
                 return Task.FromResult(-1);
             }
+            
+            if (file != null && processId.HasValue)
+            {
+                Console.Error.WriteLine("Specify one of -f|--file or -p|process-id.");
+                return Task.FromResult(-1);
+            }
 
-            return file != null 
-                ? ReportFromFile(file) 
-                : ReportFromProcess(processId.Value, ct);
+            var source = ReportSource.Unknown;
+
+            //
+            // Determine report source
+            //
+            if (file != null)
+                source = ReportSource.DumpFile;
+            else if (processId.HasValue)
+                source = ReportSource.Process;
+
+            return (source, type) switch
+            {
+                (ReportSource.Process, ReportType.HeapStat)  => ReportFromProcess(processId.Value, ct),
+                (ReportSource.DumpFile, ReportType.HeapStat) => ReportFromFile(file),
+                _                                            => HandleUnknownParam()
+            };
+        }
+
+        private static Task<int> HandleUnknownParam()
+        {
+            Console.Error.WriteLine("Invalid report type and source combination specified.");
+            return Task.FromResult(1);
         }
 
         private static async Task<int> ReportFromProcess(int processId, CancellationToken ct)
@@ -59,7 +86,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
         }
 
-        private static Task<int> ReportFromFile(FileInfo file)
+        private static Task<int> ReportFromFile(FileSystemInfo file)
         {
             if (!file.Exists)
             {
@@ -69,6 +96,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
             try
             {
+                Console.Out.WriteLine($"Reading GCDump from {file.FullName}...");
                 var dump = GCHeapDump.ReadMemoryGraph(file.FullName);
                 dump.MemoryGraph.WriteToStdOut();
                 return Task.FromResult(0);
@@ -85,5 +113,25 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         
         private static Option<int> ProcessIdOption() =>
             new Option<int>(new[] { "-p", "--process-id" }, "The process id to collect the trace.");
+        
+        private static Option<ReportType> ReportTypeOption() =>
+            new Option<ReportType>(new[] { "-t", "--report-type" }, "The type of report to generate. Available options: heapstat (default)")
+            {
+                Argument = new Argument<ReportType>(() => ReportType.HeapStat)
+            }
+        ;
+
+        private enum ReportSource
+        {
+            Unknown,
+            Process,
+            DumpFile,
+            DiagServer
+        }
+        
+        private enum ReportType
+        {
+            HeapStat
+        }
     }
 }
