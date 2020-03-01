@@ -632,7 +632,7 @@ OPTIONS
 COMMANDS
 
     collect   Capture dumps from a process
-    print     Prints a previously collected gcdump into the stdout
+    report    Generate report into stdout from a previously generated gcdump or from a running process.
 
 COLLECT
 
@@ -657,9 +657,6 @@ COLLECT
       -v, --verbose
           Turns on logging for gcdump
 
-      --std-out
-          Also writes plaintext results into stdout.
-
 Examples:
 
     $ dotnet gcdump collect --process-id 1902
@@ -667,32 +664,52 @@ Examples:
     Wrote 12576 bytes to file
     Complete
 
-PRINT
+REPORT
 
-    dotnet-gcdump print -f|--file <input_dump_path>
+    dotnet-gcdump report -f|--file <input_dump_path>
     
-    Prints a previously collected gcdump into the stdout
+    Generate report into stdout from a previously generated gcdump or from a running process.
     
     Usage:
-      dotnet-gcdump print [options]
+      dotnet-gcdump report [options]
     
     Options:
-      -f, --file <f>    The file to read gcdump from.
+      -f, --file        The file to read gcdump from.
+      -p, --process-id  The process id to collect the trace.
+      -t, --report-type The type of report to generate. Available options: heapstat (default)
 
 Examples:
 
-    $ dotnet gcdump print -f 20200207_094403_19847.gcdump | head -10
-     1,335,288  (Dump size)
-       299,845  (Total allocations)
-    
-        55,898  System.String (Bytes > 10K)  [System.Private.CoreLib.dll]
-        32,664  System.Object[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-        31,128  System.Int32[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-        13,816  Entry<System.Type,Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory+ServiceDescriptorCacheItem>[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-        10,368  Entry<System.String,System.String>[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-         8,960  Node<System.Type,Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceCallSite>[] (Bytes > 1K)  [System.Collections.Concurrent.dll]
-         8,216  System.Char[] (Bytes > 1K)  [System.Private.CoreLib.dll]
+    $ dotnet gcdump report -f 20200207_094403_19847.gcdump | head -9
+      5,080,860  GC Heap bytes
+         66,289  GC Heap objects
 
+    Object Bytes  Type
+        131,096  System.Byte[] (Bytes > 100K)  [System.Private.CoreLib.dll]
+         57,756  System.String (Bytes > 10K)  [System.Private.CoreLib.dll]
+         31,128  System.Int32[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+         28,605  System.Byte[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+         22,432  System.Object[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+         12,476  System.Char[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+          8,216  System.Char[] (Bytes > 1K)  [System.Private.CoreLib.dll]
+          8,216  System.Byte[] (Bytes > 1K)  [System.Private.CoreLib.dll]
+          8,216  System.UInt32[] (Bytes > 1K)  [System.Private.CoreLib.dll]
+
+
+    $ dotnet gcdump report -p 1752 | head -9
+      5,080,860  GC Heap bytes
+         66,289  GC Heap objects
+
+    Object Bytes  Type
+        131,096  System.Byte[] (Bytes > 100K)  [System.Private.CoreLib.dll]
+         57,756  System.String (Bytes > 10K)  [System.Private.CoreLib.dll]
+         31,128  System.Int32[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+         28,605  System.Byte[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+         22,432  System.Object[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+         12,476  System.Char[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+          8,216  System.Char[] (Bytes > 1K)  [System.Private.CoreLib.dll]
+          8,216  System.Byte[] (Bytes > 1K)  [System.Private.CoreLib.dll]
+          8,216  System.UInt32[] (Bytes > 1K)  [System.Private.CoreLib.dll]
 
 ## Future suggestions
 
