@@ -10,7 +10,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class ReportCommandHandler
     {
-        delegate Task<int> PrintDelegate(CancellationToken ct, IConsole console, FileInfo file = null, int? processId = null, ReportType reportType = ReportType.HeapStat);
+        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, FileInfo file = null, int? processId = null, ReportType reportType = ReportType.HeapStat);
         
         public static Command ReportCommand() =>
             new Command(
@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 description: "Generate report into stdout from a previously generated gcdump or from a running process.")
             {
                 // Handler
-                HandlerDescriptor.FromDelegate((PrintDelegate) Report).GetCommandHandler(),
+                HandlerDescriptor.FromDelegate((ReportDelegate) Report).GetCommandHandler(),
                 // Options
                 FileNameOption(), ProcessIdOption(), ReportTypeOption()
             };
