@@ -63,12 +63,13 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
         }
 
-        internal static async Task<(bool Success, FileInfo OutputFile)> CollectGCDump(CancellationToken ct,
-                                                                                        int processId, 
-                                                                                        string output, 
-                                                                                        int timeout, 
-                                                                                        bool verbose,
-                                                                                        bool log)
+        internal static async Task<(bool Success, FileInfo OutputFile)> CollectGCDump(
+            CancellationToken ct,
+            int processId, 
+            string output, 
+            int timeout, 
+            bool verbose,
+            bool log)
         {
             output = string.IsNullOrEmpty(output)
                 ? $"{DateTime.Now:yyyyMMdd\\_hhmmss}_{processId}.gcdump"
