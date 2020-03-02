@@ -4,6 +4,7 @@ using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftWindowsWPF;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using PEFile;
 using System;
 using System.Collections.Generic;
@@ -19,13 +20,13 @@ namespace Microsoft.Diagnostics.Monitoring
 {
     public sealed class DiagnosticsMonitor : IDisposable
     {
-        private readonly Microsoft.Extensions.Logging.ILogger _logger;
-        private readonly MonitoringSourceConfiguration _sourceConfig;
-        private readonly ContextConfiguration _context;
-        private readonly List<MonitoringSinkConfiguration> _sinkConfig;
+        private readonly IServiceProvider _services;
 
-        //TODO Make this DI
-        private List<IMetricsLogger> _metricLoggers;
+        private readonly Microsoft.Extensions.Logging.ILogger<DiagnosticsMonitor> _logger;
+
+        private readonly MonitoringSourceConfiguration _sourceConfig;
+        private readonly IOptions<ContextConfiguration> _context;
+        private IEnumerable<IMetricsLogger> _metricLoggers;
 
         //TODO localize?
         private static readonly List<string> DimNames = new List<string>{ "Namespace", "Node"};
@@ -33,22 +34,21 @@ namespace Microsoft.Diagnostics.Monitoring
         //These values don't change so we compute them only once
         private readonly List<string> _dimValues = new List<string> {string.Empty, string.Empty};
 
-        public DiagnosticsMonitor(ContextConfiguration context, MonitoringSourceConfiguration sourceConfig,
-            IEnumerable<MonitoringSinkConfiguration> sinkConfig, Microsoft.Extensions.Logging.ILogger logger)
+        public DiagnosticsMonitor(IServiceProvider services, MonitoringSourceConfiguration sourceConfig)
         {
-            _logger = logger;
+            _services = services;
             _sourceConfig = sourceConfig;
-            _context = context;
-            _sinkConfig = new List<MonitoringSinkConfiguration>(sinkConfig);
-            _metricLoggers = new List<IMetricsLogger>();
+            _context = _services.GetService<IOptions<ContextConfiguration>>();
+            _metricLoggers = _services.GetServices<IMetricsLogger>();
+            _logger = _services.GetService<ILogger<DiagnosticsMonitor>>();
         }
 
         public async Task ProcessEvents(int processId, CancellationToken cancellationToken)
         {
             var hasEventPipe = false;
 
-            _dimValues[0] = _context.Namespace;
-            _dimValues[1] = _context.Node;
+            _dimValues[0] = _context.Value.Namespace;
+            _dimValues[1] = _context.Value.Node;
 
             for (int i = 0; i < 10; ++i)
             {
@@ -125,25 +125,11 @@ namespace Microsoft.Diagnostics.Monitoring
                 {
                     var source = new EventPipeEventSource(session.EventStream);
 
-                    // We rely on Dependency Injection to create the ILogger instances and lifetimes
-                    ILoggerFactory loggerFactory = LoggerFactory.Create((ILoggingBuilder builder) => 
-                    {
-                        foreach(MonitoringSinkConfiguration config in _sinkConfig)
-                        {
-                            config.AddLogger(builder);
-                        }
-                    });
-
-                    foreach (MonitoringSinkConfiguration config in _sinkConfig)
-                    {
-                        config.AddMetricsLogger(_metricLoggers);
-                    }
-
                     // Metrics
                     HandleEventCounters(source);
 
                     // Logging
-                    HandleLoggingEvents(source, loggerFactory);
+                    HandleLoggingEvents(source);
 
                     source.Process();
                 }
@@ -164,7 +150,7 @@ namespace Microsoft.Diagnostics.Monitoring
             _logger.LogInformation("Event pipe collection completed for {ServiceName} on process id {PID}", _dimValues[1], processId);
         }
 
-        private void HandleLoggingEvents(EventPipeEventSource source, ILoggerFactory loggerFactory)
+        private void HandleLoggingEvents(EventPipeEventSource source)
         {
             string lastFormattedMessage = string.Empty;
 
@@ -232,7 +218,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
                 Exception exception = null;
 
-                ILogger logger = loggerFactory.CreateLogger(categoryName);
+                ILogger logger = _services.GetService<ILoggerFactory>().CreateLogger(categoryName);
 
                 var scopes = new List<IDisposable>();
 
@@ -360,7 +346,6 @@ namespace Microsoft.Diagnostics.Monitoring
                 {
                     logger?.Dispose();
                 }
-                _metricLoggers.Clear();
                 _metricLoggers = null;
             }
         }

@@ -6,14 +6,9 @@ namespace Microsoft.Diagnostics.Monitoring
 {
     public class ContextConfiguration
     {
-        private const string DefaultNamespace = "default";
+        public string Namespace { get; set; }
 
-        public virtual string Namespace => DefaultNamespace;
+        public string Node { get; set; }
 
-        public virtual string Node => Environment.MachineName;
-
-        public ContextConfiguration()
-        {
-        }
     }
 }

@@ -52,18 +52,17 @@ namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
         {
             using var httpclient = new HttpClient();
 
-            using HttpRequestMessage requestMessage = MetricsConfiguration.WithCredentials((MetricsConfiguration credentials) =>
-            {
-                Dictionary<string, string> formValues = new Dictionary<string, string>();
-                formValues.Add("grant_type", "client_credentials");
-                formValues.Add("client_id", credentials.ClientId);
-                formValues.Add("client_id", credentials.ClientSecret);
+            MetricsConfiguration credentials = new MetricsConfiguration();
 
-                FormUrlEncodedContent content = new FormUrlEncodedContent(formValues);
-                HttpRequestMessage message = new HttpRequestMessage(HttpMethod.Post, FormattableString.Invariant($"https://login.microsoftonline.com/{credentials.TenantId}/oauth2/token"));
+            //TODO Pull this from configuration
 
-                return message;
-            });
+            Dictionary<string, string> formValues = new Dictionary<string, string>();
+            formValues.Add("grant_type", "client_credentials");
+            formValues.Add("client_id", credentials.ClientId);
+            formValues.Add("client_id", credentials.ClientSecret);
+
+            FormUrlEncodedContent content = new FormUrlEncodedContent(formValues);
+            using HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, FormattableString.Invariant($"https://login.microsoftonline.com/{credentials.TenantId}/oauth2/token"));
 
             HttpResponseMessage result = await httpclient.SendAsync(requestMessage, cancellationToken);
 

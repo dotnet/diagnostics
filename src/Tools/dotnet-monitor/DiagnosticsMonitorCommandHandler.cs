@@ -1,4 +1,5 @@
 ﻿using Microsoft.Diagnostics.Monitoring;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
@@ -12,15 +13,15 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 {
     internal sealed class DiagnosticsMonitorCommandHandler
     {
-        private sealed class ConsoleLoggerAdapter : ILogger
+        private sealed class ConsoleLoggerAdapter : ILogger<DiagnosticsMonitor>
         {
-            private IConsole _console;
+            private readonly IConsole _console;
 
             private sealed class EmptyScope : IDisposable
             {
                 public static EmptyScope Instance { get; } = new EmptyScope();
-               
-                public void Dispose() {}
+
+                public void Dispose() { }
             }
 
             public ConsoleLoggerAdapter(IConsole console)
@@ -44,7 +45,21 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         public async Task<int> Start(CancellationToken token, IConsole console, int processId, int refreshInterval, SinkType sinkType)
         {
             //CONSIDER The console sink uses the standard AddConsole, and therefore disregards IConsole.
-            DiagnosticsMonitor monitor = new DiagnosticsMonitor(new ContextConfiguration(), new MonitoringSourceConfiguration(refreshInterval), new[] { new ConsoleSinkConfiguration() }, new ConsoleLoggerAdapter(console));
+
+            ServiceCollection services = new ServiceCollection();
+
+            //Specialized logger for diagnostic output from the service itself rather than as a sink for the data
+            services.AddSingleton<ILogger<DiagnosticsMonitor>>((sp) => new ConsoleLoggerAdapter(console));
+
+            services.AddSingleton<IMetricsLogger, ConsoleMetricsLogger>();
+            services.AddLogging(builder => builder.AddConsole());
+            services.Configure<ContextConfiguration>( contextConfig =>
+            {
+                contextConfig.Namespace = "default";
+                contextConfig.Node = Environment.MachineName;
+            });
+
+            DiagnosticsMonitor monitor = new DiagnosticsMonitor(services.BuildServiceProvider(), new MonitoringSourceConfiguration(refreshInterval));
 
             await monitor.ProcessEvents(processId, token);
 

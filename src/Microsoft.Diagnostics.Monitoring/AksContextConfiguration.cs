@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
-    internal sealed class AksContextConfiguration : ContextConfiguration
+    internal sealed class AksContextConfiguration 
     {
         private const string NamespacePath = @"/var/run/secrets/kubernetes.io/serviceaccount/namespace";
 
@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Monitoring
         {
         }
 
-        public override string Node
+        public string Node
         {
             get
             {
@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        public override string Namespace
+        public string Namespace
         {
             get
             {
@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.Monitoring
                     }
                     catch
                     {
-                        _namespace = base.Namespace;
+                        _namespace = "";
                     }
                 }
                 return _namespace;
