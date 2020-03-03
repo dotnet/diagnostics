@@ -13,24 +13,24 @@ namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
     internal class MetricsRestClient : IDisposable
     {
         private HttpClient _client;
-        private readonly string _region;
-        private readonly string _resourceId;
+        private readonly MetricsConfiguration _config;
+        private readonly ResourceConfiguration _resourceConfig;
 
         //We expect metric units, dimensions, and so on to stay the same throughout the session.
         Dictionary<(string metricNamespace, string metricName), AggregatedMetric> _metricCache = new Dictionary<(string metricNamespace, string metricName), AggregatedMetric>();
 
         private CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
-        public MetricsRestClient(string region, string resourceId)
+        public MetricsRestClient(MetricsConfiguration config, ResourceConfiguration resourceConfig)
         {
-            _client = new HttpClient(new AuthenticationDelegatingHandler());
-            _region = region;
-            _resourceId = resourceId;
+            _config = config;
+            _resourceConfig = resourceConfig;
+            _client = new HttpClient(new AuthenticationDelegatingHandler(_config));
         }
 
         public async Task SendMetric(Metric metric, CancellationToken token)
         {
-            string uri = FormattableString.Invariant($"https://{_region}.monitoring.azure.com{_resourceId}/metrics");
+            string uri = FormattableString.Invariant($"https://{_resourceConfig.AzureRegion}.monitoring.azure.com{_resourceConfig.AzureResourceId}/metrics");
 
             using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, uri);
 
@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
                 _metricCache.Add((metric.Namespace, metric.Name), aggregatedMetric);
 
                 aggregatedMetric.Data.BaseData.Namespace = metric.Namespace;
-                aggregatedMetric.Data.BaseData.Metric = metric.DisplayName + (string.IsNullOrEmpty(metric.Unit) ? string.Empty : $" ({metric.Unit}");
+                aggregatedMetric.Data.BaseData.Metric = metric.DisplayName + (string.IsNullOrEmpty(metric.Unit) ? string.Empty : $" ({metric.Unit})");
             }
 
             aggregatedMetric.Time = metric.Timestamp.ToString("o");
@@ -52,6 +52,7 @@ namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
                 Sum = metric.Value,
                 Min = metric.Value,
                 Max = metric.Value,
+                DimValues = metric.DimValues
             };
 
             aggregatedMetric.Data.BaseData.Series.Add(series);

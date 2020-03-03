@@ -1,10 +1,15 @@
 ﻿using Microsoft.Diagnostics.Monitoring;
+using Microsoft.Diagnostics.Monitoring.LogAnalytics;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,22 +47,63 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             }
         }
 
-        public async Task<int> Start(CancellationToken token, IConsole console, int processId, int refreshInterval, SinkType sinkType)
+        public async Task<int> Start(CancellationToken token, IConsole console, int processId, int refreshInterval, SinkType sink, IEnumerable<FileInfo> jsonConfigs, IEnumerable<FileInfo> keyFileConfigs)
         {
             //CONSIDER The console sink uses the standard AddConsole, and therefore disregards IConsole.
 
             ServiceCollection services = new ServiceCollection();
+            ConfigurationBuilder builder = new ConfigurationBuilder();
+
+            if (jsonConfigs != null)
+            {
+                foreach (FileInfo jsonFile in jsonConfigs)
+                {
+                    builder.SetBasePath(jsonFile.DirectoryName).AddJsonFile(jsonFile.Name, optional: true);
+                }
+            }
+            if (keyFileConfigs != null)
+            {
+                foreach (FileInfo keyFileConfig in keyFileConfigs)
+                {
+                    console.Out.WriteLine(keyFileConfig.FullName);
+                    builder.AddKeyPerFile(keyFileConfig.FullName, optional: true);
+                }
+            }
+            builder.AddInMemoryCollection(new Dictionary<string, string> { { "Namespace", "default" }, { "Node", Environment.MachineName } });
+
+            IConfigurationRoot config = builder.Build();
+
+            services.AddSingleton<IConfiguration>(config);
 
             //Specialized logger for diagnostic output from the service itself rather than as a sink for the data
             services.AddSingleton<ILogger<DiagnosticsMonitor>>((sp) => new ConsoleLoggerAdapter(console));
 
-            services.AddSingleton<IMetricsLogger, ConsoleMetricsLogger>();
-            services.AddLogging(builder => builder.AddConsole());
-            services.Configure<ContextConfiguration>( contextConfig =>
+            if (sink.HasFlag(SinkType.console))
             {
-                contextConfig.Namespace = "default";
-                contextConfig.Node = Environment.MachineName;
-            });
+                services.AddSingleton<IMetricsLogger, ConsoleMetricsLogger>();
+            }
+            if (sink.HasFlag(SinkType.logAnalytics))
+            {
+                services.AddSingleton<IMetricsLogger, MetricsLogger>();
+            }
+
+            services.AddLogging(builder =>
+                {
+                    if (sink.HasFlag(SinkType.console))
+                    {
+                        builder.AddConsole();
+                    }
+                    if (sink.HasFlag(SinkType.logAnalytics))
+                    {
+                        builder.AddProvider(new LogAnalyticsLoggerProvider());
+                    }
+                });
+            services.Configure<ContextConfiguration>(config);
+            if (sink.HasFlag(SinkType.logAnalytics))
+            {
+                services.Configure<MetricsConfiguration>(config);
+                services.Configure<ResourceConfiguration>(config);
+            }
 
             DiagnosticsMonitor monitor = new DiagnosticsMonitor(services.BuildServiceProvider(), new MonitoringSourceConfiguration(refreshInterval));
 

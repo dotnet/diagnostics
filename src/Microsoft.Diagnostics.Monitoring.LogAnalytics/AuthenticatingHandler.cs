@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Diagnostics.Tracing.Parsers.Clr;
+using Microsoft.Diagnostics.Tracing.Parsers.ClrPrivate;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -17,13 +19,11 @@ namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
     {
         //TODO Storing a high value bearer token in plain text in memory
         private AuthenticationHeaderValue _cachedBearerToken;
+        private readonly MetricsConfiguration _metricsConfiguration;
 
-        public AuthenticationDelegatingHandler()
+        public AuthenticationDelegatingHandler(MetricsConfiguration configuration) : base(new HttpClientHandler())
         {
-        }
-
-        public AuthenticationDelegatingHandler(HttpMessageHandler inner) : base(inner)
-        {
+            _metricsConfiguration = configuration;
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -52,19 +52,18 @@ namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
         {
             using var httpclient = new HttpClient();
 
-            MetricsConfiguration credentials = new MetricsConfiguration();
-
-            //TODO Pull this from configuration
-
             Dictionary<string, string> formValues = new Dictionary<string, string>();
             formValues.Add("grant_type", "client_credentials");
-            formValues.Add("client_id", credentials.ClientId);
-            formValues.Add("client_id", credentials.ClientSecret);
+            formValues.Add("client_id", _metricsConfiguration.AadClientId);
+            formValues.Add("client_secret", _metricsConfiguration.AadClientSecret);
+            formValues.Add("resource", "https://monitoring.azure.com/");
 
             FormUrlEncodedContent content = new FormUrlEncodedContent(formValues);
-            using HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, FormattableString.Invariant($"https://login.microsoftonline.com/{credentials.TenantId}/oauth2/token"));
+            using HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, FormattableString.Invariant($"https://login.microsoftonline.com/{_metricsConfiguration.TenantId}/oauth2/token"));
+            requestMessage.Content = content;
 
-            HttpResponseMessage result = await httpclient.SendAsync(requestMessage, cancellationToken);
+            using HttpResponseMessage result = await httpclient.SendAsync(requestMessage, cancellationToken);
+            result.EnsureSuccessStatusCode();
 
             AuthResult auth = await JsonSerializer.DeserializeAsync<AuthResult>(await result.EnsureSuccessStatusCode().Content.ReadAsStreamAsync(), cancellationToken: cancellationToken);
             return new AuthenticationHeaderValue("Bearer", auth.AccessToken);

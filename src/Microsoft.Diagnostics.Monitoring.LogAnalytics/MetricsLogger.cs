@@ -2,6 +2,7 @@
 using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftWindowsTCPIP;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -11,23 +12,54 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
 {
-    internal sealed class MetricsLogger : IMetricsLogger
+    public sealed class MetricsLogger : IMetricsLogger
     {
-        private readonly ILogger<MetricsLogger> _logger;
+        private readonly ILogger<DiagnosticsMonitor> _logger;
+        private MetricsConfiguration _metricConfig;
+        private ResourceConfiguration _resourceConfig;
+
         private Channel<Metric> _metricChannel;
         private CancellationTokenSource _cancellationTokenSource;
         private MetricsRestClient _metricsRestClient;
 
-        public MetricsLogger(ILogger<MetricsLogger> logger, IConfiguration config)
+        public MetricsLogger(ILogger<DiagnosticsMonitor> logger,
+            IOptions<MetricsConfiguration> metricsConfig,
+            IOptions<ResourceConfiguration> resourceConfig)
         {
+            _logger = logger;
+            
+            _metricConfig = metricsConfig.Value;
+            if (string.IsNullOrEmpty(_metricConfig.AadClientId) ||
+                string.IsNullOrEmpty(_metricConfig.AadClientSecret) ||
+                string.IsNullOrEmpty(_metricConfig.TenantId))
+            {
+                _logger.LogError("Failed to bind metrics configuration. Metrics will not be collected.");
+                return;
+            }
+            _resourceConfig = resourceConfig.Value;
+
+            if (string.IsNullOrEmpty(_resourceConfig.AzureRegion) ||
+                string.IsNullOrEmpty(_resourceConfig.AzureResourceId) ||
+                string.IsNullOrEmpty(_metricConfig.TenantId))
+            {
+                _logger.LogError("Failed to bind azure resource configuration. Metrics will not be collected.");
+                return;
+            }
+
             _metricChannel = Channel.CreateUnbounded<Metric>();
             _cancellationTokenSource = new CancellationTokenSource();
-            _logger = logger;
+            _metricsRestClient = new MetricsRestClient(_metricConfig, _resourceConfig);
+
             Task.Run(() => ProcessAllData(_cancellationTokenSource.Token), _cancellationTokenSource.Token);
         }
 
         public void LogMetrics(Metric metric)
         {
+            if (_metricsRestClient == null)
+            {
+                return;
+            }
+
             if (!_metricChannel.Writer.TryWrite(metric))
             {
                 _logger.LogInformation("Failed to post metric {0}", metric.Name);
@@ -40,7 +72,16 @@ namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
             {
                 token.ThrowIfCancellationRequested();
                 Metric metric = await _metricChannel.Reader.ReadAsync(token);
-                await _metricsRestClient.SendMetric(metric, token);
+
+                try
+                {
+                    await _metricsRestClient.SendMetric(metric, token);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, e.Message);
+                }
+                
             }
         }
 

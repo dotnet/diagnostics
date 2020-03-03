@@ -5,14 +5,19 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
 {
-    internal sealed class MetricsConfiguration
+    /// <summary>
+    /// Do not rename these fields!
+    /// </summary>
+    public sealed class MetricsConfiguration
     {
         public string TenantId { get; set; }
-        public string ClientId { get; set; }
-        public string ClientSecret { get; set; }
+        public string AadClientId { get; set; }
+        public string AadClientSecret { get; set; }
+    }
 
-        public string Region { get; set; }
-
-        public string ResourceId { get; set; }
+    public sealed class ResourceConfiguration
+    {
+        public string AzureResourceId { get; set; }
+        public string AzureRegion { get; set; }
     }
 }

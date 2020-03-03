@@ -1,18 +1,25 @@
 ﻿using Microsoft.Internal.Common.Commands;
 using Microsoft.Tools.Common;
 using System;
+using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
+using System.CommandLine.Parsing;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
+    [Flags]
     internal enum SinkType
     {
-        console,
-        logAnalytics,
+        none = 0,
+        console = 1,
+        logAnalytics = 2,
+        all = 0xff
     }
     
     class Program
@@ -23,9 +30,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                   description: "Monitor logs and metrics in a .NET application send the results to a chosen destination.")
               {
                 // Handler
-                CommandHandler.Create<CancellationToken, IConsole, int, int, SinkType>(new DiagnosticsMonitorCommandHandler().Start),
+                CommandHandler.Create<CancellationToken, IConsole, int, int, SinkType, IEnumerable<FileInfo>, IEnumerable<FileInfo>>(new DiagnosticsMonitorCommandHandler().Start),
                 // Arguments and Options
-                ProcessIdOption(), RefreshIntervalOption(), SinkOption()
+                ProcessIdOption(), RefreshIntervalOption(), SinkOption(), JsonConfigOption(), FileConfigOption()
               };
 
         private static Option ProcessIdOption() =>
@@ -33,7 +40,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 aliases: new[] { "-p", "--process-id" },
                 description: "The process id that will be monitored.")
             {
-                Argument = new Argument<int>(name: "pid")
+                Argument = new Argument<int>(name: "processId")
             };
 
         private static Option RefreshIntervalOption() =>
@@ -41,7 +48,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 alias: "--refresh-interval",
                 description: "The number of seconds to delay between updating the counters.")
             {
-                Argument = new Argument<int>(name: "refresh-interval", defaultValue: 1)
+                Argument = new Argument<int>(name: "refreshInterval", defaultValue: 10)
             };
 
         private static Option SinkOption() =>
@@ -51,6 +58,24 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             {
                 Argument = new Argument<SinkType>(name: "sink", defaultValue: SinkType.console)
             };
+
+        private static Option JsonConfigOption() =>
+        new Option(
+            alias: "--json-configs",
+            description: "Additonal configuration")
+        {
+            Argument = new Argument<IEnumerable<FileInfo>>(name: "jsonConfigs"),
+            Required = false,
+        };
+
+        private static Option FileConfigOption() =>
+        new Option(
+            alias: "--keyfile-configs",
+            description: "Additonal configuration")
+        {
+            Argument = new Argument<IEnumerable<FileInfo>>(name: "keyFileConfigs"),
+            Required = false
+        };
 
 
         public static Task<int> Main(string[] args)
