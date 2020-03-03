@@ -25,6 +25,7 @@ stages:
     #        Build legs        #
     #                          #
     ############################
+
     - template: /eng/build.yml
       parameters:
         name: Windows
@@ -136,6 +137,7 @@ stages:
       #      Test only legs      #
       #                          #
       ############################
+
       - template: /eng/build.yml
         parameters:
           name: Debian_Stretch
@@ -240,8 +242,9 @@ stages:
                 _BuildConfig: Debug
                 _BuildArch: x64
 
-      - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
       # Download, sign, package and publish
+
+      - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
         - template: /eng/common/templates/job/job.yml
           parameters:
             name: Sign_Package_Publish
@@ -266,6 +269,7 @@ stages:
             steps:
 
             # Windows x64 download. Everything under "bin" is published for the Windows x64 build.
+
             - task: DownloadPipelineArtifact@2
               displayName: Download Windows x64 and Managed Artifacts
               inputs:
@@ -346,6 +350,7 @@ stages:
               condition: succeeded()
 
             # Create nuget packages, sign binaries and publish to blob feed
+            
             - script: $(Build.SourcesDirectory)\eng\cipack.cmd
                 -configuration Release
                 -prepareMachine
