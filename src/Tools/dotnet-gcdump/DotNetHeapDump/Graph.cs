@@ -43,8 +43,8 @@ namespace Graphs
     /// nodes with the code:Graph.AllocNodeStorage call
     /// 
     /// Thus the basic flow is you call code:Graph.AllocNodeStorage to allocate storage, then call code:Graph.GetRoot
-    /// to get your first node.  If you need to 'hang' additional information off he nodes, you allocate an array
-    /// of Size code:Graph.NodeIndexLimit to hold it (for example a 'visited' bit).   Then repeatedly call 
+    /// to get your first node.  If you need to provide additional information about the nodes, you can allocate an auxiliary
+    /// array of Size code:Graph.NodeIndexLimit to hold it (for example a 'visited' bit).   Then repeatedly call 
     /// code:Node.GetFirstChild, code:Node.GetNextChild to get the children of a node to traverse the graph.
     /// 
     /// OVERHEAD
@@ -2603,8 +2603,9 @@ public class GraphSampler
         if (allNodesVisited)
         {
             Debug.Assert(total == m_graph.NodeCount);
-            // TODO FIX NOW enable Debug.Assert(totalSize == m_graph.TotalSize);
-            Debug.Assert(Math.Abs(totalSize - m_graph.TotalSize) / totalSize < .01);     // TODO FIX NOW lame, replace with assert above
+            // TODO The assert should be Debug.Assert(totalSize == m_graph.TotalSize);
+            // but we have to give a 1% error margin to get things passing. Fix this.
+            Debug.Assert(Math.Abs(totalSize - m_graph.TotalSize) / totalSize < .01);
         }
         Debug.Assert(sampleTotal == m_newGraph.NodeCount);
     }

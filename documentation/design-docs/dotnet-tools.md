@@ -1219,7 +1219,7 @@ d
     -g
     Run as a native debugger in a managed process (no interop).
     -h
-    Write dump if process has a hung window (does not respond to window messages for at least 5 seconds).
+    Write dump if process has an unresponsive window (does not respond to window messages for at least 5 seconds).
     -i
     Install ProcDump as the AeDebug postmortem debugger. Only -ma, -mp, -d and -r are supported as additional options.
     -l
