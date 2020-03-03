@@ -56,7 +56,7 @@ jobs:
 
       # Official Build OSX Pool
       ${{ if and(eq(parameters.osGroup, 'MacOS'), eq(variables['System.TeamProject'], 'public')) }}:
-        vmImage: macOS-10.13
+        vmImage: macOS-10.14
 
       # Official Build Windows Pool
       ${{ if and(eq(parameters.osGroup, 'Windows_NT'), ne(variables['System.TeamProject'], 'public')) }}:
