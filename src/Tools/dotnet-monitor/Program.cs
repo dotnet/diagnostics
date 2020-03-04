@@ -16,10 +16,10 @@ namespace Microsoft.Diagnostics.Tools.Monitor
     [Flags]
     internal enum SinkType
     {
-        none = 0,
-        console = 1,
-        logAnalytics = 2,
-        all = 0xff
+        None = 0,
+        Console = 1,
+        LogAnalytics = 2,
+        All = 0xff
     }
     
     class Program
@@ -56,7 +56,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 alias: "--sink",
                 description: "Where to send the data")
             {
-                Argument = new Argument<SinkType>(name: "sink", defaultValue: SinkType.console)
+                Argument = new Argument<SinkType>(name: "sink", defaultValue: SinkType.Console)
             };
 
         private static Option JsonConfigOption() =>

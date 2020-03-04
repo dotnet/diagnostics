@@ -12,33 +12,36 @@ using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using TraceReloggerLib;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
-    public sealed class DiagnosticsMonitor : IDisposable
+    public sealed class DiagnosticsMonitor : IAsyncDisposable
     {
         private readonly IServiceProvider _services;
-
         private readonly Microsoft.Extensions.Logging.ILogger<DiagnosticsMonitor> _logger;
-
         private readonly MonitoringSourceConfiguration _sourceConfig;
-        private readonly IOptions<ContextConfiguration> _context;
-        private IEnumerable<IMetricsLogger> _metricLoggers;
-
-        //TODO localize?
-        private static readonly List<string> DimNames = new List<string>{ "Namespace", "Node"};
+        private readonly IEnumerable<IMetricsLogger> _metricLoggers;
 
         //These values don't change so we compute them only once
-        private readonly List<string> _dimValues = new List<string> {string.Empty, string.Empty};
+        private readonly List<string> _dimValues;
+
+        public const string NamespaceName = "Namespace";
+        public const string NodeName = "Node";
+        private static readonly List<string> DimNames = new List<string>{ NamespaceName, NodeName};
+
+        private int _disposeState = 0;
 
         public DiagnosticsMonitor(IServiceProvider services, MonitoringSourceConfiguration sourceConfig)
         {
             _services = services;
             _sourceConfig = sourceConfig;
-            _context = _services.GetService<IOptions<ContextConfiguration>>();
+            IOptions<ContextConfiguration> contextConfig = _services.GetService<IOptions<ContextConfiguration>>();
+            _dimValues = new List<string> { contextConfig.Value.Namespace, contextConfig.Value.Node };
             _metricLoggers = _services.GetServices<IMetricsLogger>();
             _logger = _services.GetService<ILogger<DiagnosticsMonitor>>();
         }
@@ -46,9 +49,6 @@ namespace Microsoft.Diagnostics.Monitoring
         public async Task ProcessEvents(int processId, CancellationToken cancellationToken)
         {
             var hasEventPipe = false;
-
-            _dimValues[0] = _context.Value.Namespace;
-            _dimValues[1] = _context.Value.Node;
 
             for (int i = 0; i < 10; ++i)
             {
@@ -334,19 +334,37 @@ namespace Microsoft.Diagnostics.Monitoring
         {
             foreach(IMetricsLogger metricLogger in _metricLoggers)
             {
-                metricLogger.LogMetrics(metric);
+                try
+                {
+                    metricLogger.LogMetrics(metric);
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError($"Error from {metricLogger.GetType()}: {e.Message}");
+                }
             }
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            if (_metricLoggers != null)
+            if (Interlocked.CompareExchange(ref _disposeState, 1, 0) == 1)
             {
-                foreach(IMetricsLogger logger in _metricLoggers)
+                return;
+            }
+            
+            foreach(IMetricsLogger logger in _metricLoggers)
+            {
+                if (logger is IAsyncDisposable asyncDisposable)
+                {
+                    await asyncDisposable.DisposeAsync();
+                }
+                else
                 {
                     logger?.Dispose();
                 }
-                _metricLoggers = null;
             }
         }
 

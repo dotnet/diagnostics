@@ -6,7 +6,7 @@ using System.Text;
 namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
 {
     /// <summary>
-    /// Do not rename these fields!
+    /// Do not rename these fields. These are used to bind to the app's configuration.
     /// </summary>
     public sealed class MetricsConfiguration
     {

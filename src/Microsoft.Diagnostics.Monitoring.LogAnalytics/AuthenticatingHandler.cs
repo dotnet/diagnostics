@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
         {
             using var httpclient = new HttpClient();
 
-            Dictionary<string, string> formValues = new Dictionary<string, string>();
+            var formValues = new Dictionary<string, string>();
             formValues.Add("grant_type", "client_credentials");
             formValues.Add("client_id", _metricsConfiguration.AadClientId);
             formValues.Add("client_secret", _metricsConfiguration.AadClientSecret);

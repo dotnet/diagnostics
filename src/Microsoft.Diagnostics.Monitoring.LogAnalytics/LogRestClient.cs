@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Net.Http;
 
 namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
 {
-    public class LogRestClient
+    internal sealed class LogRestClient
     {
     }
 }

@@ -114,12 +114,10 @@ namespace Microsoft.Diagnostics.Monitoring
                     (long)(LoggingEventSource.Keywords.JsonMessage | LoggingEventSource.Keywords.FormattedMessage)
                 ),
 
-                // Distributed Tracing
-
                 // Activity correlation
-                new EventPipeProvider(TplEventSource,
-                        keywords: 0x80,
-                        eventLevel: EventLevel.LogAlways),
+                //new EventPipeProvider(TplEventSource,
+                //        keywords: 0x80,
+                //        eventLevel: EventLevel.LogAlways),
 
                 // Diagnostic source events
                 new EventPipeProvider(DiagnosticSourceEventSource,

@@ -12,15 +12,18 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
 {
-    public sealed class MetricsLogger : IMetricsLogger
+    public sealed class MetricsLogger : IMetricsLogger, IAsyncDisposable
     {
         private readonly ILogger<DiagnosticsMonitor> _logger;
-        private MetricsConfiguration _metricConfig;
-        private ResourceConfiguration _resourceConfig;
+        private readonly MetricsConfiguration _metricConfig;
+        private readonly ResourceConfiguration _resourceConfig;
 
-        private Channel<Metric> _metricChannel;
-        private CancellationTokenSource _cancellationTokenSource;
-        private MetricsRestClient _metricsRestClient;
+        private readonly Channel<Metric> _metricChannel;
+        private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly MetricsRestClient _metricsRestClient;
+        private readonly Task _processingTask;
+
+        private int _disposed = 0;
 
         public MetricsLogger(ILogger<DiagnosticsMonitor> logger,
             IOptions<MetricsConfiguration> metricsConfig,
@@ -46,63 +49,88 @@ namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
                 return;
             }
 
+            //TODO Limit this
             _metricChannel = Channel.CreateUnbounded<Metric>();
             _cancellationTokenSource = new CancellationTokenSource();
             _metricsRestClient = new MetricsRestClient(_metricConfig, _resourceConfig);
 
-            Task.Run(() => ProcessAllData(_cancellationTokenSource.Token), _cancellationTokenSource.Token);
+            _processingTask = Task.Run(() => ProcessAllData(_cancellationTokenSource.Token), _cancellationTokenSource.Token);
         }
 
         public void LogMetrics(Metric metric)
         {
-            if (_metricsRestClient == null)
+            //Sink was not configured properly, we do not log any data.
+            if (_processingTask == null)
             {
                 return;
             }
 
-            if (!_metricChannel.Writer.TryWrite(metric))
-            {
-                _logger.LogInformation("Failed to post metric {0}", metric.Name);
-            }
+            //We're not locking here so it's possible we won't throw even if the object has begun disposal.
+            //We handle this gracefully.
+            ThrowIfDisposed();
+
+            //If the channel is complete, we will not be able to write to it.
+            _metricChannel.Writer.TryWrite(metric);
         }
 
         private async Task ProcessAllData(CancellationToken token)
         {
             while (!token.IsCancellationRequested)
             {
-                token.ThrowIfCancellationRequested();
-                Metric metric = await _metricChannel.Reader.ReadAsync(token);
+                Metric metric = null;
+                try
+                {
+                    metric = await _metricChannel.Reader.ReadAsync(token);
+                }
+                catch (ChannelClosedException)
+                {
+                    return;
+                }
 
                 try
                 {
                     await _metricsRestClient.SendMetric(metric, token);
                 }
-                catch (Exception e)
+                catch (Exception e) when ((!(e is OperationCanceledException)) && (!(e is ObjectDisposedException)))
                 {
                     _logger.LogError(e, e.Message);
                 }
-                
+            }
+            token.ThrowIfCancellationRequested();
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (Interlocked.CompareExchange(ref _disposed, value: 1, comparand: 1) == 1)
+            {
+                throw new ObjectDisposedException(nameof(MetricsLogger));
             }
         }
 
         public void Dispose()
         {
-            if (_cancellationTokenSource != null)
+            _ = DisposeAsync();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (Interlocked.CompareExchange(ref _disposed, value: 1, comparand: 0) == 1)
             {
-                _cancellationTokenSource.Cancel();
-                _cancellationTokenSource.Dispose();
-                _cancellationTokenSource = null;
+                return;
             }
-            if (_metricsRestClient != null)
+
+            //Do not allow any more entries. This should force ReadAsync to throw.
+            _metricChannel?.Writer.TryComplete();
+
+            //Finish processing
+            //TODO Consider limiting this to a certain amount of time.
+            if (_processingTask != null)
             {
-                _metricsRestClient.Dispose();
-                _metricsRestClient = null;
+                await _processingTask;
             }
-            if (_metricChannel != null)
-            {
-                _metricChannel.Writer.TryComplete(null);
-                _metricChannel = null;
-            }
+            _cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Dispose();
+            _metricsRestClient?.Dispose();
         }
     }
 }

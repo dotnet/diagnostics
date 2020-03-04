@@ -12,20 +12,15 @@ namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
 {
     internal class MetricsRestClient : IDisposable
     {
-        private HttpClient _client;
-        private readonly MetricsConfiguration _config;
+        private readonly HttpClient _client;
         private readonly ResourceConfiguration _resourceConfig;
-
-        //We expect metric units, dimensions, and so on to stay the same throughout the session.
-        Dictionary<(string metricNamespace, string metricName), AggregatedMetric> _metricCache = new Dictionary<(string metricNamespace, string metricName), AggregatedMetric>();
 
         private CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
         public MetricsRestClient(MetricsConfiguration config, ResourceConfiguration resourceConfig)
         {
-            _config = config;
             _resourceConfig = resourceConfig;
-            _client = new HttpClient(new AuthenticationDelegatingHandler(_config));
+            _client = new HttpClient(new AuthenticationDelegatingHandler(config));
         }
 
         public async Task SendMetric(Metric metric, CancellationToken token)
@@ -34,14 +29,10 @@ namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
 
             using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, uri);
 
-            if (!_metricCache.TryGetValue((metric.Namespace, metric.Name), out AggregatedMetric aggregatedMetric))
-            {
-                aggregatedMetric = new AggregatedMetric();
-                _metricCache.Add((metric.Namespace, metric.Name), aggregatedMetric);
+            var aggregatedMetric = new AggregatedMetric();
 
-                aggregatedMetric.Data.BaseData.Namespace = metric.Namespace;
-                aggregatedMetric.Data.BaseData.Metric = metric.DisplayName + (string.IsNullOrEmpty(metric.Unit) ? string.Empty : $" ({metric.Unit})");
-            }
+            aggregatedMetric.Data.BaseData.Namespace = metric.Namespace;
+            aggregatedMetric.Data.BaseData.Metric = metric.DisplayName + (string.IsNullOrEmpty(metric.Unit) ? string.Empty : $" ({metric.Unit})");
 
             aggregatedMetric.Time = metric.Timestamp.ToString("o");
             aggregatedMetric.Data.BaseData.DimNames = metric.DimNames;
@@ -57,7 +48,6 @@ namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
 
             aggregatedMetric.Data.BaseData.Series.Add(series);
 
-
             using var memoryStream = new MemoryStream();
             await JsonSerializer.SerializeAsync(memoryStream, aggregatedMetric, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }, token);
             memoryStream.Position = 0L;
@@ -71,11 +61,7 @@ namespace Microsoft.Diagnostics.Monitoring.LogAnalytics
 
         public void Dispose()
         {
-            if (_client != null)
-            {
-                _client.Dispose();
-                _client = null;
-            }
+            _client?.Dispose();
         }
     }
 }

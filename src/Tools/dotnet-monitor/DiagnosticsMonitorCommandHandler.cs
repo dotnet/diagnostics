@@ -69,47 +69,71 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                     builder.AddKeyPerFile(keyFileConfig.FullName, optional: true);
                 }
             }
-            builder.AddInMemoryCollection(new Dictionary<string, string> { { "Namespace", "default" }, { "Node", Environment.MachineName } });
+
+            ConfigureNames(builder);
 
             IConfigurationRoot config = builder.Build();
-
             services.AddSingleton<IConfiguration>(config);
 
             //Specialized logger for diagnostic output from the service itself rather than as a sink for the data
             services.AddSingleton<ILogger<DiagnosticsMonitor>>((sp) => new ConsoleLoggerAdapter(console));
 
-            if (sink.HasFlag(SinkType.console))
+            if (sink.HasFlag(SinkType.Console))
             {
                 services.AddSingleton<IMetricsLogger, ConsoleMetricsLogger>();
             }
-            if (sink.HasFlag(SinkType.logAnalytics))
+            if (sink.HasFlag(SinkType.LogAnalytics))
             {
                 services.AddSingleton<IMetricsLogger, MetricsLogger>();
             }
 
             services.AddLogging(builder =>
                 {
-                    if (sink.HasFlag(SinkType.console))
+                    if (sink.HasFlag(SinkType.Console))
                     {
                         builder.AddConsole();
                     }
-                    if (sink.HasFlag(SinkType.logAnalytics))
+                    if (sink.HasFlag(SinkType.LogAnalytics))
                     {
                         builder.AddProvider(new LogAnalyticsLoggerProvider());
                     }
                 });
             services.Configure<ContextConfiguration>(config);
-            if (sink.HasFlag(SinkType.logAnalytics))
+            if (sink.HasFlag(SinkType.LogAnalytics))
             {
                 services.Configure<MetricsConfiguration>(config);
                 services.Configure<ResourceConfiguration>(config);
             }
 
-            DiagnosticsMonitor monitor = new DiagnosticsMonitor(services.BuildServiceProvider(), new MonitoringSourceConfiguration(refreshInterval));
-
+            await using var monitor = new DiagnosticsMonitor(services.BuildServiceProvider(), new MonitoringSourceConfiguration(refreshInterval));
             await monitor.ProcessEvents(processId, token);
 
             return 0;
+        }
+
+        private void ConfigureNames(IConfigurationBuilder builder)
+        {
+            string hostName = Environment.GetEnvironmentVariable("HOSTNAME");
+            if (string.IsNullOrEmpty(hostName))
+            {
+                hostName = Environment.MachineName;
+            }
+            string namespaceName = null;
+            try
+            {
+                namespaceName = File.ReadAllText(@"/var/run/secrets/kubernetes.io/serviceaccount/namespace");
+            }
+            catch
+            {
+            }
+
+            if (string.IsNullOrEmpty(namespaceName))
+            {
+                namespaceName = "default";
+            }
+
+            builder.AddInMemoryCollection(new Dictionary<string, string> { { DiagnosticsMonitor.NamespaceName, namespaceName }, { DiagnosticsMonitor.NodeName, hostName } });
+
         }
     }
 }
