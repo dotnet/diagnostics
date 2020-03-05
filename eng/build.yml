@@ -33,7 +33,7 @@ jobs:
     timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
     enableMicrobuild: true
     enableTelemetry: true
-    helixRepo: dotnet/sdk
+    helixRepo: dotnet/diagnostics
 
     pool:
       # Public Linux Build Pool
@@ -144,12 +144,13 @@ jobs:
         displayName: Build / Test
         condition: succeeded()
  
-    - task: PublishBuildArtifacts@1
-      displayName: Publish Build Artifacts
-      inputs:
-        pathtoPublish: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
-        artifactName: $(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
-      condition: ne(variables['_PublishArtifacts'], '')
+    - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+      - task: PublishBuildArtifacts@1
+        displayName: Publish Build Artifacts
+        inputs:
+          pathtoPublish: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
+          artifactName: $(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
+        condition: ne(variables['_PublishArtifacts'], '')
 
     - task: PublishBuildArtifacts@1
       displayName: Publish Artifacts on failure

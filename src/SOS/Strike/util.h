@@ -2707,8 +2707,8 @@ private:
      */
     bool MoveToPage(TADDR addr, unsigned int size = 0x18);
 
-    /* Attempts to read from the target process if the data is possibly hanging off
-     * the end of a page.
+    /* Attempts to read from the target process if the data possibly crosses the
+     * boundaries of the page.
      */
     template<class T>
     inline bool MisalignedRead(TADDR addr, T *t)

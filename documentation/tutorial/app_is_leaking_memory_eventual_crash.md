@@ -1,4 +1,4 @@
-# App is leaking memory (eventual crash/hang)
+# App is leaking memory (eventual crash/stops responding)
 
 http://localhost:5000/api/diagscenario/memleak/{kb}
 
@@ -86,9 +86,3 @@ The string instance appears to be rooted from top level Processor object which i
 ![alt text](https://user-images.githubusercontent.com/15442480/57110703-4b214a80-6cee-11e9-8887-02c25424a0ad.png)
 
 From here we can now try and back-track (from code) why the cache seems to be growing in an unbound fashion. 
-
-
-
-
-
-
