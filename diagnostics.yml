@@ -387,6 +387,7 @@ stages:
         # as well as NuGet, SourceLink, and signing validation.
         # The variables get imported from group dotnet-diagnostics-sdl-params
         enableSourceLinkValidation: true
+        symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
         SDLValidationParameters:
           enable: true
           continueOnError: false
