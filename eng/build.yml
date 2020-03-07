@@ -136,7 +136,8 @@ jobs:
         condition: succeeded()
 
     - ${{ if eq(parameters.osGroup, 'MacOS') }}:
-      - script: /bin/bash -c "sudo xcode-select -s /Applications/Xcode_10.3.app/Contents/Developer"
+      -${{ if eq(variables['System.TeamProject'], 'public') }}:
+        - script: /bin/bash -c "sudo xcode-select -s /Applications/Xcode_10.3.app/Contents/Developer"
       - script: $(Build.SourcesDirectory)/eng/cibuild.sh
           --configuration $(_BuildConfig) 
           --architecture $(_BuildArch)
