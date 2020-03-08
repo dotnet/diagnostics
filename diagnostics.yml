@@ -248,7 +248,7 @@ stages:
         - template: /eng/common/templates/job/job.yml
           parameters:
             name: Sign_Package_Publish
-            displayName: Sign, Package, and Publish to BAR
+            displayName: Sign, Package, and Generate BAR Manifests
             dependsOn:
             - Windows
             - CentOS_7
