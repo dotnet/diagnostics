@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>SOS.NETCore</AssemblyName>
+    <NeedsPublishing>true</NeedsPublishing>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>;1591;1701</NoWarn>
     <Description>.NET Core SOS</Description>
