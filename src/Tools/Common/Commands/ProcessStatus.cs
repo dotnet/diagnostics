@@ -132,7 +132,7 @@ namespace Microsoft.Internal.Common.Commands
             {
                 processHandle = process.Handle;
             }
-            catch(Exception ex)when (ex is InvalidOperationException || ex is NotSupportedException)
+            catch (Exception ex) when (ex is InvalidOperationException || ex is NotSupportedException)
             {
                 return "[cannot determine command line arguments]";
             }
