@@ -8,6 +8,7 @@
     <IsPackable>false</IsPackable>
     <NoWarn>;1591;1701</NoWarn>
     <DefineConstants>$(DefineConstants);CORE_CLR</DefineConstants>
+    <NeedsPublishing>true</NeedsPublishing>
   </PropertyGroup>
   
   <ItemGroup>

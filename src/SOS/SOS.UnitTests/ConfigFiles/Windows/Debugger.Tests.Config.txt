@@ -118,7 +118,7 @@
             <Option>
               <TestName>SOS.DualRuntimes</TestName>
               <!-- The assembly path, class and function name of the desktop test code to load/run -->
-              <DesktopTestParameters>$(RootBinDir)\bin\SymbolTestDll\$(TargetConfiguration)\$(DesktopFramework)\publish\SymbolTestDll.dll SymbolTestDll.TestClass ThrowException</DesktopTestParameters>
+              <DesktopTestParameters>$(RootBinDir)\bin\SymbolTestDll\$(TargetConfiguration)\$(DesktopFramework)\SymbolTestDll.dll SymbolTestDll.TestClass ThrowException</DesktopTestParameters>
             </Option>
           </Options>
           <Options>
