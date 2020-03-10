@@ -1,9 +1,9 @@
 {
   "tools": {
-    "dotnet": {
+    "dotnet": [
       "$(MicrosoftNETCoreApp31Version)",
       "$(MicrosoftNETCoreAppVersion)"
-    }
+    ]
   },
   "msbuild-sdks": {
     "Microsoft.DotNet.Arcade.Sdk": "5.0.0-beta.20151.1"
