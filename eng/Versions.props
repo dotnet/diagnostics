@@ -8,6 +8,8 @@
     <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
   </PropertyGroup>
   <PropertyGroup>
+    <!-- Latest symstore version updated by darc -->
+    <MicrosoftSymbolStoreVersion>1.0.55801</MicrosoftSymbolStoreVersion>
     <!-- Runtime versions to test -->
     <MicrosoftNETCoreApp21Version>2.1.16</MicrosoftNETCoreApp21Version>
     <MicrosoftAspNetCoreApp21Version>$(MicrosoftNETCoreApp21Version)</MicrosoftAspNetCoreApp21Version>
@@ -31,16 +33,13 @@
     <SystemCollectionsImmutableVersion>1.5.0</SystemCollectionsImmutableVersion>
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
     <!-- Other libs -->
-    <MicrosoftSymbolStoreVersion>1.0.55801</MicrosoftSymbolStoreVersion>
     <MicrosoftDiagnosticsRuntimeVersion>1.1.61812</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.44</MicrosoftDiagnosticsTracingTraceEventVersion>
-
     <MicrosoftExtensionsConfigurationJsonVersion>3.1.2</MicrosoftExtensionsConfigurationJsonVersion>
     <MicrosoftExtensionsConfigurationKeyPerFileVersion>3.1.2</MicrosoftExtensionsConfigurationKeyPerFileVersion>
     <MicrosoftExtensionsLoggingVersion>3.1.2</MicrosoftExtensionsLoggingVersion>
     <MicrosoftExtensionsLoggingConsoleVersion>3.1.2</MicrosoftExtensionsLoggingConsoleVersion>
-
     <SystemCommandLineExperimentalVersion>0.3.0-alpha.19602.1</SystemCommandLineExperimentalVersion>
     <SystemCommandLineRenderingVersion>0.3.0-alpha.19602.1</SystemCommandLineRenderingVersion>
     <SystemMemoryVersion>4.5.3</SystemMemoryVersion>
