@@ -8,12 +8,14 @@
     <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
   </PropertyGroup>
   <PropertyGroup>
+    <!-- Latest symstore version updated by darc -->
+    <MicrosoftSymbolStoreVersion>1.0.55801</MicrosoftSymbolStoreVersion>
     <!-- Runtime versions to test -->
-    <MicrosoftNETCoreApp21Version>2.1.12</MicrosoftNETCoreApp21Version>
+    <MicrosoftNETCoreApp21Version>2.1.16</MicrosoftNETCoreApp21Version>
     <MicrosoftAspNetCoreApp21Version>$(MicrosoftNETCoreApp21Version)</MicrosoftAspNetCoreApp21Version>
-    <MicrosoftNETCoreApp30Version>3.0.1</MicrosoftNETCoreApp30Version>
+    <MicrosoftNETCoreApp30Version>3.0.3</MicrosoftNETCoreApp30Version>
     <MicrosoftAspNetCoreApp30Version>$(MicrosoftNETCoreApp30Version)</MicrosoftAspNetCoreApp30Version>
-    <MicrosoftNETCoreApp31Version>3.1.0</MicrosoftNETCoreApp31Version>
+    <MicrosoftNETCoreApp31Version>3.1.2</MicrosoftNETCoreApp31Version>
     <MicrosoftAspNetCoreApp31Version>$(MicrosoftNETCoreApp31Version)</MicrosoftAspNetCoreApp31Version>
     <!-- Latest shared runtime version updated by darc -->
     <MicrosoftNETCoreAppVersion>5.0.0-preview.3.20159.13</MicrosoftNETCoreAppVersion>
@@ -31,16 +33,13 @@
     <SystemCollectionsImmutableVersion>1.5.0</SystemCollectionsImmutableVersion>
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
     <!-- Other libs -->
-    <MicrosoftSymbolStoreVersion>1.0.55801</MicrosoftSymbolStoreVersion>
     <MicrosoftDiagnosticsRuntimeVersion>1.1.61812</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.44</MicrosoftDiagnosticsTracingTraceEventVersion>
-
     <MicrosoftExtensionsConfigurationJsonVersion>3.1.2</MicrosoftExtensionsConfigurationJsonVersion>
     <MicrosoftExtensionsConfigurationKeyPerFileVersion>3.1.2</MicrosoftExtensionsConfigurationKeyPerFileVersion>
     <MicrosoftExtensionsLoggingVersion>3.1.2</MicrosoftExtensionsLoggingVersion>
     <MicrosoftExtensionsLoggingConsoleVersion>3.1.2</MicrosoftExtensionsLoggingConsoleVersion>
-
     <SystemCommandLineExperimentalVersion>0.3.0-alpha.19602.1</SystemCommandLineExperimentalVersion>
     <SystemCommandLineRenderingVersion>0.3.0-alpha.19602.1</SystemCommandLineRenderingVersion>
     <SystemMemoryVersion>4.5.3</SystemMemoryVersion>
