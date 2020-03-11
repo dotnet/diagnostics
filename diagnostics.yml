@@ -13,7 +13,21 @@ pr:
     - LICENSE.TXT
 
 variables:
-- template: /eng/common-variables.yml
+  - name: _TeamName
+    value: DotNetCore
+  - name: _InternalBuildArgs
+    value: ''
+
+  - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+    - name: _SignType
+      value: real
+    # DotNet-Diagnostics-SDL-Params provides Tsa* variables for SDL checks.
+    - group: DotNet-Diagnostics-SDL-Params
+    - name: _InternalBuildArgs
+      value: /p:DotNetSignType=$(_SignType)
+        /p:TeamName=$(_TeamName)
+        /p:DotNetPublishUsingPipelines=$(PublishPackages)
+        /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
 
 stages:
   - stage: build
@@ -248,7 +262,7 @@ stages:
         - template: /eng/common/templates/job/job.yml
           parameters:
             name: Sign_Package_Publish
-            displayName: Sign, Package, and Publish to BAR
+            displayName: Sign, Package, and Generate BAR Manifests
             dependsOn:
             - Windows
             - CentOS_7
