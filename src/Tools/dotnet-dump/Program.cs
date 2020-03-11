@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Commands;
 using Microsoft.Tools.Common;
 using System.CommandLine;
@@ -64,11 +63,10 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
         private static Option TypeOption() =>
             new Option(
                 alias: "--type",
-                description: @"The dump type determines the kinds of information that are collected from the process. There are two types: heap - A large and 
-relatively comprehensive dump containing module lists, thread lists, all stacks, exception information, handle information, and all memory except for mapped 
-images. mini - A small dump containing module lists, thread lists, exception information and all stacks. If not specified 'heap' is the default.")
+                description: @"The dump type determines the kinds of information that are collected from the process. There are several types: full - The largest dump containing all memory including the module images. heap - A large and relatively comprehensive dump containing module lists, thread lists, all stacks, exception information, handle information, and all memory except for mapped 
+images. mini - A small dump containing module lists, thread lists, exception information and all stacks. If not specified 'full' is the default.")
             {
-                Argument = new Argument<Dumper.DumpTypeOption>(name: "dump_type", defaultValue: Dumper.DumpTypeOption.Heap)
+                Argument = new Argument<Dumper.DumpTypeOption>(name: "dump_type", defaultValue: Dumper.DumpTypeOption.Full)
             };
 
         private static Command AnalyzeCommand() =>
