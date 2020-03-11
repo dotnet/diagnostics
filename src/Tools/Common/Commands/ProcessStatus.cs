@@ -103,7 +103,7 @@ namespace Microsoft.Internal.Common.Commands
                     {
                         //The command line may be modified and the first part of the command line may not be /path/to/exe. If that is the case, return the command line as is.Else remove the path to module as we are already displaying that.
                         string[] commandLineSplit = commandLine.Split('\0');
-                        if (commandLineSplit.FirstOrDefault() == process.ProcessName)
+                        if (commandLineSplit.FirstOrDefault() == process.MainModule.FileName)
                         {
                             return String.Join(" ", commandLineSplit.Skip(1));
                         }
