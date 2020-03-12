@@ -24,14 +24,32 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     using (var stream = new FileStream(outputFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
                     {
                         var exceptionInfo = new NativeMethods.MINIDUMP_EXCEPTION_INFORMATION();
-                        var dumpType = type == DumpTypeOption.Mini ? NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo :
-                            NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
-                            NativeMethods.MINIDUMP_TYPE.MiniDumpWithPrivateReadWriteMemory |
-                            NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
-                            NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules |
-                            NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
-                            NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
-                            NativeMethods.MINIDUMP_TYPE.MiniDumpWithTokenInformation;
+
+                        NativeMethods.MINIDUMP_TYPE dumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpNormal;
+                        switch (type)
+                        {
+                            case DumpTypeOption.Full:
+                                dumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemory |
+                                           NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
+                                           NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
+                                           NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules |
+                                           NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
+                                           NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
+                                           NativeMethods.MINIDUMP_TYPE.MiniDumpWithTokenInformation;
+                                break;
+                            case DumpTypeOption.Heap:
+                                dumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithPrivateReadWriteMemory |
+                                           NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
+                                           NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
+                                           NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules |
+                                           NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
+                                           NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
+                                           NativeMethods.MINIDUMP_TYPE.MiniDumpWithTokenInformation;
+                                break;
+                            case DumpTypeOption.Mini:
+                                dumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo;
+                                break;
+                        }
 
                         // Retry the write dump on ERROR_PARTIAL_COPY
                         for (int i = 0; i < 5; i++)
