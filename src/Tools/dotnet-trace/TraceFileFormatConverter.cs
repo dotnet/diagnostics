@@ -10,6 +10,7 @@ using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Etlx;
 using Microsoft.Diagnostics.Tracing.Stacks;
 using Microsoft.Diagnostics.Tracing.Stacks.Formats;
+using Microsoft.Diagnostics.Tracing.StackSources;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -63,7 +64,26 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console.Out.WriteLine("Conversion complete");
         }
 
-        private static void Convert(TraceFileFormat format, string fileToConvert, string outputFilename, bool continueOnError=false)
+        private static void Convert(TraceFileFormat format, string fileToConvert, string outputFilename, bool continueOnError = false)
+        {
+            if (fileToConvert.EndsWith(".trace.zip", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertFromTraceZip(format, fileToConvert, outputFilename);
+            }
+            else
+            {
+                ConvertFromNetTrace(format, fileToConvert, outputFilename, continueOnError);
+            }
+        }
+
+        private static void ConvertFromTraceZip(TraceFileFormat format, string fileToConvert, string outputFilename)
+        {
+            var stackSource = new ParallelLinuxPerfScriptStackSource(fileToConvert, doThreadTime: true);
+
+            Convert(stackSource, format, outputFilename);
+        }
+
+        private static void ConvertFromNetTrace(TraceFileFormat format, string fileToConvert, string outputFilename, bool continueOnError)
         {
             var etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert, null, new TraceLogOptions() { ContinueOnError = continueOnError } );
             using (var symbolReader = new SymbolReader(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
@@ -79,24 +99,28 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     IncludeEventSourceEvents = false // SpeedScope handles only CPU samples, events are not supported
                 };
                 computer.GenerateThreadTimeStacks(stackSource);
-
-                switch (format)
-                {
-                    case TraceFileFormat.Speedscope:
-                        SpeedScopeStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename);
-                        break;
-                    case TraceFileFormat.Chromium:
-                        ChromiumStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename, compress: false);
-                        break;
-                    default:
-                        // we should never get here
-                        throw new ArgumentException($"Invalid TraceFileFormat \"{format}\"");
-                }
+                Convert(stackSource, format, outputFilename);
             }
 
             if (File.Exists(etlxFilePath))
             {
                 File.Delete(etlxFilePath);
+            }
+        }
+
+        private static void Convert(StackSource stackSource, TraceFileFormat format, string outputFilename)
+        {
+            switch (format)
+            {
+                case TraceFileFormat.Speedscope:
+                    SpeedScopeStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename);
+                    break;
+                case TraceFileFormat.Chromium:
+                    ChromiumStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename, compress: false);
+                    break;
+                default:
+                    // we should never get here
+                    throw new ArgumentException($"Invalid TraceFileFormat \"{format}\"");
             }
         }
     }
