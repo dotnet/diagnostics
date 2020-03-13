@@ -275,13 +275,19 @@ static bool FindDotNetVersion(int majorFilter, int minorFilter, std::string& hos
 }
 
 #ifdef FEATURE_PAL
+
 const char *g_linuxPaths[] = {
+#if defined(__APPLE__)
+    "/usr/local/share/dotnet/shared/Microsoft.NETCore.App"
+#else
     "/rh-dotnet31/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
     "/rh-dotnet30/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
     "/rh-dotnet21/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
     "/usr/share/dotnet/shared/Microsoft.NETCore.App",
-};
 #endif
+};
+
+#endif // FEATURE_PAL
 
 /**********************************************************************\
  * Returns the path to the coreclr to use for hosting and it's
@@ -294,22 +300,41 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
     if (g_hostRuntimeDirectory == nullptr)
     {
 #ifdef FEATURE_PAL
-#if defined(__APPLE__)
-        hostRuntimeDirectory.assign("/usr/local/share/dotnet/shared/Microsoft.NETCore.App");
-#elif defined (__FreeBSD__) || defined(__NetBSD__)
-        ExtErr("FreeBSD or NetBSD not supported\n");
-        return E_FAIL;
-#else
-        // Start with the possible RHEL's locations, then the regular Linux path
-        for (int i = 0; i < _countof(g_linuxPaths); i++)
+        char* line = nullptr;
+        size_t lineLen = 0;
+
+        // Start with Linux location file if exists
+        FILE* locationFile = fopen("/etc/dotnet/install_location", "r");
+        if (locationFile != nullptr)
         {
-            hostRuntimeDirectory.assign(g_linuxPaths[i]);
-            if (access(hostRuntimeDirectory.c_str(), F_OK) == 0)
+            if (getline(&line, &lineLen, locationFile) != -1)
             {
-                break;
+                hostRuntimeDirectory.assign(line);
+                size_t newLinePostion = hostRuntimeDirectory.rfind('\n');
+                if (newLinePostion != std::string::npos) {
+                    hostRuntimeDirectory.erase(newLinePostion);
+                    hostRuntimeDirectory.append("/shared/Microsoft.NETCore.App");
+                }
+                free(line);
             }
         }
+        if (hostRuntimeDirectory.empty())
+        {
+#if defined (__FreeBSD__) || defined(__NetBSD__)
+            ExtErr("FreeBSD or NetBSD not supported\n");
+            return E_FAIL;
+#else
+            // Now try the possible runtime locations
+            for (int i = 0; i < _countof(g_linuxPaths); i++)
+            {
+                hostRuntimeDirectory.assign(g_linuxPaths[i]);
+                if (access(hostRuntimeDirectory.c_str(), F_OK) == 0)
+                {
+                    break;
+                }
+            }
 #endif
+        }
 #else
         ArrayHolder<CHAR> programFiles = new CHAR[MAX_LONGPATH];
         if (GetEnvironmentVariableA("PROGRAMFILES", programFiles, MAX_LONGPATH) == 0)
@@ -335,22 +360,26 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
                     // Find highest 3.1.x version
                     if (!FindDotNetVersion(3, 1, hostRuntimeDirectory))
                     {
-                        HRESULT hr = CheckEEDll();
-                        if (FAILED(hr)) {
-                            return hr;
-                        }
-                        // Don't use the desktop runtime to host
-                        if (g_pRuntime->IsDesktop())
+                        // Find highest 5.0.x version
+                        if (!FindDotNetVersion(5, 0, hostRuntimeDirectory))
                         {
-                            return E_FAIL;
+                            HRESULT hr = CheckEEDll();
+                            if (FAILED(hr)) {
+                                return hr;
+                            }
+                            // Don't use the desktop runtime to host
+                            if (g_pRuntime->IsDesktop())
+                            {
+                                return E_FAIL;
+                            }
+                            // If an installed runtime can not be found, use the target coreclr version
+                            LPCSTR runtimeDirectory = g_pRuntime->GetRuntimeDirectory();
+                            if (runtimeDirectory == nullptr)
+                            {
+                                return E_FAIL;
+                            }
+                            hostRuntimeDirectory = runtimeDirectory;
                         }
-                        // If an installed runtime can not be found, use the target coreclr version
-                        LPCSTR runtimeDirectory = g_pRuntime->GetRuntimeDirectory();
-                        if (runtimeDirectory == nullptr)
-                        {
-                            return E_FAIL;
-                        }
-                        hostRuntimeDirectory = runtimeDirectory;
                     }
                 }
             }
