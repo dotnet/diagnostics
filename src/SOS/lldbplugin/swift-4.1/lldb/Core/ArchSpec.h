@@ -103,7 +103,7 @@ public:
     eMIPS_ABI_FP_mask = 0x00700000
   };
 
-  // ARM specific e_flags
+  // HOST_ARM specific e_flags
   enum ARMeflags {
     eARM_abi_soft_float = 0x00000200,
     eARM_abi_hard_float = 0x00000400
@@ -471,7 +471,7 @@ public:
   ///
   /// In the common case there is no need to call this method as the
   /// byte order can almost always be determined by the architecture.
-  /// However, many CPU's are bi-endian (ARM, Alpha, PowerPC, etc)
+  /// However, many CPU's are bi-endian (HOST_ARM, Alpha, PowerPC, etc)
   /// and the default/assumed byte order may be incorrect.
   //------------------------------------------------------------------
   void SetByteOrder(lldb::ByteOrder byte_order) { m_byte_order = byte_order; }
@@ -585,11 +585,11 @@ public:
   /// allows the stop reasonm, like "breakpoint hit", to be replaced
   /// with a different stop reason like "no stop reason".
   ///
-  /// This is specifically used for ARM in Thumb code when we stop in
+  /// This is specifically used for HOST_ARM in Thumb code when we stop in
   /// an IT instruction (if/then/else) where the instruction won't get
   /// executed and therefore it wouldn't be correct to show the program
   /// stopped at the current PC. The code is generic and applies to all
-  /// ARM CPUs.
+  /// HOST_ARM CPUs.
   ///
   /// @return NULL or a valid stop info override callback for the
   ///     current architecture.
@@ -605,7 +605,7 @@ public:
   //------------------------------------------------------------------
   /// Detect whether this architecture uses thumb code exclusively
   ///
-  /// Some embedded ARM chips (e.g. the ARM Cortex M0-7 line) can
+  /// Some embedded HOST_ARM chips (e.g. the HOST_ARM Cortex M0-7 line) can
   /// only execute the Thumb instructions, never Arm.  We should normally
   /// pick up arm/thumbness from their the processor status bits (cpsr/xpsr)
   /// or hints on each function - but when doing bare-boards low level

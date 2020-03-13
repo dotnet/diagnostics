@@ -118,7 +118,7 @@ Buffer size required to be passed to _gcvt, fcvt and other fp conversion routine
 #define LONGLONG_IS_INT64 1     /* 1 means long long is same as int64 */
     CASSERT(sizeof(long long) == sizeof(int64_t));
 
-#if defined (_WIN64)
+#if defined (HOST_64BIT)
     #define PTR_IS_INT       0      /* 1 means ptr is same size as int */
     CASSERT(sizeof(void *) != sizeof(int));
     #if __LP64__
@@ -130,14 +130,14 @@ Buffer size required to be passed to _gcvt, fcvt and other fp conversion routine
     #endif
     #define PTR_IS_INT64     1      /* 1 means ptr is same size as int64 */
     CASSERT(sizeof(void *) == sizeof(int64_t));
-#else  /* defined (_WIN64) */
+#else  /* defined (HOST_64BIT) */
     #define PTR_IS_INT       1      /* 1 means ptr is same size as int */
     CASSERT(sizeof(void *) == sizeof(int));
     #define PTR_IS_LONG      1      /* 1 means ptr is same size as long */
     CASSERT(sizeof(void *) == sizeof(long));
     #define PTR_IS_INT64     0      /* 1 means ptr is same size as int64 */
     CASSERT(sizeof(void *) != sizeof(int64_t));
-#endif  /* defined (_WIN64) */
+#endif  /* defined (HOST_64BIT) */
 
 /* CONSTANTS */
 
@@ -707,7 +707,7 @@ int __cdecl _output (
                  * In order to handle the I, I32, and I64 size modifiers, we
                  * depart from the simple deterministic state machine. The
                  * code below scans for characters following the 'I',
-                 * and defaults to 64 bit on WIN64 and 32 bit on WIN32
+                 * and defaults to 64 bit on WIN64 and 32 bit on CLR_CMAKE_HOST_WIN32
                  */
 #if PTR_IS_INT64
                 flags |= FL_I64;    /* 'I' => __int64 on WIN64 systems */

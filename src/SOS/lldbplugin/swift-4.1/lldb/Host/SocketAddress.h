@@ -13,7 +13,7 @@
 // C Includes
 #include <stdint.h>
 
-#ifdef _WIN32
+#ifdef HOST_WINDOWS
 #include "lldb/Host/windows/windows.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>

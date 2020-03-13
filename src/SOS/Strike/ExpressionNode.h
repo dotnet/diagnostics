@@ -6,7 +6,7 @@
 #ifndef _EXPRESSION_NODE_
 #define _EXPRESSION_NODE_
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 #error This file isn't designed to build in PAL
 #endif
 

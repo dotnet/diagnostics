@@ -34,7 +34,7 @@ Revision History:
 // works great on 32 bit platforms, and is forward
 // compatible to 64 bit platforms.
 
-#ifdef _WIN64
+#ifdef HOST_64BIT
 #ifndef _IMAGEHLP64
 #define _IMAGEHLP64
 #endif
@@ -363,7 +363,7 @@ ImageRvaToVa(
     __in_opt OUT PIMAGE_SECTION_HEADER *LastRvaSection
     );
 
-#ifndef _WIN64
+#ifndef HOST_64BIT
 // This api won't be ported to Win64 - Fix your code.
 
 typedef struct _IMAGE_DEBUG_INFORMATION {
@@ -3798,7 +3798,7 @@ typedef struct _MINIDUMP_SYSTEM_INFO {
 //
 // ThreadId must be 4 bytes on all architectures.
 //
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 static_assert (sizeof ( ((PPROCESS_INFORMATION)0)->dwThreadId ) == 4, "ThreadId must be 4 bytes on all architectures.");
 #else
 typedef int VS_FIXEDFILEINFO;

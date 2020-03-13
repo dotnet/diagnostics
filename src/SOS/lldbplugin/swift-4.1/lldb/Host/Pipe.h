@@ -10,7 +10,7 @@
 #ifndef liblldb_Host_Pipe_h_
 #define liblldb_Host_Pipe_h_
 
-#if defined(_WIN32)
+#if defined(HOST_WINDOWS)
 #include "lldb/Host/windows/PipeWindows.h"
 namespace lldb_private {
 typedef PipeWindows Pipe;

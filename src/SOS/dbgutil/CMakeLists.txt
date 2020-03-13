@@ -1,7 +1,7 @@
-if(WIN32)
+if(CLR_CMAKE_HOST_WIN32)
   #use static crt
   add_definitions(-MT)
-endif(WIN32)
+endif(CLR_CMAKE_HOST_WIN32)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -9,8 +9,8 @@ set(DBGUTIL_SOURCES
     dbgutil.cpp
 )
 
-if(CLR_CMAKE_PLATFORM_UNIX)
+if(CLR_CMAKE_HOST_UNIX)
     add_compile_options(-fPIC)
-endif(CLR_CMAKE_PLATFORM_UNIX)
+endif(CLR_CMAKE_HOST_UNIX)
 
 _add_library(dbgutil STATIC ${DBGUTIL_SOURCES})

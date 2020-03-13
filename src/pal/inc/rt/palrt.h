@@ -235,7 +235,7 @@ inline void *__cdecl operator new(size_t, void *_P)
 #define ARGUMENT_PRESENT(ArgumentPointer)    (\
     (CHAR *)(ArgumentPointer) != (CHAR *)(NULL) )
 
-#if defined(_WIN64)
+#if defined(HOST_64BIT)
 #define MAX_NATURAL_ALIGNMENT sizeof(ULONGLONG)
 #else
 #define MAX_NATURAL_ALIGNMENT sizeof(ULONG)
@@ -683,7 +683,7 @@ STDAPI_(HRESULT) VariantClear(VARIANT * pvarg);
 #define V_UINTREF(X)     V_UNION(X, puintVal)
 #define V_ARRAY(X)       V_UNION(X, parray)
 
-#ifdef _WIN64
+#ifdef HOST_64BIT
 #define V_INT_PTR(X)        V_UNION(X, llVal)
 #define V_UINT_PTR(X)       V_UNION(X, ullVal)
 #define V_INT_PTRREF(X)     V_UNION(X, pllVal)
@@ -1106,11 +1106,11 @@ typedef VOID (NTAPI *WAITORTIMERCALLBACK)(PVOID, BOOLEAN);
 // usage pattern is:
 //
 // int get_scratch_register() {
-// #if defined(_TARGET_X86_)
+// #if defined(TARGET_X86)
 //     return eax;
-// #elif defined(_TARGET_AMD64_)
+// #elif defined(TARGET_AMD64)
 //     return rax;
-// #elif defined(_TARGET_ARM_)
+// #elif defined(TARGET_ARM)
 //     return r0;
 // #else
 //     PORTABILITY_ASSERT("scratch register");
@@ -1147,7 +1147,7 @@ typedef VOID (NTAPI *WAITORTIMERCALLBACK)(PVOID, BOOLEAN);
 
 #define UNREFERENCED_PARAMETER(P)          (void)(P)
 
-#ifdef BIT64
+#ifdef HOST_64BIT
 #define VALPTR(x) VAL64(x)
 #define GET_UNALIGNED_PTR(x) GET_UNALIGNED_64(x)
 #define GET_UNALIGNED_VALPTR(x) GET_UNALIGNED_VAL64(x)
@@ -1161,7 +1161,7 @@ typedef VOID (NTAPI *WAITORTIMERCALLBACK)(PVOID, BOOLEAN);
 #define SET_UNALIGNED_VALPTR(p,x) SET_UNALIGNED_VAL32(p,x)
 #endif
 
-#ifdef _TARGET_AMD64_
+#ifdef TARGET_AMD64
 #define RUNTIME_FUNCTION_INDIRECT 0x1
 #endif
 
@@ -1388,14 +1388,14 @@ typedef OUT_OF_PROCESS_FUNCTION_TABLE_CALLBACK *POUT_OF_PROCESS_FUNCTION_TABLE_C
 
 #if defined(FEATURE_PAL_SXS)
 
-// #if !defined(_TARGET_MAC64)
+// #if !defined(TARGET_DARWIN)
 // typedef LONG (*PEXCEPTION_ROUTINE)(
     // IN PEXCEPTION_POINTERS pExceptionPointers,
     // IN LPVOID lpvParam);
 
 // #define DISPATCHER_CONTEXT    LPVOID
 
-// #else // defined(_TARGET_MAC64)
+// #else // defined(TARGET_DARWIN)
 
 //
 // Define unwind history table structure.
@@ -1428,7 +1428,7 @@ EXCEPTION_DISPOSITION
     PVOID DispatcherContext
     );
 
-#if defined(_ARM_)
+#if defined(HOST_ARM)
 
 typedef struct _DISPATCHER_CONTEXT {
     DWORD ControlPc;
@@ -1446,7 +1446,7 @@ typedef struct _DISPATCHER_CONTEXT {
     DWORD Reserved;
 } DISPATCHER_CONTEXT, *PDISPATCHER_CONTEXT;
 
-#elif defined(_ARM64_)
+#elif defined(HOST_ARM64)
 
 typedef struct _DISPATCHER_CONTEXT {
     ULONG64 ControlPc;
@@ -1464,7 +1464,7 @@ typedef struct _DISPATCHER_CONTEXT {
     ULONG64 Reserved;
 } DISPATCHER_CONTEXT, *PDISPATCHER_CONTEXT;
 
-#elif defined(_AMD64_)
+#elif defined(HOST_AMD64)
 
 typedef struct _DISPATCHER_CONTEXT {
     ULONG64 ControlPc;
@@ -1478,7 +1478,7 @@ typedef struct _DISPATCHER_CONTEXT {
     PUNWIND_HISTORY_TABLE HistoryTable;
 } DISPATCHER_CONTEXT, *PDISPATCHER_CONTEXT;
 
-#elif defined(_X86_)
+#elif defined(HOST_X86)
 
 typedef struct _DISPATCHER_CONTEXT {
     DWORD ControlPc;
@@ -1500,7 +1500,7 @@ typedef struct _DISPATCHER_CONTEXT {
 
 #endif
 
-// #endif // !defined(_TARGET_MAC64)
+// #endif // !defined(TARGET_DARWIN)
 
 typedef DISPATCHER_CONTEXT *PDISPATCHER_CONTEXT;
 

@@ -33,7 +33,7 @@ public class SOS
     {
         if (config.TargetArchitecture == "arm" || config.TargetArchitecture == "arm64")
         {
-            throw new SkipTestException("SOS does not support ARM architectures");
+            throw new SkipTestException("SOS does not support HOST_ARM architectures");
         }
     }
 

@@ -28,12 +28,12 @@
         .equiv \New, \Old
 .endm
 
-#if defined(_X86_)
+#if defined(HOST_X86)
 #include "unixasmmacrosx86.inc"
-#elif defined(_AMD64_)
+#elif defined(HOST_AMD64)
 #include "unixasmmacrosamd64.inc"
-#elif defined(_ARM_)
+#elif defined(HOST_ARM)
 #include "unixasmmacrosarm.inc"
-#elif defined(_ARM64_)
+#elif defined(HOST_ARM64)
 #include "unixasmmacrosarm64.inc"
 #endif

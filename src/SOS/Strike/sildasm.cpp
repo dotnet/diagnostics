@@ -10,13 +10,13 @@
 //
 // disasm.cpp : Defines the entry point for the console application.
 //
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 #include <tchar.h>
 #endif
 #include "strike.h"
 #include "util.h"
 #include "strsafe.h"
-//#ifndef FEATURE_PAL
+//#ifndef HOST_UNIX
 //#include "gcinfo.h"
 //#endif
 #include "disasm.h"

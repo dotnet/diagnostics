@@ -9,7 +9,7 @@
 // ==--==
 #include "exts.h"
 #include "disasm.h"
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 #include "EventCallbacks.h"
 
 #define VER_PRODUCTVERSION_W        (0x0100)
@@ -35,7 +35,7 @@ ILLDBServices*        g_ExtServices;
 ILLDBServices2*       g_ExtServices2;    
 bool                  g_palInitialized = false;
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 OnUnloadTask *OnUnloadTask::s_pUnloadTaskList = NULL;
 
@@ -58,7 +58,7 @@ PDEBUG_SYSTEM_OBJECTS g_ExtSystem;
     }
 
 // Queries for all debugger interfaces.
-#ifndef FEATURE_PAL    
+#ifndef HOST_UNIX    
 extern "C" HRESULT
 ExtQuery(PDEBUG_CLIENT client)
 {
@@ -94,10 +94,10 @@ ExtQuery(ILLDBServices* services)
     SOS_ExtQueryFailGo(g_ExtSymbols, IDebugSymbols);
     SOS_ExtQueryFailGo(g_ExtSymbols2, IDebugSymbols2);
     SOS_ExtQueryFailGo(g_ExtSystem, IDebugSystemObjects);
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     SOS_ExtQueryFailGo(g_ExtData2, IDebugDataSpaces2);
     SOS_ExtQueryFailGo(g_ExtAdvanced, IDebugAdvanced);
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
     return S_OK;
 
  Fail:
@@ -116,19 +116,19 @@ ArchQuery(void)
 
     g_ExtControl->GetExecutingProcessorType(&targetArchitecture);
 
-#ifdef SOS_TARGET_AMD64
+#ifdef FEATURE_AMD64
     if(targetArchitecture == IMAGE_FILE_MACHINE_AMD64)
     {
         targetMachine = AMD64Machine::GetInstance();
     }
-#endif // SOS_TARGET_AMD64
-#ifdef SOS_TARGET_X86
+#endif // FEATURE_AMD64
+#ifdef FEATURE_X86
     if (targetArchitecture == IMAGE_FILE_MACHINE_I386)
     {
         targetMachine = X86Machine::GetInstance();
     }
-#endif // SOS_TARGET_X86
-#ifdef SOS_TARGET_ARM
+#endif // FEATURE_X86
+#ifdef FEATURE_ARM
     switch (targetArchitecture)
     {
         case IMAGE_FILE_MACHINE_ARM:
@@ -137,13 +137,13 @@ ArchQuery(void)
             targetMachine = ARMMachine::GetInstance();
             break;
     }
-#endif // SOS_TARGET_ARM
-#ifdef SOS_TARGET_ARM64
+#endif // FEATURE_ARM
+#ifdef FEATURE_ARM64
     if (targetArchitecture == IMAGE_FILE_MACHINE_ARM64)
     {
         targetMachine = ARM64Machine::GetInstance();
     }
-#endif // SOS_TARGET_ARM64
+#endif // FEATURE_ARM64
 
     if (targetMachine == NULL)
     {
@@ -166,7 +166,7 @@ ExtRelease(void)
     EXT_RELEASE(g_ExtSymbols);
     EXT_RELEASE(g_ExtSymbols2);
     EXT_RELEASE(g_ExtSystem);
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     EXT_RELEASE(g_ExtData2);
     EXT_RELEASE(g_ExtAdvanced);
     g_ExtClient = NULL;
@@ -174,10 +174,10 @@ ExtRelease(void)
     EXT_RELEASE(g_DebugClient);
     EXT_RELEASE(g_ExtServices2);
     g_ExtServices = NULL;
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 BOOL IsMiniDumpFileNODAC();
 extern HMODULE g_hInstance;
@@ -282,7 +282,7 @@ DebugExtensionInitialize(PULONG Version, PULONG Flags)
     }
     pCallbacks->Release();
 
-#ifndef _ARM_
+#ifndef HOST_ARM
     // Make sure we do not tear down the debugger when a security function fails
     // Since we link statically against CRT this will only affect the SOS module.
     _set_invalid_parameter_handler(_SOS_invalid_parameter);
@@ -318,7 +318,7 @@ DllMain(HANDLE hInstance, DWORD dwReason, LPVOID lpReserved)
     return true;
 }
 
-#else // FEATURE_PAL
+#else // HOST_UNIX
 
 __attribute__((destructor)) 
 void
@@ -376,4 +376,4 @@ DebugClient::Release()
     return ref;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX

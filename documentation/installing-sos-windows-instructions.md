@@ -5,7 +5,7 @@ SOS will automatically be loaded from the internal Microsoft extension gallery. 
 
     "C:\Program Files\Debugging Tools for Windows (x64)\cdb.exe" dotnet SymbolTestApp2.dll
     
-    Microsoft (R) Windows Debugger Version 10.0.18317.1001 AMD64
+    Microsoft (R) Windows Debugger Version 10.0.18317.1001 HOST_AMD64
     Copyright (c) Microsoft Corporation. All rights reserved.
 
     0:000> sxe ld coreclr
@@ -65,7 +65,7 @@ SOS will need to be loaded manually with the above ".load" command:
 
     C:\Users\mikem>"C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe" dotnet SymbolTestApp2.dll
 
-    Microsoft (R) Windows Debugger Version 10.0.17134.12 AMD64
+    Microsoft (R) Windows Debugger Version 10.0.17134.12 HOST_AMD64
     Copyright (c) Microsoft Corporation. All rights reserved.
 
     CommandLine: dotnet SymbolTestApp2.dll

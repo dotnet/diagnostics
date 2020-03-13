@@ -16,12 +16,12 @@
 // The main debugger code already has target platform definitions for CONTEXT.
 #include <dbgtargetcontext.h>
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 // The various OS structure definitions below tend to differ based soley on the size of pointers. DT_POINTER
 // is a type whose size matches that of the target platform. It's integral rather than point since it is never
 // legal to dereference one of these on the host.
-#ifdef _TARGET_WIN64_
+#ifdef TARGET_64BIT
 typedef ULONG64 DT_POINTER;
 #else
 typedef ULONG32 DT_POINTER;
@@ -44,14 +44,14 @@ struct DT_UNICODE_STRING
 #define DT_GDI_HANDLE_BUFFER_SIZE64  60
 
 #ifndef IMAGE_FILE_MACHINE_ARMNT
-#define IMAGE_FILE_MACHINE_ARMNT             0x01c4  // ARM Thumb-2 Little-Endian 
+#define IMAGE_FILE_MACHINE_ARMNT             0x01c4  // HOST_ARM Thumb-2 Little-Endian 
 #endif
 
 #ifndef IMAGE_FILE_MACHINE_ARM64
-#define IMAGE_FILE_MACHINE_ARM64             0xAA64  // ARM64 Little-Endian
+#define IMAGE_FILE_MACHINE_ARM64             0xAA64  // HOST_ARM64 Little-Endian
 #endif
 
-#ifdef _TARGET_WIN64_
+#ifdef TARGET_64BIT
 typedef ULONG DT_GDI_HANDLE_BUFFER[DT_GDI_HANDLE_BUFFER_SIZE64];
 #else
 typedef ULONG DT_GDI_HANDLE_BUFFER[DT_GDI_HANDLE_BUFFER_SIZE32];
@@ -188,9 +188,9 @@ struct DT_RTL_USER_PROCESS_PARAMETERS
     DT_RTL_DRIVE_LETTER_CURDIR CurrentDirectores[ DT_RTL_MAX_DRIVE_LETTERS ];
 };
 
-#endif // !FEATURE_PAL
+#endif // !HOST_UNIX
 
-// TODO-ARM64-NYI Support for SOS on target with 64K pages
+// TODO-HOST_ARM64-NYI Support for SOS on target with 64K pages
 //
 // This is probably as simple as redefining DT_OS_PAGE_SIZE to be a function
 // which returns the page size of the connected target

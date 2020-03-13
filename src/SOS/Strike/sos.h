@@ -255,7 +255,7 @@ namespace sos
         
         static int GetStringDataOffset()
         {
-#ifndef _TARGET_WIN64_
+#ifndef TARGET_64BIT
             return 8;
 #else
             return 0xc;

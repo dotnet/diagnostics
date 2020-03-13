@@ -17,12 +17,12 @@
 #include "../../../inc/dacprivate.h"
 
 
-#if defined(SOS_TARGET_X86) && defined(SOS_TARGET_AMD64)
-#error This file does not support SOS targeting both X86 and AMD64 debuggees
+#if defined(FEATURE_X86) && defined(FEATURE_AMD64)
+#error This file does not support SOS targeting both X86 and HOST_AMD64 debuggees
 #endif
 
-#if !defined(SOS_TARGET_X86) && !defined(SOS_TARGET_AMD64)
-#error This file should be used to support SOS targeting either X86 or AMD64 debuggees
+#if !defined(FEATURE_X86) && !defined(FEATURE_AMD64)
+#error This file should be used to support SOS targeting either X86 or HOST_AMD64 debuggees
 #endif
 
 
@@ -32,9 +32,9 @@ enum RegIndex
 {
     EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI,
 
-#ifdef _TARGET_AMD64_
+#ifdef TARGET_AMD64
     R8, R9, R10, R11, R12, R13, R14, R15,
-#endif // _TARGET_AMD64_
+#endif // TARGET_AMD64
 
     EIP, NONE
 };
@@ -94,7 +94,7 @@ inline RegIndex FindReg (___in __in_z char *ptr, __out_opt int *plen = NULL, __o
         REG32(EBP, ebp),
         REG32(ESP, esp),
 
-#ifdef _TARGET_AMD64_
+#ifdef TARGET_AMD64
 
         REG8(R8, r8b),
         REG8(R9, r9b),
@@ -140,7 +140,7 @@ inline RegIndex FindReg (___in __in_z char *ptr, __out_opt int *plen = NULL, __o
         REG64(R14, r14),
         REG64(R15, r15),
 
-#endif // _TARGET_AMD64_
+#endif // TARGET_AMD64
 
 #undef REG
 #undef REG8
@@ -388,7 +388,7 @@ void HandleCall(TADDR callee, Register *reg)
         }
     }
     
-#ifdef _TARGET_AMD64_
+#ifdef TARGET_AMD64
     // A jump thunk?
 
     CONTEXT ctx = {0};
@@ -424,7 +424,7 @@ void HandleCall(TADDR callee, Register *reg)
             return HandleCall(ip, reg);
         }
     }
-#endif // _TARGET_AMD64_
+#endif // TARGET_AMD64
     
     // A JitHelper?
     const char* name = HelperFuncName(callee);
@@ -498,9 +498,9 @@ void HandleValue(TADDR value)
 *                                                                      *
 \**********************************************************************/
 void 
-#ifdef _TARGET_X86_
+#ifdef TARGET_X86
     X86Machine::Unassembly 
-#elif defined(_TARGET_AMD64_)
+#elif defined(TARGET_AMD64)
     AMD64Machine::Unassembly 
 #endif
    (TADDR IPBegin, 
@@ -621,7 +621,7 @@ void
             // Print out real code address in place of the copy address
             //
 
-#ifdef _WIN64
+#ifdef HOST_64BIT
             ExtOut("%08x`%08x ", (ULONG)(InstrAddr >> 32), (ULONG)InstrAddr);
 #else
             ExtOut("%08x ", (ULONG)InstrAddr);
@@ -689,12 +689,12 @@ void
             reg[ECX].bValid = FALSE;
             reg[EDX].bValid = FALSE;
 
-#ifdef _TARGET_AMD64_
+#ifdef TARGET_AMD64
             reg[R8].bValid = FALSE;
             reg[R9].bValid = FALSE;
             reg[R10].bValid = FALSE;
             reg[R11].bValid = FALSE;
-#endif // _TARGET_AMD64_
+#endif // TARGET_AMD64
         }
         else if (!strncmp (ptr, "lea ", 4))
         {
@@ -822,7 +822,7 @@ eTargetType GetFinalTarget(TADDR callee, TADDR* finalMDorIP)
         }
     }
     
-#ifdef _TARGET_AMD64_
+#ifdef TARGET_AMD64
     // A jump thunk?
 
     CONTEXT ctx = {0};
@@ -847,7 +847,7 @@ eTargetType GetFinalTarget(TADDR callee, TADDR* finalMDorIP)
             return GetFinalTarget(ip, finalMDorIP);
         }
     }
-#endif // _TARGET_AMD64_
+#endif // TARGET_AMD64
     
     // A JitHelper?
     const char* name = HelperFuncName(callee);
@@ -861,7 +861,7 @@ eTargetType GetFinalTarget(TADDR callee, TADDR* finalMDorIP)
     return ettNative;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 void ExpFuncStateInit (TADDR *IPRetAddr)
 {
@@ -882,12 +882,12 @@ void ExpFuncStateInit (TADDR *IPRetAddr)
     char line[256];
     int i = 0; 
     int cnt = 0;
-#ifdef SOS_TARGET_X86
+#ifdef FEATURE_X86
     // On x86 and x64 the last 3 "call" instructions in ntdll!KiUserExceptionDispatcher
     // are making calls to OS APIs that take as argument the context record (and some
     // of them the exception record as well)
     const int cCallInstrs = 3;
-#elif defined(SOS_TARGET_AMD64)
+#elif defined(FEATURE_AMD64)
     // On x64 the first "call" instruction should be considered, as well 
     const int cCallInstrs = 4;
 #endif
@@ -903,7 +903,7 @@ void ExpFuncStateInit (TADDR *IPRetAddr)
     }
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 
 /**********************************************************************\
@@ -915,9 +915,9 @@ void ExpFuncStateInit (TADDR *IPRetAddr)
 *                                                                      *
 \**********************************************************************/
 BOOL
-#ifdef SOS_TARGET_X86
+#ifdef FEATURE_X86
     X86Machine::GetExceptionContext 
-#elif defined(SOS_TARGET_AMD64)
+#elif defined(FEATURE_AMD64)
     AMD64Machine::GetExceptionContext 
 #endif
     (TADDR       stack, 
@@ -927,11 +927,11 @@ BOOL
      TADDR     * exrAddr, 
      PEXCEPTION_RECORD exr) const
 {
-#ifndef FEATURE_PAL
-#ifdef SOS_TARGET_X86
+#ifndef HOST_UNIX
+#ifdef FEATURE_X86
     X86_CONTEXT * cxr = &pcxr->X86Context;
     size_t contextSize = offsetof(CONTEXT, ExtendedRegisters);
-#elif defined(SOS_TARGET_AMD64)
+#elif defined(FEATURE_AMD64)
     AMD64_CONTEXT * cxr = &pcxr->Amd64Context;
     size_t contextSize = offsetof(CONTEXT, FltSave);
 #endif
@@ -944,7 +944,7 @@ BOOL
     *cxrAddr = 0;
     *exrAddr = 0;
 
-#ifdef SOS_TARGET_X86
+#ifdef FEATURE_X86
 
     if (IP == IPRetAddr[0]) {
         *exrAddr = stack + sizeof(TADDR);
@@ -984,7 +984,7 @@ BOOL
         }
     }
 
-#elif defined(SOS_TARGET_AMD64)
+#elif defined(FEATURE_AMD64)
 
     if (IP == IPRetAddr[0] || IP == IPRetAddr[1] || IP == IPRetAddr[3]) {
         *exrAddr = stack + sizeof(TADDR) + 0x4F0;
@@ -1012,7 +1012,7 @@ BOOL
     return TRUE;
 #else
     return FALSE;
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 }
 
 
@@ -1027,9 +1027,9 @@ BOOL
 \**********************************************************************/
 
 void 
-#ifdef _TARGET_X86_
+#ifdef TARGET_X86
     X86Machine::IsReturnAddress
-#elif defined(_TARGET_AMD64_)
+#elif defined(TARGET_AMD64)
     AMD64Machine::IsReturnAddress
 #endif
         (TADDR retAddr, TADDR* whereCalled) const
@@ -1065,10 +1065,10 @@ void
     if (spot[-6] == 0xFF && (spot[-5] == 025))  {
         DWORD offs = 0;
         move_xp (offs, retAddr-4);
-#ifdef _TARGET_AMD64_
+#ifdef TARGET_AMD64
         // on x64 this 32-bit is an RIP offset
         addr = retAddr + (ULONG64)(LONG)(offs);
-#elif defined (_TARGET_X86_)
+#elif defined (TARGET_X86)
         addr = offs;
 #endif
         if (g_ExtData->ReadVirtual(TO_CDADDR(addr), whereCalled, sizeof(*whereCalled), NULL) == S_OK) {
@@ -1133,7 +1133,7 @@ void
 }
 
 
-#ifdef _X86_
+#ifdef HOST_X86
 
 ///
 /// This is dead code, not called from anywhere, not linked in the final product.
@@ -1510,7 +1510,7 @@ BOOL HandleByEpilog (Register callee[], Register caller[],
     return FALSE;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 void RestoreFrameUnmanaged (Register *reg, DWORD_PTR CurIP)
 {
     char line[256];
@@ -1703,9 +1703,9 @@ void RestoreFrameUnmanaged (Register *reg, DWORD_PTR CurIP)
     
     // Look for prolog
 }
-#endif // !FEATURE_PAL
+#endif // !HOST_UNIX
 
-#elif defined(_AMD64_)
+#elif defined(HOST_AMD64)
 
 
-#endif // !_X86_
+#endif // !HOST_X86

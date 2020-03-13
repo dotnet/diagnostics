@@ -31,9 +31,9 @@
 /*                                                               */
 /*---------------------------------------------------------------*/
 
-#ifdef _WIN32
+#ifdef HOST_WINDOWS
 #include <_version.h>
-#endif //_WIN32
+#endif //HOST_WINDOWS
 
 #ifdef RC_INVOKED
 

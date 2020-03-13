@@ -10,7 +10,7 @@
 
 #if !defined(_MSC_VER) && !defined(__NetBSD__)
 
-#ifdef _WIN32
+#ifdef HOST_WINDOWS
 #define _BSD_SOURCE // Required so that getopt.h defines optreset
 #endif
 

@@ -71,7 +71,7 @@ typedef enum {
   																// default is to flow only managed impersonation)
   STARTUP_TRIM_GC_COMMIT        = 0x80000,                      // GC uses less committed space when system memory low
   STARTUP_ETW                   = 0x100000,
-  STARTUP_ARM                   = 0x400000,                     // Enable the ARM feature.
+  STARTUP_ARM                   = 0x400000,                     // Enable the HOST_ARM feature.
   STARTUP_SINGLE_APPDOMAIN      = 0x800000,                      // application runs in default domain, no more domains are created 
   STARTUP_APPX_APP_MODEL        = 0x1000000,                     // jupiter app
   STARTUP_DISABLE_RANDOMIZED_STRING_HASHING     = 0x2000000      // Disable the randomized string hashing (not supported)

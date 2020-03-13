@@ -24,7 +24,7 @@
 // starting point for understanding the semantics of these commands is the sosdocs.txt file.
 // 
 // #CrossPlatformSOS
-// SOS currently supports cross platform debugging from x86 to ARM. It takes a different approach 
+// SOS currently supports cross platform debugging from x86 to HOST_ARM. It takes a different approach 
 // from the DAC: whereas for the DAC we produce one binary for each supported host-target 
 // architecture pair, for SOS we produce only one binary for each host architecture; this one 
 // binary contains code for all supported target architectures. In doing this SOS depends on two
@@ -40,8 +40,8 @@
 // To resolve this problem, SOS now abstracts the target behind the IMachine interface, and uses 
 // calls on IMachine to take target-specific actions. It implements X86Machine, ARMMachine, and 
 // AMD64Machine. An instance of these exists in each appropriate host (e.g. the X86 version of SOS
-// contains instances of X86Machine and ARMMachine, the ARM version contains an instance of 
-// ARMMachine, and the AMD64 version contains an instance of AMD64Machine). The code included in 
+// contains instances of X86Machine and ARMMachine, the HOST_ARM version contains an instance of 
+// ARMMachine, and the HOST_AMD64 version contains an instance of AMD64Machine). The code included in 
 // each version if determined by the SosTarget*** MSBuild symbols, and SOS_TARGET_*** conditional 
 // compilation symbols (as specified in sos.targets).
 // 
@@ -52,7 +52,7 @@
 // The one-binary-per-host decision does have some drawbacks: 
 //   . Currently including system headers or even CLR headers will only account for the host 
 //     target, IOW, when building the X86 version of SOS, CONTEXT will refer to the X86 CONTEXT 
-//     structure, so we need to be careful when debugging ARM targets. The CONTEXT issue is 
+//     structure, so we need to be careful when debugging HOST_ARM targets. The CONTEXT issue is 
 //     partially resolved by CROSS_PLATFORM_CONTEXT (there is still a need to be very careful 
 //     when handling arrays of CONTEXTs - see _EFN_StackTrace for details on this).
 //   . For larger includes (e.g. GC info), we will need to include files in specific namespaces, 
@@ -66,9 +66,9 @@
 #include <winver.h>
 #include <winternl.h>
 #include <psapi.h>
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 #include <list>   
-#endif // !FEATURE_PAL
+#endif // !HOST_UNIX
 #include <wchar.h>
 
 #include "platformspecific.h"
@@ -115,13 +115,13 @@
 
 #include "predeftlsslot.h"
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 #include "hillclimbing.h"
 #endif
 
 #include "sos_md.h"
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 #include "ExpressionNode.h"
 #include "WatchCmd.h"
@@ -147,7 +147,7 @@ typedef VM_COUNTERS *PVM_COUNTERS;
 
 const PROCESSINFOCLASS ProcessVmCounters = static_cast<PROCESSINFOCLASS>(3);
 
-#endif // !FEATURE_PAL
+#endif // !HOST_UNIX
 
 // Max number of methods that !dumpmodule -prof will print
 const UINT kcMaxMethodDescsForProfiler = 100;
@@ -162,17 +162,17 @@ const UINT kcMaxMethodDescsForProfiler = 100;
 BOOL ControlC = FALSE;
 WCHAR g_mdName[mdNameLen];
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 HMODULE g_hInstance = NULL;
 #include <algorithm>
-#endif // !FEATURE_PAL
+#endif // !HOST_UNIX
 
 #ifdef _MSC_VER
 #pragma warning(disable:4244)   // conversion from 'unsigned int' to 'unsigned short', possible loss of data
 #pragma warning(disable:4189)   // local variable is initialized but not referenced
 #endif
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 #define SOSPrefix ""
 #define SOSThreads "clrthreads"
 #else
@@ -180,7 +180,7 @@ HMODULE g_hInstance = NULL;
 #define SOSThreads "!threads"
 #endif
 
-#if defined _X86_ && !defined FEATURE_PAL
+#if defined HOST_X86 && !defined HOST_UNIX
 // disable FPO for X86 builds
 #pragma optimize("y", off)
 #endif
@@ -192,19 +192,19 @@ HMODULE g_hInstance = NULL;
 #pragma warning(default:4189)
 #endif
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 #include "ntinfo.h"
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 #ifndef IfFailRet
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
 #endif
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 
 #define MINIDUMP_NOT_SUPPORTED()
 
-#else // !FEATURE_PAL
+#else // !HOST_UNIX
 
 #define MINIDUMP_NOT_SUPPORTED()   \
     if (IsMiniDumpFile())      \
@@ -254,7 +254,7 @@ DECLARE_API (MinidumpMode)
     return Status;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -271,7 +271,7 @@ DECLARE_API(IP2MD)
     TADDR IP = 0;
     CMDOption option[] = 
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
@@ -327,13 +327,13 @@ DECLARE_API(IP2MD)
 // (MAX_STACK_FRAMES is also used by x86 to prevent infinite loops in _EFN_StackTrace)
 #define MAX_STACK_FRAMES 1000
 
-#if defined(_TARGET_WIN64_)
+#if defined(TARGET_64BIT)
 #define DEBUG_STACK_CONTEXT AMD64_CONTEXT
-#elif defined(_TARGET_ARM_) // _TARGET_WIN64_
+#elif defined(TARGET_ARM) // TARGET_64BIT
 #define DEBUG_STACK_CONTEXT ARM_CONTEXT
-#elif defined(_TARGET_X86_) // _TARGET_ARM_
+#elif defined(TARGET_X86) // TARGET_ARM
 #define DEBUG_STACK_CONTEXT X86_CONTEXT
-#endif // _TARGET_X86_
+#endif // TARGET_X86
 
 #ifdef DEBUG_STACK_CONTEXT
 // I use a global set of frames for stack walking on win64 because the debugger's
@@ -408,7 +408,7 @@ void DumpStackInternal(DumpStackFlag *pDSFlag)
         pDSFlag->top = NextOSPageAddress(pDSFlag->top);
     }
 
-#ifndef FEATURE_PAL     
+#ifndef HOST_UNIX     
     if (pDSFlag->end == 0) {
         // Find the current stack range
         NT_TIB teb;
@@ -426,7 +426,7 @@ void DumpStackInternal(DumpStackFlag *pDSFlag)
             }
         }
     }
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
     
     if (pDSFlag->end == 0)
     {
@@ -463,7 +463,7 @@ DECLARE_API(DumpStack)
         {"-EE", &DSFlag.fEEonly, COBOOL, FALSE},
         {"-n",  &DSFlag.fSuppressSrcInfo, COBOOL, FALSE},
         {"-unwind",  &unwind, COBOOL, FALSE},
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE}
 #endif
     };
@@ -523,7 +523,7 @@ DECLARE_API (EEStack)
     {   // name, vptr, type, hasValue
         {"-EE", &DSFlag.fEEonly, COBOOL, FALSE},
         {"-short", &bShortList, COBOOL, FALSE},
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE}
 #endif
     };    
@@ -641,7 +641,7 @@ HRESULT DumpStackObjectsRaw(size_t nArg, __in_z LPSTR exprBottom, __in_z LPSTR e
         }
     }
     
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     NT_TIB teb;
     ULONG64 dwTebAddr=0;
     HRESULT hr = g_ExtSystem->GetCurrentThreadTeb(&dwTebAddr);
@@ -701,7 +701,7 @@ DECLARE_API(DumpStackObjects)
     CMDOption option[] = 
     {   // name, vptr, type, hasValue
         {"-verify", &bVerify, COBOOL, FALSE},
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE}
 #endif
     };    
@@ -739,7 +739,7 @@ DECLARE_API(DumpMD)
 
     CMDOption option[] = 
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
@@ -1156,7 +1156,7 @@ DECLARE_API(DumpClass)
 
     CMDOption option[] = 
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
@@ -1279,7 +1279,7 @@ DECLARE_API(DumpMT)
     CMDOption option[] = 
     {   // name, vptr, type, hasValue
         {"-MD", &bDumpMDTable, COBOOL, FALSE},
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE}
 #endif
     };
@@ -1795,7 +1795,7 @@ DECLARE_API(DumpArray)
         {"-length", &flags.Length, COSIZE_T, TRUE},
         {"-details", &flags.bDetail, COBOOL, FALSE},
         {"-nofields", &flags.bNoFieldsForElement, COBOOL, FALSE},
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
@@ -2013,7 +2013,7 @@ DECLARE_API(DumpObj)
     {   // name, vptr, type, hasValue
         {"-nofields", &bNoFields, COBOOL, FALSE},
         {"-refs", &bRefs, COBOOL, FALSE},
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
@@ -2230,11 +2230,11 @@ CLRDATA_ADDRESS isSecurityExceptionObj(CLRDATA_ADDRESS mtObj)
 // If NULL is passed for wszBuffer, just returns the number of characters needed.
 size_t AddExceptionHeader (__out_ecount_opt(bufferLength) WCHAR *wszBuffer, size_t bufferLength)
 {
-#ifdef _TARGET_WIN64_
+#ifdef TARGET_64BIT
     const WCHAR *wszHeader = W("    SP               IP               Function\n");
 #else
     const WCHAR *wszHeader = W("    SP       IP       Function\n");
-#endif // _TARGET_WIN64_
+#endif // TARGET_64BIT
     if (wszBuffer)
     {
         swprintf_s(wszBuffer, bufferLength, wszHeader);
@@ -2441,7 +2441,7 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
         // FaultingExceptionFrame or not.
         // 1. On IA64 the IP values are never adjusted by the EE so there's nothing 
         //    to adjust back.
-        // 2. On AMD64:
+        // 2. On HOST_AMD64:
         //    (a) if the exception was an async (hardware) exception add 1 to all 
         //        IP values in the exception object
         //    (b) if the exception was a managed exception (either raised by the 
@@ -2452,17 +2452,17 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
         //    (b) if the exception was a managed exception (either raised by 
         //        the EE or thrown by managed code) add 1 to all IP values in 
         //        the exception object
-#if defined(_TARGET_AMD64_)
+#if defined(TARGET_AMD64)
         if (bAsync)
         {
             ste.ip += 1;
         }
-#elif defined(_TARGET_X86_)
+#elif defined(TARGET_X86)
         if (IsDbgTargetX86() && (!bAsync || i != 0))
         {
             ste.ip += 1;
         }
-#endif // defined(_TARGET_AMD64_) || defined(_TARGET__X86_)
+#endif // defined(TARGET_AMD64) || defined(_TARGET__X86_)
 
         StringOutput so;
         HRESULT Status = DumpMDInfoBuffer(ste.pFunc, SOS_STACKTRACE_SHOWADDRESSES|SOS_STACKTRACE_SHOWEXPLICITFRAMES, ste.sp, ste.ip, so);
@@ -2675,11 +2675,11 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
             {
                 // This code is accessing the StackTraceInfo class in the runtime.
                 // See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h
-#ifdef _TARGET_WIN64_
+#ifdef TARGET_64BIT
                 DWORD_PTR dataPtr = taStackTrace + sizeof(DWORD_PTR) + sizeof(DWORD) + sizeof(DWORD);
 #else
                 DWORD_PTR dataPtr = taStackTrace + sizeof(DWORD_PTR) + sizeof(DWORD);
-#endif // _TARGET_WIN64_
+#endif // TARGET_64BIT
                 size_t stackTraceSize = 0;
                 MOVE (stackTraceSize, dataPtr);
 
@@ -2791,7 +2791,7 @@ DECLARE_API(PrintException)
         {"-lines", &bLineNumbers, COBOOL, FALSE},
         {"-l", &bLineNumbers, COBOOL, FALSE},
         {"-ccw", &bCCW, COBOOL, FALSE},
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE}
 #endif
     };
@@ -2955,7 +2955,7 @@ DECLARE_API(DumpVC)
 
     CMDOption option[] = 
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE}
 #endif
     };
@@ -2986,7 +2986,7 @@ DECLARE_API(DumpVC)
     return PrintVC(p_MT, p_Object);
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 #ifdef FEATURE_COMINTEROP
 
@@ -3364,7 +3364,7 @@ DECLARE_API(DumpPermissionSet)
 void GCPrintGenerationInfo(DacpGcHeapDetails &heap);
 void GCPrintSegmentInfo(DacpGcHeapDetails &heap, DWORD_PTR &total_size);
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 void DisplayInvalidStructuresMessage()
 {
@@ -3590,7 +3590,7 @@ void PrintGCStat(HeapStat *inStat, const char* label=NULL)
     }
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 DECLARE_API(TraverseHeap)
 {
@@ -3669,7 +3669,7 @@ DECLARE_API(TraverseHeap)
     return Status;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 struct PrintRuntimeTypeArgs
 {
@@ -3819,7 +3819,7 @@ public:
             {"-max", &mMaxSize, COHEX, TRUE},        // max size of objects to display
             {"-live", &mLive, COHEX, FALSE},         // only print live objects
             {"-dead", &mDead, COHEX, FALSE},         // only print dead objects
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
             {"/d", &mDML, COBOOL, FALSE},            // Debugger Markup Language
 #endif
         };
@@ -3885,7 +3885,7 @@ public:
             ExtOut("If you need this functionality, get a full memory dump with \".dump /ma mydump.dmp\"\n");
         }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         if (mLive || mDead)
         {
             GCRootImpl gcroot;
@@ -3998,7 +3998,7 @@ private:
 
     bool IsCorrectLiveness(const sos::Object &obj)
     {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         if (mLive && mLiveness.find(obj.GetAddress()) == mLiveness.end())
             return false;
 
@@ -4102,7 +4102,7 @@ private:
 
     void DumpHeapStrings(sos::GCHeap &gcheap)
     {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
         ExtOut("Not implemented.\n");
 #else
         const int offset = sos::Object::GetStringDataOffset();
@@ -4166,7 +4166,7 @@ private:
             Flatten(vitr->str, (unsigned int)_wcslen(vitr->str));
             out.WriteRow(Decimal(vitr->size), Decimal(vitr->count), vitr->str);
         }
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
     }
 
     void DumpHeapShort(sos::GCHeap &gcheap)
@@ -4225,7 +4225,7 @@ private:
     WCHAR *mType;
 
 private:
-#if !defined(FEATURE_PAL)
+#if !defined(HOST_UNIX)
     // Windows only
     std::unordered_set<TADDR> mLiveness;
     typedef std::list<sos::FragmentationBlock> FragmentationList;
@@ -4511,7 +4511,7 @@ DECLARE_API(DumpAsync)
             { "-fields", &dumpFields, COBOOL, FALSE },          // show relevant fields of found async objects
             { "-stacks", &includeStacks, COBOOL, FALSE },       // gather and output continuation/stack information
             { "-roots", &includeRoots, COBOOL, FALSE },         // gather and output GC root information
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
             { "/d", &dml, COBOOL, FALSE },                      // Debugger Markup Language
 #endif
         };
@@ -4952,7 +4952,7 @@ DECLARE_API(VerifyHeap)
     }
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 enum failure_get_memory
 {
@@ -5045,7 +5045,7 @@ DECLARE_API(AnalyzeOOM)
     INIT_API();    
     MINIDUMP_NOT_SUPPORTED();    
     
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
     if (!InitializeHeapData ())
     {
@@ -5114,7 +5114,7 @@ DECLARE_API(AnalyzeOOM)
 #else
     _ASSERTE(false);
     return E_FAIL;
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 }
 
 DECLARE_API(VerifyObj)
@@ -5184,7 +5184,7 @@ DECLARE_API(ListNearObj)
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
 
-#if !defined(FEATURE_PAL)
+#if !defined(HOST_UNIX)
 
     TADDR taddrArg = 0;
     TADDR taddrObj = 0;
@@ -5372,7 +5372,7 @@ DECLARE_API(ListNearObj)
     _ASSERTE(false);
     return E_FAIL;
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 }
 
 
@@ -5382,7 +5382,7 @@ DECLARE_API(GCHeapStat)
     MINIDUMP_NOT_SUPPORTED();    
     
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
     BOOL bIncUnreachable = FALSE;
     BOOL dml = FALSE;
@@ -5552,10 +5552,10 @@ DECLARE_API(GCHeapStat)
     _ASSERTE(false);
     return E_FAIL;
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -6019,7 +6019,7 @@ DECLARE_API(DumpModule)
     CMDOption option[] = 
     {   // name, vptr, type, hasValue
         {"-mt", &bMethodTables, COBOOL, FALSE},
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE},
 #endif
         {"-prof", &bProfilerModified, COBOOL, FALSE},
@@ -6176,7 +6176,7 @@ DECLARE_API(DumpDomain)
 
     CMDOption option[] = 
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
@@ -6299,7 +6299,7 @@ DECLARE_API(DumpAssembly)
 
     CMDOption option[] = 
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
@@ -6485,7 +6485,7 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
         table.WriteColumn(8, Decimal(Thread.lockCount));
 
         // Apartment state
-#ifndef FEATURE_PAL           
+#ifndef HOST_UNIX           
         DWORD_PTR OleTlsDataAddr;
         if (!bSwitchedOutFiber 
                 && SafeReadMemory(Thread.teb + offsetof(TEB, ReservedForOle),
@@ -6512,7 +6512,7 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
             }
         }
         else
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
             table.WriteColumn(9, "Ukn");
 
         if (hosted)
@@ -6558,7 +6558,7 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
     return Status;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 HRESULT PrintSpecialThreads()
 {
     Print("\n");
@@ -6738,7 +6738,7 @@ HRESULT PrintSpecialThreads()
 
     return Status;
 }
-#endif //FEATURE_PAL
+#endif //HOST_UNIX
 
 HRESULT SwitchToExceptionThread()
 {
@@ -6871,7 +6871,7 @@ DECLARE_API(Threads)
         {"-special", &bPrintSpecialThreads, COBOOL, FALSE},
         {"-live", &bPrintLiveThreadsOnly, COBOOL, FALSE},
         {"-managedexception", &bSwitchToManagedExceptionThread, COBOOL, FALSE},
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
@@ -6900,13 +6900,13 @@ DECLARE_API(Threads)
         Status = PrintThreadsFromThreadStore(bMiniDump, bPrintLiveThreadsOnly);
         if (!bMiniDump && bPrintSpecialThreads)
         {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
             Print("\n-special not supported.\n");
-#else //FEATURE_PAL    
+#else //HOST_UNIX    
             HRESULT Status2 = PrintSpecialThreads(); 
             if (!SUCCEEDED(Status2))
                 Status = Status2;
-#endif //FEATURE_PAL            
+#endif //HOST_UNIX            
         }
     }
     catch (sos::Exception &e)
@@ -6917,7 +6917,7 @@ DECLARE_API(Threads)
     return Status;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -6967,7 +6967,7 @@ DECLARE_API(WatsonBuckets)
         
     return Status;
 } // WatsonBuckets()
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 struct PendingBreakpoint
 {
@@ -7003,9 +7003,9 @@ void IssueDebuggerBPCommand ( CLRDATA_ADDRESS addr )
     static CLRDATA_ADDRESS alreadyPlacedBPs[MaxBPsCached];
     static int curLimit = 0;
 
-    // on ARM the debugger requires breakpoint addresses to be sanitized
+    // on HOST_ARM the debugger requires breakpoint addresses to be sanitized
     if (IsDbgTargetArm())
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
       addr &= ~THUMB_CODE;
 #else
       addr |= THUMB_CODE; // lldb expects thumb code bit set
@@ -7038,7 +7038,7 @@ void IssueDebuggerBPCommand ( CLRDATA_ADDRESS addr )
             wcscpy_s(wszNameBuffer, _countof(wszNameBuffer), W("UNKNOWN"));        
         }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         sprintf_s(buffer, _countof(buffer), "bp %p", (void*) (size_t) addr);
 #else
         sprintf_s(buffer, _countof(buffer), "breakpoint set --address 0x%p", (void*) (size_t) addr);
@@ -7223,7 +7223,7 @@ public:
         }
     }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     void SaveBreakpoints(FILE* pFile)
     {
         PendingBreakpoint *pCur = m_breakpoints;
@@ -7240,7 +7240,7 @@ public:
 
     void CleanupNotifications()
     {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
         if (m_breakpoints == NULL)
         {
             g_ExtServices->ClearExceptionCallback();
@@ -7551,7 +7551,7 @@ private:
 Breakpoints g_bpoints;
 
 // If true, call the HandleRuntimeLoadedNotification function to enable the assembly load and JIT exceptions
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 bool g_breakOnRuntimeModuleLoad = false;
 #endif
 
@@ -7619,7 +7619,7 @@ public:
      */
     STDMETHODIMP OnCodeGenerated(IXCLRDataMethodInstance* method)
     {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         _ASSERTE(g_pRuntime != nullptr);
 
         // This is only needed for desktop runtime because OnCodeGenerated2
@@ -7800,7 +7800,7 @@ public:
             if(method->GetRepresentativeEntryAddress(&startAddr) == S_OK)
             {
                 CHAR buffer[100];
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
                 sprintf_s(buffer, _countof(buffer), "bp /1 %p", (void*) (size_t) (startAddr+catcherNativeOffset));
 #else
                 sprintf_s(buffer, _countof(buffer), "breakpoint set --one-shot --address 0x%p", (void*) (size_t) (startAddr+catcherNativeOffset));
@@ -7899,7 +7899,7 @@ HRESULT HandleCLRNotificationEvent()
 
     if (!CheckCLRNotificationEvent(&dle))
     {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         ExtOut("Expecting first chance CLRN exception\n");
         return E_FAIL;
 #else
@@ -7923,7 +7923,7 @@ HRESULT HandleCLRNotificationEvent()
             case DEBUG_STATUS_GO:
             case DEBUG_STATUS_GO_HANDLED:
             case DEBUG_STATUS_GO_NOT_HANDLED:
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
                 g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "g", 0);
 #else
                 g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "process continue", 0);
@@ -7947,7 +7947,7 @@ void EnableModuleLoadUnloadCallbacks()
     g_clrData->SetOtherNotificationFlags(flags);
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 DECLARE_API(SOSHandleCLRN)
 {
@@ -7963,7 +7963,7 @@ HRESULT HandleRuntimeLoadedNotification(IDebugClient* client)
     return g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
 }
 
-#else // FEATURE_PAL
+#else // HOST_UNIX
 
 HRESULT HandleExceptionNotification(ILLDBServices *client)
 {
@@ -7978,7 +7978,7 @@ HRESULT HandleRuntimeLoadedNotification(ILLDBServices *client)
     return g_ExtServices->SetExceptionCallback(HandleExceptionNotification);
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 DECLARE_API(bpmd)
 {
@@ -8096,7 +8096,7 @@ DECLARE_API(bpmd)
         ExtOut("Usage: " SOSPrefix "bpmd -list\n");
         ExtOut("Usage: " SOSPrefix "bpmd -clear <pending breakpoint number>\n");
         ExtOut("Usage: " SOSPrefix "bpmd -clearall\n");
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
         ExtOut("See \"soshelp bpmd\" for more details.\n");
 #else
         ExtOut("See \"!help bpmd\" for more details.\n");
@@ -8274,7 +8274,7 @@ DECLARE_API(bpmd)
             }
             else 
             {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
                 Status = g_ExtServices2->SetRuntimeLoadedCallback(HandleRuntimeLoadedNotification);
 #else
                 g_breakOnRuntimeModuleLoad = true;
@@ -8302,18 +8302,18 @@ DECLARE_API(bpmd)
         }
         else if (MethodDescData.bIsDynamic)
         {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
             // Dynamic methods don't have JIT notifications. This is something we must
             // fix in the next release. Until then, you have a cumbersome user experience.
             ExtOut("This DynamicMethodDesc is not yet JITTED. Placing memory breakpoint at %p\n",
                 MethodDescData.AddressOfNativeCodeSlot);
             
             sprintf_s(buffer, _countof(buffer),
-#ifdef _TARGET_WIN64_
+#ifdef TARGET_64BIT
                 "ba w8"
 #else
                 "ba w4" 
-#endif // _TARGET_WIN64_
+#endif // TARGET_64BIT
 
                 " /1 %p \"bp poi(%p); g\"",
                 (void*) (size_t) MethodDescData.AddressOfNativeCodeSlot,
@@ -8327,7 +8327,7 @@ DECLARE_API(bpmd)
             }            
 #else
             ExtErr("This DynamicMethodDesc is not yet JITTED %p\n", MethodDescData.AddressOfNativeCodeSlot);
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
         }
         else
         {
@@ -8350,17 +8350,17 @@ DECLARE_API(bpmd)
     if (bNeedNotificationExceptions)
     {
         ExtOut("Adding pending breakpoints...\n");
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
 #else
         Status = g_ExtServices->SetExceptionCallback(HandleExceptionNotification);
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
     }
 
     return Status;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -8383,7 +8383,7 @@ DECLARE_API(ThreadPool)
         {   // name, vptr, type, hasValue
             {"-ti", &doHCDump, COBOOL, FALSE},
             {"-wi", &doWorkItemDump, COBOOL, FALSE},
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
             {"/d", &dml, COBOOL, FALSE},
 #endif
         };    
@@ -8677,7 +8677,7 @@ DECLARE_API(ThreadPool)
     return Status;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 DECLARE_API(FindAppDomain)
 {
@@ -8689,7 +8689,7 @@ DECLARE_API(FindAppDomain)
 
     CMDOption option[] = 
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
@@ -8764,7 +8764,7 @@ DECLARE_API(FindAppDomain)
     return Status;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -8796,7 +8796,7 @@ DECLARE_API(COMState)
     ULONG *ids = (ULONG*)alloca(AllocSize);
     ULONG *sysIds = (ULONG*)alloca(AllocSize);
     g_ExtSystem->GetThreadIdsByIndex(0,numThread,ids,sysIds);
-#if defined(_TARGET_WIN64_)
+#if defined(TARGET_64BIT)
     ExtOut("      ID             TEB  APT    APTId CallerTID          Context\n");
 #else
     ExtOut("     ID     TEB   APT    APTId CallerTID Context\n");
@@ -8870,7 +8870,7 @@ DECLARE_API(COMState)
 }
 #endif // FEATURE_COMINTEROP
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 BOOL traverseEh(UINT clauseIndex,UINT totalClauses,DACEHInfo *pEHInfo,LPVOID token)
 {
@@ -8900,7 +8900,7 @@ BOOL traverseEh(UINT clauseIndex,UINT totalClauses,DACEHInfo *pEHInfo,LPVOID tok
     ULONG64 addrStart = pEHInfo->tryStartOffset + methodStart;
     ULONG64 addrEnd   = pEHInfo->tryEndOffset   + methodStart;
 
-#ifdef _WIN64
+#ifdef HOST_64BIT
     ExtOut("[%08x`%08x, %08x`%08x]",
             (ULONG)(addrStart >> 32), (ULONG)addrStart,
             (ULONG)(addrEnd   >> 32), (ULONG)addrEnd);
@@ -8917,7 +8917,7 @@ BOOL traverseEh(UINT clauseIndex,UINT totalClauses,DACEHInfo *pEHInfo,LPVOID tok
     addrStart = pEHInfo->handlerStartOffset + methodStart;
     addrEnd   = pEHInfo->handlerEndOffset   + methodStart;
 
-#ifdef _WIN64
+#ifdef HOST_64BIT
     ExtOut("[%08x`%08x, %08x`%08x]",
             (ULONG)(addrStart >> 32), (ULONG)addrStart,
             (ULONG)(addrEnd   >> 32), (ULONG)addrEnd);
@@ -8935,7 +8935,7 @@ BOOL traverseEh(UINT clauseIndex,UINT totalClauses,DACEHInfo *pEHInfo,LPVOID tok
 
         addrStart = pEHInfo->filterOffset + methodStart;
 
-#ifdef _WIN64
+#ifdef HOST_64BIT
         ExtOut("[%08x`%08x]", (ULONG)(addrStart >> 32), (ULONG)addrStart);
 #else
         ExtOut("[%08x]", (ULONG)addrStart);
@@ -9351,7 +9351,7 @@ DECLARE_API(u)
         {"-o", &bDisplayOffsets, COBOOL, FALSE},
         {"-il", &bIL, COBOOL, FALSE},
         {"-map", &bDisplayILMap, COBOOL, FALSE},
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
@@ -9910,7 +9910,7 @@ DECLARE_API(DumpLog)
     {
         if (g_bDacBroken)
         {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
             ExtOut("No stress log address. DAC is broken; can't get it\n");
             return E_FAIL;
 #else
@@ -10048,7 +10048,7 @@ exit:
 }
 #endif //TRACE_GC
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 DECLARE_API (DumpGCConfigLog)
 {
     INIT_API();
@@ -10160,7 +10160,7 @@ exit:
     return S_OK;
 #endif //GC_CONFIG_DRIVEN
 }
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 #ifdef GC_CONFIG_DRIVEN
 static const char * const str_interesting_data_points[] =
@@ -10364,7 +10364,7 @@ DECLARE_API(EEVersion)
                 ExtOut(" (3.x runtime)");
             }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
             if (version.dwFileFlags & VS_FF_DEBUG) {
                 ExtOut(" checked or debug build");
             }
@@ -10396,7 +10396,7 @@ DECLARE_API(EEVersion)
         ExtOut("In plan phase of garbage collection\n");
     }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     // Print SOS version
     VS_FIXEDFILEINFO sosVersion;
     if (GetSOSVersion(&sosVersion))
@@ -10418,7 +10418,7 @@ DECLARE_API(EEVersion)
             ExtOut("\n");
         }
     }
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
     return Status;
 }
 
@@ -10437,7 +10437,7 @@ DECLARE_API(SOSStatus)
     BOOL bReset = FALSE;
     CMDOption option[] = 
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"-desktop", &bDesktop, COBOOL, FALSE},
         {"-netcore", &bNetCore, COBOOL, FALSE},
 #endif
@@ -10447,7 +10447,7 @@ DECLARE_API(SOSStatus)
     {
         return Status;
     }    
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     if (bNetCore || bDesktop)
     {
         PCSTR name = bDesktop ? "desktop CLR" : ".NET Core";;
@@ -10487,7 +10487,7 @@ DECLARE_API(SOSStatus)
     return Status;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -10765,7 +10765,7 @@ DECLARE_API (ProcInfo)
 
     return Status;
 }
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -10785,7 +10785,7 @@ DECLARE_API(Token2EE)
 
     CMDOption option[] = 
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
@@ -10879,7 +10879,7 @@ DECLARE_API(Name2EE)
 
     CMDOption option[] = 
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
@@ -11054,7 +11054,7 @@ DECLARE_API(GCRoot)
     {   // name, vptr, type, hasValue
         {"-nostacks", &bNoStacks, COBOOL, FALSE},
         {"-all", &all, COBOOL, FALSE},
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
@@ -11207,11 +11207,11 @@ DECLARE_API(GCWhere)
     return Status;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 DECLARE_API(FindRoots)
 {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
@@ -11547,7 +11547,7 @@ private:
         }
       
         // GCC can't handle stacks which are too large.
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         SOSHandleData data[256];
 #else
         SOSHandleData data[4];
@@ -11734,7 +11734,7 @@ DECLARE_API(GCHandles)
 // stopping once jitted code is reached. It currently has some issues - it can take arbitrarily long
 // to reach jitted code and canceling it is terrible. At best it doesn't cancel, at worst it
 // kills the debugger. IsInterrupt() doesn't work nearly as nicely as one would hope :/
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 DECLARE_API(TraceToCode)
 {
     INIT_API_NODAC();
@@ -11819,13 +11819,13 @@ DECLARE_API(TraceToCode)
     return Status;
 
 }
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 // This is an experimental and undocumented API that sets a debugger pseudo-register based
 // on the type of code at the given IP. It can be used in scripts to keep stepping until certain
 // kinds of code have been reached. Presumably its slower than !TraceToCode but at least it
 // cancels much better
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 DECLARE_API(GetCodeTypeFlags)
 {
     INIT_API();   
@@ -11920,7 +11920,7 @@ DECLARE_API(GetCodeTypeFlags)
     return Status;
 
 }
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 DECLARE_API(StopOnException)
 {
@@ -12066,7 +12066,7 @@ DECLARE_API(StopOnException)
 \**********************************************************************/
 DECLARE_API(ObjSize)
 {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
     
@@ -12117,8 +12117,8 @@ DECLARE_API(ObjSize)
 
 }
 
-#ifndef FEATURE_PAL
-// For FEATURE_PAL, MEMORY_BASIC_INFORMATION64 doesn't exist yet. TODO?
+#ifndef HOST_UNIX
+// For HOST_UNIX, MEMORY_BASIC_INFORMATION64 doesn't exist yet. TODO?
 DECLARE_API(GCHandleLeaks)
 {
     INIT_API();
@@ -12314,9 +12314,9 @@ DECLARE_API(GCHandleLeaks)
     
     return Status;
 }
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 class ClrStackImplWithICorDebug
 {
@@ -13243,9 +13243,9 @@ public:
         InternalFrameManager internalFrameManager;
         IfFailRet(internalFrameManager.Init(pThread3));
         
-    #if defined(_AMD64_) || defined(_ARM64_)
+    #if defined(HOST_AMD64) || defined(HOST_ARM64)
         ExtOut("%-16s %-16s %s\n", "Child SP", "IP", "Call Site");
-    #elif defined(_X86_) || defined(_ARM_)
+    #elif defined(HOST_X86) || defined(HOST_ARM)
         ExtOut("%-8s %-8s %s\n", "Child SP", "IP", "Call Site");
     #endif
 
@@ -13645,7 +13645,7 @@ public:
             // GetFrameContext returns S_FALSE if the frame iterator is invalid.  That's basically an error for us.
             return E_FAIL;
         }
-#if defined(SOS_TARGET_AMD64)
+#if defined(FEATURE_AMD64)
         String outputFormat3 = "    %3s=%016x %3s=%016x %3s=%016x\n";
         String outputFormat2 = "    %3s=%016x %3s=%016x\n";
         ExtOut(outputFormat3, "rsp", context.Amd64Context.Rsp, "rbp", context.Amd64Context.Rbp, "rip", context.Amd64Context.Rip);
@@ -13654,13 +13654,13 @@ public:
         ExtOut(outputFormat3, "r8", context.Amd64Context.R8, "r9", context.Amd64Context.R9, "r10", context.Amd64Context.R10);
         ExtOut(outputFormat3, "r11", context.Amd64Context.R11, "r12", context.Amd64Context.R12, "r13", context.Amd64Context.R13);
         ExtOut(outputFormat2, "r14", context.Amd64Context.R14, "r15", context.Amd64Context.R15);
-#elif defined(SOS_TARGET_X86)
+#elif defined(FEATURE_X86)
         String outputFormat3 = "    %3s=%08x %3s=%08x %3s=%08x\n";
         String outputFormat2 = "    %3s=%08x %3s=%08x\n";
         ExtOut(outputFormat3, "esp", context.X86Context.Esp, "ebp", context.X86Context.Ebp, "eip", context.X86Context.Eip);
         ExtOut(outputFormat3, "eax", context.X86Context.Eax, "ebx", context.X86Context.Ebx, "ecx", context.X86Context.Ecx);      
         ExtOut(outputFormat3, "edx", context.X86Context.Edx, "esi", context.X86Context.Esi, "edi", context.X86Context.Edi);
-#elif defined(SOS_TARGET_ARM)
+#elif defined(FEATURE_ARM)
         String outputFormat3 = "    %3s=%08x %3s=%08x %3s=%08x\n";
         String outputFormat2 = "    %s=%08x %s=%08x\n";
         String outputFormat1 = "    %s=%08x\n";
@@ -13671,7 +13671,7 @@ public:
         ExtOut(outputFormat1, "r12", context.ArmContext.R12);
         ExtOut(outputFormat3, "sp", context.ArmContext.Sp, "lr", context.ArmContext.Lr, "pc", context.ArmContext.Pc);
         ExtOut(outputFormat2, "cpsr", context.ArmContext.Cpsr, "fpsr", context.ArmContext.Fpscr);
-#elif defined(SOS_TARGET_ARM64)
+#elif defined(FEATURE_ARM64)
         String outputXRegFormat3 = "    x%d=%016x x%d=%016x x%d=%016x\n";
         String outputXRegFormat1 = "    x%d=%016x\n";
         String outputFormat3     = "    %s=%016x %s=%016x %s=%016x\n";
@@ -14071,7 +14071,7 @@ private:
 
 };
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 WatchCmd g_watchCmd;
 
@@ -14198,7 +14198,7 @@ DECLARE_API(Watch)
     return Status;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 DECLARE_API(ClrStack)
 {
@@ -14237,7 +14237,7 @@ DECLARE_API(ClrStack)
         {"-gc", &bGC, COBOOL, FALSE},
         {"-f", &bFull, COBOOL, FALSE},
         {"-r", &bDisplayRegVals, COBOOL, FALSE },
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
@@ -14297,7 +14297,7 @@ DECLARE_API(ClrStack)
     return S_OK;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 BOOL IsMemoryInfoAvailable()
 {
@@ -14334,21 +14334,21 @@ DECLARE_API( VMMap )
     return Status;
 }   // DECLARE_API( vmmap )
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 DECLARE_API(SOSFlush)
 {
     INIT_API_EXT();
 
     Runtime::Flush();
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
     FlushMetadataRegions();
 #endif
     
     return Status;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 DECLARE_API( VMStat )
 {
@@ -14564,7 +14564,7 @@ end:
     return Status;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 DECLARE_API(dbgout)
 {
@@ -14700,7 +14700,7 @@ static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp,
 #undef DOAPPEND
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 BOOL AppendContext(LPVOID pTransitionContexts, size_t maxCount, size_t *pcurCount, size_t uiSizeOfContext,
     CROSS_PLATFORM_CONTEXT *context)
@@ -14796,7 +14796,7 @@ HRESULT CALLBACK ImplementEFNStackTrace(
         return Status;
     }
 
-#ifdef _TARGET_WIN64_
+#ifdef TARGET_64BIT
     ULONG numFrames = 0;
     BOOL bInNative = TRUE;
 
@@ -14868,7 +14868,7 @@ HRESULT CALLBACK ImplementEFNStackTrace(
     }
 
 Exit:
-#else // _TARGET_WIN64_
+#else // TARGET_64BIT
 
 #ifdef _DEBUG
     size_t prevLength = 0;
@@ -14981,7 +14981,7 @@ Exit:
     Status = S_OK;
 
 Exit:
-#endif // _TARGET_WIN64_
+#endif // TARGET_64BIT
 
     if (pStackWalk)
     {
@@ -15224,11 +15224,11 @@ HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
         {
             // This code is accessing the StackTraceInfo class in the runtime.
             // See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h
-#ifdef _TARGET_WIN64_
+#ifdef TARGET_64BIT
             DWORD_PTR dataPtr = arrayPtr + sizeof(DWORD_PTR) + sizeof(DWORD) + sizeof(DWORD);
 #else
             DWORD_PTR dataPtr = arrayPtr + sizeof(DWORD_PTR) + sizeof(DWORD);
-#endif // _TARGET_WIN64_
+#endif // TARGET_64BIT
             size_t stackTraceSize = 0;
             MOVE (stackTraceSize, dataPtr); // data length is stored at the beginning of the array in this case
 
@@ -15573,7 +15573,7 @@ DECLARE_API(SaveState)
     return S_OK;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 DECLARE_API(SuppressJitOptimization)
 {
@@ -15723,7 +15723,7 @@ DECLARE_API(StopOnCatch)
     return S_OK;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 // This is an undocumented SOS extension command intended to help test SOS
 // It causes the Dml output to be printed to the console uninterpretted so
@@ -15934,7 +15934,7 @@ _EFN_GetManagedThread(
     return E_INVALIDARG;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 //
 // Sets the .NET Core runtime path to use to run the managed code within SOS/native debugger.
@@ -15997,7 +15997,7 @@ DECLARE_API(SetSymbolServer)
         {"-timeout", &timeoutInMinutes, COSIZE_T, TRUE},
         {"-ms", &msdl, COBOOL, FALSE},
         {"-log", &logging, COBOOL, FALSE},
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
         {"-loadsymbols", &loadNative, COBOOL, FALSE},
         {"-sympath", &windowsSymbolPath.data, COSTRING, TRUE},
 #else
@@ -16067,7 +16067,7 @@ DECLARE_API(SetSymbolServer)
             ExtOut("Symbol download logging enabled\n");
         }
     }
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
     else if (loadNative)
     {
         Status = LoadNativeSymbols();
@@ -16118,7 +16118,7 @@ void PrintHelp (__in_z LPCSTR pszCmdName)
     static LPSTR pText = NULL;
 
     if (pText == NULL) {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         HGLOBAL hResource = NULL;
         HRSRC hResInfo = FindResource (g_hInstance, TEXT ("DOCUMENTATION"), TEXT ("TEXT"));
         if (hResInfo) hResource = LoadResource (g_hInstance, hResInfo);

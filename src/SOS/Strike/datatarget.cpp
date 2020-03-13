@@ -10,7 +10,7 @@
 #include "sospriv.h"
 #include "corerror.h"
 
-#define IMAGE_FILE_MACHINE_AMD64             0x8664  // AMD64 (K8)
+#define IMAGE_FILE_MACHINE_AMD64             0x8664  // HOST_AMD64 (K8)
 
 DataTarget::DataTarget(void) :
     m_ref(0)
@@ -93,9 +93,9 @@ HRESULT STDMETHODCALLTYPE
 DataTarget::GetPointerSize(
     /* [out] */ ULONG32 *size)
 {
-#if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
+#if defined(FEATURE_AMD64) || defined(FEATURE_ARM64)
     *size = 8;
-#elif defined(SOS_TARGET_ARM) || defined(SOS_TARGET_X86)
+#elif defined(FEATURE_ARM) || defined(FEATURE_X86)
     *size = 4;
 #else
   #error Unsupported architecture
@@ -119,7 +119,7 @@ DataTarget::GetImageBase(
     {
         return E_FAIL;
     }
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     // Remove the extension on Windows/dbgeng.
     CHAR *lp = strrchr(lpstr, '.');
     if (lp != nullptr)
@@ -141,7 +141,7 @@ DataTarget::ReadVirtual(
     {
         return E_UNEXPECTED;
     }
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
     if (g_sos != nullptr)
     {
         // LLDB synthesizes memory (returns 0's) for missing pages (in this case the missing metadata  pages) 
@@ -215,7 +215,7 @@ DataTarget::GetThreadContext(
     /* [in] */ ULONG32 contextSize,
     /* [out, size_is(contextSize)] */ PBYTE context)
 {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
     if (g_ExtServices == NULL)
     {
         return E_UNEXPECTED;
@@ -293,7 +293,7 @@ DataTarget::AllocVirtual(
     /* [in] */ ULONG32 protectFlags,
     /* [out] */ CLRDATA_ADDRESS* virt)
 {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
     return E_NOTIMPL;
 #else
     ULONG64 hProcess;
@@ -316,7 +316,7 @@ DataTarget::FreeVirtual(
     /* [in] */ ULONG32 size,
     /* [in] */ ULONG32 typeFlags)
 {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
     return E_NOTIMPL;
 #else
     ULONG64 hProcess;
@@ -337,7 +337,7 @@ DataTarget::VirtualUnwind(
     /* [in] */ ULONG32 contextSize,
     /* [in, out, size_is(contextSize)] */ PBYTE context)
 {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
     if (g_ExtServices == NULL)
     {
         return E_UNEXPECTED;

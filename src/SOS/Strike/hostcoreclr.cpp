@@ -23,11 +23,11 @@
 #include <tchar.h>
 #include <limits.h>
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <unistd.h>
-#endif // !FEATURE_PAL
+#endif // !HOST_UNIX
 
 #include <coreclrhost.h>
 #include <set>
@@ -45,12 +45,12 @@ bool g_symbolStoreInitialized = false;
 LPCSTR g_hostRuntimeDirectory = nullptr;
 LPCSTR g_tmpPath = nullptr;
 SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 HMODULE g_hmoduleSymBinder = nullptr;
 ISymUnmanagedBinder3 *g_pSymBinder = nullptr;
 #endif
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 #define TPALIST_SEPARATOR_STR_A ":"
 #else
 #define TPALIST_SEPARATOR_STR_A ";"
@@ -114,7 +114,7 @@ static void AddFilesFromDirectoryToTpaList(const char* directory, std::string& t
     }
 }
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 
 #if defined(__linux__)
 #define symlinkEntrypointExecutable "/proc/self/exe"
@@ -207,7 +207,7 @@ static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutabl
     return result;
 }
 
-#else // FEATURE_PAL
+#else // HOST_UNIX
 
 static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutable)
 {
@@ -223,7 +223,7 @@ static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutabl
     return true;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 //
 // Searches the runtime directory for a .NET Core runtime version
@@ -274,7 +274,7 @@ static bool FindDotNetVersion(int majorFilter, int minorFilter, std::string& hos
     return false;
 }
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 const char *g_linuxPaths[] = {
     "/rh-dotnet31/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
     "/rh-dotnet30/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
@@ -293,7 +293,7 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
     // If the hosting runtime isn't already set, use the runtime we are debugging
     if (g_hostRuntimeDirectory == nullptr)
     {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 #if defined(__APPLE__)
         hostRuntimeDirectory.assign("/usr/local/share/dotnet/shared/Microsoft.NETCore.App");
 #elif defined (__FreeBSD__) || defined(__NetBSD__)
@@ -440,7 +440,7 @@ extern "C" HRESULT SOSInitializeByHost(SOSNetCoreCallbacks* callbacks, int callb
         g_tmpPath = _strdup(tempDirectory);
     }
     Runtime::SetDacDbiPath(isDesktop, dacFilePath, dbiFilePath);
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     // When SOS is hosted on dotnet-dump, the ExtensionApis are not set so 
     // the expression evaluation function needs to be supplied.
     GetExpression = (PWINDBG_GET_EXPRESSION64)callbacks->GetExpressionDelegate;
@@ -480,7 +480,7 @@ HRESULT InitializeHosting()
         ExtDbgOut("Error: Failed to get host runtime directory\n");
         return Status;
     }
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
     ArrayHolder<char> szSOSModulePath = new char[MAX_LONGPATH + 1];
     UINT cch = MAX_LONGPATH;
     if (!PAL_GetPALDirectoryA(szSOSModulePath, &cch)) {
@@ -523,7 +523,7 @@ HRESULT InitializeHosting()
     }
     initializeCoreCLR = (coreclr_initialize_ptr)GetProcAddress(coreclrLib, "coreclr_initialize");
     createDelegate = (coreclr_create_delegate_ptr)GetProcAddress(coreclrLib, "coreclr_create_delegate");
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
     if (initializeCoreCLR == nullptr || createDelegate == nullptr)
     {
@@ -651,14 +651,14 @@ HRESULT InitializeSymbolStore()
         if (FAILED(hr)) {
             return hr;
         }
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         InitializeSymbolStoreFromSymPath();
 #endif
     }
     return S_OK;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 /**********************************************************************\
  * Setup and initialize the symbol server support using the .sympath
 \**********************************************************************/
@@ -694,9 +694,9 @@ void InitializeSymbolStoreFromSymPath()
         }
     }
 }
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 
 //
 // Symbol downloader callback
@@ -792,7 +792,7 @@ HRESULT GetMetadataLocator(
     return g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate(imagePath, imageTimestamp, imageSize, mvid, mdRva, flags, bufferSize, buffer, dataSize);
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 /**********************************************************************\
 * A typesafe version of GetProcAddress
@@ -844,7 +844,7 @@ HRESULT CreateInstanceFromPath(REFCLSID clsid, REFIID iid, LPCSTR path, HMODULE*
     return hr;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 /**********************************************************************\
  * Load symbols for an ICorDebugModule. Used by "clrstack -i".
@@ -903,7 +903,7 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
     hr = moduleData.Request(pModule);
     if (FAILED(hr))
     {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
         ExtOut("LoadSymbols moduleData.Request FAILED 0x%08x\n", hr);
         return hr;
 #else
@@ -926,14 +926,14 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
 #endif
     }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     // TODO: in-memory windows PDB not supported
     hr = LoadSymbolsForWindowsPDB(pMD, moduleData.LoadedPEAddress, pModuleName, moduleData.IsFileLayout);
     if (SUCCEEDED(hr))
     {
         return hr;
     }
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
     return LoadSymbolsForPortablePDB(
         pModuleName, 
@@ -945,7 +945,7 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
         moduleData.InMemoryPdbSize);
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 static void CleanupSymBinder()
 {
@@ -1052,7 +1052,7 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
     return Status;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 /**********************************************************************\
  * Attempts to load a portable or embeded PDB. Both Windows and xplat.
@@ -1115,7 +1115,7 @@ HRESULT SymbolReader::GetLineByILOffset(___in mdMethodDef methodToken, ___in ULO
         return S_OK;
     }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     if (m_pSymReader == NULL)
         return E_FAIL;
 
@@ -1159,7 +1159,7 @@ HRESULT SymbolReader::GetLineByILOffset(___in mdMethodDef methodToken, ___in ULO
         *pLinenum = lines[bestSoFar];
         return S_OK;
     }
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
     return E_FAIL;
 }
@@ -1200,7 +1200,7 @@ HRESULT SymbolReader::GetNamedLocalVariable(___in ISymUnmanagedScope * pScope, _
         return S_OK;
     }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     if (m_pSymReader == NULL)
         return E_FAIL;
 
@@ -1265,7 +1265,7 @@ HRESULT SymbolReader::GetNamedLocalVariable(___in ISymUnmanagedScope * pScope, _
 
         for (ULONG j = 0; j < numChildren; j++) pChildren[j]->Release();
     }
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
     return E_FAIL;
 }
@@ -1321,7 +1321,7 @@ HRESULT SymbolReader::ResolveSequencePoint(__in_z WCHAR* pFilename, ___in ULONG3
         return S_OK;
     }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     if (m_pSymReader == NULL)
         return E_FAIL;
 
@@ -1381,7 +1381,7 @@ HRESULT SymbolReader::ResolveSequencePoint(__in_z WCHAR* pFilename, ___in ULONG3
         }
         return S_OK;
     }
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
     return E_FAIL;
 }

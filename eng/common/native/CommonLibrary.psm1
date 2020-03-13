@@ -269,9 +269,9 @@ function Get-MachineArchitecture {
     }
     $ProcessorArchitecture = $ProcessorArchitectureW6432
   }
-  if (($ProcessorArchitecture -Eq "AMD64") -Or
+  if (($ProcessorArchitecture -Eq "HOST_AMD64") -Or
       ($ProcessorArchitecture -Eq "IA64") -Or
-      ($ProcessorArchitecture -Eq "ARM64")) {
+      ($ProcessorArchitecture -Eq "HOST_ARM64")) {
     return "x64"
   }
   return "x86"

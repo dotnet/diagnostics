@@ -396,7 +396,7 @@ namespace SOS
             switch (DataReader.GetArchitecture())
             {
                 case Microsoft.Diagnostics.Runtime.Architecture.Amd64:
-                    *type = IMAGE_FILE_MACHINE.AMD64;
+                    *type = IMAGE_FILE_MACHINE.HOST_AMD64;
                     break;
                 case Microsoft.Diagnostics.Runtime.Architecture.X86:
                     *type = IMAGE_FILE_MACHINE.I386;
@@ -405,7 +405,7 @@ namespace SOS
                     *type = IMAGE_FILE_MACHINE.THUMB2;
                     break;
                 case Microsoft.Diagnostics.Runtime.Architecture.Arm64:
-                    *type = IMAGE_FILE_MACHINE.ARM64;
+                    *type = IMAGE_FILE_MACHINE.HOST_ARM64;
                     break;
                 default:
                     *type = IMAGE_FILE_MACHINE.UNKNOWN;

@@ -271,7 +271,7 @@ ParseURLW(
                 // Yes; skip the "//"
                 ppu->pszSuffix += 2;
 
-#ifndef PLATFORM_UNIX
+#ifndef HOST_UNIX
                 // There might be a third slash.  Skip it.
                 // IEUNIX - On UNIX, it's a root directory, so don't skip it!
                 if ('/' == *ppu->pszSuffix)

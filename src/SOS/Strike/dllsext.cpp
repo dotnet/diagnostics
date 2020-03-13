@@ -12,7 +12,7 @@
 #include "util.h"
 #include "platformspecific.h"
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 typedef struct _PRIVATE_LDR_DATA_TABLE_ENTRY {
     LIST_ENTRY InLoadOrderLinks;
@@ -277,4 +277,4 @@ DllsName(
     return hr;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX

@@ -1103,12 +1103,12 @@ size_t GCRootImpl::GetSizeOfObject(TADDR obj, MTInfo *info)
         res += info->ComponentSize * components;
     }
 
-#ifdef _TARGET_WIN64_
+#ifdef TARGET_64BIT
     // On x64 we do an optimization to save 4 bytes in almost every string we create, so
     // pad to min object size if necessary.
     if (res < min_obj_size)
         res = min_obj_size;
-#endif // _TARGET_WIN64_
+#endif // TARGET_64BIT
 
     return (res > 0x10000) ? AlignLarge(res) : Align(res);
 }
@@ -1327,11 +1327,11 @@ void PrintNotReachableInRange(TADDR rngStart, TADDR rngEnd, BOOL bExcludeReadyFo
 // The value of card_size is determined empirically according to the average size of an object
 // In the code we also rely on the assumption that one card_table entry (DWORD) covers an entire os page
 //
-#if defined (_TARGET_WIN64_)
+#if defined (TARGET_64BIT)
 #define card_size ((size_t)(2*DT_GC_PAGE_SIZE/card_word_width))
 #else
 #define card_size ((size_t)(DT_GC_PAGE_SIZE/card_word_width))
-#endif //_TARGET_WIN64_
+#endif //TARGET_64BIT
 
 // so card_size = 128 on x86, 256 on x64
 
@@ -1907,7 +1907,7 @@ size_t HeapTraverser::getID(size_t mTable)
     return 0;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 void replace(std::wstring &str, const WCHAR *toReplace, const WCHAR *replaceWith)
 {
     const size_t replaceLen = _wcslen(toReplace);
@@ -1926,7 +1926,7 @@ void HeapTraverser::PrintType(size_t ID,LPCWSTR name)
 {
     if (m_format==FORMAT_XML)
     {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         // Sanitize name based on XML spec.
         std::wstring wname = name;
         replace(wname, W("&"), W("&amp;"));

@@ -6,41 +6,41 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # For more information: http://www.cmake.org/Wiki/CMake_RPATH_handling.
 if (CORECLR_SET_RPATH)
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-  if(CLR_CMAKE_PLATFORM_DARWIN)
+  if(CLR_CMAKE_HOST_DARWIN)
     set(CMAKE_INSTALL_RPATH "@loader_path")
   else()
     set(CMAKE_INSTALL_RPATH "\$ORIGIN")
-  endif(CLR_CMAKE_PLATFORM_DARWIN)
+  endif(CLR_CMAKE_HOST_DARWIN)
 endif (CORECLR_SET_RPATH)
 
-if(CLR_CMAKE_PLATFORM_ARCH_AMD64)
-  add_definitions(-DSOS_TARGET_AMD64=1)
-  add_definitions(-D_TARGET_WIN64_=1)
-  add_definitions(-DDBG_TARGET_64BIT)
-  add_definitions(-DDBG_TARGET_WIN64=1)
-  if(WIN32)
-    add_definitions(-DSOS_TARGET_ARM64=1)
-  endif(WIN32)
-  remove_definitions(-D_TARGET_ARM64_=1)
-  add_definitions(-D_TARGET_AMD64_)
-  add_definitions(-DDBG_TARGET_AMD64)
-elseif(CLR_CMAKE_PLATFORM_ARCH_I386)
-  add_definitions(-DSOS_TARGET_X86=1)
-  add_definitions(-D_TARGET_X86_=1)
-  add_definitions(-DDBG_TARGET_32BIT)
-  if(WIN32)
-    add_definitions(-DSOS_TARGET_ARM=1)
-  endif(WIN32)
-elseif(CLR_CMAKE_PLATFORM_ARCH_ARM)
-  add_definitions(-DSOS_TARGET_ARM=1)
-  add_definitions(-D_TARGET_WIN32_=1)
-  add_definitions(-D_TARGET_ARM_=1)
-  add_definitions(-DDBG_TARGET_32BIT)
-elseif(CLR_CMAKE_PLATFORM_ARCH_ARM64)
-  add_definitions(-DSOS_TARGET_ARM64=1)
-  add_definitions(-D_TARGET_WIN64_=1)
-  add_definitions(-DDBG_TARGET_64BIT)
-  add_definitions(-DDBG_TARGET_WIN64=1)
+if(CLR_CMAKE_HOST_ARCH_AMD64)
+  add_definitions(-DFEATURE_AMD64=1)
+  add_definitions(-DTARGET_64BIT=1)
+  add_definitions(-DTARGET_64BIT)
+  add_definitions(-DTARGET_64BIT=1)
+  if(CLR_CMAKE_HOST_WIN32)
+    add_definitions(-DFEATURE_ARM64=1)
+  endif(CLR_CMAKE_HOST_WIN32)
+  remove_definitions(-DTARGET_ARM64=1)
+  add_definitions(-DTARGET_AMD64)
+  add_definitions(-DTARGET_AMD64)
+elseif(CLR_CMAKE_HOST_ARCH_I386)
+  add_definitions(-DFEATURE_X86=1)
+  add_definitions(-DTARGET_X86=1)
+  add_definitions(-DDELETE_UNUSED_DEFINE)
+  if(CLR_CMAKE_HOST_WIN32)
+    add_definitions(-DFEATURE_ARM=1)
+  endif(CLR_CMAKE_HOST_WIN32)
+elseif(CLR_CMAKE_HOST_ARCH_ARM)
+  add_definitions(-DFEATURE_ARM=1)
+  add_definitions(-DDELETE_UNUSED_DEFINE=1)
+  add_definitions(-DTARGET_ARM=1)
+  add_definitions(-DDELETE_UNUSED_DEFINE)
+elseif(CLR_CMAKE_HOST_ARCH_ARM64)
+  add_definitions(-DFEATURE_ARM64=1)
+  add_definitions(-DTARGET_64BIT=1)
+  add_definitions(-DTARGET_64BIT)
+  add_definitions(-DTARGET_64BIT=1)
 endif()
 
 add_definitions(-DSTRIKE)  
@@ -48,7 +48,7 @@ add_definitions(-DSTRIKE)
 include_directories(${ROOT_DIR}/src/SOS/gcdump)
 include_directories(${ROOT_DIR}/src/SOS/debugshim)
 
-if(WIN32)
+if(CLR_CMAKE_HOST_WIN32)
   include_directories(inc)
   include_directories("$ENV{VSInstallDir}/DIA SDK/include")
 
@@ -106,7 +106,7 @@ if(WIN32)
     psapi.lib
     ntdll.lib
   )
-else(WIN32)
+else(CLR_CMAKE_HOST_WIN32)
   add_definitions(-DFEATURE_ENABLE_HARDWARE_EXCEPTIONS)
   add_definitions(-DPAL_STDCPP_COMPAT=1)
   add_compile_options(-Wno-null-arithmetic)
@@ -167,40 +167,40 @@ else(WIN32)
     palrt
   )
 
-endif(WIN32)
+endif(CLR_CMAKE_HOST_WIN32)
 
-if(CLR_CMAKE_PLATFORM_ARCH_AMD64)
-# if(CLR_CMAKE_PLATFORM_LINUX)
+if(CLR_CMAKE_HOST_ARCH_AMD64)
+# if(CLR_CMAKE_HOST_LINUX)
     #list(APPEND 
     #  SOS_LIBRARY 
     #  createdump_lib
     #)
     #add_definitions(-DCREATE_DUMP_SUPPORTED)
-# endif(CLR_CMAKE_PLATFORM_LINUX)
+# endif(CLR_CMAKE_HOST_LINUX)
   set(SOS_SOURCES_ARCH
     disasmX86.cpp
   )
-  if(WIN32)
+  if(CLR_CMAKE_HOST_WIN32)
     list(APPEND 
       SOS_SOURCES_ARCH  
       disasmARM64.cpp
     )
-  endif(WIN32)
-elseif(CLR_CMAKE_PLATFORM_ARCH_I386)
+  endif(CLR_CMAKE_HOST_WIN32)
+elseif(CLR_CMAKE_HOST_ARCH_I386)
   set(SOS_SOURCES_ARCH 
     disasmX86.cpp
   )
-  if(WIN32)
+  if(CLR_CMAKE_HOST_WIN32)
     list(APPEND
       SOS_SOURCES_ARCH
       disasmARM.cpp
     )
-  endif(WIN32)
-elseif(CLR_CMAKE_PLATFORM_ARCH_ARM)
+  endif(CLR_CMAKE_HOST_WIN32)
+elseif(CLR_CMAKE_HOST_ARCH_ARM)
   set(SOS_SOURCES_ARCH
     disasmARM.cpp
   )
-elseif(CLR_CMAKE_PLATFORM_ARCH_ARM64)
+elseif(CLR_CMAKE_HOST_ARCH_ARM64)
   set(SOS_SOURCES_ARCH
     disasmARM64.cpp
   )
@@ -208,31 +208,31 @@ endif()
 
 list(APPEND SOS_SOURCES ${SOS_SOURCES_ARCH})
 
-if(CLR_CMAKE_PLATFORM_LINUX OR CLR_CMAKE_PLATFORM_FREEBSD OR CLR_CMAKE_PLATFORM_NETBSD)
+if(CLR_CMAKE_HOST_LINUX OR CLR_CMAKE_HOST_FREEBSD OR CLR_CMAKE_HOST_NETBSD)
     # Add linker exports file option
     set(EXPORTS_LINKER_OPTION -Wl,--version-script=${EXPORTS_FILE})
-endif(CLR_CMAKE_PLATFORM_LINUX OR CLR_CMAKE_PLATFORM_FREEBSD OR CLR_CMAKE_PLATFORM_NETBSD)
+endif(CLR_CMAKE_HOST_LINUX OR CLR_CMAKE_HOST_FREEBSD OR CLR_CMAKE_HOST_NETBSD)
 
-if(CLR_CMAKE_PLATFORM_DARWIN)
+if(CLR_CMAKE_HOST_DARWIN)
     # Add linker exports file option
     set(EXPORTS_LINKER_OPTION -Wl,-exported_symbols_list,${EXPORTS_FILE})
-endif(CLR_CMAKE_PLATFORM_DARWIN)
+endif(CLR_CMAKE_HOST_DARWIN)
 
 add_library_clr(sos SHARED ${SOS_SOURCES})
 
-if(CLR_CMAKE_PLATFORM_UNIX)
+if(CLR_CMAKE_HOST_UNIX)
     add_custom_target(sos_exports DEPENDS ${EXPORTS_FILE})
     add_dependencies(sos sos_exports)
 
     set_property(TARGET sos APPEND_STRING PROPERTY LINK_FLAGS ${EXPORTS_LINKER_OPTION})
     set_property(TARGET sos APPEND_STRING PROPERTY LINK_DEPENDS ${EXPORTS_FILE})
-endif(CLR_CMAKE_PLATFORM_UNIX)
+endif(CLR_CMAKE_HOST_UNIX)
 
 target_link_libraries(sos ${SOS_LIBRARY})
 
 # add the install targets
 install_clr(sos)
 
-if(NOT WIN32)
+if(NOT CLR_CMAKE_HOST_WIN32)
   install(FILES sosdocsunix.txt DESTINATION .)
-endif(NOT WIN32)
+endif(NOT CLR_CMAKE_HOST_WIN32)

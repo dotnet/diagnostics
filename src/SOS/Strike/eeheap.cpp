@@ -670,7 +670,7 @@ BOOL GCObjInHeap(TADDR taddrObj, const DacpGcHeapDetails &heap,
     return FALSE;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 // this function updates genUsage to reflect statistics from the range defined by [start, end)
 void GCGenUsageStats(TADDR start, TADDR end, const std::unordered_set<TADDR> &liveObjs,
     const DacpGcHeapDetails &heap, BOOL bLarge, const AllocInfo *pAllocInfo, GenUsageStat *genUsage)
@@ -763,7 +763,7 @@ void GCGenUsageStats(TADDR start, TADDR end, const std::unordered_set<TADDR> &li
         }
     }
 }
-#endif // !FEATURE_PAL
+#endif // !HOST_UNIX
 
 BOOL GCHeapUsageStats(const DacpGcHeapDetails& heap, BOOL bIncUnreachable, HeapUsageStat *hpUsage)
 {
@@ -778,7 +778,7 @@ BOOL GCHeapUsageStats(const DacpGcHeapDetails& heap, BOOL bIncUnreachable, HeapU
 
     taddrSeg = (TADDR)heap.generation_table[GetMaxGeneration()].start_segment;
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     // this will create the bitmap of rooted objects only if bIncUnreachable is true
     GCRootImpl gcroot;
     std::unordered_set<TADDR> emptyLiveObjs;
@@ -821,7 +821,7 @@ BOOL GCHeapUsageStats(const DacpGcHeapDetails& heap, BOOL bIncUnreachable, HeapU
             startGen = TO_TADDR(heap.generation_table[n].allocation_start);
         }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         GCGenUsageStats(startGen, endGen, liveObjs, heap, FALSE, &allocInfo, &hpUsage->genUsage[n]);
 #endif
         endGen = startGen;
@@ -840,7 +840,7 @@ BOOL GCHeapUsageStats(const DacpGcHeapDetails& heap, BOOL bIncUnreachable, HeapU
             return FALSE;
         }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         GCGenUsageStats((TADDR) dacpSeg.mem, (TADDR) dacpSeg.allocated, liveObjs, heap, TRUE, NULL, &hpUsage->genUsage[3]);
 #endif
         taddrSeg = (TADDR)dacpSeg.next;
@@ -922,11 +922,11 @@ BOOL GetSizeEfficient(DWORD_PTR dwAddrCurrObj,
     // On x64 we do an optimization to save 4 bytes in almost every string we create    
     // IMPORTANT: This cannot be done in ObjectSize, which is a wrapper to this function,
     //                    because we must Align only after these changes are made
-#ifdef _TARGET_WIN64_
+#ifdef TARGET_64BIT
     // Pad to min object size if necessary
     if (s < min_obj_size)
         s = min_obj_size;
-#endif // _TARGET_WIN64_
+#endif // TARGET_64BIT
 
     s = (bLarge ? AlignLarge(s) : Align (s));
     return TRUE;
@@ -967,7 +967,7 @@ void GatherOneHeapFinalization(DacpGcHeapDetails& heapDetails, HeapStat *stat, B
                 SOS_PTR(SegQueueLimit(heapDetails,gen_segment(m))));
         }
     }
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     if (bAllReady)
     {
         if (!bShort)

@@ -74,7 +74,7 @@ public:
     virtual HRESULT STDMETHODCALLTYPE GetPlatform(CorDebugPlatform * pPlatform)
     {
         ULONG platformKind = g_targetMachine->GetPlatform();
-#ifdef FEATURE_PAL        
+#ifdef HOST_UNIX        
         if(platformKind == IMAGE_FILE_MACHINE_I386)
             *pPlatform = CORDB_PLATFORM_POSIX_X86;
         else if(platformKind == IMAGE_FILE_MACHINE_AMD64)
@@ -109,7 +109,7 @@ public:
         {
             return E_UNEXPECTED;
         }
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
         if (g_sos != nullptr)
         {
             // LLDB synthesizes memory (returns 0's) for missing pages (in this case the missing metadata  pages) 
@@ -139,7 +139,7 @@ public:
         ULONG32 contextSize,
         BYTE * context)
     {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
         if (g_ExtServices == NULL)
         {
             return E_UNEXPECTED;
@@ -180,7 +180,7 @@ public:
         g_ExtSystem->SetCurrentThreadId(ulThreadIDOrig);
 
         return hr;
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
     }
 
     //
@@ -233,7 +233,7 @@ public:
     //
     virtual HRESULT STDMETHODCALLTYPE VirtualUnwind(DWORD threadId, ULONG32 contextSize, PBYTE context)
     {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
         if (g_ExtServices == NULL)
         {
             return E_UNEXPECTED;

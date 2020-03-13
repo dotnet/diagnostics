@@ -138,7 +138,7 @@
 #define LLDB_OPT_SET_FROM_TO(A, B)                                             \
   (((1U << (B)) - 1) ^ (((1U << (A)) - 1) >> 1))
 
-#if defined(_WIN32) && !defined(MAX_PATH)
+#if defined(HOST_WINDOWS) && !defined(MAX_PATH)
 #define MAX_PATH 260
 #endif
 

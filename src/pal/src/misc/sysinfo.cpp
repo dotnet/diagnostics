@@ -61,13 +61,13 @@ Revision History:
 #include <machine/vmparam.h>
 #endif  // HAVE_MACHINE_VMPARAM_H
 
-#if defined(_TARGET_MAC64)
+#if defined(TARGET_DARWIN)
 #include <mach/mach.h>
 #include <mach/vm_statistics.h>
 #include <mach/mach_types.h>
 #include <mach/mach_init.h>
 #include <mach/mach_host.h>
-#endif // defined(_TARGET_MAC64)
+#endif // defined(TARGET_DARWIN)
 
 // On some platforms sys/user.h ends up defining _DEBUG; if so
 // remove the definition before including the header and put
@@ -108,7 +108,7 @@ PAL_GetLogicalCpuCountFromOS()
 
 #if HAVE_SYSCONF
 
-#if defined(_ARM_) || defined(_ARM64_)
+#if defined(HOST_ARM) || defined(HOST_ARM64)
 #define SYSCONF_GET_NUMPROCS       _SC_NPROCESSORS_CONF
 #define SYSCONF_GET_NUMPROCS_NAME "_SC_NPROCESSORS_CONF"
 #else
@@ -190,7 +190,7 @@ GetSystemInfo(
     lpSystemInfo->lpMaximumApplicationAddress = (PVOID) (1ull << 47);
 #elif defined(USERLIMIT)
     lpSystemInfo->lpMaximumApplicationAddress = (PVOID) USERLIMIT;
-#elif defined(_WIN64)
+#elif defined(HOST_64BIT)
 #if defined(USRSTACK64)
     lpSystemInfo->lpMaximumApplicationAddress = (PVOID) USRSTACK64;
 #else // !USRSTACK64
@@ -462,7 +462,7 @@ PAL_GetLogicalProcessorCacheSizeFromOS()
     cacheSize = std::max(cacheSize, (size_t)sysconf(_SC_LEVEL4_CACHE_SIZE));
 #endif
 
-#if defined(_ARM64_)
+#if defined(HOST_ARM64)
     if(cacheSize == 0)
     {
         size_t size;
@@ -489,10 +489,10 @@ PAL_GetLogicalProcessorCacheSizeFromOS()
         // Arm64 patch is in Linux kernel tip.
         //
         // midr_el1 is available in "/sys/devices/system/cpu/cpu0/regs/identification/midr_el1",
-        // but without an exhaustive list of ARM64 processors any decode of midr_el1
+        // but without an exhaustive list of HOST_ARM64 processors any decode of midr_el1
         // Would likely be incomplete
 
-        // Published information on ARM64 architectures is limited.
+        // Published information on HOST_ARM64 architectures is limited.
         // If we use recent high core count chips as a guide for state of the art, we find
         // total L3 cache to be 1-2MB/core.  As always, there are exceptions.
 

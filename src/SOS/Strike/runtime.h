@@ -5,7 +5,7 @@
 #ifndef __runtime_h__
 #define __runtime_h__
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 
 #define NETCORE_RUNTIME_MODULE_NAME_W   MAKEDLLNAME_W(W("coreclr"))
 #define NETCORE_RUNTIME_MODULE_NAME_A   MAKEDLLNAME_A("coreclr")
@@ -39,7 +39,7 @@
 #define NET_DBI_DLL_NAME_W              MAKEDLLNAME_W(W("mscordbi"))
 #define NET_DBI_DLL_NAME_A              MAKEDLLNAME_A("mscordbi")
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 #define DESKTOP_RUNTIME_MODULE_NAME_W   W("clr")
 #define DESKTOP_RUNTIME_MODULE_NAME_A   "clr"
@@ -108,7 +108,7 @@ private:
     ICorDebugProcess* m_pCorDebugProcess;
 
     static Runtime* s_netcore;
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     static Runtime* s_desktop;
 #endif
     static bool s_isDesktop;
@@ -169,7 +169,7 @@ public:
 
     static void CleanupRuntimes();
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     static bool SwitchRuntime(bool desktop);
 #endif
 

@@ -10,7 +10,7 @@
 #ifndef lldb_Host_HostNativeProcess_h_
 #define lldb_Host_HostNativeProcess_h_
 
-#if defined(_WIN32)
+#if defined(HOST_WINDOWS)
 #include "lldb/Host/windows/HostProcessWindows.h"
 namespace lldb_private {
 typedef HostProcessWindows HostNativeProcess;

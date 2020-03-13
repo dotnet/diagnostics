@@ -54,7 +54,7 @@
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/lldb-private.h"
 
-#if defined(_WIN32)
+#if defined(HOST_WINDOWS)
 #include "lldb/Host/windows/editlinewin.h"
 #elif !defined(__ANDROID__)
 #include <histedit.h>

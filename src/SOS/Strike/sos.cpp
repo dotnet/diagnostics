@@ -81,7 +81,7 @@ namespace sos
     {
         struct ObjectHeader
         {
-    #ifdef _WIN64
+    #ifdef HOST_64BIT
             ULONG _alignpad;
     #endif
             ULONG SyncBlockValue;      // the Index and the Bits
@@ -202,11 +202,11 @@ namespace sos
             }
 
             // On x64 we do an optimization to save 4 bytes in almost every string we create.
-        #ifdef _WIN64
+        #ifdef HOST_64BIT
             // Pad to min object size if necessary
             if (mSize < min_obj_size)
                 mSize = min_obj_size;
-        #endif // _WIN64
+        #endif // HOST_64BIT
         }
 
         mPointers = info->bContainsPointers != FALSE;

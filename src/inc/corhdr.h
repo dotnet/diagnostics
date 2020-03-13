@@ -21,7 +21,7 @@
 #define FRAMEWORK_REGISTRY_KEY_W        W("Software\\Microsoft\\.NETFramework")
 
 // keys for HKCU
-#ifdef BIT64    
+#ifdef HOST_64BIT    
 #define USER_FRAMEWORK_REGISTRY_KEY             "Software\\Microsoft\\.NETFramework64"
 #define USER_FRAMEWORK_REGISTRY_KEY_W        W("Software\\Microsoft\\.NETFramework64")
 #else
@@ -748,8 +748,8 @@ typedef enum CorAssemblyFlags
     afPA_x86                =   0x0020,     // Processor Architecture: x86 (PE32)
     afPA_IA64               =   0x0030,     // Processor Architecture: Itanium (PE32+)
     afPA_AMD64              =   0x0040,     // Processor Architecture: AMD X64 (PE32+)
-    afPA_ARM                =   0x0050,     // Processor Architecture: ARM (PE32)
-    afPA_ARM64              =   0x0060,     // Processor Architecture: ARM64 (PE32+)
+    afPA_ARM                =   0x0050,     // Processor Architecture: HOST_ARM (PE32)
+    afPA_ARM64              =   0x0060,     // Processor Architecture: HOST_ARM64 (PE32+)
     afPA_NoPlatform         =   0x0070,      // applies to any platform but cannot run on any (e.g. reference assembly), should not have "specified" set
     afPA_Specified          =   0x0080,     // Propagate PA flags to AssemblyRef record
     afPA_Mask               =   0x0070,     // Bits describing the processor architecture
@@ -1176,9 +1176,9 @@ typedef struct IMAGE_COR_ILMETHOD_SECT_EH_FAT
 /***********************************/
 typedef struct IMAGE_COR_ILMETHOD_SECT_EH_CLAUSE_SMALL
 {
-#ifdef BIT64
+#ifdef HOST_64BIT
     unsigned            Flags         : 16;
-#else // !BIT64
+#else // !HOST_64BIT
     CorExceptionFlag    Flags         : 16;
 #endif
     unsigned            TryOffset     : 16;

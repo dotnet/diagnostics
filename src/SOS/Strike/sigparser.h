@@ -367,7 +367,7 @@ class SigParser
             case ELEMENT_TYPE_I8:
             case ELEMENT_TYPE_U8:
             case ELEMENT_TYPE_R8:
-        #ifdef _WIN64
+        #ifdef HOST_64BIT
             case ELEMENT_TYPE_I:
             case ELEMENT_TYPE_U:
         #endif // WIN64
@@ -378,10 +378,10 @@ class SigParser
             case ELEMENT_TYPE_I4:
             case ELEMENT_TYPE_U4:
             case ELEMENT_TYPE_R4:
-        #ifndef _WIN64
+        #ifndef HOST_64BIT
             case ELEMENT_TYPE_I:
             case ELEMENT_TYPE_U:
-        #endif // _WIN64
+        #endif // HOST_64BIT
 
                 *pSize = 4;
                 break;

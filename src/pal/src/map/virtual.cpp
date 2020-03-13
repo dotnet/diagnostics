@@ -1738,7 +1738,7 @@ static void VM_ALLOCATE_VirtualQuery(LPCVOID lpAddress, PMEMORY_BASIC_INFORMATIO
     vm_region_flavor_t vm_flavor;
     mach_msg_type_number_t infoCnt;
     mach_port_t object_name;
-#ifdef BIT64
+#ifdef HOST_64BIT
     vm_region_basic_info_data_64_t info;
     infoCnt = VM_REGION_BASIC_INFO_COUNT_64;
     vm_flavor = VM_REGION_BASIC_INFO_64;
@@ -1749,7 +1749,7 @@ static void VM_ALLOCATE_VirtualQuery(LPCVOID lpAddress, PMEMORY_BASIC_INFORMATIO
 #endif
 
     vm_address = (vm_address_t)lpAddress;
-#ifdef BIT64    
+#ifdef HOST_64BIT    
     MachRet = vm_region_64(
 #else
     MachRet = vm_region(
@@ -1995,15 +1995,15 @@ Function :
 --*/
 void* ReserveMemoryFromExecutableAllocator(CPalThread* pThread, SIZE_T allocationSize)
 {
-#ifdef BIT64
+#ifdef HOST_64BIT
     InternalEnterCriticalSection(pThread, &virtual_critsec);
     void* mem = g_executableMemoryAllocator.AllocateMemory(allocationSize);
     InternalLeaveCriticalSection(pThread, &virtual_critsec);
 
     return mem;
-#else // !BIT64
+#else // !HOST_64BIT
     return nullptr;
-#endif // BIT64
+#endif // HOST_64BIT
 }
 
 /*++
@@ -2024,9 +2024,9 @@ void ExecutableMemoryAllocator::Initialize()
 
     // Enable the executable memory allocator on 64-bit platforms only
     // because 32-bit platforms have limited amount of virtual address space.
-#ifdef BIT64
+#ifdef HOST_64BIT
     TryReserveInitialMemory();
-#endif // BIT64
+#endif // HOST_64BIT
 
 }
 
@@ -2140,7 +2140,7 @@ Function:
 --*/
 void* ExecutableMemoryAllocator::AllocateMemory(SIZE_T allocationSize)
 {
-#ifdef BIT64
+#ifdef HOST_64BIT
     void* allocatedMemory = nullptr;
 
     // Alignment to a 64 KB granularity should not be necessary (alignment to page size should be sufficient), but
@@ -2160,9 +2160,9 @@ void* ExecutableMemoryAllocator::AllocateMemory(SIZE_T allocationSize)
     }
 
     return allocatedMemory;
-#else // !BIT64
+#else // !HOST_64BIT
     return nullptr;
-#endif // BIT64
+#endif // HOST_64BIT
 }
 
 /*++
@@ -2178,7 +2178,7 @@ Function:
 --*/
 void *ExecutableMemoryAllocator::AllocateMemoryWithinRange(const void *beginAddress, const void *endAddress, SIZE_T allocationSize)
 {
-#ifdef BIT64
+#ifdef HOST_64BIT
     _ASSERTE(beginAddress <= endAddress);
 
     // Alignment to a 64 KB granularity should not be necessary (alignment to page size should be sufficient), but see
@@ -2208,9 +2208,9 @@ void *ExecutableMemoryAllocator::AllocateMemoryWithinRange(const void *beginAddr
     m_nextFreeAddress = nextFreeAddress;
     m_remainingReservedMemory -= allocationSize;
     return address;
-#else // !BIT64
+#else // !HOST_64BIT
     return nullptr;
-#endif // BIT64
+#endif // HOST_64BIT
 }
 
 /*++

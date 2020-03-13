@@ -104,12 +104,12 @@ VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (50|54)\]\s*
-IFDEF:ARM
+IFDEF:HOST_ARM
 VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
-ENDIF:ARM
-IFDEF:ARM64
+ENDIF:HOST_ARM
+IFDEF:HOST_ARM64
 VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
-ENDIF:ARM64
+ENDIF:HOST_ARM64
 VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
 IFDEF:X64
 VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
@@ -119,12 +119,12 @@ VERIFY:\s+eax=<HEXVAL>\s+ebx=<HEXVAL>\s+ecx=<HEXVAL>\s+
 ENDIF:X86
 
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
-IFDEF:ARM
+IFDEF:HOST_ARM
 VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
-ENDIF:ARM
-IFDEF:ARM64
+ENDIF:HOST_ARM
+IFDEF:HOST_ARM64
 VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
-ENDIF:ARM64
+ENDIF:HOST_ARM64
 VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
 IFDEF:X64
 VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
@@ -194,7 +194,7 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
 ENDIF:ALPINE
 
 !IFDEF:DOTNETDUMP
-!IFDEF:ARM
+!IFDEF:HOST_ARM
 
 # Verify DumpStack works
 SOSCOMMAND:DumpStack
@@ -213,7 +213,7 @@ SOSCOMMAND:EEStack
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\),\s+calling.*\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\),\s+calling.*\s+)
 
-ENDIF:ARM
+ENDIF:HOST_ARM
 ENDIF:DOTNETDUMP
 
 # Verify that IP2MD works (uses IP from ClrStack)

@@ -229,9 +229,9 @@ public:
   /// Get the address type given a file address in an object file.
   ///
   /// Many binary file formats know what kinds
-  /// This is primarily for ARM binaries, though it can be applied to
+  /// This is primarily for HOST_ARM binaries, though it can be applied to
   /// any executable file format that supports different opcode types
-  /// within the same binary. ARM binaries support having both ARM and
+  /// within the same binary. HOST_ARM binaries support having both HOST_ARM and
   /// Thumb within the same executable container. We need to be able
   /// to get
   /// @return

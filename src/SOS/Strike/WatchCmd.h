@@ -5,8 +5,8 @@
 #ifndef _WATCH_CMD_
 #define _WATCH_CMD_
 
-#ifdef FEATURE_PAL
-#error This file not designed for use with FEATURE_PAL
+#ifdef HOST_UNIX
+#error This file not designed for use with HOST_UNIX
 #endif
 
 #include "ExpressionNode.h"

@@ -46,7 +46,7 @@
 #include <unistd.h>
 #endif
 
-#ifdef _WIN32
+#ifdef HOST_WINDOWS
 
 #include <process.h>
 

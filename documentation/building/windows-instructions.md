@@ -17,8 +17,8 @@ Visual Studio 2019 installation process:
   * .NET Desktop Development with all default components.
   * Desktop Development with C++ with all default components.
 * To build for Arm32 or Arm64, Make sure that you have the Windows 10 SDK installed (or selected to be installed as part of VS installation). To explicitly install Windows SDK, download it from here: [Windows SDK for Windows 10](https://developer.microsoft.com/en-us/windows/downloads).
-  * In addition, ensure you install the ARM tools. In the "Individual components" window, in the "Compilers, build tools, and runtimes" section, check the box for "MSVC v142 - VS 2019 C++ ARM build tools (v14.23)".
-  * Also, ensure you install the ARM64 tools. In the "Individual components" window, in the "Compilers, build tools, and runtimes" section, check the box for "MSVC v142 - VS 2019 C++ ARM64 build tools (v14.23)".
+  * In addition, ensure you install the HOST_ARM tools. In the "Individual components" window, in the "Compilers, build tools, and runtimes" section, check the box for "MSVC v142 - VS 2019 C++ HOST_ARM build tools (v14.23)".
+  * Also, ensure you install the HOST_ARM64 tools. In the "Individual components" window, in the "Compilers, build tools, and runtimes" section, check the box for "MSVC v142 - VS 2019 C++ HOST_ARM64 build tools (v14.23)".
 * To build the tests, you will need some additional components:
   * Windows 10 SDK component version 10.0.18362 or newer. This component is installed by default as a part of 'Desktop Development with C++' workload.
   * C++/CLI support for v142 build tools (14.23)
@@ -78,9 +78,9 @@ the PATH variable persistent by going to  Control Panel -> System And Security -
 and select the 'Path' variable in the 'System variables' (if you want to change it for all users) or 'User variables' (if you only want
 to change it for the current user).  Simply edit the PATH variable's value and add the directory (with a semicolon separator).
 
-## Cross Compilation for ARM on Windows
+## Cross Compilation for HOST_ARM on Windows
 
-Building ARM for Windows can be done using cross compilation. Make sure the above requirements for building for arm32 are installed.
+Building HOST_ARM for Windows can be done using cross compilation. Make sure the above requirements for building for arm32 are installed.
 
     C:\diagnostics> build.cmd -architecture arm
 

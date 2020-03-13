@@ -73,7 +73,7 @@ extern LPCSTR g_hostRuntimeDirectory;
 extern LPCSTR g_tmpPath;
 extern SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 extern bool GetAbsolutePath(const char* path, std::string& absolutePath);
 extern HRESULT LoadNativeSymbols(bool runtimeOnly = false);
 #endif
@@ -93,7 +93,7 @@ extern HRESULT InitializeSymbolStore(
     const char* searchDirectory,
     const char* windowsSymbolPath);
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 extern void InitializeSymbolStoreFromSymPath();
 #endif
 
@@ -114,7 +114,7 @@ extern HRESULT GetMetadataLocator(
 class SymbolReader
 {
 private:
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     ISymUnmanagedReader* m_pSymReader;
 #endif
     PVOID m_symbolReaderHandle;
@@ -128,7 +128,7 @@ private:
 public:
     SymbolReader()
     {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         m_pSymReader = NULL;
 #endif
         m_symbolReaderHandle = 0;
@@ -136,7 +136,7 @@ public:
 
     ~SymbolReader()
     {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         if(m_pSymReader != NULL)
         {
             m_pSymReader->Release();

@@ -10,7 +10,7 @@
 #ifndef liblldb_Host_LockFile_h_
 #define liblldb_Host_LockFile_h_
 
-#if defined(_WIN32)
+#if defined(HOST_WINDOWS)
 #include "lldb/Host/windows/LockFileWindows.h"
 namespace lldb_private {
 typedef LockFileWindows LockFile;

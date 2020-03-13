@@ -23,7 +23,7 @@ inline void RestoreSOToleranceState() {}
 #include <new>
 #include <functional>
 
-#if !defined(FEATURE_PAL)
+#if !defined(HOST_UNIX)
 #include <dia2.h>
 #endif
 
@@ -43,7 +43,7 @@ inline void RestoreSOToleranceState() {}
 typedef LPCSTR  LPCUTF8;
 typedef LPSTR   LPUTF8;
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 #define NOTHROW
 #else
 #define NOTHROW (std::nothrow)
@@ -51,7 +51,7 @@ typedef LPSTR   LPUTF8;
 
 DECLARE_HANDLE(OBJECTHANDLE);
 
-#if defined(_TARGET_WIN64_)
+#if defined(TARGET_64BIT)
 #define WIN64_8SPACES "        "
 #define WIN86_8SPACES ""
 #define POINTERSIZE "16"
@@ -90,13 +90,13 @@ DECLARE_HANDLE(OBJECTHANDLE);
 #endif
 
 // The native symbol reader dll name
-#if defined(_AMD64_)
+#if defined(HOST_AMD64)
 #define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.amd64.dll"
-#elif defined(_X86_)
+#elif defined(HOST_X86)
 #define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.x86.dll"
-#elif defined(_ARM_)
+#elif defined(HOST_ARM)
 #define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.arm.dll"
-#elif defined(_ARM64_)
+#elif defined(HOST_ARM64)
 #define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.arm64.dll"
 #endif
 
@@ -107,7 +107,7 @@ DECLARE_HANDLE(OBJECTHANDLE);
 
 // Issue - PREFast_:510  v4.51 does not support __assume(0)
 #if (defined(_MSC_VER) && !defined(_PREFAST_)) || defined(_PREFIX_)
-#if defined(_AMD64_)
+#if defined(HOST_AMD64)
 // Empty methods that consist of UNREACHABLE() result in a zero-sized declspec(noreturn) method
 // which causes the pdb file to make the next method declspec(noreturn) as well, thus breaking BBT
 // Remove when we get a VC compiler that fixes VSW 449170
@@ -1385,7 +1385,7 @@ private:
     Alignment *mAlignments;
 };
  
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 HRESULT GetClrModuleImages(__in IXCLRDataModule* module, __in CLRDataModuleExtentType desiredType, __out PULONG64 pBase, __out PULONG64 pSize);
 #endif
 HRESULT GetMethodDefinitionsFromName(DWORD_PTR ModulePtr, IXCLRDataModule* mod, const char* name, IXCLRDataMethodDefinition **ppMethodDefinitions, int numMethods, int *numMethodsNeeded);
@@ -1413,7 +1413,7 @@ HRESULT NameForToken_s(mdTypeDef mb, IMetaDataImport *pImport, __out_ecount (cap
 void vmmap();
 void vmstat();
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Support for managed stack tracing
 //
@@ -1421,7 +1421,7 @@ void vmstat();
 DWORD_PTR GetDebuggerJitInfo(DWORD_PTR md);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 template <typename SCALAR>
 inline
@@ -1438,7 +1438,7 @@ int bitidx(SCALAR bitflag)
     return -1;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 HRESULT
 DllsName(
     ULONG_PTR addrContaining,
@@ -1552,7 +1552,7 @@ bool IsRuntimeVersion(DWORD major);
 bool IsRuntimeVersion(VS_FIXEDFILEINFO& fileInfo, DWORD major);
 bool IsRuntimeVersionAtLeast(DWORD major);
 bool IsRuntimeVersionAtLeast(VS_FIXEDFILEINFO& fileInfo, DWORD major);
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 BOOL IsRetailBuild (size_t base);
 BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo);
 #endif
@@ -1567,7 +1567,7 @@ BOOL IsMiniDumpFile();
 void ReportOOM();
 
 BOOL SafeReadMemory (TADDR offset, PVOID lpBuffer, ULONG cb, PULONG lpcbBytesRead);
-#if !defined(_TARGET_WIN64_) && !defined(_ARM64_)
+#if !defined(TARGET_64BIT) && !defined(HOST_ARM64)
 // on 64-bit platforms TADDR and CLRDATA_ADDRESS are identical
 inline BOOL SafeReadMemory (CLRDATA_ADDRESS offset, PVOID lpBuffer, ULONG cb, PULONG lpcbBytesRead)
 { return SafeReadMemory(TO_TADDR(offset), lpBuffer, cb, lpcbBytesRead); }
@@ -1857,7 +1857,7 @@ BOOL IsDerivedFrom(CLRDATA_ADDRESS mtObj, __in_z LPCWSTR baseString);
 BOOL IsDerivedFrom(CLRDATA_ADDRESS mtObj, DWORD_PTR modulePtr, mdTypeDef typeDef);
 BOOL TryGetMethodDescriptorForDelegate(CLRDATA_ADDRESS delegateAddr, CLRDATA_ADDRESS* pMD);
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 void FlushMetadataRegions();
 HRESULT GetMetadataMemory(CLRDATA_ADDRESS address, ULONG32 bufferSize, BYTE* buffer);
 #endif
@@ -2196,7 +2196,7 @@ GetSignatureStringResults GetMethodSignatureString (PCCOR_SIGNATURE pbSigBlob, U
 GetSignatureStringResults GetSignatureString (PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, DWORD_PTR dwModuleAddr, CQuickBytes *sigString);
 void GetMethodName(mdMethodDef methodDef, IMetaDataImport * pImport, CQuickBytes *fullName);
 
-#ifndef _TARGET_WIN64_
+#ifndef TARGET_64BIT
 #define     itoa_s_ptr _itoa_s
 #define     itow_s_ptr _itow_s
 #else
@@ -2204,12 +2204,12 @@ void GetMethodName(mdMethodDef methodDef, IMetaDataImport * pImport, CQuickBytes
 #define     itow_s_ptr _i64tow_s
 #endif
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 extern "C"
 int  _itoa_s( int inValue, char* outBuffer, size_t inDestBufferSize, int inRadix );
 extern "C"
 int  _ui64toa_s( unsigned __int64 inValue, char* outBuffer, size_t inDestBufferSize, int inRadix );
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 struct MemRange
 {
@@ -2227,7 +2227,7 @@ struct MemRange
     MemRange * next;
 }; //struct MemRange
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 class StressLogMem
 {
@@ -2290,7 +2290,7 @@ private:
     volatile ULONG m_refCount;
 };
 
-#endif // !FEATURE_PAL
+#endif // !HOST_UNIX
 
 /// X86 Context
 #define X86_SIZE_OF_80387_REGISTERS      80
@@ -2349,7 +2349,7 @@ typedef struct {
 } M128A_XPLAT;
 
 
-/// AMD64 Context
+/// HOST_AMD64 Context
 typedef struct {
     WORD   ControlWord;
     WORD   StatusWord;
@@ -2366,7 +2366,7 @@ typedef struct {
     DWORD MxCsr_Mask;
     M128A_XPLAT FloatRegisters[8];
 
-#if defined(_WIN64)
+#if defined(HOST_64BIT)
     M128A_XPLAT XmmRegisters[16];
     BYTE  Reserved4[96];
 #else
@@ -2465,7 +2465,7 @@ typedef struct{
 } FLOAT128_XPLAT;
 
 
-/// ARM Context
+/// HOST_ARM Context
 #define ARM_MAX_BREAKPOINTS_CONST     8
 #define ARM_MAX_WATCHPOINTS_CONST     1
 typedef DECLSPEC_ALIGN(8) struct {
@@ -2508,12 +2508,12 @@ typedef DECLSPEC_ALIGN(8) struct {
 
 } ARM_CONTEXT;
 
-// On ARM this mask is or'ed with the address of code to get an instruction pointer
+// On HOST_ARM this mask is or'ed with the address of code to get an instruction pointer
 #ifndef THUMB_CODE
 #define THUMB_CODE 1
 #endif
 
-///ARM64 Context
+///HOST_ARM64 Context
 #define ARM64_MAX_BREAKPOINTS     8
 #define ARM64_MAX_WATCHPOINTS     2
 typedef struct {

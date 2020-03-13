@@ -10,11 +10,11 @@
 #define GC_CALL_PINNED              0x2
 
 
-#ifdef _WIN64
+#ifdef HOST_64BIT
 // All stack offsets are INT32's, so this guarantees a disjoint range of
 // addresses for each register.
 #define ADDRESS_SPACING UI64(0x100000000)
-#elif defined(_TARGET_ARM_)
+#elif defined(TARGET_ARM)
 #define ADDRESS_SPACING 0x100000
 #else
 #error pick suitable ADDRESS_SPACING for platform
@@ -110,7 +110,7 @@ BOOL GcInfoDumper::ReportPointerRecord (
     static RegisterInfo rgRegisters[] = {
 #define REG(reg, field) { FIELD_OFFSET(T_CONTEXT, field) }
 
-#ifdef _TARGET_AMD64_
+#ifdef TARGET_AMD64
         REG(rax, Rax),
         REG(rcx, Rcx),
         REG(rdx, Rdx),
@@ -127,7 +127,7 @@ BOOL GcInfoDumper::ReportPointerRecord (
         REG(r13, R13),
         REG(r14, R14),
         REG(r15, R15),
-#elif defined(_TARGET_ARM_)
+#elif defined(TARGET_ARM)
 #undef REG
 #define REG(reg, field) { FIELD_OFFSET(ArmVolatileContextPointer, field) }
         REG(r0, R0),
@@ -149,7 +149,7 @@ BOOL GcInfoDumper::ReportPointerRecord (
         { FIELD_OFFSET(T_KNONVOLATILE_CONTEXT_POINTERS, Lr) },
         { FIELD_OFFSET(T_CONTEXT, Sp) },
         { FIELD_OFFSET(T_KNONVOLATILE_CONTEXT_POINTERS, R7) },
-#elif defined(_TARGET_ARM64_)
+#elif defined(TARGET_ARM64)
 #undef REG
 #define REG(reg, field) { FIELD_OFFSET(Arm64VolatileContextPointer, field) }
         REG(x0, X0),
@@ -200,16 +200,16 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
 
     iFirstRegister = 0;
     nRegisters = nCONTEXTRegisters;
-#ifdef _TARGET_AMD64_
+#ifdef TARGET_AMD64
     iSPRegister = (FIELD_OFFSET(CONTEXT, Rsp) - FIELD_OFFSET(CONTEXT, Rax)) / sizeof(ULONGLONG);
-#elif defined(_TARGET_ARM64_)
+#elif defined(TARGET_ARM64)
     iSPRegister = (FIELD_OFFSET(T_CONTEXT, Sp) - FIELD_OFFSET(T_CONTEXT, X0)) / sizeof(ULONGLONG);
-#elif defined(_TARGET_ARM_)
+#elif defined(TARGET_ARM)
     iSPRegister = (FIELD_OFFSET(T_CONTEXT, Sp) - FIELD_OFFSET(T_CONTEXT, R0)) / sizeof(ULONG);
     UINT iBFRegister = m_StackBaseRegister;
 #endif
 
-#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(TARGET_ARM) || defined(TARGET_ARM64)
     BYTE* pContext = (BYTE*)&(pRD->volatileCurrContextPointers);
 #else
     BYTE* pContext = (BYTE*)pRD->pCurrentContext;
@@ -222,7 +222,7 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
         for (UINT iReg = 0; iReg < nRegisters; iReg++)
         {
             UINT iEncodedReg = iFirstRegister + iReg;
-#ifdef _TARGET_ARM_
+#ifdef TARGET_ARM
             if (ctx == 1)
             {
                 if ((iReg < 4 || iReg == 12))   // skip volatile registers for second context
@@ -258,7 +258,7 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
             {
                 break;
             }
-#elif defined (_TARGET_ARM64_)
+#elif defined (TARGET_ARM64)
             iEncodedReg = iEncodedReg + ctx; //We have to compensate for not tracking x18
             if (ctx == 1)
             {
@@ -280,7 +280,7 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
 #endif
             {
                 _ASSERTE(iReg < nCONTEXTRegisters);
-#ifdef _TARGET_ARM_
+#ifdef TARGET_ARM
                 pReg = *(SIZE_T**)(pContext + rgRegisters[iReg].cbContextOffset);
                 if (iEncodedReg == 12) 
                 {
@@ -295,7 +295,7 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
                     pReg = *(SIZE_T**)((BYTE*)pRD->pCurrentContextPointers + rgRegisters[iEncodedReg].cbContextOffset);
                 }
 
-#elif defined(_TARGET_ARM64_)
+#elif defined(TARGET_ARM64)
                 pReg = *(SIZE_T**)(pContext + rgRegisters[iReg].cbContextOffset);
                 if (iEncodedReg == iSPRegister)
                 {
@@ -316,7 +316,7 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
             if (ptr == (SIZE_T)pReg)
             {
                 // Make sure the register is in the current frame.
-#if defined(_TARGET_AMD64_) 
+#if defined(TARGET_AMD64) 
                 if (0 != ctx)
                 {
                     m_Error = REPORTED_REGISTER_IN_CALLERS_FRAME;
@@ -368,14 +368,14 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
                 GcStackSlotBase base;
                 if (iSPRegister == iEncodedReg)
                 {
-#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(TARGET_ARM) || defined(TARGET_ARM64)
                     base = GC_SP_REL;
 #else
                     if (0 == ctx)
                         base = GC_SP_REL;
                     else
                         base = GC_CALLER_SP_REL;
-#endif //defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) 
+#endif //defined(TARGET_ARM) || defined(TARGET_ARM64) 
                 }
                 else
                 {
@@ -397,7 +397,7 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
             }
         }
 
-#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(TARGET_ARM) || defined(TARGET_ARM64)
         pContext = (BYTE*)pRD->pCurrentContextPointers;
 #else
         pContext = (BYTE*)pRD->pCallerContext;
@@ -520,7 +520,7 @@ GcInfoDumper::EnumerateStateChangesResults GcInfoDumper::EnumerateStateChanges (
 
     UINT iReg;
 
-#ifdef _WIN64
+#ifdef HOST_64BIT
     ULONG64 UniqueAddress = ADDRESS_SPACING*2;
     ULONG64 *pReg;
 #else
@@ -536,7 +536,7 @@ GcInfoDumper::EnumerateStateChangesResults GcInfoDumper::EnumerateStateChanges (
         }                                                                   \
     } while (0)
 
-#ifdef _TARGET_AMD64_
+#ifdef TARGET_AMD64
     FILL_REGS(pCurrentContext->Rax, 16);
     FILL_REGS(pCallerContext->Rax, 16); 
 
@@ -551,7 +551,7 @@ GcInfoDumper::EnumerateStateChangesResults GcInfoDumper::EnumerateStateChanges (
         *(ppCurrentRax + iReg) = &regdisp.pCurrentContext->Rax + iReg;
         *(ppCallerRax  + iReg) = &regdisp.pCallerContext ->Rax + iReg;
     }
-#elif defined(_TARGET_ARM_)
+#elif defined(TARGET_ARM)
     FILL_REGS(pCurrentContext->R0, 16);
     FILL_REGS(pCallerContext->R0, 16);
 
@@ -577,7 +577,7 @@ GcInfoDumper::EnumerateStateChangesResults GcInfoDumper::EnumerateStateChanges (
     /// Set R12
     *(ppVolatileReg+4) = &regdisp.pCurrentContext->R0+12;
 
-#elif defined(_TARGET_ARM64_)
+#elif defined(TARGET_ARM64)
     FILL_REGS(pCurrentContext->X0, 33);
     FILL_REGS(pCallerContext->X0, 33);
 
@@ -649,9 +649,9 @@ PORTABILITY_ASSERT("GcInfoDumper::EnumerateStateChanges is not implemented on th
                                (GcInfoDecoderFlags)(  DECODE_SECURITY_OBJECT
                                                     | DECODE_CODE_LENGTH
                                                     | DECODE_VARARG
-#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(TARGET_ARM) || defined(TARGET_ARM64)
                                                     | DECODE_HAS_TAILCALLS
-#endif // _TARGET_ARM_ || _TARGET_ARM64_
+#endif // TARGET_ARM || TARGET_ARM64
 
                                                     | DECODE_INTERRUPTIBILITY),
                                offset);
@@ -670,7 +670,7 @@ PORTABILITY_ASSERT("GcInfoDumper::EnumerateStateChanges is not implemented on th
 
 #ifdef PARTIALLY_INTERRUPTIBLE_GC_SUPPORTED
         UINT32 safePointOffset = offset;
-#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) 
+#if defined(TARGET_AMD64) || defined(TARGET_ARM) || defined(TARGET_ARM64) 
         safePointOffset++;
 #endif
         if(safePointDecoder.IsSafePoint(safePointOffset))

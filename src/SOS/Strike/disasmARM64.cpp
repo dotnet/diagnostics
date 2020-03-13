@@ -8,12 +8,12 @@
 // 
 // ==--==
 
-#ifndef _TARGET_ARM64_
-#define _TARGET_ARM64_
+#ifndef TARGET_ARM64
+#define TARGET_ARM64
 #endif
 
-#ifdef _TARGET_AMD64_
-#undef _TARGET_AMD64_
+#ifdef TARGET_AMD64
+#undef TARGET_AMD64
 #endif
 
 #include "strike.h"
@@ -29,7 +29,7 @@
 
 namespace ARM64GCDump
 {
-#undef _TARGET_X86_
+#undef TARGET_X86
 #undef LIMITED_METHOD_CONTRACT
 #define LIMITED_METHOD_DAC_CONTRACT
 #define SUPPORTS_DAC
@@ -41,12 +41,12 @@ namespace ARM64GCDump
 #include "gcdumpnonx86.cpp"
 }
 
-#if !defined(_TARGET_WIN64_)
-#error This file only supports SOS targeting ARM64 from a 64-bit debugger
+#if !defined(TARGET_64BIT)
+#error This file only supports SOS targeting HOST_ARM64 from a 64-bit debugger
 #endif
 
-#if !defined(SOS_TARGET_ARM64)
-#error This file should be used to support SOS targeting ARM64 debuggees
+#if !defined(FEATURE_ARM64)
+#error This file should be used to support SOS targeting HOST_ARM64 debuggees
 #endif
 
 
@@ -341,7 +341,7 @@ void ARM64Machine::Unassembly (
             if ((szConstant = strchr(ptr, '=')) != NULL)
             {
                 // Some instruction fetched a PC-relative constant which the disassembler nicely decoded for
-                // us using the ARM convention =<constant>. Retrieve this value and see if it's interesting.
+                // us using the HOST_ARM convention =<constant>. Retrieve this value and see if it's interesting.
                 INT_PTR value;
                 GetValueFromExpr(szConstant, value);
                 HandleValue(value);
@@ -376,12 +376,12 @@ void ARM64Machine::Unassembly (
 BOOL ARM64Machine::GetExceptionContext (TADDR stack, TADDR PC, TADDR *cxrAddr, CROSS_PLATFORM_CONTEXT * cxr,
                           TADDR * exrAddr, PEXCEPTION_RECORD exr) const
 {
-    _ASSERTE("ARM64:NYI");
+    _ASSERTE("HOST_ARM64:NYI");
     return FALSE;
 }
 
 ///
-/// Dump ARM GCInfo table
+/// Dump HOST_ARM GCInfo table
 ///
 void ARM64Machine::DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const
 {

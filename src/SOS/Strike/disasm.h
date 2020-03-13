@@ -126,7 +126,7 @@ eTargetType GetFinalTarget(DWORD_PTR callee, DWORD_PTR* finalMDorIP);
 #define THUMB_CODE 1
 #endif
 
-#ifdef SOS_TARGET_X86
+#ifdef FEATURE_X86
 
 /// X86 Machine specific code
 class X86Machine : public IMachine
@@ -191,12 +191,12 @@ private:
     static LPCSTR     s_SPName;
 }; // class X86Machine
 
-#endif // SOS_TARGET_X86
+#endif // FEATURE_X86
 
 
-#ifdef SOS_TARGET_ARM
+#ifdef FEATURE_ARM
 
-/// ARM Machine specific code
+/// HOST_ARM Machine specific code
 class ARMMachine : public IMachine
 {
 public:
@@ -261,11 +261,11 @@ private:
     static ARMMachine s_ARMMachineInstance;
 }; // class ARMMachine
 
-#endif // SOS_TARGET_ARM
+#endif // FEATURE_ARM
 
-#ifdef SOS_TARGET_AMD64
+#ifdef FEATURE_AMD64
 
-/// AMD64 Machine specific code
+/// HOST_AMD64 Machine specific code
 class AMD64Machine : public IMachine
 {
 public:
@@ -331,11 +331,11 @@ private:
     static LPCSTR       s_SPName;
 }; // class AMD64Machine
 
-#endif // SOS_TARGET_AMD64
+#endif // FEATURE_AMD64
 
-#ifdef SOS_TARGET_ARM64
+#ifdef FEATURE_ARM64
 
-/// ARM64 Machine specific code
+/// HOST_ARM64 Machine specific code
 class ARM64Machine : public IMachine
 {
 public:
@@ -398,7 +398,7 @@ private:
 
 }; // class ARM64Machine
 
-#endif // SOS_TARGET_ARM64
+#endif // FEATURE_ARM64
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif // _MSC_VER
@@ -409,7 +409,7 @@ private:
 //
 
 
-#ifdef SOS_TARGET_X86
+#ifdef FEATURE_X86
 inline void X86Machine::FillSimpleContext(StackTrace_SimpleContext * dest, LPVOID srcCtx) const
 {
     TGT_CTXT& src = *(TGT_CTXT*) srcCtx;
@@ -423,10 +423,10 @@ inline void X86Machine::FillTargetContext(LPVOID destCtx, LPVOID srcCtx, int idx
     TGT_CTXT* dest = (TGT_CTXT*)destCtx + idx;
     *dest = *(TGT_CTXT*)srcCtx;
 }
-#endif // SOS_TARGET_X86
+#endif // FEATURE_X86
 
 
-#ifdef SOS_TARGET_ARM
+#ifdef FEATURE_ARM
 inline void ARMMachine::FillSimpleContext(StackTrace_SimpleContext * dest, LPVOID srcCtx) const
 {
     TGT_CTXT& src = *(TGT_CTXT*) srcCtx;
@@ -441,10 +441,10 @@ inline void ARMMachine::FillTargetContext(LPVOID destCtx, LPVOID srcCtx, int idx
     TGT_CTXT* dest = (TGT_CTXT*)destCtx + idx;
     *dest = *(TGT_CTXT*)srcCtx;
 }
-#endif // SOS_TARGET_ARM
+#endif // FEATURE_ARM
 
 
-#ifdef SOS_TARGET_AMD64
+#ifdef FEATURE_AMD64
 inline void AMD64Machine::FillSimpleContext(StackTrace_SimpleContext * dest, LPVOID srcCtx) const
 {
     TGT_CTXT& src = *(TGT_CTXT*) srcCtx;
@@ -458,9 +458,9 @@ inline void AMD64Machine::FillTargetContext(LPVOID destCtx, LPVOID srcCtx, int i
     TGT_CTXT* dest = (TGT_CTXT*)destCtx + idx;
     *dest = *(TGT_CTXT*)srcCtx;
 }
-#endif // SOS_TARGET_AMD64
+#endif // FEATURE_AMD64
 
-#ifdef SOS_TARGET_ARM64
+#ifdef FEATURE_ARM64
 inline void ARM64Machine::FillSimpleContext(StackTrace_SimpleContext * dest, LPVOID srcCtx) const
 {
     TGT_CTXT& src = *(TGT_CTXT*) srcCtx;
@@ -474,6 +474,6 @@ inline void ARM64Machine::FillTargetContext(LPVOID destCtx, LPVOID srcCtx, int i
     TGT_CTXT* dest = (TGT_CTXT*)destCtx + idx;
     *dest = *(TGT_CTXT*)srcCtx;
 }
-#endif // SOS_TARGET_ARM64
+#endif // FEATURE_ARM64
 
 #endif // __disasm_h__

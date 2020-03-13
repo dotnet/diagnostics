@@ -33,11 +33,11 @@ static const WCHAR* getTime(const FILETIME* time, __out_ecount (buffLen) WCHAR* 
     if (!FileTimeToSystemTime(time, &systemTime))
         return badTime;
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
     int length = _snwprintf_s(buff, buffLen, _TRUNCATE, W("%02d:%02d:%02d"), systemTime.wHour, systemTime.wMinute, systemTime.wSecond);
     if (length <= 0)
         return badTime;
-#else // FEATURE_PAL
+#else // HOST_UNIX
     static const WCHAR format[] = W("HH:mm:ss");
 
     SYSTEMTIME localTime;
@@ -47,7 +47,7 @@ static const WCHAR* getTime(const FILETIME* time, __out_ecount (buffLen) WCHAR* 
     int ret = GetTimeFormatW(LOCALE_USER_DEFAULT, 0, &localTime, format, buff, buffLen);
     if (ret == 0)
         return badTime;
-#endif // FEATURE_PAL else
+#endif // HOST_UNIX else
     
     return buff;
 }

@@ -10,7 +10,7 @@
 #ifndef liblldb_RegularExpression_h_
 #define liblldb_RegularExpression_h_
 
-#ifdef _WIN32
+#ifdef HOST_WINDOWS
 #include "../lib/Support/regex_impl.h"
 
 typedef llvm_regmatch_t regmatch_t;

@@ -16,7 +16,7 @@
 
 namespace lldb_private {
 
-#if defined(_WIN32)
+#if defined(HOST_WINDOWS)
 #define THREAD_ROUTINE __stdcall
 #else
 #define THREAD_ROUTINE

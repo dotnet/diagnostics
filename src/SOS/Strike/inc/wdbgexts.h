@@ -43,7 +43,7 @@ extern "C" {
 #if _MSC_VER >= 1200
 #pragma warning(push)
 #endif
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 #pragma warning(disable:4115 4201 4204 4214 4221)
 #endif
 
@@ -1090,7 +1090,7 @@ enum
 #define KD_SECONDARY_VERSION_AMD64_OBSOLETE_CONTEXT_2 1
 #define KD_SECONDARY_VERSION_AMD64_CONTEXT            2
 
-#ifdef _AMD64_
+#ifdef HOST_AMD64
 #define CURRENT_KD_SECONDARY_VERSION \
     KD_SECONDARY_VERSION_AMD64_CONTEXT
 #else
@@ -1731,7 +1731,7 @@ extern WINDBG_EXTENSION_APIS   ExtensionApis;
 // Check if LocalAlloc is prototyped
 //#ifdef _WINBASE_
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 __inline VOID
 ReadPhysical(
     ULONG64             address,
@@ -2373,7 +2373,7 @@ GetTypeSize (
    IN LPCSTR    Type
    )
 {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
    SYM_DUMP_PARAM Sym = {
       sizeof (SYM_DUMP_PARAM), (PUCHAR)Type, DBG_DUMP_NO_PRINT | DBG_DUMP_GET_SIZE_ONLY, 0,
       NULL, NULL, NULL, 0, NULL
@@ -2411,7 +2411,7 @@ GetFieldData (
     OUT PVOID   pOutValue
    )
 {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
    FIELD_INFO flds = {(PUCHAR)Field, NULL, 0, DBG_DUMP_FIELD_FULL_NAME | DBG_DUMP_FIELD_COPY_FIELD_DATA | DBG_DUMP_FIELD_RETURN_ADDRESS, 0, pOutValue};
    SYM_DUMP_PARAM Sym = {
       sizeof (SYM_DUMP_PARAM), (PUCHAR)Type, DBG_DUMP_NO_PRINT, TypeAddress,
@@ -2456,7 +2456,7 @@ GetShortField (
     IN  USHORT  StoreAddress
    )
 {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     static ULONG64 SavedAddress;
     static PUCHAR  SavedName;
     static ULONG   ReadPhysical;
@@ -2555,7 +2555,7 @@ ListType (
     IN PSYM_DUMP_FIELD_CALLBACK CallbackRoutine
     )
 {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     FIELD_INFO flds = {(PUCHAR)NextPointer, NULL, 0, 0, 0, NULL};
     SYM_DUMP_PARAM Sym = {
        sizeof (SYM_DUMP_PARAM), (PUCHAR) Type, DBG_DUMP_NO_PRINT | DBG_DUMP_LIST, Address,
@@ -2592,7 +2592,7 @@ GetFieldOffset (
    OUT PULONG   pOffset
    )
 {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
    FIELD_INFO flds = {
        (PUCHAR)Field,
        (PUCHAR)"",
@@ -2789,11 +2789,11 @@ ExtMatchPatternA(
     return Ioctl(IG_MATCH_PATTERN_A, (PVOID)&Args, sizeof(Args));
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 #endif
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 #pragma warning(default:4115 4201 4204 4214 4221)
 #endif
 #if _MSC_VER >= 1200

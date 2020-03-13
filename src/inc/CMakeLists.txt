@@ -1,7 +1,7 @@
-if(CLR_CMAKE_PLATFORM_UNIX)
+if(CLR_CMAKE_HOST_UNIX)
     include_directories(${ROOT_DIR}/src/pal/inc)
     include_directories(${ROOT_DIR}/src/pal/inc/rt)
-endif(CLR_CMAKE_PLATFORM_UNIX)
+endif(CLR_CMAKE_HOST_UNIX)
 
 set( CORGUIDS_IDL_SOURCES
   cordebug.idl
@@ -20,7 +20,7 @@ set( CORGUIDS_IDL_SOURCES
   sospriv.idl
 )
 
-if(WIN32)
+if(CLR_CMAKE_HOST_WIN32)
 #Build for corguids is done in two steps:
 #1. compile .idl to *_i.c : This is done using custom midl command
 #2. compile *_i.c to .lib
@@ -63,7 +63,7 @@ foreach(IDL_SOURCE IN LISTS CORGUIDS_IDL_SOURCES)
 endforeach(IDL_SOURCE)
 
 add_compile_options(-fPIC)
-endif(WIN32)
+endif(CLR_CMAKE_HOST_WIN32)
 
 if(FEATURE_JIT_PITCHING)
    add_definitions(-DFEATURE_JIT_PITCHING)

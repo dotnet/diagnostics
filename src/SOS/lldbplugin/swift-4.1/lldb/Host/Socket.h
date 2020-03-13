@@ -20,7 +20,7 @@
 #include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
 
-#ifdef _WIN32
+#ifdef HOST_WINDOWS
 #include "lldb/Host/windows/windows.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>

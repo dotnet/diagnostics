@@ -11,7 +11,7 @@ _DBG_CheckStackAlignment:
   pushq %rbp                        // aligned -16
   movq %rsp, %rbp
 
-  testl $0xf,%esp      // can get away with esp even on AMD64.
+  testl $0xf,%esp      // can get away with esp even on HOST_AMD64.
   jz .+3
   int3
 

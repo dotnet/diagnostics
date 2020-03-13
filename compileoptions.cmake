@@ -1,7 +1,7 @@
 # Copyright (c) .NET Foundation and contributors. All rights reserved.
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-if (CLR_CMAKE_PLATFORM_UNIX)
+if (CLR_CMAKE_HOST_UNIX)
   # Disable frame pointer optimizations so profilers can get better call stacks
   add_compile_options(-fno-omit-frame-pointer)
 
@@ -14,12 +14,12 @@ if (CLR_CMAKE_PLATFORM_UNIX)
   # using twos-complement representation (this is normally undefined according to the C++ spec).
   add_compile_options(-fwrapv)
 
-  if(CLR_CMAKE_PLATFORM_DARWIN)
+  if(CLR_CMAKE_HOST_DARWIN)
     # We cannot enable "stack-protector-strong" on OS X due to a bug in clang compiler (current version 7.0.2)
     add_compile_options(-fstack-protector)
   else()
     add_compile_options(-fstack-protector-strong)
-  endif(CLR_CMAKE_PLATFORM_DARWIN)
+  endif(CLR_CMAKE_HOST_DARWIN)
 
   add_definitions(-DDISABLE_CONTRACTS)
   # The -ferror-limit is helpful during the porting, it makes sure the compiler doesn't stop
@@ -55,12 +55,12 @@ if (CLR_CMAKE_PLATFORM_UNIX)
   # may not generate the same object layout as MSVC.
   add_compile_options(-Wno-incompatible-ms-struct)
 
-  # Some architectures (e.g., ARM) assume char type is unsigned while CoreCLR assumes char is signed
-  # as x64 does. It has been causing issues in ARM (https://github.com/dotnet/coreclr/issues/4746)
+  # Some architectures (e.g., HOST_ARM) assume char type is unsigned while CoreCLR assumes char is signed
+  # as x64 does. It has been causing issues in HOST_ARM (https://github.com/dotnet/coreclr/issues/4746)
   add_compile_options(-fsigned-char)
-endif(CLR_CMAKE_PLATFORM_UNIX)
+endif(CLR_CMAKE_HOST_UNIX)
 
-if(CLR_CMAKE_PLATFORM_UNIX_ARM)
+if(CLR_CMAKE_HOST_UNIX_ARM)
    # Because we don't use CMAKE_C_COMPILER/CMAKE_CXX_COMPILER to use clang
    # we have to set the triple by adding a compiler argument
    add_compile_options(-mthumb)
@@ -70,9 +70,9 @@ if(CLR_CMAKE_PLATFORM_UNIX_ARM)
      add_definitions(-DARM_SOFTFP)
      add_compile_options(-mfloat-abi=softfp)
    endif(ARM_SOFTFP)
-endif(CLR_CMAKE_PLATFORM_UNIX_ARM)
+endif(CLR_CMAKE_HOST_UNIX_ARM)
 
-if (WIN32)
+if (CLR_CMAKE_HOST_WIN32)
   # Compile options for targeting windows
 
   # The following options are set by the razzle build
@@ -101,17 +101,17 @@ if (WIN32)
   add_compile_options(/ZH:SHA_256) # use SHA256 for generating hashes of compiler processed source files.
   add_compile_options(/source-charset:utf-8) # Force MSVC to compile source as UTF-8.
 
-  if (CLR_CMAKE_PLATFORM_ARCH_I386)
+  if (CLR_CMAKE_HOST_ARCH_I386)
     add_compile_options(/Gz)
-  endif (CLR_CMAKE_PLATFORM_ARCH_I386)
+  endif (CLR_CMAKE_HOST_ARCH_I386)
 
   add_compile_options($<$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>:/GL>)
   add_compile_options($<$<OR:$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>,$<CONFIG:Checked>>:/O1>)
 
-  if (CLR_CMAKE_PLATFORM_ARCH_AMD64)
+  if (CLR_CMAKE_HOST_ARCH_AMD64)
   # The generator expression in the following command means that the /homeparams option is added only for debug builds
   add_compile_options($<$<CONFIG:Debug>:/homeparams>) # Force parameters passed in registers to be written to the stack
-  endif (CLR_CMAKE_PLATFORM_ARCH_AMD64)
+  endif (CLR_CMAKE_HOST_ARCH_AMD64)
 
   # enable control-flow-guard support for native components for non-Arm64 builds
   add_compile_options(/guard:cf) 
@@ -127,11 +127,11 @@ if (WIN32)
 
   set(CMAKE_ASM_MASM_FLAGS "${CMAKE_ASM_MASM_FLAGS} /ZH:SHA_256")
   
-endif (WIN32)
+endif (CLR_CMAKE_HOST_WIN32)
 
 if(CLR_CMAKE_ENABLE_CODE_COVERAGE)
 
-  if(CLR_CMAKE_PLATFORM_UNIX)
+  if(CLR_CMAKE_HOST_UNIX)
     string(TOUPPER ${CMAKE_BUILD_TYPE} UPPERCASE_CMAKE_BUILD_TYPE)
     if(NOT UPPERCASE_CMAKE_BUILD_TYPE STREQUAL DEBUG)
       message( WARNING "Code coverage results with an optimised (non-Debug) build may be misleading" )
@@ -144,6 +144,6 @@ if(CLR_CMAKE_ENABLE_CODE_COVERAGE)
     set(CMAKE_EXE_LINKER_FLAGS     "${CMAKE_EXE_LINKER_FLAGS} ${CLANG_COVERAGE_LINK_FLAGS}")
   else()
     message(FATAL_ERROR "Code coverage builds not supported on current platform")
-  endif(CLR_CMAKE_PLATFORM_UNIX)
+  endif(CLR_CMAKE_HOST_UNIX)
 
 endif(CLR_CMAKE_ENABLE_CODE_COVERAGE)

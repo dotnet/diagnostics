@@ -21,14 +21,14 @@
 #include "cordebugdatatarget.h"
 #include "cordebuglibraryprovider.h"
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <unistd.h>
-#endif // !FEATURE_PAL
+#endif // !HOST_UNIX
 
 Runtime* Runtime::s_netcore = nullptr;
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 Runtime* Runtime::s_desktop = nullptr;
 #endif
 
@@ -59,7 +59,7 @@ HRESULT Runtime::CreateInstance(bool isDesktop, Runtime **ppRuntime)
         hr = g_ExtSymbols->GetModuleByModuleName(runtimeModuleName, 0, &moduleIndex, &moduleAddress);
         if (SUCCEEDED(hr))
         {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
             hr = g_ExtServices2->GetModuleInfo(moduleIndex, nullptr, &moduleSize);
 #else
             _ASSERTE(moduleAddress != 0);
@@ -116,7 +116,7 @@ HRESULT Runtime::CreateInstance()
     if (g_pRuntime == nullptr)
     {
         hr = CreateInstance(false, &s_netcore);
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
         g_pRuntime = s_netcore;
 #else
         if (FAILED(hr))
@@ -133,7 +133,7 @@ HRESULT Runtime::CreateInstance()
  * Switches between the .NET Core and desktop runtimes (if both 
  * loaded). Creates the desktop CLR runtime instance on demand.
 \**********************************************************************/
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 bool Runtime::SwitchRuntime(bool desktop)
 {
     if (desktop) {
@@ -158,7 +158,7 @@ void Runtime::CleanupRuntimes()
         delete s_netcore;
         s_netcore = nullptr;
     }
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     if (s_desktop != nullptr)
     {
         delete s_desktop;
@@ -210,7 +210,7 @@ void Runtime::Flush()
     {
         s_netcore->m_clrDataProcess->Flush();
     }
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     if (s_desktop != nullptr && s_desktop->m_clrDataProcess != nullptr)
     {
         s_desktop->m_clrDataProcess->Flush();
@@ -223,7 +223,7 @@ void Runtime::Flush()
 \**********************************************************************/
 HRESULT Runtime::GetRuntimeDirectory(std::string& runtimeDirectory)
 {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
     LPCSTR directory = g_ExtServices->GetCoreClrDirectory();
     if (directory == NULL)
     {
@@ -300,7 +300,7 @@ LPCSTR Runtime::GetDacFilePath()
             std::string dacModulePath(directory);
             dacModulePath.append(DIRECTORY_SEPARATOR_STR_A);
             dacModulePath.append(GetDacDllName());
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
             // If DAC file exists in the runtime directory
             if (access(dacModulePath.c_str(), F_OK) == 0)
 #endif
@@ -363,7 +363,7 @@ LPCSTR Runtime::GetDbiFilePath()
             std::string dbiModulePath(directory);
             dbiModulePath.append(DIRECTORY_SEPARATOR_STR_A);
             dbiModulePath.append(NET_DBI_DLL_NAME_A);
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
             // If DBI file exists in the runtime directory
             if (access(dbiModulePath.c_str(), F_OK) == 0)
 #endif
@@ -467,7 +467,7 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
 #else
     GUID skuId = CLR_ID_CORECLR;
 #endif
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     if (IsDesktop())
     {
         skuId = CLR_ID_V4_DESKTOP;
@@ -573,7 +573,7 @@ void Runtime::SymbolFileCallback(const char* moduleFileName, const char* symbolF
     }
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 /**********************************************************************\
  * Internal function to load and check the version of the module
@@ -623,4 +623,4 @@ HMODULE LoadLibraryAndCheck(
     return hModule;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX

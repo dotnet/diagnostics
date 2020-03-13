@@ -5,7 +5,7 @@ Subject: [PATCH] Fix: building probe providers with C++ compiler
 
 Robert Daniels wrote:
 > > I'm attempting to use lttng userspace tracing with a C++ application
-> > on an ARM platform. I'm using GCC 4.8.4 on Linux 3.14 with the 2.6
+> > on an HOST_ARM platform. I'm using GCC 4.8.4 on Linux 3.14 with the 2.6
 > > release of lttng. I've compiled lttng-modules, lttng-ust, and
 > > lttng-tools and have been able to get a simple test working with C
 > > code.  When I attempt to run the hello.cxx test on my target it will
@@ -13,7 +13,7 @@ Robert Daniels wrote:
 >
 >
 > I spent a little time digging into this issue and finally discovered the
-> cause of my segfault with ARM C++ tracepoints.
+> cause of my segfault with HOST_ARM C++ tracepoints.
 >
 > There is a struct called 'lttng_event' in ust-events.h which contains an
 > empty union 'u'.  This was the cause of my issue.  Under C, this empty union

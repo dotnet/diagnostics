@@ -381,7 +381,7 @@ PAL_wcstol(
 
     res = strtol(s_nptr, &s_endptr, base);
 
-#ifdef BIT64
+#ifdef HOST_64BIT
     if (res > _I32_MAX)
     {
         res = _I32_MAX;
@@ -508,7 +508,7 @@ PAL_wcstoul(
 
     res = strtoul(s_nptr, &s_endptr, base);
 
-#ifdef BIT64
+#ifdef HOST_64BIT
     if (res > _UI32_MAX)
     {
         wchar_16 wc = *nptr;

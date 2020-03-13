@@ -14,7 +14,7 @@
 // to provide a minimum level of compatibility across all platforms to rely
 // on various posix api functionality.
 
-#if defined(_WIN32)
+#if defined(HOST_WINDOWS)
 #include "lldb/Host/windows/PosixApi.h"
 #else
 #include <unistd.h>

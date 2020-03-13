@@ -16,7 +16,7 @@
 
 #include "sos_md.h"
 
-#ifdef SOS_TARGET_X86
+#ifdef FEATURE_X86
 namespace X86GCDump
 {
 #include "gcdump.h"
@@ -43,9 +43,9 @@ namespace X86GCDump
 #include "gcdump.cpp"
 #include "i386/gcdumpx86.cpp"
 }
-#endif // SOS_TARGET_X86
+#endif // FEATURE_X86
 
-#ifdef SOS_TARGET_AMD64 
+#ifdef FEATURE_AMD64 
 #include "gcdump.h"
 #define DAC_ARG(x)
 #define SUPPORTS_DAC
@@ -61,7 +61,7 @@ namespace X86GCDump
     #endif
     #define LOG_PIPTR(pObjRef, gcFlags, hCallBack) ((void)0)
 #include "gcdumpnonx86.cpp"
-#endif // SOS_TARGET_AMD64
+#endif // FEATURE_AMD64
 
 #include "disasm.h"
 
@@ -75,7 +75,7 @@ GenOpenMapping(
     PULONG Size
     )
 {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     HANDLE hFile;
     HANDLE hMappedFile;
     PVOID MappedFile;
@@ -159,9 +159,9 @@ GenOpenMapping(
     CloseHandle (hFile);
 
     return MappedFile;
-#else // FEATURE_PAL
+#else // HOST_UNIX
     return NULL;
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 }
 
 char* PrintOneLine (__in_z char *begin, __in_z char *limit)
@@ -521,7 +521,7 @@ INT_PTR ParseHexNumber (__in_z char *ptr, ___out char **endptr)
     char *endptr1;
     INT_PTR value1 = strtoul(ptr, &endptr1, 16);
 
-#ifdef _TARGET_WIN64_
+#ifdef TARGET_64BIT
     if ('`' == endptr1[0] && isxdigit(endptr1[1]))
     {
         char *endptr2;
@@ -551,7 +551,7 @@ INT_PTR ParseHexNumber (__in_z char *ptr, ___out char **endptr)
         value1 = (value1 << (ndigits2*4)) | value2;
         endptr1 = endptr2;
     }
-#endif // _TARGET_WIN64_
+#endif // TARGET_64BIT
 
     // account for the possible 'h' suffix
     if ((*endptr1 == 'h') || (*endptr1 == 'H'))
@@ -572,7 +572,7 @@ INT_PTR GetValueFromExpr(__in_z char *ptr, INT_PTR &value)
     char *myPtr = ptr;
     BOOL bByRef = IsByRef (myPtr);
 
-    // ARM disassembly contains '#' prefixes for hex constants
+    // HOST_ARM disassembly contains '#' prefixes for hex constants
     if (*myPtr == '#')
         ++myPtr;
 
@@ -659,7 +659,7 @@ INT_PTR GetValueFromExpr(__in_z char *ptr, INT_PTR &value)
         }
     }
 
-#ifdef _TARGET_WIN64_
+#ifdef TARGET_64BIT
     // handle CLRStub@7fffc8601cc (000007fffc8601cc)
     if (!bByRef && !strncmp(myPtr, "CLRStub[", 8))
     {
@@ -682,7 +682,7 @@ INT_PTR GetValueFromExpr(__in_z char *ptr, INT_PTR &value)
             }
         }
     }
-#endif // _TARGET_WIN64_
+#endif // TARGET_64BIT
 
     return 0;
 }
@@ -733,7 +733,7 @@ LPCWSTR EHTypedClauseTypeName(___in const DACEHInfo* pEHInfo)
 BOOL IsClonedFinally(DACEHInfo *pEHInfo)
 {
     // This maybe should be determined in the VM and passed in the DACEHInfo struct.
-#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)
+#if defined(TARGET_AMD64) || defined(TARGET_ARM64)
     return ((pEHInfo->tryStartOffset == pEHInfo->tryEndOffset) &&
             (pEHInfo->tryStartOffset == pEHInfo->handlerStartOffset) &&
             (pEHInfo->clauseType == EHFinally) &&
@@ -834,7 +834,7 @@ void SOSEHInfo::FormatForDisassembly(CLRDATA_ADDRESS offSet)
 
 
 //
-// Implementation shared by X86, ARM, and X64
+// Implementation shared by X86, HOST_ARM, and X64
 // Any cross platform code should resolve through g_targetMachine or should
 // use the IS_DBG_TARGET_XYZ macro.
 //
@@ -920,9 +920,9 @@ BOOL PrintCallInfo(DWORD_PTR vEBP, DWORD_PTR IP, DumpStackFlag& DSFlag, BOOL bSy
             if (!bSymbolOnly)
                 DMLOut("%p %s ", SOS_PTR(vEBP), DMLIP(IP));
 
-            // if AMD64 ever becomes a cross platform target this must be resolved through
+            // if HOST_AMD64 ever becomes a cross platform target this must be resolved through
             // virtual dispatch rather than conditional compilation
-#if defined(_TARGET_AMD64_) || defined(_TARGET_X86_)
+#if defined(TARGET_AMD64) || defined(TARGET_X86)
             // degrade gracefully for debuggees that don't have a runtime loaded, or a DAC available
             eTargetType ett = ettUnk;
             if (!g_bDacBroken)
@@ -939,7 +939,7 @@ BOOL PrintCallInfo(DWORD_PTR vEBP, DWORD_PTR IP, DumpStackFlag& DSFlag, BOOL bSy
                     methodDesc = finalMDorIP;
                 }
             }
-#endif // _TARGET_AMD64_ || _TARGET_X86_
+#endif // TARGET_AMD64 || TARGET_X86
             if (methodDesc == 0) 
             {
                 PrintNativeStack(IP, DSFlag.fSuppressSrcInfo);
@@ -961,14 +961,14 @@ BOOL PrintCallInfo(DWORD_PTR vEBP, DWORD_PTR IP, DumpStackFlag& DSFlag, BOOL bSy
             else if ((name = HelperFuncName(IP)) != NULL) {
                 ExtOut(" (JitHelp: %s)", name);
             }
-#if defined(_TARGET_AMD64_) || defined(_TARGET_X86_)
+#if defined(TARGET_AMD64) || defined(TARGET_X86)
             else if (ett == ettMD || ett == ettStub)
             {
                 NameForMD_s(methodDesc, g_mdName,mdNameLen);                    
                 DMLOut("%s (stub for %S)", DMLIP(IP), g_mdName);
                 // fallthrough to return
             }
-#endif // _TARGET_AMD64_ || _TARGET_X86_
+#endif // TARGET_AMD64 || TARGET_X86
             else
             {
                 DMLOut(DMLIP(IP));
@@ -1041,7 +1041,7 @@ void DumpStackWorker (DumpStackFlag &DSFlag)
     }
 }
 
-#ifdef SOS_TARGET_X86
+#ifdef FEATURE_X86
 ///
 /// X86Machine implementation
 ///
@@ -1081,9 +1081,9 @@ void X86Machine::DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printf
     gcDump.gcPrintf = gcPrintf;
     gcDump.DumpGCTable(pTable, header, methodSize, 0);
 }
-#endif // SOS_TARGET_X86
+#endif // FEATURE_X86
 
-#ifdef SOS_TARGET_ARM
+#ifdef FEATURE_ARM
 ///
 /// ARMMachine implementation
 ///
@@ -1093,9 +1093,9 @@ LPCSTR ARMMachine::s_GCRegs[14]       = {"r0", "r1", "r2",  "r3",  "r4",  "r5", 
                                          "r7", "r8", "r9",  "r10", "r11", "r12", "lr"};
 LPCSTR ARMMachine::s_SPName           = "sp";
 
-#endif // SOS_TARGET_ARM
+#endif // FEATURE_ARM
 
-#ifdef SOS_TARGET_AMD64
+#ifdef FEATURE_AMD64
 ///
 /// AMD64Machine implementation
 ///
@@ -1106,7 +1106,7 @@ LPCSTR AMD64Machine::s_GCRegs[15]       = {"rax", "rbx", "rcx", "rdx", "rsi", "r
 LPCSTR AMD64Machine::s_SPName           = "RSP";
 
 ///
-/// Dump AMD64 GCInfo table
+/// Dump HOST_AMD64 GCInfo table
 ///
 void AMD64Machine::DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const
 {
@@ -1121,9 +1121,9 @@ void AMD64Machine::DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, prin
     gcDump.DumpGCTable(dac_cast<PTR_BYTE>(gcInfoToken.Info), methodSize, 0);
 }
 
-#endif // SOS_TARGET_AMD64
+#endif // FEATURE_AMD64
 
-#ifdef SOS_TARGET_ARM64
+#ifdef FEATURE_ARM64
 ///
 /// ARM64Machine implementation
 ///
@@ -1136,7 +1136,7 @@ LPCSTR ARM64Machine::s_GCRegs[28]       = {"x0", "x1", "x2",  "x3",  "x4",  "x5"
                                            "x22", "x23", "x24", "x25", "x26", "x27", "x28"};
 LPCSTR ARM64Machine::s_SPName           = "sp";
 
-#endif // SOS_TARGET_ARM64
+#endif // FEATURE_ARM64
 
 //
 // GCEncodingInfo class member implementations

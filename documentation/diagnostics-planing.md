@@ -39,7 +39,7 @@ But it is also important to say that they want a certain uniformity, and it is t
 that is actually often the hardest part.  In particular they want this information regardless of
 their choices with respect to:
 
-  * The hardware being used (e.g. X64, X64, ARM64 ...)
+  * The hardware being used (e.g. X64, X64, HOST_ARM64 ...)
   * The operating system being used (Windows, Linux ...)
   * The software environment in use (Raw VMs, containers, Azure Service Fabric, Web Applications (PAAS), Azure Functions, ...)
   * The other services used (Database, Storage, Redis Caches, Identity/Authorization (e.g. Microsoft ID, FaceBook Google)

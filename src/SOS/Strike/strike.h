@@ -77,18 +77,18 @@
 #include <malloc.h>
 #endif
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 #ifndef alloca
 #define alloca  __builtin_alloca
 #endif
 #ifndef _alloca
 #define _alloca __builtin_alloca
 #endif
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 #include <stddef.h>
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 #include <basetsd.h>  
 #endif
 
@@ -105,7 +105,7 @@
 #include "exts.h"
 
 //Alignment constant for allocation
-#if defined(_TARGET_X86_) || defined(_TARGET_ARM_)
+#if defined(TARGET_X86) || defined(TARGET_ARM)
 #define ALIGNCONST 3
 #else
 #define ALIGNCONST 7
@@ -114,11 +114,11 @@
 //The large object heap uses a different alignment
 #define ALIGNCONSTLARGE 7
 
-#ifdef _WIN64
+#ifdef HOST_64BIT
 #define SIZEOF_OBJHEADER    8
-#else // !_WIN64
+#else // !HOST_64BIT
 #define SIZEOF_OBJHEADER    4
-#endif // !_WIN64
+#endif // !HOST_64BIT
 
 #define plug_skew           SIZEOF_OBJHEADER
 #define min_obj_size        (sizeof(BYTE*)+plug_skew+sizeof(size_t))

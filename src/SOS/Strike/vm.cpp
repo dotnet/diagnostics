@@ -22,7 +22,7 @@ Revision History:
 
 --*/
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 #include <tchar.h>
 
 
@@ -729,4 +729,4 @@ void vmmap()
    assert(false);
 }
 
-#endif  // #ifndef FEATURE_PAL
+#endif  // #ifndef HOST_UNIX

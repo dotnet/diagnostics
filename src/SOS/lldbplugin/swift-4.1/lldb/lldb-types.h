@@ -34,7 +34,7 @@
 // things should be defined. Currently MacOSX is being assumed by default
 // since that is what lldb was first developed for.
 
-#ifdef _WIN32
+#ifdef HOST_WINDOWS
 
 #include <process.h>
 

@@ -198,13 +198,13 @@ LLDBServices::VirtualUnwind(
     DT_CONTEXT *dtcontext = (DT_CONTEXT*)context;
     lldb::SBFrame frameFound;
 
-#ifdef DBG_TARGET_AMD64
+#ifdef TARGET_AMD64
     DWORD64 spToFind = dtcontext->Rsp;
-#elif DBG_TARGET_X86
+#elif TARGET_X86
     DWORD spToFind = dtcontext->Esp;
-#elif DBG_TARGET_ARM
+#elif TARGET_ARM
     DWORD spToFind = dtcontext->Sp;
-#elif DBG_TARGET_ARM64
+#elif TARGET_ARM64
     DWORD64 spToFind = dtcontext->Sp;
 #else
 #error "spToFind undefined for this platform"
@@ -447,13 +447,13 @@ HRESULT
 LLDBServices::GetExecutingProcessorType(
     PULONG type)
 {
-#ifdef DBG_TARGET_AMD64
+#ifdef TARGET_AMD64
     *type = IMAGE_FILE_MACHINE_AMD64;
-#elif DBG_TARGET_ARM
+#elif TARGET_ARM
     *type = IMAGE_FILE_MACHINE_ARMNT;
-#elif DBG_TARGET_ARM64
+#elif TARGET_ARM64
     *type = IMAGE_FILE_MACHINE_ARM64;
-#elif DBG_TARGET_X86
+#elif TARGET_X86
     *type = IMAGE_FILE_MACHINE_I386;
 #else
 #error "Unsupported target"
@@ -1560,7 +1560,7 @@ LLDBServices::GetContextFromFrame(
     /* const */ lldb::SBFrame& frame,
     DT_CONTEXT *dtcontext)
 {
-#ifdef DBG_TARGET_AMD64
+#ifdef TARGET_AMD64
     dtcontext->Rip = frame.GetPC();
     dtcontext->Rsp = frame.GetSP();
     dtcontext->Rbp = frame.GetFP();
@@ -1587,7 +1587,7 @@ LLDBServices::GetContextFromFrame(
     dtcontext->SegEs = GetRegister(frame, "es");
     dtcontext->SegFs = GetRegister(frame, "fs");
     dtcontext->SegGs = GetRegister(frame, "gs");
-#elif DBG_TARGET_ARM
+#elif TARGET_ARM
     dtcontext->Pc = frame.GetPC();
     dtcontext->Sp = frame.GetSP();
     dtcontext->Lr = GetRegister(frame, "lr");
@@ -1606,7 +1606,7 @@ LLDBServices::GetContextFromFrame(
     dtcontext->R10 = GetRegister(frame, "r10");
     dtcontext->R11 = GetRegister(frame, "r11");
     dtcontext->R12 = GetRegister(frame, "r12");
-#elif DBG_TARGET_ARM64
+#elif TARGET_ARM64
     dtcontext->Pc = frame.GetPC();
     dtcontext->Sp = frame.GetSP();
     dtcontext->Lr = GetRegister(frame, "x30");
@@ -1642,7 +1642,7 @@ LLDBServices::GetContextFromFrame(
     dtcontext->X26 = GetRegister(frame, "x26");
     dtcontext->X27 = GetRegister(frame, "x27");
     dtcontext->X28 = GetRegister(frame, "x28");
-#elif DBG_TARGET_X86
+#elif TARGET_X86
     dtcontext->Eip = frame.GetPC();
     dtcontext->Esp = frame.GetSP();
     dtcontext->Ebp = frame.GetFP();

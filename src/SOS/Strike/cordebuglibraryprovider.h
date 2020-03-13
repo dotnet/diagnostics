@@ -5,7 +5,7 @@
 #ifndef __cordebuglibraryprovider_h__
 #define __cordebuglibraryprovider_h__
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 extern HMODULE LoadLibraryAndCheck(PCWSTR filename, DWORD timestamp, DWORD filesize);
 #endif
 
@@ -32,7 +32,7 @@ public:
         {
             *pInterface = static_cast<IUnknown *>(static_cast<ICLRDebuggingLibraryProvider*>(this));
         }
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         else if (InterfaceId == IID_ICLRDebuggingLibraryProvider)
         {
             *pInterface = static_cast<ICLRDebuggingLibraryProvider *>(this);
@@ -114,7 +114,7 @@ public:
 
         ExtOut("Loaded %S\n", modulePath.GetPtr());
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         if (phModule != NULL)
         {
             *phModule = LoadLibraryAndCheck(modulePath.GetPtr(), dwTimestamp, dwSizeOfImage);

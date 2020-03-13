@@ -35,10 +35,10 @@
 #define STRESS_LOG_READONLY
 #include "stresslog.h"
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 #include <sys/stat.h>
 #include <dlfcn.h>
-#endif // !FEATURE_PAL
+#endif // !HOST_UNIX
 
 #include <coreclrhost.h>
 #include <set>
@@ -73,7 +73,7 @@ ISOSDacInterface *g_sos = NULL;
 const UINT kcMaxRevertedRejitData   = 10;
 const UINT kcMaxTieredVersions      = 10;
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 // ensure we always allocate on the process heap
 void* __cdecl operator new(size_t size) throw()
@@ -154,7 +154,7 @@ DWORD_PTR GetValueFromExpression(___in __in_z const char *const instr)
     return 0;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 void ReportOOM()
 {
@@ -185,7 +185,7 @@ BOOL g_InMinidumpSafeMode = FALSE;
 
 BOOL IsMiniDumpFileNODAC ()
 {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     ULONG Class;
     ULONG Qualifier;
     g_ExtControl->GetDebuggeeType(&Class,&Qualifier);
@@ -198,7 +198,7 @@ BOOL IsMiniDumpFileNODAC ()
         }
     }
     
-#endif // FEATURE_PAL    
+#endif // HOST_UNIX    
     return FALSE;
 }
 
@@ -208,7 +208,7 @@ BOOL IsMiniDumpFileNODAC ()
 // gathered to make !clrstack, !threads, !help, !eeversion and !pe work.
 BOOL IsMiniDumpFile ()
 {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     // It is okay for this to be static, because although the debugger may debug multiple
     // managed processes at once, I don't believe multiple dumpfiles of different
     // types is a scenario to worry about.
@@ -220,7 +220,7 @@ BOOL IsMiniDumpFile ()
         return g_InMinidumpSafeMode;
     }
     
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
     return FALSE;
 }
 
@@ -234,7 +234,7 @@ ULONG DebuggeeType()
     return Class;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 // Check if a file exist
 BOOL FileExist (const char *filename)
@@ -295,7 +295,7 @@ BOOL IsRetailBuild (size_t base)
     return FALSE;
 }
 
-#endif // !FEATURE_PAL
+#endif // !HOST_UNIX
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -627,7 +627,7 @@ void DisplaySharedStatic(ULONG64 dwModuleDomainID, DacpMethodTableData* pMT, Dac
         return;
     }
 
-#if defined(_TARGET_WIN64_)
+#if defined(TARGET_64BIT)
     ExtOut("                                 >> Domain:Value ");
 #else
     ExtOut("    >> Domain:Value ");
@@ -1479,13 +1479,13 @@ HRESULT FileNameForModule (DacpModuleData *pModule, __out_ecount (MAX_LONGPATH) 
             if (fileName[0] != W('\0'))
                 return hr; // done
         }
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         // Try the base *
         if (base)
         {
             hr = DllsName((ULONG_PTR) base, fileName);
         }
-#endif // !FEATURE_PAL
+#endif // !HOST_UNIX
     }
     
     // If we got here, either DllsName worked, or we couldn't find a name
@@ -1742,7 +1742,7 @@ BOOL IsSameModuleName (const char *str1, const char *str2)
     const char *ptr2 = str2 + strlen(str2)-1;
     while (ptr2 >= str2)
     {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         if (tolower(*ptr1) != tolower(*ptr2))
 #else
         if (*ptr1 != *ptr2)
@@ -1977,7 +1977,7 @@ void DumpStackObjectsInternal(size_t StackTop, size_t StackBottom, BOOL verifyFi
 void DumpRegObjectHelper(const char *regName, BOOL verifyFields)
 {
     DWORD_PTR reg;
-#ifdef FEATURE_PAL    
+#ifdef HOST_UNIX    
     if (FAILED(g_ExtRegisters->GetValueByName(regName, &reg)))
         return;
 #else
@@ -1987,14 +1987,14 @@ void DumpRegObjectHelper(const char *regName, BOOL verifyFields)
         FAILED(g_ExtRegisters->GetValue(IREG, &value)))
         return;
 
-#if defined(SOS_TARGET_X86) || defined(SOS_TARGET_ARM)
+#if defined(FEATURE_X86) || defined(FEATURE_ARM)
     reg = (DWORD_PTR) value.I32;
-#elif defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
+#elif defined(FEATURE_AMD64) || defined(FEATURE_ARM64)
     reg = (DWORD_PTR) value.I64;
 #else
 #error Unsupported target
 #endif
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
     DumpStackObjectsOutput(regName, reg, verifyFields);
 }
@@ -2073,7 +2073,7 @@ BOOL IsFusionLoadedModule (LPCSTR fusionName, LPCSTR mName)
                 return FALSE;
             }
             
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
             if (tolower(*fusionName) != tolower(*mName))
 #else
             if (*fusionName != *mName)
@@ -2292,7 +2292,7 @@ Failure:
     return NULL;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -2346,7 +2346,7 @@ HRESULT GetClrModuleImages(__in IXCLRDataModule* module, __in CLRDataModuleExten
     return hr;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -2379,7 +2379,7 @@ HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataMo
             DacpGetModuleData moduleData;
             hr = moduleData.Request(module);
             if (FAILED(hr)) {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
                 return hr;
 #else
                 hr = GetClrModuleImages(module, CLRDATA_MODULE_PE_FILE, &moduleData.LoadedPEAddress, &moduleData.LoadedPESize);
@@ -2750,7 +2750,7 @@ void GetInfoFromModule (DWORD_PTR ModuleAddr, ULONG token, DWORD_PTR *ret)
                     }
                     else
                     {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
                         if (IsDMLEnabled())
                             DMLOut("Not JITTED yet. Use <exec cmd=\"!bpmd -md %p\">!bpmd -md %p</exec> to break on run.\n",
                                 SOS_PTR(md), SOS_PTR(md));
@@ -3211,7 +3211,7 @@ CLRDATA_ADDRESS GetCurrentManagedThread ()
 void ReloadSymbolWithLineInfo()
 {
     _ASSERTE(g_pRuntime != nullptr);
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     static BOOL bLoadSymbol = FALSE;
     if (!bLoadSymbol)
     {
@@ -3294,7 +3294,7 @@ BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int file
     _ASSERTE(g_ExtSymbols2 != nullptr);
     _ASSERTE(g_pRuntime != nullptr);
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
     // Load the symbols for runtime. On Linux we are looking for the "sccsid" 
     // global so "libcoreclr.so/.dylib" symbols need to be loaded.
     LoadNativeSymbols(true);
@@ -3382,7 +3382,7 @@ bool IsRuntimeVersionAtLeast(VS_FIXEDFILEINFO& fileInfo, DWORD major)
     return false;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo)
 {
@@ -3414,7 +3414,7 @@ BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo)
     return FALSE;
 }
 
-#endif // !FEATURE_PAL
+#endif // !HOST_UNIX
 
 size_t ObjectSize(DWORD_PTR obj,BOOL fIsLargeObject)
 {
@@ -3598,7 +3598,7 @@ void StringObjectContent(size_t obj, BOOL fLiteral, const int length)
     }
 }
 
-#ifdef _TARGET_WIN64_
+#ifdef TARGET_64BIT
 
 #include <limits.h>
 
@@ -3644,7 +3644,7 @@ __int64 str64hex(const char *ptr)
     return value;    
 }
 
-#endif // _TARGET_WIN64_
+#endif // TARGET_64BIT
 
 BOOL GetValueForCMD (const char *ptr, const char *end, ARGTYPE type, size_t *value)
 {   
@@ -3663,21 +3663,21 @@ BOOL GetValueForCMD (const char *ptr, const char *end, ARGTYPE type, size_t *val
     } else {
         char *last;
         if (type == COHEX) {
-#ifdef _TARGET_WIN64_
+#ifdef TARGET_64BIT
             *value = str64hex(ptr);
 #else
             *value = strtoul(ptr,&last,16);
 #endif
         }
         else {     
-#ifdef _TARGET_WIN64_
+#ifdef TARGET_64BIT
             *value = _atoi64(ptr);
 #else
             *value = strtoul(ptr,&last,10);
 #endif
         }
 
-#ifdef _TARGET_WIN64_
+#ifdef TARGET_64BIT
         last = (char *) ptr;
         // Ignore leading 0x if present
         if (*last=='0' && toupper(*(last+1))=='X') {
@@ -3786,7 +3786,7 @@ BOOL GetCMDOption(const char *string, CMDOption *option, size_t nOption,
             }
         }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
         if (ptr[0] != '-' && ptr[0] != '/') {
 #else
         if (ptr[0] != '-') {
@@ -3934,7 +3934,7 @@ HRESULT LoadClrDebugDll(void)
     HRESULT hr = g_pRuntime->GetClrDataProcess(&g_clrData);
     if (FAILED(hr))
     {
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
         return hr;
 #else
         // Fail if ExtensionApis wasn't initialized because we are hosted under dotnet-dump
@@ -4147,7 +4147,7 @@ HRESULT GetMTOfObject(TADDR obj, TADDR *mt)
     return hr;
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 StressLogMem::~StressLogMem ()
 {
@@ -4222,7 +4222,7 @@ bool StressLogMem::IsInStressLog (ULONG64 addr)
     return false;
 }
 
-#endif // !FEATURE_PAL
+#endif // !HOST_UNIX
 
 unsigned int Output::g_bSuppressOutput = 0;
 unsigned int Output::g_Indent = 0;
@@ -4676,7 +4676,7 @@ CachedString Output::BuildManagedVarValue(__in_z LPCWSTR expansionName, ULONG fr
 EnableDMLHolder::EnableDMLHolder(BOOL enable)
     : mEnable(enable)
 {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     // If the user has not requested that we use DML, it's still possible that
     // they have instead specified ".prefer_dml 1".  If enable is false,
     // we will check here for .prefer_dml.  Since this class is only used once
@@ -4693,12 +4693,12 @@ EnableDMLHolder::EnableDMLHolder(BOOL enable)
     {
         Output::g_DMLEnable++;
     }
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 }
 
 EnableDMLHolder::~EnableDMLHolder()
 {
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
     if (mEnable)
         Output::g_DMLEnable--;
 #endif
@@ -5042,7 +5042,7 @@ void TableOutput::OutputIndent()
         ExtOut(GetWhitespace(mIndent));
 }
 
-#ifndef FEATURE_PAL
+#ifndef HOST_UNIX
 
 PEOffsetMemoryReader::PEOffsetMemoryReader(TADDR moduleBaseAddress) :
     m_moduleBaseAddress(moduleBaseAddress),
@@ -5136,7 +5136,7 @@ HRESULT __stdcall PERvaMemoryReader::ReadExecutableAtRVA(DWORD relativeVirtualAd
     return SafeReadMemory(m_moduleBaseAddress + relativeVirtualAddress, data, cbData, pcbData) ? S_OK : E_FAIL;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
 
 static void AddAssemblyName(WString& methodOutput, CLRDATA_ADDRESS mdesc)
 {
@@ -5465,7 +5465,7 @@ HRESULT InternalFrameManager::PrintCurrentInternalFrame()
     return S_OK;
 }
 
-#ifdef FEATURE_PAL
+#ifdef HOST_UNIX
 
 struct MemoryRegion 
 {
@@ -5643,4 +5643,4 @@ HRESULT GetMetadataMemory(CLRDATA_ADDRESS address, ULONG32 bufferSize, BYTE* buf
     return E_ACCESSDENIED;
 }
 
-#endif // FEATURE_PAL
+#endif // HOST_UNIX
