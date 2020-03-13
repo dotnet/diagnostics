@@ -56,12 +56,12 @@ VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ (8|17)\s*\]\s+
-IFDEF:HOST_ARM
+IFDEF:ARM
 VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
-ENDIF:HOST_ARM
-IFDEF:HOST_ARM64
+ENDIF:ARM
+IFDEF:ARM64
 VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
-ENDIF:HOST_ARM64
+ENDIF:ARM64
 VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
 IFDEF:X64
 VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
@@ -72,12 +72,12 @@ ENDIF:X86
 
 IFDEF:64BIT
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 13\s*\]\s+
-IFDEF:HOST_ARM
+IFDEF:ARM
 VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
-ENDIF:HOST_ARM
-IFDEF:HOST_ARM64
+ENDIF:ARM
+IFDEF:ARM64
 VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
-ENDIF:HOST_ARM64
+ENDIF:ARM64
 VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
 IFDEF:X64
 VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
@@ -135,7 +135,7 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.InvalidOperationException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
 
 !IFDEF:DOTNETDUMP
-!IFDEF:HOST_ARM
+!IFDEF:ARM
 
 # 9) Verify DumpStack works
 SOSCOMMAND:DumpStack
@@ -154,5 +154,5 @@ SOSCOMMAND:EEStack
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+\+\s*0x<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(System\.String\[\]\)\),\s+calling.*
 
-ENDIF:HOST_ARM
+ENDIF:ARM
 ENDIF:DOTNETDUMP

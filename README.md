@@ -17,7 +17,7 @@ the build is simply a matter of invoking the 'build' script (`build.cmd` or `bui
 repository.
 
 The details of installing the components differ depending on the operating system.  See the following
-pages based on your OS.  There is no cross-building across OS (only for HOST_ARM, which is built on x64).
+pages based on your OS.  There is no cross-building across OS (only for ARM, which is built on x64).
 You have to be on the particular platform to build that platform.
 
 To install the platform's prerequisites and build:
