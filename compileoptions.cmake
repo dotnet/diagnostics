@@ -55,8 +55,8 @@ if (CLR_CMAKE_HOST_UNIX)
   # may not generate the same object layout as MSVC.
   add_compile_options(-Wno-incompatible-ms-struct)
 
-  # Some architectures (e.g., HOST_ARM) assume char type is unsigned while CoreCLR assumes char is signed
-  # as x64 does. It has been causing issues in HOST_ARM (https://github.com/dotnet/coreclr/issues/4746)
+  # Some architectures (e.g., ARM) assume char type is unsigned while CoreCLR assumes char is signed
+  # as x64 does. It has been causing issues in ARM (https://github.com/dotnet/coreclr/issues/4746)
   add_compile_options(-fsigned-char)
 endif(CLR_CMAKE_HOST_UNIX)
 

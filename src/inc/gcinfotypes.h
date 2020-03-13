@@ -119,7 +119,7 @@ struct GcStackSlot
 // The only scenarios currently supported by CoreCLR are:
 // 1. Object references
 // 2. ByRef pointers
-// 3. HOST_ARM64/X64 only : Structs returned in two registers
+// 3. ARM64/X64 only : Structs returned in two registers
 // 4. X86 only : Floating point returns to perform the correct save/restore 
 //    of the return value around return-hijacking.
 //
@@ -137,7 +137,7 @@ struct GcStackSlot
 // 
 // RT_Unset is only used in the following situations:
 // X64: Used by JIT64 until updated to use GcInfo v2 API
-// HOST_ARM: Used by JIT32 until updated to use GcInfo v2 API
+// ARM: Used by JIT32 until updated to use GcInfo v2 API
 //
 // RT_Unset should have a valid encoding, whose bits are actually stored in the image.
 // For X86, there are no free bits, and there's no RT_Unused enumeration.
@@ -655,7 +655,7 @@ void FASTCALL decodeCallPattern(int         pattern,
 #define NORMALIZE_SIZE_OF_STACK_AREA(x) ((x)>>2)
 #define DENORMALIZE_SIZE_OF_STACK_AREA(x) ((x)<<2)
 #define CODE_OFFSETS_NEED_NORMALIZATION 1
-#define NORMALIZE_CODE_OFFSET(x) (x)   // Instructions are 2/4 bytes long in Thumb/HOST_ARM states, 
+#define NORMALIZE_CODE_OFFSET(x) (x)   // Instructions are 2/4 bytes long in Thumb/ARM states, 
 #define DENORMALIZE_CODE_OFFSET(x) (x) // but the safe-point offsets are encoded with a -1 adjustment.
 #define NORMALIZE_REGISTER(x) (x)
 #define DENORMALIZE_REGISTER(x) (x)

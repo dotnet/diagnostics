@@ -10,7 +10,7 @@
 #include "sospriv.h"
 #include "corerror.h"
 
-#define IMAGE_FILE_MACHINE_AMD64             0x8664  // HOST_AMD64 (K8)
+#define IMAGE_FILE_MACHINE_AMD64             0x8664  // AMD64 (K8)
 
 DataTarget::DataTarget(void) :
     m_ref(0)

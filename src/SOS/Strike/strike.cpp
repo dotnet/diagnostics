@@ -24,7 +24,7 @@
 // starting point for understanding the semantics of these commands is the sosdocs.txt file.
 // 
 // #CrossPlatformSOS
-// SOS currently supports cross platform debugging from x86 to HOST_ARM. It takes a different approach 
+// SOS currently supports cross platform debugging from x86 to ARM. It takes a different approach 
 // from the DAC: whereas for the DAC we produce one binary for each supported host-target 
 // architecture pair, for SOS we produce only one binary for each host architecture; this one 
 // binary contains code for all supported target architectures. In doing this SOS depends on two
@@ -40,8 +40,8 @@
 // To resolve this problem, SOS now abstracts the target behind the IMachine interface, and uses 
 // calls on IMachine to take target-specific actions. It implements X86Machine, ARMMachine, and 
 // AMD64Machine. An instance of these exists in each appropriate host (e.g. the X86 version of SOS
-// contains instances of X86Machine and ARMMachine, the HOST_ARM version contains an instance of 
-// ARMMachine, and the HOST_AMD64 version contains an instance of AMD64Machine). The code included in 
+// contains instances of X86Machine and ARMMachine, the ARM version contains an instance of 
+// ARMMachine, and the AMD64 version contains an instance of AMD64Machine). The code included in 
 // each version if determined by the SosTarget*** MSBuild symbols, and SOS_TARGET_*** conditional 
 // compilation symbols (as specified in sos.targets).
 // 
@@ -52,7 +52,7 @@
 // The one-binary-per-host decision does have some drawbacks: 
 //   . Currently including system headers or even CLR headers will only account for the host 
 //     target, IOW, when building the X86 version of SOS, CONTEXT will refer to the X86 CONTEXT 
-//     structure, so we need to be careful when debugging HOST_ARM targets. The CONTEXT issue is 
+//     structure, so we need to be careful when debugging ARM targets. The CONTEXT issue is 
 //     partially resolved by CROSS_PLATFORM_CONTEXT (there is still a need to be very careful 
 //     when handling arrays of CONTEXTs - see _EFN_StackTrace for details on this).
 //   . For larger includes (e.g. GC info), we will need to include files in specific namespaces, 
@@ -2441,7 +2441,7 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
         // FaultingExceptionFrame or not.
         // 1. On IA64 the IP values are never adjusted by the EE so there's nothing 
         //    to adjust back.
-        // 2. On HOST_AMD64:
+        // 2. On AMD64:
         //    (a) if the exception was an async (hardware) exception add 1 to all 
         //        IP values in the exception object
         //    (b) if the exception was a managed exception (either raised by the 
@@ -7003,7 +7003,7 @@ void IssueDebuggerBPCommand ( CLRDATA_ADDRESS addr )
     static CLRDATA_ADDRESS alreadyPlacedBPs[MaxBPsCached];
     static int curLimit = 0;
 
-    // on HOST_ARM the debugger requires breakpoint addresses to be sanitized
+    // on ARM the debugger requires breakpoint addresses to be sanitized
     if (IsDbgTargetArm())
 #ifndef HOST_UNIX
       addr &= ~THUMB_CODE;

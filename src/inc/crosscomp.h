@@ -195,7 +195,7 @@ typedef struct _T_RUNTIME_FUNCTION {
 
 //
 // Specify the number of breakpoints and watchpoints that the OS
-// will track. Architecturally, HOST_ARM64 supports up to 16. In practice,
+// will track. Architecturally, ARM64 supports up to 16. In practice,
 // however, almost no one implements more than 4 of each.
 //
 

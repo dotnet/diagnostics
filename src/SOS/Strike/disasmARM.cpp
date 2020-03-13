@@ -40,11 +40,11 @@ namespace ARMGCDump
 }
 
 #if defined(TARGET_64BIT)
-#error This file does not support SOS targeting HOST_ARM from a 64-bit debugger
+#error This file does not support SOS targeting ARM from a 64-bit debugger
 #endif
 
 #if !defined(FEATURE_ARM)
-#error This file should be used to support SOS targeting HOST_ARM debuggees
+#error This file should be used to support SOS targeting ARM debuggees
 #endif
 
 #ifdef FEATURE_ARM
@@ -55,7 +55,7 @@ ARMMachine ARMMachine::s_ARMMachineInstance;
 static TADDR DecodeCallTarget(TADDR PC, WORD rgInstr[2])
 {
     // Displacement is spread across several bitfields in the two words of the instruction. Using the same
-    // bitfield names as the HOST_ARM Architecture Reference Manual.
+    // bitfield names as the ARM Architecture Reference Manual.
     DWORD S = (rgInstr[0] & 0x0400) >> 10;
     DWORD imm10 = rgInstr[0] & 0x03ff;
     DWORD J1 = (rgInstr[1] & 0x2000) >> 13;
@@ -156,7 +156,7 @@ static TADDR GetRealCallTarget(TADDR PC)
         return 0;
 
     // Clear the low-bit in the target used to indicate a Thumb mode destination. If this is not set we can't
-    // be looking at one of our jump thunks (in fact HOST_ARM mode code is illegal under CoreARM so this would
+    // be looking at one of our jump thunks (in fact ARM mode code is illegal under CoreARM so this would
     // indicate an issue).
     _ASSERTE((target & 1) == 1);
     target &= ~1;
@@ -516,7 +516,7 @@ void ARMMachine::Unassembly (
             else if ((valueptr = strchr(ptr, '=')) != NULL)
             {
                 // Some instruction fetched a PC-relative constant which the disassembler nicely decoded for
-                // us using the HOST_ARM convention =<constant>. Retrieve this value and see if it's interesting.
+                // us using the ARM convention =<constant>. Retrieve this value and see if it's interesting.
                 INT_PTR value;
                 GetValueFromExpr(valueptr, value);
                 HandleValue(value);
@@ -618,7 +618,7 @@ BOOL ARMMachine::GetExceptionContext (TADDR stack, TADDR PC, TADDR *cxrAddr, CRO
 
 
 ///
-/// Dump HOST_ARM GCInfo table
+/// Dump ARM GCInfo table
 ///
 void ARMMachine::DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const
 {

@@ -770,7 +770,7 @@ public:
   /// Get \a load_addr as a callable code load address for this target
   ///
   /// Take \a load_addr and potentially add any address bits that are
-  /// needed to make the address callable. For HOST_ARM this can set bit
+  /// needed to make the address callable. For ARM this can set bit
   /// zero (if it already isn't) if \a load_addr is a thumb function.
   /// If \a addr_class is set to eAddressClassInvalid, then the address
   /// adjustment will always happen. If it is set to an address class
@@ -785,7 +785,7 @@ public:
   /// Get \a load_addr as an opcode for this target.
   ///
   /// Take \a load_addr and potentially strip any address bits that are
-  /// needed to make the address point to an opcode. For HOST_ARM this can
+  /// needed to make the address point to an opcode. For ARM this can
   /// clear bit zero (if it already isn't) if \a load_addr is a
   /// thumb function and load_addr is in code.
   /// If \a addr_class is set to eAddressClassInvalid, then the address

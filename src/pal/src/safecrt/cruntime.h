@@ -59,7 +59,7 @@
 
 #elif defined (_M_AMD64)
 /*
- * HOST_AMD64
+ * AMD64
  */
 #define REG1    register
 #define REG2    register

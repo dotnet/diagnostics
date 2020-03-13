@@ -3,11 +3,11 @@
 
 function(clr_unknown_arch)
     if (CLR_CMAKE_HOST_WIN32)
-        message(FATAL_ERROR "Only HOST_AMD64, HOST_ARM64, HOST_ARM and I386 are supported")
+        message(FATAL_ERROR "Only AMD64, ARM64, ARM and I386 are supported")
     elseif(CLR_CROSS_COMPONENTS_BUILD)
-        message(FATAL_ERROR "Only HOST_AMD64, I386 host are supported for linux cross-architecture component")
+        message(FATAL_ERROR "Only AMD64, I386 host are supported for linux cross-architecture component")
     else()
-        message(FATAL_ERROR "Only HOST_AMD64, HOST_ARM64 and HOST_ARM are supported")
+        message(FATAL_ERROR "Only AMD64, ARM64 and ARM are supported")
     endif()
 endfunction()
 

@@ -26,7 +26,7 @@
 // ByteSwapContext.
 //
 
-// For now, the only cross-platform CONTEXTs we support are x86/PAL and HOST_ARM/Win. Look in
+// For now, the only cross-platform CONTEXTs we support are x86/PAL and ARM/Win. Look in
 // rotor/pal/inc/rotor_pal.h for the original PAL definitions.
 
 //

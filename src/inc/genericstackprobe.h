@@ -53,7 +53,7 @@ enum HolderStackValidation
 #define REMOVE_STACK_GUARD_FOR_PROFILER_CALL \
         REMOVE_STACK_GUARD
 
-// For HOST_AMD64, the stack size is 4K, same as X86, but the pointer size is 64, so the
+// For AMD64, the stack size is 4K, same as X86, but the pointer size is 64, so the
 // stack tends to grow a lot faster than X86.
 #ifdef TARGET_AMD64
 #define ADJUST_PROBE(n)  (2 * (n))

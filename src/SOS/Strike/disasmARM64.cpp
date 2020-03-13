@@ -42,11 +42,11 @@ namespace ARM64GCDump
 }
 
 #if !defined(TARGET_64BIT)
-#error This file only supports SOS targeting HOST_ARM64 from a 64-bit debugger
+#error This file only supports SOS targeting ARM64 from a 64-bit debugger
 #endif
 
 #if !defined(FEATURE_ARM64)
-#error This file should be used to support SOS targeting HOST_ARM64 debuggees
+#error This file should be used to support SOS targeting ARM64 debuggees
 #endif
 
 
@@ -341,7 +341,7 @@ void ARM64Machine::Unassembly (
             if ((szConstant = strchr(ptr, '=')) != NULL)
             {
                 // Some instruction fetched a PC-relative constant which the disassembler nicely decoded for
-                // us using the HOST_ARM convention =<constant>. Retrieve this value and see if it's interesting.
+                // us using the ARM convention =<constant>. Retrieve this value and see if it's interesting.
                 INT_PTR value;
                 GetValueFromExpr(szConstant, value);
                 HandleValue(value);
@@ -376,12 +376,12 @@ void ARM64Machine::Unassembly (
 BOOL ARM64Machine::GetExceptionContext (TADDR stack, TADDR PC, TADDR *cxrAddr, CROSS_PLATFORM_CONTEXT * cxr,
                           TADDR * exrAddr, PEXCEPTION_RECORD exr) const
 {
-    _ASSERTE("HOST_ARM64:NYI");
+    _ASSERTE("ARM64:NYI");
     return FALSE;
 }
 
 ///
-/// Dump HOST_ARM GCInfo table
+/// Dump ARM GCInfo table
 ///
 void ARM64Machine::DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const
 {

@@ -572,7 +572,7 @@ INT_PTR GetValueFromExpr(__in_z char *ptr, INT_PTR &value)
     char *myPtr = ptr;
     BOOL bByRef = IsByRef (myPtr);
 
-    // HOST_ARM disassembly contains '#' prefixes for hex constants
+    // ARM disassembly contains '#' prefixes for hex constants
     if (*myPtr == '#')
         ++myPtr;
 
@@ -834,7 +834,7 @@ void SOSEHInfo::FormatForDisassembly(CLRDATA_ADDRESS offSet)
 
 
 //
-// Implementation shared by X86, HOST_ARM, and X64
+// Implementation shared by X86, ARM, and X64
 // Any cross platform code should resolve through g_targetMachine or should
 // use the IS_DBG_TARGET_XYZ macro.
 //
@@ -920,7 +920,7 @@ BOOL PrintCallInfo(DWORD_PTR vEBP, DWORD_PTR IP, DumpStackFlag& DSFlag, BOOL bSy
             if (!bSymbolOnly)
                 DMLOut("%p %s ", SOS_PTR(vEBP), DMLIP(IP));
 
-            // if HOST_AMD64 ever becomes a cross platform target this must be resolved through
+            // if AMD64 ever becomes a cross platform target this must be resolved through
             // virtual dispatch rather than conditional compilation
 #if defined(TARGET_AMD64) || defined(TARGET_X86)
             // degrade gracefully for debuggees that don't have a runtime loaded, or a DAC available
@@ -1106,7 +1106,7 @@ LPCSTR AMD64Machine::s_GCRegs[15]       = {"rax", "rbx", "rcx", "rdx", "rsi", "r
 LPCSTR AMD64Machine::s_SPName           = "RSP";
 
 ///
-/// Dump HOST_AMD64 GCInfo table
+/// Dump AMD64 GCInfo table
 ///
 void AMD64Machine::DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const
 {

@@ -538,7 +538,7 @@ bool GcInfoDecoder::HasTailCalls()
 
 bool GcInfoDecoder::WantsReportOnlyLeaf()
 {
-    // Only HOST_AMD64 with JIT64 can return false here.
+    // Only AMD64 with JIT64 can return false here.
 #ifdef TARGET_AMD64
     return m_WantsReportOnlyLeaf;
 #else
@@ -598,7 +598,7 @@ bool GcInfoDecoder::EnumerateLiveSlots(
 
     unsigned executionAborted = (inputFlags & ExecutionAborted);
 
-    // In order to make HOST_ARM more x86-like we only ever report the leaf frame
+    // In order to make ARM more x86-like we only ever report the leaf frame
     // of any given function. We accomplish this by having the stackwalker
     // pass a flag whenever walking the frame of a method where it has
     // previously visited a child funclet
@@ -1424,7 +1424,7 @@ bool GcInfoDecoder::IsScratchStackSlot(INT32 spOffset, GcStackSlotBase spBase, P
 }
 
 
-void GcInfoDecoder::ReportRegisterToGC(  // HOST_AMD64
+void GcInfoDecoder::ReportRegisterToGC(  // AMD64
                                 int             regNum,
                                 unsigned        gcFlags,
                                 PREGDISPLAY     pRD,
@@ -1557,7 +1557,7 @@ bool GcInfoDecoder::IsScratchStackSlot(INT32 spOffset, GcStackSlotBase spBase, P
 }
 
 
-void GcInfoDecoder::ReportRegisterToGC(  // HOST_ARM
+void GcInfoDecoder::ReportRegisterToGC(  // ARM
                                 int             regNum,
                                 unsigned        gcFlags,
                                 PREGDISPLAY     pRD,
@@ -1648,7 +1648,7 @@ bool GcInfoDecoder::IsScratchStackSlot(INT32 spOffset, GcStackSlotBase spBase, P
 
 }
 
-void GcInfoDecoder::ReportRegisterToGC( // HOST_ARM64
+void GcInfoDecoder::ReportRegisterToGC( // ARM64
                                 int             regNum,
                                 unsigned        gcFlags,
                                 PREGDISPLAY     pRD,

@@ -18,11 +18,11 @@
 
 
 #if defined(FEATURE_X86) && defined(FEATURE_AMD64)
-#error This file does not support SOS targeting both X86 and HOST_AMD64 debuggees
+#error This file does not support SOS targeting both X86 and AMD64 debuggees
 #endif
 
 #if !defined(FEATURE_X86) && !defined(FEATURE_AMD64)
-#error This file should be used to support SOS targeting either X86 or HOST_AMD64 debuggees
+#error This file should be used to support SOS targeting either X86 or AMD64 debuggees
 #endif
 
 

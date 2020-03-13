@@ -52,6 +52,6 @@ typedef int __ptrace_request;
 #define ARCH_GET_GS 0x1004
 #endif
 
-#define LLDB_PTRACE_NT_ARM_TLS 0x401 // HOST_ARM TLS register
+#define LLDB_PTRACE_NT_ARM_TLS 0x401 // ARM TLS register
 
 #endif // liblldb_Host_linux_Ptrace_h_

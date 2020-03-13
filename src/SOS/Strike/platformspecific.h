@@ -44,11 +44,11 @@ struct DT_UNICODE_STRING
 #define DT_GDI_HANDLE_BUFFER_SIZE64  60
 
 #ifndef IMAGE_FILE_MACHINE_ARMNT
-#define IMAGE_FILE_MACHINE_ARMNT             0x01c4  // HOST_ARM Thumb-2 Little-Endian 
+#define IMAGE_FILE_MACHINE_ARMNT             0x01c4  // ARM Thumb-2 Little-Endian 
 #endif
 
 #ifndef IMAGE_FILE_MACHINE_ARM64
-#define IMAGE_FILE_MACHINE_ARM64             0xAA64  // HOST_ARM64 Little-Endian
+#define IMAGE_FILE_MACHINE_ARM64             0xAA64  // ARM64 Little-Endian
 #endif
 
 #ifdef TARGET_64BIT
@@ -190,7 +190,7 @@ struct DT_RTL_USER_PROCESS_PARAMETERS
 
 #endif // !HOST_UNIX
 
-// TODO-HOST_ARM64-NYI Support for SOS on target with 64K pages
+// TODO-ARM64-NYI Support for SOS on target with 64K pages
 //
 // This is probably as simple as redefining DT_OS_PAGE_SIZE to be a function
 // which returns the page size of the connected target

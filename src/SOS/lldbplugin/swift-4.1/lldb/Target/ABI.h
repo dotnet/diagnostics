@@ -127,8 +127,8 @@ public:
 
   virtual lldb::addr_t FixCodeAddress(lldb::addr_t pc) {
     // Some targets might use bits in a code address to indicate
-    // a mode switch. HOST_ARM uses bit zero to signify a code address is
-    // thumb, so any HOST_ARM ABI plug-ins would strip those bits.
+    // a mode switch. ARM uses bit zero to signify a code address is
+    // thumb, so any ARM ABI plug-ins would strip those bits.
     return pc;
   }
 

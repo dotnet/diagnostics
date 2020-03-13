@@ -214,9 +214,9 @@ inline void DACMessage(HRESULT Status)
     ExtOut("            3) or, if you are debugging a dump file, verify that the file \n");
     ExtOut("                %s_<arch>_<arch>_<version>.dll is on your symbol path.\n", GetDacModuleName());
     ExtOut("            4) you are debugging on supported cross platform architecture as \n");
-    ExtOut("                the dump file. For example, an HOST_ARM dump file must be debugged\n");
-    ExtOut("                on an X86 or an HOST_ARM machine; an HOST_AMD64 dump file must be\n");
-    ExtOut("                debugged on an HOST_AMD64 machine.\n");
+    ExtOut("                the dump file. For example, an ARM dump file must be debugged\n");
+    ExtOut("                on an X86 or an ARM machine; an AMD64 dump file must be\n");
+    ExtOut("                debugged on an AMD64 machine.\n");
     ExtOut("\n");
     ExtOut("You can also run the debugger command .cordll to control the debugger's\n");
     ExtOut("load of %s.dll. .cordll -ve -u -l will do a verbose reload.\n", GetDacDllName());
@@ -325,7 +325,7 @@ class GCDump;
 /// Note: 
 /// The methods accepting target address args take them as size_t==DWORD_PTR==TADDR,
 /// which means this can only provide cross platform support for same-word size 
-/// architectures (only HOST_ARM on x86 currently). Since this is not exposed outside SOS
+/// architectures (only ARM on x86 currently). Since this is not exposed outside SOS
 /// and since the some-word-size limitation exists across EE/DAC/SOS this is not an
 /// actual limitation.
 ///

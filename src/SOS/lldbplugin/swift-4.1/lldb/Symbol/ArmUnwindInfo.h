@@ -18,11 +18,11 @@
 #include "lldb/lldb-private.h"
 
 /*
- * Unwind information reader and parser for the HOST_ARM exception handling ABI
+ * Unwind information reader and parser for the ARM exception handling ABI
  *
  * Implemented based on:
- *     Exception Handling ABI for the HOST_ARM Architecture
- *     Document number: HOST_ARM IHI 0038A (current through ABI r2.09)
+ *     Exception Handling ABI for the ARM Architecture
+ *     Document number: ARM IHI 0038A (current through ABI r2.09)
  *     Date of Issue: 25th January 2007, reissued 30th November 2012
  *     http://infocenter.arm.com/help/topic/com.arm.doc.ihi0038a/IHI0038A_ehabi.pdf
  */
@@ -58,10 +58,10 @@ private:
                       uint16_t max_offset) const;
 
   const lldb::ByteOrder m_byte_order;
-  lldb::SectionSP m_arm_exidx_sp; // .HOST_ARM.exidx section
-  lldb::SectionSP m_arm_extab_sp; // .HOST_ARM.extab section
-  DataExtractor m_arm_exidx_data; // .HOST_ARM.exidx section data
-  DataExtractor m_arm_extab_data; // .HOST_ARM.extab section data
+  lldb::SectionSP m_arm_exidx_sp; // .ARM.exidx section
+  lldb::SectionSP m_arm_extab_sp; // .ARM.extab section
+  DataExtractor m_arm_exidx_data; // .ARM.exidx section data
+  DataExtractor m_arm_extab_data; // .ARM.extab section data
   std::vector<ArmExidxEntry> m_exidx_entries;
 };
 

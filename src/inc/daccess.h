@@ -198,7 +198,7 @@ typedef DPTR(IMAGE_TLS_DIRECTORY)   PTR_IMAGE_TLS_DIRECTORY;
 //----------------------------------------------------------------------------
 //
 // A PCODE is a valid PC/IP value -- a pointer to an instruction, possibly including some processor mode bits.
-// (On HOST_ARM, for example, a PCODE value should have the low-order THUMB_CODE bit set if the code should
+// (On ARM, for example, a PCODE value should have the low-order THUMB_CODE bit set if the code should
 // be executed in that mode.)
 //
 typedef TADDR PCODE;

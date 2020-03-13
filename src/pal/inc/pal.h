@@ -1622,7 +1622,7 @@ typedef struct _KNONVOLATILE_CONTEXT_POINTERS {
 
 //
 // Specify the number of breakpoints and watchpoints that the OS
-// will track. Architecturally, HOST_ARM supports up to 16. In practice,
+// will track. Architecturally, ARM supports up to 16. In practice,
 // however, almost no one implements more than 4 of each.
 //
 
@@ -1809,7 +1809,7 @@ typedef struct _IMAGE_ARM_RUNTIME_FUNCTION_ENTRY {
 
 //
 // Specify the number of breakpoints and watchpoints that the OS
-// will track. Architecturally, HOST_ARM64 supports up to 16. In practice,
+// will track. Architecturally, ARM64 supports up to 16. In practice,
 // however, almost no one implements more than 4 of each.
 //
 
@@ -3325,7 +3325,7 @@ typedef LPOSVERSIONINFOEXA LPOSVERSIONINFOEX;
 #endif
 
 #define IMAGE_FILE_MACHINE_I386              0x014c
-#define IMAGE_FILE_MACHINE_ARM64             0xAA64  // HOST_ARM64 Little-Endian
+#define IMAGE_FILE_MACHINE_ARM64             0xAA64  // ARM64 Little-Endian
 
 typedef struct _SYSTEM_INFO {
     WORD wProcessorArchitecture_PAL_Undefined;

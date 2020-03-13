@@ -211,7 +211,7 @@ inline BOOL IsInCalleesFrames(REGDISPLAY *display, LPVOID stackPointer)
 inline TADDR GetRegdisplayStackMark(REGDISPLAY *display)
 {
 #if defined(TARGET_AMD64)
-    // On HOST_AMD64, the MemoryStackFp value is the current sp (i.e. the sp value when calling another method).
+    // On AMD64, the MemoryStackFp value is the current sp (i.e. the sp value when calling another method).
     _ASSERTE(GetRegdisplaySP(display) == GetSP(display->pCurrentContext));
     return GetRegdisplaySP(display);
 
@@ -233,7 +233,7 @@ inline TADDR GetRegdisplayStackMark(REGDISPLAY *display)
 // contain roots which might need to be updated if they are
 // relocated. On Stack walking the addresses of the registers in the
 // resumable Frame are passed to GC using pCurrentContextPointers
-// member in _REGDISPLAY. However On HOST_ARM KNONVOLATILE_CONTEXT_POINTERS
+// member in _REGDISPLAY. However On ARM KNONVOLATILE_CONTEXT_POINTERS
 // does not contain pointers for volatile registers. Therefore creating
 // this structure to store pointers to volatile registers and adding an object 
 // as member in _REGDISPLAY
@@ -273,7 +273,7 @@ inline BOOL IsInCalleesFrames(REGDISPLAY *display, LPVOID stackPointer) {
 
 inline TADDR GetRegdisplayStackMark(REGDISPLAY *display) {
     LIMITED_METHOD_CONTRACT;
-    // HOST_ARM uses the establisher frame as the marker
+    // ARM uses the establisher frame as the marker
     _ASSERTE(display->IsCallerContextValid);
     return GetSP(display->pCallerContext);
 }

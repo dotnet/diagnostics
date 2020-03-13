@@ -196,7 +196,7 @@ private:
 
 #ifdef FEATURE_ARM
 
-/// HOST_ARM Machine specific code
+/// ARM Machine specific code
 class ARMMachine : public IMachine
 {
 public:
@@ -265,7 +265,7 @@ private:
 
 #ifdef FEATURE_AMD64
 
-/// HOST_AMD64 Machine specific code
+/// AMD64 Machine specific code
 class AMD64Machine : public IMachine
 {
 public:
@@ -335,7 +335,7 @@ private:
 
 #ifdef FEATURE_ARM64
 
-/// HOST_ARM64 Machine specific code
+/// ARM64 Machine specific code
 class ARM64Machine : public IMachine
 {
 public:

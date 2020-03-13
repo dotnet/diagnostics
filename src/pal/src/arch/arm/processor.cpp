@@ -12,7 +12,7 @@ Module Name:
 
 Abstract:
 
-    Implementation of processor related functions for the HOST_ARM
+    Implementation of processor related functions for the ARM
     platform. These functions are processor dependent.
 
 

@@ -63,26 +63,26 @@
 //
 // This code is extremely compiler- and CPU-specific, and will need to be altered to 
 // support new compilers and/or CPUs.  Here we enforce that we can only compile using
-// VC++, or GCC on x86 or HOST_AMD64.
+// VC++, or GCC on x86 or AMD64.
 // 
 #if !defined(_MSC_VER) && !defined(__GNUC__)
 #error The Volatile type is currently only defined for Visual C++ and GNU C++
 #endif
 
-#if defined(__GNUC__) && !defined(HOST_X86) && !defined(HOST_AMD64) && !defined(HOST_ARM) && !defined(HOST_ARM64)
-#error The Volatile type is currently only defined for GCC when targeting x86, HOST_AMD64, HOST_ARM or HOST_ARM64 CPUs
+#if defined(__GNUC__) && !defined(HOST_X86) && !defined(AMD64) && !defined(ARM) && !defined(ARM64)
+#error The Volatile type is currently only defined for GCC when targeting x86, AMD64, ARM or ARM64 CPUs
 #endif
 
 #if defined(__GNUC__)
-#if defined(HOST_ARM) || defined(HOST_ARM64)
-// This is functionally equivalent to the MemoryBarrier() macro used on HOST_ARM on Windows.
+#if defined(ARM) || defined(ARM64)
+// This is functionally equivalent to the MemoryBarrier() macro used on ARM on Windows.
 #define VOLATILE_MEMORY_BARRIER() asm volatile ("dmb ish" : : : "memory")
 #else
 //
 // For GCC, we prevent reordering by the compiler by inserting the following after a volatile
 // load (to prevent subsequent operations from moving before the read), and before a volatile 
 // write (to prevent prior operations from moving past the write).  We don't need to do anything
-// special to prevent CPU reorderings, because the x86 and HOST_AMD64 architectures are already
+// special to prevent CPU reorderings, because the x86 and AMD64 architectures are already
 // sufficiently constrained for our purposes.  If we ever need to run on weaker CPU architectures
 // (such as PowerPC), then we will need to do more work.
 // 
@@ -92,7 +92,7 @@
 #define VOLATILE_MEMORY_BARRIER() asm volatile ("" : : : "memory")
 #endif // HOST_ARM || HOST_ARM64
 #elif (defined(HOST_ARM) || defined(HOST_ARM64)) && _ISO_VOLATILE
-// HOST_ARM & HOST_ARM64 have a very weak memory model and very few tools to control that model. We're forced to perform a full
+// ARM & ARM64 have a very weak memory model and very few tools to control that model. We're forced to perform a full
 // memory barrier to preserve the volatile semantics. Technically this is only necessary on MP systems but we
 // currently don't have a cheap way to determine the number of CPUs from this header file. Revisit this if it
 // turns out to be a performance issue for the uni-proc case.

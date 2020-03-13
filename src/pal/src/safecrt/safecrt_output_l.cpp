@@ -707,10 +707,10 @@ int __cdecl _output (
                  * In order to handle the I, I32, and I64 size modifiers, we
                  * depart from the simple deterministic state machine. The
                  * code below scans for characters following the 'I',
-                 * and defaults to 64 bit on WIN64 and 32 bit on CLR_CMAKE_HOST_WIN32
+                 * and defaults to the pointer bitness
                  */
 #if PTR_IS_INT64
-                flags |= FL_I64;    /* 'I' => __int64 on WIN64 systems */
+                flags |= FL_I64;    /* 'I' => __int64 on 64-bit systems */
 #endif  /* PTR_IS_INT64 */
                 if ( (*format == _T('6')) && (*(format + 1) == _T('4')) )
                 {

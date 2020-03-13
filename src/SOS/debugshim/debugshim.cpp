@@ -15,11 +15,11 @@
 #include "palclr.h"
 
 #ifndef IMAGE_FILE_MACHINE_ARMNT
-#define IMAGE_FILE_MACHINE_ARMNT             0x01c4  // HOST_ARM Thumb-2 Little-Endian
+#define IMAGE_FILE_MACHINE_ARMNT             0x01c4  // ARM Thumb-2 Little-Endian
 #endif
 
 #ifndef IMAGE_FILE_MACHINE_ARM64
-#define IMAGE_FILE_MACHINE_ARM64             0xAA64  // HOST_ARM64 Little-Endian
+#define IMAGE_FILE_MACHINE_ARM64             0xAA64  // ARM64 Little-Endian
 #endif
 
 // making the defines very clear, these represent the host architecture - aka
@@ -464,7 +464,7 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget* pDataTarget,
 
     // Now grab the special clr debug info resource
     // We may need to scan a few different names searching though...
-    // 1) CLRDEBUGINFO<host_os><host_arch> where host_os = 'WINDOWS' or 'CORESYS' and host_arch = 'X86' or 'HOST_ARM' or 'HOST_AMD64'
+    // 1) CLRDEBUGINFO<host_os><host_arch> where host_os = 'WINDOWS' or 'CORESYS' and host_arch = 'X86' or 'ARM' or 'AMD64'
     // 2) For back-compat if the host os is windows and the host architecture matches the target then CLRDEBUGINFO is used with no suffix.
     DWORD debugResourceRVA = 0;
     DWORD debugResourceSize = 0;

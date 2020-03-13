@@ -222,9 +222,9 @@ typedef struct _IMAGE_FILE_HEADER {
 #define IMAGE_FILE_MACHINE_SH3E              0x01a4  // SH3E little-endian
 #define IMAGE_FILE_MACHINE_SH4               0x01a6  // SH4 little-endian
 #define IMAGE_FILE_MACHINE_SH5               0x01a8  // SH5
-#define IMAGE_FILE_MACHINE_ARM               0x01c0  // HOST_ARM Little-Endian
+#define IMAGE_FILE_MACHINE_ARM               0x01c0  // ARM Little-Endian
 #define IMAGE_FILE_MACHINE_THUMB             0x01c2
-#define IMAGE_FILE_MACHINE_ARMNT             0x01c4  // HOST_ARM Thumb-2 Little-Endian
+#define IMAGE_FILE_MACHINE_ARMNT             0x01c4  // ARM Thumb-2 Little-Endian
 #define IMAGE_FILE_MACHINE_AM33              0x01d3
 #define IMAGE_FILE_MACHINE_POWERPC           0x01F0  // IBM PowerPC Little-Endian
 #define IMAGE_FILE_MACHINE_POWERPCFP         0x01f1
@@ -237,7 +237,7 @@ typedef struct _IMAGE_FILE_HEADER {
 #define IMAGE_FILE_MACHINE_TRICORE           0x0520  // Infineon
 #define IMAGE_FILE_MACHINE_CEF               0x0CEF
 #define IMAGE_FILE_MACHINE_EBC               0x0EBC  // EFI Byte Code
-#define IMAGE_FILE_MACHINE_AMD64             0x8664  // HOST_AMD64 (K8)
+#define IMAGE_FILE_MACHINE_AMD64             0x8664  // AMD64 (K8)
 #define IMAGE_FILE_MACHINE_M32R              0x9041  // M32R little-endian
 #define IMAGE_FILE_MACHINE_CEE               0xC0EE
 
@@ -933,7 +933,7 @@ typedef IMAGE_RELOCATION UNALIGNED *PIMAGE_RELOCATION;
 #define IMAGE_REL_ARM_BRANCH24          0x0003  // 24 bit offset << 2 & sign ext.
 #define IMAGE_REL_ARM_BRANCH11          0x0004  // Thumb: 2 11 bit offsets
 #define IMAGE_REL_ARM_TOKEN             0x0005  // clr token
-#define IMAGE_REL_ARM_GPREL12           0x0006  // GP-relative addressing (HOST_ARM)
+#define IMAGE_REL_ARM_GPREL12           0x0006  // GP-relative addressing (ARM)
 #define IMAGE_REL_ARM_GPREL7            0x0007  // GP-relative addressing (Thumb)
 #define IMAGE_REL_ARM_BLX24             0x0008
 #define IMAGE_REL_ARM_BLX11             0x0009
@@ -941,7 +941,7 @@ typedef IMAGE_RELOCATION UNALIGNED *PIMAGE_RELOCATION;
 #define IMAGE_REL_ARM_SECREL            0x000F  // Offset within section
 
 //
-// HOST_ARM64 relocation types
+// ARM64 relocation types
 //
 #define IMAGE_REL_ARM64_ABSOLUTE        0x0000
 #define IMAGE_REL_ARM64_ADDR32          0x0001

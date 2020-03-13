@@ -65,7 +65,7 @@ extern "C" {
 #define _cdecl
 #define CDECL
 
-// On HOST_ARM __fastcall is ignored and causes a compile error
+// On ARM __fastcall is ignored and causes a compile error
 #if !defined(PAL_STDCPP_COMPAT) || defined(__arm__)
 #  undef __fastcall
 #  undef _fastcall

@@ -314,7 +314,7 @@ public:
   /// Then, if the address turns out to be in code address, return the
   /// load address that would be required to call or return to. The
   /// address might have extra bits set (bit zero will be set to Thumb
-  /// functions for an HOST_ARM target) that are required when changing the
+  /// functions for an ARM target) that are required when changing the
   /// program counter to setting a return address.
   ///
   /// @return
@@ -331,7 +331,7 @@ public:
   /// Then, if the address turns out to be in code address, return the
   /// load address for an opcode. This address object might have
   /// extra bits set (bit zero will be set to Thumb functions for an
-  /// HOST_ARM target) that are required for changing the program counter
+  /// ARM target) that are required for changing the program counter
   /// and this function will remove any bits that are intended for
   /// these special purposes. The result of this function can be used
   /// to safely write a software breakpoint trap to memory.

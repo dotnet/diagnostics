@@ -2349,7 +2349,7 @@ typedef struct {
 } M128A_XPLAT;
 
 
-/// HOST_AMD64 Context
+/// AMD64 Context
 typedef struct {
     WORD   ControlWord;
     WORD   StatusWord;
@@ -2465,7 +2465,7 @@ typedef struct{
 } FLOAT128_XPLAT;
 
 
-/// HOST_ARM Context
+/// ARM Context
 #define ARM_MAX_BREAKPOINTS_CONST     8
 #define ARM_MAX_WATCHPOINTS_CONST     1
 typedef DECLSPEC_ALIGN(8) struct {
@@ -2508,12 +2508,12 @@ typedef DECLSPEC_ALIGN(8) struct {
 
 } ARM_CONTEXT;
 
-// On HOST_ARM this mask is or'ed with the address of code to get an instruction pointer
+// On ARM this mask is or'ed with the address of code to get an instruction pointer
 #ifndef THUMB_CODE
 #define THUMB_CODE 1
 #endif
 
-///HOST_ARM64 Context
+///ARM64 Context
 #define ARM64_MAX_BREAKPOINTS     8
 #define ARM64_MAX_WATCHPOINTS     2
 typedef struct {
