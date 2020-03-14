@@ -33,7 +33,8 @@ public void PrintRuntimeGCEvents(int processId)
 
         source.Clr.All += (TraceEvent obj) => {
             Console.WriteLine(obj.EventName);
-        }
+        };
+
         try
         {
             source.Process();
