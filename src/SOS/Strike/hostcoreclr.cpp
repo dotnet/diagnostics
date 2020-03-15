@@ -300,6 +300,10 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
     if (g_hostRuntimeDirectory == nullptr)
     {
 #ifdef FEATURE_PAL
+#if defined (__FreeBSD__) || defined(__NetBSD__)
+        ExtErr("Hosting on FreeBSD or NetBSD not supported\n");
+        return E_FAIL;
+#else
         char* line = nullptr;
         size_t lineLen = 0;
 
@@ -320,10 +324,6 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
         }
         if (hostRuntimeDirectory.empty())
         {
-#if defined (__FreeBSD__) || defined(__NetBSD__)
-            ExtErr("FreeBSD or NetBSD not supported\n");
-            return E_FAIL;
-#else
             // Now try the possible runtime locations
             for (int i = 0; i < _countof(g_linuxPaths); i++)
             {
@@ -333,8 +333,8 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
                     break;
                 }
             }
-#endif
         }
+#endif // defined (__FreeBSD__) || defined(__NetBSD__)
 #else
         ArrayHolder<CHAR> programFiles = new CHAR[MAX_LONGPATH];
         if (GetEnvironmentVariableA("PROGRAMFILES", programFiles, MAX_LONGPATH) == 0)
@@ -344,7 +344,7 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
         }
         hostRuntimeDirectory.assign(programFiles);
         hostRuntimeDirectory.append("\\dotnet\\shared\\Microsoft.NETCore.App");
-#endif
+#endif // FEATURE_PAL
         hostRuntimeDirectory.append(DIRECTORY_SEPARATOR_STR_A);
 
         // First attempt find the highest 2.1.x version. We want to start with the LTS
