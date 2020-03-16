@@ -2,8 +2,13 @@
 <Project>
   <!--
      $(BuildArch) - architecture to test (x64, x86, arm, arm64). Defaults to x64.
-     $(DailyTest) - if true, only install/test the latest (master branch) runtime
      $(PrivateBuildPath) - if non-empty, path to private runtime build to copy/test
+
+     Internal service release testing:
+
+     $(InternalRuntimeSourceVersion) - the service release version i.e. 2.1.17, 3.1.3, etc.
+     $(InternalRuntimeSourceFeed)    - the service release internal feed
+     $(InternalRuntimeSourceFeedKey) - the service release feed PAT
      
      From Versions.props:
 
@@ -20,9 +25,12 @@
   -->
 
   <PropertyGroup>
-    <DailyTest Condition="'$(DailyTest)' == ''">false</DailyTest>
     <BuildArch Condition="'$(BuildArch)' == ''">$(Platform)</BuildArch>
     <BuildArch Condition="'$(BuildArch)' == ''">x64</BuildArch>
+    <PrivateBuildTesting>false</PrivateBuildTesting>
+    <PrivateBuildTesting Condition="'$(PrivateBuildPath)' != ''">true</PrivateBuildTesting>
+    <InternalReleaseTesting>false</InternalReleaseTesting>
+    <InternalReleaseTesting Condition="'$(InternalRuntimeSourceFeed)' != ''">true</InternalReleaseTesting>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(BuildArch)' != 'x86'">
@@ -49,21 +57,34 @@
       <PropertyGroup>
         <PowershellWrapper>powershell -NonInteractive -ExecutionPolicy ByPass -NoProfile -command</PowershellWrapper>
         <DotnetInstallScriptCmd>'$(RepositoryEngineeringDir)common\dotnet-install.ps1'</DotnetInstallScriptCmd>
+        <InternalInstallArgs Condition="$(InternalReleaseTesting)">-RuntimeSourceFeed $(InternalRuntimeSourceFeed) -RuntimeSourceFeedKey $(InternalRuntimeSourceFeedKey)</InternalInstallArgs>
       </PropertyGroup>
     </When>
     <Otherwise>
       <PropertyGroup>
         <DotnetInstallScriptCmd>$(RepositoryEngineeringDir)common/dotnet-install.sh</DotnetInstallScriptCmd>
+        <InternalInstallArgs Condition="$(InternalReleaseTesting)">-runtimesourcefeed $(InternalRuntimeSourceFeed) -runtimesourcefeedkey $(InternalRuntimeSourceFeedKey)</InternalInstallArgs>
       </PropertyGroup>
     </Otherwise>
   </Choose>
 
-  <ItemGroup>
-    <!-- We always test on latest, so install that one even for scheduled builds -->
-    <TestVersions Include="Latest" RuntimeVersion="$(MicrosoftNETCoreAppVersion)" AspNetVersion="$(MicrosoftAspNetCoreAppRefVersion)" Install="true" />
-    <TestVersions Include="31" RuntimeVersion="$(MicrosoftNETCoreApp31Version)" AspNetVersion="$(MicrosoftAspNetCoreApp31Version)" Install="!$(DailyTest)" />
-    <TestVersions Include="30" RuntimeVersion="$(MicrosoftNETCoreApp30Version)" AspNetVersion="$(MicrosoftAspNetCoreApp30Version)" Install="!$(DailyTest)" />
-    <TestVersions Include="21" RuntimeVersion="$(MicrosoftNETCoreApp21Version)" AspNetVersion="$(MicrosoftAspNetCoreApp21Version)" Install="true" />
+  <ItemGroup Condition="!$(InternalReleaseTesting) and !$(PrivateBuildTesting)">
+    <TestVersions Include="Latest" RuntimeVersion="$(MicrosoftNETCoreAppVersion)" AspNetVersion="$(MicrosoftAspNetCoreAppRefVersion)" />
+    <TestVersions Include="31" RuntimeVersion="$(MicrosoftNETCoreApp31Version)" AspNetVersion="$(MicrosoftAspNetCoreApp31Version)" />
+    <TestVersions Include="30" RuntimeVersion="$(MicrosoftNETCoreApp30Version)" AspNetVersion="$(MicrosoftAspNetCoreApp30Version)" />
+    <TestVersions Include="21" RuntimeVersion="$(MicrosoftNETCoreApp21Version)" AspNetVersion="$(MicrosoftAspNetCoreApp21Version)" />
+  </ItemGroup>
+
+  <!-- Local private build testing -->
+  <ItemGroup Condition="$(PrivateBuildTesting)">
+    <TestVersions Include="Latest" RuntimeVersion="$(MicrosoftNETCoreAppVersion)" AspNetVersion="$(MicrosoftAspNetCoreAppRefVersion)" />
+    <TestVersions Include="21" RuntimeVersion="$(MicrosoftNETCoreApp21Version)" />
+  </ItemGroup>
+
+  <!-- Internal service release testing -->
+  <ItemGroup Condition="$(InternalReleaseTesting)">
+    <TestVersions Include="Internal" RuntimeVersion="$(InternalRuntimeSourceVersion)" ExtraInstallArgs="$(InternalInstallArgs)" />
+    <TestVersions Include="21" RuntimeVersion="$(MicrosoftNETCoreApp21Version)" />
   </ItemGroup>
 
 <!--
@@ -72,7 +93,11 @@
 
   <Target Name="InstallTestRuntimes" 
           BeforeTargets="RunTests"
-          DependsOnTargets="InstallRuntimesWindows;InstallRuntimesUnix;WriteTestVersionManifest;TestPrivateBuild" />
+          DependsOnTargets="InstallRuntimesWindows;InstallRuntimesUnix;WriteTestVersionManifest;TestPrivateBuild">
+
+    <Message Condition="$(InternalReleaseTesting)" Importance="High" Text="InternalRuntimeSource: version '$(InternalRuntimeSourceVersion)' feed '$(InternalRuntimeSourceFeed)'" />
+
+  </Target>
 
 <!--
     Installs the test runtimes on Windows
@@ -82,11 +107,11 @@
           Condition="$([MSBuild]::IsOsPlatform(Windows))"
           Inputs="$(VersionsPropsPath)" Outputs="$(TestConfigFileName)">
 
-    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) -version %(TestVersions.RuntimeVersion) -runtime dotnet }&quot;"
-          Condition="%(TestVersions.Install)" />
+    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) %(TestVersions.ExtraInstallArgs) -version %(TestVersions.RuntimeVersion) -runtime dotnet }&quot;"
+          Condition="'%(TestVersions.RuntimeVersion)' != ''" />
 
-    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) -version %(TestVersions.AspNetVersion) -runtime aspnetcore }&quot;"
-          Condition="%(TestVersions.Install)" />
+    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) %(TestVersions.ExtraInstallArgs) -version %(TestVersions.AspNetVersion) -runtime aspnetcore }&quot;"
+          Condition="'%(TestVersions.AspNetVersion)' != ''" />
   </Target>
 
 <!--
@@ -97,13 +122,13 @@
           Condition="!$([MSBuild]::IsOsPlatform(Windows))"
           Inputs="$(VersionsPropsPath)" Outputs="$(TestConfigFileName)">
 
-    <Exec Command="$(DotnetInstallScriptCmd) $(CommonInstallArgs) -version %(TestVersions.RuntimeVersion) -runtime dotnet"
+    <Exec Command="$(DotnetInstallScriptCmd) $(CommonInstallArgs) %(TestVersions.ExtraInstallArgs) -version %(TestVersions.RuntimeVersion) -runtime dotnet"
           IgnoreStandardErrorWarningFormat="true"
-          Condition="%(TestVersions.Install)" />
+          Condition="'%(TestVersions.RuntimeVersion)' != ''" />
 
-    <Exec Command="$(DotnetInstallScriptCmd) $(CommonInstallArgs) -version %(TestVersions.AspNetVersion) -runtime aspnetcore"
+    <Exec Command="$(DotnetInstallScriptCmd) $(CommonInstallArgs) %(TestVersions.ExtraInstallArgs) -version %(TestVersions.AspNetVersion) -runtime aspnetcore"
           IgnoreStandardErrorWarningFormat="true"
-          Condition="%(TestVersions.Install)" />
+          Condition="'%(TestVersions.AspNetVersion)' != ''" />
    </Target>
 
 <!--
@@ -115,17 +140,24 @@
           Outputs="$(TestConfigFileName)">
 
     <PropertyGroup>
+      <RuntimeVersionLatest>$(MicrosoftNETCoreAppVersion)</RuntimeVersionLatest>
+      <RuntimeVersionLatest Condition="$(InternalReleaseTesting)">$(InternalRuntimeSourceVersion)</RuntimeVersionLatest>
       <TestConfigFileLines>
 <![CDATA[
 <Configuration>
-  <DailyTest>$(DailyTest)</DailyTest>
+  <PrivateBuildTesting>$(PrivateBuildTesting)</PrivateBuildTesting>
+  <InternalReleaseTesting>$(InternalReleaseTesting)</InternalReleaseTesting>
+
   <RuntimeVersion21>$(MicrosoftNETCoreApp21Version)</RuntimeVersion21>
   <AspNetCoreVersion21>$(MicrosoftAspNetCoreApp21Version)</AspNetCoreVersion21>
+
   <RuntimeVersion30>$(MicrosoftNETCoreApp30Version)</RuntimeVersion30>
   <AspNetCoreVersion30>$(MicrosoftAspNetCoreApp30Version)</AspNetCoreVersion30>
+
   <RuntimeVersion31>$(MicrosoftNETCoreApp31Version)</RuntimeVersion31>
   <AspNetCoreVersion31>$(MicrosoftAspNetCoreApp31Version)</AspNetCoreVersion31>
-  <RuntimeVersionLatest>$(MicrosoftNETCoreAppVersion)</RuntimeVersionLatest>
+
+  <RuntimeVersionLatest>$(RuntimeVersionLatest)</RuntimeVersionLatest>
   <AspNetCoreVersionLatest>$(MicrosoftAspNetCoreAppRefVersion)</AspNetCoreVersionLatest>
 </Configuration>
 ]]>

@@ -7,9 +7,11 @@ Param(
   [switch] $ci,
   [switch] $skipmanaged,
   [switch] $skipnative,
-  [switch] $dailytest,
   [string] $privatebuildpath = "",
   [switch] $cleanupprivatebuild,
+  [string] $runtimesourceversion = '',
+  [string] $runtimesourcefeed = '',
+  [string] $runtimesourcefeedkey = '',
   [Parameter(ValueFromRemainingArguments=$true)][String[]] $remainingargs
 )
 
@@ -47,14 +49,9 @@ $engroot = Join-Path $reporoot "eng"
 $artifactsdir = Join-Path $reporoot "artifacts"
 $logdir = Join-Path $artifactsdir "log"
 $logdir = Join-Path $logdir Windows_NT.$architecture.$configuration
-$dailytestproperty = "false"
 
 if ($ci) {
     $remainingargs = "-ci " + $remainingargs
-}
-
-if ($dailytest -or $privatebuildpath -ne "") {
-    $dailytestproperty = "true"
 }
 
 # Remove the private build registry keys
@@ -80,9 +77,21 @@ if (-not $skipnative) {
 }
 
 # Run the xunit tests
-if ($test -or $dailytest) {
+if ($test) {
     if (-not $crossbuild) {
-        & "$engroot\common\build.ps1" -test -configuration $configuration -verbosity $verbosity -ci:$ci /bl:$logdir\Test.binlog /p:BuildArch=$architecture /p:TestArchitectures=$architecture /p:DailyTest=$dailytestproperty /p:PrivateBuildPath=$privatebuildpath
+        & "$engroot\common\build.ps1" `
+          -test `
+          -configuration $configuration `
+          -verbosity $verbosity `
+          -ci:$ci `
+          /bl:$logdir\Test.binlog `
+          /p:BuildArch=$architecture `
+          /p:TestArchitectures=$architecture `
+          /p:PrivateBuildPath=$privatebuildpath `
+          /p:InternalRuntimeSourceVersion=$runtimesourceversion `
+          /p:InternalRuntimeSourceFeed=$runtimesourcefeed `
+          /p:InternalRuntimeSourceFeedKey=$runtimesourcefeedkey
+
         if ($lastExitCode -ne 0) {
             exit $lastExitCode
         }

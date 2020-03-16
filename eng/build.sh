@@ -29,13 +29,15 @@ __ManagedBuild=true
 __NativeBuild=true
 __CrossBuild=false
 __Test=false
-__DailyTest=false
 __PrivateBuildPath=""
 __CI=false
 __Verbosity=minimal
 __ManagedBuildArgs=
 __TestArgs=
 __UnprocessedBuildArgs=
+__RuntimeSourceVersion=''
+__RuntimeSourceFeed=''
+__RuntimeSourceFeedKey=''
 
 usage()
 {
@@ -43,7 +45,6 @@ usage()
     echo "--skipmanaged- Skip building managed components"
     echo "--skipnative - Skip building native components"
     echo "--test - run xunit tests"
-    echo "--dailytest - test components for daily build job"
     echo "--privatebuildpath - path to local private runtime build to test"
     echo "--architecture <x64|x86|arm|armel|arm64>"
     echo "--configuration <debug|release>"
@@ -175,13 +176,23 @@ while :; do
             __Test=true
             ;;
 
-        -dailytest)
-            __DailyTest=true
-            ;;
-
         -privatebuildpath)
             __PrivateBuildPath=$2
-            __DailyTest=true
+            shift
+            ;;
+
+        -runtimesourceversion)
+            __RuntimeSourceVersion=$2
+            shift
+            ;;
+
+        -runtimesourcefeed)
+            __RuntimeSourceFeed=$2
+            shift
+            ;;
+
+        -runtimesourcefeedkey)
+            __RuntimeSourceFeedKey=$2
             shift
             ;;
 
@@ -451,7 +462,19 @@ fi
 if [ $__NativeBuild == true ]; then
     echo "Generating Version Source File"
     __GenerateVersionLog="$__LogDir/GenerateVersion.binlog"
-    "$__ProjectRoot/eng/common/msbuild.sh" $__ProjectRoot/eng/CreateVersionFile.csproj /v:$__Verbosity /bl:$__GenerateVersionLog /t:GenerateVersionFiles /restore /p:GenerateVersionSourceFile=true /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" /p:Configuration="$__BuildType" /p:Platform="$__BuildArch" $__UnprocessedBuildArgs
+
+    "$__ProjectRoot/eng/common/msbuild.sh" \
+        $__ProjectRoot/eng/CreateVersionFile.csproj \
+        /v:$__Verbosity \
+        /bl:$__GenerateVersionLog \
+        /t:GenerateVersionFiles \
+        /restore \
+        /p:GenerateVersionSourceFile=true \
+        /p:NativeVersionSourceFile="$__IntermediatesDir/version.cpp" \
+        /p:Configuration="$__BuildType" \
+        /p:Platform="$__BuildArch" \
+        $__UnprocessedBuildArgs
+
     if [ $? != 0 ]; then
         echo "Generating Version Source File FAILED"
         exit 1
@@ -506,7 +529,18 @@ if [ $__Test == true ]; then
 
       echo "lldb: '$LLDB_PATH' gdb: '$GDB_PATH'"
 
-      "$__ProjectRoot/eng/common/build.sh" --test --configuration "$__BuildType" --verbosity "$__Verbosity" /bl:$__LogDir/Test.binlog /p:BuildArch=$__BuildArch /p:DailyTest=$__DailyTest /p:PrivateBuildPath=$__PrivateBuildPath $__TestArgs
+      "$__ProjectRoot/eng/common/build.sh" \
+        --test \
+        --configuration "$__BuildType" \
+        --verbosity "$__Verbosity" \
+        /bl:$__LogDir/Test.binlog \
+        /p:BuildArch=$__BuildArch \
+        /p:PrivateBuildPath=$__PrivateBuildPath \
+        /p:InternalRuntimeSourceVersion=$__RuntimeSourceVersion \
+        /p:InternalRuntimeSourceFeed=$__RuntimeSourceFeed \
+        /p:InternalRuntimeSourceFeedKey=$__RuntimeSourceFeedKey \
+        $__TestArgs
+
       if [ $? != 0 ]; then
           exit 1
       fi

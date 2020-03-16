@@ -23,6 +23,29 @@
   <CDBPath>$(RootBinDir)\bin\SOS.UnitTests\$(TargetConfiguration)\netcoreapp2.0\publish\runtimes\win-$(TargetArchitecture)\native\cdb.exe</CDBPath>
   <CDBHelperExtension>$(InstallDir)\runcommand.dll</CDBHelperExtension>
 
+  <TestLatestOnly>false</TestLatestOnly>
+  <TestLatestOnly Condition="'$(PrivateBuildTesting)' == 'true'">true</TestLatestOnly>
+  <TestLatestOnly Condition="'$(InternalReleaseTesting)' == 'true'">true</TestLatestOnly>
+
+  <TestWebApp>true</TestWebApp>
+  <TestWebApp Condition="'$(TestLatestOnly)' == 'true'">false</TestWebApp>
+
+  <TestWebApp3>true</TestWebApp3>
+  <TestWebApp3 Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp3>
+
+  <TestDesktop>true</TestDesktop>
+  <TestDesktop Condition="'$(TestLatestOnly)' == 'true'">false</TestDesktop>
+  <TestDesktop Condition="'$(TargetArchitecture)' == 'arm64'">false</TestDesktop>
+
+  <!-- Build the debuggee for this framework version but run it on latest -->
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">netcoreapp3.0</BuildProjectFrameworkLatest>
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.0</BuildProjectFrameworkLatest>
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '2.1')">netcoreapp2.1</BuildProjectFrameworkLatest>
+
+  <BuildProjectMicrosoftNetCoreAppVersionLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersionLatest>
+  <BuildProjectMicrosoftNetCoreAppVersionLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersionLatest>
+  <BuildProjectMicrosoftNetCoreAppVersionLatest Condition="StartsWith('$(RuntimeVersionLatest)', '2.1')">$(RuntimeVersion21)</BuildProjectMicrosoftNetCoreAppVersionLatest>
+
   <DesktopFrameworkPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</DesktopFrameworkPath>
   <DesktopFrameworkPath Condition="$(TargetArchitecture) != x64">$(WinDir)\Microsoft.Net\Framework\v4.0.30319\</DesktopFrameworkPath>
   <DesktopFramework>net462</DesktopFramework>
@@ -49,20 +72,19 @@
             Default (prebuilt)
           -->
         <Option>
-          <!-- The debuggee built for 3.0 but run it on latest -->
-          <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+          <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
         </Option>
-        <Option Condition="'$(DailyTest)' != 'true'">
+        <Option Condition="'$(TestLatestOnly)' != 'true'">
           <!-- The debuggee built for 3.0 but run it on 3.1 -->
           <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
         </Option>
-        <Option Condition="'$(DailyTest)' != 'true'">
+        <Option Condition="'$(TestLatestOnly)' != 'true'">
           <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
         </Option>
-        <Option Condition="'$(DailyTest)' != 'true'">
+        <Option Condition="'$(TestLatestOnly)' != 'true'">
           <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
         </Option>
@@ -75,23 +97,22 @@
           <TestName>SOS.StackAndOtherTests</TestName>
           <Options>
             <Option>
-              <!-- Build the debuggee for 3.0 but run it on latest -->
-              <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-              <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
+              <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
+              <BuildProjectMicrosoftNetCoreAppVersion>$(BuildProjectMicrosoftNetCoreAppVersionLatest)</BuildProjectMicrosoftNetCoreAppVersion>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
             </Option>
-            <Option Condition="'$(DailyTest)' != 'true'">
+            <Option Condition="'$(TestLatestOnly)' != 'true'">
               <!-- Build the debuggee for 3.0 but run it on 3.1 -->
               <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
               <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
               <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
             </Option>
-            <Option Condition="'$(DailyTest)' != 'true'">
+            <Option Condition="'$(TestLatestOnly)' != 'true'">
               <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
               <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
               <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
             </Option>
-            <Option Condition="'$(DailyTest)' != 'true'">
+            <Option Condition="'$(TestLatestOnly)' != 'true'">
               <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
               <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion21)</BuildProjectMicrosoftNetCoreAppVersion>
               <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
@@ -101,7 +122,7 @@
         <!--
             SOS.WebApp (runs only on Windows 2.x aspnetcore)
           -->
-        <Option Condition="'$(DailyTest)' != 'true'">
+        <Option Condition="'$(TestWebApp)' == 'true'">
           <TestName>SOS.WebApp</TestName>
           <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
@@ -110,7 +131,7 @@
         <!--
             SOS.WebApp3 and SOS.DualRuntimes (runs on 3.0, 3.1 and latest aspnetcore)
           -->
-        <Option>
+        <Option Condition="'$(TestWebApp3)' == 'true'">
           <Options>
             <Option>
               <TestName>SOS.WebApp3</TestName>
@@ -123,18 +144,17 @@
           </Options>
           <Options>
             <Option>
-              <!-- Build the debuggee for 3.0 but run it on latest -->
-              <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+              <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
               <FrameworkVersion>$(AspNetCoreVersionLatest)</FrameworkVersion>
             </Option>
-            <Option Condition="'$(DailyTest)' != 'true'">
+            <Option Condition="'$(TestLatestOnly)' != 'true'">
               <!-- Build the debuggee for 3.0 but run it on 3.1 -->
               <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
               <FrameworkVersion>$(AspNetCoreVersion31)</FrameworkVersion>
             </Option>
-            <Option Condition="'$(DailyTest)' != 'true'">
+            <Option Condition="'$(TestLatestOnly)' != 'true'">
               <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
               <FrameworkVersion>$(AspNetCoreVersion30)</FrameworkVersion>
@@ -152,7 +172,7 @@
     <!--
         Desktop Runtime (debuggees cli built)
      -->
-    <Option Condition="$(TargetArchitecture) != arm64">
+    <Option Condition="'$(TestDesktop)' == 'true'">
       <Options>
         <Option>
         </Option>
