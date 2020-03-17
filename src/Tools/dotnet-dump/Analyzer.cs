@@ -88,15 +88,21 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         foreach (string cmd in command)
                         {
                             await _commandProcessor.Parse(cmd);
+
+                            if (ExitCommand.Exited)
+                                break;
                         }
                     }
 
-                    // Start interactive command line processing
-                    var analyzeContext = _serviceProvider.GetService<AnalyzeContext>();
-                    await _consoleProvider.Start(async (string commandLine, CancellationToken cancellation) => {
-                        analyzeContext.CancellationToken = cancellation;
-                        await _commandProcessor.Parse(commandLine);
-                    });
+                    if (!ExitCommand.Exited)
+                    {
+                        // Start interactive command line processing
+                        var analyzeContext = _serviceProvider.GetService<AnalyzeContext>();
+                        await _consoleProvider.Start(async (string commandLine, CancellationToken cancellation) => {
+                            analyzeContext.CancellationToken = cancellation;
+                            await _commandProcessor.Parse(commandLine);
+                        });
+                    }
                 }
             }
             catch (Exception ex) when 
