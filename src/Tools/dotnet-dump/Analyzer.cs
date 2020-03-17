@@ -56,7 +56,16 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     target = DataTarget.LoadCoreDump(dump_path.FullName);
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                    target = DataTarget.LoadCrashDump(dump_path.FullName, CrashDumpReader.ClrMD);
+                    try
+                    {
+                        target = DataTarget.LoadCoreDump(dump_path.FullName);
+                    }
+                    catch { }
+
+                    if (target == null)
+                    {
+                        target = DataTarget.LoadCrashDump(dump_path.FullName, CrashDumpReader.ClrMD);
+                    }
                 }
                 else {
                     throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
