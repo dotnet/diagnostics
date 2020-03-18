@@ -100,6 +100,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         foreach (string cmd in command)
                         {
                             await _commandProcessor.Parse(cmd);
+
+                            if (_consoleProvider.Shutdown)
+                                break;
                         }
                     }
 
