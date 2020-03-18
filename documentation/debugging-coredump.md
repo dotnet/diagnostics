@@ -1,7 +1,7 @@
 Debugging Linux or MacOS Core Dump
 ==================================
 
-These instructions will lead you through getting symbols, loading and debugging a Linux or MacOS core dump. The best way to generate a core dump on Linux (only) is through the [createdump](https://github.com/dotnet/coreclr/blob/master/Documentation/botr/xplat-minidump-generation.md#configurationpolicy) facility.
+These instructions will lead you through getting symbols, loading and debugging a Linux or MacOS core dump. The best way to generate a core dump on Linux (only) is through the [createdump](https://github.com/dotnet/runtime/blob/master/docs/design/coreclr/botr/xplat-minidump-generation.md#configurationpolicy) facility.
 
 Dumps created with gdb or gcore do not have all the managed state so various SOS or dotnet-dump commands may display "UNKNOWN" for type and function names. This can also happen with Linux system generated core dumps if the `coredump_filter` for the process is not set to at least 0x3f. See [core](http://man7.org/linux/man-pages/man5/core.5.html) for more information.
 

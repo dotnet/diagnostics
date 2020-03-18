@@ -18,8 +18,8 @@
    extention (eg. strike). There is no memory allocation system calls etc to purtub things */
 
 // ******************************************************************************
-// WARNING!!!: This header is also used by the coreclr repo.
-// See: https://github.com/dotnet/coreclr/blob/master/src/inc/stresslog.h
+// WARNING!!!: This header is also used by the runtime repo.
+// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/inc/stresslog.h
 // Parser: https://github.com/dotnet/diagnostics/blob/master/src/SOS/Strike/stressLogDump.cpp
 // ******************************************************************************
 
