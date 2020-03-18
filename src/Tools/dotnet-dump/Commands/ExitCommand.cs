@@ -12,11 +12,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [CommandAlias(Name = "quit")]
     public class ExitCommand : CommandBase
     {
-        static ExitCommand() { Exited = false; }
-        static public bool Exited { get; set; }
         public override void Invoke()
         {
-            Exited = true;
             Console.Exit();
         }
     }
