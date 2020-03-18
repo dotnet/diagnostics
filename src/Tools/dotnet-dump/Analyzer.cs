@@ -60,7 +60,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     {
                         target = DataTarget.LoadCoreDump(dump_path.FullName);
                     }
-                    catch { }
+                    catch (InvalidDataException)
+                    {
+                        // This condition occurs when we try to load a Windows dump as a Elf core dump.
+                    }
 
                     if (target == null)
                     {
