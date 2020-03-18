@@ -17,14 +17,11 @@ variables:
     value: DotNetCore
   - name: _InternalBuildArgs
     value: ''
-
   - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-    - name: _SignType
-      value: real
     # DotNet-Diagnostics-SDL-Params provides Tsa* variables for SDL checks.
     - group: DotNet-Diagnostics-SDL-Params
     - name: _InternalBuildArgs
-      value: /p:DotNetSignType=$(_SignType)
+      value: /p:DotNetSignType=$(SignType)
         /p:TeamName=$(_TeamName)
         /p:DotNetPublishUsingPipelines=$(PublishPackages)
         /p:OfficialBuildId=$(BUILD.BUILDNUMBER)

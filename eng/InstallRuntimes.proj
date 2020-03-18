@@ -6,6 +6,7 @@
 
      Internal service release testing:
 
+     $(InternalRuntimeSourceType) - the type of install/test run: normal, public, msrc
      $(InternalRuntimeSourceVersion) - the service release version i.e. 2.1.17, 3.1.3, etc.
      $(InternalRuntimeSourceFeed)    - the service release internal feed
      $(InternalRuntimeSourceFeedKey) - the service release feed PAT
@@ -30,7 +31,7 @@
     <PrivateBuildTesting>false</PrivateBuildTesting>
     <PrivateBuildTesting Condition="'$(PrivateBuildPath)' != ''">true</PrivateBuildTesting>
     <InternalReleaseTesting>false</InternalReleaseTesting>
-    <InternalReleaseTesting Condition="'$(InternalRuntimeSourceFeed)' != ''">true</InternalReleaseTesting>
+    <InternalReleaseTesting Condition="'$(InternalRuntimeSourceType)' == 'public' or '$(InternalRuntimeSourceType)' == 'msrc'">true</InternalReleaseTesting>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(BuildArch)' != 'x86'">
@@ -57,13 +58,13 @@
       <PropertyGroup>
         <PowershellWrapper>powershell -NonInteractive -ExecutionPolicy ByPass -NoProfile -command</PowershellWrapper>
         <DotnetInstallScriptCmd>'$(RepositoryEngineeringDir)common\dotnet-install.ps1'</DotnetInstallScriptCmd>
-        <InternalInstallArgs Condition="$(InternalReleaseTesting)">-RuntimeSourceFeed $(InternalRuntimeSourceFeed) -RuntimeSourceFeedKey $(InternalRuntimeSourceFeedKey)</InternalInstallArgs>
+        <InternalInstallArgs Condition="'$(InternalRuntimeSourceType)' == 'msrc'">-RuntimeSourceFeed $(InternalRuntimeSourceFeed) -RuntimeSourceFeedKey $(InternalRuntimeSourceFeedKey)</InternalInstallArgs>
       </PropertyGroup>
     </When>
     <Otherwise>
       <PropertyGroup>
         <DotnetInstallScriptCmd>$(RepositoryEngineeringDir)common/dotnet-install.sh</DotnetInstallScriptCmd>
-        <InternalInstallArgs Condition="$(InternalReleaseTesting)">-runtimesourcefeed $(InternalRuntimeSourceFeed) -runtimesourcefeedkey $(InternalRuntimeSourceFeedKey)</InternalInstallArgs>
+        <InternalInstallArgs Condition="'$(InternalRuntimeSourceType)' == 'msrc'">-runtimesourcefeed $(InternalRuntimeSourceFeed) -runtimesourcefeedkey $(InternalRuntimeSourceFeedKey)</InternalInstallArgs>
       </PropertyGroup>
     </Otherwise>
   </Choose>
@@ -93,11 +94,7 @@
 
   <Target Name="InstallTestRuntimes" 
           BeforeTargets="RunTests"
-          DependsOnTargets="InstallRuntimesWindows;InstallRuntimesUnix;WriteTestVersionManifest;TestPrivateBuild">
-
-    <Message Condition="$(InternalReleaseTesting)" Importance="High" Text="InternalRuntimeSource: version '$(InternalRuntimeSourceVersion)' feed '$(InternalRuntimeSourceFeed)'" />
-
-  </Target>
+          DependsOnTargets="InstallRuntimesWindows;InstallRuntimesUnix;WriteTestVersionManifest;TestPrivateBuild" />
 
 <!--
     Installs the test runtimes on Windows

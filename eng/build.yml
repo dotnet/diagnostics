@@ -85,7 +85,16 @@ jobs:
     - _HelixType: build/product
     - _HelixBuildConfig: $(_BuildConfig)
     - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/$(_BuildConfig)/streams
-    - _InternalInstallArgs: -runtimesourceversion $(InternalRuntimeSourceVersion) -runtimesourcefeed $(InternalRuntimeSourceFeed) -runtimesourcefeedkey $(InternalRuntimeSourceFeedKey)
+    - _InternalBuildArgs: ''
+ 
+    # For testing msrc's and service releases
+    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+      - group: DotNet-MSRC-Storage
+      - _InternalInstallArgs:
+          -runtimesourcetype $(RuntimeSourceType)
+          -runtimesourceversion $(RuntimeSourceVersion)
+          -runtimesourcefeed $(dotnetfeedmsrc-private-feed-url)
+          -runtimesourcefeedkey $(dotnetclimsrc-read-sas-token-base64)
 
     # Only enable publishing in non-public, non PR scenarios.
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:

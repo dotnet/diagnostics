@@ -9,6 +9,7 @@ Param(
   [switch] $skipnative,
   [string] $privatebuildpath = "",
   [switch] $cleanupprivatebuild,
+  [string] $runtimesourcetype = '',
   [string] $runtimesourceversion = '',
   [string] $runtimesourcefeed = '',
   [string] $runtimesourcefeedkey = '',
@@ -88,6 +89,7 @@ if ($test) {
           /p:BuildArch=$architecture `
           /p:TestArchitectures=$architecture `
           /p:PrivateBuildPath=$privatebuildpath `
+          /p:InternalRuntimeSourceType=$runtimesourcetype `
           /p:InternalRuntimeSourceVersion=$runtimesourceversion `
           /p:InternalRuntimeSourceFeed=$runtimesourcefeed `
           /p:InternalRuntimeSourceFeedKey=$runtimesourcefeedkey

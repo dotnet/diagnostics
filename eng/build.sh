@@ -35,6 +35,7 @@ __Verbosity=minimal
 __ManagedBuildArgs=
 __TestArgs=
 __UnprocessedBuildArgs=
+__RuntimeSourceType=''
 __RuntimeSourceVersion=''
 __RuntimeSourceFeed=''
 __RuntimeSourceFeedKey=''
@@ -178,6 +179,11 @@ while :; do
 
         -privatebuildpath)
             __PrivateBuildPath=$2
+            shift
+            ;;
+
+        -runtimesourcetype)
+            __RuntimeSourceType=$2
             shift
             ;;
 
@@ -536,6 +542,7 @@ if [ $__Test == true ]; then
         /bl:$__LogDir/Test.binlog \
         /p:BuildArch=$__BuildArch \
         /p:PrivateBuildPath=$__PrivateBuildPath \
+        /p:InternalRuntimeSourceType=$__RuntimeSourceType \
         /p:InternalRuntimeSourceVersion=$__RuntimeSourceVersion \
         /p:InternalRuntimeSourceFeed=$__RuntimeSourceFeed \
         /p:InternalRuntimeSourceFeedKey=$__RuntimeSourceFeedKey \
