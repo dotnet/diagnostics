@@ -334,7 +334,7 @@ namespace Microsoft.Diagnostics.Tools.Reverse
             {
                 var (task, session) = entry;
                 var (pid, client) = clientDict[cookie];
-                client.StopEventPipeSession(session);
+                session.Stop();
                 await task;
             }
             else
@@ -370,12 +370,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns> 
         public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown=true, int circularBufferMB=256)
-
-        /// <summary>
-        /// Stop tracing the application via CollectTracing2 command.
-        /// </summary>
-        /// <param name="session">The EventPipeSession to stop. This session must have originated from the same application that created this diagnostics client</param>
-        public void StopEventPipeSession(EventPipeSession session);
 
         /// <summary>
         /// Trigger a core dump generation.
@@ -535,11 +529,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         /// <returns> The server loop task.  This can be `awaited` if a user wants to be sure the server has been shut down.  N.B.: don't `await` this task if you are relying on the IDisposable interface </returns>
         public async Task Connect();
-
-        /// <summary>
-        /// Stops the server loop and listening.  Unnecessary if you are using the IDisposable interface.
-        /// </summary>
-        public void Disconnect();
     }
 }
 ```
