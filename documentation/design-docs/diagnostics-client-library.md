@@ -510,8 +510,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Creates a Diagnostics Agent
         /// </summary>
-        /// <parameter name="transportAddress"> The address at which to create the IPC server.  On Windows, this is the path to a named pipe, and on Unix/Linux, it is the path to a Unix Domain Socket. </parameter>
-        public DiagnosticsAgent(string transportAddress);
+        /// <parameter name="ipcEndpointAddress"> The address at which to create the IPC server.  On Windows, this is the path to a named pipe, and on Unix/Linux, it is the path to a Unix Domain Socket. </parameter>
+        public DiagnosticsAgent(string ipcEndpointAddress);
 
         /// <summary>
         /// This event is raised the first time an application connects to the IPC server.
