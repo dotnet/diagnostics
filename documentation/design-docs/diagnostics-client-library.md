@@ -257,7 +257,6 @@ namespace Microsoft.Diagnostics.Tools.Reverse
             string address = (args.Length >= 1) ? args[0] : "~/myawesome.sock";
             try
             {
-                var clientDict = 
                 using (DiagnosticsAgent agent = new DiagnosticsAgent(address))
                 {
                     agent.OnDiagnosticsConnection += (sender, eventArgs) =>
