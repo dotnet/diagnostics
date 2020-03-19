@@ -744,35 +744,69 @@ For example, if the Diagnostic Server finds incorrectly encoded data while parsi
   </tr>
 </table>
 
------
-### Current Implementation (OLD)
+# Advertise IPC Protocol
 
-Single-purpose IPC protocol used exclusively for EventPipe functionality.  "Packets" in the current implementation are simply the `nettrace` payloads and command/control is handled via `uint32` enum values sent one way with hard coded responses expected.
+This protocol is _separate_ from the Diagnostics IPC Protocol described above, but it is closely related.  It is used by the .NET Runtime to advertise itself to agents that create a Diagnostics IPC Protocol server.  It is appropriate to view this as a meta protocol in relation to the Diagnostics IPC Protocol.
+
+## Communication Flow
+
+This protocol is for use when connecting to a Diagnostics IPC Protocol server.  A Diagnostics IPC Protocol server (Agent) and a .NET application (App) communicate like this:
+
+1. Agent creates an OS Transport
+2. App connects to OS Transport
+3. App sends an Advertise message
+4. App waits for Diagnostics IPC Protocol message
+
+In diagram form:
+```
+App -> Agent: [Advertise]
+```
+
+## Advertise Message
+
+There is only one message type in the Advertise IPC Protocol, the Advertise message.  It is a fixed size message of 3 fields (all values are **little-endian**):
+
+* Magic: 6 little-endian bytes that contain the ASCII bytes for the version of advertise protocol being spoken.
+* Instance Cookie: a 16 bit, little-endian number used to disambiguate across PID-spaces
+* Process ID: a 64 bit, little-endian number containing the pid of the process in its own PID-space
 
 ```c++
-enum class DiagnosticMessageType : uint32_t
+struct AdvertisePayload
 {
-    // EventPipe
-    StartEventPipeTracing = 1024, // To file
-    StopEventPipeTracing,
-    CollectEventPipeTracing, // To IPC
-};
-
-struct MessageHeader
-{
-    DiagnosticMessageType RequestType;
-    uint32_t Pid;
+   uint8_t  magic[6]; // contains the ASCII bytes for "AD_V1\0"
+   uint16_t instance_cookie; // a random 16 bit number meant to disambiguate runtimes across PID-spaces
+   uint64_t pid; // the process id of the runtime in its own PID-space
 };
 ```
 
-```
-runtime <- client : MessageHeader { CollectEventPipeTracing }
-    error? -> 0 then session close
-runtime -> client : session ID 
-runtime -> client : event stream
-
-...
-
-runtime <- client : stop command
-runtime -> client : session id and stops
-```
+Sample encoded message:
+<table>
+  <tr>
+    <th>1</th>
+    <th>2</th>
+    <th>3</th>
+    <th>4</th>
+    <th>5</th>
+    <th>6</th>
+    <th>7</th>
+    <th>8</th>
+    <th>9</th>
+    <th>10</th>
+    <th>11</th>
+    <th>12</th>
+    <th>13</th>
+    <th>14</th>
+    <th>15</th>
+    <th>16</th>
+  </tr>
+  <tr>
+    <td colspan="6">magic</td>
+    <td colspan="2">instance_cookie</td>
+    <td colspan="8">pid</td>
+  </tr>
+  <tr>
+    <td colspan="6">"AD_V1\0"</td>
+    <td colspan="2">42131</td>
+    <td colspan="8">20535</td>
+  </tr>
+</table>

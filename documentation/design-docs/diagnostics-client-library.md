@@ -240,6 +240,112 @@ public static int AttachProfiler(int processId, Guid profilerGuid, string profil
 }
 ```
 
+#### 8. Write a simple monitor agent
+
+This sample shows how to use the `DiagnosticsAgent` API to create a simple Agent application.
+```cs
+namespace Microsoft.Diagnostics.Tools.Reverse
+{
+    internal static class Program
+    {
+        static ConcurrentDictionary<int, (Task, EventPipeSession)> sessionDict = new ConcurrentDictionary<int, (Task, EventPipeSession)>();
+        static ConcurrentDictionary<int, (int, DiagnosticsClient)> clientDict = new ConcurrentDictionary<int, (int, DiagnosticsClient)>();
+
+        public static void main(string[] args)
+        {
+            // get the address for the server (this sample assumes Linux)
+            string address = (args.Length >= 1) ? args[0] : "~/myawesome.sock";
+            try
+            {
+                var clientDict = 
+                using (DiagnosticsAgent agent = new DiagnosticsAgent(address))
+                {
+                    agent.OnDiagnosticsConnection += (sender, eventArgs) =>
+                    {
+                        clientDict[eventArgs.RuntimeInstanceCookie] = (eventArgs.ProcessId, eventArgs.Client);
+                        Console.Write($"== New Connection: instanceCookie: {eventArgs.RuntimeInstanceCookie}, ProcessId: {eventArgs.ProcessId}\n> ");
+                    };
+                    var serverTask = agent.Connect();
+
+                    bool shouldExit = false;
+                    while (!shouldExit)
+                    {
+                        Console.Write("> ");
+                        string response = Console.ReadLine().ToLowerInvariant();
+                        switch(response)
+                        {
+                            case "list": ListConnections(); break;
+                            case "trace": TraceOnConnection(); break;
+                            case "stop": StopTrace(); break;
+                            case "exit": shouldExit = true; break;
+                            default: Console.WriteLine("Invalid command"); break;
+                        }
+                    }
+                    Console.WriteLine("Exiting...");
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+            finally
+            {
+                Console.WriteLine("Exited!");
+            }
+        }
+
+        private static void ListConnections()
+        {
+            foreach (var (instanceCookie, (pid, _)) in clientDict)
+                Console.WriteLine($"Connection: {{ instanceCookie: {instanceCookie}, pid: {pid} }}");
+        }
+
+        private static void TraceOnConnection()
+        {
+            Console.Write("Enter instance cookie to trace: ");
+            string input = Console.ReadLine();
+            int cookie = int.Parse(input);
+            if (clientDict.TryGetValue(cookie, out var value))
+            {
+                var (pid, client) = value;
+                EventPipeSession session = client.StartEventPipeSession(new List<EventPipeProvider> { new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Verbose) }, true);
+                Stream stream = session.EventStream;
+                var readTask = Task.Run(async () =>
+                {
+                    using (var file = File.Create($"trace_{cookie}_{pid}.nettrace"))
+                    {
+                        await stream.CopyToAsync(file);
+                    }
+                });
+                sessionDict[cookie] = (readTask, session);
+            }
+            else
+            {
+                Console.WriteLine("Invalid cookie");
+            }
+        }
+
+        private static async void StopTrace()
+        {
+            Console.Write("Enter instance id to stop: ");
+            string input = Console.ReadLine();
+            int cookie = int.Parse(input);
+            if (sessionDict.TryGetValue(cookie, out var entry))
+            {
+                var (task, session) = entry;
+                var (pid, client) = clientDict[cookie];
+                client.StopEventPipeSession(session);
+                await task;
+            }
+            else
+            {
+                Console.WriteLine("Invalid instance id");
+            }
+        }
+    }
+}
+```
+
 ## API Descriptions
 
 At a high level, the DiagnosticsClient class provides static methods that the user may call to invoke diagnostics IPC commands (i.e. start an EventPipe session, request a core dump, etc.) The library also provides several classes that may be helpful for invoking these commands. These commands are described in more detail in the diagnostics IPC protocol documentation available here: https://github.com/dotnet/diagnostics/blob/master/documentation/design-docs/ipc-protocol.md#commands. 
@@ -264,6 +370,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns> 
         public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown=true, int circularBufferMB=256)
+
+        /// <summary>
+        /// Stop tracing the application via CollectTracing2 command.
+        /// </summary>
+        /// <param name="session">The EventPipeSession to stop. This session must have originated from the same application that created this diagnostics client</param>
+        public void StopEventPipeSession(EventPipeSession session);
 
         /// <summary>
         /// Trigger a core dump generation.
@@ -381,3 +493,53 @@ namespace Microsoft.Diagnostics.NETCore.Client
 }
 ```
 
+### DiagnosticsAgent
+This class handles the creation of a Diagnostics Agent, e.g., the infrastructure for creating a Diagnostics IPC server and handling connections.
+
+```csharp
+namespace Microsoft.Diagnostics.NETCore.Client
+{
+    public sealed class DiagnosticsConnectionEventArgs : EventArgs
+    {
+        // The process ID of the connected process
+        // This cannot be used to uniquely identify an Application since connected Applications may not be in the same PID-space, e.g., containers
+        public int ProcessId { get; set; }
+
+        // This is a random 16-bit number casted to an int.  It is not cryptographically secure, but should be unique across PID-spaces
+        // and should be used to unique identify connection Applications.  This will be the same every time an Application instance connects
+        public int RuntimeInstanceCookie { get; set; }
+
+        // A Diagnostics Client that can be used to issue commands to the Application whose connection raise the event.
+        // N.B.: You cannot re-use after issuing a command.
+        public DiagnosticsClient Client { get; set; }
+    }
+
+    public class DiagnosticsAgent : IDisposable
+    {
+        /// <summary>
+        /// Creates a Diagnostics Agent
+        /// </summary>
+        /// <parameter name="transportAddress"> The address at which to create the IPC server.  On Windows, this is the path to a named pipe, and on Unix/Linux, it is the path to a Unix Domain Socket. </parameter>
+        public DiagnosticsAgent(string transportAddress);
+
+        /// <summary>
+        /// This event is raised whenever an application connects to the IPC server.
+        /// That should happen:
+        /// - after every command issued to an application via this connection
+        /// - when an application starts
+        /// </summary>
+        public event EventHandler<DiagnosticsConnectionEventArgs> OnDiagnosticsConnection;
+
+        /// <summary>
+        /// Starts the server loop in the background and begins listening for connections.
+        /// </summary>
+        /// <returns> The server loop task.  This can be `awaited` if a user wants to be sure the server has been shut down.  N.B.: don't `await` this task if you are relying on the IDisposable interface </returns>
+        public async Task Connect();
+
+        /// <summary>
+        /// Stops the server loop and listening.  Unnecessary if you are using the IDisposable interface.
+        /// </summary>
+        public void Disconnect();
+    }
+}
+```
