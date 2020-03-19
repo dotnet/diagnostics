@@ -504,7 +504,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public int RuntimeInstanceCookie { get; set; }
 
         // A Diagnostics Client that can be used to issue commands to the Application whose connection raise the event.
-        // N.B.: You cannot re-use after issuing a command.
         public DiagnosticsClient Client { get; set; }
     }
 
@@ -517,18 +516,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public DiagnosticsAgent(string transportAddress);
 
         /// <summary>
-        /// This event is raised whenever an application connects to the IPC server.
-        /// That should happen:
-        /// - after every command issued to an application via this connection
-        /// - when an application starts
+        /// This event is raised the first time an application connects to the IPC server.
+        /// The provided DiagnosticsClient is valid as long as the DiagnosticsAgent is still alive
         /// </summary>
         public event EventHandler<DiagnosticsConnectionEventArgs> OnDiagnosticsConnection;
 
         /// <summary>
         /// Starts the server loop in the background and begins listening for connections.
         /// </summary>
-        /// <returns> The server loop task.  This can be `awaited` if a user wants to be sure the server has been shut down.  N.B.: don't `await` this task if you are relying on the IDisposable interface </returns>
-        public async Task Connect();
+        /// <returns> The server loop task.  This can be `awaited` if a user wants to be sure the server has been shut down. </returns>
+        public void Connect();
     }
 }
 ```
