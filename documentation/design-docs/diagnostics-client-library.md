@@ -264,7 +264,6 @@ namespace Microsoft.Diagnostics.Tools.Reverse
                         clientDict[eventArgs.RuntimeInstanceCookie] = (eventArgs.ProcessId, eventArgs.Client);
                         Console.Write($"== New Connection: instanceCookie: {eventArgs.RuntimeInstanceCookie}, ProcessId: {eventArgs.ProcessId}\n> ");
                     };
-                    var serverTask = agent.Connect();
 
                     bool shouldExit = false;
                     while (!shouldExit)
@@ -516,15 +515,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         /// <summary>
         /// This event is raised the first time an application connects to the IPC server.
-        /// The provided DiagnosticsClient is valid as long as the DiagnosticsAgent is still alive
+        /// The provided DiagnosticsClient is valid as long as the DiagnosticsAgent is still alive.
+        /// Registering for this event will cause the handler to be notified of all currently active connections.
         /// </summary>
         public event EventHandler<DiagnosticsConnectionEventArgs> OnDiagnosticsConnection;
-
-        /// <summary>
-        /// Starts the server loop in the background and begins listening for connections.
-        /// </summary>
-        /// <returns> The server loop task.  This can be `awaited` if a user wants to be sure the server has been shut down. </returns>
-        public void Connect();
     }
 }
 ```
