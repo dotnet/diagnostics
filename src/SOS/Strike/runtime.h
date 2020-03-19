@@ -24,8 +24,6 @@
 
 #else
 
-#define NETCORE_RUNTIME_MODULE_NAME_UNIX_A "libcoreclr"
-
 #define NETCORE_RUNTIME_MODULE_NAME_W   W("coreclr")
 #define NETCORE_RUNTIME_MODULE_NAME_A   "coreclr"
 #define NETCORE_RUNTIME_DLL_NAME_W      MAKEDLLNAME_W(NETCORE_RUNTIME_MODULE_NAME_W)
@@ -42,6 +40,14 @@
 #define NET_DBI_DLL_NAME_A              MAKEDLLNAME_A("mscordbi")
 
 #endif // FEATURE_PAL
+
+// Runtime module name is the same for all *nix OS
+#define NETCORE_RUNTIME_MODULE_NAME_UNIX_W  W("libcoreclr")
+#define NETCORE_RUNTIME_MODULE_NAME_UNIX_A  "libcoreclr"
+
+// Runtime DLL name is extension varies for *nix OS.
+#define NETCORE_RUNTIME_DLL_NAME_LINUX_W     W("libcoreclr.so")
+#define NETCORE_RUNTIME_DLL_NAME_LINUX_A     "libcoreclr.so"
 
 #define DESKTOP_RUNTIME_MODULE_NAME_W   W("clr")
 #define DESKTOP_RUNTIME_MODULE_NAME_A   "clr"
@@ -61,6 +67,9 @@ class IRuntime
 public:
     // Returns true if desktop CLR; false if .NET Core
     virtual bool IsDesktop() const = 0;
+
+    // Returns true if we are processing a cross OS dump (from Linux on Windows)
+    virtual bool IsCrossOS() const = 0;
 
     // Returns the runtime module index
     virtual ULONG GetModuleIndex() const = 0;
@@ -100,6 +109,7 @@ class Runtime : public IRuntime
 {
 private:
     bool m_isDesktop;
+    bool m_isCrossOS;
     ULONG m_index;
     ULONG64 m_address;
     ULONG64 m_size;
@@ -117,8 +127,9 @@ private:
     static LPCSTR s_dacFilePath;
     static LPCSTR s_dbiFilePath;
 
-    Runtime(bool isDesktop, ULONG index, ULONG64 address, ULONG64 size) : 
+    Runtime(bool isDesktop, bool isCrossOS, ULONG index, ULONG64 address, ULONG64 size) :
         m_isDesktop(isDesktop),
+        m_isCrossOS(isCrossOS),
         m_index(index),
         m_address(address),
         m_size(size),
@@ -189,6 +200,7 @@ public:
     static void Flush();
 
     virtual bool IsDesktop() const { return m_isDesktop; }
+    virtual bool IsCrossOS() const { return m_isCrossOS; }
 
     virtual ULONG GetModuleIndex() const { return m_index; }
 
@@ -211,7 +223,7 @@ public:
     // Returns the runtime module DLL name (clr.dll, coreclr.dll, libcoreclr.so, libcoreclr.dylib)
     inline const char* GetRuntimeDllName() const
     {
-        return IsDesktop() ? DESKTOP_RUNTIME_DLL_NAME_A : NETCORE_RUNTIME_DLL_NAME_A;
+        return IsDesktop() ? DESKTOP_RUNTIME_DLL_NAME_A : IsCrossOS() ? NETCORE_RUNTIME_DLL_NAME_LINUX_A : NETCORE_RUNTIME_DLL_NAME_A;
     }
 
     // Returns the DAC module name (mscordacwks.dll, mscordaccore.dll, libmscordaccore.so, libmscordaccore.dylib) 
@@ -236,13 +248,13 @@ public:
 // Returns the runtime module name (clr, coreclr, libcoreclr.so, libcoreclr.dylib).
 inline const char* GetRuntimeModuleName()
 {
-    return g_pRuntime->IsDesktop() ? DESKTOP_RUNTIME_MODULE_NAME_A : NETCORE_RUNTIME_MODULE_NAME_A;
+    return g_pRuntime->IsDesktop() ? DESKTOP_RUNTIME_MODULE_NAME_A : g_pRuntime->IsCrossOS() ? NETCORE_RUNTIME_MODULE_NAME_UNIX_A : NETCORE_RUNTIME_MODULE_NAME_A;
 }
 
 // Returns the runtime module DLL name (clr.dll, coreclr.dll, libcoreclr.so, libcoreclr.dylib)
 inline const char* GetRuntimeDllName()
 {
-    return g_pRuntime->IsDesktop() ? DESKTOP_RUNTIME_DLL_NAME_A : NETCORE_RUNTIME_DLL_NAME_A;
+    return g_pRuntime->IsDesktop() ? DESKTOP_RUNTIME_DLL_NAME_A : g_pRuntime->IsCrossOS() ? NETCORE_RUNTIME_DLL_NAME_LINUX_A : NETCORE_RUNTIME_DLL_NAME_A;
 }
 
 // Returns the DAC module name (mscordacwks, mscordaccore, libmscordaccore.so, libmscordaccore.dylib) 

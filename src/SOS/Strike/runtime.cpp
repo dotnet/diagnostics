@@ -53,6 +53,7 @@ HRESULT Runtime::CreateInstance(bool isDesktop, Runtime **ppRuntime)
     ULONG64 moduleAddress = 0;
     ULONG64 moduleSize = 0;
     HRESULT hr = S_OK;
+    bool isCrossOS = false;
 
     if (*ppRuntime == nullptr)
     {
@@ -64,6 +65,8 @@ HRESULT Runtime::CreateInstance(bool isDesktop, Runtime **ppRuntime)
             runtimeModuleName = NETCORE_RUNTIME_MODULE_NAME_UNIX_A;
 
             hr = g_ExtSymbols->GetModuleByModuleName(runtimeModuleName, 0, &moduleIndex, &moduleAddress);
+
+            isCrossOS = true;
         }
 #endif // !FEATURE_PAL
         if (SUCCEEDED(hr))
@@ -99,7 +102,7 @@ HRESULT Runtime::CreateInstance(bool isDesktop, Runtime **ppRuntime)
         {
             if (moduleSize > 0) 
             {
-                *ppRuntime = new Runtime(isDesktop, moduleIndex, moduleAddress, moduleSize);
+                *ppRuntime = new Runtime(isDesktop, isCrossOS, moduleIndex, moduleAddress, moduleSize);
                 OnUnloadTask::Register(CleanupRuntimes);
             }
             else 
