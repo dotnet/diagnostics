@@ -282,7 +282,16 @@ namespace SOS
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     var peFile = new PEFile(new StreamAddressSpace(stream), true);
-                    generator = new PEFileKeyGenerator(s_tracer, peFile, moduleFilePath);
+                    if (peFile.IsValid())
+                    {
+                        generator = new PEFileKeyGenerator(s_tracer, peFile, moduleFilePath);
+                    }
+                    else
+                    {
+                        // Support loading ELF files on Windows for the cross-dac
+                        var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
+                        generator = new ELFFileKeyGenerator(s_tracer, elfFile, moduleFilePath);
+                    }
                 }
                 else {
                     return;
