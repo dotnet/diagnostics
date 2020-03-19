@@ -57,6 +57,15 @@ HRESULT Runtime::CreateInstance(bool isDesktop, Runtime **ppRuntime)
     if (*ppRuntime == nullptr)
     {
         hr = g_ExtSymbols->GetModuleByModuleName(runtimeModuleName, 0, &moduleIndex, &moduleAddress);
+#ifndef FEATURE_PAL
+        // On Windows, support loading a Linux core dump by checking for NETCORE_RUNTIME_MODULE_NAME_UNIX_A too
+        if (!SUCCEEDED(hr) && !isDesktop)
+        {
+            runtimeModuleName = NETCORE_RUNTIME_MODULE_NAME_UNIX_A;
+
+            hr = g_ExtSymbols->GetModuleByModuleName(runtimeModuleName, 0, &moduleIndex, &moduleAddress);
+        }
+#endif // !FEATURE_PAL
         if (SUCCEEDED(hr))
         {
 #ifdef FEATURE_PAL
