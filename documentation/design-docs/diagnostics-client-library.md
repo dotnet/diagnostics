@@ -246,12 +246,12 @@ This sample shows how to use the `DiagnosticsAgent` API to create a simple Agent
 ```cs
 namespace Microsoft.Diagnostics.Tools.Reverse
 {
-    internal static class Program
+    class Program
     {
         static ConcurrentDictionary<int, (Task, EventPipeSession)> sessionDict = new ConcurrentDictionary<int, (Task, EventPipeSession)>();
         static ConcurrentDictionary<int, (int, DiagnosticsClient)> clientDict = new ConcurrentDictionary<int, (int, DiagnosticsClient)>();
 
-        public static void main(string[] args)
+        static void Main(string[] args)
         {
             // get the address for the server (this sample assumes Linux)
             string address = (args.Length >= 1) ? args[0] : "~/myawesome.sock";
