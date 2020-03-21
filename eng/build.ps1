@@ -9,8 +9,8 @@ Param(
   [switch] $skipnative,
   [string] $privatebuildpath = "",
   [switch] $cleanupprivatebuild,
-  [string] $runtimesourcetype = '',
-  [string] $runtimesourceversion = '',
+  [ValidatePattern("(\d+\.\d+.\d+(-[a-z0-9\.]+)?)?")][string] $dotnetruntimeversion = '',
+  [ValidatePattern("(\d+\.\d+.\d+(-[a-z0-9\.]+)?)?")][string] $dotnetruntimedownloadversion= '',
   [string] $runtimesourcefeed = '',
   [string] $runtimesourcefeedkey = '',
   [Parameter(ValueFromRemainingArguments=$true)][String[]] $remainingargs
@@ -89,10 +89,10 @@ if ($test) {
           /p:BuildArch=$architecture `
           /p:TestArchitectures=$architecture `
           /p:PrivateBuildPath=$privatebuildpath `
-          /p:InternalRuntimeSourceType=$runtimesourcetype `
-          /p:InternalRuntimeSourceVersion=$runtimesourceversion `
-          /p:InternalRuntimeSourceFeed=$runtimesourcefeed `
-          /p:InternalRuntimeSourceFeedKey=$runtimesourcefeedkey
+          /p:DotnetRuntimeVersion=$dotnetruntimeversion `
+          /p:DotnetRuntimeDownloadVersion=$dotnetruntimedownloadversion `
+          /p:RuntimeSourceFeed=$runtimesourcefeed `
+          /p:RuntimeSourceFeedKey=$runtimesourcefeedkey
 
         if ($lastExitCode -ne 0) {
             exit $lastExitCode

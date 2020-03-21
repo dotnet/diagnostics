@@ -21,9 +21,9 @@ variables:
     # DotNet-Diagnostics-SDL-Params provides Tsa* variables for SDL checks.
     - group: DotNet-Diagnostics-SDL-Params
     - name: _InternalBuildArgs
-      value: /p:DotNetSignType=$(SignType)
+      value: /p:DotNetSignType=real
         /p:TeamName=$(_TeamName)
-        /p:DotNetPublishUsingPipelines=$(PublishPackages)
+        /p:DotNetPublishUsingPipelines=true
         /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
 
 stages:

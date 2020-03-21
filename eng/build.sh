@@ -35,8 +35,8 @@ __Verbosity=minimal
 __ManagedBuildArgs=
 __TestArgs=
 __UnprocessedBuildArgs=
-__RuntimeSourceType=''
-__RuntimeSourceVersion=''
+__DotnetRuntimeVersion=''
+__DotnetRuntimeDownloadVersion=''
 __RuntimeSourceFeed=''
 __RuntimeSourceFeedKey=''
 
@@ -182,13 +182,13 @@ while :; do
             shift
             ;;
 
-        -runtimesourcetype)
-            __RuntimeSourceType=$2
+        -dotnetruntimeversion)
+            __DotnetRuntimeVersion=$2
             shift
             ;;
 
-        -runtimesourceversion)
-            __RuntimeSourceVersion=$2
+        -dotnetruntimedownloadversion)
+            __DotnetRuntimeDownloadVersion=$2
             shift
             ;;
 
@@ -542,10 +542,10 @@ if [ $__Test == true ]; then
         /bl:$__LogDir/Test.binlog \
         /p:BuildArch=$__BuildArch \
         /p:PrivateBuildPath=$__PrivateBuildPath \
-        /p:InternalRuntimeSourceType=$__RuntimeSourceType \
-        /p:InternalRuntimeSourceVersion=$__RuntimeSourceVersion \
-        /p:InternalRuntimeSourceFeed=$__RuntimeSourceFeed \
-        /p:InternalRuntimeSourceFeedKey=$__RuntimeSourceFeedKey \
+        /p:DotnetRuntimeVersion=$__DotnetRuntimeVersion \
+        /p:DotnetRuntimeDownloadVersion=$__DotnetRuntimeDownloadVersion \
+        /p:RuntimeSourceFeed=$__RuntimeSourceFeed \
+        /p:RuntimeSourceFeedKey=$__RuntimeSourceFeedKey \
         $__TestArgs
 
       if [ $? != 0 ]; then

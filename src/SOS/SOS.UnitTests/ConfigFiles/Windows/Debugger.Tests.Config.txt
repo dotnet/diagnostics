@@ -42,10 +42,6 @@
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '2.1')">netcoreapp2.1</BuildProjectFrameworkLatest>
 
-  <BuildProjectMicrosoftNetCoreAppVersionLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersionLatest>
-  <BuildProjectMicrosoftNetCoreAppVersionLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersionLatest>
-  <BuildProjectMicrosoftNetCoreAppVersionLatest Condition="StartsWith('$(RuntimeVersionLatest)', '2.1')">$(RuntimeVersion21)</BuildProjectMicrosoftNetCoreAppVersionLatest>
-
   <DesktopFrameworkPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</DesktopFrameworkPath>
   <DesktopFrameworkPath Condition="$(TargetArchitecture) != x64">$(WinDir)\Microsoft.Net\Framework\v4.0.30319\</DesktopFrameworkPath>
   <DesktopFramework>net462</DesktopFramework>
@@ -98,23 +94,19 @@
           <Options>
             <Option>
               <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
-              <BuildProjectMicrosoftNetCoreAppVersion>$(BuildProjectMicrosoftNetCoreAppVersionLatest)</BuildProjectMicrosoftNetCoreAppVersion>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
             </Option>
             <Option Condition="'$(TestLatestOnly)' != 'true'">
               <!-- Build the debuggee for 3.0 but run it on 3.1 -->
               <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-              <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
               <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
             </Option>
             <Option Condition="'$(TestLatestOnly)' != 'true'">
               <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-              <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
               <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
             </Option>
             <Option Condition="'$(TestLatestOnly)' != 'true'">
               <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-              <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion21)</BuildProjectMicrosoftNetCoreAppVersion>
               <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
             </Option>
           </Options>
