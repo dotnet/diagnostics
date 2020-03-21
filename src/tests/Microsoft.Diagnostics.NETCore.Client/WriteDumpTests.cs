@@ -54,7 +54,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// A test that writes all the different types of dump file
         /// </summary>
-        [Fact]
+        [Fact(Skip = "Test often times out in official builds/PRs. See https://github.com/dotnet/diagnostics/issues/913")]
         public void WriteAllDumpTypesTest()
         {
             var normalDumpPath = "./myDump-normal.dmp";
