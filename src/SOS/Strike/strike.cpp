@@ -7624,7 +7624,7 @@ public:
 
         // This is only needed for desktop runtime because OnCodeGenerated2
         // isn't supported by the desktop DAC.
-        if (g_pRuntime->IsDesktop())
+        if (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
         {
             // Some method has been generated, make a breakpoint and remove it.
             ULONG32 len = mdNameLen;
@@ -9872,7 +9872,7 @@ DECLARE_API(DumpLog)
     _ASSERTE(g_pRuntime != nullptr);
 
     // Not supported on desktop runtime
-    if (g_pRuntime->IsDesktop())
+    if (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
     {
         ExtErr("DumpLog not supported on desktop runtime\n");
         return E_FAIL;

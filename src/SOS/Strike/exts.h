@@ -197,9 +197,9 @@ public:
 inline void EENotLoadedMessage(HRESULT Status)
 {
 #ifdef FEATURE_PAL
-    ExtOut("Failed to find runtime module (%s), 0x%08x\n", NETCORE_RUNTIME_DLL_NAME_A, Status);
+    ExtOut("Failed to find runtime module (%s), 0x%08x\n", GetRuntimeDllName(IRuntime::Core), Status);
 #else
-    ExtOut("Failed to find runtime module (%s or %s), 0x%08x\n", NETCORE_RUNTIME_DLL_NAME_A, DESKTOP_RUNTIME_DLL_NAME_A, Status);
+    ExtOut("Failed to find runtime module (%s or %s or %s), 0x%08x\n", GetRuntimeDllName(IRuntime::Core), GetRuntimeDllName(IRuntime::WindowsDesktop), GetRuntimeDllName(IRuntime::UnixCore), Status);
 #endif
     ExtOut("Extension commands need it in order to have something to do.\n");
 }
