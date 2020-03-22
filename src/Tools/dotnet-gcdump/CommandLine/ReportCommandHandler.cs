@@ -1,6 +1,7 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Binding;
+using System.CommandLine.Builder;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,7 +11,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class ReportCommandHandler
     {
-        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, FileInfo file = null, int? processId = null, ReportType reportType = ReportType.HeapStat);
+        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, FileInfo gcdump_filename, int? processId = null, ReportType reportType = ReportType.HeapStat);
         
         public static Command ReportCommand() =>
             new Command(
@@ -20,21 +21,21 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 // Handler
                 HandlerDescriptor.FromDelegate((ReportDelegate) Report).GetCommandHandler(),
                 // Options
-                FileNameOption(), ProcessIdOption(), ReportTypeOption()
+                FileNameArgument(), ProcessIdOption(), ReportTypeOption()
             };
 
-        private static Task<int> Report(CancellationToken ct, IConsole console, FileInfo file = null, int? processId = null, ReportType type = ReportType.HeapStat)
+        private static Task<int> Report(CancellationToken ct, IConsole console, FileInfo gcdump_filename, int? processId = null, ReportType type = ReportType.HeapStat)
         {
             //
             // Validation
             //
-            if (file == null && !processId.HasValue)
+            if (gcdump_filename == null && !processId.HasValue)
             {
-                Console.Error.WriteLine("-f|--file or -p|process-id is required");
+                Console.Error.WriteLine("<gcdump_filename> or -p|process-id is required");
                 return Task.FromResult(-1);
             }
             
-            if (file != null && processId.HasValue)
+            if (gcdump_filename != null && processId.HasValue)
             {
                 Console.Error.WriteLine("Specify one of -f|--file or -p|process-id.");
                 return Task.FromResult(-1);
@@ -45,7 +46,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             //
             // Determine report source
             //
-            if (file != null)
+            if (gcdump_filename != null)
                 source = ReportSource.DumpFile;
             else if (processId.HasValue)
                 source = ReportSource.Process;
@@ -53,7 +54,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             return (source, type) switch
             {
                 (ReportSource.Process, ReportType.HeapStat)  => ReportFromProcess(processId.Value, ct),
-                (ReportSource.DumpFile, ReportType.HeapStat) => ReportFromFile(file),
+                (ReportSource.DumpFile, ReportType.HeapStat) => ReportFromFile(gcdump_filename),
                 _                                            => HandleUnknownParam()
             };
         }
@@ -108,8 +109,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
         }
 
-        private static Option<FileInfo> FileNameOption() =>
-            new Option<FileInfo>(new[] {"-f", "--file"}, "The file to read gcdump from.");
+        private static Argument<FileInfo> FileNameArgument() =>
+            new Argument<FileInfo>("gcdump_filename")
+            {
+                Description = "The file to read gcdump from.",
+                Arity = new ArgumentArity(0, 1)
+            }.ExistingOnly();
         
         private static Option<int> ProcessIdOption() =>
             new Option<int>(new[] { "-p", "--process-id" }, "The process id to collect the trace.");
