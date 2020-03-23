@@ -732,7 +732,7 @@ void InitializeSymbolStoreFromSymPath()
 //
 static void SymbolFileCallback(void* param, const char* moduleFileName, const char* symbolFilePath)
 {
-    if (strcmp(moduleFileName, NETCORE_RUNTIME_DLL_NAME_A) == 0) {
+    if (strcmp(moduleFileName, GetRuntimeDllName(IRuntime::Core)) == 0) {
         return;
     }
     if (strcmp(moduleFileName, NETCORE_DAC_DLL_NAME_A) == 0) {
