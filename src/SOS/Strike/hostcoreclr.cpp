@@ -368,7 +368,7 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
                                 return hr;
                             }
                             // Don't use the desktop runtime to host
-                            if (g_pRuntime->IsDesktop())
+                            if (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
                             {
                                 return E_FAIL;
                             }
@@ -391,7 +391,7 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
     hostRuntimeDirectory.assign(g_hostRuntimeDirectory);
     coreClrPath.assign(g_hostRuntimeDirectory);
     coreClrPath.append(DIRECTORY_SEPARATOR_STR_A);
-    coreClrPath.append(NETCORE_RUNTIME_DLL_NAME_A);
+    coreClrPath.append(GetRuntimeDllName(IRuntime::Core));
     return S_OK;
 }
 
@@ -732,7 +732,7 @@ void InitializeSymbolStoreFromSymPath()
 //
 static void SymbolFileCallback(void* param, const char* moduleFileName, const char* symbolFilePath)
 {
-    if (strcmp(moduleFileName, NETCORE_RUNTIME_DLL_NAME_A) == 0) {
+    if (strcmp(moduleFileName, GetRuntimeDllName(IRuntime::Core)) == 0) {
         return;
     }
     if (strcmp(moduleFileName, NETCORE_DAC_DLL_NAME_A) == 0) {

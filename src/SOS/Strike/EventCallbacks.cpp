@@ -135,12 +135,19 @@ HRESULT __stdcall EventCallbacks::LoadModule(ULONG64 ImageFileHandle,
 {
     HRESULT handleEventStatus = DEBUG_STATUS_NO_CHANGE;
 
-    if (ModuleName != NULL) 
+    if (ModuleName != NULL)
     {
-        bool isNetCore = _stricmp(ModuleName, NETCORE_RUNTIME_MODULE_NAME_A) == 0;
-        bool isDesktop = _stricmp(ModuleName, DESKTOP_RUNTIME_MODULE_NAME_A) == 0;
+        bool isRuntimeModule = false;
+        for (int runtime = 0; runtime < IRuntime::ConfigurationEnd; ++runtime)
+        {
+            if (_stricmp(ModuleName, GetRuntimeModuleName((IRuntime::RuntimeConfiguration)runtime)) == 0)
+            {
+                isRuntimeModule = true;
+                break;
+            }
+        }
 
-        if (isNetCore || isDesktop)
+        if (isRuntimeModule)
         {
             if (g_breakOnRuntimeModuleLoad)
             {

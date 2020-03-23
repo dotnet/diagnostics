@@ -33,7 +33,7 @@ Runtime* Runtime::s_desktop = nullptr;
 #endif
 
 // Used to initialize the runtime instance with values from the host when under dotnet-dump
-bool Runtime::s_isDesktop = false;
+IRuntime::RuntimeConfiguration Runtime::s_configuration = IRuntime::Core;
 LPCSTR Runtime::s_dacFilePath = nullptr;
 LPCSTR Runtime::s_dbiFilePath = nullptr;
 
@@ -46,9 +46,9 @@ IRuntime* g_pRuntime = nullptr;
 /**********************************************************************\
  * Creates a desktop or .NET Core instance of the runtime class
 \**********************************************************************/
-HRESULT Runtime::CreateInstance(bool isDesktop, Runtime **ppRuntime)
+HRESULT Runtime::CreateInstance(RuntimeConfiguration configuration, Runtime **ppRuntime)
 {
-    PCSTR runtimeModuleName = isDesktop ? DESKTOP_RUNTIME_MODULE_NAME_A : NETCORE_RUNTIME_MODULE_NAME_A;
+    PCSTR runtimeModuleName = GetRuntimeModuleName(configuration);
     ULONG moduleIndex = 0;
     ULONG64 moduleAddress = 0;
     ULONG64 moduleSize = 0;
@@ -57,15 +57,6 @@ HRESULT Runtime::CreateInstance(bool isDesktop, Runtime **ppRuntime)
     if (*ppRuntime == nullptr)
     {
         hr = g_ExtSymbols->GetModuleByModuleName(runtimeModuleName, 0, &moduleIndex, &moduleAddress);
-#ifndef FEATURE_PAL
-        // On Windows, support loading a Linux core dump by checking for NETCORE_RUNTIME_MODULE_NAME_UNIX_A too
-        if (!SUCCEEDED(hr) && !isDesktop)
-        {
-            runtimeModuleName = NETCORE_RUNTIME_MODULE_NAME_UNIX_A;
-
-            hr = g_ExtSymbols->GetModuleByModuleName(runtimeModuleName, 0, &moduleIndex, &moduleAddress);
-        }
-#endif // !FEATURE_PAL
         if (SUCCEEDED(hr))
         {
 #ifdef FEATURE_PAL
@@ -99,7 +90,7 @@ HRESULT Runtime::CreateInstance(bool isDesktop, Runtime **ppRuntime)
         {
             if (moduleSize > 0) 
             {
-                *ppRuntime = new Runtime(isDesktop, moduleIndex, moduleAddress, moduleSize);
+                *ppRuntime = new Runtime(configuration, moduleIndex, moduleAddress, moduleSize);
                 OnUnloadTask::Register(CleanupRuntimes);
             }
             else 
@@ -124,13 +115,17 @@ HRESULT Runtime::CreateInstance()
     HRESULT hr = S_OK;
     if (g_pRuntime == nullptr)
     {
-        hr = CreateInstance(false, &s_netcore);
+        hr = CreateInstance(IRuntime::Core, &s_netcore);
 #ifdef FEATURE_PAL
         g_pRuntime = s_netcore;
 #else
         if (FAILED(hr))
         {
-            hr = CreateInstance(true, &s_desktop);
+            hr = CreateInstance(IRuntime::UnixCore, &s_netcore);
+        }
+        if (FAILED(hr))
+        {
+            hr = CreateInstance(IRuntime::WindowsDesktop, &s_desktop);
         }
         g_pRuntime = s_netcore != nullptr ? s_netcore : s_desktop;
 #endif
@@ -146,7 +141,7 @@ HRESULT Runtime::CreateInstance()
 bool Runtime::SwitchRuntime(bool desktop)
 {
     if (desktop) {
-        CreateInstance(true, &s_desktop);
+        CreateInstance(IRuntime::WindowsDesktop, &s_desktop);
     }
     IRuntime* runtime = desktop ? s_desktop : s_netcore;
     if (runtime == nullptr) {
@@ -477,7 +472,7 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
     GUID skuId = CLR_ID_CORECLR;
 #endif
 #ifndef FEATURE_PAL
-    if (IsDesktop())
+    if (GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
     {
         skuId = CLR_ID_V4_DESKTOP;
     }
@@ -530,7 +525,7 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
 \**********************************************************************/
 void Runtime::DisplayStatus()
 {
-    ExtOut("%s runtime at %p (%08x)\n", m_isDesktop ? "Desktop" : ".NET Core", m_address, m_size);
+    ExtOut("%s runtime at %p (%08x)\n", GetRuntimeConfigurationName(GetRuntimeConfiguration()), m_address, m_size);
     if (m_runtimeDirectory != nullptr) {
         ExtOut("Runtime directory: %s\n", m_runtimeDirectory);
     }
