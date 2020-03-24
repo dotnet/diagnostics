@@ -215,11 +215,20 @@ HMODULE g_hInstance = NULL;
         return Status;         \
     }
 
+#define ONLY_SUPPORTED_ON_WINDOWS_TARGET()                                           \
+    if ((g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsCore) &&   \
+        (g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsDesktop))  \
+    {                                                                         \
+        ExtOut("This command is only supported for Windows targets\n");       \
+        return Status;                                                        \
+    }
+
 #include "safemath.h"
 
 DECLARE_API (MinidumpMode)
 {
     INIT_API ();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
     DWORD_PTR Value=0;
 
     CMDValue arg[] = 
@@ -254,14 +263,6 @@ DECLARE_API (MinidumpMode)
 
     return Status;
 }
-
-#define ONLY_SUPPORTED_ON_WINDOWS_TARGET()                                           \
-    if ((g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsCore) &&   \
-        (g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsDesktop))  \
-    {                                                                         \
-        ExtOut("This command is only supported for Windows targets\n");       \
-        return Status;                                                        \
-    }
 
 #endif // FEATURE_PAL
 
@@ -1067,7 +1068,8 @@ DECLARE_API(DumpSig)
     INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     //
     // Fetch arguments
     //
@@ -1114,7 +1116,7 @@ DECLARE_API(DumpSigElem)
     INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     //
     // Fetch arguments
@@ -3749,6 +3751,7 @@ DECLARE_API(DumpRuntimeTypes)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL dml = FALSE;
 
@@ -4926,7 +4929,8 @@ DECLARE_API(VerifyHeap)
 {    
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     if (!g_snapshot.Build())
     {
         ExtOut("Unable to build snapshot of the garbage collector state\n");
@@ -5820,6 +5824,7 @@ DECLARE_API(RCWCleanupList)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR p_CleanupList = GetExpression(args);
 
@@ -8717,7 +8722,8 @@ DECLARE_API(FindAppDomain)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     DWORD_PTR p_Object = NULL;
     BOOL dml = FALSE;
 
@@ -8987,7 +8993,8 @@ DECLARE_API(EHInfo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     DWORD_PTR dwStartAddr = NULL;
     BOOL dml = FALSE;
 
@@ -9068,7 +9075,7 @@ DECLARE_API(GCInfo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     TADDR taStartAddr = NULL;
     TADDR taGCInfoAddr;
@@ -9365,8 +9372,8 @@ DECLARE_API(u)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     DWORD_PTR dwStartAddr = NULL;
     BOOL fWithGCInfo = FALSE;
     BOOL fWithEHInfo = FALSE;
@@ -9988,7 +9995,8 @@ DECLARE_API (DumpGCLog)
 {
     INIT_API_NODAC();
     MINIDUMP_NOT_SUPPORTED();    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     const char* fileName = "GCLog.txt";
 
     while (isspace (*args))
@@ -10088,6 +10096,7 @@ DECLARE_API (DumpGCConfigLog)
     INIT_API();
 #ifdef GC_CONFIG_DRIVEN    
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     const char* fileName = "GCConfigLog.txt";
 
@@ -10304,6 +10313,7 @@ DECLARE_API(DumpGCData)
 
 #ifdef GC_CONFIG_DRIVEN
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (!InitializeHeapData ())
     {
@@ -10533,6 +10543,7 @@ DECLARE_API (ProcInfo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();        
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (IsDumpFile())
     {
@@ -10812,6 +10823,7 @@ DECLARE_API(Token2EE)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     StringHolder DllName;
     ULONG64 token = 0;
@@ -11030,6 +11042,7 @@ DECLARE_API(PathTo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR root = NULL;
     DWORD_PTR target = NULL;
@@ -11248,6 +11261,7 @@ DECLARE_API(FindRoots)
 #ifndef FEATURE_PAL
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (IsDumpFile())
     {
@@ -11773,6 +11787,7 @@ DECLARE_API(GCHandles)
 DECLARE_API(TraceToCode)
 {
     INIT_API_NODAC();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
     _ASSERTE(g_pRuntime != nullptr);
 
     while(true)
@@ -11864,6 +11879,7 @@ DECLARE_API(TraceToCode)
 DECLARE_API(GetCodeTypeFlags)
 {
     INIT_API();   
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
     _ASSERTE(g_pRuntime != nullptr);
     
     char buffer[100+mdNameLen];
@@ -14413,6 +14429,7 @@ DECLARE_API(SaveModule)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     StringHolder Location;
     DWORD_PTR moduleAddr = NULL;
@@ -15372,6 +15389,7 @@ HRESULT ImplementEFNGetManagedExcepStack(
 DECLARE_API(VerifyStackTrace)
 {
     INIT_API();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL bVerifyManagedExcepStack = FALSE;
     CMDOption option[] = 
@@ -15577,6 +15595,7 @@ DECLARE_API(SaveState)
 {
     INIT_API_NOEE();    
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     StringHolder filePath;
     CMDValue arg[] = 
@@ -15616,6 +15635,7 @@ DECLARE_API(SuppressJitOptimization)
 {
     INIT_API_NOEE();    
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     StringHolder onOff;
     CMDValue arg[] = 
@@ -15924,6 +15944,7 @@ DECLARE_API(VerifyGMT)
     HRESULT hr = _EFN_GetManagedThread(client, osThreadId, &managedThread);
     {
         INIT_API();
+        ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
         if (SUCCEEDED(hr)) {
             ExtOut("%08x %p\n", osThreadId, managedThread);
