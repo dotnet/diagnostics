@@ -88,11 +88,11 @@ if ($test) {
           /bl:$logdir\Test.binlog `
           /p:BuildArch=$architecture `
           /p:TestArchitectures=$architecture `
-          /p:PrivateBuildPath=$privatebuildpath `
-          /p:DotnetRuntimeVersion=$dotnetruntimeversion `
-          /p:DotnetRuntimeDownloadVersion=$dotnetruntimedownloadversion `
-          /p:RuntimeSourceFeed=$runtimesourcefeed `
-          /p:RuntimeSourceFeedKey=$runtimesourcefeedkey
+          /p:PrivateBuildPath="$privatebuildpath" `
+          /p:DotnetRuntimeVersion="$dotnetruntimeversion" `
+          /p:DotnetRuntimeDownloadVersion="$dotnetruntimedownloadversion" `
+          /p:RuntimeSourceFeed="$runtimesourcefeed" `
+          /p:RuntimeSourceFeedKey="$runtimesourcefeedkey"
 
         if ($lastExitCode -ne 0) {
             exit $lastExitCode

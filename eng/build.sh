@@ -178,27 +178,27 @@ while :; do
             ;;
 
         -privatebuildpath)
-            __PrivateBuildPath=$2
+            __PrivateBuildPath="$2"
             shift
             ;;
 
         -dotnetruntimeversion)
-            __DotnetRuntimeVersion=$2
+            __DotnetRuntimeVersion="$2"
             shift
             ;;
 
         -dotnetruntimedownloadversion)
-            __DotnetRuntimeDownloadVersion=$2
+            __DotnetRuntimeDownloadVersion="$2"
             shift
             ;;
 
         -runtimesourcefeed)
-            __RuntimeSourceFeed=$2
+            __RuntimeSourceFeed="$2"
             shift
             ;;
 
         -runtimesourcefeedkey)
-            __RuntimeSourceFeedKey=$2
+            __RuntimeSourceFeedKey="$2"
             shift
             ;;
 
@@ -540,12 +540,12 @@ if [ $__Test == true ]; then
         --configuration "$__BuildType" \
         --verbosity "$__Verbosity" \
         /bl:$__LogDir/Test.binlog \
-        /p:BuildArch=$__BuildArch \
-        /p:PrivateBuildPath=$__PrivateBuildPath \
-        /p:DotnetRuntimeVersion=$__DotnetRuntimeVersion \
-        /p:DotnetRuntimeDownloadVersion=$__DotnetRuntimeDownloadVersion \
-        /p:RuntimeSourceFeed=$__RuntimeSourceFeed \
-        /p:RuntimeSourceFeedKey=$__RuntimeSourceFeedKey \
+        /p:BuildArch="$__BuildArch" \
+        /p:PrivateBuildPath="$__PrivateBuildPath" \
+        /p:DotnetRuntimeVersion="$__DotnetRuntimeVersion" \
+        /p:DotnetRuntimeDownloadVersion="$__DotnetRuntimeDownloadVersion" \
+        /p:RuntimeSourceFeed="$__RuntimeSourceFeed" \
+        /p:RuntimeSourceFeedKey="$__RuntimeSourceFeedKey" \
         $__TestArgs
 
       if [ $? != 0 ]; then
