@@ -6892,25 +6892,37 @@ DECLARE_API(Threads)
     // We need to support minidumps for this command.
     BOOL bMiniDump = IsMiniDumpFile();
 
-    if (bMiniDump && bPrintSpecialThreads)
-    {
-        Print("Special thread information is not available in mini dumps.\n");
-    }
-
     EnableDMLHolder dmlHolder(dml);
 
     try
     {
         Status = PrintThreadsFromThreadStore(bMiniDump, bPrintLiveThreadsOnly);
-        if (!bMiniDump && bPrintSpecialThreads)
+        if (bPrintSpecialThreads)
         {
 #ifdef FEATURE_PAL
             Print("\n-special not supported.\n");
-#else //FEATURE_PAL    
-            HRESULT Status2 = PrintSpecialThreads(); 
-            if (!SUCCEEDED(Status2))
-                Status = Status2;
-#endif //FEATURE_PAL            
+#else //FEATURE_PAL
+            BOOL bSupported = true;
+
+            if (((g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsCore) &&
+                (g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsDesktop)))
+            {
+                Print("Special thread information is only supported on Windows targets.\n");
+                bSupported = false;
+            }
+            else if (bMiniDump)
+            {
+                Print("Special thread information is not available in mini dumps.\n");
+                bSupported = false;
+            }
+
+            if (bSupported)
+            {
+                HRESULT Status2 = PrintSpecialThreads();
+                if (!SUCCEEDED(Status2))
+                    Status = Status2;
+            }
+#endif // FEATURE_PAL
         }
     }
     catch (sos::Exception &e)
