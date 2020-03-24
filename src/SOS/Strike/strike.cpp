@@ -203,6 +203,7 @@ HMODULE g_hInstance = NULL;
 #ifdef FEATURE_PAL
 
 #define MINIDUMP_NOT_SUPPORTED()
+#define ONLY_SUPPORTED_ON_WINDOWS_TARGET()
 
 #else // !FEATURE_PAL
 
@@ -253,6 +254,14 @@ DECLARE_API (MinidumpMode)
 
     return Status;
 }
+
+#define ONLY_SUPPORTED_ON_WINDOWS_TARGET()                                           \
+    if ((g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsCore) &&   \
+        (g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsDesktop))  \
+    {                                                                         \
+        ExtOut("This command is only supported for Windows targets\n");       \
+        return Status;                                                        \
+    }
 
 #endif // FEATURE_PAL
 
@@ -2997,7 +3006,8 @@ DECLARE_API(DumpVC)
 DECLARE_API(DumpRCW)
 {
     INIT_API();
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     BOOL dml = FALSE;
     StringHolder strObject;
 
@@ -3103,7 +3113,8 @@ DECLARE_API(DumpRCW)
 DECLARE_API(DumpCCW)
 {
     INIT_API();
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     BOOL dml = FALSE;
     StringHolder strObject;
 
@@ -3340,7 +3351,8 @@ DECLARE_API(DumpCCW)
 DECLARE_API(DumpPermissionSet)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR p_Object = NULL;
 
@@ -3599,8 +3611,9 @@ void PrintGCStat(HeapStat *inStat, const char* label=NULL)
 DECLARE_API(TraverseHeap)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
-    
+    MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     BOOL bXmlFormat = FALSE;
     BOOL bVerify = FALSE;
     StringHolder Filename;
@@ -5048,7 +5061,8 @@ DECLARE_API(AnalyzeOOM)
 {    
     INIT_API();    
     MINIDUMP_NOT_SUPPORTED();    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
 #ifndef FEATURE_PAL
 
     if (!InitializeHeapData ())
@@ -5125,6 +5139,7 @@ DECLARE_API(VerifyObj)
 {
     INIT_API();    
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     TADDR  taddrObj = 0;
     TADDR  taddrMT;
@@ -5187,6 +5202,7 @@ DECLARE_API(ListNearObj)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
 #if !defined(FEATURE_PAL)
 
@@ -5384,7 +5400,7 @@ DECLARE_API(GCHeapStat)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
 #ifndef FEATURE_PAL
 
@@ -6943,6 +6959,7 @@ DECLARE_API(Threads)
 DECLARE_API(WatsonBuckets)
 {
     INIT_API();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     // We don't need to support minidumps for this command.
     if (IsMiniDumpFile())
@@ -8388,6 +8405,7 @@ DECLARE_API(ThreadPool)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DacpThreadpoolData threadpool;
 
@@ -8794,7 +8812,7 @@ DECLARE_API(COMState)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     ULONG numThread;
     ULONG maxId;
@@ -11732,7 +11750,8 @@ DECLARE_API(GCHandles)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     try
     {
         GCHandlesImpl gchandles(args);
@@ -12085,7 +12104,8 @@ DECLARE_API(ObjSize)
 #ifndef FEATURE_PAL
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     BOOL dml = FALSE;
     StringHolder str_Object;    
 
@@ -12139,6 +12159,7 @@ DECLARE_API(GCHandleLeaks)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     ExtOut("-------------------------------------------------------------------------------\n");
     ExtOut("GCHandleLeaks will report any GCHandles that couldn't be found in memory.      \n");
