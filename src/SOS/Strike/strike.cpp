@@ -642,15 +642,19 @@ HRESULT DumpStackObjectsRaw(size_t nArg, __in_z LPSTR exprBottom, __in_z LPSTR e
     }
     
 #ifndef FEATURE_PAL
-    NT_TIB teb;
-    ULONG64 dwTebAddr=0;
-    HRESULT hr = g_ExtSystem->GetCurrentThreadTeb(&dwTebAddr);
-    if (SUCCEEDED(hr) && SafeReadMemory (TO_TADDR(dwTebAddr), &teb, sizeof (NT_TIB), NULL))
+    if ((g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsCore) ||
+        (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop))
     {
-        if (StackTop > TO_TADDR(teb.StackLimit) && StackTop <= TO_TADDR(teb.StackBase))
+        NT_TIB teb;
+        ULONG64 dwTebAddr = 0;
+        HRESULT hr = g_ExtSystem->GetCurrentThreadTeb(&dwTebAddr);
+        if (SUCCEEDED(hr) && SafeReadMemory(TO_TADDR(dwTebAddr), &teb, sizeof(NT_TIB), NULL))
         {
-            if (StackBottom == 0 || StackBottom > TO_TADDR(teb.StackBase))
-                StackBottom = TO_TADDR(teb.StackBase);
+            if (StackTop > TO_TADDR(teb.StackLimit) && StackTop <= TO_TADDR(teb.StackBase))
+            {
+                if (StackBottom == 0 || StackBottom > TO_TADDR(teb.StackBase))
+                    StackBottom = TO_TADDR(teb.StackBase);
+            }
         }
     }
 #endif
