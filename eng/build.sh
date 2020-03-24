@@ -35,8 +35,8 @@ __Verbosity=minimal
 __ManagedBuildArgs=
 __TestArgs=
 __UnprocessedBuildArgs=
-__DotnetRuntimeVersion=''
-__DotnetRuntimeDownloadVersion=''
+__DotnetRuntimeVersion='default'
+__DotnetRuntimeDownloadVersion='default'
 __RuntimeSourceFeed=''
 __RuntimeSourceFeedKey=''
 

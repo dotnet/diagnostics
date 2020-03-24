@@ -9,8 +9,8 @@ Param(
   [switch] $skipnative,
   [string] $privatebuildpath = "",
   [switch] $cleanupprivatebuild,
-  [ValidatePattern("(\d+\.\d+.\d+(-[a-z0-9\.]+)?)?")][string] $dotnetruntimeversion = '',
-  [ValidatePattern("(\d+\.\d+.\d+(-[a-z0-9\.]+)?)?")][string] $dotnetruntimedownloadversion= '',
+  [ValidatePattern("(\d+\.\d+.\d+(-[a-z0-9\.]+)?)?")][string] $dotnetruntimeversion = 'default',
+  [ValidatePattern("(\d+\.\d+.\d+(-[a-z0-9\.]+)?)?")][string] $dotnetruntimedownloadversion= 'default',
   [string] $runtimesourcefeed = '',
   [string] $runtimesourcefeedkey = '',
   [Parameter(ValueFromRemainingArguments=$true)][String[]] $remainingargs

@@ -6,8 +6,8 @@
 
      Internal service release testing:
 
-     $(DotnetRuntimeVersion)         - the service release version to test against (fx-version option value) i.e. 2.1.17, 3.1.3 or blank
-     $(DotnetRuntimeDownloadVersion) - the service release package version i.e. 2.1.17, 3.1.3-servicing.20128.1 or blank
+     $(DotnetRuntimeVersion)         - the service release version to test against (fx-version option value) i.e. 2.1.17, 3.1.3 or "default"
+     $(DotnetRuntimeDownloadVersion) - the service release package version i.e. 2.1.17, 3.1.3-servicing.20128.1 or "default"
      $(RuntimeSourceFeed)            - the service release internal blob storage link
      $(RuntimeSourceFeedKey)         - the service release blob feed token
      
@@ -31,8 +31,7 @@
     <PrivateBuildTesting>false</PrivateBuildTesting>
     <PrivateBuildTesting Condition="'$(PrivateBuildPath)' != ''">true</PrivateBuildTesting>
     <InternalReleaseTesting>false</InternalReleaseTesting>
-    <InternalReleaseTesting Condition="'$(DotnetRuntimeVersion)' != '' and '$(DotnetRuntimeVersion)' != 'default'">true</InternalReleaseTesting>
-    <DotnetRuntimeDownloadVersion Condition="'$(DotnetRuntimeDownloadVersion)' == '' or '$(DotnetRuntimeDownloadVersion)' == 'default'">$(DotnetRuntimeVersion)</DotnetRuntimeDownloadVersion>
+    <InternalReleaseTesting Condition="'$(DotnetRuntimeVersion)' != 'default'">true</InternalReleaseTesting>
     <ExtraInstallArgs>-runtimesourcefeed '$(RuntimeSourceFeed)' -runtimesourcefeedkey '$(RuntimeSourceFeedKey)'</ExtraInstallArgs>
   </PropertyGroup>
 
@@ -84,7 +83,8 @@
 
   <!-- Internal service release testing -->
   <ItemGroup Condition="$(InternalReleaseTesting)">
-    <TestVersions Include="Internal" RuntimeVersion="$(DotnetRuntimeDownloadVersion)" ExtraInstallArgs="$(ExtraInstallArgs)" />
+    <TestVersions Include="Internal" RuntimeVersion="$(DotnetRuntimeDownloadVersion)" ExtraInstallArgs="$(ExtraInstallArgs)" Condition="'$(DotnetRuntimeDownloadVersion)' != 'default'"/>
+    <TestVersions Include="Internal" RuntimeVersion="$(DotnetRuntimeVersion)" ExtraInstallArgs="$(ExtraInstallArgs)" Condition="'$(DotnetRuntimeDownloadVersion)' == 'default'"/>
     <TestVersions Include="21" RuntimeVersion="$(MicrosoftNETCoreApp21Version)" />
   </ItemGroup>
 
