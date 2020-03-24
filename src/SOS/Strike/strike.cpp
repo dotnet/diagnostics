@@ -6895,18 +6895,20 @@ DECLARE_API(Threads)
         Status = PrintThreadsFromThreadStore(bMiniDump, bPrintLiveThreadsOnly);
         if (bPrintSpecialThreads)
         {
+#ifdef FEATURE_PAL
+             Print("\n-special not supported.\n");
+#else //FEATURE_PAL
             BOOL bSupported = true;
-
-            if (bMiniDump && bPrintSpecialThreads)
-            {
-                Print("Special thread information is not available in mini dumps.\n");
-                bSupported = false;
-            }
 
             if (((g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsCore) &&
                 (g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsDesktop)))
             {
-                Print("Special thread information is only supported on Windows dumps.\n");
+                Print("Special thread information is only supported on Windows targets.\n");
+                bSupported = false;
+            }
+            else if (bMiniDump && bPrintSpecialThreads)
+            {
+                Print("Special thread information is not available in mini dumps.\n");
                 bSupported = false;
             }
 
@@ -6916,6 +6918,7 @@ DECLARE_API(Threads)
                 if (!SUCCEEDED(Status2))
                     Status = Status2;
             }
+#endif // FEATURE_PAL
         }
     }
     catch (sos::Exception &e)
