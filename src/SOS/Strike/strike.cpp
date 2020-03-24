@@ -6896,7 +6896,7 @@ DECLARE_API(Threads)
         if (bPrintSpecialThreads)
         {
 #ifdef FEATURE_PAL
-             Print("\n-special not supported.\n");
+            Print("\n-special not supported.\n");
 #else //FEATURE_PAL
             BOOL bSupported = true;
 
@@ -6906,7 +6906,7 @@ DECLARE_API(Threads)
                 Print("Special thread information is only supported on Windows targets.\n");
                 bSupported = false;
             }
-            else if (bMiniDump && bPrintSpecialThreads)
+            else if (bMiniDump)
             {
                 Print("Special thread information is not available in mini dumps.\n");
                 bSupported = false;
