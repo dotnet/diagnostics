@@ -201,7 +201,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 // Ignore the DAC version mismatch that can happen on Linux because the clrmd ELF dump 
                 // reader returns 0.0.0.0 for the runtime module that the DAC is matched against. This
                 // will be fixed in clrmd 2.0 but not 1.1.
-                runtime = clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: RuntimeInformation.IsOSPlatform(OSPlatform.Linux));
+                runtime = clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: clrInfo.ModuleInfo.BuildId != null);
             }
             catch (DllNotFoundException ex)
             {
@@ -241,6 +241,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
                                 KeyTypeFlags.ClrKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId, symbolFile: false, symbolFileName: null);
 
                             key = keys.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
+
+                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                            {
+                                // We are opening a Linux dump on Windows
+                                // We need to use the Windows index and filename
+                                key = new SymbolStoreKey(key.Index.Replace("libmscordaccore.so", "mscordaccore.dll"),
+                                                         key.FullPathName.Replace("libmscordaccore.so", "mscordaccore.dll"));
+                            }
                         }
                         else
                         {
