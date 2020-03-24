@@ -215,6 +215,14 @@ HMODULE g_hInstance = NULL;
         return Status;         \
     }
 
+#define ONLY_SUPPORTED_ON_WINDOWS_TARGET()                                           \
+    if ((g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsCore) &&   \
+        (g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsDesktop))  \
+    {                                                                         \
+        ExtOut("This command is only supported for Windows targets\n");       \
+        return Status;                                                        \
+    }
+
 #include "safemath.h"
 
 DECLARE_API (MinidumpMode)
@@ -255,14 +263,6 @@ DECLARE_API (MinidumpMode)
 
     return Status;
 }
-
-#define ONLY_SUPPORTED_ON_WINDOWS_TARGET()                                           \
-    if ((g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsCore) &&   \
-        (g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsDesktop))  \
-    {                                                                         \
-        ExtOut("This command is only supported for Windows targets\n");       \
-        return Status;                                                        \
-    }
 
 #endif // FEATURE_PAL
 
