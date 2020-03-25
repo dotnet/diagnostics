@@ -300,8 +300,14 @@ namespace SOS
                 try
                 {
                     IEnumerable<SymbolStoreKey> keys = generator.GetKeys(flags);
-                    foreach (SymbolStoreKey key in keys)
+                    foreach (SymbolStoreKey forKey in keys)
                     {
+                        SymbolStoreKey key = forKey;
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && key.FullPathName.Equals("libmscordaccore.so"))
+                        {
+                            key = new SymbolStoreKey(key.Index.Replace("libmscordaccore.so", "mscordaccore.dll"),
+                                                     "mscordaccore.dll");
+                        }
                         string moduleFileName = Path.GetFileName(key.FullPathName);
                         s_tracer.Verbose("{0} {1}", key.FullPathName, key.Index);
 
