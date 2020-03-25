@@ -215,9 +215,8 @@ HMODULE g_hInstance = NULL;
         return Status;         \
     }
 
-#define ONLY_SUPPORTED_ON_WINDOWS_TARGET()                                           \
-    if ((g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsCore) &&   \
-        (g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsDesktop))  \
+#define ONLY_SUPPORTED_ON_WINDOWS_TARGET()                                    \
+    if (!IsWindowsTarget())                                                   \
     {                                                                         \
         ExtOut("This command is only supported for Windows targets\n");       \
         return Status;                                                        \
@@ -419,7 +418,7 @@ void DumpStackInternal(DumpStackFlag *pDSFlag)
     }
 
 #ifndef FEATURE_PAL     
-    if (pDSFlag->end == 0) {
+    if (IsWindowsTarget() && (pDSFlag->end == 0)) {
         // Find the current stack range
         NT_TIB teb;
         ULONG64 dwTebAddr = 0;
@@ -652,8 +651,7 @@ HRESULT DumpStackObjectsRaw(size_t nArg, __in_z LPSTR exprBottom, __in_z LPSTR e
     }
     
 #ifndef FEATURE_PAL
-    if ((g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsCore) ||
-        (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop))
+    if (IsWindowsTarget())
     {
         NT_TIB teb;
         ULONG64 dwTebAddr = 0;
@@ -3906,7 +3904,7 @@ public:
         }
 
 #ifndef FEATURE_PAL
-        if (mLive || mDead)
+        if (IsWindowsTarget() && (mLive || mDead))
         {
             GCRootImpl gcroot;
             mLiveness = gcroot.GetLiveObjects();
@@ -4019,10 +4017,10 @@ private:
     bool IsCorrectLiveness(const sos::Object &obj)
     {
 #ifndef FEATURE_PAL
-        if (mLive && mLiveness.find(obj.GetAddress()) == mLiveness.end())
+        if (IsWindowsTarget() && mLive && mLiveness.find(obj.GetAddress()) == mLiveness.end())
             return false;
 
-        if (mDead && (mLiveness.find(obj.GetAddress()) != mLiveness.end() || obj.IsFree()))
+        if (IsWindowsTarget() && mDead && (mLiveness.find(obj.GetAddress()) != mLiveness.end() || obj.IsFree()))
             return false;
 #endif
         return true;
@@ -4125,6 +4123,12 @@ private:
 #ifdef FEATURE_PAL
         ExtOut("Not implemented.\n");
 #else
+        if (!IsWindowsTarget())
+        {
+            ExtOut("Not implemented.\n");
+            return;
+        }
+
         const int offset = sos::Object::GetStringDataOffset();
         typedef std::set<StringSetEntry> Set;
         Set set;            // A set keyed off of the string's text
@@ -4253,17 +4257,29 @@ private:
 
     void InitFragmentationList()
     {
+        if (!IsWindowsTarget())
+        {
+            return;
+        }
         mFrag.clear();
     }
 
     void ReportFreeObject(TADDR addr, size_t size, TADDR next, TADDR mt)
     {
+        if (!IsWindowsTarget())
+        {
+            return;
+        }
         if (size >= MIN_FRAGMENTATIONBLOCK_BYTES)
             mFrag.push_back(sos::FragmentationBlock(addr, size, next, mt));
     }
 
     void PrintFragmentationReport()
     {
+        if (!IsWindowsTarget())
+        {
+            return;
+        }
         if (mFrag.size() > 0)
         {
             ExtOut("Fragmented blocks larger than 0.5 MB:\n");
@@ -6512,7 +6528,7 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
         // Apartment state
 #ifndef FEATURE_PAL           
         DWORD_PTR OleTlsDataAddr;
-        if (!bSwitchedOutFiber 
+        if (IsWindowsTarget() && !bSwitchedOutFiber
                 && SafeReadMemory(Thread.teb + offsetof(TEB, ReservedForOle),
                             &OleTlsDataAddr,
                             sizeof(OleTlsDataAddr), NULL) && OleTlsDataAddr != 0)
@@ -6925,8 +6941,7 @@ DECLARE_API(Threads)
 #else //FEATURE_PAL
             BOOL bSupported = true;
 
-            if (((g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsCore) &&
-                (g_pRuntime->GetRuntimeConfiguration() != IRuntime::WindowsDesktop)))
+            if (!IsWindowsTarget())
             {
                 Print("Special thread information is only supported on Windows targets.\n");
                 bSupported = false;
@@ -9951,14 +9966,19 @@ DECLARE_API(DumpLog)
     {
         if (g_bDacBroken)
         {
-#ifdef FEATURE_PAL
-            ExtOut("No stress log address. DAC is broken; can't get it\n");
-            return E_FAIL;
-#else
-            // Try to find stress log symbols
-            DWORD_PTR dwAddr = GetValueFromExpression("StressLog::theLog");
-            StressLogAddress = dwAddr;        
+#ifndef FEATURE_PAL
+            if (IsWindowsTarget())
+            {
+                // Try to find stress log symbols
+                DWORD_PTR dwAddr = GetValueFromExpression("StressLog::theLog");
+                StressLogAddress = dwAddr;
+            }
+            else
 #endif
+            {
+                ExtOut("No stress log address. DAC is broken; can't get it\n");
+                return E_FAIL;
+            }
         }
         else if (g_sos->GetStressLogAddress(&StressLogAddress) != S_OK)
         {
@@ -10409,16 +10429,19 @@ DECLARE_API(EEVersion)
             }
 
 #ifndef FEATURE_PAL
-            if (version.dwFileFlags & VS_FF_DEBUG) {
-                ExtOut(" checked or debug build");
-            }
-            else
+            if (IsWindowsTarget())
             {
-                BOOL fRet = IsRetailBuild((size_t)g_pRuntime->GetModuleAddress());
-                if (fRet)
-                    ExtOut(" retail");
+                if (version.dwFileFlags & VS_FF_DEBUG) {
+                    ExtOut(" checked or debug build");
+                }
                 else
-                    ExtOut(" free");
+                {
+                    BOOL fRet = IsRetailBuild((size_t)g_pRuntime->GetModuleAddress());
+                    if (fRet)
+                        ExtOut(" retail");
+                    else
+                        ExtOut(" free");
+                }
             }
 #endif
             ExtOut("\n");
@@ -10443,7 +10466,7 @@ DECLARE_API(EEVersion)
 #ifndef FEATURE_PAL
     // Print SOS version
     VS_FIXEDFILEINFO sosVersion;
-    if (GetSOSVersion(&sosVersion))
+    if (IsWindowsTarget() && GetSOSVersion(&sosVersion))
     {
         if (sosVersion.dwFileVersionMS != (DWORD)-1)
         {
@@ -10494,14 +10517,22 @@ DECLARE_API(SOSStatus)
 #ifndef FEATURE_PAL
     if (bNetCore || bDesktop)
     {
-        PCSTR name = bDesktop ? "desktop CLR" : ".NET Core";;
-        if (!Runtime::SwitchRuntime(bDesktop))
+        if (IsWindowsTarget())
         {
-            ExtErr("The %s runtime is not loaded\n", name);
+            PCSTR name = bDesktop ? "desktop CLR" : ".NET Core";;
+            if (!Runtime::SwitchRuntime(bDesktop))
+            {
+                ExtErr("The %s runtime is not loaded\n", name);
+                return E_FAIL;
+            }
+            ExtOut("Switched to %s runtime successfully\n", name);
+            return S_OK;
+        }
+        else
+        {
+            ExtErr("The '-desktop' and '-netcore' options are only supported on Windows targets\n");
             return E_FAIL;
         }
-        ExtOut("Switched to %s runtime successfully\n", name);
-        return S_OK;
     }
 #endif
     if (bReset)

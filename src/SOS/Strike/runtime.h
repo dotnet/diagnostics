@@ -135,6 +135,18 @@ inline static const char* GetRuntimeModuleName(IRuntime::RuntimeConfiguration co
 extern LPCSTR g_runtimeModulePath;
 extern IRuntime* g_pRuntime;
 
+
+inline bool IsWindowsTarget(IRuntime::RuntimeConfiguration config)
+{
+    return (config == IRuntime::WindowsCore) || (config == IRuntime::WindowsDesktop);
+}
+
+inline bool IsWindowsTarget()
+{
+    return IsWindowsTarget(g_pRuntime->GetRuntimeConfiguration());
+}
+
+
 /**********************************************************************\
  * Local Runtime interface implementation
 \**********************************************************************/
