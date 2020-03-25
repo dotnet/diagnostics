@@ -25,13 +25,17 @@ Copy the core dump to a tmp directory.
     ~$ mkdir /tmp/dump
     ~$ cp ~/coredump.32232 /tmp/dump
 
-Download the host program for the core dump:
+Download the host program, modules and symbols for the core dump:
+
+    ~$ dotnet-symbol /tmp/dump/coredump.32232
+
+If your project/program binaries are not on the machine the core dump is being loaded on, copy them to a temporary directory. You can use the lldb/SOS command `setsymbolserver -directory <temp-dir>` to add this directory to the search path.
+
+Alternatively, you can download just the host program for the core dump (this all lldb needs) if you only need symbols for the managed modules. The `loadsymbols` command in SOS will attempt to download the native runtime symbols, but this currently doesn't work on 5.0.
 
     ~$ dotnet-symbol --host-only /tmp/dump/coredump.32232
 
 If the `--host-only` option is not found, update dotnet-symbol to the latest with the above step.
-
-If your project/program binaries are not on the machine the core dump is being loaded on, copy them to a temporary directory. You can use the lldb/SOS command `setsymbolserver -directory <temp-dir>` to add this directory to the search path.
 
 ### Install lldb ###
 
