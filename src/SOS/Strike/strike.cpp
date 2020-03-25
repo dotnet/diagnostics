@@ -200,12 +200,6 @@ HMODULE g_hInstance = NULL;
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
 #endif
 
-bool IsWindowsTarget()
-{
-    return (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsCore) ||
-           (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop);
-}
-
 #ifdef FEATURE_PAL
 
 #define MINIDUMP_NOT_SUPPORTED()
