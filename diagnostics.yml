@@ -17,7 +17,6 @@ variables:
     value: DotNetCore
   - name: _InternalBuildArgs
     value: ''
-
   - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
     - name: _SignType
       value: real
@@ -26,7 +25,7 @@ variables:
     - name: _InternalBuildArgs
       value: /p:DotNetSignType=$(_SignType)
         /p:TeamName=$(_TeamName)
-        /p:DotNetPublishUsingPipelines=$(PublishPackages)
+        /p:DotNetPublishUsingPipelines=true
         /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
 
 stages:

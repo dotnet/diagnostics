@@ -85,6 +85,16 @@ jobs:
     - _HelixType: build/product
     - _HelixBuildConfig: $(_BuildConfig)
     - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/$(_BuildConfig)/streams
+    - _InternalInstallArgs: ''
+ 
+    # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
+    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+      - group: DotNet-MSRC-Storage
+      - _InternalInstallArgs:
+          -dotnetruntimeversion '$(DotnetRuntimeVersion)'
+          -dotnetruntimedownloadversion '$(DotnetRuntimeDownloadVersion)'
+          -runtimesourcefeed '$(dotnetfeedmsrc-private-feed-url)'
+          -runtimesourcefeedkey '$(dotnetclimsrc-read-sas-token-base64)'
 
     # Only enable publishing in non-public, non PR scenarios.
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
@@ -110,6 +120,7 @@ jobs:
           -architecture $(_BuildArch)
           -prepareMachine 
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+          $(_InternalInstallArgs)
         displayName: Build / Test
         condition: succeeded()
 
@@ -132,6 +143,7 @@ jobs:
           --prepareMachine 
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
           /p:BUILD_BUILDNUMBER=$(BUILD.BUILDNUMBER)
+          $(_InternalInstallArgs)
         displayName: Docker Build / Test
         condition: succeeded()
 
@@ -143,6 +155,7 @@ jobs:
           --architecture $(_BuildArch)
           --prepareMachine
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+          $(_InternalInstallArgs)
         displayName: Build / Test
         condition: succeeded()
  
