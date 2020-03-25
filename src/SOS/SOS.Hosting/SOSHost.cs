@@ -154,8 +154,6 @@ namespace SOS
 
         const string DesktopRuntimeModuleName = "clr";
 
-        private static readonly string s_coreclrModuleName;
-
         internal readonly IDataReader DataReader;
         internal readonly AnalyzeContext AnalyzeContext;
 
@@ -174,16 +172,6 @@ namespace SOS
         static SOSHost()
         {
             AssemblyResolver.Enable();
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                s_coreclrModuleName = "coreclr";
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
-                s_coreclrModuleName = "libcoreclr.so";
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
-                s_coreclrModuleName = "libcoreclr.dylib";
-            }
         }
 
         /// <summary>
@@ -1110,7 +1098,19 @@ namespace SOS
 
         internal static bool IsCoreClrRuntimeModule(ModuleInfo module)
         {
-            return IsModuleEqual(module, s_coreclrModuleName);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return IsModuleEqual(module, "coreclr") || IsModuleEqual(module, "libcoreclr");
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return IsModuleEqual(module, "libcoreclr.so");
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return IsModuleEqual(module, "libcoreclr.dylib");
+            }
+            return false;
         }
 
         internal static bool IsDesktopRuntimeModule(ModuleInfo module)
