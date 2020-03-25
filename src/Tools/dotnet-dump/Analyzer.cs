@@ -247,7 +247,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
                                 // We are opening a Linux dump on Windows
                                 // We need to use the Windows index and filename
                                 key = new SymbolStoreKey(key.Index.Replace("libmscordaccore.so", "mscordaccore.dll"),
-                                                         key.FullPathName.Replace("libmscordaccore.so", "mscordaccore.dll"));
+                                                         key.FullPathName.Replace("libmscordaccore.so", "mscordaccore.dll"),
+                                                         key.IsClrSpecialFile,
+                                                         key.PdbChecksums);
                             }
                         }
                         else

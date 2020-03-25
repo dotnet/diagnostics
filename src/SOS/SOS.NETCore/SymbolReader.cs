@@ -305,8 +305,12 @@ namespace SOS
                         SymbolStoreKey key = forKey;
                         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && key.FullPathName.Equals("libmscordaccore.so"))
                         {
+                            // We are opening a Linux dump on Windows
+                            // We need to use the Windows index and filename
                             key = new SymbolStoreKey(key.Index.Replace("libmscordaccore.so", "mscordaccore.dll"),
-                                                     "mscordaccore.dll");
+                                                     "mscordaccore.dll",
+                                                     key.IsClrSpecialFile,
+                                                     key.PdbChecksums);
                         }
                         string moduleFileName = Path.GetFileName(key.FullPathName);
                         s_tracer.Verbose("{0} {1}", key.FullPathName, key.Index);
