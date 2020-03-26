@@ -28,12 +28,12 @@ namespace SOS
         internal const int E_NOTIMPL = DebugClient.E_NOTIMPL;
         internal const int E_NOINTERFACE = DebugClient.E_NOINTERFACE;
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SOSCommandDelegate(
             IntPtr ILLDBServices,
             [In, MarshalAs(UnmanagedType.LPStr)] string args);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SOSInitializeDelegate(
             [In, MarshalAs(UnmanagedType.Struct)] ref SOSNetCoreCallbacks callbacks,
             int callbacksSize,
@@ -43,7 +43,7 @@ namespace SOS
             [In, MarshalAs(UnmanagedType.LPStr)] string dbiFilePath,
             bool symbolStoreEnabled);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate UIntPtr GetExpressionDelegate(
             [In, MarshalAs(UnmanagedType.LPStr)] string expression);
 
