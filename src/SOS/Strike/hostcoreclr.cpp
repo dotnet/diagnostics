@@ -458,7 +458,15 @@ void CleanupTempDirectory()
 /**********************************************************************\
  * Called when the managed SOS Host loads/initializes SOS.
 \**********************************************************************/
-extern "C" HRESULT SOSInitializeByHost(SOSNetCoreCallbacks* callbacks, int callbacksSize, LPCSTR tempDirectory, bool isDesktop, LPCSTR dacFilePath, LPCSTR dbiFilePath, bool symbolStoreEnabled)
+extern "C" HRESULT SOSInitializeByHost(
+    SOSNetCoreCallbacks* callbacks,
+    int callbacksSize,
+    LPCSTR tempDirectory,
+    LPCSTR runtimeModulePath,
+    bool isDesktop,
+    LPCSTR dacFilePath,
+    LPCSTR dbiFilePath,
+    bool symbolStoreEnabled)
 {
     if (memcpy_s(&g_SOSNetCoreCallbacks, sizeof(g_SOSNetCoreCallbacks), callbacks, callbacksSize) != 0)
     {
@@ -467,6 +475,10 @@ extern "C" HRESULT SOSInitializeByHost(SOSNetCoreCallbacks* callbacks, int callb
     if (tempDirectory != nullptr)
     {
         g_tmpPath = _strdup(tempDirectory);
+    }
+    if (runtimeModulePath != nullptr)
+    {
+        g_runtimeModulePath = _strdup(runtimeModulePath);
     }
     Runtime::SetDacDbiPath(isDesktop, dacFilePath, dbiFilePath);
 #ifndef FEATURE_PAL
