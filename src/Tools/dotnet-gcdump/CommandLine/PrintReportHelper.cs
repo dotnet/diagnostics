@@ -1,82 +1,67 @@
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Principal;
+using System.Xml.Serialization;
 using Graphs;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
 {
+    
+    
     internal static class PrintReportHelper
     {
-        public static void WriteToStdOut(this MemoryGraph memoryGraph)
+        internal static void WriteToStdOut(this MemoryGraph memoryGraph)
         {
-            var allocations = ArrayPool<(int Index, Graph.TypeInfo Type)>.Shared.Rent(memoryGraph.m_types.Count);
-            try
+            // Print summary
+            WriteSummaryRow(memoryGraph.TotalSize, "GC Heap bytes");
+            WriteSummaryRow(memoryGraph.NodeCount, "GC Heap objects");
+
+            if (memoryGraph.TotalNumberOfReferences > 0)
             {
-                var histogramByType = memoryGraph.GetHistogramByType();
-                var allocationSize = 0;
-                var count = 0;
-
-                foreach (var type in memoryGraph.m_types)
-                {
-                    allocations[count++] = (count - 1, type);
-                    allocationSize += Math.Abs(type.Size);
-                }
-
-                // Print summary
-                WriteSummaryRow(memoryGraph.TotalSize, "GC Heap bytes");
-                WriteSummaryRow(memoryGraph.NodeCount, "GC Heap objects");
-
-                if (memoryGraph.TotalNumberOfReferences > 0)
-                {
-                    WriteSummaryRow(memoryGraph.TotalNumberOfReferences, "Total references");
-                }
-
-                Console.WriteLine();
-
-                // Print Details
-                Console.Out.Write($"{"Object Bytes",15:N0}");
-                Console.Out.Write($"  {"Count",15:N0}");
-                Console.Out.Write("  Type");
-                Console.WriteLine();
-
-
-                var filteredTypes = allocations
-                    .Take(count)
-                    .Where(t => !string.IsNullOrEmpty(t.Type.Name) && t.Type.Size > 0)
-                    .OrderByDescending(t => t.Type.Size);
-                foreach (var type in filteredTypes)
-                {
-                    WriteFixedWidth(type.Type.Size);
-                    Console.Out.Write("  ");
-                    var s = histogramByType.FirstOrDefault(c => (int) c.TypeIdx == type.Index);
-                    var node = memoryGraph.GetNode((NodeIndex) type.Index, memoryGraph.AllocNodeStorage());
-                    if (s != null)
-                    {
-                        WriteFixedWidth(s.Count);
-                        Console.Out.Write("  ");
-                    }
-                    else
-                    {
-                        Console.Out.Write($"{"",15}  ");
-                    }
-                    
-                    Console.Out.Write(type.Type.Name ?? "<null>");
-                    var dllName = GetDllName(type.Type.ModuleName ?? "");
-                    if (!dllName.IsEmpty)
-                    {
-                        Console.Out.Write("  ");
-                        Console.Out.Write('[');
-                        Console.Out.Write(GetDllName(type.Type.ModuleName ?? ""));
-                        Console.Out.Write(']');
-                    }
-
-                    Console.Out.WriteLine();
-                }
+                WriteSummaryRow(memoryGraph.TotalNumberOfReferences, "Total references");
             }
-            finally
+
+            Console.WriteLine();
+
+            // Print Details
+            Console.Out.Write($"{"Object Bytes",15:N0}");
+            Console.Out.Write($"  {"Count",8:N0}");
+            Console.Out.Write("  Type");
+            Console.WriteLine();
+
+            var filteredTypes = 
+                GetReportItem(memoryGraph)
+                .OrderByDescending(t => t.SizeBytes)
+                .ThenByDescending(t => t.Count);
+            
+            foreach (var filteredType in filteredTypes)
             {
-                ArrayPool<(int Index, Graph.TypeInfo Type)>.Shared.Return(allocations);
+                WriteFixedWidth(filteredType.SizeBytes);
+                Console.Out.Write("  ");
+                if (filteredType.Count.HasValue)
+                {
+                    Console.Out.Write($"{filteredType.Count.Value,8:N0}");
+                    Console.Out.Write("  ");
+                }
+                else
+                {
+                    Console.Out.Write($"{"",8}  ");
+                }
+                    
+                Console.Out.Write(filteredType.TypeName ?? "<null>");
+                var dllName = GetDllName(filteredType.ModuleName ?? "");
+                if (!dllName.IsEmpty)
+                {
+                    Console.Out.Write("  ");
+                    Console.Out.Write('[');
+                    Console.Out.Write(GetDllName(filteredType.ModuleName ?? ""));
+                    Console.Out.Write(']');
+                }
+
+                Console.Out.WriteLine();
             }
 
             static ReadOnlySpan<char> GetDllName(ReadOnlySpan<char> input)
@@ -90,6 +75,40 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Console.Out.Write($"{value,15:N0}  ");
                 Console.Out.Write(text);
                 Console.Out.WriteLine();
+            }
+        }
+        
+        private struct ReportItem
+        {
+            public int? Count { get; set; }
+            public long SizeBytes { get; set; }
+            public string TypeName { get; set; }
+            public string ModuleName { get; set; }
+        }
+        
+        private static IEnumerable<ReportItem> GetReportItem(MemoryGraph memoryGraph)
+        {
+            var histogramByType = memoryGraph.GetHistogramByType();
+            for (var index = 0; index < memoryGraph.m_types.Count; index++)
+            {
+                var type = memoryGraph.m_types[index];
+                if (string.IsNullOrEmpty(type.Name) || type.Size == 0)
+                    continue;
+                
+                var item = new ReportItem
+                {
+                    TypeName = type.Name,
+                    ModuleName = type.ModuleName,
+                    SizeBytes = type.Size
+                };
+                
+                var sizeAndCount = histogramByType.FirstOrDefault(c => (int) c.TypeIdx == index);
+                if (sizeAndCount != null)
+                {
+                    item.Count = sizeAndCount.Count;
+                }
+
+                yield return item;
             }
         }
     }
