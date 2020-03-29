@@ -1,4 +1,4 @@
-﻿# Dotnet Diagnostic Tools CLI Design
+# Dotnet Diagnostic Tools CLI Design
 
 ## User workflows
 
@@ -682,36 +682,30 @@ REPORT
 
 Examples:
 
-    $ dotnet gcdump report 20200207_094403_19847.gcdump | head -9
-      5,080,860  GC Heap bytes
-         66,289  GC Heap objects
+    $ dotnet gcdump report 20200207_094403_19847.gcdump
+      4,786,378  GC Heap bytes
+         63,201  GC Heap objects
 
-    Object Bytes  Type
-         131,096  System.Byte[] (Bytes > 100K)  [System.Private.CoreLib.dll]
-          57,756  System.String (Bytes > 10K)  [System.Private.CoreLib.dll]
-          31,128  System.Int32[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-          28,605  System.Byte[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-          22,432  System.Object[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-          12,476  System.Char[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-           8,216  System.Char[] (Bytes > 1K)  [System.Private.CoreLib.dll]
-           8,216  System.Byte[] (Bytes > 1K)  [System.Private.CoreLib.dll]
-           8,216  System.UInt32[] (Bytes > 1K)  [System.Private.CoreLib.dll]
-
+    Object Bytes     Count  Type
+         131,096         1  System.Byte[] (Bytes > 100K)  [System.Private.CoreLib.dll]
+          57,756         1  System.String (Bytes > 10K)  [System.Private.CoreLib.dll]
+          31,128         1  System.Int32[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+          28,605         5  System.Byte[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+          22,432         9  System.Object[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+    ...
 
     $ dotnet gcdump report -p 1752 | head -9
-      5,080,860  GC Heap bytes
-         66,289  GC Heap objects
+      1,302,804  GC Heap bytes
+         16,211  GC Heap objects
+         27,858  Total references
 
-    Object Bytes  Type
-         131,096  System.Byte[] (Bytes > 100K)  [System.Private.CoreLib.dll]
-          57,756  System.String (Bytes > 10K)  [System.Private.CoreLib.dll]
-          31,128  System.Int32[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-          28,605  System.Byte[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-          22,432  System.Object[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-          12,476  System.Char[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-           8,216  System.Char[] (Bytes > 1K)  [System.Private.CoreLib.dll]
-           8,216  System.Byte[] (Bytes > 1K)  [System.Private.CoreLib.dll]
-           8,216  System.UInt32[] (Bytes > 1K)  [System.Private.CoreLib.dll]
+    Object Bytes     Count  Type
+          31,128         1  System.Int32[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+          24,468         1  System.String (Bytes > 10K)  [System.Private.CoreLib.dll]
+          12,800         3  System.Object[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+           7,904         1  Entry<System.String,System.Drawing.Color>[] (Bytes > 1K)  [System.Private.CoreLib.dll]
+           7,074         4  System.String (Bytes > 1K)  [System.Private.CoreLib.dll]
+    ...
 
 ## Future suggestions
 
