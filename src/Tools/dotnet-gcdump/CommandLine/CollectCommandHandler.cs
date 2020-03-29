@@ -9,6 +9,7 @@ using System.CommandLine.Binding;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Graphs;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
 {
@@ -40,21 +41,54 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     return -1;
                 }
                 
-                var (success, _) = await CollectGCDump(ct, processId, output, timeout, verbose, true);
+                output = string.IsNullOrEmpty(output)
+                    ? $"{DateTime.Now:yyyyMMdd\\_hhmmss}_{processId}.gcdump"
+                    : output;
 
-                if (success)
+                FileInfo outputFileInfo = new FileInfo(output);
+
+                if (outputFileInfo.Exists)
                 {
-                    return 0;
+                    outputFileInfo.Delete();
                 }
 
-                if (ct.IsCancellationRequested)
+                if (string.IsNullOrEmpty(outputFileInfo.Extension) || outputFileInfo.Extension != ".gcdump")
+                {
+                    outputFileInfo = new FileInfo(outputFileInfo.FullName + ".gcdump");
+                }
+                
+                Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
+
+                var dumpTask = Task.Run(() => 
+                {
+                    if (TryCollectMemoryGraph(ct, processId, timeout, verbose, out var memoryGraph))
+                    {
+                        GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
+                        return true;
+                    }
+
+                    return false;
+                });
+
+                var fDumpSuccess = await dumpTask;
+
+                if (fDumpSuccess)
+                {
+                    outputFileInfo.Refresh();
+                    Console.Out.WriteLine($"\tFinished writing {outputFileInfo.Length} bytes to {outputFileInfo.FullName}");
+
+                    return 0;
+                }
+                else if (ct.IsCancellationRequested)
                 {
                     Console.Out.WriteLine($"\tCancelled.");
                     return -1;
                 }
-
-                Console.Out.WriteLine($"\tFailed to collect gcdump. Try running with '-v' for more information.");
-                return -1;
+                else
+                {
+                    Console.Out.WriteLine($"\tFailed to collect gcdump. Try running with '-v' for more information.");
+                    return -1;
+                }
             }
             catch (Exception ex)
             {
@@ -63,52 +97,21 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
         }
 
-        internal static async Task<(bool Success, FileInfo OutputFile)> CollectGCDump(
-            CancellationToken ct,
-            int processId, 
-            string output, 
-            int timeout, 
-            bool verbose,
-            bool log)
+        internal static bool TryCollectMemoryGraph(CancellationToken ct, int processId, int timeout, bool verbose,
+            out MemoryGraph memoryGraph)
         {
-            output = string.IsNullOrEmpty(output)
-                ? $"{DateTime.Now:yyyyMMdd\\_hhmmss}_{processId}.gcdump"
-                : output;
+            var heapInfo = new DotNetHeapInfo();
+            var log = verbose ? Console.Out : TextWriter.Null; 
+            
+            memoryGraph = new MemoryGraph(50_000);
 
-            var outputFileInfo = new FileInfo(output);
-
-            if (outputFileInfo.Exists)
+            if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, memoryGraph, log, timeout, heapInfo))
             {
-                outputFileInfo.Delete();
+                return false;
             }
 
-            if (string.IsNullOrEmpty(outputFileInfo.Extension) || outputFileInfo.Extension != ".gcdump")
-            {
-                outputFileInfo = new FileInfo(outputFileInfo.FullName + ".gcdump");
-            }
-
-            if (log) Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
-
-            var dumpTask = Task.Run(() =>
-            {
-                var memoryGraph = new Graphs.MemoryGraph(50_000);
-                var heapInfo = new DotNetHeapInfo();
-                if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, memoryGraph,
-                    verbose ? Console.Out : TextWriter.Null, timeout, heapInfo))
-                    return false;
-                memoryGraph.AllowReading();
-
-                GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
-                return true;
-            }, ct);
-
-            var fDumpSuccess = await dumpTask;
-            if (fDumpSuccess)
-            {
-                outputFileInfo.Refresh();
-                if (log) Console.Out.WriteLine($"Finished writing {outputFileInfo.Length} bytes to {outputFileInfo.FullName}");
-            }
-            return (fDumpSuccess, outputFileInfo); 
+            memoryGraph.AllowReading();
+            return true;
         }
 
         public static Command CollectCommand() =>

@@ -65,26 +65,17 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             return Task.FromResult(1);
         }
 
-        private static async Task<int> ReportFromProcess(int processId, CancellationToken ct)
+        private static Task<int> ReportFromProcess(int processId, CancellationToken ct)
         {
-            var tempFile = Path.GetTempFileName();
-
-            try
+            if (!CollectCommandHandler
+                .TryCollectMemoryGraph(ct, processId, CollectCommandHandler.DefaultTimeout, false, out var mg))
             {
-                var (success, outputFile) = await CollectCommandHandler.CollectGCDump(ct, processId, tempFile, CollectCommandHandler.DefaultTimeout, false, false);
-                if (!success)
-                {
-                    Console.Error.WriteLine("An error occured while collecting gcdump.");
-                    return -1;
-                }
+                Console.Error.WriteLine("An error occured while collecting gcdump.");
+                return Task.FromResult(-1);
+            }
 
-                var result = await ReportFromFile(outputFile);
-                return result;
-            }
-            finally
-            {
-                File.Delete(tempFile);                
-            }
+            mg.WriteToStdOut();
+            return Task.FromResult(0);
         }
 
         private static Task<int> ReportFromFile(FileSystemInfo file)
