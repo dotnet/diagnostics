@@ -10,15 +10,16 @@ namespace Microsoft.Diagnostics.Tools.GCDump
     {
         public static void WriteToStdOut(this MemoryGraph memoryGraph)
         {
-            var allocations = ArrayPool<Graph.TypeInfo>.Shared.Rent(memoryGraph.m_types.Count);
+            var allocations = ArrayPool<(int Index, Graph.TypeInfo Type)>.Shared.Rent(memoryGraph.m_types.Count);
             try
             {
+                var histogramByType = memoryGraph.GetHistogramByType();
                 var allocationSize = 0;
                 var count = 0;
 
                 foreach (var type in memoryGraph.m_types)
                 {
-                    allocations[count++] = type;
+                    allocations[count++] = (count - 1, type);
                     allocationSize += Math.Abs(type.Size);
                 }
 
@@ -35,25 +36,38 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 // Print Details
                 Console.Out.Write($"{"Object Bytes",15:N0}");
+                Console.Out.Write($"  {"Count",15:N0}");
                 Console.Out.Write("  Type");
                 Console.WriteLine();
 
 
                 var filteredTypes = allocations
                     .Take(count)
-                    .Where(t => !string.IsNullOrEmpty(t.Name) && t.Size > 0)
-                    .OrderByDescending(t => t.Size);
+                    .Where(t => !string.IsNullOrEmpty(t.Type.Name) && t.Type.Size > 0)
+                    .OrderByDescending(t => t.Type.Size);
                 foreach (var type in filteredTypes)
                 {
-                    WriteFixedWidth(type.Size);
+                    WriteFixedWidth(type.Type.Size);
                     Console.Out.Write("  ");
-                    Console.Out.Write(type.Name ?? "<null>");
-                    var dllName = GetDllName(type.ModuleName ?? "");
+                    var s = histogramByType.FirstOrDefault(c => (int) c.TypeIdx == type.Index);
+                    var node = memoryGraph.GetNode((NodeIndex) type.Index, memoryGraph.AllocNodeStorage());
+                    if (s != null)
+                    {
+                        WriteFixedWidth(s.Count);
+                        Console.Out.Write("  ");
+                    }
+                    else
+                    {
+                        Console.Out.Write($"{"",15}  ");
+                    }
+                    
+                    Console.Out.Write(type.Type.Name ?? "<null>");
+                    var dllName = GetDllName(type.Type.ModuleName ?? "");
                     if (!dllName.IsEmpty)
                     {
                         Console.Out.Write("  ");
                         Console.Out.Write('[');
-                        Console.Out.Write(GetDllName(type.ModuleName ?? ""));
+                        Console.Out.Write(GetDllName(type.Type.ModuleName ?? ""));
                         Console.Out.Write(']');
                     }
 
@@ -62,7 +76,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
             finally
             {
-                ArrayPool<Graph.TypeInfo>.Shared.Return(allocations);
+                ArrayPool<(int Index, Graph.TypeInfo Type)>.Shared.Return(allocations);
             }
 
             static ReadOnlySpan<char> GetDllName(ReadOnlySpan<char> input)
