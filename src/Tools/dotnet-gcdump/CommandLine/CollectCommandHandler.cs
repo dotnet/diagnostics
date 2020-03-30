@@ -75,8 +75,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 if (fDumpSuccess)
                 {
                     outputFileInfo.Refresh();
-                    Console.Out.WriteLine($"\tFinished writing {outputFileInfo.Length} bytes to {outputFileInfo.FullName}");
-
+                    Console.Out.WriteLine($"\tFinished writing {outputFileInfo.Length} bytes.");
                     return 0;
                 }
                 else if (ct.IsCancellationRequested)
