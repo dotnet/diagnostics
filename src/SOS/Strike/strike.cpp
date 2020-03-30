@@ -1359,6 +1359,8 @@ DECLARE_API(DumpMT)
 
     table.WriteRow("BaseSize:", PrefixHex(vMethTable.BaseSize));
     table.WriteRow("ComponentSize:", PrefixHex(vMethTable.ComponentSize));
+    table.WriteRow("DynamicStatics:", vMethTable.bIsDynamic ? "true" : "false");
+    table.WriteRow("ContainsPointers:", vMethTable.bContainsPointers ? "true" : "false");
     table.WriteRow("Slots in VTable:", Decimal(vMethTable.wNumMethods));
     
     table.SetColWidth(0, 29);

@@ -347,18 +347,18 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
 #endif // FEATURE_PAL
         hostRuntimeDirectory.append(DIRECTORY_SEPARATOR_STR_A);
 
-        // First attempt find the highest 2.1.x version. We want to start with the LTS
+        // First attempt find the highest LTS version. We want to start with the LTSs
         // and only use the higher versions if it isn't installed.
-        if (!FindDotNetVersion(2, 1, hostRuntimeDirectory))
+        if (!FindDotNetVersion(3, 1, hostRuntimeDirectory))
         {
-            // Find highest 2.2.x version
-            if (!FindDotNetVersion(2, 2, hostRuntimeDirectory))
+            // Find highest 2.1 LTS version
+            if (!FindDotNetVersion(2, 1, hostRuntimeDirectory))
             {
                 // Find highest 3.0.x version
                 if (!FindDotNetVersion(3, 0, hostRuntimeDirectory))
                 {
-                    // Find highest 3.1.x version
-                    if (!FindDotNetVersion(3, 1, hostRuntimeDirectory))
+                    // Find highest 2.2.x version
+                    if (!FindDotNetVersion(2, 2, hostRuntimeDirectory))
                     {
                         // Find highest 5.0.x version
                         if (!FindDotNetVersion(5, 0, hostRuntimeDirectory))
@@ -458,7 +458,15 @@ void CleanupTempDirectory()
 /**********************************************************************\
  * Called when the managed SOS Host loads/initializes SOS.
 \**********************************************************************/
-extern "C" HRESULT SOSInitializeByHost(SOSNetCoreCallbacks* callbacks, int callbacksSize, LPCSTR tempDirectory, bool isDesktop, LPCSTR dacFilePath, LPCSTR dbiFilePath, bool symbolStoreEnabled)
+extern "C" HRESULT SOSInitializeByHost(
+    SOSNetCoreCallbacks* callbacks,
+    int callbacksSize,
+    LPCSTR tempDirectory,
+    LPCSTR runtimeModulePath,
+    bool isDesktop,
+    LPCSTR dacFilePath,
+    LPCSTR dbiFilePath,
+    bool symbolStoreEnabled)
 {
     if (memcpy_s(&g_SOSNetCoreCallbacks, sizeof(g_SOSNetCoreCallbacks), callbacks, callbacksSize) != 0)
     {
@@ -467,6 +475,10 @@ extern "C" HRESULT SOSInitializeByHost(SOSNetCoreCallbacks* callbacks, int callb
     if (tempDirectory != nullptr)
     {
         g_tmpPath = _strdup(tempDirectory);
+    }
+    if (runtimeModulePath != nullptr)
+    {
+        g_runtimeModulePath = _strdup(runtimeModulePath);
     }
     Runtime::SetDacDbiPath(isDesktop, dacFilePath, dbiFilePath);
 #ifndef FEATURE_PAL

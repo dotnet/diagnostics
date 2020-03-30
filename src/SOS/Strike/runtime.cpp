@@ -525,7 +525,7 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
 \**********************************************************************/
 void Runtime::DisplayStatus()
 {
-    ExtOut("%s runtime at %p (%08x)\n", GetRuntimeConfigurationName(GetRuntimeConfiguration()), m_address, m_size);
+    ExtOut("%s runtime at %p size %08llx\n", GetRuntimeConfigurationName(GetRuntimeConfiguration()), m_address, m_size);
     if (m_runtimeDirectory != nullptr) {
         ExtOut("Runtime directory: %s\n", m_runtimeDirectory);
     }

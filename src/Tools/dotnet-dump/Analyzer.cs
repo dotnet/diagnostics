@@ -222,53 +222,67 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private string GetDacFile(ClrInfo clrInfo)
         {
             if (_dacFilePath == null)
-            {
-                string dac = clrInfo.LocalMatchingDac;
-                if (dac != null && File.Exists(dac))
+            {            
+                Debug.Assert(!string.IsNullOrEmpty(clrInfo.DacInfo.FileName));
+                var analyzeContext = _serviceProvider.GetService<AnalyzeContext>();
+                string dacFilePath = null;
+                if (!string.IsNullOrEmpty(analyzeContext.RuntimeModuleDirectory))
                 {
-                    _dacFilePath = dac;
-                }
-                else if (SymbolReader.IsSymbolStoreEnabled())
-                {
-                    string dacFileName = Path.GetFileName(dac ?? clrInfo.DacInfo.FileName);
-                    if (dacFileName != null)
+                    dacFilePath = Path.Combine(analyzeContext.RuntimeModuleDirectory, clrInfo.DacInfo.FileName);
+                    if (File.Exists(dacFilePath))
                     {
-                        SymbolStoreKey key = null;
-
-                        if (clrInfo.ModuleInfo.BuildId != null)
-                        {
-                            IEnumerable<SymbolStoreKey> keys = ELFFileKeyGenerator.GetKeys(
-                                KeyTypeFlags.ClrKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId, symbolFile: false, symbolFileName: null);
-
-                            key = keys.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
-
-                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                            {
-                                // We are opening a Linux dump on Windows
-                                // We need to use the Windows index and filename
-                                key = new SymbolStoreKey(key.Index.Replace("libmscordaccore.so", "mscordaccore.dll"),
-                                                         key.FullPathName.Replace("libmscordaccore.so", "mscordaccore.dll"),
-                                                         key.IsClrSpecialFile,
-                                                         key.PdbChecksums);
-                            }
-                        }
-                        else
-                        {
-                            // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
-                            key = PEFileKeyGenerator.GetKey(dacFileName, clrInfo.ModuleInfo.TimeStamp, clrInfo.ModuleInfo.FileSize);
-                        }
-
-                        if (key != null)
-                        {
-                            // Now download the DAC module from the symbol server
-                            _dacFilePath = SymbolReader.GetSymbolFile(key);
-                        }
+                        _dacFilePath = dacFilePath;
                     }
                 }
-
                 if (_dacFilePath == null)
                 {
-                    throw new FileNotFoundException($"Could not find matching DAC for this runtime: {clrInfo.ModuleInfo.FileName}");
+                    dacFilePath = clrInfo.LocalMatchingDac;
+                    if (!string.IsNullOrEmpty(dacFilePath) && File.Exists(dacFilePath))
+                    {
+                        _dacFilePath = dacFilePath;
+                    }
+                    else if (SymbolReader.IsSymbolStoreEnabled())
+                    {
+                        string dacFileName = Path.GetFileName(dacFilePath ?? clrInfo.DacInfo.FileName);
+                        if (dacFileName != null)
+                        {
+                            SymbolStoreKey key = null;
+
+                            if (clrInfo.ModuleInfo.BuildId != null)
+                            {
+                                IEnumerable<SymbolStoreKey> keys = ELFFileKeyGenerator.GetKeys(
+                                    KeyTypeFlags.ClrKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId, symbolFile: false, symbolFileName: null);
+
+                                key = keys.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
+
+                                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                                {
+                                    // We are opening a Linux dump on Windows
+                                    // We need to use the Windows index and filename
+                                    key = new SymbolStoreKey(key.Index.Replace("libmscordaccore.so", "mscordaccore.dll"),
+                                                             key.FullPathName.Replace("libmscordaccore.so", "mscordaccore.dll"),
+                                                             key.IsClrSpecialFile,
+                                                             key.PdbChecksums);
+                                }
+                            }
+                            else
+                            {
+                                // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
+                                key = PEFileKeyGenerator.GetKey(dacFileName, clrInfo.ModuleInfo.TimeStamp, clrInfo.ModuleInfo.FileSize);
+                            }
+
+                            if (key != null)
+                            {
+                                // Now download the DAC module from the symbol server
+                                _dacFilePath = SymbolReader.GetSymbolFile(key);
+                            }
+                        }
+                    }
+
+                    if (_dacFilePath == null)
+                    {
+                        throw new FileNotFoundException($"Could not find matching DAC for this runtime: {clrInfo.ModuleInfo.FileName}");
+                    }
                 }
                 _isDesktop = clrInfo.Flavor == ClrFlavor.Desktop;
             }
