@@ -12,8 +12,9 @@
 
 #define IMAGE_FILE_MACHINE_AMD64             0x8664  // AMD64 (K8)
 
-DataTarget::DataTarget(void) :
-    m_ref(0)
+DataTarget::DataTarget(ULONG64 baseAddress) :
+    m_ref(0),
+    m_baseAddress(baseAddress)
 {
 }
 
@@ -46,6 +47,12 @@ DataTarget::QueryInterface(
     else if (InterfaceId == IID_ICLRMetadataLocator)
     {
         *Interface = (ICLRMetadataLocator*)this;
+        AddRef();
+        return S_OK;
+    }
+    else if (InterfaceId == IID_ICLRRuntimeLocator)
+    {
+        *Interface = (ICLRRuntimeLocator*)this;
         AddRef();
         return S_OK;
     }
@@ -366,4 +373,13 @@ DataTarget::GetMetadata(
     return ::GetMetadataLocator(imagePath, imageTimestamp, imageSize, mvid, mdRva, flags, bufferSize, buffer, dataSize);
 }
 
+// ICLRRuntimeLocator
+
+HRESULT STDMETHODCALLTYPE 
+DataTarget::GetRuntimeBase(
+    /* [out] */ CLRDATA_ADDRESS* baseAddress)
+{
+    *baseAddress = m_baseAddress;
+    return S_OK;
+}
 

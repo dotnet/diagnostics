@@ -251,19 +251,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
                             if (clrInfo.ModuleInfo.BuildId != null)
                             {
                                 IEnumerable<SymbolStoreKey> keys = ELFFileKeyGenerator.GetKeys(
-                                    KeyTypeFlags.ClrKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId, symbolFile: false, symbolFileName: null);
+                                    KeyTypeFlags.DacDbiKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId, symbolFile: false, symbolFileName: null);
 
                                 key = keys.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
-
-                                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                                {
-                                    // We are opening a Linux dump on Windows
-                                    // We need to use the Windows index and filename
-                                    key = new SymbolStoreKey(key.Index.Replace("libmscordaccore.so", "mscordaccore.dll"),
-                                                             key.FullPathName.Replace("libmscordaccore.so", "mscordaccore.dll"),
-                                                             key.IsClrSpecialFile,
-                                                             key.PdbChecksums);
-                                }
                             }
                             else
                             {

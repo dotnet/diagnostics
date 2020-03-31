@@ -621,6 +621,7 @@ HRESULT InitializeHosting()
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "DisplaySymbolStore", (void **)&g_SOSNetCoreCallbacks.DisplaySymbolStoreDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "DisableSymbolStore", (void **)&g_SOSNetCoreCallbacks.DisableSymbolStoreDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "LoadNativeSymbols", (void **)&g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate));
+    IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "LoadNativeSymbolsFromIndex", (void **)&g_SOSNetCoreCallbacks.LoadNativeSymbolsFromIndexDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "LoadSymbolsForModule", (void **)&g_SOSNetCoreCallbacks.LoadSymbolsForModuleDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "Dispose", (void **)&g_SOSNetCoreCallbacks.DisposeDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "ResolveSequencePoint", (void **)&g_SOSNetCoreCallbacks.ResolveSequencePointDelegate));
@@ -763,7 +764,7 @@ static void LoadNativeSymbolsCallback(void* param, const char* moduleFilePath, U
 {
     _ASSERTE(g_hostingInitialized);
     _ASSERTE(g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate != nullptr);
-    g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(SymbolFileCallback, param, moduleFilePath, moduleAddress, moduleSize, ReadMemoryForSymbols);
+    g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(SymbolFileCallback, param, IRuntime::Core, moduleFilePath, moduleAddress, moduleSize, ReadMemoryForSymbols);
 }
 
 /**********************************************************************\

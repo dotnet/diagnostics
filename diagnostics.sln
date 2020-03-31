@@ -77,6 +77,96 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.Monit
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.Monitoring.RestServer", "src\Microsoft.Diagnostics.Monitoring.RestServer\Microsoft.Diagnostics.Monitoring.RestServer.csproj", "{B54DE8DD-6591-45C2-B9F7-22C4A23A384C}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "inc", "inc", "{41BDFD6D-D165-4D67-BEF6-4E539040D30A}"
+	ProjectSection(SolutionItems) = preProject
+		src\inc\arrayholder.h = src\inc\arrayholder.h
+		src\inc\bitvector.h = src\inc\bitvector.h
+		src\inc\clrdata.idl = src\inc\clrdata.idl
+		src\inc\clrinternal.idl = src\inc\clrinternal.idl
+		src\inc\clrprivappxhosting.idl = src\inc\clrprivappxhosting.idl
+		src\inc\clrprivbinding.idl = src\inc\clrprivbinding.idl
+		src\inc\clrprivhosting.idl = src\inc\clrprivhosting.idl
+		src\inc\clrprivruntimebinders.idl = src\inc\clrprivruntimebinders.idl
+		src\inc\CMakeLists.txt = src\inc\CMakeLists.txt
+		src\inc\cor.h = src\inc\cor.h
+		src\inc\cordebug.idl = src\inc\cordebug.idl
+		src\inc\coreclrhost.h = src\inc\coreclrhost.h
+		src\inc\corexcep.h = src\inc\corexcep.h
+		src\inc\corhdr.h = src\inc\corhdr.h
+		src\inc\corhlpr.cpp = src\inc\corhlpr.cpp
+		src\inc\corhlpr.h = src\inc\corhlpr.h
+		src\inc\corjitflags.h = src\inc\corjitflags.h
+		src\inc\corprof.idl = src\inc\corprof.idl
+		src\inc\corpub.idl = src\inc\corpub.idl
+		src\inc\corsym.idl = src\inc\corsym.idl
+		src\inc\cortypeinfo.h = src\inc\cortypeinfo.h
+		src\inc\crosscomp.h = src\inc\crosscomp.h
+		src\inc\daccess.h = src\inc\daccess.h
+		src\inc\dacprivate.h = src\inc\dacprivate.h
+		src\inc\dbgportable.h = src\inc\dbgportable.h
+		src\inc\dbgtargetcontext.h = src\inc\dbgtargetcontext.h
+		src\inc\dbgutil.h = src\inc\dbgutil.h
+		src\inc\debugmacros.h = src\inc\debugmacros.h
+		src\inc\debugmacrosext.h = src\inc\debugmacrosext.h
+		src\inc\fusion.idl = src\inc\fusion.idl
+		src\inc\gcdecoder.cpp = src\inc\gcdecoder.cpp
+		src\inc\gcdesc.h = src\inc\gcdesc.h
+		src\inc\gcdump.h = src\inc\gcdump.h
+		src\inc\gcinfo.h = src\inc\gcinfo.h
+		src\inc\gcinfodecoder.h = src\inc\gcinfodecoder.h
+		src\inc\gcinfodumper.h = src\inc\gcinfodumper.h
+		src\inc\gcinfotypes.h = src\inc\gcinfotypes.h
+		src\inc\genericstackprobe.h = src\inc\genericstackprobe.h
+		src\inc\hillclimbing.h = src\inc\hillclimbing.h
+		src\inc\holder.h = src\inc\holder.h
+		src\inc\iallocator.h = src\inc\iallocator.h
+		src\inc\livedatatarget.h = src\inc\livedatatarget.h
+		src\inc\log.h = src\inc\log.h
+		src\inc\loglf.h = src\inc\loglf.h
+		src\inc\longfilepathwrappers.h = src\inc\longfilepathwrappers.h
+		src\inc\metahost.idl = src\inc\metahost.idl
+		src\inc\MSCOREE.IDL = src\inc\MSCOREE.IDL
+		src\inc\mscorsvc.idl = src\inc\mscorsvc.idl
+		src\inc\msodw.h = src\inc\msodw.h
+		src\inc\new.hpp = src\inc\new.hpp
+		src\inc\opcode.def = src\inc\opcode.def
+		src\inc\openum.h = src\inc\openum.h
+		src\inc\palclr.h = src\inc\palclr.h
+		src\inc\palclr_win.h = src\inc\palclr_win.h
+		src\inc\predeftlsslot.h = src\inc\predeftlsslot.h
+		src\inc\random.h = src\inc\random.h
+		src\inc\regdisp.h = src\inc\regdisp.h
+		src\inc\runtimeinfo.h = src\inc\runtimeinfo.h
+		src\inc\safemath.h = src\inc\safemath.h
+		src\inc\sospriv.idl = src\inc\sospriv.idl
+		src\inc\stacktrace.h = src\inc\stacktrace.h
+		src\inc\static_assert.h = src\inc\static_assert.h
+		src\inc\staticcontract.h = src\inc\staticcontract.h
+		src\inc\stresslog.h = src\inc\stresslog.h
+		src\inc\switches.h = src\inc\switches.h
+		src\inc\tls.h = src\inc\tls.h
+		src\inc\volatile.h = src\inc\volatile.h
+		src\inc\warningcontrol.h = src\inc\warningcontrol.h
+		src\inc\xclrdata.idl = src\inc\xclrdata.idl
+		src\inc\xcordebug.idl = src\inc\xcordebug.idl
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "clr_std", "clr_std", "{33239640-6F4B-4DA4-A780-2F5B26D57EAD}"
+	ProjectSection(SolutionItems) = preProject
+		src\inc\clr_std\algorithm = src\inc\clr_std\algorithm
+		src\inc\clr_std\string = src\inc\clr_std\string
+		src\inc\clr_std\type_traits = src\inc\clr_std\type_traits
+		src\inc\clr_std\utility = src\inc\clr_std\utility
+		src\inc\clr_std\vector = src\inc\clr_std\vector
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "llvm", "llvm", "{06730767-421B-465F-BB63-A3A07D72D7A2}"
+	ProjectSection(SolutionItems) = preProject
+		src\inc\llvm\Dwarf.def = src\inc\llvm\Dwarf.def
+		src\inc\llvm\Dwarf.h = src\inc\llvm\Dwarf.h
+		src\inc\llvm\ELF.h = src\inc\llvm\ELF.h
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Checked|Any CPU = Checked|Any CPU
@@ -1188,6 +1278,9 @@ Global
 		{C57F7656-6663-4A3C-BE38-B75C6C57E77D} = {B62728C8-1267-4043-B46F-5537BBAEC692}
 		{CFCF90E5-91CF-44FD-819D-97F530AEF769} = {19FAB78C-3351-4911-8F0C-8C6056401740}
 		{B54DE8DD-6591-45C2-B9F7-22C4A23A384C} = {19FAB78C-3351-4911-8F0C-8C6056401740}
+		{41BDFD6D-D165-4D67-BEF6-4E539040D30A} = {19FAB78C-3351-4911-8F0C-8C6056401740}
+		{33239640-6F4B-4DA4-A780-2F5B26D57EAD} = {41BDFD6D-D165-4D67-BEF6-4E539040D30A}
+		{06730767-421B-465F-BB63-A3A07D72D7A2} = {41BDFD6D-D165-4D67-BEF6-4E539040D30A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {46465737-C938-44FC-BE1A-4CE139EBB5E0}

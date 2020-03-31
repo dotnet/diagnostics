@@ -47,6 +47,7 @@ PrintException
 PathTo
 StopOnCatch
 SetHostRuntime
+SetClrPath
 SetSymbolServer
 SOSFlush
 SOSStatus

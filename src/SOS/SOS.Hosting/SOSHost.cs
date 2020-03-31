@@ -71,10 +71,20 @@ namespace SOS
         private delegate void LoadNativeSymbolsDelegate(
             SymbolReader.SymbolFileCallback callback,
             IntPtr parameter,
+            SymbolReader.RuntimeConfiguration config,
             string moduleFilePath,
             ulong address,
             int size,
             SymbolReader.ReadMemoryDelegate readMemory);
+
+        private delegate void LoadNativeSymbolsFromIndexDelegate(
+            SymbolReader.SymbolFileCallback callback,
+            IntPtr parameter,
+            SymbolReader.RuntimeConfiguration config,
+            string moduleFilePath,
+            bool specialKeys,
+            int moduleIndexSize,
+            IntPtr moduleIndex);
 
         private delegate IntPtr LoadSymbolsForModuleDelegate(
             string assemblyPath,
@@ -130,6 +140,7 @@ namespace SOS
             public DisplaySymbolStoreDelegate DisplaySymbolStoreDelegate;
             public DisableSymbolStoreDelegate DisableSymbolStoreDelegate;
             public LoadNativeSymbolsDelegate LoadNativeSymbolsDelegate;
+            public LoadNativeSymbolsFromIndexDelegate LoadNativeSymbolsFromIndexDelegate;
             public LoadSymbolsForModuleDelegate LoadSymbolsForModuleDelegate;
             public DisposeDelegate DisposeDelegate;
             public ResolveSequencePointDelegate ResolveSequencePointDelegate;
@@ -144,6 +155,7 @@ namespace SOS
             DisplaySymbolStoreDelegate = SymbolReader.DisplaySymbolStore,
             DisableSymbolStoreDelegate = SymbolReader.DisableSymbolStore,
             LoadNativeSymbolsDelegate = SymbolReader.LoadNativeSymbols,
+            LoadNativeSymbolsFromIndexDelegate = SymbolReader.LoadNativeSymbolsFromIndex,
             LoadSymbolsForModuleDelegate = SymbolReader.LoadSymbolsForModule,
             DisposeDelegate = SymbolReader.Dispose,
             ResolveSequencePointDelegate = SymbolReader.ResolveSequencePoint,
