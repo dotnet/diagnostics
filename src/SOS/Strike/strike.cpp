@@ -13313,7 +13313,7 @@ public:
         ICorDebugProcess* pCorDebugProcess;
         if (FAILED(Status = g_pRuntime->GetCorDebugInterface(&pCorDebugProcess)))
         {
-            ExtOut("\n\n\n!clrstack -i is unsupported on this target.\nThe ICorDebug interface cannot be constructed.\n");
+            ExtOut("\n" SOSPrefix "clrstack -i is unsupported on this target.\nThe ICorDebug interface cannot be constructed.\n\n");
             return Status;
         }
 
