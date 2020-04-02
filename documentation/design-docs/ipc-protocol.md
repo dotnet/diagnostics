@@ -766,16 +766,26 @@ App -> Agent: [Advertise]
 
 There is only one message type in the Advertise IPC Protocol, the Advertise message.  It is a fixed size message of 3 fields (all values are **little-endian**):
 
-* Magic: 6 little-endian bytes that contain the ASCII bytes for the version of advertise protocol being spoken.
-* Instance Cookie: a 16 bit, little-endian number used to disambiguate across PID-spaces
+* Magic: 8 little-endian bytes that contain the ASCII bytes for the version of advertise protocol being spoken.
+* Instance Cookie: a 128 bit, little-endian Guid used to disambiguate across PID-spaces
 * Process ID: a 64 bit, little-endian number containing the pid of the process in its own PID-space
 
 ```c++
 struct AdvertisePayload
 {
-   uint8_t  magic[6]; // contains the ASCII bytes for "AD_V1\0"
-   uint16_t instance_cookie; // a random 16 bit number meant to disambiguate runtimes across PID-spaces
+   uint8_t  magic[8]; // contains the ASCII bytes for "ADVR_V1\0"
+   GUID instance_cookie; // a random 128 bit Guid meant to disambiguate runtimes across PID-spaces
    uint64_t pid; // the process id of the runtime in its own PID-space
+};
+```
+where `GUID` is
+```c++
+struct GUID
+{
+  uint32_t data1;
+  uint16_t data2;
+  uint16_t data3;
+  uint8_t  data4[8];
 };
 ```
 
@@ -798,15 +808,31 @@ Sample encoded message:
     <th>14</th>
     <th>15</th>
     <th>16</th>
+    <th>17</th>
+    <th>18</th>
+    <th>19</th>
+    <th>20</th>
+    <th>21</th>
+    <th>22</th>
+    <th>23</th>
+    <th>24</th>
+    <th>25</th>
+    <th>26</th>
+    <th>27</th>
+    <th>28</th>
+    <th>29</th>
+    <th>30</th>
+    <th>31</th>
+    <th>32</th>
   </tr>
   <tr>
-    <td colspan="6">magic</td>
-    <td colspan="2">instance_cookie</td>
+    <td colspan="8">magic</td>
+    <td colspan="16">instance_cookie</td>
     <td colspan="8">pid</td>
   </tr>
   <tr>
-    <td colspan="6">"AD_V1\0"</td>
-    <td colspan="2">42131</td>
+    <td colspan="8">"ADVR_V1\0"</td>
+    <td colspan="16">123e4567-e89b-12d3-a456-426655440000</td>
     <td colspan="8">20535</td>
   </tr>
 </table>
