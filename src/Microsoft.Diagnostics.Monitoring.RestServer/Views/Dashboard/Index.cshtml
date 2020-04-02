@@ -1,0 +1,25 @@
+﻿@{
+    <table>
+        <thead>
+            <tr>
+                <th>Pid</th>
+                <th>Trace Control</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (int pid in ((IEnumerable<int>)ViewData["Pids"]))
+            {
+                <tr>
+                    <td>@pid</td>
+                    <td><a href="http://localhost:52323/api/diag/@pid/dump?dumpType=1">Dump</a></td>
+                    <td>
+                        @Html.ActionLink(linkText: "Start trace", actionName: "StartTrace", routeValues: new { pid = pid })
+                    </td>
+                    <td>
+                        @Html.ActionLink("Stop trace", "StopTrace", routeValues: new { pid = pid })
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

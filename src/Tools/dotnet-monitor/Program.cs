@@ -20,10 +20,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor
     {
         None = 0,
         Console = 1,
-        LogAnalytics = 2,
         All = 0xff
     }
-    
+
     class Program
     {
         private static Command CollectCommand() =>

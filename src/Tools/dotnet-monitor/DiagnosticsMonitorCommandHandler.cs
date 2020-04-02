@@ -2,8 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Diagnostics.Monitoring;
-using Microsoft.Diagnostics.Monitoring.LogAnalytics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -65,7 +65,6 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             {
                 foreach (FileInfo keyFileConfig in keyFileConfigs)
                 {
-                    console.Out.WriteLine(keyFileConfig.FullName);
                     builder.AddKeyPerFile(keyFileConfig.FullName, optional: true);
                 }
             }
@@ -82,10 +81,6 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             {
                 services.AddSingleton<IMetricsLogger, ConsoleMetricsLogger>();
             }
-            if (sink.HasFlag(SinkType.LogAnalytics))
-            {
-                services.AddSingleton<IMetricsLogger, MetricsLogger>();
-            }
 
             services.AddLogging(builder =>
                 {
@@ -93,21 +88,16 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                     {
                         builder.AddConsole();
                     }
-                    if (sink.HasFlag(SinkType.LogAnalytics))
-                    {
-                        builder.AddProvider(new LogAnalyticsLoggerProvider());
-                    }
                 });
             services.Configure<ContextConfiguration>(config);
-            if (sink.HasFlag(SinkType.LogAnalytics))
-            {
-                services.Configure<MetricsConfiguration>(config);
-                services.Configure<ResourceConfiguration>(config);
-            }
 
-            await using var monitor = new DiagnosticsMonitor(services.BuildServiceProvider(), new MonitoringSourceConfiguration(refreshInterval));
-            await monitor.ProcessEvents(processId, token);
+            //TODO Many of these service additions should be done through extension methods
+            services.AddSingleton<IDiagnosticServices, DiagnosticServices>();
 
+            using ServiceProvider serviceProvider = services.BuildServiceProvider();
+            IDiagnosticServices diagServices = serviceProvider.GetService<IDiagnosticServices>();
+            using IWebHost host = Microsoft.Diagnostics.Monitoring.RestServer.Program.CreateWebHostBuilder(diagServices).Build();
+            await host.RunAsync(token);
             return 0;
         }
 
@@ -121,7 +111,11 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             string namespaceName = null;
             try
             {
-                namespaceName = File.ReadAllText(@"/var/run/secrets/kubernetes.io/serviceaccount/namespace");
+                string nsFile = @"/var/run/secrets/kubernetes.io/serviceaccount/namespace";
+                if (File.Exists(nsFile))
+                {
+                    namespaceName = File.ReadAllText(nsFile);
+                }
             }
             catch
             {
