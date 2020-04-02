@@ -13311,7 +13311,11 @@ public:
         HRESULT Status;
 
         ICorDebugProcess* pCorDebugProcess;
-        IfFailRet(g_pRuntime->GetCorDebugInterface(&pCorDebugProcess));
+        if (FAILED(Status = g_pRuntime->GetCorDebugInterface(&pCorDebugProcess)))
+        {
+            ExtOut("\n" SOSPrefix "clrstack -i is unsupported on this target.\nThe ICorDebug interface cannot be constructed.\n\n");
+            return Status;
+        }
 
         ExtOut("\n\n\nDumping managed stack and managed variables using ICorDebug.\n");
         ExtOut("=============================================================================\n");
