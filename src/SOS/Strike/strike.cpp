@@ -13709,8 +13709,21 @@ public:
             if (bDisplayRegVals)
                 PrintManagedFrameContext(pStackWalk);
 
-        } while (pStackWalk->Next() == S_OK);
+            hr = pStackWalk->Next();
+        } while (hr == S_OK);
 
+        if (FAILED(hr))
+        {
+            // Normal stack walk ends with S_FALSE
+            // Failure means the stalk walk did not complete normally
+            ExtOut("<failed>\nStack Walk failed. Reported stack incomplete.\n");
+#ifndef FEATURE_PAL
+            if (!IsWindowsTarget())
+            {
+                ExtOut("Native stack walking is not supported on this target.\nStack walk will terminate at the first native frame.\n");
+            }
+#endif // FEATURE_PAL
+        }
 #ifdef DEBUG_STACK_CONTEXT
         while (numNativeFrames > 0)
         {
