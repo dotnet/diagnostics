@@ -248,8 +248,8 @@ namespace Microsoft.Diagnostics.Tools.Reverse
 {
     class Program
     {
-        static ConcurrentDictionary<int, (Task, EventPipeSession)> sessionDict = new ConcurrentDictionary<int, (Task, EventPipeSession)>();
-        static ConcurrentDictionary<int, (int, DiagnosticsClient)> clientDict = new ConcurrentDictionary<int, (int, DiagnosticsClient)>();
+        static ConcurrentDictionary<Guid, (Task, EventPipeSession)> sessionDict = new ConcurrentDictionary<int, (Task, EventPipeSession)>();
+        static ConcurrentDictionary<Guid, (int, DiagnosticsClient)> clientDict = new ConcurrentDictionary<int, (int, DiagnosticsClient)>();
 
         static void Main(string[] args)
         {
@@ -302,7 +302,7 @@ namespace Microsoft.Diagnostics.Tools.Reverse
         {
             Console.Write("Enter instance cookie to trace: ");
             string input = Console.ReadLine();
-            int cookie = int.Parse(input);
+            var cookie = new Guid(input);
             if (clientDict.TryGetValue(cookie, out var value))
             {
                 var (pid, client) = value;
@@ -327,7 +327,7 @@ namespace Microsoft.Diagnostics.Tools.Reverse
         {
             Console.Write("Enter instance id to stop: ");
             string input = Console.ReadLine();
-            int cookie = int.Parse(input);
+            var cookie = new Guid(input);
             if (sessionDict.TryGetValue(cookie, out var entry))
             {
                 var (task, session) = entry;
@@ -494,12 +494,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
     public sealed class DiagnosticsConnectionEventArgs : EventArgs
     {
         // The process ID of the connected process
-        // This cannot be used to uniquely identify an Application since connected Applications may not be in the same PID-space, e.g., containers
+        // This cannot  always be used to uniquely identify an Application since connected Applications may not be in the same PID-space, e.g., containers
         public int ProcessId { get; set; }
 
-        // This is a random 16-bit number casted to an int.  It is not cryptographically secure, but should be unique across PID-spaces
-        // and should be used to unique identify connection Applications.  This will be the same every time an Application instance connects
-        public int RuntimeInstanceCookie { get; set; }
+        // This is a random Guid.  It should be used to unique identify connection Applications.  This will be the same every time an Application instance connects
+        public Guid RuntimeInstanceCookie { get; set; }
 
         // A Diagnostics Client that can be used to issue commands to the Application whose connection raise the event.
         public DiagnosticsClient Client { get; set; }
