@@ -29,13 +29,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        public string TryGetDisplayName(string counterName)
-        {
-            if (Counters.ContainsKey(counterName))
-                return Counters[counterName].DisplayName;
-            return null;
-        }
-
         public string ToProviderString(int interval)
         {
             return $"{Name}:{Keywords}:{Level}:EventCounterIntervalSec={interval}";
