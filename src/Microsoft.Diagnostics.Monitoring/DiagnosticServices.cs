@@ -9,14 +9,17 @@ using System.IO.Compression;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
     public sealed class DiagnosticServices : IDiagnosticServices
     {
-        private readonly Dictionary<int, EventPipeSession> _sessions = new Dictionary<int, EventPipeSession>();
+        private const int MaxTraceSeconds = 60 * 5;
+
         private readonly ILogger<DiagnosticsMonitor> _logger;
+        private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
         public DiagnosticServices(ILogger<DiagnosticsMonitor> logger)
         {
@@ -53,38 +56,40 @@ namespace Microsoft.Diagnostics.Monitoring
             return new FileStreamWrapper(dumpFilePath);
         }
 
-        public Task<Stream> StartNetTrace(int pid, TraceRequest traceRequest)
+        public Task<Stream> StartCpuTrace(int pid, int durationSeconds)
         {
-            if (_sessions.ContainsKey(pid))
+            if ((durationSeconds < 1) || (durationSeconds > MaxTraceSeconds))
             {
-                throw new InvalidOperationException("Trace has already started");
+                throw new InvalidOperationException("Invalid duration");
             }
 
+            //TODO Should we limit only 1 trace per file?
             var client = new DiagnosticsClient(pid);
 
             //TODO Pull event providers from the configuration.
             var cpuProviders = new EventPipeProvider[] {
-                    new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", System.Diagnostics.Tracing.EventLevel.Informational),
-                    new EventPipeProvider("Microsoft-Windows-DotNETRuntime", System.Diagnostics.Tracing.EventLevel.Informational, (long)Tracing.Parsers.ClrTraceEventParser.Keywords.Default)
-                };
+                new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", System.Diagnostics.Tracing.EventLevel.Informational),
+                new EventPipeProvider("Microsoft-Windows-DotNETRuntime", System.Diagnostics.Tracing.EventLevel.Informational, (long)Tracing.Parsers.ClrTraceEventParser.Keywords.Default)
+            };
 
             EventPipeSession session = client.StartEventPipeSession(cpuProviders, requestRundown: true);
 
-            _sessions.Add(pid, session);
-            return Task.FromResult(session.EventStream);
-        }
-
-        public Task StopNetTrace(int pid, TraceRequest traceRequest)
-        {
-            if (!_sessions.TryGetValue(pid, out EventPipeSession session))
+            CancellationToken token = _tokenSource.Token;
+            Task traceTask = Task.Run(async () =>
             {
-                throw new InvalidOperationException("No running trace session");
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(durationSeconds), token);
+                }
+                finally
+                {
+                    session.Stop();
+                    //We rely on the caller to Dispose the EventStream file.
+                }
+            });
 
-            }
-            _sessions.Remove(pid);
-            session.Stop();
+            return Task.FromResult(session.EventStream);
 
-            return Task.CompletedTask;
         }
 
         private static NETCore.Client.DumpType MapDumpType(DumpType dumpType)
@@ -106,15 +111,8 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public void Dispose()
         {
-            if (_sessions != null)
-            {
-                foreach(KeyValuePair<int, EventPipeSession> session in _sessions)
-                {
-                    //CONSIDER Should we also stop the sessions here?
-                    session.Value?.Dispose();
-                }
-                _sessions.Clear();
-            }
+            _tokenSource.Cancel();
+            _tokenSource.Dispose();
         }
     }
 }

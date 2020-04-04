@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -27,7 +28,13 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            services.AddMvc((MvcOptions options) =>
+            {
+                // HACK We need to disable EndpointRouting in order to run properly in 3.1
+                System.Reflection.PropertyInfo prop = options.GetType().GetProperty("EnableEndpointRouting");
+                prop?.SetValue(options, false);
+
+            }).SetCompatibilityVersion(CompatibilityVersion.Latest);
 
             services.Configure<GzipCompressionProviderOptions>(options =>
             {
@@ -55,12 +62,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 
             app.UseResponseCompression();
             app.UseHttpsRedirection();
-            app.UseMvc(routes =>
-               {
-                   routes.MapRoute(
-                       name: "default",
-                       template: "{controller=Dashboard}/{action=Index}/{pid?}");
-               });
+            app.UseMvc();
         }
     }
 }

@@ -12,13 +12,12 @@ namespace Microsoft.Diagnostics.Monitoring
     /// </summary>
     public interface IDiagnosticServices : IDisposable
     {
-        public IEnumerable<int> GetProcesses();
+        IEnumerable<int> GetProcesses();
 
-        public Task<Stream> GetDump(int pid, DumpType mode);
+        Task<Stream> GetDump(int pid, DumpType mode);
 
-        public Task<Stream> StartNetTrace(int pid, TraceRequest traceRequest);
-
-        public Task StopNetTrace(int pid, TraceRequest traceRequest);
+        //TODO We can most likely unify trace, cpu, and logs/metrics around one call with the appropriate config
+        Task<Stream> StartCpuTrace(int pid, int duration);
     }
 
     public enum DumpType
@@ -37,8 +36,6 @@ namespace Microsoft.Diagnostics.Monitoring
 
     public sealed class TraceRequest
     {
-        public TraceState State { get; set; }
-
         public string Configuraton { get; set; }
     }
 }

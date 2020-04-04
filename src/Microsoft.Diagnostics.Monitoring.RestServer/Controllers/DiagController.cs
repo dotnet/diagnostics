@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     [ApiController]
     public class DiagController : ControllerBase
     {
@@ -28,56 +28,52 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         }
 
         [HttpGet(@"{pid}/dump")]
-        public async Task<ActionResult> GetDump(int pid, [FromQuery]int? dumpType = 1)
+        public Task<ActionResult> GetDump(int pid, [FromQuery]int? dumpType = 1)
         {
             if (!Enum.IsDefined(typeof(DumpType), dumpType))
             {
-                return BadRequest("Invalid dump type");
+                return Task.FromResult<ActionResult>(BadRequest(new ProblemDetails { Detail = "Invalid dump type", Status = 400 }));
             }
 
-            try
+            return InvokeService(async () =>
             {
                 Stream dump = await _diagnosticServices.GetDump(pid, (DumpType)dumpType);
 
                 //Compression is done automatically by the response
                 //Chunking is done because the result has no content-length
                 return File(dump, "application/octet-stream", fileDownloadName: FormattableString.Invariant($"coredump_{pid}"));
-            }
-            catch (DiagnosticsClientException e)
-            {
-                return BadRequest(e.Message);
-            }
-            catch(InvalidOperationException e)
-            {
-                return BadRequest(e.Message);
-            }
+            });
         }
 
-        [HttpPost("{pid}/trace")]
-        public async Task<ActionResult> Trace(int pid, [FromBody]TraceRequest request)
+        [HttpGet("{pid}/cpuprofile")]
+        public Task<ActionResult> CpuProfile(int pid, [FromQuery]int durationSeconds = 30) 
+        {
+            return InvokeService(async () =>
+            {
+                Stream stream = await _diagnosticServices.StartCpuTrace(pid, durationSeconds);
+                return File(stream, "application/octet-stream", fileDownloadName: FormattableString.Invariant($"{Guid.NewGuid()}.nettrace"));
+            });
+        }
+
+        private async Task<ActionResult> InvokeService(Func<Task<ActionResult>> serviceCall)
         {
             try
             {
-                if (request.State == TraceState.Running)
-                {
-                    Stream stream = await _diagnosticServices.StartNetTrace(pid, request);
-                    return File(stream, "application/octet-stream", fileDownloadName: FormattableString.Invariant($"{Guid.NewGuid()}.nettrace"));
-                }
-                else
-                {
-                    await _diagnosticServices.StopNetTrace(pid, request);
-                    return Ok();
-                }
+                return await serviceCall();
             }
             catch (DiagnosticsClientException e)
             {
-                return BadRequest(e.Message);
+                return BadRequest(FromException(e));
             }
-            catch(InvalidOperationException e)
+            catch (InvalidOperationException e)
             {
-                return BadRequest(e.Message);
+                return BadRequest(FromException(e));
             }
+        }
 
+        private static ProblemDetails FromException(Exception e)
+        {
+            return new ProblemDetails { Detail = e.Message, Status = 400 };
         }
     }
 }
