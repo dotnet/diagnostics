@@ -50,7 +50,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         {
             return InvokeService(async () =>
             {
-                Stream stream = await _diagnosticServices.StartCpuTrace(pid, durationSeconds);
+                Stream stream = await _diagnosticServices.StartCpuTrace(pid, durationSeconds, this.HttpContext.RequestAborted);
                 return File(stream, "application/octet-stream", fileDownloadName: FormattableString.Invariant($"{Guid.NewGuid()}.nettrace"));
             });
         }

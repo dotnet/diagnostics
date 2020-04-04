@@ -14,9 +14,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.Diagnostics.Monitoring.RestServer
+namespace Microsoft.Diagnostics.Monitoring
 {
-    public class Startup
+    internal class Startup
     {
         public Startup(IConfiguration configuration)
         {
@@ -61,7 +61,6 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
             }
 
             app.UseResponseCompression();
-            app.UseHttpsRedirection();
             app.UseMvc();
         }
     }

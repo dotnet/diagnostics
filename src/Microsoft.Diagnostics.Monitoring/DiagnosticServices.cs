@@ -1,5 +1,4 @@
-﻿using Microsoft.Diagnostics.Monitoring.RestServer;
-using Microsoft.Diagnostics.NETCore.Client;
+﻿using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -53,10 +52,10 @@ namespace Microsoft.Diagnostics.Monitoring
                 });
             }
 
-            return new FileStreamWrapper(dumpFilePath);
+            return new AutoDeleteFileStream(dumpFilePath);
         }
 
-        public Task<Stream> StartCpuTrace(int pid, int durationSeconds)
+        public Task<Stream> StartCpuTrace(int pid, int durationSeconds, CancellationToken cancellationToken)
         {
             if ((durationSeconds < 1) || (durationSeconds > MaxTraceSeconds))
             {
@@ -74,22 +73,22 @@ namespace Microsoft.Diagnostics.Monitoring
 
             EventPipeSession session = client.StartEventPipeSession(cpuProviders, requestRundown: true);
 
-            CancellationToken token = _tokenSource.Token;
+            CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_tokenSource.Token, cancellationToken);
             Task traceTask = Task.Run(async () =>
             {
                 try
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(durationSeconds), token);
+                    await Task.Delay(TimeSpan.FromSeconds(durationSeconds), linkedTokenSource.Token);
                 }
                 finally
                 {
                     session.Stop();
+                    linkedTokenSource.Dispose();
                     //We rely on the caller to Dispose the EventStream file.
                 }
-            });
+            }, CancellationToken.None);
 
             return Task.FromResult(session.EventStream);
-
         }
 
         private static NETCore.Client.DumpType MapDumpType(DumpType dumpType)
@@ -112,7 +111,21 @@ namespace Microsoft.Diagnostics.Monitoring
         public void Dispose()
         {
             _tokenSource.Cancel();
-            _tokenSource.Dispose();
+        }
+
+        /// <summary>
+        /// We want to make sure we destroy files we finish streaming.
+        /// We want to make sure that we stream out files since we compress on the fly; the size cannot be known upfront.
+        /// CONSIDER The above implies knowledge of how the file is used by the rest api.
+        /// </summary>
+        private sealed class AutoDeleteFileStream : FileStream
+        {
+            public AutoDeleteFileStream(string path) : base(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite | FileShare.Delete,
+                bufferSize: 4096, FileOptions.DeleteOnClose)
+            {
+            }
+
+            public override bool CanSeek => false;
         }
     }
 }

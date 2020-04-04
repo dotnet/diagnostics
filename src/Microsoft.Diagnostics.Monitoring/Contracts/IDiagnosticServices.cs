@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring
@@ -17,7 +18,7 @@ namespace Microsoft.Diagnostics.Monitoring
         Task<Stream> GetDump(int pid, DumpType mode);
 
         //TODO We can most likely unify trace, cpu, and logs/metrics around one call with the appropriate config
-        Task<Stream> StartCpuTrace(int pid, int duration);
+        Task<Stream> StartCpuTrace(int pid, int duration, CancellationToken token);
     }
 
     public enum DumpType
