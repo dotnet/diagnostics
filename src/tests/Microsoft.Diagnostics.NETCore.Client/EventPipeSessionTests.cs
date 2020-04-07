@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public void EventPipeSessionStreamTest()
         {
             TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
-            runner.Start(5000);
+            runner.Start(3000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
             runner.PrintStatus();
             output.WriteLine($"[{DateTime.Now.ToString()}] Trying to start an EventPipe session on process {runner.Pid}");

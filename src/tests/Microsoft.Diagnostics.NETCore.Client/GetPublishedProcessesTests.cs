@@ -4,19 +4,14 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Threading;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Xunit;
 using Xunit.Abstractions;
 
-using Microsoft.Diagnostics.TestHelpers;
-using Microsoft.Diagnostics.NETCore.Client;
-
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    
+
     /// <summary>
     /// Suite of tests that test top-level commands
     /// </summary>
@@ -34,6 +29,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
             runner.Start(3000);
+            // On Windows, runner.Start will not wait for named pipe creation since for other tests, NamedPipeClientStream will
+            // just wait until the named pipe is created.
+            // For these tests, we need to sleep an arbitrary time before pipe is created.
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Thread.Sleep(5000);
+            }
             List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
             foreach (int p in publishedProcesses)
             {
@@ -55,7 +57,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 runner[i].Start();
                 pids[i] = runner[i].Pid;
             }
-            System.Threading.Thread.Sleep(2000);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Thread.Sleep(5000);
+            }
             List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
             foreach (int p in publishedProcesses)
             {

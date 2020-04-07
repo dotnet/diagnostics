@@ -613,10 +613,10 @@
 #endif
 
 #if !defined(MAX_LONGPATH)
-#define MAX_LONGPATH   260 /* max. length of full pathname */
+#define MAX_LONGPATH    1024        /* max. length of full pathname */
 #endif
 #if !defined(MAX_PATH_FNAME)
-#define MAX_PATH_FNAME   MAX_PATH /* max. length of full pathname */
+#define MAX_PATH_FNAME  MAX_PATH    /* max. length of full pathname */
 #endif
 
 #define __clr_reserved __reserved

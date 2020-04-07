@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Tools.Common;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -18,7 +19,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel);
 
         /// <summary>
         /// Collects a diagnostic trace from a currently running process.
@@ -31,14 +32,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="providers">A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'</param>
         /// <param name="profile">A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.</param>
         /// <param name="format">The desired format of the created trace file.</param>
+        /// <param name="duration">The duration of trace to be taken. </param>
+        /// <param name="clrevents">A list of CLR events to be emitted.</param>
+        /// <param name="clreventlevel">The verbosity level of CLR events</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel)
         {
             try
             {
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
-                Console.Clear();
+
                 if (processId < 0)
                 {
                     Console.Error.WriteLine("Process ID should not be negative.");
@@ -50,7 +54,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     return ErrorCodes.ArgumentError;
                 }
 
-                if (profile.Length == 0 && providers.Length == 0)
+                bool hasConsole = console.GetTerminal() != null;
+
+                if (hasConsole)
+                    Console.Clear();
+
+                if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
                 {
                     Console.Out.WriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
                     profile = "cpu-sampling";
@@ -77,6 +86,22 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     Profile.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
                 }
 
+                // Parse --clrevents parameter
+                if (clrevents.Length != 0)
+                {
+                    // Ignore --clrevents if CLR event provider was already specified via --profile or --providers command.
+                    if (enabledBy.ContainsKey(Extensions.CLREventProviderName))
+                    {
+                        Console.WriteLine($"The argument --clrevents {clrevents} will be ignored because the CLR provider was configured via either --profile or --providers command.");
+                    }
+                    else
+                    {
+                        var clrProvider = Extensions.ToCLREventPipeProvider(clrevents, clreventlevel);
+                        providerCollection.Add(clrProvider);
+                        enabledBy[Extensions.CLREventProviderName] = "--clrevents";
+                    }
+                }
+
 
                 if (providerCollection.Count <= 0)
                 {
@@ -91,6 +116,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 var shouldStopAfterDuration = duration != default(TimeSpan);
                 var failed = false;
                 var terminated = false;
+                var rundownRequested = false;
                 System.Timers.Timer durationTimer = null;
 
                 ct.Register(() => shouldExit.Set());
@@ -145,11 +171,19 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     if (nBytesRead <= 0)
                                         break;
                                     fs.Write(buffer, 0, nBytesRead);
-                                    lineToClear = Console.CursorTop-1;
-                                    ResetCurrentConsoleLine(vTermMode.IsEnabled);
-                                    Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
-                                    Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
-                                    Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
+
+                                    if (!rundownRequested)
+                                    {
+                                        if (hasConsole)
+                                        {
+                                            lineToClear = Console.CursorTop - 1;
+                                            ResetCurrentConsoleLine(vTermMode.IsEnabled);
+                                        }
+
+                                        Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
+                                        Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
+                                        Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
+                                    }
                                 }
                             }
                         }
@@ -174,6 +208,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (!terminated)
                     {
                         durationTimer?.Stop();
+                        if (hasConsole)
+                        {
+                            lineToClear = Console.CursorTop;
+                            ResetCurrentConsoleLine(vTermMode.IsEnabled);
+                        }
+                        Console.Out.WriteLine("Stopping the trace. This may take up to minutes depending on the application being traced.");
+                        rundownRequested = true;
                         session.Stop();
                     }
                     await collectingTask;
@@ -200,7 +241,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console.Out.Write(String.Format("{0, -40}","Provider Name"));  // +4 is for the tab
             Console.Out.Write(String.Format("{0, -20}","Keywords"));
             Console.Out.Write(String.Format("{0, -20}","Level"));
-            Console.Out.Write("Enabled By\n");
+            Console.Out.Write("Enabled By\r\n");
             foreach (var provider in providers)
             {
                 Console.Out.WriteLine(String.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + $"{enabledBy[provider.Name]}");
@@ -251,55 +292,81 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Command CollectCommand() =>
             new Command(
                 name: "collect",
-                description: "Collects a diagnostic trace from a currently running process",
-                symbols: new Option[] {
-                    CommonOptions.ProcessIdOption(),
-                    CircularBufferOption(),
-                    OutputPathOption(),
-                    ProvidersOption(),
-                    ProfileOption(),
-                    CommonOptions.FormatOption(),
-                    DurationOption()
-                },
-                handler: HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler());
+                description: "Collects a diagnostic trace from a currently running process") 
+            {
+                // Handler
+                HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler(),
+                // Options
+                CommonOptions.ProcessIdOption(),
+                CircularBufferOption(),
+                OutputPathOption(),
+                ProvidersOption(),
+                ProfileOption(),
+                CommonOptions.FormatOption(),
+                DurationOption(),
+                CLREventsOption(),
+                CLREventLevelOption()
+            };
 
         private static uint DefaultCircularBufferSizeInMB => 256;
 
         private static Option CircularBufferOption() =>
             new Option(
                 alias: "--buffersize",
-                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB.",
-                argument: new Argument<uint>(defaultValue: DefaultCircularBufferSizeInMB) { Name = "size" },
-                isHidden: false);
+                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB.")
+            {
+                Argument = new Argument<uint>(name: "size", defaultValue: DefaultCircularBufferSizeInMB)
+            };
 
         public static string DefaultTraceName => "trace.nettrace";
 
         private static Option OutputPathOption() =>
             new Option(
                 aliases: new[] { "-o", "--output" },
-                description: $"The output path for the collected trace data. If not specified it defaults to '{DefaultTraceName}'",
-                argument: new Argument<FileInfo>(defaultValue: new FileInfo(DefaultTraceName)) { Name = "trace-file-path" },
-                isHidden: false);
+                description: $"The output path for the collected trace data. If not specified it defaults to '{DefaultTraceName}'.")
+            {
+                Argument = new Argument<FileInfo>(name: "trace-file-path", defaultValue: new FileInfo(DefaultTraceName))
+            };
 
         private static Option ProvidersOption() =>
             new Option(
                 alias: "--providers",
-                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'. These providers are in addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the configuration here takes precedence over the implicit configuration from the profile.",
-                argument: new Argument<string>(defaultValue: "") { Name = "list-of-comma-separated-providers" }, // TODO: Can we specify an actual type?
-                isHidden: false);
+                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'. These providers are in addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the configuration here takes precedence over the implicit configuration from the profile.")
+            {
+                Argument = new Argument<string>(name: "list-of-comma-separated-providers", defaultValue: "") // TODO: Can we specify an actual type?
+            };
 
         private static Option ProfileOption() =>
             new Option(
                 alias: "--profile",
-                description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.",
-                argument: new Argument<string>(defaultValue: "") { Name = "profile-name" },
-                isHidden: false);
+                description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.")
+            {
+                Argument = new Argument<string>(name: "profile-name", defaultValue: "")
+            };
 
         private static Option DurationOption() =>
             new Option(
                 alias: "--duration",
-                description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.",
-                argument: new Argument<TimeSpan>(defaultValue: default(TimeSpan)) { Name = "duration-timespan" },
-                isHidden: true);
+                description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.")
+            {
+                Argument = new Argument<TimeSpan>(name: "duration-timespan", defaultValue: default),
+                IsHidden = true
+            };
+        
+        private static Option CLREventsOption() => 
+            new Option(
+                alias: "--clrevents",
+                description: @"List of CLR runtime events to emit.")
+            {
+                Argument = new Argument<string>(name: "clrevents", defaultValue: "")
+            };
+
+        private static Option CLREventLevelOption() => 
+            new Option(
+                alias: "--clreventlevel",
+                description: @"Verbosity of CLR events to be emitted.")
+            {
+                Argument = new Argument<string>(name: "clreventlevel", defaultValue: "")
+            };
     }
 }

@@ -13,8 +13,8 @@
  */
 
 // ******************************************************************************
-// WARNING!!!: This header is also used by the coreclr repo.
-// See: https://github.com/dotnet/coreclr/blob/master/src/inc/gcdump.h
+// WARNING!!!: This header is also used by the runtime repo.
+// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/inc/gcdump.h
 // ******************************************************************************
 
 /*****************************************************************************/

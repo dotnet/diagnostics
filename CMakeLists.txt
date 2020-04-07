@@ -38,12 +38,6 @@ endif(CORECLR_SET_RPATH)
 OPTION(CLR_CMAKE_ENABLE_CODE_COVERAGE "Enable code coverage" OFF)
 OPTION(CLR_CMAKE_WARNINGS_ARE_ERRORS "Warnings are errors" ON)
 
-# Ensure that python is present
-find_program(PYTHON NAMES python2.7 python2 python)
-if (PYTHON STREQUAL "PYTHON-NOTFOUND")
-  message(FATAL_ERROR "PYTHON not found: Please install Python 2.7.9 or later from https://www.python.org/downloads/")
-endif()
-
 # Ensure other tools are present
 if (WIN32)
     if(CLR_CMAKE_HOST_ARCH STREQUAL arm)
@@ -455,10 +449,7 @@ endif(WIN32)
 
 # CLR_ADDITIONAL_LINKER_FLAGS - used for passing additional arguments to linker
 # CLR_ADDITIONAL_COMPILER_OPTIONS - used for passing additional arguments to compiler
-#
-# For example:
-#       ./build-native.sh cmakeargs "-DCLR_ADDITIONAL_COMPILER_OPTIONS=<...>" cmakeargs "-DCLR_ADDITIONAL_LINKER_FLAGS=<...>"
-#
+
 if(CLR_CMAKE_PLATFORM_UNIX)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CLR_ADDITIONAL_LINKER_FLAGS}")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CLR_ADDITIONAL_LINKER_FLAGS}" )
@@ -638,4 +629,3 @@ include(compileoptions.cmake)
 # Native Projects
 #-----------------------------------------
 add_subdirectory(src)
-

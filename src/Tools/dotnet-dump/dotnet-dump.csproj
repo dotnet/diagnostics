@@ -8,6 +8,7 @@
     <RootNamespace>Microsoft.Diagnostic.Tools.Dump</RootNamespace>
     <Description>Diagnostic dump collect and analyze tool</Description>
     <PackageTags>Diagnostic</PackageTags>
+    <NeedsPublishing>true</NeedsPublishing>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <SOSPackagePathPrefix>tools/$(TargetFramework)/any</SOSPackagePathPrefix>
   </PropertyGroup>
@@ -18,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Common\CommandExtensions.cs" Link="CommandExtensions.cs" />
     <Compile Include="..\Common\Commands\ProcessStatus.cs" Link="ProcessStatus.cs" />
   </ItemGroup>
   

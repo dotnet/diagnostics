@@ -23,7 +23,11 @@ namespace Microsoft.Diagnostics.TestHelpers
         private static Dictionary<string,string> GetBuildProperties(TestConfiguration config, string runtimeIdentifier)
         {
             Dictionary<string, string> buildProperties = new Dictionary<string, string>();
-            buildProperties.Add("RuntimeFrameworkVersion", config.BuildProjectMicrosoftNetCoreAppVersion);
+            string buildProjectMicrosoftNetCoreAppVersion = config.BuildProjectMicrosoftNetCoreAppVersion;
+            if (!string.IsNullOrEmpty(buildProjectMicrosoftNetCoreAppVersion))
+            {
+                buildProperties.Add("RuntimeFrameworkVersion", buildProjectMicrosoftNetCoreAppVersion);
+            }
             buildProperties.Add("BuildProjectFramework", config.BuildProjectFramework);
             if (runtimeIdentifier != null)
             {
