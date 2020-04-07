@@ -35,10 +35,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Command ListProfilesCommand() =>
             new Command(
                 name: "list-profiles",
-                description: "Lists pre-built tracing profiles with a description of what providers and filters are in each profile")
-            {
-                Handler = CommandHandler.Create<IConsole>(GetProfiles),
-            };
+                description: "Lists pre-built tracing profiles with a description of what providers and filters are in each profile.",
+                handler: CommandHandler.Create<IConsole>(GetProfiles),
+                isHidden: false);
 
         internal static IEnumerable<Profile> DotNETRuntimeProfiles { get; } = new[] {
             new Profile(

@@ -2,11 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Internal.Common.Commands;
-using Microsoft.Tools.Common;
 using System;
-using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Binding;
 using System.CommandLine.Builder;
@@ -14,6 +10,9 @@ using System.CommandLine.Invocation;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Internal.Common.Commands;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -25,72 +24,67 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private static Command MonitorCommand() =>
             new Command(
-                name: "monitor",
-                description: "Start monitoring a .NET application")
-            {
-                // Handler
-                CommandHandler.Create<CancellationToken, List<string>, IConsole, int, int>(new CounterMonitor().Monitor),
-                // Arguments and Options
-                CounterList(), ProcessIdOption(), RefreshIntervalOption()
-            };
+                "monitor", 
+                "Start monitoring a .NET application", 
+                new Option[] { ProcessIdOption(), RefreshIntervalOption() },
+                argument: CounterList(),
+                handler: CommandHandler.Create<CancellationToken, List<string>, IConsole, int, int>(new CounterMonitor().Monitor));
 
         private static Command CollectCommand() =>
             new Command(
-                name: "collect",
-                description: "Monitor counters in a .NET application and export the result into a file")
-            {
-                // Handler
-                HandlerDescriptor.FromDelegate((ExportDelegate)new CounterMonitor().Collect).GetCommandHandler(),
-                // Arguments and Options
-                CounterList(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption()
-            };
+                "collect",
+                "Monitor counters in a .NET application and export the result into a file",
+                new Option[] { ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption() },
+                argument: CounterList(),
+                handler: HandlerDescriptor.FromDelegate((ExportDelegate)new CounterMonitor().Collect).GetCommandHandler());
 
         private static Option ProcessIdOption() =>
             new Option(
-                aliases: new[] { "-p", "--process-id" },
-                description: "The process id that will be monitored.")
-            {
-                Argument = new Argument<int>(name: "pid")
-            };
+                new[] { "-p", "--process-id" }, 
+                "The ID of the process that will be monitored.",
+                new Argument<int> { Name = "pid" });
 
         private static Option RefreshIntervalOption() =>
             new Option(
-                alias: "--refresh-interval",
-                description: "The number of seconds to delay between updating the displayed counters.")
-            {
-                Argument = new Argument<int>(name: "refresh-interval", defaultValue: 1)
-            };
+                new[] { "--refresh-interval" }, 
+                "The number of seconds to delay between updating the displayed counters.",
+                new Argument<int>(defaultValue: 1) { Name = "refresh-interval" });
 
-        private static Option ExportFormatOption() =>
+        private static Option ExportFormatOption() => 
             new Option(
-                alias: "--format",
-                description: "The format of exported counter data.")
-            {
-                Argument = new Argument<CountersExportFormat>(name: "format", defaultValue: CountersExportFormat.csv)
-            };
+                new[] { "--format" },
+                "The format of exported counter data.",
+                new Argument<CountersExportFormat>(defaultValue: CountersExportFormat.csv) { Name = "format" });
 
-        private static Option ExportFileNameOption() =>
+        private static Option ExportFileNameOption() => 
             new Option(
-                aliases: new[] { "-o", "--output" },
-                description: "The output file name.") 
-            {
-                Argument = new Argument<string>(name: "output", defaultValue: "counter")
-            };
+                new[] { "-o", "--output" },
+                "The output file name.",
+                new Argument<string>(defaultValue: "counter") { Name = "output" });
 
         private static Argument CounterList() =>
-            new Argument<List<string>>(name: "counter_list", defaultValue: new List<string>()) 
-            {
-                Description = @"A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the provider_name is used without a qualifying counter_name then all counters will be shown. To discover provider and counter names, use the list command.",
+            new Argument<List<string>> {
+                Name = "counter_list",
+                Description = @"A space separated list of counters. Counters can be specified provider_name[:counter_name].
+                If the provider_name is used without a qualifying counter_name then all counters will be shown. To discover 
+                provider and counter names, use the list command.
+                .",
                 Arity = ArgumentArity.ZeroOrMore
             };
 
         private static Command ListCommand() =>
             new Command(
-                name: "list",
-                description: "Display a list of counter names and descriptions, grouped by provider.")
-            {
-                Handler = CommandHandler.Create<IConsole>(List)
-            };
+                "list", 
+                "Display a list of counter names and descriptions, grouped by provider.", 
+                new Option[] { },
+                handler: CommandHandler.Create<IConsole>(List));
+
+        private static Command ProcessStatusCommand() =>
+            new Command(
+                "ps",
+                "Display a list of dotnet processes that can be monitored.",
+                new Option[] { },
+                handler: CommandHandler.Create<IConsole>(ProcessStatusCommandHandler.PrintProcessStatus));
 
         public static int List(IConsole console)
         {
@@ -117,7 +111,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 .AddCommand(MonitorCommand())
                 .AddCommand(CollectCommand())
                 .AddCommand(ListCommand())
-                .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that can be monitored"))
+                .AddCommand(ProcessStatusCommand())
                 .UseDefaults()
                 .Build();
             return parser.InvokeAsync(args);

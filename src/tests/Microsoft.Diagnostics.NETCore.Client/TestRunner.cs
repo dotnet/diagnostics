@@ -2,19 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.TestHelpers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
+
+using Microsoft.Diagnostics.TestHelpers;
+
+using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -37,7 +34,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             startInfo.EnvironmentVariables[key] = value;
         }
 
-        public void Start(int timeoutInMS=15000)
+        public void Start(int timeoutInMS=0)
         {
             if (outputHelper != null)
                 outputHelper.WriteLine("$[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName);
@@ -60,30 +57,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 outputHelper.WriteLine($"Have total {testProcess.Modules.Count} modules loaded");
             }
 
-            // Block until we see the IPC channel created, or until timeout specified.
-            Task monitorSocketTask = Task.Run(() =>
-            {
-                while (true)
-                {
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    {
-                        // On Windows, namedpipe connection will block until the named pipe is ready to connect so no need to block here
-                        break;
-                    }
-                    else
-                    {
-                        // On Linux, we wait until the socket is created.
-                        var matchingFiles = Directory.GetFiles(Path.GetTempPath(), $"dotnet-diagnostic-{testProcess.Id}-*-socket"); // Try best match.
-                        if (matchingFiles.Length > 0)
-                        {
-                            break;
-                        }
-                    }
-                    Task.Delay(100);
-                }
-            });
-
-            monitorSocketTask.Wait(TimeSpan.FromMilliseconds(timeoutInMS));
+            outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Sleeping for {timeoutInMS} ms.");
+            Thread.Sleep(timeoutInMS);
+            outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Done sleeping. Ready to test.");
         }
 
         public void Stop()

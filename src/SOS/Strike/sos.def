@@ -128,8 +128,6 @@ EXPORTS
     sethostruntime=SetHostRuntime
     SetSymbolServer
     setsymbolserver=SetSymbolServer
-    SetClrPath
-    setclrpath=SetClrPath
     SOSFlush
     sosflush=SOSFlush
     StopOnException
@@ -205,7 +203,7 @@ EXPORTS
     gchandleleaks=GCHandleLeaks
     Gchandleleaks=GCHandleLeaks
     GCHandleleaks=GCHandleLeaks
-    SOSHandleCLRN
+    HandleCLRN
     MinidumpMode
     minidumpmode=MinidumpMode
     Minidumpmode=MinidumpMode

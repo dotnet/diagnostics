@@ -88,8 +88,6 @@ public:
     VOID DFSVisit(ExpressionNodeVisitorCallback pFunc, VOID* pUserData, int depth=0);
 
 private:
-    static ICorDebugProcess* s_pCorDebugProcess;
-
     // for nodes that evaluate to a type, this is that type
     // for nodes that evaluate to a debuggee value, this is the type of that
     // value or one of its base types. It represents the type the value should

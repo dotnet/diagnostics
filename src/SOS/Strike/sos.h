@@ -107,7 +107,7 @@ namespace sos
     inline void CheckInterrupt()
     {
         if (g_ExtControl->GetInterrupt() == S_OK)
-            Throw<Exception>("Command canceled at the user's request.");
+            Throw<Exception>("User interrupt.");
     }
 
     /* ThinLock struct.  Use Object::GetThinLock to fill the struct.

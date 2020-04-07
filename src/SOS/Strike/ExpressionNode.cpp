@@ -4,11 +4,10 @@
 
 #include "ExpressionNode.h"
 
+
 #ifndef IfFailRet
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
 #endif
-
-ICorDebugProcess* ExpressionNode::s_pCorDebugProcess = nullptr;
 
 // Returns the complete expression being evaluated to get the value for this node
 // The returned pointer is a string interior to this object - once you release
@@ -46,15 +45,8 @@ WCHAR* ExpressionNode::GetErrorMessage() { return pErrorMessage; }
 // Factory function for creating the expression node at the root of a tree
 HRESULT ExpressionNode::CreateExpressionNode(__in_z WCHAR* pExpression, ExpressionNode** ppExpressionNode)
 {
-    _ASSERTE(g_pRuntime != nullptr);
     *ppExpressionNode = NULL;
-
-    HRESULT Status = g_pRuntime->GetCorDebugInterface(&s_pCorDebugProcess);
-    if (FAILED(Status)) 
-    {
-        return Status;
-    }
-    Status = CreateExpressionNodeHelper(pExpression,
+    HRESULT Status = CreateExpressionNodeHelper(pExpression,
         pExpression,
         0,
         NULL,
@@ -1768,8 +1760,7 @@ HRESULT ExpressionNode::EnumerateFrames(FrameEnumCallback pCallback, VOID* pUser
     ULONG ulThreadID = 0;
     g_ExtSystem->GetCurrentThreadSystemId(&ulThreadID);
 
-    _ASSERTE(s_pCorDebugProcess != nullptr);
-    IfFailRet(s_pCorDebugProcess->GetThread(ulThreadID, &pThread));
+    IfFailRet(g_pCorDebugProcess->GetThread(ulThreadID, &pThread));
     IfFailRet(pThread->QueryInterface(IID_ICorDebugThread3, (LPVOID *) &pThread3));
     IfFailRet(pThread3->CreateStackWalk(&pStackWalk));
 
@@ -1989,8 +1980,7 @@ HRESULT ExpressionNode::FindTypeByName(__in_z const WCHAR* pTypeName, ICorDebugT
 {
     HRESULT Status = S_OK;
     ToRelease<ICorDebugAppDomainEnum> pAppDomainEnum;
-    _ASSERTE(s_pCorDebugProcess != nullptr);
-    IfFailRet(s_pCorDebugProcess->EnumerateAppDomains(&pAppDomainEnum));
+    IfFailRet(g_pCorDebugProcess->EnumerateAppDomains(&pAppDomainEnum));
     DWORD count;
     IfFailRet(pAppDomainEnum->GetCount(&count));
     for(DWORD i = 0; i < count; i++)

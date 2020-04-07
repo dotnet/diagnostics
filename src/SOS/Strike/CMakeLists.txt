@@ -69,7 +69,6 @@ if(WIN32)
     gcroot.cpp
     hostcoreclr.cpp
     metadata.cpp
-    runtime.cpp
     sigparser.cpp
     sildasm.cpp
     sos.cpp
@@ -126,7 +125,6 @@ else(WIN32)
     gcroot.cpp
     hostcoreclr.cpp
     metadata.cpp
-    runtime.cpp
     sigparser.cpp
     sildasm.cpp
     stressLogDump.cpp

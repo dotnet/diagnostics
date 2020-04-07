@@ -175,42 +175,6 @@ Options:
         KeyValueArgs format: '[key1=value1][;key2=value2]' 
             note: values that contain ';' or '=' characters should be surrounded by double quotes ("), e.g., 'key="value;with=symbols";key2=value2'
 
-  --clrevents <clrevents>
-    List of CLR events to collect.
-
-    The string should be in the format '[Keyword1]+[Keyword2]+...+[KeywordN]'. For example: --clrevents GC+GCHandle
-
-    List of CLR event keywords:
-    * GC
-    * GCHandle
-    * Fusion
-    * Loader
-    * JIT
-    * NGEN
-    * StartEnumeration
-    * EndEnumeration
-    * Security
-    * AppDomainResourceManagement
-    * JITTracing
-    * Interop
-    * Contention
-    * Exception
-    * Threading
-    * JittedMethodILToNativeMap
-    * OverrideAndSuppressNGENEvents
-    * Type
-    * GCHeapDump
-    * GCSampledObjectAllocationHigh
-    * GCHeapSurvivalAndMovement
-    * GCHeapCollect
-    * GCHeapAndTypeNames
-    * GCSampledObjectAllocationLow
-    * PerfTrack
-    * Stack
-    * ThreadTransfer
-    * Debugger
-
-
   --buffersize <Size>
     Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
 

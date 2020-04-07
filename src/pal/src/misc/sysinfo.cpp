@@ -26,12 +26,9 @@ Revision History:
 #include <errno.h>
 #include <unistd.h>
 #include <sys/types.h>
-
-#if HAVE_SYSCONF
-// <unistd.h> already included above
-#elif HAVE_SYSCTL
+#if HAVE_SYSCTL
 #include <sys/sysctl.h>
-#else
+#elif !HAVE_SYSCONF
 #error Either sysctl or sysconf is required for GetSystemInfo.
 #endif
 

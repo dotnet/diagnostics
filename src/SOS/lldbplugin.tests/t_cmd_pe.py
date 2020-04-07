@@ -12,7 +12,7 @@ def runScenario(assembly, debugger, target):
     # set breakpoint at Test.Main and stop there
     test.stop_in_main(debugger, assembly)
 
-    ci.HandleCommand("pe", res)
+    ci.HandleCommand("dso", res)
     print(res.GetOutput())
     print(res.GetError())
     # Interpreter must have this command and able to run it

@@ -90,6 +90,8 @@ void DumpStackWorker (DumpStackFlag &DSFlag);
 
 void UnassemblyUnmanaged (DWORD_PTR IP, BOOL bSuppressLines);
 
+HRESULT CheckEEDll ();
+
 BOOL GetCalleeSite (DWORD_PTR IP, DWORD_PTR &IPCallee);
 
 void DisasmAndClean (DWORD_PTR &IP, __out_ecount_opt(length) char *line, ULONG length);
@@ -125,6 +127,7 @@ eTargetType GetFinalTarget(DWORD_PTR callee, DWORD_PTR* finalMDorIP);
 #ifndef THUMB_CODE
 #define THUMB_CODE 1
 #endif
+#define STACKWALK_CONTROLPC_ADJUST_OFFSET 2
 
 #ifdef SOS_TARGET_X86
 
@@ -175,8 +178,6 @@ public:
     { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = _countof(s_GCRegs); }
 
     virtual void DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const;
-
-    int StackWalkIPAdjustOffset() const { return 1; }
 
 private:
     X86Machine()  {}
@@ -244,8 +245,6 @@ public:
     { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = _countof(s_GCRegs); }
 
     virtual void DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const;
-
-    int StackWalkIPAdjustOffset() const { return 2; }
 
 private:
     ARMMachine()  {}
@@ -316,8 +315,6 @@ public:
 
     virtual void DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const;
 
-    int StackWalkIPAdjustOffset() const { return 1; }
-
 private:
     AMD64Machine()  {}
     ~AMD64Machine() {}
@@ -382,8 +379,6 @@ public:
     { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = _countof(s_GCRegs);}
 
     virtual void DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const;
-
-    int StackWalkIPAdjustOffset() const { return 4; }
 
 private:
     ARM64Machine()  {}

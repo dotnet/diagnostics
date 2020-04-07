@@ -41,13 +41,9 @@ fi
 # Configures warning treatment in msbuild.
 warn_as_error=${warn_as_error:-true}
 
-# True to attempt using .NET Core already that meets requirements specified in global.json
+# True to attempt using .NET Core already that meets requirements specified in global.json 
 # installed on the machine instead of downloading one.
 use_installed_dotnet_cli=${use_installed_dotnet_cli:-true}
-
-# Enable repos to use a particular version of the on-line dotnet-install scripts.
-#    default URL: https://dot.net/v1/dotnet-install.sh
-dotnetInstallScriptVersion=${dotnetInstallScriptVersion:-'v1'}
 
 # True to use global NuGet cache instead of restoring packages to repository-local directory.
 if [[ "$ci" == true ]]; then
@@ -55,6 +51,78 @@ if [[ "$ci" == true ]]; then
 else
   use_global_nuget_cache=${use_global_nuget_cache:-true}
 fi
+
+function EmitError {
+  if [[ "$ci" != true ]]; then
+    echo "$@" >&2
+    return
+  fi
+
+  message_type="error"
+  sourcepath=''
+  linenumber=''
+  columnnumber=''
+  error_code=''
+
+  while [[ $# -gt 0 ]]; do
+    opt="$(echo "${1/#--/-}" | awk '{print tolower($0)}')"
+    case "$opt" in
+      -type|-t)
+        message_type=$2
+        shift
+        ;;
+      -sourcepath|-s)
+        sourcepath=$2
+        shift
+        ;;
+      -linenumber|-l)
+        linenumber=$2
+        shift
+        ;;
+      -columnnumber|-col)
+        columnnumber=$2
+        shift
+        ;;
+      -code|-c)
+        error_code=$2
+        shift
+        ;;
+      *)
+        break
+        ;;
+    esac
+
+    shift
+  done
+
+  message='##vso[task.logissue'
+
+  message="$message type=$message_type"
+
+  if [ -n "$sourcepath" ]; then
+    message="$message;sourcepath=$sourcepath"
+  else
+    message="$message;sourcepath=${BASH_SOURCE[1]}"
+  fi
+
+  if [ -n "$linenumber" ]; then
+    message="$message;linenumber=$linenumber"
+  else
+    message="$message;linenumber=${BASH_LINENO[0]}"
+  fi
+
+  if [ -n "$columnnumber" ]; then
+    message="$message;columnnumber=$columnnumber"
+  fi
+
+  if [ -n "$error_code" ]; then
+    message="$message;code=$error_code"
+  fi
+
+  message="$message]$*"
+
+  echo "$message"
+}
 
 # Resolve any symlinks in the given path.
 function ResolvePath {
@@ -77,11 +145,11 @@ function ResolvePath {
 function ReadGlobalVersion {
   local key=$1
 
-  local line=$(awk "/$key/ {print; exit}" "$global_json_file")
+  local line=`grep -m 1 "$key" "$global_json_file"`
   local pattern="\"$key\" *: *\"(.*)\""
 
   if [[ ! $line =~ $pattern ]]; then
-    Write-PipelineTelemetryError -category 'Build' "Error: Cannot find \"$key\" in $global_json_file"
+    EmitError "Error: Cannot find \"$key\" in $global_json_file"
     ExitWithExitCode 1
   fi
 
@@ -142,7 +210,7 @@ function InitializeDotNetCli {
       if [[ "$install" == true ]]; then
         InstallDotNetSdk "$dotnet_root" "$dotnet_sdk_version"
       else
-        Write-PipelineTelemetryError -category 'InitializeToolset' "Unable to find dotnet with SDK version '$dotnet_sdk_version'"
+        EmitError "Unable to find dotnet with SDK version '$dotnet_sdk_version'"
         ExitWithExitCode 1
       fi
     fi
@@ -150,10 +218,14 @@ function InitializeDotNetCli {
 
   # Add dotnet to PATH. This prevents any bare invocation of dotnet in custom
   # build steps from using anything other than what we've downloaded.
-  Write-PipelinePrependPath -path "$dotnet_root"
+  export PATH="$dotnet_root:$PATH"
 
-  Write-PipelineSetVariable -name "DOTNET_MULTILEVEL_LOOKUP" -value "0"
-  Write-PipelineSetVariable -name "DOTNET_SKIP_FIRST_TIME_EXPERIENCE" -value "1"
+  if [[ $ci == true ]]; then
+    # Make Sure that our bootstrapped dotnet cli is available in future steps of the Azure Pipelines build
+    echo "##vso[task.prependpath]$dotnet_root"
+    echo "##vso[task.setvariable variable=DOTNET_MULTILEVEL_LOOKUP]0"
+    echo "##vso[task.setvariable variable=DOTNET_SKIP_FIRST_TIME_EXPERIENCE]1"
+  fi
 
   # return value
   _InitializeDotNetCli="$dotnet_root"
@@ -172,7 +244,7 @@ function InstallDotNetSdk {
 function InstallDotNet {
   local root=$1
   local version=$2
-
+ 
   GetDotNetInstallScript "$root"
   local install_script=$_GetDotNetInstallScript
 
@@ -191,59 +263,15 @@ function InstallDotNet {
   fi
   bash "$install_script" --version $version --install-dir "$root" $archArg $runtimeArg $skipNonVersionedFilesArg || {
     local exit_code=$?
-    Write-PipelineTelemetryError -category 'InitializeToolset' "Failed to install dotnet SDK from public location (exit code '$exit_code')."
-
-    if [[ -n "$runtimeArg" ]]; then
-      local runtimeSourceFeed=''
-      if [[ -n "${6:-}" ]]; then
-        runtimeSourceFeed="--azure-feed $6"
-      fi
-
-      local runtimeSourceFeedKey=''
-      if [[ -n "${7:-}" ]]; then
-        decodedFeedKey=`echo $7 | base64 --decode`
-        runtimeSourceFeedKey="--feed-credential $decodedFeedKey"
-      fi
-
-      if [[ -n "$runtimeSourceFeed" || -n "$runtimeSourceFeedKey" ]]; then
-        bash "$install_script" --version $version --install-dir "$root" $archArg $runtimeArg $skipNonVersionedFilesArg $runtimeSourceFeed $runtimeSourceFeedKey || {
-          local exit_code=$?
-          Write-PipelineTelemetryError -category 'InitializeToolset' "Failed to install dotnet SDK from custom location '$runtimeSourceFeed' (exit code '$exit_code')."
-          ExitWithExitCode $exit_code
-        }
-      else
-        ExitWithExitCode $exit_code
-      fi
-    fi
+    EmitError "Failed to install dotnet SDK (exit code '$exit_code')."
+    ExitWithExitCode $exit_code
   }
-}
-
-function with_retries {
-  local maxRetries=5
-  local retries=1
-  echo "Trying to run '$@' for maximum of $maxRetries attempts."
-  while [[ $((retries++)) -le $maxRetries ]]; do
-    "$@"
-
-    if [[ $? == 0 ]]; then
-      echo "Ran '$@' successfully."
-      return 0
-    fi
-
-    timeout=$((2**$retries-1))
-    echo "Failed to execute '$@'. Waiting $timeout seconds before next attempt ($retries out of $maxRetries)." 1>&2
-    sleep $timeout
-  done
-
-  echo "Failed to execute '$@' for $maxRetries times." 1>&2
-
-  return 1
 }
 
 function GetDotNetInstallScript {
   local root=$1
   local install_script="$root/dotnet-install.sh"
-  local install_script_url="https://dot.net/$dotnetInstallScriptVersion/dotnet-install.sh"
+  local install_script_url="https://dot.net/v1/dotnet-install.sh"
 
   if [[ ! -a "$install_script" ]]; then
     mkdir -p "$root"
@@ -252,19 +280,12 @@ function GetDotNetInstallScript {
 
     # Use curl if available, otherwise use wget
     if command -v curl > /dev/null; then
-      with_retries curl "$install_script_url" -sSL --retry 10 --create-dirs -o "$install_script" || {
-        local exit_code=$?
-        Write-PipelineTelemetryError -category 'InitializeToolset' "Failed to acquire dotnet install script (exit code '$exit_code')."
-        ExitWithExitCode $exit_code
-      }
+      curl "$install_script_url" -sSL --retry 10 --create-dirs -o "$install_script"
     else
-      with_retries wget -v -O "$install_script" "$install_script_url" || {
-        local exit_code=$?
-        Write-PipelineTelemetryError -category 'InitializeToolset' "Failed to acquire dotnet install script (exit code '$exit_code')."
-        ExitWithExitCode $exit_code
-      }
+      wget -q -O "$install_script" "$install_script_url"
     fi
   fi
+
   # return value
   _GetDotNetInstallScript="$install_script"
 }
@@ -273,11 +294,11 @@ function InitializeBuildTool {
   if [[ -n "${_InitializeBuildTool:-}" ]]; then
     return
   fi
-
+  
   InitializeDotNetCli $restore
 
   # return values
-  _InitializeBuildTool="$_InitializeDotNetCli/dotnet"
+  _InitializeBuildTool="$_InitializeDotNetCli/dotnet"  
   _InitializeBuildToolCommand="msbuild"
   _InitializeBuildToolFramework="netcoreapp2.1"
 }
@@ -296,14 +317,11 @@ function GetNuGetPackageCachePath {
 }
 
 function InitializeNativeTools() {
-  if [[ -n "${DisableNativeToolsetInstalls:-}" ]]; then
-    return
-  fi
   if grep -Fq "native-tools" $global_json_file
   then
     local nativeArgs=""
     if [[ "$ci" == true ]]; then
-      nativeArgs="--installDirectory $tools_dir"
+      nativeArgs="-InstallDirectory $tools_dir"
     fi
     "$_script_dir/init-tools-native.sh" $nativeArgs
   fi
@@ -331,7 +349,7 @@ function InitializeToolset {
   fi
 
   if [[ "$restore" != true ]]; then
-    Write-PipelineTelemetryError -category 'InitializeToolset' "Toolset version $toolset_version has not been restored."
+    EmitError "Toolset version $toolsetVersion has not been restored."
     ExitWithExitCode 2
   fi
 
@@ -341,14 +359,14 @@ function InitializeToolset {
   if [[ "$binary_log" == true ]]; then
     bl="/bl:$log_dir/ToolsetRestore.binlog"
   fi
-
+  
   echo '<Project Sdk="Microsoft.DotNet.Arcade.Sdk"/>' > "$proj"
   MSBuild-Core "$proj" $bl /t:__WriteToolsetLocation /clp:ErrorsOnly\;NoSummary /p:__ToolsetLocationOutputFile="$toolset_location_file"
 
   local toolset_build_proj=`cat "$toolset_location_file"`
 
   if [[ ! -a "$toolset_build_proj" ]]; then
-    Write-PipelineTelemetryError -category 'Build' "Invalid toolset path: $toolset_build_proj"
+    EmitError "Invalid toolset path: $toolset_build_proj"
     ExitWithExitCode 3
   fi
 
@@ -375,18 +393,6 @@ function MSBuild {
   if [[ "$pipelines_log" == true ]]; then
     InitializeBuildTool
     InitializeToolset
-
-    # Work around issues with Azure Artifacts credential provider
-    # https://github.com/dotnet/arcade/issues/3932
-    if [[ "$ci" == true ]]; then
-      "$_InitializeBuildTool" nuget locals http-cache -c
-
-      export NUGET_PLUGIN_HANDSHAKE_TIMEOUT_IN_SECONDS=20
-      export NUGET_PLUGIN_REQUEST_TIMEOUT_IN_SECONDS=20
-      Write-PipelineSetVariable -name "NUGET_PLUGIN_HANDSHAKE_TIMEOUT_IN_SECONDS" -value "20"
-      Write-PipelineSetVariable -name "NUGET_PLUGIN_REQUEST_TIMEOUT_IN_SECONDS" -value "20"
-    fi
-
     local toolset_dir="${_InitializeToolset%/*}"
     local logger_path="$toolset_dir/$_InitializeBuildToolFramework/Microsoft.DotNet.Arcade.Sdk.dll"
     args=( "${args[@]}" "-logger:$logger_path" )
@@ -398,12 +404,12 @@ function MSBuild {
 function MSBuild-Core {
   if [[ "$ci" == true ]]; then
     if [[ "$binary_log" != true ]]; then
-      Write-PipelineTelemetryError -category 'Build'  "Binary log must be enabled in CI build."
+      EmitError "Binary log must be enabled in CI build."
       ExitWithExitCode 1
     fi
 
     if [[ "$node_reuse" == true ]]; then
-      Write-PipelineTelemetryError -category 'Build'  "Node reuse must be disabled in CI build."
+      EmitError "Node reuse must be disabled in CI build."
       ExitWithExitCode 1
     fi
   fi
@@ -417,15 +423,13 @@ function MSBuild-Core {
 
   "$_InitializeBuildTool" "$_InitializeBuildToolCommand" /m /nologo /clp:Summary /v:$verbosity /nr:$node_reuse $warnaserror_switch /p:TreatWarningsAsErrors=$warn_as_error /p:ContinuousIntegrationBuild=$ci "$@" || {
     local exit_code=$?
-    Write-PipelineTelemetryError -category 'Build'  "Build failed (exit code '$exit_code')."
+    EmitError "Build failed (exit code '$exit_code')."
     ExitWithExitCode $exit_code
   }
 }
 
 ResolvePath "${BASH_SOURCE[0]}"
 _script_dir=`dirname "$_ResolvePath"`
-
-. "$_script_dir/pipeline-logging-functions.sh"
 
 eng_root=`cd -P "$_script_dir/.." && pwd`
 repo_root=`cd -P "$_script_dir/../.." && pwd`
@@ -438,7 +442,7 @@ temp_dir="$artifacts_dir/tmp/$configuration"
 global_json_file="$repo_root/global.json"
 # determine if global.json contains a "runtimes" entry
 global_json_has_runtimes=false
-dotnetlocal_key=$(awk "/runtimes/ {print; exit}" "$global_json_file") || true
+dotnetlocal_key=`grep -m 1 "runtimes" "$global_json_file"` || true
 if [[ -n "$dotnetlocal_key" ]]; then
   global_json_has_runtimes=true
 fi
@@ -453,23 +457,7 @@ mkdir -p "$toolset_dir"
 mkdir -p "$temp_dir"
 mkdir -p "$log_dir"
 
-Write-PipelineSetVariable -name "Artifacts" -value "$artifacts_dir"
-Write-PipelineSetVariable -name "Artifacts.Toolset" -value "$toolset_dir"
-Write-PipelineSetVariable -name "Artifacts.Log" -value "$log_dir"
-Write-PipelineSetVariable -name "Temp" -value "$temp_dir"
-Write-PipelineSetVariable -name "TMP" -value "$temp_dir"
-
-# Import custom tools configuration, if present in the repo.
-if [ -z "${disable_configure_toolset_import:-}" ]; then
-  configure_toolset_script="$eng_root/configure-toolset.sh"
-  if [[ -a "$configure_toolset_script" ]]; then
-    . "$configure_toolset_script"
-  fi
-fi
-
-# TODO: https://github.com/dotnet/arcade/issues/1468
-# Temporary workaround to avoid breaking change.
-# Remove once repos are updated.
-if [[ -n "${useInstalledDotNetCli:-}" ]]; then
-  use_installed_dotnet_cli="$useInstalledDotNetCli"
+if [[ $ci == true ]]; then
+  export TEMP="$temp_dir"
+  export TMP="$temp_dir"
 fi

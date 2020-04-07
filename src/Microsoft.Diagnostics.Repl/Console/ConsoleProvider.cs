@@ -50,7 +50,6 @@ namespace Microsoft.Diagnostics.Repl
         {
             m_history = new List<StringBuilder>();
             m_activeLine = new StringBuilder();
-            m_shutdown = false;
 
             m_consoleConverter = new CharToLineConverter(text => {
                 NewOutput(text);
@@ -78,6 +77,7 @@ namespace Microsoft.Diagnostics.Repl
         public async Task Start(Func<string, CancellationToken, Task> dispatchCommand)
         {
             m_lastCommandLine = null;
+            m_shutdown = false;
             m_interactiveConsole = !Console.IsInputRedirected;
             RefreshLine();
 
@@ -114,8 +114,6 @@ namespace Microsoft.Diagnostics.Repl
                 }
             }
         }
-
-        public bool Shutdown { get { return m_shutdown; } }
 
         /// <summary>
         /// Stop input processing/dispatching

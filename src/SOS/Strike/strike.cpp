@@ -159,7 +159,10 @@ const UINT kcMaxMethodDescsForProfiler = 100;
 #include <memory>
 #include <functional>
 
+BOOL CallStatus;
 BOOL ControlC = FALSE;
+
+IMetaDataDispenserEx *pDisp = NULL;
 WCHAR g_mdName[mdNameLen];
 
 #ifndef FEATURE_PAL
@@ -203,7 +206,6 @@ HMODULE g_hInstance = NULL;
 #ifdef FEATURE_PAL
 
 #define MINIDUMP_NOT_SUPPORTED()
-#define ONLY_SUPPORTED_ON_WINDOWS_TARGET()
 
 #else // !FEATURE_PAL
 
@@ -215,19 +217,11 @@ HMODULE g_hInstance = NULL;
         return Status;         \
     }
 
-#define ONLY_SUPPORTED_ON_WINDOWS_TARGET()                                    \
-    if (!IsWindowsTarget())                                                   \
-    {                                                                         \
-        ExtOut("This command is only supported for Windows targets\n");       \
-        return Status;                                                        \
-    }
-
 #include "safemath.h"
 
 DECLARE_API (MinidumpMode)
 {
     INIT_API ();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
     DWORD_PTR Value=0;
 
     CMDValue arg[] = 
@@ -418,7 +412,7 @@ void DumpStackInternal(DumpStackFlag *pDSFlag)
     }
 
 #ifndef FEATURE_PAL     
-    if (IsWindowsTarget() && (pDSFlag->end == 0)) {
+    if (pDSFlag->end == 0) {
         // Find the current stack range
         NT_TIB teb;
         ULONG64 dwTebAddr = 0;
@@ -651,18 +645,15 @@ HRESULT DumpStackObjectsRaw(size_t nArg, __in_z LPSTR exprBottom, __in_z LPSTR e
     }
     
 #ifndef FEATURE_PAL
-    if (IsWindowsTarget())
+    NT_TIB teb;
+    ULONG64 dwTebAddr=0;
+    HRESULT hr = g_ExtSystem->GetCurrentThreadTeb(&dwTebAddr);
+    if (SUCCEEDED(hr) && SafeReadMemory (TO_TADDR(dwTebAddr), &teb, sizeof (NT_TIB), NULL))
     {
-        NT_TIB teb;
-        ULONG64 dwTebAddr = 0;
-        HRESULT hr = g_ExtSystem->GetCurrentThreadTeb(&dwTebAddr);
-        if (SUCCEEDED(hr) && SafeReadMemory(TO_TADDR(dwTebAddr), &teb, sizeof(NT_TIB), NULL))
+        if (StackTop > TO_TADDR(teb.StackLimit) && StackTop <= TO_TADDR(teb.StackBase))
         {
-            if (StackTop > TO_TADDR(teb.StackLimit) && StackTop <= TO_TADDR(teb.StackBase))
-            {
-                if (StackBottom == 0 || StackBottom > TO_TADDR(teb.StackBase))
-                    StackBottom = TO_TADDR(teb.StackBase);
-            }
+            if (StackBottom == 0 || StackBottom > TO_TADDR(teb.StackBase))
+                StackBottom = TO_TADDR(teb.StackBase);
         }
     }
 #endif
@@ -1066,8 +1057,7 @@ DECLARE_API(DumpSig)
     INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
+    
     //
     // Fetch arguments
     //
@@ -1114,7 +1104,7 @@ DECLARE_API(DumpSigElem)
     INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+    
 
     //
     // Fetch arguments
@@ -1359,8 +1349,6 @@ DECLARE_API(DumpMT)
 
     table.WriteRow("BaseSize:", PrefixHex(vMethTable.BaseSize));
     table.WriteRow("ComponentSize:", PrefixHex(vMethTable.ComponentSize));
-    table.WriteRow("DynamicStatics:", vMethTable.bIsDynamic ? "true" : "false");
-    table.WriteRow("ContainsPointers:", vMethTable.bContainsPointers ? "true" : "false");
     table.WriteRow("Slots in VTable:", Decimal(vMethTable.wNumMethods));
     
     table.SetColWidth(0, 29);
@@ -1420,10 +1408,8 @@ DECLARE_API(DumpMT)
                 if (MethodDescData.Request(g_sos, TO_CDADDR(methodDesc)) == S_OK)
                 {
                     // Is it an fcall?
-                    ULONG64 baseAddress = g_pRuntime->GetModuleAddress();
-                    ULONG64 size = g_pRuntime->GetModuleSize();
-                    if ((TO_TADDR(MethodDescData.NativeCodeAddr) >=  TO_TADDR(baseAddress)) &&
-                        ((TO_TADDR(MethodDescData.NativeCodeAddr) <  TO_TADDR(baseAddress + size))))
+                    if ((TO_TADDR(MethodDescData.NativeCodeAddr) >=  TO_TADDR(g_moduleInfo[MSCORWKS].baseAddr)) &&
+                        ((TO_TADDR(MethodDescData.NativeCodeAddr) <  TO_TADDR(g_moduleInfo[MSCORWKS].baseAddr + g_moduleInfo[MSCORWKS].size))))
                     {
                         pszJitType = "FCALL";
                     }
@@ -2257,23 +2243,15 @@ size_t AddExceptionHeader (__out_ecount_opt(bufferLength) WCHAR *wszBuffer, size
     return _wcslen(wszHeader);
 }
 
-enum StackTraceElementFlags
-{
-    // Set if this element represents the last frame of the foreign exception stack trace
-    STEF_LAST_FRAME_FROM_FOREIGN_STACK_TRACE = 0x0001,
-
-    // Set if the "ip" field has already been adjusted (decremented)
-    STEF_IP_ADJUSTED = 0x0002,
-};
-
-// This struct needs to match the definition in the runtime.
-// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h
 struct StackTraceElement 
 {
     UINT_PTR        ip;
     UINT_PTR        sp;
     DWORD_PTR       pFunc;  // MethodDesc
-    INT             flags;  // This is StackTraceElementFlags but it needs to always be "int" sized for backward compatibility.
+    // TRUE if this element represents the last frame of the foreign
+    // exception stack trace.
+    BOOL            fIsLastFrameFromForeignStackTrace;
+
 };
 
 #include "sos_stacktrace.h"
@@ -2407,14 +2385,12 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
     UINT bytes, 
     __out_ecount_opt(bufferLength) WCHAR *wszBuffer, 
     size_t bufferLength, 
-    BOOL bAsync,                // hardware exception if true
+    BOOL bAsync,
     BOOL bNestedCase = FALSE,
     BOOL bLineNumbers = FALSE)
 {
     UINT count = bytes / sizeof(StackTraceElement);
     size_t Length = 0;
-
-    _ASSERTE(g_targetMachine != nullptr);
 
     if (wszBuffer && bufferLength > 0)
     {
@@ -2489,28 +2465,7 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
             WCHAR filename[MAX_LONGPATH] = W("");
             ULONG linenum = 0;
             if (bLineNumbers && 
-                // To get the source line number of the actual code that threw an exception, the IP needs 
-                // to be adjusted in certain cases. 
-                //
-                // The IP of the stack frame points to either:
-                //
-                // 1) The instruction that caused a hardware exception (div by zero, null ref, etc).
-                // 2) The instruction after the call to an internal runtime function (FCALL like IL_Throw,
-                //    IL_Rethrow, JIT_OverFlow, etc.) that caused a software exception.
-                // 3) The instruction after the call to a managed function (non-leaf node).
-                //
-                // #2 and #3 are the cases that need to adjust IP because they point after the call instruction
-                // and may point to the next (incorrect) IL instruction/source line.  We distinguish these from
-                // #1 by the bAsync flag which is set to true for hardware exceptions and that it is a leaf node
-                // (i == 0).
-                //
-                // When the IP needs to be adjusted it is a lot simpler to decrement IP instead of trying to figure
-                // out the beginning of the instruction. It is enough for GetLineByOffset to return the correct line number.
-                //
-                // The unmodified IP is displayed (above by DumpMDInfoBuffer) which points after the exception in most 
-                // cases. This means that the printed IP and the printed line number often will not map to one another
-                // and this is intentional.
-                SUCCEEDED(GetLineByOffset(TO_CDADDR(ste.ip), &linenum, filename, _countof(filename), !bAsync || i > 0)))
+                SUCCEEDED(GetLineByOffset(TO_CDADDR(ste.ip), &linenum, filename, _countof(filename))))
             {
                 swprintf_s(wszLineBuffer, _countof(wszLineBuffer), W("    %s [%s @ %d]\n"), so.String(), filename, linenum);
             }
@@ -2688,8 +2643,6 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
 
             if (arrayLen != 0 && hr == S_OK)
             {
-                // This code is accessing the StackTraceInfo class in the runtime.
-                // See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h
 #ifdef _TARGET_WIN64_
                 DWORD_PTR dataPtr = taStackTrace + sizeof(DWORD_PTR) + sizeof(DWORD) + sizeof(DWORD);
 #else
@@ -3008,8 +2961,7 @@ DECLARE_API(DumpVC)
 DECLARE_API(DumpRCW)
 {
     INIT_API();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
+    
     BOOL dml = FALSE;
     StringHolder strObject;
 
@@ -3115,8 +3067,7 @@ DECLARE_API(DumpRCW)
 DECLARE_API(DumpCCW)
 {
     INIT_API();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
+    
     BOOL dml = FALSE;
     StringHolder strObject;
 
@@ -3353,8 +3304,7 @@ DECLARE_API(DumpCCW)
 DECLARE_API(DumpPermissionSet)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+    MINIDUMP_NOT_SUPPORTED();    
 
     DWORD_PTR p_Object = NULL;
 
@@ -3613,9 +3563,8 @@ void PrintGCStat(HeapStat *inStat, const char* label=NULL)
 DECLARE_API(TraverseHeap)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
+    MINIDUMP_NOT_SUPPORTED();    
+    
     BOOL bXmlFormat = FALSE;
     BOOL bVerify = FALSE;
     StringHolder Filename;
@@ -3751,7 +3700,6 @@ DECLARE_API(DumpRuntimeTypes)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL dml = FALSE;
 
@@ -3906,7 +3854,7 @@ public:
         }
 
 #ifndef FEATURE_PAL
-        if (IsWindowsTarget() && (mLive || mDead))
+        if (mLive || mDead)
         {
             GCRootImpl gcroot;
             mLiveness = gcroot.GetLiveObjects();
@@ -4019,10 +3967,10 @@ private:
     bool IsCorrectLiveness(const sos::Object &obj)
     {
 #ifndef FEATURE_PAL
-        if (IsWindowsTarget() && mLive && mLiveness.find(obj.GetAddress()) == mLiveness.end())
+        if (mLive && mLiveness.find(obj.GetAddress()) == mLiveness.end())
             return false;
 
-        if (IsWindowsTarget() && mDead && (mLiveness.find(obj.GetAddress()) != mLiveness.end() || obj.IsFree()))
+        if (mDead && (mLiveness.find(obj.GetAddress()) != mLiveness.end() || obj.IsFree()))
             return false;
 #endif
         return true;
@@ -4125,12 +4073,6 @@ private:
 #ifdef FEATURE_PAL
         ExtOut("Not implemented.\n");
 #else
-        if (!IsWindowsTarget())
-        {
-            ExtOut("Not implemented.\n");
-            return;
-        }
-
         const int offset = sos::Object::GetStringDataOffset();
         typedef std::set<StringSetEntry> Set;
         Set set;            // A set keyed off of the string's text
@@ -4259,29 +4201,17 @@ private:
 
     void InitFragmentationList()
     {
-        if (!IsWindowsTarget())
-        {
-            return;
-        }
         mFrag.clear();
     }
 
     void ReportFreeObject(TADDR addr, size_t size, TADDR next, TADDR mt)
     {
-        if (!IsWindowsTarget())
-        {
-            return;
-        }
         if (size >= MIN_FRAGMENTATIONBLOCK_BYTES)
             mFrag.push_back(sos::FragmentationBlock(addr, size, next, mt));
     }
 
     void PrintFragmentationReport()
     {
-        if (!IsWindowsTarget())
-        {
-            return;
-        }
         if (mFrag.size() > 0)
         {
             ExtOut("Fragmented blocks larger than 0.5 MB:\n");
@@ -4947,8 +4877,7 @@ DECLARE_API(VerifyHeap)
 {    
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
+    
     if (!g_snapshot.Build())
     {
         ExtOut("Unable to build snapshot of the garbage collector state\n");
@@ -5083,8 +5012,7 @@ DECLARE_API(AnalyzeOOM)
 {    
     INIT_API();    
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
+    
 #ifndef FEATURE_PAL
 
     if (!InitializeHeapData ())
@@ -5161,7 +5089,6 @@ DECLARE_API(VerifyObj)
 {
     INIT_API();    
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     TADDR  taddrObj = 0;
     TADDR  taddrMT;
@@ -5224,7 +5151,6 @@ DECLARE_API(ListNearObj)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
 #if !defined(FEATURE_PAL)
 
@@ -5422,7 +5348,7 @@ DECLARE_API(GCHeapStat)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+    
 
 #ifndef FEATURE_PAL
 
@@ -5842,7 +5768,6 @@ DECLARE_API(RCWCleanupList)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR p_CleanupList = GetExpression(args);
 
@@ -6108,7 +6033,6 @@ DECLARE_API(DumpModule)
 
     ExtOut("PEFile:                  %p\n", SOS_PTR(module.File));
     ExtOut("ModuleId:                %p\n", SOS_PTR(module.dwModuleID));
-    ExtOut("ModuleIndex:             %p\n", SOS_PTR(module.dwModuleIndex));
     ExtOut("LoaderHeap:              %p\n", SOS_PTR(module.pLookupTableHeap));
     ExtOut("TypeDefToMethodTableMap: %p\n", SOS_PTR(module.TypeDefToMethodTableMap));
     ExtOut("TypeRefToMethodTableMap: %p\n", SOS_PTR(module.TypeRefToMethodTableMap));
@@ -6530,7 +6454,7 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
         // Apartment state
 #ifndef FEATURE_PAL           
         DWORD_PTR OleTlsDataAddr;
-        if (IsWindowsTarget() && !bSwitchedOutFiber
+        if (!bSwitchedOutFiber 
                 && SafeReadMemory(Thread.teb + offsetof(TEB, ReservedForOle),
                             &OleTlsDataAddr,
                             sizeof(OleTlsDataAddr), NULL) && OleTlsDataAddr != 0)
@@ -6931,36 +6855,25 @@ DECLARE_API(Threads)
     // We need to support minidumps for this command.
     BOOL bMiniDump = IsMiniDumpFile();
 
+    if (bMiniDump && bPrintSpecialThreads)
+    {
+        Print("Special thread information is not available in mini dumps.\n");
+    }
+
     EnableDMLHolder dmlHolder(dml);
 
     try
     {
         Status = PrintThreadsFromThreadStore(bMiniDump, bPrintLiveThreadsOnly);
-        if (bPrintSpecialThreads)
+        if (!bMiniDump && bPrintSpecialThreads)
         {
 #ifdef FEATURE_PAL
             Print("\n-special not supported.\n");
-#else //FEATURE_PAL
-            BOOL bSupported = true;
-
-            if (!IsWindowsTarget())
-            {
-                Print("Special thread information is only supported on Windows targets.\n");
-                bSupported = false;
-            }
-            else if (bMiniDump)
-            {
-                Print("Special thread information is not available in mini dumps.\n");
-                bSupported = false;
-            }
-
-            if (bSupported)
-            {
-                HRESULT Status2 = PrintSpecialThreads();
-                if (!SUCCEEDED(Status2))
-                    Status = Status2;
-            }
-#endif // FEATURE_PAL
+#else //FEATURE_PAL    
+            HRESULT Status2 = PrintSpecialThreads(); 
+            if (!SUCCEEDED(Status2))
+                Status = Status2;
+#endif //FEATURE_PAL            
         }
     }
     catch (sos::Exception &e)
@@ -6981,7 +6894,6 @@ DECLARE_API(Threads)
 DECLARE_API(WatsonBuckets)
 {
     INIT_API();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     // We don't need to support minidumps for this command.
     if (IsMiniDumpFile())
@@ -7668,48 +7580,13 @@ public:
         }
         return m_count;
     }
+
             
     /*
      * New code was generated or discarded for a method.:
      */
     STDMETHODIMP OnCodeGenerated(IXCLRDataMethodInstance* method)
     {
-#ifndef FEATURE_PAL
-        _ASSERTE(g_pRuntime != nullptr);
-
-        // This is only needed for desktop runtime because OnCodeGenerated2
-        // isn't supported by the desktop DAC.
-        if (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
-        {
-            // Some method has been generated, make a breakpoint and remove it.
-            ULONG32 len = mdNameLen;
-            LPWSTR szModuleName = (LPWSTR)alloca(mdNameLen * sizeof(WCHAR));
-            if (method->GetName(0, mdNameLen, &len, g_mdName) == S_OK)
-            {
-                ToRelease<IXCLRDataModule> pMod;
-                HRESULT hr = method->GetTokenAndScope(NULL, &pMod);
-                if (SUCCEEDED(hr))
-                {
-                    len = mdNameLen;
-                    if (pMod->GetName(mdNameLen, &len, szModuleName) == S_OK)
-                    {
-                        ExtOut("JITTED %S!%S\n", szModuleName, g_mdName);
-
-                        // Add breakpoint, perhaps delete pending breakpoint
-                        DacpGetModuleAddress dgma;
-                        if (SUCCEEDED(dgma.Request(pMod)))
-                        {
-                            g_bpoints.Update(TO_TADDR(dgma.ModulePtr), FALSE);
-                        }
-                        else
-                        {
-                            ExtOut("Failed to request module address.\n");
-                        }
-                    }
-                }
-            }
-        }
-#endif
         m_dbgStatus = DEBUG_STATUS_GO_HANDLED;
         return S_OK;
     }
@@ -8004,7 +7881,7 @@ void EnableModuleLoadUnloadCallbacks()
 
 #ifndef FEATURE_PAL
 
-DECLARE_API(SOSHandleCLRN)
+DECLARE_API(HandleCLRN)
 {
     INIT_API();    
     MINIDUMP_NOT_SUPPORTED();    
@@ -8015,7 +7892,7 @@ HRESULT HandleRuntimeLoadedNotification(IDebugClient* client)
 {
     INIT_API();
     EnableModuleLoadUnloadCallbacks();
-    return g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
+    return g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!HandleCLRN\" clrn", 0);
 }
 
 #else // FEATURE_PAL
@@ -8339,7 +8216,7 @@ DECLARE_API(bpmd)
     }
     else /* We were given a MethodDesc already */
     {
-        // if we've got an explicit MD, then we better have runtime and dac loaded
+        // if we've got an explicit MD, then we better have CLR and mscordacwks loaded
         INIT_API_EE()
         INIT_API_DAC();
 
@@ -8406,7 +8283,7 @@ DECLARE_API(bpmd)
     {
         ExtOut("Adding pending breakpoints...\n");
 #ifndef FEATURE_PAL
-        Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
+        Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!HandleCLRN\" clrn", 0);
 #else
         Status = g_ExtServices->SetExceptionCallback(HandleExceptionNotification);
 #endif // FEATURE_PAL
@@ -8427,7 +8304,6 @@ DECLARE_API(ThreadPool)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DacpThreadpoolData threadpool;
 
@@ -8739,8 +8615,7 @@ DECLARE_API(FindAppDomain)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
+    
     DWORD_PTR p_Object = NULL;
     BOOL dml = FALSE;
 
@@ -8835,7 +8710,7 @@ DECLARE_API(COMState)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+    
 
     ULONG numThread;
     ULONG maxId;
@@ -9010,8 +8885,7 @@ DECLARE_API(EHInfo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
+    
     DWORD_PTR dwStartAddr = NULL;
     BOOL dml = FALSE;
 
@@ -9092,7 +8966,7 @@ DECLARE_API(GCInfo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+    
 
     TADDR taStartAddr = NULL;
     TADDR taGCInfoAddr;
@@ -9389,14 +9263,13 @@ DECLARE_API(u)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
+    
+    
     DWORD_PTR dwStartAddr = NULL;
     BOOL fWithGCInfo = FALSE;
     BOOL fWithEHInfo = FALSE;
     BOOL bSuppressLines = FALSE;
     BOOL bDisplayOffsets = FALSE;
-    BOOL bDisplayILMap = FALSE;
     BOOL bIL = FALSE;
     BOOL dml = FALSE;
     size_t nArg;
@@ -9408,7 +9281,6 @@ DECLARE_API(u)
         {"-n", &bSuppressLines, COBOOL, FALSE},
         {"-o", &bDisplayOffsets, COBOOL, FALSE},
         {"-il", &bIL, COBOOL, FALSE},
-        {"-map", &bDisplayILMap, COBOOL, FALSE},
 #ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
 #endif
@@ -9464,7 +9336,7 @@ DECLARE_API(u)
     DacpCodeHeaderData& codeHeaderData = std::get<1>(p);
     std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]> map(nullptr);
     ULONG32 mapCount = 0;
-    Status = GetIntermediateLangMap(bIL, codeHeaderData, map /*out*/, mapCount /* out */, bDisplayILMap);
+    Status = GetIntermediateLangMap(bIL, codeHeaderData, map /*out*/, mapCount /* out */, false);
     if (Status != S_OK)
     {
         return Status;
@@ -9901,7 +9773,7 @@ HRESULT GetIntermediateLangMap(BOOL bIL, const DacpCodeHeaderData& codeHeaderDat
             {
                 // TODO: These information should be interleaved with the disassembly
                 // Decoded IL can be obtained through refactoring DumpIL code.
-                ExtOut("%08x %p %p\n", map[i].ilOffset, map[i].startAddress, map[i].endAddress);
+                ExtOut("%04x %p %p\n", map[i].ilOffset, map[i].startAddress, map[i].endAddress);
             }
         }
     }
@@ -9927,16 +9799,8 @@ DECLARE_API(DumpLog)
 
     MINIDUMP_NOT_SUPPORTED();    
 
-    _ASSERTE(g_pRuntime != nullptr);
-
-    // Not supported on desktop runtime
-    if (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
-    {
-        ExtErr("DumpLog not supported on desktop runtime\n");
-        return E_FAIL;
-    }
-                        
     const char* fileName = "StressLog.txt";
+
     CLRDATA_ADDRESS StressLogAddress = NULL;
     
     StringHolder sFileName, sLogAddr;
@@ -9968,19 +9832,14 @@ DECLARE_API(DumpLog)
     {
         if (g_bDacBroken)
         {
-#ifndef FEATURE_PAL
-            if (IsWindowsTarget())
-            {
-                // Try to find stress log symbols
-                DWORD_PTR dwAddr = GetValueFromExpression("StressLog::theLog");
-                StressLogAddress = dwAddr;
-            }
-            else
+#ifdef FEATURE_PAL
+            ExtOut("No stress log address. DAC is broken; can't get it\n");
+            return E_FAIL;
+#else
+            // Try to find stress log symbols
+            DWORD_PTR dwAddr = GetValueFromExpression(MAIN_CLR_MODULE_NAME_A "!StressLog::theLog");
+            StressLogAddress = dwAddr;        
 #endif
-            {
-                ExtOut("No stress log address. DAC is broken; can't get it\n");
-                return E_FAIL;
-            }
         }
         else if (g_sos->GetStressLogAddress(&StressLogAddress) != S_OK)
         {
@@ -10017,7 +9876,12 @@ DECLARE_API (DumpGCLog)
 {
     INIT_API_NODAC();
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+    
+    if (GetEEFlavor() == UNKNOWNEE) 
+    {
+        ExtOut("CLR not loaded\n");
+        return Status;
+    }
 
     const char* fileName = "GCLog.txt";
 
@@ -10027,12 +9891,12 @@ DECLARE_API (DumpGCLog)
     if (*args != 0)
         fileName = args;
     
-    DWORD_PTR dwAddr = GetValueFromExpression("SVR::gc_log_buffer");
+    DWORD_PTR dwAddr = GetValueFromExpression(MAIN_CLR_MODULE_NAME_A "!SVR::gc_log_buffer");
     moveN (dwAddr, dwAddr);
 
     if (dwAddr == 0)
     {
-        dwAddr = GetValueFromExpression("WKS::gc_log_buffer");
+        dwAddr = GetValueFromExpression(MAIN_CLR_MODULE_NAME_A "!WKS::gc_log_buffer");
         moveN (dwAddr, dwAddr);
         if (dwAddr == 0)
         {
@@ -10118,7 +9982,12 @@ DECLARE_API (DumpGCConfigLog)
     INIT_API();
 #ifdef GC_CONFIG_DRIVEN    
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
+    if (GetEEFlavor() == UNKNOWNEE) 
+    {
+        ExtOut("CLR not loaded\n");
+        return Status;
+    }
 
     const char* fileName = "GCConfigLog.txt";
 
@@ -10141,13 +10010,13 @@ DECLARE_API (DumpGCConfigLog)
     
     if (fIsServerGC) 
     {
-        dwAddr = GetValueFromExpression("SVR::gc_config_log_buffer");
-        dwAddrOffset = GetValueFromExpression("SVR::gc_config_log_buffer_offset");
+        dwAddr = GetValueFromExpression(MAIN_CLR_MODULE_NAME_A "!SVR::gc_config_log_buffer");
+        dwAddrOffset = GetValueFromExpression(MAIN_CLR_MODULE_NAME_A "!SVR::gc_config_log_buffer_offset");
     }
     else
     {
-        dwAddr = GetValueFromExpression("WKS::gc_config_log_buffer");
-        dwAddrOffset = GetValueFromExpression("WKS::gc_config_log_buffer_offset");
+        dwAddr = GetValueFromExpression(MAIN_CLR_MODULE_NAME_A "!WKS::gc_config_log_buffer");
+        dwAddrOffset = GetValueFromExpression(MAIN_CLR_MODULE_NAME_A "!WKS::gc_config_log_buffer_offset");
     }
 
     moveN (dwAddr, dwAddr);
@@ -10335,7 +10204,6 @@ DECLARE_API(DumpGCData)
 
 #ifdef GC_CONFIG_DRIVEN
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (!InitializeHeapData ())
     {
@@ -10411,6 +10279,11 @@ DECLARE_API(EEVersion)
 {
     INIT_API();
 
+    EEFLAVOR eef = GetEEFlavor();
+    if (eef == UNKNOWNEE) {
+        ExtOut("CLR not loaded\n");
+        return Status;
+    }
     static const int fileVersionBufferSize = 1024;
     ArrayHolder<char> fileVersionBuffer = new char[fileVersionBufferSize];
     VS_FIXEDFILEINFO version;
@@ -10431,19 +10304,16 @@ DECLARE_API(EEVersion)
             }
 
 #ifndef FEATURE_PAL
-            if (IsWindowsTarget())
+            if (version.dwFileFlags & VS_FF_DEBUG) {
+                ExtOut(" checked or debug build");
+            }
+            else
             {
-                if (version.dwFileFlags & VS_FF_DEBUG) {
-                    ExtOut(" checked or debug build");
-                }
+                BOOL fRet = IsRetailBuild((size_t)g_moduleInfo[eef].baseAddr);
+                if (fRet)
+                    ExtOut(" retail");
                 else
-                {
-                    BOOL fRet = IsRetailBuild((size_t)g_pRuntime->GetModuleAddress());
-                    if (fRet)
-                        ExtOut(" retail");
-                    else
-                        ExtOut(" free");
-                }
+                    ExtOut(" free");
             }
 #endif
             ExtOut("\n");
@@ -10468,7 +10338,7 @@ DECLARE_API(EEVersion)
 #ifndef FEATURE_PAL
     // Print SOS version
     VS_FIXEDFILEINFO sosVersion;
-    if (IsWindowsTarget() && GetSOSVersion(&sosVersion))
+    if (GetSOSVersion(&sosVersion))
     {
         if (sosVersion.dwFileVersionMS != (DWORD)-1)
         {
@@ -10499,65 +10369,26 @@ DECLARE_API(EEVersion)
 \**********************************************************************/
 DECLARE_API(SOSStatus)
 {
-    INIT_API_EXT();
+    INIT_API_NOEE();
 
-    BOOL bDesktop = FALSE;
-    BOOL bNetCore = FALSE;
-    BOOL bReset = FALSE;
-    CMDOption option[] = 
-    {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
-        {"-desktop", &bDesktop, COBOOL, FALSE},
-        {"-netcore", &bNetCore, COBOOL, FALSE},
-#endif
-        {"-reset", &bReset, COBOOL, FALSE},
-    };
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
-    {
-        return Status;
-    }    
-#ifndef FEATURE_PAL
-    if (bNetCore || bDesktop)
-    {
-        if (IsWindowsTarget())
-        {
-            PCSTR name = bDesktop ? "desktop CLR" : ".NET Core";;
-            if (!Runtime::SwitchRuntime(bDesktop))
-            {
-                ExtErr("The %s runtime is not loaded\n", name);
-                return E_FAIL;
-            }
-            ExtOut("Switched to %s runtime successfully\n", name);
-            return S_OK;
-        }
-        else
-        {
-            ExtErr("The '-desktop' and '-netcore' options are only supported on Windows targets\n");
-            return E_FAIL;
-        }
-    }
-#endif
-    if (bReset)
-    {
-        Runtime::CleanupRuntimes();
-        CleanupTempDirectory();
-        ExtOut("SOS state reset\n");
-        return S_OK;
-    }
     if (g_targetMachine != nullptr) {
         ExtOut("Target platform: %04x Context size %04x\n", g_targetMachine->GetPlatform(), g_targetMachine->GetContextSize());
-    }
-    if (g_runtimeModulePath != nullptr) {
-        ExtOut("Runtime module path: %s\n", g_runtimeModulePath);
-    }
-    if (g_pRuntime != nullptr) {
-        g_pRuntime->DisplayStatus();
     }
     if (g_tmpPath != nullptr) {
         ExtOut("Temp path: %s\n", g_tmpPath);
     }
+    if (g_dacFilePath != nullptr) {
+        ExtOut("DAC file path: %s\n", g_dacFilePath);
+    }
+    if (g_dbiFilePath != nullptr) {
+        ExtOut("DBI file path: %s\n", g_dbiFilePath);
+    }
     if (g_hostRuntimeDirectory != nullptr) {
         ExtOut("Host runtime path: %s\n", g_hostRuntimeDirectory);
+    }
+    std::string coreclrDirectory;
+    if (SUCCEEDED(GetCoreClrDirectory(coreclrDirectory))) {
+        ExtOut("Runtime path: %s\n", coreclrDirectory.c_str());
     }
     DisplaySymbolStore();
 
@@ -10576,7 +10407,6 @@ DECLARE_API (ProcInfo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();        
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (IsDumpFile())
     {
@@ -10856,7 +10686,6 @@ DECLARE_API(Token2EE)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     StringHolder DllName;
     ULONG64 token = 0;
@@ -11075,7 +10904,6 @@ DECLARE_API(PathTo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR root = NULL;
     DWORD_PTR target = NULL;
@@ -11294,7 +11122,6 @@ DECLARE_API(FindRoots)
 #ifndef FEATURE_PAL
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (IsDumpFile())
     {
@@ -11353,7 +11180,7 @@ DECLARE_API(FindRoots)
         GcEvtArgs gea = { GC_MARK_END, { ((gen == -1) ? 7 : (1 << gen)) } };
         idp2->SetGcNotification(gea);
         // ... and register the notification handler
-        g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
+        g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!HandleCLRN\" clrn", 0);
         // the above notification is removed in CNotification::OnGcEvent()
     }
     else
@@ -11797,8 +11624,7 @@ DECLARE_API(GCHandles)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
+    
     try
     {
         GCHandlesImpl gchandles(args);
@@ -11819,9 +11645,10 @@ DECLARE_API(GCHandles)
 #ifndef FEATURE_PAL
 DECLARE_API(TraceToCode)
 {
-    INIT_API_NODAC();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-    _ASSERTE(g_pRuntime != nullptr);
+    INIT_API_NOEE();
+
+    static ULONG64 g_clrBaseAddr = 0;
+
 
     while(true)
     {
@@ -11838,10 +11665,13 @@ DECLARE_API(TraceToCode)
         ULONG64 base = 0;
         CLRDATA_ADDRESS cdaStart = TO_CDADDR(Offset);
         DacpMethodDescData MethodDescData;
-        if (g_ExtSymbols->GetModuleByOffset(Offset, 0, NULL, &base) == S_OK)
+        if(g_ExtSymbols->GetModuleByOffset(Offset, 0, NULL, &base) == S_OK)
         {
-            ULONG64 clrBaseAddr = g_pRuntime->GetModuleAddress();
-            if(clrBaseAddr == base)
+            if(g_clrBaseAddr == 0)
+            {
+                GetRuntimeModuleInfo(NULL, &g_clrBaseAddr);
+            }
+            if(g_clrBaseAddr == base)
             {
                 ExtOut("Compiled code in CLR\n");
                 codeType = 4;
@@ -11906,15 +11736,14 @@ DECLARE_API(TraceToCode)
 
 // This is an experimental and undocumented API that sets a debugger pseudo-register based
 // on the type of code at the given IP. It can be used in scripts to keep stepping until certain
-// kinds of code have been reached. Presumably its slower than !TraceToCode but at least it
+// kinds of code have been reached. Presumbably its slower than !TraceToCode but at least it
 // cancels much better
 #ifndef FEATURE_PAL
 DECLARE_API(GetCodeTypeFlags)
 {
     INIT_API();   
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-    _ASSERTE(g_pRuntime != nullptr);
     
+
     char buffer[100+mdNameLen];
     size_t ip;
     StringHolder PReg;
@@ -11955,7 +11784,7 @@ DECLARE_API(GetCodeTypeFlags)
     CLRDATA_ADDRESS cdaStart = TO_CDADDR(ip);
     DWORD codeType = 0;
     CLRDATA_ADDRESS addr;
-    if (g_sos->GetMethodDescPtrFromIP(cdaStart, &addr) == S_OK)
+    if(g_sos->GetMethodDescPtrFromIP(cdaStart, &addr) == S_OK)
     {
         WCHAR wszNameBuffer[1024]; // should be large enough
 
@@ -11974,8 +11803,8 @@ DECLARE_API(GetCodeTypeFlags)
     }
     else if(g_ExtSymbols->GetModuleByOffset (ip, 0, NULL, &base) == S_OK)
     {
-        ULONG64 clrBaseAddr = g_pRuntime->GetModuleAddress();
-        if (base == clrBaseAddr)
+        ULONG64 clrBaseAddr = 0;
+        if(SUCCEEDED(GetRuntimeModuleInfo(NULL, &clrBaseAddr)) && base==clrBaseAddr)
         {
             ExtOut("Compiled code in CLR");
             codeType = 4;
@@ -12153,8 +11982,7 @@ DECLARE_API(ObjSize)
 #ifndef FEATURE_PAL
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
+    
     BOOL dml = FALSE;
     StringHolder str_Object;    
 
@@ -12208,7 +12036,6 @@ DECLARE_API(GCHandleLeaks)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     ExtOut("-------------------------------------------------------------------------------\n");
     ExtOut("GCHandleLeaks will report any GCHandles that couldn't be found in memory.      \n");
@@ -12253,7 +12080,7 @@ DECLARE_API(GCHandleLeaks)
     if (LoadClrDebugDll() != S_OK)
     {
         // Try to find stress log symbols
-        DWORD_PTR dwAddr = GetValueFromExpression("StressLog::theLog");
+        DWORD_PTR dwAddr = GetValueFromExpression(MAIN_CLR_MODULE_NAME_A "!StressLog::theLog");
         StressLogAddress = dwAddr;        
         g_bDacBroken = TRUE;
     }
@@ -13310,12 +13137,7 @@ public:
     {
         HRESULT Status;
 
-        ICorDebugProcess* pCorDebugProcess;
-        if (FAILED(Status = g_pRuntime->GetCorDebugInterface(&pCorDebugProcess)))
-        {
-            ExtOut("\n" SOSPrefix "clrstack -i is unsupported on this target.\nThe ICorDebug interface cannot be constructed.\n\n");
-            return Status;
-        }
+        IfFailRet(InitCorDebugInterface());
 
         ExtOut("\n\n\nDumping managed stack and managed variables using ICorDebug.\n");
         ExtOut("=============================================================================\n");
@@ -13326,7 +13148,7 @@ public:
         ULONG ulThreadID = 0;
         g_ExtSystem->GetCurrentThreadSystemId(&ulThreadID);
 
-        IfFailRet(pCorDebugProcess->GetThread(ulThreadID, &pThread));
+        IfFailRet(g_pCorDebugProcess->GetThread(ulThreadID, &pThread));
         IfFailRet(pThread->QueryInterface(IID_ICorDebugThread3, (LPVOID *) &pThread3));
         IfFailRet(pThread3->CreateStackWalk(&pStackWalk));
 
@@ -13486,6 +13308,10 @@ public:
         }
         ExtOut("=============================================================================\n");
 
+#ifdef FEATURE_PAL
+        // Temporary until we get a process exit notification plumbed from lldb
+        UninitCorDebugInterface();
+#endif
         return S_OK;
     }
 };
@@ -13567,8 +13393,6 @@ class ClrStackImpl
 public:
     static void PrintThread(ULONG osID, BOOL bParams, BOOL bLocals, BOOL bSuppressLines, BOOL bGC, BOOL bFull, BOOL bDisplayRegVals)
     {
-        _ASSERTE(g_targetMachine != nullptr);
-
         // Symbols variables
         ULONG symlines = 0; // symlines will be non-zero only if SYMOPT_LOAD_LINES was set in the symbol options
         if (!bSuppressLines && SUCCEEDED(g_ExtSymbols->GetSymbolOptions(&symlines)))
@@ -13611,9 +13435,7 @@ public:
             
         TableOutput out(3, POINTERSIZE_HEX, AlignRight);
         out.WriteRow("Child SP", "IP", "Call Site");
-
-        int frameNumber = 0;
-        int internalFrames = 0;
+                
         do
         {
             if (IsInterrupt())
@@ -13648,8 +13470,6 @@ public:
                 // Print the method/Frame info
                 if (SUCCEEDED(frameDataResult) && FrameData.frameAddr)
                 {
-                    internalFrames++;
-
                     // Skip the instruction pointer because it doesn't really mean anything for method frames
                     out.WriteColumn(1, bFull ? String("") : NativePtr(ip));
 
@@ -13668,27 +13488,8 @@ public:
                 }
                 else
                 {
-                    // To get the source line number of the actual code that threw an exception, the IP needs 
-                    // to be adjusted in certain cases. 
-                    //
-                    // The IP of stack frame points to either:
-                    //
-                    // 1) Currently executing instruction (if you hit a breakpoint or are single stepping through).
-                    // 2) The instruction that caused a hardware exception (div by zero, null ref, etc).
-                    // 3) The instruction after the call to an internal runtime function (FCALL like IL_Throw,
-                    //    JIT_OverFlow, etc.) that caused a software exception.
-                    // 4) The instruction after the call to a managed function (non-leaf node).
-                    //
-                    // #3 and #4 are the cases that need IP adjusted back because they point after the call instruction
-                    // and may point to the next (incorrect) IL instruction/source line.  We distinguish these from #1
-                    // or #2 by either being non-leaf node stack frame (#4) or the present of an internal stack frame (#3).
-                    bool bAdjustIPForLineNumber = frameNumber > 0 || internalFrames > 0;
-                    frameNumber++;
-                    
-                    // The unmodified IP is displayed which points after the exception in most cases. This means that the
-                    // printed IP and the printed line number often will not map to one another and this is intentional.
                     out.WriteColumn(1, InstructionPtr(ip));
-                    out.WriteColumn(2, MethodNameFromIP(ip, bSuppressLines, bFull, bFull, bAdjustIPForLineNumber));
+                    out.WriteColumn(2, MethodNameFromIP(ip, bSuppressLines, bFull, bFull));
 
                     // Print out gc references.  refCount will be zero if bGC is false (or if we
                     // failed to fetch gc reference information).
@@ -13709,21 +13510,8 @@ public:
             if (bDisplayRegVals)
                 PrintManagedFrameContext(pStackWalk);
 
-            hr = pStackWalk->Next();
-        } while (hr == S_OK);
+        } while (pStackWalk->Next() == S_OK);
 
-        if (FAILED(hr))
-        {
-            // Normal stack walk ends with S_FALSE
-            // Failure means the stalk walk did not complete normally
-            ExtOut("<failed>\nStack Walk failed. Reported stack incomplete.\n");
-#ifndef FEATURE_PAL
-            if (!IsWindowsTarget())
-            {
-                ExtOut("Native stack walking is not supported on this target.\nStack walk will terminate at the first native frame.\n");
-            }
-#endif // FEATURE_PAL
-        }
 #ifdef DEBUG_STACK_CONTEXT
         while (numNativeFrames > 0)
         {
@@ -14439,17 +14227,17 @@ DECLARE_API( VMMap )
 
 #endif // FEATURE_PAL
 
-DECLARE_API(SOSFlush)
+DECLARE_API( SOSFlush )
 {
-    INIT_API_EXT();
+    INIT_API();
 
-    Runtime::Flush();
+    g_clrData->Flush();
 #ifdef FEATURE_PAL
     FlushMetadataRegions();
 #endif
     
     return Status;
-}
+}   // DECLARE_API( SOSFlush )
 
 #ifndef FEATURE_PAL
 
@@ -14479,7 +14267,6 @@ DECLARE_API(SaveModule)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     StringHolder Location;
     DWORD_PTR moduleAddr = NULL;
@@ -14672,7 +14459,7 @@ end:
 
 DECLARE_API(dbgout)
 {
-    INIT_API_EXT();
+    INIT_API();
 
     BOOL bOff = FALSE;
 
@@ -15326,8 +15113,6 @@ HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
 
         if (arrayLen)
         {
-            // This code is accessing the StackTraceInfo class in the runtime.
-            // See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h
 #ifdef _TARGET_WIN64_
             DWORD_PTR dataPtr = arrayPtr + sizeof(DWORD_PTR) + sizeof(DWORD) + sizeof(DWORD);
 #else
@@ -15439,7 +15224,6 @@ HRESULT ImplementEFNGetManagedExcepStack(
 DECLARE_API(VerifyStackTrace)
 {
     INIT_API();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL bVerifyManagedExcepStack = FALSE;
     CMDOption option[] = 
@@ -15640,12 +15424,148 @@ DECLARE_API(VerifyStackTrace)
     return Status;
 }
 
+// This is an internal-only Apollo extension to de-optimize the code
+DECLARE_API(SuppressJitOptimization)
+{
+    INIT_API_NOEE();    
+    MINIDUMP_NOT_SUPPORTED();    
+
+    StringHolder onOff;
+    CMDValue arg[] = 
+    {   // vptr, type
+        {&onOff.data, COSTRING},
+    };
+    size_t nArg;
+    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg)) 
+    {
+        return E_FAIL;
+    }
+
+    if (nArg == 1 && (_stricmp(onOff.data, "On") == 0))
+    {
+        // if CLR is already loaded, try to change the flags now
+        if (CheckEEDll() == S_OK)
+        {
+            SetNGENCompilerFlags(CORDEBUG_JIT_DISABLE_OPTIMIZATION);
+        }
+
+        if (!g_fAllowJitOptimization)
+        {
+            ExtOut("JIT optimization is already suppressed\n");
+        }
+        else
+        {
+            g_fAllowJitOptimization = FALSE;
+            g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!HandleCLRN\" clrn", 0);
+            ExtOut("JIT optimization will be suppressed\n");
+        }
+
+
+    }
+    else if(nArg == 1 && (_stricmp(onOff.data, "Off") == 0))
+    {
+        // if CLR is already loaded, try to change the flags now
+        if(CheckEEDll() == S_OK)
+        {
+            SetNGENCompilerFlags(CORDEBUG_JIT_DEFAULT);
+        }
+
+        if(g_fAllowJitOptimization)
+            ExtOut("JIT optimization is already permitted\n");
+        else
+        {
+            g_fAllowJitOptimization = TRUE;
+            ExtOut("JIT optimization will be permitted\n");
+        }
+    }
+    else
+    {
+        ExtOut("Usage: !SuppressJitOptimization <on|off>\n");
+    }
+
+    return S_OK;
+}
+
+// Uses ICorDebug to set the state of desired NGEN compiler flags. This can suppress pre-jitted optimized
+// code
+HRESULT SetNGENCompilerFlags(DWORD flags)
+{
+    HRESULT hr;
+
+    ToRelease<ICorDebugProcess2> proc2;
+    if(FAILED(hr = InitCorDebugInterface()))
+    {
+        ExtOut("SOS: warning, prejitted code optimizations could not be changed. Failed to load ICorDebug HR = 0x%x\n", hr);
+    }
+    else if(FAILED(g_pCorDebugProcess->QueryInterface(__uuidof(ICorDebugProcess2), (void**) &proc2)))
+    {
+        if(flags != CORDEBUG_JIT_DEFAULT)
+        {
+            ExtOut("SOS: warning, prejitted code optimizations could not be changed. This CLR version doesn't support the functionality\n");
+        }
+        else
+        {
+            hr = S_OK;
+        }
+    }
+    else if(FAILED(hr = proc2->SetDesiredNGENCompilerFlags(flags)))
+    {
+        // Versions of CLR that don't have SetDesiredNGENCompilerFlags DAC-ized will return E_FAIL.
+        // This was first supported in the clr_triton branch around 4/1/12, Apollo release
+        // It will likely be supported in desktop CLR during Dev12
+        if(hr == E_FAIL)
+        {
+            if(flags != CORDEBUG_JIT_DEFAULT)
+            {
+                ExtOut("SOS: warning, prejitted code optimizations could not be changed. This CLR version doesn't support the functionality\n");
+            }
+            else
+            {
+                hr = S_OK;
+            }
+        }
+        else if(hr == CORDBG_E_NGEN_NOT_SUPPORTED)
+        {
+            if(flags != CORDEBUG_JIT_DEFAULT)
+            {
+                ExtOut("SOS: warning, prejitted code optimizations could not be changed. This CLR version doesn't support NGEN\n");
+            }
+            else
+            {
+                hr = S_OK;
+            }
+        }
+        else if(hr == CORDBG_E_MUST_BE_IN_CREATE_PROCESS)
+        {
+            DWORD currentFlags = 0;
+            if(FAILED(hr = proc2->GetDesiredNGENCompilerFlags(&currentFlags)))
+            {
+                ExtOut("SOS: warning, prejitted code optimizations could not be changed. GetDesiredNGENCompilerFlags failed hr=0x%x\n", hr);
+            }
+            else if(currentFlags != flags)
+            {
+                ExtOut("SOS: warning, prejitted code optimizations could not be changed at this time. This setting is fixed once CLR starts\n");
+            }
+            else
+            {
+                hr = S_OK;
+            }
+        }
+        else
+        {
+            ExtOut("SOS: warning, prejitted code optimizations could not be changed at this time. SetDesiredNGENCompilerFlags hr = 0x%x\n", hr);
+        }
+    }
+
+    return hr;
+}
+
+
 // This is an internal-only Apollo extension to save breakpoint/watch state
 DECLARE_API(SaveState)
 {
     INIT_API_NOEE();    
     MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     StringHolder filePath;
     CMDValue arg[] = 
@@ -15680,141 +15600,6 @@ DECLARE_API(SaveState)
 }
 
 #endif // FEATURE_PAL
-
-DECLARE_API(SuppressJitOptimization)
-{
-    INIT_API_NOEE();    
-    MINIDUMP_NOT_SUPPORTED();    
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
-    StringHolder onOff;
-    CMDValue arg[] = 
-    {   // vptr, type
-        {&onOff.data, COSTRING},
-    };
-    size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg)) 
-    {
-        return E_FAIL;
-    }
-
-    if (nArg == 1 && (_stricmp(onOff.data, "On") == 0))
-    {
-        // if CLR is already loaded, try to change the flags now
-        if (CheckEEDll() == S_OK)
-        {
-            SetNGENCompilerFlags(CORDEBUG_JIT_DISABLE_OPTIMIZATION);
-        }
-
-        if (!g_fAllowJitOptimization)
-        {
-            ExtOut("JIT optimization is already suppressed\n");
-        }
-        else
-        {
-            g_fAllowJitOptimization = FALSE;
-            g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
-            ExtOut("JIT optimization will be suppressed\n");
-        }
-    }
-    else if(nArg == 1 && (_stricmp(onOff.data, "Off") == 0))
-    {
-        // if CLR is already loaded, try to change the flags now
-        if (CheckEEDll() == S_OK)
-        {
-            SetNGENCompilerFlags(CORDEBUG_JIT_DEFAULT);
-        }
-
-        if (g_fAllowJitOptimization)
-            ExtOut("JIT optimization is already permitted\n");
-        else
-        {
-            g_fAllowJitOptimization = TRUE;
-            ExtOut("JIT optimization will be permitted\n");
-        }
-    }
-    else
-    {
-        ExtOut("Usage: !SuppressJitOptimization <on|off>\n");
-    }
-
-    return S_OK;
-}
-
-// Uses ICorDebug to set the state of desired NGEN compiler flags. This can suppress pre-jitted optimized
-// code
-HRESULT SetNGENCompilerFlags(DWORD flags)
-{
-    HRESULT hr;
-
-    ToRelease<ICorDebugProcess2> proc2;
-    ICorDebugProcess* pCorDebugProcess;
-    if (FAILED(hr = g_pRuntime->GetCorDebugInterface(&pCorDebugProcess)))
-    {
-        ExtOut("SOS: warning, prejitted code optimizations could not be changed. Failed to load ICorDebug HR = 0x%x\n", hr);
-    }
-    else if (FAILED(pCorDebugProcess->QueryInterface(__uuidof(ICorDebugProcess2), (void**) &proc2)))
-    {
-        if (flags != CORDEBUG_JIT_DEFAULT)
-        {
-            ExtOut("SOS: warning, prejitted code optimizations could not be changed. This CLR version doesn't support the functionality\n");
-        }
-        else
-        {
-            hr = S_OK;
-        }
-    }
-    else if (FAILED(hr = proc2->SetDesiredNGENCompilerFlags(flags)))
-    {
-        // Versions of CLR that don't have SetDesiredNGENCompilerFlags DAC-ized will return E_FAIL.
-        // This was first supported in the clr_triton branch around 4/1/12, Apollo release
-        // It will likely be supported in desktop CLR during Dev12
-        if(hr == E_FAIL)
-        {
-            if(flags != CORDEBUG_JIT_DEFAULT)
-            {
-                ExtOut("SOS: warning, prejitted code optimizations could not be changed. This CLR version doesn't support the functionality\n");
-            }
-            else
-            {
-                hr = S_OK;
-            }
-        }
-        else if (hr == CORDBG_E_NGEN_NOT_SUPPORTED)
-        {
-            if (flags != CORDEBUG_JIT_DEFAULT)
-            {
-                ExtOut("SOS: warning, prejitted code optimizations could not be changed. This CLR version doesn't support NGEN\n");
-            }
-            else
-            {
-                hr = S_OK;
-            }
-        }
-        else if (hr == CORDBG_E_MUST_BE_IN_CREATE_PROCESS)
-        {
-            DWORD currentFlags = 0;
-            if (FAILED(hr = proc2->GetDesiredNGENCompilerFlags(&currentFlags)))
-            {
-                ExtOut("SOS: warning, prejitted code optimizations could not be changed. GetDesiredNGENCompilerFlags failed hr=0x%x\n", hr);
-            }
-            else if (currentFlags != flags)
-            {
-                ExtOut("SOS: warning, prejitted code optimizations could not be changed at this time. This setting is fixed once CLR starts\n");
-            }
-            else
-            {
-                hr = S_OK;
-            }
-        }
-        else
-        {
-            ExtOut("SOS: warning, prejitted code optimizations could not be changed at this time. SetDesiredNGENCompilerFlags hr = 0x%x\n", hr);
-        }
-    }
-
-    return hr;
-}
 
 DECLARE_API(StopOnCatch)
 {
@@ -15994,7 +15779,6 @@ DECLARE_API(VerifyGMT)
     HRESULT hr = _EFN_GetManagedThread(client, osThreadId, &managedThread);
     {
         INIT_API();
-        ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
         if (SUCCEEDED(hr)) {
             ExtOut("%08x %p\n", osThreadId, managedThread);
@@ -16091,7 +15875,6 @@ DECLARE_API(SetSymbolServer)
     StringHolder symbolCache;
     StringHolder searchDirectory;
     StringHolder windowsSymbolPath;
-    size_t timeoutInMinutes = 0;
     BOOL disable = FALSE;
     BOOL loadNative = FALSE;
     BOOL msdl = FALSE;
@@ -16102,7 +15885,6 @@ DECLARE_API(SetSymbolServer)
         {"-disable", &disable, COBOOL, FALSE},
         {"-cache", &symbolCache.data, COSTRING, TRUE},
         {"-directory", &searchDirectory.data, COSTRING, TRUE},
-        {"-timeout", &timeoutInMinutes, COSIZE_T, TRUE},
         {"-ms", &msdl, COBOOL, FALSE},
         {"-log", &logging, COBOOL, FALSE},
 #ifdef FEATURE_PAL
@@ -16139,9 +15921,9 @@ DECLARE_API(SetSymbolServer)
         DisableSymbolStore();
     }
 
-    if (logging || msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr || searchDirectory.data != nullptr || windowsSymbolPath.data != nullptr)
+    if (msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr || searchDirectory.data != nullptr || windowsSymbolPath.data != nullptr)
     {
-        Status = InitializeSymbolStore(logging, msdl, symweb, symbolServer.data, (int)timeoutInMinutes, symbolCache.data, searchDirectory.data, windowsSymbolPath.data);
+        Status = InitializeSymbolStore(logging, msdl, symweb, symbolServer.data, symbolCache.data, searchDirectory.data, windowsSymbolPath.data);
         if (FAILED(Status))
         {
             return Status;
@@ -16175,50 +15957,16 @@ DECLARE_API(SetSymbolServer)
             ExtOut("Symbol download logging enabled\n");
         }
     }
-#ifdef FEATURE_PAL
     else if (loadNative)
     {
         Status = LoadNativeSymbols();
     }
-#endif
     else
     {
         DisplaySymbolStore();
     }
 
     return Status;
-}
-
-//
-// Sets the runtime module path
-//
-DECLARE_API(SetClrPath)
-{
-    INIT_API_EXT();
-
-    StringHolder runtimeModulePath;
-    CMDValue arg[] =
-    {
-        {&runtimeModulePath.data, COSTRING},
-    };
-    size_t narg;
-    if (!GetCMDOption(args, nullptr, 0, arg, _countof(arg), &narg))
-    {
-        return E_FAIL;
-    }
-    if (narg > 0)
-    {
-        if (g_runtimeModulePath != nullptr)
-        {
-            free((void*)g_runtimeModulePath);
-        }
-        g_runtimeModulePath = _strdup(runtimeModulePath.data);
-    }
-    if (g_runtimeModulePath != nullptr)
-    {
-        ExtOut("Runtime module path: %s\n", g_runtimeModulePath);
-    }
-    return S_OK;
 }
 
 void PrintHelp (__in_z LPCSTR pszCmdName)
