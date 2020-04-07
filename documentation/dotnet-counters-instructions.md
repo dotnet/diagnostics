@@ -48,17 +48,6 @@ dotnet tool install --global dotnet-counters
      15683 WebApi     /home/suwhang/repos/WebApi/WebApi
      16324 dotnet     /usr/local/share/dotnet/dotnet
 
-*PS*
-    dotnet-counters ps
-
-    Display a list of dotnet processes that can be monitored.
-
-    Examples:
-      > dotnet-counters ps
-
-     15683 WebApi     /home/suwhang/repos/WebApi/WebApi
-     16324 dotnet     /usr/local/share/dotnet/dotnet
-
 *LIST*
 
     dotnet-counters list [-h|--help]

@@ -175,7 +175,6 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         protected static string GetLogPath(TestConfiguration config, string framework, string runtime, string debuggeeName)
         {
-            string version = config.BuildProjectMicrosoftNetCoreAppVersion;
             return Path.Combine(GetDotNetRootBuildDirPath(config), $"{framework}-{runtime ?? "any"}-{debuggeeName}.txt");
         }
 

@@ -79,6 +79,7 @@ typedef struct _TADDR_SEGINFO
 } TADDR_SEGINFO;
 
 #include "util.h"
+#include "runtime.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -172,10 +173,9 @@ inline BOOL IsInterrupt()
 {
     if (!ControlC && g_ExtControl->GetInterrupt() == S_OK)
     {
-        ExtOut("Command cancelled at the user's request.\n");
+        ExtOut("Command canceled at the user's request.\n");
         ControlC = TRUE;
     }
-
     return ControlC;
 }
 
@@ -196,7 +196,11 @@ public:
 
 inline void EENotLoadedMessage(HRESULT Status)
 {
-    ExtOut("Failed to find runtime module (%s), 0x%08x\n", MAKEDLLNAME_A("coreclr"), Status);
+#ifdef FEATURE_PAL
+    ExtOut("Failed to find runtime module (%s), 0x%08x\n", GetRuntimeDllName(IRuntime::Core), Status);
+#else
+    ExtOut("Failed to find runtime module (%s or %s or %s), 0x%08x\n", GetRuntimeDllName(IRuntime::Core), GetRuntimeDllName(IRuntime::WindowsDesktop), GetRuntimeDllName(IRuntime::UnixCore), Status);
+#endif
     ExtOut("Extension commands need it in order to have something to do.\n");
 }
 
@@ -204,31 +208,31 @@ inline void DACMessage(HRESULT Status)
 {
     ExtOut("Failed to load data access module, 0x%08x\n", Status);
 #ifndef FEATURE_PAL
-    ExtOut("Verify that 1) you have a recent build of the debugger (6.2.14 or newer)\n");
-    ExtOut("            2) the file mscordaccore.dll that matches your version of coreclr.dll is\n");
+    ExtOut("Verify that 1) you have a recent build of the debugger (10.0.18317.1001 or newer)\n");
+    ExtOut("            2) the file %s that matches your version of %s is\n", GetDacDllName(), GetRuntimeDllName());
     ExtOut("                in the version directory or on the symbol path\n");
     ExtOut("            3) or, if you are debugging a dump file, verify that the file \n");
-    ExtOut("                mscordaccore_<arch>_<arch>_<version>.dll is on your symbol path.\n");
+    ExtOut("                %s_<arch>_<arch>_<version>.dll is on your symbol path.\n", GetDacModuleName());
     ExtOut("            4) you are debugging on supported cross platform architecture as \n");
     ExtOut("                the dump file. For example, an ARM dump file must be debugged\n");
     ExtOut("                on an X86 or an ARM machine; an AMD64 dump file must be\n");
     ExtOut("                debugged on an AMD64 machine.\n");
     ExtOut("\n");
     ExtOut("You can also run the debugger command .cordll to control the debugger's\n");
-    ExtOut("load of mscordaccore.dll.  .cordll -ve -u -l will do a verbose reload.\n");
+    ExtOut("load of %s.dll. .cordll -ve -u -l will do a verbose reload.\n", GetDacDllName());
     ExtOut("If that succeeds, the SOS command should work on retry.\n");
     ExtOut("\n");
     ExtOut("If you are debugging a minidump, you need to make sure that your executable\n");
-    ExtOut("path is pointing to coreclr.dll as well.\n");
+    ExtOut("path is pointing to %s as well.\n", GetRuntimeDllName());
 #else // FEATURE_PAL
     if (Status == CORDBG_E_MISSING_DEBUGGER_EXPORTS)
     {
-        ExtOut("You can run the debugger command 'setclrpath' to control the load of %s.\n", MAKEDLLNAME_A("mscordaccore"));
+        ExtOut("You can run the debugger command 'setclrpath' to control the load of %s.\n", GetDacDllName());
         ExtOut("If that succeeds, the SOS command should work on retry.\n");
     }
     else
     {
-        ExtOut("Can not load or initialize %s. The target runtime may not be initialized.\n", MAKEDLLNAME_A("mscordaccore"));
+        ExtOut("Can not load or initialize %s. The target runtime may not be initialized.\n", GetDacDllName());
     }
 #endif // FEATURE_PAL
 }
@@ -251,7 +255,7 @@ HRESULT CheckEEDll();
     if ((Status = ArchQuery()) != S_OK) return Status;
 
 #define INIT_API_EE()                                           \
-    if ((Status = CheckEEDll()) != S_OK)                        \
+    if ((Status = CheckEEDll()) != S_OK)           \
     {                                                           \
         EENotLoadedMessage(Status);                             \
         return Status;                                          \
@@ -285,15 +289,10 @@ HRESULT CheckEEDll();
 // and functions they call should test g_bDacBroken before calling any DAC enabled
 // feature.
 #define INIT_API_NO_RET_ON_FAILURE()                            \
-    INIT_API_NOEE()                                             \
-    if ((Status = CheckEEDll()) != S_OK)                        \
+    INIT_API_NODAC()                                             \
+    if ((Status = LoadClrDebugDll()) != S_OK)              \
     {                                                           \
-        ExtOut("Failed to find runtime module (%s), 0x%08x\n", MAKEDLLNAME_A("coreclr"), Status); \
-        ExtOut("Some functionality may be impaired\n");         \
-    }                                                           \
-    else if ((Status = LoadClrDebugDll()) != S_OK)              \
-    {                                                           \
-        ExtOut("Failed to load data access module (%s), 0x%08x\n", MAKEDLLNAME_A("mscordaccore"), Status); \
+        ExtOut("Failed to load data access module (%s), 0x%08x\n", GetDacDllName(), Status); \
         ExtOut("Some functionality may be impaired\n");         \
     }                                                           \
     else                                                        \
@@ -391,6 +390,8 @@ public:
     typedef void (*printfFtn)(const char* fmt, ...);
     // Dumps the GCInfo
     virtual void DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const = 0;
+    // The amount of bytes to adjust the IP for software exception throw instructions (the STACKWALK_CONTROLPC_ADJUST_OFFSET define in the runtime)
+    virtual int StackWalkIPAdjustOffset() const = 0;
 
 protected:
     IMachine()           {}

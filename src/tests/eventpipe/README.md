@@ -4,9 +4,9 @@ This directory contains the dotnet/diagnostics end of testing for EventPipe and 
 
 | completed | functionality    | location |
 | --------- | ---------------- | -------- |
-| ✅        | IPC protocol     | dotnet/coreclr |
-| ✅        | EventPipe Provider Enable/Disable | dotnet/coreclr |
-| ✅        | EventPipe Event-Provider coherence | dotnet/coreclr |
+| ✅        | IPC protocol     | dotnet/runtime/src/coreclr |
+| ✅        | EventPipe Provider Enable/Disable | dotnet/runtime/src/coreclr |
+| ✅        | EventPipe Event-Provider coherence | dotnet/runtime/src/coreclr |
 | ✅        | `dotnet trace` provider parsing | dotnet/diagnostics |
 | ✅        | `dotnet trace` provider-profile merging | dotnet/diagnostics |
 

@@ -1,3 +1,3 @@
 @echo off
-call %~dp0eng\Build.cmd -restore -build -build-native %*
+powershell -ExecutionPolicy ByPass -NoProfile -command "& """%~dp0eng\build.ps1""" -restore %*"
 exit /b %ErrorLevel%

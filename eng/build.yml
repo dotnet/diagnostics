@@ -33,7 +33,7 @@ jobs:
     timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
     enableMicrobuild: true
     enableTelemetry: true
-    helixRepo: dotnet/sdk
+    helixRepo: dotnet/diagnostics
 
     pool:
       # Public Linux Build Pool
@@ -56,7 +56,7 @@ jobs:
 
       # Official Build OSX Pool
       ${{ if and(eq(parameters.osGroup, 'MacOS'), eq(variables['System.TeamProject'], 'public')) }}:
-        vmImage: macOS-10.13
+        vmImage: macOS-10.14
 
       # Official Build Windows Pool
       ${{ if and(eq(parameters.osGroup, 'Windows_NT'), ne(variables['System.TeamProject'], 'public')) }}:
@@ -85,6 +85,16 @@ jobs:
     - _HelixType: build/product
     - _HelixBuildConfig: $(_BuildConfig)
     - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/$(_BuildConfig)/streams
+    - _InternalInstallArgs: ''
+ 
+    # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
+    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+      - group: DotNet-MSRC-Storage
+      - _InternalInstallArgs:
+          -dotnetruntimeversion '$(DotnetRuntimeVersion)'
+          -dotnetruntimedownloadversion '$(DotnetRuntimeDownloadVersion)'
+          -runtimesourcefeed '$(dotnetfeedmsrc-private-feed-url)'
+          -runtimesourcefeedkey '$(dotnetclimsrc-read-sas-token-base64)'
 
     # Only enable publishing in non-public, non PR scenarios.
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
@@ -97,14 +107,6 @@ jobs:
     - ${{ if ne(parameters.testOnly, 'true') }}:
       - _LinuxScript: $(Build.SourcesDirectory)/eng/cibuild.sh
 
-    - ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
-      - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
-        - _DailyTest: -daily-test
-      - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
-        - _DailyTest: --daily-test
-    - ${{ if ne(variables['Build.Reason'], 'Schedule') }}:
-      - _DailyTest: ''
-
     # This is only required for cross builds.
     - ${{ if eq(parameters.crossrootfsDir, '') }}:
       - _RootFs: ''
@@ -113,11 +115,12 @@ jobs:
 
     steps:
     - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
-      - script: $(Build.SourcesDirectory)\eng\cibuild.cmd $(_DailyTest)
+      - script: $(Build.SourcesDirectory)\eng\cibuild.cmd
           -configuration $(_BuildConfig) 
           -architecture $(_BuildArch)
           -prepareMachine 
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+          $(_InternalInstallArgs)
         displayName: Build / Test
         condition: succeeded()
 
@@ -134,30 +137,35 @@ jobs:
           --docker-image $(_DockerImageName)
           --source-directory $(Build.SourcesDirectory)
           --container-name diagnostics-$(Build.BuildId)
-          $(_LinuxScript) $(_DailyTest) $(_RootFs)
+          $(_LinuxScript) $(_RootFs)
           --configuration $(_BuildConfig) 
           --architecture $(_BuildArch)
           --prepareMachine 
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
           /p:BUILD_BUILDNUMBER=$(BUILD.BUILDNUMBER)
+          $(_InternalInstallArgs)
         displayName: Docker Build / Test
         condition: succeeded()
 
     - ${{ if eq(parameters.osGroup, 'MacOS') }}:
-      - script: $(Build.SourcesDirectory)/eng/cibuild.sh $(_DailyTest)
+      - ${{ if eq(variables['System.TeamProject'], 'public') }}:
+        - script: /bin/bash -c "sudo xcode-select -s /Applications/Xcode_10.3.app/Contents/Developer"
+      - script: $(Build.SourcesDirectory)/eng/cibuild.sh
           --configuration $(_BuildConfig) 
           --architecture $(_BuildArch)
           --prepareMachine
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+          $(_InternalInstallArgs)
         displayName: Build / Test
         condition: succeeded()
  
-    - task: PublishBuildArtifacts@1
-      displayName: Publish Build Artifacts
-      inputs:
-        pathtoPublish: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
-        artifactName: $(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
-      condition: ne(variables['_PublishArtifacts'], '')
+    - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+      - task: PublishBuildArtifacts@1
+        displayName: Publish Build Artifacts
+        inputs:
+          pathtoPublish: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
+          artifactName: $(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
+        condition: ne(variables['_PublishArtifacts'], '')
 
     - task: PublishBuildArtifacts@1
       displayName: Publish Artifacts on failure
@@ -216,4 +224,4 @@ jobs:
         mergeTestResults: true
         buildConfiguration: ${{ parameters.name }}
       continueOnError: true
-      condition: always()
+      condition: ne(variables['_BuildOnly'], 'true')

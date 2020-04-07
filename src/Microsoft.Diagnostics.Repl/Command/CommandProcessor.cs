@@ -10,6 +10,7 @@ using System.CommandLine.Invocation;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Repl
@@ -114,36 +115,36 @@ namespace Microsoft.Diagnostics.Repl
             var baseAttributes = (BaseAttribute[])type.GetCustomAttributes(typeof(BaseAttribute), inherit: false);
             foreach (BaseAttribute baseAttribute in baseAttributes)
             {
-                if (baseAttribute is CommandAttribute commandAttribute)
+                if (baseAttribute is CommandAttribute commandAttribute && IsValidPlatform(commandAttribute))
                 {
                     command = new Command(commandAttribute.Name, commandAttribute.Help);
                     var properties = new List<(PropertyInfo, Option)>();
-                    PropertyInfo argument = null;
+                    var arguments = new List<(PropertyInfo, Argument)>();
 
                     foreach (PropertyInfo property in type.GetProperties().Where(p => p.CanWrite))
                     {
                         var argumentAttribute = (ArgumentAttribute)property.GetCustomAttributes(typeof(ArgumentAttribute), inherit: false).SingleOrDefault();
                         if (argumentAttribute != null)
                         {
-                            if (argument != null) {
-                                throw new ArgumentException($"More than one ArgumentAttribute in command class: {type.Name}");
-                            }
                             IArgumentArity arity = property.PropertyType.IsArray ? ArgumentArity.ZeroOrMore : ArgumentArity.ZeroOrOne;
 
-                            command.Argument = new Argument {
+                            var argument = new Argument {
                                 Name = argumentAttribute.Name ?? property.Name.ToLowerInvariant(),
                                 Description = argumentAttribute.Help,
                                 ArgumentType = property.PropertyType,
                                 Arity = arity
                             };
-                            argument = property;
+                            command.AddArgument(argument);
+                            arguments.Add((property, argument));
                         }
                         else
                         {
                             var optionAttribute = (OptionAttribute)property.GetCustomAttributes(typeof(OptionAttribute), inherit: false).SingleOrDefault();
                             if (optionAttribute != null)
                             {
-                                var option = new Option(optionAttribute.Name ?? BuildAlias(property.Name), optionAttribute.Help, new Argument { ArgumentType = property.PropertyType });
+                                var option = new Option(optionAttribute.Name ?? BuildAlias(property.Name), optionAttribute.Help) {
+                                    Argument = new Argument { ArgumentType = property.PropertyType }
+                                };
                                 command.AddOption(option);
                                 properties.Add((property, option));
 
@@ -160,16 +161,17 @@ namespace Microsoft.Diagnostics.Repl
                         }
                     }
 
-                    var handler = new Handler(this, commandAttribute.AliasExpansion, argument, properties, type);
+                    var handler = new Handler(this, commandAttribute.AliasExpansion, arguments, properties, type);
                     _commandHandlers.Add(command.Name, handler);
                     command.Handler = handler;
 
                     rootBuilder.AddCommand(command);
                 }
 
-                if (baseAttribute is CommandAliasAttribute commandAliasAttribute)
+                if (baseAttribute is CommandAliasAttribute commandAliasAttribute && IsValidPlatform(commandAliasAttribute))
                 {
-                    if (command == null) {
+                    if (command == null)
+                    {
                         throw new ArgumentException($"No previous CommandAttribute for this CommandAliasAttribute: {type.Name}");
                     }
                     command.AddAlias(commandAliasAttribute.Name);
@@ -189,6 +191,29 @@ namespace Microsoft.Diagnostics.Repl
             return service;
         }
 
+        /// <summary>
+        /// Returns true if the command should be added.
+        /// </summary>
+        private static bool IsValidPlatform(CommandBaseAttribute attribute)
+        {
+            if (attribute.Platform != CommandPlatform.All)
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    return (attribute.Platform & CommandPlatform.Windows) != 0;
+                }
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    return (attribute.Platform & CommandPlatform.Linux) != 0;
+                }
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    return (attribute.Platform & CommandPlatform.OSX) != 0;
+                }
+            }
+            return true;
+        }
+
         private static string BuildAlias(string parameterName)
         {
             if (string.IsNullOrWhiteSpace(parameterName)) {
@@ -201,18 +226,18 @@ namespace Microsoft.Diagnostics.Repl
         {
             private readonly CommandProcessor _commandProcessor;
             private readonly string _aliasExpansion;
-            private readonly PropertyInfo _argument;
+            private readonly IEnumerable<(PropertyInfo Property, Argument Argument)> _arguments;
             private readonly IEnumerable<(PropertyInfo Property, Option Option)> _properties;
 
             private readonly ConstructorInfo _constructor;
             private readonly MethodInfo _methodInfo;
             private readonly MethodInfo _methodInfoHelp;
 
-            public Handler(CommandProcessor commandProcessor, string aliasExpansion, PropertyInfo argument, IEnumerable<(PropertyInfo, Option)> properties, Type type)
+            public Handler(CommandProcessor commandProcessor, string aliasExpansion, IEnumerable<(PropertyInfo, Argument)> arguments, IEnumerable<(PropertyInfo, Option)> properties, Type type)
             {
                 _commandProcessor = commandProcessor;
                 _aliasExpansion = aliasExpansion;
-                _argument = argument;
+                _arguments = arguments;
                 _properties = properties;
 
                 _constructor = type.GetConstructors().SingleOrDefault((info) => info.GetParameters().Length == 0) ?? 
@@ -303,19 +328,19 @@ namespace Microsoft.Diagnostics.Repl
                     property.Property.SetValue(instance, value);
                 }
 
-                if (context != null && _argument != null)
+                if (context != null)
                 {
-                    object value = null;
-                    ArgumentResult result = context.ParseResult.CommandResult.ArgumentResult;
-                    switch (result)
+                    IEnumerable<ArgumentResult> argumentResults = context.ParseResult.CommandResult.Children.OfType<ArgumentResult>();
+
+                    foreach ((PropertyInfo Property, Argument Argument) argument in _arguments)
                     {
-                        case SuccessfulArgumentResult successful:
-                            value = successful.Value;
-                            break;
-                        case FailedArgumentResult failed:
-                            throw new InvalidOperationException(failed.ErrorMessage);
+                        ArgumentResult argumentResult = argumentResults.Where((result) => result.Argument == argument.Argument).SingleOrDefault();
+                        if (argumentResult != null)
+                        {
+                            object value = argumentResult.GetValueOrDefault();
+                            argument.Property.SetValue(instance, value);
+                        }
                     }
-                    _argument.SetValue(instance, value);
                 }
             }
 
