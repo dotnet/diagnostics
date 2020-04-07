@@ -7,7 +7,19 @@ using System;
 namespace Microsoft.Diagnostics.Repl
 {
     /// <summary>
-    /// Base command option attribute.
+    /// OS Platforms to add command
+    /// </summary>
+    [Flags]
+    public enum CommandPlatform : byte
+    {
+        All         = 0x00,
+        Windows     = 0x01,
+        Linux       = 0x02,
+        OSX         = 0x04,
+    }
+
+    /// <summary>
+    /// Base command, option and argument class.
     /// </summary>
     public class BaseAttribute : Attribute
     {
@@ -23,10 +35,21 @@ namespace Microsoft.Diagnostics.Repl
     }
 
     /// <summary>
+    /// Base command and command alias class.
+    /// </summary>
+    public class CommandBaseAttribute : BaseAttribute
+    {
+        /// <summary>
+        /// Optional OS platform for the command
+        /// </summary>
+        public CommandPlatform Platform = CommandPlatform.All;
+    }
+
+    /// <summary>
     /// Marks the class as a Command.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-    public class CommandAttribute : BaseAttribute
+    public class CommandAttribute : CommandBaseAttribute
     {
         /// <summary>
         /// Sets the value of the CommandBase.AliasExpansion when the command is executed.
@@ -38,7 +61,7 @@ namespace Microsoft.Diagnostics.Repl
     /// Adds an alias to the previous command attribute
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-    public class CommandAliasAttribute : BaseAttribute
+    public class CommandAliasAttribute : CommandBaseAttribute
     {
     }
 

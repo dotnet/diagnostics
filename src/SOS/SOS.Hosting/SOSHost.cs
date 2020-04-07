@@ -6,17 +6,12 @@ using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Metadata;
-using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -43,6 +38,8 @@ namespace SOS
             [In, MarshalAs(UnmanagedType.Struct)] ref SOSNetCoreCallbacks callbacks,
             int callbacksSize,
             [In, MarshalAs(UnmanagedType.LPStr)] string tempDirectory,
+            [In, MarshalAs(UnmanagedType.LPStr)] string runtimeModulePath,
+            bool isDesktop,
             [In, MarshalAs(UnmanagedType.LPStr)] string dacFilePath,
             [In, MarshalAs(UnmanagedType.LPStr)] string dbiFilePath,
             bool symbolStoreEnabled);
@@ -61,6 +58,7 @@ namespace SOS
             bool symweb,
             string tempDirectory,
             string symbolServerPath,
+            int timeoutInMintues,
             string symbolCachePath,
             string symbolDirectoryPath,
             string windowsSymbolPath);
@@ -155,11 +153,11 @@ namespace SOS
             GetExpressionDelegate = SOSHost.GetExpression,
         };
 
+        const string DesktopRuntimeModuleName = "clr";
+
         internal readonly IDataReader DataReader;
+        internal readonly AnalyzeContext AnalyzeContext;
 
-        private static readonly string s_coreclrModuleName;
-
-        private readonly AnalyzeContext _analyzeContext;
         private readonly RegisterService _registerService;
         private readonly MemoryService _memoryService;
         private readonly IConsoleService _console;
@@ -175,16 +173,6 @@ namespace SOS
         static SOSHost()
         {
             AssemblyResolver.Enable();
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                s_coreclrModuleName = "coreclr";
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
-                s_coreclrModuleName = "libcoreclr.so";
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
-                s_coreclrModuleName = "libcoreclr.dylib";
-            }
         }
 
         /// <summary>
@@ -201,7 +189,7 @@ namespace SOS
             DataTarget dataTarget = serviceProvider.GetService<DataTarget>();
             DataReader = dataTarget.DataReader;
             _console = serviceProvider.GetService<IConsoleService>();
-            _analyzeContext = serviceProvider.GetService<AnalyzeContext>();
+            AnalyzeContext = serviceProvider.GetService<AnalyzeContext>();
             _memoryService = serviceProvider.GetService<MemoryService>();
             _registerService = serviceProvider.GetService<RegisterService>();
             _versionCache = new ReadVirtualCache(_memoryService);
@@ -226,9 +214,10 @@ namespace SOS
         /// Loads and initializes the SOS module.
         /// </summary>
         /// <param name="tempDirectory">Temporary directory created to download DAC module</param>
+        /// <param name="isDesktop">if true, desktop runtime, else .NET Core runtime</param>
         /// <param name="dacFilePath">The path to DAC that CLRMD loaded or downloaded or null</param>
         /// <param name="dbiFilePath">The path to DBI (for future use) or null</param>
-        public void InitializeSOSHost(string tempDirectory, string dacFilePath, string dbiFilePath)
+        public void InitializeSOSHost(string tempDirectory, bool isDesktop, string dacFilePath, string dbiFilePath)
         {
             if (_sosLibrary == IntPtr.Zero)
             {
@@ -270,6 +259,8 @@ namespace SOS
                     ref s_callbacks,
                     Marshal.SizeOf<SOSNetCoreCallbacks>(),
                     tempDirectory,
+                    AnalyzeContext.RuntimeModuleDirectory,
+                    isDesktop,
                     dacFilePath,
                     dbiFilePath,
                     SymbolReader.IsSymbolStoreEnabled());
@@ -341,7 +332,7 @@ namespace SOS
         internal int GetInterrupt(
             IntPtr self)
         {
-            return _analyzeContext.CancellationToken.IsCancellationRequested ? S_OK : E_FAIL;
+            return AnalyzeContext.CancellationToken.IsCancellationRequested ? S_OK : E_FAIL;
         }
 
         internal int OutputVaList(
@@ -875,7 +866,7 @@ namespace SOS
             IntPtr context,
             uint contextSize)
         {
-            uint threadId = (uint)_analyzeContext.CurrentThreadId;
+            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
             byte[] registerContext = _registerService.GetThreadContext(threadId);
             if (registerContext == null) {
                 return E_FAIL;
@@ -932,7 +923,7 @@ namespace SOS
             IntPtr self,
             out uint id)
         {
-            return GetThreadIdBySystemId(self, (uint)_analyzeContext.CurrentThreadId, out id);
+            return GetThreadIdBySystemId(self, (uint)AnalyzeContext.CurrentThreadId, out id);
         }
 
         internal int SetCurrentThreadId(
@@ -942,7 +933,7 @@ namespace SOS
             try
             {
                 unchecked {
-                    _analyzeContext.CurrentThreadId = (int)DataReader.EnumerateAllThreads().ElementAt((int)id);
+                    AnalyzeContext.CurrentThreadId = (int)DataReader.EnumerateAllThreads().ElementAt((int)id);
                 }
             }
             catch (ArgumentOutOfRangeException)
@@ -956,7 +947,7 @@ namespace SOS
             IntPtr self,
             out uint sysId)
         {
-            sysId = (uint)_analyzeContext.CurrentThreadId;
+            sysId = (uint)AnalyzeContext.CurrentThreadId;
             return S_OK;
         }
 
@@ -1012,7 +1003,7 @@ namespace SOS
             IntPtr self,
             ulong* offset)
         {
-            uint threadId = (uint)_analyzeContext.CurrentThreadId;
+            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
             ulong teb = DataReader.GetThreadTeb(threadId);
             Write(offset, teb);
             return S_OK;
@@ -1100,16 +1091,33 @@ namespace SOS
             int index, 
             out ulong value)
         {
-            uint threadId = (uint)_analyzeContext.CurrentThreadId;
+            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
             if (!_registerService.GetRegisterValue(threadId, index, out value)) {
                 return E_FAIL;
             }
             return S_OK;
         }
 
-        internal static bool IsRuntimeModule(ModuleInfo module)
+        internal static bool IsCoreClrRuntimeModule(ModuleInfo module)
         {
-            return IsModuleEqual(module, s_coreclrModuleName);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return IsModuleEqual(module, "coreclr") || IsModuleEqual(module, "libcoreclr");
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return IsModuleEqual(module, "libcoreclr.so");
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return IsModuleEqual(module, "libcoreclr.dylib");
+            }
+            return false;
+        }
+
+        internal static bool IsDesktopRuntimeModule(ModuleInfo module)
+        {
+            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && IsModuleEqual(module, DesktopRuntimeModuleName);
         }
 
         internal static bool IsModuleEqual(ModuleInfo module, string moduleName)

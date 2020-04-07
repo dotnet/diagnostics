@@ -6,14 +6,26 @@
     <VersionPrefix>3.1.0</VersionPrefix>
     <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
     <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
-    <MicrosoftNETCoreAppVersion>5.0.0-alpha.1.19564.1</MicrosoftNETCoreAppVersion>
-    <MicrosoftAspNetCoreAppRefVersion>5.0.0-alpha1.19572.4</MicrosoftAspNetCoreAppRefVersion>
   </PropertyGroup>
   <PropertyGroup>
-    <!-- Opt-out repo features -->
+    <!-- Latest symstore version updated by darc -->
+    <MicrosoftSymbolStoreVersion>1.0.120301</MicrosoftSymbolStoreVersion>
+    <!-- Runtime versions to test -->
+    <MicrosoftNETCoreApp21Version>2.1.16</MicrosoftNETCoreApp21Version>
+    <MicrosoftAspNetCoreApp21Version>$(MicrosoftNETCoreApp21Version)</MicrosoftAspNetCoreApp21Version>
+    <MicrosoftNETCoreApp30Version>3.0.3</MicrosoftNETCoreApp30Version>
+    <MicrosoftAspNetCoreApp30Version>$(MicrosoftNETCoreApp30Version)</MicrosoftAspNetCoreApp30Version>
+    <MicrosoftNETCoreApp31Version>3.1.2</MicrosoftNETCoreApp31Version>
+    <MicrosoftAspNetCoreApp31Version>$(MicrosoftNETCoreApp31Version)</MicrosoftAspNetCoreApp31Version>
+    <!-- Latest shared runtime version updated by darc -->
+    <MicrosoftNETCoreAppVersion>5.0.0-preview.4.20205.13</MicrosoftNETCoreAppVersion>
+    <!-- Latest shared aspnetcore version updated by darc -->
+    <MicrosoftAspNetCoreAppRefVersion>5.0.0-preview.4.20203.11</MicrosoftAspNetCoreAppRefVersion>
+  </PropertyGroup>
+  <PropertyGroup>
+    <!-- Opt-in/out repo features -->
     <UsingToolXliff>false</UsingToolXliff>
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
-    <UsingToolSymbolUploader>true</UsingToolSymbolUploader>
     <!-- Build tools -->
     <MicrosoftNetCompilersVersion>3.0.0</MicrosoftNetCompilersVersion>
     <!-- CoreFX -->
@@ -21,23 +33,23 @@
     <SystemCollectionsImmutableVersion>1.5.0</SystemCollectionsImmutableVersion>
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
     <!-- Other libs -->
-    <MicrosoftSymbolStoreVersion>1.0.55801</MicrosoftSymbolStoreVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>1.1.46104</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>1.1.116301</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
-    <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.44</MicrosoftDiagnosticsTracingTraceEventVersion>
-    <SystemCommandLineExperimentalVersion>0.2.0-alpha.19254.1</SystemCommandLineExperimentalVersion>
-    <SystemCommandLineRenderingVersion>0.2.0-alpha.19254.1</SystemCommandLineRenderingVersion>
+    <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.51</MicrosoftDiagnosticsTracingTraceEventVersion>
+    <MicrosoftExtensionsConfigurationJsonVersion>3.1.2</MicrosoftExtensionsConfigurationJsonVersion>
+    <MicrosoftExtensionsConfigurationKeyPerFileVersion>3.1.2</MicrosoftExtensionsConfigurationKeyPerFileVersion>
+    <MicrosoftExtensionsLoggingVersion>3.1.2</MicrosoftExtensionsLoggingVersion>
+    <MicrosoftExtensionsLoggingConsoleVersion>3.1.2</MicrosoftExtensionsLoggingConsoleVersion>
+    <SystemCommandLineExperimentalVersion>0.3.0-alpha.19602.1</SystemCommandLineExperimentalVersion>
+    <SystemCommandLineRenderingVersion>0.3.0-alpha.19602.1</SystemCommandLineRenderingVersion>
     <SystemMemoryVersion>4.5.3</SystemMemoryVersion>
-
+    <SystemTextJsonVersion>4.7.1</SystemTextJsonVersion>
+    <SystemThreadingChannelsVersion>4.7.0</SystemThreadingChannelsVersion>
     <XUnitVersion>2.4.1</XUnitVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-
-    <MicrosoftDotNetRemoteExecutorVersion>5.0.0-beta.19562.5</MicrosoftDotNetRemoteExecutorVersion>
-
+    <MicrosoftDotNetRemoteExecutorVersion>5.0.0-beta.20201.2</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
-
   </PropertyGroup>
-
   <PropertyGroup>
     <RestoreSources>
       $(RestoreSources);

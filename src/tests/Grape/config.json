@@ -1,0 +1,19 @@
+{
+    "traceName": "test",
+    "duration": 60,
+    "eventProviders":
+    [
+        {
+            "Name" : "Microsoft-Windows-DotNETRuntime",
+            "Level": 4,
+            "Keywords": "0xffffffffffffffff",
+            "Arguments": ""
+        },
+        {
+            "Name" : "System.Runtime",
+            "Level": 4,
+            "Keywords": "0xffffffffffffffff",
+            "Arguments": "EventCounterIntervalSec=1"
+        }
+    ]
+}

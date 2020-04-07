@@ -20,9 +20,12 @@ namespace Microsoft.Diagnostics.Tools.Dump
         /// </summary>
         public enum DumpTypeOption
         {
+            Full,       // The largest dump containing all memory including the module images.
+
             Heap,       // A large and relatively comprehensive dump containing module lists, thread lists, all 
                         // stacks, exception information, handle information, and all memory except for mapped images.
-            Mini        // A small dump containing module lists, thread lists, exception information and all stacks.
+
+            Mini,       // A small dump containing module lists, thread lists, exception information and all stacks.
         }
 
         public Dumper()
@@ -49,7 +52,19 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 output = Path.GetFullPath(output);
 
                 // Display the type of dump and dump path
-                string dumpTypeMessage = type == DumpTypeOption.Mini ? "minidump" : "minidump with heap";
+                string dumpTypeMessage = null;
+                switch (type)
+                {
+                    case DumpTypeOption.Full:
+                        dumpTypeMessage = "full";
+                        break;
+                    case DumpTypeOption.Heap:
+                        dumpTypeMessage = "dump with heap";
+                        break;
+                    case DumpTypeOption.Mini:
+                        dumpTypeMessage = "dump";
+                        break;
+                }
                 console.Out.WriteLine($"Writing {dumpTypeMessage} to {output}");
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -62,7 +77,20 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
                     var client = new DiagnosticsClient(processId);
-                    DumpType dumpType = type == DumpTypeOption.Heap ? DumpType.WithHeap : DumpType.Normal;
+
+                    DumpType dumpType = DumpType.Normal;
+                    switch (type)
+                    {
+                        case DumpTypeOption.Full:
+                            dumpType = DumpType.Full;
+                            break;
+                        case DumpTypeOption.Heap:
+                            dumpType = DumpType.WithHeap;
+                            break;
+                        case DumpTypeOption.Mini:
+                            dumpType = DumpType.Normal;
+                            break;
+                    }
 
                     // Send the command to the runtime to initiate the core dump
                     client.WriteDump(dumpType, output, diag);

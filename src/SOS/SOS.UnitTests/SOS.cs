@@ -74,8 +74,8 @@ public class SOS
                     }
                 }
 
-                // With the dotnet-dump analyze tool
-                if (information.TestConfiguration.DotNetDumpPath() != null)
+                // Using the dotnet-dump analyze tool if the path exists in the config file. Don't test dotnet-dump on triage dumps when running on desktop CLR.
+                if (information.TestConfiguration.DotNetDumpPath() != null && (information.TestConfiguration.IsNETCore || information.DumpType != SOSRunner.DumpType.Triage))
                 {
                     using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDumpWithDotNetDump))
                     {
@@ -145,6 +145,12 @@ public class SOS
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
+    public async Task LineNums(TestConfiguration config)
+    {
+        await RunTest(config, "LineNums", "LineNums.script", testTriage: true);
+    }
+
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task NestedExceptionTest(TestConfiguration config)
     {
         await RunTest(config, "NestedExceptionTest", "NestedExceptionTest.script", testTriage: true);
@@ -209,6 +215,25 @@ public class SOS
             UsePipeSync = true,
             DumpGenerator = SOSRunner.DumpGenerator.DotNetDump
         });
+    }
+
+    [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "SOS.DualRuntimes")]
+    public async Task DualRuntimes(TestConfiguration config)
+    {
+        // The assembly path, class and function name of the desktop test code to load/run
+        string desktopTestParameters = TestConfiguration.MakeCanonicalPath(config.GetValue("DesktopTestParameters"));
+        if (string.IsNullOrEmpty(desktopTestParameters))
+        {
+            throw new SkipTestException("DesktopTestParameters config value does not exists");
+        }
+        await RunTest("DualRuntimes.script", testLive: false, information: new SOSRunner.TestInformation {
+            TestConfiguration = config,
+            TestName = "SOS.DualRuntimes",
+            DebuggeeName = "WebApp3",
+            DebuggeeArguments = desktopTestParameters,
+            UsePipeSync = true,
+            DumpGenerator = SOSRunner.DumpGenerator.DotNetDump
+        }); ;
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]

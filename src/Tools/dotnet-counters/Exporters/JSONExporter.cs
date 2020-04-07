@@ -36,8 +36,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             }
 
             builder = new StringBuilder();
-            builder.Append($"{{ \"Target Process\": \"{_processName}\", ");
-            builder.Append($"\"Start Time\": \"{DateTime.Now.ToString()}\", ");
+            builder.Append($"{{ \"TargetProcess\": \"{_processName}\", ");
+            builder.Append($"\"StartTime\": \"{DateTime.Now.ToString()}\", ");
             builder.Append($"\"Events\": [");
         }
 
@@ -57,10 +57,10 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 File.AppendAllText(_output, builder.ToString());
                 builder.Clear();
             }
-            builder.Append($"{{ \"timestamp\": \"{DateTime.Now.ToString()}\", ");
+            builder.Append($"{{ \"timestamp\": \"{DateTime.Now.ToString("u")}\", ");
             builder.Append($" \"provider\": \"{providerName}\", ");
             builder.Append($" \"name\": \"{payload.GetDisplay()}\", ");
-            builder.Append($" \"counter type\": \"{payload.GetCounterType()}\", ");
+            builder.Append($" \"counterType\": \"{payload.GetCounterType()}\", ");
             builder.Append($" \"value\": {payload.GetValue()} }},");
         }
 

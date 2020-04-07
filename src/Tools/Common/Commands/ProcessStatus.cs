@@ -2,18 +2,24 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.NETCore.Client;
 using System;
 using System.CommandLine;
-using System.Diagnostics;
+using System.CommandLine.Invocation;
 using System.Linq;
 using System.Text;
-
-using Microsoft.Diagnostics.NETCore.Client;
+using Process = System.Diagnostics.Process;
 
 namespace Microsoft.Internal.Common.Commands
 {
     public class ProcessStatusCommandHandler
     {
+        public static Command ProcessStatusCommand(string description) =>
+            new Command(name: "ps", description)
+            {
+                Handler = CommandHandler.Create<IConsole>(PrintProcessStatus)
+            };
+
         /// <summary>
         /// Print the current list of available .NET core processes for diagnosis and their statuses
         /// </summary>
@@ -28,13 +34,24 @@ namespace Microsoft.Internal.Common.Commands
                     .OrderBy(process => process.ProcessName)
                     .ThenBy(process => process.Id);
 
+                var currentPid = Process.GetCurrentProcess().Id;
+
                 foreach (var process in processes)
                 {
+                    if (process.Id == currentPid)
+                    {
+                        continue;
+                    }
+
                     try
                     {
                         sb.Append($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}\n");
                     }
                     catch (InvalidOperationException)
+                    {
+                        sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
+                    }
+                    catch (NullReferenceException)
                     {
                         sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
                     }
