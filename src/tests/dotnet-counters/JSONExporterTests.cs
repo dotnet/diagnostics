@@ -149,7 +149,7 @@ namespace DotnetCounters.UnitTests
         [JsonProperty("name")]
         public string name { get; set; }
 
-        [JsonProperty("counterType")]
+        [JsonProperty("counter type")]
         public string counterType { get; set; }
 
         [JsonProperty("value")]
@@ -158,10 +158,10 @@ namespace DotnetCounters.UnitTests
 
     class JSONCounterTrace
     {
-        [JsonProperty("TargetProcess")]
+        [JsonProperty("Target Process")]
         public string targetProcess { get; set; }
 
-        [JsonProperty("StartTime")]
+        [JsonProperty("Start Time")]
         public string startTime { get; set; }
 
         [JsonProperty("Events")]

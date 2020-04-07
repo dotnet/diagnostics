@@ -1,19 +1,12 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
 /* this ALWAYS GENERATED file contains the definitions for the interfaces */
 
 
- /* File created by MIDL compiler version 8.01.0622 */
-/* at Mon Jan 18 19:14:07 2038
- */
-/* Compiler settings for C:/ssd/diagnostics/src/inc/mscoree.idl:
-    Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 8.01.0622 
-    protocol : dce , ms_ext, c_ext, robust
-    error checks: allocation ref bounds_check enum stub_data 
-    VC __declspec() decoration level: 
-         __declspec(uuid()), __declspec(selectany), __declspec(novtable)
-         DECLSPEC_UUID(), MIDL_INTERFACE()
-*/
+ /* File created by MIDL compiler version 8.00.0603 */
 /* @@MIDL_FILE_HEADING(  ) */
 
 #pragma warning( disable: 4049 )  /* more than 64k source lines */
@@ -87,7 +80,6 @@ struct IHostControl;
 struct ICLRControl;
 
 EXTERN_GUID(CLSID_ComCallUnmarshalV4, 0x45fb4600,0xe6e8,0x4928,0xb2,0x5e,0x50,0x47,0x6f,0xf7,0x94,0x25);
-EXTERN_GUID(CLSID_CLRRuntimeHost, 0x90F1A06E, 0x7712, 0x4762, 0x86, 0xB5, 0x7A, 0x5E, 0xBA, 0x6B, 0xDB, 0x02);
 EXTERN_GUID(IID_ICLRRuntimeHost, 0x90F1A06C, 0x7712, 0x4762, 0x86, 0xB5, 0x7A, 0x5E, 0xBA, 0x6B, 0xDB, 0x02);
 EXTERN_GUID(IID_ICLRRuntimeHost2, 0x712AB73F, 0x2C22, 0x4807, 0xAD, 0x7E, 0xF5, 0x01, 0xD7, 0xb7, 0x2C, 0x2D);
 EXTERN_GUID(IID_ICLRRuntimeHost4, 0x64F6D366, 0xD7C2, 0x4F1F, 0xB4, 0xB2, 0xE8, 0x16, 0x0C, 0xAC, 0x43, 0xAF);
@@ -237,7 +229,7 @@ enum __MIDL___MIDL_itf_mscoree_0000_0000_0009
         eExitProcess	= ( eRudeUnloadAppDomain + 1 ) ,
         eFastExitProcess	= ( eExitProcess + 1 ) ,
         eRudeExitProcess	= ( eFastExitProcess + 1 ) ,
-        MaxPolicyAction	= ( eRudeExitProcess + 1 ) 
+        MaxPolicyAction	= (eRudeExitProcess + 1 )
     } 	EPolicyAction;
 
 

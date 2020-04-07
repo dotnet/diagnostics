@@ -391,7 +391,6 @@
     <ClCompile Include="gchist.cpp" />
     <ClCompile Include="gcroot.cpp" />
     <ClCompile Include="metadata.cpp" />
-    <ClCompile Include="runtime.cpp" />
     <ClCompile Include="sildasm.cpp" />
     <ClCompile Include="sos.cpp" />
     <ClCompile Include="stressLogDump.cpp" />
@@ -406,8 +405,6 @@
     <ClCompile Include="disasmARM64.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cordebugdatatarget.h" />
-    <ClInclude Include="cordebuglibraryprovider.h" />
     <ClInclude Include="data.h" />
     <ClInclude Include="datatarget.h" />
     <ClInclude Include="disasm.h" />
@@ -420,7 +417,6 @@
     <ClInclude Include="inc\wdbgexts.h" />
     <ClInclude Include="ntinfo.h" />
     <ClInclude Include="platformspecific.h" />
-    <ClInclude Include="runtime.h" />
     <ClInclude Include="sos.h" />
     <ClInclude Include="sos_md.h" />
     <ClInclude Include="sos_stacktrace.h" />

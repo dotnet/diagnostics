@@ -1,4 +1,4 @@
-# App is leaking memory (eventual crash/stops responding)
+# App is leaking memory (eventual crash/hang)
 
 http://localhost:5000/api/diagscenario/memleak/{kb}
 
@@ -56,7 +56,7 @@ Now that we have a core dump generated, what options do we have to analyze the c
 
 In both cases, you have to be careful to roughly match the environment up with the production server. For example, if I am running .net core preview 5 on Ubuntu 16.04 the core dump must be analyzed on the same architecture and environment. 
 
-For the LLDB/SOS experience, please see - https://github.com/dotnet/runtime/blob/master/docs/workflow/building/coreclr/debugging-instructions.md.
+For the LLDB/SOS experience, please see - https://github.com/dotnet/coreclr/blob/master/Documentation/building/debugging-instructions.md.
 
 To use the dotnet-dump tool to analyze the dump please run:
 
@@ -86,3 +86,9 @@ The string instance appears to be rooted from top level Processor object which i
 ![alt text](https://user-images.githubusercontent.com/15442480/57110703-4b214a80-6cee-11e9-8887-02c25424a0ad.png)
 
 From here we can now try and back-track (from code) why the cache seems to be growing in an unbound fashion. 
+
+
+
+
+
+

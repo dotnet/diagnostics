@@ -10,7 +10,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
 {
     [Command(Name = "exit", Help = "Exit interactive mode.")]
     [CommandAlias(Name = "quit")]
-    [CommandAlias(Name = "q")]
     public class ExitCommand : CommandBase
     {
         public override void Invoke()

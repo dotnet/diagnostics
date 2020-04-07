@@ -9,6 +9,5 @@
     <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;win-arm;osx-x64</PackAsToolShimRuntimeIdentifiers>
     <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <IsShipping>true</IsShipping>
   </PropertyGroup>
 </Project>

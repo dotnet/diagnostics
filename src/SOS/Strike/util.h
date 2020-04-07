@@ -97,7 +97,9 @@ DECLARE_HANDLE(OBJECTHANDLE);
 #elif defined(_ARM_)
 #define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.arm.dll"
 #elif defined(_ARM64_)
-#define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.arm64.dll"
+// Use diasymreader until the package has an arm64 version - issue #7360
+//#define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.arm64.dll"
+#define NATIVE_SYMBOL_READER_DLL "diasymreader.dll"
 #endif
 
 // PREFIX macros - Begin
@@ -199,6 +201,9 @@ extern IXCLRDataProcess *g_clrData;
 extern ISOSDacInterface *g_sos;
 
 #include "dacprivate.h"
+
+interface ICorDebugProcess;
+extern ICorDebugProcess * g_pCorDebugProcess;
 
 // This class is templated for easy modification.  We may need to update the CachedString
 // or related classes to use WCHAR instead of char in the future.
@@ -1384,10 +1389,7 @@ private:
     int *mWidths;
     Alignment *mAlignments;
 };
- 
-#ifndef FEATURE_PAL
-HRESULT GetClrModuleImages(__in IXCLRDataModule* module, __in CLRDataModuleExtentType desiredType, __out PULONG64 pBase, __out PULONG64 pSize);
-#endif
+
 HRESULT GetMethodDefinitionsFromName(DWORD_PTR ModulePtr, IXCLRDataModule* mod, const char* name, IXCLRDataMethodDefinition **ppMethodDefinitions, int numMethods, int *numMethodsNeeded);
 HRESULT GetMethodDescsFromName(DWORD_PTR ModulePtr, IXCLRDataModule* mod, const char* name, DWORD_PTR **pOut, int *numMethodDescs);
 
@@ -1534,6 +1536,15 @@ private:
     T* m_ptr;    
 };
 
+struct ModuleInfo
+{
+    ULONG64 baseAddr;
+    ULONG64 size;
+    ULONG index;
+    BOOL hasPdb;
+};
+extern ModuleInfo g_moduleInfo[];
+
 BOOL InitializeHeapData();
 BOOL IsServerBuild ();
 UINT GetMaxGeneration();
@@ -1547,11 +1558,13 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize);
 void DecodeDynamicIL(BYTE *data, ULONG Size, DacpObjectData& tokenArray);
 ULONG DisplayILOperation(const UINT indentCount, BYTE* pBuffer, ULONG position, std::function<void(DWORD)>& func);
 
+HRESULT GetRuntimeModuleInfo(PULONG moduleIndex, PULONG64 moduleBase);
+EEFLAVOR GetEEFlavor ();
+HRESULT InitCorDebugInterface();
+VOID UninitCorDebugInterface();
 BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes);
 bool IsRuntimeVersion(DWORD major);
 bool IsRuntimeVersion(VS_FIXEDFILEINFO& fileInfo, DWORD major);
-bool IsRuntimeVersionAtLeast(DWORD major);
-bool IsRuntimeVersionAtLeast(VS_FIXEDFILEINFO& fileInfo, DWORD major);
 #ifndef FEATURE_PAL
 BOOL IsRetailBuild (size_t base);
 BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo);
@@ -2589,7 +2602,7 @@ typedef struct _CROSS_PLATFORM_CONTEXT {
 
 
 WString BuildRegisterOutput(const SOSStackRefData &ref, bool printObj = true);
-WString MethodNameFromIP(CLRDATA_ADDRESS methodDesc, BOOL bSuppressLines = FALSE, BOOL bAssemblyName = FALSE, BOOL bDisplacement = FALSE, BOOL bAdjustIPForLineNumber = FALSE);
+WString MethodNameFromIP(CLRDATA_ADDRESS methodDesc, BOOL bSuppressLines = FALSE, BOOL bAssemblyName = FALSE, BOOL bDisplacement = FALSE);
 HRESULT GetGCRefs(ULONG osID, SOSStackRefData **ppRefs, unsigned int *pRefCnt, SOSStackRefError **ppErrors, unsigned int *pErrCount);
 WString GetFrameFromAddress(TADDR frameAddr, IXCLRDataStackWalk *pStackwalk = NULL, BOOL bAssemblyName = FALSE);
 
@@ -2707,8 +2720,8 @@ private:
      */
     bool MoveToPage(TADDR addr, unsigned int size = 0x18);
 
-    /* Attempts to read from the target process if the data possibly crosses the
-     * boundaries of the page.
+    /* Attempts to read from the target process if the data is possibly hanging off
+     * the end of a page.
      */
     template<class T>
     inline bool MisalignedRead(TADDR addr, T *t)
@@ -3054,6 +3067,11 @@ struct Flags
 
 private:
     UnderlyingType m_val;
+};
+
+struct ImageInfo
+{
+    ULONG64 modBase;
 };
 
 // Helper class used in ClrStackFromPublicInterface() to keep track of explicit EE Frames

@@ -3,25 +3,25 @@
 #
 # Commands Verified: GCWhere, GCRoot, DumpObj, DumpHeap, DumpStackObjects
 #
-# 1) Run to the first debug break
-# 2) Load sos
-# 3) Dump stack objects to get the address of GCWhere!temp
+# 1) load sos
+# 2) run to the first debug break
+# 3) dump stack objects to get the address of GCWhere!temp
 # 4) Run various commands on the address, verify Gen0
-# 5) Run to the second debug break
+# 5) run to the second debug break
 # 6) Run various commands on the address, verify Gen1
-# 7) Run to the third debug break
+# 7) run to the third debug break
 # 8) Run various commands on the address, verify Gen2
-# 9) Run to the fourth debug break
+# 9) run to the fourth debug break
 #10) Run various commands on the address, verify it is still Gen2
-#11) Let the program run to completion
+#11) let the program run to completion
+
+LOADSOS
 
 # Continue to the DebugBreak
 CONTINUE
 IFDEF:CDB
 VERIFY:Break instruction exception - code 80000003
 ENDIF:CDB
-
-LOADSOS
 
 SOSCOMMAND:DumpStackObjects
 VERIFY:<HEXVAL>\s+<HEXVAL>\s+System.IO.StringWriter\s+

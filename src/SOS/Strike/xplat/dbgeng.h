@@ -34,7 +34,9 @@ public:
         m_lldbservices2(lldbservices2)
     {
         m_lldbservices->AddRef();
-        m_lldbservices2->AddRef();
+        if (m_lldbservices2 != nullptr) {
+            m_lldbservices2->AddRef();
+        }
     }
 
     //----------------------------------------------------------------------------
@@ -279,6 +281,9 @@ public:
         ULONG bufferSize,
         PULONG versionInfoSize)
     {
+        if (m_lldbservices2 == nullptr) {
+            return E_NOINTERFACE;
+        }
         return m_lldbservices2->GetModuleVersionInformation(index, base, item, buffer, bufferSize, versionInfoSize);
     }
 

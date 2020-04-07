@@ -117,8 +117,6 @@ static const char *NameForHandle(unsigned int type)
         return "async pinned";
     case 8:
         return "sized ref";
-    case 9:
-        return "weak WinRT";
     }
 
     return "unknown";

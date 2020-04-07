@@ -2,11 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Tools.Common;
 using SOS;
+using System;
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
@@ -27,30 +28,22 @@ namespace Microsoft.Diagnostics.Tools.SOS
 
         private static Command InstallCommand() =>
             new Command(
-                name: "install",
-                description: "Installs SOS and configures LLDB to load it on startup.")
-            {
-                // Handler
-                CommandHandler.Create<IConsole, Architecture?>((console, architecture) => InvokeAsync(console, architecture, install: true)),
-                // Options
-                ArchitectureOption()
-            };
+                "install", 
+                "Installs SOS and configures LLDB to load it on startup.", 
+                new Option[] { ArchitectureOption() },
+                handler: CommandHandler.Create<IConsole, Architecture?>((console, architecture) => InvokeAsync(console, architecture, install: true)));
 
         private static Option ArchitectureOption() =>
             new Option(
-                alias: "--architecture",
-                description: "The processor architecture to install.")
-            {
-                Argument = new Argument<Architecture>(name: "architecture")
-            };
+                new[] { "--architecture" }, 
+                "The process to collect a memory dump from.",
+                new Argument<Architecture>() { Name = "architecture" });
 
         private static Command UninstallCommand() =>
             new Command(
-                name: "uninstall",
-                description: "Uninstalls SOS and reverts any configuration changes to LLDB.")
-            {
-                Handler = CommandHandler.Create<IConsole>((console) => InvokeAsync(console, architecture: null, install: false))
-            };
+                "uninstall",
+                "Uninstalls SOS and reverts any configuration changes to LLDB.",
+                handler: CommandHandler.Create<IConsole>((console) => InvokeAsync(console, architecture: null, install: false)));
 
         private static Task<int> InvokeAsync(IConsole console, Architecture? architecture, bool install)
         {

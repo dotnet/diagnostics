@@ -28,6 +28,7 @@ VERIFY:InnerException:\s+System\.InvalidOperationException, Use !PrintException 
 VERIFY:StackTrace \(generated\):\s+
 VERIFY:\s+SP\s+IP\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>.+RandomTest(::|\.)RandomUserTask\.<\.ctor>.+\+0x<HEXVAL>\s*
+# Desktop sos has a bug that prevents the line number/source file info from being printed. Fixed in ProjectK.
 !IFDEF:DESKTOP
 !IFDEF:TRIAGE_DUMP
 VERIFY:[.+[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?[Tt]ask[Nn]ested[Ee]xception[\\|/][Rr]andom[Uu]ser[Ll]ibrary[\\|/][Rr]andom[Uu]ser[Tt]ask\.cs @ (16|23)\]
@@ -42,9 +43,10 @@ VERIFY:InnerException:\s+<none>\s+
 VERIFY:StackTrace \(generated\):\s+
 VERIFY:\s+SP\s+IP\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>.+RandomTest(::|\.)RandomUserTask\.InnerException(\(\))?\+0x<HEXVAL>\s*
+# Desktop sos has a bug that prevents the line number/source file info from being printed. Fixed in ProjectK.
 !IFDEF:DESKTOP
 !IFDEF:TRIAGE_DUMP
-VERIFY:[.+[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?[Tt]ask[Nn]ested[Ee]xception[\\|/][Rr]andom[Uu]ser[Ll]ibrary[\\|/][Rr]andom[Uu]ser[Tt]ask\.cs @ (34|35)\]
+VERIFY:[.+[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?[Tt]ask[Nn]ested[Ee]xception[\\|/][Rr]andom[Uu]ser[Ll]ibrary[\\|/][Rr]andom[Uu]ser[Tt]ask\.cs @ 34\]
 ENDIF:TRIAGE_DUMP
 ENDIF:DESKTOP
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>.+RandomTest(::|\.)RandomUserTask\.<\.ctor>.+\+0x<HEXVAL>\s*

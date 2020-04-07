@@ -1,37 +1,31 @@
 using System;
-using System.Threading;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace SymbolTestDll
 {
     public class TestClass
     {
-        public static int ThrowException(string argument)
+        public static void ThrowException()
         {
-            Foo5(56, argument);
-            return 0;
+            Foo5(56);
         }
 
-        static int Foo5(int x, string argument)
+        static int Foo5(int x)
         {
-            return Foo6(x, argument);
+            return Foo6(x);
         }
 
-        static int Foo6(int x, string argument)
+        static int Foo6(int x)
         {
-            Foo7(argument);
+            Foo7();
             return x;
         }
 
-        static void Foo7(string argument)
+        static void Foo7()
         {
-            if (argument != null)
-            {
-                throw new Exception(argument);
-            }
-            else
-            {
-                Thread.Sleep(-1);
-            }
-        }
+            throw new Exception();
+	}
     }
 }

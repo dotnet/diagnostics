@@ -48,6 +48,6 @@ bool
 setclrpathCommandInitialize(lldb::SBDebugger debugger)
 {
     lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
-    lldb::SBCommand command = interpreter.AddCommand("setclrpath", new setclrpathCommand(), "Set the path to load the runtime DAC/DBI files. setclrpath <path>");
+    lldb::SBCommand command = interpreter.AddCommand("setclrpath", new setclrpathCommand(), "Set the path to load coreclr dac/dbi files. setclrpath <path>");
     return true;
 }

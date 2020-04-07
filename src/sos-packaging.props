@@ -40,18 +40,6 @@
     </None>
 
     <None Include="$(SOSNETCoreBinaries)" Pack="true" Visible="false">
-      <PackagePath>$(SOSPackagePathPrefix)/win-arm64</PackagePath>
-    </None>
-    <None Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\sos.dll" Pack="true" Visible="false">
-      <PackagePath>$(SOSPackagePathPrefix)/win-arm64</PackagePath>
-    </None>
-    <!-- Commented out until issue https://github.com/dotnet/diagnostics/issues/324 is addressed
-    <None Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\Microsoft.DiaSymReader.Native.arm64.dll" Pack="true" Visible="false">
-      <PackagePath>$(SOSPackagePathPrefix)/win-arm64</PackagePath>
-    </None>
-     -->
-
-    <None Include="$(SOSNETCoreBinaries)" Pack="true" Visible="false">
       <PackagePath>$(SOSPackagePathPrefix)/linux-x64</PackagePath>
     </None>
     <None Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsosplugin.so" Pack="true" Visible="false">

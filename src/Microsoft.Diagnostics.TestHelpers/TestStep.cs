@@ -304,7 +304,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                     else if (openedStepState.ProcessID != Process.GetCurrentProcess().Id)
                     {
                         errorMessage.AppendLine("As of " + DateTimeOffset.Now + " the process executing this step (ID: 0x" + currentState.ProcessID.ToString("x") + ")" + Environment.NewLine +
-                                                "is still running. The process may have stopped responding or is running more slowly than expected?");
+                                                "is still running. The process may be hung or running more slowly than expected?");
                     }
                     else
                     {

@@ -92,17 +92,13 @@ namespace SOS
         string GetCoreClrDirectory(
             IntPtr self)
         {
-            if (_soshost.AnalyzeContext.RuntimeModuleDirectory == null)
+            foreach (ModuleInfo module in _soshost.DataReader.EnumerateModules())
             {
-                foreach (ModuleInfo module in _soshost.DataReader.EnumerateModules())
-                {
-                    if (SOSHost.IsCoreClrRuntimeModule(module))
-                    {
-                        _soshost.AnalyzeContext.RuntimeModuleDirectory = Path.GetDirectoryName(module.FileName) + Path.DirectorySeparatorChar;
-                    }
+                if (SOSHost.IsRuntimeModule(module)) {
+                    return Path.GetDirectoryName(module.FileName) + Path.DirectorySeparatorChar;
                 }
             }
-            return _soshost.AnalyzeContext.RuntimeModuleDirectory;
+            return null;
         }
 
         int VirtualUnwind(
@@ -179,7 +175,7 @@ namespace SOS
             {
                 if (runtimeOnly)
                 {
-                    if (SOSHost.IsCoreClrRuntimeModule(module))
+                    if (SOSHost.IsRuntimeModule(module))
                     {
                         callback(IntPtr.Zero, module.FileName, module.ImageBase, unchecked((int)module.FileSize));
                         break;

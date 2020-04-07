@@ -123,6 +123,9 @@
 #define plug_skew           SIZEOF_OBJHEADER
 #define min_obj_size        (sizeof(BYTE*)+plug_skew+sizeof(size_t))
 
+extern BOOL CallStatus;
+
+
 #ifndef NT_SUCCESS
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 #endif

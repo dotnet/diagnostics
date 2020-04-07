@@ -26,7 +26,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private readonly ServiceProvider _serviceProvider;
         private readonly ConsoleProvider _consoleProvider;
         private readonly CommandProcessor _commandProcessor;
-        private bool _isDesktop;
         private string _dacFilePath;
 
         /// <summary>
@@ -42,7 +41,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
             _serviceProvider = new ServiceProvider();
             _consoleProvider = new ConsoleProvider();
-            _commandProcessor = new CommandProcessor(_serviceProvider, _consoleProvider, new Assembly[] { typeof(Analyzer).Assembly });
+            Type type = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? typeof(SOSCommandForWindows) : typeof(SOSCommand);
+            _commandProcessor = new CommandProcessor(_serviceProvider, _consoleProvider, new Assembly[] { typeof(Analyzer).Assembly }, new Type[] { type });
         }
 
         public async Task<int> Analyze(FileInfo dump_path, string[] command)
@@ -56,19 +56,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     target = DataTarget.LoadCoreDump(dump_path.FullName);
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                    try
-                    {
-                        target = DataTarget.LoadCoreDump(dump_path.FullName);
-                    }
-                    catch (InvalidDataException)
-                    {
-                        // This condition occurs when we try to load a Windows dump as a Elf core dump.
-                    }
-
-                    if (target == null)
-                    {
-                        target = DataTarget.LoadCrashDump(dump_path.FullName, CrashDumpReader.ClrMD);
-                    }
+                    target = DataTarget.LoadCrashDump(dump_path.FullName, CrashDumpReader.ClrMD);
                 }
                 else {
                     throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
@@ -83,26 +71,13 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     AddServices(target);
 
                     // Automatically enable symbol server support
-                    SymbolReader.InitializeSymbolStore(
-                        logging: false, 
-                        msdl: true,
-                        symweb: false,
-                        tempDirectory: null,
-                        symbolServerPath: null,
-                        timeoutInMinutes: 0,
-                        symbolCachePath: null,
-                        symbolDirectoryPath: null,
-                        windowsSymbolPath: null);
+                    SymbolReader.InitializeSymbolStore(logging: false, msdl: true, symweb: false, tempDirectory: null, symbolServerPath: null, symbolCachePath: null, symbolDirectoryPath: null, windowsSymbolPath: null);
 
                     // Run the commands from the dotnet-dump command line
                     if (command != null)
                     {
-                        foreach (string cmd in command)
-                        {
+                        foreach (string cmd in command) {
                             await _commandProcessor.Parse(cmd);
-
-                            if (_consoleProvider.Shutdown)
-                                break;
                         }
                     }
 
@@ -158,7 +133,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             _serviceProvider.AddServiceFactory(typeof(SOSHost), () => {
                 var sosHost = new SOSHost(_serviceProvider);
-                sosHost.InitializeSOSHost(SymbolReader.TempDirectory, _isDesktop, _dacFilePath, dbiFilePath: null);
+                sosHost.InitializeSOSHost(SymbolReader.TempDirectory, _dacFilePath, dbiFilePath: null);
                 return sosHost;
             });
         }
@@ -168,40 +143,15 @@ namespace Microsoft.Diagnostics.Tools.Dump
         /// </summary>
         private ClrRuntime CreateRuntime(DataTarget target)
         {
-            ClrInfo clrInfo = null;
-
-            // First check if there is a .NET Core runtime loaded
-            foreach (ClrInfo clr in target.ClrVersions)
-            {
-                if (clr.Flavor == ClrFlavor.Core)
-                {
-                    clrInfo = clr;
-                    break;
-                }
-            }
-            // If no .NET Core runtime, then check for desktop runtime
-            if (clrInfo == null)
-            {
-                foreach (ClrInfo clr in target.ClrVersions)
-                {
-                    if (clr.Flavor == ClrFlavor.Desktop)
-                    {
-                        clrInfo = clr;
-                        break;
-                    }
-                }
-            }
-            if (clrInfo == null) {
-                throw new InvalidOperationException("No CLR runtime is present");
-            }
             ClrRuntime runtime;
+            if (target.ClrVersions.Count != 1) {
+                throw new InvalidOperationException("More or less than 1 CLR version is present");
+            }
+            ClrInfo clrInfo = target.ClrVersions[0];
             string dacFilePath = GetDacFile(clrInfo);
             try
             {
-                // Ignore the DAC version mismatch that can happen on Linux because the clrmd ELF dump 
-                // reader returns 0.0.0.0 for the runtime module that the DAC is matched against. This
-                // will be fixed in clrmd 2.0 but not 1.1.
-                runtime = clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: clrInfo.ModuleInfo.BuildId != null);
+                runtime = clrInfo.CreateRuntime(dacFilePath);
             }
             catch (DllNotFoundException ex)
             {
@@ -222,69 +172,44 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private string GetDacFile(ClrInfo clrInfo)
         {
             if (_dacFilePath == null)
-            {            
-                Debug.Assert(!string.IsNullOrEmpty(clrInfo.DacInfo.FileName));
-                var analyzeContext = _serviceProvider.GetService<AnalyzeContext>();
-                string dacFilePath = null;
-                if (!string.IsNullOrEmpty(analyzeContext.RuntimeModuleDirectory))
+            {
+                string dac = clrInfo.LocalMatchingDac;
+                if (dac != null && File.Exists(dac))
                 {
-                    dacFilePath = Path.Combine(analyzeContext.RuntimeModuleDirectory, clrInfo.DacInfo.FileName);
-                    if (File.Exists(dacFilePath))
-                    {
-                        _dacFilePath = dacFilePath;
-                    }
+                    _dacFilePath = dac;
                 }
-                if (_dacFilePath == null)
+                else if (SymbolReader.IsSymbolStoreEnabled())
                 {
-                    dacFilePath = clrInfo.LocalMatchingDac;
-                    if (!string.IsNullOrEmpty(dacFilePath) && File.Exists(dacFilePath))
+                    string dacFileName = Path.GetFileName(dac ?? clrInfo.DacInfo.FileName);
+                    if (dacFileName != null)
                     {
-                        _dacFilePath = dacFilePath;
-                    }
-                    else if (SymbolReader.IsSymbolStoreEnabled())
-                    {
-                        string dacFileName = Path.GetFileName(dacFilePath ?? clrInfo.DacInfo.FileName);
-                        if (dacFileName != null)
+                        SymbolStoreKey key = null;
+
+                        if (clrInfo.ModuleInfo.BuildId != null)
                         {
-                            SymbolStoreKey key = null;
+                            IEnumerable<SymbolStoreKey> keys = ELFFileKeyGenerator.GetKeys(
+                                KeyTypeFlags.ClrKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId, symbolFile: false, symbolFileName: null);
 
-                            if (clrInfo.ModuleInfo.BuildId != null)
-                            {
-                                IEnumerable<SymbolStoreKey> keys = ELFFileKeyGenerator.GetKeys(
-                                    KeyTypeFlags.ClrKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId, symbolFile: false, symbolFileName: null);
+                            key = keys.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
+                        }
+                        else
+                        {
+                            // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
+                            key = PEFileKeyGenerator.GetKey(dacFileName, clrInfo.ModuleInfo.TimeStamp, clrInfo.ModuleInfo.FileSize);
+                        }
 
-                                key = keys.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
-
-                                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                                {
-                                    // We are opening a Linux dump on Windows
-                                    // We need to use the Windows index and filename
-                                    key = new SymbolStoreKey(key.Index.Replace("libmscordaccore.so", "mscordaccore.dll"),
-                                                             key.FullPathName.Replace("libmscordaccore.so", "mscordaccore.dll"),
-                                                             key.IsClrSpecialFile,
-                                                             key.PdbChecksums);
-                                }
-                            }
-                            else
-                            {
-                                // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
-                                key = PEFileKeyGenerator.GetKey(dacFileName, clrInfo.ModuleInfo.TimeStamp, clrInfo.ModuleInfo.FileSize);
-                            }
-
-                            if (key != null)
-                            {
-                                // Now download the DAC module from the symbol server
-                                _dacFilePath = SymbolReader.GetSymbolFile(key);
-                            }
+                        if (key != null)
+                        {
+                            // Now download the DAC module from the symbol server
+                            _dacFilePath = SymbolReader.GetSymbolFile(key);
                         }
                     }
-
-                    if (_dacFilePath == null)
-                    {
-                        throw new FileNotFoundException($"Could not find matching DAC for this runtime: {clrInfo.ModuleInfo.FileName}");
-                    }
                 }
-                _isDesktop = clrInfo.Flavor == ClrFlavor.Desktop;
+
+                if (_dacFilePath == null)
+                {
+                    throw new FileNotFoundException("Could not find matching DAC for this runtime: {0}", clrInfo.ModuleInfo.FileName);
+                }
             }
             return _dacFilePath;
         }

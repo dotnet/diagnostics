@@ -13,14 +13,13 @@ using Microsoft.Diagnostics.Tracing.Stacks.Formats;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal enum TraceFileFormat { NetTrace, Speedscope, Chromium };
+    internal enum TraceFileFormat { NetTrace, Speedscope };
 
     internal static class TraceFileFormatConverter
     {
-        private static IReadOnlyDictionary<TraceFileFormat, string> TraceFileFormatExtensions = new Dictionary<TraceFileFormat, string>() {
+        private static Dictionary<TraceFileFormat, string> TraceFileFormatExtensions = new Dictionary<TraceFileFormat, string>() {
             { TraceFileFormat.NetTrace,     "nettrace" },
-            { TraceFileFormat.Speedscope,   "speedscope.json" },
-            { TraceFileFormat.Chromium,     "chromium.json" }
+            { TraceFileFormat.Speedscope,   "speedscope.json" }
         };
 
         public static void ConvertToFormat(TraceFileFormat format, string fileToConvert, string outputFilename = "")
@@ -36,10 +35,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 case TraceFileFormat.NetTrace:
                     break;
                 case TraceFileFormat.Speedscope:
-                case TraceFileFormat.Chromium:
                     try
                     {
-                        Convert(format, fileToConvert, outputFilename);
+                        ConvertToSpeedscope(fileToConvert, outputFilename);
                     }
                     // TODO: On a broken/truncated trace, the exception we get from TraceEvent is a plain System.Exception type because it gets caught and rethrown inside TraceEvent.
                     // We should probably modify TraceEvent to throw a better exception.
@@ -48,7 +46,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         if (ex.ToString().Contains("Read past end of stream."))
                         {
                             Console.WriteLine("Detected a potentially broken trace. Continuing with best-efforts to convert the trace, but resulting speedscope file may contain broken stacks as a result.");
-                            Convert(format, fileToConvert, outputFilename, true);
+                            ConvertToSpeedscope(fileToConvert, outputFilename, true);
                         }
                         else
                         {
@@ -63,10 +61,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console.Out.WriteLine("Conversion complete");
         }
 
-        private static void Convert(TraceFileFormat format, string fileToConvert, string outputFilename, bool continueOnError=false)
+        private static void ConvertToSpeedscope(string fileToConvert, string outputFilename, bool continueOnError=false)
         {
             var etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert, null, new TraceLogOptions() { ContinueOnError = continueOnError } );
-            using (var symbolReader = new SymbolReader(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
+            using (var symbolReader = new SymbolReader(System.IO.TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
             using (var eventLog = new TraceLog(etlxFilePath))
             {
                 var stackSource = new MutableTraceEventStackSource(eventLog)
@@ -74,30 +72,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     OnlyManagedCodeStacks = true // EventPipe currently only has managed code stacks.
                 };
 
-                var computer = new SampleProfilerThreadTimeComputer(eventLog, symbolReader)
-                {
-                    IncludeEventSourceEvents = false // SpeedScope handles only CPU samples, events are not supported
-                };
+                var computer = new SampleProfilerThreadTimeComputer(eventLog, symbolReader);
                 computer.GenerateThreadTimeStacks(stackSource);
 
-                switch (format)
-                {
-                    case TraceFileFormat.Speedscope:
-                        SpeedScopeStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename);
-                        break;
-                    case TraceFileFormat.Chromium:
-                        ChromiumStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename, compress: false);
-                        break;
-                    default:
-                        // we should never get here
-                        throw new ArgumentException($"Invalid TraceFileFormat \"{format}\"");
-                }
+                SpeedScopeStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename);
             }
 
             if (File.Exists(etlxFilePath))
             {
                 File.Delete(etlxFilePath);
             }
+            
         }
     }
 }

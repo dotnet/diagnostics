@@ -12,7 +12,6 @@
     <SOSPackagePathPrefix>tools</SOSPackagePathPrefix>
     <GalleryManifestName>$(ArtifactsPackagesDir)\GalleryManifest.xml</GalleryManifestName>
     <BeforePack>GenerateGalleryZip;GenerateSymbolsZip</BeforePack>
-    <IsShippingPackage>false</IsShippingPackage>
   </PropertyGroup>
 
   <ItemGroup>
@@ -42,7 +41,6 @@
                 <File Architecture="amd64" Module="win-x64\sos.dll" />
                 <File Architecture="x86"   Module="win-x86\sos.dll" />
                 <File Architecture="arm32" Module="win-arm\sos.dll" />
-                <File Architecture="arm64" Module="win-arm64\sos.dll" />
             </Files>
             <LoadTriggers>
                 <TriggerSet>
@@ -75,7 +73,7 @@
     <PropertyGroup>
       <GalleryDir>$(ArtifactsBinDir)\gallery</GalleryDir>
       <GallerySubDir>$(GalleryDir)\$(FileVersion)</GallerySubDir>
-      <SOSNETCorePath>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netstandard2.0\publish</SOSNETCorePath>
+      <SOSNETCorePath>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\$(TargetFramework)\publish</SOSNETCorePath>
     </PropertyGroup>
 
     <ItemGroup>
@@ -112,18 +110,6 @@
       <ZipSourceFiles Include="$(SOSNETCorePath)\*.dll">
          <TargetPath>$(GallerySubDir)\win-arm</TargetPath>
       </ZipSourceFiles>
-
-      <ZipSourceFiles Include="$(ArtifactsBinDir)Windows_NT.arm64.$(Configuration)\sos.dll">
-         <TargetPath>$(GallerySubDir)\win-arm64</TargetPath>
-      </ZipSourceFiles>
-      <!-- Commented out until issue https://github.com/dotnet/diagnostics/issues/324 is addressed
-      <ZipSourceFiles Include="$(ArtifactsBinDir)Windows_NT.arm64.$(Configuration)\Microsoft.DiaSymReader.Native.arm64.dll">
-         <TargetPath>$(GallerySubDir)\win-arm64</TargetPath>
-      </ZipSourceFiles>
-       -->
-      <ZipSourceFiles Include="$(SOSNETCorePath)\*.dll">
-         <TargetPath>$(GallerySubDir)\win-arm64</TargetPath>
-      </ZipSourceFiles>
     </ItemGroup>
 
     <Copy SourceFiles="@(ZipSourceFiles)" DestinationFolder="%(ZipSourceFiles.TargetPath)" />
@@ -151,10 +137,6 @@
 
       <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.arm.$(Configuration)\sos.pdb">
          <TargetPath>$(SymbolsDir)\win-arm</TargetPath>
-      </ZipSymbolFiles>
-
-      <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.arm64.$(Configuration)\sos.pdb">
-         <TargetPath>$(SymbolsDir)\win-arm64</TargetPath>
       </ZipSymbolFiles>
     </ItemGroup>
 

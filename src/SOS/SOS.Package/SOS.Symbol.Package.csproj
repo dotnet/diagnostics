@@ -27,9 +27,6 @@
     <None Include="$(ArtifactsBinDir)\Windows_NT.arm.$(Configuration)\sos.pdb" Pack="true" Visible="false">
       <PackagePath>$(SOSPackagePathPrefix)/win-arm</PackagePath>
     </None>
-    <None Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\sos.pdb" Pack="true" Visible="false">
-      <PackagePath>$(SOSPackagePathPrefix)/win-arm64</PackagePath>
-    </None>
 
     <None Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false">
       <PackagePath>$(SOSPackagePathPrefix)/linux-x64</PackagePath>

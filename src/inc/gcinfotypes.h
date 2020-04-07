@@ -11,8 +11,8 @@
 #endif
 
 // ******************************************************************************
-// WARNING!!!: This header is also used by the runtime repo.
-// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/inc/gcinfotypes.h
+// WARNING!!!: This header is also used by the coreclr repo.
+// See: https://github.com/dotnet/coreclr/blob/master/src/inc/gcinfotypes.h
 // ******************************************************************************
 
 #define PARTIALLY_INTERRUPTIBLE_GC_SUPPORTED

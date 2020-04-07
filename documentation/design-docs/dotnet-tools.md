@@ -1,4 +1,4 @@
-# Dotnet Diagnostic Tools CLI Design
+﻿# Dotnet Diagnostic Tools CLI Design
 
 ## User workflows
 
@@ -632,7 +632,6 @@ OPTIONS
 COMMANDS
 
     collect   Capture dumps from a process
-    report    Generate report into stdout from a previously generated gcdump or from a running process.
 
 COLLECT
 
@@ -663,49 +662,6 @@ Examples:
     Writing gcdump to file ./20190226_135837_1902.gcdump
     Wrote 12576 bytes to file
     Complete
-
-REPORT
-
-    dotnet-gcdump report <gcdump_filename>
-    
-    Generate report into stdout from a previously generated gcdump or from a running process.
-    
-    Usage:
-      dotnet-gcdump report [options] [<gcdump_filename>]
-
-    Arguments:
-      <gcdump_filename>  The file to read gcdump from.
-  
-    Options:
-      -p, --process-id   The process id to collect the trace.
-      -t, --report-type  The type of report to generate. Available options: heapstat (default)
-
-Examples:
-
-    $ dotnet gcdump report 20200207_094403_19847.gcdump
-      4,786,378  GC Heap bytes
-         63,201  GC Heap objects
-
-    Object Bytes     Count  Type
-         131,096         1  System.Byte[] (Bytes > 100K)  [System.Private.CoreLib.dll]
-          57,756         1  System.String (Bytes > 10K)  [System.Private.CoreLib.dll]
-          31,128         1  System.Int32[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-          28,605         5  System.Byte[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-          22,432         9  System.Object[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-    ...
-
-    $ dotnet gcdump report -p 1752 | head -9
-      1,302,804  GC Heap bytes
-         16,211  GC Heap objects
-         27,858  Total references
-
-    Object Bytes     Count  Type
-          31,128         1  System.Int32[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-          24,468         1  System.String (Bytes > 10K)  [System.Private.CoreLib.dll]
-          12,800         3  System.Object[] (Bytes > 10K)  [System.Private.CoreLib.dll]
-           7,904         1  Entry<System.String,System.Drawing.Color>[] (Bytes > 1K)  [System.Private.CoreLib.dll]
-           7,074         4  System.String (Bytes > 1K)  [System.Private.CoreLib.dll]
-    ...
 
 ## Future suggestions
 
@@ -1263,7 +1219,7 @@ d
     -g
     Run as a native debugger in a managed process (no interop).
     -h
-    Write dump if process has an unresponsive window (does not respond to window messages for at least 5 seconds).
+    Write dump if process has a hung window (does not respond to window messages for at least 5 seconds).
     -i
     Install ProcDump as the AeDebug postmortem debugger. Only -ma, -mp, -d and -r are supported as additional options.
     -l

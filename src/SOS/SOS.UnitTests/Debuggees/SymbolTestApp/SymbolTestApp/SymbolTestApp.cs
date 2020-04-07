@@ -51,7 +51,7 @@ namespace SymbolTestApp
 #endif
             Type dllType = assembly.GetType("SymbolTestDll.TestClass");
             MethodInfo dllMethod = dllType.GetMethod("ThrowException");
-            dllMethod.Invoke(null, new object[] { "This is the exception message" });
+            dllMethod.Invoke(null, null);
         }
     }
 }
