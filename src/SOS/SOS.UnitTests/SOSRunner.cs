@@ -544,8 +544,6 @@ public class SOSRunner : IDisposable
                     {
                         throw new ArgumentException("No DotNetDumpHost in configuration");
                     }
-                    initialCommands.Add("setsymbolserver -directory %DEBUG_ROOT%");
-
                     // Add the path to runtime so dotnet-dump/SOS can find DAC/DBI for triage dumps
                     if (information.DumpType == DumpType.Triage)
                     {
@@ -555,6 +553,7 @@ public class SOSRunner : IDisposable
                             initialCommands.Add("setclrpath " + runtimeSymbolsPath);
                         }
                     }
+                    initialCommands.Add("setsymbolserver -directory %DEBUG_ROOT%");
                     arguments.Append(debuggerPath);
                     arguments.Append(@" analyze %DUMP_NAME%");
                     debuggerPath = config.DotNetDumpHost();
