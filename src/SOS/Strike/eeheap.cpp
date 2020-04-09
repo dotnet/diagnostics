@@ -527,7 +527,7 @@ void GCPrintLargeHeapSegmentInfo(const DacpGcHeapDetails &heap, DWORD_PTR &total
         ExtOut("%p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n", SOS_PTR(dwAddrSeg),
                  SOS_PTR(segment.mem), SOS_PTR(segment.allocated),
                  (ULONG_PTR)(segment.allocated - segment.mem),
-                 segment.allocated - segment.mem);
+                 (ULONG_PTR)(segment.allocated - segment.mem));
         total_size += (DWORD_PTR) (segment.allocated - segment.mem);
         dwAddrSeg = (DWORD_PTR)segment.next;
     }
