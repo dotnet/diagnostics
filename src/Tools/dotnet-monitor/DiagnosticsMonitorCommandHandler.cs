@@ -2,14 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Diagnostics.Monitoring;
-using Microsoft.Diagnostics.Monitoring.LogAnalytics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,71 +49,37 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             }
         }
 
-        public async Task<int> Start(CancellationToken token, IConsole console, int processId, int refreshInterval, SinkType sink, IEnumerable<FileInfo> jsonConfigs, IEnumerable<FileInfo> keyFileConfigs)
+        public async Task<int> Start(CancellationToken token, IConsole console, ushort port)
         {
             //CONSIDER The console sink uses the standard AddConsole, and therefore disregards IConsole.
-
-            ServiceCollection services = new ServiceCollection();
-            ConfigurationBuilder builder = new ConfigurationBuilder();
-
-            if (jsonConfigs != null)
-            {
-                foreach (FileInfo jsonFile in jsonConfigs)
-                {
-                    builder.SetBasePath(jsonFile.DirectoryName).AddJsonFile(jsonFile.Name, optional: true);
-                }
-            }
-            if (keyFileConfigs != null)
-            {
-                foreach (FileInfo keyFileConfig in keyFileConfigs)
-                {
-                    console.Out.WriteLine(keyFileConfig.FullName);
-                    builder.AddKeyPerFile(keyFileConfig.FullName, optional: true);
-                }
-            }
-
-            ConfigureNames(builder);
-
-            IConfigurationRoot config = builder.Build();
-            services.AddSingleton<IConfiguration>(config);
-
-            //Specialized logger for diagnostic output from the service itself rather than as a sink for the data
-            services.AddSingleton<ILogger<DiagnosticsMonitor>>((sp) => new ConsoleLoggerAdapter(console));
-
-            if (sink.HasFlag(SinkType.Console))
-            {
-                services.AddSingleton<IMetricsLogger, ConsoleMetricsLogger>();
-            }
-            if (sink.HasFlag(SinkType.LogAnalytics))
-            {
-                services.AddSingleton<IMetricsLogger, MetricsLogger>();
-            }
-
-            services.AddLogging(builder =>
-                {
-                    if (sink.HasFlag(SinkType.Console))
-                    {
-                        builder.AddConsole();
-                    }
-                    if (sink.HasFlag(SinkType.LogAnalytics))
-                    {
-                        builder.AddProvider(new LogAnalyticsLoggerProvider());
-                    }
-                });
-            services.Configure<ContextConfiguration>(config);
-            if (sink.HasFlag(SinkType.LogAnalytics))
-            {
-                services.Configure<MetricsConfiguration>(config);
-                services.Configure<ResourceConfiguration>(config);
-            }
-
-            await using var monitor = new DiagnosticsMonitor(services.BuildServiceProvider(), new MonitoringSourceConfiguration(refreshInterval));
-            await monitor.ProcessEvents(processId, token);
-
+            using IWebHost host = CreateWebHostBuilder(console, port).Build();
+            await host.RunAsync(token);
             return 0;
         }
 
-        private void ConfigureNames(IConfigurationBuilder builder)
+        public IWebHostBuilder CreateWebHostBuilder(IConsole console, ushort port)
+        {
+            IWebHostBuilder builder = WebHost.CreateDefaultBuilder()
+                .ConfigureAppConfiguration((IConfigurationBuilder builder) =>
+                {
+                    ConfigureNames(builder);
+                })
+                .ConfigureServices((WebHostBuilderContext context, IServiceCollection services) =>
+                {
+                    //TODO Many of these service additions should be done through extension methods
+                    services.AddSingleton<IDiagnosticServices, DiagnosticServices>();
+
+                    //Specialized logger for diagnostic output from the service itself rather than as a sink for the data
+                    services.AddSingleton<ILogger<DiagnosticsMonitor>>((sp) => new ConsoleLoggerAdapter(console));
+                    services.Configure<ContextConfiguration>(context.Configuration);
+                })
+                .UseUrls(FormattableString.Invariant($"http://localhost:{port}"), FormattableString.Invariant($"https://localhost:{port + 1}"))
+                .UseStartup<Startup>();
+
+            return builder;
+        }
+
+        private static void ConfigureNames(IConfigurationBuilder builder)
         {
             string hostName = Environment.GetEnvironmentVariable("HOSTNAME");
             if (string.IsNullOrEmpty(hostName))
@@ -121,7 +89,11 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             string namespaceName = null;
             try
             {
-                namespaceName = File.ReadAllText(@"/var/run/secrets/kubernetes.io/serviceaccount/namespace");
+                string nsFile = @"/var/run/secrets/kubernetes.io/serviceaccount/namespace";
+                if (File.Exists(nsFile))
+                {
+                    namespaceName = File.ReadAllText(nsFile);
+                }
             }
             catch
             {
