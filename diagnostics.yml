@@ -144,6 +144,20 @@ stages:
                 _BuildArch: arm64
                 _PublishArtifacts: bin/Linux.arm64.Release
 
+      - template: /eng/build.yml
+        parameters:
+          name: Alpine3_6_cross64
+          osGroup: Linux
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-alpine-406629a-20200127195039
+          crossrootfsDir: '/crossrootfs/arm64'
+          strategy:
+            matrix:
+              Build_Release:
+                _BuildOnly: true
+                _BuildConfig: Release
+                _BuildArch: arm64
+                _PublishArtifacts: bin/Linux.arm64.Release
+
 
       ############################
       #                          #
@@ -269,6 +283,7 @@ stages:
             - MacOS
             - Linux_cross
             - Linux_cross64
+            - Alpine3_6_cross64
             condition: succeeded()
             pool:
               name: NetCoreInternal-Pool
@@ -351,6 +366,15 @@ stages:
               inputs:
                 artifactName: Linux_cross64_arm64_Release
                 targetPath: '$(Build.SourcesDirectory)/artifacts/bin/Linux.arm64.Release'
+              condition: succeeded()
+
+            # Linux MUSL arm64 download
+
+            - task: DownloadPipelineArtifact@2
+              displayName: Download Linux Musl arm64 Artifacts
+              inputs:
+                artifactName: Alpine3_6_cross64_arm64_Release
+                targetPath: '$(Build.SourcesDirectory)/artifacts/bin/Linux-musl.arm64.Release'
               condition: succeeded()
 
             # MacOS download
