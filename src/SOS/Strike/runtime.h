@@ -5,6 +5,8 @@
 #ifndef __runtime_h__
 #define __runtime_h__
 
+#include <runtimeinfo.h>
+
 #ifdef FEATURE_PAL
 
 #define NETCORE_DAC_MODULE_NAME_W       MAKEDLLNAME_W(W("mscordaccore"))
@@ -44,10 +46,10 @@ class IRuntime
 public:
     enum RuntimeConfiguration
     {
-        WindowsDesktop,
-        WindowsCore,
-        UnixCore,
-        OSXCore,
+        WindowsDesktop      = 0,
+        WindowsCore         = 1,
+        UnixCore            = 2,
+        OSXCore             = 3,
         ConfigurationEnd,
 #ifdef FEATURE_PAL
 #ifdef __APPLE__
@@ -91,6 +93,9 @@ public:
     virtual void DisplayStatus() = 0;
 };
 
+extern LPCSTR g_runtimeModulePath;
+extern IRuntime* g_pRuntime;
+
 // Returns the runtime configuration as a string
 inline static const char* GetRuntimeConfigurationName(IRuntime::RuntimeConfiguration config)
 {
@@ -132,9 +137,29 @@ inline static const char* GetRuntimeModuleName(IRuntime::RuntimeConfiguration co
 #endif
 }
 
-extern LPCSTR g_runtimeModulePath;
-extern IRuntime* g_pRuntime;
+// Returns the runtime module name (clr, coreclr, libcoreclr.so, libcoreclr.dylib).
+inline const char* GetRuntimeModuleName()
+{
+    return GetRuntimeModuleName(g_pRuntime->GetRuntimeConfiguration());
+}
 
+// Returns the runtime module DLL name (clr.dll, coreclr.dll, libcoreclr.so, libcoreclr.dylib)
+inline const char* GetRuntimeDllName()
+{
+    return GetRuntimeDllName(g_pRuntime->GetRuntimeConfiguration());
+}
+
+// Returns the DAC module name (mscordacwks, mscordaccore, libmscordaccore.so, libmscordaccore.dylib) 
+inline const char* GetDacModuleName()
+{
+    return (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop) ? DESKTOP_DAC_MODULE_NAME_A : NETCORE_DAC_MODULE_NAME_A;
+}
+
+// Returns the DAC module name (mscordacwks.dll, mscordaccore.dll, libmscordaccore.so, libmscordaccore.dylib) 
+inline const char* GetDacDllName()
+{
+    return (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop) ? DESKTOP_DAC_DLL_NAME_A : NETCORE_DAC_DLL_NAME_A;
+}
 
 inline bool IsWindowsTarget(IRuntime::RuntimeConfiguration config)
 {
@@ -146,7 +171,6 @@ inline bool IsWindowsTarget()
     return IsWindowsTarget(g_pRuntime->GetRuntimeConfiguration());
 }
 
-
 /**********************************************************************\
  * Local Runtime interface implementation
 \**********************************************************************/
@@ -157,6 +181,7 @@ private:
     ULONG m_index;
     ULONG64 m_address;
     ULONG64 m_size;
+    RuntimeInfo* m_runtimeInfo;
     LPCSTR m_runtimeDirectory;
     LPCSTR m_dacFilePath;
     LPCSTR m_dbiFilePath;
@@ -171,11 +196,12 @@ private:
     static LPCSTR s_dacFilePath;
     static LPCSTR s_dbiFilePath;
 
-    Runtime(RuntimeConfiguration configuration,ULONG index, ULONG64 address, ULONG64 size) :
+    Runtime(RuntimeConfiguration configuration, ULONG index, ULONG64 address, ULONG64 size, RuntimeInfo* runtimeInfo) :
         m_configuration(configuration),
         m_index(index),
         m_address(address),
         m_size(size),
+        m_runtimeInfo(runtimeInfo),
         m_runtimeDirectory(nullptr),
         m_dacFilePath(nullptr),
         m_dbiFilePath(nullptr),
@@ -194,8 +220,6 @@ private:
     virtual Runtime::~Runtime();
 
     static HRESULT CreateInstance(RuntimeConfiguration configuration, Runtime** ppRuntime);
-
-    HRESULT GetRuntimeDirectory(std::string& runtimeDirectory);
 
     void LoadRuntimeModules();
 
@@ -286,29 +310,5 @@ public:
         return (GetRuntimeConfiguration() == IRuntime::WindowsDesktop) ? DESKTOP_DAC_DLL_NAME_W : NETCORE_DAC_DLL_NAME_W;
     }
 };
-
-// Returns the runtime module name (clr, coreclr, libcoreclr.so, libcoreclr.dylib).
-inline const char* GetRuntimeModuleName()
-{
-    return GetRuntimeModuleName(g_pRuntime->GetRuntimeConfiguration());
-}
-
-// Returns the runtime module DLL name (clr.dll, coreclr.dll, libcoreclr.so, libcoreclr.dylib)
-inline const char* GetRuntimeDllName()
-{
-    return GetRuntimeDllName(g_pRuntime->GetRuntimeConfiguration());
-}
-
-// Returns the DAC module name (mscordacwks, mscordaccore, libmscordaccore.so, libmscordaccore.dylib) 
-inline const char* GetDacModuleName()
-{
-    return (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop) ? DESKTOP_DAC_MODULE_NAME_A : NETCORE_DAC_MODULE_NAME_A;
-}
-
-// Returns the DAC module name (mscordacwks.dll, mscordaccore.dll, libmscordaccore.so, libmscordaccore.dylib) 
-inline const char* GetDacDllName()
-{
-    return (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop) ? DESKTOP_DAC_DLL_NAME_A : NETCORE_DAC_DLL_NAME_A;
-}
 
 #endif // __runtime_h__

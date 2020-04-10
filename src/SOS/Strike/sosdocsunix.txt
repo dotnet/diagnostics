@@ -1602,16 +1602,16 @@ help.
 COMMAND: gcwhere.
 GCWhere <object address>
 
-!GCWhere displays the location in the GC heap of the argument passed in.
+GCWhere displays the location in the GC heap of the argument passed in.
 
-    0:002> !GCWhere 02800038  
+    0:002> sos GCWhere 02800038  
     Address  Gen Heap segment  begin    allocated size
     02800038 2    0   02800000 02800038 0282b740  12
 
 When the argument lies in the managed heap, but is not a valid *object* address 
 the "size" is displayed as 0:
 
-    0:002> !GCWhere 0280003c
+    0:002> sos GCWhere 0280003c
     Address  Gen Heap segment  begin    allocated size
     0280003c 2    0   02800000 02800038 0282b740  0
 \\
@@ -1791,7 +1791,7 @@ reference the object:
 COMMAND: histroot.
 HistRoot <root>
 
-The root value obtained from !HistObjFind can be used to track the movement of 
+The root value obtained from sos HistObjFind can be used to track the movement of 
 an object through the GCs.
 
 HistRoot provides information related to both promotions and relocations of the 
@@ -1954,7 +1954,7 @@ Display internal SOS status or reset the internal cached state.
 \\
 
 COMMAND: setclrpath.
-!setclrpath <path-to-runtime>
+setclrpath <path-to-runtime>
 
 Sets the path to load the runtime DAC/DBI files. This command may be necessary for dumps that were created
 on another machine or for triage dumps.

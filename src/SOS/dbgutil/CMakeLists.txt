@@ -1,16 +1,32 @@
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
 if(WIN32)
-  #use static crt
-  add_definitions(-MT)
+    include_directories(${ROOT_DIR}/src/inc/llvm)
+    #use static crt
+    add_definitions(-MT)
 endif(WIN32)
 
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
+add_definitions(-DPAL_STDCPP_COMPAT)
 
 set(DBGUTIL_SOURCES
     dbgutil.cpp
 )
 
+if(NOT DEFINED CLR_CMAKE_PLATFORM_DARWIN)
+    list(APPEND DBGUTIL_SOURCES
+        elfreader.cpp
+    )
+endif(NOT DEFINED CLR_CMAKE_PLATFORM_DARWIN)
+
+if(CLR_CMAKE_PLATFORM_ALPINE_LINUX)
+    add_definitions(-DTARGET_ALPINE_LINUX)
+endif(CLR_CMAKE_PLATFORM_ALPINE_LINUX)
+
 if(CLR_CMAKE_PLATFORM_UNIX)
+    add_definitions(-DHOST_UNIX)
     add_compile_options(-fPIC)
+else(CLR_CMAKE_PLATFORM_UNIX)
+    add_definitions(-DHOST_WINDOWS)
 endif(CLR_CMAKE_PLATFORM_UNIX)
 
 _add_library(dbgutil STATIC ${DBGUTIL_SOURCES})
