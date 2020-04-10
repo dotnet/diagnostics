@@ -242,39 +242,16 @@ while :; do
             __ExtraCmakeArgs="$__ExtraCmakeArgs -DSTRIP_SYMBOLS=true"
             ;;
 
-        -clang3.5)
-            __ClangMajorVersion=3
-            __ClangMinorVersion=5
-            ;;
-
-        -clang3.6)
-            __ClangMajorVersion=3
-            __ClangMinorVersion=6
-            ;;
-
-        -clang3.7)
-            __ClangMajorVersion=3
-            __ClangMinorVersion=7
-            ;;
-
-        -clang3.8)
-            __ClangMajorVersion=3
-            __ClangMinorVersion=8
-            ;;
-
-        -clang3.9)
-            __ClangMajorVersion=3
-            __ClangMinorVersion=9
-            ;;
-
-        -clang4.0)
-            __ClangMajorVersion=4
-            __ClangMinorVersion=0
-            ;;
-
-        -clang5.0)
-            __ClangMajorVersion=5
-            __ClangMinorVersion=0
+        -clang*)
+            __Compiler=clang
+            # clangx.y or clang-x.y
+            version="$(echo "$lowerI" | tr -d '[:alpha:]-=')"
+            parts=(${version//./ })
+            __ClangMajorVersion="${parts[0]}"
+            __ClangMinorVersion="${parts[1]}"
+            if [[ -z "$__ClangMinorVersion" && "$__ClangMajorVersion" -le 6 ]]; then
+                __ClangMinorVersion=0;
+            fi
             ;;
 
         -clean|-binarylog|-bl|-pipelineslog|-pl|-restore|-r|-rebuild|-pack|-integrationtest|-performancetest|-sign|-publish|-preparemachine)
@@ -322,16 +299,6 @@ __DotNetCli=$__ProjectRoot/.dotnet/dotnet
 # This is where all built native libraries will copied to.
 export __CMakeBinDir="$__BinDir"
 
-# Set default clang version
-if [[ $__ClangMajorVersion == 0 && $__ClangMinorVersion == 0 ]]; then
-   if [[ "$__BuildArch" == "arm" || "$__BuildArch" == "armel" ]]; then
-       __ClangMajorVersion=5
-       __ClangMinorVersion=0
-   else
-       __ClangMajorVersion=3
-       __ClangMinorVersion=9
-   fi
-fi
 
 if [[ "$__BuildArch" == "armel" ]]; then
     # Armel cross build is Tizen specific and does not support Portable RID build
@@ -424,6 +391,20 @@ fi
 initTargetDistroRid
 
 echo "RID: $__DistroRid"
+
+# Set default clang version
+if [[ $__ClangMajorVersion == 0 && $__ClangMinorVersion == 0 ]]; then
+   if [[ "$__BuildArch" == "arm" || "$__BuildArch" == "armel" ]]; then
+       __ClangMajorVersion=5
+       __ClangMinorVersion=0
+   elif [[ "$__BuildArch" == "arm64" && "$__DistroRid" == "linux-musl-arm64" ]]; then
+       __ClangMajorVersion=9
+       __ClangMinorVersion=
+   else
+       __ClangMajorVersion=3
+       __ClangMinorVersion=9
+   fi
+fi
 
 #
 # Setup LLDB paths for native build
