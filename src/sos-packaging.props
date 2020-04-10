@@ -104,6 +104,19 @@
     </None>
 
     <None Include="$(SOSNETCoreBinaries)" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/linux-musl-arm64</PackagePath>
+    </None>
+    <None Include="$(ArtifactsBinDir)\Linux-musl.arm64.$(Configuration)\libsosplugin.so" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/linux-musl-arm64</PackagePath>
+    </None>
+    <None Include="$(ArtifactsBinDir)\Linux-musl.arm64.$(Configuration)\libsos.so" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/linux-musl-arm64</PackagePath>
+    </None>
+    <None Include="$(ArtifactsBinDir)\Linux-musl.arm64.$(Configuration)\sosdocsunix.txt" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/linux-musl-arm64</PackagePath>
+    </None>
+
+    <None Include="$(SOSNETCoreBinaries)" Pack="true" Visible="false">
       <PackagePath>$(SOSPackagePathPrefix)/osx-x64</PackagePath>
     </None>
     <None Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib" Pack="true" Visible="false">
