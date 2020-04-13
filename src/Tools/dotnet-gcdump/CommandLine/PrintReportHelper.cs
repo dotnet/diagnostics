@@ -32,8 +32,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             Console.Out.Write("  Type");
             Console.WriteLine();
 
-            var filteredTypes = 
-                GetReportItem(memoryGraph)
+            var filteredTypes = GetReportItem(memoryGraph)
                 .OrderByDescending(t => t.SizeBytes)
                 .ThenByDescending(t => t.Count);
             
