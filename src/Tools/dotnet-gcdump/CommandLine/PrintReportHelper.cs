@@ -50,7 +50,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     Console.Out.Write($"{"",8}  ");
                 }
                     
-                Console.Out.Write(filteredType.TypeName ?? "<null>");
+                Console.Out.Write(filteredType.TypeName ?? "<UNKNOWN>");
                 var dllName = GetDllName(filteredType.ModuleName ?? "");
                 if (!dllName.IsEmpty)
                 {
