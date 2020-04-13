@@ -1,16 +1,16 @@
-# App is hanging
+# App stops responding
 
 **IMPORTANT: This tutorial uses API/methods available in dotnet core preview 5. These API/methods are _subject to change._** 
 
 http://localhost:5000/api/diagscenario/deadlock
 
-In this scenario, the endpoint will experience a hang and substantial thread accumulation. We'll show how you can use both the existing tools to analyze the problem as well as extending the existing tools to create a more automated debug session. 
+In this scenario, the endpoint will experience unresponsiveness and substantial thread accumulation. We'll show how you can use both the existing tools to analyze the problem as well as extending the existing tools to create a more automated debug session. 
 
 ### Memory counters
 As of preview 5, the lock contention and thread counters are not yet available. They are on the backlog to be included in future milestones. The general symptom of this issue is that one or more requests will take a long time to process and ultimately timeout.
 
 ### Core dump generation
-In order to investigate hung applications a memory dump is often beneficial allowing us to inspect the state of all the threads as well as any possible locks that may have contention issues. 
+In order to investigate applications that seem to be making no progress a memory dump is often beneficial allowing us to inspect the state of all the threads as well as any possible locks that may have contention issues. 
 
 
 
@@ -43,7 +43,7 @@ Once we have the process identifier, we can use the dotnet-dump collect tool (sp
 
 
 
-At this point, we have the core dump and the next step is analyzing it to find the root cause of our hanging application. 
+At this point, we have the core dump and the next step is analyzing it to find the root cause of our unresponsive application. 
 
 
 
@@ -58,7 +58,7 @@ To start our investigation, let's open the core dump using dotnet-dump analyze:
 
 
 
-Since we are looking at a potential hang it's useful to first get an overall feel for the thread activity in the process. We can use the threads command as shown below:
+Since we are looking for the root cause of the unresponsiveness, it is often useful to first get an overall feel for the thread state in the process. We can use the threads command as shown below:
 
 
 
@@ -351,8 +351,3 @@ System.Threading.ExecutionContext.RunInternal(System.Threading.ExecutionContext,
 ```
 
 The output shows a large number of threads (with associated thread ID's) that is commonly a good indicator that a threading issue is taking place. 
-
-
-
- 
-

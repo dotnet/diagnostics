@@ -50,6 +50,17 @@ namespace SOS
             public int localsSize;
         }
 
+        /// <summary>
+        /// Matches the IRuntime::RuntimeConfiguration in runtime.h
+        /// </summary>
+        public enum RuntimeConfiguration
+        {
+            WindowsDesktop  = 0,
+            WindowsCore     = 1,
+            UnixCore        = 2,
+            OSXCore         = 3
+        }
+
         private sealed class OpenedReader : IDisposable
         {
             public readonly MetadataReaderProvider Provider;
@@ -253,60 +264,62 @@ namespace SOS
         }
 
         /// <summary>
-        /// Load native symbols and modules (i.e. dac, dbi).
+        /// Load native symbols and modules (i.e. DAC, DBI).
         /// </summary>
         /// <param name="callback">called back for each symbol file loaded</param>
         /// <param name="parameter">callback parameter</param>
+        /// <param name="config">Target configuration: Windows, Linux or OSX</param>
         /// <param name="moduleFilePath">module path</param>
         /// <param name="address">module base address</param>
         /// <param name="size">module size</param>
         /// <param name="readMemory">read memory callback delegate</param>
-        public static void LoadNativeSymbols(SymbolFileCallback callback, IntPtr parameter, string moduleFilePath, ulong address, int size, ReadMemoryDelegate readMemory)
+        public static void LoadNativeSymbols(
+            SymbolFileCallback callback,
+            IntPtr parameter,
+            RuntimeConfiguration config,
+            string moduleFilePath,
+            ulong address,
+            int size,
+            ReadMemoryDelegate readMemory)
         {
             if (IsSymbolStoreEnabled())
             {
                 Stream stream = new TargetStream(address, size, readMemory);
-                KeyTypeFlags flags = KeyTypeFlags.SymbolKey | KeyTypeFlags.ClrKeys;
                 KeyGenerator generator = null;
 
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                switch (config)
                 {
-                    var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
-                    generator = new ELFFileKeyGenerator(s_tracer, elfFile, moduleFilePath);
-                }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                {
-                    var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
-                    generator = new MachOFileKeyGenerator(s_tracer, machOFile, moduleFilePath);
-                }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    var peFile = new PEFile(new StreamAddressSpace(stream), true);
-                    generator = new PEFileKeyGenerator(s_tracer, peFile, moduleFilePath);
-                }
-                else {
-                    return;
+                    case RuntimeConfiguration.UnixCore:
+                        var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
+                        generator = new ELFFileKeyGenerator(s_tracer, elfFile, moduleFilePath);
+                        break;
+                    case RuntimeConfiguration.OSXCore:
+                        var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
+                        generator = new MachOFileKeyGenerator(s_tracer, machOFile, moduleFilePath);
+                        break;
+                    case RuntimeConfiguration.WindowsCore:
+                    case RuntimeConfiguration.WindowsDesktop:
+                        var peFile = new PEFile(new StreamAddressSpace(stream), true);
+                        generator = new PEFileKeyGenerator(s_tracer, peFile, moduleFilePath);
+                        break;
+                    default:
+                        s_tracer.Error("Unsupported platform {0}", config);
+                        return;
                 }
 
                 try
                 {
-                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(flags);
+                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.SymbolKey | KeyTypeFlags.DacDbiKeys);
                     foreach (SymbolStoreKey key in keys)
                     {
                         string moduleFileName = Path.GetFileName(key.FullPathName);
                         s_tracer.Verbose("{0} {1}", key.FullPathName, key.Index);
 
-                        // Don't download the sos binaries that come with the runtime
-                        if (!IsPathEqual(moduleFileName, "SOS.NETCore.dll") && 
-                            !IsPathEqual(moduleFileName, "sos.dll") && 
-                            !moduleFileName.StartsWith("libsos."))
+                        string downloadFilePath = GetSymbolFile(key);
+                        if (downloadFilePath != null)
                         {
-                            string downloadFilePath = GetSymbolFile(key);
-                            if (downloadFilePath != null)
-                            {
-                                s_tracer.Information("{0}: {1}", moduleFileName, downloadFilePath);
-                                callback(parameter, moduleFileName, downloadFilePath);
-                            }
+                            s_tracer.Information("{0}: {1}", moduleFileName, downloadFilePath);
+                            callback(parameter, moduleFileName, downloadFilePath);
                         }
                     }
                 }
@@ -315,6 +328,83 @@ namespace SOS
                     s_tracer.Error("{0}/{1:X16}: {2}", moduleFilePath, address, ex.Message);
                 }
             }
+        }
+
+        /// <summary>
+        /// Load native modules (i.e. DAC, DBI) from the runtime build id.
+        /// </summary>
+        /// <param name="callback">called back for each symbol file loaded</param>
+        /// <param name="parameter">callback parameter</param>
+        /// <param name="config">Target configuration: Windows, Linux or OSX</param>
+        /// <param name="moduleFilePath">module path</param>
+        /// <param name="specialKeys">if true, returns the DBI/DAC keys, otherwise the identity key</param>
+        /// <param name="moduleIndexSize">build id size</param>
+        /// <param name="moduleIndex">pointer to build id</param>
+        public static void LoadNativeSymbolsFromIndex(
+            SymbolFileCallback callback,
+            IntPtr parameter,
+            RuntimeConfiguration config,
+            string moduleFilePath,
+            bool specialKeys,
+            int moduleIndexSize,
+            IntPtr moduleIndex)
+        {
+            try
+            {
+                KeyTypeFlags flags = specialKeys ? KeyTypeFlags.DacDbiKeys : KeyTypeFlags.IdentityKey;
+                byte[] id = new byte[moduleIndexSize];
+                Marshal.Copy(moduleIndex, id, 0, moduleIndexSize);
+
+                IEnumerable<SymbolStoreKey> keys = null;
+                switch (config)
+                {
+                    case RuntimeConfiguration.UnixCore:
+                        keys = ELFFileKeyGenerator.GetKeys(flags, moduleFilePath, id, symbolFile: false, symbolFileName: null);
+                        break;
+
+                    case RuntimeConfiguration.OSXCore:
+                        keys = MachOFileKeyGenerator.GetKeys(flags, moduleFilePath, id, symbolFile: false, symbolFileName: null);
+                        break;
+
+                    case RuntimeConfiguration.WindowsCore:
+                    case RuntimeConfiguration.WindowsDesktop:
+                        uint timeStamp = BitConverter.ToUInt32(id, 0);
+                        uint fileSize = BitConverter.ToUInt32(id, 4);
+                        SymbolStoreKey key = PEFileKeyGenerator.GetKey(moduleFilePath, timeStamp, fileSize);
+                        keys = new SymbolStoreKey[] { key };
+                        break;
+
+                    default:
+                        s_tracer.Error("Unsupported platform {0}", config);
+                        return;
+                }
+                foreach (SymbolStoreKey key in keys)
+                {
+                    string moduleFileName = Path.GetFileName(key.FullPathName);
+                    s_tracer.Verbose("{0} {1}", key.FullPathName, key.Index);
+
+                    string downloadFilePath = GetSymbolFile(key);
+                    if (downloadFilePath != null)
+                    {
+                        s_tracer.Information("{0}: {1}", moduleFileName, downloadFilePath);
+                        callback(parameter, moduleFileName, downloadFilePath);
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException || ex is TaskCanceledException)
+            {
+                s_tracer.Error("{0} - {1}", ex.Message, moduleFilePath);
+            }
+        }
+
+        /// <summary>
+        /// Load symbol or module files from the keys
+        /// </summary>
+        /// <param name="callback">called back for each symbol file loaded</param>
+        /// <param name="parameter">callback parameter</param>
+        /// <param name="keys">list of keys to download</param>
+        private static void LoadSymbolFiles(SymbolFileCallback callback, IntPtr parameter, IEnumerable<SymbolStoreKey> keys)
+        {
         }
 
         /// <summary>

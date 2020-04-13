@@ -275,13 +275,19 @@ static bool FindDotNetVersion(int majorFilter, int minorFilter, std::string& hos
 }
 
 #ifdef FEATURE_PAL
+
 const char *g_linuxPaths[] = {
+#if defined(__APPLE__)
+    "/usr/local/share/dotnet/shared/Microsoft.NETCore.App"
+#else
     "/rh-dotnet31/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
     "/rh-dotnet30/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
     "/rh-dotnet21/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
     "/usr/share/dotnet/shared/Microsoft.NETCore.App",
-};
 #endif
+};
+
+#endif // FEATURE_PAL
 
 /**********************************************************************\
  * Returns the path to the coreclr to use for hosting and it's
@@ -294,22 +300,41 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
     if (g_hostRuntimeDirectory == nullptr)
     {
 #ifdef FEATURE_PAL
-#if defined(__APPLE__)
-        hostRuntimeDirectory.assign("/usr/local/share/dotnet/shared/Microsoft.NETCore.App");
-#elif defined (__FreeBSD__) || defined(__NetBSD__)
-        ExtErr("FreeBSD or NetBSD not supported\n");
+#if defined (__FreeBSD__) || defined(__NetBSD__)
+        ExtErr("Hosting on FreeBSD or NetBSD not supported\n");
         return E_FAIL;
 #else
-        // Start with the possible RHEL's locations, then the regular Linux path
-        for (int i = 0; i < _countof(g_linuxPaths); i++)
+        char* line = nullptr;
+        size_t lineLen = 0;
+
+        // Start with Linux location file if exists
+        FILE* locationFile = fopen("/etc/dotnet/install_location", "r");
+        if (locationFile != nullptr)
         {
-            hostRuntimeDirectory.assign(g_linuxPaths[i]);
-            if (access(hostRuntimeDirectory.c_str(), F_OK) == 0)
+            if (getline(&line, &lineLen, locationFile) != -1)
             {
-                break;
+                hostRuntimeDirectory.assign(line);
+                size_t newLinePostion = hostRuntimeDirectory.rfind('\n');
+                if (newLinePostion != std::string::npos) {
+                    hostRuntimeDirectory.erase(newLinePostion);
+                    hostRuntimeDirectory.append("/shared/Microsoft.NETCore.App");
+                }
+                free(line);
             }
         }
-#endif
+        if (hostRuntimeDirectory.empty())
+        {
+            // Now try the possible runtime locations
+            for (int i = 0; i < _countof(g_linuxPaths); i++)
+            {
+                hostRuntimeDirectory.assign(g_linuxPaths[i]);
+                if (access(hostRuntimeDirectory.c_str(), F_OK) == 0)
+                {
+                    break;
+                }
+            }
+        }
+#endif // defined (__FreeBSD__) || defined(__NetBSD__)
 #else
         ArrayHolder<CHAR> programFiles = new CHAR[MAX_LONGPATH];
         if (GetEnvironmentVariableA("PROGRAMFILES", programFiles, MAX_LONGPATH) == 0)
@@ -319,38 +344,42 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
         }
         hostRuntimeDirectory.assign(programFiles);
         hostRuntimeDirectory.append("\\dotnet\\shared\\Microsoft.NETCore.App");
-#endif
+#endif // FEATURE_PAL
         hostRuntimeDirectory.append(DIRECTORY_SEPARATOR_STR_A);
 
-        // First attempt find the highest 2.1.x version. We want to start with the LTS
+        // First attempt find the highest LTS version. We want to start with the LTSs
         // and only use the higher versions if it isn't installed.
-        if (!FindDotNetVersion(2, 1, hostRuntimeDirectory))
+        if (!FindDotNetVersion(3, 1, hostRuntimeDirectory))
         {
-            // Find highest 2.2.x version
-            if (!FindDotNetVersion(2, 2, hostRuntimeDirectory))
+            // Find highest 2.1 LTS version
+            if (!FindDotNetVersion(2, 1, hostRuntimeDirectory))
             {
                 // Find highest 3.0.x version
                 if (!FindDotNetVersion(3, 0, hostRuntimeDirectory))
                 {
-                    // Find highest 3.1.x version
-                    if (!FindDotNetVersion(3, 1, hostRuntimeDirectory))
+                    // Find highest 2.2.x version
+                    if (!FindDotNetVersion(2, 2, hostRuntimeDirectory))
                     {
-                        HRESULT hr = CheckEEDll();
-                        if (FAILED(hr)) {
-                            return hr;
-                        }
-                        // Don't use the desktop runtime to host
-                        if (g_pRuntime->IsDesktop())
+                        // Find highest 5.0.x version
+                        if (!FindDotNetVersion(5, 0, hostRuntimeDirectory))
                         {
-                            return E_FAIL;
+                            HRESULT hr = CheckEEDll();
+                            if (FAILED(hr)) {
+                                return hr;
+                            }
+                            // Don't use the desktop runtime to host
+                            if (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
+                            {
+                                return E_FAIL;
+                            }
+                            // If an installed runtime can not be found, use the target coreclr version
+                            LPCSTR runtimeDirectory = g_pRuntime->GetRuntimeDirectory();
+                            if (runtimeDirectory == nullptr)
+                            {
+                                return E_FAIL;
+                            }
+                            hostRuntimeDirectory = runtimeDirectory;
                         }
-                        // If an installed runtime can not be found, use the target coreclr version
-                        LPCSTR runtimeDirectory = g_pRuntime->GetRuntimeDirectory();
-                        if (runtimeDirectory == nullptr)
-                        {
-                            return E_FAIL;
-                        }
-                        hostRuntimeDirectory = runtimeDirectory;
                     }
                 }
             }
@@ -362,7 +391,7 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
     hostRuntimeDirectory.assign(g_hostRuntimeDirectory);
     coreClrPath.assign(g_hostRuntimeDirectory);
     coreClrPath.append(DIRECTORY_SEPARATOR_STR_A);
-    coreClrPath.append(NETCORE_RUNTIME_DLL_NAME_A);
+    coreClrPath.append(GetRuntimeDllName(IRuntime::Core));
     return S_OK;
 }
 
@@ -429,7 +458,15 @@ void CleanupTempDirectory()
 /**********************************************************************\
  * Called when the managed SOS Host loads/initializes SOS.
 \**********************************************************************/
-extern "C" HRESULT SOSInitializeByHost(SOSNetCoreCallbacks* callbacks, int callbacksSize, LPCSTR tempDirectory, bool isDesktop, LPCSTR dacFilePath, LPCSTR dbiFilePath, bool symbolStoreEnabled)
+extern "C" HRESULT SOSInitializeByHost(
+    SOSNetCoreCallbacks* callbacks,
+    int callbacksSize,
+    LPCSTR tempDirectory,
+    LPCSTR runtimeModulePath,
+    bool isDesktop,
+    LPCSTR dacFilePath,
+    LPCSTR dbiFilePath,
+    bool symbolStoreEnabled)
 {
     if (memcpy_s(&g_SOSNetCoreCallbacks, sizeof(g_SOSNetCoreCallbacks), callbacks, callbacksSize) != 0)
     {
@@ -438,6 +475,10 @@ extern "C" HRESULT SOSInitializeByHost(SOSNetCoreCallbacks* callbacks, int callb
     if (tempDirectory != nullptr)
     {
         g_tmpPath = _strdup(tempDirectory);
+    }
+    if (runtimeModulePath != nullptr)
+    {
+        g_runtimeModulePath = _strdup(runtimeModulePath);
     }
     Runtime::SetDacDbiPath(isDesktop, dacFilePath, dbiFilePath);
 #ifndef FEATURE_PAL
@@ -580,6 +621,7 @@ HRESULT InitializeHosting()
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "DisplaySymbolStore", (void **)&g_SOSNetCoreCallbacks.DisplaySymbolStoreDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "DisableSymbolStore", (void **)&g_SOSNetCoreCallbacks.DisableSymbolStoreDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "LoadNativeSymbols", (void **)&g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate));
+    IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "LoadNativeSymbolsFromIndex", (void **)&g_SOSNetCoreCallbacks.LoadNativeSymbolsFromIndexDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "LoadSymbolsForModule", (void **)&g_SOSNetCoreCallbacks.LoadSymbolsForModuleDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "Dispose", (void **)&g_SOSNetCoreCallbacks.DisposeDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "ResolveSequencePoint", (void **)&g_SOSNetCoreCallbacks.ResolveSequencePointDelegate));
@@ -703,7 +745,7 @@ void InitializeSymbolStoreFromSymPath()
 //
 static void SymbolFileCallback(void* param, const char* moduleFileName, const char* symbolFilePath)
 {
-    if (strcmp(moduleFileName, NETCORE_RUNTIME_DLL_NAME_A) == 0) {
+    if (strcmp(moduleFileName, GetRuntimeDllName(IRuntime::Core)) == 0) {
         return;
     }
     if (strcmp(moduleFileName, NETCORE_DAC_DLL_NAME_A) == 0) {
@@ -722,7 +764,7 @@ static void LoadNativeSymbolsCallback(void* param, const char* moduleFilePath, U
 {
     _ASSERTE(g_hostingInitialized);
     _ASSERTE(g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate != nullptr);
-    g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(SymbolFileCallback, param, moduleFilePath, moduleAddress, moduleSize, ReadMemoryForSymbols);
+    g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(SymbolFileCallback, param, IRuntime::Core, moduleFilePath, moduleAddress, moduleSize, ReadMemoryForSymbols);
 }
 
 /**********************************************************************\

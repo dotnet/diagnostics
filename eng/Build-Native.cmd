@@ -10,7 +10,7 @@ set __ThisScriptFull="%~f0"
 set __ThisScriptDir="%~dp0"
 
 call "%__ThisScriptDir%"\setup-vs-tools.cmd
-if NOT '%ERRORLEVEL%' == '0' exit /b 1
+if NOT '%ERRORLEVEL%' == '0' goto ExitWithError
 
 if defined VS160COMNTOOLS (
     set "__VSToolsRoot=%VS160COMNTOOLS%"
@@ -150,7 +150,7 @@ REM ============================================================================
 set __DotNetCli=%__ProjectDir%\.dotnet\dotnet.exe
 if not exist "%__DotNetCli%" (
     echo %__MsgPrefix%Assertion failed: dotnet cli not found at path "%__DotNetCli%"
-    exit /b 1
+    goto ExitWithError
 )
 
 REM =========================================================================================
@@ -180,7 +180,7 @@ if /i %__BuildCrossArch% EQU 1 (
     powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__ProjectDir%\eng\common\msbuild.ps1" "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /restore /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__CrossCompIntermediatesDir%\_version.h %__CommonBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
-        exit /b 1
+        goto ExitWithError
     )
     if defined __SkipConfigure goto SkipConfigureCrossBuild
 
@@ -199,7 +199,7 @@ if /i %__BuildCrossArch% EQU 1 (
 :SkipConfigureCrossBuild
     if not exist "%__CrossCompIntermediatesDir%\install.vcxproj" (
         echo %__MsgPrefix%Error: failed to generate cross-arch components build project!
-        exit /b 1
+        goto ExitWithError
     )
     if defined __ConfigureOnly goto SkipCrossCompBuild
 
@@ -211,7 +211,7 @@ if /i %__BuildCrossArch% EQU 1 (
     if not !ERRORLEVEL! == 0 (
         echo %__MsgPrefix%Error: cross-arch components build failed. Refer to the build log files for details:
         echo     !__BuildLog!
-        exit /b 1
+        goto ExitWithError
     )
 
 :SkipCrossCompBuild
@@ -250,7 +250,7 @@ if %__Build% EQU 1 (
 
     if not defined VSINSTALLDIR (
         echo %__MsgPrefix%Error: VSINSTALLDIR variable not defined.
-        exit /b 1
+        goto ExitWithError
     )
 
     echo Generating Version Header
@@ -258,7 +258,7 @@ if %__Build% EQU 1 (
     powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__ProjectDir%\eng\common\msbuild.ps1" "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /restore /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h %__CommonBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
-        exit /b 1
+        goto ExitWithError
     )
     if defined __SkipConfigure goto SkipConfigure
 
@@ -278,7 +278,7 @@ if %__Build% EQU 1 (
 
     if not exist "%__IntermediatesDir%\install.vcxproj" (
         echo %__MsgPrefix%Error: failed to generate native component build project!
-        exit /b 1
+        goto ExitWithError
     )
     set __BuildLog="%__LogDir%\Native.Build.binlog"
 
@@ -288,7 +288,7 @@ if %__Build% EQU 1 (
     if not !ERRORLEVEL! == 0 (
         echo %__MsgPrefix%Error: native component build failed. Refer to the build log files for details:
         echo     !__BuildLog!
-        exit /b 1
+        goto ExitWithError
     )
 
 :SkipNativeBuild
@@ -315,6 +315,18 @@ echo %__MsgPrefix%Product binaries are available at !__BinDir!
 exit /b 0
 
 REM =========================================================================================
+REM === These two routines are intended for the exit code to propagate to the parent process
+REM === Like MSBuild or Powershell. If we directly goto ExitWithError from within a if statement in
+REM === any of the routines, the exit code is not propagated due to quirks of nested conditonals
+REM === in delayed expansion scripts.
+REM =========================================================================================
+:ExitWithError
+exit /b 1
+
+:ExitWithCode
+exit /b !__exitCode!
+
+REM =========================================================================================
 REM ===
 REM === Helper routines
 REM ===
@@ -333,4 +345,4 @@ echo.-? -h -help --help: view this message.
 echo -architecture <x64|x86|arm|arm64>
 echo -configuration <debug|release>
 echo -verbosity <q[uiet]|m[inimal]|n[ormal]|d[etailed]|diag[nostic]>
-exit /b 1
+goto ExitWithError

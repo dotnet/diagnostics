@@ -203,6 +203,7 @@ HMODULE g_hInstance = NULL;
 #ifdef FEATURE_PAL
 
 #define MINIDUMP_NOT_SUPPORTED()
+#define ONLY_SUPPORTED_ON_WINDOWS_TARGET()
 
 #else // !FEATURE_PAL
 
@@ -214,11 +215,19 @@ HMODULE g_hInstance = NULL;
         return Status;         \
     }
 
+#define ONLY_SUPPORTED_ON_WINDOWS_TARGET()                                    \
+    if (!IsWindowsTarget())                                                   \
+    {                                                                         \
+        ExtOut("This command is only supported for Windows targets\n");       \
+        return Status;                                                        \
+    }
+
 #include "safemath.h"
 
 DECLARE_API (MinidumpMode)
 {
     INIT_API ();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
     DWORD_PTR Value=0;
 
     CMDValue arg[] = 
@@ -409,7 +418,7 @@ void DumpStackInternal(DumpStackFlag *pDSFlag)
     }
 
 #ifndef FEATURE_PAL     
-    if (pDSFlag->end == 0) {
+    if (IsWindowsTarget() && (pDSFlag->end == 0)) {
         // Find the current stack range
         NT_TIB teb;
         ULONG64 dwTebAddr = 0;
@@ -642,15 +651,18 @@ HRESULT DumpStackObjectsRaw(size_t nArg, __in_z LPSTR exprBottom, __in_z LPSTR e
     }
     
 #ifndef FEATURE_PAL
-    NT_TIB teb;
-    ULONG64 dwTebAddr=0;
-    HRESULT hr = g_ExtSystem->GetCurrentThreadTeb(&dwTebAddr);
-    if (SUCCEEDED(hr) && SafeReadMemory (TO_TADDR(dwTebAddr), &teb, sizeof (NT_TIB), NULL))
+    if (IsWindowsTarget())
     {
-        if (StackTop > TO_TADDR(teb.StackLimit) && StackTop <= TO_TADDR(teb.StackBase))
+        NT_TIB teb;
+        ULONG64 dwTebAddr = 0;
+        HRESULT hr = g_ExtSystem->GetCurrentThreadTeb(&dwTebAddr);
+        if (SUCCEEDED(hr) && SafeReadMemory(TO_TADDR(dwTebAddr), &teb, sizeof(NT_TIB), NULL))
         {
-            if (StackBottom == 0 || StackBottom > TO_TADDR(teb.StackBase))
-                StackBottom = TO_TADDR(teb.StackBase);
+            if (StackTop > TO_TADDR(teb.StackLimit) && StackTop <= TO_TADDR(teb.StackBase))
+            {
+                if (StackBottom == 0 || StackBottom > TO_TADDR(teb.StackBase))
+                    StackBottom = TO_TADDR(teb.StackBase);
+            }
         }
     }
 #endif
@@ -1054,7 +1066,8 @@ DECLARE_API(DumpSig)
     INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     //
     // Fetch arguments
     //
@@ -1101,7 +1114,7 @@ DECLARE_API(DumpSigElem)
     INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     //
     // Fetch arguments
@@ -1346,6 +1359,8 @@ DECLARE_API(DumpMT)
 
     table.WriteRow("BaseSize:", PrefixHex(vMethTable.BaseSize));
     table.WriteRow("ComponentSize:", PrefixHex(vMethTable.ComponentSize));
+    table.WriteRow("DynamicStatics:", vMethTable.bIsDynamic ? "true" : "false");
+    table.WriteRow("ContainsPointers:", vMethTable.bContainsPointers ? "true" : "false");
     table.WriteRow("Slots in VTable:", Decimal(vMethTable.wNumMethods));
     
     table.SetColWidth(0, 29);
@@ -2993,7 +3008,8 @@ DECLARE_API(DumpVC)
 DECLARE_API(DumpRCW)
 {
     INIT_API();
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     BOOL dml = FALSE;
     StringHolder strObject;
 
@@ -3099,7 +3115,8 @@ DECLARE_API(DumpRCW)
 DECLARE_API(DumpCCW)
 {
     INIT_API();
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     BOOL dml = FALSE;
     StringHolder strObject;
 
@@ -3336,7 +3353,8 @@ DECLARE_API(DumpCCW)
 DECLARE_API(DumpPermissionSet)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR p_Object = NULL;
 
@@ -3595,8 +3613,9 @@ void PrintGCStat(HeapStat *inStat, const char* label=NULL)
 DECLARE_API(TraverseHeap)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
-    
+    MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     BOOL bXmlFormat = FALSE;
     BOOL bVerify = FALSE;
     StringHolder Filename;
@@ -3732,6 +3751,7 @@ DECLARE_API(DumpRuntimeTypes)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL dml = FALSE;
 
@@ -3886,7 +3906,7 @@ public:
         }
 
 #ifndef FEATURE_PAL
-        if (mLive || mDead)
+        if (IsWindowsTarget() && (mLive || mDead))
         {
             GCRootImpl gcroot;
             mLiveness = gcroot.GetLiveObjects();
@@ -3999,10 +4019,10 @@ private:
     bool IsCorrectLiveness(const sos::Object &obj)
     {
 #ifndef FEATURE_PAL
-        if (mLive && mLiveness.find(obj.GetAddress()) == mLiveness.end())
+        if (IsWindowsTarget() && mLive && mLiveness.find(obj.GetAddress()) == mLiveness.end())
             return false;
 
-        if (mDead && (mLiveness.find(obj.GetAddress()) != mLiveness.end() || obj.IsFree()))
+        if (IsWindowsTarget() && mDead && (mLiveness.find(obj.GetAddress()) != mLiveness.end() || obj.IsFree()))
             return false;
 #endif
         return true;
@@ -4105,6 +4125,12 @@ private:
 #ifdef FEATURE_PAL
         ExtOut("Not implemented.\n");
 #else
+        if (!IsWindowsTarget())
+        {
+            ExtOut("Not implemented.\n");
+            return;
+        }
+
         const int offset = sos::Object::GetStringDataOffset();
         typedef std::set<StringSetEntry> Set;
         Set set;            // A set keyed off of the string's text
@@ -4233,17 +4259,29 @@ private:
 
     void InitFragmentationList()
     {
+        if (!IsWindowsTarget())
+        {
+            return;
+        }
         mFrag.clear();
     }
 
     void ReportFreeObject(TADDR addr, size_t size, TADDR next, TADDR mt)
     {
+        if (!IsWindowsTarget())
+        {
+            return;
+        }
         if (size >= MIN_FRAGMENTATIONBLOCK_BYTES)
             mFrag.push_back(sos::FragmentationBlock(addr, size, next, mt));
     }
 
     void PrintFragmentationReport()
     {
+        if (!IsWindowsTarget())
+        {
+            return;
+        }
         if (mFrag.size() > 0)
         {
             ExtOut("Fragmented blocks larger than 0.5 MB:\n");
@@ -4909,7 +4947,8 @@ DECLARE_API(VerifyHeap)
 {    
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     if (!g_snapshot.Build())
     {
         ExtOut("Unable to build snapshot of the garbage collector state\n");
@@ -5044,7 +5083,8 @@ DECLARE_API(AnalyzeOOM)
 {    
     INIT_API();    
     MINIDUMP_NOT_SUPPORTED();    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
 #ifndef FEATURE_PAL
 
     if (!InitializeHeapData ())
@@ -5121,6 +5161,7 @@ DECLARE_API(VerifyObj)
 {
     INIT_API();    
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     TADDR  taddrObj = 0;
     TADDR  taddrMT;
@@ -5183,6 +5224,7 @@ DECLARE_API(ListNearObj)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
 #if !defined(FEATURE_PAL)
 
@@ -5380,7 +5422,7 @@ DECLARE_API(GCHeapStat)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
 #ifndef FEATURE_PAL
 
@@ -5800,6 +5842,7 @@ DECLARE_API(RCWCleanupList)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR p_CleanupList = GetExpression(args);
 
@@ -6487,7 +6530,7 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
         // Apartment state
 #ifndef FEATURE_PAL           
         DWORD_PTR OleTlsDataAddr;
-        if (!bSwitchedOutFiber 
+        if (IsWindowsTarget() && !bSwitchedOutFiber
                 && SafeReadMemory(Thread.teb + offsetof(TEB, ReservedForOle),
                             &OleTlsDataAddr,
                             sizeof(OleTlsDataAddr), NULL) && OleTlsDataAddr != 0)
@@ -6888,25 +6931,36 @@ DECLARE_API(Threads)
     // We need to support minidumps for this command.
     BOOL bMiniDump = IsMiniDumpFile();
 
-    if (bMiniDump && bPrintSpecialThreads)
-    {
-        Print("Special thread information is not available in mini dumps.\n");
-    }
-
     EnableDMLHolder dmlHolder(dml);
 
     try
     {
         Status = PrintThreadsFromThreadStore(bMiniDump, bPrintLiveThreadsOnly);
-        if (!bMiniDump && bPrintSpecialThreads)
+        if (bPrintSpecialThreads)
         {
 #ifdef FEATURE_PAL
             Print("\n-special not supported.\n");
-#else //FEATURE_PAL    
-            HRESULT Status2 = PrintSpecialThreads(); 
-            if (!SUCCEEDED(Status2))
-                Status = Status2;
-#endif //FEATURE_PAL            
+#else //FEATURE_PAL
+            BOOL bSupported = true;
+
+            if (!IsWindowsTarget())
+            {
+                Print("Special thread information is only supported on Windows targets.\n");
+                bSupported = false;
+            }
+            else if (bMiniDump)
+            {
+                Print("Special thread information is not available in mini dumps.\n");
+                bSupported = false;
+            }
+
+            if (bSupported)
+            {
+                HRESULT Status2 = PrintSpecialThreads();
+                if (!SUCCEEDED(Status2))
+                    Status = Status2;
+            }
+#endif // FEATURE_PAL
         }
     }
     catch (sos::Exception &e)
@@ -6927,6 +6981,7 @@ DECLARE_API(Threads)
 DECLARE_API(WatsonBuckets)
 {
     INIT_API();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     // We don't need to support minidumps for this command.
     if (IsMiniDumpFile())
@@ -7624,7 +7679,7 @@ public:
 
         // This is only needed for desktop runtime because OnCodeGenerated2
         // isn't supported by the desktop DAC.
-        if (g_pRuntime->IsDesktop())
+        if (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
         {
             // Some method has been generated, make a breakpoint and remove it.
             ULONG32 len = mdNameLen;
@@ -8372,6 +8427,7 @@ DECLARE_API(ThreadPool)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DacpThreadpoolData threadpool;
 
@@ -8683,7 +8739,8 @@ DECLARE_API(FindAppDomain)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     DWORD_PTR p_Object = NULL;
     BOOL dml = FALSE;
 
@@ -8778,7 +8835,7 @@ DECLARE_API(COMState)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     ULONG numThread;
     ULONG maxId;
@@ -8953,7 +9010,8 @@ DECLARE_API(EHInfo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     DWORD_PTR dwStartAddr = NULL;
     BOOL dml = FALSE;
 
@@ -9034,7 +9092,7 @@ DECLARE_API(GCInfo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     TADDR taStartAddr = NULL;
     TADDR taGCInfoAddr;
@@ -9331,8 +9389,8 @@ DECLARE_API(u)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     DWORD_PTR dwStartAddr = NULL;
     BOOL fWithGCInfo = FALSE;
     BOOL fWithEHInfo = FALSE;
@@ -9872,7 +9930,7 @@ DECLARE_API(DumpLog)
     _ASSERTE(g_pRuntime != nullptr);
 
     // Not supported on desktop runtime
-    if (g_pRuntime->IsDesktop())
+    if (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
     {
         ExtErr("DumpLog not supported on desktop runtime\n");
         return E_FAIL;
@@ -9910,14 +9968,19 @@ DECLARE_API(DumpLog)
     {
         if (g_bDacBroken)
         {
-#ifdef FEATURE_PAL
-            ExtOut("No stress log address. DAC is broken; can't get it\n");
-            return E_FAIL;
-#else
-            // Try to find stress log symbols
-            DWORD_PTR dwAddr = GetValueFromExpression("StressLog::theLog");
-            StressLogAddress = dwAddr;        
+#ifndef FEATURE_PAL
+            if (IsWindowsTarget())
+            {
+                // Try to find stress log symbols
+                DWORD_PTR dwAddr = GetValueFromExpression("StressLog::theLog");
+                StressLogAddress = dwAddr;
+            }
+            else
 #endif
+            {
+                ExtOut("No stress log address. DAC is broken; can't get it\n");
+                return E_FAIL;
+            }
         }
         else if (g_sos->GetStressLogAddress(&StressLogAddress) != S_OK)
         {
@@ -9954,7 +10017,8 @@ DECLARE_API (DumpGCLog)
 {
     INIT_API_NODAC();
     MINIDUMP_NOT_SUPPORTED();    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     const char* fileName = "GCLog.txt";
 
     while (isspace (*args))
@@ -10054,6 +10118,7 @@ DECLARE_API (DumpGCConfigLog)
     INIT_API();
 #ifdef GC_CONFIG_DRIVEN    
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     const char* fileName = "GCConfigLog.txt";
 
@@ -10270,6 +10335,7 @@ DECLARE_API(DumpGCData)
 
 #ifdef GC_CONFIG_DRIVEN
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (!InitializeHeapData ())
     {
@@ -10365,16 +10431,19 @@ DECLARE_API(EEVersion)
             }
 
 #ifndef FEATURE_PAL
-            if (version.dwFileFlags & VS_FF_DEBUG) {
-                ExtOut(" checked or debug build");
-            }
-            else
+            if (IsWindowsTarget())
             {
-                BOOL fRet = IsRetailBuild((size_t)g_pRuntime->GetModuleAddress());
-                if (fRet)
-                    ExtOut(" retail");
+                if (version.dwFileFlags & VS_FF_DEBUG) {
+                    ExtOut(" checked or debug build");
+                }
                 else
-                    ExtOut(" free");
+                {
+                    BOOL fRet = IsRetailBuild((size_t)g_pRuntime->GetModuleAddress());
+                    if (fRet)
+                        ExtOut(" retail");
+                    else
+                        ExtOut(" free");
+                }
             }
 #endif
             ExtOut("\n");
@@ -10399,7 +10468,7 @@ DECLARE_API(EEVersion)
 #ifndef FEATURE_PAL
     // Print SOS version
     VS_FIXEDFILEINFO sosVersion;
-    if (GetSOSVersion(&sosVersion))
+    if (IsWindowsTarget() && GetSOSVersion(&sosVersion))
     {
         if (sosVersion.dwFileVersionMS != (DWORD)-1)
         {
@@ -10450,14 +10519,22 @@ DECLARE_API(SOSStatus)
 #ifndef FEATURE_PAL
     if (bNetCore || bDesktop)
     {
-        PCSTR name = bDesktop ? "desktop CLR" : ".NET Core";;
-        if (!Runtime::SwitchRuntime(bDesktop))
+        if (IsWindowsTarget())
         {
-            ExtErr("The %s runtime is not loaded\n", name);
+            PCSTR name = bDesktop ? "desktop CLR" : ".NET Core";;
+            if (!Runtime::SwitchRuntime(bDesktop))
+            {
+                ExtErr("The %s runtime is not loaded\n", name);
+                return E_FAIL;
+            }
+            ExtOut("Switched to %s runtime successfully\n", name);
+            return S_OK;
+        }
+        else
+        {
+            ExtErr("The '-desktop' and '-netcore' options are only supported on Windows targets\n");
             return E_FAIL;
         }
-        ExtOut("Switched to %s runtime successfully\n", name);
-        return S_OK;
     }
 #endif
     if (bReset)
@@ -10499,6 +10576,7 @@ DECLARE_API (ProcInfo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();        
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (IsDumpFile())
     {
@@ -10778,6 +10856,7 @@ DECLARE_API(Token2EE)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     StringHolder DllName;
     ULONG64 token = 0;
@@ -10996,6 +11075,7 @@ DECLARE_API(PathTo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR root = NULL;
     DWORD_PTR target = NULL;
@@ -11214,6 +11294,7 @@ DECLARE_API(FindRoots)
 #ifndef FEATURE_PAL
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (IsDumpFile())
     {
@@ -11716,7 +11797,8 @@ DECLARE_API(GCHandles)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     try
     {
         GCHandlesImpl gchandles(args);
@@ -11738,6 +11820,7 @@ DECLARE_API(GCHandles)
 DECLARE_API(TraceToCode)
 {
     INIT_API_NODAC();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
     _ASSERTE(g_pRuntime != nullptr);
 
     while(true)
@@ -11829,6 +11912,7 @@ DECLARE_API(TraceToCode)
 DECLARE_API(GetCodeTypeFlags)
 {
     INIT_API();   
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
     _ASSERTE(g_pRuntime != nullptr);
     
     char buffer[100+mdNameLen];
@@ -12069,7 +12153,8 @@ DECLARE_API(ObjSize)
 #ifndef FEATURE_PAL
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
-    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
     BOOL dml = FALSE;
     StringHolder str_Object;    
 
@@ -12123,6 +12208,7 @@ DECLARE_API(GCHandleLeaks)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     ExtOut("-------------------------------------------------------------------------------\n");
     ExtOut("GCHandleLeaks will report any GCHandles that couldn't be found in memory.      \n");
@@ -13225,7 +13311,11 @@ public:
         HRESULT Status;
 
         ICorDebugProcess* pCorDebugProcess;
-        IfFailRet(g_pRuntime->GetCorDebugInterface(&pCorDebugProcess));
+        if (FAILED(Status = g_pRuntime->GetCorDebugInterface(&pCorDebugProcess)))
+        {
+            ExtOut("\n" SOSPrefix "clrstack -i is unsupported on this target.\nThe ICorDebug interface cannot be constructed.\n\n");
+            return Status;
+        }
 
         ExtOut("\n\n\nDumping managed stack and managed variables using ICorDebug.\n");
         ExtOut("=============================================================================\n");
@@ -13619,8 +13709,21 @@ public:
             if (bDisplayRegVals)
                 PrintManagedFrameContext(pStackWalk);
 
-        } while (pStackWalk->Next() == S_OK);
+            hr = pStackWalk->Next();
+        } while (hr == S_OK);
 
+        if (FAILED(hr))
+        {
+            // Normal stack walk ends with S_FALSE
+            // Failure means the stalk walk did not complete normally
+            ExtOut("<failed>\nStack Walk failed. Reported stack incomplete.\n");
+#ifndef FEATURE_PAL
+            if (!IsWindowsTarget())
+            {
+                ExtOut("Native stack walking is not supported on this target.\nStack walk will terminate at the first native frame.\n");
+            }
+#endif // FEATURE_PAL
+        }
 #ifdef DEBUG_STACK_CONTEXT
         while (numNativeFrames > 0)
         {
@@ -14376,6 +14479,7 @@ DECLARE_API(SaveModule)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     StringHolder Location;
     DWORD_PTR moduleAddr = NULL;
@@ -15335,6 +15439,7 @@ HRESULT ImplementEFNGetManagedExcepStack(
 DECLARE_API(VerifyStackTrace)
 {
     INIT_API();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL bVerifyManagedExcepStack = FALSE;
     CMDOption option[] = 
@@ -15540,6 +15645,7 @@ DECLARE_API(SaveState)
 {
     INIT_API_NOEE();    
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     StringHolder filePath;
     CMDValue arg[] = 
@@ -15579,6 +15685,7 @@ DECLARE_API(SuppressJitOptimization)
 {
     INIT_API_NOEE();    
     MINIDUMP_NOT_SUPPORTED();    
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     StringHolder onOff;
     CMDValue arg[] = 
@@ -15887,6 +15994,7 @@ DECLARE_API(VerifyGMT)
     HRESULT hr = _EFN_GetManagedThread(client, osThreadId, &managedThread);
     {
         INIT_API();
+        ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
         if (SUCCEEDED(hr)) {
             ExtOut("%08x %p\n", osThreadId, managedThread);

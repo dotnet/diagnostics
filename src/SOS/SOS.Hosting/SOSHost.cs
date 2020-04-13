@@ -28,22 +28,23 @@ namespace SOS
         internal const int E_NOTIMPL = DebugClient.E_NOTIMPL;
         internal const int E_NOINTERFACE = DebugClient.E_NOINTERFACE;
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SOSCommandDelegate(
             IntPtr ILLDBServices,
             [In, MarshalAs(UnmanagedType.LPStr)] string args);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SOSInitializeDelegate(
             [In, MarshalAs(UnmanagedType.Struct)] ref SOSNetCoreCallbacks callbacks,
             int callbacksSize,
             [In, MarshalAs(UnmanagedType.LPStr)] string tempDirectory,
+            [In, MarshalAs(UnmanagedType.LPStr)] string runtimeModulePath,
             bool isDesktop,
             [In, MarshalAs(UnmanagedType.LPStr)] string dacFilePath,
             [In, MarshalAs(UnmanagedType.LPStr)] string dbiFilePath,
             bool symbolStoreEnabled);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate UIntPtr GetExpressionDelegate(
             [In, MarshalAs(UnmanagedType.LPStr)] string expression);
 
@@ -70,10 +71,20 @@ namespace SOS
         private delegate void LoadNativeSymbolsDelegate(
             SymbolReader.SymbolFileCallback callback,
             IntPtr parameter,
+            SymbolReader.RuntimeConfiguration config,
             string moduleFilePath,
             ulong address,
             int size,
             SymbolReader.ReadMemoryDelegate readMemory);
+
+        private delegate void LoadNativeSymbolsFromIndexDelegate(
+            SymbolReader.SymbolFileCallback callback,
+            IntPtr parameter,
+            SymbolReader.RuntimeConfiguration config,
+            string moduleFilePath,
+            bool specialKeys,
+            int moduleIndexSize,
+            IntPtr moduleIndex);
 
         private delegate IntPtr LoadSymbolsForModuleDelegate(
             string assemblyPath,
@@ -129,6 +140,7 @@ namespace SOS
             public DisplaySymbolStoreDelegate DisplaySymbolStoreDelegate;
             public DisableSymbolStoreDelegate DisableSymbolStoreDelegate;
             public LoadNativeSymbolsDelegate LoadNativeSymbolsDelegate;
+            public LoadNativeSymbolsFromIndexDelegate LoadNativeSymbolsFromIndexDelegate;
             public LoadSymbolsForModuleDelegate LoadSymbolsForModuleDelegate;
             public DisposeDelegate DisposeDelegate;
             public ResolveSequencePointDelegate ResolveSequencePointDelegate;
@@ -143,6 +155,7 @@ namespace SOS
             DisplaySymbolStoreDelegate = SymbolReader.DisplaySymbolStore,
             DisableSymbolStoreDelegate = SymbolReader.DisableSymbolStore,
             LoadNativeSymbolsDelegate = SymbolReader.LoadNativeSymbols,
+            LoadNativeSymbolsFromIndexDelegate = SymbolReader.LoadNativeSymbolsFromIndex,
             LoadSymbolsForModuleDelegate = SymbolReader.LoadSymbolsForModule,
             DisposeDelegate = SymbolReader.Dispose,
             ResolveSequencePointDelegate = SymbolReader.ResolveSequencePoint,
@@ -153,8 +166,6 @@ namespace SOS
         };
 
         const string DesktopRuntimeModuleName = "clr";
-
-        private static readonly string s_coreclrModuleName;
 
         internal readonly IDataReader DataReader;
         internal readonly AnalyzeContext AnalyzeContext;
@@ -174,16 +185,6 @@ namespace SOS
         static SOSHost()
         {
             AssemblyResolver.Enable();
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                s_coreclrModuleName = "coreclr";
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
-                s_coreclrModuleName = "libcoreclr.so";
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
-                s_coreclrModuleName = "libcoreclr.dylib";
-            }
         }
 
         /// <summary>
@@ -270,6 +271,7 @@ namespace SOS
                     ref s_callbacks,
                     Marshal.SizeOf<SOSNetCoreCallbacks>(),
                     tempDirectory,
+                    AnalyzeContext.RuntimeModuleDirectory,
                     isDesktop,
                     dacFilePath,
                     dbiFilePath,
@@ -1110,7 +1112,19 @@ namespace SOS
 
         internal static bool IsCoreClrRuntimeModule(ModuleInfo module)
         {
-            return IsModuleEqual(module, s_coreclrModuleName);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return IsModuleEqual(module, "coreclr") || IsModuleEqual(module, "libcoreclr");
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return IsModuleEqual(module, "libcoreclr.so");
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return IsModuleEqual(module, "libcoreclr.dylib");
+            }
+            return false;
         }
 
         internal static bool IsDesktopRuntimeModule(ModuleInfo module)

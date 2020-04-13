@@ -56,7 +56,19 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     target = DataTarget.LoadCoreDump(dump_path.FullName);
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                    target = DataTarget.LoadCrashDump(dump_path.FullName, CrashDumpReader.ClrMD);
+                    try
+                    {
+                        target = DataTarget.LoadCoreDump(dump_path.FullName);
+                    }
+                    catch (InvalidDataException)
+                    {
+                        // This condition occurs when we try to load a Windows dump as a Elf core dump.
+                    }
+
+                    if (target == null)
+                    {
+                        target = DataTarget.LoadCrashDump(dump_path.FullName, CrashDumpReader.ClrMD);
+                    }
                 }
                 else {
                     throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
@@ -88,6 +100,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         foreach (string cmd in command)
                         {
                             await _commandProcessor.Parse(cmd);
+
+                            if (_consoleProvider.Shutdown)
+                                break;
                         }
                     }
 
@@ -186,7 +201,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 // Ignore the DAC version mismatch that can happen on Linux because the clrmd ELF dump 
                 // reader returns 0.0.0.0 for the runtime module that the DAC is matched against. This
                 // will be fixed in clrmd 2.0 but not 1.1.
-                runtime = clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: RuntimeInformation.IsOSPlatform(OSPlatform.Linux));
+                runtime = clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: clrInfo.ModuleInfo.BuildId != null);
             }
             catch (DllNotFoundException ex)
             {
@@ -207,43 +222,57 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private string GetDacFile(ClrInfo clrInfo)
         {
             if (_dacFilePath == null)
-            {
-                string dac = clrInfo.LocalMatchingDac;
-                if (dac != null && File.Exists(dac))
+            {            
+                Debug.Assert(!string.IsNullOrEmpty(clrInfo.DacInfo.FileName));
+                var analyzeContext = _serviceProvider.GetService<AnalyzeContext>();
+                string dacFilePath = null;
+                if (!string.IsNullOrEmpty(analyzeContext.RuntimeModuleDirectory))
                 {
-                    _dacFilePath = dac;
-                }
-                else if (SymbolReader.IsSymbolStoreEnabled())
-                {
-                    string dacFileName = Path.GetFileName(dac ?? clrInfo.DacInfo.FileName);
-                    if (dacFileName != null)
+                    dacFilePath = Path.Combine(analyzeContext.RuntimeModuleDirectory, clrInfo.DacInfo.FileName);
+                    if (File.Exists(dacFilePath))
                     {
-                        SymbolStoreKey key = null;
-
-                        if (clrInfo.ModuleInfo.BuildId != null)
-                        {
-                            IEnumerable<SymbolStoreKey> keys = ELFFileKeyGenerator.GetKeys(
-                                KeyTypeFlags.ClrKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId, symbolFile: false, symbolFileName: null);
-
-                            key = keys.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
-                        }
-                        else
-                        {
-                            // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
-                            key = PEFileKeyGenerator.GetKey(dacFileName, clrInfo.ModuleInfo.TimeStamp, clrInfo.ModuleInfo.FileSize);
-                        }
-
-                        if (key != null)
-                        {
-                            // Now download the DAC module from the symbol server
-                            _dacFilePath = SymbolReader.GetSymbolFile(key);
-                        }
+                        _dacFilePath = dacFilePath;
                     }
                 }
-
                 if (_dacFilePath == null)
                 {
-                    throw new FileNotFoundException($"Could not find matching DAC for this runtime: {clrInfo.ModuleInfo.FileName}");
+                    dacFilePath = clrInfo.LocalMatchingDac;
+                    if (!string.IsNullOrEmpty(dacFilePath) && File.Exists(dacFilePath))
+                    {
+                        _dacFilePath = dacFilePath;
+                    }
+                    else if (SymbolReader.IsSymbolStoreEnabled())
+                    {
+                        string dacFileName = Path.GetFileName(dacFilePath ?? clrInfo.DacInfo.FileName);
+                        if (dacFileName != null)
+                        {
+                            SymbolStoreKey key = null;
+
+                            if (clrInfo.ModuleInfo.BuildId != null)
+                            {
+                                IEnumerable<SymbolStoreKey> keys = ELFFileKeyGenerator.GetKeys(
+                                    KeyTypeFlags.DacDbiKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId, symbolFile: false, symbolFileName: null);
+
+                                key = keys.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
+                            }
+                            else
+                            {
+                                // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
+                                key = PEFileKeyGenerator.GetKey(dacFileName, clrInfo.ModuleInfo.TimeStamp, clrInfo.ModuleInfo.FileSize);
+                            }
+
+                            if (key != null)
+                            {
+                                // Now download the DAC module from the symbol server
+                                _dacFilePath = SymbolReader.GetSymbolFile(key);
+                            }
+                        }
+                    }
+
+                    if (_dacFilePath == null)
+                    {
+                        throw new FileNotFoundException($"Could not find matching DAC for this runtime: {clrInfo.ModuleInfo.FileName}");
+                    }
                 }
                 _isDesktop = clrInfo.Flavor == ClrFlavor.Desktop;
             }

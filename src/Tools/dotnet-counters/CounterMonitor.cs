@@ -236,7 +236,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             Task monitorTask = new Task(() => {
                 try
                 {
-                    _session = _diagnosticsClient.StartEventPipeSession(Trace.Extensions.ToProviders(providerString), false);
+                    _session = _diagnosticsClient.StartEventPipeSession(Trace.Extensions.ToProviders(providerString), false, 10);
                     var source = new EventPipeEventSource(_session.EventStream);
                     source.Dynamic.All += DynamicAllMonitor;
                     _renderer.EventPipeSourceConnected();

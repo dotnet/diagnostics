@@ -8,7 +8,7 @@ using System.CommandLine;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
-    [Command(Name = "setclrpath", Platform = CommandPlatform.Linux | CommandPlatform.OSX, Help = "Set the path to load coreclr DAC/DBI files.")]
+    [Command(Name = "setclrpath", Help = "Set the path to load coreclr DAC/DBI files.")]
     public class SetClrPath: CommandBase
     {
         public AnalyzeContext AnalyzeContext { get; set; }

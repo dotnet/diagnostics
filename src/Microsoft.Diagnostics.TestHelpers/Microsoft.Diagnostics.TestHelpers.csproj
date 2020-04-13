@@ -9,7 +9,7 @@
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <PackageTags>tests</PackageTags>
     <IncludeSymbols>true</IncludeSymbols>
-    <IsShippingAssembly>true</IsShippingAssembly>
+    <IsShipping>false</IsShipping>
   </PropertyGroup>
   
   <ItemGroup>

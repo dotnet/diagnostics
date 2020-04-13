@@ -5,7 +5,7 @@ This repository contains the source code for various .NET Core runtime diagnosti
 
 Another goal to make it easier to obtain a version of lldb (currently 3.9) with scripts and documentation for platforms/distros like Centos, Alpine, Fedora, etc. that by default provide really old versions.
 
-This repo will also allow out of band development of new SOS and lldb plugin features like symbol server support for the .NET Core runtime and solve the source build problem having SOS.NETCore (managed portion of SOS) in the coreclr repo.
+This repo will also allow out of band development of new SOS and lldb plugin features like symbol server support for the .NET Core runtime and solve the source build problem having SOS.NETCore (managed portion of SOS) in the runtime repo.
 
 See the [GitHub Release tab](https://github.com/dotnet/diagnostics/releases) for notes on SOS and diagnostic tools releases.
 
@@ -56,5 +56,4 @@ To install the platform's prerequisites and build:
 
 ## License
 
-The diagnostics repository is licensed under the [MIT license](LICENSE.TXT). This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).  For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
-
+The diagnostics repository is licensed under the [MIT license](LICENSE.TXT).
