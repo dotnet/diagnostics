@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         private static Task<int> HandleUnknownParam()
         {
             Console.Error.WriteLine("Invalid report type and source combination specified.");
-            return Task.FromResult(1);
+            return Task.FromResult(-1);
         }
 
         private static Task<int> ReportFromProcess(int processId, CancellationToken ct)
