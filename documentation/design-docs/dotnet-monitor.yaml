@@ -192,11 +192,11 @@ paths:
         type: "integer"
         default: "30"
       - name: "configuration"
-        in: "body"
+        in: body
         schema:
-          type: "array"
+          type: object
           items:
-            $ref: "#/definitions/EventPipeProvider"
+            $ref: "#/definitions/EventPipeConfiguration"
       responses:
         200:
           description: "Success"
@@ -226,11 +226,11 @@ paths:
         required: true
         type: "string"
       - name: "configuration"
-        in: "body"
+        in: body
         schema:
-          type: "array"
+          type: object
           items:
-            $ref: "#/definitions/EventPipeProvider"
+            $ref: "#/definitions/EventPipeConfiguration"
       responses:
         200:
           description: "Success"
@@ -424,6 +424,19 @@ definitions:
       - status
       - detail
       - instance
+  EventPipeConfiguration:
+    type: object
+    properties:
+      providers:
+        type: array
+        items:
+          $ref: "#/definitions/EventPipeProvider"
+      requestRundown:
+        type: boolean
+        default: true
+      circularBufferInMB:
+        type: number
+        default: 256
   EventPipeProvider:
     type: object
     properties:
