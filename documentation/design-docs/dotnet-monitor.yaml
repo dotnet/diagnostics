@@ -34,6 +34,18 @@ paths:
       operationId: "getdefaultprocessdump"
       produces:
       - "application/octet-stream"
+      parameters:
+      - name: "type"
+        in: query
+        description: "Specifies the dump type, which determines the kinds of information that are collected from the process."
+        type: string
+        enum:
+        - "Normal"
+        - "WithHeap"
+        - "Triage"
+        - "Full"
+        required: false
+        default: "Normal"
       responses:
         200:
           description: "Success"
@@ -56,6 +68,17 @@ paths:
         description: "Process ID of the process to collect a process dump"
         required: true
         type: "integer"
+      - name: "type"
+        in: query
+        description: "Specifies the dump type, which determines the kinds of information that are collected from the process."
+        type: string
+        enum:
+        - "Normal"
+        - "WithHeap"
+        - "Triage"
+        - "Full"
+        required: false
+        default: "Normal"
       responses:
         200:
           description: "Success"
