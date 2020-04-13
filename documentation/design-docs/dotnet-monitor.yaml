@@ -95,6 +95,13 @@ paths:
       operationId: "getdefaultgcdump"
       produces:
       - "application/octet-stream"
+      parameters:
+      - name: "timeout"
+        in: "query"
+        description: "Maximum duration of the GC Dump"
+        required: false
+        type: "integer"
+        default: "30"
       responses:
         200:
           description: "Success"
@@ -112,6 +119,12 @@ paths:
       produces:
       - "application/octet-stream"
       parameters:
+      - name: "timeout"
+        in: "query"
+        description: "Maximum duration of the GC Dump"
+        required: false
+        type: "integer"
+        default: "30"
       - name: "uid"
         in: "path"
         description: "Process ID of the process"
@@ -456,4 +469,3 @@ definitions:
     - name
     - keywords
     - eventLevel
-            
