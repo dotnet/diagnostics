@@ -67,7 +67,7 @@ paths:
         in: "path"
         description: "Process ID of the process to collect a process dump"
         required: true
-        type: "integer"
+        type: "string"
       - name: "type"
         in: query
         description: "Specifies the dump type, which determines the kinds of information that are collected from the process."
