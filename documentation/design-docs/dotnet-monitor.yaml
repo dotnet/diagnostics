@@ -1,0 +1,421 @@
+swagger: "2.0"
+info:
+  description: "dotnet-monitor diagnostics agent"
+  version: "1.0.0"
+  title: "dotnet-monitor"
+host: "localhost:9999"
+basePath: "/diag/v1/"
+schemes:
+- "https"
+- "http"
+paths:
+  /processes/:
+    get:
+      tags:
+      - "processes"
+      operationId: "getprocesses"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            type: array
+            items: 
+              $ref: "#/definitions/Process"
+        400:
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Error"
+  /dump/:
+    get:
+      tags:
+      - "dumps"
+      operationId: "getdefaultprocessdump"
+      produces:
+      - "application/octet-stream"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            format: "byte"
+        400:
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Error"
+  /dump/{uid}:
+    get:
+      tags:
+      - "dumps"
+      operationId: "getprocessdump"
+      produces:
+      - "application/octet-stream"
+      parameters:
+      - name: "uid"
+        in: "path"
+        description: "Process ID of the process to collect a process dump"
+        required: true
+        type: "integer"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            format: "byte"
+        400:
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Error"
+  /gcdump/:
+    get:
+      tags:
+      - "dumps"
+      operationId: "getdefaultgcdump"
+      produces:
+      - "application/octet-stream"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            format: "byte"
+        400:
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Error"
+  /gcdump/{uid}:
+    get:
+      tags:
+      - "dumps"
+      operationId: "getgcdump"
+      produces:
+      - "application/octet-stream"
+      parameters:
+      - name: "uid"
+        in: "path"
+        description: "Process ID of the process to collect a process dump"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            format: "byte"
+        400:
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Error"
+  /cpuprofile:
+    get:
+      tags:
+      - "traces"
+      operationId: "getdefaultcputrace"
+      produces:
+      - "application/octet-stream"
+      parameters:
+      - name: "duration"
+        in: "query"
+        description: "Duration of the CPU trace"
+        required: false
+        type: "integer"
+        default: "30"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            format: "byte"
+        400:
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Error"
+  /cpuprofile/{uid}:
+    get:
+      tags:
+      - "traces"
+      operationId: "getcputrace"
+      produces:
+      - "application/octet-stream"
+      parameters:
+      - name: "uid"
+        in: "path"
+        description: "Process ID of the process to collect a process dump"
+        required: true
+        type: "string"
+      - name: "duration"
+        in: "query"
+        description: "Duration of the CPU trace"
+        required: false
+        type: "integer"
+        default: "30"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            format: "byte"
+        400:
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Error"
+  /trace/:
+    post:
+      tags:
+      - "traces"
+      operationId: "postdefaulttrace"
+      produces:
+      - "application/octet-stream"
+      parameters:
+      - name: "duration"
+        in: "query"
+        description: "Duration of the trace"
+        required: false
+        type: "integer"
+        default: "30"
+      - name: "configuration"
+        in: "body"
+        schema:
+          type: "array"
+          items:
+            $ref: "#/definitions/EventPipeProvider"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            format: "byte"
+        400:
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Error"
+  /trace/{uid}:
+    post:
+      tags:
+      - "traces"
+      operationId: "posttrace"
+      produces:
+      - "application/octet-stream"
+      parameters:
+      - name: "duration"
+        in: "query"
+        description: "Duration of the trace"
+        required: false
+        type: "integer"
+        default: "30"
+      - name: "uid"
+        in: "path"
+        description: "ID of the process to collect a process dump"
+        required: true
+        type: "string"
+      - name: "configuration"
+        in: "body"
+        schema:
+          type: "array"
+          items:
+            $ref: "#/definitions/EventPipeProvider"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            format: "byte"
+        400:
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Error"
+  /logs/:
+    get:
+      tags:
+      - "logs"
+      operationId: "getdefaultlogs"
+      produces:
+      # Newline-delimited JSON- http://www.ietf.org/rfc/rfc4288.txt
+      - "application/x-ndjson"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            format: "byte"
+        400:
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Error"
+  /logs/{uid}:
+    get:
+      tags:
+      - "logs"
+      operationId: "getlogs"
+      produces:
+      - "application/x-ndjson"
+      parameters:
+      - name: "uid"
+        in: "path"
+        description: "Process ID of the process to collect a process dump"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            format: "byte"
+        400:
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Error"
+    post:
+      tags:
+      - "logs"
+      operationId: "postlogs"
+      produces:
+      - "application/x-ndjson"
+      parameters:
+      - name: "uid"
+        in: "path"
+        description: "Process ID of the process to collect a process dump"
+        required: true
+        type: "string"
+      - name: "configuration"
+        in: "body"
+        schema:
+          type: "array"
+          items:
+            $ref: "#/definitions/LogFilter"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            format: "byte"
+        400:
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Error"
+            
+  /metrics/:
+    get:
+      tags:
+      - "metrics"
+      operationId: "getdefaultmetrics"
+      produces:
+      - "text/plain; version=0.0.4"
+      responses:
+        200:
+          description: "Success"
+          schema:
+           $ref: "#/definitions/Metrics" 
+        400:
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Error"
+  /metrics/{uid}:
+    get:
+      tags:
+      - "metrics"
+      operationId: "getmetrics"
+      produces:
+      - "text/plain; version=0.0.4"
+      parameters:
+      - name: "uid"
+        in: "path"
+        description: "Process ID of the process to collect a process dump"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Success"
+          schema:
+           $ref: "#/definitions/Metrics" 
+        400:
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Error"
+    post:
+      tags:
+      - "metrics"
+      operationId: "postmetrics"
+      produces:
+      - "text/plain; version=0.0.4"
+      parameters:
+      - name: "uid"
+        in: "path"
+        description: "Process ID of the process to collect a process dump"
+        required: true
+        type: "string"
+      - name: "configuration"
+        in: "body"
+        schema:
+          type: "array"
+          items:
+            $ref: "#/definitions/EventPipeProvider"
+      responses:
+        200:
+          description: "Success"
+          schema:
+           $ref: "#/definitions/Metrics" 
+        400:
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Error"
+
+# Descriptions of common components
+definitions:
+  # Prometheus line exposition format
+  Metrics:
+    type: string
+    example: "http_requests_total{method='post',code='200'} 1027 1395066363000\nhttp_requests_total{method='post',code='400'}    3 1395066363000"
+  Process:
+    type: object
+    properties:
+      uid:
+        type: string
+      name:
+        type: string
+      commandLine:
+        type: string
+    required:
+      - uid
+  LogFilter:
+    type: object
+    properties:
+      provider:
+        type: string
+      logLevel:
+        type: string
+        enum:
+        - "Trace"
+        - "Debug"
+        - "Information"
+        - "Warning"
+        - "Error"
+        - "Critical"
+  # RFC 7807 Problem details
+  Error:
+    type: object
+    properties:
+      code:
+        type: string
+      title:
+        type: string
+      status:
+        type: integer
+      detail:
+        type: string
+      instance:
+        type: string
+    required:
+      - code
+      - title
+      - status
+      - detail
+      - instance
+  EventPipeProvider:
+    type: object
+    properties:
+      name:
+        type: string
+      keywords:
+        type: string
+      eventLevel:
+        type: string
+      arguments:
+        type: object
+        additionalProperties:
+          type: string
+    required:
+    - name
+    - keywords
+    - eventLevel
+            
