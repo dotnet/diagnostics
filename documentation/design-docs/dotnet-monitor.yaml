@@ -329,6 +329,7 @@ paths:
       operationId: "getdefaultmetrics"
       produces:
       - "text/plain; version=0.0.4"
+      - "application/json"
       responses:
         200:
           description: "Success"
@@ -345,6 +346,7 @@ paths:
       operationId: "getmetrics"
       produces:
       - "text/plain; version=0.0.4"
+      - "application/json"
       parameters:
       - name: "uid"
         in: "path"
