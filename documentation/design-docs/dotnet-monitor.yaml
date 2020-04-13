@@ -65,7 +65,7 @@ paths:
       parameters:
       - name: "uid"
         in: "path"
-        description: "Process ID of the process to collect a process dump"
+        description: "Process ID of the process"
         required: true
         type: "string"
       - name: "type"
@@ -114,7 +114,7 @@ paths:
       parameters:
       - name: "uid"
         in: "path"
-        description: "Process ID of the process to collect a process dump"
+        description: "Process ID of the process"
         required: true
         type: "string"
       responses:
@@ -159,7 +159,7 @@ paths:
       parameters:
       - name: "uid"
         in: "path"
-        description: "Process ID of the process to collect a process dump"
+        description: "Process ID of the process"
         required: true
         type: "string"
       - name: "duration"
@@ -248,6 +248,7 @@ paths:
       produces:
       # Newline-delimited JSON- http://www.ietf.org/rfc/rfc4288.txt
       - "application/x-ndjson"
+      - "text/event-stream"
       responses:
         200:
           description: "Success"
@@ -264,10 +265,11 @@ paths:
       operationId: "getlogs"
       produces:
       - "application/x-ndjson"
+      - "text/event-stream"
       parameters:
       - name: "uid"
         in: "path"
-        description: "Process ID of the process to collect a process dump"
+        description: "Process ID of the process"
         required: true
         type: "string"
       responses:
@@ -288,7 +290,7 @@ paths:
       parameters:
       - name: "uid"
         in: "path"
-        description: "Process ID of the process to collect a process dump"
+        description: "Process ID of the process"
         required: true
         type: "string"
       - name: "configuration"
@@ -333,7 +335,7 @@ paths:
       parameters:
       - name: "uid"
         in: "path"
-        description: "Process ID of the process to collect a process dump"
+        description: "Process ID of the process"
         required: true
         type: "string"
       responses:
@@ -354,7 +356,7 @@ paths:
       parameters:
       - name: "uid"
         in: "path"
-        description: "Process ID of the process to collect a process dump"
+        description: "Process ID of the process"
         required: true
         type: "string"
       - name: "configuration"
