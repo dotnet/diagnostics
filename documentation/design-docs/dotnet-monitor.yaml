@@ -9,7 +9,7 @@ schemes:
 - "https"
 - "http"
 paths:
-  /processes/:
+  /processes:
     get:
       tags:
       - "processes"
@@ -27,7 +27,7 @@ paths:
           description: "Bad request"
           schema:
             $ref: "#/definitions/Error"
-  /dump/:
+  /dump:
     get:
       tags:
       - "dumps"
@@ -88,7 +88,7 @@ paths:
           description: "Bad request"
           schema:
             $ref: "#/definitions/Error"
-  /gcdump/:
+  /gcdump:
     get:
       tags:
       - "dumps"
@@ -177,7 +177,7 @@ paths:
           description: "Bad request"
           schema:
             $ref: "#/definitions/Error"
-  /trace/:
+  /trace:
     post:
       tags:
       - "traces"
@@ -240,7 +240,7 @@ paths:
           description: "Bad request"
           schema:
             $ref: "#/definitions/Error"
-  /logs/:
+  /logs:
     get:
       tags:
       - "logs"
@@ -307,7 +307,7 @@ paths:
           schema:
             $ref: "#/definitions/Error"
             
-  /metrics/:
+  /metrics:
     get:
       tags:
       - "metrics"
