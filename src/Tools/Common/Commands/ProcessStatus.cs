@@ -34,8 +34,15 @@ namespace Microsoft.Internal.Common.Commands
                     .OrderBy(process => process.ProcessName)
                     .ThenBy(process => process.Id);
 
+                var currentPid = Process.GetCurrentProcess().Id;
+
                 foreach (var process in processes)
                 {
+                    if (process.Id == currentPid)
+                    {
+                        continue;
+                    }
+
                     try
                     {
                         sb.Append($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}\n");

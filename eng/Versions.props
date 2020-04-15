@@ -9,7 +9,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest symstore version updated by darc -->
-    <MicrosoftSymbolStoreVersion>1.0.117501</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.121301</MicrosoftSymbolStoreVersion>
     <!-- Runtime versions to test -->
     <MicrosoftNETCoreApp21Version>2.1.16</MicrosoftNETCoreApp21Version>
     <MicrosoftAspNetCoreApp21Version>$(MicrosoftNETCoreApp21Version)</MicrosoftAspNetCoreApp21Version>
@@ -18,9 +18,9 @@
     <MicrosoftNETCoreApp31Version>3.1.2</MicrosoftNETCoreApp31Version>
     <MicrosoftAspNetCoreApp31Version>$(MicrosoftNETCoreApp31Version)</MicrosoftAspNetCoreApp31Version>
     <!-- Latest shared runtime version updated by darc -->
-    <MicrosoftNETCoreAppVersion>5.0.0-preview.4.20202.18</MicrosoftNETCoreAppVersion>
+    <MicrosoftNETCoreAppVersion>5.0.0-preview.4.20214.3</MicrosoftNETCoreAppVersion>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefVersion>5.0.0-preview.4.20202.13</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefVersion>5.0.0-preview.4.20214.3</MicrosoftAspNetCoreAppRefVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
@@ -33,13 +33,17 @@
     <SystemCollectionsImmutableVersion>1.5.0</SystemCollectionsImmutableVersion>
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
     <!-- Other libs -->
+    <MicrosoftAspNetCoreVersion>2.1.7</MicrosoftAspNetCoreVersion>
+    <MicrosoftAspNetCoreHttpsPolicyVersion>2.1.1</MicrosoftAspNetCoreHttpsPolicyVersion>
+    <MicrosoftAspNetCoreMvcVersion>2.1.3</MicrosoftAspNetCoreMvcVersion>
+    <MicrosoftAspNetCoreResponseCompressionVersion>2.1.1</MicrosoftAspNetCoreResponseCompressionVersion>
     <MicrosoftDiagnosticsRuntimeVersion>1.1.116301</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.51</MicrosoftDiagnosticsTracingTraceEventVersion>
-    <MicrosoftExtensionsConfigurationJsonVersion>3.1.2</MicrosoftExtensionsConfigurationJsonVersion>
-    <MicrosoftExtensionsConfigurationKeyPerFileVersion>3.1.2</MicrosoftExtensionsConfigurationKeyPerFileVersion>
-    <MicrosoftExtensionsLoggingVersion>3.1.2</MicrosoftExtensionsLoggingVersion>
-    <MicrosoftExtensionsLoggingConsoleVersion>3.1.2</MicrosoftExtensionsLoggingConsoleVersion>
+    <MicrosoftExtensionsConfigurationJsonVersion>2.1.1</MicrosoftExtensionsConfigurationJsonVersion>
+    <MicrosoftExtensionsConfigurationKeyPerFileVersion>2.1.1</MicrosoftExtensionsConfigurationKeyPerFileVersion>
+    <MicrosoftExtensionsLoggingVersion>2.1.1</MicrosoftExtensionsLoggingVersion>
+    <MicrosoftExtensionsLoggingConsoleVersion>2.1.1</MicrosoftExtensionsLoggingConsoleVersion>
     <SystemCommandLineExperimentalVersion>0.3.0-alpha.19602.1</SystemCommandLineExperimentalVersion>
     <SystemCommandLineRenderingVersion>0.3.0-alpha.19602.1</SystemCommandLineRenderingVersion>
     <SystemMemoryVersion>4.5.3</SystemMemoryVersion>
@@ -47,7 +51,7 @@
     <SystemThreadingChannelsVersion>4.7.0</SystemThreadingChannelsVersion>
     <XUnitVersion>2.4.1</XUnitVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-    <MicrosoftDotNetRemoteExecutorVersion>5.0.0-beta.20171.1</MicrosoftDotNetRemoteExecutorVersion>
+    <MicrosoftDotNetRemoteExecutorVersion>5.0.0-beta.20201.2</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
   </PropertyGroup>
   <PropertyGroup>

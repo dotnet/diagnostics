@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Internal.Common.Commands;
 using Microsoft.Tools.Common;
 using System;
 using System.Collections.Generic;
@@ -20,10 +19,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor
     {
         None = 0,
         Console = 1,
-        LogAnalytics = 2,
         All = 0xff
     }
-    
+
     class Program
     {
         private static Command CollectCommand() =>
@@ -32,59 +30,22 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                   description: "Monitor logs and metrics in a .NET application send the results to a chosen destination.")
               {
                 // Handler
-                CommandHandler.Create<CancellationToken, IConsole, int, int, SinkType, IEnumerable<FileInfo>, IEnumerable<FileInfo>>(new DiagnosticsMonitorCommandHandler().Start),
-                // Arguments and Options
-                ProcessIdOption(), RefreshIntervalOption(), SinkOption(), JsonConfigOption(), FileConfigOption()
+                CommandHandler.Create<CancellationToken, IConsole, ushort>(new DiagnosticsMonitorCommandHandler().Start),
+                PortOption()
               };
 
-        private static Option ProcessIdOption() =>
+        private static Option PortOption() =>
             new Option(
-                aliases: new[] { "-p", "--process-id" },
-                description: "The process id that will be monitored.")
+                aliases: new[] { "-p", "--port" },
+                description: "The port to listen on for REST api calls.")
             {
-                Argument = new Argument<int>(name: "processId")
+                Argument = new Argument<ushort>(name: "port", defaultValue: 52323)
             };
-
-        private static Option RefreshIntervalOption() =>
-            new Option(
-                alias: "--refresh-interval",
-                description: "The number of seconds to delay between updating the counters.")
-            {
-                Argument = new Argument<int>(name: "refreshInterval", defaultValue: 10)
-            };
-
-        private static Option SinkOption() =>
-            new Option(
-                alias: "--sink",
-                description: "Where to send the data")
-            {
-                Argument = new Argument<SinkType>(name: "sink", defaultValue: SinkType.Console)
-            };
-
-        private static Option JsonConfigOption() =>
-        new Option(
-            alias: "--json-configs",
-            description: "Additonal configuration")
-        {
-            Argument = new Argument<IEnumerable<FileInfo>>(name: "jsonConfigs"),
-            Required = false,
-        };
-
-        private static Option FileConfigOption() =>
-        new Option(
-            alias: "--keyfile-configs",
-            description: "Additonal configuration")
-        {
-            Argument = new Argument<IEnumerable<FileInfo>>(name: "keyFileConfigs"),
-            Required = false
-        };
-
 
         public static Task<int> Main(string[] args)
         {
             var parser = new CommandLineBuilder()
                             .AddCommand(CollectCommand())
-                            .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that can be monitored"))
                             .UseDefaults()
                             .Build();
             return parser.InvokeAsync(args);

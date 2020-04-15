@@ -29,7 +29,8 @@ typedef  BOOL (*InitializeSymbolStoreDelegate)(
 
 typedef  void (*DisplaySymbolStoreDelegate)(WriteLineDelegate);
 typedef  void (*DisableSymbolStoreDelegate)();
-typedef  void (*LoadNativeSymbolsDelegate)(SymbolFileCallbackDelegate, void*, const char*, ULONG64, int, ReadMemoryDelegate);
+typedef  void (*LoadNativeSymbolsDelegate)(SymbolFileCallbackDelegate, void*, int, const char*, ULONG64, int, ReadMemoryDelegate);
+typedef  void (*LoadNativeSymbolsFromIndexDelegate)(SymbolFileCallbackDelegate, void*, int, const char*, BOOL, int, const unsigned char* moduleIndex);
 typedef  PVOID (*LoadSymbolsForModuleDelegate)(const char*, BOOL, ULONG64, int, ULONG64, int, ReadMemoryDelegate);
 typedef  void (*DisposeDelegate)(PVOID);
 typedef  BOOL (*ResolveSequencePointDelegate)(PVOID, const char*, unsigned int, unsigned int*, unsigned int*);
@@ -55,6 +56,7 @@ struct SOSNetCoreCallbacks
     DisplaySymbolStoreDelegate DisplaySymbolStoreDelegate;
     DisableSymbolStoreDelegate DisableSymbolStoreDelegate;
     LoadNativeSymbolsDelegate LoadNativeSymbolsDelegate;
+    LoadNativeSymbolsFromIndexDelegate LoadNativeSymbolsFromIndexDelegate;
     LoadSymbolsForModuleDelegate LoadSymbolsForModuleDelegate;
     DisposeDelegate DisposeDelegate;
     ResolveSequencePointDelegate ResolveSequencePointDelegate;
