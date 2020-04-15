@@ -73,7 +73,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                     services.AddSingleton<ILogger<DiagnosticsMonitor>>((sp) => new ConsoleLoggerAdapter(console));
                     services.Configure<ContextConfiguration>(context.Configuration);
                 })
-                .UseUrls(FormattableString.Invariant($"http://localhost:{port}"), FormattableString.Invariant($"https://localhost:{port + 1}"))
+                .UseUrls(FormattableString.Invariant($"http://localhost:{port}"))
                 .UseStartup<Startup>();
 
             return builder;
