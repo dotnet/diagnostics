@@ -149,7 +149,7 @@ namespace DotnetCounters.UnitTests
 
             for (int i = 0 ; i < 20; i++)
             {
-                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(false, "heapSize", (double)i, 0, "Heap Size", "MB"), false);
+                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(false, "heapSize", 0, 0, "Heap Size", "MB"), false);
             }
             exporter.Stop();
 
@@ -160,7 +160,7 @@ namespace DotnetCounters.UnitTests
                 // first } from end of the last event payload
                 // next ] from closing "Events" field 
                 // last } from closing the whole JSON
-                Assert.EndsWith("}]}", json);
+                Assert.EndsWith("0 }]}", json);
             }
         }
     }
