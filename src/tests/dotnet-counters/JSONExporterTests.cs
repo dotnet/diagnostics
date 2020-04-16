@@ -119,6 +119,7 @@ namespace DotnetCounters.UnitTests
             }
             exporter.Stop();
 
+            Assert.True(File.Exists(fileName));
             using (StreamReader r = new StreamReader(fileName))
             {
                 string json = r.ReadToEnd();
