@@ -119,7 +119,6 @@ namespace DotnetCounters.UnitTests
             }
             exporter.Stop();
 
-            Assert.True(File.Exists(fileName));
             using (StreamReader r = new StreamReader(fileName))
             {
                 string json = r.ReadToEnd();
@@ -134,6 +133,33 @@ namespace DotnetCounters.UnitTests
                     Assert.Equal(i, payload.value);
                     i += 1;
                 }
+            }
+        }
+
+        [Fact]
+        public void ValidJSONFormatTest()
+        {
+            // Test if the produced JSON is a valid format. 
+            // Regression test for https://github.com/dotnet/diagnostics/issues/1020
+
+            string fileName = "validJSONFormatTest.json";
+            JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
+            exporter.Initialize();
+
+            for (int i = 0 ; i < 20; i++)
+            {
+                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(false, "heapSize", (double)i, 0, "Heap Size", "MB"), false);
+            }
+            exporter.Stop();
+
+            Assert.True(File.Exists(fileName));
+            using (StreamReader r = new StreamReader(fileName))
+            {
+                string json = r.ReadToEnd();
+                // first } from end of the last event payload
+                // next ] from closing "Events" field 
+                // last } from closing the whole JSON
+                Assert.EndsWith("}]}", json);
             }
         }
     }
