@@ -30,16 +30,16 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                   description: "Monitor logs and metrics in a .NET application send the results to a chosen destination.")
               {
                 // Handler
-                CommandHandler.Create<CancellationToken, IConsole, ushort>(new DiagnosticsMonitorCommandHandler().Start),
+                CommandHandler.Create<CancellationToken, IConsole, string[]>(new DiagnosticsMonitorCommandHandler().Start),
                 PortOption()
               };
 
         private static Option PortOption() =>
             new Option(
-                aliases: new[] { "-p", "--port" },
-                description: "The port to listen on for REST api calls.")
+                aliases: new[] { "-u", "--urls"},
+                description: "Bindings for the REST api.")
             {
-                Argument = new Argument<ushort>(name: "port", defaultValue: 52323)
+                Argument = new Argument<string[]>(name: "urls", defaultValue: new[] { "http://localhost:52323" })
             };
 
         public static Task<int> Main(string[] args)

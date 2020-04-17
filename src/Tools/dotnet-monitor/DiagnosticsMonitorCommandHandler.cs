@@ -49,15 +49,15 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             }
         }
 
-        public async Task<int> Start(CancellationToken token, IConsole console, ushort port)
+        public async Task<int> Start(CancellationToken token, IConsole console, string[] urls)
         {
             //CONSIDER The console sink uses the standard AddConsole, and therefore disregards IConsole.
-            using IWebHost host = CreateWebHostBuilder(console, port).Build();
+            using IWebHost host = CreateWebHostBuilder(console, urls).Build();
             await host.RunAsync(token);
             return 0;
         }
 
-        public IWebHostBuilder CreateWebHostBuilder(IConsole console, ushort port)
+        public IWebHostBuilder CreateWebHostBuilder(IConsole console, string[] urls)
         {
             IWebHostBuilder builder = WebHost.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((IConfigurationBuilder builder) =>
@@ -73,7 +73,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                     services.AddSingleton<ILogger<DiagnosticsMonitor>>((sp) => new ConsoleLoggerAdapter(console));
                     services.Configure<ContextConfiguration>(context.Configuration);
                 })
-                .UseUrls(FormattableString.Invariant($"http://localhost:{port}"))
+                .UseUrls(urls)
                 .UseStartup<Startup>();
 
             return builder;
