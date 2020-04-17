@@ -74,27 +74,32 @@ public:
     virtual HRESULT STDMETHODCALLTYPE GetPlatform(CorDebugPlatform * pPlatform)
     {
         ULONG platformKind = g_targetMachine->GetPlatform();
-#ifdef FEATURE_PAL        
-        if(platformKind == IMAGE_FILE_MACHINE_I386)
-            *pPlatform = CORDB_PLATFORM_POSIX_X86;
-        else if(platformKind == IMAGE_FILE_MACHINE_AMD64)
-            *pPlatform = CORDB_PLATFORM_POSIX_AMD64;
-        else if(platformKind == IMAGE_FILE_MACHINE_ARMNT)
-            *pPlatform = CORDB_PLATFORM_POSIX_ARM;
+        if (IsWindowsTarget())
+        {
+            if (platformKind == IMAGE_FILE_MACHINE_I386)
+                *pPlatform = CORDB_PLATFORM_WINDOWS_X86;
+            else if (platformKind == IMAGE_FILE_MACHINE_AMD64)
+                *pPlatform = CORDB_PLATFORM_WINDOWS_AMD64;
+            else if (platformKind == IMAGE_FILE_MACHINE_ARMNT)
+                *pPlatform = CORDB_PLATFORM_WINDOWS_ARM;
+            else if (platformKind == IMAGE_FILE_MACHINE_ARM64)
+                *pPlatform = CORDB_PLATFORM_WINDOWS_ARM64;
+            else
+                return E_FAIL;
+        }
         else
-            return E_FAIL;
-#else
-        if(platformKind == IMAGE_FILE_MACHINE_I386)
-            *pPlatform = CORDB_PLATFORM_WINDOWS_X86;
-        else if(platformKind == IMAGE_FILE_MACHINE_AMD64)
-            *pPlatform = CORDB_PLATFORM_WINDOWS_AMD64;
-        else if(platformKind == IMAGE_FILE_MACHINE_ARMNT)
-            *pPlatform = CORDB_PLATFORM_WINDOWS_ARM;
-        else if(platformKind == IMAGE_FILE_MACHINE_ARM64)
-            *pPlatform = CORDB_PLATFORM_WINDOWS_ARM64;
-        else
-            return E_FAIL;        
-#endif        
+        {
+            if (platformKind == IMAGE_FILE_MACHINE_I386)
+                *pPlatform = CORDB_PLATFORM_POSIX_X86;
+            else if (platformKind == IMAGE_FILE_MACHINE_AMD64)
+                *pPlatform = CORDB_PLATFORM_POSIX_AMD64;
+            else if (platformKind == IMAGE_FILE_MACHINE_ARMNT)
+                *pPlatform = CORDB_PLATFORM_POSIX_ARM;
+            else if (platformKind == IMAGE_FILE_MACHINE_ARM64)
+                *pPlatform = CORDB_PLATFORM_POSIX_ARM64;
+            else
+                return E_FAIL;
+        }
     
         return S_OK;
     }

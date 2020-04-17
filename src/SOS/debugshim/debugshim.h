@@ -28,7 +28,7 @@ class CLRDebuggingImpl : public ICLRDebugging
 {
 
 public:
-    CLRDebuggingImpl(GUID skuId) : m_cRef(0), m_skuId(skuId)
+    CLRDebuggingImpl(GUID skuId, bool isWindowsTarget) : m_cRef(0), m_skuId(skuId), m_isWindowsTarget(isWindowsTarget)
     {
     }
 
@@ -84,6 +84,7 @@ private:
 
 	volatile LONG m_cRef;
     GUID m_skuId;
+    bool m_isWindowsTarget;
 
 };  // class CLRDebuggingImpl
 

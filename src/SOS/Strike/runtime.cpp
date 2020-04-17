@@ -477,7 +477,7 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
         skuId = CLR_ID_V4_DESKTOP;
     }
 #endif
-    CLRDebuggingImpl* pDebuggingImpl = new CLRDebuggingImpl(skuId);
+    CLRDebuggingImpl* pDebuggingImpl = new CLRDebuggingImpl(skuId, IsWindowsTarget());
     hr = pDebuggingImpl->QueryInterface(IID_ICLRDebugging, (LPVOID *)&pClrDebugging);
     if (FAILED(hr))
     {
