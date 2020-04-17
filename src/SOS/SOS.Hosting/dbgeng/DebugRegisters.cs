@@ -36,12 +36,12 @@ namespace SOS
 
         #region IDebugRegisters Delegates
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetNumberRegistersDelegate(
             IntPtr self,
             [Out] uint* Number);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetDescriptionDelegate(
             IntPtr self,
             [In] uint Register,
@@ -50,25 +50,25 @@ namespace SOS
             [Out] uint* NameSize,
             [Out] DEBUG_REGISTER_DESCRIPTION* Desc);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetIndexByNameDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Name,
             [Out] out uint Index);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetValueDelegate(
             IntPtr self,
             [In] uint Register,
             [Out] out DEBUG_VALUE Value);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetValueDelegate(
             IntPtr self,
             [In] uint Register,
             [In] DEBUG_VALUE* Value);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetValuesDelegate( //FIX ME!!! This needs to be tested
             IntPtr self,
             [In] uint Count,
@@ -76,7 +76,7 @@ namespace SOS
             [In] uint Start,
             [Out] DEBUG_VALUE* Values);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetValuesDelegate(
             IntPtr self,
             [In] uint Count,
@@ -84,23 +84,23 @@ namespace SOS
             [In] uint Start,
             [In] DEBUG_VALUE* Values);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int OutputRegistersDelegate(
             IntPtr self,
             [In] DEBUG_OUTCTL OutputControl,
             [In] DEBUG_REGISTERS Flags);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetInstructionOffsetDelegate(
             IntPtr self,
             [Out] out ulong Offset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetStackOffsetDelegate(
             IntPtr self,
             [Out] out ulong Offset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetFrameOffsetDelegate(
             IntPtr self,
             [Out] out ulong Offset);
