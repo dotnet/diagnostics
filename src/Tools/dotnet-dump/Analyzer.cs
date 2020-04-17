@@ -219,6 +219,15 @@ namespace Microsoft.Diagnostics.Tools.Dump
             return runtime;
         }
 
+        private string GetPlatformDacFileName(string dacFileName)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return dacFileName.Replace("libmscordaccore.so", "mscordaccore.dll");
+            }
+            return dacFileName;
+        }
+
         private string GetDacFile(ClrInfo clrInfo)
         {
             if (_dacFilePath == null)
@@ -228,7 +237,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 string dacFilePath = null;
                 if (!string.IsNullOrEmpty(analyzeContext.RuntimeModuleDirectory))
                 {
-                    dacFilePath = Path.Combine(analyzeContext.RuntimeModuleDirectory, clrInfo.DacInfo.FileName);
+                    dacFilePath = Path.Combine(analyzeContext.RuntimeModuleDirectory, GetPlatformDacFileName(clrInfo.DacInfo.FileName));
                     if (File.Exists(dacFilePath))
                     {
                         _dacFilePath = dacFilePath;
@@ -236,14 +245,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
                 if (_dacFilePath == null)
                 {
-                    dacFilePath = clrInfo.LocalMatchingDac;
+                    dacFilePath = GetPlatformDacFileName(clrInfo.LocalMatchingDac);
                     if (!string.IsNullOrEmpty(dacFilePath) && File.Exists(dacFilePath))
                     {
                         _dacFilePath = dacFilePath;
                     }
                     else if (SymbolReader.IsSymbolStoreEnabled())
                     {
-                        string dacFileName = Path.GetFileName(dacFilePath ?? clrInfo.DacInfo.FileName);
+                        string dacFileName = Path.GetFileName(dacFilePath ?? GetPlatformDacFileName(clrInfo.DacInfo.FileName));
                         if (dacFileName != null)
                         {
                             SymbolStoreKey key = null;
