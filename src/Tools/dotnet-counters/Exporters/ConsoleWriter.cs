@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 
 namespace Microsoft.Diagnostics.Tools.Counters.Exporters
@@ -125,8 +126,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             }
 
             const string DecimalPlaces = "###";
-            string payloadVal = payload.GetValue().ToString("#,0." + DecimalPlaces);
-            int decimalIndex = payloadVal.IndexOf('.');
+            string payloadVal = payload.GetValue().ToString("#,0." + DecimalPlaces, CultureInfo.CurrentCulture);
+            int decimalIndex = payloadVal.IndexOf(CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator, StringComparison.CurrentCulture);
             if (decimalIndex == -1)
             {
                 decimalIndex = payloadVal.Length;
