@@ -5,6 +5,7 @@ using System.CommandLine.Builder;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Tools.GCDump.CommandLine;
 using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.GCDump

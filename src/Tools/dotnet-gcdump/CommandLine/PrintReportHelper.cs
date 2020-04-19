@@ -1,16 +1,11 @@
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Principal;
-using System.Xml.Serialization;
 using Graphs;
 
-namespace Microsoft.Diagnostics.Tools.GCDump
+namespace Microsoft.Diagnostics.Tools.GCDump.CommandLine
 {
-    
-    
     internal static class PrintReportHelper
     {
         internal static void WriteToStdOut(this MemoryGraph memoryGraph)
@@ -93,21 +88,18 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 var type = memoryGraph.m_types[index];
                 if (string.IsNullOrEmpty(type.Name) || type.Size == 0)
                     continue;
-                
-                var item = new ReportItem
+
+                var sizeAndCount = histogramByType.FirstOrDefault(c => (int) c.TypeIdx == index);
+                if (sizeAndCount == null || sizeAndCount.Count == 0)
+                    continue;
+
+                yield return new ReportItem
                 {
                     TypeName = type.Name,
                     ModuleName = type.ModuleName,
-                    SizeBytes = type.Size
+                    SizeBytes = type.Size,
+                    Count = sizeAndCount.Count
                 };
-                
-                var sizeAndCount = histogramByType.FirstOrDefault(c => (int) c.TypeIdx == index);
-                if (sizeAndCount != null)
-                {
-                    item.Count = sizeAndCount.Count;
-                }
-
-                yield return item;
             }
         }
     }
