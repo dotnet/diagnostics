@@ -115,8 +115,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             new Option<ReportType>(new[] { "-t", "--report-type" }, "The type of report to generate. Available options: heapstat (default)")
             {
                 Argument = new Argument<ReportType>(() => ReportType.HeapStat)
-            }
-        ;
+            };
 
         private enum ReportSource
         {
