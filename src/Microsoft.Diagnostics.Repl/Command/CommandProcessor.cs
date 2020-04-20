@@ -286,7 +286,7 @@ namespace Microsoft.Diagnostics.Repl
                 try
                 {
                     // Assumes zero parameter constructor
-                    object instance = _constructor.Invoke(new object[0]);
+                    object instance = _constructor.Invoke(Array.Empty<object>());
                     SetProperties(context, instance);
 
                     object[] arguments = BuildArguments(methodInfo, context);

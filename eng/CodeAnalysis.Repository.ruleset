@@ -11,7 +11,7 @@
         <Rule Id="CA1014" Action="None" />          <!-- Mark assemblies with CLSCompliant -->
         <Rule Id="CA1016" Action="None" />          <!-- Mark assemblies with assembly version -->
         <Rule Id="CA1017" Action="None" />          <!-- Mark assemblies with ComVisible -->
-        <Rule Id="CA1018" Action="Warning" />       <!-- Mark attributes with AttributeUsageAttribute -->
+        <Rule Id="CA1018" Action="None" />          <!-- Mark attributes with AttributeUsageAttribute -->
         <Rule Id="CA1019" Action="None" />          <!-- Define accessors for attribute arguments -->
         <Rule Id="CA1024" Action="None" />          <!-- Use properties where appropriate -->
         <Rule Id="CA1027" Action="None" />          <!-- Mark enums with FlagsAttribute -->
