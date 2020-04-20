@@ -3926,10 +3926,6 @@ void _mm_setcsr(unsigned int i);
                                             catch (...) {}
 #define PAL_CPP_ENDTRY                  }
 
-#ifdef _MSC_VER
-#pragma warning(disable:4611) // interaction between '_setjmp' and C++ object destruction is non-portable
-#endif
-
 #ifdef FEATURE_PAL_SXS
 
 #define PAL_TRY_FOR_DLLMAIN(ParamType, paramDef, paramRef, _reason) PAL_TRY(ParamType, paramDef, paramRef)
