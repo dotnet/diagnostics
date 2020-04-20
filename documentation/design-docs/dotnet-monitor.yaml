@@ -3,10 +3,9 @@ info:
   description: "dotnet-monitor diagnostics agent"
   version: "1.0.0"
   title: "dotnet-monitor"
-host: "localhost:9999"
+host: "localhost:52323"
 basePath: "/diag/v1/"
 schemes:
-- "https"
 - "http"
 paths:
   /processes:
