@@ -26,4 +26,6 @@
   <PropertyGroup Condition="'$(TargetFramework)' != 'net462'">
     <DebugType>portable</DebugType>
   </PropertyGroup>
+
+  <Import Project="$(RepositoryEngineeringDir)Analyzers.props" />
 </Project>

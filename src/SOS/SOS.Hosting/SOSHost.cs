@@ -510,7 +510,7 @@ namespace SOS
             out uint loaded,
             out uint unloaded)
         {
-            loaded = (uint)DataReader.EnumerateModules().Count();
+            loaded = (uint)DataReader.EnumerateModules().Count;
             unloaded = 0;
             return S_OK;
         }

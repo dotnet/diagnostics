@@ -252,12 +252,12 @@ namespace EventPipe.UnitTests.Common
                     source.Process();
                     _droppedEvents = source.EventsLost;
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     Logger.logger.Log($"Exception thrown while reading; dumping culprit stream to disk...");
                     eventPipeStream.DumpStreamToDisk();
                     // rethrow it to fail the test
-                    throw e;
+                    throw;
                 }
                 Logger.logger.Log("Stopping stream processing");
                 Logger.logger.Log($"Dropped {source.EventsLost} events");

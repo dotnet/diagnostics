@@ -93,7 +93,7 @@ images. mini - A small dump containing module lists, thread lists, exception inf
                 aliases: new[] { "-c", "--command" }, 
                 description: "Run the command on start.") 
             {
-                Argument = new Argument<string[]>(name: "command", defaultValue: new string[0]) { Arity = ArgumentArity.ZeroOrMore }
+                Argument = new Argument<string[]>(name: "command", defaultValue: System.Array.Empty<string>()) { Arity = ArgumentArity.ZeroOrMore }
             };
     }
 }
