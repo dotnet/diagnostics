@@ -6090,22 +6090,39 @@ DECLARE_API(DumpModule)
         ExtOut("Fail to fill Module %p\n", SOS_PTR(p_ModuleAddr));
         return Status;
     }
+
     
     WCHAR FileName[MAX_LONGPATH];
     FileNameForModule (&module, FileName);
-    ExtOut("Name:       %S\n", FileName[0] ? FileName : W("Unknown Module"));
+    ExtOut("Name: %S\n", FileName[0] ? FileName : W("Unknown Module"));
 
-    ExtOut("Attributes: ");
+    ExtOut("Attributes:              ");
     if (module.bIsPEFile)
         ExtOut("PEFile ");
     if (module.bIsReflection)
         ExtOut("Reflection ");
     if (module.dwTransientFlags & SUPPORTS_UPDATEABLE_METHODS)
-        ExtOut("SupportsUpdateableMethods");
-    ExtOut("\n");
-    
-    DMLOut("Assembly:   %s\n", DMLAssembly(module.Assembly));
+        ExtOut("SupportsUpdateableMethods ");
 
+    ToRelease<IXCLRDataModule> dataModule;
+    if (SUCCEEDED(g_sos->GetModule(TO_CDADDR(p_ModuleAddr), &dataModule)))
+    {
+        DacpGetModuleData moduleData;
+        if (SUCCEEDED(moduleData.Request(dataModule)))
+        {
+            if (moduleData.IsDynamic)
+                ExtOut("IsDynamic ");
+            if (moduleData.IsInMemory)
+                ExtOut("IsInMemory ");
+            if (moduleData.IsFileLayout)
+                ExtOut("IsFileLayout ");
+        }
+    }
+    ExtOut("\n");
+
+    DMLOut("Assembly:                %s\n", DMLAssembly(module.Assembly));
+
+    ExtOut("BaseAddress:             %p\n", SOS_PTR(module.ilBase));
     ExtOut("PEFile:                  %p\n", SOS_PTR(module.File));
     ExtOut("ModuleId:                %p\n", SOS_PTR(module.dwModuleID));
     ExtOut("ModuleIndex:             %p\n", SOS_PTR(module.dwModuleIndex));
@@ -6117,6 +6134,7 @@ DECLARE_API(DumpModule)
     ExtOut("MemberRefToDescMap:      %p\n", SOS_PTR(module.MemberRefToDescMap));
     ExtOut("FileReferencesMap:       %p\n", SOS_PTR(module.FileReferencesMap));
     ExtOut("AssemblyReferencesMap:   %p\n", SOS_PTR(module.ManifestModuleReferencesMap));
+
 
     if (module.ilBase && module.metadataStart)
         ExtOut("MetaData start address:  %p (%d bytes)\n", SOS_PTR(module.metadataStart), module.metadataSize);
@@ -6193,10 +6211,6 @@ DECLARE_API(DumpModule)
         {
             ExtOut("\nThis runtime version does not support listing the profiler modified functions.\n");
         }
-
-
-
-    HRESULT GetMethodsWithProfilerModifiedIL(CLRDATA_ADDRESS module, CLRDATA_ADDRESS *methodDescs, int cMethodDescs, int *pcMethodDescs);
     }
 
     return Status;

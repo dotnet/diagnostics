@@ -106,43 +106,43 @@ namespace SOS
 
         #region IDebugClient Delegates
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int AttachKernelDelegate(
             IntPtr self,
             [In] DEBUG_ATTACH flags,
             [In][MarshalAs(UnmanagedType.LPStr)] string connectOptions);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetKernelConnectionOptionsDelegate(
             IntPtr self,
             [Out][MarshalAs(UnmanagedType.LPStr)] StringBuilder Buffer,
             [In] int BufferSize,
             [Out] uint* OptionsSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetKernelConnectionOptionsDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Options);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int StartProcessServerDelegate(
             IntPtr self,
             [In] DEBUG_CLASS Flags,
             [In][MarshalAs(UnmanagedType.LPStr)] string Options,
             [In] IntPtr Reserved);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ConnectProcessServerDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string RemoteOptions,
             [Out] ulong* Server);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int DisconnectProcessServerDelegate(
             IntPtr self,
             [In] ulong Server);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetRunningProcessSystemIdsDelegate(
             IntPtr self,
             [In] ulong Server,
@@ -150,7 +150,7 @@ namespace SOS
             [In] uint Count,
             [Out] uint* ActualCount);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetRunningProcessSystemIdByExecutableNameDelegate(
             IntPtr self,
             [In] ulong Server,
@@ -158,7 +158,7 @@ namespace SOS
             [In] DEBUG_GET_PROC Flags,
             [Out] uint* Id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetRunningProcessDescriptionDelegate(
             IntPtr self,
             [In] ulong Server,
@@ -171,21 +171,21 @@ namespace SOS
             [In] int DescriptionSize,
             [Out] uint* ActualDescriptionSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int AttachProcessDelegate(
             IntPtr self,
             [In] ulong Server,
             [In] uint ProcessID,
             [In] DEBUG_ATTACH AttachFlags);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int CreateProcessDelegate(
             IntPtr self,
             [In] ulong Server,
             [In][MarshalAs(UnmanagedType.LPStr)] string CommandLine,
             [In] DEBUG_CREATE_PROCESS Flags);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int CreateProcessAndAttachDelegate(
             IntPtr self,
             [In] ulong Server,
@@ -194,164 +194,164 @@ namespace SOS
             [In] uint ProcessId,
             [In] DEBUG_ATTACH AttachFlags);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetProcessOptionsDelegate(
             IntPtr self,
             [Out] DEBUG_PROCESS* Options);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int AddProcessOptionsDelegate(
             IntPtr self,
             [In] DEBUG_PROCESS Options);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int RemoveProcessOptionsDelegate(
             IntPtr self,
             [In] DEBUG_PROCESS Options);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetProcessOptionsDelegate(
             IntPtr self,
             [In] DEBUG_PROCESS Options);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int OpenDumpFileDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string DumpFile);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int WriteDumpFileDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string DumpFile,
             [In] DEBUG_DUMP Qualifier);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ConnectSessionDelegate(
             IntPtr self,
             [In] DEBUG_CONNECT_SESSION Flags,
             [In] uint HistoryLimit);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int StartServerDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Options);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int OutputServerDelegate(
             IntPtr self,
             [In] DEBUG_OUTCTL OutputControl,
             [In][MarshalAs(UnmanagedType.LPStr)] string Machine,
             [In] DEBUG_SERVERS Flags);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int TerminateProcessesDelegate(
             IntPtr self);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int DetachProcessesDelegate(
             IntPtr self);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int EndSessionDelegate(
             IntPtr self,
             [In] DEBUG_END Flags);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetExitCodeDelegate(
             IntPtr self,
             [Out] uint* Code);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int DispatchCallbacksDelegate(
             IntPtr self,
             [In] uint Timeout);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ExitDispatchDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.Interface)] IDebugClient Client);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int CreateClientDelegate(
             IntPtr self,
             [Out][MarshalAs(UnmanagedType.Interface)] IntPtr Client);             // out IDebugClient
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetInputCallbacksDelegate(
             IntPtr self,
             [Out][MarshalAs(UnmanagedType.Interface)] IntPtr Callbacks);          // out IDebugInputCallbacks
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetInputCallbacksDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.Interface)] IDebugInputCallbacks Callbacks);
 
         /* GetOutputCallbacks could a conversion thunk from the debugger engine so we can't specify a specific interface */
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetOutputCallbacksDelegate(
             IntPtr self,
             [Out] IntPtr Callbacks);    // out IDebugOutputCallbacks
 
         /* We may have to pass a debugger engine conversion thunk back in so we can't specify a specific interface */
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetOutputCallbacksDelegate(
             IntPtr self,
             [In] IDebugOutputCallbacks Callbacks);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetOutputMaskDelegate(
             IntPtr self,
             [Out] DEBUG_OUTPUT* Mask);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetOutputMaskDelegate(
             IntPtr self,
             [In] DEBUG_OUTPUT Mask);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetOtherOutputMaskDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.Interface)] IDebugClient Client,
             [Out] DEBUG_OUTPUT* Mask);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetOtherOutputMaskDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.Interface)] IDebugClient Client,
             [In] DEBUG_OUTPUT Mask);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetOutputWidthDelegate(
             IntPtr self,
             [Out] uint* Columns);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetOutputWidthDelegate(
             IntPtr self,
             [In] uint Columns);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetOutputLinePrefixDelegate(
             IntPtr self,
             [Out][MarshalAs(UnmanagedType.LPStr)] StringBuilder Buffer,
             [In] int BufferSize,
             [Out] uint* PrefixSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetOutputLinePrefixDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Prefix);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetIdentityDelegate(
             IntPtr self,
             [Out][MarshalAs(UnmanagedType.LPStr)] StringBuilder Buffer,
             [In] int BufferSize,
             [Out] uint* IdentitySize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int OutputIdentityDelegate(
             IntPtr self,
             [In] DEBUG_OUTCTL OutputControl,
@@ -360,19 +360,19 @@ namespace SOS
 
         /* GetEventCallbacks could a conversion thunk from the debugger engine so we can't specify a specific interface */
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetEventCallbacksDelegate(
             IntPtr self,
             [Out] IntPtr Callbacks);    // out IDebugEventCallbacks
 
         /* We may have to pass a debugger engine conversion thunk back in so we can't specify a specific interface */
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetEventCallbacksDelegate(
             IntPtr self,
             [In] IDebugEventCallbacks Callbacks);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int FlushCallbacksDelegate(
             IntPtr self);
 

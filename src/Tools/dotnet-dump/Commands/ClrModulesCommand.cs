@@ -14,6 +14,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
     {
         public ClrRuntime Runtime { get; set; }
 
+        public DataTarget DataTarget { get; set; }
+
         [Option(Name = "--verbose", Help = "Displays detailed information about the modules.")]
         [OptionAlias(Name = "-v")]
         public bool Verbose { get; set; }
@@ -34,6 +36,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     WriteLine("    MetadataAddress: {0:X16}", module.MetadataAddress);
                     WriteLine("    MetadataSize:    {0:X16}", module.MetadataLength);
                     WriteLine("    PdbInfo:         {0}", module.Pdb?.ToString() ?? "<none>");
+
+                    DataTarget.DataReader.GetVersionInfo(module.ImageBase, out VersionInfo version);
+                    WriteLine("    Version:         {0}", version);
                 }
                 else
                 {
