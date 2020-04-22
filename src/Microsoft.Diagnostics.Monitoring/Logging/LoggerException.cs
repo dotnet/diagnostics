@@ -36,7 +36,9 @@ namespace Microsoft.Diagnostics.Monitoring
             info.AddValue("WatsonBuckets", null, typeof(byte[])); // Do not rename (binary serialization)
         }
 
+#pragma warning disable CA1507
         public override string Message => _exceptionMessage.GetProperty("Message").GetString();
+#pragma warning restore CA1507
 
         public override string StackTrace => _exceptionMessage.GetProperty("VerboseMessage").GetString();
 

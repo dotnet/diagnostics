@@ -20,12 +20,14 @@
 #include "datatarget.h"
 #include "cordebugdatatarget.h"
 #include "cordebuglibraryprovider.h"
+#include "runtimeinfo.h"
 
 #ifdef FEATURE_PAL
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <unistd.h>
 #endif // !FEATURE_PAL
+
 
 Runtime* Runtime::s_netcore = nullptr;
 #ifndef FEATURE_PAL
@@ -43,6 +45,61 @@ LPCSTR g_runtimeModulePath = nullptr;
 // Current runtime instance
 IRuntime* g_pRuntime = nullptr;
 
+#if !defined(__APPLE__)
+
+extern bool TryGetSymbol(uint64_t baseAddress, const char* symbolName, uint64_t* symbolAddress);
+
+bool ElfReaderReadMemory(void* address, void* buffer, size_t size)
+{
+    ULONG read = 0;
+    return SUCCEEDED(g_ExtData->ReadVirtual((ULONG64)address, buffer, (ULONG)size, &read));
+}
+
+/**********************************************************************\
+ * Search all the modules in the process for the single-file host
+\**********************************************************************/
+static HRESULT GetSingleFileInfo(PULONG pModuleIndex, PULONG64 pModuleAddress, RuntimeInfo** ppRuntimeInfo)
+{
+    _ASSERTE(pModuleIndex != nullptr);
+    _ASSERTE(pModuleAddress != nullptr);
+
+    ULONG loaded, unloaded;
+    HRESULT hr = g_ExtSymbols->GetNumberModules(&loaded, &unloaded);
+    if (FAILED(hr)) {
+        return hr;
+    }
+
+    for (ULONG index = 0; index < loaded; index++)
+    {
+        ULONG64 baseAddress;
+        hr = g_ExtSymbols->GetModuleByIndex(index, &baseAddress);
+        if (FAILED(hr)) {
+            return hr;
+        }
+        ULONG64 symbolAddress;
+        if (TryGetSymbol(baseAddress, "DotNetRuntimeInfo", &symbolAddress))
+        {
+            ULONG read = 0;
+            ArrayHolder<BYTE> buffer = new BYTE[sizeof(RuntimeInfo)];
+            hr = g_ExtData->ReadVirtual(symbolAddress, buffer, sizeof(RuntimeInfo), &read);
+            if (FAILED(hr)) {
+                return hr;
+            }
+            if (strcmp(((RuntimeInfo*)buffer.GetPtr())->Signature, "DotNetRuntimeInfo") != 0) {
+                break;
+            }
+            *pModuleIndex = index;
+            *pModuleAddress = baseAddress;
+            *ppRuntimeInfo = (RuntimeInfo*)buffer.Detach();
+            return S_OK;
+        }
+    }
+
+    return E_FAIL;
+}
+
+#endif // !defined(__APPLE__)
+
 /**********************************************************************\
  * Creates a desktop or .NET Core instance of the runtime class
 \**********************************************************************/
@@ -52,11 +109,25 @@ HRESULT Runtime::CreateInstance(RuntimeConfiguration configuration, Runtime **pp
     ULONG moduleIndex = 0;
     ULONG64 moduleAddress = 0;
     ULONG64 moduleSize = 0;
+    RuntimeInfo* runtimeInfo = nullptr;
     HRESULT hr = S_OK;
 
     if (*ppRuntime == nullptr)
     {
+        // Check if the normal runtime module (coreclr.dll, libcoreclr.so, etc.) is loaded
         hr = g_ExtSymbols->GetModuleByModuleName(runtimeModuleName, 0, &moduleIndex, &moduleAddress);
+#if !defined(__APPLE__)
+        if (FAILED(hr))
+        {
+            // If the standard runtime module isn't loaded, try looking for a single-file program
+            if (configuration == IRuntime::UnixCore)
+            {
+                hr = GetSingleFileInfo(&moduleIndex, &moduleAddress, &runtimeInfo);
+            }
+        }
+#endif // !defined(__APPLE__)
+
+        // If the previous operations were successful, get the size of the runtime module
         if (SUCCEEDED(hr))
         {
 #ifdef FEATURE_PAL
@@ -86,11 +157,13 @@ HRESULT Runtime::CreateInstance(RuntimeConfiguration configuration, Runtime **pp
             }
 #endif
         }
+
+        // If the previous operations were successful, create the Runtime instance
         if (SUCCEEDED(hr))
         {
             if (moduleSize > 0) 
             {
-                *ppRuntime = new Runtime(configuration, moduleIndex, moduleAddress, moduleSize);
+                *ppRuntime = new Runtime(configuration, moduleIndex, moduleAddress, moduleSize, runtimeInfo);
                 OnUnloadTask::Register(CleanupRuntimes);
             }
             else 
@@ -225,51 +298,6 @@ void Runtime::Flush()
 /**********************************************************************\
  * Returns the runtime directory of the target
 \**********************************************************************/
-HRESULT Runtime::GetRuntimeDirectory(std::string& runtimeDirectory)
-{
-#ifdef FEATURE_PAL
-    LPCSTR directory = g_ExtServices->GetCoreClrDirectory();
-    if (directory == NULL)
-    {
-        ExtErr("Error: Runtime module (%s) not loaded yet\n", GetRuntimeDllName());
-        return E_FAIL;
-    }
-    if (!GetAbsolutePath(directory, runtimeDirectory))
-    {
-        ExtDbgOut("Error: Runtime directory %s doesn't exist\n", directory);
-        return E_FAIL;
-    }
-#else
-    ArrayHolder<char> szModuleName = new char[MAX_LONGPATH + 1];
-    HRESULT hr = g_ExtSymbols->GetModuleNames(m_index, 0, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
-    if (FAILED(hr))
-    {
-        ExtErr("Error: Failed to get runtime module name\n");
-        return hr;
-    }
-    if (GetFileAttributesA(szModuleName) == INVALID_FILE_ATTRIBUTES)
-    {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        ExtDbgOut("Error: Runtime module %s doesn't exist %08x\n", szModuleName, hr);
-        return hr;
-    }
-    runtimeDirectory = szModuleName;
-
-    // Parse off the module name to get just the path
-    size_t lastSlash = runtimeDirectory.rfind(DIRECTORY_SEPARATOR_CHAR_A);
-    if (lastSlash == std::string::npos)
-    {
-        ExtDbgOut("Error: Runtime module %s has no directory separator\n", szModuleName);
-        return E_FAIL;
-    }
-    runtimeDirectory.assign(runtimeDirectory, 0, lastSlash);
-#endif
-    return S_OK;
-}
-
-/**********************************************************************\
- * Returns the runtime directory of the target
-\**********************************************************************/
 LPCSTR Runtime::GetRuntimeDirectory()
 {
     if (m_runtimeDirectory == nullptr)
@@ -280,11 +308,26 @@ LPCSTR Runtime::GetRuntimeDirectory()
         }
         else 
         {
-            std::string runtimeDirectory;
-            if (SUCCEEDED(GetRuntimeDirectory(runtimeDirectory)))
+            ArrayHolder<char> szModuleName = new char[MAX_LONGPATH + 1];
+            HRESULT hr = g_ExtSymbols->GetModuleNames(m_index, 0, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
+            if (FAILED(hr))
             {
-                m_runtimeDirectory = _strdup(runtimeDirectory.c_str());
+                ExtErr("Error: Failed to get runtime module name\n");
+                return nullptr;
             }
+            if (GetFileAttributesA(szModuleName) == INVALID_FILE_ATTRIBUTES)
+            {
+                hr = HRESULT_FROM_WIN32(GetLastError());
+                ExtDbgOut("Error: Runtime module %s doesn't exist %08x\n", szModuleName.GetPtr(), hr);
+                return nullptr;
+            }
+            // Parse off the file name
+            char* lastSlash = strrchr(szModuleName, DIRECTORY_SEPARATOR_CHAR_A);
+            if (lastSlash != nullptr)
+            {
+                *lastSlash = '\0';
+            }
+            m_runtimeDirectory = _strdup(szModuleName.GetPtr());
         }
     }
     return m_runtimeDirectory;
@@ -410,7 +453,7 @@ HRESULT Runtime::GetClrDataProcess(IXCLRDataProcess** ppClrDataProcess)
             FreeLibrary(hdac);
             return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
         }
-        ICLRDataTarget *target = new DataTarget();
+        ICLRDataTarget *target = new DataTarget(GetModuleAddress());
         HRESULT hr = pfnCLRDataCreateInstance(__uuidof(IXCLRDataProcess), target, (void**)&m_clrDataProcess);
         if (FAILED(hr))
         {
@@ -477,7 +520,7 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
         skuId = CLR_ID_V4_DESKTOP;
     }
 #endif
-    CLRDebuggingImpl* pDebuggingImpl = new CLRDebuggingImpl(skuId);
+    CLRDebuggingImpl* pDebuggingImpl = new CLRDebuggingImpl(skuId, IsWindowsTarget());
     hr = pDebuggingImpl->QueryInterface(IID_ICLRDebugging, (LPVOID *)&pClrDebugging);
     if (FAILED(hr))
     {
@@ -526,6 +569,13 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
 void Runtime::DisplayStatus()
 {
     ExtOut("%s runtime at %p size %08llx\n", GetRuntimeConfigurationName(GetRuntimeConfiguration()), m_address, m_size);
+    if (m_runtimeInfo != nullptr) {
+        ArrayHolder<char> szModuleName = new char[MAX_LONGPATH + 1];
+        HRESULT hr = g_ExtSymbols->GetModuleNames(m_index, 0, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
+        if (SUCCEEDED(hr)) {
+            ExtOut("Single-file module path: %s\n", szModuleName.GetPtr());
+        }
+    }
     if (m_runtimeDirectory != nullptr) {
         ExtOut("Runtime directory: %s\n", m_runtimeDirectory);
     }
@@ -546,15 +596,37 @@ extern int ReadMemoryForSymbols(ULONG64 address, uint8_t* buffer, int cb);
 \**********************************************************************/
 void Runtime::LoadRuntimeModules()
 {
-    ArrayHolder<char> moduleFilePath = new char[MAX_LONGPATH + 1];
-    HRESULT hr = g_ExtSymbols->GetModuleNames(m_index, 0, moduleFilePath, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
-    if (SUCCEEDED(hr))
+    HRESULT hr = InitializeSymbolStore();
+    if (SUCCEEDED(hr) && g_symbolStoreInitialized)
     {
-        hr = InitializeSymbolStore();
-        if (SUCCEEDED(hr) && g_symbolStoreInitialized)
+        if (m_runtimeInfo != nullptr)
         {
-            _ASSERTE(g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate != nullptr);
-            g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(SymbolFileCallback, this, moduleFilePath, m_address, (int)m_size, ReadMemoryForSymbols);
+            _ASSERTE(g_SOSNetCoreCallbacks.LoadNativeSymbolsFromIndexDelegate != nullptr);
+            g_SOSNetCoreCallbacks.LoadNativeSymbolsFromIndexDelegate(
+                SymbolFileCallback,
+                this,
+                GetRuntimeConfiguration(),
+                GetRuntimeDllName(),
+                true,                                   // special keys (runtime, DAC and DBI)
+                m_runtimeInfo->RuntimeModuleIndex[0],   // size of module index
+                &m_runtimeInfo->RuntimeModuleIndex[1]); // beginning of index 
+        }
+        else
+        {
+            ArrayHolder<char> moduleFilePath = new char[MAX_LONGPATH + 1];
+            hr = g_ExtSymbols->GetModuleNames(m_index, 0, moduleFilePath, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
+            if (SUCCEEDED(hr))
+            {
+                _ASSERTE(g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate != nullptr);
+                g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(
+                    SymbolFileCallback,
+                    this,
+                    GetRuntimeConfiguration(),
+                    moduleFilePath,
+                    m_address,
+                    (int)m_size,
+                    ReadMemoryForSymbols);
+            }
         }
     }
 }

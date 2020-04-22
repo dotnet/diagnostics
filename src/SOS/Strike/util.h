@@ -71,10 +71,6 @@ DECLARE_HANDLE(OBJECTHANDLE);
 #define TARGET_POINTER_SIZE POINTERSIZE_BYTES
 #endif // TARGET_POINTER_SIZE
 
-#if defined(_MSC_VER)
-#pragma warning(disable:4510 4512 4610)
-#endif
-
 #ifndef _ASSERTE
 #ifdef _DEBUG
 #define _ASSERTE(expr)         \

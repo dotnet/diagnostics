@@ -28,12 +28,12 @@ namespace SOS
         internal const int E_NOTIMPL = DebugClient.E_NOTIMPL;
         internal const int E_NOINTERFACE = DebugClient.E_NOINTERFACE;
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SOSCommandDelegate(
             IntPtr ILLDBServices,
             [In, MarshalAs(UnmanagedType.LPStr)] string args);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SOSInitializeDelegate(
             [In, MarshalAs(UnmanagedType.Struct)] ref SOSNetCoreCallbacks callbacks,
             int callbacksSize,
@@ -44,7 +44,7 @@ namespace SOS
             [In, MarshalAs(UnmanagedType.LPStr)] string dbiFilePath,
             bool symbolStoreEnabled);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate UIntPtr GetExpressionDelegate(
             [In, MarshalAs(UnmanagedType.LPStr)] string expression);
 
@@ -71,10 +71,20 @@ namespace SOS
         private delegate void LoadNativeSymbolsDelegate(
             SymbolReader.SymbolFileCallback callback,
             IntPtr parameter,
+            SymbolReader.RuntimeConfiguration config,
             string moduleFilePath,
             ulong address,
             int size,
             SymbolReader.ReadMemoryDelegate readMemory);
+
+        private delegate void LoadNativeSymbolsFromIndexDelegate(
+            SymbolReader.SymbolFileCallback callback,
+            IntPtr parameter,
+            SymbolReader.RuntimeConfiguration config,
+            string moduleFilePath,
+            bool specialKeys,
+            int moduleIndexSize,
+            IntPtr moduleIndex);
 
         private delegate IntPtr LoadSymbolsForModuleDelegate(
             string assemblyPath,
@@ -130,6 +140,7 @@ namespace SOS
             public DisplaySymbolStoreDelegate DisplaySymbolStoreDelegate;
             public DisableSymbolStoreDelegate DisableSymbolStoreDelegate;
             public LoadNativeSymbolsDelegate LoadNativeSymbolsDelegate;
+            public LoadNativeSymbolsFromIndexDelegate LoadNativeSymbolsFromIndexDelegate;
             public LoadSymbolsForModuleDelegate LoadSymbolsForModuleDelegate;
             public DisposeDelegate DisposeDelegate;
             public ResolveSequencePointDelegate ResolveSequencePointDelegate;
@@ -144,6 +155,7 @@ namespace SOS
             DisplaySymbolStoreDelegate = SymbolReader.DisplaySymbolStore,
             DisableSymbolStoreDelegate = SymbolReader.DisableSymbolStore,
             LoadNativeSymbolsDelegate = SymbolReader.LoadNativeSymbols,
+            LoadNativeSymbolsFromIndexDelegate = SymbolReader.LoadNativeSymbolsFromIndex,
             LoadSymbolsForModuleDelegate = SymbolReader.LoadSymbolsForModule,
             DisposeDelegate = SymbolReader.Dispose,
             ResolveSequencePointDelegate = SymbolReader.ResolveSequencePoint,
@@ -498,7 +510,7 @@ namespace SOS
             out uint loaded,
             out uint unloaded)
         {
-            loaded = (uint)DataReader.EnumerateModules().Count();
+            loaded = (uint)DataReader.EnumerateModules().Count;
             unloaded = 0;
             return S_OK;
         }

@@ -539,9 +539,9 @@ void GCPrintLargeHeapSegmentInfo(const DacpGcHeapDetails &heap, DWORD_PTR &total
                 SOS_PTR(segment.allocated),
                 SOS_PTR(segment.committed),
                 (ULONG_PTR)(segment.allocated - segment.mem),
-                segment.allocated - segment.mem,
+                (ULONG_PTR)(segment.allocated - segment.mem),
                 (ULONG_PTR)(segment.committed - segment.mem),
-                segment.committed - segment.mem);
+                (ULONG_PTR)(segment.committed - segment.mem));
 
         total_allocated_size += (DWORD_PTR) (segment.allocated - segment.mem);
         total_committed_size += (DWORD_PTR) (segment.committed - segment.mem);

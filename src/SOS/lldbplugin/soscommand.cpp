@@ -129,7 +129,7 @@ bool
 sosCommandInitialize(lldb::SBDebugger debugger)
 {
     lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
-    interpreter.AddCommand("sos", new sosCommand(nullptr), "Various coreclr debugging commands. See 'soshelp' for more details. sos <command-name> <args>");
+    interpreter.AddCommand("sos", new sosCommand(nullptr), "Various .NET Core debugging commands. See 'soshelp' for more details. sos <command-name> <args>");
     interpreter.AddCommand("bpmd", new sosCommand("bpmd"), "Creates a breakpoint at the specified managed method in the specified module.");
     interpreter.AddCommand("clrstack", new sosCommand("ClrStack"), "Provides a stack trace of managed code only.");
     interpreter.AddCommand("clrthreads", new sosCommand("Threads"), "List the managed threads running.");
@@ -168,6 +168,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     interpreter.AddCommand("histobjfind", new sosCommand("HistObjFind"), "Displays all the log entries that reference an object at the specified address.");
     interpreter.AddCommand("histroot", new sosCommand("HistRoot"), "Displays information related to both promotions and relocations of the specified root.");
     interpreter.AddCommand("sethostruntime", new sosCommand("SetHostRuntime"), "Sets or displays the .NET Core runtime directory to use to run managed code in SOS.");
+    interpreter.AddCommand("setclrpath", new sosCommand("SetClrPath"), "Set the path to load the runtime DAC/DBI files.");
     interpreter.AddCommand("setsymbolserver", new sosCommand("SetSymbolServer"), "Enables the symbol server support ");
     interpreter.AddCommand("sympath", new sosCommand("SetSymbolServer", "-sympath"), "Add server, cache and directory paths in the Windows symbol path format.");
     interpreter.AddCommand("soshelp", new sosCommand("Help"), "Displays all available commands when no parameter is specified, or displays detailed help information about the specified command. soshelp <command>");
