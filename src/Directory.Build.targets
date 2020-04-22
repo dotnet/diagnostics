@@ -11,6 +11,22 @@
     <EmbeddedFiles Include="$(GeneratedAssemblyInfoFile)"/>
   </ItemGroup>
 
+  <!-- This is an ugly workaround needed to be able to do r2r/single file on packages that reference TraceEvent as the package's props inject a double
+  write to the same relative path. This is related to https://github.com/microsoft/perfview/issues/1002 -->
+  <Target Name="RemoveDupeAssemblies"
+          Condition="'$(PublishSingleFile)' == 'true'"
+          AfterTargets="ComputeResolvedFilesToPublishList"
+          BeforeTargets="CopyFilesToPublishDirectory">
+      
+    <PropertyGroup>
+      <ExcludedTraceEventPath>$([MSBuild]::NormalizeDirectory($(PkgMicrosoft_Diagnostics_Tracing_TraceEvent), 'lib/netstandard1.6'))</ExcludedTraceEventPath>
+    </PropertyGroup>
+    <ItemGroup>
+      <ResolvedFileToPublish Condition="$([MSBuild]::NormalizePath(%(ResolvedFileToPublish.Identity)).StartsWith($(ExcludedTraceEventPath)))"
+                             ExcludeFromSingleFile="true"/>
+    </ItemGroup>
+  </Target>
+
   <!-- We need this for the binplacing for testing assets.
   This should be removed at some point as it's brittle (harcodes versions and creates native-managed coupling). -->
   <Target Name="_PublishPackageReferences"
