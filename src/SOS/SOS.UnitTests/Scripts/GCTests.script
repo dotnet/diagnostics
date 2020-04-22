@@ -105,7 +105,7 @@ VERIFY:\s+generation\s+<DECVAL>\s+starts\s+at\s+0x<HEXVAL>\s+
 VERIFY:\s+generation\s+<DECVAL>\s+starts\s+at\s+0x<HEXVAL>\s+
 VERIFY:\s+generation\s+<DECVAL>\s+starts\s+at\s+0x<HEXVAL>\s+
 VERIFY:\s+segment\s+begin\s+allocated\s+committed\s+allocated\s+size\s+committed\s+size\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL\(<DECVAL>\)\s+0x<HEXVAL>\(<DECVAL>\)
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL\(<DECVAL>\)\s+0x<HEXVAL>\(<DECVAL>\)\s+
 VERIFY:\s+Large object heap starts at 0x<HEXVAL>\s+
 
 # Continue to the next DebugBreak
