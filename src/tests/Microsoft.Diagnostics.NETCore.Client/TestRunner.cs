@@ -7,6 +7,7 @@ using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.TestHelpers;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -56,8 +57,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             if (outputHelper != null)
             {
-                outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Successfuly started process {testProcess.Id}");
-                outputHelper.WriteLine($"Have total {testProcess.Modules.Count} modules loaded");
+                outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Successfully started process {testProcess.Id}");
+                for (int retry = 0; retry < 5; retry++)
+                {
+                    try
+                    {
+                        outputHelper.WriteLine($"Have total {testProcess.Modules.Count} modules loaded");
+                        break;
+                    }
+                    catch (Win32Exception)
+                    {
+                    }
+                }
             }
 
             // Block until we see the IPC channel created, or until timeout specified.
@@ -67,7 +78,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
-                        // On Windows, namedpipe connection will block until the named pipe is ready to connect so no need to block here
+                        // On Windows, named pipe connection will block until the named pipe is ready to connect so no need to block here
                         break;
                     }
                     else

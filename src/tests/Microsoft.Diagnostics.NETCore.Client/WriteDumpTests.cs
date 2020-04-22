@@ -111,7 +111,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             var client = new DiagnosticsClient(arbitraryPid);
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            if (!(RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.Windows)))
             {
                 Assert.Throws<PlatformNotSupportedException>(() => client.WriteDump(DumpType.Normal, dumpPath));
             }

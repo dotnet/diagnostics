@@ -253,9 +253,9 @@ public class SOSRunner : IDisposable
 
                 if (dumpGeneration == DumpGenerator.CreateDump)
                 {
-                    if (OS.Kind != OSKind.Linux)
+                    if (OS.Kind == OSKind.OSX)
                     {
-                        throw new SkipTestException("Createdump doesn't exists on Windows or macOS");
+                        throw new SkipTestException("Createdump doesn't exists on MacOS");
                     }
                     // Run the debuggee with the createdump environment variables set to generate a coredump on unhandled exception
                     processRunner.
