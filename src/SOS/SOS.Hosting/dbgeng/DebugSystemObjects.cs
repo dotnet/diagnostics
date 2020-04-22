@@ -54,48 +54,48 @@ namespace SOS
 
         #region IDebugSystemObjects Delegates
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetEventThreadDelegate(
             IntPtr self,
             [Out] uint* Id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetEventProcessDelegate(
             IntPtr self,
             [Out] uint* Id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCurrentThreadIdDelegate(
             IntPtr self,
             [Out] out uint Id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetCurrentThreadIdDelegate(
             IntPtr self,
             [In] uint Id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCurrentProcessIdDelegate(
             IntPtr self,
             [Out] out uint Id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetCurrentProcessIdDelegate(
             IntPtr self,
             [In] uint Id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetNumberThreadsDelegate(
             IntPtr self,
             [Out] out uint Number);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetTotalNumberThreadsDelegate(
             IntPtr self,
             [Out] out uint Total,
             [Out] out uint LargestProcess);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetThreadIdsByIndexDelegate(
             IntPtr self,
             [In] uint Start,
@@ -103,62 +103,62 @@ namespace SOS
             [Out] uint* Ids,
             [Out] uint* SysIds);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetThreadIdByProcessorDelegate(
             IntPtr self,
             [In] uint Processor,
             [Out] uint* Id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCurrentThreadDataOffsetDelegate(
             IntPtr self,
             [Out] ulong* Offset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetThreadIdByDataOffsetDelegate(
             IntPtr self,
             [In] ulong Offset,
             [Out] uint* Id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCurrentThreadTebDelegate(
             IntPtr self,
             [Out] ulong* Offset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetThreadIdByTebDelegate(
             IntPtr self,
             [In] ulong Offset,
             [Out] uint* Id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCurrentThreadSystemIdDelegate(
             IntPtr self,
             [Out] out uint SysId);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetThreadIdBySystemIdDelegate(
             IntPtr self,
             [In] uint SysId,
             [Out] out uint Id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCurrentThreadHandleDelegate(
             IntPtr self,
             [Out] ulong* Handle);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetThreadIdByHandleDelegate(
             IntPtr self,
             [In] ulong Handle,
             [Out] uint* Id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetNumberProcessesDelegate(
             IntPtr self,
             [Out] uint* Number);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetProcessIdsByIndexDelegate(
             IntPtr self,
             [In] uint Start,
@@ -166,51 +166,51 @@ namespace SOS
             [Out] uint* Ids,
             [Out] uint* SysIds);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCurrentProcessDataOffsetDelegate(
             IntPtr self,
             [Out] ulong* Offset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetProcessIdByDataOffsetDelegate(
             IntPtr self,
             [In] ulong Offset,
             [Out] uint* Id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCurrentProcessPebDelegate(
             IntPtr self,
             [Out] ulong* Offset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetProcessIdByPebDelegate(
             IntPtr self,
             [In] ulong Offset,
             [Out] uint* Id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCurrentProcessSystemIdDelegate(
             IntPtr self,
             [Out] uint* SysId);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetProcessIdBySystemIdDelegate(
             IntPtr self,
             [In] uint SysId,
             [Out] uint* Id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCurrentProcessHandleDelegate(
             IntPtr self,
             [Out] ulong* Handle);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetProcessIdByHandleDelegate(
             IntPtr self,
             [In] ulong Handle,
             [Out] uint* Id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCurrentProcessExecutableNameDelegate(
             IntPtr self,
             [Out][MarshalAs(UnmanagedType.LPStr)] StringBuilder Buffer,

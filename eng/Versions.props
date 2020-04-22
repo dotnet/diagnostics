@@ -33,7 +33,11 @@
     <SystemCollectionsImmutableVersion>1.5.0</SystemCollectionsImmutableVersion>
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
     <!-- Other libs -->
-    <MicrosoftDiagnosticsRuntimeVersion>1.1.116301</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftAspNetCoreVersion>2.1.7</MicrosoftAspNetCoreVersion>
+    <MicrosoftAspNetCoreHttpsPolicyVersion>2.1.1</MicrosoftAspNetCoreHttpsPolicyVersion>
+    <MicrosoftAspNetCoreMvcVersion>2.1.3</MicrosoftAspNetCoreMvcVersion>
+    <MicrosoftAspNetCoreResponseCompressionVersion>2.1.1</MicrosoftAspNetCoreResponseCompressionVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>1.1.122004</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.51</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftExtensionsConfigurationJsonVersion>3.1.2</MicrosoftExtensionsConfigurationJsonVersion>
