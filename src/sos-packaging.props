@@ -59,11 +59,11 @@
 
   <!-- What and where to pack SOS assets in the final packages. -->
   <ItemGroup>
-    <None Include="@(SosRequiredBinaries -> '%(Identity)')">
-      <Link>%(TargetRid)/%(Filename)%(Extension)</Link>
-      <PackagePath>$(SOSPackagePathPrefix)/%(TargetRid)</PackagePath>
-      <Pack>true</Pack>
+    <None Include="@(SosRequiredBinaries)">
       <Visible>false</Visible>
+      <Pack>true</Pack>
+      <PackagePath>$(SOSPackagePathPrefix)/%(TargetRid)</PackagePath>
+      <Link Condition="'$(PublishSingleFile)' == 'true'">%(TargetRid)/%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory Condition="'$(PublishSingleFile)' == 'true' and '%(TargetRid)' == '$(RuntimeIdentifier)'">PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
