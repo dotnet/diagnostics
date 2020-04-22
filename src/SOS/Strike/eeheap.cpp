@@ -465,13 +465,14 @@ void GCPrintGenerationInfo(const DacpGcHeapDetails &heap)
 }
 
 
-void GCPrintSegmentInfo(const DacpGcHeapDetails &heap, DWORD_PTR &total_size)
+void GCPrintSegmentInfo(const DacpGcHeapDetails &heap, DWORD_PTR &total_allocated_size, DWORD_PTR &total_committed_size)
 {
     DWORD_PTR dwAddrSeg;       
     DacpHeapSegmentData segment;
     
     dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration()].start_segment;        
-    total_size = 0;
+    total_allocated_size = 0;
+    total_committed_size = 0;
     // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
     while (dwAddrSeg != (DWORD_PTR)heap.generation_table[0].start_segment)
     {
@@ -482,12 +483,16 @@ void GCPrintSegmentInfo(const DacpGcHeapDetails &heap, DWORD_PTR &total_size)
             ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
             return;
         }
-        ExtOut("%p  %p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n", SOS_PTR(dwAddrSeg),
-                 SOS_PTR(segment.mem), SOS_PTR(segment.allocated),
-                 (ULONG_PTR)(segment.allocated - segment.mem),
-                 (ULONG_PTR)(segment.committed - segment.mem),
-                 (ULONG_PTR)(segment.allocated - segment.mem));
-        total_size += (DWORD_PTR) (segment.allocated - segment.mem);
+        ExtOut("%p  %p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE"d)  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n",
+                SOS_PTR(dwAddrSeg),
+                SOS_PTR(segment.mem), SOS_PTR(segment.allocated), SOS_PTR(segment.committed),
+                (ULONG_PTR)(segment.allocated - segment.mem),
+                (ULONG_PTR)(segment.allocated - segment.mem),
+                (ULONG_PTR)(segment.committed - segment.mem),
+                (ULONG_PTR)(segment.committed - segment.mem));
+
+        total_allocated_size += (DWORD_PTR) (segment.allocated - segment.mem);
+        total_committed_size += (DWORD_PTR) (segment.committed - segment.mem);
         dwAddrSeg = (DWORD_PTR)segment.next;
     }
 
@@ -498,17 +503,20 @@ void GCPrintSegmentInfo(const DacpGcHeapDetails &heap, DWORD_PTR &total_size)
     }
     
     DWORD_PTR end = (DWORD_PTR)heap.alloc_allocated;
-    ExtOut("%p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n", SOS_PTR(dwAddrSeg),
-             SOS_PTR(segment.mem), SOS_PTR(end),
-             (ULONG_PTR)(end - (DWORD_PTR)segment.mem),
-             (ULONG_PTR)(end - (DWORD_PTR)segment.mem));
-    
-    total_size += end - (DWORD_PTR)segment.mem;
+    ExtOut("%p  %p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE"d)  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n",
+            SOS_PTR(dwAddrSeg),
+            SOS_PTR(segment.mem), SOS_PTR(end), SOS_PTR(segment.committed),
+            (ULONG_PTR)(end - (DWORD_PTR)segment.mem),
+            (ULONG_PTR)(end - (DWORD_PTR)segment.mem),
+            (ULONG_PTR)(segment.committed - (DWORD_PTR)segment.mem),
+            (ULONG_PTR)(segment.committed - (DWORD_PTR)segment.mem));
 
+    total_allocated_size += end - (DWORD_PTR)segment.mem;
+    total_committed_size += segment.committed - segment.mem;
 }
 
 
-void GCPrintLargeHeapSegmentInfo(const DacpGcHeapDetails &heap, DWORD_PTR &total_size)
+void GCPrintLargeHeapSegmentInfo(const DacpGcHeapDetails &heap, DWORD_PTR &total_allocated_size, DWORD_PTR &total_committed_size)
 {
     DWORD_PTR dwAddrSeg;
     DacpHeapSegmentData segment;
@@ -525,25 +533,31 @@ void GCPrintLargeHeapSegmentInfo(const DacpGcHeapDetails &heap, DWORD_PTR &total
             ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
             return;
         }
-        ExtOut("%p  %p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n", SOS_PTR(dwAddrSeg),
-                 SOS_PTR(segment.mem), SOS_PTR(segment.allocated),
-                 (ULONG_PTR)(segment.allocated - segment.mem),
-                 (ULONG_PTR)(segment.committed - segment.mem),
-                 segment.allocated - segment.mem);
-        total_size += (DWORD_PTR) (segment.allocated - segment.mem);
+        ExtOut("%p  %p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE"d)  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n",
+                SOS_PTR(dwAddrSeg),
+                SOS_PTR(segment.mem),
+                SOS_PTR(segment.allocated),
+                SOS_PTR(segment.committed),
+                (ULONG_PTR)(segment.allocated - segment.mem),
+                segment.allocated - segment.mem,
+                (ULONG_PTR)(segment.committed - segment.mem),
+                segment.committed - segment.mem);
+
+        total_allocated_size += (DWORD_PTR) (segment.allocated - segment.mem);
+        total_committed_size += (DWORD_PTR) (segment.committed - segment.mem);
         dwAddrSeg = (DWORD_PTR)segment.next;
     }
 }
 
-void GCHeapInfo(const DacpGcHeapDetails &heap, DWORD_PTR &total_size)
+void GCHeapInfo(const DacpGcHeapDetails &heap, DWORD_PTR &total_allocated_size, DWORD_PTR &total_committed_size)
 {
     GCPrintGenerationInfo(heap);
-    ExtOut("%" POINTERSIZE "s  %" POINTERSIZE "s  %" POINTERSIZE "s  %" POINTERSIZE "s  %" POINTERSIZE "s\n", "segment", "begin", "allocated", "committed", "size");
-    GCPrintSegmentInfo(heap, total_size);
-    ExtOut("Large object heap starts at 0x%p\n",
+    ExtOut("%" POINTERSIZE "s  %" POINTERSIZE "s  %" POINTERSIZE "s  %" POINTERSIZE "s  %" POINTERSIZE "s  %" POINTERSIZE "s\n", "segment", "begin", "allocated", "committed", "allocated size", "committed size");
+    GCPrintSegmentInfo(heap, total_allocated_size, total_committed_size);
+    ExtOut("Large Object Heap starts at 0x%p\n",
                   SOS_PTR(heap.generation_table[GetMaxGeneration()+1].allocation_start));
-    ExtOut("%" POINTERSIZE "s  %" POINTERSIZE "s  %" POINTERSIZE "s  %" POINTERSIZE "s  %" POINTERSIZE "s\n", "segment", "begin", "allocated", "committed", "size");
-    GCPrintLargeHeapSegmentInfo(heap,total_size);
+    ExtOut("%" POINTERSIZE "s  %" POINTERSIZE "s  %" POINTERSIZE "s  %" POINTERSIZE "s  %" POINTERSIZE "s  %" POINTERSIZE "s\n", "segment", "begin", "allocated", "committed", "allocated size", "committed size");
+    GCPrintLargeHeapSegmentInfo(heap, total_allocated_size, total_committed_size);
 }
 
 BOOL GCObjInGeneration(TADDR taddrObj, const DacpGcHeapDetails &heap, 

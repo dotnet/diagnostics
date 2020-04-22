@@ -3533,7 +3533,8 @@ DECLARE_API(EEHeap)
         }
 
         ExtOut("Number of GC Heaps: %d\n", dwNHeaps);
-        DWORD_PTR totalSize = 0;
+        DWORD_PTR totalAllocatedSize = 0;
+        DWORD_PTR totalCommittedSize = 0;
         if (!gcheap.bServerMode)
         {
             DacpGcHeapDetails heapDetails;
@@ -3543,9 +3544,11 @@ DECLARE_API(EEHeap)
                 return Status;
             }
 
-            GCHeapInfo (heapDetails, totalSize);
-            ExtOut("Total Size:              ");
-            PrintHeapSize(totalSize, 0);
+            GCHeapInfo (heapDetails, totalAllocatedSize, totalCommittedSize);
+            ExtOut("Total Allocated Size:              ");
+            PrintHeapSize(totalAllocatedSize, 0);
+            ExtOut("Total Committed Size:              ");
+            PrintHeapSize(totalCommittedSize, 0);
         }
         else
         {
@@ -3574,16 +3577,22 @@ DECLARE_API(EEHeap)
                 }
                 ExtOut("------------------------------\n");
                 ExtOut("Heap %d (%p)\n", n, SOS_PTR(heapAddrs[n]));
-                DWORD_PTR heapSize = 0;
-                GCHeapInfo (heapDetails, heapSize);
-                totalSize += heapSize;
-                ExtOut("Heap Size:       " WIN86_8SPACES);
-                PrintHeapSize(heapSize, 0);
+                DWORD_PTR heapAllocSize = 0;
+                DWORD_PTR heapCommitSize = 0;
+                GCHeapInfo (heapDetails, heapAllocSize, heapCommitSize);
+                totalAllocatedSize += heapAllocSize;
+                totalCommittedSize += heapCommitSize;
+                ExtOut("Allocated Heap Size:       " WIN86_8SPACES);
+                PrintHeapSize(heapAllocSize, 0);
+                ExtOut("Committed Heap Size:       " WIN86_8SPACES);
+                PrintHeapSize(heapCommitSize, 0);
             }
         }
         ExtOut("------------------------------\n");
-        ExtOut("GC Heap Size:    " WIN86_8SPACES);
-        PrintHeapSize(totalSize, 0);
+        ExtOut("GC Allocated Heap Size:    " WIN86_8SPACES);
+        PrintHeapSize(totalAllocatedSize, 0);
+        ExtOut("GC Committed Heap Size:    " WIN86_8SPACES);
+        PrintHeapSize(totalCommittedSize, 0);
     }
     return Status;
 }
