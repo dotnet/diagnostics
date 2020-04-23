@@ -26,10 +26,6 @@ parameters:
   # Depends on 
   dependsOn: ''
 
-  runtimeFeedParams:
-    runtimeFeedToken: ''
-    runtimeFeedUrl: ''
-
 jobs:
 - template: /eng/common/templates/job/job.yml
   parameters:
