@@ -1,3 +1,23 @@
+parameters:
+- name: runtimeFeed
+  displayName: Feed for runtime installation
+  type: string
+  default: default
+  values:
+  - default
+  - custom
+  - msrc-feed
+  - dotnetclimsrc-feed
+- name: runtimeFeedToken
+  displayName: Base 64 SAS Token for runtime installation
+  type: string
+  default: default
+  values:
+  - default
+  - custom
+  - msrc-feed-sas-token-base64
+  - dotnetclimsrc-sas-token-base64
+
 trigger: none
 
 pr:
@@ -27,6 +47,28 @@ variables:
         /p:TeamName=$(_TeamName)
         /p:DotNetPublishUsingPipelines=true
         /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+    - group: DotNet-MSRC-Storage
+    # Custom feed and token
+    - ${{ if eq(parameters.runtimeFeed, 'custom') }}:
+      - name: RuntimeFeedUrl
+        value: $(DotnetRuntimeDownloadFeed)
+    - ${{ if eq(parameters.runtimeFeedToken, 'custom') }}:
+      - name: RuntimeFeedBase64SasToken
+        value: $(DotnetRuntimeDownloadBase64SasToken)
+    # MSRC dotnet feed. Usually on orchestrated 2.1 releases.
+    - ${{ if eq(parameters.runtimeFeed, 'msrc-feed') }}:
+      - name: RuntimeFeedUrl
+        value: https://dotnetfeedmsrc.blob.core.windows.net
+    - ${{ if eq(parameters.runtimeFeedToken, 'msrc-feed-sas-token-base64') }}:
+      - name: RuntimeFeedBase64SasToken
+        value: $(dotnetfeedmsrc-read-sas-token-base64)
+    # dotnetclimsrc contains 3.1+
+    - ${{ if eq(parameters.runtimeFeed, 'dotnetclimsrc-feed') }}:
+      - name: RuntimeFeedUrl
+        value: https://dotnetclimsrc.blob.core.windows.net/dotnet
+    - ${{ if eq(parameters.runtimeFeedToken, 'dotnetclimsrc-sas-token-base64') }}:
+      - name: RuntimeFeedBase64SasToken
+        value: $(dotnetclimsrc-read-sas-token-base64)
 
 stages:
   - stage: build

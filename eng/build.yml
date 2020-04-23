@@ -26,6 +26,10 @@ parameters:
   # Depends on 
   dependsOn: ''
 
+  runtimeFeedParams:
+    runtimeFeedToken: ''
+    runtimeFeedUrl: ''
+
 jobs:
 - template: /eng/common/templates/job/job.yml
   parameters:
@@ -89,12 +93,11 @@ jobs:
  
     # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-      - group: DotNet-MSRC-Storage
       - _InternalInstallArgs:
           -dotnetruntimeversion '$(DotnetRuntimeVersion)'
           -dotnetruntimedownloadversion '$(DotnetRuntimeDownloadVersion)'
-          -runtimesourcefeed '$(dotnetfeedmsrc-private-feed-url)'
-          -runtimesourcefeedkey '$(dotnetclimsrc-read-sas-token-base64)'
+          -runtimesourcefeed '$(RuntimeFeedUrl)'
+          -runtimesourcefeedkey '$(RuntimeFeedBase64SasToken)'
 
     # Only enable publishing in non-public, non PR scenarios.
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
