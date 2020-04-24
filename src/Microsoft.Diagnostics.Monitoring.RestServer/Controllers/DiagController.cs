@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Runtime.InteropServices;
@@ -16,8 +17,6 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
     [ApiController]
     public class DiagController : ControllerBase
     {
-        private static readonly string DumpFileExtension = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".dmp" : string.Empty;
-
         private readonly ILogger<DiagController> _logger;
         private readonly IDiagnosticServices _diagnosticServices;
 
@@ -48,9 +47,19 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             {
                 OperationResult<Stream> result = await _diagnosticServices.GetDump(pid, type);
 
-                //Compression is done automatically by the response
-                //Chunking is done because the result has no content-length
-                return CreateFileStreamResult(result, $"coredump_{result.Pid}{DumpFileExtension}");
+                FormattableString dumpFileName;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    // This assumes that Windows does not have shared process spaces
+                    Process process = Process.GetProcessById(result.Pid);
+                    dumpFileName = $"{process.ProcessName}.{result.Pid}.dmp";
+                }
+                else
+                {
+                    dumpFileName = $"core_{result.Pid}";
+                }
+
+                return CreateFileStreamResult(result, dumpFileName);
             });
         }
 
@@ -66,6 +75,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
         private FileStreamResult CreateFileStreamResult(OperationResult<Stream> result, FormattableString downloadName)
         {
+            //Compression is done automatically by the response
+            //Chunking is done because the result has no content-length
             return File(result.Value, "application/octet-stream", Invariant(downloadName));
         }
 
