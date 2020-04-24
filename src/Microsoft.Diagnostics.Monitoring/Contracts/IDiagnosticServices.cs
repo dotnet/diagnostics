@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,17 +14,17 @@ namespace Microsoft.Diagnostics.Monitoring
     {
         IEnumerable<int> GetProcesses();
 
-        Task<Stream> GetDump(int pid, DumpType mode);
+        Task<OperationResult<Stream>> GetDump(int? pid, DumpType mode);
 
         //TODO We can most likely unify trace, cpu, and logs/metrics around one call with the appropriate config
-        Task<Stream> StartCpuTrace(int pid, int duration, CancellationToken token);
+        Task<OperationResult<Stream>> StartCpuTrace(int? pid, int duration, CancellationToken token);
     }
 
     public enum DumpType
     {
         Full = 1,
-        Normal,
-        MiniWithHeap,
+        Mini,
+        WithHeap,
         Triage
     }
 
@@ -38,5 +37,12 @@ namespace Microsoft.Diagnostics.Monitoring
     public sealed class TraceRequest
     {
         public string Configuraton { get; set; }
+    }
+
+    public sealed class OperationResult<T>
+    {
+        public int Pid { get; set; }
+
+        public T Value { get; set; }
     }
 }

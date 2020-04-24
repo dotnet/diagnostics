@@ -30,6 +30,8 @@ namespace Microsoft.Diagnostics.Monitoring
         {
             services.AddMvc((MvcOptions options) =>
             {
+                options.Filters.Add(new ProducesAttribute("application/json"));
+
                 // HACK We need to disable EndpointRouting in order to run properly in 3.1
                 System.Reflection.PropertyInfo prop = options.GetType().GetProperty("EnableEndpointRouting");
                 prop?.SetValue(options, false);
