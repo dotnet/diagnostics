@@ -41,19 +41,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             });
         }
 
-        [HttpGet("dump")]
-        public Task<ActionResult> GetDump([FromQuery] DumpType type = DumpType.WithHeap)
-        {
-            return GetDumpImpl(pid: null, type);
-        }
-
-        [HttpGet("dump/{pid}")]
-        public Task<ActionResult> GetDump(int pid, [FromQuery]DumpType type = DumpType.WithHeap)
-        {
-            return GetDumpImpl(pid, type);
-        }
-
-        public Task<ActionResult> GetDumpImpl(int? pid, DumpType type)
+        [HttpGet("dump/{pid?}")]
+        public Task<ActionResult> GetDump(int? pid, [FromQuery]DumpType type = DumpType.WithHeap)
         {
             return InvokeService(async () =>
             {
@@ -65,19 +54,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             });
         }
 
-        [HttpGet("cpuprofile")]
-        public Task<ActionResult> CpuProfile([FromQuery] int duration = 30)
-        {
-            return CpuProfileImpl(pid: null, duration);
-        }
-
-        [HttpGet("cpuprofile/{pid}")]
-        public Task<ActionResult> CpuProfile(int pid, [FromQuery]int duration = 30)
-        {
-            return CpuProfileImpl(pid, duration);
-        }
-
-        private Task<ActionResult> CpuProfileImpl(int? pid, int duration)
+        [HttpGet("cpuprofile/{pid?}")]
+        public Task<ActionResult> CpuProfile(int? pid, [FromQuery]int duration = 30)
         {
             return InvokeService(async () =>
             {
