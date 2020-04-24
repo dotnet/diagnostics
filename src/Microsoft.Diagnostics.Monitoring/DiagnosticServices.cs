@@ -125,9 +125,9 @@ namespace Microsoft.Diagnostics.Monitoring
 
         private int GetSingleProcessId()
         {
-            // Short-circuit for when running in a container on Kubernetes where the entrypoint
+            // Short-circuit for when running in a Docker container, assuming the entrypoint
             // of the container is a dotnet application.
-            if (RuntimeInfo.IsKubernetes && null != Process.GetProcessById(1))
+            if (RuntimeInfo.IsInDockerContainer && null != Process.GetProcessById(1))
             {
                 return 1;
             }
