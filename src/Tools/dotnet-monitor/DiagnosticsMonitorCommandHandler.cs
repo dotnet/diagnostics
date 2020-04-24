@@ -104,7 +104,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 namespaceName = "default";
             }
 
-            builder.AddInMemoryCollection(new Dictionary<string, string> { { DiagnosticsMonitor.NamespaceName, namespaceName }, { DiagnosticsMonitor.NodeName, hostName } });
+            builder.AddInMemoryCollection(new Dictionary<string, string> { {DiagnosticsEventPipeProcessor.NamespaceName, namespaceName }, { DiagnosticsEventPipeProcessor.NodeName, hostName } });
 
         }
     }

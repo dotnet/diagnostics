@@ -1,9 +1,15 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Diagnostics.Monitoring.RestServer.Models;
@@ -19,11 +25,13 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
     {
         private readonly ILogger<DiagController> _logger;
         private readonly IDiagnosticServices _diagnosticServices;
+        private readonly IServiceProvider _serviceProvider;
 
-        public DiagController(ILogger<DiagController> logger, IDiagnosticServices diagnosticServices)
+        public DiagController(ILogger<DiagController> logger, IServiceProvider serviceProvider, IDiagnosticServices diagnosticServices)
         {
             _logger = logger;
             _diagnosticServices = diagnosticServices;
+            _serviceProvider = serviceProvider;
         }
 
         [HttpGet("processes")]
@@ -59,7 +67,9 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     dumpFileName = $"core_{result.Pid}";
                 }
 
-                return CreateFileStreamResult(result, dumpFileName);
+                //Compression is done automatically by the response
+                //Chunking is done because the result has no content-length
+                return File(result.Value, "application/octet-stream", Invariant(dumpFileName));
             });
         }
 
@@ -68,16 +78,29 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         {
             return InvokeService(async () =>
             {
-                OperationResult<Stream> result = await _diagnosticServices.StartCpuTrace(pid, duration, this.HttpContext.RequestAborted);
-                return CreateFileStreamResult(result, $"{Guid.NewGuid()}.nettrace");
+                OperationResult<IStreamResult> result = await _diagnosticServices.StartCpuTrace(pid, duration, this.HttpContext.RequestAborted);
+                return new EventStreamResult(result.Value, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
             });
         }
 
-        private FileStreamResult CreateFileStreamResult(OperationResult<Stream> result, FormattableString downloadName)
+        [HttpGet("trace/{pid?}")]
+        public Task<ActionResult> Trace(int? pid, [FromQuery]int durationSeconds = 30)
         {
-            //Compression is done automatically by the response
-            //Chunking is done because the result has no content-length
-            return File(result.Value, "application/octet-stream", Invariant(downloadName));
+            return InvokeService(async () =>
+            {
+                OperationResult<IStreamResult> result = await _diagnosticServices.StartTrace(pid, durationSeconds, this.HttpContext.RequestAborted);
+
+                return new EventStreamResult(result.Value, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
+            });
+        }
+
+        [HttpGet("logs/{pid?}")]
+        public ActionResult Logs(int? pid, [FromQuery] int durationSeconds = 30)
+        {
+            return new OutputStreamResult( async (outputStream, token) =>
+            {
+                await _diagnosticServices.StartLogs(outputStream, pid, durationSeconds, token);
+            }, "application/x-ndjson", Invariant($"{Guid.NewGuid()}.txt"));
         }
 
         private ActionResult<T> InvokeService<T>(Func<ActionResult<T>> serviceCall)
@@ -117,6 +140,58 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             catch (InvalidOperationException e)
             {
                 return BadRequest(FromException(e));
+            }
+        }
+
+        /// <summary>
+        /// Same as FileStreamResult, but also cleans up the underlying stream provider once it's finished
+        /// </summary>
+        private sealed class EventStreamResult : FileStreamResult
+        {
+            private readonly IStreamResult _streamResult;
+            public EventStreamResult(IStreamResult streamResult, string contentType, string fileDownloadName) : base(streamResult.Stream, contentType)
+            {
+                FileDownloadName = fileDownloadName;
+                _streamResult = streamResult;
+            }
+
+            public override async Task ExecuteResultAsync(ActionContext context)
+            {
+                try
+                {
+                    await base.ExecuteResultAsync(context);
+                }
+                finally
+                {
+                    await _streamResult.DisposeAsync();
+                }
+            }
+        }
+
+        private sealed class OutputStreamResult : ActionResult
+        {
+            private readonly Func<Stream, CancellationToken, Task> _action;
+            private readonly string _contentType;
+            private readonly string _fileDownloadName;
+
+            public OutputStreamResult(Func<Stream, CancellationToken, Task> action, string contentType, string fileDownloadName = null)
+            {
+                _action = action;
+                _contentType = contentType;
+                _fileDownloadName = fileDownloadName;
+            }
+
+            public override async Task ExecuteResultAsync(ActionContext context)
+            {
+                if (_fileDownloadName != null)
+                {
+                    ContentDispositionHeaderValue contentDispositionHeaderValue = new ContentDispositionHeaderValue("attachment");
+                    contentDispositionHeaderValue.FileName = _fileDownloadName;
+                    context.HttpContext.Response.Headers["Content-Disposition"] = contentDispositionHeaderValue.ToString();
+                }
+                context.HttpContext.Response.Headers["Content-Type"] = _contentType;
+
+                await _action(context.HttpContext.Response.Body, context.HttpContext.RequestAborted);
             }
         }
 

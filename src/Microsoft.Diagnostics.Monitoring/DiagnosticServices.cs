@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -6,7 +10,9 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Monitoring.Logging;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Monitoring
@@ -16,11 +22,13 @@ namespace Microsoft.Diagnostics.Monitoring
         private const int MaxTraceSeconds = 60 * 5;
 
         private readonly ILogger<DiagnosticsMonitor> _logger;
+        private readonly IServiceProvider _serviceProvider;
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
-        public DiagnosticServices(ILogger<DiagnosticsMonitor> logger)
+        public DiagnosticServices(ILogger<DiagnosticsMonitor> logger, IServiceProvider serviceProvider)
         {
             _logger = logger;
+            _serviceProvider = serviceProvider;
         }
 
         public IEnumerable<int> GetProcesses()
@@ -39,71 +47,88 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public async Task<OperationResult<Stream>> GetDump(int? pid, DumpType mode)
         {
-            if (!pid.HasValue)
-            {
-                pid = GetSingleProcessId();
-            }
+            int pidValue = GetSingleProcessId(pid);
 
-            string dumpFilePath = FormattableString.Invariant($@"{Path.GetTempPath()}{Path.DirectorySeparatorChar}{Guid.NewGuid()}_{pid.Value}");
+            string dumpFilePath = FormattableString.Invariant($@"{Path.GetTempPath()}{Path.DirectorySeparatorChar}{Guid.NewGuid()}_{pidValue}");
             NETCore.Client.DumpType dumpType = MapDumpType(mode);
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 // Get the process
-                Process process = Process.GetProcessById(pid.Value);
+                Process process = Process.GetProcessById(pidValue);
                 await Dumper.CollectDumpAsync(process, dumpFilePath, dumpType);
             }
             else
             {
                 await Task.Run(() =>
                 {
-                    var client = new DiagnosticsClient(pid.Value);
+                    var client = new DiagnosticsClient(pidValue);
                     client.WriteDump(dumpType, dumpFilePath);
                 });
             }
 
-            return CreateResult(pid.Value, new AutoDeleteFileStream(dumpFilePath));
+            return CreateResult<Stream>(pidValue, new AutoDeleteFileStream(dumpFilePath));
         }
 
-        public Task<OperationResult<Stream>> StartCpuTrace(int? pid, int durationSeconds, CancellationToken cancellationToken)
+        public async Task<OperationResult<IStreamResult>> StartCpuTrace(int? pid, int durationSeconds, CancellationToken cancellationToken)
         {
             if ((durationSeconds < 1) || (durationSeconds > MaxTraceSeconds))
             {
                 throw new InvalidOperationException("Invalid duration");
             }
 
-            if (!pid.HasValue)
+            int pidValue = GetSingleProcessId(pid);
+
+            DiagnosticsMonitor monitor = new DiagnosticsMonitor(_serviceProvider, new CpuProfileConfiguration());
+            Stream stream = await monitor.ProcessEvents(pidValue, durationSeconds, cancellationToken);
+
+            return CreateResult<IStreamResult>(pidValue, new StreamResult(monitor, stream));
+        }
+
+        public async Task<OperationResult<IStreamResult>> StartTrace(int? pid, int durationSeconds, CancellationToken token)
+        {
+            if ((durationSeconds < 1) || (durationSeconds > MaxTraceSeconds))
             {
-                pid = GetSingleProcessId();
+                throw new InvalidOperationException("Invalid duration");
             }
 
-            //TODO Should we limit only 1 trace per file?
-            var client = new DiagnosticsClient(pid.Value);
+            int pidValue = GetSingleProcessId(pid);
 
-            //TODO Pull event providers from the configuration.
-            var cpuProviders = new EventPipeProvider[] {
-                new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", System.Diagnostics.Tracing.EventLevel.Informational),
-                new EventPipeProvider("Microsoft-Windows-DotNETRuntime", System.Diagnostics.Tracing.EventLevel.Informational, (long)Tracing.Parsers.ClrTraceEventParser.Keywords.Default)
-            };
+            DiagnosticsMonitor monitor = new DiagnosticsMonitor(_serviceProvider, new LoggingSourceConfiguration());
+            Stream stream = await monitor.ProcessEvents(pidValue, durationSeconds, token);
+            return CreateResult<IStreamResult>(pidValue, new StreamResult(monitor, stream));
+        }
 
-            EventPipeSession session = client.StartEventPipeSession(cpuProviders, requestRundown: true);
-
-            CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_tokenSource.Token, cancellationToken);
-            Task traceTask = Task.Run(async () =>
+        public async Task<OperationResult> StartLogs(Stream outputStream, int? pid, int durationSeconds, CancellationToken token)
+        {
+            if ((durationSeconds < 1) || (durationSeconds > MaxTraceSeconds))
             {
-                try
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(durationSeconds), linkedTokenSource.Token);
-                }
-                finally
-                {
-                    session.Stop();
-                    linkedTokenSource.Dispose();
-                    //We rely on the caller to Dispose the EventStream file.
-                }
-            }, CancellationToken.None);
+                throw new InvalidOperationException("Invalid duration");
+            }
 
-            return Task.FromResult(CreateResult(pid.Value, session.EventStream));
+            int pidValue = GetSingleProcessId(pid);
+
+            //We want to use ILogger since at some point in the future we may want to push this data to other
+            //sinks. At the same time we want these to be transient for the purposes of streaming the data, but not for other logs (such as those of
+            //the rest service itself).
+            ServiceCollection serviceCollection = new ServiceCollection();
+            serviceCollection.AddLogging(loggingBuilder => loggingBuilder.AddProvider(new StreamingLoggerProvider(outputStream)));
+
+            //TODO This is not ideal since the newly added services do not actually know about the parent service provider.
+            var serviceProvider = new AggregateServiceProvider(_serviceProvider, serviceCollection.BuildServiceProvider());
+
+            var processor = new DiagnosticsEventPipeProcessor(serviceProvider, PipeMode.Logs);
+
+            try
+            {
+                await processor.Process(pidValue, durationSeconds, token);
+            }
+            finally
+            {
+                await processor.DisposeAsync();
+            }
+
+            return new OperationResult { Pid = pidValue };
         }
 
         private static NETCore.Client.DumpType MapDumpType(DumpType dumpType)
@@ -123,8 +148,13 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        private int GetSingleProcessId()
+        private int GetSingleProcessId(int? pid)
         {
+            if (pid.HasValue)
+            {
+                return pid.Value;
+            }
+
             // Short-circuit for when running in a Docker container, assuming the entrypoint
             // of the container is a dotnet application.
             if (RuntimeInfo.IsInDockerContainer && null != Process.GetProcessById(1))
@@ -145,12 +175,12 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        private static OperationResult<Stream> CreateResult(int pid, Stream stream)
+        private static OperationResult<T> CreateResult<T>(int pid, T value)
         {
-            return new OperationResult<Stream>()
+            return new OperationResult<T>()
             {
                 Pid = pid,
-                Value = stream
+                Value = value
             };
         }
 
@@ -172,6 +202,36 @@ namespace Microsoft.Diagnostics.Monitoring
             }
 
             public override bool CanSeek => false;
+        }
+
+        /// <summary>
+        /// This helper class allows us to return a stream result to the caller and then later dispose
+        /// any underlying data structures associated with the DiagnosticsMonitor once the caller is done
+        /// processing the stream.
+        /// </summary>
+        private sealed class StreamResult : IStreamResult
+        {
+            private readonly DiagnosticsMonitor _monitor;
+
+            public StreamResult(DiagnosticsMonitor monitor, Stream stream)
+            {
+                Stream = stream;
+                _monitor = monitor;
+            }
+
+            public Stream Stream { get; }
+
+            public async ValueTask DisposeAsync()
+            {
+                try
+                {
+                    await _monitor.CurrentProcessingTask;
+                }
+                finally
+                {
+                    await _monitor.DisposeAsync();
+                }
+            }
         }
     }
 }
