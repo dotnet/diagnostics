@@ -17,7 +17,7 @@
     <MicrosoftNETCoreApp31Version>3.1.2</MicrosoftNETCoreApp31Version>
     <MicrosoftAspNetCoreApp31Version>$(MicrosoftNETCoreApp31Version)</MicrosoftAspNetCoreApp31Version>
     <!-- Latest shared runtime version updated by darc -->
-    <MicrosoftNETCoreAppVersion>5.0.0-preview.5.20224.13</MicrosoftNETCoreAppVersion>
+    <MicrosoftNETCoreAppVersion>5.0.0-preview.5.20225.8</MicrosoftNETCoreAppVersion>
     <!-- Latest shared aspnetcore version updated by darc -->
     <MicrosoftAspNetCoreAppRefVersion>5.0.0-preview.5.20223.18</MicrosoftAspNetCoreAppRefVersion>
   </PropertyGroup>
