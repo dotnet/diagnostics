@@ -3,10 +3,12 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Monitoring;
+using Microsoft.Diagnostics.Monitoring.Contracts;
 using Microsoft.Diagnostics.Monitoring.Logging;
 using Microsoft.DotNet.RemoteExecutor;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.DataCollection;
 using System;
@@ -56,7 +58,12 @@ namespace DotnetMonitor.UnitTests
 
             using (var testExecution = RemoteTest.StartRemoteProcess(LoggerRemoteTest.EntryPoint, nameof(LoggerRemoteTest)))
             {
-                DiagnosticsEventPipeProcessor diagnosticsEventPipeProcessor = new DiagnosticsEventPipeProcessor(serviceProvider, PipeMode.Logs);
+                DiagnosticsEventPipeProcessor diagnosticsEventPipeProcessor = new DiagnosticsEventPipeProcessor(
+                    serviceProvider.GetService<IOptions<ContextConfiguration>>().Value,
+                    PipeMode.Logs,
+                    serviceProvider.GetService<ILoggerFactory>(),
+                    Enumerable.Empty<IMetricsLogger>());
+
                 var processingTask = diagnosticsEventPipeProcessor.Process(testExecution.RemoteProcess.Process.Id, 10, CancellationToken.None);
 
                 testExecution.Start();
@@ -104,10 +111,21 @@ namespace DotnetMonitor.UnitTests
                 contextConfig.Node = Environment.MachineName;
             });
             serviceCollection.AddSingleton<ILogger<DiagnosticsMonitor>>(new TestLogger());
-            serviceCollection.AddLogging((logging) => logging.AddProvider(new StreamingLoggerProvider(outputStream)));
+            serviceCollection.AddSingleton<IStreamAccessor>(new DirectStreamAccessor(outputStream));
+            serviceCollection.AddLogging((logging) => logging.Services.AddSingleton<ILoggerProvider, StreamingLoggerProvider>());
 
             return serviceCollection.BuildServiceProvider();
         }
+
+        private sealed class DirectStreamAccessor : IStreamAccessor
+        {
+            public DirectStreamAccessor(Stream stream)
+            {
+                OutputStream = stream;
+            }
+            public Stream OutputStream { get; private set; }
+        }
+
 
         private sealed class TestLogger : ILogger<DiagnosticsMonitor>
         {

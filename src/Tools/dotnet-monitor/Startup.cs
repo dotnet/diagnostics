@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 using System.Collections.Generic;
 using System.IO.Compression;
 using System.Linq;
@@ -9,6 +13,7 @@ using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Diagnostics.Monitoring.Contracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -48,6 +53,9 @@ namespace Microsoft.Diagnostics.Monitoring
                 configureOptions.Providers.Add<GzipCompressionProvider>();
                 configureOptions.MimeTypes = new List<string> { "application/octet-stream" };
             });
+
+            services.AddHttpContextAccessor();
+            services.AddSingleton<IStreamAccessor, StreamAccessorService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

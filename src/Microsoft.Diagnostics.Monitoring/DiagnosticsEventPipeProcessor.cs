@@ -26,8 +26,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
     public class DiagnosticsEventPipeProcessor : IAsyncDisposable
     {
-        private readonly IServiceProvider _services;
-        private readonly Microsoft.Extensions.Logging.ILogger<DiagnosticsMonitor> _logger;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly IEnumerable<IMetricsLogger> _metricLoggers;
         private readonly PipeMode _mode;
 
@@ -38,14 +37,14 @@ namespace Microsoft.Diagnostics.Monitoring
         public const string NodeName = "Node";
         private static readonly List<string> DimNames = new List<string> { NamespaceName, NodeName };
 
-        public DiagnosticsEventPipeProcessor(IServiceProvider services, PipeMode mode)
+        public DiagnosticsEventPipeProcessor(ContextConfiguration contextConfig, PipeMode mode,
+            ILoggerFactory loggerFactory,
+            IEnumerable<IMetricsLogger> metricLoggers)
         {
-            _services = services;
-            IOptions<ContextConfiguration> contextConfig = _services.GetService<IOptions<ContextConfiguration>>();
-            _dimValues = new List<string> { contextConfig.Value.Namespace, contextConfig.Value.Node };
-            _metricLoggers = _services.GetServices<IMetricsLogger>();
-            _logger = _services.GetService<ILogger<DiagnosticsMonitor>>();
+            _dimValues = new List<string> { contextConfig.Namespace, contextConfig.Node };
+            _metricLoggers = metricLoggers;
             _mode = mode;
+            _loggerFactory = loggerFactory;
         }
 
         public async Task Process(int pid, int duration, CancellationToken token)
@@ -66,7 +65,7 @@ namespace Microsoft.Diagnostics.Monitoring
                         config = new MetricSourceConfiguration();
                     }
 
-                    monitor = new DiagnosticsMonitor(_services, config);
+                    monitor = new DiagnosticsMonitor(config);
                     Stream sessionStream = await monitor.ProcessEvents(pid, duration, token);
                     source = new EventPipeEventSource(sessionStream);
                     
@@ -86,7 +85,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 }
                 catch (DiagnosticsClientException ex)
                 {
-                    _logger.LogDebug(0, ex, "Failed to start the event pipe session");
+                    throw new InvalidOperationException("Failed to start the event pipe session", ex);
                 }
                 catch (Exception)
                 {
@@ -171,7 +170,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
                 Exception exception = null;
 
-                ILogger logger = _services.GetService<ILoggerFactory>().CreateLogger(categoryName);
+                ILogger logger = _loggerFactory.CreateLogger(categoryName);
                 var scopes = new List<IDisposable>();
 
                 if (logActivities.TryGetValue(traceEvent.ActivityID, out var logActivityItem))
@@ -212,9 +211,8 @@ namespace Microsoft.Diagnostics.Monitoring
                         logger.Log(logLevel, new EventId(eventId, eventName), obj, exception, LogObject.Callback);
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    _logger.LogDebug(ex, "Error processing log entry for {ServiceName}", _dimValues[1]);
                 }
                 finally
                 {
@@ -275,9 +273,8 @@ namespace Microsoft.Diagnostics.Monitoring
                         PostMetric(new Metric(traceEvent.TimeStamp, traceEvent.ProviderName, counterName, displayName, displayUnits, value, dimNames: DimNames, dimValues: _dimValues));
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    _logger.LogError(ex, "Error processing counter for {ProviderName}:{EventName}", traceEvent.ProviderName, traceEvent.EventName);
                 }
             };
         }
@@ -292,10 +289,6 @@ namespace Microsoft.Diagnostics.Monitoring
                 }
                 catch (ObjectDisposedException)
                 {
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError($"Error from {metricLogger.GetType()}: {e.Message}");
                 }
             }
         }

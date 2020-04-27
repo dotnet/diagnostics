@@ -19,19 +19,15 @@ namespace Microsoft.Diagnostics.Monitoring
 {
     public sealed class DiagnosticsMonitor : IAsyncDisposable
     {
-        private readonly IServiceProvider _services;
-        private readonly Microsoft.Extensions.Logging.ILogger<DiagnosticsMonitor> _logger;
         private readonly MonitoringSourceConfiguration _sourceConfig;
         private readonly CancellationTokenSource _disposeSource;
         private readonly object _lock = new object();
         private Task _currentTask;
         private bool _disposed;
 
-        public DiagnosticsMonitor(IServiceProvider services, MonitoringSourceConfiguration sourceConfig)
+        public DiagnosticsMonitor(MonitoringSourceConfiguration sourceConfig)
         {
-            _services = services;
             _sourceConfig = sourceConfig;
-            _logger = _services.GetService<ILogger<DiagnosticsMonitor>>();
             _disposeSource = new CancellationTokenSource();
         }
 
@@ -64,13 +60,9 @@ namespace Microsoft.Diagnostics.Monitoring
                 {
                     throw new InvalidOperationException("End of stream", e);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (!(ex is OperationCanceledException))
                 {
-                    if (!cancellationToken.IsCancellationRequested)
-                    {
-                        _logger.LogDebug(0, ex, "Failed to start the event pipe session");
-                    }
-                    throw new InvalidOperationException(ex.Message, ex);
+                    throw new InvalidOperationException("Failed to start the event pipe session", ex);
                 }
 
                 CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(_disposeSource.Token, cancellationToken);

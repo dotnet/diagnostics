@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.Monitoring.Contracts;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -16,16 +17,16 @@ namespace Microsoft.Diagnostics.Monitoring.Logging
     /// </summary>
     public sealed class StreamingLoggerProvider : ILoggerProvider
     {
-        private readonly Stream _outputStream;
+        private readonly IStreamAccessor _streamAccessor;
 
-        public StreamingLoggerProvider(Stream outputStream)
+        public StreamingLoggerProvider(IStreamAccessor streamAccessor)
         {
-            _outputStream = outputStream;
+            _streamAccessor = streamAccessor;
         }
 
         public ILogger CreateLogger(string categoryName)
         {
-            return new StreamingLogger(categoryName, _outputStream);
+            return new StreamingLogger(categoryName, _streamAccessor);
         }
 
         public void Dispose()
@@ -36,12 +37,12 @@ namespace Microsoft.Diagnostics.Monitoring.Logging
     public sealed class StreamingLogger : ILogger
     {
         private Stack<IReadOnlyList<KeyValuePair<string, object>>> _scopes = new Stack<IReadOnlyList<KeyValuePair<string, object>>>();
-        private readonly Stream _outputStream;
+        private readonly IStreamAccessor _streamAccessor;
         private readonly string _categoryName;
 
-        public StreamingLogger(string category, Stream outputStream)
+        public StreamingLogger(string category, IStreamAccessor streamAccessor)
         {
-            _outputStream = outputStream;
+            _streamAccessor = streamAccessor;
             _categoryName = category;
         }
 
@@ -74,8 +75,10 @@ namespace Microsoft.Diagnostics.Monitoring.Logging
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
+            Stream outputStream = _streamAccessor.OutputStream;
+
             //CONSIDER Should we cache up the loggers and writers?
-            using (var jsonWriter = new Utf8JsonWriter(_outputStream, new JsonWriterOptions { Indented = false }))
+            using (var jsonWriter = new Utf8JsonWriter(outputStream, new JsonWriterOptions { Indented = false }))
             {
                 jsonWriter.WriteStartObject();
                 jsonWriter.WriteString("LogLevel", logLevel.ToString());
@@ -116,8 +119,8 @@ namespace Microsoft.Diagnostics.Monitoring.Logging
                 jsonWriter.Flush();
             }
 
-            _outputStream.WriteByte((byte)'\n');
-            _outputStream.Flush();
+            outputStream.WriteByte((byte)'\n');
+            outputStream.Flush();
         }
 
         private static void WriteKeyValuePair(Utf8JsonWriter jsonWriter, KeyValuePair<string, object> kvp)
