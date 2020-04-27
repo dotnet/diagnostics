@@ -48,7 +48,7 @@ DumpMD                             GCHandles
 Token2EE                           GCHandleLeaks
 EEVersion                          FinalizeQueue (fq)
 DumpModule                         FindAppDomain
-ThreadPool                         SaveModule
+ThreadPool (tp)                    SaveModule
 DumpAssembly                       ProcInfo 
 DumpSigElem                        StopOnException (soe)
 DumpRuntimeTypes                   DumpLog

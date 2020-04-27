@@ -174,5 +174,6 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     interpreter.AddCommand("soshelp", new sosCommand("Help"), "Displays all available commands when no parameter is specified, or displays detailed help information about the specified command. soshelp <command>");
     interpreter.AddCommand("sosstatus", new sosCommand("SOSStatus"), "Displays the global SOS status.");
     interpreter.AddCommand("sosflush", new sosCommand("SOSFlush"), "Flushes the DAC caches.");
+    interpreter.AddCommand("threadpool", new sosCommand("ThreadPool"), "Displays info about the runtime thread pool.");
     return true;
 }

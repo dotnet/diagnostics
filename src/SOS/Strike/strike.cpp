@@ -114,11 +114,7 @@
 #include "disasm.h"
 
 #include "predeftlsslot.h"
-
-#ifndef FEATURE_PAL
 #include "hillclimbing.h"
-#endif
-
 #include "sos_md.h"
 
 #ifndef FEATURE_PAL
@@ -8429,8 +8425,6 @@ DECLARE_API(bpmd)
     return Status;
 }
 
-#ifndef FEATURE_PAL
-
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -8746,8 +8740,6 @@ DECLARE_API(ThreadPool)
     }
     return Status;
 }
-
-#endif // FEATURE_PAL
 
 DECLARE_API(FindAppDomain)
 {
