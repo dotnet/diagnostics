@@ -54,6 +54,7 @@ SOSStatus
 SuppressJitOptimization
 SyncBlk
 Threads
+ThreadPool
 ThreadState
 Token2EE
 u

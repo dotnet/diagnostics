@@ -40,7 +40,7 @@ DumpDomain (dumpdomain)            VerifyHeap
 EEHeap (eeheap)                    FindAppDomain          
 Name2EE (name2ee)                  DumpLog (dumplog)
 SyncBlk (syncblk)                  SuppressJitOptimization
-DumpMT (dumpmt)
+DumpMT (dumpmt)                    ThreadPool (threadpool)
 DumpClass (dumpclass)
 DumpMD (dumpmd)                    
 Token2EE                           
@@ -1384,7 +1384,14 @@ and the types referenced by the module. For example:
     0334e374 0x0100000c System.Console
     03167a50 0x0100000e System.Runtime.InteropServices.GCHandle
     0336a048 0x0100000f System.GC
+\\
 
+COMMAND: threadpool.
+ThreadPool
+
+This command lists basic information about the ThreadPool, including the number
+of work requests in the queue, number of completion port threads, and number of
+timers.
 \\
 
 COMMAND: dumpassembly.
