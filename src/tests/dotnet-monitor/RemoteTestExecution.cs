@@ -10,6 +10,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using Xunit.Abstractions;
 
 namespace DotnetMonitor.UnitTests
 {
@@ -62,7 +64,7 @@ namespace DotnetMonitor.UnitTests
             return new Mutex(owned, "TestCaseEnd");
         }
 
-        public static RemoteTestExecution StartRemoteProcess(Func<string, int> testEntry, string loggerCategory)
+        public static RemoteTestExecution StartRemoteProcess(Func<string, int> testEntry, string loggerCategory, ITestOutputHelper outputHelper)
         {
             var options = new RemoteInvokeOptions()
             {
@@ -77,11 +79,39 @@ namespace DotnetMonitor.UnitTests
             //Note lambdas may not work here since closures cannot be properly serialized across process boundaries.
             testExecution.RemoteProcess = RemoteExecutor.Invoke(testEntry, loggerCategory, options);
 
+            try
+            {
+                Task<string> stdOutputTask = testExecution.RemoteProcess.Process.StandardOutput.ReadToEndAsync();
+                Task<string> stdErrorTask = testExecution.RemoteProcess.Process.StandardError.ReadToEndAsync();
+
+                Task.Run( async () =>
+                {
+                    string result = await stdOutputTask;
+                    outputHelper.WriteLine("Stdout:");
+                    if (result != null)
+                    {
+                        outputHelper.WriteLine(result);
+                    }
+                    result = await stdErrorTask;
+                    outputHelper.WriteLine("Stderr:");
+                    if (result != null)
+                    {
+                        outputHelper.WriteLine(result);
+                    }
+                });
+            }
+            catch (ObjectDisposedException)
+            {
+                Console.Error.WriteLine("Failed to collect remote process's output");
+            }
+
             return testExecution;
         }
 
         public int TestBody(string loggerCategory)
         {
+            Console.WriteLine("Starting remote test process");
+            
             using var startMutex = GetStartMutex(false);
             using var endMutex = GetEndMutex(false);
 
@@ -94,8 +124,14 @@ namespace DotnetMonitor.UnitTests
             using var loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
             var logger = loggerFactory.CreateLogger(loggerCategory);
 
+            Console.WriteLine("Awaiting start mutex");
+
             startMutex.WaitOne();
+
+            Console.WriteLine("Starting test body");
             TestBodyCore(logger);
+
+            Console.WriteLine("Awaiting end mutex");
             endMutex.WaitOne();
 
             return 0;

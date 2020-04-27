@@ -22,11 +22,19 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace DotnetMonitor.UnitTests
 {
     public class DiagnosticsMonitorTests
     {
+        private readonly ITestOutputHelper _output;
+
+        public DiagnosticsMonitorTests(ITestOutputHelper output)
+        {
+            _output = output;
+        }
+
         private sealed class LoggerRemoteTest : RemoteTest
         {
             public static int EntryPoint(string logger)
@@ -56,7 +64,7 @@ namespace DotnetMonitor.UnitTests
             var outputStream = new MemoryStream();
             var serviceProvider = PrepareServiceProvider(outputStream);
 
-            using (var testExecution = RemoteTest.StartRemoteProcess(LoggerRemoteTest.EntryPoint, nameof(LoggerRemoteTest)))
+            using (var testExecution = RemoteTest.StartRemoteProcess(LoggerRemoteTest.EntryPoint, nameof(LoggerRemoteTest), _output))
             {
                 DiagnosticsEventPipeProcessor diagnosticsEventPipeProcessor = new DiagnosticsEventPipeProcessor(
                     serviceProvider.GetService<IOptions<ContextConfiguration>>().Value,
@@ -110,7 +118,6 @@ namespace DotnetMonitor.UnitTests
                 contextConfig.Namespace = "default";
                 contextConfig.Node = Environment.MachineName;
             });
-            serviceCollection.AddSingleton<ILogger<DiagnosticsMonitor>>(new TestLogger());
             serviceCollection.AddSingleton<IStreamAccessor>(new DirectStreamAccessor(outputStream));
             serviceCollection.AddLogging((logging) => logging.Services.AddSingleton<ILoggerProvider, StreamingLoggerProvider>());
 
@@ -124,18 +131,6 @@ namespace DotnetMonitor.UnitTests
                 OutputStream = stream;
             }
             public Stream OutputStream { get; private set; }
-        }
-
-
-        private sealed class TestLogger : ILogger<DiagnosticsMonitor>
-        {
-            public IDisposable BeginScope<TState>(TState state) => null;
-            public bool IsEnabled(LogLevel logLevel) => true;
-
-            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
-            {
-                Console.WriteLine(formatter(state, exception));
-            }
         }
 
         private static void Validate(IDictionary<string, JsonElement> values, params (string key, object value)[] expectedValues)
