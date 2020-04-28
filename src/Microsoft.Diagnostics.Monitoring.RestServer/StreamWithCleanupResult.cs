@@ -13,10 +13,10 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
     /// <summary>
     /// Same as FileStreamResult, but also cleans up the underlying stream provider once it's finished
     /// </summary>
-    internal sealed class EventStreamResult : FileStreamResult
+    internal sealed class StreamWithCleanupResult : FileStreamResult
     {
-        private readonly IStreamResult _streamResult;
-        public EventStreamResult(IStreamResult streamResult, string contentType, string fileDownloadName) : base(streamResult.Stream, contentType)
+        private readonly IStreamWithCleanup _streamResult;
+        public StreamWithCleanupResult(IStreamWithCleanup streamResult, string contentType, string fileDownloadName) : base(streamResult.Stream, contentType)
         {
             FileDownloadName = fileDownloadName;
             _streamResult = streamResult;

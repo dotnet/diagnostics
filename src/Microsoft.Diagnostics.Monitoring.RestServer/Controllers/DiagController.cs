@@ -27,13 +27,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
         private readonly ILogger<DiagController> _logger;
         private readonly IDiagnosticServices _diagnosticServices;
-        private readonly IServiceProvider _serviceProvider;
 
-        public DiagController(ILogger<DiagController> logger, IServiceProvider serviceProvider, IDiagnosticServices diagnosticServices)
+        public DiagController(ILogger<DiagController> logger, IDiagnosticServices diagnosticServices)
         {
             _logger = logger;
             _diagnosticServices = diagnosticServices;
-            _serviceProvider = serviceProvider;
         }
 
         [HttpGet("processes")]
@@ -81,8 +79,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             return InvokeService(async () =>
             {
                 ValidateDuration(durationSeconds);
-                OperationResult<IStreamResult> result = await _diagnosticServices.StartCpuTrace(pid, durationSeconds, this.HttpContext.RequestAborted);
-                return new EventStreamResult(result.Value, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
+                OperationResult<IStreamWithCleanup> result = await _diagnosticServices.StartCpuTrace(pid, durationSeconds, this.HttpContext.RequestAborted);
+                return new StreamWithCleanupResult(result.Value, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
             });
         }
 
@@ -92,8 +90,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             return InvokeService(async () =>
             {
                 ValidateDuration(durationSeconds);
-                OperationResult<IStreamResult> result = await _diagnosticServices.StartTrace(pid, durationSeconds, this.HttpContext.RequestAborted);
-                return new EventStreamResult(result.Value, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
+                OperationResult<IStreamWithCleanup> result = await _diagnosticServices.StartTrace(pid, durationSeconds, this.HttpContext.RequestAborted);
+                return new StreamWithCleanupResult(result.Value, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
             });
         }
 

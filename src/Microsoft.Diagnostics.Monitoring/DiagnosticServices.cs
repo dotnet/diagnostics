@@ -10,7 +10,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.Monitoring.Contracts;
 using Microsoft.Diagnostics.Monitoring.Logging;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,26 +22,13 @@ namespace Microsoft.Diagnostics.Monitoring
     {
         private readonly ILogger<DiagnosticsMonitor> _logger;
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
-        private IEnumerable<IMetricsLogger> _metricsLoggers;
         private ContextConfiguration _contextConfiguration;
-        private IServiceProvider _loggerServiceProvider;
 
         public DiagnosticServices(ILogger<DiagnosticsMonitor> logger,
-            IOptions<ContextConfiguration> contextConfig,
-            IEnumerable<IMetricsLogger> metricsLoggers,
-            IStreamAccessor streamingAccessor)
+            IOptions<ContextConfiguration> contextConfig)
         {
             _logger = logger;
-            _metricsLoggers = metricsLoggers;
             _contextConfiguration = contextConfig.Value;
-
-            //We want to use ILogger since at some point in the future we may want to push this data to other
-            //sinks. At the same time we want these to be transient for the purposes of streaming the data, but not for other logs (such as those of
-            //the rest service itself).
-            ServiceCollection serviceCollection = new ServiceCollection();
-            serviceCollection.AddSingleton(streamingAccessor);
-            serviceCollection.AddLogging(builder => builder.Services.AddSingleton<ILoggerProvider, StreamingLoggerProvider>());
-            _loggerServiceProvider = serviceCollection.BuildServiceProvider();
         }
 
         public IEnumerable<int> GetProcesses()
@@ -84,32 +70,35 @@ namespace Microsoft.Diagnostics.Monitoring
             return CreateResult<Stream>(pidValue, new AutoDeleteFileStream(dumpFilePath));
         }
 
-        public async Task<OperationResult<IStreamResult>> StartCpuTrace(int? pid, int durationSeconds, CancellationToken cancellationToken)
+        public async Task<OperationResult<IStreamWithCleanup>> StartCpuTrace(int? pid, int durationSeconds, CancellationToken cancellationToken)
         {
             int pidValue = GetSingleProcessId(pid);
 
             DiagnosticsMonitor monitor = new DiagnosticsMonitor(new CpuProfileConfiguration());
             Stream stream = await monitor.ProcessEvents(pidValue, durationSeconds, cancellationToken);
 
-            return CreateResult<IStreamResult>(pidValue, new StreamResult(monitor, stream));
+            return CreateResult<IStreamWithCleanup>(pidValue, new StreamWithCleanup(monitor, stream));
         }
 
-        public async Task<OperationResult<IStreamResult>> StartTrace(int? pid, int durationSeconds, CancellationToken token)
+        public async Task<OperationResult<IStreamWithCleanup>> StartTrace(int? pid, int durationSeconds, CancellationToken token)
         {
             int pidValue = GetSingleProcessId(pid);
 
             DiagnosticsMonitor monitor = new DiagnosticsMonitor(new LoggingSourceConfiguration());
             Stream stream = await monitor.ProcessEvents(pidValue, durationSeconds, token);
-            return CreateResult<IStreamResult>(pidValue, new StreamResult(monitor, stream));
+            return CreateResult<IStreamWithCleanup>(pidValue, new StreamWithCleanup(monitor, stream));
         }
 
         public async Task<OperationResult> StartLogs(Stream outputStream, int? pid, int durationSeconds, CancellationToken token)
         {
             int pidValue = GetSingleProcessId(pid);
 
-            var processor = new DiagnosticsEventPipeProcessor(_contextConfiguration, 
+            var loggerFactory = new LoggerFactory();
+            loggerFactory.AddProvider(new StreamingLoggerProvider(outputStream));
+
+            var processor = new DiagnosticsEventPipeProcessor(_contextConfiguration,
                 PipeMode.Logs,
-                _loggerServiceProvider.GetRequiredService<ILoggerFactory>(),
+                loggerFactory,
                 Enumerable.Empty<IMetricsLogger>());
 
             try
@@ -119,6 +108,7 @@ namespace Microsoft.Diagnostics.Monitoring
             finally
             {
                 await processor.DisposeAsync();
+                loggerFactory.Dispose();
             }
 
             return new OperationResult { Pid = pidValue };
@@ -202,11 +192,11 @@ namespace Microsoft.Diagnostics.Monitoring
         /// any underlying data structures associated with the DiagnosticsMonitor once the caller is done
         /// processing the stream.
         /// </summary>
-        private sealed class StreamResult : IStreamResult
+        private sealed class StreamWithCleanup : IStreamWithCleanup
         {
             private readonly DiagnosticsMonitor _monitor;
 
-            public StreamResult(DiagnosticsMonitor monitor, Stream stream)
+            public StreamWithCleanup(DiagnosticsMonitor monitor, Stream stream)
             {
                 Stream = stream;
                 _monitor = monitor;

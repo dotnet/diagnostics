@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Monitoring;
-using Microsoft.Diagnostics.Monitoring.Contracts;
 using Microsoft.Diagnostics.Monitoring.Logging;
 using Microsoft.DotNet.RemoteExecutor;
 using Microsoft.Extensions.DependencyInjection;
@@ -62,16 +61,15 @@ namespace DotnetMonitor.UnitTests
         public void TestDiagnosticsEventPipeProcessorLogs()
         {
             var outputStream = new MemoryStream();
-            var serviceProvider = PrepareServiceProvider(outputStream);
 
             using (var testExecution = RemoteTest.StartRemoteProcess(LoggerRemoteTest.EntryPoint, nameof(LoggerRemoteTest), _output))
             {
                 _output.WriteLine($"Started remote execution {testExecution.RemoteProcess.Process.ProcessName} {testExecution.RemoteProcess.Process.Id}");
 
                 DiagnosticsEventPipeProcessor diagnosticsEventPipeProcessor = new DiagnosticsEventPipeProcessor(
-                    serviceProvider.GetService<IOptions<ContextConfiguration>>().Value,
+                    ContextConfiguration,
                     PipeMode.Logs,
-                    serviceProvider.GetService<ILoggerFactory>(),
+                    new LoggerFactory(new[] {new StreamingLoggerProvider(outputStream)}),
                     Enumerable.Empty<IMetricsLogger>());
 
                 var processingTask = diagnosticsEventPipeProcessor.Process(testExecution.RemoteProcess.Process.Id, 10, CancellationToken.None);
@@ -112,28 +110,7 @@ namespace DotnetMonitor.UnitTests
             Assert.Equal(1, result.Arguments.Count);
         }
 
-        private IServiceProvider PrepareServiceProvider(Stream outputStream)
-        {
-            ServiceCollection serviceCollection = new ServiceCollection();
-            serviceCollection.Configure<ContextConfiguration>((contextConfig) =>
-            {
-                contextConfig.Namespace = "default";
-                contextConfig.Node = Environment.MachineName;
-            });
-            serviceCollection.AddSingleton<IStreamAccessor>(new DirectStreamAccessor(outputStream));
-            serviceCollection.AddLogging((logging) => logging.Services.AddSingleton<ILoggerProvider, StreamingLoggerProvider>());
-
-            return serviceCollection.BuildServiceProvider();
-        }
-
-        private sealed class DirectStreamAccessor : IStreamAccessor
-        {
-            public DirectStreamAccessor(Stream stream)
-            {
-                OutputStream = stream;
-            }
-            public Stream OutputStream { get; private set; }
-        }
+        private ContextConfiguration ContextConfiguration => new ContextConfiguration { Namespace = "default", Node = Environment.MachineName };
 
         private static void Validate(IDictionary<string, JsonElement> values, params (string key, object value)[] expectedValues)
         {
