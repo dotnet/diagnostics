@@ -66,6 +66,8 @@ namespace DotnetMonitor.UnitTests
 
             using (var testExecution = RemoteTest.StartRemoteProcess(LoggerRemoteTest.EntryPoint, nameof(LoggerRemoteTest), _output))
             {
+                _output.WriteLine($"Started remote execution {testExecution.RemoteProcess.Process.ProcessName} {testExecution.RemoteProcess.Process.Id}");
+
                 DiagnosticsEventPipeProcessor diagnosticsEventPipeProcessor = new DiagnosticsEventPipeProcessor(
                     serviceProvider.GetService<IOptions<ContextConfiguration>>().Value,
                     PipeMode.Logs,

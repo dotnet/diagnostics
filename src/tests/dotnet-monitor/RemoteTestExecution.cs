@@ -86,23 +86,31 @@ namespace DotnetMonitor.UnitTests
 
                 Task.Run( async () =>
                 {
-                    string result = await stdOutputTask;
-                    outputHelper.WriteLine("Stdout:");
-                    if (result != null)
+                    try
                     {
-                        outputHelper.WriteLine(result);
+                        string result = await stdOutputTask;
+                        outputHelper.WriteLine("Stdout:");
+                        if (result != null)
+                        {
+                            outputHelper.WriteLine(result);
+                        }
+                        result = await stdErrorTask;
+                        outputHelper.WriteLine("Stderr:");
+                        if (result != null)
+                        {
+                            outputHelper.WriteLine(result);
+                        }
                     }
-                    result = await stdErrorTask;
-                    outputHelper.WriteLine("Stderr:");
-                    if (result != null)
+                    catch (Exception e)
                     {
-                        outputHelper.WriteLine(result);
+                        outputHelper.WriteLine(e.ToString());
+                        throw;
                     }
                 });
             }
             catch (ObjectDisposedException)
             {
-                Console.Error.WriteLine("Failed to collect remote process's output");
+                outputHelper.WriteLine("Failed to collect remote process's output");
             }
 
             return testExecution;
