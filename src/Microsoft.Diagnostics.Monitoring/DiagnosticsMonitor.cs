@@ -129,7 +129,13 @@ namespace Microsoft.Diagnostics.Monitoring
              _disposeSource.Cancel();
             if (currentTask != null)
             {
-                await currentTask;
+                try
+                {
+                    await currentTask;
+                }
+                catch (OperationCanceledException)
+                {
+                }
             }
             _disposeSource?.Dispose();
         }

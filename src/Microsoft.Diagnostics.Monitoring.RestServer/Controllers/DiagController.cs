@@ -23,6 +23,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
     [ApiController]
     public class DiagController : ControllerBase
     {
+        private const int MaxTraceSeconds = 60 * 5;
+
         private readonly ILogger<DiagController> _logger;
         private readonly IDiagnosticServices _diagnosticServices;
         private readonly IServiceProvider _serviceProvider;
@@ -74,11 +76,12 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         }
 
         [HttpGet("cpuprofile/{pid?}")]
-        public Task<ActionResult> CpuProfile(int? pid, [FromQuery]int duration = 30)
+        public Task<ActionResult> CpuProfile(int? pid, [FromQuery]int durationSeconds = 30)
         {
             return InvokeService(async () =>
             {
-                OperationResult<IStreamResult> result = await _diagnosticServices.StartCpuTrace(pid, duration, this.HttpContext.RequestAborted);
+                ValidateDuration(durationSeconds);
+                OperationResult<IStreamResult> result = await _diagnosticServices.StartCpuTrace(pid, durationSeconds, this.HttpContext.RequestAborted);
                 return new EventStreamResult(result.Value, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
             });
         }
@@ -88,8 +91,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         {
             return InvokeService(async () =>
             {
+                ValidateDuration(durationSeconds);
                 OperationResult<IStreamResult> result = await _diagnosticServices.StartTrace(pid, durationSeconds, this.HttpContext.RequestAborted);
-
                 return new EventStreamResult(result.Value, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
             });
         }
@@ -97,10 +100,43 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         [HttpGet("logs/{pid?}")]
         public ActionResult Logs(int? pid, [FromQuery] int durationSeconds = 30)
         {
-            return new OutputStreamResult( async (outputStream, token) =>
+            return InvokeService(() =>
             {
-                await _diagnosticServices.StartLogs(outputStream, pid, durationSeconds, token);
-            }, "application/x-ndjson", Invariant($"{Guid.NewGuid()}.txt"));
+                ValidateDuration(durationSeconds);
+
+                return new OutputStreamResult(async (outputStream, token) =>
+                {
+                    await _diagnosticServices.StartLogs(outputStream, pid, durationSeconds, token);
+                }, "application/x-ndjson", Invariant($"{Guid.NewGuid()}.txt"));
+            });
+        }
+
+        private static void ValidateDuration(int durationSeconds)
+        {
+            if ((durationSeconds < 1) || (durationSeconds > MaxTraceSeconds))
+            {
+                throw new InvalidOperationException("Invalid duration");
+            }
+        }
+
+        private ActionResult InvokeService(Func<ActionResult> serviceCall)
+        {
+            try
+            {
+                return serviceCall();
+            }
+            catch (ArgumentException e)
+            {
+                return BadRequest(FromException(e));
+            }
+            catch (DiagnosticsClientException e)
+            {
+                return BadRequest(FromException(e));
+            }
+            catch (InvalidOperationException e)
+            {
+                return BadRequest(FromException(e));
+            }
         }
 
         private ActionResult<T> InvokeService<T>(Func<ActionResult<T>> serviceCall)
@@ -140,58 +176,6 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             catch (InvalidOperationException e)
             {
                 return BadRequest(FromException(e));
-            }
-        }
-
-        /// <summary>
-        /// Same as FileStreamResult, but also cleans up the underlying stream provider once it's finished
-        /// </summary>
-        private sealed class EventStreamResult : FileStreamResult
-        {
-            private readonly IStreamResult _streamResult;
-            public EventStreamResult(IStreamResult streamResult, string contentType, string fileDownloadName) : base(streamResult.Stream, contentType)
-            {
-                FileDownloadName = fileDownloadName;
-                _streamResult = streamResult;
-            }
-
-            public override async Task ExecuteResultAsync(ActionContext context)
-            {
-                try
-                {
-                    await base.ExecuteResultAsync(context);
-                }
-                finally
-                {
-                    await _streamResult.DisposeAsync();
-                }
-            }
-        }
-
-        private sealed class OutputStreamResult : ActionResult
-        {
-            private readonly Func<Stream, CancellationToken, Task> _action;
-            private readonly string _contentType;
-            private readonly string _fileDownloadName;
-
-            public OutputStreamResult(Func<Stream, CancellationToken, Task> action, string contentType, string fileDownloadName = null)
-            {
-                _action = action;
-                _contentType = contentType;
-                _fileDownloadName = fileDownloadName;
-            }
-
-            public override async Task ExecuteResultAsync(ActionContext context)
-            {
-                if (_fileDownloadName != null)
-                {
-                    ContentDispositionHeaderValue contentDispositionHeaderValue = new ContentDispositionHeaderValue("attachment");
-                    contentDispositionHeaderValue.FileName = _fileDownloadName;
-                    context.HttpContext.Response.Headers["Content-Disposition"] = contentDispositionHeaderValue.ToString();
-                }
-                context.HttpContext.Response.Headers["Content-Type"] = _contentType;
-
-                await _action(context.HttpContext.Response.Body, context.HttpContext.RequestAborted);
             }
         }
 

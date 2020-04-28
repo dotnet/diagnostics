@@ -126,13 +126,19 @@ namespace DotnetMonitor.UnitTests
 
             Console.WriteLine("Awaiting start mutex");
 
-            startMutex.WaitOne();
+            if (!startMutex.WaitOne(TimeSpan.FromSeconds(10)))
+            {
+                throw new TimeoutException("Mutex timed out");
+            }
 
             Console.WriteLine("Starting test body");
             TestBodyCore(logger);
 
             Console.WriteLine("Awaiting end mutex");
-            endMutex.WaitOne();
+            if (!endMutex.WaitOne(TimeSpan.FromSeconds(10)))
+            {
+                throw new TimeoutException("Mutex timed out");
+            }
 
             return 0;
         }

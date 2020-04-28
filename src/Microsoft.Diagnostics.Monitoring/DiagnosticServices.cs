@@ -21,8 +21,6 @@ namespace Microsoft.Diagnostics.Monitoring
 {
     public sealed class DiagnosticServices : IDiagnosticServices
     {
-        private const int MaxTraceSeconds = 60 * 5;
-
         private readonly ILogger<DiagnosticsMonitor> _logger;
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
         private IEnumerable<IMetricsLogger> _metricsLoggers;
@@ -88,11 +86,6 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public async Task<OperationResult<IStreamResult>> StartCpuTrace(int? pid, int durationSeconds, CancellationToken cancellationToken)
         {
-            if ((durationSeconds < 1) || (durationSeconds > MaxTraceSeconds))
-            {
-                throw new InvalidOperationException("Invalid duration");
-            }
-
             int pidValue = GetSingleProcessId(pid);
 
             DiagnosticsMonitor monitor = new DiagnosticsMonitor(new CpuProfileConfiguration());
@@ -103,11 +96,6 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public async Task<OperationResult<IStreamResult>> StartTrace(int? pid, int durationSeconds, CancellationToken token)
         {
-            if ((durationSeconds < 1) || (durationSeconds > MaxTraceSeconds))
-            {
-                throw new InvalidOperationException("Invalid duration");
-            }
-
             int pidValue = GetSingleProcessId(pid);
 
             DiagnosticsMonitor monitor = new DiagnosticsMonitor(new LoggingSourceConfiguration());
@@ -117,14 +105,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public async Task<OperationResult> StartLogs(Stream outputStream, int? pid, int durationSeconds, CancellationToken token)
         {
-            if ((durationSeconds < 1) || (durationSeconds > MaxTraceSeconds))
-            {
-                throw new InvalidOperationException("Invalid duration");
-            }
-
             int pidValue = GetSingleProcessId(pid);
-
-
 
             var processor = new DiagnosticsEventPipeProcessor(_contextConfiguration, 
                 PipeMode.Logs,

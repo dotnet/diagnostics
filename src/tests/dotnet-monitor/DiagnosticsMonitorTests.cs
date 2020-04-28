@@ -82,7 +82,7 @@ namespace DotnetMonitor.UnitTests
 
             outputStream.Position = 0L;
 
-            Assert.True(outputStream.Length > 0);
+            Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
             using var reader = new StreamReader(outputStream);
 
