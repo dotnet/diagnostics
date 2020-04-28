@@ -764,11 +764,12 @@ App -> Agent: [Advertise]
 
 ## Advertise Message
 
-There is only one message type in the Advertise IPC Protocol, the Advertise message.  It is a fixed size message of 3 fields (all values are **little-endian**):
+There is only one message type in the Advertise IPC Protocol, the Advertise message.  It is a fixed size message of 4 fields (all values are **little-endian**):
 
 * Magic: 8 little-endian bytes that contain the ASCII bytes for the version of advertise protocol being spoken.
 * Instance Cookie: a 128 bit, little-endian Guid used to disambiguate across PID-spaces
 * Process ID: a 64 bit, little-endian number containing the pid of the process in its own PID-space
+* Future: a 16 bit, little-endian number for future use.  It is unused in "ADVR_V1".
 
 ```c++
 struct AdvertisePayload
@@ -776,6 +777,7 @@ struct AdvertisePayload
    uint8_t  magic[8]; // contains the ASCII bytes for "ADVR_V1\0"
    GUID instance_cookie; // a random 128 bit Guid meant to disambiguate runtimes across PID-spaces
    uint64_t pid; // the process id of the runtime in its own PID-space
+   uint16_t future; // an unused 2 byte field for future use
 };
 ```
 where `GUID` is
@@ -788,6 +790,7 @@ struct GUID
   uint8_t  data4[8];
 };
 ```
+and `sizoef(AdvertisePayload)==34`
 
 Sample encoded message:
 <table>
@@ -824,15 +827,19 @@ Sample encoded message:
     <th>30</th>
     <th>31</th>
     <th>32</th>
+    <th>33</th>
+    <th>34</th>
   </tr>
   <tr>
     <td colspan="8">magic</td>
     <td colspan="16">instance_cookie</td>
     <td colspan="8">pid</td>
+    <td colspan="2">future</td>
   </tr>
   <tr>
     <td colspan="8">"ADVR_V1\0"</td>
     <td colspan="16">123e4567-e89b-12d3-a456-426655440000</td>
     <td colspan="8">20535</td>
+    <td colspan="2">0x0000</td>
   </tr>
 </table>
