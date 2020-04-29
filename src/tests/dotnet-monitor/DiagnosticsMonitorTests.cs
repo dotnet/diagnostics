@@ -12,10 +12,8 @@ using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.DataCollection;
 using System;
 using System.Collections.Generic;
-using System.CommandLine.Invocation;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Pipelines;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -58,7 +56,7 @@ namespace DotnetMonitor.UnitTests
         }
 
         [Fact]
-        public void TestDiagnosticsEventPipeProcessorLogs()
+        public async Task TestDiagnosticsEventPipeProcessorLogs()
         {
             var outputStream = new MemoryStream();
 
@@ -66,18 +64,27 @@ namespace DotnetMonitor.UnitTests
             {
                 _output.WriteLine($"Started remote execution {testExecution.RemoteProcess.Process.ProcessName} {testExecution.RemoteProcess.Process.Id}");
 
+                //Add a small delay to make sure the remote process had a chance to start and create the diagnostic pipe.
+                await Task.Delay(1000);
+
+                var loggerFactory = new LoggerFactory(new[] { new StreamingLoggerProvider(outputStream) });
+
                 DiagnosticsEventPipeProcessor diagnosticsEventPipeProcessor = new DiagnosticsEventPipeProcessor(
                     ContextConfiguration,
                     PipeMode.Logs,
-                    new LoggerFactory(new[] {new StreamingLoggerProvider(outputStream)}),
+                    loggerFactory,
                     Enumerable.Empty<IMetricsLogger>());
 
                 var processingTask = diagnosticsEventPipeProcessor.Process(testExecution.RemoteProcess.Process.Id, 10, CancellationToken.None);
 
+                //Add a small delay to make sure diagnostic processor had a chance to initialize
+                await Task.Delay(1000);
+
                 testExecution.Start();
 
-                //Can't await here, it will break the mutex
-                processingTask.Wait();
+                await processingTask;
+                await diagnosticsEventPipeProcessor.DisposeAsync();
+                loggerFactory.Dispose();
             }
 
             outputStream.Position = 0L;

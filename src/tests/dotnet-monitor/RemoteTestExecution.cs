@@ -20,32 +20,28 @@ namespace DotnetMonitor.UnitTests
     /// </summary>
     internal sealed class RemoteTestExecution : IDisposable
     {
-        /// <summary>
-        /// These mutexes are used to coordiate the test and the remote app. The test gates the start and end of the app.
-        /// TODO Mutexes are not ideal for this since they have thread affinity.
-        /// </summary>
-        private Mutex _startMutex;
-        private Mutex _endMutex;
-
-        public RemoteTestExecution()
-        {
-            _startMutex = RemoteTest.GetStartMutex(true);
-            _endMutex = RemoteTest.GetEndMutex(true);
-        }
-        
         public RemoteInvokeHandle RemoteProcess { get; internal set; }
 
         public void Start()
         {
-            _startMutex.ReleaseMutex();
+            SendSignal();
         }
+
+        private void SendSignal()
+        {
+            //We cannot use named synchronization primitives since they do not work across processes
+            //on Linux. Use redirected standard input instead.
+            RemoteProcess.Process.StandardInput.Write('0');
+            RemoteProcess.Process.StandardInput.Flush();
+        }
+
 
         public void Dispose()
         {
-            _endMutex.ReleaseMutex();
+            SendSignal();
 
-            _startMutex.Dispose();
-            _endMutex.Dispose();
+            RemoteProcess.Process.WaitForExit(30_000);
+            RemoteProcess.Dispose();
         }
     }
 
@@ -54,16 +50,6 @@ namespace DotnetMonitor.UnitTests
     /// </summary>
     internal abstract class RemoteTest
     {
-        internal static Mutex GetStartMutex(bool owned)
-        {
-            return new Mutex(owned, "TestCaseStart");
-        }
-
-        internal static Mutex GetEndMutex(bool owned)
-        {
-            return new Mutex(owned, "TestCaseEnd");
-        }
-
         public static RemoteTestExecution StartRemoteProcess(Func<string, int> testEntry, string loggerCategory, ITestOutputHelper outputHelper)
         {
             var options = new RemoteInvokeOptions()
@@ -71,7 +57,7 @@ namespace DotnetMonitor.UnitTests
                 Start = true,
                 ExpectedExitCode = 0,
                 CheckExitCode = true,
-                StartInfo = new ProcessStartInfo {  RedirectStandardError = true, RedirectStandardOutput = true},
+                StartInfo = new ProcessStartInfo {  RedirectStandardError = true, RedirectStandardOutput = true, RedirectStandardInput = true},
             };
 
             var testExecution = new RemoteTestExecution();
@@ -119,9 +105,6 @@ namespace DotnetMonitor.UnitTests
         public int TestBody(string loggerCategory)
         {
             Console.WriteLine("Starting remote test process");
-            
-            using var startMutex = GetStartMutex(false);
-            using var endMutex = GetEndMutex(false);
 
             ServiceCollection serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging(builder =>
@@ -132,21 +115,23 @@ namespace DotnetMonitor.UnitTests
             using var loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
             var logger = loggerFactory.CreateLogger(loggerCategory);
 
-            Console.WriteLine("Awaiting start mutex");
-
-            if (!startMutex.WaitOne(TimeSpan.FromSeconds(10)))
+            Console.WriteLine($"{DateTime.UtcNow} Awaiting start");
+            if (Console.Read() == -1)
             {
-                throw new TimeoutException("Mutex timed out");
+                throw new InvalidOperationException("Unable to receive start signal");
             }
 
-            Console.WriteLine("Starting test body");
+            Console.WriteLine($"{DateTime.UtcNow} Starting test body");
             TestBodyCore(logger);
 
-            Console.WriteLine("Awaiting end mutex");
-            if (!endMutex.WaitOne(TimeSpan.FromSeconds(10)))
+            Console.WriteLine($"{DateTime.UtcNow} Awaiting end");
+            if (Console.Read() == -1)
             {
-                throw new TimeoutException("Mutex timed out");
+                throw new InvalidOperationException("Unable to receive end signal");
             }
+
+
+            Console.WriteLine($"{DateTime.UtcNow} Ending remote test process");
 
             return 0;
         }

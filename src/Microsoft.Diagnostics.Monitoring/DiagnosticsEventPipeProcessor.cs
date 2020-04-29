@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public async Task Process(int pid, int duration, CancellationToken token)
         {
-            await Task.Factory.StartNew(async () =>
+            await await Task.Factory.StartNew(async () =>
             {
                 EventPipeEventSource source = null;
                 DiagnosticsMonitor monitor = null;
@@ -89,7 +89,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 }
                 catch (Exception)
                 {
-                    // This fails if stop is called or if the process dies
+                    throw;
                 }
                 finally
                 {
