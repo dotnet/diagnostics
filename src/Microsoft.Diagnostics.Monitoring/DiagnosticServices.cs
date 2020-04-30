@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -6,21 +10,25 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Monitoring.Logging;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
     public sealed class DiagnosticServices : IDiagnosticServices
     {
-        private const int MaxTraceSeconds = 60 * 5;
-
         private readonly ILogger<DiagnosticsMonitor> _logger;
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
+        private ContextConfiguration _contextConfiguration;
 
-        public DiagnosticServices(ILogger<DiagnosticsMonitor> logger)
+        public DiagnosticServices(ILogger<DiagnosticsMonitor> logger,
+            IOptions<ContextConfiguration> contextConfig)
         {
             _logger = logger;
+            _contextConfiguration = contextConfig.Value;
         }
 
         public IEnumerable<int> GetProcesses()
@@ -37,73 +45,63 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        public async Task<OperationResult<Stream>> GetDump(int? pid, DumpType mode)
+        public async Task<Stream> GetDump(int pid, DumpType mode)
         {
-            if (!pid.HasValue)
-            {
-                pid = GetSingleProcessId();
-            }
-
-            string dumpFilePath = FormattableString.Invariant($@"{Path.GetTempPath()}{Path.DirectorySeparatorChar}{Guid.NewGuid()}_{pid.Value}");
+            string dumpFilePath = FormattableString.Invariant($@"{Path.GetTempPath()}{Path.DirectorySeparatorChar}{Guid.NewGuid()}_{pid}");
             NETCore.Client.DumpType dumpType = MapDumpType(mode);
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 // Get the process
-                Process process = Process.GetProcessById(pid.Value);
+                Process process = Process.GetProcessById(pid);
                 await Dumper.CollectDumpAsync(process, dumpFilePath, dumpType);
             }
             else
             {
                 await Task.Run(() =>
                 {
-                    var client = new DiagnosticsClient(pid.Value);
+                    var client = new DiagnosticsClient(pid);
                     client.WriteDump(dumpType, dumpFilePath);
                 });
             }
 
-            return CreateResult(pid.Value, new AutoDeleteFileStream(dumpFilePath));
+            return new AutoDeleteFileStream(dumpFilePath);
         }
 
-        public Task<OperationResult<Stream>> StartCpuTrace(int? pid, int durationSeconds, CancellationToken cancellationToken)
+        public async Task<IStreamWithCleanup> StartCpuTrace(int pid, int durationSeconds, CancellationToken cancellationToken)
         {
-            if ((durationSeconds < 1) || (durationSeconds > MaxTraceSeconds))
+            DiagnosticsMonitor monitor = new DiagnosticsMonitor(new CpuProfileConfiguration());
+            Stream stream = await monitor.ProcessEvents(pid, durationSeconds, cancellationToken);
+
+            return new StreamWithCleanup(monitor, stream);
+        }
+
+        public async Task<IStreamWithCleanup> StartTrace(int pid, int durationSeconds, CancellationToken token)
+        {
+            DiagnosticsMonitor monitor = new DiagnosticsMonitor(new LoggingSourceConfiguration());
+            Stream stream = await monitor.ProcessEvents(pid, durationSeconds, token);
+            return new StreamWithCleanup(monitor, stream);
+        }
+
+        public async Task StartLogs(Stream outputStream, int pid, int durationSeconds, CancellationToken token)
+        {
+            var loggerFactory = new LoggerFactory();
+            loggerFactory.AddProvider(new StreamingLoggerProvider(outputStream));
+
+            var processor = new DiagnosticsEventPipeProcessor(_contextConfiguration,
+                PipeMode.Logs,
+                loggerFactory,
+                Enumerable.Empty<IMetricsLogger>());
+
+            try
             {
-                throw new InvalidOperationException("Invalid duration");
+                await processor.Process(pid, durationSeconds, token);
             }
-
-            if (!pid.HasValue)
+            finally
             {
-                pid = GetSingleProcessId();
+                await processor.DisposeAsync();
+                loggerFactory.Dispose();
             }
-
-            //TODO Should we limit only 1 trace per file?
-            var client = new DiagnosticsClient(pid.Value);
-
-            //TODO Pull event providers from the configuration.
-            var cpuProviders = new EventPipeProvider[] {
-                new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", System.Diagnostics.Tracing.EventLevel.Informational),
-                new EventPipeProvider("Microsoft-Windows-DotNETRuntime", System.Diagnostics.Tracing.EventLevel.Informational, (long)Tracing.Parsers.ClrTraceEventParser.Keywords.Default)
-            };
-
-            EventPipeSession session = client.StartEventPipeSession(cpuProviders, requestRundown: true);
-
-            CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_tokenSource.Token, cancellationToken);
-            Task traceTask = Task.Run(async () =>
-            {
-                try
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(durationSeconds), linkedTokenSource.Token);
-                }
-                finally
-                {
-                    session.Stop();
-                    linkedTokenSource.Dispose();
-                    //We rely on the caller to Dispose the EventStream file.
-                }
-            }, CancellationToken.None);
-
-            return Task.FromResult(CreateResult(pid.Value, session.EventStream));
         }
 
         private static NETCore.Client.DumpType MapDumpType(DumpType dumpType)
@@ -123,8 +121,13 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        private int GetSingleProcessId()
+        public int ResolveProcess(int? pid)
         {
+            if (pid.HasValue)
+            {
+                return pid.Value;
+            }
+
             // Short-circuit for when running in a Docker container, assuming the entrypoint
             // of the container is a dotnet application.
             if (RuntimeInfo.IsInDockerContainer && null != Process.GetProcessById(1))
@@ -145,15 +148,6 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        private static OperationResult<Stream> CreateResult(int pid, Stream stream)
-        {
-            return new OperationResult<Stream>()
-            {
-                Pid = pid,
-                Value = stream
-            };
-        }
-
         public void Dispose()
         {
             _tokenSource.Cancel();
@@ -172,6 +166,36 @@ namespace Microsoft.Diagnostics.Monitoring
             }
 
             public override bool CanSeek => false;
+        }
+
+        /// <summary>
+        /// This helper class allows us to return a stream result to the caller and then later dispose
+        /// any underlying data structures associated with the DiagnosticsMonitor once the caller is done
+        /// processing the stream.
+        /// </summary>
+        private sealed class StreamWithCleanup : IStreamWithCleanup
+        {
+            private readonly DiagnosticsMonitor _monitor;
+
+            public StreamWithCleanup(DiagnosticsMonitor monitor, Stream stream)
+            {
+                Stream = stream;
+                _monitor = monitor;
+            }
+
+            public Stream Stream { get; }
+
+            public async ValueTask DisposeAsync()
+            {
+                try
+                {
+                    await _monitor.CurrentProcessingTask;
+                }
+                finally
+                {
+                    await _monitor.DisposeAsync();
+                }
+            }
         }
     }
 }

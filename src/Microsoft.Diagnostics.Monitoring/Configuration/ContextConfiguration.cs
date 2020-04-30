@@ -16,6 +16,5 @@ namespace Microsoft.Diagnostics.Monitoring
         public string Namespace { get; set; }
 
         public string Node { get; set; }
-
     }
 }

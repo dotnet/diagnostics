@@ -14,10 +14,21 @@ namespace Microsoft.Diagnostics.Monitoring
     {
         IEnumerable<int> GetProcesses();
 
-        Task<OperationResult<Stream>> GetDump(int? pid, DumpType mode);
+        int ResolveProcess(int? pid);
+
+        Task<Stream> GetDump(int pid, DumpType mode);
 
         //TODO We can most likely unify trace, cpu, and logs/metrics around one call with the appropriate config
-        Task<OperationResult<Stream>> StartCpuTrace(int? pid, int duration, CancellationToken token);
+        Task<IStreamWithCleanup> StartCpuTrace(int pid, int duration, CancellationToken token);
+
+        Task<IStreamWithCleanup> StartTrace(int pid, int duration, CancellationToken token);
+
+        Task StartLogs(Stream outputStream, int pid, int duration, CancellationToken token);
+    }
+
+    public interface IStreamWithCleanup : IAsyncDisposable
+    {
+        Stream Stream { get; }
     }
 
     public enum DumpType
@@ -28,21 +39,8 @@ namespace Microsoft.Diagnostics.Monitoring
         Triage
     }
 
-    public enum TraceState
-    {
-        Stopped = 0,
-        Running = 1,
-    }
-
     public sealed class TraceRequest
     {
         public string Configuraton { get; set; }
-    }
-
-    public sealed class OperationResult<T>
-    {
-        public int Pid { get; set; }
-
-        public T Value { get; set; }
     }
 }
