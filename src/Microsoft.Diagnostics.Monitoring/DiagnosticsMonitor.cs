@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public Task CurrentProcessingTask => _currentTask;
 
-        public Task<Stream> ProcessEvents(int processId, int duration, CancellationToken cancellationToken)
+        public Task<Stream> ProcessEvents(int processId, int durationSeconds, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -71,7 +71,8 @@ namespace Microsoft.Diagnostics.Monitoring
                 {
                     try
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(duration), linkedSource.Token);
+                        int durationMilliseconds = (durationSeconds != -1) ? durationSeconds * 1000 : durationSeconds;
+                        await Task.Delay(durationMilliseconds, linkedSource.Token);
                     }
                     finally
                     {

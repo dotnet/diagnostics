@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -23,8 +24,6 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
     [ApiController]
     public class DiagController : ControllerBase
     {
-        private const int MaxTraceSeconds = 60 * 5;
-
         private readonly ILogger<DiagController> _logger;
         private readonly IDiagnosticServices _diagnosticServices;
 
@@ -53,111 +52,85 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         {
             return InvokeService(async () =>
             {
-                OperationResult<Stream> result = await _diagnosticServices.GetDump(pid, type);
+                int pidValue = _diagnosticServices.ResolveProcess(pid);
+                Stream result = await _diagnosticServices.GetDump(pidValue, type);
 
                 FormattableString dumpFileName;
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     // This assumes that Windows does not have shared process spaces
-                    Process process = Process.GetProcessById(result.Pid);
-                    dumpFileName = $"{process.ProcessName}.{result.Pid}.dmp";
+                    Process process = Process.GetProcessById(pidValue);
+                    dumpFileName = $"{process.ProcessName}.{pidValue}.dmp";
                 }
                 else
                 {
-                    dumpFileName = $"core_{result.Pid}";
+                    dumpFileName = $"core_{pidValue}";
                 }
 
                 //Compression is done automatically by the response
                 //Chunking is done because the result has no content-length
-                return File(result.Value, "application/octet-stream", Invariant(dumpFileName));
+                return File(result, "application/octet-stream", Invariant(dumpFileName));
             });
         }
 
         [HttpGet("cpuprofile/{pid?}")]
-        public Task<ActionResult> CpuProfile(int? pid, [FromQuery]int durationSeconds = 30)
+        public Task<ActionResult> CpuProfile(int? pid, [FromQuery][Range(-1, int.MaxValue)]int durationSeconds = 30)
         {
             return InvokeService(async () =>
             {
-                ValidateDuration(durationSeconds);
-                OperationResult<IStreamWithCleanup> result = await _diagnosticServices.StartCpuTrace(pid, durationSeconds, this.HttpContext.RequestAborted);
-                return new StreamWithCleanupResult(result.Value, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
+                int pidValue = _diagnosticServices.ResolveProcess(pid);
+                IStreamWithCleanup result = await _diagnosticServices.StartCpuTrace(pidValue, durationSeconds, this.HttpContext.RequestAborted);
+                return new StreamWithCleanupResult(result, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
             });
         }
 
         [HttpGet("trace/{pid?}")]
-        public Task<ActionResult> Trace(int? pid, [FromQuery]int durationSeconds = 30)
+        public Task<ActionResult> Trace(int? pid, [FromQuery][Range(-1, int.MaxValue)]int durationSeconds = 30)
         {
             return InvokeService(async () =>
             {
-                ValidateDuration(durationSeconds);
-                OperationResult<IStreamWithCleanup> result = await _diagnosticServices.StartTrace(pid, durationSeconds, this.HttpContext.RequestAborted);
-                return new StreamWithCleanupResult(result.Value, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
+                int pidValue = _diagnosticServices.ResolveProcess(pid);
+                IStreamWithCleanup result = await _diagnosticServices.StartTrace(pidValue, durationSeconds, this.HttpContext.RequestAborted);
+                return new StreamWithCleanupResult(result, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
             });
         }
 
         [HttpGet("logs/{pid?}")]
-        public ActionResult Logs(int? pid, [FromQuery] int durationSeconds = 30)
+        public ActionResult Logs(int? pid, [FromQuery][Range(-1, int.MaxValue)]int durationSeconds = 30)
         {
             return InvokeService(() =>
             {
-                ValidateDuration(durationSeconds);
-
+                int pidValue = _diagnosticServices.ResolveProcess(pid);
                 return new OutputStreamResult(async (outputStream, token) =>
                 {
-                    await _diagnosticServices.StartLogs(outputStream, pid, durationSeconds, token);
+                    await _diagnosticServices.StartLogs(outputStream, pidValue, durationSeconds, token);
                 }, "application/x-ndjson", Invariant($"{Guid.NewGuid()}.txt"));
             });
         }
 
-        private static void ValidateDuration(int durationSeconds)
-        {
-            if ((durationSeconds < 1) || (durationSeconds > MaxTraceSeconds))
-            {
-                throw new InvalidOperationException("Invalid duration");
-            }
-        }
-
         private ActionResult InvokeService(Func<ActionResult> serviceCall)
         {
-            try
-            {
-                return serviceCall();
-            }
-            catch (ArgumentException e)
-            {
-                return BadRequest(FromException(e));
-            }
-            catch (DiagnosticsClientException e)
-            {
-                return BadRequest(FromException(e));
-            }
-            catch (InvalidOperationException e)
-            {
-                return BadRequest(FromException(e));
-            }
+            //We can convert ActionResult to ActionResult<T>
+            //and then safely convert back.
+            return InvokeService<object>(() => serviceCall()).Result;
         }
 
         private ActionResult<T> InvokeService<T>(Func<ActionResult<T>> serviceCall)
         {
-            try
-            {
-                return serviceCall();
-            }
-            catch (ArgumentException e)
-            {
-                return BadRequest(FromException(e));
-            }
-            catch (DiagnosticsClientException e)
-            {
-                return BadRequest(FromException(e));
-            }
-            catch (InvalidOperationException e)
-            {
-                return BadRequest(FromException(e));
-            }
+            //Convert from ActionResult<T> to Task<ActionResult<T>>
+            //and safely convert back.
+            return InvokeService(() => Task.FromResult(serviceCall())).Result;
         }
 
         private async Task<ActionResult> InvokeService(Func<Task<ActionResult>> serviceCall)
+        {
+            //Task<ActionResult> -> Task<ActionResult<T>>
+            //Then unwrap the result back to ActionResult
+            ActionResult<object> result = await InvokeService<object>(async () => await serviceCall());
+            return result.Result;
+        }
+
+        private async Task<ActionResult<T>> InvokeService<T>(Func<Task<ActionResult<T>>> serviceCall)
         {
             try
             {

@@ -45,54 +45,46 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        public async Task<OperationResult<Stream>> GetDump(int? pid, DumpType mode)
+        public async Task<Stream> GetDump(int pid, DumpType mode)
         {
-            int pidValue = GetSingleProcessId(pid);
-
-            string dumpFilePath = FormattableString.Invariant($@"{Path.GetTempPath()}{Path.DirectorySeparatorChar}{Guid.NewGuid()}_{pidValue}");
+            string dumpFilePath = FormattableString.Invariant($@"{Path.GetTempPath()}{Path.DirectorySeparatorChar}{Guid.NewGuid()}_{pid}");
             NETCore.Client.DumpType dumpType = MapDumpType(mode);
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 // Get the process
-                Process process = Process.GetProcessById(pidValue);
+                Process process = Process.GetProcessById(pid);
                 await Dumper.CollectDumpAsync(process, dumpFilePath, dumpType);
             }
             else
             {
                 await Task.Run(() =>
                 {
-                    var client = new DiagnosticsClient(pidValue);
+                    var client = new DiagnosticsClient(pid);
                     client.WriteDump(dumpType, dumpFilePath);
                 });
             }
 
-            return CreateResult<Stream>(pidValue, new AutoDeleteFileStream(dumpFilePath));
+            return new AutoDeleteFileStream(dumpFilePath);
         }
 
-        public async Task<OperationResult<IStreamWithCleanup>> StartCpuTrace(int? pid, int durationSeconds, CancellationToken cancellationToken)
+        public async Task<IStreamWithCleanup> StartCpuTrace(int pid, int durationSeconds, CancellationToken cancellationToken)
         {
-            int pidValue = GetSingleProcessId(pid);
-
             DiagnosticsMonitor monitor = new DiagnosticsMonitor(new CpuProfileConfiguration());
-            Stream stream = await monitor.ProcessEvents(pidValue, durationSeconds, cancellationToken);
+            Stream stream = await monitor.ProcessEvents(pid, durationSeconds, cancellationToken);
 
-            return CreateResult<IStreamWithCleanup>(pidValue, new StreamWithCleanup(monitor, stream));
+            return new StreamWithCleanup(monitor, stream);
         }
 
-        public async Task<OperationResult<IStreamWithCleanup>> StartTrace(int? pid, int durationSeconds, CancellationToken token)
+        public async Task<IStreamWithCleanup> StartTrace(int pid, int durationSeconds, CancellationToken token)
         {
-            int pidValue = GetSingleProcessId(pid);
-
             DiagnosticsMonitor monitor = new DiagnosticsMonitor(new LoggingSourceConfiguration());
-            Stream stream = await monitor.ProcessEvents(pidValue, durationSeconds, token);
-            return CreateResult<IStreamWithCleanup>(pidValue, new StreamWithCleanup(monitor, stream));
+            Stream stream = await monitor.ProcessEvents(pid, durationSeconds, token);
+            return new StreamWithCleanup(monitor, stream);
         }
 
-        public async Task<OperationResult> StartLogs(Stream outputStream, int? pid, int durationSeconds, CancellationToken token)
+        public async Task StartLogs(Stream outputStream, int pid, int durationSeconds, CancellationToken token)
         {
-            int pidValue = GetSingleProcessId(pid);
-
             var loggerFactory = new LoggerFactory();
             loggerFactory.AddProvider(new StreamingLoggerProvider(outputStream));
 
@@ -103,15 +95,13 @@ namespace Microsoft.Diagnostics.Monitoring
 
             try
             {
-                await processor.Process(pidValue, durationSeconds, token);
+                await processor.Process(pid, durationSeconds, token);
             }
             finally
             {
                 await processor.DisposeAsync();
                 loggerFactory.Dispose();
             }
-
-            return new OperationResult { Pid = pidValue };
         }
 
         private static NETCore.Client.DumpType MapDumpType(DumpType dumpType)
@@ -131,7 +121,7 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        private int GetSingleProcessId(int? pid)
+        public int ResolveProcess(int? pid)
         {
             if (pid.HasValue)
             {
@@ -156,15 +146,6 @@ namespace Microsoft.Diagnostics.Monitoring
                 default:
                     throw new ArgumentException("Unable to select a single target process because multiple target processes have been discovered.");
             }
-        }
-
-        private static OperationResult<T> CreateResult<T>(int pid, T value)
-        {
-            return new OperationResult<T>()
-            {
-                Pid = pid,
-                Value = value
-            };
         }
 
         public void Dispose()

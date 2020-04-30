@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.Monitoring
             _loggerFactory = loggerFactory;
         }
 
-        public async Task Process(int pid, int duration, CancellationToken token)
+        public async Task Process(int pid, int durationSeconds, CancellationToken token)
         {
             await await Task.Factory.StartNew(async () =>
             {
@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.Monitoring
                     }
 
                     monitor = new DiagnosticsMonitor(config);
-                    Stream sessionStream = await monitor.ProcessEvents(pid, duration, token);
+                    Stream sessionStream = await monitor.ProcessEvents(pid, durationSeconds, token);
                     source = new EventPipeEventSource(sessionStream);
                     
                     if (_mode == PipeMode.Metrics)
@@ -86,10 +86,6 @@ namespace Microsoft.Diagnostics.Monitoring
                 catch (DiagnosticsClientException ex)
                 {
                     throw new InvalidOperationException("Failed to start the event pipe session", ex);
-                }
-                catch (Exception)
-                {
-                    throw;
                 }
                 finally
                 {
