@@ -180,7 +180,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
             if (NuGetPackageCacheDirPath != null)
             {
-                args += " --packages \"" + NuGetPackageCacheDirPath + "\"";
+                args += " --packages \"" + NuGetPackageCacheDirPath.TrimEnd('\\') + "\"";
             }
             if (extraArgs != null)
             {
