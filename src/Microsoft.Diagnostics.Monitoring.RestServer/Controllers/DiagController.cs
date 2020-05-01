@@ -16,7 +16,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Diagnostics.Monitoring.RestServer.Models;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
-using static System.FormattableString;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 {
@@ -69,7 +68,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
                 //Compression is done automatically by the response
                 //Chunking is done because the result has no content-length
-                return File(result, "application/octet-stream", Invariant(dumpFileName));
+                return File(result, "application/octet-stream", FormattableString.Invariant(dumpFileName));
             });
         }
 
@@ -80,7 +79,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
                 Stream result = await _diagnosticServices.GetGcDump(pidValue, TimeSpan.FromSeconds(timeoutSeconds), this.HttpContext.RequestAborted);
-                return File(result, "application/octet-stream", Invariant($"{DateTime.UtcNow:yyyyMMdd\\_HHmmss}_{pidValue}.gcdump"));
+                return File(result, "application/octet-stream", FormattableString.Invariant($"{DateTime.UtcNow:yyyyMMdd\\_HHmmss}_{pidValue}.gcdump"));
             });
         }
 
@@ -91,7 +90,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
                 IStreamWithCleanup result = await _diagnosticServices.StartCpuTrace(pidValue, durationSeconds, this.HttpContext.RequestAborted);
-                return new StreamWithCleanupResult(result, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
+                return new StreamWithCleanupResult(result, "application/octet-stream", FormattableString.Invariant($"{Guid.NewGuid()}.nettrace"));
             });
         }
 
@@ -102,7 +101,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
                 IStreamWithCleanup result = await _diagnosticServices.StartTrace(pidValue, durationSeconds, this.HttpContext.RequestAborted);
-                return new StreamWithCleanupResult(result, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
+                return new StreamWithCleanupResult(result, "application/octet-stream", FormattableString.Invariant($"{Guid.NewGuid()}.nettrace"));
             });
         }
 
@@ -115,7 +114,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 return new OutputStreamResult(async (outputStream, token) =>
                 {
                     await _diagnosticServices.StartLogs(outputStream, pidValue, durationSeconds, token);
-                }, "application/x-ndjson", Invariant($"{Guid.NewGuid()}.txt"));
+                }, "application/x-ndjson", FormattableString.Invariant($"{Guid.NewGuid()}.txt"));
             });
         }
 
