@@ -80,7 +80,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
                 Stream result = await _diagnosticServices.GetGcDump(pidValue, TimeSpan.FromSeconds(timeoutSeconds), this.HttpContext.RequestAborted);
-                return File(result, "application/octet-stream", Invariant($"{DateTime.Now:yyyyMMdd\\_HHmmss}_{pidValue}.gcdump"));
+                return File(result, "application/octet-stream", Invariant($"{DateTime.UtcNow:yyyyMMdd\\_HHmmss}_{pidValue}.gcdump"));
             });
         }
 

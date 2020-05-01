@@ -320,12 +320,8 @@ namespace Microsoft.Diagnostics.Monitoring
         private Task HandleGCEvents(EventPipeEventSource source, int pid, Func<Task> stopFunc, CancellationToken token)
         {
             int gcNum = -1;
-
-            TaskCompletionSource<object> gcEventsStarted = new TaskCompletionSource<object>();
-            token.Register(() => gcEventsStarted.TrySetCanceled(token));
-
-            TaskCompletionSource<object> gcStopped = new TaskCompletionSource<object>();
-            token.Register(() => gcStopped.TrySetCanceled(token));
+            var gcStarted = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var gcStopped = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             source.Clr.GCStart += data =>
             {
@@ -334,7 +330,7 @@ namespace Microsoft.Diagnostics.Monitoring
                     return;
                 }
 
-                gcEventsStarted.TrySetResult(null);
+                gcStarted.TrySetResult(null);
 
                 if (gcNum < 0 && data.Depth == 2 && data.Type != GCType.BackgroundGC)
                 {
@@ -362,7 +358,7 @@ namespace Microsoft.Diagnostics.Monitoring
                     return;
                 }
 
-                gcEventsStarted.TrySetResult(null);
+                gcStarted.TrySetResult(null);
             };
 
             DotNetHeapDumpGraphReader dumper = new DotNetHeapDumpGraphReader(TextWriter.Null)
@@ -373,20 +369,24 @@ namespace Microsoft.Diagnostics.Monitoring
 
             return Task.Run(async () =>
             {
-                // Wait for GC events for up to 5 seconds.
-                Task eventsStartedTask = gcEventsStarted.Task;
+                using var gcStartedCancellationRegistration = token.Register(() => gcStarted.TrySetCanceled(token));
+                using var gcStoppedCancellationRegistration = token.Register(() => gcStopped.TrySetCanceled(token));
+
+                // The event source will not always provide the GC events when it starts listening. However,
+                // they will be provided when the event source is told to stop processing events. Give the
+                // event source some time to produce the events, but if it doesn't start producing them within
+                // a short amount of time (5 seconds), then stop processing events to allow them to be flushed.
+                Task eventsStartedTask = gcStarted.Task;
                 Task eventsTimeoutTask = Task.Delay(TimeSpan.FromSeconds(5), token);
-                Task completedTask = await Task.WhenAny(gcEventsStarted.Task, eventsTimeoutTask);
+                Task completedTask = await Task.WhenAny(gcStarted.Task, eventsTimeoutTask);
 
                 token.ThrowIfCancellationRequested();
 
-                if (completedTask == gcEventsStarted.Task)
+                if (completedTask == gcStarted.Task)
                 {
                     // If started receiving GC events, wait for the GC Stop event and then
                     // stop processing events.
                     await gcStopped.Task;
-
-                    token.ThrowIfCancellationRequested();
 
                     await stopFunc();
                 }
@@ -396,6 +396,8 @@ namespace Microsoft.Diagnostics.Monitoring
                     // force flushing of the GC events and then wait for the GC Stop event.
                     await stopFunc();
 
+                    await gcStarted.Task;
+                    
                     await gcStopped.Task;
                 }
 
