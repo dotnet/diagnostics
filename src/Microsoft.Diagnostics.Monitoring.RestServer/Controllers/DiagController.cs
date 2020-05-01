@@ -73,6 +73,17 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             });
         }
 
+        [HttpGet("gcdump/{pid?}")]
+        public Task<ActionResult> GetGcDump(int? pid, [FromQuery, Range(-1, int.MaxValue)] int timeoutSeconds = 30)
+        {
+            return InvokeService(async () =>
+            {
+                int pidValue = _diagnosticServices.ResolveProcess(pid);
+                Stream result = await _diagnosticServices.GetGcDump(pidValue, TimeSpan.FromSeconds(timeoutSeconds), this.HttpContext.RequestAborted);
+                return File(result, "application/octet-stream", Invariant($"{DateTime.Now:yyyyMMdd\\_HHmmss}_{pidValue}.gcdump"));
+            });
+        }
+
         [HttpGet("cpuprofile/{pid?}")]
         public Task<ActionResult> CpuProfile(int? pid, [FromQuery][Range(-1, int.MaxValue)]int durationSeconds = 30)
         {
