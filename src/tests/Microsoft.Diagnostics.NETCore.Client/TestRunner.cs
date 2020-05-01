@@ -58,6 +58,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             if (outputHelper != null)
             {
                 outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Successfully started process {testProcess.Id}");
+                // Retry getting the module count because we can catch the process during startup and it fails temporarily.
                 for (int retry = 0; retry < 5; retry++)
                 {
                     try

@@ -260,6 +260,7 @@ public class SOSRunner : IDisposable
                     // Run the debuggee with the createdump environment variables set to generate a coredump on unhandled exception
                     processRunner.
                         WithEnvironmentVariable("COMPlus_DbgEnableMiniDump", "1").
+                        WithEnvironmentVariable("COMPlus_CreateDumpDiagnostics", "1").
                         WithEnvironmentVariable("COMPlus_DbgMiniDumpName", ReplaceVariables(variables, "%DUMP_NAME%"));
 
                     switch (information.DumpType)

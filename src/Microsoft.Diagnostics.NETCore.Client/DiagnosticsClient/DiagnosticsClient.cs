@@ -4,9 +4,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
@@ -18,9 +17,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     public sealed class DiagnosticsClient
     {
-        const uint CORDIAGIPC_E_UNKNOWN_COMMAND = 0x80131385;
-
-        private int _processId;
+        private readonly int _processId;
 
         public DiagnosticsClient(int processId)
         {
@@ -62,7 +59,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 case DiagnosticsServerCommandId.Error:
                     uint hr = BitConverter.ToUInt32(response.Payload, 0);
-                    if (hr == CORDIAGIPC_E_UNKNOWN_COMMAND) {
+                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand) {
                         throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
                     }
                     throw new ServerErrorException($"Writing dump failed (HRESULT: 0x{hr:X8})");

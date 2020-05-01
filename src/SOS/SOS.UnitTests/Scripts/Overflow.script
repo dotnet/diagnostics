@@ -37,15 +37,10 @@ ENDIF:DUMP
 
 IFDEF:LIVE
 
-IFDEF:OSX
-VERIFY:The current thread is unmanaged
-ENDIF:OSX
-
 IFDEF:WINDOWS
 VERIFY:There is no current managed exception on this thread
 ENDIF:WINDOWS
 
-!IFDEF:OSX
 !IFDEF:WINDOWS
 
 IFDEF:MAJOR_RUNTIME_VERSION_5
@@ -61,6 +56,5 @@ VERIFY:There is no current managed exception on this thread
 ENDIF:MAJOR_RUNTIME_VERSION_5
 
 ENDIF:WINDOWS
-ENDIF:OSX
 
 ENDIF:LIVE
