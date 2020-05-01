@@ -75,7 +75,7 @@ namespace DotnetMonitor.UnitTests
                     loggerFactory,
                     Enumerable.Empty<IMetricsLogger>());
 
-                var processingTask = diagnosticsEventPipeProcessor.Process(testExecution.RemoteProcess.Process.Id, 10, CancellationToken.None);
+                var processingTask = diagnosticsEventPipeProcessor.Process(testExecution.RemoteProcess.Process.Id, TimeSpan.FromSeconds(10), CancellationToken.None);
 
                 //Add a small delay to make sure diagnostic processor had a chance to initialize
                 await Task.Delay(1000);
