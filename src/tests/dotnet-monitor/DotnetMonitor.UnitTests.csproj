@@ -9,11 +9,9 @@
     <PackageReference Include="Microsoft.DotNet.RemoteExecutor" Version="$(MicrosoftDotNetRemoteExecutorVersion)" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MicrosoftBclAsyncInterfacesVersion)" />
     <PackageReference Include="Microsoft.Win32.Primitives" Version="$(MicrosoftWin32PrimitivesVersion)" />
-    <!--<PackageReference Include="xunit.abstractions" Version="$(XUnitAbstractionsVersion)" />-->
+    <PackageReference Include="xunit.abstractions" Version="$(XUnitAbstractionsVersion)" />
     <PackageReference Include="Microsoft.Extensions.Logging.EventSource" Version="$(MicrosoftExtensionsLoggingEventSourceVersion)" />
-    <PackageReference Include="System.Text.Json" Version="4.7.1" />
-    <!--<PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" />-->
-    <!--<ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj" />-->
+    <PackageReference Include="System.Text.Json" Version="$(SystemTextJsonVersion)" />
   </ItemGroup>
 
 </Project>
