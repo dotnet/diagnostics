@@ -76,10 +76,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         [HttpGet("cpuprofile/{pid?}")]
         public Task<ActionResult> CpuProfile(int? pid, [FromQuery][Range(-1, int.MaxValue)]int durationSeconds = 30)
         {
+            TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
             return InvokeService(async () =>
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
-                IStreamWithCleanup result = await _diagnosticServices.StartCpuTrace(pidValue, durationSeconds, this.HttpContext.RequestAborted);
+                IStreamWithCleanup result = await _diagnosticServices.StartCpuTrace(pidValue, duration, this.HttpContext.RequestAborted);
                 return new StreamWithCleanupResult(result, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
             });
         }
@@ -87,10 +88,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         [HttpGet("trace/{pid?}")]
         public Task<ActionResult> Trace(int? pid, [FromQuery][Range(-1, int.MaxValue)]int durationSeconds = 30)
         {
+            TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
             return InvokeService(async () =>
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
-                IStreamWithCleanup result = await _diagnosticServices.StartTrace(pidValue, durationSeconds, this.HttpContext.RequestAborted);
+                IStreamWithCleanup result = await _diagnosticServices.StartTrace(pidValue, duration, this.HttpContext.RequestAborted);
                 return new StreamWithCleanupResult(result, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
             });
         }
@@ -98,12 +100,13 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         [HttpGet("logs/{pid?}")]
         public ActionResult Logs(int? pid, [FromQuery][Range(-1, int.MaxValue)]int durationSeconds = 30)
         {
+            TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
             return InvokeService(() =>
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
                 return new OutputStreamResult(async (outputStream, token) =>
                 {
-                    await _diagnosticServices.StartLogs(outputStream, pidValue, durationSeconds, token);
+                    await _diagnosticServices.StartLogs(outputStream, pidValue, duration, token);
                 }, "application/x-ndjson", Invariant($"{Guid.NewGuid()}.txt"));
             });
         }
@@ -157,6 +160,13 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 Detail = e.Message,
                 Status = (int)HttpStatusCode.BadRequest
             };
+        }
+
+        private static TimeSpan ConvertSecondsToTimeSpan(int durationSeconds)
+        {
+            return durationSeconds < 0 ?
+                Timeout.InfiniteTimeSpan :
+                TimeSpan.FromSeconds(durationSeconds);
         }
     }
 }

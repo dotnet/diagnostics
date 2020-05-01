@@ -68,22 +68,22 @@ namespace Microsoft.Diagnostics.Monitoring
             return new AutoDeleteFileStream(dumpFilePath);
         }
 
-        public async Task<IStreamWithCleanup> StartCpuTrace(int pid, int durationSeconds, CancellationToken cancellationToken)
+        public async Task<IStreamWithCleanup> StartCpuTrace(int pid, TimeSpan duration, CancellationToken cancellationToken)
         {
             DiagnosticsMonitor monitor = new DiagnosticsMonitor(new CpuProfileConfiguration());
-            Stream stream = await monitor.ProcessEvents(pid, durationSeconds, cancellationToken);
+            Stream stream = await monitor.ProcessEvents(pid, duration, cancellationToken);
 
             return new StreamWithCleanup(monitor, stream);
         }
 
-        public async Task<IStreamWithCleanup> StartTrace(int pid, int durationSeconds, CancellationToken token)
+        public async Task<IStreamWithCleanup> StartTrace(int pid, TimeSpan duration, CancellationToken token)
         {
             DiagnosticsMonitor monitor = new DiagnosticsMonitor(new LoggingSourceConfiguration());
-            Stream stream = await monitor.ProcessEvents(pid, durationSeconds, token);
+            Stream stream = await monitor.ProcessEvents(pid, duration, token);
             return new StreamWithCleanup(monitor, stream);
         }
 
-        public async Task StartLogs(Stream outputStream, int pid, int durationSeconds, CancellationToken token)
+        public async Task StartLogs(Stream outputStream, int pid, TimeSpan duration, CancellationToken token)
         {
             var loggerFactory = new LoggerFactory();
             loggerFactory.AddProvider(new StreamingLoggerProvider(outputStream));
@@ -95,7 +95,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
             try
             {
-                await processor.Process(pid, durationSeconds, token);
+                await processor.Process(pid, duration, token);
             }
             finally
             {
