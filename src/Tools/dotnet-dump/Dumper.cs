@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
         }
 
-        public async Task<int> Collect(IConsole console, int processId, string output, bool diag, DumpTypeOption type)
+        public int Collect(IConsole console, int processId, string output, bool diag, DumpTypeOption type)
         {
             if (processId == 0) {
                 console.Error.WriteLine("ProcessId is required.");
@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     // Get the process
                     Process process = Process.GetProcessById(processId);
 
-                    await Windows.CollectDumpAsync(process, output, type);
+                    Windows.CollectDump(process, output, type);
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {

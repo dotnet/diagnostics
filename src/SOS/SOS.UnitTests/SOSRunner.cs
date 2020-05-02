@@ -253,16 +253,23 @@ public class SOSRunner : IDisposable
 
                 if (dumpGeneration == DumpGenerator.CreateDump)
                 {
-                    if (OS.Kind != OSKind.Linux)
+                    if (OS.Kind == OSKind.OSX)
                     {
-                        throw new SkipTestException("Createdump doesn't exists on Windows or macOS");
+                        throw new SkipTestException("Createdump doesn't exists on MacOS");
                     }
                     // Run the debuggee with the createdump environment variables set to generate a coredump on unhandled exception
                     processRunner.
                         WithEnvironmentVariable("COMPlus_DbgEnableMiniDump", "1").
+                        WithEnvironmentVariable("COMPlus_CreateDumpDiagnostics", "1").
                         WithEnvironmentVariable("COMPlus_DbgMiniDumpName", ReplaceVariables(variables, "%DUMP_NAME%"));
 
-                    switch (information.DumpType)
+                    // TODO: temporary hack to disable using createdump for triage type until the failures can be fixed
+                    DumpType dumpType = information.DumpType;
+                    if (OS.Kind == OSKind.Windows && dumpType == DumpType.Triage)
+                    {
+                        dumpType = DumpType.Heap;
+                    }
+                    switch (dumpType)
                     {
                         case DumpType.Heap:
                             processRunner.WithEnvironmentVariable("COMPlus_DbgMiniDumpType", "2");

@@ -4,9 +4,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
@@ -18,7 +17,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     public sealed class DiagnosticsClient
     {
-        private int _processId;
+        private readonly int _processId;
 
         public DiagnosticsClient(int processId)
         {
@@ -47,20 +46,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="logDumpGeneration">When set to true, display the dump generation debug log to the console.</param>
         public void WriteDump(DumpType dumpType, string dumpPath, bool logDumpGeneration=false)
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            if (!(RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.Windows)))
                 throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
 
             if (string.IsNullOrEmpty(dumpPath))
                 throw new ArgumentNullException($"{nameof(dumpPath)} required");
 
-            var payload = SerializeCoreDump(dumpPath, dumpType, logDumpGeneration);
-            var message = new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
-            var response = IpcClient.SendMessage(_processId, message);
-            var hr = 0;
+            byte[] payload = SerializeCoreDump(dumpPath, dumpType, logDumpGeneration);
+            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
+            IpcMessage response = IpcClient.SendMessage(_processId, message);
             switch ((DiagnosticsServerCommandId)response.Header.CommandId)
             {
                 case DiagnosticsServerCommandId.Error:
-                    hr = BitConverter.ToInt32(response.Payload, 0);
+                    uint hr = BitConverter.ToUInt32(response.Payload, 0);
+                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand) {
+                        throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
+                    }
                     throw new ServerErrorException($"Writing dump failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerCommandId.OK:
                     return;
