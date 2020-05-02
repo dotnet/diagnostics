@@ -88,6 +88,11 @@ namespace Microsoft.Diagnostics.Monitoring
             var loggerFactory = new LoggerFactory();
             loggerFactory.AddProvider(new StreamingLoggerProvider(outputStream));
 
+            await StartLogs(loggerFactory, pid, duration, token);
+        }
+
+        public async Task StartLogs(ILoggerFactory loggerFactory, int pid, TimeSpan duration, CancellationToken token)
+        {
             var processor = new DiagnosticsEventPipeProcessor(_contextConfiguration,
                 PipeMode.Logs,
                 loggerFactory,

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -24,6 +25,8 @@ namespace Microsoft.Diagnostics.Monitoring
         Task<IStreamWithCleanup> StartTrace(int pid, TimeSpan duration, CancellationToken token);
 
         Task StartLogs(Stream outputStream, int pid, TimeSpan duration, CancellationToken token);
+
+        Task StartLogs(ILoggerFactory loggerFactory, int pid, TimeSpan duration, CancellationToken token);
     }
 
     public interface IStreamWithCleanup : IAsyncDisposable
