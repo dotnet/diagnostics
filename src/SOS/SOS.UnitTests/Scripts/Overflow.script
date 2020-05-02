@@ -52,7 +52,12 @@ VERIFY:StackTrace \(generated\):\s+
 ENDIF:MAJOR_RUNTIME_VERSION_5
 
 !IFDEF:MAJOR_RUNTIME_VERSION_5
+!IFDEF:OSX
 VERIFY:There is no current managed exception on this thread
+ENDIF:OSX
+IFDEF:OSX
+VERIFY:The current thread is unmanaged
+ENDIF:OSX
 ENDIF:MAJOR_RUNTIME_VERSION_5
 
 ENDIF:WINDOWS

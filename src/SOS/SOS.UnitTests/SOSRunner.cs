@@ -263,7 +263,13 @@ public class SOSRunner : IDisposable
                         WithEnvironmentVariable("COMPlus_CreateDumpDiagnostics", "1").
                         WithEnvironmentVariable("COMPlus_DbgMiniDumpName", ReplaceVariables(variables, "%DUMP_NAME%"));
 
-                    switch (information.DumpType)
+                    // TODO: temporary hack to disable using createdump for triage type until the failures can be fixed
+                    DumpType dumpType = information.DumpType;
+                    if (OS.Kind == OSKind.Windows && dumpType == DumpType.Triage)
+                    {
+                        dumpType = DumpType.Heap;
+                    }
+                    switch (dumpType)
                     {
                         case DumpType.Heap:
                             processRunner.WithEnvironmentVariable("COMPlus_DbgMiniDumpType", "2");
