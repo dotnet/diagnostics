@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         Task<Stream> GetDump(int pid, DumpType mode);
 
-        Task<Stream> GetGcDump(int pid, TimeSpan timeout, CancellationToken token);
+        Task<Stream> GetGcDump(int pid, CancellationToken token);
 
         //TODO We can most likely unify trace, cpu, and logs/metrics around one call with the appropriate config
         Task<IStreamWithCleanup> StartCpuTrace(int pid, TimeSpan duration, CancellationToken token);

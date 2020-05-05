@@ -54,32 +54,23 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
                 Stream result = await _diagnosticServices.GetDump(pidValue, type);
 
-                FormattableString dumpFileName;
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    // This assumes that Windows does not have shared process spaces
-                    Process process = Process.GetProcessById(pidValue);
-                    dumpFileName = $"{process.ProcessName}.{pidValue}.dmp";
-                }
-                else
-                {
-                    dumpFileName = $"core_{pidValue}";
-                }
+                string dumpFileName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
+                    FormattableString.Invariant($"dump_{DateTime.UtcNow:yyyyMMdd_HHmmss}.dmp") :
+                    FormattableString.Invariant($"core_{DateTime.UtcNow:yyyyMMdd_HHmmss}");
 
                 //Compression is done automatically by the response
                 //Chunking is done because the result has no content-length
-                return File(result, "application/octet-stream", FormattableString.Invariant(dumpFileName));
+                return File(result, "application/octet-stream", dumpFileName);
             });
         }
 
         [HttpGet("gcdump/{pid?}")]
-        public Task<ActionResult> GetGcDump(int? pid, [FromQuery, Range(-1, int.MaxValue)] int timeoutSeconds = 30)
+        public Task<ActionResult> GetGcDump(int? pid)
         {
-            TimeSpan timeout = ConvertSecondsToTimeSpan(timeoutSeconds);
             return InvokeService(async () =>
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
-                Stream result = await _diagnosticServices.GetGcDump(pidValue, timeout, this.HttpContext.RequestAborted);
+                Stream result = await _diagnosticServices.GetGcDump(pidValue, this.HttpContext.RequestAborted);
                 return File(result, "application/octet-stream", FormattableString.Invariant($"{DateTime.UtcNow:yyyyMMdd\\_HHmmss}_{pidValue}.gcdump"));
             });
         }

@@ -10,6 +10,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using FastSerialization;
 using Graphs;
 using Microsoft.Diagnostics.Monitoring.Logging;
 using Microsoft.Diagnostics.NETCore.Client;
@@ -68,25 +69,28 @@ namespace Microsoft.Diagnostics.Monitoring
             return new AutoDeleteFileStream(dumpFilePath);
         }
 
-        public async Task<Stream> GetGcDump(int pid, TimeSpan timeout, CancellationToken cancellationToken)
+        public async Task<Stream> GetGcDump(int pid, CancellationToken cancellationToken)
         {
-            using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            linkedSource.CancelAfter(timeout);
-
             var graph = new MemoryGraph(50_000);
             await using var processor = new DiagnosticsEventPipeProcessor(_contextConfiguration,
                 PipeMode.GCDump,
                 gcGraph: graph);
 
-            await processor.Process(pid, Timeout.InfiniteTimeSpan, linkedSource.Token);
+            await processor.Process(pid, Timeout.InfiniteTimeSpan, cancellationToken);
 
-            string dumpFilePath = Path.Combine(Path.GetTempPath(), FormattableString.Invariant($"{Guid.NewGuid()}_{pid}"));
-            GCHeapDump.WriteMemoryGraph(graph, dumpFilePath, "dotnet-monitor");
+            var dumper = new GCHeapDump(graph);
+            dumper.CreationTool = "dotnet-monitor";
 
-            return new AutoDeleteFileStream(dumpFilePath);
+            var stream = new MemoryStream();
+            var serializer = new Serializer(stream, dumper, leaveOpen: true);
+            serializer.Close();
+
+            stream.Position = 0;
+            return stream;
         }
 
-        public async Task<IStreamWithCleanup> StartCpuTrace(int pid, TimeSpan duration, CancellationToken cancellationToken)        {
+        public async Task<IStreamWithCleanup> StartCpuTrace(int pid, TimeSpan duration, CancellationToken cancellationToken)
+        {
             DiagnosticsMonitor monitor = new DiagnosticsMonitor(new CpuProfileConfiguration());
             Stream stream = await monitor.ProcessEvents(pid, duration, cancellationToken);
 

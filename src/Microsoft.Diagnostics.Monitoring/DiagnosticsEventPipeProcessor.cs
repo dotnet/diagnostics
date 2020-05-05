@@ -7,6 +7,7 @@ using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers.Clr;
 using Microsoft.Diagnostics.Tracing.Parsers.FrameworkEventSource;
+using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftWindowsTCPIP;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -63,6 +64,7 @@ namespace Microsoft.Diagnostics.Monitoring
             {
                 EventPipeEventSource source = null;
                 DiagnosticsMonitor monitor = null;
+                Task handleEventsTask = Task.CompletedTask;
                 try
                 {
                     MonitoringSourceConfiguration config = null;
@@ -83,9 +85,8 @@ namespace Microsoft.Diagnostics.Monitoring
                     Stream sessionStream = await monitor.ProcessEvents(pid, duration, token);
                     source = new EventPipeEventSource(sessionStream);
 
-                    Task handleEventsTask = Task.CompletedTask;
                     // Allows the event handling routines to stop processing before the duration expires.
-                    Func<Task> stopFunc = () => Task.Run(() => { monitor.StopProcessing(); source.StopProcessing(); });
+                    Func<Task> stopFunc = () => Task.Run(() => { monitor.StopProcessing(); });
 
                     if (_mode == PipeMode.Metrics)
                     {
@@ -108,8 +109,6 @@ namespace Microsoft.Diagnostics.Monitoring
                     source.Process();
 
                     token.ThrowIfCancellationRequested();
-
-                    await handleEventsTask;
                 }
                 catch (DiagnosticsClientException ex)
                 {
@@ -123,6 +122,13 @@ namespace Microsoft.Diagnostics.Monitoring
                         await monitor.DisposeAsync();
                     }
                 }
+
+                // Await the task returned by the event handling method AFTER the EventPipeEventSource is disposed.
+                // The EventPipeEventSource will only raise the Completed event when it is disposed. So if this task
+                // is waiting for the Completed event to be raised, it will never complete until after EventPipeEventSource
+                // is diposed.
+                await handleEventsTask;
+
             }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
 
@@ -317,20 +323,18 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        private Task HandleGCEvents(EventPipeEventSource source, int pid, Func<Task> stopFunc, CancellationToken token)
+        private async Task HandleGCEvents(EventPipeEventSource source, int pid, Func<Task> stopFunc, CancellationToken token)
         {
             int gcNum = -1;
-            var gcStarted = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var gcStopped = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            source.Clr.GCStart += data =>
+            Action<GCStartTraceData, Action> gcStartHandler = (GCStartTraceData data, Action taskComplete) =>
             {
                 if (data.ProcessID != pid)
                 {
                     return;
                 }
 
-                gcStarted.TrySetResult(null);
+                taskComplete();
 
                 if (gcNum < 0 && data.Depth == 2 && data.Type != GCType.BackgroundGC)
                 {
@@ -338,7 +342,17 @@ namespace Microsoft.Diagnostics.Monitoring
                 }
             };
 
-            source.Clr.GCStop += data =>
+            Action<GCBulkNodeTraceData, Action> gcBulkNodeHandler = (GCBulkNodeTraceData data, Action taskComplete) =>
+            {
+                if (data.ProcessID != pid)
+                {
+                    return;
+                }
+
+                taskComplete();
+            };
+
+            Action<GCEndTraceData, Action> gcEndHandler = (GCEndTraceData data, Action taskComplete) =>
             {
                 if (data.ProcessID != pid)
                 {
@@ -347,19 +361,35 @@ namespace Microsoft.Diagnostics.Monitoring
 
                 if (data.Count == gcNum)
                 {
-                    gcStopped.TrySetResult(null);
+                    taskComplete();
                 }
             };
 
-            source.Clr.GCBulkNode += data =>
-            {
-                if (data.ProcessID != pid)
-                {
-                    return;
-                }
+            // Register event handlers on the event source and represent their completion as tasks
+            using var gcStartTaskSource = new EventTaskSource<Action<GCStartTraceData>>(
+                taskComplete => data => gcStartHandler(data, taskComplete),
+                handler => source.Clr.GCStart += handler,
+                handler => source.Clr.GCStart -= handler,
+                token);
+            using var gcBulkNodeTaskSource = new EventTaskSource<Action<GCBulkNodeTraceData>>(
+                taskComplete => data => gcBulkNodeHandler(data, taskComplete),
+                handler => source.Clr.GCBulkNode += handler,
+                handler => source.Clr.GCBulkNode -= handler,
+                token);
+            using var gcStopTaskSource = new EventTaskSource<Action<GCEndTraceData>>(
+                taskComplete => data => gcEndHandler(data, taskComplete),
+                handler => source.Clr.GCStop += handler,
+                handler => source.Clr.GCStop -= handler,
+                token);
+            using var sourceCompletedTaskSource = new EventTaskSource<Action>(
+                taskComplete => taskComplete,
+                handler => source.Completed += handler,
+                handler => source.Completed -= handler,
+                token);
 
-                gcStarted.TrySetResult(null);
-            };
+            // A task that is completed whenever GC data is received
+            Task gcDataTask = Task.WhenAny(gcStartTaskSource.Task, gcBulkNodeTaskSource.Task);
+            Task gcStopTask = gcStopTaskSource.Task;
 
             DotNetHeapDumpGraphReader dumper = new DotNetHeapDumpGraphReader(TextWriter.Null)
             {
@@ -367,46 +397,39 @@ namespace Microsoft.Diagnostics.Monitoring
             };
             dumper.SetupCallbacks(_gcGraph, source, pid.ToString(CultureInfo.InvariantCulture));
 
-            return Task.Run(async () =>
+            // The event source will not always provide the GC events when it starts listening. However,
+            // they will be provided when the event source is told to stop processing events. Give the
+            // event source some time to produce the events, but if it doesn't start producing them within
+            // a short amount of time (5 seconds), then stop processing events to allow them to be flushed.
+            Task eventsTimeoutTask = Task.Delay(TimeSpan.FromSeconds(5), token);
+            Task completedTask = await Task.WhenAny(gcDataTask, eventsTimeoutTask);
+
+            token.ThrowIfCancellationRequested();
+
+            // If started receiving GC events, wait for the GC Stop event.
+            if (completedTask == gcDataTask)
             {
-                using var gcStartedCancellationRegistration = token.Register(() => gcStarted.TrySetCanceled(token));
-                using var gcStoppedCancellationRegistration = token.Register(() => gcStopped.TrySetCanceled(token));
+                await gcStopTask;
+            }
 
-                // The event source will not always provide the GC events when it starts listening. However,
-                // they will be provided when the event source is told to stop processing events. Give the
-                // event source some time to produce the events, but if it doesn't start producing them within
-                // a short amount of time (5 seconds), then stop processing events to allow them to be flushed.
-                Task eventsStartedTask = gcStarted.Task;
-                Task eventsTimeoutTask = Task.Delay(TimeSpan.FromSeconds(5), token);
-                Task completedTask = await Task.WhenAny(gcStarted.Task, eventsTimeoutTask);
+            // Stop receiving events; if haven't received events yet, this will force flushing of events.
+            await stopFunc();
 
-                token.ThrowIfCancellationRequested();
+            // Wait for all received events to be processed.
+            await sourceCompletedTaskSource.Task;
 
-                if (completedTask == gcStarted.Task)
-                {
-                    // If started receiving GC events, wait for the GC Stop event and then
-                    // stop processing events.
-                    await gcStopped.Task;
+            // Check that GC data and stop events were received. This is done by checking that the
+            // associated tasks have ran to completion. If one of them has not reached the completion state, then
+            // fail the GC dump operation.
+            if (gcDataTask.Status != TaskStatus.RanToCompletion ||
+                gcStopTask.Status != TaskStatus.RanToCompletion)
+            {
+                throw new InvalidOperationException("Unable to create GC dump due to incomplete GC data.");
+            }
 
-                    await stopFunc();
-                }
-                else
-                {
-                    // If have not received any GC events yet, stop processing events, which will
-                    // force flushing of the GC events and then wait for the GC Stop event.
-                    await stopFunc();
+            dumper.ConvertHeapDataToGraph();
 
-                    await gcStarted.Task;
-                    
-                    await gcStopped.Task;
-                }
-
-                token.ThrowIfCancellationRequested();
-
-                dumper.ConvertHeapDataToGraph();
-
-                _gcGraph.AllowReading();
-            }, token);
+            _gcGraph.AllowReading();
         }
 
         public async ValueTask DisposeAsync()
