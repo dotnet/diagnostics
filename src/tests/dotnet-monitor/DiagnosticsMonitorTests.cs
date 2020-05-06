@@ -55,7 +55,7 @@ namespace DotnetMonitor.UnitTests
             }
         }
 
-        [Fact(Skip = "Test is failing on Mac")]
+        [Fact]
         public async Task TestDiagnosticsEventPipeProcessorLogs()
         {
             var outputStream = new MemoryStream();
