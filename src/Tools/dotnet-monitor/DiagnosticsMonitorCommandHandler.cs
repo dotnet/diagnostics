@@ -20,7 +20,18 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 {
     internal sealed class DiagnosticsMonitorCommandHandler
     {
-        private sealed class ConsoleLoggerAdapter : ILogger<DiagnosticsMonitor>
+        private sealed class ConsoleLoggerAdapterProvider : ILoggerProvider
+        {
+            private readonly IConsole _console;
+
+            public ConsoleLoggerAdapterProvider(IConsole console) => _console = console;
+
+            public ILogger CreateLogger(string categoryName) => new ConsoleLoggerAdapter(_console);
+
+            public void Dispose() { }
+        }
+
+        private sealed class ConsoleLoggerAdapter : ILogger
         {
             private readonly IConsole _console;
 
@@ -31,15 +42,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 public void Dispose() { }
             }
 
-            public ConsoleLoggerAdapter(IConsole console)
-            {
-                _console = console;
-            }
+            public ConsoleLoggerAdapter(IConsole console) => _console = console;
 
-            public IDisposable BeginScope<TState>(TState state)
-            {
-                return EmptyScope.Instance;
-            }
+            public IDisposable BeginScope<TState>(TState state) => EmptyScope.Instance;
 
             public bool IsEnabled(LogLevel logLevel) => true;
 
@@ -51,7 +56,6 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
         public async Task<int> Start(CancellationToken token, IConsole console, string[] urls)
         {
-            //CONSIDER The console sink uses the standard AddConsole, and therefore disregards IConsole.
             using IWebHost host = CreateWebHostBuilder(console, urls).Build();
             await host.RunAsync(token);
             return 0;
@@ -66,11 +70,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 })
                 .ConfigureServices((WebHostBuilderContext context, IServiceCollection services) =>
                 {
+                    services.AddLogging((builder) => builder.AddProvider(new ConsoleLoggerAdapterProvider(console)));
                     //TODO Many of these service additions should be done through extension methods
                     services.AddSingleton<IDiagnosticServices, DiagnosticServices>();
-
-                    //Specialized logger for diagnostic output from the service itself rather than as a sink for the data
-                    services.AddSingleton<ILogger<DiagnosticsMonitor>>((sp) => new ConsoleLoggerAdapter(console));
                     services.Configure<ContextConfiguration>(context.Configuration);
                 })
                 .UseUrls(urls)
