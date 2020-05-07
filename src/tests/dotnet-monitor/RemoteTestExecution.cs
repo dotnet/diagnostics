@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.DotNet.RemoteExecutor;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -20,7 +21,7 @@ namespace DotnetMonitor.UnitTests
     /// </summary>
     internal sealed class RemoteTestExecution : IDisposable
     {
-        public RemoteInvokeHandle RemoteProcess { get; internal set; }
+        public Process RemoteProcess { get; internal set; }
 
         public void Start()
         {
@@ -31,8 +32,8 @@ namespace DotnetMonitor.UnitTests
         {
             //We cannot use named synchronization primitives since they do not work across processes
             //on Linux. Use redirected standard input instead.
-            RemoteProcess.Process.StandardInput.Write('0');
-            RemoteProcess.Process.StandardInput.Flush();
+            RemoteProcess.StandardInput.Write('0');
+            RemoteProcess.StandardInput.Flush();
         }
 
 
@@ -50,20 +51,14 @@ namespace DotnetMonitor.UnitTests
     /// </summary>
     internal abstract class RemoteTest
     {
-        public static RemoteTestExecution StartRemoteProcess(Func<string, int> testEntry, string loggerCategory, ITestOutputHelper outputHelper)
+        public static RemoteTestExecution StartRemoteProcess(string loggerCategory, ITestOutputHelper outputHelper)
         {
-            var options = new RemoteInvokeOptions()
-            {
-                Start = true,
-                ExpectedExitCode = 0,
-                CheckExitCode = true,
-                StartInfo = new ProcessStartInfo {  RedirectStandardError = true, RedirectStandardOutput = true, RedirectStandardInput = true},
-            };
 
             var testExecution = new RemoteTestExecution();
 
             //Note lambdas may not work here since closures cannot be properly serialized across process boundaries.
-            testExecution.RemoteProcess = RemoteExecutor.Invoke(testEntry, loggerCategory, options);
+            //testExecution.RemoteProcess = RemoteExecutor.Invoke(testEntry, loggerCategory, options);
+            TestRunner
 
             try
             {
@@ -101,41 +96,5 @@ namespace DotnetMonitor.UnitTests
 
             return testExecution;
         }
-
-        public int TestBody(string loggerCategory)
-        {
-            Console.WriteLine("Starting remote test process");
-
-            ServiceCollection serviceCollection = new ServiceCollection();
-            serviceCollection.AddLogging(builder =>
-            {
-                builder.AddEventSourceLogger();
-            });
-
-            using var loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
-            var logger = loggerFactory.CreateLogger(loggerCategory);
-
-            Console.WriteLine($"{DateTime.UtcNow} Awaiting start");
-            if (Console.Read() == -1)
-            {
-                throw new InvalidOperationException("Unable to receive start signal");
-            }
-
-            Console.WriteLine($"{DateTime.UtcNow} Starting test body");
-            TestBodyCore(logger);
-
-            Console.WriteLine($"{DateTime.UtcNow} Awaiting end");
-            if (Console.Read() == -1)
-            {
-                throw new InvalidOperationException("Unable to receive end signal");
-            }
-
-
-            Console.WriteLine($"{DateTime.UtcNow} Ending remote test process");
-
-            return 0;
-        }
-
-        protected abstract void TestBodyCore(ILogger logger);
     }
 }

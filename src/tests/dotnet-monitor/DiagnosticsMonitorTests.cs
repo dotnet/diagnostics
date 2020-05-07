@@ -32,29 +32,6 @@ namespace DotnetMonitor.UnitTests
             _output = output;
         }
 
-        private sealed class LoggerRemoteTest : RemoteTest
-        {
-            public static int EntryPoint(string logger)
-            {
-                // The entry point must create the test object, it cannot be created in the test process
-                return new LoggerRemoteTest().TestBody(logger);
-            }
-
-            protected override void TestBodyCore(ILogger logger)
-            {
-                //Json data is always converted to strings for ActivityStart events.
-                using (var scope = logger.BeginScope(new Dictionary<string, object> {
-                    { "IntValue", "5" },
-                    { "BoolValue", "true" },
-                    { "StringValue", "test" } }.ToList()))
-                {
-                    logger.LogWarning("Some warning message with {arg}", 6);
-                }
-
-                logger.LogWarning("Another message");
-            }
-        }
-
         [Fact]
         public async Task TestDiagnosticsEventPipeProcessorLogs()
         {
