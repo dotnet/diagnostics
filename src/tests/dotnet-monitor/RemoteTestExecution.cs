@@ -3,12 +3,12 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.DotNet.RemoteExecutor;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,7 +21,12 @@ namespace DotnetMonitor.UnitTests
     /// </summary>
     internal sealed class RemoteTestExecution : IDisposable
     {
-        public Process RemoteProcess { get; internal set; }
+        public RemoteTestExecution(TestRunner runner)
+        {
+            TestRunner = runner;
+        }
+
+        public TestRunner TestRunner { get; }
 
         public void Start()
         {
@@ -32,41 +37,31 @@ namespace DotnetMonitor.UnitTests
         {
             //We cannot use named synchronization primitives since they do not work across processes
             //on Linux. Use redirected standard input instead.
-            RemoteProcess.StandardInput.Write('0');
-            RemoteProcess.StandardInput.Flush();
+            TestRunner.StandardInput.Write('0');
+            TestRunner.StandardInput.Flush();
         }
 
-
-        public void Dispose()
-        {
-            SendSignal();
-
-            RemoteProcess.Process.WaitForExit(30_000);
-            RemoteProcess.Dispose();
-        }
-    }
-
-    /// <summary>
-    /// Utility class to execute tests remotely and write messages to the EventPipe.
-    /// </summary>
-    internal abstract class RemoteTest
-    {
         public static RemoteTestExecution StartRemoteProcess(string loggerCategory, ITestOutputHelper outputHelper)
         {
+            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath("EventPipeTracee") + " " + loggerCategory,
+                outputHelper, redirectError: true, redirectInput: true);
+            runner.Start();
 
-            var testExecution = new RemoteTestExecution();
+            ReadAllOutput(runner.StandardOutput, runner.StandardError, outputHelper);
 
-            //Note lambdas may not work here since closures cannot be properly serialized across process boundaries.
-            //testExecution.RemoteProcess = RemoteExecutor.Invoke(testEntry, loggerCategory, options);
-            TestRunner
+            var testExecution = new RemoteTestExecution(runner);
+            return testExecution;
+        }
 
-            try
+        private static Task ReadAllOutput(StreamReader output, StreamReader error, ITestOutputHelper outputHelper)
+        {
+            return Task.Run(async () =>
             {
-                Task<string> stdOutputTask = testExecution.RemoteProcess.Process.StandardOutput.ReadToEndAsync();
-                Task<string> stdErrorTask = testExecution.RemoteProcess.Process.StandardError.ReadToEndAsync();
-
-                Task.Run( async () =>
+                try
                 {
+                    Task<string> stdOutputTask = output.ReadToEndAsync();
+                    Task<string> stdErrorTask = error.ReadToEndAsync();
+
                     try
                     {
                         string result = await stdOutputTask;
@@ -87,14 +82,17 @@ namespace DotnetMonitor.UnitTests
                         outputHelper.WriteLine(e.ToString());
                         throw;
                     }
-                });
-            }
-            catch (ObjectDisposedException)
-            {
-                outputHelper.WriteLine("Failed to collect remote process's output");
-            }
+                }
+                catch (ObjectDisposedException)
+                {
+                    outputHelper.WriteLine("Failed to collect remote process's output");
+                }
+            });
+        }
 
-            return testExecution;
+        public void Dispose()
+        {
+            SendSignal();
         }
     }
 }

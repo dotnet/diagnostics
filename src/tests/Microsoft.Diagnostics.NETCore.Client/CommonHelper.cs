@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             var curPath = Directory.GetCurrentDirectory();
 ;
-            var traceePath = curPath.Replace("Microsoft.Diagnostics.NETCore.Client.UnitTests", traceeName);
+            var traceePath = curPath.Replace(System.Reflection.Assembly.GetCallingAssembly().GetName().Name, traceeName);
 
             return Path.Combine(traceePath, Path.ChangeExtension(traceeName, ".dll"));
         }
