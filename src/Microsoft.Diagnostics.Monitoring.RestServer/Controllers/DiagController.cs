@@ -55,8 +55,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 Stream result = await _diagnosticServices.GetDump(pidValue, type);
 
                 string dumpFileName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
-                    FormattableString.Invariant($"dump_{DateTime.UtcNow:yyyyMMdd_HHmmss}.dmp") :
-                    FormattableString.Invariant($"core_{DateTime.UtcNow:yyyyMMdd_HHmmss}");
+                    FormattableString.Invariant($"dump_{GetFileNameTimeStampUtcNow()}.dmp") :
+                    FormattableString.Invariant($"core_{GetFileNameTimeStampUtcNow()}");
 
                 //Compression is done automatically by the response
                 //Chunking is done because the result has no content-length
@@ -71,7 +71,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
                 Stream result = await _diagnosticServices.GetGcDump(pidValue, this.HttpContext.RequestAborted);
-                return File(result, "application/octet-stream", FormattableString.Invariant($"{DateTime.UtcNow:yyyyMMdd\\_HHmmss}_{pidValue}.gcdump"));
+                return File(result, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{pidValue}.gcdump"));
             });
         }
 
@@ -169,6 +169,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             return durationSeconds < 0 ?
                 Timeout.InfiniteTimeSpan :
                 TimeSpan.FromSeconds(durationSeconds);
+        }
+
+        private static string GetFileNameTimeStampUtcNow()
+        {
+            return DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
         }
     }
 }
