@@ -4,7 +4,7 @@
 
 using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Diagnostics.Monitoring.Logging;
-using Microsoft.DotNet.RemoteExecutor;
+using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -32,40 +32,14 @@ namespace DotnetMonitor.UnitTests
             _output = output;
         }
 
-        private sealed class LoggerRemoteTest : RemoteTest
-        {
-            public static int EntryPoint(string logger)
-            {
-                // The entry point must create the test object, it cannot be created in the test process
-                return new LoggerRemoteTest().TestBody(logger);
-            }
-
-            protected override void TestBodyCore(ILogger logger)
-            {
-                //Json data is always converted to strings for ActivityStart events.
-                using (var scope = logger.BeginScope(new Dictionary<string, object> {
-                    { "IntValue", "5" },
-                    { "BoolValue", "true" },
-                    { "StringValue", "test" } }.ToList()))
-                {
-                    logger.LogWarning("Some warning message with {arg}", 6);
-                }
-
-                logger.LogWarning("Another message");
-            }
-        }
-
-        [Fact(Skip = "Test is failing on Mac")]
+        [Fact]
         public async Task TestDiagnosticsEventPipeProcessorLogs()
         {
             var outputStream = new MemoryStream();
 
-            using (var testExecution = RemoteTest.StartRemoteProcess(LoggerRemoteTest.EntryPoint, nameof(LoggerRemoteTest), _output))
+            using (var testExecution = RemoteTestExecution.StartRemoteProcess("LoggerRemoteTest", _output))
             {
-                _output.WriteLine($"Started remote execution {testExecution.RemoteProcess.Process.ProcessName} {testExecution.RemoteProcess.Process.Id}");
-
-                //Add a small delay to make sure the remote process had a chance to start and create the diagnostic pipe.
-                await Task.Delay(1000);
+                //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
 
                 var loggerFactory = new LoggerFactory(new[] { new StreamingLoggerProvider(outputStream) });
 
@@ -75,11 +49,12 @@ namespace DotnetMonitor.UnitTests
                     loggerFactory,
                     Enumerable.Empty<IMetricsLogger>());
 
-                var processingTask = diagnosticsEventPipeProcessor.Process(testExecution.RemoteProcess.Process.Id, TimeSpan.FromSeconds(10), CancellationToken.None);
+                var processingTask = diagnosticsEventPipeProcessor.Process(testExecution.TestRunner.Pid, TimeSpan.FromSeconds(10), CancellationToken.None);
 
                 //Add a small delay to make sure diagnostic processor had a chance to initialize
                 await Task.Delay(1000);
 
+                //Send signal to proceed with event collection
                 testExecution.Start();
 
                 await processingTask;
@@ -98,7 +73,7 @@ namespace DotnetMonitor.UnitTests
 
             LoggerTestResult result = JsonSerializer.Deserialize<LoggerTestResult>(firstMessage);
             Assert.Equal("Some warning message with 6", result.Message);
-            Assert.Equal(nameof(LoggerRemoteTest), result.Category);
+            Assert.Equal("LoggerRemoteTest", result.Category);
             Assert.Equal("Warning", result.LogLevel);
             Assert.Equal("0", result.EventId);
             Validate(result.Scopes, ("BoolValue", "true"), ("StringValue", "test"), ("IntValue", "5"));
@@ -109,7 +84,7 @@ namespace DotnetMonitor.UnitTests
 
             result = JsonSerializer.Deserialize<LoggerTestResult>(secondMessage);
             Assert.Equal("Another message", result.Message);
-            Assert.Equal(nameof(LoggerRemoteTest), result.Category);
+            Assert.Equal("LoggerRemoteTest", result.Category);
             Assert.Equal("Warning", result.LogLevel);
             Assert.Equal("0", result.EventId);
             Assert.Equal(0, result.Scopes.Count);

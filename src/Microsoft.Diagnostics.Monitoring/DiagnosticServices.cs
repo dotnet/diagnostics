@@ -21,14 +21,11 @@ namespace Microsoft.Diagnostics.Monitoring
 {
     public sealed class DiagnosticServices : IDiagnosticServices
     {
-        private readonly ILogger<DiagnosticsMonitor> _logger;
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
         private ContextConfiguration _contextConfiguration;
 
-        public DiagnosticServices(ILogger<DiagnosticsMonitor> logger,
-            IOptions<ContextConfiguration> contextConfig)
+        public DiagnosticServices(IOptions<ContextConfiguration> contextConfig)
         {
-            _logger = logger;
             _contextConfiguration = contextConfig.Value;
         }
 

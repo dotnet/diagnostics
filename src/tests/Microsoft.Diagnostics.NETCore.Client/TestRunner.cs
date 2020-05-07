@@ -25,11 +25,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private ProcessStartInfo startInfo;
         private ITestOutputHelper outputHelper;
 
-        public TestRunner(string testExePath, ITestOutputHelper _outputHelper=null)
+        public TestRunner(string testExePath, ITestOutputHelper _outputHelper = null,
+            bool redirectError = false, bool redirectInput = false)
         {
             startInfo = new ProcessStartInfo(CommonHelper.HostExe, testExePath);
             startInfo.UseShellExecute = false;
             startInfo.RedirectStandardOutput = true;
+            startInfo.RedirectStandardError = redirectError;
+            startInfo.RedirectStandardInput = redirectInput;
             outputHelper = _outputHelper;
         }
 
@@ -38,10 +41,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
             startInfo.EnvironmentVariables[key] = value;
         }
 
+        public StreamWriter StandardInput => testProcess.StandardInput;
+        public StreamReader StandardOutput => testProcess.StandardOutput;
+        public StreamReader StandardError => testProcess.StandardError;
+
         public void Start(int timeoutInMS=15000)
         {
             if (outputHelper != null)
-                outputHelper.WriteLine("$[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName);
+                outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName);
 
             testProcess = Process.Start(startInfo);
 
