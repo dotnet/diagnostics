@@ -11,6 +11,17 @@ using System.Runtime.InteropServices;
 namespace Microsoft.Diagnostics.NETCore.Client
 {
     /// <summary>
+    /// Errors (HRESULT) returned for DiagnosticsServerCommandId.Error responses.
+    /// </summary>
+    internal enum DiagnosticsIpcError : uint
+    {
+        BadEncoding     = 0x80131384,
+        UnknownCommand  = 0x80131385,
+        UnknownMagic    = 0x80131386,
+        UnknownError    = 0x80131387
+    }
+
+    /// <summary>
     /// Different diagnostic message types that are handled by the runtime.
     /// </summary>
     internal enum DiagnosticsMessageType : uint
