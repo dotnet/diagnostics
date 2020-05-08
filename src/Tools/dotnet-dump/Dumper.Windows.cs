@@ -20,8 +20,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 // Open the file for writing
                 using (var stream = new FileStream(outputFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
                 {
-                    var exceptionInfo = new NativeMethods.MINIDUMP_EXCEPTION_INFORMATION();
-
                     NativeMethods.MINIDUMP_TYPE dumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpNormal;
                     switch (type)
                     {
@@ -52,7 +50,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     for (int i = 0; i < 5; i++)
                     {
                         // Dump the process!
-                        if (NativeMethods.MiniDumpWriteDump(process.Handle, (uint)process.Id, stream.SafeFileHandle, dumpType, ref exceptionInfo, IntPtr.Zero, IntPtr.Zero))
+                        if (NativeMethods.MiniDumpWriteDump(process.Handle, (uint)process.Id, stream.SafeFileHandle, dumpType, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero))
                         {
                             break;
                         }
@@ -73,7 +71,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 public const int ERROR_PARTIAL_COPY = unchecked((int)0x8007012b);
 
                 [DllImport("Dbghelp.dll", SetLastError = true)]
-                public static extern bool MiniDumpWriteDump(IntPtr hProcess, uint ProcessId, SafeFileHandle hFile, MINIDUMP_TYPE DumpType, ref MINIDUMP_EXCEPTION_INFORMATION ExceptionParam, IntPtr UserStreamParam, IntPtr CallbackParam);
+                public static extern bool MiniDumpWriteDump(IntPtr hProcess, uint ProcessId, SafeFileHandle hFile, MINIDUMP_TYPE DumpType, IntPtr ExceptionParam, IntPtr UserStreamParam, IntPtr CallbackParam);
 
                 [StructLayout(LayoutKind.Sequential, Pack = 4)]
                 public struct MINIDUMP_EXCEPTION_INFORMATION
