@@ -215,7 +215,7 @@ public static void PrintEventsLive(int processId)
             session.Stop();
         });
 
-        Task.WaitAny(streamTask, sleepTask);
+        Task.WaitAny(streamTask, inputTask);
     }
 }
 ```
