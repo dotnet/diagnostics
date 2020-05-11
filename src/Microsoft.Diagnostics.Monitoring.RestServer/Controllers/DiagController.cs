@@ -16,7 +16,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Diagnostics.Monitoring.RestServer.Models;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
-using static System.FormattableString;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 {
@@ -55,21 +54,24 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
                 Stream result = await _diagnosticServices.GetDump(pidValue, type);
 
-                FormattableString dumpFileName;
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    // This assumes that Windows does not have shared process spaces
-                    Process process = Process.GetProcessById(pidValue);
-                    dumpFileName = $"{process.ProcessName}.{pidValue}.dmp";
-                }
-                else
-                {
-                    dumpFileName = $"core_{pidValue}";
-                }
+                string dumpFileName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
+                    FormattableString.Invariant($"dump_{GetFileNameTimeStampUtcNow()}.dmp") :
+                    FormattableString.Invariant($"core_{GetFileNameTimeStampUtcNow()}");
 
                 //Compression is done automatically by the response
                 //Chunking is done because the result has no content-length
-                return File(result, "application/octet-stream", Invariant(dumpFileName));
+                return File(result, "application/octet-stream", dumpFileName);
+            });
+        }
+
+        [HttpGet("gcdump/{pid?}")]
+        public Task<ActionResult> GetGcDump(int? pid)
+        {
+            return InvokeService(async () =>
+            {
+                int pidValue = _diagnosticServices.ResolveProcess(pid);
+                Stream result = await _diagnosticServices.GetGcDump(pidValue, this.HttpContext.RequestAborted);
+                return File(result, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{pidValue}.gcdump"));
             });
         }
 
@@ -81,7 +83,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
                 IStreamWithCleanup result = await _diagnosticServices.StartCpuTrace(pidValue, duration, this.HttpContext.RequestAborted);
-                return new StreamWithCleanupResult(result, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
+                return new StreamWithCleanupResult(result, "application/octet-stream", FormattableString.Invariant($"{Guid.NewGuid()}.nettrace"));
             });
         }
 
@@ -93,7 +95,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
                 IStreamWithCleanup result = await _diagnosticServices.StartTrace(pidValue, duration, this.HttpContext.RequestAborted);
-                return new StreamWithCleanupResult(result, "application/octet-stream", Invariant($"{Guid.NewGuid()}.nettrace"));
+                return new StreamWithCleanupResult(result, "application/octet-stream", FormattableString.Invariant($"{Guid.NewGuid()}.nettrace"));
             });
         }
 
@@ -107,7 +109,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 return new OutputStreamResult(async (outputStream, token) =>
                 {
                     await _diagnosticServices.StartLogs(outputStream, pidValue, duration, token);
-                }, "application/x-ndjson", Invariant($"{Guid.NewGuid()}.txt"));
+                }, "application/x-ndjson", FormattableString.Invariant($"{Guid.NewGuid()}.txt"));
             });
         }
 
@@ -167,6 +169,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             return durationSeconds < 0 ?
                 Timeout.InfiniteTimeSpan :
                 TimeSpan.FromSeconds(durationSeconds);
+        }
+
+        private static string GetFileNameTimeStampUtcNow()
+        {
+            return DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
         }
     }
 }

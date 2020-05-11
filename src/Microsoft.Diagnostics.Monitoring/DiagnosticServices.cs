@@ -10,9 +10,10 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using FastSerialization;
+using Graphs;
 using Microsoft.Diagnostics.Monitoring.Logging;
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -47,7 +48,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public async Task<Stream> GetDump(int pid, DumpType mode)
         {
-            string dumpFilePath = FormattableString.Invariant($@"{Path.GetTempPath()}{Path.DirectorySeparatorChar}{Guid.NewGuid()}_{pid}");
+            string dumpFilePath = Path.Combine(Path.GetTempPath(), FormattableString.Invariant($"{Guid.NewGuid()}_{pid}"));
             NETCore.Client.DumpType dumpType = MapDumpType(mode);
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -68,6 +69,26 @@ namespace Microsoft.Diagnostics.Monitoring
             return new AutoDeleteFileStream(dumpFilePath);
         }
 
+        public async Task<Stream> GetGcDump(int pid, CancellationToken cancellationToken)
+        {
+            var graph = new MemoryGraph(50_000);
+            await using var processor = new DiagnosticsEventPipeProcessor(_contextConfiguration,
+                PipeMode.GCDump,
+                gcGraph: graph);
+
+            await processor.Process(pid, Timeout.InfiniteTimeSpan, cancellationToken);
+
+            var dumper = new GCHeapDump(graph);
+            dumper.CreationTool = "dotnet-monitor";
+
+            var stream = new MemoryStream();
+            var serializer = new Serializer(stream, dumper, leaveOpen: true);
+            serializer.Close();
+
+            stream.Position = 0;
+            return stream;
+        }
+
         public async Task<IStreamWithCleanup> StartCpuTrace(int pid, TimeSpan duration, CancellationToken cancellationToken)
         {
             DiagnosticsMonitor monitor = new DiagnosticsMonitor(new CpuProfileConfiguration());
@@ -85,23 +106,14 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public async Task StartLogs(Stream outputStream, int pid, TimeSpan duration, CancellationToken token)
         {
-            var loggerFactory = new LoggerFactory();
+            using var loggerFactory = new LoggerFactory();
             loggerFactory.AddProvider(new StreamingLoggerProvider(outputStream));
 
-            var processor = new DiagnosticsEventPipeProcessor(_contextConfiguration,
+            await using var processor = new DiagnosticsEventPipeProcessor(_contextConfiguration,
                 PipeMode.Logs,
-                loggerFactory,
-                Enumerable.Empty<IMetricsLogger>());
+                loggerFactory: loggerFactory);
 
-            try
-            {
-                await processor.Process(pid, duration, token);
-            }
-            finally
-            {
-                await processor.DisposeAsync();
-                loggerFactory.Dispose();
-            }
+            await processor.Process(pid, duration, token);
         }
 
         private static NETCore.Client.DumpType MapDumpType(DumpType dumpType)
