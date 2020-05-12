@@ -37,7 +37,7 @@ namespace DotnetMonitor.UnitTests
         {
             var outputStream = new MemoryStream();
 
-            using (var testExecution = RemoteTestExecution.StartRemoteProcess("LoggerRemoteTest", _output))
+            await using (var testExecution = RemoteTestExecution.StartRemoteProcess("LoggerRemoteTest", _output))
             {
                 //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
 

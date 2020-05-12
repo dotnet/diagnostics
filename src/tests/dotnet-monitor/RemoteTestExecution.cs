@@ -19,11 +19,14 @@ namespace DotnetMonitor.UnitTests
     /// <summary>
     /// Utility class to control remote test execution.
     /// </summary>
-    internal sealed class RemoteTestExecution : IDisposable
+    internal sealed class RemoteTestExecution : IAsyncDisposable
     {
-        public RemoteTestExecution(TestRunner runner)
+        private Task IoReadingTask { get; }
+
+        private RemoteTestExecution(TestRunner runner, Task ioReadingTask)
         {
             TestRunner = runner;
+            IoReadingTask = ioReadingTask;
         }
 
         public TestRunner TestRunner { get; }
@@ -47,9 +50,9 @@ namespace DotnetMonitor.UnitTests
                 outputHelper, redirectError: true, redirectInput: true);
             runner.Start();
 
-            ReadAllOutput(runner.StandardOutput, runner.StandardError, outputHelper);
+            Task readingTask = ReadAllOutput(runner.StandardOutput, runner.StandardError, outputHelper);
 
-            return new RemoteTestExecution(runner);
+            return new RemoteTestExecution(runner, readingTask);
         }
 
         private static Task ReadAllOutput(StreamReader output, StreamReader error, ITestOutputHelper outputHelper)
@@ -89,9 +92,10 @@ namespace DotnetMonitor.UnitTests
             });
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
             SendSignal();
+            await IoReadingTask;
         }
     }
 }
