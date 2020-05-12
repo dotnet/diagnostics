@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Grape
 
         public void Start(int timeoutInMS=0)
         {
-            Debug.WriteLine("$[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName);
+            Debug.WriteLine($"[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName);
             testProcess = Process.Start(startInfo);
 
             if (testProcess == null)
