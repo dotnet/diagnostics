@@ -15,7 +15,6 @@
 
      $(MicrosoftNETCoreAppVersion)   $(MicrosoftAspNetCoreAppRefVersion) - latest dotnet runtime/aspnetcore version to install/test
      $(MicrosoftNETCoreApp31Version) $(MicrosoftAspNetCoreApp31Version)  - 3.1 version
-     $(MicrosoftNETCoreApp30Version) $(MicrosoftAspNetCoreApp30Version)  - 3.0 version
      $(MicrosoftNETCoreApp21Version) $(MicrosoftAspNetCoreApp21Version)  - 2.1 version
 
      From Arcade:
@@ -71,7 +70,6 @@
   <ItemGroup Condition="!$(InternalReleaseTesting) and !$(PrivateBuildTesting)">
     <TestVersions Include="Latest" RuntimeVersion="$(MicrosoftNETCoreAppVersion)" AspNetVersion="$(MicrosoftAspNetCoreAppRefVersion)" />
     <TestVersions Include="31" RuntimeVersion="$(MicrosoftNETCoreApp31Version)" AspNetVersion="$(MicrosoftAspNetCoreApp31Version)" />
-    <TestVersions Include="30" RuntimeVersion="$(MicrosoftNETCoreApp30Version)" AspNetVersion="$(MicrosoftAspNetCoreApp30Version)" />
     <TestVersions Include="21" RuntimeVersion="$(MicrosoftNETCoreApp21Version)" AspNetVersion="$(MicrosoftAspNetCoreApp21Version)" />
   </ItemGroup>
 
@@ -147,9 +145,6 @@
 
   <RuntimeVersion21>$(MicrosoftNETCoreApp21Version)</RuntimeVersion21>
   <AspNetCoreVersion21>$(MicrosoftAspNetCoreApp21Version)</AspNetCoreVersion21>
-
-  <RuntimeVersion30>$(MicrosoftNETCoreApp30Version)</RuntimeVersion30>
-  <AspNetCoreVersion30>$(MicrosoftAspNetCoreApp30Version)</AspNetCoreVersion30>
 
   <RuntimeVersion31>$(MicrosoftNETCoreApp31Version)</RuntimeVersion31>
   <AspNetCoreVersion31>$(MicrosoftAspNetCoreApp31Version)</AspNetCoreVersion31>

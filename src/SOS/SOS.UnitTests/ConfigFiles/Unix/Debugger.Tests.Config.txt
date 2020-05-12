@@ -29,8 +29,8 @@
   <TestWebApp3 Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp3>
 
   <!-- Build the debuggee for this framework version but run it on latest -->
-  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">netcoreapp3.0</BuildProjectFrameworkLatest>
-  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.0</BuildProjectFrameworkLatest>
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">netcoreapp3.1</BuildProjectFrameworkLatest>
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.1</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '2.1')">netcoreapp2.1</BuildProjectFrameworkLatest>
 
   <DebuggeeSourceRoot>$(RepoRootDir)/src/SOS/SOS.UnitTests/Debuggees</DebuggeeSourceRoot>
@@ -52,13 +52,8 @@
       <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
     </Option>
     <Option Condition="'$(TestLatestOnly)' != 'true'">
-      <!-- The debuggee built for 3.0 but run it on 3.1 -->
-      <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+      <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
-    </Option>
-    <Option Condition="'$(TestLatestOnly)' != 'true'">
-      <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-      <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
     </Option>
     <Option Condition="'$(TestLatestOnly)' != 'true'">
       <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
@@ -77,13 +72,8 @@
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
         </Option>
         <Option Condition="'$(TestLatestOnly)' != 'true'">
-          <!-- Build the debuggee for 3.0 but run it on 3.1 -->
-          <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+          <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
-        </Option>
-        <Option Condition="'$(TestLatestOnly)' != 'true'">
-          <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
         </Option>
         <Option Condition="'$(TestLatestOnly)' != 'true'">
           <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
@@ -92,7 +82,7 @@
       </Options>
     </Option>
     <!--
-        SOS.WebApp3 (runs on 3.0, 3.1 and latest aspnetcore)
+        SOS.WebApp3 (runs on 3.1 and latest aspnetcore)
       -->
     <Option Condition="'$(TestWebApp3)' == 'true'">
       <TestName>SOS.WebApp3</TestName>
@@ -103,15 +93,9 @@
           <FrameworkVersion>$(AspNetCoreVersionLatest)</FrameworkVersion>
         </Option>
         <Option Condition="'$(TestLatestOnly)' != 'true'">
-          <!-- Build the debuggee for 3.0 but run it on 3.1 -->
-          <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+          <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
           <FrameworkVersion>$(AspNetCoreVersion31)</FrameworkVersion>
-        </Option>
-        <Option Condition="'$(TestLatestOnly)' != 'true'">
-          <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
-          <FrameworkVersion>$(AspNetCoreVersion30)</FrameworkVersion>
         </Option>
       </Options>
     </Option>
