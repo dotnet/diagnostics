@@ -5,10 +5,8 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 using System.IO;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -75,26 +73,14 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             });
         }
 
-        [HttpGet("cpuprofile/{pid?}")]
-        public Task<ActionResult> CpuProfile(int? pid, [FromQuery][Range(-1, int.MaxValue)]int durationSeconds = 30)
-        {
-            TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
-            return InvokeService(async () =>
-            {
-                int pidValue = _diagnosticServices.ResolveProcess(pid);
-                IStreamWithCleanup result = await _diagnosticServices.StartCpuTrace(pidValue, duration, this.HttpContext.RequestAborted);
-                return new StreamWithCleanupResult(result, "application/octet-stream", FormattableString.Invariant($"{Guid.NewGuid()}.nettrace"));
-            });
-        }
-
         [HttpGet("trace/{pid?}")]
-        public Task<ActionResult> Trace(int? pid, [FromQuery][Range(-1, int.MaxValue)]int durationSeconds = 30)
+        public Task<ActionResult> Trace(int? pid, [FromQuery]TraceProfile profile = TraceProfile.All, [FromQuery][Range(-1, int.MaxValue)]int durationSeconds = 30)
         {
             TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
             return InvokeService(async () =>
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
-                IStreamWithCleanup result = await _diagnosticServices.StartTrace(pidValue, duration, this.HttpContext.RequestAborted);
+                IStreamWithCleanup result = await _diagnosticServices.StartTrace(pidValue, profile, duration, this.HttpContext.RequestAborted);
                 return new StreamWithCleanupResult(result, "application/octet-stream", FormattableString.Invariant($"{Guid.NewGuid()}.nettrace"));
             });
         }

@@ -12,6 +12,11 @@ namespace Microsoft.Diagnostics.Monitoring
     {
         private IList<MonitoringSourceConfiguration> _configurations;
 
+        public AggregateSourceConfiguration(IEnumerable<MonitoringSourceConfiguration> configurations)
+        {
+            _configurations = configurations.ToList();
+        }
+
         public AggregateSourceConfiguration(params MonitoringSourceConfiguration[] configurations)
         {
             _configurations = configurations;
