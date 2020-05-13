@@ -96,11 +96,12 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public async Task<IStreamWithCleanup> StartTrace(int pid, TimeSpan duration, CancellationToken token)
         {
-            AggregateSourceConfiguration configuration = new AggregateSourceConfiguration();
-            configuration.AddConfiguration(new HttpRequestSourceConfiguration());
-            configuration.AddConfiguration(new LoggingSourceConfiguration());
+            AggregateSourceConfiguration aggregateConfiguration = new AggregateSourceConfiguration(
+                new HttpRequestSourceConfiguration(),
+                new LoggingSourceConfiguration()
+            );
 
-            DiagnosticsMonitor monitor = new DiagnosticsMonitor(configuration);
+            DiagnosticsMonitor monitor = new DiagnosticsMonitor(aggregateConfiguration);
             Stream stream = await monitor.ProcessEvents(pid, duration, token);
             return new StreamWithCleanup(monitor, stream);
         }

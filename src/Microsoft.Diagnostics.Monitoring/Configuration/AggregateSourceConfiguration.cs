@@ -10,11 +10,11 @@ namespace Microsoft.Diagnostics.Monitoring
 {
     public sealed class AggregateSourceConfiguration : MonitoringSourceConfiguration
     {
-        private IList<MonitoringSourceConfiguration> _configurations = new List<MonitoringSourceConfiguration>();
+        private IList<MonitoringSourceConfiguration> _configurations;
 
-        public void AddConfiguration(MonitoringSourceConfiguration configuration)
+        public AggregateSourceConfiguration(params MonitoringSourceConfiguration[] configurations)
         {
-            _configurations.Add(configuration);
+            _configurations = configurations;
         }
 
         public override IList<EventPipeProvider> GetProviders()
