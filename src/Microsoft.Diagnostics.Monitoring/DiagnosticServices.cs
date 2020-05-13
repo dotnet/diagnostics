@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastSerialization;
 using Graphs;
+using Microsoft.Diagnostics.Monitoring.Configuration;
 using Microsoft.Diagnostics.Monitoring.Logging;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
@@ -96,7 +97,11 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public async Task<IStreamWithCleanup> StartTrace(int pid, TimeSpan duration, CancellationToken token)
         {
-            DiagnosticsMonitor monitor = new DiagnosticsMonitor(new LoggingSourceConfiguration());
+            AggregateSourceConfiguration configuration = new AggregateSourceConfiguration();
+            configuration.AddConfiguration(new HttpRequestSourceConfiguration());
+            configuration.AddConfiguration(new LoggingSourceConfiguration());
+
+            DiagnosticsMonitor monitor = new DiagnosticsMonitor(configuration);
             Stream stream = await monitor.ProcessEvents(pid, duration, token);
             return new StreamWithCleanup(monitor, stream);
         }
