@@ -274,19 +274,6 @@ stages:
 
       - template: /eng/build.yml
         parameters:
-          name: Ubuntu_14_04
-          osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-14.04-1735d26-20190521133852
-          dependsOn: CentOS_7
-          testOnly: true
-          strategy:
-            matrix:
-              Build_Debug:
-                _BuildConfig: Debug
-                _BuildArch: x64
-
-      - template: /eng/build.yml
-        parameters:
           name: Ubuntu_16_04
           osGroup: Linux
           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-09ca40b-20190520220842

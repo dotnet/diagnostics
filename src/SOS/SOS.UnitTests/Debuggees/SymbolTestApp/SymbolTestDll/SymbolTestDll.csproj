@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework Condition="'$(BuildProjectFramework)' != ''">$(BuildProjectFramework)</TargetFramework>
-    <TargetFrameworks Condition="'$(BuildProjectFramework)' == '' and '$(OS)' != 'Windows_NT'">netcoreapp2.1;netcoreapp3.0</TargetFrameworks>
-    <TargetFrameworks Condition="'$(BuildProjectFramework)' == '' and '$(OS)' == 'Windows_NT'">net462;netcoreapp2.1;netcoreapp3.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(BuildProjectFramework)' == '' and '$(OS)' != 'Windows_NT'">netcoreapp2.1;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks Condition="'$(BuildProjectFramework)' == '' and '$(OS)' == 'Windows_NT'">net462;netcoreapp2.1;netcoreapp3.1</TargetFrameworks>
   </PropertyGroup>
 </Project>

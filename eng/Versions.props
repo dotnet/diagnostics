@@ -10,11 +10,9 @@
     <!-- Latest symstore version updated by darc -->
     <MicrosoftSymbolStoreVersion>1.0.126101</MicrosoftSymbolStoreVersion>
     <!-- Runtime versions to test -->
-    <MicrosoftNETCoreApp21Version>2.1.16</MicrosoftNETCoreApp21Version>
+    <MicrosoftNETCoreApp21Version>2.1.18</MicrosoftNETCoreApp21Version>
     <MicrosoftAspNetCoreApp21Version>$(MicrosoftNETCoreApp21Version)</MicrosoftAspNetCoreApp21Version>
-    <MicrosoftNETCoreApp30Version>3.0.3</MicrosoftNETCoreApp30Version>
-    <MicrosoftAspNetCoreApp30Version>$(MicrosoftNETCoreApp30Version)</MicrosoftAspNetCoreApp30Version>
-    <MicrosoftNETCoreApp31Version>3.1.2</MicrosoftNETCoreApp31Version>
+    <MicrosoftNETCoreApp31Version>3.1.4</MicrosoftNETCoreApp31Version>
     <MicrosoftAspNetCoreApp31Version>$(MicrosoftNETCoreApp31Version)</MicrosoftAspNetCoreApp31Version>
     <!-- Latest shared runtime version updated by darc -->
     <MicrosoftNETCoreAppVersion>5.0.0-preview.5.20261.9</MicrosoftNETCoreAppVersion>
