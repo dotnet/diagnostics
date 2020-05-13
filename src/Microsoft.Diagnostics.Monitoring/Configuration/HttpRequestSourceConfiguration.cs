@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using Microsoft.Diagnostics.NETCore.Client;
 
-namespace Microsoft.Diagnostics.Monitoring.Configuration
+namespace Microsoft.Diagnostics.Monitoring
 {
     public sealed class HttpRequestSourceConfiguration : MonitoringSourceConfiguration
     {

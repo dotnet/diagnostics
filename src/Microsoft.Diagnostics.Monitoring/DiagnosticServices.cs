@@ -12,7 +12,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastSerialization;
 using Graphs;
-using Microsoft.Diagnostics.Monitoring.Configuration;
 using Microsoft.Diagnostics.Monitoring.Logging;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;

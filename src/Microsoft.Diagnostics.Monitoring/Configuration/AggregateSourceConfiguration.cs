@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Diagnostics.NETCore.Client;
 
-namespace Microsoft.Diagnostics.Monitoring.Configuration
+namespace Microsoft.Diagnostics.Monitoring
 {
     public sealed class AggregateSourceConfiguration : MonitoringSourceConfiguration
     {
