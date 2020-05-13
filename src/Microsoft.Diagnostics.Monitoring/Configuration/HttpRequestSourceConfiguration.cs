@@ -10,7 +10,7 @@ namespace Microsoft.Diagnostics.Monitoring
 {
     public sealed class HttpRequestSourceConfiguration : MonitoringSourceConfiguration
     {
-        private const string DiagnosticFilterString = "\"" +
+        private const string DiagnosticFilterString =
                 "Microsoft.AspNetCore/Microsoft.AspNetCore.Hosting.HttpRequestIn.Start@Activity1Start:-" +
                     "Request.Scheme" +
                     ";Request.Host" +
@@ -49,8 +49,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 "HttpHandlerDiagnosticListener/System.Net.Http.HttpRequestOut.Stop@Activity2Stop:-" +
                     ";ActivityDuration=*Activity.Duration.Ticks" +
                     ";ActivityId=*Activity.Id" +
-                "\r\n" +
-                "\"";
+                "\r\n";
 
         public override IList<EventPipeProvider> GetProviders()
         {
