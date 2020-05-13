@@ -19,6 +19,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public override IList<EventPipeProvider> GetProviders()
         {
+            // CONSIDER: Might have to deduplicate providers and merge them together.
             return _configurations.SelectMany(c => c.GetProviders()).ToList();
         }
     }
