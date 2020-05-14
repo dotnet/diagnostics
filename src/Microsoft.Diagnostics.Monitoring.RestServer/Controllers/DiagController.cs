@@ -74,13 +74,17 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         }
 
         [HttpGet("trace/{pid?}")]
-        public Task<ActionResult> Trace(int? pid, [FromQuery]TraceProfile profile = TraceProfile.All, [FromQuery][Range(-1, int.MaxValue)]int durationSeconds = 30)
+        public Task<ActionResult> Trace(
+            int? pid,
+            [FromQuery]TraceProfile profile = TraceProfile.All,
+            [FromQuery][Range(-1, int.MaxValue)]int durationSeconds = 30,
+            [FromQuery][Range(1, int.MaxValue)] int metricsIntervalSeconds = 1)
         {
             TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
             return InvokeService(async () =>
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
-                IStreamWithCleanup result = await _diagnosticServices.StartTrace(pidValue, profile, duration, this.HttpContext.RequestAborted);
+                IStreamWithCleanup result = await _diagnosticServices.StartTrace(pidValue, profile, duration, metricsIntervalSeconds, this.HttpContext.RequestAborted);
                 return new StreamWithCleanupResult(result, "application/octet-stream", FormattableString.Invariant($"{Guid.NewGuid()}.nettrace"));
             });
         }

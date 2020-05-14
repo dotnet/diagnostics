@@ -86,7 +86,7 @@ namespace Microsoft.Diagnostics.Monitoring
             return stream;
         }
 
-        public async Task<IStreamWithCleanup> StartTrace(int pid, TraceProfile profile, TimeSpan duration, CancellationToken token)
+        public async Task<IStreamWithCleanup> StartTrace(int pid, TraceProfile profile, TimeSpan duration, int metricsIntervalSeconds, CancellationToken token)
         {
             IList<MonitoringSourceConfiguration> configurations = new List<MonitoringSourceConfiguration>();
             if (profile.HasFlag(TraceProfile.Cpu))
@@ -103,7 +103,7 @@ namespace Microsoft.Diagnostics.Monitoring
             }
             if (profile.HasFlag(TraceProfile.Metrics))
             {
-                configurations.Add(new MetricSourceConfiguration(5));
+                configurations.Add(new MetricSourceConfiguration(metricsIntervalSeconds));
             }
 
             AggregateSourceConfiguration aggregateConfiguration = new AggregateSourceConfiguration(configurations.ToArray());
