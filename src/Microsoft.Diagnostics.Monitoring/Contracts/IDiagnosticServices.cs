@@ -44,7 +44,6 @@ namespace Microsoft.Diagnostics.Monitoring
         Cpu =     0x1,
         Http =    0x2,
         Logs =    0x4,
-        Metrics = 0x8,
-        All = Cpu | Http | Logs | Metrics
+        Metrics = 0x8
     }
 }

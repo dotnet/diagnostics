@@ -21,6 +21,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
     [ApiController]
     public class DiagController : ControllerBase
     {
+        private const TraceProfile DefaultTraceProfiles = TraceProfile.Cpu | TraceProfile.Http | TraceProfile.Metrics;
+
         private readonly ILogger<DiagController> _logger;
         private readonly IDiagnosticServices _diagnosticServices;
 
@@ -76,7 +78,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         [HttpGet("trace/{pid?}")]
         public Task<ActionResult> Trace(
             int? pid,
-            [FromQuery]TraceProfile profile = TraceProfile.All,
+            [FromQuery]TraceProfile profile = DefaultTraceProfiles,
             [FromQuery][Range(-1, int.MaxValue)]int durationSeconds = 30,
             [FromQuery][Range(1, int.MaxValue)] int metricsIntervalSeconds = 1)
         {
