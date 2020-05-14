@@ -103,10 +103,10 @@ namespace Microsoft.Diagnostics.Monitoring
             }
             if (profile.HasFlag(TraceProfile.Metrics))
             {
-                configurations.Add(new MetricSourceConfiguration());
+                configurations.Add(new MetricSourceConfiguration(5));
             }
 
-            AggregateSourceConfiguration aggregateConfiguration = new AggregateSourceConfiguration(configurations);
+            AggregateSourceConfiguration aggregateConfiguration = new AggregateSourceConfiguration(configurations.ToArray());
 
             DiagnosticsMonitor monitor = new DiagnosticsMonitor(aggregateConfiguration);
             Stream stream = await monitor.ProcessEvents(pid, duration, token);
