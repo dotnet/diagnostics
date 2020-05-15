@@ -50,7 +50,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
                 try
                 {
-                    session = client.StartEventPipeSession(_sourceConfig.GetProviders());
+                    session = client.StartEventPipeSession(_sourceConfig.GetProviders(), _sourceConfig.RequestRundown, _sourceConfig.BufferSizeInMB);
                 }
                 catch (EndOfStreamException e)
                 {
