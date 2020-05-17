@@ -90,7 +90,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
                     Windows.CollectDump(process, output, type);
                 }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                else
                 {
                     var client = new DiagnosticsClient(processId);
 
@@ -110,9 +110,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
                     // Send the command to the runtime to initiate the core dump
                     client.WriteDump(dumpType, output, diag);
-                }
-                else {
-                    throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
                 }
             }
             catch (Exception ex) when 
