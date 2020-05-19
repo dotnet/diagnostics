@@ -2,10 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using System;
 using System.Collections.Generic;
-using System.Text;
+using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
@@ -19,5 +17,9 @@ namespace Microsoft.Diagnostics.Monitoring
         public const string TplEventSource = "System.Threading.Tasks.TplEventSource";
 
         public abstract IList<EventPipeProvider> GetProviders();
+
+        public virtual bool RequestRundown => true;
+
+        public virtual int BufferSizeInMB => 256;
     }
 }

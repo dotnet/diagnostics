@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         Task<Stream> GetGcDump(int pid, CancellationToken token);
 
-        Task<IStreamWithCleanup> StartTrace(int pid, TraceProfile profile, TimeSpan duration, int metricsIntervalSeconds, CancellationToken token);
+        Task<IStreamWithCleanup> StartTrace(int pid, MonitoringSourceConfiguration configuration, TimeSpan duration, CancellationToken token);
 
         Task StartLogs(Stream outputStream, int pid, TimeSpan duration, CancellationToken token);
     }

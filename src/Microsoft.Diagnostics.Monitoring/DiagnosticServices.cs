@@ -86,29 +86,9 @@ namespace Microsoft.Diagnostics.Monitoring
             return stream;
         }
 
-        public async Task<IStreamWithCleanup> StartTrace(int pid, TraceProfile profile, TimeSpan duration, int metricsIntervalSeconds, CancellationToken token)
+        public async Task<IStreamWithCleanup> StartTrace(int pid, MonitoringSourceConfiguration configuration, TimeSpan duration, CancellationToken token)
         {
-            IList<MonitoringSourceConfiguration> configurations = new List<MonitoringSourceConfiguration>();
-            if (profile.HasFlag(TraceProfile.Cpu))
-            {
-                configurations.Add(new CpuProfileConfiguration());
-            }
-            if (profile.HasFlag(TraceProfile.Http))
-            {
-                configurations.Add(new HttpRequestSourceConfiguration());
-            }
-            if (profile.HasFlag(TraceProfile.Logs))
-            {
-                configurations.Add(new LoggingSourceConfiguration());
-            }
-            if (profile.HasFlag(TraceProfile.Metrics))
-            {
-                configurations.Add(new MetricSourceConfiguration(metricsIntervalSeconds));
-            }
-
-            AggregateSourceConfiguration aggregateConfiguration = new AggregateSourceConfiguration(configurations.ToArray());
-
-            DiagnosticsMonitor monitor = new DiagnosticsMonitor(aggregateConfiguration);
+            DiagnosticsMonitor monitor = new DiagnosticsMonitor(configuration);
             Stream stream = await monitor.ProcessEvents(pid, duration, token);
             return new StreamWithCleanup(monitor, stream);
         }
