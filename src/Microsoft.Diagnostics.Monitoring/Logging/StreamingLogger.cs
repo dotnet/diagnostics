@@ -9,7 +9,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 
-namespace Microsoft.Diagnostics.Monitoring.Logging
+namespace Microsoft.Diagnostics.Monitoring
 {
     /// <summary>
     /// This class is used to write structured event data in json format to an output stream.

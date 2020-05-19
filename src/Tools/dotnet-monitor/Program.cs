@@ -30,8 +30,8 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                   description: "Monitor logs and metrics in a .NET application send the results to a chosen destination.")
               {
                 // Handler
-                CommandHandler.Create<CancellationToken, IConsole, string[]>(new DiagnosticsMonitorCommandHandler().Start),
-                PortOption()
+                CommandHandler.Create<CancellationToken, IConsole, string[], bool>(new DiagnosticsMonitorCommandHandler().Start),
+                PortOption(), ProvideMetrics()
               };
 
         private static Option PortOption() =>
@@ -40,6 +40,14 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 description: "Bindings for the REST api.")
             {
                 Argument = new Argument<string[]>(name: "urls", defaultValue: new[] { "http://localhost:52323" })
+            };
+
+        private static Option ProvideMetrics() =>
+            new Option(
+                aliases: new[] { "-m", "--metrics" },
+                description: "Enable publishing of metrics")
+            {
+                Argument = new Argument<bool>(name: "metrics", defaultValue: true )
             };
 
         public static Task<int> Main(string[] args)

@@ -12,7 +12,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastSerialization;
 using Graphs;
-using Microsoft.Diagnostics.Monitoring.Logging;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -22,12 +21,6 @@ namespace Microsoft.Diagnostics.Monitoring
     public sealed class DiagnosticServices : IDiagnosticServices
     {
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
-        private ContextConfiguration _contextConfiguration;
-
-        public DiagnosticServices(IOptions<ContextConfiguration> contextConfig)
-        {
-            _contextConfiguration = contextConfig.Value;
-        }
 
         public IEnumerable<int> GetProcesses()
         {
@@ -69,8 +62,7 @@ namespace Microsoft.Diagnostics.Monitoring
         public async Task<Stream> GetGcDump(int pid, CancellationToken cancellationToken)
         {
             var graph = new MemoryGraph(50_000);
-            await using var processor = new DiagnosticsEventPipeProcessor(_contextConfiguration,
-                PipeMode.GCDump,
+            await using var processor = new DiagnosticsEventPipeProcessor(PipeMode.GCDump,
                 gcGraph: graph);
 
             await processor.Process(pid, Timeout.InfiniteTimeSpan, cancellationToken);
@@ -98,8 +90,7 @@ namespace Microsoft.Diagnostics.Monitoring
             using var loggerFactory = new LoggerFactory();
             loggerFactory.AddProvider(new StreamingLoggerProvider(outputStream));
 
-            await using var processor = new DiagnosticsEventPipeProcessor(_contextConfiguration,
-                PipeMode.Logs,
+            await using var processor = new DiagnosticsEventPipeProcessor(PipeMode.Logs,
                 loggerFactory: loggerFactory);
 
             await processor.Process(pid, duration, token);
@@ -145,6 +136,13 @@ namespace Microsoft.Diagnostics.Monitoring
                 case 1:
                     return pids[0];
                 default:
+#if DEBUG
+                    Process process = pids.Select(pid => Process.GetProcessById(pid)).FirstOrDefault(p => string.Equals(p.ProcessName, "iisexpress", StringComparison.OrdinalIgnoreCase));
+                    if (process != null)
+                    {
+                        return process.Id;
+                    }
+#endif
                     throw new ArgumentException("Unable to select a single target process because multiple target processes have been discovered.");
             }
         }

@@ -34,26 +34,20 @@ namespace Microsoft.Diagnostics.Monitoring
         private readonly ILoggerFactory _loggerFactory;
         private readonly IEnumerable<IMetricsLogger> _metricLoggers;
         private readonly PipeMode _mode;
-
-        //These values don't change so we compute them only once
-        private readonly List<string> _dimValues;
-
-        public const string NamespaceName = "Namespace";
-        public const string NodeName = "Node";
-        private static readonly List<string> DimNames = new List<string> { NamespaceName, NodeName };
+        private readonly int _metricIntervalSeconds;
 
         public DiagnosticsEventPipeProcessor(
-            ContextConfiguration contextConfig,
             PipeMode mode,
             ILoggerFactory loggerFactory = null,
             IEnumerable<IMetricsLogger> metricLoggers = null,
+            int metricIntervalSeconds = 10,
             MemoryGraph gcGraph = null)
         {
-            _dimValues = new List<string> { contextConfig.Namespace, contextConfig.Node };
             _metricLoggers = metricLoggers ?? Enumerable.Empty<IMetricsLogger>();
             _mode = mode;
             _loggerFactory = loggerFactory;
             _gcGraph = gcGraph;
+            _metricIntervalSeconds = metricIntervalSeconds;
         }
 
         public async Task Process(int pid, TimeSpan duration, CancellationToken token)
@@ -72,7 +66,7 @@ namespace Microsoft.Diagnostics.Monitoring
                     }
                     if (_mode == PipeMode.Metrics)
                     {
-                        config = new MetricSourceConfiguration();
+                        config = new MetricSourceConfiguration(_metricIntervalSeconds);
                     }
                     if (_mode == PipeMode.GCDump)
                     {
@@ -280,31 +274,62 @@ namespace Microsoft.Diagnostics.Monitoring
                         IDictionary<string, object> payloadVal = (IDictionary<string, object>)(traceEvent.PayloadValue(0));
                         IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
 
+                        //Make sure we are part of the requested series. If multiple clients request metrics, all of them get the metrics.
+                        string series = payloadFields["Series"].ToString();
+                        if (GetInterval(series) != _metricIntervalSeconds * 1000)
+                        {
+                            return;
+                        }
+
+                        float intervalSec = (float)payloadFields["IntervalSec"];
                         string counterName = payloadFields["Name"].ToString();
                         string displayName = payloadFields["DisplayName"].ToString();
                         string displayUnits = payloadFields["DisplayUnits"].ToString();
                         double value = 0;
+                        MetricType metricType = MetricType.Avg;
+
                         if (payloadFields["CounterType"].Equals("Mean"))
                         {
                             value = (double)payloadFields["Mean"];
                         }
                         else if (payloadFields["CounterType"].Equals("Sum"))
                         {
+                            metricType = MetricType.Sum;
                             value = (double)payloadFields["Increment"];
                             if (string.IsNullOrEmpty(displayUnits))
                             {
                                 displayUnits = "count";
                             }
-                            displayUnits += "/sec";
+                            //TODO Should we make these /sec like the dotnet-counters tool?
                         }
 
-                        PostMetric(new Metric(traceEvent.TimeStamp, traceEvent.ProviderName, counterName, displayName, displayUnits, value, dimNames: DimNames, dimValues: _dimValues));
+                        // Note that dimensional data such as pod and namespace are automatically added in prometheus and azure monitor scenarios.
+                        // We no longer added it here.
+                        PostMetric(new Metric(traceEvent.TimeStamp,
+                            traceEvent.ProviderName,
+                            counterName, displayName,
+                            displayUnits,
+                            value,
+                            metricType,
+                            intervalSec,
+                            dimNames: new List<string>(0), dimValues: new List<string>(0)));
                     }
                 }
                 catch (Exception)
                 {
                 }
             };
+        }
+
+        private static int GetInterval(string series)
+        {
+            const string comparison = "Interval=";
+            int interval = 0;
+            if (series.StartsWith(comparison, StringComparison.OrdinalIgnoreCase))
+            {
+                int.TryParse(series.Substring(comparison.Length), out interval);
+            }
+            return interval;
         }
 
         private void PostMetric(Metric metric)

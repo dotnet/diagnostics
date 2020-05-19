@@ -4,17 +4,22 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
     /// <summary>
-    /// Do not rename these fields. These are used to bind to the app's configuration.
+    /// Used to store metrics. A snapshot will be requested periodically.
     /// </summary>
-    public class ContextConfiguration
+    public interface IMetricsStore : IDisposable
     {
-        public string Namespace { get; set; }
+        void AddMetric(Metric metric);
 
-        public string Node { get; set; }
+        Task SnapshotMetrics(Stream stream, CancellationToken token);
+
+        void Clear();
     }
 }

@@ -5,6 +5,7 @@
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Diagnostics.Monitoring;
+using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -20,26 +21,39 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 {
     internal sealed class DiagnosticsMonitorCommandHandler
     {
-        public async Task<int> Start(CancellationToken token, IConsole console, string[] urls)
+        public async Task<int> Start(CancellationToken token, IConsole console, string[] urls, bool metrics)
         {
             //CONSIDER The console logger uses the standard AddConsole, and therefore disregards IConsole.
-            using IWebHost host = CreateWebHostBuilder(console, urls).Build();
+            using IWebHost host = CreateWebHostBuilder(console, urls, metrics).Build();
             await host.RunAsync(token);
             return 0;
         }
 
-        public IWebHostBuilder CreateWebHostBuilder(IConsole console, string[] urls)
+        public IWebHostBuilder CreateWebHostBuilder(IConsole console, string[] urls, bool metrics)
         {
+            string metricsEndpoint = null;
+            if (metrics)
+            {
+                metricsEndpoint = GetMetricsEndpoint();
+                urls = new List<string>(urls) { metricsEndpoint }.ToArray();
+            }
+
             IWebHostBuilder builder = WebHost.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((IConfigurationBuilder builder) =>
                 {
-                    ConfigureNames(builder);
+                    if (metrics)
+                    {
+                        ConfigureMetricsEndpoint(builder, metricsEndpoint);
+                    }
                 })
                 .ConfigureServices((WebHostBuilderContext context, IServiceCollection services) =>
                 {
                     //TODO Many of these service additions should be done through extension methods
                     services.AddSingleton<IDiagnosticServices, DiagnosticServices>();
-                    services.Configure<ContextConfiguration>(context.Configuration);
+                    if (metrics)
+                    {
+                        services.Configure<PrometheusConfiguration>(context.Configuration.GetSection(nameof(PrometheusConfiguration)));
+                    }
                 })
                 .UseUrls(urls)
                 .UseStartup<Startup>();
@@ -47,33 +61,30 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             return builder;
         }
 
-        private static void ConfigureNames(IConfigurationBuilder builder)
+        private string GetMetricsEndpoint()
         {
-            string hostName = Environment.GetEnvironmentVariable("HOSTNAME");
-            if (string.IsNullOrEmpty(hostName))
+            string endpoint = "http://localhost:52325";
+            if (RuntimeInfo.IsInDockerContainer)
             {
-                hostName = Environment.MachineName;
+                //Necessary for prometheus scraping
+                endpoint = "http://*:52325";
             }
-            string namespaceName = null;
-            try
-            {
-                string nsFile = @"/var/run/secrets/kubernetes.io/serviceaccount/namespace";
-                if (File.Exists(nsFile))
-                {
-                    namespaceName = File.ReadAllText(nsFile);
-                }
-            }
-            catch
-            {
-            }
+            return endpoint;
+        }
 
-            if (string.IsNullOrEmpty(namespaceName))
+        private static void ConfigureMetricsEndpoint(IConfigurationBuilder builder, string endpoint)
+        {
+            builder.AddInMemoryCollection(new Dictionary<string, string>
             {
-                namespaceName = "default";
-            }
+                {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.Endpoint)), endpoint},
+                {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.Enabled)), true.ToString()},
+                {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.UpdateIntervalSeconds)), 30.ToString()}
+            });
+        }
 
-            builder.AddInMemoryCollection(new Dictionary<string, string> { {DiagnosticsEventPipeProcessor.NamespaceName, namespaceName }, { DiagnosticsEventPipeProcessor.NodeName, hostName } });
-
+        private static string MakeKey(string parent, string child)
+        {
+            return FormattableString.Invariant($"{parent}:{child}");
         }
     }
 }
