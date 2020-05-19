@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.Tracing;
-using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Runtime.InteropServices;
@@ -14,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Diagnostics.Monitoring.RestServer.Models;
+using Microsoft.Diagnostics.Monitoring.RestServer.Validation;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
 
@@ -126,10 +126,15 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
                 foreach (EventPipeProviderModel providerModel in configuration.Providers)
                 {
+                    if (!IntegerOrHexStringAttribute.TryParse(providerModel.Keywords, out long keywords, out string parseError))
+                    {
+                        throw new InvalidOperationException(parseError);
+                    }
+
                     providers.Add(new EventPipeProvider(
                         providerModel.Name,
                         MapEventLevel(providerModel.EventLevel),
-                        providerModel.Keywords,
+                        keywords,
                         providerModel.Arguments
                         ));
                 }

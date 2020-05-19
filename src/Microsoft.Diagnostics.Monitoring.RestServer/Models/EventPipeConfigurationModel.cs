@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Models
         public bool RequestRundown { get; set; } = true;
 
         [DataMember(Name = "bufferSizeInMB")]
-        [Range(1, int.MaxValue)]
+        [Range(1, 1024)]
         public int BufferSizeInMB { get; set; } = 256;
     }
 }

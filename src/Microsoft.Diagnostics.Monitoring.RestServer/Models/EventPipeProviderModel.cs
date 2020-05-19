@@ -4,7 +4,7 @@
 
 using System.Collections.Generic;
 using System.Runtime.Serialization;
-using Microsoft.Diagnostics.Monitoring.RestServer.Converters;
+using Microsoft.Diagnostics.Monitoring.RestServer.Validation;
 using Newtonsoft.Json;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer.Models
@@ -16,8 +16,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Models
         public string Name { get; set; }
 
         [DataMember(Name = "keywords", IsRequired = true)]
-        [JsonConverter(typeof(IntegerOrHexJsonConverter))]
-        public long Keywords { get; set; }
+        [IntegerOrHexString]
+        public string Keywords { get; set; }
 
         [DataMember(Name = "eventLevel", IsRequired = true)]
         public EventPipeProviderEventLevel EventLevel { get; set; }
