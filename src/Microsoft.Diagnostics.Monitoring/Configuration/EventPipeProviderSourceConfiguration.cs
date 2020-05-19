@@ -2,16 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
 using System.Collections.Generic;
+using System.Linq;
+using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
     public sealed class EventPipeProviderSourceConfiguration : MonitoringSourceConfiguration
     {
-        private IList<EventPipeProvider> _providers;
-        private bool _requestRundown;
-        private int _bufferSizeInMB;
+        private readonly IEnumerable<EventPipeProvider> _providers;
+        private readonly bool _requestRundown;
+        private readonly int _bufferSizeInMB;
 
         public EventPipeProviderSourceConfiguration(bool requestRundown = true, int bufferSizeInMB = 256, params EventPipeProvider[] providers)
         {
@@ -22,7 +23,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public override IList<EventPipeProvider> GetProviders()
         {
-            return _providers;
+            return _providers.ToList();
         }
 
         public override bool RequestRundown => _requestRundown;
