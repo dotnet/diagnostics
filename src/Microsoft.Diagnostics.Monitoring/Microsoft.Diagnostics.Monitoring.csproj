@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
     <Description>Monitoring for dotnet</Description>
-    <IsPackable>false</IsPackable>
+    <IsPackable>true</IsPackable>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
