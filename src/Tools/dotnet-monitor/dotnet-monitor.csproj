@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
-    <PackAsToolShimRuntimeIdentifiers>linux-x64;win-x64</PackAsToolShimRuntimeIdentifiers>
+    <RuntimeIdentifiers>linux-x64;linux-musl-x64;win-x64</RuntimeIdentifiers>
+    <PackAsToolShimRuntimeIdentifiers>linux-x64;linux-musl-x64;win-x64</PackAsToolShimRuntimeIdentifiers>
     <RootNamespace>Microsoft.Diagnostics.Tools.Monitor</RootNamespace>
     <ToolCommandName>dotnet-monitor</ToolCommandName>
     <Description>.NET Core Diagnostic Monitoring Tool</Description>
