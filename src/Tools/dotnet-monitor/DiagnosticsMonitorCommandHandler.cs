@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,21 +22,22 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 {
     internal sealed class DiagnosticsMonitorCommandHandler
     {
-        public async Task<int> Start(CancellationToken token, IConsole console, string[] urls, bool metrics)
+        private const string ConfigPrefix = "DotnetMonitor_";
+        private const string ConfigPath = "/etc/dotnet-monitor";
+
+        public async Task<int> Start(CancellationToken token, IConsole console, string[] urls, string[] metricUrls, bool metrics)
         {
             //CONSIDER The console logger uses the standard AddConsole, and therefore disregards IConsole.
-            using IWebHost host = CreateWebHostBuilder(console, urls, metrics).Build();
+            using IWebHost host = CreateWebHostBuilder(console, urls, metricUrls, metrics).Build();
             await host.RunAsync(token);
             return 0;
         }
 
-        public IWebHostBuilder CreateWebHostBuilder(IConsole console, string[] urls, bool metrics)
+        public IWebHostBuilder CreateWebHostBuilder(IConsole console, string[] urls, string[] metricUrls, bool metrics)
         {
-            string metricsEndpoint = null;
             if (metrics)
             {
-                metricsEndpoint = GetMetricsEndpoint();
-                urls = new List<string>(urls) { metricsEndpoint }.ToArray();
+                urls = urls.Concat(metricUrls).ToArray();
             }
 
             IWebHostBuilder builder = WebHost.CreateDefaultBuilder()
@@ -43,7 +45,10 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 {
                     if (metrics)
                     {
-                        ConfigureMetricsEndpoint(builder, metricsEndpoint);
+                        //Note these are in precedence order.
+                        ConfigureMetricsEndpoint(builder, metricUrls);
+                        builder.AddKeyPerFile(ConfigPath, optional: true);
+                        builder.AddEnvironmentVariables(ConfigPrefix);
                     }
                 })
                 .ConfigureServices((WebHostBuilderContext context, IServiceCollection services) =>
@@ -61,24 +66,14 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             return builder;
         }
 
-        private string GetMetricsEndpoint()
-        {
-            string endpoint = "http://localhost:52325";
-            if (RuntimeInfo.IsInDockerContainer)
-            {
-                //Necessary for prometheus scraping
-                endpoint = "http://*:52325";
-            }
-            return endpoint;
-        }
-
-        private static void ConfigureMetricsEndpoint(IConfigurationBuilder builder, string endpoint)
+        private static void ConfigureMetricsEndpoint(IConfigurationBuilder builder, string[] metricEndpoints)
         {
             builder.AddInMemoryCollection(new Dictionary<string, string>
             {
-                {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.Endpoint)), endpoint},
+                {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.Endpoints)), string.Join(';',metricEndpoints)},
                 {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.Enabled)), true.ToString()},
-                {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.UpdateIntervalSeconds)), 30.ToString()}
+                {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.UpdateIntervalSeconds)), 10.ToString()},
+                {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.MetricCount)), 3.ToString()}
             });
         }
 

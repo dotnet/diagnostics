@@ -21,12 +21,15 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
     {
         private readonly DiagnosticsEventPipeProcessor _pipeProcessor;
         private readonly IDiagnosticServices _services;
+        private readonly MetricsStoreService _store;
 
         public MetricsService(IDiagnosticServices services,
-            IMetricsStore store,
-            IOptions<PrometheusConfiguration> metricsConfiguration)
+            IOptions<PrometheusConfiguration> metricsConfiguration,
+            MetricsStoreService metricsStore)
         {
-            _pipeProcessor = new DiagnosticsEventPipeProcessor(PipeMode.Metrics, metricLoggers: new[] { new MetricsLogger(store) },
+            _store = metricsStore;
+
+            _pipeProcessor = new DiagnosticsEventPipeProcessor(PipeMode.Metrics, metricLoggers: new[] { new MetricsLogger(_store.MetricsStore) },
                 metricIntervalSeconds: metricsConfiguration.Value.UpdateIntervalSeconds);
             _services = services;
         }

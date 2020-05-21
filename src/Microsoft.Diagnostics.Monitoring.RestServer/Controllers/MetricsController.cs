@@ -17,11 +17,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
     public class MetricsController : ControllerBase
     {
         private readonly ILogger<MetricsController> _logger;
-        private readonly IMetricsStore _metricsStore;
+        private readonly MetricsStoreService _metricsStore;
         private readonly PrometheusConfiguration _prometheusConfiguration;
 
         public MetricsController(ILogger<MetricsController> logger,
-            IMetricsStore metricsStore,
+            MetricsStoreService metricsStore,
             IOptions<PrometheusConfiguration> prometheusConfiguration)
         {
             _logger = logger;
@@ -41,7 +41,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
                 return new OutputStreamResult(async (outputStream, token) =>
                 {
-                    await _metricsStore.SnapshotMetrics(outputStream, token);
+                    await _metricsStore.MetricsStore.SnapshotMetrics(outputStream, token);
                 }, "text/plain; version=0.0.4");
             });
         }

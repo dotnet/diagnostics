@@ -4,6 +4,7 @@
 
 using Microsoft.AspNetCore.Mvc.ActionConstraints;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
@@ -22,18 +23,18 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
     {
         private sealed class HostConstraint : IActionConstraint
         {
-            private readonly Uri _restrictedUri;
+            private readonly int?[] _restrictedPorts;
 
-            public HostConstraint(Uri restrictedUri)
+            public HostConstraint(int?[] restrictedPorts)
             {
-                _restrictedUri = restrictedUri;
+                _restrictedPorts = restrictedPorts;
             }
 
             public int Order => 0;
 
             public bool Accept(ActionConstraintContext context)
             {
-                return context.RouteContext.HttpContext.Request.Host.Port != _restrictedUri?.Port;
+                return !_restrictedPorts.Any(port => context.RouteContext.HttpContext.Request.Host.Port == port);
             }
         }
 
@@ -41,8 +42,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 
         public IActionConstraint CreateInstance(IServiceProvider services)
         {
-            var metricOptions = services.GetService(typeof(IOptions<PrometheusConfiguration>)) as IOptions<PrometheusConfiguration>;
-            return new HostConstraint(metricOptions.Value.Enabled ? metricOptions.Value.EndpointAddress : null);
+            var metricOptions = services.GetRequiredService<IOptions<PrometheusConfiguration>>();
+            return new HostConstraint(metricOptions.Value.Enabled ? metricOptions.Value.Ports : Array.Empty<int?>());
         }
     }
 }

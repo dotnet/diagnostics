@@ -34,6 +34,7 @@
     <MicrosoftAspNetCoreHttpsPolicyVersion>2.1.1</MicrosoftAspNetCoreHttpsPolicyVersion>
     <MicrosoftAspNetCoreMvcVersion>2.1.3</MicrosoftAspNetCoreMvcVersion>
     <MicrosoftAspNetCoreResponseCompressionVersion>2.1.1</MicrosoftAspNetCoreResponseCompressionVersion>
+    <MicrosoftBclHashCodeVersion>1.1.0</MicrosoftBclHashCodeVersion>
     <MicrosoftBclAsyncInterfacesVersion>1.1.0</MicrosoftBclAsyncInterfacesVersion>
     <MicrosoftDiagnosticsRuntimeVersion>1.1.122004</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>

@@ -28,35 +28,76 @@ namespace Microsoft.Diagnostics.Monitoring
             {"%", "_ratio" },
         };
 
-        private Dictionary<string, List<Metric>> _allMetrics = new Dictionary<string, List<Metric>>();
+        private sealed class MetricKey
+        {
+            private Metric _metric;
+
+            public MetricKey(Metric metric)
+            {
+                _metric = metric;
+            }
+
+            public override int GetHashCode()
+            {
+                HashCode code = new HashCode();
+                code.Add(_metric.Name);
+                foreach(string name in _metric.DimNames)
+                {
+                    code.Add(name);
+                }
+                foreach(string value in _metric.DimValues)
+                {
+                    code.Add(value);
+                }
+                return code.ToHashCode();
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (obj is MetricKey metricKey)
+                {
+                    return CompareMetrics(_metric, metricKey._metric);
+                }
+                return false;
+            }
+        }
+
+        private Dictionary<MetricKey, Queue<Metric>> _allMetrics = new Dictionary<MetricKey, Queue<Metric>>();
+        private readonly int _maxMetricCount;
+
+        public MetricsStore(int maxMetricCount)
+        {
+            if (maxMetricCount < 1)
+            {
+                throw new ArgumentException("Invalid metric count");
+            }
+            _maxMetricCount = maxMetricCount;
+        }
 
         public void AddMetric(Metric metric)
         {
             lock (_allMetrics)
             {
-                if (!_allMetrics.TryGetValue(metric.Name, out List<Metric> metrics))
+                var metricKey = new MetricKey(metric);
+                if (!_allMetrics.TryGetValue(metricKey, out Queue<Metric> metrics))
                 {
-                    metrics = new List<Metric>();
-                    _allMetrics.Add(metric.Name, metrics);
+                    metrics = new Queue<Metric>();
+                    _allMetrics.Add(metricKey, metrics);
                 }
-                int index = metrics.FindIndex(m => CompareMetrics(m, metric));
-                if (index < 0)
+                metrics.Enqueue(metric);
+                if (metrics.Count > _maxMetricCount)
                 {
-                    metrics.Add(metric);
-                }
-                else
-                {
-                    metrics[index] = metric;
+                    metrics.Dequeue();
                 }
             }
         }
 
         public async Task SnapshotMetrics(Stream outputStream, CancellationToken token)
         {
-            Dictionary<string, List<Metric>> copy = null;
+            Dictionary<MetricKey, Queue<Metric>> copy = null;
             lock (_allMetrics)
             {
-                copy = new Dictionary<string, List<Metric>>(_allMetrics);
+                copy = new Dictionary<MetricKey, Queue<Metric>>(_allMetrics);
             }
 
             using var writer = new StreamWriter(outputStream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), bufferSize: 1024, leaveOpen: true);
@@ -130,7 +171,10 @@ namespace Microsoft.Diagnostics.Monitoring
 
         private static bool CompareMetrics(Metric first, Metric second)
         {
-            //We don't compare the name since we operate on grouped metrics
+            if (!string.Equals(first.Name, second.Name))
+            {
+                return false;
+            }
             if (first.DimNames.Count != second.DimNames.Count)
             {
                 return false;

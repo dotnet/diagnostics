@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.Monitoring
             Configuration.Bind(nameof(PrometheusConfiguration), config);
             if (config.Enabled)
             {
-                services.AddSingleton<IMetricsStore, MetricsStore>();
+                services.AddSingleton<MetricsStoreService>();
                 services.AddHostedService<MetricsService>();
             }
         }

@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer
 {
@@ -18,19 +20,38 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
     /// </summary>
     public class PrometheusConfiguration
     {
-        private readonly Lazy<Uri> _endpoint;
+        private readonly Lazy<int?[]> _ports;
         
         public PrometheusConfiguration()
         {
-            _endpoint = new Lazy<Uri>(() => new Uri(Endpoint));
+            _ports = new Lazy<int?[]>(() =>
+                {
+                    string[] endpoints = Endpoints.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                    int?[] ports = new int?[endpoints.Length];
+                    for(int i = 0; i < endpoints.Length; i++)
+                    {
+                        //We cannot use Uri[Builder], since we are sometimes parsing invalid hostnames
+                        try
+                        {
+                            UriHelper.FromAbsolute(endpoints[i], out _, out HostString host, out _, out _, out _);
+                            ports[i] = host.Port;
+                        }
+                        catch (FormatException)
+                        {
+                        }
+                    }
+                    return ports;
+                });
         }
 
         public bool Enabled { get; set; }
         
-        public string Endpoint { get; set; }
+        public string Endpoints { get; set; }
 
-        public Uri EndpointAddress => _endpoint.Value;
+        public int?[] Ports => _ports.Value;
 
         public int UpdateIntervalSeconds { get; set; }
+
+        public int MetricCount { get; set; }
     }
 }
