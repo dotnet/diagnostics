@@ -33,7 +33,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="gen-0-size", Description="Gen 0 Heap Size" },
                     new CounterProfile{ Name="gen-1-size", Description="Gen 1 Heap Size" },
                     new CounterProfile{ Name="gen-2-size", Description="Gen 2 Heap Size" },
-                    new CounterProfile{ Name="loh-size", Description="LOH Heap Size" },
+                    new CounterProfile{ Name="loh-size", Description="LOH Size" },
+                    new CounterProfile{ Name="poh-size", Description="POH (Pinned Object Heap) Size" },
                     new CounterProfile{ Name="alloc-rate", Description="Number of bytes allocated in the managed heap per second" },
                     new CounterProfile{ Name="assembly-count", Description="Number of Assemblies Loaded" },
                     new CounterProfile{ Name="exception-count", Description="Number of Exceptions / sec" },
@@ -41,6 +42,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="monitor-lock-contention-count", Description="Number of times there were contention when trying to take the monitor lock per second" },
                     new CounterProfile{ Name="threadpool-queue-length", Description="ThreadPool Work Items Queue Length" },
                     new CounterProfile{ Name="threadpool-completed-items-count", Description="ThreadPool Completed Work Items Count" },
+                    new CounterProfile{ Name="active-timer-count", Description="Number of timers that are currently active" }
+                    new CounterProfile{ Name="il-bytes-jitted", Description="Total IL bytes jitted since process start" }
+                    new CounterProfile{ Name="methods-jitted-count", Description="Number of methods jitted" }
                     new CounterProfile{ Name="active-timer-count", Description="Number of timers that are currently active" }
                 });
             yield return new CounterProvider(
