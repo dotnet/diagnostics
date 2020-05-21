@@ -42,8 +42,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="monitor-lock-contention-count", Description="Number of times there were contention when trying to take the monitor lock per second" },
                     new CounterProfile{ Name="threadpool-queue-length", Description="ThreadPool Work Items Queue Length" },
                     new CounterProfile{ Name="threadpool-completed-items-count", Description="ThreadPool Completed Work Items Count" },
-                    new CounterProfile{ Name="active-timer-count", Description="Number of timers that are currently active" }
-                    new CounterProfile{ Name="il-bytes-jitted", Description="Total IL bytes jitted since process start" }
+                    new CounterProfile{ Name="active-timer-count", Description="Number of timers that are currently active" },
+                    new CounterProfile{ Name="il-bytes-jitted", Description="Total IL bytes jitted" },
                     new CounterProfile{ Name="methods-jitted-count", Description="Number of methods jitted" }
                 });
             yield return new CounterProvider(
