@@ -45,7 +45,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="active-timer-count", Description="Number of timers that are currently active" }
                     new CounterProfile{ Name="il-bytes-jitted", Description="Total IL bytes jitted since process start" }
                     new CounterProfile{ Name="methods-jitted-count", Description="Number of methods jitted" }
-                    new CounterProfile{ Name="active-timer-count", Description="Number of timers that are currently active" }
                 });
             yield return new CounterProvider(
                 "Microsoft.AspNetCore.Hosting", // Name
