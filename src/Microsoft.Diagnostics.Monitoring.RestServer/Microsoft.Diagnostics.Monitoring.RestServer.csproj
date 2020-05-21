@@ -4,11 +4,13 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
     <Description>REST Api surface for dotnet-monitor</Description>
-    <IsPackable>false</IsPackable>
+    <!-- Tentatively create package so other teams can tenatively consume. -->
+    <IsPackable>true</IsPackable>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <IncludeSymbols>true</IncludeSymbols>
+    <!-- Do not ship this package until ready to be consumed. -->
     <IsShipping>false</IsShipping>
     <OutputType>Library</OutputType>
   </PropertyGroup>
