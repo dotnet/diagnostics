@@ -94,11 +94,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     if (commonId != -1)
                     {
-                        Console.WriteLine($"There are more than one active processes with the given name: {name}");
+                        Console.WriteLine("There are more than one active processes with the given name: {0}", name);
                         return -1;
                     }
                     commonId = processesWithMatchingName[i].Id;
                 }
+            }
+            if (commonId == -1)
+            {
+                Console.WriteLine("There is no active process with the given name: {0}", name);
             }
             return commonId;
         }
@@ -115,7 +119,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 processId = FindProcessIdWithName(name);
                 if (processId < 0)
                 {
-                    Console.WriteLine("There is no active process with the given name: {name}");
                     return 0;
                 }
             }
