@@ -82,8 +82,44 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _renderer.Stop();
         }
 
-        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval)
+        private int FindProcessIdWithName(string name)
         {
+            var publishedProcessesPids = new List<int>(DiagnosticsClient.GetPublishedProcesses());
+            var processesWithMatchingName = Process.GetProcessesByName(name);
+            var commonId = -1;
+
+            for (int i = 0; i < processesWithMatchingName.Length; i++)
+            {
+                if (publishedProcessesPids.Contains(processesWithMatchingName[i].Id))
+                {
+                    if (commonId != -1)
+                    {
+                        Console.WriteLine($"There are more than one active processes with the given name: {name}");
+                        return -1;
+                    }
+                    commonId = processesWithMatchingName[i].Id;
+                }
+            }
+            return commonId;
+        }
+
+        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, string name)
+        {
+            if (name != "")
+            {
+                if (processId != 0)
+                {
+                    Console.WriteLine("Can only specify either --name or --process-id option.");
+                    return 0;
+                }
+                processId = FindProcessIdWithName(name);
+                if (processId < 0)
+                {
+                    Console.WriteLine("There is no active process with the given name: {name}");
+                    return 0;
+                }
+            }
+
             try
             {
                 _ct = ct;
