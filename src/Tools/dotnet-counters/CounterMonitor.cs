@@ -125,8 +125,22 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output)
+        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name)
         {
+            if (name != "")
+            {
+                if (processId != 0)
+                {
+                    Console.WriteLine("Can only specify either --name or --process-id option.");
+                    return 0;
+                }
+                processId = CommandUtils.FindProcessIdWithName(name);
+                if (processId < 0)
+                {
+                    return 0;
+                }
+            }
+
             try
             {
                 _ct = ct;
