@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Internal.Common.Utils;
 using System;
 using System.CommandLine;
 using System.Diagnostics;
@@ -32,8 +33,23 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
         }
 
-        public int Collect(IConsole console, int processId, string output, bool diag, DumpTypeOption type)
+        public int Collect(IConsole console, int processId, string output, bool diag, DumpTypeOption type, string name)
         {
+            Console.WriteLine(name);
+            if (name != "")
+            {
+                if (processId != 0)
+                {
+                    Console.WriteLine("Can only specify either --name or --process-id option.");
+                    return 0;
+                }
+                processId = CommandUtils.FindProcessIdWithName(name);
+                if (processId < 0)
+                {
+                    return 0;
+                }
+            }
+
             if (processId == 0) {
                 console.Error.WriteLine("ProcessId is required.");
                 return 1;
