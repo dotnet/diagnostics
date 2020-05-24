@@ -142,7 +142,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         private static Option ProcessIdOption() =>
             new Option(
                 aliases: new[] { "-p", "--process-id" },
-                description: "The process id to collect the trace.")
+                description: "The process id to collect the gcdump.")
             {
                 Argument = new Argument<int>(name: "pid", defaultValue: 0),
             };
@@ -150,7 +150,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         private static Option NameOption() =>
             new Option(
                 aliases: new[] { "-n", "--name" },
-                description: "The name of the process that will be monitored.")
+                description: "The name of the process to collect the gcdump.")
             {
                 Argument = new Argument<string>(name: "name")
             };

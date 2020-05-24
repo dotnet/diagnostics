@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Option NameOption() =>
             new Option(
                 aliases: new[] { "-n", "--name" },
-                description: "The name of the process that will be monitored.")
+                description: "The name of the process to collect the trace.")
             {
                 Argument = new Argument<string>(name: "name")
             };

@@ -46,7 +46,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private static Option ProcessNameOption() =>
             new Option(
                 aliases: new[] { "-n", "--name" },
-                description: "The name of the process that will be monitored.")
+                description: "The name of the process to collect a memory dump.")
             {
                 Argument = new Argument<string>(name: "name")
             };
