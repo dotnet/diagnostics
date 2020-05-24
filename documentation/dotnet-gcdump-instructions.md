@@ -63,13 +63,14 @@ Prior to .NET Core 3.1-preview2, there was an issue where static and COM types w
 
 ```cmd
 collect:
-  Collects a diagnostic trace from a currently running process
+  Collects a gcdump from a currently running process
 
 Usage:
   dotnet-gcdump collect [options]
 
 Options:
-  -p, --process-id <pid>             The process to collect the trace from
+  -p, --process-id <pid>             The process to collect the gcdump from
+  -n, --name <name>                  The name of the process to collect the gcdump from.
   -o, --output <gcdump-file-path>    The path where collected gcdumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump'
                                      where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path
                                      and file name of the dump.
