@@ -22,9 +22,9 @@
       <Uri>https://github.com/dotnet/runtime</Uri>
       <Sha>c44dc40b763b7c74012622a0a6120cd8ffa35ce4</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-preview.6.20273.2">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-preview.6.20274.3">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>0e38046bce72ac0a916a08763a7fb3e79c786749</Sha>
+      <Sha>6afd6f40c043f96c8fb1ee06cbebbc1d229efddc</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>
