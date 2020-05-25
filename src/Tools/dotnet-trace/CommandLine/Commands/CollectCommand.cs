@@ -3,7 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Internal.Common.Utils; using Microsoft.Tools.Common;
+using Microsoft.Internal.Common.Utils;
+using Microsoft.Tools.Common;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
