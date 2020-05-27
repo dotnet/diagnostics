@@ -9,7 +9,6 @@ using System.IO.Pipes;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 
@@ -73,6 +72,25 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
                 socket.Connect(remoteEP);
                 return new NetworkStream(socket);
+            }
+        }
+
+        /// <summary>
+        /// Checks that the client is able to communicate with target process over diagnostic transport.
+        /// </summary>
+        /// <returns>
+        /// True if client is able to communicate with target process; otherwise, false.
+        /// </returns>
+        public static bool CheckTransport(int processId)
+        {
+            try
+            {
+                using var stream = GetTransport(processId);
+                return null != stream;
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
 

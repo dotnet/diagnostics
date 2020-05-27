@@ -25,6 +25,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
+        /// Checks that the client is able to communicate with target process over diagnostic transport.
+        /// </summary>
+        /// <returns>
+        /// True if client is able to communicate with target process; otherwise, false.
+        /// </returns>
+        public bool CheckTransport()
+        {
+            return IpcClient.CheckTransport(_processId);
+        }
+
+        /// <summary>
         /// Start tracing the application and return an EventPipeSession object
         /// </summary>
         /// <param name="providers">An IEnumerable containing the list of Providers to turn on.</param>
