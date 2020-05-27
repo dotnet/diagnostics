@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         public int Collect(IConsole console, int processId, string output, bool diag, DumpTypeOption type, string name)
         {
             Console.WriteLine(name);
-            if (name != "")
+            if (name != null)
             {
                 if (processId != 0)
                 {

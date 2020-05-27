@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <returns></returns>
         private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name)
         {
-            if (name != "")
+            if (name != null)
             {
                 if (processId != 0)
                 {

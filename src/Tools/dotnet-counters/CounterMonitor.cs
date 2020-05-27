@@ -85,7 +85,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, string name)
         {
-            if (name != "")
+            if (name != null)
             {
                 if (processId != 0)
                 {
@@ -127,7 +127,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name)
         {
-            if (name != "")
+            if (name != null)
             {
                 if (processId != 0)
                 {

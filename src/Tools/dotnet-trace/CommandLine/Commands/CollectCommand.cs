@@ -46,7 +46,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Debug.Assert(profile != null);
 
                 // Either processName or processId has to be specified.
-                if (name!= "")
+                if (name != null)
                 {
                     if (processId != 0)
                     {
