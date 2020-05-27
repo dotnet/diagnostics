@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Monitoring;
-using Microsoft.Diagnostics.Monitoring.Logging;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -44,7 +43,6 @@ namespace DotnetMonitor.UnitTests
                 var loggerFactory = new LoggerFactory(new[] { new StreamingLoggerProvider(outputStream) });
 
                 DiagnosticsEventPipeProcessor diagnosticsEventPipeProcessor = new DiagnosticsEventPipeProcessor(
-                    ContextConfiguration,
                     PipeMode.Logs,
                     loggerFactory,
                     Enumerable.Empty<IMetricsLogger>());
@@ -91,8 +89,6 @@ namespace DotnetMonitor.UnitTests
             //We are expecting only the original format
             Assert.Equal(1, result.Arguments.Count);
         }
-
-        private ContextConfiguration ContextConfiguration => new ContextConfiguration { Namespace = "default", Node = Environment.MachineName };
 
         private static void Validate(IDictionary<string, JsonElement> values, params (string key, object value)[] expectedValues)
         {

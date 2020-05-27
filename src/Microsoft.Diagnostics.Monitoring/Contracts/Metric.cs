@@ -19,7 +19,16 @@ namespace Microsoft.Diagnostics.Monitoring
 
     public class Metric
     {
-        public Metric(DateTime timestamp, string metricNamespace, string name, string displayName, string unit, double value, IReadOnlyList<string> dimNames, IReadOnlyList<string> dimValues, MetricType metricType = MetricType.Avg)
+        public Metric(DateTime timestamp,
+            string metricNamespace,
+            string name,
+            string displayName,
+            string unit,
+            double value,
+            MetricType metricType,
+            float interval,
+            IReadOnlyList<string> dimNames,
+            IReadOnlyList<string> dimValues)
         {
             Timestamp = timestamp;
             Name = name;
@@ -30,6 +39,7 @@ namespace Microsoft.Diagnostics.Monitoring
             Namespace = metricNamespace;
             DimNames = dimNames;
             DimValues = dimValues;
+            Interval = interval;
         }
 
         public IReadOnlyList<string> DimNames { get; }
@@ -49,5 +59,7 @@ namespace Microsoft.Diagnostics.Monitoring
         public double Value { get; }
 
         public DateTime Timestamp { get; }
+
+        float Interval { get; }
     }
 }

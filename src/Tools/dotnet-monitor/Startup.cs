@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -49,6 +50,14 @@ namespace Microsoft.Diagnostics.Monitoring
                 configureOptions.Providers.Add<GzipCompressionProvider>();
                 configureOptions.MimeTypes = new List<string> { "application/octet-stream" };
             });
+
+            var config = new PrometheusConfiguration();
+            Configuration.Bind(nameof(PrometheusConfiguration), config);
+            if (config.Enabled)
+            {
+                services.AddSingleton<MetricsStoreService>();
+                services.AddHostedService<MetricsService>();
+            }
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

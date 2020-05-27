@@ -21,6 +21,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 {
     [Route("")] // Root
     [ApiController]
+    [HostRestriction]
     public class DiagController : ControllerBase
     {
         private const TraceProfile DefaultTraceProfiles = TraceProfile.Cpu | TraceProfile.Http | TraceProfile.Metrics;
@@ -37,7 +38,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         [HttpGet("processes")]
         public ActionResult<IEnumerable<ProcessModel>> GetProcesses()
         {
-            return InvokeService(() =>
+            return this.InvokeService(() =>
             {
                 IList<ProcessModel> processes = new List<ProcessModel>();
                 foreach (int pid in _diagnosticServices.GetProcesses())
@@ -51,7 +52,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         [HttpGet("dump/{pid?}")]
         public Task<ActionResult> GetDump(int? pid, [FromQuery] DumpType type = DumpType.WithHeap)
         {
-            return InvokeService(async () =>
+            return this.InvokeService(async () =>
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
                 Stream result = await _diagnosticServices.GetDump(pidValue, type);
@@ -69,7 +70,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         [HttpGet("gcdump/{pid?}")]
         public Task<ActionResult> GetGcDump(int? pid)
         {
-            return InvokeService(async () =>
+            return this.InvokeService(async () =>
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
                 Stream result = await _diagnosticServices.GetGcDump(pidValue, this.HttpContext.RequestAborted);
@@ -86,7 +87,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         {
             TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
 
-            return InvokeService(async () =>
+            return this.InvokeService(async () =>
             {
                 var configurations = new List<MonitoringSourceConfiguration>();
                 if (profile.HasFlag(TraceProfile.Cpu))
@@ -120,7 +121,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         {
             TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
 
-            return InvokeService(async () =>
+            return this.InvokeService(async () =>
             {
                 var providers = new List<EventPipeProvider>();
 
@@ -152,7 +153,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         public ActionResult Logs(int? pid, [FromQuery][Range(-1, int.MaxValue)] int durationSeconds = 30)
         {
             TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
-            return InvokeService(() =>
+            return this.InvokeService(() =>
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
                 return new OutputStreamResult(async (outputStream, token) =>
@@ -188,57 +189,6 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 default:
                     throw new ArgumentException("Unexpected event level", nameof(eventLevel));
             }
-        }
-
-        private ActionResult InvokeService(Func<ActionResult> serviceCall)
-        {
-            //We can convert ActionResult to ActionResult<T>
-            //and then safely convert back.
-            return InvokeService<object>(() => serviceCall()).Result;
-        }
-
-        private ActionResult<T> InvokeService<T>(Func<ActionResult<T>> serviceCall)
-        {
-            //Convert from ActionResult<T> to Task<ActionResult<T>>
-            //and safely convert back.
-            return InvokeService(() => Task.FromResult(serviceCall())).Result;
-        }
-
-        private async Task<ActionResult> InvokeService(Func<Task<ActionResult>> serviceCall)
-        {
-            //Task<ActionResult> -> Task<ActionResult<T>>
-            //Then unwrap the result back to ActionResult
-            ActionResult<object> result = await InvokeService<object>(async () => await serviceCall());
-            return result.Result;
-        }
-
-        private async Task<ActionResult<T>> InvokeService<T>(Func<Task<ActionResult<T>>> serviceCall)
-        {
-            try
-            {
-                return await serviceCall();
-            }
-            catch (ArgumentException e)
-            {
-                return BadRequest(FromException(e));
-            }
-            catch (DiagnosticsClientException e)
-            {
-                return BadRequest(FromException(e));
-            }
-            catch (InvalidOperationException e)
-            {
-                return BadRequest(FromException(e));
-            }
-        }
-
-        private static ProblemDetails FromException(Exception e)
-        {
-            return new ProblemDetails
-            {
-                Detail = e.Message,
-                Status = (int)HttpStatusCode.BadRequest
-            };
         }
 
         private static TimeSpan ConvertSecondsToTimeSpan(int durationSeconds)

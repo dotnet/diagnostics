@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
-    internal static class RuntimeInfo
+    public static class RuntimeInfo
     {
         public static bool IsInDockerContainer
         {

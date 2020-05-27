@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Tools.Common;
 using System;
 using System.Collections.Generic;
@@ -30,17 +31,44 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                   description: "Monitor logs and metrics in a .NET application send the results to a chosen destination.")
               {
                 // Handler
-                CommandHandler.Create<CancellationToken, IConsole, string[]>(new DiagnosticsMonitorCommandHandler().Start),
-                PortOption()
+                CommandHandler.Create<CancellationToken, IConsole, string[], string[], bool>(new DiagnosticsMonitorCommandHandler().Start),
+                Urls(), MetricUrls(), ProvideMetrics()
               };
 
-        private static Option PortOption() =>
+        private static Option Urls() =>
             new Option(
-                aliases: new[] { "-u", "--urls"},
+                aliases: new[] { "-u", "--urls" },
                 description: "Bindings for the REST api.")
             {
                 Argument = new Argument<string[]>(name: "urls", defaultValue: new[] { "http://localhost:52323" })
             };
+
+        private static Option MetricUrls() =>
+            new Option(
+                aliases: new[] { "--metricUrls" },
+                description: "Bindings for metrics")
+            {
+                Argument = new Argument<string[]>(name: "metricUrls", defaultValue: new[]{ GetDefaultMetricsEndpoint() })
+            };
+    
+        private static Option ProvideMetrics() =>
+            new Option(
+                aliases: new[] { "-m", "--metrics" },
+                description: "Enable publishing of metrics")
+            {
+                Argument = new Argument<bool>(name: "metrics", defaultValue: true )
+            };
+
+        private static string GetDefaultMetricsEndpoint()
+        {
+            string endpoint = "http://localhost:52325";
+            if (RuntimeInfo.IsInDockerContainer)
+            {
+                //Necessary for prometheus scraping
+                endpoint = "http://*:52325";
+            }
+            return endpoint;
+        }
 
         public static Task<int> Main(string[] args)
         {
