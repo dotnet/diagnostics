@@ -144,6 +144,9 @@ Options:
   -p, --process-id <pid>
     The process to collect the trace from
 
+  -n, --name <name>
+    The name of the process to collect the trace from.
+
   -o, --output <trace-file-path>
     The output path for the collected trace data. If not specified it defaults to 'trace.nettrace'
 

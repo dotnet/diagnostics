@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Tools.Common;
+using Microsoft.Internal.Common.Utils;
 using System;
 using System.CommandLine;
 using System.CommandLine.Binding;
@@ -15,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name);
 
         /// <summary>
         /// Collects a gcdump from a currently running process.
@@ -25,8 +26,22 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="processId">The process to collect the gcdump from.</param>
         /// <param name="output">The output path for the collected gcdump.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name)
         {
+            if (name != null)
+            {
+                if (processId != 0)
+                {
+                    Console.WriteLine("Can only specify either --name or --process-id option.");
+                    return -1;
+                }
+                processId = CommandUtils.FindProcessIdWithName(name);
+                if (processId < 0)
+                {
+                    return -1;
+                }
+            }
+
             try
             {
                 if (processId < 0)
@@ -121,15 +136,23 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 // Handler
                 HandlerDescriptor.FromDelegate((CollectDelegate) Collect).GetCommandHandler(),
                 // Options
-                ProcessIdOption(), OutputPathOption(), VerboseOption(), TimeoutOption()
+                ProcessIdOption(), OutputPathOption(), VerboseOption(), TimeoutOption(), NameOption()
             };
 
         private static Option ProcessIdOption() =>
             new Option(
                 aliases: new[] { "-p", "--process-id" },
-                description: "The process id to collect the trace.")
+                description: "The process id to collect the gcdump.")
             {
                 Argument = new Argument<int>(name: "pid", defaultValue: 0),
+            };
+
+        private static Option NameOption() =>
+            new Option(
+                aliases: new[] { "-n", "--name" },
+                description: "The name of the process to collect the gcdump.")
+            {
+                Argument = new Argument<string>(name: "name")
             };
 
         private static Option OutputPathOption() =>

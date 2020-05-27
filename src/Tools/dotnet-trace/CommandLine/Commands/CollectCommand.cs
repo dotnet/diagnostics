@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Internal.Common.Utils;
 using Microsoft.Tools.Common;
 using System;
 using System.Collections.Generic;
@@ -19,7 +20,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name);
 
         /// <summary>
         /// Collects a diagnostic trace from a currently running process.
@@ -27,6 +28,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="ct">The cancellation token</param>
         /// <param name="console"></param>
         /// <param name="processId">The process to collect the trace from.</param>
+        /// <param name="name">The name of process to collect the trace from.</param>
         /// <param name="output">The output path for the collected trace data.</param>
         /// <param name="buffersize">Sets the size of the in-memory circular buffer in megabytes.</param>
         /// <param name="providers">A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'</param>
@@ -36,12 +38,27 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="clrevents">A list of CLR events to be emitted.</param>
         /// <param name="clreventlevel">The verbosity level of CLR events</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name)
         {
             try
             {
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
+
+                // Either processName or processId has to be specified.
+                if (name != null)
+                {
+                    if (processId != 0)
+                    {
+                        Console.WriteLine("Can only specify either --name or --process-id option.");
+                        return ErrorCodes.ArgumentError;
+                    }
+                    processId = CommandUtils.FindProcessIdWithName(name);
+                    if (processId < 0)
+                    {
+                        return ErrorCodes.ArgumentError;
+                    }
+                }
 
                 if (processId < 0)
                 {
@@ -305,7 +322,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CommonOptions.FormatOption(),
                 DurationOption(),
                 CLREventsOption(),
-                CLREventLevelOption()
+                CLREventLevelOption(),
+                CommonOptions.NameOption()
             };
 
         private static uint DefaultCircularBufferSizeInMB => 256;
