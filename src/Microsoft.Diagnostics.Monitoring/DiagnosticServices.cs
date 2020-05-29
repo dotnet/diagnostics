@@ -20,6 +20,8 @@ namespace Microsoft.Diagnostics.Monitoring
 {
     public sealed class DiagnosticServices : IDiagnosticServices
     {
+        private const int DockerEntrypointProcessId = 1;
+
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
         public IEnumerable<int> GetProcesses()
@@ -120,11 +122,14 @@ namespace Microsoft.Diagnostics.Monitoring
                 return pid.Value;
             }
 
-            // Short-circuit for when running in a Docker container, assuming the entrypoint
-            // of the container is a dotnet application.
-            if (RuntimeInfo.IsInDockerContainer && null != Process.GetProcessById(1))
+            // Short-circuit for when running in a Docker container.
+            if (RuntimeInfo.IsInDockerContainer)
             {
-                return 1;
+                var client = new DiagnosticsClient(DockerEntrypointProcessId);
+                if (client.CheckTransport())
+                {
+                    return DockerEntrypointProcessId;
+                }
             }
 
             // Only return a process ID if there is exactly one discoverable process.
