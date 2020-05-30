@@ -1,0 +1,63 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The intent of this project is to product a NuGet package with self-contained,
+       trimmed deployments of the dotnet-monitor tool. The corresponding tool project
+       cannot publish self-contained because that is explicitly forbidden by projects
+       that pack as .NET tools. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <AssemblyName>dotnet-monitor</AssemblyName>
+    <RootNamespace>Microsoft.Diagnostics.Tools.Monitor</RootNamespace>
+    <IsShipping>false</IsShipping>
+    <!-- Publish Settings -->
+    <RuntimeIdentifiers>linux-musl-x64</RuntimeIdentifiers>
+    <PublishTrimmed>true</PublishTrimmed>
+    <!-- Package settings -->
+    <IsPackable>true</IsPackable>
+    <PackageId>Microsoft.Diagnostics.Monitoring.App</PackageId>
+    <Description>.NET Core Diagnostic Monitoring Tool</Description>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <PackageTags>Diagnostic</PackageTags>
+    <!-- Do not include build output by default in the NuGet package. File inclusion is provided
+         via additional targets added to TargetsForTfmSpecificContentInPackage. -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Diagnostics.DotNetMonitor.Core\Microsoft.Diagnostics.DotNetMonitor.Core.csproj">
+      <!-- Prevents inclusion of the PackageReference as a NuGet dependency -->
+      <PrivateAssets>All</PrivateAssets>
+    </ProjectReference>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!-- Add custom target, that is called for each TargetFramework moniker, to publish and add the self-contained application to the NuGet package. -->
+    <!-- See https://docs.microsoft.com/en-us/nuget/reference/msbuild-targets#advanced-extension-points-to-create-customized-package -->
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);AddPublishedFilesToPackage</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+
+  <Target Name="AddPublishedFilesToPackage" Condition="'$(TargetFramework)' == 'netcoreapp3.1'">
+    <ItemGroup>
+      <PublishRuntimeIdentifiers Include="$(RuntimeIdentifiers)" />
+    </ItemGroup>
+    <ItemGroup>
+      <PackGroup Include="@(PublishRuntimeIdentifiers)">
+        <RuntimeIdentifier>%(Identity)</RuntimeIdentifier>
+        <PublishDir>$(OutputPath)%(Identity)\publish\</PublishDir>
+        <PublishedAssembly>$(OutputPath)%(Identity)\publish\$(TargetName)$(TargetExt)</PublishedAssembly>
+        <PackagePath>tools\$(TargetFramework)\%(Identity)\</PackagePath>
+      </PackGroup>
+    </ItemGroup>
+    <!-- Publish self-contained -->
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Publish" Properties="RuntimeIdentifier=%(PackGroup.RuntimeIdentifier);SelfContained=true" />
+    <Error Text="Published application '%(PackGroup.PublishedAssembly)' does not exist." Condition="!Exists('%(PackGroup.PublishedAssembly)')" />
+    <!-- Add self-contained files to NuGet package -->
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="%(PackGroup.PublishDir)**">
+        <PackagePath>%(PackGroup.PackagePath)%(RecursiveDir)</PackagePath>
+      </TfmSpecificPackageFile>
+    </ItemGroup>
+  </Target>
+
+</Project>

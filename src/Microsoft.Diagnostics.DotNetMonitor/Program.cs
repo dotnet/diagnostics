@@ -8,7 +8,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 {
     class Program
     {
-        public static Task<int> Main(string[] args)
+        static Task<int> Main(string[] args)
         {
             return DotNetMonitor.Execute(args);
         }

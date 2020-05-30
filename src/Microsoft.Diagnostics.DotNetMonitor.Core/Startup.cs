@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Diagnostics.Monitoring.RestServer;
+using Microsoft.Diagnostics.Monitoring.RestServer.Controllers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -38,7 +39,8 @@ namespace Microsoft.Diagnostics.Monitoring
                 System.Reflection.PropertyInfo prop = options.GetType().GetProperty("EnableEndpointRouting");
                 prop?.SetValue(options, false);
 
-            }).SetCompatibilityVersion(CompatibilityVersion.Latest);
+            }).SetCompatibilityVersion(CompatibilityVersion.Latest)
+                .AddApplicationPart(typeof(DiagController).Assembly);
 
             services.Configure<GzipCompressionProviderOptions>(options =>
             {
