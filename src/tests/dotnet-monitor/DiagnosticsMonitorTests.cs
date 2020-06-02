@@ -40,7 +40,7 @@ namespace DotnetMonitor.UnitTests
             {
                 //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
 
-                var loggerFactory = new LoggerFactory(new[] { new StreamingLoggerProvider(outputStream) });
+                var loggerFactory = new LoggerFactory(new[] { new StreamingLoggerProvider(outputStream, LogFormat.Json) });
 
                 DiagnosticsEventPipeProcessor diagnosticsEventPipeProcessor = new DiagnosticsEventPipeProcessor(
                     PipeMode.Logs,

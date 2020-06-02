@@ -16,6 +16,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 {
     internal static class DiagControllerExtensions
     {
+        public static ActionResult NotAcceptable(this ControllerBase controller)
+        {
+            return new StatusCodeResult((int)HttpStatusCode.NotAcceptable);
+        }
+
         public static ActionResult InvokeService(this ControllerBase controller, Func<ActionResult> serviceCall)
         {
             //We can convert ActionResult to ActionResult<T>
