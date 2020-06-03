@@ -3,6 +3,7 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>;1591;1701</NoWarn>
+    <IsTestProject>false</IsTestProject>
     <IsPackable>true</IsPackable>
     <Description>Diagnostic test support</Description>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>

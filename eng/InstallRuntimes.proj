@@ -76,14 +76,12 @@
   <!-- Local private build testing -->
   <ItemGroup Condition="$(PrivateBuildTesting)">
     <TestVersions Include="Latest" RuntimeVersion="$(MicrosoftNETCoreAppVersion)" AspNetVersion="$(MicrosoftAspNetCoreAppRefVersion)" />
-    <TestVersions Include="21" RuntimeVersion="$(MicrosoftNETCoreApp21Version)" />
   </ItemGroup>
 
   <!-- Internal service release testing -->
   <ItemGroup Condition="$(InternalReleaseTesting)">
     <TestVersions Include="Internal" RuntimeVersion="$(DotnetRuntimeDownloadVersion)" ExtraInstallArgs="$(ExtraInstallArgs)" Condition="'$(DotnetRuntimeDownloadVersion)' != 'default'"/>
     <TestVersions Include="Internal" RuntimeVersion="$(DotnetRuntimeVersion)" ExtraInstallArgs="$(ExtraInstallArgs)" Condition="'$(DotnetRuntimeDownloadVersion)' == 'default'"/>
-    <TestVersions Include="21" RuntimeVersion="$(MicrosoftNETCoreApp21Version)" />
   </ItemGroup>
 
 <!--
