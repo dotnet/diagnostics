@@ -87,10 +87,11 @@ namespace Microsoft.Diagnostics.Monitoring
             return new StreamWithCleanup(monitor, stream);
         }
 
-        public async Task StartLogs(Stream outputStream, int pid, TimeSpan duration, CancellationToken token)
+        public async Task StartLogs(Stream outputStream, int pid, TimeSpan duration, LogFormat format, CancellationToken token)
         {
             using var loggerFactory = new LoggerFactory();
-            loggerFactory.AddProvider(new StreamingLoggerProvider(outputStream));
+
+            loggerFactory.AddProvider(new StreamingLoggerProvider(outputStream, format));
 
             await using var processor = new DiagnosticsEventPipeProcessor(PipeMode.Logs,
                 loggerFactory: loggerFactory);

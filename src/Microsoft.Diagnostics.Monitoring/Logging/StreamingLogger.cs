@@ -17,15 +17,17 @@ namespace Microsoft.Diagnostics.Monitoring
     public sealed class StreamingLoggerProvider : ILoggerProvider
     {
         private readonly Stream _outputStream;
+        private readonly LogFormat _format;
 
-        public StreamingLoggerProvider(Stream outputStream)
+        public StreamingLoggerProvider(Stream outputStream, LogFormat logFormat)
         {
             _outputStream = outputStream;
+            _format = logFormat;
         }
 
         public ILogger CreateLogger(string categoryName)
         {
-            return new StreamingLogger(categoryName, _outputStream);
+            return new StreamingLogger(categoryName, _outputStream, _format);
         }
 
         public void Dispose()
@@ -35,37 +37,23 @@ namespace Microsoft.Diagnostics.Monitoring
 
     public sealed class StreamingLogger : ILogger
     {
-        private Stack<IReadOnlyList<KeyValuePair<string, object>>> _scopes = new Stack<IReadOnlyList<KeyValuePair<string, object>>>();
+        private readonly ScopeState _scopes = new ScopeState();
         private readonly Stream _outputStream;
         private readonly string _categoryName;
+        private readonly LogFormat _logFormat;
 
-        public StreamingLogger(string category, Stream outputStream)
+        public StreamingLogger(string category, Stream outputStream, LogFormat format)
         {
             _outputStream = outputStream;
             _categoryName = category;
-        }
-
-        private sealed class ScopeState : IDisposable
-        {
-            private readonly Stack<IReadOnlyList<KeyValuePair<string, object>>> _scopes;
-
-            public ScopeState(Stack<IReadOnlyList<KeyValuePair<string, object>>> scopes, IReadOnlyList<KeyValuePair<string, object>> scope)
-            {
-                _scopes = scopes;
-                _scopes.Push(scope);
-            }
-
-            public void Dispose()
-            {
-                _scopes.Pop();
-            }
+            _logFormat = format;
         }
 
         public IDisposable BeginScope<TState>(TState state)
         {
             if (state is LogObject logObject)
             {
-                return new ScopeState(_scopes, logObject);
+                return _scopes.Push(logObject);
             }
             return null;
         }
@@ -73,6 +61,18 @@ namespace Microsoft.Diagnostics.Monitoring
         public bool IsEnabled(LogLevel logLevel) => true;
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        {
+            if (_logFormat == LogFormat.Json)
+            {
+                LogJson(logLevel, eventId, state, exception, formatter);
+            }
+            else
+            {
+                LogEventStream(logLevel, eventId, state, exception, formatter);
+            }
+        }
+
+        private void LogJson<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
             Stream outputStream = _outputStream;
 
@@ -96,7 +96,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 jsonWriter.WriteStartObject("Scopes");
                 foreach (IReadOnlyList<KeyValuePair<string, object>> scope in _scopes)
                 {
-                    foreach(KeyValuePair<string, object> scopeValue in scope)
+                    foreach (KeyValuePair<string, object> scopeValue in scope)
                     {
                         WriteKeyValuePair(jsonWriter, scopeValue);
                     }
@@ -120,6 +120,66 @@ namespace Microsoft.Diagnostics.Monitoring
 
             outputStream.WriteByte((byte)'\n');
             outputStream.Flush();
+        }
+
+        private void LogEventStream<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        {
+            Stream outputStream = _outputStream;
+
+            using var writer = new StreamWriter(outputStream, Encoding.UTF8, 1024, leaveOpen: true) { NewLine = "\n" };
+
+            //event: eventName (if exists)
+            //data: level category[eventId]
+            //data: message
+            //data: => scope1, scope2 => scope3, scope4
+            //\n
+            
+            if (!string.IsNullOrEmpty(eventId.Name))
+            {
+                writer.Write("event: ");
+                writer.WriteLine(eventId.Name);
+            }
+            writer.Write("data: ");
+            writer.Write(logLevel);
+            writer.Write(" ");
+            writer.Write(_categoryName);
+            writer.Write('[');
+            writer.Write(eventId.Id);
+            writer.WriteLine(']');
+            writer.Write("data: ");
+            writer.WriteLine(formatter(state, exception));
+
+            bool firstScope = true;
+            foreach (IReadOnlyList<KeyValuePair<string, object>> scope in _scopes)
+            {
+                bool firstScopeEntry = true;
+                foreach (KeyValuePair<string, object> scopeValue in scope)
+                {
+                    if (firstScope)
+                    {
+                        writer.Write("data:");
+                        firstScope = false;
+                    }
+
+                    if (firstScopeEntry)
+                    {
+                        writer.Write(" => ");
+                        firstScopeEntry = false;
+                    }
+                    else
+                    {
+                        writer.Write(", ");
+                    }
+                    writer.Write(scopeValue.Key);
+                    writer.Write(':');
+                    writer.Write(scopeValue.Value);
+                }
+            }
+            if (!firstScope)
+            {
+                writer.WriteLine();
+            }
+            writer.WriteLine();
         }
 
         private static void WriteKeyValuePair(Utf8JsonWriter jsonWriter, KeyValuePair<string, object> kvp)

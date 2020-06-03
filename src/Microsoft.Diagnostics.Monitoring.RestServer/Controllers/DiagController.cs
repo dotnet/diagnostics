@@ -7,15 +7,18 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.Tracing;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Diagnostics.Monitoring.RestServer.Models;
 using Microsoft.Diagnostics.Monitoring.RestServer.Validation;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
+using Microsoft.Net.Http.Headers;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 {
@@ -25,6 +28,10 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
     public class DiagController : ControllerBase
     {
         private const TraceProfile DefaultTraceProfiles = TraceProfile.Cpu | TraceProfile.Http | TraceProfile.Metrics;
+        private const string ContentTypeNdJson = "application/x-ndjson";
+        private const string ContentTypeEventStream = "text/event-stream";
+        private static readonly MediaTypeHeaderValue NdJsonHeader = new MediaTypeHeaderValue(ContentTypeNdJson);
+        private static readonly MediaTypeHeaderValue EventStreamHeader = new MediaTypeHeaderValue(ContentTypeEventStream);
 
         private readonly ILogger<DiagController> _logger;
         private readonly IDiagnosticServices _diagnosticServices;
@@ -150,16 +157,27 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         }
 
         [HttpGet("logs/{pid?}")]
+        [Produces(ContentTypeEventStream, ContentTypeNdJson)]
         public ActionResult Logs(int? pid, [FromQuery][Range(-1, int.MaxValue)] int durationSeconds = 30)
         {
             TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
             return this.InvokeService(() =>
             {
                 int pidValue = _diagnosticServices.ResolveProcess(pid);
+
+                LogFormat format = ComputeLogFormat(Request.GetTypedHeaders().Accept);
+                if (format == LogFormat.None)
+                {
+                    return this.NotAcceptable();
+                }
+                
+                string contentType = (format == LogFormat.EventStream) ? ContentTypeEventStream : ContentTypeNdJson;
+                string downloadName = (format == LogFormat.EventStream) ? null : FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{pidValue}.txt");
+
                 return new OutputStreamResult(async (outputStream, token) =>
                 {
-                    await _diagnosticServices.StartLogs(outputStream, pidValue, duration, token);
-                }, "application/x-ndjson", FormattableString.Invariant($"{Guid.NewGuid()}.txt"));
+                    await _diagnosticServices.StartLogs(outputStream, pidValue, duration, format, token);
+                }, contentType, downloadName);
             });
         }
 
@@ -167,7 +185,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         {
             int pidValue = _diagnosticServices.ResolveProcess(pid);
             IStreamWithCleanup result = await _diagnosticServices.StartTrace(pidValue, configuration, duration, this.HttpContext.RequestAborted);
-            return new StreamWithCleanupResult(result, "application/octet-stream", FormattableString.Invariant($"{Guid.NewGuid()}.nettrace"));
+            return new StreamWithCleanupResult(result, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{pidValue}.nettrace"));
         }
 
         private static EventLevel MapEventLevel(EventPipeProviderEventLevel eventLevel)
@@ -201,6 +219,32 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         private static string GetFileNameTimeStampUtcNow()
         {
             return DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
+        }
+
+        private static LogFormat ComputeLogFormat(IList<MediaTypeHeaderValue> acceptedHeaders)
+        {
+            if (acceptedHeaders == null)
+            {
+                return LogFormat.None;
+            }
+
+            if (acceptedHeaders.Contains(EventStreamHeader))
+            {
+                return LogFormat.EventStream;
+            }
+            if (acceptedHeaders.Contains(NdJsonHeader))
+            {
+                return LogFormat.Json;
+            }
+            if (acceptedHeaders.Any(h => EventStreamHeader.IsSubsetOf(h)))
+            {
+                return LogFormat.EventStream;
+            }
+            if (acceptedHeaders.Any(h => NdJsonHeader.IsSubsetOf(h)))
+            {
+                return LogFormat.Json;
+            }
+            return LogFormat.None;
         }
     }
 }
