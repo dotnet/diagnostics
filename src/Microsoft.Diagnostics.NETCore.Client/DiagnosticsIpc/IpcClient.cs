@@ -71,7 +71,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
                 socket.Connect(remoteEP);
-                return new NetworkStream(socket);
+                return new NetworkStream(socket, ownsSocket: true);
             }
         }
 
