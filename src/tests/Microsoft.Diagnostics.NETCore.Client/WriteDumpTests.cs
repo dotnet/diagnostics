@@ -32,24 +32,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void BasicWriteDumpTest()
         {
-            var dumpPath = "./myDump.dmp";
-            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
-            runner.Start(3000);
-            DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                Assert.Throws<PlatformNotSupportedException>(() => client.WriteDump(DumpType.Normal, dumpPath));
-            }
-            else
-            {
-                output.WriteLine($"Requesting dump at {DateTime.Now.ToString()}");
-                client.WriteDump(DumpType.Normal, dumpPath);
-                Assert.True(File.Exists(dumpPath));
-                File.Delete(dumpPath);
-            }
+                var dumpPath = "./myDump.dmp";
+                TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
+                runner.Start(3000);
+                DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
 
-            runner.Stop();
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    Assert.Throws<PlatformNotSupportedException>(() => client.WriteDump(DumpType.Normal, dumpPath));
+                }
+                else
+                {
+                    output.WriteLine($"Requesting dump at {DateTime.Now.ToString()}");
+                    client.WriteDump(DumpType.Normal, dumpPath);
+                    Assert.True(File.Exists(dumpPath));
+                    File.Delete(dumpPath);
+                }
+
+                runner.Stop();
+            }
         }
 
         /// <summary>
