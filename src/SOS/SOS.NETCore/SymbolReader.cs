@@ -284,48 +284,29 @@ namespace SOS
         {
             if (IsSymbolStoreEnabled())
             {
-                Stream stream = new TargetStream(address, size, readMemory);
-                KeyGenerator generator = null;
-
-                switch (config)
+                KeyGenerator generator = GetKeyGenerator(config, moduleFilePath, address, size, readMemory);
+                if (generator != null)
                 {
-                    case RuntimeConfiguration.UnixCore:
-                        var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
-                        generator = new ELFFileKeyGenerator(s_tracer, elfFile, moduleFilePath);
-                        break;
-                    case RuntimeConfiguration.OSXCore:
-                        var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
-                        generator = new MachOFileKeyGenerator(s_tracer, machOFile, moduleFilePath);
-                        break;
-                    case RuntimeConfiguration.WindowsCore:
-                    case RuntimeConfiguration.WindowsDesktop:
-                        var peFile = new PEFile(new StreamAddressSpace(stream), true);
-                        generator = new PEFileKeyGenerator(s_tracer, peFile, moduleFilePath);
-                        break;
-                    default:
-                        s_tracer.Error("Unsupported platform {0}", config);
-                        return;
-                }
-
-                try
-                {
-                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.SymbolKey | KeyTypeFlags.DacDbiKeys);
-                    foreach (SymbolStoreKey key in keys)
+                    try
                     {
-                        string moduleFileName = Path.GetFileName(key.FullPathName);
-                        s_tracer.Verbose("{0} {1}", key.FullPathName, key.Index);
-
-                        string downloadFilePath = GetSymbolFile(key);
-                        if (downloadFilePath != null)
+                        IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.SymbolKey | KeyTypeFlags.DacDbiKeys);
+                        foreach (SymbolStoreKey key in keys)
                         {
-                            s_tracer.Information("{0}: {1}", moduleFileName, downloadFilePath);
-                            callback(parameter, moduleFileName, downloadFilePath);
+                            string moduleFileName = Path.GetFileName(key.FullPathName);
+                            s_tracer.Verbose("{0} {1}", key.FullPathName, key.Index);
+
+                            string downloadFilePath = GetSymbolFile(key);
+                            if (downloadFilePath != null)
+                            {
+                                s_tracer.Information("{0}: {1}", moduleFileName, downloadFilePath);
+                                callback(parameter, moduleFileName, downloadFilePath);
+                            }
                         }
                     }
-                }
-                catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException || ex is TaskCanceledException)
-                {
-                    s_tracer.Error("{0}/{1:X16}: {2}", moduleFilePath, address, ex.Message);
+                    catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException || ex is TaskCanceledException)
+                    {
+                        s_tracer.Error("{0}/{1:X16}: {2}", moduleFilePath, address, ex.Message);
+                    }
                 }
             }
         }
@@ -398,13 +379,45 @@ namespace SOS
         }
 
         /// <summary>
-        /// Load symbol or module files from the keys
+        /// Creates a key generator for the runtime module pointed to by the address/size.
         /// </summary>
-        /// <param name="callback">called back for each symbol file loaded</param>
-        /// <param name="parameter">callback parameter</param>
-        /// <param name="keys">list of keys to download</param>
-        private static void LoadSymbolFiles(SymbolFileCallback callback, IntPtr parameter, IEnumerable<SymbolStoreKey> keys)
+        /// <param name="config">Target configuration: Windows, Linux or OSX</param>
+        /// <param name="moduleFilePath">module path</param>
+        /// <param name="address">module base address</param>
+        /// <param name="size">module size</param>
+        /// <param name="readMemory">read memory callback delegate</param>
+        /// <returns>KeyGenerator or null if error</returns>
+        public static KeyGenerator GetKeyGenerator(
+            RuntimeConfiguration config,
+            string moduleFilePath,
+            ulong address,
+            int size,
+            ReadMemoryDelegate readMemory)
         {
+            Stream stream = new TargetStream(address, size, readMemory);
+            KeyGenerator generator = null;
+
+            switch (config)
+            {
+                case RuntimeConfiguration.UnixCore:
+                    var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
+                    generator = new ELFFileKeyGenerator(s_tracer, elfFile, moduleFilePath);
+                    break;
+                case RuntimeConfiguration.OSXCore:
+                    var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
+                    generator = new MachOFileKeyGenerator(s_tracer, machOFile, moduleFilePath);
+                    break;
+                case RuntimeConfiguration.WindowsCore:
+                case RuntimeConfiguration.WindowsDesktop:
+                    var peFile = new PEFile(new StreamAddressSpace(stream), true);
+                    generator = new PEFileKeyGenerator(s_tracer, peFile, moduleFilePath);
+                    break;
+                default:
+                    s_tracer.Error("Unsupported platform {0}", config);
+                    break;
+            }
+
+            return generator;
         }
 
         /// <summary>

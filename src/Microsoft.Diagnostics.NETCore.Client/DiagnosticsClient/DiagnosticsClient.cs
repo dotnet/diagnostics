@@ -57,9 +57,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="logDumpGeneration">When set to true, display the dump generation debug log to the console.</param>
         public void WriteDump(DumpType dumpType, string dumpPath, bool logDumpGeneration=false)
         {
-            if (!(RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.Windows)))
-                throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
-
             if (string.IsNullOrEmpty(dumpPath))
                 throw new ArgumentNullException($"{nameof(dumpPath)} required");
 

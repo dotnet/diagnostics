@@ -233,7 +233,20 @@ namespace SOS
         {
             if (_sosLibrary == IntPtr.Zero)
             {
-                string sosPath = Path.Combine(SOSPath, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "sos.dll" : "libsos.so");
+                string sos;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                    sos = "sos.dll";
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
+                    sos = "libsos.so";
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+                    sos = "libsos.dylib";
+                }
+                else {
+                    throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
+                }
+                string sosPath = Path.Combine(SOSPath, sos);
                 try
                 {
                     _sosLibrary = DataTarget.PlatformFunctions.LoadLibrary(sosPath);

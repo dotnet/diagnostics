@@ -445,6 +445,7 @@ HRESULT Runtime::GetClrDataProcess(IXCLRDataProcess** ppClrDataProcess)
         HMODULE hdac = LoadLibraryA(dacFilePath);
         if (hdac == NULL)
         {
+            ExtDbgOut("LoadLibrary(%s) FAILED %08x\n", dacFilePath, HRESULT_FROM_WIN32(GetLastError()));
             return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
         }
         PFN_CLRDataCreateInstance pfnCLRDataCreateInstance = (PFN_CLRDataCreateInstance)GetProcAddress(hdac, "CLRDataCreateInstance");
