@@ -37,10 +37,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
             runner.Start(3000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
 
-            output.WriteLine($"Requesting dump at {DateTime.Now.ToString()}");
-            client.WriteDump(DumpType.Normal, dumpPath);
-            Assert.True(File.Exists(dumpPath));
-            File.Delete(dumpPath);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.Throws<PlatformNotSupportedException>(() => client.WriteDump(DumpType.Normal, dumpPath));
+            }
+            else
+            {
+                output.WriteLine($"Requesting dump at {DateTime.Now.ToString()}");
+                client.WriteDump(DumpType.Normal, dumpPath);
+                Assert.True(File.Exists(dumpPath));
+                File.Delete(dumpPath);
+            }
 
             runner.Stop();
         }
