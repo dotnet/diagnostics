@@ -78,6 +78,14 @@ Install the required packages:
 
 See the section below on how to clone, build and test the repo.
 
+#### Ubuntu 20.04 ####
+
+Install the required packages:
+
+    sudo apt update
+    sudo apt install cmake clang curl gdb gettext git libicu-dev lldb liblldb-dev libunwind8 llvm make python python-lldb tar wget zip 
+
+See the section below on how to clone, build and test the repo.
 #### Alpine 3.8/3.9 ####
 
 Install the required packages:

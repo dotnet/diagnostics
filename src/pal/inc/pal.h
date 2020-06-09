@@ -3439,7 +3439,6 @@ CreatePipe(
 #define exp           PAL_exp
 #define log           PAL_log
 #define log10         PAL_log10
-#define pow           PAL_pow
 #define acosf         PAL_acosf
 #define acoshf        PAL_acoshf
 #define asinf         PAL_asinf
@@ -3448,7 +3447,6 @@ CreatePipe(
 #define expf          PAL_expf
 #define logf          PAL_logf
 #define log10f        PAL_log10f
-#define powf          PAL_powf
 #define malloc        PAL_malloc
 #define free          PAL_free
 #define mkstemp       PAL_mkstemp
@@ -3495,33 +3493,15 @@ typedef struct {
 
 PALIMPORT div_t div(int numer, int denom);
 
-#if defined(_DEBUG)
+#ifndef __THROW
+#define __THROW
+#endif 
 
-/*++
-Function:
-PAL_memcpy
-
-Overlapping buffer-safe version of memcpy.
-See MSDN doc for memcpy
---*/
-EXTERN_C
-PALIMPORT
-void *PAL_memcpy (void *dest, const void *src, size_t count);
-
-PALIMPORT void * __cdecl memcpy(void *, const void *, size_t);
-
-#define memcpy PAL_memcpy
-#define IS_PAL_memcpy 1
-#define TEST_PAL_DEFERRED(def) IS_##def
-#define IS_REDEFINED_IN_PAL(def) TEST_PAL_DEFERRED(def)
-#else //defined(_DEBUG)
-PALIMPORT void * __cdecl memcpy(void *, const void *, size_t);
-#endif //defined(_DEBUG)
+PALIMPORT void * __cdecl memcpy (void *__restrict __dest, const void *__restrict __src, size_t __n) __THROW;
 PALIMPORT int    __cdecl memcmp(const void *, const void *, size_t);
 PALIMPORT void * __cdecl memset(void *, int, size_t);
 PALIMPORT void * __cdecl memmove(void *, const void *, size_t);
 PALIMPORT void * __cdecl memchr(const void *, int, size_t);
-PALIMPORT long long int __cdecl atoll(const char *);
 PALIMPORT size_t __cdecl strlen(const char *);
 PALIMPORT int __cdecl strcmp(const char*, const char *);
 PALIMPORT int __cdecl strncmp(const char*, const char *, size_t);
@@ -3679,67 +3659,12 @@ unsigned int __cdecl _rotr(unsigned int value, int shift)
 #endif // !__has_builtin(_rotr)
 
 PALIMPORT int __cdecl abs(int);
-#ifndef PAL_STDCPP_COMPAT
-PALIMPORT LONG __cdecl labs(LONG);
-#endif // !PAL_STDCPP_COMPAT
+
 // clang complains if this is declared with __int64
 PALIMPORT long long __cdecl llabs(long long);
 
-PALIMPORT int __cdecl _finite(double);
-PALIMPORT int __cdecl _isnan(double);
-PALIMPORT double __cdecl _copysign(double, double);
-PALIMPORT double __cdecl acos(double);
-PALIMPORT double __cdecl acosh(double);
-PALIMPORT double __cdecl asin(double);
-PALIMPORT double __cdecl asinh(double);
-PALIMPORT double __cdecl atan(double);
-PALIMPORT double __cdecl atanh(double);
-PALIMPORT double __cdecl atan2(double, double);
-PALIMPORT double __cdecl cbrt(double);
-PALIMPORT double __cdecl ceil(double);
-PALIMPORT double __cdecl cos(double);
-PALIMPORT double __cdecl cosh(double);
-PALIMPORT double __cdecl exp(double);
 PALIMPORT double __cdecl fabs(double);
-PALIMPORT double __cdecl floor(double);
-PALIMPORT double __cdecl fmod(double, double); 
-PALIMPORT double __cdecl log(double);
-PALIMPORT double __cdecl log10(double);
-PALIMPORT double __cdecl modf(double, double*);
-PALIMPORT double __cdecl pow(double, double);
-PALIMPORT double __cdecl sin(double);
-PALIMPORT double __cdecl sinh(double);
-PALIMPORT double __cdecl sqrt(double);
-PALIMPORT double __cdecl tan(double);
-PALIMPORT double __cdecl tanh(double);
-
-PALIMPORT int __cdecl _finitef(float);
-PALIMPORT int __cdecl _isnanf(float);
-PALIMPORT float __cdecl _copysignf(float, float);
-PALIMPORT float __cdecl acosf(float);
-PALIMPORT float __cdecl acoshf(float);
-PALIMPORT float __cdecl asinf(float);
-PALIMPORT float __cdecl asinhf(float);
-PALIMPORT float __cdecl atanf(float);
-PALIMPORT float __cdecl atanhf(float);
-PALIMPORT float __cdecl atan2f(float, float);
-PALIMPORT float __cdecl cbrtf(float);
-PALIMPORT float __cdecl ceilf(float);
-PALIMPORT float __cdecl cosf(float);
-PALIMPORT float __cdecl coshf(float);
-PALIMPORT float __cdecl expf(float);
 PALIMPORT float __cdecl fabsf(float);
-PALIMPORT float __cdecl floorf(float);
-PALIMPORT float __cdecl fmodf(float, float); 
-PALIMPORT float __cdecl logf(float);
-PALIMPORT float __cdecl log10f(float);
-PALIMPORT float __cdecl modff(float, float*);
-PALIMPORT float __cdecl powf(float, float);
-PALIMPORT float __cdecl sinf(float);
-PALIMPORT float __cdecl sinhf(float);
-PALIMPORT float __cdecl sqrtf(float);
-PALIMPORT float __cdecl tanf(float);
-PALIMPORT float __cdecl tanhf(float);
 
 #ifndef PAL_STDCPP_COMPAT
 
@@ -3769,9 +3694,6 @@ PALIMPORT void * __cdecl realloc(void *, size_t);
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
 #endif // !PAL_STDCPP_COMPAT
-
-PALIMPORT PAL_NORETURN void __cdecl exit(int);
-int __cdecl atexit(void (__cdecl *function)(void));
 
 PALIMPORT void __cdecl qsort(void *, size_t, size_t, int (__cdecl *)(const void *, const void *));
 PALIMPORT void * __cdecl bsearch(const void *, const void *, size_t, size_t,
