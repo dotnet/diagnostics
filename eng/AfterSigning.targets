@@ -1,0 +1,22 @@
+<Project>
+
+  <PropertyGroup>
+    <_SuppressSdkImports>false</_SuppressSdkImports>
+  </PropertyGroup>
+
+  <Target Name="PopulateGenerateChecksumItems"
+          AfterTargets="Build"
+          BeforeTargets="GenerateChecksums" >
+
+    <ItemGroup>
+      <NuGetPackageFile Include="$(ArtifactsPackagesDir)**\*.nupkg" />
+      <GenerateChecksumItems Include="%(NuGetPackageFile.Identity)" >
+        <DestinationPath>%(FullPath).sha512</DestinationPath>
+      </GenerateChecksumItems>
+    </ItemGroup>
+
+  </Target>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+
+</Project>
