@@ -1,0 +1,37 @@
+<Project>
+
+  <PropertyGroup>
+    <PublishDependsOnTargets>$(PublishDependsOnTargets);CollectPackageChecksumFiles</PublishDependsOnTargets>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageChecksumFile Include="$(ArtifactsPackagesDir)**\*.sha512" />
+  </ItemGroup>
+
+  <Target Name="CollectPackageChecksumFiles">
+    <!-- Invoke the _GetVersionInfo custom target in this project in order to get the build version information.
+         This is necessary due to the Arcade's Publish.proj not including Arcade SDK, which provides the
+         calcuated version information. -->
+    <MSBuild Projects="$(RepoRoot)src\version.proj"
+        Targets="_GetVersionInfo"
+        SkipNonexistentProjects="false">
+      <Output TaskParameter="TargetOutputs" ItemName="_VersionInfo" />
+    </MSBuild>
+
+    <!-- Extract the build version information from the above project. -->
+    <PropertyGroup>
+      <_Version>@(_VersionInfo->'%(Version)')</_Version>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <!-- For items published to the checksum feed, use the build version so that all
+           assets produced from the same build are colocated within the same root folder.
+           Package versions of each asset could potentially vary within the same build,
+           thus avoid using the package version as the root folder. -->
+      <ItemsToPushToBlobFeed Include="@(PackageChecksumFile)">
+        <RelativeBlobPath>diagnostics/$(_Version)/%(Filename)%(Extension)</RelativeBlobPath>
+      </ItemsToPushToBlobFeed>
+    </ItemGroup>
+  </Target>
+
+</Project>
