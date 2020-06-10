@@ -29,7 +29,7 @@ namespace sos
             return true;
         else if (end2 >= beg1 && end2 <= end1)  // second range ends within first range
             return true;
-        else if (beg1 >= beg2 && beg1 <= end2)  // first range starts within second range 
+        else if (beg1 >= beg2 && beg1 <= end2)  // first range starts within second range
             return true;
         else if (end1 >= beg2 && end1 <= end2)  // first range ends within second range
             return true;
@@ -51,8 +51,8 @@ namespace sos
         if ((mAddress & ~ALIGNCONST) != mAddress)
             sos::Throw<Exception>("Object %p is misaligned.", mAddress);
     }
-    
-    
+
+
     Object::Object(const Object &rhs)
         : mAddress(rhs.mAddress), mMT(rhs.mMT), mSize(rhs.mSize), mPointers(rhs.mPointers), mMTData(rhs.mMTData), mTypeName(rhs.mTypeName)
     {
@@ -64,7 +64,7 @@ namespace sos
     {
         if (mMTData)
             delete mMTData;
-        
+
         if (mTypeName)
             delete mTypeName;
 
@@ -115,7 +115,7 @@ namespace sos
             TADDR temp;
             if (FAILED(MOVE(temp, mAddress)))
                 sos::Throw<DataRead>("Object %s has an invalid method table.", DMLListNearObj(mAddress));
-            
+
             if (temp == NULL)
                 sos::Throw<HeapCorruption>("Object %s has an invalid method table.", DMLListNearObj(mAddress));
 
@@ -124,19 +124,19 @@ namespace sos
 
         return mMT;
     }
-    
+
     TADDR Object::GetComponentMT() const
     {
         if (mMT != NULL && mMT != sos::MethodTable::GetArrayMT())
             return NULL;
-        
+
         DacpObjectData objData;
         if (FAILED(objData.Request(g_sos, TO_CDADDR(mAddress))))
             sos::Throw<DataRead>("Failed to request object data for %s.", DMLListNearObj(mAddress));
-        
+
         if (mMT == NULL)
             mMT = TO_TADDR(objData.MethodTable) & ~3;
-        
+
         return TO_TADDR(objData.ElementTypeHandle);
     }
 
@@ -144,8 +144,8 @@ namespace sos
     {
         if (mTypeName == NULL)
             mTypeName = CreateMethodTableName(GetMT(), GetComponentMT());
-            
-        
+
+
         if (mTypeName == NULL)
             return W("<error>");
 
@@ -190,7 +190,7 @@ namespace sos
                 info->LoaderAllocatorObjectHandle = TO_TADDR(mtcd.LoaderAllocatorObjectHandle);
             }
         }
-        
+
         if (mSize == (size_t)~0)
         {
             mSize = info->BaseSize;
@@ -259,11 +259,11 @@ namespace sos
         // Verify all fields on the object.
         CLRDATA_ADDRESS dwAddr = vMethodTableFields.FirstField;
         DacpFieldDescData vFieldDesc;
-        
+
         while (numInstanceFields < vMethodTableFields.wNumInstanceFields)
         {
             CheckInterrupt();
-            
+
             if (FAILED(vFieldDesc.Request(g_sos, dwAddr)))
                 return false;
 
@@ -271,14 +271,14 @@ namespace sos
                 return false;
 
             dwAddr = vFieldDesc.NextField;
-                
+
             if (!vFieldDesc.bIsStatic)
             {
-                numInstanceFields++;            
+                numInstanceFields++;
                 TADDR dwTmp = TO_TADDR(obj + vFieldDesc.dwOffset + sizeof(BaseObject));
                 if (vFieldDesc.Type == ELEMENT_TYPE_CLASS)
                 {
-                    // Is it a valid object?  
+                    // Is it a valid object?
                     if (FAILED(MOVE(dwTmp, dwTmp)))
                         return false;
 
@@ -289,9 +289,9 @@ namespace sos
                             return false;
                     }
                 }
-            }        
+            }
         }
-        
+
         return true;
     }
 
@@ -301,7 +301,7 @@ namespace sos
         MethodTable mt = addr;
         return _wcscmp(mt.GetName(), W("<Unloaded Type>")) == 0;
     }
-    
+
     void MethodTable::Clear()
     {
         if (mName)
@@ -310,15 +310,15 @@ namespace sos
             mName = NULL;
         }
     }
-    
+
     const WCHAR *MethodTable::GetName() const
     {
         if (mName == NULL)
             mName = CreateMethodTableName(mMT);
-        
+
         if (mName == NULL)
             return W("<error>");
-            
+
         return mName;
     }
 
@@ -334,7 +334,7 @@ namespace sos
         {
             return VerifyMemberFields(TO_TADDR(objectData.MethodTable), address);
         }
-        
+
         return true;
     }
 
@@ -358,10 +358,10 @@ namespace sos
         {
             out.ThreadPtr = TO_TADDR(threadPtr);
         }
-        
+
         return out.ThreadId != 0 && out.ThreadPtr != NULL;
     }
-    
+
     bool Object::GetStringData(__out_ecount(size) WCHAR *buffer, size_t size) const
     {
         SOS_Assert(IsString());
@@ -370,7 +370,7 @@ namespace sos
 
         return SUCCEEDED(g_sos->GetObjectStringData(mAddress, (ULONG32)size, buffer, NULL));
     }
-    
+
     size_t Object::GetStringLength() const
     {
         SOS_Assert(IsString());
@@ -401,13 +401,13 @@ namespace sos
     {
         Init();
     }
-    
+
     RefIterator::~RefIterator()
     {
         if (mBuffer)
             delete [] mBuffer;
     }
-    
+
     const RefIterator &RefIterator::operator++()
     {
         if (mDone)
@@ -419,7 +419,7 @@ namespace sos
             mDone = true;
             return *this;
         }
-        
+
         if (!mArrayOfVC)
         {
             mCurr += sizeof(TADDR);
@@ -444,18 +444,18 @@ namespace sos
             {
                 int i_last = i;
                 i--;
-                
+
                 if (i == mCount)
                     i = 0;
-                
+
                 mCurr += mCurrSeries->val_serie[i_last].skip;
                 mStop = mCurr + mCurrSeries->val_serie[i].nptrs * sizeof(TADDR);
             }
-            
+
             if (mCurr >= mObject + mObjSize - plug_skew)
                 mDone = true;
         }
-        
+
         if (mDone && mLoaderAllocatorObjectHandle != NULL)
         {
             // The iteration over all regular object references is done, but there is one more
@@ -466,17 +466,17 @@ namespace sos
 
         return *this;
     }
-    
+
     TADDR RefIterator::operator*() const
     {
         return ReadPointer(mCurr);
     }
-    
+
     TADDR RefIterator::GetOffset() const
     {
         return mCurr - mObject;
     }
-    
+
     void RefIterator::Init()
     {
         TADDR mt = ReadPointer(mObject);
@@ -559,7 +559,7 @@ namespace sos
             mLoaderAllocatorObjectHandle = loaderAllocatorObjectHandle;
             if (mDone)
             {
-                // There are no object references, but there is still a reference for 
+                // There are no object references, but there is still a reference for
                 // collectible types - the LoaderAllocator for GC
                 mCurr = mLoaderAllocatorObjectHandle;
                 mDone = false;
@@ -571,19 +571,21 @@ namespace sos
     const TADDR GCHeap::HeapStart = 0;
     const TADDR GCHeap::HeapEnd = ~0;
 
-    ObjectIterator::ObjectIterator(const DacpGcHeapDetails *heap, int numHeaps, TADDR start, TADDR stop)
-    : bLarge(false), mCurrObj(0), mLastObj(0), mStart(start), mEnd(stop), mSegmentEnd(0), mHeaps(heap),
+    ObjectIterator::ObjectIterator(const GCHeapDetails *heap, int numHeaps, TADDR start, TADDR stop)
+    : bLarge(false), bPinned(false), mCurrObj(0), mLastObj(0), mStart(start), mEnd(stop), mSegmentEnd(0), mHeaps(heap),
       mNumHeaps(numHeaps), mCurrHeap(0)
     {
         mAllocInfo.Init();
         SOS_Assert(numHeaps > 0);
 
         TADDR segStart = TO_TADDR(mHeaps[0].generation_table[GetMaxGeneration()].start_segment);
-        if (FAILED(mSegment.Request(g_sos, segStart, mHeaps[0])))
+        if (FAILED(mSegment.Request(g_sos, segStart, mHeaps[0].original_heap_details)))
+        {
             sos::Throw<DataRead>("Could not request segment data at %p.", segStart);
+        }
 
         mCurrObj = mStart < TO_TADDR(mSegment.mem) ? TO_TADDR(mSegment.mem) : mStart;
-        mSegmentEnd = (segStart == TO_TADDR(mHeaps[0].ephemeral_heap_segment)) ? 
+        mSegmentEnd = (segStart == TO_TADDR(mHeaps[0].ephemeral_heap_segment)) ?
                             TO_TADDR(mHeaps[0].alloc_allocated) :
                             TO_TADDR(mSegment.allocated);
 
@@ -593,35 +595,47 @@ namespace sos
     bool ObjectIterator::NextSegment()
     {
         if (mCurrHeap >= mNumHeaps)
+        {
             return false;
+        }
 
         TADDR next = TO_TADDR(mSegment.next);
         if (next == NULL)
         {
-            if (bLarge)
+            if (bPinned || (bLarge && !mHeaps[mCurrHeap].has_poh))
             {
                 mCurrHeap++;
                 if (mCurrHeap == mNumHeaps)
+                {
                     return false;
+                }
 
-                bLarge = false;
+                bPinned = false;
                 next = TO_TADDR(mHeaps[mCurrHeap].generation_table[GetMaxGeneration()].start_segment);
+            }
+            else if (bLarge)
+            {
+                bLarge = false;
+                bPinned = true;
+                next = TO_TADDR(mHeaps[mCurrHeap].generation_table[GetMaxGeneration() + 2].start_segment);
             }
             else
             {
                 bLarge = true;
-                next = TO_TADDR(mHeaps[mCurrHeap].generation_table[GetMaxGeneration()+1].start_segment);
+                next = TO_TADDR(mHeaps[mCurrHeap].generation_table[GetMaxGeneration() + 1].start_segment);
             }
         }
 
         SOS_Assert(next != NULL);
-        if (FAILED(mSegment.Request(g_sos, next, mHeaps[mCurrHeap])))
+        if (FAILED(mSegment.Request(g_sos, next, mHeaps[mCurrHeap].original_heap_details)))
+        {
             sos::Throw<DataRead>("Failed to request segment data at %p.", next);
+        }
 
         mLastObj = 0;
         mCurrObj = mStart < TO_TADDR(mSegment.mem) ? TO_TADDR(mSegment.mem) : mStart;
-        mSegmentEnd = (next == TO_TADDR(mHeaps[mCurrHeap].ephemeral_heap_segment)) ? 
-                            TO_TADDR(mHeaps[mCurrHeap].alloc_allocated) : 
+        mSegmentEnd = (next == TO_TADDR(mHeaps[mCurrHeap].ephemeral_heap_segment)) ?
+                            TO_TADDR(mHeaps[mCurrHeap].alloc_allocated) :
                             TO_TADDR(mSegment.allocated);
         return CheckSegmentRange();
     }
@@ -655,7 +669,7 @@ namespace sos
     }
 
 
-    
+
     const Object &ObjectIterator::operator*() const
     {
         AssertSanity();
@@ -724,13 +738,13 @@ namespace sos
         mCurrObj = mCurrObj.GetAddress() + size;
 
         if (!bLarge)
-        {       
+        {
             // Is this the end of an allocation context? We need to know this because there can be
             // allocated memory at the end of an allocation context that doesn't yet contain any objects.
             // This happens because we actually allocate a minimum amount of memory (the allocation quantum)
             // whenever we need to get more memory. Typically, a single allocation request won't fill this
             // block, so we'll fulfill subsequent requests out of the remainder of the block until it's
-            // depleted. 
+            // depleted.
             int i;
             for (i = 0; i < mAllocInfo.num; i ++)
             {
@@ -766,32 +780,50 @@ namespace sos
     GCHeap::GCHeap()
     {
         if (FAILED(mHeapData.Request(g_sos)))
+        {
             sos::Throw<DataRead>("Failed to request GC heap data.");
+        }
 
         if (mHeapData.bServerMode)
         {
             mNumHeaps = mHeapData.HeapCount;
             DWORD dwAllocSize = 0;
             if (!ClrSafeInt<DWORD>::multiply(sizeof(CLRDATA_ADDRESS), mNumHeaps, dwAllocSize))
+            {
                 sos::Throw<Exception>("Failed to get GCHeaps: Integer overflow.");
+            }
 
             CLRDATA_ADDRESS *heapAddrs = (CLRDATA_ADDRESS*)alloca(dwAllocSize);
             if (FAILED(g_sos->GetGCHeapList(mNumHeaps, heapAddrs, NULL)))
+            {
                 sos::Throw<DataRead>("Failed to get GCHeaps.");
+            }
 
-            mHeaps = new DacpGcHeapDetails[mNumHeaps];
+            mHeaps = new GCHeapDetails[mNumHeaps];
 
             for (int i = 0; i < mNumHeaps; i++)
-                if (FAILED(mHeaps[i].Request(g_sos, heapAddrs[i])))
+            {
+                DacpGcHeapDetails dacHeapDetails;
+                if (FAILED(dacHeapDetails.Request(g_sos, heapAddrs[i])))
+                {
                     sos::Throw<DataRead>("Failed to get GC heap details at %p.", heapAddrs[i]);
+                }
+
+                mHeaps[i].Set(dacHeapDetails, heapAddrs[i]);
+            }
         }
         else
         {
-            mHeaps = new DacpGcHeapDetails[1];
+            mHeaps = new GCHeapDetails[1];
             mNumHeaps = 1;
-            
-            if (FAILED(mHeaps[0].Request(g_sos)))
+
+            DacpGcHeapDetails dacGCDetails;
+            if (FAILED(dacGCDetails.Request(g_sos)))
+            {
                 sos::Throw<DataRead>("Failed to request GC details data.");
+            }
+
+            mHeaps[0].Set(dacGCDetails);
         }
     }
 
@@ -821,7 +853,7 @@ namespace sos
     {
         Init();
     }
-    
+
     const SyncBlk &SyncBlk::operator=(int index)
     {
         mIndex = index;
@@ -833,6 +865,7 @@ namespace sos
     void SyncBlk::Init()
     {
         if (FAILED(mData.Request(g_sos, mIndex)))
+
             sos::Throw<DataRead>("Failed to request SyncBlk at index %d.", mIndex);
     }
 
@@ -898,7 +931,7 @@ namespace sos
         SOS_Assert(mIndex);
         return TO_TADDR(mData.appDomainPtr);
     }
-    
+
     void BuildTypeWithExtraInfo(TADDR addr, unsigned int size, __inout_ecount(size) WCHAR *buffer)
     {
         try
@@ -907,9 +940,9 @@ namespace sos
             TADDR mtAddr = obj.GetMT();
             bool isArray = sos::MethodTable::IsArrayMT(mtAddr);
             bool isString = obj.IsString();
-            
+
             sos::MethodTable mt(isArray ? obj.GetComponentMT() : mtAddr);
-            
+
             if (isArray)
             {
                 swprintf_s(buffer, size, W("%s[]"), mt.GetName());
@@ -918,7 +951,7 @@ namespace sos
             {
                 WCHAR str[32];
                 obj.GetStringData(str, _countof(str));
-                
+
                 _snwprintf_s(buffer, size, _TRUNCATE, W("%s: \"%s\""), mt.GetName(), str);
             }
             else
@@ -929,10 +962,10 @@ namespace sos
         catch (const sos::Exception &e)
         {
             int len = MultiByteToWideChar(CP_ACP, 0, e.what(), -1, NULL, 0);
-            
+
             ArrayHolder<WCHAR> tmp = new WCHAR[len];
             MultiByteToWideChar(CP_ACP, 0, e.what(), -1, (WCHAR*)tmp, len);
-            
+
             swprintf_s(buffer, size, W("<invalid object: '%s'>"), (WCHAR*)tmp);
         }
     }
