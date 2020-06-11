@@ -158,7 +158,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
         [HttpGet("logs/{pid?}")]
         [Produces(ContentTypeEventStream, ContentTypeNdJson)]
-        public ActionResult Logs(int? pid, [FromQuery][Range(-1, int.MaxValue)] int durationSeconds = 30)
+        public ActionResult Logs(int? pid, [FromQuery][Range(-1, int.MaxValue)] int durationSeconds = 30, [FromQuery] LogLevel level = LogLevel.Debug)
         {
             TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
             return this.InvokeService(() =>
@@ -170,13 +170,13 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 {
                     return this.NotAcceptable();
                 }
-                
+
                 string contentType = (format == LogFormat.EventStream) ? ContentTypeEventStream : ContentTypeNdJson;
                 string downloadName = (format == LogFormat.EventStream) ? null : FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{pidValue}.txt");
 
                 return new OutputStreamResult(async (outputStream, token) =>
                 {
-                    await _diagnosticServices.StartLogs(outputStream, pidValue, duration, format, token);
+                    await _diagnosticServices.StartLogs(outputStream, pidValue, duration, format, level, token);
                 }, contentType, downloadName);
             });
         }

@@ -14,7 +14,6 @@ using FastSerialization;
 using Graphs;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
@@ -87,14 +86,15 @@ namespace Microsoft.Diagnostics.Monitoring
             return new StreamWithCleanup(monitor, stream);
         }
 
-        public async Task StartLogs(Stream outputStream, int pid, TimeSpan duration, LogFormat format, CancellationToken token)
+        public async Task StartLogs(Stream outputStream, int pid, TimeSpan duration, LogFormat format, LogLevel level, CancellationToken token)
         {
             using var loggerFactory = new LoggerFactory();
 
-            loggerFactory.AddProvider(new StreamingLoggerProvider(outputStream, format));
+            loggerFactory.AddProvider(new StreamingLoggerProvider(outputStream, format, level));
 
             await using var processor = new DiagnosticsEventPipeProcessor(PipeMode.Logs,
-                loggerFactory: loggerFactory);
+                loggerFactory: loggerFactory,
+                logsLevel: level);
 
             await processor.Process(pid, duration, token);
         }
