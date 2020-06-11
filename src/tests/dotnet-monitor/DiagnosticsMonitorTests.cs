@@ -14,11 +14,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Extensions;
 
 namespace DotnetMonitor.UnitTests
 {
@@ -31,9 +33,14 @@ namespace DotnetMonitor.UnitTests
             _output = output;
         }
 
-        [Fact(Skip = "Disable test due to errors on MacOS")]
+        [SkippableFact]
         public async Task TestDiagnosticsEventPipeProcessorLogs()
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                throw new SkipTestException("Unstable test on OSX");
+            }
+
             var outputStream = new MemoryStream();
 
             await using (var testExecution = RemoteTestExecution.StartRemoteProcess("LoggerRemoteTest", _output))
