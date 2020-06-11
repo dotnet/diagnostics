@@ -5,7 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageChecksumFile Include="$(ArtifactsPackagesDir)**\*.sha512" />
+    <PackageChecksumFile Include="$(ArtifactsShippingPackagesDir)**\*.sha512" IsShipping="true" />
+    <PackageChecksumFile Include="$(ArtifactsNonShippingPackagesDir)**\*.sha512" IsShipping="false" />
   </ItemGroup>
 
   <Target Name="CollectPackageChecksumFiles">
@@ -30,6 +31,7 @@
            thus avoid using the package version as the root folder. -->
       <ItemsToPushToBlobFeed Include="@(PackageChecksumFile)">
         <RelativeBlobPath>diagnostics/$(_Version)/%(Filename)%(Extension)</RelativeBlobPath>
+        <ManifestArtifactData Condition="'%(IsShipping)' != 'true'">NonShipping=true</ManifestArtifactData>
         <PublishFlatContainer>true</PublishFlatContainer>
       </ItemsToPushToBlobFeed>
     </ItemGroup>
