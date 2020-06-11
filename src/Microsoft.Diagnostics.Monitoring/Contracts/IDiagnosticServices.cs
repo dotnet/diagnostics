@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -26,7 +27,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         Task<IStreamWithCleanup> StartTrace(int pid, MonitoringSourceConfiguration configuration, TimeSpan duration, CancellationToken token);
 
-        Task StartLogs(Stream outputStream, int pid, TimeSpan duration, LogFormat logFormat, CancellationToken token);
+        Task StartLogs(Stream outputStream, int pid, TimeSpan duration, LogFormat logFormat, LogLevel logLevel, CancellationToken token);
     }
 
     public interface IStreamWithCleanup : IAsyncDisposable

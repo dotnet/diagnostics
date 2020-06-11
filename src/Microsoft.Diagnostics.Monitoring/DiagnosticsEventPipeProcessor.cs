@@ -6,15 +6,12 @@ using Graphs;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers.Clr;
-using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftWindowsTCPIP;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,19 +32,22 @@ namespace Microsoft.Diagnostics.Monitoring
         private readonly IEnumerable<IMetricsLogger> _metricLoggers;
         private readonly PipeMode _mode;
         private readonly int _metricIntervalSeconds;
+        private readonly LogLevel _logsLevel;
 
         public DiagnosticsEventPipeProcessor(
             PipeMode mode,
             ILoggerFactory loggerFactory = null,
             IEnumerable<IMetricsLogger> metricLoggers = null,
             int metricIntervalSeconds = 10,
-            MemoryGraph gcGraph = null)
+            MemoryGraph gcGraph = null,
+            LogLevel logsLevel = LogLevel.Debug)
         {
             _metricLoggers = metricLoggers ?? Enumerable.Empty<IMetricsLogger>();
             _mode = mode;
             _loggerFactory = loggerFactory;
             _gcGraph = gcGraph;
             _metricIntervalSeconds = metricIntervalSeconds;
+            _logsLevel = logsLevel;
         }
 
         public async Task Process(int pid, TimeSpan duration, CancellationToken token)
@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.Monitoring
                     MonitoringSourceConfiguration config = null;
                     if (_mode == PipeMode.Logs)
                     {
-                        config = new LoggingSourceConfiguration();
+                        config = new LoggingSourceConfiguration(_logsLevel);
                     }
                     if (_mode == PipeMode.Metrics)
                     {

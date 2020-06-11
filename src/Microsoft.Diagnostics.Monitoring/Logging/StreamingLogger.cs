@@ -18,16 +18,18 @@ namespace Microsoft.Diagnostics.Monitoring
     {
         private readonly Stream _outputStream;
         private readonly LogFormat _format;
+        private readonly LogLevel _logLevel;
 
-        public StreamingLoggerProvider(Stream outputStream, LogFormat logFormat)
+        public StreamingLoggerProvider(Stream outputStream, LogFormat logFormat, LogLevel logLevel = LogLevel.Debug)
         {
             _outputStream = outputStream;
             _format = logFormat;
+            _logLevel = logLevel;
         }
 
         public ILogger CreateLogger(string categoryName)
         {
-            return new StreamingLogger(categoryName, _outputStream, _format);
+            return new StreamingLogger(categoryName, _outputStream, _format, _logLevel);
         }
 
         public void Dispose()
@@ -41,12 +43,14 @@ namespace Microsoft.Diagnostics.Monitoring
         private readonly Stream _outputStream;
         private readonly string _categoryName;
         private readonly LogFormat _logFormat;
+        private readonly LogLevel _logLevel;
 
-        public StreamingLogger(string category, Stream outputStream, LogFormat format)
+        public StreamingLogger(string category, Stream outputStream, LogFormat format, LogLevel logLevel)
         {
             _outputStream = outputStream;
             _categoryName = category;
             _logFormat = format;
+            _logLevel = logLevel;
         }
 
         public IDisposable BeginScope<TState>(TState state)
@@ -58,7 +62,7 @@ namespace Microsoft.Diagnostics.Monitoring
             return null;
         }
 
-        public bool IsEnabled(LogLevel logLevel) => true;
+        public bool IsEnabled(LogLevel logLevel) => logLevel <= _logLevel;
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {

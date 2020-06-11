@@ -5,11 +5,19 @@
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
     public class LoggingSourceConfiguration : MonitoringSourceConfiguration
     {
+        private readonly LogLevel _level;
+
+        public LoggingSourceConfiguration(LogLevel level = LogLevel.Debug)
+        {
+            _level = level;
+        }
+
         public override IList<EventPipeProvider> GetProviders()
         {
             var providers = new List<EventPipeProvider>()
@@ -18,7 +26,12 @@ namespace Microsoft.Diagnostics.Monitoring
                 new EventPipeProvider(
                     MicrosoftExtensionsLoggingProviderName,
                     EventLevel.LogAlways,
-                    (long)(LoggingEventSource.Keywords.JsonMessage | LoggingEventSource.Keywords.FormattedMessage)
+                    (long)(LoggingEventSource.Keywords.JsonMessage | LoggingEventSource.Keywords.FormattedMessage),
+                    arguments: new Dictionary<string,string>
+                        {
+                            // Filter all loggers to the specified level
+                            { "FilterSpecs", $"*:{_level:G}" }
+                        }
                 )
             };
 
