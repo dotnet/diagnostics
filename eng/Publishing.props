@@ -30,6 +30,7 @@
            thus avoid using the package version as the root folder. -->
       <ItemsToPushToBlobFeed Include="@(PackageChecksumFile)">
         <RelativeBlobPath>diagnostics/$(_Version)/%(Filename)%(Extension)</RelativeBlobPath>
+        <PublishFlatContainer>true</PublishFlatContainer>
       </ItemsToPushToBlobFeed>
     </ItemGroup>
   </Target>
