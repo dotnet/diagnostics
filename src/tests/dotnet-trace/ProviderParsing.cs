@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.True(provider.Keywords == 1);
             Assert.True(provider.EventLevel == System.Diagnostics.Tracing.EventLevel.Verbose);
             Assert.True(provider.Arguments.Count == 1);
-            Assert.True(provider.Arguments["FilterAndPayloadSpecs"] == "\"QuotedValue\"");
+            Assert.True(provider.Arguments["FilterAndPayloadSpecs"] == "QuotedValue");
         }
 
         [Theory]
@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.True(provider.Keywords == 1);
             Assert.True(provider.EventLevel == System.Diagnostics.Tracing.EventLevel.Verbose);
             Assert.True(provider.Arguments.Count == 1);
-            Assert.True(provider.Arguments["FilterAndPayloadSpecs"] == "\"QuotedValue:-\r\nQuoted/Value\"");
+            Assert.True(provider.Arguments["FilterAndPayloadSpecs"] == "QuotedValue:-\r\nQuoted/Value");
         }
 
         [Theory]
@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.True(provider.Keywords == (long)(-1));
             Assert.True(provider.EventLevel == System.Diagnostics.Tracing.EventLevel.Verbose);
             Assert.True(provider.Arguments.Count == 1);
-            Assert.True(provider.Arguments["FilterAndPayloadSpecs"] == "\"QuotedValue\"");
+            Assert.True(provider.Arguments["FilterAndPayloadSpecs"] == "QuotedValue");
         }
 
         [Theory]
@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.True(provider.Keywords == (long)(-1));
             Assert.True(provider.EventLevel == System.Diagnostics.Tracing.EventLevel.Verbose);
             Assert.True(provider.Arguments.Count == 1);
-            Assert.True(provider.Arguments["FilterAndPayloadSpecs"] == "\"QuotedValue\"");
+            Assert.True(provider.Arguments["FilterAndPayloadSpecs"] == "QuotedValue");
         }
 
         [Theory]
@@ -117,7 +117,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.True(providerOne.Keywords == 1);
             Assert.True(providerOne.EventLevel == System.Diagnostics.Tracing.EventLevel.Critical);
             Assert.True(providerOne.Arguments.Count == 1);
-            Assert.True(providerOne.Arguments["FilterAndPayloadSpecs"] == "\"QuotedValue\"");
+            Assert.True(providerOne.Arguments["FilterAndPayloadSpecs"] == "QuotedValue");
 
             Assert.True(providerTwo.Name == "ProviderTwo");
             Assert.True(providerTwo.Keywords == 2);
@@ -173,19 +173,19 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.True(providerOne.Keywords == 1);
             Assert.True(providerOne.EventLevel == System.Diagnostics.Tracing.EventLevel.Critical);
             Assert.True(providerOne.Arguments.Count == 1);
-            Assert.True(providerOne.Arguments["FilterAndPayloadSpecs"] == "\"QuotedValue:-\r\nQuoted/Value:-A=B;C=D;\"");
+            Assert.True(providerOne.Arguments["FilterAndPayloadSpecs"] == "QuotedValue:-\r\nQuoted/Value:-A=B;C=D;");
 
             Assert.True(providerTwo.Name == "ProviderTwo");
             Assert.True(providerTwo.Keywords == 2);
             Assert.True(providerTwo.EventLevel == System.Diagnostics.Tracing.EventLevel.Error);
             Assert.True(providerTwo.Arguments.Count == 1);
-            Assert.True(providerTwo.Arguments["FilterAndPayloadSpecs"]== "\"QuotedValue\"");
+            Assert.True(providerTwo.Arguments["FilterAndPayloadSpecs"]== "QuotedValue");
 
             Assert.True(providerThree.Name == "ProviderThree");
             Assert.True(providerThree.Keywords == 3);
             Assert.True(providerThree.EventLevel == System.Diagnostics.Tracing.EventLevel.Warning);
             Assert.True(providerThree.Arguments.Count == 1);
-            Assert.True(providerThree.Arguments["FilterAndPayloadSpecs"] == "\"QuotedValue:-\r\nQuoted/Value:-A=B;C=D;\"");
+            Assert.True(providerThree.Arguments["FilterAndPayloadSpecs"] == "QuotedValue:-\r\nQuoted/Value:-A=B;C=D;");
         }
 
         [Theory]
