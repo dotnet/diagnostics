@@ -141,7 +141,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
                     providers.Add(new EventPipeProvider(
                         providerModel.Name,
-                        MapEventLevel(providerModel.EventLevel),
+                        providerModel.EventLevel,
                         keywords,
                         providerModel.Arguments
                         ));
@@ -186,27 +186,6 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             int pidValue = _diagnosticServices.ResolveProcess(pid);
             IStreamWithCleanup result = await _diagnosticServices.StartTrace(pidValue, configuration, duration, this.HttpContext.RequestAborted);
             return new StreamWithCleanupResult(result, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{pidValue}.nettrace"));
-        }
-
-        private static EventLevel MapEventLevel(EventPipeProviderEventLevel eventLevel)
-        {
-            switch (eventLevel)
-            {
-                case EventPipeProviderEventLevel.Critical:
-                    return EventLevel.Critical;
-                case EventPipeProviderEventLevel.Error:
-                    return EventLevel.Error;
-                case EventPipeProviderEventLevel.Informational:
-                    return EventLevel.Informational;
-                case EventPipeProviderEventLevel.LogAlways:
-                    return EventLevel.LogAlways;
-                case EventPipeProviderEventLevel.Verbose:
-                    return EventLevel.Verbose;
-                case EventPipeProviderEventLevel.Warning:
-                    return EventLevel.Warning;
-                default:
-                    throw new ArgumentException("Unexpected event level", nameof(eventLevel));
-            }
         }
 
         private static TimeSpan ConvertSecondsToTimeSpan(int durationSeconds)
