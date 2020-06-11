@@ -2,7 +2,7 @@
 
   <!-- This project is not meant to produce any artifacts (e.g. assemblies, packages)
        but is intended to be used to produce version information for projects that
-       do not include the Arcarde SDK (e.g. the Publish.proj from Arcade SDK). -->
+       do not include the Arcade SDK (e.g. the Publish.proj from Arcade SDK). -->
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>Version</RootNamespace>
