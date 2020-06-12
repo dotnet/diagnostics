@@ -33,4 +33,19 @@
           AfterTargets="PostBuildEvent"
           Condition="$(NeedsPublishing) == 'true'"
           DependsOnTargets="$(_BeforePublishNoBuildTargets);$(_CorePublishTargets)" />
+
+  <!-- Creates a file for packaged projects that declare a blog group prefix so that
+      publishing can use it in the blob path calculation. -->
+  <Target Name="GenerateBlobGroupFile"
+          AfterTargets="Pack"
+          Condition="'$(IsPackable)' == 'true' and '$(BlobGroupPrefix)' != ''">
+    <PropertyGroup>
+      <_BlobGroupVersionMajor>$(PackageVersion.Split('.')[0])</_BlobGroupVersionMajor>
+      <_BlobGroupVersionMinor>$(PackageVersion.Split('.')[1])</_BlobGroupVersionMinor>
+      <_BlobGroupName>$(BlobGroupPrefix)$(_BlobGroupVersionMajor).$(_BlobGroupVersionMinor)</_BlobGroupName>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(PackageOutputPath)\$(PackageId).$(PackageVersion).nupkg.blobgroup"
+                      Lines="$(_BlobGroupName)"
+                      Overwrite="true" />
+  </Target>
 </Project>

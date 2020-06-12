@@ -10,7 +10,8 @@
   <Target Name="CollectGenerateChecksumItems">
     <ItemGroup>
       <NuGetPackageFile Include="$(ArtifactsPackagesDir)**\*.nupkg" />
-      <GenerateChecksumItems Include="%(NuGetPackageFile.Identity)" >
+      <GenerateChecksumItems Include="%(NuGetPackageFile.Identity)"
+                             Condition="$([System.IO.File]::Exists('%(NugetPackageFile.Identity).blobgroup'))" >
         <DestinationPath>%(FullPath).sha512</DestinationPath>
       </GenerateChecksumItems>
     </ItemGroup>
