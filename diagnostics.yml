@@ -454,6 +454,7 @@ stages:
         # The variables get imported from group dotnet-diagnostics-sdl-params
         enableSourceLinkValidation: true
         symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
+        publishInstallersAndChecksums: true
         SDLValidationParameters:
           enable: true
           continueOnError: false
