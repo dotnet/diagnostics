@@ -2,11 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Repl;
 using SOS;
 using System;
-using System.CommandLine;
 using System.IO;
 using System.Linq;
 
@@ -28,6 +26,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [Command(Name = "dumpmodule",       AliasExpansion = "DumpModule",          Help = "Displays information about a EE module structure at the specified address.")]
     [Command(Name = "dumpmt",           AliasExpansion = "DumpMT",              Help = "Displays information about a method table at the specified address.")]
     [Command(Name = "dumpobj",          AliasExpansion = "DumpObj",             Help = "Displays info about an object at the specified address.")]
+    [CommandAlias(Name = "do")]
     [Command(Name = "dumpvc",           AliasExpansion = "DumpVC",              Help = "Displays info about the fields of a value class.")]
     [Command(Name = "dumpstackobjects", AliasExpansion = "DumpStackObjects",    Help = "Displays all managed objects found within the bounds of the current stack.")]
     [CommandAlias(Name = "dso")]

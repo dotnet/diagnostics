@@ -68,7 +68,7 @@ namespace SOS
             builder.AddMethod(new SetCurrentThreadIdDelegate(soshost.SetCurrentThreadId));
             builder.AddMethod(new GetCurrentThreadSystemIdDelegate(soshost.GetCurrentThreadSystemId));
             builder.AddMethod(new GetThreadIdBySystemIdDelegate(soshost.GetThreadIdBySystemId));
-            builder.AddMethod(new GetThreadContextByIdDelegate(GetThreadContextById));
+            builder.AddMethod(new GetThreadContextByIdDelegate(soshost.GetThreadContextById));
 
             builder.AddMethod(new GetValueByNameDelegate(GetValueByName));
             builder.AddMethod(new GetInstructionOffsetDelegate(soshost.GetInstructionOffset));
@@ -141,19 +141,6 @@ namespace SOS
             // Don't fail, but always return 0 native frames so "clrstack -f" still prints the managed frames
             SOSHost.Write(framesFilled);
             return S_OK;
-        }
-
-        int GetThreadContextById(
-            IntPtr self,
-            uint threadId,
-            uint contextFlags,
-            uint contextSize,
-            IntPtr context)
-        {
-            if (_soshost.DataReader.GetThreadContext(threadId, contextFlags, contextSize, context)) {
-                return S_OK;
-            }
-            return E_FAIL;
         }
 
         int GetValueByName(

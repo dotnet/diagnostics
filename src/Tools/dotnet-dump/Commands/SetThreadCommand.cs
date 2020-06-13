@@ -4,11 +4,6 @@
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Repl;
-using Microsoft.Diagnostics.Runtime;
-using System;
-using System.Collections.Generic;
-using System.CommandLine;
-using System.Linq;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -16,30 +11,37 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [CommandAlias(Name = "threads")]
     public class SetThreadCommand : CommandBase
     {
-        [Argument(Help = "The thread index to set, otherwise displays the list of threads.")]
-        public int? ThreadIndex { get; set; } = null;
+        [Argument(Help = "The thread index or id to set, otherwise displays the list of threads.")]
+        public int? Thread { get; set; } = null;
 
-        public DataTarget DataTarget { get; set; }
+        [Option(Name = "--tid", Help = "<thread> is an OS thread id.")]
+        [OptionAlias(Name = "-t")]
+        public bool ThreadId { get; set; }
 
         public AnalyzeContext AnalyzeContext { get; set; }
 
+        public IThreadService ThreadService { get; set; }
+
         public override void Invoke()
         {
-            if (ThreadIndex.HasValue)
+            if (Thread.HasValue)
             {
-                IEnumerable<uint> threads = DataTarget.DataReader.EnumerateAllThreads();
-                if (ThreadIndex.Value >= threads.Count()) {
-                    throw new InvalidOperationException($"Invalid thread index {ThreadIndex.Value}");
+                ThreadInfo threadInfo;
+                if (ThreadId)
+                {
+                    threadInfo = ThreadService.GetThreadInfoFromId((uint)Thread.Value);
                 }
-                AnalyzeContext.CurrentThreadId = unchecked((int)threads.ElementAt(ThreadIndex.Value));
+                else
+                {
+                    threadInfo = ThreadService.GetThreadInfoFromIndex(Thread.Value);
+                }
+                AnalyzeContext.CurrentThreadId = threadInfo.ThreadId;
             }
             else
             {
-                int index = 0;
-                foreach (uint threadId in DataTarget.DataReader.EnumerateAllThreads())
+                foreach (ThreadInfo thread in ThreadService.EnumerateThreads())
                 {
-                    WriteLine("{0}{1} 0x{2:X4} ({2})", threadId == AnalyzeContext.CurrentThreadId ? "*" : " ", index, threadId);
-                    index++;
+                    WriteLine("{0}{1} 0x{2:X4} ({2})", thread.ThreadId == AnalyzeContext.CurrentThreadId.Value ? "*" : " ", thread.ThreadIndex, thread.ThreadId);
                 }
             }
         }

@@ -143,13 +143,13 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             // Create common analyze context for commands
             var analyzeContext = new AnalyzeContext() {
-                CurrentThreadId = unchecked((int)target.DataReader.EnumerateAllThreads().FirstOrDefault())
+                CurrentThreadId = target.DataReader.EnumerateAllThreads().FirstOrDefault()
             };
             _serviceProvider.AddService(analyzeContext);
 
-            // Add the register, memory, SOSHost and ClrRuntime services
-            var registerService = new RegisterService(target);
-            _serviceProvider.AddService(registerService);
+            // Add the thread, memory, SOSHost and ClrRuntime services
+            var threadService = new ThreadService(target.DataReader);
+            _serviceProvider.AddService<IThreadService>(threadService);
 
             var memoryService = new MemoryService(target.DataReader);
             _serviceProvider.AddService(memoryService);
