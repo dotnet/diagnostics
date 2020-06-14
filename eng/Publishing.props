@@ -19,22 +19,21 @@
     <PropertyGroup>
       <_BlobGroupFilePath>%(PackageFile.FullPath).blobgroup</_BlobGroupFilePath>
       <_ChecksumFilePath>%(PackageFile.FullPath).sha512</_ChecksumFilePath>
-      <_VersionFilePath>%(PackageFile.FullPath).version</_VersionFilePath>
     </PropertyGroup>    
     <!-- Read in blob group name, if it exists -->
     <ReadLinesFromFile File="$(_BlobGroupFilePath)" Condition="Exists('$(_BlobGroupFilePath)')">
       <Output TaskParameter="Lines" PropertyName="_BlobGroupName"/>
     </ReadLinesFromFile>
     <ItemGroup>
-      <!-- Capture package checksum artifact -->
-      <_PackageArtifact Include="$(_ChecksumFilePath)" Condition="Exists('$(_ChecksumFilePath)')" />
-      <!-- Capture version checksum artifact -->
-      <_PackageArtifact Include="$(_VersionFilePath)" Condition="Exists('$(_VersionFilePath)')" />
+      <!-- Capture package; setting cateogry to Other will upload to installers blob feed. -->
+      <_BlobItem Include="%(PackageFile.FullPath)" Category="Other" />
+      <!-- Capture checksum -->
+      <_BlobItem Include="$(_ChecksumFilePath)" Condition="Exists('$(_ChecksumFilePath)')" />
     </ItemGroup>
     <ItemGroup>
       <!-- Add artifact items to be pushed to blob feed -->
-      <ItemsToPushToBlobFeed Include="%(_PackageArtifact.Identity)" Condition="'$(_BlobGroupName)' != ''">
-        <RelativeBlobPath>diagnostics/$(_BlobGroupName)/%(_PackageArtifact.Filename)%(_PackageArtifact.Extension)</RelativeBlobPath>
+      <ItemsToPushToBlobFeed Include="@(_BlobItem)" Condition="'$(_BlobGroupName)' != ''">
+        <RelativeBlobPath>diagnostics/$(_BlobGroupName)/%(_BlobItem.Filename)%(_BlobItem.Extension)</RelativeBlobPath>
         <ManifestArtifactData Condition="'%(PackageFile.IsShipping)' != 'true'">NonShipping=true</ManifestArtifactData>
         <PublishFlatContainer>true</PublishFlatContainer>
       </ItemsToPushToBlobFeed>
