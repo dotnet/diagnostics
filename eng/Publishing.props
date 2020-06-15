@@ -1,35 +1,40 @@
 <Project>
 
   <PropertyGroup>
-    <PublishDependsOnTargets>$(PublishDependsOnTargets);CollectPackageChecksumFiles</PublishDependsOnTargets>
+    <PublishDependsOnTargets>$(PublishDependsOnTargets);CollectPackageArtifactFiles</PublishDependsOnTargets>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageChecksumFile Include="$(ArtifactsShippingPackagesDir)**\*.sha512" IsShipping="true" />
-    <PackageChecksumFile Include="$(ArtifactsNonShippingPackagesDir)**\*.sha512" IsShipping="false" />
+    <PackageFile Include="$(ArtifactsShippingPackagesDir)**\*.nupkg" IsShipping="true" />
+    <PackageFile Include="$(ArtifactsNonShippingPackagesDir)**\*.nupkg" IsShipping="false" />
   </ItemGroup>
 
-  <!-- Run the CollectPackageChecksumFiles target on each PackageChecksunFile by target batching on a non-existing file.
+  <!-- Run the CollectPackageArtifactFiles target on each PackageFile by target batching on a non-existing file.
        This allows using the ReadLinesFromFile task to read the blob group file, which was written with WriteLinesToFile,
        thus avoiding erroneously reading in the newline at the end of the blob group file. -->
-  <Target Name="CollectPackageChecksumFiles"
-          Inputs="@(PackageChecksumFile)"
-          Outputs="%(PackageChecksumFile.Identity).notexist">
-    <!-- Find the blob group file next to the checksum file. -->
+  <Target Name="CollectPackageArtifactFiles"
+          Inputs="@(PackageFile)"
+          Outputs="%(PackageFile.Identity).notexist">
+    <!-- Find the artifact files next to the package file. -->
     <PropertyGroup>
-      <_BlobGroupFilePath>%(PackageChecksumFile.RootDir)%(PackageChecksumFile.Directory)%(PackageChecksumFile.Filename).blobgroup</_BlobGroupFilePath>
-    </PropertyGroup>
-    <Error Message="Blob group file '$(_BlobGroupFilePath)' does not exist."
-           Condition="!Exists('$(_BlobGroupFilePath)')" />
-    <!-- Read in blob group name -->
-    <ReadLinesFromFile File="$(_BlobGroupFilePath)">
+      <_BlobGroupFilePath>%(PackageFile.FullPath).blobgroup</_BlobGroupFilePath>
+      <_ChecksumFilePath>%(PackageFile.FullPath).sha512</_ChecksumFilePath>
+    </PropertyGroup>    
+    <!-- Read in blob group name, if it exists -->
+    <ReadLinesFromFile File="$(_BlobGroupFilePath)" Condition="Exists('$(_BlobGroupFilePath)')">
       <Output TaskParameter="Lines" PropertyName="_BlobGroupName"/>
     </ReadLinesFromFile>
-    <!-- Add ItemsToPushToBlobFeed for checksum file using blob group in relative blob path. -->
     <ItemGroup>
-      <ItemsToPushToBlobFeed Include="%(PackageChecksumFile.Identity)">
-        <RelativeBlobPath>diagnostics/$(_BlobGroupName)/%(PackageChecksumFile.Filename)%(PackageChecksumFile.Extension)</RelativeBlobPath>
-        <ManifestArtifactData Condition="'%(PackageChecksumFile.IsShipping)' != 'true'">NonShipping=true</ManifestArtifactData>
+      <!-- Capture package; setting cateogry to Other will upload to installers blob feed. -->
+      <_BlobItem Include="%(PackageFile.FullPath)" Category="Other" />
+      <!-- Capture checksum -->
+      <_BlobItem Include="$(_ChecksumFilePath)" Condition="Exists('$(_ChecksumFilePath)')" />
+    </ItemGroup>
+    <ItemGroup>
+      <!-- Add artifact items to be pushed to blob feed -->
+      <ItemsToPushToBlobFeed Include="@(_BlobItem)" Condition="'$(_BlobGroupName)' != ''">
+        <RelativeBlobPath>diagnostics/$(_BlobGroupName)/%(_BlobItem.Filename)%(_BlobItem.Extension)</RelativeBlobPath>
+        <ManifestArtifactData Condition="'%(PackageFile.IsShipping)' != 'true'">NonShipping=true</ManifestArtifactData>
         <PublishFlatContainer>true</PublishFlatContainer>
       </ItemsToPushToBlobFeed>
     </ItemGroup>
