@@ -3,89 +3,23 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.IO.Pipes;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Runtime.InteropServices;
-using System.Security.Principal;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
     internal class IpcClient
     {
-        public static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
-        public static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
-
-        private static double ConnectTimeoutMilliseconds { get; } = TimeSpan.FromSeconds(3).TotalMilliseconds;
-
-        /// <summary>
-        /// Get the OS Transport to be used for communicating with a dotnet process.
-        /// </summary>
-        /// <param name="processId">The PID of the dotnet process to get the transport for</param>
-        /// <returns>A System.IO.Stream wrapper around the transport</returns>
-        private static Stream GetTransport(int processId)
-        {
-            try 
-            {
-                var process = Process.GetProcessById(processId);
-            }
-            catch (System.ArgumentException)
-            {
-                throw new ServerNotAvailableException($"Process {processId} is not running.");
-            }
-            catch (System.InvalidOperationException)
-            {
-                throw new ServerNotAvailableException($"Process {processId} seems to be elevated.");
-            }
- 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                string pipeName = $"dotnet-diagnostic-{processId}";
-                var namedPipe = new NamedPipeClientStream(
-                    ".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation);
-                namedPipe.Connect((int)ConnectTimeoutMilliseconds);
-                return namedPipe;
-            }
-            else
-            {
-                string ipcPort;
-                try
-                {
-                    ipcPort = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-{processId}-*-socket") // Try best match.
-                                .OrderByDescending(f => new FileInfo(f).LastWriteTime)
-                                .FirstOrDefault();
-                    if (ipcPort == null)
-                    {
-                        throw new ServerNotAvailableException($"Process {processId} not running compatible .NET Core runtime.");
-                    }
-                }
-                catch (InvalidOperationException)
-                {
-                    throw new ServerNotAvailableException($"Process {processId} not running compatible .NET Core runtime.");
-                }
-                string path = Path.Combine(IpcRootPath, ipcPort);
-                var remoteEP = CreateUnixDomainSocketEndPoint(path);
-
-                var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-                socket.Connect(remoteEP);
-                return new NetworkStream(socket, ownsSocket: true);
-            }
-        }
-
         /// <summary>
         /// Checks that the client is able to communicate with target process over diagnostic transport.
         /// </summary>
         /// <returns>
         /// True if client is able to communicate with target process; otherwise, false.
         /// </returns>
-        public static bool CheckTransport(int processId)
+        public static bool CheckTransport(IIpcEndpoint endpoint)
         {
             try
             {
-                using var stream = GetTransport(processId);
+                using var stream = endpoint.Connect();
                 return null != stream;
             }
             catch (Exception)
@@ -97,12 +31,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId.
         /// </summary>
-        /// <param name="processId">The PID of the dotnet process</param>
+        /// <param name="endpoint">The PID of the dotnet process</param>
         /// <param name="message">The DiagnosticsIpc Message to be sent</param>
         /// <returns>The response DiagnosticsIpc Message from the dotnet process</returns>
-        public static IpcMessage SendMessage(int processId, IpcMessage message)
+        public static IpcMessage SendMessage(IIpcEndpoint endpoint, IpcMessage message)
         {
-            using (var stream = GetTransport(processId))
+            using (var stream = endpoint.Connect())
             {
                 Write(stream, message);
                 return Read(stream);
@@ -113,13 +47,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId
         /// and returns the Stream for reuse in Optional Continuations.
         /// </summary>
-        /// <param name="processId">The PID of the dotnet process</param>
+        /// <param name="endpoint">The PID of the dotnet process</param>
         /// <param name="message">The DiagnosticsIpc Message to be sent</param>
         /// <param name="response">out var for response message</param>
         /// <returns>The response DiagnosticsIpc Message from the dotnet process</returns>
-        public static Stream SendMessage(int processId, IpcMessage message, out IpcMessage response)
+        public static Stream SendMessage(IIpcEndpoint endpoint, IpcMessage message, out IpcMessage response)
         {
-            var stream = GetTransport(processId);
+            var stream = endpoint.Connect();
             Write(stream, message);
             response = Read(stream);
             return stream;
@@ -138,23 +72,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private static IpcMessage Read(Stream stream)
         {
             return IpcMessage.Parse(stream);
-        }
-
-        private static EndPoint CreateUnixDomainSocketEndPoint(string path)
-        {
-#if NETCOREAPP
-            return new UnixDomainSocketEndPoint(path);
-#elif NETSTANDARD2_0
-            // UnixDomainSocketEndPoint is not part of .NET Standard 2.0
-            var type = typeof(Socket).Assembly.GetType("System.Net.Sockets.UnixDomainSocketEndPoint")
-                       ?? Type.GetType("System.Net.Sockets.UnixDomainSocketEndPoint, System.Core");
-            if (type == null)
-            {
-                throw new PlatformNotSupportedException("Current process is not running a compatible .NET Core runtime.");
-            }
-            var ctor = type.GetConstructor(new[] { typeof(string) });
-            return (EndPoint)ctor.Invoke(new object[] { path });
-#endif
         }
     }
 }

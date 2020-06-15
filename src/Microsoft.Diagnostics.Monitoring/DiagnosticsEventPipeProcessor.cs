@@ -2,11 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Graphs;
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing;
-using Microsoft.Diagnostics.Tracing.Parsers.Clr;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -15,6 +10,11 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Graphs;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Parsers.Clr;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
@@ -22,7 +22,8 @@ namespace Microsoft.Diagnostics.Monitoring
     {
         Logs = 1,
         Metrics,
-        GCDump
+        GCDump,
+        ProcessInfo
     }
 
     public class DiagnosticsEventPipeProcessor : IAsyncDisposable
@@ -33,6 +34,7 @@ namespace Microsoft.Diagnostics.Monitoring
         private readonly PipeMode _mode;
         private readonly int _metricIntervalSeconds;
         private readonly LogLevel _logsLevel;
+        private readonly Action<string> _processInfoCallback;
 
         public DiagnosticsEventPipeProcessor(
             PipeMode mode,
@@ -40,7 +42,8 @@ namespace Microsoft.Diagnostics.Monitoring
             IEnumerable<IMetricsLogger> metricLoggers = null,
             int metricIntervalSeconds = 10,
             MemoryGraph gcGraph = null,
-            LogLevel logsLevel = LogLevel.Debug)
+            LogLevel logsLevel = LogLevel.Debug,
+            Action<string> processInfoCallback = null)
         {
             _metricLoggers = metricLoggers ?? Enumerable.Empty<IMetricsLogger>();
             _mode = mode;
@@ -48,9 +51,10 @@ namespace Microsoft.Diagnostics.Monitoring
             _gcGraph = gcGraph;
             _metricIntervalSeconds = metricIntervalSeconds;
             _logsLevel = logsLevel;
+            _processInfoCallback = processInfoCallback;
         }
 
-        public async Task Process(int pid, TimeSpan duration, CancellationToken token)
+        public async Task Process(DiagnosticsClient client, int pid, TimeSpan duration, CancellationToken token)
         {
             await await Task.Factory.StartNew(async () =>
             {
@@ -72,9 +76,13 @@ namespace Microsoft.Diagnostics.Monitoring
                     {
                         config = new GCDumpSourceConfiguration();
                     }
+                    if (_mode == PipeMode.ProcessInfo)
+                    {
+                        config = new SampleProfilerConfiguration();
+                    }
 
                     monitor = new DiagnosticsMonitor(config);
-                    Stream sessionStream = await monitor.ProcessEvents(pid, duration, token);
+                    Stream sessionStream = await monitor.ProcessEvents(client, duration, token);
                     source = new EventPipeEventSource(sessionStream);
 
                     // Allows the event handling routines to stop processing before the duration expires.
@@ -96,6 +104,11 @@ namespace Microsoft.Diagnostics.Monitoring
                     {
                         // GC
                         handleEventsTask = HandleGCEvents(source, pid, stopFunc, token);
+                    }
+
+                    if (_mode == PipeMode.ProcessInfo)
+                    {
+                        handleEventsTask = HandleProcessInfo(source, stopFunc, token);
                     }
 
                     source.Process();
@@ -453,6 +466,40 @@ namespace Microsoft.Diagnostics.Monitoring
             dumper.ConvertHeapDataToGraph();
 
             _gcGraph.AllowReading();
+        }
+
+        private async Task HandleProcessInfo(EventPipeEventSource source, Func<Task> stopFunc, CancellationToken token)
+        {
+            string commandLine = null;
+
+            Action<TraceEvent, Action> processInfoHandler = (TraceEvent traceEvent, Action taskComplete) =>
+            {
+                commandLine = (string)traceEvent.PayloadByName("CommandLine");
+                taskComplete();
+            };
+
+            using var processInfoTaskSource = new EventTaskSource<Action<TraceEvent>>(
+                taskComplete => traceEvent => processInfoHandler(traceEvent, taskComplete),
+                handler => source.Dynamic.AddCallbackForProviderEvent(MonitoringSourceConfiguration.EventPipeProviderName, "ProcessInfo", handler),
+                handler => source.Dynamic.RemoveCallback(handler),
+                token);
+            using var anyEventTaskSource = new EventTaskSource<Action<TraceEvent>>(
+                taskComplete => _ => taskComplete(),
+                handler => source.AllEvents += handler,
+                handler => source.AllEvents -= handler,
+                token);
+
+            // Wait for any event to occur
+            await anyEventTaskSource.Task;
+
+            // Stop receiving events; the ProcessInfo event will be sent on session stop.
+            await stopFunc();
+
+            // Wait for the ProcessInfo event
+            await processInfoTaskSource.Task;
+
+            // Send ProcessInfo information
+            _processInfoCallback?.Invoke(commandLine);
         }
 
         public async ValueTask DisposeAsync()

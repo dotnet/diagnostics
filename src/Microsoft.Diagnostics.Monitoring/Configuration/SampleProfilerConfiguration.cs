@@ -3,19 +3,17 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
-using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
-    public sealed class CpuProfileConfiguration : MonitoringSourceConfiguration
+    public sealed class SampleProfilerConfiguration : MonitoringSourceConfiguration
     {
         public override IList<EventPipeProvider> GetProviders() =>
             new EventPipeProvider[]
             {
-                new EventPipeProvider(SampleProfilerProviderName, System.Diagnostics.Tracing.EventLevel.Informational),
-                new EventPipeProvider("Microsoft-Windows-DotNETRuntime", System.Diagnostics.Tracing.EventLevel.Informational, (long) Tracing.Parsers.ClrTraceEventParser.Keywords.Default)
+                new EventPipeProvider(SampleProfilerProviderName, EventLevel.Informational)
             };
     }
 }

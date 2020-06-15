@@ -1,4 +1,5 @@
-﻿using System.Runtime.Serialization;
+﻿using System;
+using System.Runtime.Serialization;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer.Models
 {
@@ -7,5 +8,13 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Models
     {
         [DataMember(Name = "pid")]
         public int Pid { get; set; }
+
+        [DataMember(Name = "uid")]
+        public Guid Uid { get; set; }
+
+        public static ProcessModel FromProcessInfo(IProcessInfo processInfo)
+        {
+            return new ProcessModel() { Pid = processInfo.Pid, Uid = processInfo.Uid };
+        }
     }
 }

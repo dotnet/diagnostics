@@ -42,6 +42,7 @@
     <MicrosoftExtensionsConfigurationJsonVersion>2.1.1</MicrosoftExtensionsConfigurationJsonVersion>
     <MicrosoftExtensionsConfigurationKeyPerFileVersion>2.1.1</MicrosoftExtensionsConfigurationKeyPerFileVersion>
     <MicrosoftExtensionsDependencyInjectionVersion>2.1.1</MicrosoftExtensionsDependencyInjectionVersion>
+    <MicrosoftExtensionsHostingAbstractionsVersion>2.1.1</MicrosoftExtensionsHostingAbstractionsVersion>
     <MicrosoftExtensionsLoggingVersion>2.1.1</MicrosoftExtensionsLoggingVersion>
     <MicrosoftExtensionsLoggingConsoleVersion>2.1.1</MicrosoftExtensionsLoggingConsoleVersion>
     <!-- We use a newer version of LoggingEventSource due to a bug in an older version-->

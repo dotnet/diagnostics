@@ -17,11 +17,11 @@ namespace Microsoft.Diagnostics.Monitoring
     /// </summary>
     public interface IDiagnosticServices : IDisposable
     {
-        IEnumerable<int> GetProcesses();
+        Task<IEnumerable<IProcessInfo>> GetProcessesAsync(CancellationToken token);
 
-        int ResolveProcess(int? pid);
+        Task<int> ResolveProcessAsync(int? pid, CancellationToken token);
 
-        Task<Stream> GetDump(int pid, DumpType mode);
+        Task<Stream> GetDump(int pid, DumpType mode, CancellationToken token);
 
         Task<Stream> GetGcDump(int pid, CancellationToken token);
 
@@ -33,6 +33,13 @@ namespace Microsoft.Diagnostics.Monitoring
     public interface IStreamWithCleanup : IAsyncDisposable
     {
         Stream Stream { get; }
+    }
+
+    public interface IProcessInfo
+    {
+        int Pid { get; }
+
+        Guid Uid { get; }
     }
 
     public enum DumpType

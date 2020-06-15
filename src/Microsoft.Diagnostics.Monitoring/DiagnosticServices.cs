@@ -21,15 +21,21 @@ namespace Microsoft.Diagnostics.Monitoring
     {
         private const int DockerEntrypointProcessId = 1;
 
+        private readonly IDiagnosticsConnectionsSourceInternal _connectionsSource;
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
-        public IEnumerable<int> GetProcesses()
+        public DiagnosticServices(IDiagnosticsConnectionsSource connectionsSource)
+        {
+            _connectionsSource = (IDiagnosticsConnectionsSourceInternal)connectionsSource;
+        }
+
+        public async Task<IEnumerable<IProcessInfo>> GetProcessesAsync(CancellationToken token)
         {
             try
             {
-                //TODO This won't work properly with multi-container scenarios that don't share the process space.
-                //TODO We will need to use DiagnosticsAgent if we are the server.
-                return DiagnosticsClient.GetPublishedProcesses();
+                var connections = await _connectionsSource.GetConnectionsAsync(token);
+
+                return connections.Select(c => new ProcessInfo(c.RuntimeInstanceCookie, c.ProcessId)).ToList();
             }
             catch (UnauthorizedAccessException)
             {
@@ -37,7 +43,7 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        public async Task<Stream> GetDump(int pid, DumpType mode)
+        public async Task<Stream> GetDump(int pid, DumpType mode, CancellationToken token)
         {
             string dumpFilePath = Path.Combine(Path.GetTempPath(), FormattableString.Invariant($"{Guid.NewGuid()}_{pid}"));
             NETCore.Client.DumpType dumpType = MapDumpType(mode);
@@ -50,9 +56,9 @@ namespace Microsoft.Diagnostics.Monitoring
             }
             else
             {
+                var client = await GetClientAsync(pid, CancellationToken.None);
                 await Task.Run(() =>
                 {
-                    var client = new DiagnosticsClient(pid);
                     client.WriteDump(dumpType, dumpFilePath);
                 });
             }
@@ -60,13 +66,15 @@ namespace Microsoft.Diagnostics.Monitoring
             return new AutoDeleteFileStream(dumpFilePath);
         }
 
-        public async Task<Stream> GetGcDump(int pid, CancellationToken cancellationToken)
+        public async Task<Stream> GetGcDump(int pid, CancellationToken token)
         {
             var graph = new MemoryGraph(50_000);
-            await using var processor = new DiagnosticsEventPipeProcessor(PipeMode.GCDump,
+            await using var processor = new DiagnosticsEventPipeProcessor(
+                PipeMode.GCDump,
                 gcGraph: graph);
 
-            await processor.Process(pid, Timeout.InfiniteTimeSpan, cancellationToken);
+            var client = await GetClientAsync(pid, token);
+            await processor.Process(client, pid, Timeout.InfiniteTimeSpan, token);
 
             var dumper = new GCHeapDump(graph);
             dumper.CreationTool = "dotnet-monitor";
@@ -82,7 +90,8 @@ namespace Microsoft.Diagnostics.Monitoring
         public async Task<IStreamWithCleanup> StartTrace(int pid, MonitoringSourceConfiguration configuration, TimeSpan duration, CancellationToken token)
         {
             DiagnosticsMonitor monitor = new DiagnosticsMonitor(configuration);
-            Stream stream = await monitor.ProcessEvents(pid, duration, token);
+            var client = await GetClientAsync(pid, token);
+            Stream stream = await monitor.ProcessEvents(client, duration, token);
             return new StreamWithCleanup(monitor, stream);
         }
 
@@ -92,11 +101,13 @@ namespace Microsoft.Diagnostics.Monitoring
 
             loggerFactory.AddProvider(new StreamingLoggerProvider(outputStream, format, level));
 
-            await using var processor = new DiagnosticsEventPipeProcessor(PipeMode.Logs,
+            await using var processor = new DiagnosticsEventPipeProcessor(
+                PipeMode.Logs,
                 loggerFactory: loggerFactory,
                 logsLevel: level);
 
-            await processor.Process(pid, duration, token);
+            var client = await GetClientAsync(pid, token);
+            await processor.Process(client, pid, duration, token);
         }
 
         private static NETCore.Client.DumpType MapDumpType(DumpType dumpType)
@@ -116,7 +127,7 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        public int ResolveProcess(int? pid)
+        public async Task<int> ResolveProcessAsync(int? pid, CancellationToken token)
         {
             if (pid.HasValue)
             {
@@ -126,24 +137,31 @@ namespace Microsoft.Diagnostics.Monitoring
             // Short-circuit for when running in a Docker container.
             if (RuntimeInfo.IsInDockerContainer)
             {
-                var client = new DiagnosticsClient(DockerEntrypointProcessId);
-                if (client.CheckTransport())
+                try
                 {
-                    return DockerEntrypointProcessId;
+                    var client = await GetClientAsync(DockerEntrypointProcessId, token);
+                    if (client.CheckTransport())
+                    {
+                        return DockerEntrypointProcessId;
+                    }
+                }
+                catch
+                {
+                    // Process ID 1 doesn't exist or didn't advertise in the reverse pipe configuration.
                 }
             }
 
             // Only return a process ID if there is exactly one discoverable process.
-            int[] pids = GetProcesses().ToArray();
-            switch (pids.Length)
+            IProcessInfo[] processes = (await GetProcessesAsync(token)).ToArray();
+            switch (processes.Length)
             {
                 case 0:
                     throw new ArgumentException("Unable to discover a target process.");
                 case 1:
-                    return pids[0];
+                    return processes[0].Pid;
                 default:
 #if DEBUG
-                    Process process = pids.Select(pid => Process.GetProcessById(pid)).FirstOrDefault(p => string.Equals(p.ProcessName, "iisexpress", StringComparison.OrdinalIgnoreCase));
+                    Process process = processes.Select(p => Process.GetProcessById(p.Pid)).FirstOrDefault(p => string.Equals(p.ProcessName, "iisexpress", StringComparison.OrdinalIgnoreCase));
                     if (process != null)
                     {
                         return process.Id;
@@ -151,6 +169,19 @@ namespace Microsoft.Diagnostics.Monitoring
 #endif
                     throw new ArgumentException("Unable to select a single target process because multiple target processes have been discovered.");
             }
+        }
+
+        private async Task<DiagnosticsClient> GetClientAsync(int processId, CancellationToken token)
+        {
+            var connections = await _connectionsSource.GetConnectionsAsync(token);
+            var connection = connections.FirstOrDefault(c => c.ProcessId == processId);
+
+            if (null == connection)
+            {
+                throw new InvalidOperationException($"Diagnostics client for process ID {processId} does not exist.");
+            }
+
+            return new DiagnosticsClient(connection.Endpoint);
         }
 
         public void Dispose()
@@ -201,6 +232,19 @@ namespace Microsoft.Diagnostics.Monitoring
                     await _monitor.DisposeAsync();
                 }
             }
+        }
+
+        private sealed class ProcessInfo : IProcessInfo
+        {
+            public ProcessInfo(Guid uid, int pid)
+            {
+                Pid = pid;
+                Uid = uid;
+            }
+
+            public int Pid { get; }
+
+            public Guid Uid { get; }
         }
     }
 }

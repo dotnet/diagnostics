@@ -43,14 +43,14 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         }
 
         [HttpGet("processes")]
-        public ActionResult<IEnumerable<ProcessModel>> GetProcesses()
+        public Task<ActionResult<IEnumerable<ProcessModel>>> GetProcesses()
         {
-            return this.InvokeService(() =>
+            return this.InvokeService(async () =>
             {
                 IList<ProcessModel> processes = new List<ProcessModel>();
-                foreach (int pid in _diagnosticServices.GetProcesses())
+                foreach (IProcessInfo p in await _diagnosticServices.GetProcessesAsync(HttpContext.RequestAborted))
                 {
-                    processes.Add(new ProcessModel() { Pid = pid });
+                    processes.Add(ProcessModel.FromProcessInfo(p));
                 }
                 return new ActionResult<IEnumerable<ProcessModel>>(processes);
             });
@@ -61,8 +61,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         {
             return this.InvokeService(async () =>
             {
-                int pidValue = _diagnosticServices.ResolveProcess(pid);
-                Stream result = await _diagnosticServices.GetDump(pidValue, type);
+                int pidValue = await _diagnosticServices.ResolveProcessAsync(pid, HttpContext.RequestAborted);
+                Stream result = await _diagnosticServices.GetDump(pidValue, type, HttpContext.RequestAborted);
 
                 string dumpFileName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
                     FormattableString.Invariant($"dump_{GetFileNameTimeStampUtcNow()}.dmp") :
@@ -79,7 +79,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         {
             return this.InvokeService(async () =>
             {
-                int pidValue = _diagnosticServices.ResolveProcess(pid);
+                int pidValue = await _diagnosticServices.ResolveProcessAsync(pid, HttpContext.RequestAborted);
                 Stream result = await _diagnosticServices.GetGcDump(pidValue, this.HttpContext.RequestAborted);
                 return File(result, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{pidValue}.gcdump"));
             });
@@ -158,12 +158,12 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
         [HttpGet("logs/{pid?}")]
         [Produces(ContentTypeEventStream, ContentTypeNdJson)]
-        public ActionResult Logs(int? pid, [FromQuery][Range(-1, int.MaxValue)] int durationSeconds = 30, [FromQuery] LogLevel level = LogLevel.Debug)
+        public Task<ActionResult> Logs(int? pid, [FromQuery][Range(-1, int.MaxValue)] int durationSeconds = 30, [FromQuery] LogLevel level = LogLevel.Debug)
         {
             TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
-            return this.InvokeService(() =>
+            return this.InvokeService(async () =>
             {
-                int pidValue = _diagnosticServices.ResolveProcess(pid);
+                int pidValue = await _diagnosticServices.ResolveProcessAsync(pid, HttpContext.RequestAborted);
 
                 LogFormat format = ComputeLogFormat(Request.GetTypedHeaders().Accept);
                 if (format == LogFormat.None)
@@ -183,7 +183,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
         private async Task<StreamWithCleanupResult> StartTrace(int? pid, MonitoringSourceConfiguration configuration, TimeSpan duration)
         {
-            int pidValue = _diagnosticServices.ResolveProcess(pid);
+            int pidValue = await _diagnosticServices.ResolveProcessAsync(pid, HttpContext.RequestAborted);
             IStreamWithCleanup result = await _diagnosticServices.StartTrace(pidValue, configuration, duration, this.HttpContext.RequestAborted);
             return new StreamWithCleanupResult(result, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{pidValue}.nettrace"));
         }

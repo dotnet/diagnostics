@@ -2,16 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Monitoring;
-using Microsoft.Tools.Common;
 using System;
-using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Monitoring;
+using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
@@ -31,8 +29,8 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                   description: "Monitor logs and metrics in a .NET application send the results to a chosen destination.")
               {
                 // Handler
-                CommandHandler.Create<CancellationToken, IConsole, string[], string[], bool>(new DiagnosticsMonitorCommandHandler().Start),
-                Urls(), MetricUrls(), ProvideMetrics()
+                CommandHandler.Create<CancellationToken, IConsole, string[], string[], bool, string>(new DiagnosticsMonitorCommandHandler().Start),
+                Urls(), MetricUrls(), ProvideMetrics(), TransportPath()
               };
 
         private static Option Urls() =>
@@ -57,6 +55,14 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 description: "Enable publishing of metrics")
             {
                 Argument = new Argument<bool>(name: "metrics", defaultValue: true )
+            };
+
+        private static Option TransportPath() =>
+            new Option(
+                alias: "--transport-path",
+                description: "A fully qualified path and filename for the OS transport to communicate over.")
+            {
+                Argument = new Argument<string>(name: "transportPath")
             };
 
         private static string GetDefaultMetricsEndpoint()
