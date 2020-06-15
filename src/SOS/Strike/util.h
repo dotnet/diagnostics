@@ -443,12 +443,12 @@ public:
 
     ~GCHeapDetails()
     {
-        if (generation_table == NULL)
+        if (generation_table != NULL)
         {
             delete[] generation_table;
         }
 
-        if (finalization_fill_pointers == NULL)
+        if (finalization_fill_pointers != NULL)
         {
             delete[] finalization_fill_pointers;
         }

@@ -865,7 +865,6 @@ namespace sos
     void SyncBlk::Init()
     {
         if (FAILED(mData.Request(g_sos, mIndex)))
-
             sos::Throw<DataRead>("Failed to request SyncBlk at index %d.", mIndex);
     }
 
