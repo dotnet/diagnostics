@@ -8,9 +8,9 @@
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>54d096ee50a9bcf7ac6efd16a07d51af651d20a1</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.SymbolStore" Version="1.0.131301">
+    <Dependency Name="Microsoft.SymbolStore" Version="1.0.131501">
       <Uri>https://github.com/dotnet/symstore</Uri>
-      <Sha>bc8d8d949fb37084883a23c3804ca295d866a8a9</Sha>
+      <Sha>35efe4f0f037cccfc8ac01fa76d0d1e2a7cf7333</Sha>
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
