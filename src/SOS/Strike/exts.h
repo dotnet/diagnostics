@@ -409,6 +409,7 @@ extern IMachine* g_targetMachine;
 inline BOOL IsDbgTargetX86()    { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_I386; }
 inline BOOL IsDbgTargetAmd64()  { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_AMD64; }
 inline BOOL IsDbgTargetArm()    { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARMNT; }
+inline BOOL IsDbgTargetArm64()  { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARM64; }
 inline BOOL IsDbgTargetWin64()  { return IsDbgTargetAmd64(); }
 
 /* Returns the instruction pointer for the given CONTEXT.  We need this and its family of
