@@ -6,7 +6,7 @@
  /* File created by MIDL compiler version 8.01.0622 */
 /* at Mon Jan 18 19:14:07 2038
  */
-/* Compiler settings for C:/git/diagnostics/src/inc/sospriv.idl:
+/* Compiler settings for C:/git/runtime/src/coreclr/src/inc/sospriv.idl:
     Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 8.01.0622
     protocol : dce , ms_ext, c_ext, robust
     error checks: allocation ref bounds_check enum stub_data
@@ -2523,6 +2523,9 @@ EXTERN_C const IID IID_ISOSDacInterface8;
     ISOSDacInterface8 : public IUnknown
     {
     public:
+        virtual HRESULT STDMETHODCALLTYPE GetNumberGenerations(
+            unsigned int *pGenerations) = 0;
+
         virtual HRESULT STDMETHODCALLTYPE GetGenerationTable(
             unsigned int cGenerations,
             struct DacpGenerationData *pGenerationData,
@@ -2565,6 +2568,10 @@ EXTERN_C const IID IID_ISOSDacInterface8;
 
         ULONG ( STDMETHODCALLTYPE *Release )(
             ISOSDacInterface8 * This);
+
+        HRESULT ( STDMETHODCALLTYPE *GetNumberGenerations )(
+            ISOSDacInterface8 * This,
+            unsigned int *pGenerations);
 
         HRESULT ( STDMETHODCALLTYPE *GetGenerationTable )(
             ISOSDacInterface8 * This,
@@ -2614,6 +2621,9 @@ EXTERN_C const IID IID_ISOSDacInterface8;
 #define ISOSDacInterface8_Release(This) \
     ( (This)->lpVtbl -> Release(This) )
 
+
+#define ISOSDacInterface8_GetNumberGenerations(This,pGenerations)   \
+    ( (This)->lpVtbl -> GetNumberGenerations(This,pGenerations) )
 
 #define ISOSDacInterface8_GetGenerationTable(This,cGenerations,pGenerationData,pNeeded) \
     ( (This)->lpVtbl -> GetGenerationTable(This,cGenerations,pGenerationData,pNeeded) )

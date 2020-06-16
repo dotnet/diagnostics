@@ -314,32 +314,12 @@ private:
     {
         HRESULT hr = S_OK;
         bool success = false;
-        unsigned int generationCount;
         ReleaseHolder<ISOSDacInterface8> sos8;
-        if (SUCCEEDED(hr = g_sos->QueryInterface(__uuidof(ISOSDacInterface8), &sos8)))
+        if (!SUCCEEDED(hr = g_sos->QueryInterface(__uuidof(ISOSDacInterface8), &sos8))
+            || !SUCCEEDED(hr = sos8->GetNumberGenerations(count)))
         {
-            if (svrHeapAddr == NULL)
-            {
-                hr = sos8->GetGenerationTable(0, NULL, &generationCount);
-                if (SUCCEEDED(hr) || hr == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER))
-                {
-                    success = true;
-                    *count = generationCount;
-                }
-            }
-            else
-            {
-                hr = sos8->GetGenerationTableSvr(svrHeapAddr, 0, NULL, &generationCount);
-                if (SUCCEEDED(hr) || hr == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER))
-                {
-                    success = true;
-                    *count = generationCount;
-                }
-            }
-        }
-
-        if (!success)
-        {
+            // The runtime will either have the original 4 generations or implement ISOSDacInterface8
+            // if the call succeeded, count is already populated.
             *count = DAC_NUMBERGENERATIONS;
         }
     }
@@ -357,7 +337,8 @@ private:
         {
             if (svrHeapAddr == NULL)
             {
-                if (SUCCEEDED(hr = sos8->GetGenerationTable(count, data, &generationCount)))
+                if (SUCCEEDED(hr = sos8->GetGenerationTable(count, data, &generationCount))
+                    && hr != S_FALSE)
                 {
                     success = true;
                     // Nothing else to do, data is already populated
@@ -365,7 +346,8 @@ private:
             }
             else
             {
-                if (SUCCEEDED(hr = sos8->GetGenerationTableSvr(svrHeapAddr, count, data, &generationCount)))
+                if (SUCCEEDED(hr = sos8->GetGenerationTableSvr(svrHeapAddr, count, data, &generationCount))
+                    && hr != S_FALSE)
                 {
                     success = true;
                     // Nothing else to do, data is already populated
@@ -378,7 +360,7 @@ private:
         if (!success)
         {
             // This would mean that there are additional, unaccounted for, generations
-            _ASSERTE(hr != HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER));
+            _ASSERTE(hr != S_FALSE);
 
             // We couldn't get any data from the newer APIs, so fall back to the original data
             memcpy(data, &(heap.generation_table), sizeof(DacpGenerationData) * DAC_NUMBERGENERATIONS);
@@ -398,7 +380,8 @@ private:
         {
             if (svrHeapAddr == NULL)
             {
-                if (SUCCEEDED(hr = sos8->GetFinalizationFillPointers(count, data, &fillPointersCount)))
+                if (SUCCEEDED(hr = sos8->GetFinalizationFillPointers(count, data, &fillPointersCount))
+                    && hr != S_FALSE)
                 {
                     success = true;
                     // Nothing else to do, data is already populated
@@ -406,7 +389,8 @@ private:
             }
             else
             {
-                if (SUCCEEDED(hr = sos8->GetFinalizationFillPointersSvr(svrHeapAddr, count, data, &fillPointersCount)))
+                if (SUCCEEDED(hr = sos8->GetFinalizationFillPointersSvr(svrHeapAddr, count, data, &fillPointersCount))
+                    && hr != S_FALSE)
                 {
                     success = true;
                     // Nothing else to do, data is already populated
@@ -419,7 +403,7 @@ private:
         if (!success)
         {
             // This would mean that there are additional, unaccounted for, generations
-            _ASSERTE(hr != HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER));
+            _ASSERTE(hr != S_FALSE);
 
             // We couldn't get any data from the newer APIs, so fall back to the original data
             memcpy(data, &(heap.finalization_fill_pointers), sizeof(CLRDATA_ADDRESS) * (DAC_NUMBERGENERATIONS + 3));
