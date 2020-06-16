@@ -15,26 +15,42 @@
   <Target Name="CollectPackageArtifactFiles"
           Inputs="@(PackageFile)"
           Outputs="%(PackageFile.Identity).notexist">
+
     <!-- Find the artifact files next to the package file. -->
     <PropertyGroup>
       <_BlobGroupFilePath>%(PackageFile.FullPath).blobgroup</_BlobGroupFilePath>
       <_ChecksumFilePath>%(PackageFile.FullPath).sha512</_ChecksumFilePath>
     </PropertyGroup>    
+
     <!-- Read in blob group name, if it exists -->
     <ReadLinesFromFile File="$(_BlobGroupFilePath)" Condition="Exists('$(_BlobGroupFilePath)')">
       <Output TaskParameter="Lines" PropertyName="_BlobGroupName"/>
     </ReadLinesFromFile>
+
+    <!-- Calculate manifest artifact data for each file type. -->
     <ItemGroup>
-      <!-- Capture package; setting cateogry to Other will upload to installers blob feed. -->
-      <_BlobItem Include="%(PackageFile.FullPath)" Category="Other" />
-      <!-- Capture checksum -->
-      <_BlobItem Include="$(_ChecksumFilePath)" Condition="Exists('$(_ChecksumFilePath)')" />
+      <_CommonArtifactData Include="NonShipping=true" Condition="'%(PackageFile.IsShipping)' != 'true'" />
     </ItemGroup>
     <ItemGroup>
-      <!-- Add artifact items to be pushed to blob feed -->
+      <_PackageArtifactData Include="@(_CommonArtifactData)" />
+      <!-- Setting Category to Other will upload to installers blob feed. -->
+      <_PackageArtifactData Include="Category=Other" />
+    </ItemGroup>
+
+    <!-- Capture each blob item to upload to blob feed -->
+    <ItemGroup>
+      <_BlobItem Include="%(PackageFile.FullPath)">
+        <ManifestArtifactData>@(_PackageArtifactData)</ManifestArtifactData>
+      </_BlobItem>
+      <_BlobItem Include="$(_ChecksumFilePath)" Condition="Exists('$(_ChecksumFilePath)')">
+        <ManifestArtifactData Condition="'@(_CommonArtifactData)' != ''">@(_CommonArtifactData)</ManifestArtifactData>
+      </_BlobItem>
+    </ItemGroup>
+
+    <!-- Add artifact items to be pushed to blob feed -->
+    <ItemGroup>      
       <ItemsToPushToBlobFeed Include="@(_BlobItem)" Condition="'$(_BlobGroupName)' != ''">
         <RelativeBlobPath>diagnostics/$(_BlobGroupName)/%(_BlobItem.Filename)%(_BlobItem.Extension)</RelativeBlobPath>
-        <ManifestArtifactData Condition="'%(PackageFile.IsShipping)' != 'true'">NonShipping=true</ManifestArtifactData>
         <PublishFlatContainer>true</PublishFlatContainer>
       </ItemsToPushToBlobFeed>
     </ItemGroup>
