@@ -688,7 +688,10 @@ BOOL GCObjInLargeSegment(TADDR taddrObj, const GCHeapDetails &heap, TADDR_SEGINF
 
 BOOL GCObjInPinnedObjectSegment(TADDR taddrObj, const GCHeapDetails &heap, TADDR_SEGINFO& rngSeg)
 {
-    _ASSERTE(heap.has_poh);
+    if (!heap.has_poh)
+    {
+        return FALSE;
+    }
 
     TADDR taddrSeg;
     DacpHeapSegmentData dacpSeg;
