@@ -170,7 +170,7 @@ namespace SOS
         internal readonly IDataReader DataReader;
         internal readonly AnalyzeContext AnalyzeContext;
 
-        private readonly RegisterService _registerService;
+        private readonly IThreadService _threadService;
         private readonly MemoryService _memoryService;
         private readonly IConsoleService _console;
         private readonly COMCallableIUnknown _ccw;  
@@ -203,7 +203,7 @@ namespace SOS
             _console = serviceProvider.GetService<IConsoleService>();
             AnalyzeContext = serviceProvider.GetService<AnalyzeContext>();
             _memoryService = serviceProvider.GetService<MemoryService>();
-            _registerService = serviceProvider.GetService<RegisterService>();
+            _threadService = serviceProvider.GetService<IThreadService>();
             _versionCache = new ReadVirtualCache(_memoryService);
 
             string rid = InstallHelper.GetRid();
@@ -891,9 +891,27 @@ namespace SOS
             IntPtr context,
             uint contextSize)
         {
-            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
-            byte[] registerContext = _registerService.GetThreadContext(threadId);
-            if (registerContext == null) {
+            if (!AnalyzeContext.CurrentThreadId.HasValue)
+            {
+                return E_FAIL;
+            }
+            return GetThreadContextById(self, AnalyzeContext.CurrentThreadId.Value, 0, contextSize, context);
+        }
+
+        internal int GetThreadContextById(
+            IntPtr self,
+            uint threadId,
+            uint contextFlags,
+            uint contextSize,
+            IntPtr context)
+        {
+            byte[] registerContext;
+            try
+            {
+                registerContext = _threadService.GetThreadContext(threadId);
+            }
+            catch (DiagnosticsException)
+            {
                 return E_FAIL;
             }
             try
@@ -919,7 +937,7 @@ namespace SOS
             IntPtr self,
             out uint number)
         {
-            number = (uint)DataReader.EnumerateAllThreads().Count();
+            number = (uint)_threadService.EnumerateThreads().Count();
             return DebugClient.S_OK;
         }
 
@@ -928,7 +946,7 @@ namespace SOS
             out uint total,
             out uint largestProcess)
         {
-            total = (uint)DataReader.EnumerateAllThreads().Count();
+            total = (uint)_threadService.EnumerateThreads().Count();
             largestProcess = total;
             return DebugClient.S_OK;
         }
@@ -948,7 +966,12 @@ namespace SOS
             IntPtr self,
             out uint id)
         {
-            return GetThreadIdBySystemId(self, (uint)AnalyzeContext.CurrentThreadId, out id);
+            if (!AnalyzeContext.CurrentThreadId.HasValue)
+            {
+                id = 0;
+                return E_FAIL;
+            }
+            return GetThreadIdBySystemId(self, AnalyzeContext.CurrentThreadId.Value, out id);
         }
 
         internal int SetCurrentThreadId(
@@ -957,11 +980,10 @@ namespace SOS
         {
             try
             {
-                unchecked {
-                    AnalyzeContext.CurrentThreadId = (int)DataReader.EnumerateAllThreads().ElementAt((int)id);
-                }
+                ThreadInfo threadInfo = _threadService.GetThreadInfoFromIndex(unchecked((int)id));
+                AnalyzeContext.CurrentThreadId = threadInfo.ThreadId;
             }
-            catch (ArgumentOutOfRangeException)
+            catch (InvalidOperationException)
             {
                 return E_FAIL;
             }
@@ -972,7 +994,12 @@ namespace SOS
             IntPtr self,
             out uint sysId)
         {
-            sysId = (uint)AnalyzeContext.CurrentThreadId;
+            if (!AnalyzeContext.CurrentThreadId.HasValue)
+            {
+                sysId = 0;
+                return E_FAIL;
+            }
+            sysId = AnalyzeContext.CurrentThreadId.Value;
             return S_OK;
         }
 
@@ -983,11 +1010,11 @@ namespace SOS
             uint* ids,
             uint* sysIds)
         {
-            uint id = 0;
             int index = 0;
-            foreach (uint s in DataReader.EnumerateAllThreads())
+            foreach (ThreadInfo threadInfo in _threadService.EnumerateThreads())
             {
-                if (id >= count) {
+                uint id = (uint)threadInfo.ThreadIndex;
+                if (index >= count) {
                     break;
                 }
                 if (id >= start)
@@ -996,11 +1023,10 @@ namespace SOS
                         ids[index] = id;
                     }
                     if (sysIds != null) {
-                        sysIds[index] = s;
+                        sysIds[index] = threadInfo.ThreadId;
                     }
                     index++;
                 }
-                id++;
             }
             return DebugClient.S_OK;
         }
@@ -1010,17 +1036,19 @@ namespace SOS
             uint sysId,
             out uint id)
         {
-            id = 0;
             if (sysId != 0)
             {
-                foreach (uint s in DataReader.EnumerateAllThreads())
+                try
                 {
-                    if (s == sysId) {
-                        return S_OK;
-                    }
-                    id++;
+                    ThreadInfo threadInfo = _threadService.GetThreadInfoFromId(sysId);
+                    id = (uint)threadInfo.ThreadIndex;
+                    return S_OK;
+                }
+                catch (InvalidOperationException)
+                {
                 }
             }
+            id = 0;
             return E_FAIL;
         }
 
@@ -1028,31 +1056,42 @@ namespace SOS
             IntPtr self,
             ulong* offset)
         {
-            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
-            ulong teb = DataReader.GetThreadTeb(threadId);
-            Write(offset, teb);
-            return S_OK;
+            if (!AnalyzeContext.CurrentThreadId.HasValue)
+            {
+                return E_FAIL;
+            }
+            uint threadId = AnalyzeContext.CurrentThreadId.Value;
+            try
+            {
+                ulong teb = _threadService.GetThreadInfoFromId(threadId).ThreadTeb;
+                Write(offset, teb);
+                return S_OK;
+            }
+            catch (InvalidOperationException)
+            {
+                return E_FAIL;
+            }
         }
 
         internal int GetInstructionOffset(
             IntPtr self,
             out ulong offset)
         {
-            return GetRegister(_registerService.InstructionPointerIndex, out offset);
+            return GetRegister(_threadService.InstructionPointerIndex, out offset);
         }
 
         internal int GetStackOffset(
             IntPtr self,
             out ulong offset)
         {
-            return GetRegister(_registerService.StackPointerIndex, out offset);
+            return GetRegister(_threadService.StackPointerIndex, out offset);
         }
 
         internal int GetFrameOffset(
             IntPtr self,
             out ulong offset)
         {
-            return GetRegister(_registerService.FramePointerIndex, out offset);
+            return GetRegister(_threadService.FramePointerIndex, out offset);
         }
 
         internal int GetIndexByName(
@@ -1060,7 +1099,7 @@ namespace SOS
             string name,
             out uint index)
         {
-            if (_registerService.GetRegisterIndexByName(name, out int value)) {
+            if (_threadService.GetRegisterIndexByName(name, out int value)) {
                 index = 0;
                 return E_INVALIDARG;
             }
@@ -1106,7 +1145,7 @@ namespace SOS
             out ulong value)
         {
             value = 0;
-            if (!_registerService.GetRegisterIndexByName(register, out int index)) {
+            if (!_threadService.GetRegisterIndexByName(register, out int index)) {
                 return E_INVALIDARG;
             }
             return GetRegister(index, out value);
@@ -1116,8 +1155,13 @@ namespace SOS
             int index, 
             out ulong value)
         {
-            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
-            if (!_registerService.GetRegisterValue(threadId, index, out value)) {
+            if (!AnalyzeContext.CurrentThreadId.HasValue)
+            {
+                value = 0;
+                return E_FAIL;
+            }
+            uint threadId = AnalyzeContext.CurrentThreadId.Value;
+            if (!_threadService.GetRegisterValue(threadId, index, out value)) {
                 return E_FAIL;
             }
             return S_OK;
