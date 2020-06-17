@@ -406,7 +406,7 @@ private:
             _ASSERTE(hr != S_FALSE);
 
             // We couldn't get any data from the newer APIs, so fall back to the original data
-            memcpy(data, &(heap.finalization_fill_pointers), sizeof(CLRDATA_ADDRESS) * (DAC_NUMBERGENERATIONS + 3));
+            memcpy(data, &(heap.finalization_fill_pointers), sizeof(CLRDATA_ADDRESS) * (DAC_NUMBERGENERATIONS + 2));
         }
     }
 
@@ -430,11 +430,13 @@ public:
         if (generation_table != NULL)
         {
             delete[] generation_table;
+            generation_table = NULL;
         }
 
         if (finalization_fill_pointers != NULL)
         {
             delete[] finalization_fill_pointers;
+            finalization_fill_pointers = NULL;
         }
     }
 
