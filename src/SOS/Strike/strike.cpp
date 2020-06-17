@@ -5444,14 +5444,15 @@ DECLARE_API(GCHeapStat)
     if (!IsServerBuild())
     {
         float tempf;
-        DacpGcHeapDetails heapDetails;
-        if (heapDetails.Request(g_sos) != S_OK)
+        DacpGcHeapDetails dacHeapDetails;
+        if (dacHeapDetails.Request(g_sos) != S_OK)
         {
             ExtErr("Error requesting gc heap details\n");
             return Status;
         }
 
         HeapUsageStat hpUsage;
+        GCHeapDetails heapDetails(dacHeapDetails);
         if (GCHeapUsageStats(heapDetails, bIncUnreachable, &hpUsage))
         {
             ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n", 0,
@@ -5465,9 +5466,10 @@ DECLARE_API(GCHeapStat)
                 hpUsage.genUsage[4].freed);
             tempf = ((float)(hpUsage.genUsage[0].freed + hpUsage.genUsage[1].freed + hpUsage.genUsage[2].freed)) /
                 (hpUsage.genUsage[0].allocd + hpUsage.genUsage[1].allocd + hpUsage.genUsage[2].allocd);
+            int pohFreeUsage = heapDetails.has_poh ? (int)(100*((float)hpUsage.genUsage[4].freed) / (hpUsage.genUsage[4].allocd)) : 0;
             ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%%",
                 (int)(100*((float)hpUsage.genUsage[3].freed) / (hpUsage.genUsage[3].allocd)), "%%",
-                (int)(100*((float)hpUsage.genUsage[4].freed) / (hpUsage.genUsage[4].allocd)), "%%");
+                pohFreeUsage, "%%");
 
             if (bIncUnreachable)
             {
@@ -5477,9 +5479,10 @@ DECLARE_API(GCHeapStat)
                     hpUsage.genUsage[2].unrooted, hpUsage.genUsage[3].unrooted);
                 tempf = ((float)(hpUsage.genUsage[0].unrooted+hpUsage.genUsage[1].unrooted+hpUsage.genUsage[2].unrooted)) /
                     (hpUsage.genUsage[0].allocd+hpUsage.genUsage[1].allocd+hpUsage.genUsage[2].allocd);
+                int pohUnrootedUsage = heapDetails.has_poh ? (int)(100*((float)hpUsage.genUsage[4].unrooted) / (hpUsage.genUsage[4].allocd)) : 0;
                 ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%%",
                     (int)(100*((float)hpUsage.genUsage[3].unrooted) / (hpUsage.genUsage[3].allocd)), "%%",
-                    (int)(100*((float)hpUsage.genUsage[4].unrooted) / (hpUsage.genUsage[4].allocd)), "%%");
+                    pohUnrootedUsage, "%%");
             }
         }
     }
@@ -5517,7 +5520,7 @@ DECLARE_API(GCHeapStat)
 
         // aggregate stats across heaps / generation
         GenUsageStat genUsageStat[5] = {0, 0, 0, 0, 0};
-
+        bool hasPoh = false;
         for (DWORD n = 0; n < dwNHeaps; n ++)
         {
             DacpGcHeapDetails dacHeapDetails;
@@ -5528,6 +5531,7 @@ DECLARE_API(GCHeapStat)
             }
 
             GCHeapDetails heapDetails(dacHeapDetails, heapAddrs[n]);
+            hasPoh = heapDetails.has_poh;
             if (GCHeapUsageStats(heapDetails, bIncUnreachable, &hpUsage[n]))
             {
                 for (int i = 0; i < 5; ++i)
@@ -5564,9 +5568,10 @@ DECLARE_API(GCHeapStat)
 
             tempf = ((float)(hpUsage[n].genUsage[0].freed + hpUsage[n].genUsage[1].freed + hpUsage[n].genUsage[2].freed)) /
                 (hpUsage[n].genUsage[0].allocd + hpUsage[n].genUsage[1].allocd + hpUsage[n].genUsage[2].allocd);
+            int pohFreeUsage = hasPoh ? (int)(100*((float)hpUsage[n].genUsage[4].freed) / (hpUsage[n].genUsage[4].allocd)) : 0;
             ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%%",
                 (int)(100*((float)hpUsage[n].genUsage[3].freed) / (hpUsage[n].genUsage[3].allocd)), "%%",
-                (int)(100*((float)hpUsage[n].genUsage[4].freed) / (hpUsage[n].genUsage[4].allocd)), "%%");
+                pohFreeUsage, "%%");
         }
         ExtOut("Total    %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n",
             genUsageStat[0].freed, genUsageStat[1].freed,
@@ -5585,9 +5590,10 @@ DECLARE_API(GCHeapStat)
 
                 tempf = ((float)(hpUsage[n].genUsage[0].unrooted + hpUsage[n].genUsage[1].unrooted + hpUsage[n].genUsage[2].unrooted)) /
                     (hpUsage[n].genUsage[0].allocd + hpUsage[n].genUsage[1].allocd + hpUsage[n].genUsage[2].allocd);
+                int pohUnrootedUsage = hasPoh ? (int)(100*((float)hpUsage[n].genUsage[4].unrooted) / (hpUsage[n].genUsage[4].allocd)) : 0;
                 ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%%",
                     (int)(100*((float)hpUsage[n].genUsage[3].unrooted) / (hpUsage[n].genUsage[3].allocd)), "%%",
-                    (int)(100*((float)hpUsage[n].genUsage[4].unrooted) / (hpUsage[n].genUsage[4].allocd)), "%%");
+                    pohUnrootedUsage, "%%");
             }
             ExtOut("Total    %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n",
                 genUsageStat[0].unrooted, genUsageStat[1].unrooted,

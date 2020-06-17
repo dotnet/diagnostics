@@ -611,6 +611,7 @@ namespace sos
                 }
 
                 bPinned = false;
+                bLarge = false;
                 next = TO_TADDR(mHeaps[mCurrHeap].generation_table[GetMaxGeneration()].start_segment);
             }
             else if (bLarge)

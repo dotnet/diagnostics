@@ -1809,7 +1809,7 @@ struct GenUsageStat
 
 struct HeapUsageStat
 {
-    GenUsageStat  genUsage[5]; // gen0, 1, 2, LOH
+    GenUsageStat  genUsage[5]; // gen0, 1, 2, LOH, POH
 };
 
 extern DacpUsefulGlobalsData g_special_usefulGlobals;
