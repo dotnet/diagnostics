@@ -66,6 +66,7 @@
 #include <winver.h>
 #include <winternl.h>
 #include <psapi.h>
+#include <inttypes.h>
 #ifndef FEATURE_PAL
 #include <list>   
 #endif // !FEATURE_PAL
@@ -13759,8 +13760,8 @@ public:
         if (IsDbgTargetAmd64())
         {
             foundPlatform = true;
-            String outputFormat3 = "    %3s=%016x %3s=%016x %3s=%016x\n";
-            String outputFormat2 = "    %3s=%016x %3s=%016x\n";
+            String outputFormat3 = "    %3s=%016" PRIx64" %3s=%016" PRIx64" %3s=%016" PRIx64"\n";
+            String outputFormat2 = "    %3s=%016" PRIx64" %3s=%016" PRIx64"\n";
             ExtOut(outputFormat3, "rsp", context.Amd64Context.Rsp, "rbp", context.Amd64Context.Rbp, "rip", context.Amd64Context.Rip);
             ExtOut(outputFormat3, "rax", context.Amd64Context.Rax, "rbx", context.Amd64Context.Rbx, "rcx", context.Amd64Context.Rcx);
             ExtOut(outputFormat3, "rdx", context.Amd64Context.Rdx, "rsi", context.Amd64Context.Rsi, "rdi", context.Amd64Context.Rdi);
@@ -13806,11 +13807,11 @@ public:
             for (int i = 0; i < 29; ++i)
             {
                 if (i <10) ExtOut(" ");
-                ExtOut(" x%d=%016x", i, X[i]);
+                ExtOut(" x%d=%016" PRIx64, i, X[i]);
                 if ((i % 3) == 2) ExtOut("\n   ");
             }
-            ExtOut("  fp=%016x\n", context.Arm64Context.Fp);
-            ExtOut("     lr=%016x  sp=%016x  pc=%016x\n", context.Arm64Context.Lr, context.Arm64Context.Sp, context.Arm64Context.Pc);
+            ExtOut("  fp=%016" PRIx64"\n", context.Arm64Context.Fp);
+            ExtOut("     lr=%016" PRIx64"  sp=%016" PRIx64"  pc=%016" PRIx64"\n", context.Arm64Context.Lr, context.Arm64Context.Sp, context.Arm64Context.Pc);
             ExtOut("           cpsr=%08x        fpcr=%08x        fpsr=%08x\n", context.Arm64Context.Cpsr, context.Arm64Context.Fpcr, context.Arm64Context.Fpsr);
         }
 #endif
