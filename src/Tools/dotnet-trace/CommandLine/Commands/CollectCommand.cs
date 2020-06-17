@@ -144,7 +144,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     EventPipeSession session = null;
                     try
                     {
-                        session = diagnosticsClient.StartEventPipeSession(providerCollection, true);
+                        session = diagnosticsClient.StartEventPipeSession(providerCollection, true, (int)buffersize);
                     }
                     catch (DiagnosticsClientException e)
                     {
