@@ -97,7 +97,11 @@ namespace Microsoft.Diagnostics.Monitoring
             Dictionary<MetricKey, Queue<Metric>> copy = null;
             lock (_allMetrics)
             {
-                copy = new Dictionary<MetricKey, Queue<Metric>>(_allMetrics);
+                copy = new Dictionary<MetricKey, Queue<Metric>>();
+                foreach (var metricGroup in _allMetrics)
+                {
+                    copy.Add(metricGroup.Key, new Queue<Metric>(metricGroup.Value));
+                }
             }
 
             using var writer = new StreamWriter(outputStream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), bufferSize: 1024, leaveOpen: true);
