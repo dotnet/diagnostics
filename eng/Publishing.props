@@ -34,7 +34,8 @@
     <ItemGroup>
       <_PackageArtifactData Include="@(_CommonArtifactData)" />
       <!-- Setting Category to Other will upload to installers blob feed. -->
-      <_PackageArtifactData Include="Category=Other" />
+      <!-- Feed configuration categories are uppercase and case sensitive in PublishArtifactsInManifest task. -->
+      <_PackageArtifactData Include="Category=OTHER" />
     </ItemGroup>
 
     <!-- Capture each blob item to upload to blob feed -->
