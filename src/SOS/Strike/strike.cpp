@@ -3,9 +3,9 @@
 // See the LICENSE file in the project root for more information.
 
 // ==++==
-// 
- 
-// 
+//
+
+//
 // ==--==
 
 // ===========================================================================
@@ -17,45 +17,45 @@
 //
 //************************************************************************************************
 // SOS is the native debugging extension designed to support investigations into CLR (mis-)
-// behavior by both users of the runtime as well as the code owners. It allows inspection of 
+// behavior by both users of the runtime as well as the code owners. It allows inspection of
 // internal structures, of user visible entities, as well as execution control.
-// 
-// This is the main SOS file hosting the implementation of all the exposed commands. A good 
+//
+// This is the main SOS file hosting the implementation of all the exposed commands. A good
 // starting point for understanding the semantics of these commands is the sosdocs.txt file.
-// 
+//
 // #CrossPlatformSOS
-// SOS currently supports cross platform debugging from x86 to ARM. It takes a different approach 
-// from the DAC: whereas for the DAC we produce one binary for each supported host-target 
-// architecture pair, for SOS we produce only one binary for each host architecture; this one 
+// SOS currently supports cross platform debugging from x86 to ARM. It takes a different approach
+// from the DAC: whereas for the DAC we produce one binary for each supported host-target
+// architecture pair, for SOS we produce only one binary for each host architecture; this one
 // binary contains code for all supported target architectures. In doing this SOS depends on two
 // assumptions:
-//   . that the debugger will load the appropriate DAC, and 
+//   . that the debugger will load the appropriate DAC, and
 //   . that the host and target word size is identical.
 // The second assumption is identical to the DAC assumption, and there will be considerable effort
 // required (in the EE, the DAC, and SOS) if we ever need to remove it.
-// 
-// In an ideal world SOS would be able to retrieve all platform specific information it needs 
+//
+// In an ideal world SOS would be able to retrieve all platform specific information it needs
 // either from the debugger or from DAC. However, SOS has taken some subtle and not so subtle
 // dependencies on the CLR and the target platform.
-// To resolve this problem, SOS now abstracts the target behind the IMachine interface, and uses 
-// calls on IMachine to take target-specific actions. It implements X86Machine, ARMMachine, and 
+// To resolve this problem, SOS now abstracts the target behind the IMachine interface, and uses
+// calls on IMachine to take target-specific actions. It implements X86Machine, ARMMachine, and
 // AMD64Machine. An instance of these exists in each appropriate host (e.g. the X86 version of SOS
-// contains instances of X86Machine and ARMMachine, the ARM version contains an instance of 
-// ARMMachine, and the AMD64 version contains an instance of AMD64Machine). The code included in 
-// each version if determined by the SosTarget*** MSBuild symbols, and SOS_TARGET_*** conditional 
+// contains instances of X86Machine and ARMMachine, the ARM version contains an instance of
+// ARMMachine, and the AMD64 version contains an instance of AMD64Machine). The code included in
+// each version if determined by the SosTarget*** MSBuild symbols, and SOS_TARGET_*** conditional
 // compilation symbols (as specified in sos.targets).
-// 
+//
 // Most of the target specific code is hosted in disasm.h/.cpp, and disasmX86.cpp, disasmARM.cpp.
 // Some code currently under _TARGET_*** ifdefs may need to be reviewed/revisited.
-// 
+//
 // Issues:
-// The one-binary-per-host decision does have some drawbacks: 
-//   . Currently including system headers or even CLR headers will only account for the host 
-//     target, IOW, when building the X86 version of SOS, CONTEXT will refer to the X86 CONTEXT 
-//     structure, so we need to be careful when debugging ARM targets. The CONTEXT issue is 
-//     partially resolved by CROSS_PLATFORM_CONTEXT (there is still a need to be very careful 
+// The one-binary-per-host decision does have some drawbacks:
+//   . Currently including system headers or even CLR headers will only account for the host
+//     target, IOW, when building the X86 version of SOS, CONTEXT will refer to the X86 CONTEXT
+//     structure, so we need to be careful when debugging ARM targets. The CONTEXT issue is
+//     partially resolved by CROSS_PLATFORM_CONTEXT (there is still a need to be very careful
 //     when handling arrays of CONTEXTs - see _EFN_StackTrace for details on this).
-//   . For larger includes (e.g. GC info), we will need to include files in specific namespaces, 
+//   . For larger includes (e.g. GC info), we will need to include files in specific namespaces,
 //     with specific _TARGET_*** macros defined in order to avoid name clashes and ensure correct
 //     system types are used.
 // -----------------------------------------------------------------------------------------------
@@ -68,7 +68,7 @@
 #include <psapi.h>
 #include <inttypes.h>
 #ifndef FEATURE_PAL
-#include <list>   
+#include <list>
 #endif // !FEATURE_PAL
 #include <wchar.h>
 
@@ -227,16 +227,16 @@ DECLARE_API (MinidumpMode)
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
     DWORD_PTR Value=0;
 
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&Value, COHEX}
     };
 
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
     {
         return Status;
-    }    
+    }
     if (nArg == 0)
     {
         // Print status of current mode
@@ -265,7 +265,7 @@ DECLARE_API (MinidumpMode)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function is called to get the MethodDesc for a given eip     *  
+*    This function is called to get the MethodDesc for a given eip     *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(IP2MD)
@@ -275,19 +275,19 @@ DECLARE_API(IP2MD)
 
     BOOL dml = FALSE;
     TADDR IP = 0;
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
 #ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&IP, COHEX},
     };
     size_t nArg;
-    
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -302,7 +302,7 @@ DECLARE_API(IP2MD)
     CLRDATA_ADDRESS cdaStart = TO_CDADDR(IP);
     CLRDATA_ADDRESS pMD;
 
-    
+
     if ((Status = g_sos->GetMethodDescPtrFromIP(cdaStart, &pMD)) != S_OK)
     {
         ExtOut("Failed to request MethodData, not in JIT code range\n");
@@ -321,7 +321,7 @@ DECLARE_API(IP2MD)
         symlines &= SYMOPT_LOAD_LINES;
     }
 
-    if (symlines != 0 && 
+    if (symlines != 0 &&
         SUCCEEDED(GetLineByOffset(TO_CDADDR(IP), &linenum, filename, _countof(filename))))
     {
         ExtOut("Source file:  %S @ %d\n", filename, linenum);
@@ -369,8 +369,8 @@ GetContextStackTrace(ULONG osThreadId, PULONG pnumFrames)
         g_ExtSystem->SetCurrentThreadId(id);
 
         // GetContextStackTrace fills g_FrameContexts as an array of
-        // contexts packed as target architecture contexts. We cannot 
-        // safely cast this as an array of CROSS_PLATFORM_CONTEXT, since 
+        // contexts packed as target architecture contexts. We cannot
+        // safely cast this as an array of CROSS_PLATFORM_CONTEXT, since
         // sizeof(CROSS_PLATFORM_CONTEXT) != sizeof(TGT_CONTEXT)
         hr = debugControl4->GetContextStackTrace(
             NULL,
@@ -393,15 +393,15 @@ GetContextStackTrace(ULONG osThreadId, PULONG pnumFrames)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function displays the stack trace.  It looks at each DWORD   *  
+*    This function displays the stack trace.  It looks at each DWORD   *
 *    on stack.  If the DWORD is a return address, the symbol name or
 *    managed function name is displayed.                               *
 *                                                                      *
 \**********************************************************************/
 void DumpStackInternal(DumpStackFlag *pDSFlag)
-{    
+{
     ReloadSymbolWithLineInfo();
-    
+
     ULONG64 StackOffset;
     g_ExtRegisters->GetStackOffset (&StackOffset);
     if (pDSFlag->top == 0) {
@@ -414,7 +414,7 @@ void DumpStackInternal(DumpStackFlag *pDSFlag)
         pDSFlag->top = NextOSPageAddress(pDSFlag->top);
     }
 
-#ifndef FEATURE_PAL     
+#ifndef FEATURE_PAL
     if (IsWindowsTarget() && (pDSFlag->end == 0)) {
         // Find the current stack range
         NT_TIB teb;
@@ -433,13 +433,13 @@ void DumpStackInternal(DumpStackFlag *pDSFlag)
         }
     }
 #endif // FEATURE_PAL
-    
+
     if (pDSFlag->end == 0)
     {
         ExtOut("TEB information is not available so a stack size of 0xFFFF is assumed\n");
         pDSFlag->end = pDSFlag->top + 0xFFFF;
     }
-    
+
     if (pDSFlag->end < pDSFlag->top)
     {
         ExtOut("Wrong option: stack selection wrong\n");
@@ -449,7 +449,7 @@ void DumpStackInternal(DumpStackFlag *pDSFlag)
     DumpStackWorker(*pDSFlag);
 }
 
- 
+
 DECLARE_API(DumpStack)
 {
     INIT_API_NO_RET_ON_FAILURE();
@@ -499,7 +499,7 @@ DECLARE_API(DumpStack)
     ExtOut("(%d)\n", id);
 
     DumpStackInternal(&DSFlag);
-    
+
     return Status;
 }
 
@@ -507,15 +507,15 @@ DECLARE_API(DumpStack)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function displays the stack trace for threads that EE knows  *  
+*    This function displays the stack trace for threads that EE knows  *
 *    from ThreadStore.                                                 *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API (EEStack)
 {
-    INIT_API();    
+    INIT_API();
 
-    MINIDUMP_NOT_SUPPORTED();  
+    MINIDUMP_NOT_SUPPORTED();
 
     DumpStackFlag DSFlag;
     DSFlag.fEEonly = FALSE;
@@ -525,16 +525,16 @@ DECLARE_API (EEStack)
 
     BOOL bShortList = FALSE;
     BOOL dml = FALSE;
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-EE", &DSFlag.fEEonly, COBOOL, FALSE},
         {"-short", &bShortList, COBOOL, FALSE},
 #ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE}
 #endif
-    };    
+    };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL)) 
+    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -549,7 +549,7 @@ DECLARE_API (EEStack)
     {
         ExtOut("Failed to request ThreadStore\n");
         return Status;
-    }    
+    }
 
     CLRDATA_ADDRESS CurThread = ThreadStore.firstThread;
     while (CurThread)
@@ -557,7 +557,7 @@ DECLARE_API (EEStack)
         if (IsInterrupt())
             break;
 
-        DacpThreadData Thread;        
+        DacpThreadData Thread;
         if ((Status = Thread.Request(g_sos, CurThread)) != S_OK)
         {
             ExtOut("Failed to request Thread at %p\n", CurThread);
@@ -567,27 +567,27 @@ DECLARE_API (EEStack)
         ULONG id=0;
         if (g_ExtSystem->GetThreadIdBySystemId (Thread.osThreadId, &id) != S_OK)
         {
-            CurThread = Thread.nextThread;    
+            CurThread = Thread.nextThread;
             continue;
         }
-        
+
         ExtOut("---------------------------------------------\n");
         ExtOut("Thread %3d\n", id);
         BOOL doIt = FALSE;
 
-        
+
 #define TS_Hijacked 0x00000080
 
-        if (!bShortList) 
+        if (!bShortList)
         {
             doIt = TRUE;
         }
-        else if ((Thread.lockCount > 0) || (Thread.state & TS_Hijacked)) 
-        {             
+        else if ((Thread.lockCount > 0) || (Thread.state & TS_Hijacked))
+        {
             // TODO: bring back || (int)vThread.m_pFrame != -1  {
             doIt = TRUE;
         }
-        else 
+        else
         {
             ULONG64 IP;
             g_ExtRegisters->GetInstructionOffset (&IP);
@@ -600,8 +600,8 @@ DECLARE_API (EEStack)
                 doIt = TRUE;
             }
         }
-        
-        if (doIt) 
+
+        if (doIt)
         {
             g_ExtSystem->SetCurrentThreadId(id);
             DSFlag.top = 0;
@@ -646,7 +646,7 @@ HRESULT DumpStackObjectsRaw(size_t nArg, __in_z LPSTR exprBottom, __in_z LPSTR e
             }
         }
     }
-    
+
 #ifndef FEATURE_PAL
     if (IsWindowsTarget())
     {
@@ -663,10 +663,10 @@ HRESULT DumpStackObjectsRaw(size_t nArg, __in_z LPSTR exprBottom, __in_z LPSTR e
         }
     }
 #endif
-    
+
     if (StackBottom == 0)
         StackBottom = StackTop + 0xFFFF;
-    
+
     if (StackBottom < StackTop)
     {
         ExtOut("Wrong option: stack selection wrong\n");
@@ -674,12 +674,12 @@ HRESULT DumpStackObjectsRaw(size_t nArg, __in_z LPSTR exprBottom, __in_z LPSTR e
     }
 
     // We can use the gc snapshot to eliminate object addresses that are
-    // not on the gc heap. 
+    // not on the gc heap.
     if (!g_snapshot.Build())
     {
         ExtOut("Unable to determine bounds of gc heap\n");
         return E_FAIL;
-    }   
+    }
 
     // Print thread ID.
     ULONG id = 0;
@@ -687,7 +687,7 @@ HRESULT DumpStackObjectsRaw(size_t nArg, __in_z LPSTR exprBottom, __in_z LPSTR e
     ExtOut("OS Thread Id: 0x%x ", id);
     g_ExtSystem->GetCurrentThreadId (&id);
     ExtOut("(%d)\n", id);
-    
+
     DumpStackObjectsHelper(StackTop, StackBottom, bVerify);
     return S_OK;
 }
@@ -696,7 +696,7 @@ HRESULT DumpStackObjectsRaw(size_t nArg, __in_z LPSTR exprBottom, __in_z LPSTR e
 * Routine Description:                                                 *
 *                                                                      *
 *    This function is called to dump the address and name of all       *
-*    Managed Objects on the stack.                                     *  
+*    Managed Objects on the stack.                                     *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(DumpStackObjects)
@@ -707,27 +707,27 @@ DECLARE_API(DumpStackObjects)
 
     BOOL bVerify = FALSE;
     BOOL dml = FALSE;
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-verify", &bVerify, COBOOL, FALSE},
 #ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE}
 #endif
-    };    
-    CMDValue arg[] = 
+    };
+    CMDValue arg[] =
     {   // vptr, type
         {&exprTop.data, COSTRING},
         {&exprBottom.data, COSTRING}
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
 
     EnableDMLHolder enableDML(dml);
-    
+
     return DumpStackObjectsRaw(nArg, exprBottom.data, exprTop.data, bVerify);
 }
 
@@ -735,42 +735,42 @@ DECLARE_API(DumpStackObjects)
 * Routine Description:                                                 *
 *                                                                      *
 *    This function is called to dump the contents of a MethodDesc      *
-*    for a given address                                               *  
+*    for a given address                                               *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(DumpMD)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    
+
     DWORD_PTR dwStartAddr = NULL;
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
 #ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&dwStartAddr, COHEX},
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
 
     EnableDMLHolder dmlHolder(dml);
-    
+
     DumpMDInfo(dwStartAddr);
-    
+
     return Status;
 }
 
-BOOL GatherDynamicInfo(TADDR DynamicMethodObj, DacpObjectData *codeArray, 
+BOOL GatherDynamicInfo(TADDR DynamicMethodObj, DacpObjectData *codeArray,
                        DacpObjectData *tokenArray, TADDR *ptokenArrayAddr)
 {
     BOOL bRet = FALSE;
@@ -779,21 +779,21 @@ BOOL GatherDynamicInfo(TADDR DynamicMethodObj, DacpObjectData *codeArray,
 
     if (codeArray == NULL || tokenArray == NULL)
         return bRet;
-    
+
     if (objData.Request(g_sos, TO_CDADDR(DynamicMethodObj)) != S_OK)
         return bRet;
-    
+
     iOffset = GetObjFieldOffset(TO_CDADDR(DynamicMethodObj), objData.MethodTable, W("m_resolver"));
     if (iOffset <= 0)
         return bRet;
-    
+
     TADDR resolverPtr;
     if (FAILED(MOVE(resolverPtr, DynamicMethodObj + iOffset)))
         return bRet;
 
     if (objData.Request(g_sos, TO_CDADDR(resolverPtr)) != S_OK)
         return bRet;
-    
+
     iOffset = GetObjFieldOffset(TO_CDADDR(resolverPtr), objData.MethodTable, W("m_code"));
     if (iOffset <= 0)
         return bRet;
@@ -804,10 +804,10 @@ BOOL GatherDynamicInfo(TADDR DynamicMethodObj, DacpObjectData *codeArray,
 
     if (codeArray->Request(g_sos, TO_CDADDR(codePtr)) != S_OK)
         return bRet;
-    
+
     if (codeArray->dwComponentSize != 1)
         return bRet;
-        
+
     // We also need the resolution table
     iOffset = GetObjFieldOffset (TO_CDADDR(resolverPtr), objData.MethodTable, W("m_scope"));
     if (iOffset <= 0)
@@ -819,7 +819,7 @@ BOOL GatherDynamicInfo(TADDR DynamicMethodObj, DacpObjectData *codeArray,
 
     if (objData.Request(g_sos, TO_CDADDR(scopePtr)) != S_OK)
         return bRet;
-    
+
     iOffset = GetObjFieldOffset (TO_CDADDR(scopePtr), objData.MethodTable, W("m_tokens"));
     if (iOffset <= 0)
         return bRet;
@@ -830,7 +830,7 @@ BOOL GatherDynamicInfo(TADDR DynamicMethodObj, DacpObjectData *codeArray,
 
     if (objData.Request(g_sos, TO_CDADDR(tokensPtr)) != S_OK)
         return bRet;
-    
+
     iOffset = GetObjFieldOffset(TO_CDADDR(tokensPtr), objData.MethodTable, W("_items"));
     if (iOffset <= 0)
         return bRet;
@@ -839,7 +839,7 @@ BOOL GatherDynamicInfo(TADDR DynamicMethodObj, DacpObjectData *codeArray,
     MOVE (itemsPtr, tokensPtr + iOffset);
 
     *ptokenArrayAddr = itemsPtr;
-    
+
     if (tokenArray->Request(g_sos, TO_CDADDR(itemsPtr)) != S_OK)
         return bRet;
 
@@ -865,23 +865,23 @@ DECLARE_API(DumpIL)
     BOOL dml = FALSE;
     BOOL fILPointerDirectlySpecified = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"/d", &dml, COBOOL, FALSE},
         {"/i", &fILPointerDirectlySpecified, COBOOL, FALSE},
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&dwStartAddr, COHEX},
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
 
-    EnableDMLHolder dmlHolder(dml);    
+    EnableDMLHolder dmlHolder(dml);
     if (dwStartAddr == NULL)
     {
         ExtOut("Must pass a valid expression\n");
@@ -903,7 +903,7 @@ DECLARE_API(DumpIL)
     {
         dwDynamicMethodObj = dwStartAddr;
     }
-    
+
     if (dwDynamicMethodObj == NULL)
     {
         // We have been given a MethodDesc
@@ -937,10 +937,10 @@ DECLARE_API(DumpIL)
             IfFailRet(DecodeILFromAddress(pImport, ilAddr));
         }
     }
-    
+
     if (dwDynamicMethodObj != NULL)
     {
-        // We have a DynamicMethod managed object, let us visit the town and paint.        
+        // We have a DynamicMethod managed object, let us visit the town and paint.
         DacpObjectData codeArray;
         DacpObjectData tokenArray;
         DWORD_PTR tokenArrayAddr;
@@ -949,7 +949,7 @@ DECLARE_API(DumpIL)
             DMLOut("Error gathering dynamic info from object at %s.\n", DMLObject(dwDynamicMethodObj));
             return Status;
         }
-        
+
         // Read the memory into a local buffer
         BYTE *pArray = new NOTHROW BYTE[(SIZE_T)codeArray.dwNumComponents];
         if (pArray == NULL)
@@ -957,7 +957,7 @@ DECLARE_API(DumpIL)
             ExtOut("Not enough memory to read IL\n");
             return Status;
         }
-        
+
         Status = g_ExtData->ReadVirtual(UL64_TO_CDA(codeArray.ArrayDataPtr), pArray, (ULONG)codeArray.dwNumComponents, NULL);
         if (Status != S_OK)
         {
@@ -967,15 +967,15 @@ DECLARE_API(DumpIL)
         }
 
         // Now we have a local copy of the IL, and a managed array for token resolution.
-        // Visit our IL parser with this info.        
+        // Visit our IL parser with this info.
         ExtOut("This is dynamic IL. Exception info is not reported at this time.\n");
         ExtOut("If a token is unresolved, run \"!do <addr>\" on the addr given\n");
         ExtOut("in parenthesis. You can also look at the token table yourself, by\n");
         ExtOut("running \"!DumpArray %p\".\n\n", SOS_PTR(tokenArrayAddr));
         DecodeDynamicIL(pArray, (ULONG)codeArray.dwNumComponents, tokenArray);
-        
-        delete [] pArray;                
-    }    
+
+        delete [] pArray;
+    }
     return Status;
 }
 
@@ -993,10 +993,10 @@ void DumpSigWorker (
     ArrayHolder<COR_SIGNATURE> pSig = new NOTHROW COR_SIGNATURE[cbSigInc];
     if (pSig == NULL)
     {
-        ReportOOM();        
+        ReportOOM();
         return;
     }
-    
+
     CQuickBytes sigString;
     for (;;)
     {
@@ -1045,7 +1045,7 @@ void DumpSigWorker (
             ExtOut("Out of memory\n");
             return;
         }
-        
+
         pSig = pSigNew;
     }
 
@@ -1071,7 +1071,7 @@ DECLARE_API(DumpSig)
 
     StringHolder sigExpr;
     StringHolder moduleExpr;
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {
         {&sigExpr.data, COSTRING},
         {&moduleExpr.data, COSTRING}
@@ -1087,7 +1087,7 @@ DECLARE_API(DumpSig)
         return Status;
     }
 
-    DWORD_PTR dwSigAddr = GetExpression(sigExpr.data);        
+    DWORD_PTR dwSigAddr = GetExpression(sigExpr.data);
     DWORD_PTR dwModuleAddr = GetExpression(moduleExpr.data);
 
     if (dwSigAddr == 0 || dwModuleAddr == 0)
@@ -1095,7 +1095,7 @@ DECLARE_API(DumpSig)
         ExtOut("Invalid parameters %s %s\n", sigExpr.data, moduleExpr.data);
         return Status;
     }
-    
+
     DumpSigWorker(dwSigAddr, dwModuleAddr, TRUE);
     return Status;
 }
@@ -1119,7 +1119,7 @@ DECLARE_API(DumpSigElem)
 
     StringHolder sigExpr;
     StringHolder moduleExpr;
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {
         {&sigExpr.data, COSTRING},
         {&moduleExpr.data, COSTRING}
@@ -1136,7 +1136,7 @@ DECLARE_API(DumpSigElem)
         return Status;
     }
 
-    DWORD_PTR dwSigAddr = GetExpression(sigExpr.data);        
+    DWORD_PTR dwSigAddr = GetExpression(sigExpr.data);
     DWORD_PTR dwModuleAddr = GetExpression(moduleExpr.data);
 
     if (dwSigAddr == 0 || dwModuleAddr == 0)
@@ -1152,7 +1152,7 @@ DECLARE_API(DumpSigElem)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function is called to dump the contents of an EEClass from   *  
+*    This function is called to dump the contents of an EEClass from   *
 *    a given address
 *                                                                      *
 \**********************************************************************/
@@ -1160,28 +1160,28 @@ DECLARE_API(DumpClass)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    
+
     DWORD_PTR dwStartAddr = 0;
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
 #ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&dwStartAddr, COHEX}
     };
 
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
 
-    if (nArg == 0) 
+    if (nArg == 0)
     {
         ExtOut("Missing EEClass address\n");
         return Status;
@@ -1201,7 +1201,7 @@ DECLARE_API(DumpClass)
     {
         ExtOut("EEClass has an invalid MethodTable address\n");
         return Status;
-    }            
+    }
 
     sos::MethodTable mt = TO_TADDR(methodTable);
     ExtOut("Class Name:      %S\n", mt.GetName());
@@ -1219,7 +1219,7 @@ DECLARE_API(DumpClass)
         {
             ExtOut("EEClass has an invalid MethodTable address\n");
             return Status;
-        }                     
+        }
         ParentEEClass = mtdataparent.Class;
     }
 
@@ -1236,8 +1236,8 @@ DECLARE_API(DumpClass)
         ExtOut("Abstract, ");
     if (IsTdImport(mtdata.dwAttrClass))
         ExtOut("ComImport, ");
-    
-    ExtOut("\n");        
+
+    ExtOut("\n");
 
     DacpMethodTableFieldData vMethodTableFields;
     if (SUCCEEDED(vMethodTableFields.Request(g_sos, methodTable)))
@@ -1257,7 +1257,7 @@ DECLARE_API(DumpClass)
             ExtOut("ContextStaticsSize:  %x\n", vMethodTableFields.wContextStaticsSize);
         }
 
-    
+
         if (vMethodTableFields.wNumInstanceFields + vMethodTableFields.wNumStaticFields > 0)
         {
             DisplayFields(methodTable, &mtdata, &vMethodTableFields, NULL, TRUE, FALSE);
@@ -1270,7 +1270,7 @@ DECLARE_API(DumpClass)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function is called to dump the contents of a MethodTable     *  
+*    This function is called to dump the contents of a MethodTable     *
 *    from a given address                                              *
 *                                                                      *
 \**********************************************************************/
@@ -1278,27 +1278,27 @@ DECLARE_API(DumpMT)
 {
     DWORD_PTR dwStartAddr=0;
     DWORD_PTR dwOriginalAddr;
-    
+
     INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
-    
+
     BOOL bDumpMDTable = FALSE;
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-MD", &bDumpMDTable, COBOOL, FALSE},
 #ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE}
 #endif
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&dwStartAddr, COHEX}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -1314,17 +1314,17 @@ DECLARE_API(DumpMT)
 
     dwOriginalAddr = dwStartAddr;
     dwStartAddr = dwStartAddr&~3;
-    
+
     if (!IsMethodTable(dwStartAddr))
     {
         Print(dwOriginalAddr, " is not a MethodTable\n");
         return Status;
     }
- 
-    DacpMethodTableData vMethTable;
-    vMethTable.Request(g_sos, TO_CDADDR(dwStartAddr));    
 
-    if (vMethTable.bIsFree) 
+    DacpMethodTableData vMethTable;
+    vMethTable.Request(g_sos, TO_CDADDR(dwStartAddr));
+
+    if (vMethTable.bIsFree)
     {
         Print("Free MethodTable\n");
         return Status;
@@ -1359,7 +1359,7 @@ DECLARE_API(DumpMT)
     table.WriteRow("DynamicStatics:", vMethTable.bIsDynamic ? "true" : "false");
     table.WriteRow("ContainsPointers:", vMethTable.bContainsPointers ? "true" : "false");
     table.WriteRow("Slots in VTable:", Decimal(vMethTable.wNumMethods));
-    
+
     table.SetColWidth(0, 29);
     table.WriteRow("Number of IFaces in IFaceMap:", Decimal(vMethTable.wNumInterfaces));
 
@@ -1398,9 +1398,9 @@ DECLARE_API(DumpMT)
                 DacpMethodDescData tmpMethodDescData;
                 if (tmpMethodDescData.Request(g_sos, TO_CDADDR(methodDesc)) == S_OK)
                 {
-                    DacpCodeHeaderData codeHeaderData;                        
+                    DacpCodeHeaderData codeHeaderData;
                     if (codeHeaderData.Request(g_sos,tmpMethodDescData.NativeCodeAddr) == S_OK)
-                    {        
+                    {
                         jitType = (JITTypes) codeHeaderData.JITType;
                     }
                 }
@@ -1428,23 +1428,23 @@ DECLARE_API(DumpMT)
             }
 
             table.WriteColumn(2, pszJitType);
-            
-            NameForMD_s(methodDesc,g_mdName,mdNameLen);                        
+
+            NameForMD_s(methodDesc,g_mdName,mdNameLen);
             table.WriteColumn(3, g_mdName);
         }
     }
-    return Status;    
+    return Status;
 }
 
 extern size_t Align (size_t nbytes);
 
 HRESULT PrintVC(TADDR taMT, TADDR taObject, BOOL bPrintFields = TRUE)
-{       
+{
     HRESULT Status;
     DacpMethodTableData mtabledata;
     if ((Status = mtabledata.Request(g_sos, TO_CDADDR(taMT)))!=S_OK)
         return Status;
-    
+
     size_t size = mtabledata.BaseSize;
     if ((Status=g_sos->GetMethodTableName(TO_CDADDR(taMT), mdNameLen, g_mdName, NULL))!=S_OK)
         return Status;
@@ -1477,15 +1477,15 @@ void PrintRuntimeTypeInfo(TADDR p_rtObject, const DacpObjectData & rtObjectData)
     // Get the method table
     int iOffset = GetObjFieldOffset(TO_CDADDR(p_rtObject), rtObjectData.MethodTable, W("m_handle"));
     if (iOffset > 0)
-    {            
+    {
         TADDR mtPtr;
         if (SUCCEEDED(GetMTOfObject(p_rtObject + iOffset, &mtPtr)))
         {
             sos::MethodTable mt = mtPtr;
             ExtOut("Type Name:   %S\n", mt.GetName());
             DMLOut("Type MT:     %s\n", DMLMethodTable(mtPtr));
-        }                        
-    }        
+        }
+    }
 }
 
 HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
@@ -1498,7 +1498,7 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
     DacpObjectData objData;
     HRESULT Status;
     if ((Status=objData.Request(g_sos, TO_CDADDR(taObj))) != S_OK)
-    {        
+    {
         ExtOut("Invalid object\n");
         return Status;
     }
@@ -1510,18 +1510,18 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
         ExtOut("Size:        %" POINTERSIZE_TYPE "d(0x%" POINTERSIZE_TYPE "x) bytes\n", size, size);
         return S_OK;
     }
-    
+
     sos::Object obj = taObj;
     ExtOut("Name:        %S\n", obj.GetTypeName());
     DMLOut("MethodTable: %s\n", DMLMethodTable(objData.MethodTable));
 
-    
+
     DacpMethodTableData mtabledata;
     if ((Status=mtabledata.Request(g_sos,objData.MethodTable)) == S_OK)
     {
         DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
     }
-    else        
+    else
     {
         ExtOut("Invalid EEClass address\n");
         return Status;
@@ -1549,20 +1549,20 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
         // Get the method table
         int iOffset = GetObjFieldOffset (TO_CDADDR(taObj), objData.MethodTable, W("m_runtimeType"));
         if (iOffset > 0)
-        {            
+        {
             TADDR rtPtr;
             if (MOVE(rtPtr, taObj + iOffset) == S_OK)
             {
                 DacpObjectData rtObjectData;
                 if ((Status=rtObjectData.Request(g_sos, TO_CDADDR(rtPtr))) != S_OK)
-                {        
+                {
                     ExtOut("Error when reading RuntimeType field\n");
                     return Status;
                 }
 
                 PrintRuntimeTypeInfo(rtPtr, rtObjectData);
-            }                        
-        }        
+            }
+        }
     }
 
     if (objData.ObjectType==OBJ_ARRAY)
@@ -1572,7 +1572,7 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
 
         IfDMLOut(" (<exec cmd=\"!DumpArray /d %p\">Print Array</exec>)", SOS_PTR(taObj));
         ExtOut("\n");
-        
+
         if (objData.ElementType == ELEMENT_TYPE_I1 ||
             objData.ElementType == ELEMENT_TYPE_U1 ||
             objData.ElementType == ELEMENT_TYPE_CHAR)
@@ -1607,7 +1607,7 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
     else if (objData.ObjectType == OBJ_OBJECT)
     {
         ExtOut("Object\n");
-    }    
+    }
 
     if (bPrintFields)
     {
@@ -1629,10 +1629,10 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
     sos::ThinLockInfo lockInfo;
     if (obj.GetThinLock(lockInfo))
     {
-        ExtOut("ThinLock owner %x (%p), Recursive %x\n", lockInfo.ThreadId, 
+        ExtOut("ThinLock owner %x (%p), Recursive %x\n", lockInfo.ThreadId,
             SOS_PTR(lockInfo.ThreadPtr), lockInfo.Recursion);
     }
-    
+
     return S_OK;
 }
 
@@ -1653,7 +1653,7 @@ BOOL IndicesInRange (DWORD * indices, DWORD * lowerBounds, DWORD * bounds, DWORD
             {
                 return FALSE;
             }
-            
+
             indices[i] = lowerBounds[i];
             indices[i - 1]++;
         }
@@ -1682,7 +1682,7 @@ size_t OffsetFromIndices (DWORD * indices, DWORD * lowerBounds, DWORD * bounds, 
         return 0;
     }
 
-    for (; i >= 0; i--) 
+    for (; i >= 0; i--)
     {
         DWORD curIndex = indices[i] - lowerBounds[i];
         offset += curIndex * multiplier;
@@ -1699,12 +1699,12 @@ HRESULT PrintPermissionSet (TADDR p_PermSet)
 
     DacpObjectData PermSetData;
     if ((Status=PermSetData.Request(g_sos, TO_CDADDR(p_PermSet))) != S_OK)
-    {        
+    {
         ExtOut("Invalid object\n");
         return Status;
     }
 
-    
+
     sos::MethodTable mt = TO_TADDR(PermSetData.MethodTable);
     if (_wcscmp (W("System.Security.PermissionSet"), mt.GetName()) != 0 && _wcscmp(W("System.Security.NamedPermissionSet"), mt.GetName()) != 0)
     {
@@ -1713,14 +1713,14 @@ HRESULT PrintPermissionSet (TADDR p_PermSet)
     }
 
     ExtOut("PermissionSet object: %p\n", SOS_PTR(p_PermSet));
-    
+
     // Print basic info
 
     // Walk the fields, printing some fields in a special way.
 
     int iOffset = GetObjFieldOffset (TO_CDADDR(p_PermSet), PermSetData.MethodTable, W("m_Unrestricted"));
-    
-    if (iOffset > 0)        
+
+    if (iOffset > 0)
     {
         BYTE unrestricted;
         MOVE(unrestricted, p_PermSet + iOffset);
@@ -1739,7 +1739,7 @@ HRESULT PrintPermissionSet (TADDR p_PermSet)
         {
             DacpObjectData tbSetData;
             if ((Status=tbSetData.Request(g_sos, TO_CDADDR(tbSetPtr))) != S_OK)
-            {        
+            {
                 ExtOut("Invalid object\n");
                 return Status;
             }
@@ -1754,7 +1754,7 @@ HRESULT PrintPermissionSet (TADDR p_PermSet)
                     // Print all the permissions in the array
                     DacpObjectData objData;
                     if ((Status=objData.Request(g_sos, TO_CDADDR(PermsArrayPtr))) != S_OK)
-                    {        
+                    {
                         ExtOut("Invalid object\n");
                         return Status;
                     }
@@ -1775,7 +1775,7 @@ HRESULT PrintPermissionSet (TADDR p_PermSet)
                     return PrintObj(PermObjPtr);
                 }
             }
-            
+
 
         }
     }
@@ -1787,7 +1787,7 @@ HRESULT PrintPermissionSet (TADDR p_PermSet)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function is called to dump the contents of an object from a  *  
+*    This function is called to dump the contents of an object from a  *
 *    given address
 *                                                                      *
 \**********************************************************************/
@@ -1796,12 +1796,12 @@ DECLARE_API(DumpArray)
     INIT_API();
 
     DumpArrayFlags flags;
-    
+
     MINIDUMP_NOT_SUPPORTED();
 
     BOOL dml = FALSE;
-    
-    CMDOption option[] = 
+
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-start", &flags.startIndex, COSIZE_T, TRUE},
         {"-length", &flags.Length, COSIZE_T, TRUE},
@@ -1811,12 +1811,12 @@ DECLARE_API(DumpArray)
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&flags.strObject, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -1833,10 +1833,10 @@ DECLARE_API(DumpArray)
     {
         ExtOut("<Note: this object has an invalid CLASS field>\n");
     }
-    
+
     DacpObjectData objData;
     if ((Status=objData.Request(g_sos, TO_CDADDR(p_Object))) != S_OK)
-    {  
+    {
         ExtOut("Invalid object\n");
         return Status;
     }
@@ -1870,7 +1870,7 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
     {
         ExtOut("-nofields has no effect unless -details is specified\n");
     }
-    
+
     DWORD i;
     if (!isPermSetPrint)
     {
@@ -1881,7 +1881,7 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
         for (i = 1; i < objData.dwRank; i++)
             ExtOut(",");
         ExtOut("]\n");
-        
+
         DMLOut("MethodTable: %s\n", DMLMethodTable(objData.MethodTable));
 
         {
@@ -1889,13 +1889,13 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
             if (SUCCEEDED(mtdata.Request(g_sos, objData.MethodTable)))
             {
                 DMLOut("EEClass:     %s\n", DMLClass(mtdata.Class));
-            }            
+            }
         }
 
         DWORD_PTR size = (DWORD_PTR)objData.Size;
         ExtOut("Size:        %" POINTERSIZE_TYPE "d(0x%" POINTERSIZE_TYPE "x) bytes\n", size, size);
 
-        ExtOut("Array:       Rank %d, Number of elements %" POINTERSIZE_TYPE "d, Type %s\n", 
+        ExtOut("Array:       Rank %d, Number of elements %" POINTERSIZE_TYPE "d, Type %s\n",
                 objData.dwRank, (DWORD_PTR)objData.dwNumComponents, ElementTypeName(objData.ElementType));
         DMLOut("Element Methodtable: %s\n", DMLMethodTable(objData.ElementTypeHandle));
     }
@@ -1912,14 +1912,14 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
     DWORD *lowerBounds = (DWORD *)alloca(dwRankAllocSize);
     if (!SafeReadMemory(objData.ArrayLowerBoundsPtr, lowerBounds, dwRankAllocSize, NULL))
     {
-        ExtOut("Failed to read lower bounds info from the array\n");        
+        ExtOut("Failed to read lower bounds info from the array\n");
         return S_OK;
     }
 
     DWORD *bounds = (DWORD *)alloca(dwRankAllocSize);
     if (!SafeReadMemory (objData.ArrayBoundsPtr, bounds, dwRankAllocSize, NULL))
     {
-        ExtOut("Failed to read bounds info from the array\n");        
+        ExtOut("Failed to read bounds info from the array\n");
         return S_OK;
     }
 
@@ -1928,7 +1928,7 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
     {
         bounds[0] = _min(bounds[0], (DWORD)(flags.Length + flags.startIndex) - lowerBounds[0]);
     }
-    
+
     DWORD *indices = (DWORD *)alloca(dwRankAllocSize);
     for (i = 0; i < objData.dwRank; i++)
     {
@@ -1940,13 +1940,13 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
     {
         indices[0] = (DWORD)flags.startIndex;
     }
-    
-    //Offset should be calculated by OffsetFromIndices. However because of the way 
-    //how we grow indices, incrementing offset by one happens to match indices in every iteration    
+
+    //Offset should be calculated by OffsetFromIndices. However because of the way
+    //how we grow indices, incrementing offset by one happens to match indices in every iteration
     for (size_t offset = OffsetFromIndices (indices, lowerBounds, bounds, objData.dwRank);
-        IndicesInRange (indices, lowerBounds, bounds, objData.dwRank); 
+        IndicesInRange (indices, lowerBounds, bounds, objData.dwRank);
         indices[objData.dwRank - 1]++, offset++)
-    {      
+    {
         if (IsInterrupt())
         {
             ExtOut("interrupted by user\n");
@@ -1957,11 +1957,11 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
         TADDR p_Element = NULL;
         if (isElementValueType)
         {
-            p_Element = elementAddress;        
+            p_Element = elementAddress;
         }
         else if (!SafeReadMemory (elementAddress, &p_Element, sizeof (p_Element), NULL))
         {
-            ExtOut("Failed to read element at ");        
+            ExtOut("Failed to read element at ");
             ExtOutIndices(indices, objData.dwRank);
             ExtOut("\n");
             continue;
@@ -2000,28 +2000,28 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
             DecrementIndent();
         }
     }
-    
+
     return S_OK;
 }
 
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function is called to dump the contents of an object from a  *  
+*    This function is called to dump the contents of an object from a  *
 *    given address
 *                                                                      *
 \**********************************************************************/
-DECLARE_API(DumpObj)    
+DECLARE_API(DumpObj)
 {
     INIT_API();
 
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
 
     BOOL dml = FALSE;
     BOOL bNoFields = FALSE;
     BOOL bRefs = FALSE;
     StringHolder str_Object;
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-nofields", &bNoFields, COBOOL, FALSE},
         {"-refs", &bRefs, COBOOL, FALSE},
@@ -2029,16 +2029,16 @@ DECLARE_API(DumpObj)
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&str_Object.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
-    
+
     DWORD_PTR p_Object = GetExpression(str_Object.data);
     EnableDMLHolder dmlHolder(dml);
     if (p_Object == 0)
@@ -2049,7 +2049,7 @@ DECLARE_API(DumpObj)
 
     try {
         Status = PrintObj(p_Object, !bNoFields);
-    
+
         if (SUCCEEDED(Status) && bRefs)
         {
             ExtOut("GC Refs:\n");
@@ -2205,7 +2205,7 @@ CLRDATA_ADDRESS isExceptionObj(CLRDATA_ADDRESS mtObj)
     {
         if (dmtd.Request(g_sos, walkMT) != S_OK)
         {
-            break;            
+            break;
         }
         if (walkMT == g_special_usefulGlobals.ExceptionMethodTable)
         {
@@ -2225,9 +2225,9 @@ CLRDATA_ADDRESS isSecurityExceptionObj(CLRDATA_ADDRESS mtObj)
     {
         if (dmtd.Request(g_sos, walkMT) != S_OK)
         {
-            break;            
+            break;
         }
-        NameForMT_s(TO_TADDR(walkMT), g_mdName, mdNameLen);                
+        NameForMT_s(TO_TADDR(walkMT), g_mdName, mdNameLen);
         if (_wcscmp(W("System.Security.SecurityException"), g_mdName) == 0)
         {
             return walkMT;
@@ -2265,7 +2265,7 @@ enum StackTraceElementFlags
 
 // This struct needs to match the definition in the runtime.
 // See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h
-struct StackTraceElement 
+struct StackTraceElement
 {
     UINT_PTR        ip;
     UINT_PTR        sp;
@@ -2289,7 +2289,7 @@ public:
 
     BOOL Append(__in_z LPCWSTR pszStr)
     {
-        size_t iInputLen = _wcslen (pszStr);        
+        size_t iInputLen = _wcslen (pszStr);
         size_t iCurLen = _wcslen (cs.String());
         if ((iCurLen + iInputLen + 1) > cs.Size())
         {
@@ -2302,7 +2302,7 @@ public:
         wcsncat_s (cs.String(), cs.Size(), pszStr, _TRUNCATE);
         return TRUE;
     }
-    
+
     size_t Length()
     {
         return _wcslen(cs.String());
@@ -2316,7 +2316,7 @@ public:
 
 static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp, ULONG64 IPAddr, StringOutput& so);
 
-// Using heuristics to determine if an exception object represented an async (hardware) or a 
+// Using heuristics to determine if an exception object represented an async (hardware) or a
 // managed exception
 // We need to use these heuristics when the System.Exception object is not the active exception
 // on some thread, but it's something found somewhere on the managed heap.
@@ -2331,13 +2331,13 @@ static const HRESULT AsyncHResultValues[] =
     COR_E_FORMAT,        // kFormatException
     COR_E_NULLREFERENCE, // kNullReferenceException
     E_POINTER,           // kAccessViolationException
-    // the EE is raising the next exceptions more often than the OS will raise an async 
+    // the EE is raising the next exceptions more often than the OS will raise an async
     // exception for these conditions, so in general treat these as Synchronous
       // COR_E_INDEXOUTOFRANGE, // kIndexOutOfRangeException
       // COR_E_OUTOFMEMORY,   // kOutOfMemoryException
       // COR_E_STACKOVERFLOW, // kStackOverflowException
     COR_E_DATAMISALIGNED, // kDataMisalignedException
-    
+
 };
 BOOL IsAsyncException(CLRDATA_ADDRESS taObj, CLRDATA_ADDRESS mtObj)
 {
@@ -2400,10 +2400,10 @@ BOOL IsAsyncException(const DacpExceptionObjectData & excData)
 
 
 #define SOS_STACKTRACE_SHOWEXPLICITFRAMES  0x00000002
-size_t FormatGeneratedException (DWORD_PTR dataPtr, 
-    UINT bytes, 
-    __out_ecount_opt(bufferLength) WCHAR *wszBuffer, 
-    size_t bufferLength, 
+size_t FormatGeneratedException (DWORD_PTR dataPtr,
+    UINT bytes,
+    __out_ecount_opt(bufferLength) WCHAR *wszBuffer,
+    size_t bufferLength,
     BOOL bAsync,                // hardware exception if true
     BOOL bNestedCase = FALSE,
     BOOL bLineNumbers = FALSE)
@@ -2417,7 +2417,7 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
     {
         wszBuffer[0] = L'\0';
     }
-    
+
     // Buffer is calculated for sprintf below ("   %p %p %S\n");
     WCHAR wszLineBuffer[mdNameLen + 8 + sizeof(size_t)*2 + MAX_LONGPATH + 8];
 
@@ -2425,7 +2425,7 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
     {
         return 0;
     }
-    
+
     if (bNestedCase)
     {
         // If we are computing the call stack for a nested exception, we
@@ -2433,36 +2433,36 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
         // will have that frame.
         count--;
     }
-    
+
     for (UINT i = 0; i < count; i++)
     {
         StackTraceElement ste;
         MOVE (ste, dataPtr + i*sizeof(StackTraceElement));
 
-        // ste.ip must be adjusted because of an ancient workaround in the exception 
+        // ste.ip must be adjusted because of an ancient workaround in the exception
         // infrastructure. The workaround is that the exception needs to have
         // an ip address that will map to the line number where the exception was thrown.
         // (It doesn't matter that it's not a valid instruction). (see /vm/excep.cpp)
         //
         // This "counterhack" is not 100% accurate
-        // The biggest issue is that !PrintException must work with exception objects 
-        // that may not be currently active; as a consequence we cannot rely on the 
-        // state of some "current thread" to infer whether the IP values stored in 
-        // the exception object have been adjusted or not. If we could, we may examine 
-        // the topmost "Frame" and make the decision based on whether it's a 
+        // The biggest issue is that !PrintException must work with exception objects
+        // that may not be currently active; as a consequence we cannot rely on the
+        // state of some "current thread" to infer whether the IP values stored in
+        // the exception object have been adjusted or not. If we could, we may examine
+        // the topmost "Frame" and make the decision based on whether it's a
         // FaultingExceptionFrame or not.
-        // 1. On IA64 the IP values are never adjusted by the EE so there's nothing 
+        // 1. On IA64 the IP values are never adjusted by the EE so there's nothing
         //    to adjust back.
         // 2. On AMD64:
-        //    (a) if the exception was an async (hardware) exception add 1 to all 
+        //    (a) if the exception was an async (hardware) exception add 1 to all
         //        IP values in the exception object
-        //    (b) if the exception was a managed exception (either raised by the 
+        //    (b) if the exception was a managed exception (either raised by the
         //        EE or thrown by managed code) do not adjust any IP values
         // 3. On X86:
-        //    (a) if the exception was an async (hardware) exception add 1 to 
+        //    (a) if the exception was an async (hardware) exception add 1 to
         //        all but the topmost IP value in the exception object
-        //    (b) if the exception was a managed exception (either raised by 
-        //        the EE or thrown by managed code) add 1 to all IP values in 
+        //    (b) if the exception was a managed exception (either raised by
+        //        the EE or thrown by managed code) add 1 to all IP values in
         //        the exception object
 #if defined(_TARGET_AMD64_)
         if (bAsync)
@@ -2479,15 +2479,15 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
         StringOutput so;
         HRESULT Status = DumpMDInfoBuffer(ste.pFunc, SOS_STACKTRACE_SHOWADDRESSES|SOS_STACKTRACE_SHOWEXPLICITFRAMES, ste.sp, ste.ip, so);
 
-        // If DumpMDInfoBuffer failed (due to out of memory or missing metadata), 
+        // If DumpMDInfoBuffer failed (due to out of memory or missing metadata),
         // or did not update so (when ste is an explicit frames), do not update wszBuffer
         if (Status == S_OK)
         {
             WCHAR filename[MAX_LONGPATH] = W("");
             ULONG linenum = 0;
-            if (bLineNumbers && 
-                // To get the source line number of the actual code that threw an exception, the IP needs 
-                // to be adjusted in certain cases. 
+            if (bLineNumbers &&
+                // To get the source line number of the actual code that threw an exception, the IP needs
+                // to be adjusted in certain cases.
                 //
                 // The IP of the stack frame points to either:
                 //
@@ -2504,7 +2504,7 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
                 // When the IP needs to be adjusted it is a lot simpler to decrement IP instead of trying to figure
                 // out the beginning of the instruction. It is enough for GetLineByOffset to return the correct line number.
                 //
-                // The unmodified IP is displayed (above by DumpMDInfoBuffer) which points after the exception in most 
+                // The unmodified IP is displayed (above by DumpMDInfoBuffer) which points after the exception in most
                 // cases. This means that the printed IP and the printed line number often will not map to one another
                 // and this is intentional.
                 SUCCEEDED(GetLineByOffset(TO_CDADDR(ste.ip), &linenum, filename, _countof(filename), !bAsync || i > 0)))
@@ -2562,7 +2562,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
 
     DacpObjectData objData;
     if ((Status=objData.Request(g_sos, taObj)) != S_OK)
-    {        
+    {
         ExtOut("Invalid object\n");
         return Status;
     }
@@ -2576,7 +2576,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
     }
 
     DMLOut("Exception object: %s\n", DMLObject(taObj));
-    
+
     if (NameForMT_s(TO_TADDR(objData.MethodTable), g_mdName, mdNameLen))
     {
         ExtOut("Exception type:   %S\n", g_mdName);
@@ -2641,7 +2641,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
             TADDR taMT;
             if (SUCCEEDED(GetMTOfObject(taInnerExc, &taMT)))
             {
-                NameForMT_s(taMT, g_mdName, mdNameLen);                
+                NameForMT_s(taMT, g_mdName, mdNameLen);
                 ExtOut("%S, ", g_mdName);
                 if (IsDMLEnabled())
                     DMLOut("Use <exec cmd=\"!PrintException /d %p\">!PrintException %p</exec> to see more.\n", taInnerExc, taInnerExc);
@@ -2671,7 +2671,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
         else
         {
             int iOffset = GetObjFieldOffset (taObj, objData.MethodTable, W("_stackTrace"));
-            if (iOffset > 0)        
+            if (iOffset > 0)
             {
                 MOVE(taStackTrace, taObj + iOffset);
             }
@@ -2697,7 +2697,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
 
                 DWORD cbStackSize = static_cast<DWORD>(stackTraceSize * sizeof(StackTraceElement));
                 dataPtr += sizeof(size_t) + sizeof(size_t); // skip the array header, then goes the data
-            
+
                 if (stackTraceSize == 0)
                 {
                     ExtOut("Unable to decipher generated stack trace\n");
@@ -2721,7 +2721,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
             {
                 ExtOut("<Not Available>\n");
             }
-        }                   
+        }
         else
         {
             ExtOut("<none>\n");
@@ -2771,18 +2771,18 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
     {
         // We have a SecurityException Object: print out the debugString if present
         int iOffset = GetObjFieldOffset (taObj, objData.MethodTable, W("m_debugString"));
-        if (iOffset > 0)        
+        if (iOffset > 0)
         {
             TADDR taDebugString;
-            MOVE (taDebugString, taObj + iOffset);                
-            
+            MOVE (taDebugString, taObj + iOffset);
+
             if (taDebugString)
             {
                 ExtOut("SecurityException Message: ");
                 StringObjectContent(taDebugString);
                 ExtOut("\n\n"); // extra newline looks better
             }
-        }            
+        }
     }
 
     return Status;
@@ -2791,13 +2791,13 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
 DECLARE_API(PrintException)
 {
     INIT_API();
-    
+
     BOOL dml = FALSE;
-    BOOL bShowNested = FALSE;   
+    BOOL bShowNested = FALSE;
     BOOL bLineNumbers = FALSE;
     BOOL bCCW = FALSE;
     StringHolder strObject;
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-nested", &bShowNested, COBOOL, FALSE},
         {"-lines", &bLineNumbers, COBOOL, FALSE},
@@ -2807,12 +2807,12 @@ DECLARE_API(PrintException)
         {"/d", &dml, COBOOL, FALSE}
 #endif
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&strObject, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -2847,7 +2847,7 @@ DECLARE_API(PrintException)
 
         CLRDATA_ADDRESS threadAddr = GetCurrentManagedThread();
         DacpThreadData Thread;
-        
+
         if ((threadAddr == NULL) || (Thread.Request(g_sos, threadAddr) != S_OK))
         {
             ExtOut("The current thread is unmanaged\n");
@@ -2859,11 +2859,11 @@ DECLARE_API(PrintException)
                             &dwAddr,
                             sizeof(dwAddr), NULL)) || (dwAddr==NULL))
         {
-            ExtOut("There is no current managed exception on this thread\n");            
-        }    
+            ExtOut("There is no current managed exception on this thread\n");
+        }
         else
-        {        
-            p_Object = dwAddr;        
+        {
+            p_Object = dwAddr;
         }
     }
     else
@@ -2902,7 +2902,7 @@ DECLARE_API(PrintException)
     // Are there nested exceptions?
     CLRDATA_ADDRESS threadAddr = GetCurrentManagedThread();
     DacpThreadData Thread;
-    
+
     if ((threadAddr == NULL) || (Thread.Request(g_sos, threadAddr) != S_OK))
     {
         ExtOut("The current thread is unmanaged\n");
@@ -2916,7 +2916,7 @@ DECLARE_API(PrintException)
             ExtOut("There are nested exceptions on this thread. Run with -nested for details\n");
             return Status;
         }
-        
+
         CLRDATA_ADDRESS currentNested = Thread.firstNestedException;
         do
         {
@@ -2941,10 +2941,10 @@ DECLARE_API(PrintException)
             {
                 return Status;
             }
-            
+
             currentNested = next;
         }
-        while(currentNested != NULL);        
+        while(currentNested != NULL);
     }
     return Status;
 }
@@ -2952,32 +2952,32 @@ DECLARE_API(PrintException)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function is called to dump the contents of an object from a  *  
+*    This function is called to dump the contents of an object from a  *
 *    given address
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(DumpVC)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
-    
+    MINIDUMP_NOT_SUPPORTED();
+
     DWORD_PTR p_MT = NULL;
     DWORD_PTR p_Object = NULL;
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
 #ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE}
 #endif
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&p_MT, COHEX},
         {&p_Object, COHEX},
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -2988,12 +2988,12 @@ DECLARE_API(DumpVC)
         ExtOut("Usage: !DumpVC <Method Table> <Value object start addr>\n");
         return Status;
     }
-    
+
     if (!IsMethodTable(p_MT))
     {
         ExtOut("Not a managed object\n");
         return S_OK;
-    } 
+    }
 
     return PrintVC(p_MT, p_Object);
 }
@@ -3010,16 +3010,16 @@ DECLARE_API(DumpRCW)
     BOOL dml = FALSE;
     StringHolder strObject;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"/d", &dml, COBOOL, FALSE}
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&strObject, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -3058,7 +3058,7 @@ DECLARE_API(DumpRCW)
             ExtOut("Managed ref count:          %d\n", rcwData.refCount);
             ExtOut("IUnknown V-table pointer :  %p (captured at RCW creation time)\n", SOS_PTR(rcwData.vtablePtr));
 
-            ExtOut("Flags:                      %s%s%s%s%s%s%s%s\n", 
+            ExtOut("Flags:                      %s%s%s%s%s%s%s%s\n",
                 (rcwData.isDisconnected? "IsDisconnected " : ""),
                 (rcwData.supportsIInspectable? "SupportsIInspectable " : ""),
                 (rcwData.isAggregated? "IsAggregated " : ""),
@@ -3072,15 +3072,15 @@ DECLARE_API(DumpRCW)
             // Jupiter data hidden by default
             if (rcwData.isJupiterObject)
             {
-                ExtOut("IJupiterObject:    %p\n", SOS_PTR(rcwData.jupiterObject));            
+                ExtOut("IJupiterObject:    %p\n", SOS_PTR(rcwData.jupiterObject));
             }
-            
+
             ExtOut("COM interface pointers:\n");
 
             ArrayHolder<DacpCOMInterfacePointerData> pArray = new NOTHROW DacpCOMInterfacePointerData[rcwData.interfaceCount];
             if (pArray == NULL)
             {
-                ReportOOM();            
+                ReportOOM();
                 return Status;
             }
 
@@ -3093,14 +3093,14 @@ DECLARE_API(DumpRCW)
             ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s Type\n", "IP", "Context", "MT");
             for (int i = 0; i < rcwData.interfaceCount; i++)
             {
-                // Ignore any NULL MethodTable interface cache. At this point only IJupiterObject 
-                // is saved as NULL MethodTable at first slot, and we've already printed outs its 
+                // Ignore any NULL MethodTable interface cache. At this point only IJupiterObject
+                // is saved as NULL MethodTable at first slot, and we've already printed outs its
                 // value earlier.
                 if (pArray[i].methodTable == NULL)
                     continue;
-                
+
                 NameForMT_s(TO_TADDR(pArray[i].methodTable), g_mdName, mdNameLen);
-                
+
                 DMLOut("%p %p %s %S\n", SOS_PTR(pArray[i].interfacePtr), SOS_PTR(pArray[i].comContext), DMLMethodTable(pArray[i].methodTable), g_mdName);
             }
         }
@@ -3117,16 +3117,16 @@ DECLARE_API(DumpCCW)
     BOOL dml = FALSE;
     StringHolder strObject;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"/d", &dml, COBOOL, FALSE}
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&strObject, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -3155,7 +3155,7 @@ DECLARE_API(DumpCCW)
 
             if (ccwData.ccwAddress != p_CCW)
                 ExtOut("CCW:               %p\n", SOS_PTR(ccwData.ccwAddress));
-            
+
             DMLOut("Managed object:    %s\n", DMLObject(ccwData.managedObject));
             ExtOut("Outer IUnknown:    %p\n", SOS_PTR(ccwData.outerIUnknown));
             ExtOut("Ref count:         %d%s\n", ccwData.refCount, ccwData.isNeutered ? " (NEUTERED)" : "");
@@ -3163,29 +3163,29 @@ DECLARE_API(DumpCCW)
                 (ccwData.isExtendsCOMObject? "IsExtendsCOMObject " : ""),
                 (ccwData.isAggregated? "IsAggregated " : "")
                 );
-                
+
             // Jupiter information hidden by default
             if (ccwData.jupiterRefCount > 0)
             {
-                ExtOut("Jupiter ref count: %d%s%s%s%s\n", 
-                    ccwData.jupiterRefCount, 
+                ExtOut("Jupiter ref count: %d%s%s%s%s\n",
+                    ccwData.jupiterRefCount,
                     (ccwData.isPegged || ccwData.isGlobalPegged) ? ", Pegged by" : "",
                     ccwData.isPegged ? " Jupiter " : "",
                     (ccwData.isPegged && ccwData.isGlobalPegged) ? "&" : "",
                     ccwData.isGlobalPegged ? " CLR " : ""
                     );
             }
-            
-            ExtOut("RefCounted Handle: %p%s\n", 
-                SOS_PTR(ccwData.handle), 
+
+            ExtOut("RefCounted Handle: %p%s\n",
+                SOS_PTR(ccwData.handle),
                 (ccwData.hasStrongRef ? " (STRONG)" : " (WEAK)"));
 
-            ExtOut("COM interface pointers:\n");            
+            ExtOut("COM interface pointers:\n");
 
             ArrayHolder<DacpCOMInterfacePointerData> pArray = new NOTHROW DacpCOMInterfacePointerData[ccwData.interfaceCount];
             if (pArray == NULL)
             {
-                ReportOOM();            
+                ReportOOM();
                 return Status;
             }
 
@@ -3206,7 +3206,7 @@ DECLARE_API(DumpCCW)
                 {
                     NameForMT_s(TO_TADDR(pArray[i].methodTable), g_mdName, mdNameLen);
                 }
-                
+
                 DMLOut("%p %s %S\n", pArray[i].interfacePtr, DMLMethodTable(pArray[i].methodTable), g_mdName);
             }
         }
@@ -3222,31 +3222,31 @@ DECLARE_API(DumpCCW)
 * Routine Description:                                                 *
 *                                                                      *
 *    This function is called to dump the contents of a PermissionSet   *
-*    from a given address.                                             * 
+*    from a given address.                                             *
 *                                                                      *
 \**********************************************************************/
-/* 
+/*
     COMMAND: dumppermissionset.
     !DumpPermissionSet <PermissionSet object address>
 
-    This command allows you to examine a PermissionSet object. Note that you can 
-    also use DumpObj such an object in greater detail. DumpPermissionSet attempts 
-    to extract all the relevant information from a PermissionSet that you might be 
+    This command allows you to examine a PermissionSet object. Note that you can
+    also use DumpObj such an object in greater detail. DumpPermissionSet attempts
+    to extract all the relevant information from a PermissionSet that you might be
     interested in when performing Code Access Security (CAS) related debugging.
 
     Here is a simple PermissionSet object:
 
-    0:000> !DumpPermissionSet 014615f4 
+    0:000> !DumpPermissionSet 014615f4
     PermissionSet object: 014615f4
     Unrestricted: TRUE
 
-    Note that this is an unrestricted PermissionSet object that does not contain 
-    any individual permissions. 
+    Note that this is an unrestricted PermissionSet object that does not contain
+    any individual permissions.
 
-    Here is another example of a PermissionSet object, one that is not unrestricted 
+    Here is another example of a PermissionSet object, one that is not unrestricted
     and contains a single permission:
 
-    0:003> !DumpPermissionSet 01469fa8 
+    0:003> !DumpPermissionSet 01469fa8
     PermissionSet object: 01469fa8
     Unrestricted: FALSE
     Name: System.Security.Permissions.ReflectionPermission
@@ -3260,8 +3260,8 @@ DECLARE_API(DumpCCW)
           MT    Field   Offset                 Type VT     Attr    Value Name
     5b73125c  4001d66        4         System.Int32  0 instance        2 m_flags
 
-    Here is another example of an unrestricted PermissionSet, one that contains 
-    several permissions. The numbers in parentheses before each Permission object 
+    Here is another example of an unrestricted PermissionSet, one that contains
+    several permissions. The numbers in parentheses before each Permission object
     represents the index of that Permission in the PermissionSet.
 
     0:003> !DumpPermissionSet 01467bd8
@@ -3355,12 +3355,12 @@ DECLARE_API(DumpPermissionSet)
 
     DWORD_PTR p_Object = NULL;
 
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {
         {&p_Object, COHEX}
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -3369,7 +3369,7 @@ DECLARE_API(DumpPermissionSet)
         ExtOut("Usage: !DumpPermissionSet <PermissionSet object addr>\n");
         return Status;
     }
-    
+
 
     return PrintPermissionSet(p_Object);
 }
@@ -3394,26 +3394,26 @@ void DisplayInvalidStructuresMessage()
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function dumps GC heap size.                                 *  
+*    This function dumps GC heap size.                                 *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(EEHeap)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
-    
+    MINIDUMP_NOT_SUPPORTED();
+
     BOOL dml = FALSE;
     BOOL showgc = FALSE;
     BOOL showloader = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-gc", &showgc, COBOOL, FALSE},
         {"-loader", &showloader, COBOOL, FALSE},
         {"/d", &dml, COBOOL, FALSE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL)) 
+    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -3423,7 +3423,7 @@ DECLARE_API(EEHeap)
     {
         // Loader heap.
         DWORD_PTR allHeapSize = 0;
-        DWORD_PTR wasted = 0;    
+        DWORD_PTR wasted = 0;
         DacpAppDomainStoreData adsData;
         if ((Status=adsData.Request(g_sos))!=S_OK)
         {
@@ -3438,12 +3438,12 @@ DECLARE_API(EEHeap)
         {
             IfFailRet(PrintDomainHeapInfo("Shared Domain", adsData.sharedDomain, &allHeapSize, &wasted));
         }
-        
+
         ArrayHolder<CLRDATA_ADDRESS> pArray = new NOTHROW CLRDATA_ADDRESS[adsData.DomainCount];
 
         if (pArray==NULL)
         {
-            ReportOOM();            
+            ReportOOM();
             return Status;
         }
 
@@ -3478,11 +3478,11 @@ DECLARE_API(EEHeap)
             allHeapSize += JitHeapInfo();
         }
 
-    
+
         // Module Data
         {
             int numModule;
-            ArrayHolder<DWORD_PTR> moduleList = ModuleFromName(NULL, &numModule);   
+            ArrayHolder<DWORD_PTR> moduleList = ModuleFromName(NULL, &numModule);
             if (moduleList == NULL)
             {
                 ExtOut("Failed to request module list.\n");
@@ -3508,7 +3508,7 @@ DECLARE_API(EEHeap)
     }
 
     if (showgc || !showloader)
-    {   
+    {
         // GC Heap
         DWORD dwNHeaps = 1;
 
@@ -3516,7 +3516,7 @@ DECLARE_API(EEHeap)
         {
             DisplayInvalidStructuresMessage();
         }
-        
+
         DacpGcHeapData gcheap;
         if (gcheap.Request(g_sos) != S_OK)
         {
@@ -3559,12 +3559,12 @@ DECLARE_API(EEHeap)
                 ExtOut("Failed to get GCHeaps\n");
                 return Status;
             }
-                        
+
             DWORD n;
             for (n = 0; n < dwNHeaps; n ++)
             {
-                DacpGcHeapDetails heapDetails;
-                if (heapDetails.Request(g_sos, heapAddrs[n]) != S_OK)
+                DacpGcHeapDetails dacHeapDetails;
+                if (dacHeapDetails.Request(g_sos, heapAddrs[n]) != S_OK)
                 {
                     ExtOut("Error requesting details\n");
                     return Status;
@@ -3572,6 +3572,7 @@ DECLARE_API(EEHeap)
                 ExtOut("------------------------------\n");
                 ExtOut("Heap %d (%p)\n", n, SOS_PTR(heapAddrs[n]));
                 DWORD_PTR heapSize = 0;
+                GCHeapDetails heapDetails(dacHeapDetails, heapAddrs[n]);
                 GCHeapInfo (heapDetails, heapSize);
                 totalSize += heapSize;
                 ExtOut("Heap Size:       " WIN86_8SPACES);
@@ -3617,17 +3618,17 @@ DECLARE_API(TraverseHeap)
     BOOL bVerify = FALSE;
     StringHolder Filename;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr,        type, hasValue
         {"-xml", &bXmlFormat, COBOOL, FALSE},
         {"-verify", &bVerify, COBOOL, FALSE},
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&Filename.data, COSTRING},
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -3651,11 +3652,11 @@ DECLARE_API(TraverseHeap)
     }
 
     if (!bVerify)
-        ExtOut("Assuming a uncorrupted GC heap.  If this is a crash dump consider -verify option\n"); 
+        ExtOut("Assuming a uncorrupted GC heap.  If this is a crash dump consider -verify option\n");
 
     HeapTraverser traverser(bVerify != FALSE);
 
-    ExtOut("Writing %s format to file %s\n", bXmlFormat ? "Xml" : "CLRProfiler", Filename.data);    
+    ExtOut("Writing %s format to file %s\n", bXmlFormat ? "Xml" : "CLRProfiler", Filename.data);
     ExtOut("Gathering types...\n");
 
     // TODO: there may be a canonical list of methodtables in the runtime that we can
@@ -3679,9 +3680,9 @@ DECLARE_API(TraverseHeap)
         return Status;
     }
 
-    fclose(file);                
+    fclose(file);
     ExtOut("\nfile %s saved\n", Filename.data);
-    
+
     return Status;
 }
 
@@ -3736,7 +3737,7 @@ void PrintRuntimeTypes(DWORD_PTR objAddr,size_t Size,DWORD_PTR methodTable,LPVOI
             {
                 ExtOut(" %" POINTERSIZE "s", "?");
             }
-        
+
             NameForMT_s(mtPtr, g_mdName, mdNameLen);
             DMLOut(" %s %S\n", DMLMethodTable(mtPtr), g_mdName);
         }
@@ -3747,12 +3748,12 @@ void PrintRuntimeTypes(DWORD_PTR objAddr,size_t Size,DWORD_PTR methodTable,LPVOI
 DECLARE_API(DumpRuntimeTypes)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"/d", &dml, COBOOL, FALSE},
     };
@@ -3823,7 +3824,7 @@ public:
         ArrayHolder<char> type = NULL;
 
         TADDR minTemp = 0;
-        CMDOption option[] = 
+        CMDOption option[] =
         {   // name, vptr, type, hasValue
             {"-mt", &mMT, COHEX, TRUE},              // dump objects with a given MethodTable
             {"-type", &type, COSTRING, TRUE},        // list objects of specified type
@@ -3841,7 +3842,7 @@ public:
 #endif
         };
 
-        CMDValue arg[] = 
+        CMDValue arg[] =
         {   // vptr, type
             {&mStart, COHEX},
             {&mStop, COHEX}
@@ -3861,7 +3862,7 @@ public:
         {
             sos::Throw<sos::Exception>("Cannot specify both -mt and -type");
         }
-        
+
         if (mLive && mDead)
         {
             sos::Throw<sos::Exception>("Cannot specify both -live and -dead.");
@@ -3871,7 +3872,7 @@ public:
         {
             sos::Throw<sos::Exception>("wrong argument");
         }
-        
+
         // If the user gave us a type, convert it to unicode and clean up "type".
         if (type && !mStrings)
         {
@@ -3890,12 +3891,12 @@ public:
     void Run()
     {
         // enable Debugger Markup Language
-        EnableDMLHolder dmlholder(mDML); 
+        EnableDMLHolder dmlholder(mDML);
         sos::GCHeap gcheap;
 
         if (!gcheap.AreGCStructuresValid())
             DisplayInvalidStructuresMessage();
-        
+
         if (IsMiniDumpFile())
         {
             ExtOut("In a minidump without full memory, most gc heap structures will not be valid.\n");
@@ -3937,7 +3938,7 @@ public:
             {
                 if (!sos::IsObject(itr->GetObject(), true))
                 {
-                    ExtOut("SyncBlock %d corrupted, points to invalid object %p\n", 
+                    ExtOut("SyncBlock %d corrupted, points to invalid object %p\n",
                             itr->GetIndex(), SOS_PTR(itr->GetObject()));
                         succeeded = false;
                 }
@@ -3961,7 +3962,7 @@ public:
                             ULONG index = header & MASK_SYNCBLOCKINDEX;
                             valid = (ULONG)itr->GetIndex() == index;
                         }
-                        
+
                         if (!valid)
                         {
                             ExtOut("Object header for %p should have a SyncBlock index of %d.\n",
@@ -3989,7 +3990,7 @@ private:
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -4068,7 +4069,7 @@ private:
             {
                 stats.Add((DWORD_PTR)itr->GetMT(), (DWORD)itr->GetSize());
                 if (!mStat)
-                    DMLOut("%s %s %8d%s\n", DMLObject(itr->GetAddress()), DMLDumpHeapMT(itr->GetMT()), itr->GetSize(), 
+                    DMLOut("%s %s %8d%s\n", DMLObject(itr->GetAddress()), DMLDumpHeapMT(itr->GetMT()), itr->GetSize(),
                                             itr->IsFree() ? " Free":"     ");
             }
         }
@@ -4088,30 +4089,30 @@ private:
         {
             str[0] = 0;
         }
-        
+
         StringSetEntry(__in_ecount(64) WCHAR tmp[64], size_t _size)
             : count(1), size(_size)
         {
             memcpy(str, tmp, sizeof(str));
         }
-        
+
         void Add(size_t _size) const
         {
             count++;
             size += _size;
         }
-        
+
         mutable size_t count;
         mutable size_t size;
         WCHAR str[64];
-        
+
         bool operator<(const StringSetEntry &rhs) const
         {
             return _wcscmp(str, rhs.str) < 0;
         }
     };
 
-    
+
     static bool StringSetCompare(const StringSetEntry &a1, const StringSetEntry &a2)
     {
         return a1.size < a2.size;
@@ -4131,7 +4132,7 @@ private:
         const int offset = sos::Object::GetStringDataOffset();
         typedef std::set<StringSetEntry> Set;
         Set set;            // A set keyed off of the string's text
-        
+
         StringSetEntry tmp;  // Temp string used to keep track of the set
         ULONG fetched = 0;
 
@@ -4140,12 +4141,12 @@ private:
         {
             if (IsInterrupt())
                 break;
-                
+
             if (itr->IsString() && IsCorrectSize(*itr) && IsCorrectLiveness(*itr))
             {
                 CLRDATA_ADDRESS addr = itr->GetAddress();
                 size_t size = itr->GetSize();
-                
+
                 if (!mStat)
                     out.WriteRow(ObjectPtr(addr), Pointer(itr->GetMT()), Decimal(size));
 
@@ -4185,7 +4186,7 @@ private:
         {
             if (IsInterrupt())
                 break;
-                
+
             Flatten(vitr->str, (unsigned int)_wcslen(vitr->str));
             out.WriteRow(Decimal(vitr->size), Decimal(vitr->count), vitr->str);
         }
@@ -4214,7 +4215,7 @@ private:
             if (!Verify(itr))
                 return;
 
-            sos::ThinLockInfo lockInfo; 
+            sos::ThinLockInfo lockInfo;
             if (IsCorrectType(*itr) && itr->GetThinLock(lockInfo))
             {
                 DMLOut("%s %s %8d", DMLObject(itr->GetAddress()), DMLDumpHeapMT(itr->GetMT()), itr->GetSize());
@@ -4283,7 +4284,7 @@ private:
         {
             ExtOut("Fragmented blocks larger than 0.5 MB:\n");
             ExtOut("%" POINTERSIZE "s %8s %16s\n", "Addr", "Size", "Followed by");
- 
+
             for (FragmentationList::const_iterator itr = mFrag.begin(); itr != mFrag.end(); ++itr)
             {
                 sos::MethodTable mt = itr->GetNextMT();
@@ -4570,7 +4571,7 @@ DECLARE_API(DumpAsync)
             type = new WCHAR[ansiTypeLen];
             MultiByteToWideChar(CP_ACP, 0, ansiType, -1, type, (int)ansiTypeLen);
         }
-        
+
         EnableDMLHolder dmlHolder(dml);
         BOOL hasTypeFilter = mt != NULL || ansiType != NULL || addr != NULL;
 
@@ -4592,7 +4593,7 @@ DECLARE_API(DumpAsync)
         for (sos::ObjectIterator itr = gcheap.WalkHeap(); !IsInterrupt() && itr != NULL; ++itr)
         {
             // Skip objects too small to be state machines or tasks, avoiding some compiler-generated caching data structures.
-            if (itr->GetSize() <= 24) 
+            if (itr->GetSize() <= 24)
             {
                 continue;
             }
@@ -4910,8 +4911,8 @@ DECLARE_API(DumpAsync)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function dumps all objects on GC heap. It also displays      *  
-*    statistics of objects.  If GC heap is corrupted, it will stop at 
+*    This function dumps all objects on GC heap. It also displays      *
+*    statistics of objects.  If GC heap is corrupted, it will stop at
 *    the bad place.  (May not work if GC is in progress.)              *
 *                                                                      *
 \**********************************************************************/
@@ -4941,7 +4942,7 @@ DECLARE_API(DumpHeap)
 }
 
 DECLARE_API(VerifyHeap)
-{    
+{
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
@@ -4951,7 +4952,7 @@ DECLARE_API(VerifyHeap)
         ExtOut("Unable to build snapshot of the garbage collector state\n");
         return E_FAIL;
     }
-    
+
     try
     {
         bool succeeded = true;
@@ -5011,20 +5012,20 @@ enum oom_reason
     oom_unproductive_full_gc = 6
 };
 
-static const char *const str_oom[] = 
+static const char *const str_oom[] =
 {
-    "There was no managed OOM due to allocations on the GC heap", // oom_no_failure 
+    "There was no managed OOM due to allocations on the GC heap", // oom_no_failure
     "This is likely to be a bug in GC", // oom_budget
     "Didn't have enough memory to commit", // oom_cant_commit
-    "This is likely to be a bug in GC", // oom_cant_reserve 
-    "Didn't have enough memory to allocate an LOH segment", // oom_loh 
-    "Low on memory during GC", // oom_low_mem 
+    "This is likely to be a bug in GC", // oom_cant_reserve
+    "Didn't have enough memory to allocate an LOH segment", // oom_loh
+    "Low on memory during GC", // oom_low_mem
     "Could not do a full GC" // oom_unproductive_full_gc
 };
 
-static const char *const str_fgm[] = 
+static const char *const str_fgm[] =
 {
-    "There was no failure to allocate memory", // fgm_no_failure 
+    "There was no failure to allocate memory", // fgm_no_failure
     "Failed to reserve memory", // fgm_reserve_segment
     "Didn't have enough memory to commit beginning of the segment", // fgm_commit_segment_beg
     "Didn't have enough memory to commit the new ephemeral segment", // fgm_commit_eph_segment
@@ -5034,7 +5035,7 @@ static const char *const str_fgm[] =
 
 void PrintOOMInfo(DacpOomData* oomData)
 {
-    ExtOut("Managed OOM occurred after GC #%d (Requested to allocate %d bytes)\n", 
+    ExtOut("Managed OOM occurred after GC #%d (Requested to allocate %d bytes)\n",
         oomData->gc_index, oomData->alloc_size);
 
     if ((oomData->reason == oom_budget) ||
@@ -5051,11 +5052,11 @@ void PrintOOMInfo(DacpOomData* oomData)
     // Now print out the more detailed memory info if any.
     if (oomData->fgm != fgm_no_failure)
     {
-        ExtOut("Detail: %s: %s (%d bytes)", 
-            (oomData->loh_p ? "LOH" : "SOH"), 
+        ExtOut("Detail: %s: %s (%d bytes)",
+            (oomData->loh_p ? "LOH" : "SOH"),
             str_fgm[oomData->fgm],
             oomData->size);
-    
+
         if ((oomData->fgm == fgm_commit_segment_beg) ||
             (oomData->fgm == fgm_commit_eph_segment) ||
             (oomData->fgm == fgm_grow_table) ||
@@ -5077,9 +5078,9 @@ void PrintOOMInfo(DacpOomData* oomData)
 }
 
 DECLARE_API(AnalyzeOOM)
-{    
-    INIT_API();    
-    MINIDUMP_NOT_SUPPORTED();    
+{
+    INIT_API();
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
 #ifndef FEATURE_PAL
@@ -5107,7 +5108,7 @@ DECLARE_API(AnalyzeOOM)
         }
     }
     else
-    {   
+    {
         DWORD dwNHeaps = GetGcHeapCount();
         DWORD dwAllocSize;
         if (!ClrSafeInt<DWORD>::multiply(sizeof(CLRDATA_ADDRESS), dwNHeaps, dwAllocSize))
@@ -5122,7 +5123,7 @@ DECLARE_API(AnalyzeOOM)
             ExtOut("Failed to get GCHeaps\n");
             return Status;
         }
-        
+
         for (DWORD n = 0; n < dwNHeaps; n ++)
         {
             if (oomData.Request(g_sos, heapAddrs[n]) != S_OK)
@@ -5156,7 +5157,7 @@ DECLARE_API(AnalyzeOOM)
 
 DECLARE_API(VerifyObj)
 {
-    INIT_API();    
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -5167,11 +5168,11 @@ DECLARE_API(VerifyObj)
     BOOL bValid = FALSE;
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"/d", &dml, COBOOL, FALSE},
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&taddrObj, COHEX}
     };
@@ -5198,7 +5199,7 @@ DECLARE_API(VerifyObj)
         goto Exit;
     }
     {
-        DacpGcHeapDetails *pheapDetails = g_snapshot.GetHeap(taddrObj);
+        GCHeapDetails *pheapDetails = g_snapshot.GetHeap(taddrObj);
         bValid = VerifyObject(*pheapDetails, taddrObj, taddrMT, objSize, TRUE);
     }
 
@@ -5211,7 +5212,7 @@ Exit:
     return Status;
 }
 
-void LNODisplayOutput(LPCWSTR tag, TADDR pMT, TADDR currentObj, size_t size) 
+void LNODisplayOutput(LPCWSTR tag, TADDR pMT, TADDR currentObj, size_t size)
 {
     sos::Object obj(currentObj, pMT);
     DMLOut("%S %s %12d (0x%x)\t%S\n", tag, DMLObject(currentObj), size, size, obj.GetTypeName());
@@ -5220,29 +5221,29 @@ void LNODisplayOutput(LPCWSTR tag, TADDR pMT, TADDR currentObj, size_t size)
 DECLARE_API(ListNearObj)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
 #if !defined(FEATURE_PAL)
 
     TADDR taddrArg = 0;
     TADDR taddrObj = 0;
-    // we may want to provide a more exact version of searching for the 
-    // previous object in the heap, using the brick table, instead of 
+    // we may want to provide a more exact version of searching for the
+    // previous object in the heap, using the brick table, instead of
     // looking for what may be valid method tables...
     //BOOL bExact;
-    //CMDOption option[] = 
+    //CMDOption option[] =
     //{
     //    // name, vptr, type, hasValue
     //    {"-exact", &bExact, COBOOL, FALSE}
     //};
 
     BOOL dml = FALSE;
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"/d", &dml, COBOOL, FALSE},
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {
         // vptr, type
         {&taddrArg, COHEX}
@@ -5259,12 +5260,12 @@ DECLARE_API(ListNearObj)
     if (!g_snapshot.Build())
     {
         ExtOut("Unable to build snapshot of the garbage collector state\n");
-        return Status;    
+        return Status;
     }
 
     taddrObj = Align(taddrArg);
 
-    DacpGcHeapDetails *heap = g_snapshot.GetHeap(taddrArg);
+    GCHeapDetails *heap = g_snapshot.GetHeap(taddrArg);
     if (heap == NULL)
     {
         ExtOut("Address %p does not lie in the managed heap\n", SOS_PTR(taddrObj));
@@ -5277,7 +5278,7 @@ DECLARE_API(ListNearObj)
     int           gen;
     if (!GCObjInHeap(taddrObj, *heap, trngSeg, gen, allocCtx, bLarge))
     {
-        ExtOut("Failed to find the segment of the managed heap where the object %p resides\n", 
+        ExtOut("Failed to find the segment of the managed heap where the object %p resides\n",
             SOS_PTR(taddrObj));
         return Status;
     }
@@ -5313,13 +5314,13 @@ DECLARE_API(ListNearObj)
             // remember this as one of the possible "good" objects preceeding taddrObj
             candidate.push_back(taddrCur);
 
-            std::vector<TADDR>::iterator it = 
+            std::vector<TADDR>::iterator it =
                 std::find(candidate.begin(), candidate.end(), taddrCur+curSize);
             if (it != candidate.end())
             {
                 // We found a chain of two objects preceeding taddrObj.  We'll
                 // trust this is a good indication that the two objects are valid.
-                // What is not valid is possibly the object following the second 
+                // What is not valid is possibly the object following the second
                 // one...
                 taddrCur = *it;
                 GetMTOfObject(taddrCur, &curMT);
@@ -5341,15 +5342,15 @@ DECLARE_API(ListNearObj)
     }
 
     taddrNxt = taddrObj;
-    if (taddrArg == taddrObj) 
+    if (taddrArg == taddrObj)
     {
         taddrNxt += sizeof(TADDR);
     }
 
     // ===== Now look at taddrObj
-    if (taddrObj == taddrArg) 
+    if (taddrObj == taddrArg)
     {
-        // only look at taddrObj if it's the same as what user passed in, meaning it's aligned.  
+        // only look at taddrObj if it's the same as what user passed in, meaning it's aligned.
         if (SUCCEEDED(GetMTOfObject(taddrObj, &objMT)) &&
             GetSizeEfficient(taddrObj, objMT, bLarge, objSize, bContainsPointers))
         {
@@ -5368,7 +5369,7 @@ DECLARE_API(ListNearObj)
     }
 
     // ===== And finally move on to elements following taddrObj
-    
+
     for (; taddrNxt < trngSeg.end; taddrNxt += sizeof(TADDR))
     {
         if (SUCCEEDED(GetMTOfObject(taddrNxt, &nxtMT)) &&
@@ -5394,8 +5395,8 @@ DECLARE_API(ListNearObj)
         ExtOut("After:  couldn't find any object between %#p and %#p\n",
             SOS_PTR(taddrArg), SOS_PTR(trngSeg.end));
 
-    if (bCur && bNxt && 
-        (((taddrCur+curSize == taddrObj) && (taddrObj+objSize == taddrNxt)) || (taddrCur+curSize == taddrNxt)))
+    if (bCur && bNxt &&
+        (((taddrCur + curSize == taddrObj) && (taddrObj + objSize == taddrNxt)) || (taddrCur + curSize == taddrNxt)))
     {
         ExtOut("Heap local consistency confirmed.\n");
     }
@@ -5404,7 +5405,7 @@ DECLARE_API(ListNearObj)
         ExtOut("Heap local consistency not confirmed.\n");
     }
 
-    return Status;    
+    return Status;
 
 #else
 
@@ -5418,7 +5419,7 @@ DECLARE_API(ListNearObj)
 DECLARE_API(GCHeapStat)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
 #ifndef FEATURE_PAL
@@ -5432,49 +5433,57 @@ DECLARE_API(GCHeapStat)
         {"-iu",           &bIncUnreachable, COBOOL, FALSE},
         {"/d",            &dml, COBOOL, FALSE}
     };
-    
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL)) 
+
+    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
     {
         return Status;
     }
 
     EnableDMLHolder dmlHolder(dml);
-    ExtOut("%-8s %12s %12s %12s %12s\n", "Heap", "Gen0", "Gen1", "Gen2", "LOH");
+    ExtOut("%-8s %12s %12s %12s %12s %12s\n", "Heap", "Gen0", "Gen1", "Gen2", "LOH", "POH");
 
     if (!IsServerBuild())
     {
         float tempf;
-        DacpGcHeapDetails heapDetails;
-        if (heapDetails.Request(g_sos) != S_OK)
+        DacpGcHeapDetails dacHeapDetails;
+        if (dacHeapDetails.Request(g_sos) != S_OK)
         {
             ExtErr("Error requesting gc heap details\n");
             return Status;
         }
 
         HeapUsageStat hpUsage;
+        GCHeapDetails heapDetails(dacHeapDetails);
         if (GCHeapUsageStats(heapDetails, bIncUnreachable, &hpUsage))
         {
-            ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n", 0, 
-                hpUsage.genUsage[0].allocd, hpUsage.genUsage[1].allocd, 
-                hpUsage.genUsage[2].allocd, hpUsage.genUsage[3].allocd);
-            ExtOut("\nFree space:                                                  Percentage\n");
-            ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u ", 0, 
-                hpUsage.genUsage[0].freed, hpUsage.genUsage[1].freed, 
-                hpUsage.genUsage[2].freed, hpUsage.genUsage[3].freed);
-            tempf = ((float)(hpUsage.genUsage[0].freed+hpUsage.genUsage[1].freed+hpUsage.genUsage[2].freed)) /
-                (hpUsage.genUsage[0].allocd+hpUsage.genUsage[1].allocd+hpUsage.genUsage[2].allocd);
-            ExtOut("SOH:%3d%% LOH:%3d%%\n", (int)(100 * tempf), 
-                (int)(100*((float)hpUsage.genUsage[3].freed) / (hpUsage.genUsage[3].allocd)));
+            ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n", 0,
+                hpUsage.genUsage[0].allocd, hpUsage.genUsage[1].allocd,
+                hpUsage.genUsage[2].allocd, hpUsage.genUsage[3].allocd,
+                hpUsage.genUsage[4].allocd);
+            ExtOut("\nFree space:                                                               Percentage\n");
+            ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u ", 0,
+                hpUsage.genUsage[0].freed, hpUsage.genUsage[1].freed,
+                hpUsage.genUsage[2].freed, hpUsage.genUsage[3].freed,
+                hpUsage.genUsage[4].freed);
+            tempf = ((float)(hpUsage.genUsage[0].freed + hpUsage.genUsage[1].freed + hpUsage.genUsage[2].freed)) /
+                (hpUsage.genUsage[0].allocd + hpUsage.genUsage[1].allocd + hpUsage.genUsage[2].allocd);
+            int pohFreeUsage = heapDetails.has_poh ? (int)(100*((float)hpUsage.genUsage[4].freed) / (hpUsage.genUsage[4].allocd)) : 0;
+            ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%%",
+                (int)(100*((float)hpUsage.genUsage[3].freed) / (hpUsage.genUsage[3].allocd)), "%%",
+                pohFreeUsage, "%%");
+
             if (bIncUnreachable)
             {
-            ExtOut("\nUnrooted objects:                                            Percentage\n");
-            ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u ", 0, 
-                hpUsage.genUsage[0].unrooted, hpUsage.genUsage[1].unrooted, 
-                hpUsage.genUsage[2].unrooted, hpUsage.genUsage[3].unrooted);
-            tempf = ((float)(hpUsage.genUsage[0].unrooted+hpUsage.genUsage[1].unrooted+hpUsage.genUsage[2].unrooted)) / 
-                (hpUsage.genUsage[0].allocd+hpUsage.genUsage[1].allocd+hpUsage.genUsage[2].allocd);
-            ExtOut("SOH:%3d%% LOH:%3d%%\n", (int)(100 * tempf),
-                (int)(100*((float)hpUsage.genUsage[3].unrooted) / (hpUsage.genUsage[3].allocd)));
+                ExtOut("\nUnrooted objects:                                            Percentage\n");
+                ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u ", 0,
+                    hpUsage.genUsage[0].unrooted, hpUsage.genUsage[1].unrooted,
+                    hpUsage.genUsage[2].unrooted, hpUsage.genUsage[3].unrooted);
+                tempf = ((float)(hpUsage.genUsage[0].unrooted+hpUsage.genUsage[1].unrooted+hpUsage.genUsage[2].unrooted)) /
+                    (hpUsage.genUsage[0].allocd+hpUsage.genUsage[1].allocd+hpUsage.genUsage[2].allocd);
+                int pohUnrootedUsage = heapDetails.has_poh ? (int)(100*((float)hpUsage.genUsage[4].unrooted) / (hpUsage.genUsage[4].allocd)) : 0;
+                ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%%",
+                    (int)(100*((float)hpUsage.genUsage[3].unrooted) / (hpUsage.genUsage[3].allocd)), "%%",
+                    pohUnrootedUsage, "%%");
             }
         }
     }
@@ -5511,26 +5520,28 @@ DECLARE_API(GCHeapStat)
         }
 
         // aggregate stats across heaps / generation
-        GenUsageStat genUsageStat[4] = {0, 0, 0, 0};
-
+        GenUsageStat genUsageStat[5] = {0, 0, 0, 0, 0};
+        bool hasPoh = false;
         for (DWORD n = 0; n < dwNHeaps; n ++)
         {
-            DacpGcHeapDetails heapDetails;
-            if (heapDetails.Request(g_sos, heapAddrs[n]) != S_OK)
+            DacpGcHeapDetails dacHeapDetails;
+            if (dacHeapDetails.Request(g_sos, heapAddrs[n]) != S_OK)
             {
                 ExtErr("Error requesting gc heap details\n");
                 return Status;
             }
 
+            GCHeapDetails heapDetails(dacHeapDetails, heapAddrs[n]);
+            hasPoh = heapDetails.has_poh;
             if (GCHeapUsageStats(heapDetails, bIncUnreachable, &hpUsage[n]))
             {
-                for (int i = 0; i < 4; ++i)
+                for (int i = 0; i < 5; ++i)
                 {
                     genUsageStat[i].allocd   += hpUsage[n].genUsage[i].allocd;
                     genUsageStat[i].freed    += hpUsage[n].genUsage[i].freed;
                     if (bIncUnreachable)
                     {
-                    genUsageStat[i].unrooted += hpUsage[n].genUsage[i].unrooted;
+                        genUsageStat[i].unrooted += hpUsage[n].genUsage[i].unrooted;
                     }
                 }
             }
@@ -5538,54 +5549,63 @@ DECLARE_API(GCHeapStat)
 
         for (DWORD n = 0; n < dwNHeaps; n ++)
         {
-            ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n", n, 
-                hpUsage[n].genUsage[0].allocd, hpUsage[n].genUsage[1].allocd, 
-                hpUsage[n].genUsage[2].allocd, hpUsage[n].genUsage[3].allocd);
+            ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n", n,
+                hpUsage[n].genUsage[0].allocd, hpUsage[n].genUsage[1].allocd,
+                hpUsage[n].genUsage[2].allocd, hpUsage[n].genUsage[3].allocd,
+                hpUsage[n].genUsage[4].allocd);
         }
-        ExtOut("Total    %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n",
-            genUsageStat[0].allocd, genUsageStat[1].allocd, 
-            genUsageStat[2].allocd, genUsageStat[3].allocd);
+        ExtOut("Total    %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n",
+            genUsageStat[0].allocd, genUsageStat[1].allocd,
+            genUsageStat[2].allocd, genUsageStat[3].allocd,
+            genUsageStat[4].allocd);
 
-        ExtOut("\nFree space:                                                  Percentage\n");
+        ExtOut("\nFree space:                                                               Percentage\n");
         for (DWORD n = 0; n < dwNHeaps; n ++)
         {
-            ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u ", n, 
-                hpUsage[n].genUsage[0].freed, hpUsage[n].genUsage[1].freed, 
-                hpUsage[n].genUsage[2].freed, hpUsage[n].genUsage[3].freed);
+            ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u ", n,
+                hpUsage[n].genUsage[0].freed, hpUsage[n].genUsage[1].freed,
+                hpUsage[n].genUsage[2].freed, hpUsage[n].genUsage[3].freed,
+                hpUsage[n].genUsage[4].freed);
 
-            tempf = ((float)(hpUsage[n].genUsage[0].freed+hpUsage[n].genUsage[1].freed+hpUsage[n].genUsage[2].freed)) /
-                (hpUsage[n].genUsage[0].allocd+hpUsage[n].genUsage[1].allocd+hpUsage[n].genUsage[2].allocd);
-            ExtOut("SOH:%3d%% LOH:%3d%%\n", (int)(100 * tempf), 
-                (int)(100*((float)hpUsage[n].genUsage[3].freed) / (hpUsage[n].genUsage[3].allocd))
-            );
+            tempf = ((float)(hpUsage[n].genUsage[0].freed + hpUsage[n].genUsage[1].freed + hpUsage[n].genUsage[2].freed)) /
+                (hpUsage[n].genUsage[0].allocd + hpUsage[n].genUsage[1].allocd + hpUsage[n].genUsage[2].allocd);
+            int pohFreeUsage = hasPoh ? (int)(100*((float)hpUsage[n].genUsage[4].freed) / (hpUsage[n].genUsage[4].allocd)) : 0;
+            ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%%",
+                (int)(100*((float)hpUsage[n].genUsage[3].freed) / (hpUsage[n].genUsage[3].allocd)), "%%",
+                pohFreeUsage, "%%");
         }
-        ExtOut("Total    %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n",
-            genUsageStat[0].freed, genUsageStat[1].freed, 
-            genUsageStat[2].freed, genUsageStat[3].freed);
+        ExtOut("Total    %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n",
+            genUsageStat[0].freed, genUsageStat[1].freed,
+            genUsageStat[2].freed, genUsageStat[3].freed,
+            genUsageStat[4].freed);
 
         if (bIncUnreachable)
         {
             ExtOut("\nUnrooted objects:                                            Percentage\n");
             for (DWORD n = 0; n < dwNHeaps; n ++)
             {
-                ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u ", n, 
-                    hpUsage[n].genUsage[0].unrooted, hpUsage[n].genUsage[1].unrooted, 
-                    hpUsage[n].genUsage[2].unrooted, hpUsage[n].genUsage[3].unrooted);
+                ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u ", n,
+                    hpUsage[n].genUsage[0].unrooted, hpUsage[n].genUsage[1].unrooted,
+                    hpUsage[n].genUsage[2].unrooted, hpUsage[n].genUsage[3].unrooted,
+                    hpUsage[n].genUsage[4].unrooted);
 
-                tempf = ((float)(hpUsage[n].genUsage[0].unrooted+hpUsage[n].genUsage[1].unrooted+hpUsage[n].genUsage[2].unrooted)) / 
-                    (hpUsage[n].genUsage[0].allocd+hpUsage[n].genUsage[1].allocd+hpUsage[n].genUsage[2].allocd);
-                ExtOut("SOH:%3d%% LOH:%3d%%\n", (int)(100 * tempf),
-                    (int)(100*((float)hpUsage[n].genUsage[3].unrooted) / (hpUsage[n].genUsage[3].allocd)));
+                tempf = ((float)(hpUsage[n].genUsage[0].unrooted + hpUsage[n].genUsage[1].unrooted + hpUsage[n].genUsage[2].unrooted)) /
+                    (hpUsage[n].genUsage[0].allocd + hpUsage[n].genUsage[1].allocd + hpUsage[n].genUsage[2].allocd);
+                int pohUnrootedUsage = hasPoh ? (int)(100*((float)hpUsage[n].genUsage[4].unrooted) / (hpUsage[n].genUsage[4].allocd)) : 0;
+                ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%%",
+                    (int)(100*((float)hpUsage[n].genUsage[3].unrooted) / (hpUsage[n].genUsage[3].allocd)), "%%",
+                    pohUnrootedUsage, "%%");
             }
-            ExtOut("Total    %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n",
-                genUsageStat[0].unrooted, genUsageStat[1].unrooted, 
-                genUsageStat[2].unrooted, genUsageStat[3].unrooted);
+            ExtOut("Total    %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n",
+                genUsageStat[0].unrooted, genUsageStat[1].unrooted,
+                genUsageStat[2].unrooted, genUsageStat[3].unrooted,
+                genUsageStat[4].unrooted);
         }
 
     }
 
     return Status;
-    
+
 #else
 
     _ASSERTE(false);
@@ -5599,30 +5619,30 @@ DECLARE_API(GCHeapStat)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function dumps what is in the syncblock cache.  By default   *  
+*    This function dumps what is in the syncblock cache.  By default   *
 *    it dumps all active syncblocks.  Using -all to dump all syncblocks
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(SyncBlk)
 {
-    INIT_API();    
-    MINIDUMP_NOT_SUPPORTED();    
-    
+    INIT_API();
+    MINIDUMP_NOT_SUPPORTED();
+
     BOOL bDumpAll = FALSE;
     size_t nbAsked = 0;
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-all", &bDumpAll, COBOOL, FALSE},
         {"/d", &dml, COBOOL, FALSE}
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&nbAsked, COSIZE_T}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -5636,7 +5656,7 @@ DECLARE_API(SyncBlk)
     }
 
     DWORD dwCount = syncBlockData.SyncBlockCount;
-    
+
     ExtOut("Index" WIN64_8SPACES " SyncBlock MonitorHeld Recursion Owning Thread Info" WIN64_8SPACES "  SyncBlock Owner\n");
     ULONG freeCount = 0;
     ULONG CCWCount = 0;
@@ -5646,8 +5666,8 @@ DECLARE_API(SyncBlk)
     {
         if (IsInterrupt())
             return Status;
-        
-        if (nbAsked && nb != nbAsked) 
+
+        if (nbAsked && nb != nbAsked)
         {
             continue;
         }
@@ -5665,8 +5685,8 @@ DECLARE_API(SyncBlk)
         {
             ExtOut("%5d ", nb);
             if (!syncBlockData.bFree || nb != nbAsked)
-            {            
-                ExtOut("%p  ", syncBlockData.SyncBlockPointer); 
+            {
+                ExtOut("%p  ", syncBlockData.SyncBlockPointer);
                 ExtOut("%11d ", syncBlockData.MonitorHeld);
                 ExtOut("%9d ", syncBlockData.Recursion);
                 ExtOut("%p ", syncBlockData.HoldingThread);
@@ -5711,17 +5731,17 @@ DECLARE_API(SyncBlk)
                 }
             }
         }
-                                    
-        if (syncBlockData.bFree) 
+
+        if (syncBlockData.bFree)
         {
             freeCount ++;
             if (bPrint) {
                 ExtOut(" Free");
             }
         }
-        else 
+        else
         {
-#ifdef FEATURE_COMINTEROP            
+#ifdef FEATURE_COMINTEROP
             if (syncBlockData.COMFlags) {
                 switch (syncBlockData.COMFlags) {
                 case SYNCBLOCKDATA_COMFLAGS_CCW:
@@ -5735,10 +5755,10 @@ DECLARE_API(SyncBlk)
                     break;
                 }
             }
-#endif // FEATURE_COMINTEROP            
+#endif // FEATURE_COMINTEROP
         }
 
-        if (syncBlockData.MonitorHeld > 1)            
+        if (syncBlockData.MonitorHeld > 1)
         {
             // TODO: implement this
             /*
@@ -5746,7 +5766,7 @@ DECLARE_API(SyncBlk)
             DWORD_PTR pHead = (DWORD_PTR)vSyncBlock.m_Link.m_pNext;
             DWORD_PTR pNext = pHead;
             Thread vThread;
-    
+
             while (1)
             {
                 if (IsInterrupt())
@@ -5768,14 +5788,14 @@ DECLARE_API(SyncBlk)
                 pNext = (DWORD_PTR)vWaitEventLink.m_LinkSB.m_pNext;
                 if (pNext == 0)
                     break;
-            }  
+            }
             */
         }
-        
+
         if (bPrint)
             ExtOut("\n");
     }
-    
+
     ExtOut("-----------------------------\n");
     ExtOut("Total           %d\n", dwCount);
 #ifdef FEATURE_COMINTEROP
@@ -5784,7 +5804,7 @@ DECLARE_API(SyncBlk)
     ExtOut("ComClassFactory %d\n", CFCount);
 #endif
     ExtOut("Free            %d\n", freeCount);
-   
+
     return Status;
 }
 
@@ -5809,7 +5829,7 @@ void VisitRcw(CLRDATA_ADDRESS RCW,CLRDATA_ADDRESS Context,CLRDATA_ADDRESS Thread
             ExtOut("RuntimeCallableWrappers (RCW) to be cleaned:\n");
             ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s Apartment\n",
                 "RCW", "CONTEXT", "THREAD");
-        }        
+        }
         LPCSTR szThreadApartment;
         if (bIsFreeThreaded)
         {
@@ -5825,11 +5845,11 @@ void VisitRcw(CLRDATA_ADDRESS RCW,CLRDATA_ADDRESS Context,CLRDATA_ADDRESS Thread
         {
             szThreadApartment = "(STA)";
             pArgs->STACount++;
-        }        
-        
+        }
+
         ExtOut("%" POINTERSIZE "p %" POINTERSIZE "p %" POINTERSIZE "p %9s\n",
-            SOS_PTR(RCW), 
-            SOS_PTR(Context), 
+            SOS_PTR(RCW),
+            SOS_PTR(Context),
             SOS_PTR(Thread),
             szThreadApartment);
     }
@@ -5838,13 +5858,13 @@ void VisitRcw(CLRDATA_ADDRESS RCW,CLRDATA_ADDRESS Context,CLRDATA_ADDRESS Thread
 DECLARE_API(RCWCleanupList)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR p_CleanupList = GetExpression(args);
 
     VisitRcwArgs travArgs;
-    ZeroMemory(&travArgs,sizeof(VisitRcwArgs));  
+    ZeroMemory(&travArgs,sizeof(VisitRcwArgs));
     travArgs.bDetail = TRUE;
 
     // We need to detect when !RCWCleanupList is called with an expression which evaluates to 0
@@ -5853,7 +5873,7 @@ DECLARE_API(RCWCleanupList)
     if (p_CleanupList || strlen(args) == 0)
     {
         HRESULT hr = g_sos->TraverseRCWCleanupList(p_CleanupList, (VISITRCWFORCLEANUP)VisitRcw, &travArgs);
-    
+
         if (SUCCEEDED(hr))
         {
             ExtOut("Free-Threaded Interfaces to be released: %d\n", travArgs.FTMCount);
@@ -5869,7 +5889,7 @@ DECLARE_API(RCWCleanupList)
     {
         ExtOut("Invalid parameter %s\n", args);
     }
-    
+
     return Status;
 }
 #endif // FEATURE_COMINTEROP
@@ -5878,21 +5898,21 @@ DECLARE_API(RCWCleanupList)
 * Routine Description:                                                 *
 *                                                                      *
 *    This function is called to dump the contents of the finalizer     *
-*    queue.                                                            *  
+*    queue.                                                            *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(FinalizeQueue)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
-    
+    MINIDUMP_NOT_SUPPORTED();
+
     BOOL bDetail = FALSE;
     BOOL bAllReady = FALSE;
     BOOL bShort    = FALSE;
     BOOL dml = FALSE;
     TADDR taddrMT  = 0;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-detail",   &bDetail,   COBOOL, FALSE},
         {"-allReady", &bAllReady, COBOOL, FALSE},
@@ -5901,7 +5921,7 @@ DECLARE_API(FinalizeQueue)
         {"-mt",       &taddrMT,   COHEX,  TRUE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL)) 
+    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -5920,10 +5940,10 @@ DECLARE_API(FinalizeQueue)
                 {
                     ExtOut("SyncBlocks to be cleaned by the finalizer thread:\n");
                     ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s\n",
-                        "SyncBlock", "RCW", "CCW", "ComClassFactory");                
+                        "SyncBlock", "RCW", "CCW", "ComClassFactory");
                 }
-                
-                ExtOut("%" POINTERSIZE "p %" POINTERSIZE "p %" POINTERSIZE "p %" POINTERSIZE "p\n", 
+
+                ExtOut("%" POINTERSIZE "p %" POINTERSIZE "p %" POINTERSIZE "p %" POINTERSIZE "p\n",
                     (ULONG64) dsbcd.SyncBlockPointer,
                     (ULONG64) dsbcd.blockRCW,
                     (ULONG64) dsbcd.blockCCW,
@@ -5942,13 +5962,13 @@ DECLARE_API(FinalizeQueue)
 
 #ifdef FEATURE_COMINTEROP
         VisitRcwArgs travArgs;
-        ZeroMemory(&travArgs,sizeof(VisitRcwArgs));  
+        ZeroMemory(&travArgs,sizeof(VisitRcwArgs));
         travArgs.bDetail = bDetail;
         g_sos->TraverseRCWCleanupList(0, (VISITRCWFORCLEANUP) VisitRcw, &travArgs);
         ExtOut("Free-Threaded Interfaces to be released: %d\n", travArgs.FTMCount);
         ExtOut("MTA Interfaces to be released: %d\n", travArgs.MTACount);
-        ExtOut("STA Interfaces to be released: %d\n", travArgs.STACount);    
-#endif // FEATURE_COMINTEROP    
+        ExtOut("STA Interfaces to be released: %d\n", travArgs.STACount);
+#endif // FEATURE_COMINTEROP
 
 // noRCW:
         ExtOut("----------------------------------\n");
@@ -5971,7 +5991,7 @@ DECLARE_API(FinalizeQueue)
         GatherOneHeapFinalization(heapDetails, &hpStat, bAllReady, bShort);
     }
     else
-    {   
+    {
         DWORD dwAllocSize;
         if (!ClrSafeInt<DWORD>::multiply(sizeof(CLRDATA_ADDRESS), dwNHeaps, dwAllocSize))
         {
@@ -5985,7 +6005,7 @@ DECLARE_API(FinalizeQueue)
             ExtOut("Failed to get GCHeaps\n");
             return Status;
         }
-        
+
         for (DWORD n = 0; n < dwNHeaps; n ++)
         {
             DacpGcHeapDetails heapDetails;
@@ -5997,10 +6017,11 @@ DECLARE_API(FinalizeQueue)
 
             ExtOut("------------------------------\n");
             ExtOut("Heap %d\n", n);
+
             GatherOneHeapFinalization(heapDetails, &hpStat, bAllReady, bShort);
-        }        
+        }
     }
-    
+
     if (!bShort)
     {
         if (bAllReady)
@@ -6042,21 +6063,21 @@ void ModuleMapTraverse(UINT index, CLRDATA_ADDRESS methodTable, LPVOID token)
 * Routine Description:                                                 *
 *                                                                      *
 *    This function is called to dump the contents of a Module          *
-*    for a given address                                               *  
+*    for a given address                                               *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(DumpModule)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
-    
-    
+    MINIDUMP_NOT_SUPPORTED();
+
+
     DWORD_PTR p_ModuleAddr = NULL;
     BOOL bMethodTables = FALSE;
     BOOL bProfilerModified = FALSE;
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-mt", &bMethodTables, COBOOL, FALSE},
 #ifndef FEATURE_PAL
@@ -6064,13 +6085,13 @@ DECLARE_API(DumpModule)
 #endif
         {"-prof", &bProfilerModified, COBOOL, FALSE},
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&p_ModuleAddr, COHEX}
     };
 
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -6088,7 +6109,7 @@ DECLARE_API(DumpModule)
         return Status;
     }
 
-    
+
     WCHAR FileName[MAX_LONGPATH];
     FileNameForModule (&module, FileName);
     ExtOut("Name: %S\n", FileName[0] ? FileName : W("Unknown Module"));
@@ -6140,24 +6161,24 @@ DECLARE_API(DumpModule)
     {
         ExtOut("\nTypes defined in this module\n\n");
         ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %s\n", "MT", "TypeDef", "Name");
-                
+
         ExtOut("------------------------------------------------------------------------------\n");
-        g_sos->TraverseModuleMap(TYPEDEFTOMETHODTABLE, TO_CDADDR(p_ModuleAddr), ModuleMapTraverse, (LPVOID)mdTypeDefNil);        
+        g_sos->TraverseModuleMap(TYPEDEFTOMETHODTABLE, TO_CDADDR(p_ModuleAddr), ModuleMapTraverse, (LPVOID)mdTypeDefNil);
 
         ExtOut("\nTypes referenced in this module\n\n");
         ExtOut("%" POINTERSIZE "s   %" POINTERSIZE "s %s\n", "MT", "TypeRef", "Name");
-        
+
         ExtOut("------------------------------------------------------------------------------\n");
-        g_sos->TraverseModuleMap(TYPEREFTOMETHODTABLE, TO_CDADDR(p_ModuleAddr), ModuleMapTraverse, (LPVOID)mdTypeDefNil);     
+        g_sos->TraverseModuleMap(TYPEREFTOMETHODTABLE, TO_CDADDR(p_ModuleAddr), ModuleMapTraverse, (LPVOID)mdTypeDefNil);
     }
-    
+
     if (bProfilerModified)
     {
         CLRDATA_ADDRESS methodDescs[kcMaxMethodDescsForProfiler];
         int cMethodDescs;
 
         ReleaseHolder<ISOSDacInterface7> sos7;
-        if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface7), &sos7)) && 
+        if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface7), &sos7)) &&
             SUCCEEDED(sos7->GetMethodsWithProfilerModifiedIL(TO_CDADDR(p_ModuleAddr),
                                                              methodDescs,
                                                              kcMaxMethodDescsForProfiler,
@@ -6217,30 +6238,30 @@ DECLARE_API(DumpModule)
 * Routine Description:                                                 *
 *                                                                      *
 *    This function is called to dump the contents of a Domain          *
-*    for a given address                                               *  
+*    for a given address                                               *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(DumpDomain)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    
+
     DWORD_PTR p_DomainAddr = 0;
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
 #ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&p_DomainAddr, COHEX},
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -6253,7 +6274,7 @@ DECLARE_API(DumpDomain)
         ExtOut("Unable to get AppDomain information\n");
         return Status;
     }
-    
+
     if (p_DomainAddr)
     {
         DacpAppDomainData appDomain1;
@@ -6281,7 +6302,7 @@ DECLARE_API(DumpDomain)
         DomainInfo(&appDomain1);
         return Status;
     }
-        
+
     ExtOut("--------------------------------------\n");
     DMLOut("System Domain:      %s\n", DMLDomain(adsData.systemDomain));
     DacpAppDomainData appDomain;
@@ -6291,7 +6312,7 @@ DECLARE_API(DumpDomain)
         return Status;
     }
     DomainInfo(&appDomain);
-    
+
     if (adsData.sharedDomain != NULL)
     {
         ExtOut("--------------------------------------\n");
@@ -6340,30 +6361,30 @@ DECLARE_API(DumpDomain)
 * Routine Description:                                                 *
 *                                                                      *
 *    This function is called to dump the contents of a Assembly        *
-*    for a given address                                               *  
+*    for a given address                                               *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(DumpAssembly)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
-    
+    MINIDUMP_NOT_SUPPORTED();
+
     DWORD_PTR p_AssemblyAddr = 0;
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
 #ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&p_AssemblyAddr, COHEX},
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -6375,7 +6396,7 @@ DECLARE_API(DumpAssembly)
         ExtOut("Invalid Assembly %s\n", args);
         return Status;
     }
-    
+
     DacpAssemblyData Assembly;
     if ((Status=Assembly.Request(g_sos, TO_CDADDR(p_AssemblyAddr)))!=S_OK)
     {
@@ -6429,7 +6450,7 @@ String GetHostingCapabilities(DWORD hostConfig)
 HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
 {
     HRESULT Status;
-    
+
     DacpThreadStoreData ThreadStore;
     if ((Status = ThreadStore.Request(g_sos)) != S_OK)
     {
@@ -6462,7 +6483,7 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
 
     const bool hosted = (ThreadStore.fHostConfig & CLRTASKHOSTED) != 0;
     table.ReInit(hosted ? 12 : 11, POINTERSIZE_HEX);
-    table.SetWidths(10, 4, 4, 4, _max(9, POINTERSIZE_HEX), 
+    table.SetWidths(10, 4, 4, 4, _max(9, POINTERSIZE_HEX),
                       8, 11, 1+POINTERSIZE_HEX*2, POINTERSIZE_HEX,
                       5, 3, POINTERSIZE_HEX);
 
@@ -6473,12 +6494,12 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
 
     table.WriteColumn(8, "Lock");
     table.WriteRow("DBG", "ID", "OSID", "ThreadOBJ", "State", "GC Mode", "GC Alloc Context", "Domain", "Count", "Apt");
-    
+
     if (hosted)
         table.WriteColumn("Fiber");
 
     table.WriteColumn("Exception");
-    
+
     DacpThreadData Thread;
     CLRDATA_ADDRESS CurThread = ThreadStore.firstThread;
     while (CurThread)
@@ -6495,8 +6516,8 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
         BOOL bSwitchedOutFiber = Thread.osThreadId == SWITCHED_OUT_FIBER_OSID;
         if (!IsKernelDebugger())
         {
-            ULONG id = 0;          
-            
+            ULONG id = 0;
+
             if (bSwitchedOutFiber)
             {
                 table.WriteColumn(0, "<<<< ");
@@ -6535,11 +6556,11 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
             else
                 table.WriteColumn(7, AppDomainPtr(domain));
         }
-        
+
         table.WriteColumn(8, Decimal(Thread.lockCount));
 
         // Apartment state
-#ifndef FEATURE_PAL           
+#ifndef FEATURE_PAL
         DWORD_PTR OleTlsDataAddr;
         if (IsWindowsTarget() && !bSwitchedOutFiber
                 && SafeReadMemory(Thread.teb + offsetof(TEB, ReservedForOle),
@@ -6571,7 +6592,7 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
 
         if (hosted)
             table.WriteColumn(10, Thread.fiberData);
-        
+
         WString lastCol;
         if (CurThread == ThreadStore.finalizerThread)
             lastCol += W("(Finalizer) ");
@@ -6580,13 +6601,13 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
 
         const int TS_TPWorkerThread         = 0x01000000;    // is this a threadpool worker thread?
         const int TS_CompletionPortThread   = 0x08000000;    // is this is a completion port thread?
-        
+
         if (Thread.state & TS_TPWorkerThread)
             lastCol += W("(Threadpool Worker) ");
         else if (Thread.state & TS_CompletionPortThread)
             lastCol += W("(Threadpool Completion Port) ");
-        
-        
+
+
         TADDR taLTOH;
         if (Thread.lastThrownObjectHandle && SafeReadMemory(TO_TADDR(Thread.lastThrownObjectHandle),
                                                             &taLTOH, sizeof(taLTOH), NULL) && taLTOH)
@@ -6619,7 +6640,7 @@ HRESULT PrintSpecialThreads()
 
     DWORD dwCLRTLSDataIndex = 0;
     HRESULT Status = g_sos->GetTLSIndex(&dwCLRTLSDataIndex);
-    
+
     if (!SUCCEEDED (Status))
     {
         Print("Failed to retrieve Tls Data index\n");
@@ -6649,35 +6670,35 @@ HRESULT PrintSpecialThreads()
     for (ULONG ulThread = 0; ulThread < ulTotalThreads; ulThread++)
     {
         ULONG Id = 0;
-        ULONG SysId = 0;        
+        ULONG SysId = 0;
         HRESULT threadStatus = g_ExtSystem->GetThreadIdsByIndex(ulThread, 1, &Id, &SysId);
         if (!SUCCEEDED (threadStatus))
         {
-            PrintLn("Failed to get thread ID for thread ", Decimal(ulThread));        
+            PrintLn("Failed to get thread ID for thread ", Decimal(ulThread));
             continue;
-        }    
+        }
 
         threadStatus = g_ExtSystem->SetCurrentThreadId(Id);
         if (!SUCCEEDED (threadStatus))
         {
-            PrintLn("Failed to switch to thread ", ThreadID(SysId));        
+            PrintLn("Failed to switch to thread ", ThreadID(SysId));
             continue;
-        }    
+        }
 
-        CLRDATA_ADDRESS cdaTeb = 0;        
+        CLRDATA_ADDRESS cdaTeb = 0;
         threadStatus = g_ExtSystem->GetCurrentThreadTeb(&cdaTeb);
         if (!SUCCEEDED (threadStatus))
         {
-            PrintLn("Failed to get Teb for Thread ", ThreadID(SysId));        
+            PrintLn("Failed to get Teb for Thread ", ThreadID(SysId));
             continue;
-        } 
+        }
 
         TADDR CLRTLSDataAddr = 0;
 
         TADDR tlsArrayAddr = NULL;
         if (!SafeReadMemory (TO_TADDR(cdaTeb) + WINNT_OFFSETOF__TEB__ThreadLocalStoragePointer , &tlsArrayAddr, sizeof (void**), NULL))
         {
-            PrintLn("Failed to get Tls expansion slots for thread ", ThreadID(SysId));        
+            PrintLn("Failed to get Tls expansion slots for thread ", ThreadID(SysId));
             continue;
         }
 
@@ -6689,7 +6710,7 @@ HRESULT PrintSpecialThreads()
         TADDR moduleTlsDataAddr = 0;
         if (!SafeReadMemory (tlsArrayAddr + sizeof (void*) * (dwCLRTLSDataIndex & 0xFFFF), &moduleTlsDataAddr, sizeof (void**), NULL))
         {
-            PrintLn("Failed to get Tls expansion slots for thread ", ThreadID(SysId));        
+            PrintLn("Failed to get Tls expansion slots for thread ", ThreadID(SysId));
             continue;
         }
 
@@ -6698,7 +6719,7 @@ HRESULT PrintSpecialThreads()
         TADDR CLRTLSData = NULL;
         if (!SafeReadMemory (CLRTLSDataAddr, &CLRTLSData, sizeof (TADDR), NULL))
         {
-            PrintLn("Failed to get CLR Tls data for thread ", ThreadID(SysId));        
+            PrintLn("Failed to get CLR Tls data for thread ", ThreadID(SysId));
             continue;
         }
 
@@ -6710,10 +6731,10 @@ HRESULT PrintSpecialThreads()
         size_t ThreadType = 0;
         if (!SafeReadMemory (CLRTLSData + sizeof (TADDR) * TlsIdx_ThreadType, &ThreadType, sizeof (size_t), NULL))
         {
-            PrintLn("Failed to get thread type info not found for thread ", ThreadID(SysId));        
+            PrintLn("Failed to get thread type info not found for thread ", ThreadID(SysId));
             continue;
         }
-        
+
         if (ThreadType == 0)
         {
             continue;
@@ -6786,9 +6807,9 @@ HRESULT PrintSpecialThreads()
     Status = g_ExtSystem->SetCurrentThreadId (ulOriginalThreadID);
     if (!SUCCEEDED (Status))
     {
-        ExtOut("Failed to switch to original thread\n");        
+        ExtOut("Failed to switch to original thread\n");
         return Status;
-    }    
+    }
 
     return Status;
 }
@@ -6797,7 +6818,7 @@ HRESULT PrintSpecialThreads()
 HRESULT SwitchToExceptionThread()
 {
     HRESULT Status;
-    
+
     DacpThreadStoreData ThreadStore;
     if ((Status = ThreadStore.Request(g_sos)) != S_OK)
     {
@@ -6817,7 +6838,7 @@ HRESULT SwitchToExceptionThread()
             PrintLn("Failed to request Thread at ", Pointer(CurThread));
             return Status;
         }
-        
+
         TADDR taLTOH;
         if (Thread.lastThrownObjectHandle != NULL)
         {
@@ -6902,7 +6923,7 @@ DECLARE_API(ThreadState)
                 count++;
             }
     }
-    
+
     // If we did not find any thread states, print out a message to let the user
     // know that the function is working correctly.
     if (count == 0)
@@ -6920,7 +6941,7 @@ DECLARE_API(Threads)
     BOOL bSwitchToManagedExceptionThread = FALSE;
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-special", &bPrintSpecialThreads, COBOOL, FALSE},
         {"-live", &bPrintLiveThreadsOnly, COBOOL, FALSE},
@@ -6929,7 +6950,7 @@ DECLARE_API(Threads)
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL)) 
+    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -6938,7 +6959,7 @@ DECLARE_API(Threads)
     {
         return SwitchToExceptionThread();
     }
-    
+
     // We need to support minidumps for this command.
     BOOL bMiniDump = IsMiniDumpFile();
 
@@ -6978,7 +6999,7 @@ DECLARE_API(Threads)
     {
         ExtOut("%s\n", e.what());
     }
-    
+
     return Status;
 }
 
@@ -6999,7 +7020,7 @@ DECLARE_API(WatsonBuckets)
     {
         ExtOut("Not supported on mini dumps.\n");
     }
-    
+
     // Get the current managed thread.
     CLRDATA_ADDRESS threadAddr = GetCurrentManagedThread();
     DacpThreadData Thread;
@@ -7009,7 +7030,7 @@ DECLARE_API(WatsonBuckets)
         ExtOut("The current thread is unmanaged\n");
         return Status;
     }
-    
+
     // Get the definition of GenericModeBlock.
 #include <msodw.h>
     GenericModeBlock gmb;
@@ -7030,7 +7051,7 @@ DECLARE_API(WatsonBuckets)
     ExtOut("b7: %S\n", gmb.wzP7);
     ExtOut("b8: %S\n", gmb.wzP8);
     ExtOut("b9: %S\n", gmb.wzP9);
-        
+
     return Status;
 } // WatsonBuckets()
 #endif // FEATURE_PAL
@@ -7041,7 +7062,7 @@ struct PendingBreakpoint
     WCHAR szFunctionName[mdNameLen];
     WCHAR szFilename[MAX_LONGPATH];
     DWORD lineNumber;
-    TADDR pModule; 
+    TADDR pModule;
     DWORD ilOffset;
     mdMethodDef methodToken;
     void SetModule(TADDR module)
@@ -7055,7 +7076,7 @@ struct PendingBreakpoint
     }
 
     PendingBreakpoint *pNext;
-    PendingBreakpoint() : lineNumber(0), ilOffset(0), methodToken(0), pNext(NULL) 
+    PendingBreakpoint() : lineNumber(0), ilOffset(0), methodToken(0), pNext(NULL)
     {
         szModuleName[0] = L'\0';
         szFunctionName[0] = L'\0';
@@ -7075,7 +7096,7 @@ void IssueDebuggerBPCommand ( CLRDATA_ADDRESS addr )
       addr &= ~THUMB_CODE;
 #else
       addr |= THUMB_CODE; // lldb expects thumb code bit set
-#endif      
+#endif
 
     // if we overflowed our cache consider all new BPs unique...
     BOOL bUnique = curLimit >= MaxBPsCached;
@@ -7101,7 +7122,7 @@ void IssueDebuggerBPCommand ( CLRDATA_ADDRESS addr )
         if (g_sos->GetMethodDescPtrFromIP(addr, &pMD) != S_OK
             || g_sos->GetMethodDescName(pMD, 1024, wszNameBuffer, NULL) != S_OK)
         {
-            wcscpy_s(wszNameBuffer, _countof(wszNameBuffer), W("UNKNOWN"));        
+            wcscpy_s(wszNameBuffer, _countof(wszNameBuffer), W("UNKNOWN"));
         }
 
 #ifndef FEATURE_PAL
@@ -7210,7 +7231,7 @@ public:
                 pSymReader = NULL;
 
             // Get tokens for any modules that match. If there was a change,
-            // update notifications.                
+            // update notifications.
             pCur = m_breakpoints;
             while(pCur)
             {
@@ -7267,9 +7288,9 @@ public:
             }
 
             pCur = pNext;
-        }                
+        }
     }
-    
+
     void ListBreakpoints()
     {
         PendingBreakpoint *pCur = m_breakpoints;
@@ -7389,7 +7410,7 @@ public:
         HRESULT Status = S_OK;
         char szName[mdNameLen];
         int numModule;
-        
+
         ToRelease<IXCLRDataModule> module;
         IfFailRet(g_sos->GetModule(mod, &module));
 
@@ -7434,7 +7455,7 @@ public:
         BOOL bFoundCode = FALSE;
         BOOL bNeedDefer = FALSE;
         CLRDATA_ENUM h1;
-        
+
         if (pMeth->StartEnumInstances (NULL, &h1) == S_OK)
         {
             IXCLRDataMethodInstance *inst = NULL;
@@ -7458,7 +7479,7 @@ public:
                         }
                     }
                 }
-                
+
                 if (!foundByIlOffset && ilOffset == 0)
                 {
                     CLRDATA_ADDRESS addr = 0;
@@ -7489,13 +7510,13 @@ public:
         return bNeedDefer;
     }
 
-private:    
+private:
     BOOL IsIn(__in_z LPWSTR szModule, __in_z LPWSTR szName, TADDR mod)
     {
         PendingBreakpoint *pCur = m_breakpoints;
         while(pCur)
         {
-            if (pCur->ModuleMatches(mod) && 
+            if (pCur->ModuleMatches(mod) &&
                 _wcsicmp(pCur->szModuleName, szModule) == 0 &&
                 _wcscmp(pCur->szFunctionName, szName) == 0)
             {
@@ -7511,7 +7532,7 @@ private:
         PendingBreakpoint *pCur = m_breakpoints;
         while(pCur)
         {
-            if (pCur->ModuleMatches(mod) && 
+            if (pCur->ModuleMatches(mod) &&
                 _wcsicmp(pCur->szFilename, szFilename) == 0 &&
                 pCur->lineNumber == lineNumber)
             {
@@ -7527,7 +7548,7 @@ private:
         PendingBreakpoint *pCur = m_breakpoints;
         while(pCur)
         {
-            if (pCur->ModuleMatches(mod) && 
+            if (pCur->ModuleMatches(mod) &&
                 pCur->methodToken == token &&
                 pCur->ilOffset == ilOffset)
             {
@@ -7638,7 +7659,7 @@ class CNotification : public IXCLRDataExceptionNotification5
     int m_count;
     int m_dbgStatus;
 public:
-    CNotification() 
+    CNotification()
         : m_count(0)
         , m_dbgStatus(DEBUG_STATUS_NO_CHANGE)
     {}
@@ -7679,7 +7700,7 @@ public:
         }
         return m_count;
     }
-            
+
     /*
      * New code was generated or discarded for a method.:
      */
@@ -7731,7 +7752,7 @@ public:
         ULONG32 len = mdNameLen;
         LPWSTR szModuleName = (LPWSTR)alloca(mdNameLen * sizeof(WCHAR));
         if (method->GetName(0, mdNameLen, &len, g_mdName) == S_OK)
-        {            
+        {
             ToRelease<IXCLRDataModule> pMod;
             HRESULT hr = method->GetTokenAndScope(NULL, &pMod);
             if (SUCCEEDED(hr))
@@ -7740,7 +7761,7 @@ public:
                 if (pMod->GetName(mdNameLen, &len, szModuleName) == S_OK)
                 {
                     ExtOut("JITTED %S!%S\n", szModuleName, g_mdName);
-                    
+
                     DacpGetModuleAddress dgma;
                     if (SUCCEEDED(dgma.Request(pMod)))
                     {
@@ -7797,7 +7818,7 @@ public:
                     ExtOut("SOS: warning, optimizations for this module could not be suppressed hr=0x%x\n", hr);
             }
         }
-        
+
         m_dbgStatus = DEBUG_STATUS_GO_HANDLED;
         return S_OK;
     }
@@ -7817,9 +7838,9 @@ public:
     /*
      * The given type was loaded or unloaded.
      */
-    STDMETHODIMP OnTypeLoaded(IXCLRDataTypeInstance* typeInst) 
+    STDMETHODIMP OnTypeLoaded(IXCLRDataTypeInstance* typeInst)
     { return E_NOTIMPL; }
-    STDMETHODIMP OnTypeUnloaded(IXCLRDataTypeInstance* typeInst) 
+    STDMETHODIMP OnTypeUnloaded(IXCLRDataTypeInstance* typeInst)
     { return E_NOTIMPL; }
 
     STDMETHODIMP OnAppDomainLoaded(IXCLRDataAppDomain* domain)
@@ -7921,7 +7942,7 @@ BOOL CheckCLRNotificationEvent(DEBUG_LAST_EVENT_INFO_EXCEPTION* pdle)
         return FALSE;
     }
 
-    // The new DAC based interface doesn't exists so ask the debugger for the last exception 
+    // The new DAC based interface doesn't exists so ask the debugger for the last exception
     // information. NOTE: this function doesn't work on xplat version when the coreclr symbols
     // have been stripped.
 
@@ -8017,8 +8038,8 @@ void EnableModuleLoadUnloadCallbacks()
 
 DECLARE_API(SOSHandleCLRN)
 {
-    INIT_API();    
-    MINIDUMP_NOT_SUPPORTED();    
+    INIT_API();
+    MINIDUMP_NOT_SUPPORTED();
     return HandleCLRNotificationEvent();
 }
 
@@ -8051,7 +8072,7 @@ DECLARE_API(bpmd)
     INIT_API_NOEE();
     MINIDUMP_NOT_SUPPORTED();
     char buffer[1024];
-    
+
     if (IsDumpFile())
     {
         ExtOut(SOSPrefix "bpmd is not supported on a dump file.\n");
@@ -8071,9 +8092,9 @@ DECLARE_API(bpmd)
     DWORD_PTR pMD = NULL;
     BOOL fNoFutureModule = FALSE;
     BOOL fList = FALSE;
-    size_t clearItem = 0; 
+    size_t clearItem = 0;
     BOOL fClearAll = FALSE;
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-md", &pMD, COHEX, TRUE},
         {"-nofuturemodule", &fNoFutureModule, COBOOL, FALSE},
@@ -8081,14 +8102,14 @@ DECLARE_API(bpmd)
         {"-clear", &clearItem, COSIZE_T, TRUE},
         {"-clearall", &fClearAll, COBOOL, FALSE},
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&DllName.data, COSTRING},
         {&TypeName.data, COSTRING},
         {&Offset, COSIZE_T},
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -8189,8 +8210,8 @@ DECLARE_API(bpmd)
     // Do we already have this breakpoint?
     // Or, before setting it, is the module perhaps already loaded and code
     // is available? If so, don't add to our pending list, just go ahead and
-    // set the real breakpoint.    
-    
+    // set the real breakpoint.
+
     LPWSTR ModuleName = (LPWSTR)alloca(mdNameLen * sizeof(WCHAR));
     LPWSTR FunctionName = (LPWSTR)alloca(mdNameLen * sizeof(WCHAR));
     LPWSTR Filename = (LPWSTR)alloca(MAX_LONGPATH * sizeof(WCHAR));
@@ -8278,10 +8299,10 @@ DECLARE_API(bpmd)
                         {
                             ULONG32 nameLen = 0;
                             pMethodDef->GetName(0, mdNameLen, &nameLen, FunctionName);
-                            
+
                             // get the size of the required buffer
                             int buffSize = WideCharToMultiByte(CP_ACP, 0, FunctionName, -1, TypeName.data, 0, NULL, NULL);
-                            
+
                             TypeName.data = new NOTHROW char[buffSize];
                             if (TypeName.data != NULL)
                             {
@@ -8338,7 +8359,7 @@ DECLARE_API(bpmd)
                 bNeedNotificationExceptions = TRUE;
                 EnableModuleLoadUnloadCallbacks();
             }
-            else 
+            else
             {
 #ifdef FEATURE_PAL
                 Status = g_ExtServices2->SetRuntimeLoadedCallback(HandleRuntimeLoadedNotification);
@@ -8361,7 +8382,7 @@ DECLARE_API(bpmd)
             ExtOut("%p is not a valid MethodDesc\n", SOS_PTR(pMD));
             return Status;
         }
-        
+
         if (MethodDescData.bHasNativeCode)
         {
             IssueDebuggerBPCommand((size_t) MethodDescData.NativeCodeAddr);
@@ -8373,12 +8394,12 @@ DECLARE_API(bpmd)
             // fix in the next release. Until then, you have a cumbersome user experience.
             ExtOut("This DynamicMethodDesc is not yet JITTED. Placing memory breakpoint at %p\n",
                 MethodDescData.AddressOfNativeCodeSlot);
-            
+
             sprintf_s(buffer, _countof(buffer),
 #ifdef _TARGET_WIN64_
                 "ba w8"
 #else
-                "ba w4" 
+                "ba w4"
 #endif // _TARGET_WIN64_
 
                 " /1 %p \"bp poi(%p); g\"",
@@ -8389,8 +8410,8 @@ DECLARE_API(bpmd)
             if (FAILED(Status))
             {
                 ExtOut("Unable to set breakpoint with IDebugControl::Execute: %x\n",Status);
-                ExtOut("Attempted to run: %s\n", buffer);                
-            }            
+                ExtOut("Attempted to run: %s\n", buffer);
+            }
 #else
             ExtErr("This DynamicMethodDesc is not yet JITTED %p\n", MethodDescData.AddressOfNativeCodeSlot);
 #endif // FEATURE_PAL
@@ -8409,7 +8430,7 @@ DECLARE_API(bpmd)
             // We didn't find code, add a breakpoint.
             g_bpoints.ResolvePendingNonModuleBoundBreakpoint(ModuleName, FunctionName, TO_TADDR(MethodDescData.ModulePtr), 0);
             g_bpoints.Update(TO_TADDR(MethodDescData.ModulePtr), FALSE);
-            bNeedNotificationExceptions = TRUE;            
+            bNeedNotificationExceptions = TRUE;
         }
     }
 
@@ -8444,30 +8465,30 @@ DECLARE_API(ThreadPool)
     {
         BOOL doHCDump = FALSE, doWorkItemDump = FALSE, dml = FALSE;
 
-        CMDOption option[] = 
+        CMDOption option[] =
         {   // name, vptr, type, hasValue
             {"-ti", &doHCDump, COBOOL, FALSE},
             {"-wi", &doWorkItemDump, COBOOL, FALSE},
 #ifndef FEATURE_PAL
             {"/d", &dml, COBOOL, FALSE},
 #endif
-        };    
+        };
 
-        if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL)) 
+        if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
         {
             return Status;
         }
 
         EnableDMLHolder dmlHolder(dml);
 
-        ExtOut ("CPU utilization: %d%%\n", threadpool.cpuUtilization);            
+        ExtOut ("CPU utilization: %d %s\n", threadpool.cpuUtilization, "%%");
         ExtOut ("Worker Thread:");
         ExtOut (" Total: %d", threadpool.NumWorkingWorkerThreads + threadpool.NumIdleWorkerThreads + threadpool.NumRetiredWorkerThreads);
         ExtOut (" Running: %d", threadpool.NumWorkingWorkerThreads);
         ExtOut (" Idle: %d", threadpool.NumIdleWorkerThreads);
-        ExtOut (" MaxLimit: %d", threadpool.MaxLimitTotalWorkerThreads);        
-        ExtOut (" MinLimit: %d", threadpool.MinLimitTotalWorkerThreads);        
-        ExtOut ("\n");        
+        ExtOut (" MaxLimit: %d", threadpool.MaxLimitTotalWorkerThreads);
+        ExtOut (" MinLimit: %d", threadpool.MinLimitTotalWorkerThreads);
+        ExtOut ("\n");
 
         int numWorkRequests = 0;
         CLRDATA_ADDRESS workRequestPtr = threadpool.FirstUnmanagedWorkRequest;
@@ -8483,7 +8504,7 @@ DECLARE_API(ThreadPool)
             workRequestPtr = workRequestData.NextWorkRequest;
         }
 
-        ExtOut ("Work Request in Queue: %d\n", numWorkRequests);    
+        ExtOut ("Work Request in Queue: %d\n", numWorkRequests);
         workRequestPtr = threadpool.FirstUnmanagedWorkRequest;
         while (workRequestPtr)
         {
@@ -8674,9 +8695,9 @@ DECLARE_API(ThreadPool)
             ExtOut ("\nThread Injection History\n");
             if (threadpool.HillClimbingLogSize > 0)
             {
-                static char const * const TransitionNames[] = 
+                static char const * const TransitionNames[] =
                 {
-                    "Warmup", 
+                    "Warmup",
                     "Initializing",
                     "RandomMove",
                     "ClimbingMove",
@@ -8691,7 +8712,7 @@ DECLARE_API(ThreadPool)
                 DacpHillClimbingLogEntry entry;
 
                 // get the most recent entry first, so we can calculate time offsets
-                
+
                 int index = (threadpool.HillClimbingLogFirstIndex + threadpool.HillClimbingLogSize-1) % HillClimbingLogCapacity;
                 CLRDATA_ADDRESS entryPtr = threadpool.HillClimbingLog + (index * sizeof(HillClimbingLogEntry));
                 if ((Status = entry.Request(g_sos,entryPtr))!=S_OK)
@@ -8721,18 +8742,18 @@ DECLARE_API(ThreadPool)
                 }
             }
         }
-            
+
         ExtOut ("--------------------------------------\n");
         ExtOut ("Number of Timers: %d\n", threadpool.NumTimers);
         ExtOut ("--------------------------------------\n");
-        
+
         ExtOut ("Completion Port Thread:");
-        ExtOut ("Total: %d", threadpool.NumCPThreads);    
-        ExtOut (" Free: %d", threadpool.NumFreeCPThreads);    
-        ExtOut (" MaxFree: %d", threadpool.MaxFreeCPThreads);    
+        ExtOut ("Total: %d", threadpool.NumCPThreads);
+        ExtOut (" Free: %d", threadpool.NumFreeCPThreads);
+        ExtOut (" MaxFree: %d", threadpool.MaxFreeCPThreads);
         ExtOut (" CurrentLimit: %d", threadpool.CurrentLimitTotalCPThreads);
         ExtOut (" MaxLimit: %d", threadpool.MaxLimitTotalCPThreads);
-        ExtOut (" MinLimit: %d", threadpool.MinLimitTotalCPThreads);        
+        ExtOut (" MinLimit: %d", threadpool.MinLimitTotalCPThreads);
         ExtOut ("\n");
     }
     else
@@ -8745,43 +8766,43 @@ DECLARE_API(ThreadPool)
 DECLARE_API(FindAppDomain)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR p_Object = NULL;
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
 #ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&p_Object, COHEX},
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
 
     EnableDMLHolder dmlHolder(dml);
-    
+
     if ((p_Object == 0) || !sos::IsObject(p_Object))
     {
         ExtOut("%p is not a valid object\n", SOS_PTR(p_Object));
         return Status;
     }
-    
+
     DacpAppDomainStoreData adstore;
     if (adstore.Request(g_sos) != S_OK)
     {
         ExtOut("Error getting AppDomain information\n");
         return Status;
-    }    
+    }
 
     CLRDATA_ADDRESS appDomain = GetAppDomain (TO_CDADDR(p_Object));
 
@@ -8791,7 +8812,7 @@ DECLARE_API(FindAppDomain)
         if (appDomain == adstore.sharedDomain)
         {
             ExtOut("Name:      Shared Domain\n");
-            ExtOut("ID:        (shared domain)\n");            
+            ExtOut("ID:        (shared domain)\n");
         }
         else if (appDomain == adstore.systemDomain)
         {
@@ -8824,7 +8845,7 @@ DECLARE_API(FindAppDomain)
         ExtOut("Note that the Thread could have transitioned between\n");
         ExtOut("multiple AppDomains.\n");
     }
-    
+
     return Status;
 }
 
@@ -8834,14 +8855,14 @@ DECLARE_API(FindAppDomain)
 * Routine Description:                                                 *
 *                                                                      *
 *    This function is called to get the COM state (e.g. APT,contexe    *
-*    activity.                                                         *  
+*    activity.                                                         *
 *                                                                      *
 \**********************************************************************/
 #ifdef FEATURE_COMINTEROP
 DECLARE_API(COMState)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     ULONG numThread;
@@ -8901,7 +8922,7 @@ DECLARE_API(COMState)
                 }
                 else
                     ExtOut(" %8x", 0);
-                
+
                 DWORD dwTIDCaller;
                 if (SafeReadMemory(OleTlsDataAddr+offsetof(SOleTlsData,dwTIDCaller),
                                    &dwTIDCaller,
@@ -8910,7 +8931,7 @@ DECLARE_API(COMState)
                 }
                 else
                     ExtOut("  %8x", 0);
-                
+
                 size_t Context;
                 if (SafeReadMemory(OleTlsDataAddr+offsetof(SOleTlsData,pCurrentCtx),
                                    &Context,
@@ -8922,7 +8943,7 @@ DECLARE_API(COMState)
 
             }
             else
-                ExtOut(" Ukn");            
+                ExtOut(" Ukn");
         }
         else
             ExtOut(" Ukn");
@@ -8939,7 +8960,7 @@ DECLARE_API(COMState)
 BOOL traverseEh(UINT clauseIndex,UINT totalClauses,DACEHInfo *pEHInfo,LPVOID token)
 {
     size_t methodStart = (size_t) token;
-    
+
     if (IsInterrupt())
     {
         return FALSE;
@@ -8972,7 +8993,7 @@ BOOL traverseEh(UINT clauseIndex,UINT totalClauses,DACEHInfo *pEHInfo,LPVOID tok
     ExtOut("[%08x, %08x]", (ULONG)addrStart, (ULONG)addrEnd);
 #endif
 
-    ExtOut(" [%x, %x]\n", 
+    ExtOut(" [%x, %x]\n",
         (UINT32) pEHInfo->tryStartOffset,
         (UINT32) pEHInfo->tryEndOffset);
 
@@ -8989,10 +9010,10 @@ BOOL traverseEh(UINT clauseIndex,UINT totalClauses,DACEHInfo *pEHInfo,LPVOID tok
     ExtOut("[%08x, %08x]", (ULONG)addrStart, (ULONG)addrEnd);
 #endif
 
-    ExtOut(" [%x, %x]\n", 
+    ExtOut(" [%x, %x]\n",
         (UINT32) pEHInfo->handlerStartOffset,
         (UINT32) pEHInfo->handlerEndOffset);
-    
+
     if (pEHInfo->clauseType == EHFilter)
     {
         ExtOut("Filter: ");
@@ -9008,32 +9029,32 @@ BOOL traverseEh(UINT clauseIndex,UINT totalClauses,DACEHInfo *pEHInfo,LPVOID tok
         ExtOut(" [%x]\n",
             (UINT32) pEHInfo->filterOffset);
     }
-    
-    ExtOut("\n");        
+
+    ExtOut("\n");
     return TRUE;
 }
 
 DECLARE_API(EHInfo)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR dwStartAddr = NULL;
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"/d", &dml, COBOOL, FALSE},
     };
 
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&dwStartAddr, COHEX},
     };
 
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg) || (0 == nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg) || (0 == nArg))
     {
         return Status;
     }
@@ -9041,7 +9062,7 @@ DECLARE_API(EHInfo)
     EnableDMLHolder dmlHolder(dml);
     DWORD_PTR tmpAddr = dwStartAddr;
 
-    if (!IsMethodDesc(dwStartAddr)) 
+    if (!IsMethodDesc(dwStartAddr))
     {
         JITTypes jitType;
         DWORD_PTR methodDesc;
@@ -9068,8 +9089,8 @@ DECLARE_API(EHInfo)
     {
         ExtOut("Unable to get codeHeader information\n");
         return Status;
-    }        
-    
+    }
+
     DMLOut("MethodDesc:   %s\n", DMLMethodDesc(MD.MethodDescPtr));
     DumpMDInfo(TO_TADDR(MD.MethodDescPtr));
 
@@ -9084,7 +9105,7 @@ DECLARE_API(EHInfo)
     {
         ExtOut("Failed to perform EHInfo traverse\n");
     }
-    
+
     return Status;
 }
 
@@ -9092,7 +9113,7 @@ DECLARE_API(EHInfo)
 * Routine Description:                                                 *
 *                                                                      *
 *    This function is called to dump the GC encoding of a managed      *
-*    function.                                                         *  
+*    function.                                                         *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(GCInfo)
@@ -9105,11 +9126,11 @@ DECLARE_API(GCInfo)
     TADDR taGCInfoAddr;
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"/d", &dml, COBOOL, FALSE},
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&taStartAddr, COHEX},
     };
@@ -9122,7 +9143,7 @@ DECLARE_API(GCInfo)
     EnableDMLHolder dmlHolder(dml);
     TADDR tmpAddr = taStartAddr;
 
-    if (!IsMethodDesc(taStartAddr)) 
+    if (!IsMethodDesc(taStartAddr))
     {
         JITTypes jitType;
         TADDR methodDesc;
@@ -9203,7 +9224,7 @@ DECLARE_API(GCInfo)
         ExtOut("Could not allocate memory to read the gc info.\n");
         return E_OUTOFMEMORY;
     }
-    
+
     memset(table, 0, tableSize);
     // We avoid using move here, because we do not want to return
     if (!SafeReadMemory(taGCInfoAddr, table, tableSize, NULL))
@@ -9289,7 +9310,7 @@ BOOL gatherEh(UINT clauseIndex,UINT totalClauses,DACEHInfo *pEHInfo,LPVOID token
     {
         return FALSE;
     }
-    
+
     if (pInfo->m_pInfos == NULL)
     {
         // First time, initialize structure
@@ -9297,7 +9318,7 @@ BOOL gatherEh(UINT clauseIndex,UINT totalClauses,DACEHInfo *pEHInfo,LPVOID token
         pInfo->m_pInfos = new NOTHROW DACEHInfo[totalClauses];
         if (pInfo->m_pInfos == NULL)
         {
-            ReportOOM();            
+            ReportOOM();
             return FALSE;
         }
     }
@@ -9342,7 +9363,7 @@ GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData)
 
     // This is not a dynamic method, print the IL for it.
     // Get the module
-    DacpModuleData dmd;    
+    DacpModuleData dmd;
     if (dmd.Request(g_sos, MethodDescData.ModulePtr) != S_OK)
     {
         ExtOut("Unable to get module\n");
@@ -9357,14 +9378,14 @@ GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData)
     }
 
     if (ilAddr == NULL)
-    { 
+    {
         ULONG pRva;
         DWORD dwFlags;
         if (pImport->GetRVA(MethodDescData.MDToken, &pRva, &dwFlags) != S_OK)
         {
             ExtOut("error in import\n");
             return error;
-        }    
+        }
 
         CLRDATA_ADDRESS ilAddrClr;
         if (g_sos->GetILForModule(MethodDescData.ModulePtr, pRva, &ilAddrClr) != S_OK)
@@ -9389,13 +9410,13 @@ GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData)
 * Routine Description:                                                 *
 *                                                                      *
 *    This function is called to unassembly a managed function.         *
-*    It tries to print symbolic info for function call, contants...    *  
+*    It tries to print symbolic info for function call, contants...    *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(u)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR dwStartAddr = NULL;
@@ -9408,7 +9429,7 @@ DECLARE_API(u)
     BOOL dml = FALSE;
     size_t nArg;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-gcinfo", &fWithGCInfo, COBOOL, FALSE},
         {"-ehinfo", &fWithEHInfo, COBOOL, FALSE},
@@ -9420,7 +9441,7 @@ DECLARE_API(u)
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&dwStartAddr, COHEX},
     };
@@ -9624,13 +9645,13 @@ DECLARE_API(u)
         pInfo = new NOTHROW SOSEHInfo;
         if (pInfo == NULL)
         {
-            ReportOOM();                
+            ReportOOM();
         }
         else if (g_sos->TraverseEHInfo(codeHeaderData.MethodStart, gatherEh, (LPVOID)pInfo) != S_OK)
         {
             ExtOut("Failed to gather EHInfo data\n");
             delete pInfo;
-            pInfo = NULL;            
+            pInfo = NULL;
         }
     }
 
@@ -9662,7 +9683,7 @@ DECLARE_API(u)
                 displayILFun);
 
         ExtOut("Cold region:\n");
-        
+
         // Displaying gcinfo for a cold region requires knowing the size of
         // the hot region preceeding.
         g_gcEncodingInfo.hotSizeToAdd = codeHeaderData.HotRegionSize;
@@ -9671,7 +9692,7 @@ DECLARE_API(u)
                 (DWORD_PTR) codeHeaderData.ColdRegionStart,
                 ((DWORD_PTR)codeHeaderData.ColdRegionStart) + codeHeaderData.ColdRegionSize,
                 dwStartAddr,
-                ((DWORD_PTR) MethodDescData.GCStressCodeCopy) + codeHeaderData.HotRegionSize,                
+                ((DWORD_PTR) MethodDescData.GCStressCodeCopy) + codeHeaderData.HotRegionSize,
                 fWithGCInfo ? &g_gcEncodingInfo : NULL,
                 pInfo,
                 bSuppressLines,
@@ -9690,7 +9711,7 @@ DECLARE_API(u)
     {
         g_gcEncodingInfo.Deinitialize();
     }
-    
+
     return Status;
 }
 
@@ -9929,10 +9950,10 @@ HRESULT GetIntermediateLangMap(BOOL bIL, const DacpCodeHeaderData& codeHeaderDat
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(DumpLog)
-{        
+{
     INIT_API_NO_RET_ON_FAILURE();
 
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
 
     _ASSERTE(g_pRuntime != nullptr);
 
@@ -9942,21 +9963,21 @@ DECLARE_API(DumpLog)
         ExtErr("DumpLog not supported on desktop runtime\n");
         return E_FAIL;
     }
-                        
+
     const char* fileName = "StressLog.txt";
     CLRDATA_ADDRESS StressLogAddress = NULL;
-    
+
     StringHolder sFileName, sLogAddr;
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-addr", &sLogAddr.data, COSTRING, TRUE}
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&sFileName.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -10004,8 +10025,8 @@ DECLARE_API(DumpLog)
 
     ExtOut("Attempting to dump Stress log to file '%s'\n", fileName);
 
-    
-    
+
+
     Status = StressLog::Dump(StressLogAddress, fileName, g_ExtData);
 
     if (Status == S_OK)
@@ -10023,7 +10044,7 @@ DECLARE_API(DumpLog)
 DECLARE_API (DumpGCLog)
 {
     INIT_API_NODAC();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     const char* fileName = "GCLog.txt";
@@ -10033,7 +10054,7 @@ DECLARE_API (DumpGCLog)
 
     if (*args != 0)
         fileName = args;
-    
+
     DWORD_PTR dwAddr = GetValueFromExpression("SVR::gc_log_buffer");
     moveN (dwAddr, dwAddr);
 
@@ -10047,13 +10068,13 @@ DECLARE_API (DumpGCLog)
             return E_FAIL;
         }
     }
-    
+
     ExtOut("Dumping GC log at %08x\n", dwAddr);
 
     g_bDacBroken = FALSE;
-    
+
     ExtOut("Attempting to dump GC log to file '%s'\n", fileName);
-    
+
     Status = E_FAIL;
 
     HANDLE hGCLog = CreateFileA(
@@ -10123,8 +10144,8 @@ exit:
 DECLARE_API (DumpGCConfigLog)
 {
     INIT_API();
-#ifdef GC_CONFIG_DRIVEN    
-    MINIDUMP_NOT_SUPPORTED();    
+#ifdef GC_CONFIG_DRIVEN
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     const char* fileName = "GCConfigLog.txt";
@@ -10134,7 +10155,7 @@ DECLARE_API (DumpGCConfigLog)
 
     if (*args != 0)
         fileName = args;
-    
+
     if (!InitializeHeapData ())
     {
         ExtOut("GC Heap not initialized yet.\n");
@@ -10143,10 +10164,10 @@ DECLARE_API (DumpGCConfigLog)
 
     BOOL fIsServerGC = IsServerBuild();
 
-    DWORD_PTR dwAddr = 0; 
+    DWORD_PTR dwAddr = 0;
     DWORD_PTR dwAddrOffset = 0;
-    
-    if (fIsServerGC) 
+
+    if (fIsServerGC)
     {
         dwAddr = GetValueFromExpression("SVR::gc_config_log_buffer");
         dwAddrOffset = GetValueFromExpression("SVR::gc_config_log_buffer_offset");
@@ -10165,15 +10186,15 @@ DECLARE_API (DumpGCConfigLog)
         ExtOut("Can't get either WKS or SVR GC's config log buffer");
         return E_FAIL;
     }
-    
+
     ExtOut("Dumping GC log at %08x\n", dwAddr);
 
     g_bDacBroken = FALSE;
-    
+
     ExtOut("Attempting to dump GC log to file '%s'\n", fileName);
-    
+
     Status = E_FAIL;
-    
+
     HANDLE hGCLog = CreateFileA(
         fileName,
         GENERIC_WRITE,
@@ -10248,7 +10269,7 @@ static const char * const str_interesting_data_points[] =
     "post short padded", // 7
 };
 
-static const char * const str_heap_compact_reasons[] = 
+static const char * const str_heap_compact_reasons[] =
 {
     "low on ephemeral space",
     "high fragmentation",
@@ -10256,7 +10277,7 @@ static const char * const str_heap_compact_reasons[] =
     "user specfied compact LOH",
     "last GC before OOM",
     "induced compacting GC",
-    "fragmented gen0 (ephemeral GC)", 
+    "fragmented gen0 (ephemeral GC)",
     "high memory load (ephemeral GC)",
     "high memory load and frag",
     "very high memory load and frag",
@@ -10271,14 +10292,14 @@ static BOOL gc_heap_compact_reason_mandatory_p[] =
     TRUE, //compact_loh_forced = 3,
     TRUE, //compact_last_gc = 4
     TRUE, //compact_induced_compacting = 5,
-    FALSE, //compact_fragmented_gen0 = 6, 
-    FALSE, //compact_high_mem_load = 7, 
-    TRUE, //compact_high_mem_frag = 8, 
+    FALSE, //compact_fragmented_gen0 = 6,
+    FALSE, //compact_high_mem_load = 7,
+    TRUE, //compact_high_mem_frag = 8,
     TRUE, //compact_vhigh_mem_frag = 9,
     TRUE //compact_no_gc_mode = 10
 };
 
-static const char * const str_heap_expand_mechanisms[] = 
+static const char * const str_heap_expand_mechanisms[] =
 {
     "reused seg with normal fit",
     "reused seg with best fit",
@@ -10288,7 +10309,7 @@ static const char * const str_heap_expand_mechanisms[] =
     "expand in next full GC"
 };
 
-static const char * const str_bit_mechanisms[] = 
+static const char * const str_bit_mechanisms[] =
 {
     "using mark list",
     "demotion"
@@ -10296,7 +10317,7 @@ static const char * const str_bit_mechanisms[] =
 
 static const char * const str_gc_global_mechanisms[] =
 {
-    "concurrent GCs", 
+    "concurrent GCs",
     "compacting GCs",
     "promoting GCs",
     "GCs that did demotion",
@@ -10341,7 +10362,7 @@ DECLARE_API(DumpGCData)
     INIT_API();
 
 #ifdef GC_CONFIG_DRIVEN
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (!InitializeHeapData ())
@@ -10366,11 +10387,11 @@ DECLARE_API(DumpGCData)
             ExtOut("Error requesting interesting GC info\n");
             return E_FAIL;
         }
-            
+
         PrintInterestingGCInfo(&interestingInfo);
     }
     else
-    {   
+    {
         DWORD dwNHeaps = GetGcHeapCount();
         DWORD dwAllocSize;
         if (!ClrSafeInt<DWORD>::multiply(sizeof(CLRDATA_ADDRESS), dwNHeaps, dwAllocSize))
@@ -10385,7 +10406,7 @@ DECLARE_API(DumpGCData)
             ExtOut("Failed to get GCHeaps\n");
             return Status;
         }
-        
+
         for (DWORD n = 0; n < dwNHeaps; n ++)
         {
             if (interestingInfo.Request(g_sos, heapAddrs[n]) != S_OK)
@@ -10410,7 +10431,7 @@ DECLARE_API(DumpGCData)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function is called to dump the build number and type of the  *  
+*    This function is called to dump the build number and type of the  *
 *    runtime and SOS.                                                  *
 *                                                                      *
 \**********************************************************************/
@@ -10511,7 +10532,7 @@ DECLARE_API(SOSStatus)
     BOOL bDesktop = FALSE;
     BOOL bNetCore = FALSE;
     BOOL bReset = FALSE;
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
 #ifndef FEATURE_PAL
         {"-desktop", &bDesktop, COBOOL, FALSE},
@@ -10522,7 +10543,7 @@ DECLARE_API(SOSStatus)
     if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
     {
         return Status;
-    }    
+    }
 #ifndef FEATURE_PAL
     if (bNetCore || bDesktop)
     {
@@ -10575,14 +10596,14 @@ DECLARE_API(SOSStatus)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function is called to print the environment setting for      *  
+*    This function is called to print the environment setting for      *
 *    the current process.                                              *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API (ProcInfo)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();        
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (IsDumpFile())
@@ -10592,7 +10613,7 @@ DECLARE_API (ProcInfo)
     }
 
 #define INFO_ENV        0x00000001
-#define INFO_TIME       0x00000002    
+#define INFO_TIME       0x00000002
 #define INFO_MEM        0x00000004
 #define INFO_ALL        0xFFFFFFFF
 
@@ -10656,7 +10677,7 @@ DECLARE_API (ProcInfo)
         addr = value + Offset_Environment;
         g_ExtData->ReadVirtual(UL64_TO_CDA(addr), &value, sizeof(PVOID), NULL);
 
-        static WCHAR buffer[DT_OS_PAGE_SIZE/2];        
+        static WCHAR buffer[DT_OS_PAGE_SIZE/2];
         ULONG readBytes = DT_OS_PAGE_SIZE;
         ULONG64 Page;
         if ((g_ExtData->ReadDebuggerData( DEBUG_DATA_MmPageSize, &Page, sizeof(Page), NULL)) == S_OK
@@ -10666,7 +10687,7 @@ DECLARE_API (ProcInfo)
             if (readBytes > uPageSize) {
                 readBytes = uPageSize;
             }
-        }        
+        }
         addr = value;
         while (1) {
             if (IsInterrupt())
@@ -10695,7 +10716,7 @@ DECLARE_API (ProcInfo)
             }
         }
     }
-    
+
     HANDLE hProcess = INVALID_HANDLE_VALUE;
     if (fProcInfo & (INFO_TIME | INFO_MEM)) {
         ULONG64 handle;
@@ -10705,7 +10726,7 @@ DECLARE_API (ProcInfo)
         }
         hProcess = (HANDLE)handle;
     }
-    
+
     if (!IsDumpFile() && fProcInfo & INFO_TIME) {
         FILETIME CreationTime;
         FILETIME ExitTime;
@@ -10739,15 +10760,15 @@ DECLARE_API (ProcInfo)
                         SystemTime.wHour, SystemTime.wMinute,
                         SystemTime.wSecond, SystemTime.wMilliseconds/10);
             }
-        
+
             DWORD nDay = 0;
             DWORD nHour = 0;
             DWORD nMin = 0;
             DWORD nSec = 0;
             DWORD nHundred = 0;
-            
+
             ULONG64 totalTime;
-             
+
             totalTime = KernelTime.dwLowDateTime + (((ULONG64)KernelTime.dwHighDateTime) << 32);
             nDay = (DWORD)(totalTime/(24*3600*10000000ui64));
             totalTime %= 24*3600*10000000ui64;
@@ -10760,13 +10781,13 @@ DECLARE_API (ProcInfo)
             nHundred = (DWORD)(totalTime/100000);
             ExtOut("Kernel CPU time   : %d days %02d:%02d:%02d.%02d\n",
                     nDay, nHour, nMin, nSec, nHundred);
-            
+
             DWORD sDay = nDay;
             DWORD sHour = nHour;
             DWORD sMin = nMin;
             DWORD sSec = nSec;
             DWORD sHundred = nHundred;
-            
+
             totalTime = UserTime.dwLowDateTime + (((ULONG64)UserTime.dwHighDateTime) << 32);
             nDay = (DWORD)(totalTime/(24*3600*10000000ui64));
             totalTime %= 24*3600*10000000ui64;
@@ -10779,7 +10800,7 @@ DECLARE_API (ProcInfo)
             nHundred = (DWORD)(totalTime/100000);
             ExtOut("User   CPU time   : %d days %02d:%02d:%02d.%02d\n",
                     nDay, nHour, nMin, nSec, nHundred);
-        
+
             sDay += nDay;
             sHour += nHour;
             sMin += nMin;
@@ -10830,9 +10851,9 @@ DECLARE_API (ProcInfo)
             ExtOut("Process Memory\n");
             ExtOut("WorkingSetSize: %8d KB       PeakWorkingSetSize: %8d KB\n",
                     memory.WorkingSetSize/1024, memory.PeakWorkingSetSize/1024);
-            ExtOut("VirtualSize:    %8d KB       PeakVirtualSize:    %8d KB\n", 
+            ExtOut("VirtualSize:    %8d KB       PeakVirtualSize:    %8d KB\n",
                     memory.VirtualSize/1024, memory.PeakVirtualSize/1024);
-            ExtOut("PagefileUsage:  %8d KB       PeakPagefileUsage:  %8d KB\n", 
+            ExtOut("PagefileUsage:  %8d KB       PeakPagefileUsage:  %8d KB\n",
                     memory.PagefileUsage/1024, memory.PeakPagefileUsage/1024);
         }
 
@@ -10855,35 +10876,35 @@ DECLARE_API (ProcInfo)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function is called to find the address of EE data for a      *  
+*    This function is called to find the address of EE data for a      *
 *    metadata token.                                                   *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(Token2EE)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     StringHolder DllName;
     ULONG64 token = 0;
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
 #ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
 
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&DllName.data, COSTRING},
         {&token, COHEX}
     };
 
     size_t nArg;
-    if (!GetCMDOption(args,option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args,option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -10906,7 +10927,7 @@ DECLARE_API(Token2EE)
     {
         moduleList = ModuleFromName(DllName.data, &numModule);
     }
-    
+
     if (moduleList == NULL)
     {
         ExtOut("Failed to request module list.\n");
@@ -10921,7 +10942,7 @@ DECLARE_API(Token2EE)
             if (i > 0)
             {
                 ExtOut("--------------------------------------\n");
-            }        
+            }
 
             DWORD_PTR dwAddr = moduleList[i];
             WCHAR FileName[MAX_LONGPATH];
@@ -10937,21 +10958,21 @@ DECLARE_API(Token2EE)
             {
                 pszFilename++; // skip past the last "\" character
             }
-            
+
             DMLOut("Module:      %s\n", DMLModule(dwAddr));
             ExtOut("Assembly:    %S\n", pszFilename);
-            
+
             GetInfoFromModule(dwAddr, (ULONG)token);
         }
     }
-    
+
     return Status;
 }
 
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function is called to find the address of EE data for a      *  
+*    This function is called to find the address of EE data for a      *
 *    metadata token.                                                   *
 *                                                                      *
 \**********************************************************************/
@@ -10960,24 +10981,24 @@ DECLARE_API(Name2EE)
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
-    StringHolder DllName, TypeName; 
+    StringHolder DllName, TypeName;
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
 #ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
-    
-    CMDValue arg[] = 
+
+    CMDValue arg[] =
     {   // vptr, type
         {&DllName.data, COSTRING},
         {&TypeName.data, COSTRING}
     };
     size_t nArg;
-    
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -11014,17 +11035,17 @@ DECLARE_API(Name2EE)
             }
         }
     }
-    
+
     if (nArg != 2)
     {
         ExtOut("Usage: " SOSPrefix "name2ee module_name item_name\n");
-        ExtOut("  or   " SOSPrefix "name2ee module_name!item_name\n");        
+        ExtOut("  or   " SOSPrefix "name2ee module_name!item_name\n");
         ExtOut("       use * for module_name to search all loaded modules\n");
         ExtOut("Examples: " SOSPrefix "name2ee  mscorlib.dll System.String.ToString\n");
         ExtOut("          " SOSPrefix "name2ee *!System.String\n");
         return Status;
     }
-    
+
     int numModule;
     ArrayHolder<DWORD_PTR> moduleList = NULL;
     if (strcmp(DllName.data, "*") == 0)
@@ -11035,7 +11056,7 @@ DECLARE_API(Name2EE)
     {
         moduleList = ModuleFromName(DllName.data, &numModule);
     }
-            
+
 
     if (moduleList == NULL)
     {
@@ -11052,7 +11073,7 @@ DECLARE_API(Name2EE)
             {
                 ExtOut("--------------------------------------\n");
             }
-            
+
             DWORD_PTR dwAddr = moduleList[i];
             WCHAR FileName[MAX_LONGPATH];
             FileNameForModule (dwAddr, FileName);
@@ -11067,13 +11088,13 @@ DECLARE_API(Name2EE)
             {
                 pszFilename++; // skip past the last "\" character
             }
-            
+
             DMLOut("Module:      %s\n", DMLModule(dwAddr));
             ExtOut("Assembly:    %S\n", pszFilename);
             GetInfoFromName(dwAddr, TypeName.data);
         }
     }
- 
+
     return Status;
 }
 
@@ -11081,7 +11102,7 @@ DECLARE_API(Name2EE)
 DECLARE_API(PathTo)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR root = NULL;
@@ -11089,11 +11110,11 @@ DECLARE_API(PathTo)
     BOOL dml = FALSE;
     size_t nArg;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"/d", &dml, COBOOL, FALSE},
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&root, COHEX},
         {&target, COHEX},
@@ -11101,20 +11122,20 @@ DECLARE_API(PathTo)
     if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
-    }    
-    
+    }
+
     if (root == 0 || target == 0)
     {
         ExtOut("Invalid argument %s\n", args);
         return Status;
     }
-    
+
     GCRootImpl gcroot;
     bool result = gcroot.PrintPathToObject(root, target);
-    
+
     if (!result)
         ExtOut("Did not find a path from %p to %p.\n", SOS_PTR(root), SOS_PTR(target));
-    
+
     return Status;
 }
 
@@ -11122,14 +11143,14 @@ DECLARE_API(PathTo)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function finds all roots (on stack or in handles) for a      *  
+*    This function finds all roots (on stack or in handles) for a      *
 *    given object.                                                     *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(GCRoot)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
 
     BOOL bNoStacks = FALSE;
     DWORD_PTR obj = NULL;
@@ -11137,7 +11158,7 @@ DECLARE_API(GCRoot)
     BOOL all = FALSE;
     size_t nArg;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-nostacks", &bNoStacks, COBOOL, FALSE},
         {"-all", &all, COBOOL, FALSE},
@@ -11145,7 +11166,7 @@ DECLARE_API(GCRoot)
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
 
     {   // vptr, type
         {&obj, COHEX}
@@ -11153,20 +11174,20 @@ DECLARE_API(GCRoot)
     if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
-    }    
+    }
     if (obj == 0)
     {
         ExtOut("Invalid argument %s\n", args);
         return Status;
     }
 
-    EnableDMLHolder dmlHolder(dml);      
+    EnableDMLHolder dmlHolder(dml);
     GCRootImpl gcroot;
     int i = gcroot.PrintRootsForObject(obj, all == TRUE, bNoStacks == TRUE);
-    
+
     if (IsInterrupt())
         ExtOut("Interrupted, data may be incomplete.\n");
-    
+
     if (all)
         ExtOut("Found %d roots.\n", i);
     else
@@ -11186,13 +11207,13 @@ DECLARE_API(GCWhere)
     TADDR taddrObj = 0;
     size_t nArg;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-brick", &bGetBrick, COBOOL, FALSE},
         {"-card", &bGetCard, COBOOL, FALSE},
         {"/d", &dml, COBOOL, FALSE},
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&taddrObj, COHEX}
     };
@@ -11202,7 +11223,7 @@ DECLARE_API(GCWhere)
     }
 
     EnableDMLHolder dmlHolder(dml);
-    // Obtain allocation context for each managed thread.    
+    // Obtain allocation context for each managed thread.
     AllocInfo allocInfo;
     allocInfo.Init();
 
@@ -11215,7 +11236,7 @@ DECLARE_API(GCWhere)
     size_t size = 0;
     if (sos::IsObject(taddrObj))
     {
-        TADDR taddrMT; 
+        TADDR taddrMT;
         BOOL  bContainsPointers;
         if(FAILED(GetMTOfObject(taddrObj, &taddrMT)) ||
            !GetSizeEfficient(taddrObj, taddrMT, FALSE, size, bContainsPointers))
@@ -11265,16 +11286,17 @@ DECLARE_API(GCWhere)
             ExtOut("Failed to get GCHeaps\n");
             return Status;
         }
- 
+
         for (DWORD n = 0; n < dwNHeaps; n ++)
         {
-            DacpGcHeapDetails heapDetails;
-            if (heapDetails.Request(g_sos, heapAddrs[n]) != S_OK)
+            DacpGcHeapDetails dacHeapDetails;
+            if (dacHeapDetails.Request(g_sos, heapAddrs[n]) != S_OK)
             {
                 ExtOut("Error requesting details\n");
                 return Status;
             }
 
+            GCHeapDetails heapDetails(dacHeapDetails, heapAddrs[n]);
             if (GCObjInHeap(taddrObj, heapDetails, trngSeg, gen, allocCtx, bLarge))
             {
                 ExtOut("Address " WIN64_8SPACES " Gen Heap segment " WIN64_8SPACES " begin   " WIN64_8SPACES " allocated" WIN64_8SPACES " size\n");
@@ -11308,19 +11330,19 @@ DECLARE_API(FindRoots)
         ExtOut("!FindRoots is not supported on a dump file.\n");
         return Status;
     }
-    
+
     LONG_PTR gen = -100; // initialized outside the legal range: [-1, 2]
     StringHolder sgen;
     TADDR taObj = NULL;
     BOOL dml = FALSE;
     size_t nArg;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-gen", &sgen.data, COSTRING, TRUE},
         {"/d", &dml, COBOOL, FALSE},
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&taObj, COHEX}
     };
@@ -11398,7 +11420,7 @@ DECLARE_API(FindRoots)
 
         GCRootImpl gcroot;
         int roots = gcroot.FindRoots(CNotification::GetCondemnedGen(), taObj);
-        
+
         ExtOut("Found %d roots.\n", roots);
     }
 
@@ -11411,7 +11433,7 @@ DECLARE_API(FindRoots)
 class GCHandleStatsForDomains
 {
 public:
-    GCHandleStatsForDomains() 
+    GCHandleStatsForDomains()
         : m_singleDomainMode(FALSE), m_numDomains(0), m_pStatistics(NULL), m_pDomainPointers(NULL), m_sharedDomainIndex(-1), m_systemDomainIndex(-1)
     {
     }
@@ -11425,14 +11447,14 @@ public:
             else
                 delete [] m_pStatistics;
         }
-        
+
         if (m_pDomainPointers)
             delete [] m_pDomainPointers;
     }
-    
+
     BOOL Init(BOOL singleDomainMode)
     {
-        m_singleDomainMode = singleDomainMode; 
+        m_singleDomainMode = singleDomainMode;
         if (m_singleDomainMode)
         {
             m_numDomains = 1;
@@ -11462,16 +11484,16 @@ public:
 
             m_sharedDomainIndex = i - 1; // The m_sharedDomainIndex is set to -1 if there is no shared domain
             m_systemDomainIndex = i;
-            
+
             if (g_sos->GetAppDomainList(adsData.DomainCount, pArray+numSpecialDomains, NULL) != S_OK)
                 return FALSE;
-            
+
             m_pDomainPointers = pArray.Detach();
             m_pStatistics = new NOTHROW GCHandleStatistics[m_numDomains];
             if (m_pStatistics == NULL)
                 return FALSE;
         }
-        
+
         return TRUE;
     }
 
@@ -11488,24 +11510,24 @@ public:
                 if (m_pDomainPointers[i] == appDomainPtr)
                     return m_pStatistics + i;
         }
-        
+
         return NULL;
     }
-    
-    
+
+
     GCHandleStatistics *GetStatistics(int appDomainIndex) const
     {
         SOS_Assert(appDomainIndex >= 0);
         SOS_Assert(appDomainIndex < m_numDomains);
-        
+
         return m_singleDomainMode ? m_pStatistics : m_pStatistics + appDomainIndex;
     }
-    
+
     int GetNumDomains() const
     {
         return m_numDomains;
     }
-    
+
     CLRDATA_ADDRESS GetDomain(int index) const
     {
         SOS_Assert(index >= 0);
@@ -11539,17 +11561,17 @@ public:
         : mPerDomain(FALSE), mStat(FALSE), mDML(FALSE), mType((int)~0)
     {
         ArrayHolder<char> type = NULL;
-        CMDOption option[] = 
+        CMDOption option[] =
         {
             {"-perdomain", &mPerDomain, COBOOL, FALSE},
             {"-stat", &mStat, COBOOL, FALSE},
             {"-type", &type, COSTRING, TRUE},
             {"/d", &mDML, COBOOL, FALSE},
         };
-        
+
         if (!GetCMDOption(args,option,_countof(option),NULL,0,NULL))
             sos::Throw<sos::Exception>("Failed to parse command line arguments.");
-        
+
         if (type != NULL)
             if (_stricmp(type, "Pinned") == 0)
                 mType = HNDTYPE_PINNED;
@@ -11574,32 +11596,32 @@ public:
             else
                 sos::Throw<sos::Exception>("Unknown handle type '%s'.", type.GetPtr());
     }
-    
+
     void Run()
     {
         EnableDMLHolder dmlHolder(mDML);
-        
+
         mOut.ReInit(6, POINTERSIZE_HEX, AlignRight);
         mOut.SetWidths(5, POINTERSIZE_HEX, 11, POINTERSIZE_HEX, 8, POINTERSIZE_HEX);
         mOut.SetColAlignment(1, AlignLeft);
-        
+
         if (mHandleStat.Init(!mPerDomain) == FALSE)
             sos::Throw<sos::Exception>("Error getting per-appdomain handle information");
-        
+
         if (!mStat)
             mOut.WriteRow("Handle", "Type", "Object", "Size", "Data", "Type");
-            
+
         WalkHandles();
-        
+
         for (int i=0; (i < mHandleStat.GetNumDomains()) && !IsInterrupt(); i++)
         {
             GCHandleStatistics *pStats = mHandleStat.GetStatistics(i);
 
             if (mPerDomain)
             {
-                Print( "------------------------------------------------------------------------------\n");           
+                Print( "------------------------------------------------------------------------------\n");
                 Print("GC Handle Statistics for AppDomain ", AppDomainPtr(mHandleStat.GetDomain(i)));
-            
+
                 if (i == mHandleStat.GetSharedDomainIndex())
                     Print(" (Shared Domain)\n");
                 else if (i == mHandleStat.GetSystemDomainIndex())
@@ -11611,7 +11633,7 @@ public:
             if (!mStat)
                 Print("\n");
             PrintGCStat(&pStats->hs);
-            
+
             // Don't print handle stats if the user has filtered by type.  All handles will be the same
             // type, and the total count will be displayed by PrintGCStat.
             if (mType == (unsigned int)~0)
@@ -11633,14 +11655,14 @@ private:
             else
                 sos::Throw<sos::Exception>("Failed to walk the handle table.");
         }
-      
+
         // GCC can't handle stacks which are too large.
 #ifndef FEATURE_PAL
         SOSHandleData data[256];
 #else
         SOSHandleData data[4];
 #endif
-        
+
         unsigned int fetched = 0;
         HRESULT hr = S_OK;
         do
@@ -11650,27 +11672,27 @@ private:
                 ExtOut("Error %x while walking the handle table.\n", hr);
                 break;
             }
-            
+
             WalkHandles(data, fetched);
         } while (_countof(data) == fetched);
     }
-    
+
     void WalkHandles(SOSHandleData data[], unsigned int count)
     {
         for (unsigned int i = 0; i < count; ++i)
         {
             sos::CheckInterrupt();
-        
+
             if (mType != (unsigned int)~0 && mType != data[i].Type)
                 continue;
-        
+
             GCHandleStatistics *pStats = mHandleStat.LookupStatistics(data[i].AppDomain);
             TADDR objAddr = 0;
             TADDR mtAddr = 0;
             size_t size = 0;
             const WCHAR *mtName = 0;
             const char *type = 0;
-            
+
             if (FAILED(MOVE(objAddr, data[i].Handle)))
             {
                 objAddr = 0;
@@ -11695,7 +11717,7 @@ private:
                         pStats->hs.Add(obj.GetMT(), (DWORD)size);
                 }
             }
-        
+
             switch(data[i].Type)
             {
                 case HNDTYPE_PINNED:
@@ -11705,7 +11727,7 @@ private:
                 case HNDTYPE_REFCOUNTED:
                     type = "RefCounted";
                     if (pStats) pStats->refCntHandleCount++;
-                    break;    
+                    break;
                 case HNDTYPE_STRONG:
                     type = "Strong";
                     if (pStats) pStats->strongHandleCount++;
@@ -11744,13 +11766,13 @@ private:
                     pStats->unknownHandleCount++;
                     break;
             }
-            
+
             if (type && !mStat)
             {
                 sos::MethodTable mt = mtAddr;
                 if (mtName == 0)
                     mtName = mt.GetName();
-                
+
                 if (data[i].Type == HNDTYPE_REFCOUNTED)
                     mOut.WriteRow(data[i].Handle, type, ObjectPtr(objAddr), Decimal(size), Decimal(data[i].RefCount), mtName);
                 else if (data[i].Type == HNDTYPE_DEPENDENT)
@@ -11762,18 +11784,18 @@ private:
             }
         }
     }
-    
+
     inline void PrintHandleRow(const char *text, int count)
     {
         if (count)
             mOut.WriteRow(text, Decimal(count));
     }
-    
+
     void PrintGCHandleStats(GCHandleStatistics *pStats)
     {
         Print("Handles:\n");
         mOut.ReInit(2, 21, AlignLeft, 4);
-        
+
         PrintHandleRow("Strong Handles:", pStats->strongHandleCount);
         PrintHandleRow("Pinned Handles:", pStats->pinnedHandleCount);
         PrintHandleRow("Async Pinned Handles:", pStats->asyncPinnedHandleCount);
@@ -11786,7 +11808,7 @@ private:
         PrintHandleRow("Dependent Handles:", pStats->dependentCount);
         PrintHandleRow("Other Handles:", pStats->unknownHandleCount);
     }
-    
+
 private:
     BOOL mPerDomain, mStat, mDML;
     unsigned int mType;
@@ -11803,7 +11825,7 @@ private:
 DECLARE_API(GCHandles)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     try
@@ -11918,21 +11940,21 @@ DECLARE_API(TraceToCode)
 #ifndef FEATURE_PAL
 DECLARE_API(GetCodeTypeFlags)
 {
-    INIT_API();   
+    INIT_API();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
     _ASSERTE(g_pRuntime != nullptr);
-    
+
     char buffer[100+mdNameLen];
     size_t ip;
     StringHolder PReg;
-    
+
     CMDValue arg[] = {
         // vptr, type
         {&ip, COSIZE_T},
         {&PReg.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -11946,7 +11968,7 @@ DECLARE_API(GetCodeTypeFlags)
             ExtOut("Pseudo-register number must be between 0 and 19\n");
             return Status;
         }
-    }        
+    }
 
     sprintf_s(buffer,_countof (buffer),
         "r$t%d=0",
@@ -11956,7 +11978,7 @@ DECLARE_API(GetCodeTypeFlags)
     {
         ExtOut("Error initialized register $t%d to zero\n", preg);
         return Status;
-    }    
+    }
 
     ULONG64 base = 0;
     CLRDATA_ADDRESS cdaStart = TO_CDADDR(ip);
@@ -12007,7 +12029,7 @@ DECLARE_API(GetCodeTypeFlags)
     {
         ExtOut("Error setting register $t%d\n", preg);
         return Status;
-    }  
+    }
     return Status;
 
 }
@@ -12016,14 +12038,14 @@ DECLARE_API(GetCodeTypeFlags)
 DECLARE_API(StopOnException)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
-    
+    MINIDUMP_NOT_SUPPORTED();
+
 
     char buffer[100+mdNameLen];
 
     BOOL fDerived = FALSE;
-    BOOL fCreate1 = FALSE;    
-    BOOL fCreate2 = FALSE;    
+    BOOL fCreate1 = FALSE;
+    BOOL fCreate2 = FALSE;
 
     CMDOption option[] = {
         // name, vptr, type, hasValue
@@ -12033,14 +12055,14 @@ DECLARE_API(StopOnException)
     };
 
     StringHolder TypeName,PReg;
-    
+
     CMDValue arg[] = {
         // vptr, type
         {&TypeName.data, COSTRING},
         {&PReg.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -12052,7 +12074,7 @@ DECLARE_API(StopOnException)
     if (nArg < 1 || nArg > 2)
     {
         ExtOut("usage: StopOnException [-derived] [-create | -create2] <type name>\n");
-        ExtOut("                       [<pseudo-register number for result>]\n");            
+        ExtOut("                       [<pseudo-register number for result>]\n");
         ExtOut("ex:    StopOnException -create System.OutOfMemoryException 1\n");
         return Status;
     }
@@ -12066,7 +12088,7 @@ DECLARE_API(StopOnException)
             ExtOut("Pseudo-register number must be between 0 and 19\n");
             return Status;
         }
-    }        
+    }
 
     sprintf_s(buffer,_countof (buffer),
         "r$t%d=0",
@@ -12076,10 +12098,10 @@ DECLARE_API(StopOnException)
     {
         ExtOut("Error initialized register $t%d to zero\n", preg);
         return Status;
-    }    
-    
+    }
+
     if (fCreate1 || fCreate2)
-    {            
+    {
         sprintf_s(buffer,_countof (buffer),
             "sxe %s \"!soe %s %s %d;.if(@$t%d==0) {g} .else {.echo '%s hit'}\" %x",
             fCreate1 ? "-c" : "-c2",
@@ -12090,23 +12112,23 @@ DECLARE_API(StopOnException)
             TypeName.data,
             EXCEPTION_COMPLUS
             );
-            
-        Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);        
+
+        Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
         if (FAILED(Status))
         {
             ExtOut("Error setting breakpoint: %s\n", buffer);
             return Status;
-        }        
+        }
 
         ExtOut("Breakpoint set\n");
         return Status;
-    }    
+    }
 
     // Find the last thrown exception on this thread.
     // Does it match? If so, set the register.
     CLRDATA_ADDRESS threadAddr = GetCurrentManagedThread();
     DacpThreadData Thread;
-    
+
     if ((threadAddr == NULL) || (Thread.Request(g_sos, threadAddr) != S_OK))
     {
         ExtOut("The current thread is unmanaged\n");
@@ -12121,15 +12143,15 @@ DECLARE_API(StopOnException)
         ExtOut("There is no current managed exception on this thread\n");
         return Status;
     }
-    
+
     if (taLTOH)
     {
         LPWSTR typeNameWide = (LPWSTR)alloca(mdNameLen * sizeof(WCHAR));
         MultiByteToWideChar(CP_ACP,0,TypeName.data,-1,typeNameWide,mdNameLen);
-        
+
         TADDR taMT;
         if (SafeReadMemory(taLTOH, &taMT, sizeof(taMT), NULL))
-        {            
+        {
             NameForMT_s (taMT, g_mdName, mdNameLen);
             if ((_wcscmp(g_mdName,typeNameWide) == 0) ||
                 (fDerived && IsDerivedFrom(taMT, typeNameWide)))
@@ -12152,30 +12174,30 @@ DECLARE_API(StopOnException)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function finds the size of an object or all roots.           *  
+*    This function finds the size of an object or all roots.           *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(ObjSize)
 {
 #ifndef FEATURE_PAL
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL dml = FALSE;
-    StringHolder str_Object;    
+    StringHolder str_Object;
 
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"/d", &dml, COBOOL, FALSE},
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&str_Object.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -12214,7 +12236,7 @@ DECLARE_API(ObjSize)
 DECLARE_API(GCHandleLeaks)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     ExtOut("-------------------------------------------------------------------------------\n");
@@ -12222,23 +12244,23 @@ DECLARE_API(GCHandleLeaks)
     ExtOut("Strong and Pinned GCHandles are reported at this time. You can safely abort the\n");
     ExtOut("memory scan with Control-C or Control-Break.                                   \n");
     ExtOut("-------------------------------------------------------------------------------\n");
-    
+
     static DWORD_PTR array[2000];
     UINT i;
     BOOL dml = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"/d", &dml, COBOOL, FALSE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL)) 
+    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
     {
         return Status;
     }
 
     EnableDMLHolder dmlHolder(dml);
-    
+
     UINT iFinal = FindAllPinnedAndStrong(array,sizeof(array)/sizeof(DWORD_PTR));
     ExtOut("Found %d handles:\n",iFinal);
     for (i=1;i<=iFinal;i++)
@@ -12261,7 +12283,7 @@ DECLARE_API(GCHandleLeaks)
     {
         // Try to find stress log symbols
         DWORD_PTR dwAddr = GetValueFromExpression("StressLog::theLog");
-        StressLogAddress = dwAddr;        
+        StressLogAddress = dwAddr;
         g_bDacBroken = TRUE;
     }
     else
@@ -12281,22 +12303,22 @@ DECLARE_API(GCHandleLeaks)
     {
         ExtOut("Failed to read whole or part of stress log, some references may come from stress log\n");
     }
-    
-    
+
+
     while (!bAbort)
     {
         NTSTATUS status;
         MEMORY_BASIC_INFORMATION64 memInfo;
 
         status = g_ExtData2->QueryVirtual(UL64_TO_CDA(memCur), &memInfo);
-                
-        if( !NT_SUCCESS(status) ) 
-        {            
+
+        if( !NT_SUCCESS(status) )
+        {
             break;
         }
 
         if (memInfo.State == MEM_COMMIT)
-        {            
+        {
             for (ULONG64 memIter = memCur; memIter < (memCur + memInfo.RegionSize); memIter+=sizeof(buffer))
             {
                 if (IsInterrupt())
@@ -12310,19 +12332,19 @@ DECLARE_API(GCHandleLeaks)
                 {
                     ExtOut("Searching %p...\n", SOS_PTR(memIter));
                 }
-                
+
                 ULONG size = 0;
                 HRESULT ret;
                 ret = g_ExtData->ReadVirtual(UL64_TO_CDA(memIter), buffer, sizeof(buffer), &size);
                 if (ret == S_OK)
                 {
                     for (UINT x=0;x<1024;x++)
-                    {            
+                    {
                         DWORD_PTR value = buffer[x];
                         // We don't care about the low bit. Also, the GCHandle class turns on the
                         // low bit for pinned handles, so without the statement below, we wouldn't
                         // notice pinned handles.
-                        value = value & ~1; 
+                        value = value & ~1;
                         for (i=0;i<iFinal;i++)
                         {
                             ULONG64 addrInDebugee = (ULONG64)memIter+(x*sizeof(DWORD_PTR));
@@ -12350,7 +12372,7 @@ DECLARE_API(GCHandleLeaks)
                 }
             }
         }
-        
+
         memCur += memInfo.RegionSize;
     }
 
@@ -12366,7 +12388,7 @@ DECLARE_API(GCHandleLeaks)
 
     if (numNotFound > 0)
     {
-        ExtOut("------------------------------------------------------------------------------\n");    
+        ExtOut("------------------------------------------------------------------------------\n");
         ExtOut("Some handles were not found. If the number of not-found handles grows over the\n");
         ExtOut("lifetime of your application, you may have a GCHandle leak. This will cause   \n");
         ExtOut("the GC Heap to grow larger as objects are being kept alive, referenced only   \n");
@@ -12374,7 +12396,7 @@ DECLARE_API(GCHandleLeaks)
         ExtOut("may be some noise in this output, as an unmanaged application may be storing  \n");
         ExtOut("the handle in a non-standard way, perhaps with some bits flipped. The memory  \n");
         ExtOut("scan wouldn't be able to find those.                                          \n");
-        ExtOut("------------------------------------------------------------------------------\n");    
+        ExtOut("------------------------------------------------------------------------------\n");
 
         ExtOut("Didn't find %d handles:\n", numNotFound);
         int numPrinted=0;
@@ -12387,24 +12409,24 @@ DECLARE_API(GCHandleLeaks)
                 if ((numPrinted % 4) == 0)
                     ExtOut("\n");
             }
-        }   
+        }
         ExtOut("\n");
     }
     else
-    {       
-        ExtOut("------------------------------------------------------------------------------\n");    
+    {
+        ExtOut("------------------------------------------------------------------------------\n");
         ExtOut("All handles found");
         if (bAbort)
             ExtOut(" even though you aborted.\n");
         else
-            ExtOut(".\n");        
+            ExtOut(".\n");
         ExtOut("A leak may still exist because in a general scan of process memory SOS can't  \n");
         ExtOut("differentiate between garbage and valid structures, so you may have false     \n");
         ExtOut("positives. If you still suspect a leak, use this function over time to        \n");
         ExtOut("identify a possible trend.                                                    \n");
-        ExtOut("------------------------------------------------------------------------------\n");    
+        ExtOut("------------------------------------------------------------------------------\n");
     }
-    
+
     return Status;
 }
 #endif // FEATURE_PAL
@@ -12493,7 +12515,7 @@ private:
         {
             ULONG numTypes = 0;
             ToRelease<ICorDebugType> pCurrentTypeParam;
-            
+
             while(SUCCEEDED(pTypeEnum->Next(1, &pCurrentTypeParam, &numTypes)))
             {
                 if(numTypes == 0) break;
@@ -12590,7 +12612,7 @@ private:
             break;
         case ELEMENT_TYPE_U2:
             swprintf_s(typeName, typeNameLen, W("unsigned short\0"));
-            break;    
+            break;
         case ELEMENT_TYPE_I4:
             swprintf_s(typeName, typeNameLen, W("int\0"));
             break;
@@ -12634,7 +12656,7 @@ private:
 
                 switch(corElemType)
                 {
-                case ELEMENT_TYPE_SZARRAY: 
+                case ELEMENT_TYPE_SZARRAY:
                     wcsncat_s(typeName, typeNameLen, W("[]\0"), typeNameLen);
                     return S_OK;
                 case ELEMENT_TYPE_ARRAY:
@@ -12644,16 +12666,16 @@ private:
                         wcsncat_s(typeName, typeNameLen, W("["), typeNameLen);
                         for(ULONG32 i = 0; i < rank - 1; i++)
                         {
-                            // 
+                            //
                             wcsncat_s(typeName, typeNameLen, W(","), typeNameLen);
                         }
                         wcsncat_s(typeName, typeNameLen, W("]\0"), typeNameLen);
                     }
                     return S_OK;
-                case ELEMENT_TYPE_BYREF:   
+                case ELEMENT_TYPE_BYREF:
                     wcsncat_s(typeName, typeNameLen, W("&\0"), typeNameLen);
                     return S_OK;
-                case ELEMENT_TYPE_PTR:     
+                case ELEMENT_TYPE_PTR:
                     wcsncat_s(typeName, typeNameLen, W("*\0"), typeNameLen);
                     return S_OK;
                 default:
@@ -12832,7 +12854,7 @@ private:
             quickString.String()));
 
         ExtOut(" = \"%S\"\n", quickString.String());
-        
+
         return S_OK;
     }
 
@@ -13008,7 +13030,7 @@ private:
         case ELEMENT_TYPE_U2:
             ExtOut("  = %hu\n", *(unsigned short*) &(rgbValue[0]));
             break;
-        
+
         case ELEMENT_TYPE_I:
             ExtOut("  = %d\n", *(int*) &(rgbValue[0]));
             break;
@@ -13048,7 +13070,7 @@ private:
             // TODO: The following corElementTypes are not yet implemented here.  Array
             // might be interesting to add, though the others may be of rather limited use:
             // ELEMENT_TYPE_ARRAY          = 0x14,     // MDARRAY <type> <rank> <bcount> <bound1> ... <lbcount> <lb1> ...
-            // 
+            //
             // ELEMENT_TYPE_GENERICINST    = 0x15,     // GENERICINST <generic type> <argCnt> <arg1> ... <argn>
         }
 
@@ -13077,7 +13099,7 @@ private:
 
                 if(i == 0 && (methAttr & mdStatic) == 0)
                     swprintf_s(paramName, mdNameLen, W("this\0"));
-                else 
+                else
                 {
                     int idx = ((methAttr & mdStatic) == 0)? i : (i + 1);
                     if(SUCCEEDED(pMD->GetParamForMethodIndex(methodDef, idx, &paramDef)))
@@ -13293,7 +13315,7 @@ private:
                         DMLOut(" |- %S %s", typeName, DMLManagedVar(currentExpansion, currentFrame, mdName));
                         PrintValue(pFieldVal, pILFrame, pMD, indent, varToExpand, currentExpansion, currentExpansionSize, currentFrame);
                     }
-                    else if(!(fieldAttr & fdLiteral)) 
+                    else if(!(fieldAttr & fdLiteral))
                         ExtOut(" |- < unknown type > %S\n", mdName);
                 }
             }
@@ -13339,7 +13361,7 @@ public:
 
         InternalFrameManager internalFrameManager;
         IfFailRet(internalFrameManager.Init(pThread3));
-        
+
     #if defined(_AMD64_) || defined(_ARM64_)
         ExtOut("%-16s %-16s %s\n", "Child SP", "IP", "Call Site");
     #elif defined(_X86_) || defined(_ARM_)
@@ -13364,7 +13386,7 @@ public:
                 ExtOut("<interrupted>\n");
                 break;
             }
-            
+
             // This is a workaround for a problem in the MacOS DAC/DBI PAL. The PAL exception
             // handling is unnecessarily enabled for DLLs and is not properly passing what I
             // think is recoverable stack fault on to the OS. Instead it is causing a fault
@@ -13372,7 +13394,7 @@ public:
             ArrayHolder<CROSS_PLATFORM_CONTEXT> context = new CROSS_PLATFORM_CONTEXT[1];
             ULONG32 cbContextActual;
             if ((Status = pStackWalk->GetContext(
-                DT_CONTEXT_FULL, 
+                DT_CONTEXT_FULL,
                 sizeof(CROSS_PLATFORM_CONTEXT),
                 &cbContextActual,
                 (BYTE *)context.GetPtr())) != S_OK)
@@ -13396,7 +13418,7 @@ public:
                 continue;
             }
 
-            // TODO: What about internal frames preceding the above native stack frame? 
+            // TODO: What about internal frames preceding the above native stack frame?
             // Should I just exclude the above native stack frame from the output?
             // TODO: Compare caller frame (instead of current frame) against internal frame,
             // to deal with issues of current frame's current SP being closer to leaf than
@@ -13443,7 +13465,7 @@ public:
                 if (FAILED(Status))
                 {
                     // We're on a JITted frame, but there's no Function for it.  So it must
-                    // be... 
+                    // be...
                     ExtOut("[IL Stub or LCG]\n");
                     continue;
                 }
@@ -13500,7 +13522,7 @@ public:
 WString BuildRegisterOutput(const SOSStackRefData &ref, bool printObj)
 {
     WString res;
-    
+
     if (ref.HasRegisterInformation)
     {
         WCHAR reg[32];
@@ -13509,7 +13531,7 @@ WString BuildRegisterOutput(const SOSStackRefData &ref, bool printObj)
             res = reg;
         else
             res = W("<unknown register>");
-            
+
         if (ref.Offset)
         {
             int offset = ref.Offset;
@@ -13522,16 +13544,16 @@ WString BuildRegisterOutput(const SOSStackRefData &ref, bool printObj)
                 res += W("-");
                 offset = -offset;
             }
-            
+
             res += Hex(offset);
         }
-        
+
         res += W(": ");
     }
-    
+
     if (ref.Address)
         res += WString(Pointer(ref.Address));
-        
+
     if (printObj)
     {
         if (ref.Address)
@@ -13544,27 +13566,27 @@ WString BuildRegisterOutput(const SOSStackRefData &ref, bool printObj)
     {
         res += W(" (pinned)");
     }
-    
+
     if (ref.Flags & SOSRefInterior)
     {
         res += W(" (interior)");
     }
-    
+
     return res;
 }
 
 void PrintRef(const SOSStackRefData &ref, TableOutput &out)
 {
     WString res = BuildRegisterOutput(ref);
-    
+
     if (ref.Object && (ref.Flags & SOSRefInterior) == 0)
     {
         WCHAR type[128];
         sos::BuildTypeWithExtraInfo(TO_TADDR(ref.Object), _countof(type), type);
-        
+
         res += WString(W(" - ")) + type;
     }
-    
+
     out.WriteColumn(2, res);
 }
 
@@ -13582,12 +13604,12 @@ public:
         {
             symlines &= SYMOPT_LOAD_LINES;
         }
-        
+
         if (symlines == 0)
             bSuppressLines = TRUE;
-        
+
         ToRelease<IXCLRDataStackWalk> pStackWalk;
-        
+
         HRESULT hr = CreateStackWalk(osID, &pStackWalk);
         if (FAILED(hr) || pStackWalk == NULL)
         {
@@ -13609,13 +13631,13 @@ public:
             currentNativeFrame = &g_Frames[0];
         }
 #endif // DEBUG_STACK_CONTEXT
-        
+
         unsigned int refCount = 0, errCount = 0;
         ArrayHolder<SOSStackRefData> pRefs = NULL;
         ArrayHolder<SOSStackRefError> pErrs = NULL;
         if (bGC && FAILED(GetGCRefs(osID, &pRefs, &refCount, &pErrs, &errCount)))
             refCount = 0;
-            
+
         TableOutput out(3, POINTERSIZE_HEX, AlignRight);
         out.WriteRow("Child SP", "IP", "Call Site");
 
@@ -13663,7 +13685,7 @@ public:
                     // This is a clr!Frame.
                     out.WriteColumn(2, GetFrameFromAddress(TO_TADDR(FrameData.frameAddr), pStackWalk, bFull));
 
-                    // Print out gc references for the Frame.  
+                    // Print out gc references for the Frame.
                     for (unsigned int i = 0; i < refCount; ++i)
                         if (pRefs[i].Source == sp)
                             PrintRef(pRefs[i], out);
@@ -13675,8 +13697,8 @@ public:
                 }
                 else
                 {
-                    // To get the source line number of the actual code that threw an exception, the IP needs 
-                    // to be adjusted in certain cases. 
+                    // To get the source line number of the actual code that threw an exception, the IP needs
+                    // to be adjusted in certain cases.
                     //
                     // The IP of stack frame points to either:
                     //
@@ -13691,7 +13713,7 @@ public:
                     // or #2 by either being non-leaf node stack frame (#4) or the present of an internal stack frame (#3).
                     bool bAdjustIPForLineNumber = frameNumber > 0 || internalFrames > 0;
                     frameNumber++;
-                    
+
                     // The unmodified IP is displayed which points after the exception in most cases. This means that the
                     // printed IP and the printed line number often will not map to one another and this is intentional.
                     out.WriteColumn(1, InstructionPtr(ip));
@@ -13740,8 +13762,7 @@ public:
         }
 #endif // DEBUG_STACK_CONTEXT
     }
-    
-    static HRESULT PrintManagedFrameContext(IXCLRDataStackWalk* pStackWalk)
+    static HRESULT PrintManagedFrameContext(IXCLRDataStackWalk *pStackWalk)
     {
         CROSS_PLATFORM_CONTEXT context;
         HRESULT hr = pStackWalk->GetContext(DT_CONTEXT_FULL, g_targetMachine->GetContextSize(), NULL, (BYTE*)&context);
@@ -13840,13 +13861,13 @@ public:
         // First find the info for the Frame object, if the current frame has an associated clr!Frame.
         *ip = GetIP(context);
         *sp = GetSP(context);
-        
+
         if (IsDbgTargetArm())
             *ip = *ip & ~THUMB_CODE;
-        
+
         return S_OK;
     }
-    
+
     static void PrintNativeStackFrame(TableOutput out, PDEBUG_STACK_FRAME frame, BOOL bSuppressLines)
     {
         char filename[MAX_LONGPATH + 1];
@@ -13895,12 +13916,12 @@ public:
     {
         ULONG id = 0;
         ULONG osid = 0;
-        
+
         g_ExtSystem->GetCurrentThreadSystemId(&osid);
         ExtOut("OS Thread Id: 0x%x ", osid);
         g_ExtSystem->GetCurrentThreadId(&id);
         ExtOut("(%d)\n", id);
-        
+
         PrintThread(osid, bParams, bLocals, bSuppressLines, bGC, bNative, bDisplayRegVals);
     }
 
@@ -13936,7 +13957,7 @@ public:
         }
     }
 
-private: 
+private:
     static HRESULT CreateStackWalk(ULONG osID, IXCLRDataStackWalk **ppStackwalk)
     {
         HRESULT hr = S_OK;
@@ -13970,27 +13991,27 @@ private:
         ULONG32 argCount = 0;
         ULONG32 localCount = 0;
         HRESULT hr = S_OK;
-        
+
         hr = pStackWalk->GetFrame(&pFrame);
-        
+
         // Print arguments
         if (SUCCEEDED(hr) && bArgs)
             hr = pFrame->GetNumArguments(&argCount);
-                
+
         if (SUCCEEDED(hr) && bArgs)
             hr = ShowArgs(argCount, pFrame, pVal);
-        
+
         // Print locals
         if (SUCCEEDED(hr) && bLocals)
             hr = pFrame->GetNumLocalVariables(&localCount);
-        
+
         if (SUCCEEDED(hr) && bLocals)
             ShowLocals(localCount, pFrame, pVal);
-            
+
         ExtOut("\n");
     }
-    
-    
+
+
 
     /* Displays the arguments to a function
      * Params:
@@ -14005,46 +14026,46 @@ private:
         ULONG64 outVar = 0;
         ULONG32 tmp;
         HRESULT hr = S_OK;
-        
+
         ArrayHolder<WCHAR> argName = new NOTHROW WCHAR[mdNameLen];
         if (!argName)
         {
             ReportOOM();
             return E_FAIL;
         }
-        
+
         for (ULONG32 i=0; i < argy; i++)
-        {   
+        {
             if (i == 0)
-            {      
+            {
                 ExtOut("    PARAMETERS:\n");
             }
-            
+
             hr = pFramey->GetArgumentByIndex(i,
                                    &pVal,
                                    mdNameLen,
                                    &tmp,
                                    argName);
-            
+
             if (FAILED(hr))
                 return hr;
 
             ExtOut("        ");
-            
+
             if (argName[0] != L'\0')
             {
                 ExtOut("%S ", argName.GetPtr());
             }
-            
+
             // At times we cannot print the value of a parameter (most
-            // common case being a non-primitive value type).  In these 
-            // cases we need to print the location of the parameter, 
+            // common case being a non-primitive value type).  In these
+            // cases we need to print the location of the parameter,
             // so that we can later examine it (e.g. using !dumpvc)
             {
                 bool result = SUCCEEDED(pVal->GetNumLocations(&tmp)) && tmp == 1;
                 if (result)
                     result = SUCCEEDED(pVal->GetLocationByIndex(0, &tmp, &addr));
-                
+
                 if (result)
                 {
                     if (tmp == CLRDATA_VLOC_REGISTER)
@@ -14061,9 +14082,9 @@ private:
 
             if (argName[0] != L'\0' || fPrintedLocation)
             {
-                ExtOut("= ");                
+                ExtOut("= ");
             }
-            
+
             if (HRESULT_CODE(pVal->GetBytes(0,&tmp,NULL)) == ERROR_BUFFER_OVERFLOW)
             {
                 ArrayHolder<BYTE> pByte = new NOTHROW BYTE[tmp + 1];
@@ -14072,9 +14093,9 @@ private:
                     ReportOOM();
                     return E_FAIL;
                 }
-                
+
                 hr = pVal->GetBytes(tmp, &tmp, pByte);
-                
+
                 if (FAILED(hr))
                 {
                     ExtOut("<unable to retrieve data>\n");
@@ -14095,16 +14116,16 @@ private:
                     else
                         ExtOut("0x%p\n", SOS_PTR(outVar));
                 }
-                
+
             }
             else
             {
                 ExtOut("<no data>\n");
             }
-            
+
             pVal->Release();
         }
-        
+
         return S_OK;
     }
 
@@ -14118,13 +14139,13 @@ private:
     static HRESULT ShowLocals(ULONG32 localy, IXCLRDataFrame *pFramey, IXCLRDataValue *pVal)
     {
         for (ULONG32 i=0; i < localy; i++)
-        {   
+        {
             if (i == 0)
                 ExtOut("    LOCALS:\n");
-            
+
             HRESULT hr;
             ExtOut("        ");
-            
+
             // local names don't work in Whidbey.
             hr = pFramey->GetLocalVariableByIndex(i, &pVal, mdNameLen, NULL, g_mdName);
             if (FAILED(hr))
@@ -14152,11 +14173,11 @@ private:
 
                 // Can I get a name for the item?
 
-                ExtOut("= ");                
+                ExtOut("= ");
             }
             ULONG32 dwSize = 0;
             hr = pVal->GetBytes(0, &dwSize, NULL);
-            
+
             if (HRESULT_CODE(hr) == ERROR_BUFFER_OVERFLOW)
             {
                 ArrayHolder<BYTE> pByte = new NOTHROW BYTE[dwSize + 1];
@@ -14194,10 +14215,10 @@ private:
             {
                 ExtOut("<no data>\n");
             }
-            
+
             pVal->Release();
         }
-        
+
         return S_OK;
     }
 
@@ -14224,7 +14245,7 @@ DECLARE_API(Watch)
     BOOL clear = FALSE;
 
     size_t nArg = 0;
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-add", &addExpression.data, COSTRING, TRUE},
         {"-a", &aExpression.data, COSTRING, TRUE},
@@ -14239,7 +14260,7 @@ DECLARE_API(Watch)
         {"-rename", &renameOldName.data, COSTRING, TRUE},
     };
 
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&expression.data, COSTRING}
     };
@@ -14336,7 +14357,7 @@ DECLARE_API(ClrStack)
 {
     INIT_API();
 
-    BOOL bAll = FALSE;    
+    BOOL bAll = FALSE;
     BOOL bParams = FALSE;
     BOOL bLocals = FALSE;
     BOOL bSuppressLines = FALSE;
@@ -14345,7 +14366,7 @@ DECLARE_API(ClrStack)
     BOOL dml = FALSE;
     BOOL bFull = FALSE;
     BOOL bDisplayRegVals = FALSE;
-    BOOL bAllThreads = FALSE;    
+    BOOL bAllThreads = FALSE;
     DWORD frameToDumpVariablesFor = -1;
     StringHolder cvariableName;
     ArrayHolder<WCHAR> wvariableName = new NOTHROW WCHAR[mdNameLen];
@@ -14358,7 +14379,7 @@ DECLARE_API(ClrStack)
     memset(wvariableName, 0, sizeof(wvariableName));
 
     size_t nArg = 0;
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-a", &bAll, COBOOL, FALSE},
         {"-all", &bAllThreads, COBOOL, FALSE},
@@ -14373,7 +14394,7 @@ DECLARE_API(ClrStack)
         {"/d", &dml, COBOOL, FALSE},
 #endif
     };
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&cvariableName.data, COSTRING},
         {&frameToDumpVariablesFor, COSIZE_T},
@@ -14387,7 +14408,7 @@ DECLARE_API(ClrStack)
     if (bAll || bParams || bLocals)
     {
         // No parameter or local supports for minidump case!
-        MINIDUMP_NOT_SUPPORTED();        
+        MINIDUMP_NOT_SUPPORTED();
     }
 
     if (bAll)
@@ -14411,21 +14432,21 @@ DECLARE_API(ClrStack)
         }
         if(cvariableName.data != NULL && strlen(cvariableName.data) > 0)
             swprintf_s(wvariableName, mdNameLen, W("%S\0"), cvariableName.data);
-        
+
         if(_wcslen(wvariableName) > 0)
             bParams = bLocals = TRUE;
 
         EnableDMLHolder dmlHolder(TRUE);
         return ClrStackImplWithICorDebug::ClrStackFromPublicInterface(bParams, bLocals, FALSE, wvariableName, frameToDumpVariablesFor);
     }
-    
+
     if (bAllThreads) {
         ClrStackImpl::PrintAllThreads(bParams, bLocals, bSuppressLines, bGC, bFull, bDisplayRegVals);
     }
     else {
         ClrStackImpl::PrintCurrentThread(bParams, bLocals, bSuppressLines, bGC, bFull, bDisplayRegVals);
     }
-    
+
     return S_OK;
 }
 
@@ -14436,17 +14457,17 @@ BOOL IsMemoryInfoAvailable()
     ULONG Class;
     ULONG Qualifier;
     g_ExtControl->GetDebuggeeType(&Class,&Qualifier);
-    if (Qualifier == DEBUG_DUMP_SMALL) 
+    if (Qualifier == DEBUG_DUMP_SMALL)
     {
         g_ExtControl->GetDumpFormatFlags(&Qualifier);
-        if ((Qualifier & DEBUG_FORMAT_USER_SMALL_FULL_MEMORY) == 0)            
+        if ((Qualifier & DEBUG_FORMAT_USER_SMALL_FULL_MEMORY) == 0)
         {
             if ((Qualifier & DEBUG_FORMAT_USER_SMALL_FULL_MEMORY_INFO) == 0)
             {
                 return FALSE;
-            }            
+            }
         }
-    }        
+    }
     return TRUE;
 }
 
@@ -14476,7 +14497,7 @@ DECLARE_API(SOSFlush)
 #ifdef FEATURE_PAL
     FlushMetadataRegions();
 #endif
-    
+
     return Status;
 }
 
@@ -14501,26 +14522,26 @@ DECLARE_API( VMStat )
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function saves a dll to a file.                              *  
+*    This function saves a dll to a file.                              *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(SaveModule)
 {
     INIT_API();
-    MINIDUMP_NOT_SUPPORTED();    
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     StringHolder Location;
     DWORD_PTR moduleAddr = NULL;
     BOOL bIsImage;
 
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&moduleAddr, COHEX},
         {&Location.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
     {
         return Status;
     }
@@ -14535,7 +14556,7 @@ DECLARE_API(SaveModule)
     }
 
     char* ptr = Location.data;
-    
+
     DWORD_PTR dllBase = 0;
     ULONG64 base;
     if (g_ExtSymbols->GetModuleByOffset(TO_CDADDR(moduleAddr),0,NULL,&base) == S_OK)
@@ -14543,7 +14564,7 @@ DECLARE_API(SaveModule)
         dllBase = TO_TADDR(base);
     }
     else if (IsModule(moduleAddr))
-    {        
+    {
         DacpModuleData module;
         module.Request(g_sos, TO_CDADDR(moduleAddr));
         dllBase = TO_TADDR(module.ilBase);
@@ -14578,7 +14599,7 @@ DECLARE_API(SaveModule)
         return S_FALSE;
 
     DWORD_PTR sectionAddr = dllBase + DosHeader.e_lfanew + offsetof(IMAGE_NT_HEADERS,OptionalHeader)
-            + Header.FileHeader.SizeOfOptionalHeader;    
+            + Header.FileHeader.SizeOfOptionalHeader;
 
     IMAGE_SECTION_HEADER section;
     struct MemLocation
@@ -14647,7 +14668,7 @@ DECLARE_API(SaveModule)
     char *buffer = (char *)_alloca(pageSize);
     DWORD nRead;
     DWORD nWrite;
-    
+
     // NT PE Headers
     TADDR dwAddr = dllBase;
     TADDR dwEnd = dllBase + Header.OptionalHeader.SizeOfHeaders;
@@ -14679,7 +14700,7 @@ DECLARE_API(SaveModule)
             nRead = pageSize;
             if (dwEnd - dwAddr + 1 < pageSize)
                 nRead = (ULONG)(dwEnd - dwAddr + 1);
-            
+
             if (g_ExtData->ReadVirtual(TO_CDADDR(dwAddr), buffer, nRead, &nRead) == S_OK)
             {
                 WriteFile(hFile,buffer,nRead,&nWrite,NULL);
@@ -14705,7 +14726,7 @@ DECLARE_API(dbgout)
 
     BOOL bOff = FALSE;
 
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-off", &bOff, COBOOL, FALSE},
     };
@@ -14713,14 +14734,14 @@ DECLARE_API(dbgout)
     if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
     {
         return Status;
-    }    
+    }
 
     Output::SetDebugOutputEnabled(!bOff);
     ExtOut("Debug output logging %s\n", Output::IsDebugOutputEnabled() ? "enabled" : "disabled");
     return Status;
 }
 
-static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp, 
+static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp,
         ULONG64 IPAddr, StringOutput& so)
 {
 #define DOAPPEND(str)         \
@@ -14767,7 +14788,7 @@ static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp,
     ULONG Index;
     ULONG64 base;
     if (g_ExtSymbols->GetModuleByOffset(UL64_TO_CDA(addrInModule), 0, &Index, &base) == S_OK)
-    {                                    
+    {
         ArrayHolder<char> szModuleName = new char[MAX_LONGPATH+1];
         if (g_ExtSymbols->GetModuleNames(Index, base, NULL, 0, NULL, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL) == S_OK)
         {
@@ -14792,7 +14813,7 @@ static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp,
         }
     }
 
-    // Under certain circumstances DacpMethodDescData::GetMethodDescName() 
+    // Under certain circumstances DacpMethodDescData::GetMethodDescName()
     //   returns a module qualified method name
     HRESULT hr = g_sos->GetMethodDescName(dwStartAddr, MAX_LONGPATH, wszNameBuffer, NULL);
 
@@ -14812,7 +14833,7 @@ static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp,
         DOAPPEND(W("!"));
         if (hr == S_OK)
         {
-            // the module name we retrieved above from debugger will take 
+            // the module name we retrieved above from debugger will take
             // precedence over the name possibly returned by GetMethodDescName()
             DOAPPEND(pwszMethNameBegin != NULL ? (pwszMethNameBegin+1) : (WCHAR *)wszNameBuffer);
         }
@@ -14869,7 +14890,7 @@ HRESULT CALLBACK ImplementEFNStackTrace(
     LPVOID pTransitionContexts,
     size_t *puiTransitionContextCount,
     size_t uiSizeOfContext,
-    DWORD Flags) 
+    DWORD Flags)
 {
 
 #define DOAPPEND(str) if (!so.Append((str))) { \
@@ -14877,7 +14898,7 @@ HRESULT CALLBACK ImplementEFNStackTrace(
     goto Exit;                                 \
 }
 
-    HRESULT Status = E_FAIL;    
+    HRESULT Status = E_FAIL;
     StringOutput so;
     size_t transitionContextCount = 0;
 
@@ -14941,7 +14962,7 @@ HRESULT CALLBACK ImplementEFNStackTrace(
 
     for (ULONG i = 0; i < numFrames; i++)
     {
-        PDEBUG_STACK_FRAME pCur = g_Frames + i;                
+        PDEBUG_STACK_FRAME pCur = g_Frames + i;
 
         CLRDATA_ADDRESS pMD;
         if (g_sos->GetMethodDescPtrFromIP(pCur->InstructionOffset, &pMD) == S_OK)
@@ -14956,7 +14977,7 @@ HRESULT CALLBACK ImplementEFNStackTrace(
                 if (puiTransitionContextCount)
                 {
                     // below we cast the i-th AMD64_CONTEXT to CROSS_PLATFORM_CONTEXT
-                    AppendContext (pTransitionContexts, *puiTransitionContextCount, 
+                    AppendContext (pTransitionContexts, *puiTransitionContextCount,
                         &transitionContextCount, uiSizeOfContext, (CROSS_PLATFORM_CONTEXT*)(&(g_FrameContexts[i])));
                 }
                 else
@@ -14977,7 +14998,7 @@ HRESULT CALLBACK ImplementEFNStackTrace(
             }
             // for S_FALSE do not append anything
 
-        }        
+        }
         else
         {
             if (!bInNative)
@@ -14989,7 +15010,7 @@ HRESULT CALLBACK ImplementEFNStackTrace(
                 // For each transition, we need to store the context information
                 if (puiTransitionContextCount)
                 {
-                    AppendContext (pTransitionContexts, *puiTransitionContextCount, 
+                    AppendContext (pTransitionContexts, *puiTransitionContextCount,
                         &transitionContextCount, uiSizeOfContext, (CROSS_PLATFORM_CONTEXT*)(&(g_FrameContexts[i])));
                 }
                 else
@@ -15041,19 +15062,19 @@ Exit:
                 // For each transition, we need to store the context information
                 if (puiTransitionContextCount)
                 {
-                    AppendContext (pTransitionContexts, *puiTransitionContextCount, 
+                    AppendContext (pTransitionContexts, *puiTransitionContextCount,
                             &transitionContextCount, uiSizeOfContext, &context);
                 }
                 else
                 {
                     transitionContextCount++;
-                }                    
+                }
             }
 
             // we may have a method, try to get the methoddesc
             if (g_sos->GetMethodDescPtrFromIP(GetIP(context), &pMD)==S_OK)
             {
-                Status = DumpMDInfoBuffer((DWORD_PTR) pMD, Flags, 
+                Status = DumpMDInfoBuffer((DWORD_PTR) pMD, Flags,
                                           GetSP(context), GetIP(context), so);
                 if (FAILED(Status))
                 {
@@ -15074,7 +15095,7 @@ Exit:
                 DWORD_PTR vtAddr;
                 MOVE(vtAddr, TO_TADDR(FrameData.frameAddr));
                 if (g_sos->GetFrameName(TO_CDADDR(vtAddr), 1024, wszNameBuffer, NULL) == S_OK)
-                    ExtDbgOut("[%ls: %08x] ", wszNameBuffer, FrameData.frameAddr);  
+                    ExtDbgOut("[%ls: %08x] ", wszNameBuffer, FrameData.frameAddr);
                 else
                     ExtDbgOut("[Frame: %08x] ", FrameData.frameAddr);
             }
@@ -15088,13 +15109,13 @@ Exit:
                 // For each transition, we need to store the context information
                 if (puiTransitionContextCount)
                 {
-                    AppendContext (pTransitionContexts, *puiTransitionContextCount, 
+                    AppendContext (pTransitionContexts, *puiTransitionContextCount,
                             &transitionContextCount, uiSizeOfContext, &context);
                 }
                 else
                 {
                     transitionContextCount++;
-                }                    
+                }
             }
         }
 
@@ -15108,9 +15129,9 @@ Exit:
             ExtDbgOut ( "\n" );
 #endif
 
-    } 
+    }
     while ((frameCount++) < MAX_STACK_FRAMES && pStackWalk->Next()==S_OK);
-    
+
     Status = S_OK;
 
 Exit:
@@ -15152,19 +15173,19 @@ HRESULT CALLBACK ImplementEFNStackTraceTry(
     LPVOID pTransitionContexts,
     size_t *puiTransitionContextCount,
     size_t uiSizeOfContext,
-    DWORD Flags) 
+    DWORD Flags)
 {
     HRESULT Status = E_FAIL;
 
     PAL_TRY_NAKED
     {
-        Status = ImplementEFNStackTrace(client, wszTextOut, puiTextLength, 
+        Status = ImplementEFNStackTrace(client, wszTextOut, puiTextLength,
             pTransitionContexts, puiTransitionContextCount,
             uiSizeOfContext, Flags);
     }
     PAL_EXCEPT_NAKED (EXCEPTION_EXECUTE_HANDLER)
     {
-    }        
+    }
     PAL_ENDTRY_NAKED
 
     return Status;
@@ -15178,11 +15199,11 @@ HRESULT CALLBACK _EFN_StackTrace(
     __out_bcount_opt(uiSizeOfContext*(*puiTransitionContextCount)) LPVOID pTransitionContexts,
     size_t *puiTransitionContextCount,
     size_t uiSizeOfContext,
-    DWORD Flags) 
+    DWORD Flags)
 {
-    INIT_API();    
+    INIT_API();
 
-    Status = ImplementEFNStackTraceTry(client, wszTextOut, puiTextLength, 
+    Status = ImplementEFNStackTraceTry(client, wszTextOut, puiTextLength,
         pTransitionContexts, puiTransitionContextCount,
         uiSizeOfContext, Flags);
 
@@ -15194,7 +15215,7 @@ BOOL FormatFromRemoteString(DWORD_PTR strObjPointer, __out_ecount(cchString) PWS
     BOOL bRet = FALSE;
 
     wszBuffer[0] = L'\0';
-    
+
     DacpObjectData objData;
     if (objData.Request(g_sos, TO_CDADDR(strObjPointer))!=S_OK)
     {
@@ -15207,7 +15228,7 @@ BOOL FormatFromRemoteString(DWORD_PTR strObjPointer, __out_ecount(cchString) PWS
     {
         return bRet;
     }
-    
+
     DWORD dwBufLength = 0;
     if (!ClrSafeInt<DWORD>::addition(stInfo.m_StringLength, 1, dwBufLength))
     {
@@ -15220,7 +15241,7 @@ BOOL FormatFromRemoteString(DWORD_PTR strObjPointer, __out_ecount(cchString) PWS
     {
         return bRet;
     }
-    
+
     if (g_sos->GetObjectStringData(TO_CDADDR(strObjPointer), stInfo.m_StringLength+1, pwszBuf, NULL)!=S_OK)
     {
         delete [] pwszBuf;
@@ -15264,9 +15285,9 @@ BOOL FormatFromRemoteString(DWORD_PTR strObjPointer, __out_ecount(cchString) PWS
         // Note that we don't add a newline because we have this embedded in wszLineBuffer
         swprintf_s(wszLineBuffer, _countof(wszLineBuffer), W("    %p %p %s"), (void*)(size_t)-1, (void*)(size_t)-1, pwszPointer);
         Length += (UINT)_wcslen(wszLineBuffer);
-        
+
         if (wszBuffer)
-        {            
+        {
             wcsncat_s(wszBuffer, cchString, wszLineBuffer, _TRUNCATE);
         }
 
@@ -15274,8 +15295,8 @@ BOOL FormatFromRemoteString(DWORD_PTR strObjPointer, __out_ecount(cchString) PWS
         // Move to the next line.
         pwszPointer = nextPos;
     }
-    
-    delete [] pwszBuf; 
+
+    delete [] pwszBuf;
 
     // Return TRUE only if the stack string had any information that was successfully parsed.
     // (Length > 0) is a good indicator of that.
@@ -15283,14 +15304,14 @@ BOOL FormatFromRemoteString(DWORD_PTR strObjPointer, __out_ecount(cchString) PWS
     return bRet;
 }
 
-HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj, 
+HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
     __out_ecount(cchString) PWSTR wszStackString,
     ULONG cchString,
     BOOL bNestedCase) // If bNestedCase is TRUE, the last frame of the computed stack is left off
-{    
+{
     DacpObjectData objData;
     if (objData.Request(g_sos, cdaObj) != S_OK)
-    {        
+    {
         return E_FAIL;
     }
 
@@ -15305,7 +15326,7 @@ HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
     DacpExceptionObjectData excData;
     BOOL bGotExcData = SUCCEEDED(excData.Request(g_sos, cdaObj));
 
-    int iOffset;    
+    int iOffset;
     // Is there a _remoteStackTraceString? We'll want to prepend that data.
     // We only have string data, so IP/SP info has to be set to -1.
     DWORD_PTR strPointer;
@@ -15316,7 +15337,7 @@ HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
     else
     {
         iOffset = GetObjFieldOffset (cdaObj, objData.MethodTable, W("_remoteStackTraceString"));
-        MOVE (strPointer, TO_TADDR(cdaObj) + iOffset);        
+        MOVE (strPointer, TO_TADDR(cdaObj) + iOffset);
     }
     if (strPointer)
     {
@@ -15325,7 +15346,7 @@ HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
         {
             return E_OUTOFMEMORY;
         }
-        
+
         if (FormatFromRemoteString(strPointer, pwszBuffer, cchString))
         {
             // Prepend this stuff to the string for the user
@@ -15333,7 +15354,7 @@ HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
         }
         delete[] pwszBuffer;
     }
-    
+
     BOOL bAsync = bGotExcData ? IsAsyncException(excData)
                               : IsAsyncException(cdaObj, objData.MethodTable);
 
@@ -15367,9 +15388,9 @@ HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
 
             DWORD cbStackSize = static_cast<DWORD>(stackTraceSize * sizeof(StackTraceElement));
             dataPtr += sizeof(size_t) + sizeof(size_t); // skip the array header, then goes the data
-            
+
             if (stackTraceSize != 0)
-            {                
+            {
                 size_t iLength = FormatGeneratedException (dataPtr, cbStackSize, NULL, 0, bAsync, bNestedCase);
                 WCHAR *pwszBuffer = new NOTHROW WCHAR[iLength + 1];
                 if (pwszBuffer)
@@ -15384,12 +15405,12 @@ HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
                 }
             }
         }
-    }                   
+    }
     return S_OK;
 }
 
 HRESULT ImplementEFNGetManagedExcepStack(
-    CLRDATA_ADDRESS cdaStackObj, 
+    CLRDATA_ADDRESS cdaStackObj,
     __out_ecount(cchString) PWSTR wszStackString,
     ULONG cchString)
 {
@@ -15405,38 +15426,38 @@ HRESULT ImplementEFNGetManagedExcepStack(
     BOOL bCanUseThreadContext = TRUE;
 
     ZeroMemory(&Thread, sizeof(DacpThreadData));
-    
+
     if ((threadAddr == NULL) || (Thread.Request(g_sos, threadAddr) != S_OK))
     {
         // The current thread is unmanaged
         bCanUseThreadContext = FALSE;
     }
 
-    if (cdaStackObj == NULL)    
+    if (cdaStackObj == NULL)
     {
         if (!bCanUseThreadContext)
         {
             return E_INVALIDARG;
         }
-        
+
         TADDR taLTOH = NULL;
         if ((!SafeReadMemory(TO_TADDR(Thread.lastThrownObjectHandle),
                             &taLTOH,
                             sizeof(taLTOH), NULL)) || (taLTOH==NULL))
         {
             return Status;
-        }    
+        }
         else
-        {        
+        {
             cdaStackObj = TO_CDADDR(taLTOH);
         }
     }
 
     // Put the stack trace header on
     AddExceptionHeader(wszStackString, cchString);
-    
+
     // First is there a nested exception?
-    if (bCanUseThreadContext && Thread.firstNestedException)    
+    if (bCanUseThreadContext && Thread.firstNestedException)
     {
         CLRDATA_ADDRESS obj = 0, next = 0;
         CLRDATA_ADDRESS currentNested = Thread.firstNestedException;
@@ -15449,13 +15470,13 @@ HRESULT ImplementEFNGetManagedExcepStack(
             {
                 break;
             }
-                        
+
             Status = AppendExceptionInfo(obj, wszStackString, cchString, TRUE);
             currentNested = next;
         }
-        while(currentNested != NULL);                        
+        while(currentNested != NULL);
     }
-    
+
     Status = AppendExceptionInfo(cdaStackObj, wszStackString, cchString, FALSE);
 
     return Status;
@@ -15471,12 +15492,12 @@ DECLARE_API(VerifyStackTrace)
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL bVerifyManagedExcepStack = FALSE;
-    CMDOption option[] = 
+    CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-ManagedExcepStack", &bVerifyManagedExcepStack, COBOOL, FALSE},
     };
-    
-    if (!GetCMDOption(args, option, _countof(option), NULL,0,NULL)) 
+
+    if (!GetCMDOption(args, option, _countof(option), NULL,0,NULL))
     {
         return Status;
     }
@@ -15498,11 +15519,11 @@ DECLARE_API(VerifyStackTrace)
                             &taLTOH,
                             sizeof(taLTOH), NULL)) || (taLTOH == NULL))
         {
-            ExtOut("There is no current managed exception on this thread\n");            
+            ExtOut("There is no current managed exception on this thread\n");
             return Status;
-        }    
+        }
         else
-        {        
+        {
             taExc = taLTOH;
         }
 
@@ -15552,7 +15573,7 @@ DECLARE_API(VerifyStackTrace)
             return Status;
         }
 
-        // For the transition contexts buffer the callers are expected to allocate 
+        // For the transition contexts buffer the callers are expected to allocate
         // contextLength * sizeof(TARGET_CONTEXT), and not
         // contextLength * sizeof(CROSS_PLATFORM_CONTEXT). See sos_stacktrace.h for
         // details.
@@ -15587,17 +15608,17 @@ DECLARE_API(VerifyStackTrace)
         if (IsDbgTargetX86())
         {
             ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s\n",
-                   "Ebp", "Esp", "Eip"); 
+                   "Ebp", "Esp", "Eip");
         }
         else if (IsDbgTargetAmd64())
         {
             ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s\n",
-                   "Rbp", "Rsp", "Rip"); 
+                   "Rbp", "Rsp", "Rip");
         }
         else if (IsDbgTargetArm())
         {
             ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s\n",
-                   "FP", "SP", "PC"); 
+                   "FP", "SP", "PC");
         }
         else
         {
@@ -15642,14 +15663,14 @@ DECLARE_API(VerifyStackTrace)
         ExtOut("Simple Context information:\n");
         if (IsDbgTargetX86())
             ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s\n",
-                       "Ebp", "Esp", "Eip"); 
+                       "Ebp", "Esp", "Eip");
         else if (IsDbgTargetAmd64())
                 ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s\n",
-                       "Rbp", "Rsp", "Rip"); 
+                       "Rbp", "Rsp", "Rip");
         else if (IsDbgTargetArm())
                 ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s\n",
-                       "FP", "SP", "PC"); 
-        else 
+                       "FP", "SP", "PC");
+        else
         {
             ExtOut("Unsupported platform");
             delete[] wszBuffer;
@@ -15672,17 +15693,17 @@ DECLARE_API(VerifyStackTrace)
 // This is an internal-only Apollo extension to save breakpoint/watch state
 DECLARE_API(SaveState)
 {
-    INIT_API_NOEE();    
-    MINIDUMP_NOT_SUPPORTED();    
+    INIT_API_NOEE();
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     StringHolder filePath;
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&filePath.data, COSTRING},
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
     {
         return E_FAIL;
     }
@@ -15712,17 +15733,17 @@ DECLARE_API(SaveState)
 
 DECLARE_API(SuppressJitOptimization)
 {
-    INIT_API_NOEE();    
-    MINIDUMP_NOT_SUPPORTED();    
+    INIT_API_NOEE();
+    MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     StringHolder onOff;
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {   // vptr, type
         {&onOff.data, COSTRING},
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg)) 
+    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
     {
         return E_FAIL;
     }
@@ -15847,8 +15868,8 @@ HRESULT SetNGENCompilerFlags(DWORD flags)
 
 DECLARE_API(StopOnCatch)
 {
-    INIT_API();    
-    MINIDUMP_NOT_SUPPORTED();    
+    INIT_API();
+    MINIDUMP_NOT_SUPPORTED();
 
     g_stopOnNextCatch = TRUE;
     ULONG32 flags = 0;
@@ -15871,9 +15892,9 @@ DECLARE_API(ExposeDML)
 }
 
 // According to kksharma the Windows debuggers always sign-extend
-// arguments when calling externally, therefore StackObjAddr 
+// arguments when calling externally, therefore StackObjAddr
 // conforms to CLRDATA_ADDRESS contract.
-HRESULT CALLBACK 
+HRESULT CALLBACK
 _EFN_GetManagedExcepStack(
     PDEBUG_CLIENT client,
     ULONG64 StackObjAddr,
@@ -15916,11 +15937,11 @@ _EFN_GetManagedExcepStackW(
 
     return ImplementEFNGetManagedExcepStack(StackObjAddr, wszStackString, cchString);
 }
-    
+
 // According to kksharma the Windows debuggers always sign-extend
-// arguments when calling externally, therefore objAddr 
+// arguments when calling externally, therefore objAddr
 // conforms to CLRDATA_ADDRESS contract.
-HRESULT CALLBACK 
+HRESULT CALLBACK
 _EFN_GetManagedObjectName(
     PDEBUG_CLIENT client,
     ULONG64 objAddr,
@@ -15946,9 +15967,9 @@ _EFN_GetManagedObjectName(
 }
 
 // According to kksharma the Windows debuggers always sign-extend
-// arguments when calling externally, therefore objAddr 
+// arguments when calling externally, therefore objAddr
 // conforms to CLRDATA_ADDRESS contract.
-HRESULT CALLBACK 
+HRESULT CALLBACK
 _EFN_GetManagedObjectFieldInfo(
     PDEBUG_CLIENT client,
     ULONG64 objAddr,
@@ -15960,7 +15981,7 @@ _EFN_GetManagedObjectFieldInfo(
     INIT_API();
     DacpObjectData objData;
     LPWSTR fieldName = (LPWSTR)alloca(mdNameLen * sizeof(WCHAR));
-    
+
     if (szFieldName == NULL || *szFieldName == '\0' ||
         objAddr == NULL)
     {
@@ -15972,12 +15993,12 @@ _EFN_GetManagedObjectFieldInfo(
         // One of these needs to be valid
         return E_FAIL;
     }
-        
+
     if (FAILED(objData.Request(g_sos, objAddr)))
-    {        
+    {
         return E_FAIL;
     }
-    
+
     MultiByteToWideChar(CP_ACP,0,szFieldName,-1,fieldName,mdNameLen);
 
     int iOffset = GetObjFieldOffset (objAddr, objData.MethodTable, fieldName);
@@ -16059,9 +16080,9 @@ _EFN_GetManagedThread(
         if ((Status = thread.Request(g_sos, curThread)) != S_OK)
         {
             return Status;
-        }        
+        }
         if (thread.osThreadId == osThreadId)
-        {        
+        {
             *pManagedThread = (ULONG64)curThread;
             return S_OK;
         }
@@ -16086,13 +16107,13 @@ DECLARE_API(SetHostRuntime)
         {&hostRuntimeDirectory.data, COSTRING},
     };
     size_t narg;
-    if (!GetCMDOption(args, nullptr, 0, arg, _countof(arg), &narg)) 
+    if (!GetCMDOption(args, nullptr, 0, arg, _countof(arg), &narg))
     {
         return E_FAIL;
     }
     if (narg > 0)
     {
-        if (IsHostingInitialized()) 
+        if (IsHostingInitialized())
         {
             ExtErr("Runtime hosting already initialized %s\n", g_hostRuntimeDirectory);
             return E_FAIL;
@@ -16259,7 +16280,7 @@ void PrintHelp (__in_z LPCSTR pszCmdName)
         HGLOBAL hResource = NULL;
         HRSRC hResInfo = FindResource (g_hInstance, TEXT ("DOCUMENTATION"), TEXT ("TEXT"));
         if (hResInfo) hResource = LoadResource (g_hInstance, hResInfo);
-        if (hResource) pText = (LPSTR) LockResource (hResource); 
+        if (hResource) pText = (LPSTR) LockResource (hResource);
         if (pText == NULL)
         {
             ExtErr("Error loading documentation resource\n");
@@ -16276,7 +16297,7 @@ void PrintHelp (__in_z LPCSTR pszCmdName)
         char lpFilename[MAX_LONGPATH + 12]; // + 12 to make enough room for strcat function.
         strcpy_s(lpFilename, _countof(lpFilename), szSOSModulePath);
         strcat_s(lpFilename, _countof(lpFilename), "sosdocsunix.txt");
-        
+
         HANDLE hSosDocFile = CreateFileA(lpFilename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
         if (hSosDocFile == INVALID_HANDLE_VALUE) {
             ExtErr("Error finding documentation file\n");
@@ -16285,7 +16306,7 @@ void PrintHelp (__in_z LPCSTR pszCmdName)
 
         HANDLE hMappedSosDocFile = CreateFileMappingA(hSosDocFile, NULL, PAGE_READONLY, 0, 0, NULL);
         CloseHandle(hSosDocFile);
-        if (hMappedSosDocFile == NULL) { 
+        if (hMappedSosDocFile == NULL) {
             ExtErr("Error mapping documentation file\n");
             return;
         }
@@ -16303,7 +16324,7 @@ void PrintHelp (__in_z LPCSTR pszCmdName)
     // Find our line in the text file
     char searchString[MAX_LONGPATH];
     sprintf_s(searchString, _countof(searchString), "COMMAND: %s.", pszCmdName);
-    
+
     LPSTR pStart = strstr(pText, searchString);
     LPSTR pEnd = NULL;
     if (!pStart)
@@ -16348,7 +16369,7 @@ void PrintHelp (__in_z LPCSTR pszCmdName)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function displays the commands available in strike and the   *  
+*    This function displays the commands available in strike and the   *
 *    arguments passed into each.
 *                                                                      *
 \**********************************************************************/
@@ -16357,7 +16378,7 @@ DECLARE_API(Help)
     INIT_API_EXT();
 
     StringHolder commandName;
-    CMDValue arg[] = 
+    CMDValue arg[] =
     {
         {&commandName.data, COSTRING}
     };
@@ -16370,7 +16391,7 @@ DECLARE_API(Help)
     ExtOut("-------------------------------------------------------------------------------\n");
 
     if (nArg == 1)
-    {        
+    {
         // Convert commandName to lower-case
         LPSTR curChar = commandName.data;
         while (*curChar != '\0')
@@ -16386,13 +16407,13 @@ DECLARE_API(Help)
         curChar = commandName.data;
         if (*curChar == '!')
             curChar++;
-        
+
         PrintHelp (curChar);
     }
     else
     {
         PrintHelp ("contents");
     }
-    
+
     return S_OK;
 }
