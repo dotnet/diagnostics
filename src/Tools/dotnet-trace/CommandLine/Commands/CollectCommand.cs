@@ -73,8 +73,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 bool hasConsole = console.GetTerminal() != null;
 
-                if (hasConsole)
-                    Console.Clear();
+                // if (hasConsole)
+                //     Console.Clear();
 
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
                 {
@@ -131,8 +131,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 var process = Process.GetProcessById(processId);
                 var shouldExit = new ManualResetEvent(false);
                 var shouldStopAfterDuration = duration != default(TimeSpan);
-                var failed = false;
-                var terminated = false;
                 var rundownRequested = false;
                 System.Timers.Timer durationTimer = null;
 
@@ -164,77 +162,52 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         durationTimer.AutoReset = false;
                     }
 
-                    var collectingTask = new Task(() =>
-                    {
-                        try
-                        {
-                            var stopwatch = new Stopwatch();
-                            durationTimer?.Start();
-                            stopwatch.Start();
+                    var stopwatch = new Stopwatch();
+                    durationTimer?.Start();
+                    stopwatch.Start();
 
-                            using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
+                    using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
+                    {
+                        Console.Out.WriteLine($"Process        : {process.MainModule.FileName}");
+                        Console.Out.WriteLine($"Output File    : {fs.Name}");
+                        if (shouldStopAfterDuration)
+                            Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
+
+                        Console.Out.WriteLine("\n\n");
+
+                        Task copyTask = session.EventStream.CopyToAsync(fs);
+                        lineToClear = Console.CursorTop - 1;
+                        Action printStatus = () =>
+                        {
+                            if (shouldExit.WaitOne(0) || (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
                             {
-                                Console.Out.WriteLine($"Process        : {process.MainModule.FileName}");
-                                Console.Out.WriteLine($"Output File    : {fs.Name}");
-                                if (shouldStopAfterDuration)
-                                    Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
-
-                                Console.Out.WriteLine("\n\n");
-                                var buffer = new byte[16 * 1024];
-
-                                while (true)
-                                {
-                                    int nBytesRead = session.EventStream.Read(buffer, 0, buffer.Length);
-                                    if (nBytesRead <= 0)
-                                        break;
-                                    fs.Write(buffer, 0, nBytesRead);
-
-                                    if (!rundownRequested)
-                                    {
-                                        if (hasConsole)
-                                        {
-                                            lineToClear = Console.CursorTop - 1;
-                                            ResetCurrentConsoleLine(vTermMode.IsEnabled);
-                                        }
-
-                                        Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
-                                        Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
-                                        Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
-                                    }
-                                }
+                                durationTimer?.Stop();
+                                rundownRequested = true;
+                                lineToClear--; // account for the newline sent to the console
+                                session.Stop();
                             }
-                        }
-                        catch (Exception ex)
-                        {
-                            failed = true;
-                            Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
-                        }
-                        finally
-                        {
-                            terminated = true;
-                            shouldExit.Set();
-                        }
-                    });
-                    collectingTask.Start();
 
-                    do
-                    {
-                        while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
-                    } while (!shouldExit.WaitOne(0) && Console.ReadKey(true).Key != ConsoleKey.Enter);
+                            if (hasConsole)
+                            {
+                                ResetCurrentConsoleLine(vTermMode.IsEnabled);
+                            }
 
-                    if (!terminated)
-                    {
-                        durationTimer?.Stop();
-                        if (hasConsole)
-                        {
-                            lineToClear = Console.CursorTop;
-                            ResetCurrentConsoleLine(vTermMode.IsEnabled);
-                        }
-                        Console.Out.WriteLine("Stopping the trace. This may take up to minutes depending on the application being traced.");
-                        rundownRequested = true;
-                        session.Stop();
+                            var fileInfo = new FileInfo(output.FullName);
+                            Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fileInfo.Length)}");
+                            Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
+                            if (rundownRequested)
+                            {
+                                Console.Out.WriteLine("Stopping the trace. This may take up to minutes depending on the application being traced.");
+                            }
+                        };
+                        System.Timers.Timer timer = new System.Timers.Timer(100);
+                        timer.Elapsed += (s,e) => printStatus();
+                        timer.Start();
+
+                        await copyTask;
+                        timer.Stop();
+                        await Task.Delay(100);
                     }
-                    await collectingTask;
                 }
 
                 Console.Out.WriteLine();
@@ -243,13 +216,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (format != TraceFileFormat.NetTrace)
                     TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
 
-                return failed ? ErrorCodes.TracingError : 0;
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
-                return ErrorCodes.UnknownError;
+                return ErrorCodes.TracingError;
             }
+
+            return 0;
         }
 
         private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, string> enabledBy)
