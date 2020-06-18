@@ -174,9 +174,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                         Task copyTask = session.EventStream.CopyToAsync(fs);
                         lineToClear = Console.CursorTop - 1;
-                        Action printStatus = () =>
+                        Action timerCallback = () =>
                         {
-                            if (shouldExit.WaitOne(0) || (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
+                            if (!rundownRequested && (shouldExit.WaitOne(0) || (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)))
                             {
                                 durationTimer?.Stop();
                                 rundownRequested = true;
@@ -197,8 +197,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 Console.Out.WriteLine("Stopping the trace. This may take up to minutes depending on the application being traced.");
                             }
                         };
+
                         System.Timers.Timer timer = new System.Timers.Timer(100);
-                        timer.Elapsed += (s,e) => printStatus();
+                        timer.Elapsed += (s,e) => timerCallback();
                         timer.Start();
 
                         await copyTask;
