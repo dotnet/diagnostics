@@ -73,9 +73,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 bool hasConsole = console.GetTerminal() != null;
 
-                // if (hasConsole)
-                //     Console.Clear();
-
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
                 {
                     Console.Out.WriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
@@ -206,6 +203,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                         await copyTask;
                         timer.Stop();
+                        // May have lost race between timer signalling and stopping,
+                        // so wait to make sure callback doesn't execute while printing the end.
                         await Task.Delay(100);
                     }
                 }
