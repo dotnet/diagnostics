@@ -342,7 +342,7 @@ echo.
 echo All arguments are optional. The options are:
 echo.
 echo.-? -h -help --help: view this message.
-echo -architecture <x64|x86|arm|arm64>
-echo -configuration <debug|release>
-echo -verbosity <q[uiet]|m[inimal]|n[ormal]|d[etailed]|diag[nostic]>
+echo -architecture ^<x64^|x86^|arm^|arm64^>.
+echo -configuration ^<debug^|release^>
+echo -verbosity ^<q[uiet]^|m[inimal]^|n[ormal]^|d[etailed]^|diag[nostic]^>
 goto ExitWithError
