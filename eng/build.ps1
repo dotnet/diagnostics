@@ -1,40 +1,27 @@
 [CmdletBinding(PositionalBinding=$false)]
 Param(
-  [string][Alias('c')] $configuration = "Debug",
-  [string] $architecture = "<auto>",
-  [string][Alias('v')] $verbosity = "minimal",
-  [switch][Alias('t')] $test,
-  [switch] $ci,
-  [switch] $skipmanaged,
-  [switch] $skipnative,
-  [string] $privatebuildpath = "",
-  [switch] $cleanupprivatebuild,
-  [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimeversion = 'default',
-  [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimedownloadversion= 'default',
-  [string] $runtimesourcefeed = '',
-  [string] $runtimesourcefeedkey = '',
-  [Parameter(ValueFromRemainingArguments=$true)][String[]] $remainingargs
+    [ValidateSet("x86","x64","arm","arm64")][string][Alias('a', "platform")]$architecture = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant(),
+    [ValidateSet("Debug","Release")][string][Alias('c')] $configuration = "Debug",
+    [string][Alias('v')] $verbosity = "minimal",
+    [switch][Alias('t')] $test,
+    [switch] $ci,
+    [switch] $skipmanaged,
+    [switch] $skipnative,
+    [string] $privatebuildpath = "",
+    [switch] $cleanupprivatebuild,
+    [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimeversion = 'default',
+    [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimedownloadversion= 'default',
+    [string] $runtimesourcefeed = '',
+    [string] $runtimesourcefeedkey = '',
+    [Parameter(ValueFromRemainingArguments=$true)][String[]] $remainingargs
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-function Get-Architecture([string]$arch) {
-    switch ($arch.ToLower()) {
-        { $_ -eq "<auto>" } { return Get-Architecture($env:PROCESSOR_ARCHITECTURE) }
-        { ($_ -eq "amd64") -or ($_ -eq "x64") } { return "x64" }
-        { $_ -eq "x86" } { return "x86" }
-        { $_ -eq "arm" } { return "arm" }
-        { $_ -eq "arm64" } { return "arm64" }
-        default { throw "Architecture not supported." }
-    }
-}
-
-$architecture = Get-Architecture($architecture)
-
 $crossbuild = $false
 if (($architecture -eq "arm") -or ($architecture -eq "arm64")) {
-    $processor = Get-Architecture($env:PROCESSOR_ARCHITECTURE)
+    $processor = @([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())
     if ($architecture -ne $processor) {
         $crossbuild = $true
     }
