@@ -41,4 +41,36 @@ namespace Microsoft.Internal.Common.Utils
             return commonId;
         }
     }
+
+    internal class LineRewriter
+    {
+        private int prevBufferWidth = 0;
+        private string clearLineString = "";
+        private Action lineRewriterFn = null;
+        public int lineToClear { get; set; } = 0;
+
+        public LineRewriter(bool isVTerm) =>
+            lineRewriterFn = isVTerm ? (Action)VTermLineRewriter : (Action)SystemConsoleLineRewriter;
+
+        // ANSI escape codes:
+        //  [2K => clear current line
+        //  [{lineToClear};0H => move cursor to column 0 of row `lineToClear`
+        private void VTermLineRewriter() => Console.Out.Write($"\u001b[2K\u001b[{lineToClear};0H");
+
+        private void SystemConsoleLineRewriter()
+        {
+            if (prevBufferWidth != Console.BufferWidth)
+            {
+                prevBufferWidth = Console.BufferWidth;
+                clearLineString = new string(' ', Console.BufferWidth - 1);
+            }
+            Console.SetCursorPosition(0, lineToClear);
+            Console.Out.Write(clearLineString);
+            Console.SetCursorPosition(0, lineToClear);
+        }
+
+
+
+        public void RewriteConsoleLine() => lineRewriterFn();
+    }
 }

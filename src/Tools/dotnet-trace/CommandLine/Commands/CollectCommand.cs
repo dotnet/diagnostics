@@ -163,6 +163,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     durationTimer?.Start();
                     stopwatch.Start();
 
+                    var rewriter = new LineRewriter(vTermMode.IsEnabled);
+
                     using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                     {
                         Console.Out.WriteLine($"Process        : {process.MainModule.FileName}");
@@ -173,20 +175,20 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         Console.Out.WriteLine("\n\n");
 
                         Task copyTask = session.EventStream.CopyToAsync(fs);
-                        lineToClear = Console.CursorTop - 1;
+                        rewriter.lineToClear = Console.CursorTop - 1;
                         Action timerCallback = () =>
                         {
                             if (!rundownRequested && (shouldExit.WaitOne(0) || (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)))
                             {
                                 durationTimer?.Stop();
                                 rundownRequested = true;
-                                lineToClear--; // account for the newline sent to the console
+                                rewriter.lineToClear--; // account for the newline sent to the console
                                 session.Stop();
                             }
 
                             if (hasConsole)
                             {
-                                ResetCurrentConsoleLine(vTermMode.IsEnabled);
+                                rewriter.RewriteConsoleLine();
                             }
 
                             var fileInfo = new FileInfo(output.FullName);
@@ -241,32 +243,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
         private static string GetProviderDisplayString(EventPipeProvider provider) =>
             String.Format("{0, -40}", provider.Name) + String.Format("0x{0, -18}", $"{provider.Keywords:X16}") + String.Format("{0, -8}", provider.EventLevel.ToString() + $"({(int)provider.EventLevel})");
-
-        private static int prevBufferWidth = 0;
-        private static string clearLineString = "";
-        private static int lineToClear = 0;
-
-        private static void ResetCurrentConsoleLine(bool isVTerm)
-        {
-            if (isVTerm)
-            {
-                // ANSI escape codes:
-                //  [2K => clear current line
-                //  [{lineToClear};0H => move cursor to column 0 of row `lineToClear`
-                Console.Out.Write($"\u001b[2K\u001b[{lineToClear};0H");
-            }
-            else
-            {
-                if (prevBufferWidth != Console.BufferWidth)
-                {
-                    prevBufferWidth = Console.BufferWidth;
-                    clearLineString = new string(' ', Console.BufferWidth - 1);
-                }
-                Console.SetCursorPosition(0, lineToClear);
-                Console.Out.Write(clearLineString);
-                Console.SetCursorPosition(0, lineToClear);
-            }
-        }
 
         private static string GetSize(long length)
         {
