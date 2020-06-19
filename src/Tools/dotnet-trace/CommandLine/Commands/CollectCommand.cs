@@ -163,7 +163,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     durationTimer?.Start();
                     stopwatch.Start();
 
-                    var rewriter = new LineRewriter(vTermMode.IsEnabled);
+                    LineRewriter rewriter = null;
 
                     using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                     {
@@ -174,30 +174,32 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                         Console.Out.WriteLine("\n\n");
 
+                        var fileInfo = new FileInfo(output.FullName);
                         Task copyTask = session.EventStream.CopyToAsync(fs);
-                        rewriter.lineToClear = Console.CursorTop - 1;
+
+                        if (hasConsole)
+                        {
+                            rewriter = new LineRewriter { LineToClear = Console.CursorTop -1 };
+                            Console.CursorVisible = false;
+                        }
+
                         Action timerCallback = () =>
                         {
                             if (!rundownRequested && (shouldExit.WaitOne(0) || (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)))
                             {
                                 durationTimer?.Stop();
                                 rundownRequested = true;
-                                rewriter.lineToClear--; // account for the newline sent to the console
                                 session.Stop();
                             }
 
                             if (hasConsole)
-                            {
-                                rewriter.RewriteConsoleLine();
-                            }
+                                rewriter?.RewriteConsoleLine();
 
-                            var fileInfo = new FileInfo(output.FullName);
+                            fileInfo.Refresh();
                             Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fileInfo.Length)}");
                             Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
                             if (rundownRequested)
-                            {
                                 Console.Out.WriteLine("Stopping the trace. This may take up to minutes depending on the application being traced.");
-                            }
                         };
 
                         System.Timers.Timer timer = new System.Timers.Timer(100);
@@ -223,6 +225,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                 return ErrorCodes.TracingError;
+            }
+            finally
+            {
+                if (console.GetTerminal() != null)
+                    Console.CursorVisible = true;
             }
 
             return 0;

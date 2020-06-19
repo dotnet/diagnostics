@@ -44,33 +44,25 @@ namespace Microsoft.Internal.Common.Utils
 
     internal class LineRewriter
     {
-        private int prevBufferWidth = 0;
-        private string clearLineString = "";
-        private Action lineRewriterFn = null;
-        public int lineToClear { get; set; } = 0;
+        public int LineToClear { get; set; } = 0;
 
-        public LineRewriter(bool isVTerm) =>
-            lineRewriterFn = isVTerm ? (Action)VTermLineRewriter : (Action)SystemConsoleLineRewriter;
+        public LineRewriter() {}
 
         // ANSI escape codes:
         //  [2K => clear current line
-        //  [{lineToClear};0H => move cursor to column 0 of row `lineToClear`
-        private void VTermLineRewriter() => Console.Out.Write($"\u001b[2K\u001b[{lineToClear};0H");
-
-        private void SystemConsoleLineRewriter()
+        //  [{LineToClear};0H => move cursor to column 0 of row `LineToClear`
+        public void RewriteConsoleLine()
         {
-            if (prevBufferWidth != Console.BufferWidth)
-            {
-                prevBufferWidth = Console.BufferWidth;
-                clearLineString = new string(' ', Console.BufferWidth - 1);
-            }
-            Console.SetCursorPosition(0, lineToClear);
-            Console.Out.Write(clearLineString);
-            Console.SetCursorPosition(0, lineToClear);
+            // first attempt ANSI Codes
+            int before = Console.CursorTop;
+            Console.Out.Write($"\u001b[2K\u001b[{LineToClear};0H");
+            int after = Console.CursorTop;
+            // Some consoles claim to be VT100 compliant, but don't respect
+            // all of the ANSI codes, so fallback to the System.Console impl in that case
+            if (before == after)
+                SystemConsoleLineRewriter();
         }
 
-
-
-        public void RewriteConsoleLine() => lineRewriterFn();
+        private void SystemConsoleLineRewriter() => Console.SetCursorPosition(0, LineToClear);
     }
 }
