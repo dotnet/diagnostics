@@ -2,7 +2,7 @@
 
 # Introducing dotnet-monitor, an experimental tool
 
-`dotnet-monitor` is experimental tool that makes it easier to get access to diagnostics information in a dotnet process.
+`dotnet-monitor` is an experimental tool that makes it easier to get access to diagnostics information in a dotnet process.
 
 When running a dotnet application, on a local machine, on a remote server, in a VM, or in a Kubernetes cluster, environmental differences  can make collecting diagnostics artifacts (e.g., logs, traces, process dumps) challenging. `dotnet-monitor` aims to simplify the process by abstracting over all environmental differences and exposing a consistent REST API regardless of where your application is run.
 
@@ -49,7 +49,7 @@ docker run -it --rm -p 52323:52323 -v diagnosticsserver:/tmp mcr.microsoft.com/d
 ```
 #### Running in a Kubernetes cluster
 
-When running in cluster, it is recommend to run the `dotnet-monitor` container as a sidecar alongside your application container in the pod. This sample Kubernetes manifest shows how to configure your deployment to include a sidecar container.
+When running in a cluster, it is recommend to run the `dotnet-monitor` container as a sidecar alongside your application container in the pod. This sample Kubernetes manifest shows how to configure your deployment to include a sidecar container.
 
 ```yaml
 apiVersion: apps/v1
@@ -87,9 +87,9 @@ spec:
             mountPath: /tmp
 ```
 
-Unlike other target environments, this configuration does not make available the the diagnostics endpoint on your host network. You will need to port forward traffic from your host to your target cluster.
+Unlike other target environments, this configuration does not make available the diagnostics endpoint on your host network. You will need to port forward traffic from your host to your target cluster.
 
-To do this, let us get the name of this desired pod we wish to forward traffic to using the `kubectl` command.
+To do this, let us get the name of the pod we wish to forward traffic to using the `kubectl` command.
 
 ```bash
 $ kubectl get pod -l app=dotnet-hello-world
@@ -110,7 +110,7 @@ In bash,
 $ kubectl port-forward pods/dotnet-hello-world-dc6f67566-t2dzd 52323:52323 >/dev/null &
 ```
 
-Once we have started forwarding traffic from our local network to the desired pod, we can our desired API call. As an example, you can run the following command:
+Once we have started forwarding traffic from our local network to the desired pod, we can make our desired API call. As an example, you can run the following command:
 
 In PowerShell,
 
