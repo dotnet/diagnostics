@@ -1,3 +1,5 @@
+
+
 # Introducing dotnet-monitor, an experimental tool
 
 `dotnet-monitor` is an experimental tool that makes it easier to get access to diagnostics information in a dotnet process.
@@ -273,6 +275,9 @@ PS> Start-Process http://localhost:52323/logs
 In bash,
 ```bash
 $ curl -H "Accept:application/x-ndjson" http://localhost:52323/logs --no-buffer
+
+{"LogLevel":"Information","EventId":"1","Category":"Microsoft.AspNetCore.Hosting.Diagnostics","Message":"Request starting HTTP/1.1 GET http://localhost:7001/  ","Scopes":{"RequestId":"0HM0N9ARKHVJK:00000002","RequestPath":"/","SpanId":"|88c401de-4df03365b379aaa4.","TraceId":"88c401de-4df03365b379aaa4","ParentId":""},"Arguments":{"Protocol":"HTTP/1.1","Method":"GET","ContentType":null,"ContentLength":null,"Scheme":"http","Host":"localhost:7001","PathBase":"","Path":"/","QueryString":""}}
+{"LogLevel":"Information","EventId":"ExecutingEndpoint","Category":"Microsoft.AspNetCore.Routing.EndpointMiddleware","Message":"Executing endpoint \u0027/Index\u0027","Scopes":{"RequestId":"0HM0N9ARKHVJK:00000002","RequestPath":"/","SpanId":"|88c401de-4df03365b379aaa4.","TraceId":"88c401de-4df03365b379aaa4","ParentId":""},"Arguments":{"EndpointName":"/Index","{OriginalFormat}":"Executing endpoint \u0027{EndpointName}\u0027"}}
 ```
 
 ### Metrics
@@ -291,7 +296,25 @@ PS> Invoke-RestMethod http://localhost:52323/metrics
 
 In bash,
 ```bash
-curl -S http://localhost:52323/metrics
+$ curl -S http://localhost:52323/metrics
+
+# HELP systemruntime_alloc_rate_bytes Allocation Rate
+# TYPE systemruntime_alloc_rate_bytes gauge
+systemruntime_alloc_rate_bytes 96784 1592899673335
+systemruntime_alloc_rate_bytes 96784 1592899683336
+systemruntime_alloc_rate_bytes 96784 1592899693336
+# HELP systemruntime_assembly_count Number of Assemblies Loaded
+# TYPE systemruntime_assembly_count gauge
+systemruntime_assembly_count 136 1592899673335
+systemruntime_assembly_count 136 1592899683336
+systemruntime_assembly_count 136 1592899693336
+# HELP systemruntime_active_timer_count Number of Active Timers
+# TYPE systemruntime_active_timer_count gauge
+systemruntime_active_timer_count 1 1592899673335
+systemruntime_active_timer_count 1 1592899683336
+systemruntime_active_timer_count 1 1592899693336
+# ...
+# (Output truncated)
 ```
 
 While metrics collection is enabled by default when `dotnet-monitor` detects exactly one target process, it can be configured to disable to collection of metrics entirely via the `--metrics` parameter. In the example below, metrics collection will not be enabled.
