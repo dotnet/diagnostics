@@ -1,10 +1,14 @@
-
-
 # Introducing dotnet-monitor, an experimental tool
 
 `dotnet-monitor` is an experimental tool that makes it easier to get access to diagnostics information in a dotnet process.
 
 When running a dotnet application differences in diverse local and production environments can make collecting diagnostics artifacts (e.g., logs, traces, process dumps) challenging. `dotnet-monitor` aims to simplify the process by exposing a consistent REST API regardless of where your application is run.
+
+This blog post details how to get started with `dotnet-monitor` and covers the following:
+
+1. How to setup `dotnet-monitor`
+2. What diagnostics artifacts can be collected; and
+3. How to collect each of the artifacts
 
 ## Tour of dotnet-monitor
 
@@ -17,11 +21,11 @@ When running a dotnet application differences in diverse local and production en
 
 The setup instructions for `dotnet-monitor` vary based on the target environment. The following section covers some common environments.
 
-In the default configuration `dotnet-monitor` binds to two different  groups of URLs. The URLs controlled via the `--urls` parameter (defaults to http://localhost:52323) expose all the collection endpoints. The URLs controlled via the `--metricUrls` parameter (defaults to http://localhost:52325) only exposes the `/metrics` endpoint. Since diagnostics artifacts such as logs, dumps, and traces can leak sensitive information about the application, it is **strongly recommended** that you do not publicly expose these endpoints.
+In the default configuration `dotnet-monitor` binds to two different  groups of URLs. The URLs controlled via the `--urls` parameter (defaults to http://localhost:52323) expose all the collection endpoints. The URLs controlled via the `--metricUrls` parameter (defaults to http://localhost:52325) only expose the `/metrics` endpoint. Since diagnostics artifacts such as logs, dumps, and traces can leak sensitive information about the application, it is **strongly recommended** that you do not publicly expose these endpoints.
 
 #### Local Machine
 
-To get started with `dotnet-monitor` locally, you will need to have [.NET Core](https://dotnet.microsoft.com/download) installed on your machine. `dotnet-monitor` can then be installed as a global tool using the following command:
+To get started with `dotnet-monitor` locally, you will need to have [.NET Core](https://dotnet.microsoft.com/download) installed on your machine. You can then install`dotnet-monitor` as a global tool using the following command:
 
 ```bash
 dotnet tool install -g dotnet-monitor --add-source https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet5-transport/nuget/v3/index.json --version 5.0.0-preview*
@@ -40,7 +44,7 @@ When consuming `dotnet-monitor` as a container image, it can be pulled from [MCR
 ```bash
 docker pull mcr.microsoft.com/dotnet/nightly/monitor:5.0.0-preview1
 ```
-Once you have the image pulled locally, you will need to share a volume mount between your application container and `dotnet-monitor`
+Once you have the image pulled locally, you will need to share a volume mount between your application container and `dotnet-monitor` using the following commands:
 
 ```bash
 docker volume create diagnosticserver
@@ -49,7 +53,7 @@ docker run -it --rm -p 52323:52323 -v diagnosticsserver:/tmp mcr.microsoft.com/d
 ```
 #### Running in a Kubernetes cluster
 
-When running in a cluster, it is recommend to run the `dotnet-monitor` container as a sidecar alongside your application container in the pod. This sample Kubernetes manifest shows how to configure your deployment to include a sidecar container.
+When running in a cluster, it is recommend to run the `dotnet-monitor` container as a sidecar alongside your application container in the same pod. The sample Kubernetes manifest below shows how to configure your deployment to include a sidecar container.
 
 ```yaml
 apiVersion: apps/v1
@@ -87,9 +91,9 @@ spec:
             mountPath: /tmp
 ```
 
-Unlike other target environments, this configuration does not make available the diagnostics endpoint on your host network. You will need to port forward traffic from your host to your target cluster.
+Unlike other target environments, this configuration does not make the diagnostics endpoint available on your host network. You will need to port forward traffic from your host to your target cluster.
 
-To do this, let us get the name of the pod we wish to forward traffic to using the `kubectl` command.
+To do this, obtain the name of the pod you wish to forward traffic to using the `kubectl` command:
 
 ```bash
 $ kubectl get pod -l app=dotnet-hello-world
@@ -97,7 +101,7 @@ NAME                                 READY   STATUS    RESTARTS   AGE
 dotnet-hello-world-dc6f67566-t2dzd   2/2     Running   0          37m
 ```
 
-Once we have our desired pod name, we can forward traffic using the the `kubectl port-forward` command:
+Once you have your target pod name, forward traffic using the `kubectl port-forward` command:
 
 In PowerShell,
 
@@ -110,7 +114,7 @@ In bash,
 $ kubectl port-forward pods/dotnet-hello-world-dc6f67566-t2dzd 52323:52323 >/dev/null &
 ```
 
-Once we have started forwarding traffic from our local network to the desired pod, we can make our desired API call. As an example, you can run the following command:
+Once you have started forwarding traffic from your local network to the desired pod, you can make your desired API call. As an example, you can run the following command:
 
 In PowerShell,
 
@@ -122,7 +126,7 @@ In bash,
 $ curl -s http://localhost:52323/processes | jq
 ```
 
-Once we have completed collecting our desired diagnostics artifacts, we can successfully stop forwarding traffic into the container using the following command:
+Once you have completed collecting the desired diagnostics artifacts, you can stop forwarding traffic into the container using the following command:
 
 In PowerShell,
 ```powershell
@@ -146,7 +150,7 @@ The REST API exposed by dotnet-monitor exposes the following endpoints:
 - `/logs/{pid?}`
 - `/metrics`
 
-In the sections that follow we'll look at the functionality exposed by each of these endpoints and how you can use these endpoints to collect diagnostics artifacts.
+In the sections that follow, we'll look at the functionality exposed by each of these endpoints and use these endpoints to collect diagnostics artifacts.
 
 ### Processes
 
@@ -174,7 +178,7 @@ $ curl -s http://localhost:52323/processes | jq
 ]
 ```
 
-As a convenience, `dotnet-monitor` does not require you to specify a process id for the remaining diagnostic endpoints when there's only one accessible process.
+As a convenience, when there is only one accessible process, `dotnet-monitor` does not require you to specify a process id for the remaining diagnostic endpoints.
 
 > Known Issue: When running locally the `dotnet-monitor` tools lists itself as one of the target processes. 
 
@@ -194,7 +198,7 @@ In bash,
 $ wget --content-disposition http://localhost:52323/dump
 ```
 
-A dump artifact cannot be analyzed  on a machine of a different OS/Architecture than where it was captured. When run against a Kubernetes cluster running Linux, the resulting core dumps are Linux ELF dumps and cannot be analyzed on a Windows or a macOS machine. You can however use the existing [dotnet-dump](https://docs.microsoft.com/dotnet/core/diagnostics/dotnet-dump) tool to analyze the generated dump in Docker container using the following commands:
+A dump artifact cannot be analyzed  on a machine of a different OS/Architecture than where it was captured. When collecting a dump from a Kubernetes cluster running Linux, the resulting core dump cannot be analyzed on a Windows or a macOS machine. You can however use the existing [dotnet-dump](https://docs.microsoft.com/dotnet/core/diagnostics/dotnet-dump) tool to analyze the generated dump in a Docker container using the following commands:
 
 ```bash
 docker run --rm -it -v C:/dumpFiles:/dumpFiles mcr.microsoft.com/dotnet/sdk /bin/sh
@@ -220,22 +224,22 @@ In bash,
 $ wget --content-disposition http://localhost:52323/gcdump
 ```
 
-Unlike in the case of process dumps, the resulting GC dump is a portable format and can be analyzed by Visual Studio and [perfview](https://github.com/microsoft/perfview) regardless of the platform it was collected on. To learn more about when to collect GC dumps and how to analyze them, take a look at our [earlier blog post](https://devblogs.microsoft.com/dotnet/collecting-and-analyzing-memory-dumps/).
+Unlike a process dump, a GC dump is a portable format which can be analyzed by Visual Studio and [perfview](https://github.com/microsoft/perfview) regardless of the platform it was collected on. To learn more about when to collect GC dumps and how to analyze them, take a look at our [earlier blog post](https://devblogs.microsoft.com/dotnet/collecting-and-analyzing-memory-dumps/).
 
 ### Traces
 
-The `/trace` endpoint returns a trace of the target process. The default trace profile include sampled CPU stacks, HTTP request start/stop events, and metrics for a duration of 30 seconds.
+The `/trace` endpoint returns a trace of the target process. The default trace profile includes sampled CPU stacks, HTTP request start/stop events, and metrics for a duration of 30 seconds.
 
-The duration of collection can be customized via the `durationSeconds` querystring parameter The diagnostic data can be customized via the `profile` querystring parameter to include any combination of the preset profiles:
+The duration of collection can be customized via the `durationSeconds` querystring parameter. The diagnostic data present in the trace can be customized via the `profile` querystring parameter to include any combination of the preset profiles:
 
 - `CPU` (CPU profiler),
 - `Http` (Request start/stop events from ASP.NET Core),
 - `Logs` (Logging from the `EventSourceLogger` from `Microsoft.Extensions.Logging` library); and
 - `Metrics`(Runtime and ASP.NET Core `EventCounters`).
 
-For example, a request to  `/trace?profile=cpu,logs` will enable the collection of just the CPU profiler and logs.
+For example, a request to  `/trace?profile=cpu,logs` will enable the collection of the CPU profiler and logs.
 
-In addition to the `GET` endpoint, there is `POST` version of the endpoint that allows you to specify what `EventSource` providers to enable via the request body. 
+In addition to the `GET` endpoint, there is `POST` version of the endpoint which allows you to specify what `EventSource` providers to enable via the request body. 
 
 To collect a trace of the target process, run the following command:
 
@@ -258,7 +262,7 @@ The `/logs` endpoint will stream logs from the target process for a duration of 
 
 The duration of collection can be customized via the `durationSeconds` querystring parameter. The logs endpoint is capable of returning either newline delimited JSON([application/x-ndjson](https://github.com/ndjson/ndjson-spec)) or the Event stream format([text/event-stream](https://developer.mozilla.org/docs/Web/API/Server-sent_events/Using_server-sent_events#Event_stream_format)) based on the specified `Accept` header in the HTTP request.
 
-To start streaming log from the target process, run the following command:
+To start streaming logs from the target process, run the following command:
 
 In PowerShell,
 
@@ -275,12 +279,6 @@ $ curl -H "Accept:application/x-ndjson" http://localhost:52323/logs --no-buffer
 
 The `/metrics` endpoint will return a snapshot of runtime and ASP.NET Core metrics in the [prometheus exposition format](https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format). Unlike the other diagnostics endpoints, the metrics endpoint will not be available if `dotnet-trace` detects more than one target process. In addition to being accessible via the URLs configured via the `--urls` parameters, the metrics endpoint is also accessible from the URLs configured via the `--metricUrls`. When running in Kubernetes, it may be suitable to expose the metrics URL to other services in your cluster to allow them to scrape metrics.
 
-While metrics collection is enabled by default when `dotnet-monitor` detects exactly one target process, it can configured to disable to collection of metrics entirely via the `--metrics` parameter. In the example below, metrics collection will not be enabled.
-
-````bash
-dotnet monitor collect --metrics false
-````
-
 When deploying in-cluster, a common pattern to collect metrics is to use Prometheus or another monitoring tool to scrape the metrics endpoint exposed by your application. As an example, when running in Azure Kubernetes Services(AKS), you can [configure Azure Monitor to scrape prometheus metrics](https://docs.microsoft.com/azure/azure-monitor/insights/container-insights-prometheus-integration) exposed by `dotnet-monitor`. By following the instructions in the linked document, you can enable Azure Monitor to [enable monitoring pods](https://gist.github.com/shirhatti/0222017e8e2fdb481f735002f7bd72f7/revisions) that have been [annotated](https://gist.github.com/shirhatti/ad7a986137d7ca6b1dc094a3e0a61a0d#file-hello-world-deployment-yaml-L18-L19).
 
 Like in the case of the other diagnostics endpoints, it is also possible to view a snapshot of current metrics by running the following command:
@@ -295,6 +293,12 @@ In bash,
 ```bash
 curl -S http://localhost:52323/metrics
 ```
+
+While metrics collection is enabled by default when `dotnet-monitor` detects exactly one target process, it can be configured to disable to collection of metrics entirely via the `--metrics` parameter. In the example below, metrics collection will not be enabled.
+
+````bash
+dotnet monitor collect --metrics false
+````
 
 ## Roadmap
 
