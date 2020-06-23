@@ -80,6 +80,15 @@ namespace Microsoft.Diagnostics.DebugServices
                 fixed (byte* ptr = buffer)
                 {
                     result = _dataReader.ReadMemory(address, new IntPtr(ptr), bytesRequested, out bytesRead);
+
+                    if (!result && (_dataReader.GetPointerSize() == 4) && ((address & 0x80000000) != 0))
+                    {
+                        // dataReader should expect sign extended pointers from 32-bit processes.
+                        // However this is currently not true at least for ELF Core dumps.
+                        // Work around the issue by retrying the memory read with non-sign extended address.
+                        // Consider removing when microsoft/clrmd#774 is fixed
+                        result = _dataReader.ReadMemory(address & 0xffffffff, new IntPtr(ptr), bytesRequested, out bytesRead);
+                    }
                 }
             }
             // If the read failed or a successful partial read
@@ -108,10 +117,13 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <returns>bytes read or null if error</returns>
         private byte[] ReadMemoryFromModule(ulong address, int bytesRequested)
         {
+            ulong ignoreAddressBitsMask = _dataReader.GetPointerSize() == 4 ? 0xffffffff00000000 : 0;
+            address = address & ~ignoreAddressBitsMask;
+
             // Check if there is a module that contains the address range being read and map it into the virtual address space.
             foreach (ModuleInfo module in _dataReader.EnumerateModules())
             {
-                ulong start = module.ImageBase;
+                ulong start = module.ImageBase & ~ignoreAddressBitsMask;
                 ulong end = start + module.FileSize;
                 if (address >= start && address < end)
                 {
