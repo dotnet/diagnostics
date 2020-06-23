@@ -262,7 +262,7 @@ The resulting `.nettrace` file can be analyzed with both Visual Studio and PerfV
 
 The `/logs` endpoint will stream logs from the target process for a duration of 30 seconds.
 
-The duration of collection can be customized via the `durationSeconds` querystring parameter. The logs endpoint is capable of returning either newline delimited JSON([application/x-ndjson](https://github.com/ndjson/ndjson-spec)) or the Event stream format([text/event-stream](https://developer.mozilla.org/docs/Web/API/Server-sent_events/Using_server-sent_events#Event_stream_format)) based on the specified `Accept` header in the HTTP request.
+The duration of collection can be customized via the `durationSeconds` querystring parameter. The logs endpoint is capable of returning either newline delimited JSON ([application/x-ndjson](https://github.com/ndjson/ndjson-spec)) or the Event stream format([text/event-stream](https://developer.mozilla.org/docs/Web/API/Server-sent_events/Using_server-sent_events#Event_stream_format)) based on the specified `Accept` header in the HTTP request.
 
 To start streaming logs from the target process, run the following command:
 
@@ -284,7 +284,7 @@ $ curl -H "Accept:application/x-ndjson" http://localhost:52323/logs --no-buffer
 
 The `/metrics` endpoint will return a snapshot of runtime and ASP.NET Core metrics in the [prometheus exposition format](https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format). Unlike the other diagnostics endpoints, the metrics endpoint will not be available if `dotnet-trace` detects more than one target process. In addition to being accessible via the URLs configured via the `--urls` parameters, the metrics endpoint is also accessible from the URLs configured via the `--metricUrls`. When running in Kubernetes, it may be suitable to expose the metrics URL to other services in your cluster to allow them to scrape metrics.
 
-When deploying in-cluster, a common pattern to collect metrics is to use Prometheus or another monitoring tool to scrape the metrics endpoint exposed by your application. As an example, when running in Azure Kubernetes Services(AKS), you can [configure Azure Monitor to scrape prometheus metrics](https://docs.microsoft.com/azure/azure-monitor/insights/container-insights-prometheus-integration) exposed by `dotnet-monitor`. By following the instructions in the linked document, you can enable Azure Monitor to [enable monitoring pods](https://gist.github.com/shirhatti/0222017e8e2fdb481f735002f7bd72f7/revisions) that have been [annotated](https://gist.github.com/shirhatti/ad7a986137d7ca6b1dc094a3e0a61a0d#file-hello-world-deployment-yaml-L18-L19).
+When deploying in-cluster, a common pattern to collect metrics is to use Prometheus or another monitoring tool to scrape the metrics endpoint exposed by your application. As an example, when running in Azure Kubernetes Services (AKS), you can [configure Azure Monitor to scrape prometheus metrics](https://docs.microsoft.com/azure/azure-monitor/insights/container-insights-prometheus-integration) exposed by `dotnet-monitor`. By following the instructions in the linked document, you can enable Azure Monitor to [enable monitoring pods](https://gist.github.com/shirhatti/0222017e8e2fdb481f735002f7bd72f7/revisions) that have been [annotated](https://gist.github.com/shirhatti/ad7a986137d7ca6b1dc094a3e0a61a0d#file-hello-world-deployment-yaml-L18-L19).
 
 Like in the case of the other diagnostics endpoints, it is also possible to view a snapshot of current metrics by running the following command:
 
