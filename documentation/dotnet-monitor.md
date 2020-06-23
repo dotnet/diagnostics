@@ -4,7 +4,7 @@
 
 `dotnet-monitor` is an experimental tool that makes it easier to get access to diagnostics information in a dotnet process.
 
-When running a dotnet application, on a local machine, on a remote server, in a VM, or in a Kubernetes cluster, environmental differences  can make collecting diagnostics artifacts (e.g., logs, traces, process dumps) challenging. `dotnet-monitor` aims to simplify the process by abstracting over all environmental differences and exposing a consistent REST API regardless of where your application is run.
+When running a dotnet application differences in diverse local and production environments can make collecting diagnostics artifacts (e.g., logs, traces, process dumps) challenging. `dotnet-monitor` aims to simplify the process by exposing a consistent REST API regardless of where your application is run.
 
 ## Tour of dotnet-monitor
 
@@ -176,7 +176,7 @@ $ curl -s http://localhost:52323/processes | jq
 
 As a convenience, `dotnet-monitor` does not require you to specify a process id for the remaining diagnostic endpoints when there's only one accessible process.
 
-> NOTE: When running locally the `dotnet-monitor` tools lists itself as one of the target processes. 
+> Known Issue: When running locally the `dotnet-monitor` tools lists itself as one of the target processes. 
 
 ### Dump
 
@@ -281,7 +281,7 @@ While metrics collection is enabled by default when `dotnet-monitor` detects exa
 dotnet monitor collect --metrics false
 ````
 
-When deploying in-cluster, a common patter to collect metrics is to use Prometheus or another monitoring tool to scrape the metrics endpoint exposed by your application. As an example, when running in Azure Kubernetes Services(AKS), you can [configure Azure Monitor to scrape prometheus metrics](https://docs.microsoft.com/azure/azure-monitor/insights/container-insights-prometheus-integration) exposed by `dotnet-monitor`. By following the instructions in the linked document, you can enable Azure Monitor to [enable monitoring pods](https://gist.github.com/shirhatti/0222017e8e2fdb481f735002f7bd72f7/revisions) that have been [annotated](https://gist.github.com/shirhatti/ad7a986137d7ca6b1dc094a3e0a61a0d#file-hello-world-deployment-yaml-L18-L19).
+When deploying in-cluster, a common pattern to collect metrics is to use Prometheus or another monitoring tool to scrape the metrics endpoint exposed by your application. As an example, when running in Azure Kubernetes Services(AKS), you can [configure Azure Monitor to scrape prometheus metrics](https://docs.microsoft.com/azure/azure-monitor/insights/container-insights-prometheus-integration) exposed by `dotnet-monitor`. By following the instructions in the linked document, you can enable Azure Monitor to [enable monitoring pods](https://gist.github.com/shirhatti/0222017e8e2fdb481f735002f7bd72f7/revisions) that have been [annotated](https://gist.github.com/shirhatti/ad7a986137d7ca6b1dc094a3e0a61a0d#file-hello-world-deployment-yaml-L18-L19).
 
 Like in the case of the other diagnostics endpoints, it is also possible to view a snapshot of current metrics by running the following command:
 
