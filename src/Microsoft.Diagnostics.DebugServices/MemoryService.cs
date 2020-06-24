@@ -108,10 +108,13 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <returns>bytes read or null if error</returns>
         private byte[] ReadMemoryFromModule(ulong address, int bytesRequested)
         {
+            ulong ignoreAddressBitsMask = _dataReader.GetPointerSize() == 4 ? 0xffffffff00000000 : 0;
+            address = address & ~ignoreAddressBitsMask;
+
             // Check if there is a module that contains the address range being read and map it into the virtual address space.
             foreach (ModuleInfo module in _dataReader.EnumerateModules())
             {
-                ulong start = module.ImageBase;
+                ulong start = module.ImageBase & ~ignoreAddressBitsMask;
                 ulong end = start + module.FileSize;
                 if (address >= start && address < end)
                 {
