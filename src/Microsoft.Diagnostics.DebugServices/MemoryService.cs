@@ -80,15 +80,6 @@ namespace Microsoft.Diagnostics.DebugServices
                 fixed (byte* ptr = buffer)
                 {
                     result = _dataReader.ReadMemory(address, new IntPtr(ptr), bytesRequested, out bytesRead);
-
-                    if (!result && (_dataReader.GetPointerSize() == 4) && ((address & 0x80000000) != 0))
-                    {
-                        // dataReader should expect sign extended pointers from 32-bit processes.
-                        // However this is currently not true at least for ELF Core dumps.
-                        // Work around the issue by retrying the memory read with non-sign extended address.
-                        // Consider removing when microsoft/clrmd#774 is fixed
-                        result = _dataReader.ReadMemory(address & 0xffffffff, new IntPtr(ptr), bytesRequested, out bytesRead);
-                    }
                 }
             }
             // If the read failed or a successful partial read
