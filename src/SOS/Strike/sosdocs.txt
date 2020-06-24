@@ -24,16 +24,17 @@ Type "!help <functionname>" for detailed info on that function.
 Object Inspection                  Examining code and stacks
 -----------------------------      -----------------------------
 DumpObj (do)                       Threads (clrthreads)
-DumpArray (da)                     ThreadState
-DumpAsync                          IP2MD
-DumpDelegate                       U
-DumpStackObjects (dso)             DumpStack
-DumpHeap                           EEStack
-DumpVC                             ClrStack
-GCRoot                             GCInfo
-ObjSize                            EHInfo
-FinalizeQueue                      BPMD (bpmd)
-PrintException (pe)                COMState
+DumpALC (dumpalc)                  ThreadState
+DumpArray (da)                     IP2MD
+DumpAsync                          U
+DumpDelegate                       DumpStack
+DumpStackObjects (dso)             EEStack
+DumpHeap                           ClrStack
+DumpVC                             GCInfo
+GCRoot                             EHInfo
+ObjSize                            BPMD (bpmd)
+FinalizeQueue                      COMState
+PrintException (pe)
 TraverseHeap
 
 Examining CLR data structures      Diagnostic Utilities
@@ -321,6 +322,42 @@ The arguments in detail:
         5b9a628c  4000001        0         System.Int32   instance        4 x
         5b9a628c  4000002        4         System.Int32   instance        8 y
         5b9a628c  4000003        8         System.Int32   instance       12 z
+
+\\
+
+COMMAND: dumpalc.
+DumpALC
+    <object address>
+
+This command allows you to dump the AssemblyLoadContext into which the type of the
+specified object was loaded.
+
+ Example output:
+        0:000> !dumpalc 000001c2800101a0
+        Name:        Host.HostAssemblyLoadContext
+        MethodTable: 00007ff7c9cb1428
+        EEClass:     00007ff7c9ca4b40
+        Size:        88(0x58) bytes
+        File:        c:\test\host.dll
+        Fields:
+                      MT    Field   Offset                 Type VT     Attr            Value Name
+        00007ff7c9920eb8  4000ea3        8        System.Object  0 instance 000001c28000cff0 _unloadLock
+        0000000000000000  4000ea4       10                       0 instance 0000000000000000 _resolvingUnmanagedDll
+        0000000000000000  4000ea5       18                       0 instance 0000000000000000 _resolving
+        00007ff7c9d36850  4000ea6       20 ...Private.CoreLib]]  0 instance 000001c2800101b8 _unloading
+        00007ff7c9a74748  4000ea7       28        System.String  0 instance 0000000000000000 _name
+        00007ff7c9a427f0  4000ea8       30        System.IntPtr  1 instance 000001C2FA21DD50 _nativeAssemblyLoadContext
+        00007ff7c9a1c7e0  4000ea9       38         System.Int64  1 instance                0 _id
+        00007ff7c9ac57b8  4000eaa       40         System.Int32  1 instance                0 _state
+        00007ff7c9a107b8  4000eab       44       System.Boolean  1 instance                1 _isCollectible
+        00007ff7c9cb4070  4000ea1      b08 ...Private.CoreLib]]  0   static 000001c28000d090 s_allContexts
+        00007ff7c9a1c7e0  4000ea2      970         System.Int64  1   static                1 s_nextId
+        0000000000000000  4000eac      b10 ...yLoadEventHandler  0   static 0000000000000000 AssemblyLoad
+        0000000000000000  4000ead      b18 ...solveEventHandler  0   static 0000000000000000 TypeResolve
+        0000000000000000  4000eae      b20 ...solveEventHandler  0   static 0000000000000000 ResourceResolve
+        0000000000000000  4000eaf      b28 ...solveEventHandler  0   static 0000000000000000 AssemblyResolve
+        0000000000000000  4000eb0      b30                       0   static 0000000000000000 s_asyncLocalCurrent
+        00007ff7c9cb26d0  4000001       48 ...ependencyResolver  0 instance 000001c28000d1c0 _resolver
 
 \\
 

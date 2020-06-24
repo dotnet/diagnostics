@@ -5,6 +5,7 @@
 bpmd
 ClrStack
 dbgout
+DumpALC
 DumpArray
 DumpAssembly
 DumpAsync
