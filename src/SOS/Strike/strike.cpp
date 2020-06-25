@@ -1659,14 +1659,19 @@ HRESULT PrintALC(TADDR taObj)
         return S_OK;
     }
 
-    CLRDATA_ADDRESS assemblyLoadContext;
+    CLRDATA_ADDRESS assemblyLoadContext = 0;
     ReleaseHolder<ISOSDacInterface8> sos8;
     if (SUCCEEDED(Status = g_sos->QueryInterface(__uuidof(ISOSDacInterface8), &sos8)))
     {
         Status = sos8->GetAssemblyLoadContext(objData.MethodTable, &assemblyLoadContext);
+        if (FAILED(Status))
+        {
+            ExtOut("Failed to get the AssemblyLoadContext\n");
+            return Status;
+        }
     }
 
-    if (assemblyLoadContext == NULL)
+    if (assemblyLoadContext == 0)
     {
         ExtOut("Name:        System.Runtime.Loader.DefaultAssemblyLoadContext\n");
         ExtOut("The managed instance of this context doesn't exist yet\n");
