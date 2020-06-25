@@ -106,6 +106,15 @@ public class SOS
         }
     }
 
+    private static void SkipForIssue1289(TestConfiguration config)
+    {
+        // https://github.com/dotnet/diagnostics/issues/1289
+        if (config.IsNETCore && config.RuntimeFrameworkVersionMajor == 5 && config.TargetArchitecture == "x86")
+        {
+            throw new SkipTestException("DumpHeap command output does not contain 'Statistics' on .NET 5.0 x86.");
+        }
+    }
+
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task DivZero(TestConfiguration config)
     {
@@ -115,6 +124,8 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task GCTests(TestConfiguration config)
     {
+        SkipForIssue1289(config);
+
         SkipIfArm(config);
 
         // Live only
@@ -171,6 +182,8 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task OtherCommands(TestConfiguration config)
     {
+        SkipForIssue1289(config);
+
         // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.
         await RunTest("OtherCommands.script", information: new SOSRunner.TestInformation {
             TestConfiguration = config,
@@ -209,6 +222,8 @@ public class SOS
     [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "SOS.WebApp3")]
     public async Task WebApp3(TestConfiguration config)
     {
+        SkipForIssue1289(config);
+
         await RunTest("WebApp.script", testLive: false, information: new SOSRunner.TestInformation {
             TestConfiguration = config,
             DebuggeeName = "WebApp3",
@@ -220,6 +235,8 @@ public class SOS
     [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "SOS.DualRuntimes")]
     public async Task DualRuntimes(TestConfiguration config)
     {
+        SkipForIssue1289(config);
+
         // The assembly path, class and function name of the desktop test code to load/run
         string desktopTestParameters = TestConfiguration.MakeCanonicalPath(config.GetValue("DesktopTestParameters"));
         if (string.IsNullOrEmpty(desktopTestParameters))
