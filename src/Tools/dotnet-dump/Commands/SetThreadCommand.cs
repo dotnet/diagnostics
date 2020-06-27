@@ -39,9 +39,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
             }
             else
             {
+                uint currentThreadId = AnalyzeContext.CurrentThreadId.GetValueOrDefault(uint.MaxValue);
                 foreach (ThreadInfo thread in ThreadService.EnumerateThreads())
                 {
-                    WriteLine("{0}{1} 0x{2:X4} ({2})", thread.ThreadId == AnalyzeContext.CurrentThreadId.Value ? "*" : " ", thread.ThreadIndex, thread.ThreadId);
+                    WriteLine("{0}{1} 0x{2:X4} ({2})", thread.ThreadId == currentThreadId ? "*" : " ", thread.ThreadIndex, thread.ThreadId);
                 }
             }
         }

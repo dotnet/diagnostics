@@ -4,6 +4,7 @@
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Repl;
+using System;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -27,7 +28,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
             }
             else
             {
-                threadId = AnalyzeContext.CurrentThreadId.Value;
+                if (AnalyzeContext.CurrentThreadId.HasValue)
+                {
+                    threadId = AnalyzeContext.CurrentThreadId.Value;
+                }
+                else
+                {
+                    throw new InvalidOperationException($"No current thread");
+                }
             }
             foreach (RegisterInfo register in ThreadService.Registers)
             {
