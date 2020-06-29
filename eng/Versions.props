@@ -17,7 +17,7 @@
     <!-- Latest shared runtime version updated by darc -->
     <MicrosoftNETCoreAppVersion>5.0.0-preview.8.20328.1</MicrosoftNETCoreAppVersion>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefVersion>5.0.0-preview.8.20327.3</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefVersion>5.0.0-preview.8.20328.2</MicrosoftAspNetCoreAppRefVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
