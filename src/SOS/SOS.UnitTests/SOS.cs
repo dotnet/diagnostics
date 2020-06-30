@@ -133,6 +133,17 @@ public class SOS
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
+    public async Task GCPOHTests(TestConfiguration config)
+    {
+        if (!config.IsNETCore || config.RuntimeFrameworkVersionMajor < 5)
+        {
+            throw new SkipTestException("This test validates POH behavior, which was introduced in .net 5");
+        }
+
+        await RunTest(config, "GCPOH", "GCPOH.script", testName: "SOS.GCPOHTests", testDump: false);
+    }
+
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task Overflow(TestConfiguration config)
     {
         // The .NET Core createdump facility may not catch stack overflow so use gdb to generate dump
