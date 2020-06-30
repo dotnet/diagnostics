@@ -188,8 +188,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             if (hasConsole)
                                 rewriter?.RewriteConsoleLine();
 
-                            Console.Error.WriteLine($"Writing to line: {Console.CursorTop}");
-
                             fileInfo.Refresh();
                             Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fileInfo.Length)}");
                             Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
@@ -200,7 +198,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         while (!shouldExit.WaitOne(100) && !(Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
                             printStatus();
 
-                        if (hasConsole)
+                        if (hasConsole && Math.Abs(Console.CursorTop - Console.BufferHeight) == 1)
                             rewriter.LineToClear--;
                         durationTimer?.Stop();
                         rundownRequested = true;
