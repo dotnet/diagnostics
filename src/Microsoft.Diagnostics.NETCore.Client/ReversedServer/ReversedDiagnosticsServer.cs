@@ -80,28 +80,39 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 Stream stream = await _transport.AcceptAsync(linkedSource.Token);
 
-                linkedSource.Token.ThrowIfCancellationRequested();
-
-                IpcAdvertise advertise = IpcAdvertise.Parse(stream);
-                Guid runtimeCookie = advertise.RuntimeInstanceCookie;
-                int pid = unchecked((int)advertise.ProcessId);
-
-                // If this runtime instance already exists, update the existing connection with the new endpoint.
-                // Consumers should hold onto the connection instance and use it for diagnostic communication,
-                // regardless of the number of times the same runtime instance connects. This requires consumers
-                // to continuously invoke the AcceptAsync method in order to handle runtime instance reconnects,
-                // even if the consumer only wants to handle a single connection.
-                ServerIpcEndpoint endpoint = null;
-                if (!_endpoints.TryGetValue(runtimeCookie, out endpoint))
+                IpcAdvertise advertise = null;
+                try
                 {
-                    // Create a new endpoint and connection that are cached an returned from this method.
-                    endpoint = new ServerIpcEndpoint();
-                    newConnection = new ReversedDiagnosticsConnection(this, endpoint, pid, runtimeCookie);
-
-                    _endpoints.TryAdd(runtimeCookie, endpoint);
+                    advertise = IpcAdvertise.Parse(stream);
+                }
+                catch (Exception)
+                {
+                    // The advertise data could be incomplete if the runtime shuts down before completely writing
+                    // the information. Catch the exception and continue waiting for a new connection.
                 }
 
-                endpoint.SetStream(stream);
+                if (null != advertise)
+                {
+                    Guid runtimeCookie = advertise.RuntimeInstanceCookie;
+                    int pid = unchecked((int)advertise.ProcessId);
+
+                    // If this runtime instance already exists, update the existing connection with the new endpoint.
+                    // Consumers should hold onto the connection instance and use it for diagnostic communication,
+                    // regardless of the number of times the same runtime instance connects. This requires consumers
+                    // to continuously invoke the AcceptAsync method in order to handle runtime instance reconnects,
+                    // even if the consumer only wants to handle a single connection.
+                    ServerIpcEndpoint endpoint = null;
+                    if (!_endpoints.TryGetValue(runtimeCookie, out endpoint))
+                    {
+                        // Create a new endpoint and connection that are cached an returned from this method.
+                        endpoint = new ServerIpcEndpoint();
+                        newConnection = new ReversedDiagnosticsConnection(this, endpoint, pid, runtimeCookie);
+
+                        _endpoints.TryAdd(runtimeCookie, endpoint);
+                    }
+
+                    endpoint.SetStream(stream);
+                }
             }
             while (null == newConnection);
 
