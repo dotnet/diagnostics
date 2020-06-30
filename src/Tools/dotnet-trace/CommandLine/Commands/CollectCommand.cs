@@ -183,17 +183,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             Console.CursorVisible = false;
                         }
 
-                        Action timerCallback = () =>
+                        Action printStatus = () =>
                         {
-                            if (!rundownRequested && (shouldExit.WaitOne(0) || (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)))
-                            {
-                                durationTimer?.Stop();
-                                rundownRequested = true;
-                                session.Stop();
-                            }
-
                             if (hasConsole)
                                 rewriter?.RewriteConsoleLine();
+
+                            Console.Error.WriteLine($"Writing to line: {Console.CursorTop}");
 
                             fileInfo.Refresh();
                             Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fileInfo.Length)}");
@@ -202,24 +197,27 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 Console.Out.WriteLine("Stopping the trace. This may take up to minutes depending on the application being traced.");
                         };
 
-                        System.Timers.Timer timer = new System.Timers.Timer(100);
-                        timer.Elapsed += (s,e) => timerCallback();
-                        timer.Start();
+                        while (!shouldExit.WaitOne(100) && !(Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
+                            printStatus();
 
-                        await copyTask;
-                        timer.Stop();
-                        // May have lost race between timer signalling and stopping,
-                        // so wait to make sure callback doesn't execute while printing the end.
-                        await Task.Delay(100);
+                        if (hasConsole)
+                            rewriter.LineToClear--;
+                        durationTimer?.Stop();
+                        rundownRequested = true;
+                        session.Stop();
+
+                        do
+                        {
+                            printStatus();
+                        } while (!copyTask.Wait(100));
                     }
+
+                    Console.Out.WriteLine();
+                    Console.Out.WriteLine("Trace completed.");
+
+                    if (format != TraceFileFormat.NetTrace)
+                        TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
                 }
-
-                Console.Out.WriteLine();
-                Console.Out.WriteLine("Trace completed.");
-
-                if (format != TraceFileFormat.NetTrace)
-                    TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
-
             }
             catch (Exception ex)
             {
@@ -232,7 +230,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     Console.CursorVisible = true;
             }
 
-            return 0;
+            return await Task.FromResult(0);
         }
 
         private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, string> enabledBy)
