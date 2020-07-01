@@ -168,6 +168,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     transportName = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-{pid}-*-socket") // Try best match.
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                         .FirstOrDefault();
+                    return true;
                 }
                 catch (InvalidOperationException)
                 {
