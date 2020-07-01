@@ -140,7 +140,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 try
                 {
                     var client = await GetClientAsync(DockerEntrypointProcessId, token);
-                    if (client.CheckTransport())
+                    if (client.HasTransport())
                     {
                         return DockerEntrypointProcessId;
                     }

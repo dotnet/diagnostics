@@ -10,22 +10,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal class IpcClient
     {
         /// <summary>
-        /// Checks that the client is able to communicate with target process over diagnostic transport.
+        /// Checks that the client has the diagnostic transport.
         /// </summary>
         /// <returns>
-        /// True if client is able to communicate with target process; otherwise, false.
+        /// True if client has the diagnostic transport; otherwise, false.
         /// </returns>
-        public static bool CheckTransport(IIpcEndpoint endpoint)
+        public static bool HasTransport(IIpcEndpoint endpoint)
         {
-            try
-            {
-                using var stream = endpoint.Connect();
-                return null != stream;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
+            return endpoint.HasTransport();
         }
 
         /// <summary>

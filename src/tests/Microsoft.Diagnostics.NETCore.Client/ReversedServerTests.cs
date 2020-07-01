@@ -332,6 +332,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             var client = new DiagnosticsClient(connection.Endpoint);
 
+            Assert.True(client.HasTransport());
+
             _outputHelper.WriteLine($"{connection.RuntimeInstanceCookie}: Session #1 - Creating session.");
             var session1Task = Task.Run(async () =>
             {

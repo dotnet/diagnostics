@@ -24,6 +24,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// Gets the stream to retrieve diagnostic information from the runtime instance.
         /// </summary>
         Stream Connect();
+
+        /// <summary>
+        /// Checks if the associated runtime instance has the diagnostics transport.
+        /// </summary>
+        bool HasTransport();
     }
 
     internal class ServerIpcEndpoint : IIpcEndpoint, IDisposable
@@ -44,6 +49,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _streamReady.WaitOne();
 
             return Interlocked.Exchange(ref _stream, null);
+        }
+
+        /// <inheritdoc cref="IIpcEndpoint.HasTransport"/>
+        public bool HasTransport()
+        {
+            return null != _stream;
         }
 
         public void Dispose()
@@ -109,38 +120,62 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ServerNotAvailableException($"Process {_pid} seems to be elevated.");
             }
 
+            if (!TryGetTransportName(_pid, out string transportName))
+            {
+                throw new ServerNotAvailableException($"Process {_pid} not running compatible .NET runtime.");
+            }
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                string pipeName = $"dotnet-diagnostic-{_pid}";
                 var namedPipe = new NamedPipeClientStream(
-                    ".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation);
+                    ".", transportName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation);
                 namedPipe.Connect((int)ConnectTimeoutMilliseconds);
                 return namedPipe;
             }
             else
             {
-                string ipcPort;
-                try
-                {
-                    ipcPort = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-{_pid}-*-socket") // Try best match.
-                                .OrderByDescending(f => new FileInfo(f).LastWriteTime)
-                                .FirstOrDefault();
-                    if (ipcPort == null)
-                    {
-                        throw new ServerNotAvailableException($"Process {_pid} not running compatible .NET Core runtime.");
-                    }
-                }
-                catch (InvalidOperationException)
-                {
-                    throw new ServerNotAvailableException($"Process {_pid} not running compatible .NET Core runtime.");
-                }
-                string path = Path.Combine(IpcRootPath, ipcPort);
+                string path = Path.Combine(IpcRootPath, transportName);
                 var remoteEP = CreateUnixDomainSocketEndPoint(path);
 
                 var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
                 socket.Connect(remoteEP);
-                return new NetworkStream(socket);
+                return new NetworkStream(socket, ownsSocket: true);
             }
+        }
+
+        /// <inheritdoc cref="IIpcEndpoint.HasTransport"/>
+        public bool HasTransport()
+        {
+            if (!TryGetTransportName(_pid, out string transportName))
+            {
+                return false;
+            }
+
+            return File.Exists(Path.Combine(IpcRootPath, transportName));
+        }
+
+        private static bool TryGetTransportName(int pid, out string transportName)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                transportName = $"dotnet-diagnostic-{pid}";
+                return true;
+            }
+            else
+            {
+                try
+                {
+                    transportName = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-{pid}-*-socket") // Try best match.
+                        .OrderByDescending(f => new FileInfo(f).LastWriteTime)
+                        .FirstOrDefault();
+                }
+                catch (InvalidOperationException)
+                {
+                }
+            }
+
+            transportName = null;
+            return false;
         }
 
         internal static EndPoint CreateUnixDomainSocketEndPoint(string path)
