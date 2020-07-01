@@ -93,11 +93,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             ReversedDiagnosticsConnection newConnection = null;
             do
             {
-                Stream stream = await _transport.AcceptAsync(linkedSource.Token);
-
+                Stream stream = null;
                 IpcAdvertise advertise = null;
                 try
                 {
+                    stream = await _transport.AcceptAsync(linkedSource.Token);
                     advertise = IpcAdvertise.Parse(stream);
                 }
                 catch (Exception)
