@@ -121,6 +121,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
             // runtime timeout or respect attachTimeout as one total duration.
         }
 
+        internal void ResumeRuntime()
+        {
+            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Server, (byte)DiagnosticsServerCommandId.ResumeRuntime);
+            var response = IpcClient.SendMessage(_endpoint, message);
+            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
+            {
+                case DiagnosticsServerCommandId.Error:
+                    var hr = BitConverter.ToInt32(response.Payload, 0);
+                    throw new ServerErrorException($"Resume runtime failed (HRESULT: 0x{hr:X8})");
+                case DiagnosticsServerCommandId.OK:
+                    return;
+                default:
+                    throw new ServerErrorException($"Resume runtime failed - server responded with unknown command");
+            }
+        }
+
         /// <summary>
         /// Get all the active processes that can be attached to.
         /// </summary>

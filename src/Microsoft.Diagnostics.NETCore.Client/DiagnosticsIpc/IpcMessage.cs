@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public IpcMessage(IpcHeader header, byte[] payload)
         {
-            Payload = payload;
+            Payload = payload ?? Array.Empty<byte>();
             Header = header;
         }
 
@@ -90,7 +90,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         { 
             byte[] serializedData = null;
             // Verify things will fit in the size capacity
-            Header.Size = checked((UInt16)(IpcHeader.HeaderSizeInBytes + Payload.Length)); ;
+            Header.Size = checked((UInt16)(IpcHeader.HeaderSizeInBytes + Payload.Length));
             byte[] headerBytes = Header.Serialize();
 
             using (var stream = new MemoryStream())

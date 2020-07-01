@@ -19,8 +19,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal enum DiagnosticsServerCommandId : byte
     {
-        OK    = 0x00,
-        Error = 0xFF,
+        OK            = 0x00,
+        ResumeRuntime = 0x01,
+        Error         = 0xFF,
     }
 
     internal enum EventPipeCommandId : byte
