@@ -23,15 +23,81 @@ namespace DotnetMonitor.UnitTests
         }
 
         /// <summary>
+        /// Tests that the server connections source has no connections
+        /// if <see cref="ReversedServerConnectionsSource.Listen"/> is not called.
+        /// </summary>
+        [Fact]
+        public async Task ServerConnectionsSourceNoListenTest()
+        {
+            await using var source = StartReversedServerConnectionsSource(out string transportName);
+            // Intentionally do not call Listen
+
+            await using (var execution1 = StartTraceeProcess("LoggerRemoteTest", transportName))
+            {
+                execution1.Start();
+
+                await Task.Delay(TimeSpan.FromSeconds(1));
+
+                var connections = await GetConnectionsAsync(source);
+
+                Assert.Empty(connections);
+
+                _outputHelper.WriteLine("Stopping tracee.");
+            }
+        }
+
+        /// <summary>
         /// Tests that the server connections source has not connections if no processes connect to it.
         /// </summary>
         [Fact]
         public async Task ServerConnectionsSourceNoConnectionsTest()
         {
             await using var source = StartReversedServerConnectionsSource(out _);
+            source.Listen();
 
             var connections = await GetConnectionsAsync(source);
             Assert.Empty(connections);
+        }
+
+        /// <summary>
+        /// Tests that server connections source should throw ObjectDisposedException
+        /// from API surface after being disposed.
+        /// </summary>
+        [Fact]
+        public async Task ServerConnectionsSourceThrowsWhenDisposedTest()
+        {
+            var source = StartReversedServerConnectionsSource(out _);
+            source.Listen();
+
+            await source.DisposeAsync();
+
+            // Validate source surface throws after disposal
+            Assert.Throws<ObjectDisposedException>(
+                () => source.Listen());
+
+            Assert.Throws<ObjectDisposedException>(
+                () => source.Listen(1));
+
+            await Assert.ThrowsAsync<ObjectDisposedException>(
+                () => source.GetConnectionsAsync(CancellationToken.None));
+        }
+
+        /// <summary>
+        /// Tests that server connections source should throw an exception from
+        /// <see cref="ReversedServerConnectionsSource.Listen"/> and
+        /// <see cref="ReversedServerConnectionsSource.Listen(int)"/> after listening was already started.
+        /// </summary>
+        [Fact]
+        public async Task ServerConnectionsSourceThrowsWhenMultipleListenTest()
+        {
+            await using var source = StartReversedServerConnectionsSource(out _);
+            source.Listen();
+
+            Assert.Throws<InvalidOperationException>(
+                () => source.Listen());
+
+            Assert.Throws<InvalidOperationException>(
+                () => source.Listen(1));
         }
 
         /// <summary>
@@ -42,6 +108,7 @@ namespace DotnetMonitor.UnitTests
         public async Task ServerConnectionsSourceAddRemoveSingleConnectionTest()
         {
             await using var source = StartReversedServerConnectionsSource(out string transportName);
+            source.Listen();
 
             var connections = await GetConnectionsAsync(source);
             Assert.Empty(connections);
@@ -69,11 +136,11 @@ namespace DotnetMonitor.UnitTests
             Assert.Empty(connections);
         }
 
-        private ReversedServerConnectionsSource StartReversedServerConnectionsSource(out string transportName)
+        private TestReversedServerConnectionsSource StartReversedServerConnectionsSource(out string transportName)
         {
             transportName = ReversedServerHelper.CreateServerTransportName();
             _outputHelper.WriteLine("Starting reversed connections source at '" + transportName + "'.");
-            return new ReversedServerConnectionsSource(transportName);
+            return new TestReversedServerConnectionsSource(transportName);
         }
 
         private RemoteTestExecution StartTraceeProcess(string loggerCategory, string transportName = null)
@@ -111,14 +178,20 @@ namespace DotnetMonitor.UnitTests
         private sealed class NewConnectionHelper : IDisposable
         {
             private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
-            private readonly Task _newConnectionTask;
+            private readonly EventTaskSource<EventHandler> _newConnectionSource;
             private readonly ITestOutputHelper _outputHelper;
 
             private bool _disposed;
 
-            public NewConnectionHelper(ReversedServerConnectionsSource source, ITestOutputHelper outputHelper)
+            public NewConnectionHelper(TestReversedServerConnectionsSource source, ITestOutputHelper outputHelper)
             {
-                _newConnectionTask = source.WaitForNewConnectionAsync(_cancellation.Token);
+                // Create a task source that is signalled
+                // when the NewConnection event is raise.
+                _newConnectionSource = new EventTaskSource<EventHandler>(
+                    complete => (s, e) => complete(),
+                    h => source.NewConnection += h,
+                    h => source.NewConnection -= h,
+                    _cancellation.Token);
                 _outputHelper = outputHelper;
             }
 
@@ -137,9 +210,24 @@ namespace DotnetMonitor.UnitTests
             {
                 _outputHelper.WriteLine("Waiting for new connection.");
                 _cancellation.CancelAfter(timeout);
-                await _newConnectionTask;
+                await _newConnectionSource.Task;
                 _outputHelper.WriteLine("Notified of new connection.");
             }
+        }
+
+        private sealed class TestReversedServerConnectionsSource : ReversedServerConnectionsSource
+        {
+            public TestReversedServerConnectionsSource(string transportPath)
+                : base(transportPath)
+            {
+            }
+
+            internal override void OnNewConnection(ReversedDiagnosticsConnection connection)
+            {
+                NewConnection(this, EventArgs.Empty);
+            }
+
+            public event EventHandler NewConnection;
         }
     }
 }

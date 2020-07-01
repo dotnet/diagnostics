@@ -430,10 +430,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </remarks>
         private class ConnectionAccepter : IAsyncDisposable
         {
-            private readonly Task _acceptTask;
             private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
             private readonly Queue<ReversedDiagnosticsConnection> _connections = new Queue<ReversedDiagnosticsConnection>();
             private readonly SemaphoreSlim _connectionsSemaphore = new SemaphoreSlim(0);
+            private readonly Task _listenTask;
             private readonly ITestOutputHelper _outputHelper;
             private readonly ReversedDiagnosticsServer _server;
 
@@ -445,7 +445,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 _server = server;
                 _outputHelper = outputHelper;
 
-                _acceptTask = AcceptFromServerAsync(_cancellation.Token);
+                _listenTask = ListenAsync(_cancellation.Token);
             }
 
             public async ValueTask DisposeAsync()
@@ -454,7 +454,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     _cancellation.Cancel();
 
-                    await _acceptTask;
+                    await _listenTask;
 
                     _cancellation.Dispose();
 
@@ -479,7 +479,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             /// is always awaited in order to to handle new runtime instance connections
             /// as well as existing runtime instance reconnections.
             /// </summary>
-            private async Task AcceptFromServerAsync(CancellationToken token)
+            private async Task ListenAsync(CancellationToken token)
             {
                 while (!token.IsCancellationRequested)
                 {

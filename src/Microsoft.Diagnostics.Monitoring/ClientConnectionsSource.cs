@@ -23,7 +23,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 connections.Add(new DiagnosticsConnection(pid));
             }
 
-            return Task.FromResult(connections.AsReadOnly().AsEnumerable());
+            return Task.FromResult(connections.AsEnumerable());
         }
 
         private class DiagnosticsConnection : IDiagnosticsConnection

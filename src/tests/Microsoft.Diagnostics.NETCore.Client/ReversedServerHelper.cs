@@ -41,6 +41,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public static void AddReversedServer(TestRunner runner, string transportName)
         {
             runner.AddEnvVar("DOTNET_DiagnosticsMonitorAddress", transportName);
+            // Disable pausing on start until tested runtime understands ResumeRuntime command
+            runner.AddEnvVar("DOTNET_DiagnosticsMonitorPauseOnStart", "0");
         }
     }
 }

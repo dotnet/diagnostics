@@ -14,15 +14,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     internal abstract class IpcServerTransport : IDisposable
     {
-        public static IpcServerTransport Create(string transportPath)
+        public static IpcServerTransport Create(string transportPath, int maxConnections)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                return new WindowsPipeServerTransport(transportPath);
+                return new WindowsPipeServerTransport(transportPath, maxConnections);
             }
             else
             {
-                return new UnixDomainSocketServerTransport(transportPath);
+                return new UnixDomainSocketServerTransport(transportPath, maxConnections);
             }
         }
 
@@ -36,6 +36,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         public abstract Task<Stream> AcceptAsync(CancellationToken token);
+
+        public static int MaxAllowedConnections
+        {
+            get
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    return NamedPipeServerStream.MaxAllowedServerInstances;
+                }
+                else
+                {
+                    return (int)SocketOptionName.MaxConnections;
+                }
+            }
+        }
     }
 
     internal sealed class WindowsPipeServerTransport : IpcServerTransport
@@ -46,9 +61,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private NamedPipeServerStream _stream;
 
         private readonly string _pipeName;
+        private readonly int _maxInstances;
 
-        public WindowsPipeServerTransport(string pipeName)
+        public WindowsPipeServerTransport(string pipeName, int maxInstances)
         {
+            _maxInstances = maxInstances;
             _pipeName = pipeName.StartsWith(PipePrefix) ? pipeName.Substring(PipePrefix.Length) : pipeName;
             CreateNewPipeServer();
         }
@@ -83,7 +100,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private void CreateNewPipeServer()
         {
-            _stream = new NamedPipeServerStream(_pipeName, PipeDirection.InOut, 10, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+            _stream = new NamedPipeServerStream(_pipeName, PipeDirection.InOut, _maxInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
         }
     }
 
@@ -94,12 +111,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private readonly string _path;
         private readonly Socket _socket;
 
-        public UnixDomainSocketServerTransport(string path)
+        public UnixDomainSocketServerTransport(string path, int backlog)
         {
             _path = path;
             _socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
             _socket.Bind(PidIpcEndpoint.CreateUnixDomainSocketEndPoint(path));
-            _socket.Listen(255);
+            _socket.Listen(backlog);
             _socket.LingerState.Enabled = false;
         }
 
@@ -129,34 +146,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override async Task<Stream> AcceptAsync(CancellationToken token)
         {
-            TaskCompletionSource<Socket> acceptCompletionSource = new TaskCompletionSource<Socket>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            Action cancelAccept = () =>
+            using (token.Register(() => _socket.Close(0)))
             {
-                acceptCompletionSource.TrySetCanceled(token);
-                _socket.Close(0);
-            };
-
-            AsyncCallback endAccept = result =>
-            {
-                if (!token.IsCancellationRequested)
+                Socket socket;
+                try
                 {
-                    try
-                    {
-                        acceptCompletionSource.TrySetResult(_socket.EndAccept(result));
-                    }
-                    catch (Exception ex)
-                    {
-                        acceptCompletionSource.TrySetException(ex);
-                    }
+                    socket = await Task.Factory.FromAsync(_socket.BeginAccept, _socket.EndAccept, _socket);
                 }
-            };
+                catch (ObjectDisposedException)
+                {
+                    // When the socket is close, the FromAsync logic will try to call EndAccept on the socket,
+                    // but that will throw an ObjectDisposedException. First check if the cancellation token
+                    // caused the closing of the socket, then rethrow the exception if it did not.
+                    token.ThrowIfCancellationRequested();
 
-            using (token.Register(cancelAccept))
-            {
-                _socket.BeginAccept(endAccept, null);
+                    throw;
+                }
 
-                return new NetworkStream(await acceptCompletionSource.Task);
+                return new NetworkStream(socket, ownsSocket: true);
             }
         }
     }

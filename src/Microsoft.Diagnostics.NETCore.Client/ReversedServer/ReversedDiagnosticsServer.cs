@@ -32,8 +32,23 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// On all other systems, this must be the full file path of the socket.
         /// </param>
         public ReversedDiagnosticsServer(string transportPath)
+            : this(transportPath, MaxAllowedConnections)
         {
-            _transport = IpcServerTransport.Create(transportPath);
+        }
+
+        /// <summary>
+        /// Constructs the <see cref="ReversedDiagnosticsServer"/> instance with an endpoint bound
+        /// to the location specified by <paramref name="transportPath"/>.
+        /// </summary>
+        /// <param name="transportPath">
+        /// The path of the server endpoint.
+        /// On Windows, this can be a full pipe path or the name without the "\\.\pipe\" prefix.
+        /// On all other systems, this must be the full file path of the socket.
+        /// </param>
+        /// <param name="maxConnections">The maximum number of connections the server will support.</param>
+        public ReversedDiagnosticsServer(string transportPath, int maxConnections)
+        {
+            _transport = IpcServerTransport.Create(transportPath, maxConnections);
         }
 
         public void Dispose()
@@ -143,5 +158,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ObjectDisposedException(nameof(ReversedDiagnosticsServer));
             }
         }
+
+        public static int MaxAllowedConnections = IpcServerTransport.MaxAllowedConnections;
     }
 }

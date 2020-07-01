@@ -14,17 +14,19 @@ namespace Microsoft.Diagnostics.Monitoring
     /// <summary>
     /// Aggregates diagnostics connections that are established at a transport path via a reversed server.
     /// </summary>
-    internal sealed class ReversedServerConnectionsSource : IDiagnosticsConnectionsSourceInternal, IAsyncDisposable
+    internal class ReversedServerConnectionsSource : IDiagnosticsConnectionsSourceInternal, IAsyncDisposable
     {
-        private readonly Task _acceptTask;
+        // The amount of time to attempt to get the process information from a connection.
+        private readonly TimeSpan ProcessInfoDuration = TimeSpan.FromSeconds(5);
+
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
         private readonly IList<ReversedDiagnosticsConnection> _connections = new List<ReversedDiagnosticsConnection>();
         private readonly SemaphoreSlim _connectionsSemaphore = new SemaphoreSlim(1);
-        private readonly ReversedDiagnosticsServer _server;
+        private readonly string _transportPath;
 
-        private TaskCompletionSource<object> _newConnectionSource;
-
+        private Task _listenTask;
         private bool _disposed = false;
+        private ReversedDiagnosticsServer _server;
 
         /// <summary>
         /// Constructs a <see cref="ReversedServerConnectionsSource"/> that aggreates diagnostics connection
@@ -37,25 +39,52 @@ namespace Microsoft.Diagnostics.Monitoring
         /// </param>
         public ReversedServerConnectionsSource(string transportPath)
         {
-            _server = new ReversedDiagnosticsServer(transportPath);
-
-            _acceptTask = AcceptAsync(_cancellation.Token);
+            _transportPath = transportPath;
         }
 
         public async ValueTask DisposeAsync()
         {
-            if (_disposed)
+            if (!_disposed)
             {
                 _cancellation.Cancel();
 
-                _server.Dispose();
+                _server?.Dispose();
 
-                await _acceptTask;
+                if (null != _listenTask)
+                {
+                    await _listenTask;
+                }
 
                 _cancellation.Dispose();
 
                 _disposed = true;
             }
+        }
+
+        /// <summary>
+        /// Starts listening to the reversed diagnostics server for new connections.
+        /// </summary>
+        public void Listen()
+        {
+            Listen(ReversedDiagnosticsServer.MaxAllowedConnections);
+        }
+
+        /// <summary>
+        /// Starts listening to the reversed diagnostics server for new connections.
+        /// </summary>
+        /// <param name="maxConnections">The maximum number of connections the server will support.</param>
+        public void Listen(int maxConnections)
+        {
+            VerifyNotDisposed();
+
+            if (null != _server || null != _listenTask)
+            {
+                throw new InvalidOperationException(nameof(ReversedServerConnectionsSource.Listen) + " method can only be called once.");
+            }
+
+            _server = new ReversedDiagnosticsServer(_transportPath);
+
+            _listenTask = ListenAsync(_cancellation.Token);
         }
 
         /// <summary>
@@ -65,6 +94,8 @@ namespace Microsoft.Diagnostics.Monitoring
         /// <returns>A list of active <see cref="IDiagnosticsConnection"/> instances.</returns>
         public async Task<IEnumerable<IDiagnosticsConnection>> GetConnectionsAsync(CancellationToken token)
         {
+            VerifyNotDisposed();
+
             using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _cancellation.Token);
             CancellationToken linkedToken = linkedSource.Token;
 
@@ -73,18 +104,16 @@ namespace Microsoft.Diagnostics.Monitoring
             await _connectionsSemaphore.WaitAsync(linkedToken);
             try
             {
-                // Create a task that checks each connection and removes it
+                // Create a task for each connection that checks and removes it
                 // if it is no longer connected or is not responsive.
-                IList<Task> pruneTasks = _connections
-                    .Select(c => Task.Run(() => PruneConnectionAsync(c, linkedToken), linkedToken))
-                    .ToList();
-
+                IList<Task> pruneTasks = new List<Task>();
+                foreach (ReversedDiagnosticsConnection connection in _connections)
+                {
+                    pruneTasks.Add(Task.Run(() => PruneConnectionAsync(connection, linkedToken), linkedToken));
+                }
                 await Task.WhenAll(pruneTasks);
 
-                return _connections
-                    .Select(c => new DiagnosticsConnection(c))
-                    .ToList()
-                    .AsReadOnly();
+                return _connections.Select(c => new DiagnosticsConnection(c));
             }
             finally
             {
@@ -96,7 +125,7 @@ namespace Microsoft.Diagnostics.Monitoring
         /// Accepts connections from the reversed diagnostics server.
         /// </summary>
         /// <param name="token">The token to monitor for cancellation requests.</param>
-        private async Task AcceptAsync(CancellationToken token)
+        private async Task ListenAsync(CancellationToken token)
         {
             // Continuously accept connections from the reversed diagnostics server so
             // that <see cref="ReversedDiagnosticsServer.AcceptAsync(CancellationToken)"/>
@@ -114,10 +143,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
                     _connectionsSemaphore.Release();
 
-                    if (null != _newConnectionSource)
-                    {
-                        _newConnectionSource.TrySetResult(null);
-                    }
+                    OnNewConnection(connection);
                 }
                 catch (OperationCanceledException)
                 {
@@ -130,9 +156,6 @@ namespace Microsoft.Diagnostics.Monitoring
         /// </summary>
         private async Task PruneConnectionAsync(ReversedDiagnosticsConnection connection, CancellationToken token)
         {
-            // Cancel event pipe processing within reasonable amount of time to remove potentially unresponsive processes.
-            using CancellationTokenSource timeoutSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-
             // Try to get ProcessInfo information to test the connection
             try
             {
@@ -141,37 +164,44 @@ namespace Microsoft.Diagnostics.Monitoring
                 // NOTE: This test does not need to necessarily use the event pipe providers and collection.
                 // It only needs to send some type of request and receive a response from the runtime instance
                 // to verify that the diagnostics pipe/socket is viable and the runtime instance is still connected.
-                await using DiagnosticsEventPipeProcessor process = new DiagnosticsEventPipeProcessor(PipeMode.ProcessInfo);
+                bool hasProcessInfo = false;
+                Action<string> callback = commandLine => hasProcessInfo = !string.IsNullOrEmpty(commandLine);
+                await using var process = new DiagnosticsEventPipeProcessor(
+                    PipeMode.ProcessInfo,
+                    processInfoCallback: callback);
 
-                using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutSource.Token);
+                await process.Process(client, 0, ProcessInfoDuration, token);
 
-                await process.Process(client, 0, Timeout.InfiniteTimeSpan, linkedSource.Token);
+                // Check if could not get process information within reasonable amount of time
+                if (!hasProcessInfo)
+                {
+                    RemoveConnection(connection);
+                }
             }
-            catch (OperationCanceledException) when (token.IsCancellationRequested)
-            {
-                // Do not remove connection if method was cancelled.
-                throw;
-            }
-            catch (Exception)
+            catch (Exception ex) when (!(ex is OperationCanceledException))
             {
                 // Runtime instance likely no longer exists or is not responsive; remove connection.
-                _connections.Remove(connection);
-
-                // Dispose the connection to release the tracking resources in the reversed server.
-                connection.Dispose();
+                RemoveConnection(connection);
             }
         }
 
-        /// <summary>
-        /// Waits for a new connection to be made available to the connection source from the reversed server.
-        /// </summary>
-        /// <param name="token">The token to monitor for cancellation requests.</param>
-        internal async Task WaitForNewConnectionAsync(CancellationToken token)
+        private void RemoveConnection(ReversedDiagnosticsConnection connection)
         {
-            _newConnectionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            using (token.Register(() => _newConnectionSource.TrySetCanceled()))
+            _connections.Remove(connection);
+
+            // Dispose the connection to release the tracking resources in the reversed server.
+            connection.Dispose();
+        }
+
+        internal virtual void OnNewConnection(ReversedDiagnosticsConnection connection)
+        {
+        }
+
+        private void VerifyNotDisposed()
+        {
+            if (_disposed)
             {
-                await _newConnectionSource.Task;
+                throw new ObjectDisposedException(nameof(ReversedDiagnosticsServer));
             }
         }
 

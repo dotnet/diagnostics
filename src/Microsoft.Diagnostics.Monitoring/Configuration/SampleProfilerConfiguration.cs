@@ -15,5 +15,9 @@ namespace Microsoft.Diagnostics.Monitoring
             {
                 new EventPipeProvider(SampleProfilerProviderName, EventLevel.Informational)
             };
+
+        public override int BufferSizeInMB => 1;
+
+        public override bool RequestRundown => false;
     }
 }

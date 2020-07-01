@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.Monitoring
             {
                 var connections = await _connectionsSource.GetConnectionsAsync(token);
 
-                return connections.Select(c => new ProcessInfo(c.RuntimeInstanceCookie, c.ProcessId)).ToList();
+                return connections.Select(c => new ProcessInfo(c.RuntimeInstanceCookie, c.ProcessId));
             }
             catch (UnauthorizedAccessException)
             {
