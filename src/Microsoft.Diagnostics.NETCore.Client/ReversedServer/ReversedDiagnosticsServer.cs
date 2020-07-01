@@ -100,7 +100,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     stream = await _transport.AcceptAsync(linkedSource.Token);
                     advertise = IpcAdvertise.Parse(stream);
                 }
-                catch (Exception)
+                catch (Exception ex) when (!(ex is OperationCanceledException))
                 {
                     // The advertise data could be incomplete if the runtime shuts down before completely writing
                     // the information. Catch the exception and continue waiting for a new connection.
