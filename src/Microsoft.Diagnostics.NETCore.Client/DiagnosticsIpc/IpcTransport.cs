@@ -156,10 +156,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static bool TryGetTransportName(int pid, out string transportName)
         {
+            transportName = null;
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 transportName = $"dotnet-diagnostic-{pid}";
-                return true;
             }
             else
             {
@@ -168,15 +169,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     transportName = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-{pid}-*-socket") // Try best match.
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                         .FirstOrDefault();
-                    return true;
                 }
                 catch (InvalidOperationException)
                 {
                 }
             }
 
-            transportName = null;
-            return false;
+            return !string.IsNullOrEmpty(transportName);
         }
 
         internal static EndPoint CreateUnixDomainSocketEndPoint(string path)
