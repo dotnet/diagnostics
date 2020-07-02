@@ -37,6 +37,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal class ServerIpcEndpoint : IIpcEndpoint, IDisposable
     {
         private readonly AutoResetEvent _streamReady = new AutoResetEvent(false);
+        private readonly object _streamSync = new object();
 
         private bool _disposed;
         private Stream _stream;
@@ -44,41 +45,60 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <inheritdoc cref="IIpcEndpoint.CheckTransport"/>
         public bool CheckTransport()
         {
-            Stream stream = _stream;
-
-            if (null == stream)
+            if (!_streamReady.WaitOne(0))
             {
                 return false;
             }
-            else if (stream is ExposedSocketNetworkStream networkStream)
+
+            // Stream was available; reset event should be in wait state at this time
+            // so anything that tries to get the stream via Connect will block momentarily.
+            // This means this method should have exclusive access to mutating or checking
+            // the state of the stream.
+
+            lock (_stream)
             {
-                // Upate Connected state of socket by sending non-blocking zero-byte data.
-                Socket socket = networkStream.Socket;
-                bool blocking = socket.Blocking;
                 try
                 {
-                    socket.Blocking = false;
-                    socket.Send(Array.Empty<byte>(), 0, SocketFlags.None);
-                }
-                catch (Exception)
-                {
+                    if (null == _stream)
+                    {
+                        return false;
+                    }
+                    else if (_stream is ExposedSocketNetworkStream networkStream)
+                    {
+                        // Upate Connected state of socket by sending non-blocking zero-byte data.
+                        Socket socket = networkStream.Socket;
+                        bool blocking = socket.Blocking;
+                        try
+                        {
+                            socket.Blocking = false;
+                            socket.Send(Array.Empty<byte>(), 0, SocketFlags.None);
+                        }
+                        catch (Exception)
+                        {
+                        }
+                        finally
+                        {
+                            socket.Blocking = blocking;
+                        }
+                        return socket.Connected;
+                    }
+                    else if (_stream is PipeStream pipeStream)
+                    {
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        {
+                            // PeekNamedPipe will return false if the pipe is disconnected/broken.
+                            return NativeMethods.PeekNamedPipe(pipeStream.SafePipeHandle, null, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+                        }
+                    }
+
+                    throw new InvalidOperationException($"Stream type '{_stream.GetType().FullName}' was not handled.");
                 }
                 finally
                 {
-                    socket.Blocking = blocking;
-                }
-                return socket.Connected;
-            }
-            else if (stream is PipeStream pipeStream)
-            {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    // PeekNamedPipe will return false if the pipe is disconnected/broken.
-                    return NativeMethods.PeekNamedPipe(pipeStream.SafePipeHandle, null, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+                    // Set the event again to allow other callers to get the stream.
+                    _streamReady.Set();
                 }
             }
-
-            throw new InvalidOperationException($"Stream type '{stream.GetType().FullName}' was not handled.");
         }
 
         /// <inheritdoc cref="IIpcEndpoint.Connect"/>
@@ -91,14 +111,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             _streamReady.WaitOne();
 
-            return Interlocked.Exchange(ref _stream, null);
+            return ExchangeStream(stream: null);
         }
 
         public void Dispose()
         {
             if (!_disposed)
             {
-                SetStream(stream: null);
+                ExchangeStream(stream: null)?.Dispose();
 
                 _streamReady.Dispose();
 
@@ -111,11 +131,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         internal void SetStream(Stream stream)
         {
-            Stream existingStream = Interlocked.Exchange(ref _stream, stream);
+            ExchangeStream(stream)?.Dispose();
 
             _streamReady.Set();
+        }
 
-            existingStream?.Dispose();
+        private Stream ExchangeStream(Stream stream)
+        {
+            lock (_streamSync)
+            {
+                return Interlocked.Exchange(ref _stream, stream);
+            }
         }
     }
 
