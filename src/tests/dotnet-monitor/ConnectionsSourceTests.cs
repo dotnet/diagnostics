@@ -140,7 +140,7 @@ namespace DotnetMonitor.UnitTests
         {
             transportName = ReversedServerHelper.CreateServerTransportName();
             _outputHelper.WriteLine("Starting reversed connections source at '" + transportName + "'.");
-            return new TestReversedServerConnectionsSource(transportName);
+            return new TestReversedServerConnectionsSource(transportName, _outputHelper);
         }
 
         private RemoteTestExecution StartTraceeProcess(string loggerCategory, string transportName = null)
@@ -185,7 +185,7 @@ namespace DotnetMonitor.UnitTests
 
             public NewConnectionHelper(TestReversedServerConnectionsSource source, ITestOutputHelper outputHelper)
             {
-                // Create a task source that is signalled
+                // Create a task source that is signaled
                 // when the NewConnection event is raise.
                 _newConnectionSource = new EventTaskSource<EventHandler>(
                     complete => (s, e) => complete(),
@@ -217,14 +217,23 @@ namespace DotnetMonitor.UnitTests
 
         private sealed class TestReversedServerConnectionsSource : ReversedServerConnectionsSource
         {
-            public TestReversedServerConnectionsSource(string transportPath)
+            private readonly ITestOutputHelper _outputHelper;
+
+            public TestReversedServerConnectionsSource(string transportPath, ITestOutputHelper outputHelper)
                 : base(transportPath)
             {
+                _outputHelper = outputHelper;
             }
 
             internal override void OnNewConnection(ReversedDiagnosticsConnection connection)
             {
+                _outputHelper.WriteLine($"Added connection to collection: {connection.ToTestString()}");
                 NewConnection(this, EventArgs.Empty);
+            }
+
+            internal override void OnRemovedConnection(ReversedDiagnosticsConnection connection)
+            {
+                _outputHelper.WriteLine($"Removed connection from collection: {connection.ToTestString()}");
             }
 
             public event EventHandler NewConnection;

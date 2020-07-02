@@ -8,7 +8,7 @@ using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    public static class ReversedServerHelper
+    internal static class ReversedServerHelper
     {
         /// <summary>
         /// Creates a unique server name to avoid collisions from simultaneous running tests
@@ -33,14 +33,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public static TestRunner StartTracee(ITestOutputHelper _outputHelper, string transportName)
         {
             var runner = new TestRunner(CommonHelper.GetTraceePath(targetFramework: "net5.0"), _outputHelper);
-            AddReversedServer(runner, transportName);
+            runner.AddReversedServer(transportName);
             runner.Start();
             return runner;
         }
 
-        public static void AddReversedServer(TestRunner runner, string transportName)
+        public static void AddReversedServer(this TestRunner runner, string transportName)
         {
             runner.AddEnvVar("DOTNET_DiagnosticsMonitorAddress", transportName);
+        }
+
+        public static string ToTestString(this ReversedDiagnosticsConnection connection)
+        {
+            return $"PID={connection.ProcessId}, COOKIE={connection.RuntimeInstanceCookie}";
         }
     }
 }

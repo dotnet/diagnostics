@@ -55,13 +55,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             // This means this method should have exclusive access to mutating or checking
             // the state of the stream.
 
-            lock (_stream)
+            lock (_streamSync)
             {
                 try
                 {
                     if (null == _stream)
                     {
-                        return false;
+                        throw new InvalidOperationException("Stream is null but ready event was set.");
                     }
                     else if (_stream is ExposedSocketNetworkStream networkStream)
                     {
@@ -87,7 +87,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                         {
                             // PeekNamedPipe will return false if the pipe is disconnected/broken.
-                            return NativeMethods.PeekNamedPipe(pipeStream.SafePipeHandle, null, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+                            if (!NativeMethods.PeekNamedPipe(pipeStream.SafePipeHandle, null, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero))
+                            {
+                                int err = Marshal.GetLastWin32Error();
+                                if (109 == err) // ERROR_BROKEN_PIPE
+                                {
+                                    return false;
+                                }
+                                throw new InvalidOperationException($"PeekNamedPipe failed: {err}");
+                            }
+                            return true;
                         }
                     }
 

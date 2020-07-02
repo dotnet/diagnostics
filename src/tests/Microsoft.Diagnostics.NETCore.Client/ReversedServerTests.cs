@@ -341,7 +341,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.NotEqual(Guid.Empty, connection.RuntimeInstanceCookie);
             Assert.NotNull(connection.Endpoint);
             Assert.Equal(expectValidTransport, connection.Endpoint.CheckTransport());
-            _outputHelper.WriteLine($"Connection: {ConnectionToString(connection)}");
+            _outputHelper.WriteLine($"Connection: {connection.ToTestString()}");
         }
 
         private void ResumeRuntime(ReversedDiagnosticsConnection connection, DiagnosticsClient client)
@@ -443,11 +443,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await stoppedProcessingTask;
         }
 
-        private static string ConnectionToString(ReversedDiagnosticsConnection connection)
-        {
-            return $"PID={connection.ProcessId}, COOKIE={connection.RuntimeInstanceCookie}";
-        }
-
         /// <summary>
         /// Helper class for consuming connections from the reverse diagnostics server.
         /// </summary>
@@ -518,7 +513,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         connection = await _server.AcceptAsync(token);
 
                         _acceptedCount++;
-                        _outputHelper.WriteLine($"Accepted connection #{_acceptedCount} from server: {ConnectionToString(connection)}");
+                        _outputHelper.WriteLine($"Accepted connection #{_acceptedCount} from server: {connection.ToTestString()}");
                     }
                     catch (OperationCanceledException)
                     {

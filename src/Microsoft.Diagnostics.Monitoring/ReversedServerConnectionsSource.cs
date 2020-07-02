@@ -109,6 +109,8 @@ namespace Microsoft.Diagnostics.Monitoring
                     {
                         _connections.Remove(connection);
 
+                        OnRemovedConnection(connection);
+
                         // Dispose the connection to release the tracking resources in the reversed server.
                         connection.Dispose();
                     }
@@ -138,27 +140,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 {
                     ReversedDiagnosticsConnection connection = await _server.AcceptAsync(token);
 
-                    // Send ResumeRuntime message for runtime instances that connect to the server. This will allow
-                    // those instances that are configured to pause on start to resume after the diagnostics
-                    // connection has been made. Instances that are not configured to pause on startup will ignore
-                    // the command and return success.
-                    var client = new DiagnosticsClient(connection.Endpoint);
-                    try
-                    {
-                        client.ResumeRuntime();
-                    }
-                    catch (ServerErrorException)
-                    {
-                        // The runtime likely doesn't understand the ResumeRuntime command.
-                    }
-
-                    await _connectionsSemaphore.WaitAsync(token);
-
-                    _connections.Add(connection);
-
-                    _connectionsSemaphore.Release();
-
-                    OnNewConnection(connection);
+                    _ = Task.Run(() => ResumeAndQueueConnection(connection, token), token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -166,7 +148,45 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
+        private async Task ResumeAndQueueConnection(ReversedDiagnosticsConnection connection, CancellationToken token)
+        {
+            // Send ResumeRuntime message for runtime instances that connect to the server. This will allow
+            // those instances that are configured to pause on start to resume after the diagnostics
+            // connection has been made. Instances that are not configured to pause on startup will ignore
+            // the command and return success.
+            var client = new DiagnosticsClient(connection.Endpoint);
+            try
+            {
+                client.ResumeRuntime();
+            }
+            catch (ServerErrorException)
+            {
+                // The runtime likely doesn't understand the ResumeRuntime command.
+            }
+
+            // The ResumeRuntime message will consume the stream.
+            // Wait until the server repopulates the stream so that the source doesn't try to offer
+            // a connection that cannot be immediately used. If it offered it immediately, timing issues could ensue
+            // such as when the GetConnectionsAsync call prunes connections that fail the CheckTransport check.
+            while (!connection.Endpoint.CheckTransport())
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(100), token);
+            }
+
+            await _connectionsSemaphore.WaitAsync(token);
+
+            _connections.Add(connection);
+
+            OnNewConnection(connection);
+
+            _connectionsSemaphore.Release();
+        }
+
         internal virtual void OnNewConnection(ReversedDiagnosticsConnection connection)
+        {
+        }
+
+        internal virtual void OnRemovedConnection(ReversedDiagnosticsConnection connection)
         {
         }
 

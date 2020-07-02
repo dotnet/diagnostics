@@ -43,7 +43,7 @@ namespace DotnetMonitor.UnitTests
             TestRunner runner = new TestRunner(commandLine, outputHelper, redirectError: true, redirectInput: true);
             if (!string.IsNullOrEmpty(reversedServerTransportName))
             {
-                ReversedServerHelper.AddReversedServer(runner, reversedServerTransportName);
+                runner.AddReversedServer(reversedServerTransportName);
             }
             runner.Start();
 
