@@ -30,14 +30,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Checks that the client has the diagnostic transport.
+        /// Checks that the client is able to communicate with target process over diagnostic transport.
         /// </summary>
         /// <returns>
-        /// True if client has the diagnostic transport; otherwise, false.
+        /// True if client is able to communicate with target process; otherwise, false.
         /// </returns>
-        internal bool HasTransport()
+        internal bool CheckTransport()
         {
-            return IpcClient.HasTransport(_endpoint);
+            return IpcClient.CheckTransport(_endpoint);
         }
 
         /// <summary>

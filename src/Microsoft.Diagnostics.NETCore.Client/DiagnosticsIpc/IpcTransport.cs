@@ -21,14 +21,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal interface IIpcEndpoint
     {
         /// <summary>
+        /// Checks that the client is able to communicate with target process over diagnostic transport.
+        /// </summary>
+        /// <returns>
+        /// True if client is able to communicate with target process; otherwise, false.
+        /// </returns>
+        bool CheckTransport();
+
+        /// <summary>
         /// Gets the stream to retrieve diagnostic information from the runtime instance.
         /// </summary>
         Stream Connect();
-
-        /// <summary>
-        /// Checks if the associated runtime instance has the diagnostics transport.
-        /// </summary>
-        bool HasTransport();
     }
 
     internal class ServerIpcEndpoint : IIpcEndpoint, IDisposable
@@ -37,6 +40,46 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private bool _disposed;
         private Stream _stream;
+
+        /// <inheritdoc cref="IIpcEndpoint.CheckTransport"/>
+        public bool CheckTransport()
+        {
+            Stream stream = _stream;
+
+            if (null == stream)
+            {
+                return false;
+            }
+            else if (stream is ExposedSocketNetworkStream networkStream)
+            {
+                // Upate Connected state of socket by sending non-blocking zero-byte data.
+                Socket socket = networkStream.Socket;
+                bool blocking = socket.Blocking;
+                try
+                {
+                    socket.Blocking = false;
+                    socket.Send(Array.Empty<byte>(), 0, SocketFlags.None);
+                }
+                catch (Exception)
+                {
+                }
+                finally
+                {
+                    socket.Blocking = blocking;
+                }
+                return socket.Connected;
+            }
+            else if (stream is PipeStream pipeStream)
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    // PeekNamedPipe will return false if the pipe is disconnected/broken.
+                    return NativeMethods.PeekNamedPipe(pipeStream.SafePipeHandle, null, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+                }
+            }
+
+            throw new InvalidOperationException($"Stream type '{stream.GetType().FullName}' was not handled.");
+        }
 
         /// <inheritdoc cref="IIpcEndpoint.Connect"/>
         /// <remarks>
@@ -49,12 +92,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _streamReady.WaitOne();
 
             return Interlocked.Exchange(ref _stream, null);
-        }
-
-        /// <inheritdoc cref="IIpcEndpoint.HasTransport"/>
-        public bool HasTransport()
-        {
-            return null != _stream;
         }
 
         public void Dispose()
@@ -101,6 +138,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _pid = pid;
         }
 
+
+        /// <inheritdoc cref="IIpcEndpoint.CheckTransport"/>
+        public bool CheckTransport()
+        {
+            if (!TryGetTransportName(_pid, out string transportName))
+            {
+                return false;
+            }
+
+            return File.Exists(Path.Combine(IpcRootPath, transportName));
+        }
+
         /// <summary>
         /// Connects to the underlying IPC Transport and opens a read/write-able Stream
         /// </summary>
@@ -139,19 +188,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
                 socket.Connect(remoteEP);
-                return new NetworkStream(socket, ownsSocket: true);
+                return new ExposedSocketNetworkStream(socket, ownsSocket: true);
             }
-        }
-
-        /// <inheritdoc cref="IIpcEndpoint.HasTransport"/>
-        public bool HasTransport()
-        {
-            if (!TryGetTransportName(_pid, out string transportName))
-            {
-                return false;
-            }
-
-            return File.Exists(Path.Combine(IpcRootPath, transportName));
         }
 
         private static bool TryGetTransportName(int pid, out string transportName)

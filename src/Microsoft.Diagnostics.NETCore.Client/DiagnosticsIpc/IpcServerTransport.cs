@@ -163,7 +163,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     throw;
                 }
 
-                return new NetworkStream(socket, ownsSocket: true);
+                return new ExposedSocketNetworkStream(socket, ownsSocket: true);
             }
         }
     }

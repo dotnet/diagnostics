@@ -16,9 +16,6 @@ namespace Microsoft.Diagnostics.Monitoring
     /// </summary>
     internal class ReversedServerConnectionsSource : IDiagnosticsConnectionsSourceInternal, IAsyncDisposable
     {
-        // The amount of time to attempt to get the process information from a connection.
-        private readonly TimeSpan ProcessInfoDuration = TimeSpan.FromSeconds(5);
-
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
         private readonly IList<ReversedDiagnosticsConnection> _connections = new List<ReversedDiagnosticsConnection>();
         private readonly SemaphoreSlim _connectionsSemaphore = new SemaphoreSlim(1);
@@ -104,14 +101,18 @@ namespace Microsoft.Diagnostics.Monitoring
             await _connectionsSemaphore.WaitAsync(linkedToken);
             try
             {
-                // Create a task for each connection that checks and removes it
-                // if it is no longer connected or is not responsive.
-                IList<Task> pruneTasks = new List<Task>();
-                foreach (ReversedDiagnosticsConnection connection in _connections)
+                // Check the transport for each connection and remove the connection if the check fails.
+                var connections = _connections.ToList();
+                foreach (ReversedDiagnosticsConnection connection in connections)
                 {
-                    pruneTasks.Add(Task.Run(() => PruneConnectionAsync(connection, linkedToken), linkedToken));
+                    if (!connection.Endpoint.CheckTransport())
+                    {
+                        _connections.Remove(connection);
+
+                        // Dispose the connection to release the tracking resources in the reversed server.
+                        connection.Dispose();
+                    }
                 }
-                await Task.WhenAll(pruneTasks);
 
                 return _connections.Select(c => new DiagnosticsConnection(c));
             }
@@ -163,48 +164,6 @@ namespace Microsoft.Diagnostics.Monitoring
                 {
                 }
             }
-        }
-
-        /// <summary>
-        /// Tests a diagnostics connection and removes it if the associated runtime instance is no longer active.
-        /// </summary>
-        private async Task PruneConnectionAsync(ReversedDiagnosticsConnection connection, CancellationToken token)
-        {
-            // Try to get ProcessInfo information to test the connection
-            try
-            {
-                DiagnosticsClient client = new DiagnosticsClient(connection.Endpoint);
-
-                // NOTE: This test does not need to necessarily use the event pipe providers and collection.
-                // It only needs to send some type of request and receive a response from the runtime instance
-                // to verify that the diagnostics pipe/socket is viable and the runtime instance is still connected.
-                bool hasProcessInfo = false;
-                Action<string> callback = commandLine => hasProcessInfo = !string.IsNullOrEmpty(commandLine);
-                await using var process = new DiagnosticsEventPipeProcessor(
-                    PipeMode.ProcessInfo,
-                    processInfoCallback: callback);
-
-                await process.Process(client, 0, ProcessInfoDuration, token);
-
-                // Check if could not get process information within reasonable amount of time
-                if (!hasProcessInfo)
-                {
-                    RemoveConnection(connection);
-                }
-            }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
-            {
-                // Runtime instance likely no longer exists or is not responsive; remove connection.
-                RemoveConnection(connection);
-            }
-        }
-
-        private void RemoveConnection(ReversedDiagnosticsConnection connection)
-        {
-            _connections.Remove(connection);
-
-            // Dispose the connection to release the tracking resources in the reversed server.
-            connection.Dispose();
         }
 
         internal virtual void OnNewConnection(ReversedDiagnosticsConnection connection)

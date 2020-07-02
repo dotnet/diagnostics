@@ -89,7 +89,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             var client = new DiagnosticsClient(runner.Pid);
-            Assert.True(client.HasTransport(), $"Unable to verify diagnostics transport for test process {runner.Pid}.");
+            Assert.True(client.CheckTransport(), $"Unable to verify diagnostics transport for test process {runner.Pid}.");
 
             runner.Stop();
         }
