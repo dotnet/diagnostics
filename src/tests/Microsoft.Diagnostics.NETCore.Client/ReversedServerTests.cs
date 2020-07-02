@@ -8,6 +8,7 @@ using System.Diagnostics.Tracing;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Dia2Lib;
 using Microsoft.Diagnostics.Tracing;
 using Xunit;
 using Xunit.Abstractions;
@@ -180,6 +181,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 await VerifyNoMoreConnections(accepter);
 
                 client = new DiagnosticsClient(connection.Endpoint);
+
+                ResumeRuntime(connection, client);
+
+                // Wait some time for the process to reconnect to server
+                await Task.Delay(TimeSpan.FromSeconds(1));
             }
             finally
             {
@@ -325,6 +331,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _outputHelper.WriteLine($"Connection: {ConnectionToString(connection)}");
         }
 
+        private void ResumeRuntime(ReversedDiagnosticsConnection connection, DiagnosticsClient client)
+        {
+            _outputHelper.WriteLine($"{connection.RuntimeInstanceCookie}: Resuming runtime instance.");
+            try
+            {
+                client.ResumeRuntime();
+                _outputHelper.WriteLine($"{connection.RuntimeInstanceCookie}: Resumed successfully.");
+            }
+            catch (ServerErrorException ex)
+            {
+                // Runtime likely does not understand the ResumeRuntime command.
+                _outputHelper.WriteLine($"{connection.RuntimeInstanceCookie}: {ex.Message}");
+            }
+        }
+
         /// <summary>
         /// Verifies that a client can handle multiple operations simultaneously.
         /// </summary>
@@ -335,36 +356,28 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.True(client.HasTransport());
 
             _outputHelper.WriteLine($"{connection.RuntimeInstanceCookie}: Session #1 - Creating session.");
-            var session1Task = Task.Run(async () =>
-            {
-                var providers = new List<EventPipeProvider>();
-                providers.Add(CreateProvider("Microsoft-Windows-DotNETRuntime"));
-                var session = client.StartEventPipeSession(providers);
+            var providers1 = new List<EventPipeProvider>();
+            providers1.Add(CreateProvider("Microsoft-Windows-DotNETRuntime"));
+            var session1 = client.StartEventPipeSession(providers1);
 
-                await VerifyEventStreamProvidesEventsAsync(connection, session, 1);
-
-                return session;
-            });
+            var verify1Task = Task.Run(() => VerifyEventStreamProvidesEventsAsync(connection, session1, 1));
 
             _outputHelper.WriteLine($"{connection.RuntimeInstanceCookie}: Session #2 - Creating session.");
-            var session2Task = Task.Run(async () =>
-            {
-                var providers = new List<EventPipeProvider>();
-                providers.Add(CreateProvider("Microsoft-DotNETCore-SampleProfiler"));
-                var session = client.StartEventPipeSession(providers);
+            var providers2 = new List<EventPipeProvider>();
+            providers2.Add(CreateProvider("Microsoft-DotNETCore-SampleProfiler"));
+            var session2 = client.StartEventPipeSession(providers2);
 
-                await VerifyEventStreamProvidesEventsAsync(connection, session, 2);
+            var verify2Task = Task.Run(() => VerifyEventStreamProvidesEventsAsync(connection, session2, 2));
 
-                return session;
-            });
+            ResumeRuntime(connection, client);
 
             // Allow session verifications to run in parallel
             _outputHelper.WriteLine($"{connection.RuntimeInstanceCookie}: Waiting for session verifications.");
-            await Task.WhenAll(session1Task, session2Task);
+            await Task.WhenAll(verify1Task, verify2Task);
 
             _outputHelper.WriteLine($"{connection.RuntimeInstanceCookie}: Sessions finished.");
-            EventPipeSession session1 = session1Task.Result;
-            EventPipeSession session2 = session2Task.Result;
+            await verify1Task;
+            await verify2Task;
 
             // Check that sessions and streams are unique
             Assert.NotEqual(session1, session2);

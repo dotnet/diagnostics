@@ -137,6 +137,20 @@ namespace Microsoft.Diagnostics.Monitoring
                 {
                     ReversedDiagnosticsConnection connection = await _server.AcceptAsync(token);
 
+                    // Send ResumeRuntime message for runtime instances that connect to the server. This will allow
+                    // those instances that are configured to pause on start to resume after the diagnostics
+                    // connection has been made. Instances that are not configured to pause on startup will ignore
+                    // the command and return success.
+                    var client = new DiagnosticsClient(connection.Endpoint);
+                    try
+                    {
+                        client.ResumeRuntime();
+                    }
+                    catch (ServerErrorException)
+                    {
+                        // The runtime likely doesn't understand the ResumeRuntime command.
+                    }
+
                     await _connectionsSemaphore.WaitAsync(token);
 
                     _connections.Add(connection);
