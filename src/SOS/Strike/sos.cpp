@@ -733,7 +733,7 @@ namespace sos
     void ObjectIterator::MoveToNextObject()
     {
         // Object::GetSize can be unaligned, so we must align it ourselves.
-        size_t size = (bLarge ? AlignLarge(mCurrObj.GetSize()) : Align(mCurrObj.GetSize()));
+        size_t size = (bLarge || bPinned) ? AlignLarge(mCurrObj.GetSize()) : Align(mCurrObj.GetSize());
 
         mLastObj = mCurrObj;
         mCurrObj = mCurrObj.GetAddress() + size;
