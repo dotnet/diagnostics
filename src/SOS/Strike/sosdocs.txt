@@ -2611,12 +2611,13 @@ You can use the "dotnet --info" in a command shell to find the path of an instal
 \\
 
 COMMAND: setsymbolserver.
-!SetSymbolServer [-ms] [-mi] [-disable] [-log] [-cache <cache-path>] [-directory <search-directory>] [<symbol-server-URL>]
+!SetSymbolServer [-ms] [-mi] [-disable] [-log] [-cache <cache-path>] [-directory <search-directory>] [-pat <token>] [<symbol-server-URL>]
 
 -ms - Use the public Microsoft symbol server.
 -mi - Use the internal symweb symbol server.
 -disable - Disable symbol download support.
 -directory - Directory to search for symbols. Can be more than one.
+-pat - Access token to the authenticated server.
 -cache - Specific a symbol cache directory. The default is %%TEMP%%\SymbolCache if not specified.
 -log - Enable symbol download logging.
 <symbol-server-URL> - Symbol server URL.

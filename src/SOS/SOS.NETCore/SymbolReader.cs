@@ -201,6 +201,7 @@ namespace SOS
             bool symweb,
             string tempDirectory,
             string symbolServerPath,
+            string authToken,
             int timeoutInMinutes,
             string symbolCachePath,
             string symbolDirectoryPath,
@@ -233,7 +234,7 @@ namespace SOS
                     }
                 }
                 // Build the symbol stores using the other parameters
-                if (!GetServerSymbolStore(ref store, msdl, symweb, symbolServerPath, timeoutInMinutes, symbolCachePath, symbolDirectoryPath)) {
+                if (!GetServerSymbolStore(ref store, msdl, symweb, symbolServerPath, authToken, timeoutInMinutes, symbolCachePath, symbolDirectoryPath)) {
                     return false;
                 }
             }
@@ -1189,7 +1190,7 @@ namespace SOS
                     }
 
                     // Add the symbol stores to the chain
-                    if (!GetServerSymbolStore(ref store, msdl, false, symbolServerPath, timeoutInMinutes: 0, symbolCachePath, symbolDirectoryPath))
+                    if (!GetServerSymbolStore(ref store, msdl, false, symbolServerPath, null, timeoutInMinutes: 0, symbolCachePath, symbolDirectoryPath))
                     {
                         return false;
                     }
@@ -1199,7 +1200,7 @@ namespace SOS
             return true;
         }
 
-        private static bool GetServerSymbolStore(ref SymbolStore store, bool msdl, bool symweb, string symbolServerPath, int timeoutInMinutes, string symbolCachePath, string symbolDirectoryPath)
+        private static bool GetServerSymbolStore(ref SymbolStore store, bool msdl, bool symweb, string symbolServerPath, string authToken, int timeoutInMinutes, string symbolCachePath, string symbolDirectoryPath)
         {
             bool internalServer = false;
 
@@ -1247,7 +1248,7 @@ namespace SOS
                         }
                         else
                         {
-                            httpSymbolStore = new HttpSymbolStore(s_tracer, store, uri);
+                            httpSymbolStore = new HttpSymbolStore(s_tracer, store, uri, personalAccessToken: authToken);
                         }
                         if (timeoutInMinutes != 0)
                         {
