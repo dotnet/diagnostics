@@ -157,7 +157,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 logActivities[traceEvent.ActivityID] = item;
             });
 
-            source.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJsonStop/Stop", (traceEvent) =>
+            source.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Stop", (traceEvent) =>
             {
                 var factoryId = (int)traceEvent.PayloadByName("FactoryID");
                 var categoryName = (string)traceEvent.PayloadByName("LoggerName");
