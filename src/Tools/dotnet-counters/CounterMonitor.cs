@@ -80,6 +80,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
             catch (PlatformNotSupportedException)
             {
             }
+            // On non-abrupt exits, the socket may be already closed by the runtime and we won't be able to send a stop request through it. 
+            catch (ServerNotAvailableException)
+            {
+            }
             _renderer.Stop();
         }
 
