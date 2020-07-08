@@ -16238,6 +16238,7 @@ DECLARE_API(SetSymbolServer)
     StringHolder symbolCache;
     StringHolder searchDirectory;
     StringHolder windowsSymbolPath;
+    StringHolder authToken;
     size_t timeoutInMinutes = 0;
     BOOL disable = FALSE;
     BOOL loadNative = FALSE;
@@ -16249,6 +16250,7 @@ DECLARE_API(SetSymbolServer)
         {"-disable", &disable, COBOOL, FALSE},
         {"-cache", &symbolCache.data, COSTRING, TRUE},
         {"-directory", &searchDirectory.data, COSTRING, TRUE},
+        {"-pat", &authToken.data, COSTRING, TRUE},
         {"-timeout", &timeoutInMinutes, COSIZE_T, TRUE},
         {"-ms", &msdl, COBOOL, FALSE},
         {"-log", &logging, COBOOL, FALSE},
@@ -16288,7 +16290,7 @@ DECLARE_API(SetSymbolServer)
 
     if (logging || msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr || searchDirectory.data != nullptr || windowsSymbolPath.data != nullptr)
     {
-        Status = InitializeSymbolStore(logging, msdl, symweb, symbolServer.data, (int)timeoutInMinutes, symbolCache.data, searchDirectory.data, windowsSymbolPath.data);
+        Status = InitializeSymbolStore(logging, msdl, symweb, symbolServer.data, authToken.data, (int)timeoutInMinutes, symbolCache.data, searchDirectory.data, windowsSymbolPath.data);
         if (FAILED(Status))
         {
             return Status;

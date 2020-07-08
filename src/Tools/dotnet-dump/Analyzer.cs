@@ -89,6 +89,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         symweb: false,
                         tempDirectory: null,
                         symbolServerPath: null,
+                        authToken: null,
                         timeoutInMinutes: 0,
                         symbolCachePath: null,
                         symbolDirectoryPath: null,
