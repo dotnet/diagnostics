@@ -1678,7 +1678,7 @@ HRESULT PrintALC(TADDR taObj)
         return S_OK;
     }
 
-    return PrintObj(assemblyLoadContext);
+    return PrintObj(TO_TADDR(assemblyLoadContext));
 }
 
 BOOL IndicesInRange (DWORD * indices, DWORD * lowerBounds, DWORD * bounds, DWORD rank)
