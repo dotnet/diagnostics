@@ -426,8 +426,8 @@ stages:
         enableSourceLinkValidation: true
         symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
         SDLValidationParameters:
-          enable: true
-          continueOnError: false
+          enable: false
+          continueOnError: true
           params: ' -SourceToolsList @("policheck","credscan")
           -TsaInstanceURL $(_TsaInstanceURL)
           -TsaProjectName $(_TsaProjectName)
