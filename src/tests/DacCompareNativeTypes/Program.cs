@@ -106,6 +106,7 @@ namespace DacCompareNativeTypes
                 "RSPtrArray<CordbAppDomain,RSSmartPtr<CordbAppDomain>>",
                 "RSPtrArray<CordbInternalFrame,RSSmartPtr<CordbInternalFrame>>",
                 "RSPtrArray<CordbProcess,RSSmartPtr<CordbProcess>>",
+                "Target_CLiteWeightStgdbRW",
 
                 // DBI not used in cross OS
                 "TwoWayPipe",
@@ -113,7 +114,18 @@ namespace DacCompareNativeTypes
                 // Shims
                 // Not expected to matter
                 "ShimProcess",
-                "ShimRemoteDataTarget"
+                "ShimRemoteDataTarget",
+
+                // Libunwind types 3.1 crossdac uses a different libunwind version
+                "cursor",
+                "dwarf_cie_info",
+                "dwarf_cursor",
+                "dwarf_rs_cache",
+                "map_iterator",
+                "mempool",
+                "ucontext",
+                "unw_addr_space",
+                "unw_tdep_save_loc"
             };
 
             return ignoreTypes.Exists(x => String.CompareOrdinal(x, fullName) == 0);
@@ -200,10 +212,29 @@ namespace DacCompareNativeTypes
             return true;
         }
 
-        static void CompareTypes(Type dwarfType, Type pdbType)
+        int ignored;
+        int matched;
+        int mismatched;
+        int dwarfUnique;
+        int pdbUnique;
+
+        Program() {}
+
+        void CompareTypes(Type dwarfType, Type pdbType)
         {
-            if (IsIgnoreType(pdbType) || AllPbdAlternatesMatch(dwarfType, pdbType))
+            if (IsIgnoreType(pdbType))
+            {
+                ignored++;
                 return;
+            }
+
+            if (AllPbdAlternatesMatch(dwarfType, pdbType))
+            {
+                matched++;
+                return;
+            }
+
+            mismatched++;
 
             foreach(var p in pdbType.Alternates.Values)
             {
@@ -214,11 +245,8 @@ namespace DacCompareNativeTypes
             }
         }
 
-        static void Main(string[] args)
+        int Main(string pdbPath, string dwarfPath)
         {
-            string pdbPath = @"pdb";
-            string dwarfPath = @"dwarf";
-
             Dictionary<string, Type> pdbTypes = new Dictionary<string, Type>();
             Dictionary<string, Type> dwarfTypes = new Dictionary<string, Type>();
 
@@ -238,6 +266,8 @@ namespace DacCompareNativeTypes
                 }
             }
 
+            Console.WriteLine($"PDB unique types : {pdbTypes.Keys.Count}");
+
             foreach (Type type in DwarfParser.Parse(File.ReadLines(dwarfPath)))
             {
                 if (dwarfTypes.ContainsKey(type.FullName))
@@ -254,13 +284,47 @@ namespace DacCompareNativeTypes
                 }
             }
 
+            Console.WriteLine($"Dwarf unique types : {dwarfTypes.Keys.Count}");
+
             foreach (Type type in dwarfTypes.Values.OrderBy(x => x.FullName))
             {
                 if (pdbTypes.ContainsKey(type.FullName))
                 {
                     CompareTypes(type, pdbTypes[type.FullName]);
                 }
+                else
+                {
+                    // Console.WriteLine($"dwarf unique type : {type.FullName}");
+                    dwarfUnique++;
+                }
             }
+
+            foreach (Type type in pdbTypes.Values.OrderBy(x => x.FullName))
+            {
+                if (!dwarfTypes.ContainsKey(type.FullName))
+                {
+                    // Console.WriteLine($"PDB unique type : {type.FullName}");
+                    pdbUnique++;
+                }
+            }
+
+            Console.WriteLine($"Matches: {matched}");
+            Console.WriteLine($"Ignored: {ignored}");
+            Console.WriteLine($"Mismatched: {mismatched}");
+            Console.WriteLine($"DwarfUnique: {dwarfUnique}");
+            Console.WriteLine($"PdbUnique: {pdbUnique}");
+
+            return mismatched + (matched == 0 ? 1 : 0);
+        }
+
+        static int Main(string[] args)
+        {
+            string pdbPath = @"pdb";
+            string dwarfPath = @"dwarf";
+
+            Program program = new Program();
+
+            return program.Main(pdbPath, dwarfPath);
         }
     }
 }
