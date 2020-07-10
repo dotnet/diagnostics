@@ -3,10 +3,10 @@
     "dotnet": "5.0.100-preview.6.20310.4",
     "runtimes": {
       "dotnet/x64": [
-        "3.1.5"
+        "$(MicrosoftNETCoreApp31Version)", "$(MicrosoftNETCoreAppVersion)"
       ],
       "dotnet/x86": [
-        "3.1.5"
+        "$(MicrosoftNETCoreApp31Version)", "$(MicrosoftNETCoreAppVersion)"
       ]
     }
   },
