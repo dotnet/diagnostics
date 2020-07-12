@@ -17,6 +17,7 @@
 [Pp]ackages/
 x64/
 .dotnet/
+.dotnet-test/
 .packages/
 .tools/
 

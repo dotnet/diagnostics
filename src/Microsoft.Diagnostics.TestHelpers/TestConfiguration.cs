@@ -740,6 +740,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             get
             {
                 return OS.Kind == OSKind.Linux && IsNETCore && RuntimeFrameworkVersionMajor >= 2 ||
+                       OS.Kind == OSKind.OSX && IsNETCore && RuntimeFrameworkVersionMajor >= 5 ||
                        OS.Kind == OSKind.Windows && IsNETCore && RuntimeFrameworkVersionMajor >= 5;
             }
         }
