@@ -16,7 +16,7 @@ using System.Threading;
 namespace Microsoft.Diagnostics.NETCore.Client
 {
     /// <summary>
-    /// An endpiont used to acquire the diagnostics stream for a runtime instance.
+    /// An endpoint used to acquire the diagnostics stream for a runtime instance.
     /// </summary>
     internal interface IIpcEndpoint
     {
@@ -149,7 +149,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             lock (_streamSync)
             {
-                return Interlocked.Exchange(ref _stream, stream);
+                var previousStream = _stream;
+                _stream = stream;
+                return previousStream;
             }
         }
     }

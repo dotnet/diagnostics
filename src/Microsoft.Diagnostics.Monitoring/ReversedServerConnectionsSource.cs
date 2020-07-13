@@ -45,12 +45,14 @@ namespace Microsoft.Diagnostics.Monitoring
             {
                 _cancellation.Cancel();
 
-                _server?.Dispose();
-
                 if (null != _listenTask)
                 {
                     await _listenTask;
                 }
+
+                _server?.Dispose();
+
+                _connectionsSemaphore.Dispose();
 
                 _cancellation.Dispose();
 
@@ -174,12 +176,16 @@ namespace Microsoft.Diagnostics.Monitoring
             }
 
             await _connectionsSemaphore.WaitAsync(token);
-
-            _connections.Add(connection);
-
-            OnNewConnection(connection);
-
-            _connectionsSemaphore.Release();
+            try
+            {
+                _connections.Add(connection);
+            
+                OnNewConnection(connection);
+            }
+            finally
+            {
+                _connectionsSemaphore.Release();
+            }
         }
 
         internal virtual void OnNewConnection(ReversedDiagnosticsConnection connection)

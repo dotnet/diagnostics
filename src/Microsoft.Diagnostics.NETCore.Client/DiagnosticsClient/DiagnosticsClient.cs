@@ -15,7 +15,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// <summary>
     /// This is a top-level class that contains methods to send various diagnostics command to the runtime.
     /// </summary>
-    public class DiagnosticsClient
+    public sealed class DiagnosticsClient
     {
         private readonly IIpcEndpoint _endpoint;
 
@@ -68,15 +68,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
             byte[] payload = SerializeCoreDump(dumpPath, dumpType, logDumpGeneration);
             IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
             IpcMessage response = IpcClient.SendMessage(_endpoint, message);
-            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
-                case DiagnosticsServerCommandId.Error:
+                case DiagnosticsServerResponseId.Error:
                     uint hr = BitConverter.ToUInt32(response.Payload, 0);
                     if (hr == (uint)DiagnosticsIpcError.UnknownCommand) {
                         throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
                     }
                     throw new ServerErrorException($"Writing dump failed (HRESULT: 0x{hr:X8})");
-                case DiagnosticsServerCommandId.OK:
+                case DiagnosticsServerResponseId.OK:
                     return;
                 default:
                     throw new ServerErrorException($"Writing dump failed - server responded with unknown command");
@@ -105,12 +105,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             byte[] serializedConfiguration = SerializeProfilerAttach((uint)attachTimeout.TotalSeconds, profilerGuid, profilerPath, additionalData);
             var message = new IpcMessage(DiagnosticsServerCommandSet.Profiler, (byte)ProfilerCommandId.AttachProfiler, serializedConfiguration);
             var response = IpcClient.SendMessage(_endpoint, message);
-            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
-                case DiagnosticsServerCommandId.Error:
+                case DiagnosticsServerResponseId.Error:
                     var hr = BitConverter.ToInt32(response.Payload, 0);
                     throw new ServerErrorException($"Profiler attach failed (HRESULT: 0x{hr:X8})");
-                case DiagnosticsServerCommandId.OK:
+                case DiagnosticsServerResponseId.OK:
                     return;
                 default:
                     throw new ServerErrorException($"Profiler attach failed - server responded with unknown command");
@@ -125,12 +125,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Server, (byte)DiagnosticsServerCommandId.ResumeRuntime);
             var response = IpcClient.SendMessage(_endpoint, message);
-            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
-                case DiagnosticsServerCommandId.Error:
+                case DiagnosticsServerResponseId.Error:
                     var hr = BitConverter.ToInt32(response.Payload, 0);
                     throw new ServerErrorException($"Resume runtime failed (HRESULT: 0x{hr:X8})");
-                case DiagnosticsServerCommandId.OK:
+                case DiagnosticsServerResponseId.OK:
                     return;
                 default:
                     throw new ServerErrorException($"Resume runtime failed - server responded with unknown command");

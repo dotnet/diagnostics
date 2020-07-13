@@ -17,10 +17,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
         Server         = 0xFF,
     }
 
+    // Overlaps with DiagnosticsServerResponseId
+    // DON'T create overlapping values
     internal enum DiagnosticsServerCommandId : byte
     {
-        OK            = 0x00,
+        // 0x00 used in DiagnosticServerResponseId
         ResumeRuntime = 0x01,
+        // 0xFF used DiagnosticServerResponseId
+    };
+
+    // Overlaps with DiagnosticsServerCommandId
+    // DON'T create overlapping values
+    internal enum DiagnosticsServerResponseId : byte
+    {
+        OK            = 0x00,
         Error         = 0xFF,
     }
 

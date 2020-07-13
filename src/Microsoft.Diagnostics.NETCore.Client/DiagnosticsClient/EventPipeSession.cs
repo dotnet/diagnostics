@@ -28,12 +28,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             var config = new EventPipeSessionConfiguration(circularBufferMB, EventPipeSerializationFormat.NetTrace, providers, requestRundown);
             var message = new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.CollectTracing2, config.SerializeV2());
             EventStream = IpcClient.SendMessage(endpoint, message, out var response);
-            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
-                case DiagnosticsServerCommandId.OK:
+                case DiagnosticsServerResponseId.OK:
                     _sessionId = BitConverter.ToInt64(response.Payload, 0);
                     break;
-                case DiagnosticsServerCommandId.Error:
+                case DiagnosticsServerResponseId.Error:
                     var hr = BitConverter.ToInt32(response.Payload, 0);
                     throw new ServerErrorException($"EventPipe session start failed (HRESULT: 0x{hr:X8})");
                 default:
@@ -53,11 +53,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             byte[] payload = BitConverter.GetBytes(_sessionId);
             var response = IpcClient.SendMessage(_endpoint, new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.StopTracing, payload));
 
-            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
-                case DiagnosticsServerCommandId.OK:
+                case DiagnosticsServerResponseId.OK:
                     return;
-                case DiagnosticsServerCommandId.Error:
+                case DiagnosticsServerResponseId.Error:
                     var hr = BitConverter.ToInt32(response.Payload, 0);
                     throw new ServerErrorException($"EventPipe session stop failed (HRESULT: 0x{hr:X8})");
                 default:
