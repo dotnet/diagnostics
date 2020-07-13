@@ -60,6 +60,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private bool _disposed = false;
         private NamedPipeServerStream _stream;
 
+        private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
         private readonly string _pipeName;
         private readonly int _maxInstances;
 
@@ -76,7 +77,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (disposing)
                 {
+                    _cancellation.Cancel();
+
                     _stream.Dispose();
+
+                    _cancellation.Dispose();
                 }
                 _disposed = true;
             }
@@ -84,16 +89,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override async Task<Stream> AcceptAsync(CancellationToken token)
         {
+            using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _cancellation.Token);
+
             NamedPipeServerStream connectedStream;
             try
             {
-                await _stream.WaitForConnectionAsync(token);
+                await _stream.WaitForConnectionAsync(linkedSource.Token);
 
                 connectedStream = _stream;
             }
             finally
             {
-                CreateNewPipeServer();
+                if (!_cancellation.IsCancellationRequested)
+                {
+                    CreateNewPipeServer();
+                }
             }
             return connectedStream;
         }
@@ -108,16 +118,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         private bool _disposed = false;
 
+        private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
+        private readonly int _backlog;
         private readonly string _path;
-        private readonly Socket _socket;
+
+        private UnixDomainSocketWithCleanup _socket;
 
         public UnixDomainSocketServerTransport(string path, int backlog)
         {
+            _backlog = backlog;
             _path = path;
-            _socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-            _socket.Bind(PidIpcEndpoint.CreateUnixDomainSocketEndPoint(path));
-            _socket.Listen(backlog);
-            _socket.LingerState.Enabled = false;
+
+            CreateNewSocketServer();
         }
 
         protected override void Dispose(bool disposing)
@@ -126,6 +138,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (disposing)
                 {
+                    _cancellation.Cancel();
+
                     try
                     {
                         _socket.Shutdown(SocketShutdown.Both);
@@ -137,8 +151,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                     _socket.Dispose();
 
-                    if (File.Exists(_path))
-                        File.Delete(_path);
+                    _cancellation.Dispose();
                 }
                 _disposed = true;
             }
@@ -146,25 +159,44 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override async Task<Stream> AcceptAsync(CancellationToken token)
         {
-            using (token.Register(() => _socket.Close(0)))
+            using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _cancellation.Token);
+            using (linkedSource.Token.Register(() => _socket.Close(0)))
             {
                 Socket socket;
                 try
                 {
                     socket = await Task.Factory.FromAsync(_socket.BeginAccept, _socket.EndAccept, _socket);
                 }
-                catch (ObjectDisposedException)
+                catch (Exception ex)
                 {
-                    // When the socket is close, the FromAsync logic will try to call EndAccept on the socket,
-                    // but that will throw an ObjectDisposedException. First check if the cancellation token
-                    // caused the closing of the socket, then rethrow the exception if it did not.
-                    token.ThrowIfCancellationRequested();
+                    // Recreate socket if transport is not disposed.
+                    if (!_cancellation.IsCancellationRequested)
+                    {
+                        CreateNewSocketServer();
+                    }
+
+                    // When the socket is closed, the FromAsync logic will try to call EndAccept on the socket,
+                    // but that will throw an ObjectDisposedException.
+                    if (ex is ObjectDisposedException)
+                    {
+                        // First check if the cancellation token caused the closing of the socket,
+                        // then rethrow the exception if it did not.
+                        token.ThrowIfCancellationRequested();
+                    }
 
                     throw;
                 }
 
                 return new ExposedSocketNetworkStream(socket, ownsSocket: true);
             }
+        }
+
+        private void CreateNewSocketServer()
+        {
+            _socket = new UnixDomainSocketWithCleanup();
+            _socket.Bind(_path);
+            _socket.Listen(_backlog);
+            _socket.LingerState.Enabled = false;
         }
     }
 }
