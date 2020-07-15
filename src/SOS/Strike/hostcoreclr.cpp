@@ -655,6 +655,7 @@ HRESULT InitializeSymbolStore(
     BOOL msdl,
     BOOL symweb,
     const char* symbolServer,
+    const char* authToken,
     int timeoutInMinutes,
     const char* cacheDirectory,
     const char* searchDirectory,
@@ -670,6 +671,7 @@ HRESULT InitializeSymbolStore(
         symweb,
         GetTempDirectory(),
         symbolServer,
+        authToken,
         timeoutInMinutes,
         cacheDirectory,
         searchDirectory,
@@ -722,6 +724,7 @@ void InitializeSymbolStoreFromSymPath()
                         false,                  // symweb
                         GetTempDirectory(),     // tempDirectory
                         nullptr,                // symbolServerPath
+                        nullptr,                // authToken
                         0,                      // timeoutInMinutes
                         nullptr,                // symbolCachePath
                         nullptr,                // symbolDirectoryPath

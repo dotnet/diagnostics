@@ -94,11 +94,11 @@ stages:
               _BuildConfig: Release
               _BuildArch: x64
               _PublishArtifacts: bin
+            Build_Release_x86:
+              _BuildConfig: Release
+              _BuildArch: x86
+              _PublishArtifacts: bin/Windows_NT.x86.Release
             ${{ if ne(variables['System.TeamProject'], 'public') }}:
-              Build_Release_x86:
-                _BuildConfig: Release
-                _BuildArch: x86
-                _PublishArtifacts: bin/Windows_NT.x86.Release
               Build_Release_arm:
                 _BuildOnly: true
                 _BuildConfig: Release

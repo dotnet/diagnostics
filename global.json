@@ -2,8 +2,11 @@
   "tools": {
     "dotnet": "5.0.100-preview.6.20310.4",
     "runtimes": {
-      "dotnet": [
-        "3.1.4"
+      "dotnet/x64": [
+        "3.1.5"
+      ],
+      "dotnet/x86": [
+        "3.1.5"
       ]
     }
   },
