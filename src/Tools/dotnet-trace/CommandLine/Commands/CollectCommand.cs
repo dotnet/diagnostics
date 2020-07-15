@@ -194,11 +194,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                         if (hasConsole)
                                         {
                                             lineToClear = Console.CursorTop - 1;
+
+                                            // in case of INPUT redirection the vertical position does not seem to be updated
+                                            // as expected. So it is needed to count the lines to clear: here only 2 lines are
+                                            // displayed via Console.Out.WriteLine (time + size and keys to exit).
+                                            // If new lines are added/removed in the future, the number will need to be updated accordingly.
+                                            if (!vTermMode.IsEnabled) lineToClear -= 1;  // 2 lines - 1 from lineToClear initialization = 1
                                             ResetCurrentConsoleLine(vTermMode.IsEnabled);
+
+                                            // don't output anything if there is no console
+                                            // otherwise these lines might appear both in case of OUTPUT > file redirection
+                                            // and & background in Linux
+                                            Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
+                                            Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
                                         }
 
-                                        Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fs.Length)}");
-                                        Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
                                         Debug.WriteLine($"PACKET: {Convert.ToBase64String(buffer, 0, nBytesRead)} (bytes {nBytesRead})");
                                     }
                                 }
@@ -219,7 +229,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     do
                     {
-                        while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
+                        if (Console.IsInputRedirected)
+                            // Console.KeyAvailable throws an exception if the console is redirected
+                            while (!shouldExit.WaitOne(250)) { }
+                        else
+                            while (!Console.KeyAvailable && !shouldExit.WaitOne(250)) { }
                     } while (!shouldExit.WaitOne(0) && Console.ReadKey(true).Key != ConsoleKey.Enter);
 
                     if (!terminated)
@@ -367,8 +381,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 alias: "--duration",
                 description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.")
             {
-                Argument = new Argument<TimeSpan>(name: "duration-timespan", defaultValue: default),
-                IsHidden = true
+                Argument = new Argument<TimeSpan>(name: "duration-timespan", defaultValue: default)
             };
         
         private static Option CLREventsOption() => 
