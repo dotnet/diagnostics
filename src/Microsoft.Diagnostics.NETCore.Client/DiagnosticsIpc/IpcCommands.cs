@@ -13,24 +13,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         Dump           = 0x01,
         EventPipe      = 0x02,
         Profiler       = 0x03,
+        Process        = 0x04,
 
         Server         = 0xFF,
     }
 
-    // Overlaps with DiagnosticsServerResponseId
-    // DON'T create overlapping values
-    internal enum DiagnosticsServerCommandId : byte
-    {
-        // 0x00 used in DiagnosticServerResponseId
-        ResumeRuntime = 0x01,
-        // 0xFF used DiagnosticServerResponseId
-    };
-
-    // Overlaps with DiagnosticsServerCommandId
-    // DON'T create overlapping values
     internal enum DiagnosticsServerResponseId : byte
     {
         OK            = 0x00,
+        // future
         Error         = 0xFF,
     }
 
@@ -49,5 +40,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal enum ProfilerCommandId : byte
     {
         AttachProfiler = 0x01,
+    }
+
+    internal enum ProcessCommandId : byte
+    {
+        GetProcessInfo = 0x00,
+        ResumeRuntime  = 0x01
     }
 }

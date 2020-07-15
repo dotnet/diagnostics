@@ -123,7 +123,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal void ResumeRuntime()
         {
-            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Server, (byte)DiagnosticsServerCommandId.ResumeRuntime);
+            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.ResumeRuntime);
             var response = IpcClient.SendMessage(_endpoint, message);
             switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
