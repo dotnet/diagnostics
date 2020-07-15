@@ -18,7 +18,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public void Bind(string path)
         {
-            Bind(PidIpcEndpoint.CreateUnixDomainSocketEndPoint(_path));
+            Bind(PidIpcEndpoint.CreateUnixDomainSocketEndPoint(path));
+
             _path = path;
         }
 
