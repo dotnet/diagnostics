@@ -140,10 +140,11 @@ namespace Microsoft.Diagnostics.Monitoring
                 try
                 {
                     var client = await GetClientAsync(DockerEntrypointProcessId, token);
-                    if (client.CheckTransport())
-                    {
-                        return DockerEntrypointProcessId;
-                    }
+                    using var timeoutSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+                    
+                    await client.WaitForConnectionAsync(timeoutSource.Token);
+
+                    return DockerEntrypointProcessId;
                 }
                 catch
                 {

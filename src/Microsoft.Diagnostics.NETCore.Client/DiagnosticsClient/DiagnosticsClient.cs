@@ -9,6 +9,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -30,14 +32,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Checks that the client is able to communicate with target process over diagnostic transport.
+        /// Wait for an available diagnostics connection to the runtime instance.
         /// </summary>
+        /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <returns>
-        /// True if client is able to communicate with target process; otherwise, false.
+        /// A task the completes when a diagnostics connection to the runtime instance becomes available.
         /// </returns>
-        internal bool CheckTransport()
+        internal Task WaitForConnectionAsync(CancellationToken token)
         {
-            return IpcClient.CheckTransport(_endpoint);
+            return _endpoint.WaitForConnectionAsync(token);
         }
 
         /// <summary>

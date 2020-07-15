@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             // Wait some time for the process to exit
             await Task.Delay(TimeSpan.FromSeconds(1));
 
-            VerifyConnection(runner, connection, expectValidTransport: false);
+            await VerifyConnection(runner, connection, expectAvailableConnection: false);
 
             // Validate connection surface throws after disposal
             connection?.Dispose();
@@ -133,7 +133,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 connection = await AcceptAsync(accepter);
 
-                VerifyConnection(runner, connection);
+                await VerifyConnection(runner, connection);
 
                 // There should not be any more available connections
                 await VerifyNoMoreConnections(accepter);
@@ -150,7 +150,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await Task.Delay(TimeSpan.FromSeconds(1));
 
             // Process exited so the endpoint should not have a valid transport anymore.
-            Assert.False(connection.Endpoint.CheckTransport());
+            await VerifyWaitForConnection(connection, expectAvailableConnection: false);
 
             connection?.Dispose();
 
@@ -178,7 +178,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // Get client connection
                 connection = await AcceptAsync(accepter);
 
-                VerifyConnection(runner, connection);
+                await VerifyConnection(runner, connection);
 
                 // There should not be any more available connections
                 await VerifyNoMoreConnections(accepter);
@@ -187,10 +187,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 ResumeRuntime(connection, client);
 
-                // Wait some time for the process to reconnect to server
-                await Task.Delay(TimeSpan.FromSeconds(1));
-
-                Assert.True(client.CheckTransport());
+                await VerifyWaitForConnection(client);
             }
             finally
             {
@@ -202,7 +199,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await Task.Delay(TimeSpan.FromSeconds(1));
 
             // Process exited so the endpoint should not have a valid transport anymore.
-            Assert.False(client.CheckTransport());
+            await VerifyWaitForConnection(client, expectConnection: false);
 
             // At this point, the target process has exited. The DiagnosticsClient should no longer be viable,
             // thus the pipe should be broken (IOException).
@@ -242,11 +239,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // Start clients pointing to diagnostics server
                 runner1 = StartTracee(transportName);
                 connection1 = await AcceptAsync(accepter);
-                VerifyConnection(runner1, connection1);
+                await VerifyConnection(runner1, connection1);
 
                 runner2 = StartTracee(transportName);
                 connection2 = await AcceptAsync(accepter);
-                VerifyConnection(runner2, connection2);
+                await VerifyConnection(runner2, connection2);
 
                 // Verify that the connections are different
                 Assert.NotEqual(connection1.ProcessId, connection2.ProcessId);
@@ -277,8 +274,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await Task.Delay(TimeSpan.FromSeconds(1));
 
             // Processes exited so the endpoints should not have a valid transport anymore.
-            Assert.False(connection1.Endpoint.CheckTransport());
-            Assert.False(connection2.Endpoint.CheckTransport());
+            await VerifyWaitForConnection(connection1, expectAvailableConnection: false);
+            await VerifyWaitForConnection(connection2, expectAvailableConnection: false);
 
             connection1?.Dispose();
             connection2?.Dispose();
@@ -313,6 +310,34 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return new EventPipeProvider(name, EventLevel.Verbose, (long)EventKeywords.All);
         }
 
+        private async Task VerifyWaitForConnection(DiagnosticsClient client, bool expectConnection = true)
+        {
+            using var connectionCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            if (expectConnection)
+            {
+                await client.WaitForConnectionAsync(connectionCancellation.Token);
+            }
+            else
+            {
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                    () => client.WaitForConnectionAsync(connectionCancellation.Token));
+            }
+        }
+
+        private async Task VerifyWaitForConnection(ReversedDiagnosticsConnection connection, bool expectAvailableConnection = true)
+        {
+            using var connectionCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            if (expectAvailableConnection)
+            {
+                await connection.Endpoint.WaitForConnectionAsync(connectionCancellation.Token);
+            }
+            else
+            {
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                    () => connection.Endpoint.WaitForConnectionAsync(connectionCancellation.Token));
+            }
+        }
+
         /// <summary>
         /// Checks that the accepter does not provide a connection.
         /// </summary>
@@ -332,7 +357,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Verifies basic information on the connection and that it matches the target process from the runner.
         /// </summary>
-        private void VerifyConnection(TestRunner runner, ReversedDiagnosticsConnection connection, bool expectValidTransport = true)
+        private async Task VerifyConnection(TestRunner runner, ReversedDiagnosticsConnection connection, bool expectAvailableConnection = true)
         {
             _outputHelper.WriteLine($"Verifying connection information for process ID {runner.Pid}.");
             Assert.NotNull(runner);
@@ -340,7 +365,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.Equal(runner.Pid, connection.ProcessId);
             Assert.NotEqual(Guid.Empty, connection.RuntimeInstanceCookie);
             Assert.NotNull(connection.Endpoint);
-            Assert.Equal(expectValidTransport, connection.Endpoint.CheckTransport());
+
+            await VerifyWaitForConnection(connection, expectAvailableConnection);
+
             _outputHelper.WriteLine($"Connection: {connection.ToTestString()}");
         }
 
@@ -366,7 +393,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             var client = new DiagnosticsClient(connection.Endpoint);
 
-            Assert.True(client.CheckTransport());
+            await VerifyWaitForConnection(client);
 
             _outputHelper.WriteLine($"{connection.RuntimeInstanceCookie}: Session #1 - Creating session.");
             var providers1 = new List<EventPipeProvider>();

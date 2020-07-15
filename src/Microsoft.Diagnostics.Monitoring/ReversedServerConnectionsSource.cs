@@ -105,24 +105,47 @@ namespace Microsoft.Diagnostics.Monitoring
             {
                 // Check the transport for each connection and remove the connection if the check fails.
                 var connections = _connections.ToList();
+
+                var pruneTasks = new List<Task>();
                 foreach (ReversedDiagnosticsConnection connection in connections)
                 {
-                    if (!connection.Endpoint.CheckTransport())
-                    {
-                        _connections.Remove(connection);
-
-                        OnRemovedConnection(connection);
-
-                        // Dispose the connection to release the tracking resources in the reversed server.
-                        connection.Dispose();
-                    }
+                    pruneTasks.Add(Task.Run(() => PruneConnectionIfNotViable(connection, linkedToken), linkedToken));
                 }
+
+                await Task.WhenAll(pruneTasks);
 
                 return _connections.Select(c => new DiagnosticsConnection(c));
             }
             finally
             {
                 _connectionsSemaphore.Release();
+            }
+        }
+
+        private async Task PruneConnectionIfNotViable(ReversedDiagnosticsConnection connection, CancellationToken token)
+        {
+            using var timeoutSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+            using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutSource.Token);
+
+            try
+            {
+                timeoutSource.CancelAfter(TimeSpan.FromMilliseconds(100));
+
+                await connection.Endpoint.WaitForConnectionAsync(linkedSource.Token);
+            }
+            catch
+            {
+                // Only remove the connection if due to some exception
+                // other than cancelling the pruning operation.
+                if (!token.IsCancellationRequested)
+                {
+                    _connections.Remove(connection);
+
+                    OnRemovedConnection(connection);
+
+                    // Dispose the connection to release the tracking resources in the reversed server.
+                    connection.Dispose();
+                }
             }
         }
 
@@ -168,12 +191,11 @@ namespace Microsoft.Diagnostics.Monitoring
 
             // The ResumeRuntime message will consume the stream.
             // Wait until the server repopulates the stream so that the source doesn't try to offer
-            // a connection that cannot be immediately used. If it offered it immediately, timing issues could ensue
+            // a connection that cannot be immediately used. If it is offered immediately, timing issues could ensue
             // such as when the GetConnectionsAsync call prunes connections that fail the CheckTransport check.
-            while (!connection.Endpoint.CheckTransport())
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(100), token);
-            }
+            using var timeoutSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+            using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutSource.Token);
+            await connection.Endpoint.WaitForConnectionAsync(linkedSource.Token);
 
             await _connectionsSemaphore.WaitAsync(token);
             try

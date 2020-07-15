@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -79,7 +80,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         [Fact]
-        public void CheckSpecificProcessTest()
+        public async Task CheckSpecificProcessTest()
         {
             TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
             runner.Start(3000);
@@ -89,9 +90,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             var client = new DiagnosticsClient(runner.Pid);
-            Assert.True(client.CheckTransport(), $"Unable to verify diagnostics transport for test process {runner.Pid}.");
-
-            runner.Stop();
+            using var timeoutSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(250));
+            try
+            {
+                await client.WaitForConnectionAsync(timeoutSource.Token);
+            }
+            finally
+            {
+                runner.Stop();
+            }
         }
     }
 }

@@ -12,6 +12,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -21,12 +22,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal interface IIpcEndpoint
     {
         /// <summary>
-        /// Checks that the client is able to communicate with target process over diagnostic transport.
+        /// Wait for an available diagnostics connection to the runtime instance.
         /// </summary>
+        /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <returns>
-        /// True if client is able to communicate with target process; otherwise, false.
+        /// A task the completes when a diagnostics connection to the runtime instance becomes available.
         /// </returns>
-        bool CheckTransport();
+        Task WaitForConnectionAsync(CancellationToken token);
 
         /// <summary>
         /// Gets the stream to retrieve diagnostic information from the runtime instance.
@@ -36,78 +38,78 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal class ServerIpcEndpoint : IIpcEndpoint, IDisposable
     {
-        private readonly AutoResetEvent _streamReady = new AutoResetEvent(false);
+        private readonly SemaphoreSlim _streamReady = new SemaphoreSlim(0);
         private readonly object _streamSync = new object();
 
         private bool _disposed;
         private Stream _stream;
 
-        /// <inheritdoc cref="IIpcEndpoint.CheckTransport"/>
-        public bool CheckTransport()
+        /// <inheritdoc cref="IIpcEndpoint.WaitForConnectionAsync"/>
+        public async Task WaitForConnectionAsync(CancellationToken token)
         {
-            if (!_streamReady.WaitOne(0))
+            bool isConnected = false;
+            do
             {
-                return false;
-            }
+                // Wait for the stream to be available
+                await _streamReady.WaitAsync(token);
 
-            // Stream was available; reset event should be in wait state at this time
-            // so anything that tries to get the stream via Connect will block momentarily.
-            // This means this method should have exclusive access to mutating or checking
-            // the state of the stream.
-
-            lock (_streamSync)
-            {
-                try
+                lock (_streamSync)
                 {
-                    if (null == _stream)
+                    try
                     {
-                        throw new InvalidOperationException("Stream is null but ready event was set.");
-                    }
-                    else if (_stream is ExposedSocketNetworkStream networkStream)
-                    {
-                        // Upate Connected state of socket by sending non-blocking zero-byte data.
-                        Socket socket = networkStream.Socket;
-                        bool blocking = socket.Blocking;
-                        try
+                        if (null == _stream)
                         {
-                            socket.Blocking = false;
-                            socket.Send(Array.Empty<byte>(), 0, SocketFlags.None);
+                            throw new InvalidOperationException("Stream is null but ready semaphore was released.");
                         }
-                        catch (Exception)
+                        else if (_stream is ExposedSocketNetworkStream networkStream)
                         {
-                        }
-                        finally
-                        {
-                            socket.Blocking = blocking;
-                        }
-                        return socket.Connected;
-                    }
-                    else if (_stream is PipeStream pipeStream)
-                    {
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                        {
-                            // PeekNamedPipe will return false if the pipe is disconnected/broken.
-                            if (!NativeMethods.PeekNamedPipe(pipeStream.SafePipeHandle, null, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero))
+                            // Upate Connected state of socket by sending non-blocking zero-byte data.
+                            Socket socket = networkStream.Socket;
+                            bool blocking = socket.Blocking;
+                            try
                             {
-                                int err = Marshal.GetLastWin32Error();
-                                if (109 == err) // ERROR_BROKEN_PIPE
-                                {
-                                    return false;
-                                }
-                                throw new InvalidOperationException($"PeekNamedPipe failed: {err}");
+                                socket.Blocking = false;
+                                socket.Send(Array.Empty<byte>(), 0, SocketFlags.None);
                             }
-                            return true;
+                            catch (Exception)
+                            {
+                            }
+                            finally
+                            {
+                                socket.Blocking = blocking;
+                            }
+                            isConnected = socket.Connected;
+                        }
+                        else if (_stream is PipeStream pipeStream)
+                        {
+                            Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows), "Pipe stream should only be used on Windows.");
+
+                            // PeekNamedPipe will return false if the pipe is disconnected/broken.
+                            isConnected = NativeMethods.PeekNamedPipe(
+                                pipeStream.SafePipeHandle,
+                                null,
+                                0,
+                                IntPtr.Zero,
+                                IntPtr.Zero,
+                                IntPtr.Zero);
                         }
                     }
-
-                    throw new InvalidOperationException($"Stream type '{_stream.GetType().FullName}' was not handled.");
+                    finally
+                    {
+                        // WaitForConnectionAsync does not consume the stream, so release the semaphore so
+                        // that other operations may consume the already available stream.
+                        _streamReady.Release();
+                    }
                 }
-                finally
+
+                // If the stream is not connected anymore, wait briefly to allow
+                // the runtime instance to possibly repopulate a new connection stream.
+                if (!isConnected)
                 {
-                    // Set the event again to allow other callers to get the stream.
-                    _streamReady.Set();
+                    await Task.Delay(TimeSpan.FromMilliseconds(20), token);
                 }
             }
+            while (!isConnected);
         }
 
         /// <inheritdoc cref="IIpcEndpoint.Connect"/>
@@ -118,7 +120,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </remarks>
         public Stream Connect()
         {
-            _streamReady.WaitOne();
+            _streamReady.Wait();
 
             return ExchangeStream(stream: null);
         }
@@ -142,7 +144,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             ExchangeStream(stream)?.Dispose();
 
-            _streamReady.Set();
+            _streamReady.Release();
         }
 
         private Stream ExchangeStream(Stream stream)
@@ -176,15 +178,26 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
 
-        /// <inheritdoc cref="IIpcEndpoint.CheckTransport"/>
-        public bool CheckTransport()
+        /// <inheritdoc cref="IIpcEndpoint.WaitForConnectionAsync"/>
+        public async Task WaitForConnectionAsync(CancellationToken token)
         {
-            if (!TryGetTransportName(_pid, out string transportName))
+            bool transportExists = false;
+            do
             {
-                return false;
-            }
+                // Check if the transport path exists
+                if (TryGetTransportName(_pid, out string transportName))
+                {
+                    transportExists = File.Exists(Path.Combine(IpcRootPath, transportName));
+                }
 
-            return File.Exists(Path.Combine(IpcRootPath, transportName));
+                // If transport does not exist, wait briefly to allow
+                // the runtime instance to possibly repopulate a new connection stream.
+                if (!transportExists)
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(20), token);
+                }
+            }
+            while (!transportExists);
         }
 
         /// <summary>
