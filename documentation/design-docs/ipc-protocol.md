@@ -326,7 +326,8 @@ enum class CommandSet : uint8_t
     // reserved = 0x00,
     Dump        = 0x01,
     EventPipe   = 0x02,
-    Profiler    = 0x03
+    Profiler    = 0x03,
+    Process     = 0x04,
     // future
 
     Server = 0xFF,
@@ -365,12 +366,22 @@ See: [Dump Commands](#Dump-Commands)
 ```c++
 enum class ProfilerCommandId : uint8_t
 {
-    // reserver     = 0x00,
+    // reserved     = 0x00,
     AttachProfiler  = 0x01,
     // future
 }
 ``` 
 See: [Profiler Commands](#Profiler-Commands)
+
+```c++
+enum class ProcessCommandId : uint8_t
+{
+    ProcessInfo   = 0x00,
+    ResumeRuntime = 0x01,
+    // future
+}
+```
+See: [Process Commands](#Process-Commands)
 
 Commands may use the generic `{ magic="DOTNET_IPC_V1"; size=20; command_set=0xFF (Server); command_id=0x00 (OK); reserved = 0x0000; }` to indicate success rather than having a command specific success `command_id`.
 
@@ -378,7 +389,7 @@ For example, the Command to start a stream session with EventPipe would be `0x02
 
 ## EventPipe Commands
 
-```c
+```c++
 enum class EventPipeCommandId : uint8_t
 {
     // reserved = 0x00,
@@ -662,7 +673,83 @@ Payload
 }
 ```
 
-### Errors
+## Process Commands
+
+> Available since .NET 5.0
+
+### `ProcessInfo`
+
+Command Code: `0x0400`
+
+The `ProcessInfo` command queries the runtime for some basic information about the process.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0400; 0x0000 }`
+
+There is no payload.
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; size; 0xFF00; 0x0000; }`
+
+Payload:
+* `int64 processId`: the process id in the process's PID-space
+* `GUID runtimeCookie`: a 128-bit GUID that should be unique across PID-spaces
+* `string commandLine`: the command line that invoked the process
+  * Windows: will be the same as the output of `GetCommandLineW`
+  * Non-Windows: will be the fully qualified path of the executable in `argv[0]` followed by all arguments as the appear in `argv` separated by spaces, i.e., `/full/path/to/argv[0] argv[1] argv[2] ...`
+* `string OS`: the operating system that the process is running on
+  * macOS => `"macOS"`
+  * Windows => `"Windows"`
+  * Linux => `"Linux"`
+  * other => `"Unknown"`
+* `string arch`: the architecture of the process
+  * 32-bit => `"x86"`
+  * 64-bit => `"x64"`
+  * ARM32 => `"arm32"`
+  * ARM64 => `"arm64"`
+  * Other => `"Unknown"`
+
+##### Details:
+
+Returns:
+```c++
+struct Payload
+{
+    uint64_t ProcessId;
+    LPCWSTR CommandLine;
+    LPCWSTR OS;
+    LPCWSTR Arch;
+    GUID RuntimeCookie;
+}
+```
+
+### `ResumeRuntime`
+
+Command Code: `0x0401`
+
+If the target .NET application has been configured with `DOTNET_DiagnosticsMonitorAddress` and `DOTNET_DiagnosticsMonitorPauseOnStart` has not been set to `0`, then the runtime will pause during `EEStartupHelper` in `ceemain.cpp` and wait for an event to be set.  (See [Reverse Diagnostics Server](#Reverse-Diagnostics-Server) for more details)
+
+The `ResumeRuntime` command sets the necessary event to resume runtime startup.  If the .NET application _has not_ been configured to with Diagnostics Monitor Address or the runtime has _already_ been resumed, this command is a no-op.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0401; 0x0000 }`
+
+There is no payload.
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; size; 0xFF00; 0x0000; }`
+
+There is no payload.
+
+## Errors
 
 In the event an error occurs in the handling of an Ipc Message, the Diagnostic Server will attempt to send an Ipc Message encoding the error and subsequently close the connection.  The connection will be closed **regardless** of the success of sending the error message.  The Client is expected to be resilient in the event of a connection being abruptly closed.
 
@@ -744,35 +831,93 @@ For example, if the Diagnostic Server finds incorrectly encoded data while parsi
   </tr>
 </table>
 
------
-### Current Implementation (OLD)
+# Reverse Diagnostics Server
 
-Single-purpose IPC protocol used exclusively for EventPipe functionality.  "Packets" in the current implementation are simply the `nettrace` payloads and command/control is handled via `uint32` enum values sent one way with hard coded responses expected.
+> Available since .NET 5.0
 
-```c++
-enum class DiagnosticMessageType : uint32_t
-{
-    // EventPipe
-    StartEventPipeTracing = 1024, // To file
-    StopEventPipeTracing,
-    CollectEventPipeTracing, // To IPC
-};
+.NET applications can be configured with the following environment variables:
 
-struct MessageHeader
-{
-    DiagnosticMessageType RequestType;
-    uint32_t Pid;
-};
+ * `DOTNET_DiagnosticsMonitorAddress`: A string that is the address for a diagnostics monitoring server
+   * On Windows, this is the name of a Named Pipe that exists under `\\.\pipe\` without the any prefix, e.g., `MyDiagnosticsPipe` points to `\\.\pipe\MyDiagnosticsPipe` and `\app1\mypipe` points to `\\.\pipe\app1\mypipe`
+   * On non-Windows, this is the path to a Unix Domain Socket
+ * `DOTNET_DiagnosticsMonitorPauseOnStart`: `0` or `1` (default if `DOTNET_DiagnosticsMonitorAddress` is set) indicating whether the runtime should pause at a known location in `EEStartupHelper` in `ceemain.cpp`.  If there is a Diagnostics Monitor Address configured, this is on _by default_, but is off otherwise.
+
+This functionality is referred to as a Reverse Diagnostics Server.  When A Reverse Server is configured, the runtime will attempt to connect to the provided address in a retry loop while also listening on the traditional server.  The retry loop has an initial timeout of 10ms with a falloff factor of 1.25x and a max timeout of 500 ms.  A successful connection will result in an infinite timeout.  The runtime is resilient to the Reverse Server transport failing, e.g., closing, not `Accepting`, etc.
+
+## Advertise Protocol
+
+Upon successful connection, the runtime will send a fixed-size, 34 byte buffer containing the following information:
+
+ * `char[8] magic`: (8 bytes) `"ADVR_V1\0"` (ASCII chars + null byte)
+ * `GUID runtimeCookie`: (16 bytes) CLR Instance Cookie (little-endian)
+ * `uint64_t processId`: (8 bytes) PID (little-endian)
+ * `uint16_t future`: (2 bytes) unused for futureproofing
+
+With the following layout:
+
+<table>
+  <tr>
+    <th>1</th>
+    <th>2</th>
+    <th>3</th>
+    <th>4</th>
+    <th>5</th>
+    <th>6</th>
+    <th>7</th>
+    <th>8</th>
+    <th>9</th>
+    <th>10</th>
+    <th>11</th>
+    <th>12</th>
+    <th>13</th>
+    <th>14</th>
+    <th>15</th>
+    <th>16</th>
+    <th>17</th>
+    <th>18</th>
+    <th>19</th>
+    <th>20</th>
+    <th>21</th>
+    <th>22</th>
+    <th>23</th>
+    <th>24</th>
+    <th>25</th>
+    <th>26</th>
+    <th>27</th>
+    <th>28</th>
+    <th>29</th>
+    <th>30</th>
+    <th>31</th>
+    <th>32</th>
+    <th>33</th>
+    <th>34</th>
+  </tr>
+  <tr>
+    <td colspan="8">magic</td>
+    <td colspan="16">runtimeCookie</td>
+    <td colspan="8">processId</td>
+    <td colspan="2">future</td>
+  </tr>
+  <tr>
+    <td colspan="8">"ADVR_V1\0"</td>
+    <td colspan="16">123e4567-e89b-12d3-a456-426614174000</td>
+    <td colspan="8">12345</td>
+    <td colspan="2">0x0000</td>
+  </tr>
+</table>
+
+This is a one-way transmission with no expectation of an ACK.  The Reverse Server is expected to consume this message and then hold on to the now active connection until it chooses to send a Diagnostics IPC command.
+
+## Dataflow
+
+Due to the potential for an optional continuation in teh Diagnostics IPC Protocol, each successful connection between the runtime and a reverse server is only usable once.  As a result, a .NET process will attempt to _reconnect_ to the Reverse Server after every command that is sent across an active connection.
+
+A typical dataflow has 2 actors, the Target application, `T` and the Diagnostics Monitor Application, `M`, and communicates like so:
 ```
-
-```
-runtime <- client : MessageHeader { CollectEventPipeTracing }
-    error? -> 0 then session close
-runtime -> client : session ID 
-runtime -> client : event stream
-
-...
-
-runtime <- client : stop command
-runtime -> client : session id and stops
+T ->   : Target attempts to connect to M, which may not exist yet
+// M comes into existence
+T -> M : [ Advertise ] - Target sends advertise message to Monitor
+// 0 or more time passes
+T <- M : [ Diagnostics IPC Protocol ] - Monitor sends a Diagnostics IPC Protocol command
+T -> M : [ Advertise ] - Target reconnects to Monitor with a _new_ connection and re-sends the advertise message
 ```
