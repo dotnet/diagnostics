@@ -233,11 +233,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             else
             {
-                string path = Path.Combine(IpcRootPath, transportName);
-                var remoteEP = CreateUnixDomainSocketEndPoint(path);
-
-                var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-                socket.Connect(remoteEP);
+                var socket = new UnixDomainSocket();
+                socket.Connect(Path.Combine(IpcRootPath, transportName));
                 return new ExposedSocketNetworkStream(socket, ownsSocket: true);
             }
         }
@@ -264,22 +261,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             return !string.IsNullOrEmpty(transportName);
-        }
-
-        internal static EndPoint CreateUnixDomainSocketEndPoint(string path)
-        {
-#if NETCOREAPP
-            return new UnixDomainSocketEndPoint(path);
-#elif NETSTANDARD2_0
-            // UnixDomainSocketEndPoint is not part of .NET Standard 2.0
-            var type = typeof(Socket).Assembly.GetType("System.Net.Sockets.UnixDomainSocketEndPoint");
-            if (type == null)
-            {
-                throw new PlatformNotSupportedException("Current process is not running a compatible .NET Core runtime.");
-            }
-            var ctor = type.GetConstructor(new[] { typeof(string) });
-            return (EndPoint)ctor.Invoke(new object[] { path });
-#endif
         }
     }
 }

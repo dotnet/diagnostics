@@ -122,7 +122,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private readonly int _backlog;
         private readonly string _path;
 
-        private UnixDomainSocketWithCleanup _socket;
+        private UnixDomainSocket _socket;
 
         public UnixDomainSocketServerTransport(string path, int backlog)
         {
@@ -193,7 +193,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private void CreateNewSocketServer()
         {
-            _socket = new UnixDomainSocketWithCleanup();
+            _socket = new UnixDomainSocket();
             _socket.Bind(_path);
             _socket.Listen(_backlog);
             _socket.LingerState.Enabled = false;
