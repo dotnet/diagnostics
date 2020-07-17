@@ -82,7 +82,7 @@ using EditLineStringStreamType = std::stringstream;
 using EditLineCharType = char;
 #endif
 
-#ifdef EL_CLIENTDATA	/* editline with wide support + wide char read function */
+#ifdef EL_CLIENTDATA    /* editline with wide support + wide char read function */
 using EditLineGetCharType = wchar_t;
 #else
 using EditLineGetCharType = char;

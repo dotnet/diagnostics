@@ -6580,9 +6580,7 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
 
     const bool hosted = (ThreadStore.fHostConfig & CLRTASKHOSTED) != 0;
     table.ReInit(hosted ? 12 : 11, POINTERSIZE_HEX);
-    table.SetWidths(10, 4, 4, 4, _max(9, POINTERSIZE_HEX),
-                      8, 11, 1+POINTERSIZE_HEX*2, POINTERSIZE_HEX,
-                      5, 3, POINTERSIZE_HEX);
+    table.SetWidths(10, 4, 4, 8, _max(9, POINTERSIZE_HEX), 8, 11, 1+POINTERSIZE_HEX*2, POINTERSIZE_HEX, 5, 3, POINTERSIZE_HEX);
 
     table.SetColAlignment(0, AlignRight);
     table.SetColAlignment(1, AlignRight);

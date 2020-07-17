@@ -158,6 +158,8 @@ extern ILLDBServices2*       g_ExtServices2;
 
 #endif // FEATURE_PAL
 
+extern bool g_dotnetDumpHost;
+
 HRESULT
 ExtQuery(PDEBUG_CLIENT client);
 
@@ -202,39 +204,51 @@ inline void EENotLoadedMessage(HRESULT Status)
     ExtOut("Failed to find runtime module (%s or %s or %s), 0x%08x\n", GetRuntimeDllName(IRuntime::Core), GetRuntimeDllName(IRuntime::WindowsDesktop), GetRuntimeDllName(IRuntime::UnixCore), Status);
 #endif
     ExtOut("Extension commands need it in order to have something to do.\n");
+    ExtOut("For more information see https://aka.ms/sos_faq\n");
 }
 
 inline void DACMessage(HRESULT Status)
 {
     ExtOut("Failed to load data access module, 0x%08x\n", Status);
-#ifndef FEATURE_PAL
-    ExtOut("Verify that 1) you have a recent build of the debugger (10.0.18317.1001 or newer)\n");
-    ExtOut("            2) the file %s that matches your version of %s is\n", GetDacDllName(), GetRuntimeDllName());
-    ExtOut("                in the version directory or on the symbol path\n");
-    ExtOut("            3) or, if you are debugging a dump file, verify that the file \n");
-    ExtOut("                %s_<arch>_<arch>_<version>.dll is on your symbol path.\n", GetDacModuleName());
-    ExtOut("            4) you are debugging on supported cross platform architecture as \n");
-    ExtOut("                the dump file. For example, an ARM dump file must be debugged\n");
-    ExtOut("                on an X86 or an ARM machine; an AMD64 dump file must be\n");
-    ExtOut("                debugged on an AMD64 machine.\n");
-    ExtOut("\n");
-    ExtOut("You can also run the debugger command .cordll to control the debugger's\n");
-    ExtOut("load of %s.dll. .cordll -ve -u -l will do a verbose reload.\n", GetDacDllName());
-    ExtOut("If that succeeds, the SOS command should work on retry.\n");
-    ExtOut("\n");
-    ExtOut("If you are debugging a minidump, you need to make sure that your executable\n");
-    ExtOut("path is pointing to %s as well.\n", GetRuntimeDllName());
-#else // FEATURE_PAL
-    if (Status == CORDBG_E_MISSING_DEBUGGER_EXPORTS)
+#ifdef FEATURE_PAL
+    if (true)
+#else 
+    if (g_dotnetDumpHost)
+#endif
     {
-        ExtOut("You can run the debugger command 'setclrpath' to control the load of %s.\n", GetDacDllName());
-        ExtOut("If that succeeds, the SOS command should work on retry.\n");
+        if (Status == CORDBG_E_MISSING_DEBUGGER_EXPORTS)
+        {
+            ExtOut("You can run the debugger command 'setclrpath <directory>' to control the load of %s.\n", GetDacDllName());
+            ExtOut("If that succeeds, the SOS command should work on retry.\n");
+        }
+        else
+        {
+            ExtOut("Can not load or initialize %s. The target runtime may not be initialized.\n", GetDacDllName());
+        }
     }
     else
     {
-        ExtOut("Can not load or initialize %s. The target runtime may not be initialized.\n", GetDacDllName());
+        ExtOut("Verify that 1) you have a recent build of the debugger (10.0.18317.1001 or newer)\n");
+        ExtOut("            2) the file %s that matches your version of %s is\n", GetDacDllName(), GetRuntimeDllName());
+        ExtOut("                in the version directory or on the symbol path\n");
+        ExtOut("            3) or, if you are debugging a dump file, verify that the file\n");
+        ExtOut("                %s_<arch>_<arch>_<version>.dll is on your symbol path.\n", GetDacModuleName());
+        ExtOut("            4) you are debugging on a platform and architecture that supports this\n");
+        ExtOut("                the dump file. For example, an ARM dump file must be debugged\n");
+        ExtOut("                on an X86 or an ARM machine; an AMD64 dump file must be\n");
+        ExtOut("                debugged on an AMD64 machine.\n");
+        ExtOut("\n");
+        ExtOut("You can run the command '!setclrpath <directory>' to control the load of %s.\n", GetDacDllName());
+        ExtOut("\n");
+        ExtOut("Or you can also run the debugger command .cordll to control the debugger's\n");
+        ExtOut("load of %s. .cordll -ve -u -l will do a verbose reload.\n", GetDacDllName());
+        ExtOut("If that succeeds, the SOS command should work on retry.\n");
+        ExtOut("\n");
+        ExtOut("If you are debugging a minidump, you need to make sure that your executable\n");
+        ExtOut("path is pointing to %s as well.\n", GetRuntimeDllName());
     }
-#endif // FEATURE_PAL
+    ExtOut("\n");
+    ExtOut("For more information see https://aka.ms/sos_faq\n");
 }
 
 HRESULT CheckEEDll();
