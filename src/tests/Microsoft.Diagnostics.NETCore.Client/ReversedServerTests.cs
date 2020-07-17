@@ -291,9 +291,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return new ReversedDiagnosticsServer(transportName);
         }
 
-        private async Task<ReversedDiagnosticsConnection> AcceptAsync(ConnectionAccepter accepter, int timeoutSeconds = 1)
+        private async Task<ReversedDiagnosticsConnection> AcceptAsync(ConnectionAccepter accepter)
         {
-            using (var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+            using (var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
             {
                 return await accepter.AcceptAsync(cancellationSource.Token);
             }
