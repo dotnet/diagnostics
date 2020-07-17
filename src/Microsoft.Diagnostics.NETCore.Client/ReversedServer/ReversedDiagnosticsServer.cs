@@ -98,7 +98,25 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 try
                 {
                     stream = await _transport.AcceptAsync(linkedSource.Token);
-                    advertise = IpcAdvertise.Parse(stream);
+                }
+                catch (Exception ex) when (!(ex is OperationCanceledException))
+                {
+                    // The advertise data could be incomplete if the runtime shuts down before completely writing
+                    // the information. Catch the exception and continue waiting for a new connection.
+                }
+
+                // Cancel parsing of advertise data after timeout period to
+                // mitigate runtimes that write partial data and do not close the stream (avoid waiting forever).
+                using var parseCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(linkedSource.Token);
+                try
+                {
+                    parseCancellationSource.CancelAfter(TimeSpan.FromSeconds(3));
+
+                    advertise = await IpcAdvertise.ParseAsync(stream, parseCancellationSource.Token);
+                }
+                catch (OperationCanceledException ex) when (ex.CancellationToken == linkedSource.Token)
+                {
+                    // Only handle cancellation if it was due to the parse timeout.
                 }
                 catch (Exception ex) when (!(ex is OperationCanceledException))
                 {

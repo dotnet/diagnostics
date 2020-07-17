@@ -6,6 +6,8 @@ using System;
 using System.Linq;
 using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -34,18 +36,42 @@ namespace Microsoft.Diagnostics.NETCore.Client
             RuntimeInstanceCookie = cookie;
         }
 
-        public static IpcAdvertise Parse(Stream stream)
+        public static async Task<IpcAdvertise> ParseAsync(Stream stream, CancellationToken token)
         {
-            var reader = new BinaryReader(stream);
-            byte[] magic = reader.ReadBytes(Magic_V1.Length);
-            Guid cookie = new Guid(reader.ReadBytes(16));
-            UInt64 pid = reader.ReadUInt64();
-            UInt16 future = reader.ReadUInt16();
+            byte[] buffer = new byte[Magic_V1.Length + 16 + 8 + 2];
+
+            int totalRead = 0;
+            do
+            {
+                int read = await stream.ReadAsync(buffer, totalRead, buffer.Length - totalRead, token);
+                if (0 == read)
+                {
+                    throw new EndOfStreamException();
+                }
+                totalRead += read;
+            }
+            while (totalRead < buffer.Length);
+
+            int index = 0;
+            byte[] magic = new byte[Magic_V1.Length];
+            Array.Copy(buffer, magic, Magic_V1.Length);
+            index += Magic_V1.Length;
 
             if (!Magic_V1.SequenceEqual(magic))
             {
                 throw new Exception("Invalid advertise message from client connection");
             }
+
+            byte[] cookieBuffer = new byte[16];
+            Array.Copy(buffer, index, cookieBuffer, 0, 16);
+            Guid cookie = new Guid(cookieBuffer);
+            index += 16;
+
+            UInt64 pid = BitConverter.ToUInt64(buffer, index);
+            index += 8;
+
+            UInt16 future = BitConverter.ToUInt16(buffer, index);
+            index += 2;
 
             // FUTURE: switch on incoming magic and change if version ever increments
             return new IpcAdvertise(magic, cookie, pid, future);
