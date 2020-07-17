@@ -3,8 +3,7 @@ Dump collection and analysis utility (dotnet-dump)
 
 The dotnet-dump CLI global tool is way to collect and analyze Windows and Linux dumps all without any native debugger involved like lldb on Linux. This is important on platforms like Alpine Linux or Linux ARM32/ARM64 where a fully working lldb isn't available. The dotnet-dump tool will allow you to run SOS commands to analyze crashes and the GC, but it isn't a native debugger so things like displaying the native stack frames isn't supported.
 
-The dotnet-dump tool is only supported on the same OS and architecture the dump was taken. 
-Currently not supported on macOS.
+The dotnet-dump tool is only supported on the same OS and architecture the dump was taken. Currently not supported on macOS.
 
 ## Installing dotnet-dump
 

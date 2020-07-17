@@ -30,5 +30,5 @@ Frequently Asked Questions
     ```
     The following could be the problem:
     * The process or core dump hasn't loaded the .NET Core runtime yet.
-    * A coredump loaded under lldb wasn't started with the host program like `dotnet` or `apphost`. `target modules list` doesn't display libcoreclr.so or libcoreclr.dylib. Start with with path to host program some thing like `lldb --core coredump /usr/share/dotnet/dotnet`. 
-    * A coredump loaded under lldb but `target modules list` does displays the runtime module. lldb needs the correct version of libcoreclr.so/dylib next to the coredump. You can use `dotnet-symbol --modules <coredump>` to download the needed binaries.
+    * The coredump was loaded under lldb without specifying the host (i.e `dotnet`). `target modules list` doesn't display `libcoreclr.so` or `libcoreclr.dylib`. Start lldb with the host as the target program and the core file, for example `lldb --core coredump /usr/share/dotnet/dotnet`. In case you don't have the host available, `dotnet symbol` is will be able to download them.
+    * If a coredump was loaded under lldb, a host was specified, and `target modules list` displays the runtime module but you still get that message lldb needs the correct version of libcoreclr.so/dylib next to the coredump. You can use `dotnet-symbol --modules <coredump>` to download the needed binaries.

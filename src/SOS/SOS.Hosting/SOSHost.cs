@@ -1045,7 +1045,7 @@ namespace SOS
                     id = (uint)threadInfo.ThreadIndex;
                     return S_OK;
                 }
-catch (DiagnosticsException)
+                catch (DiagnosticsException)
                 {
                 }
             }
