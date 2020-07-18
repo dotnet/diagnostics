@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
-using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
@@ -31,78 +30,26 @@ namespace Microsoft.Diagnostics.NETCore.Client
         Task WaitForConnectionAsync(CancellationToken token);
 
         /// <summary>
-        /// Gets the stream to retrieve diagnostic information from the runtime instance.
+        /// Connects to the underlying IPC Transport and opens a read/write-able Stream
         /// </summary>
+        /// <returns>A Stream for writing and reading data to and from the target .NET process</returns>
         Stream Connect();
     }
 
-    internal class ServerIpcEndpoint : IIpcEndpoint, IDisposable
+    internal abstract class BaseIpcEndpoint : IIpcEndpoint
     {
-        private readonly SemaphoreSlim _streamReady = new SemaphoreSlim(0);
-        private readonly object _streamSync = new object();
+        /// <inheritdoc cref="IIpcEndpoint.Connect"/>
+        public abstract Stream Connect();
 
-        private bool _disposed;
-        private Stream _stream;
-
-        /// <inheritdoc cref="IIpcEndpoint.WaitForConnectionAsync"/>
+        /// <inheritdoc cref="IIpcEndpoint.WaitForConnectionAsync(CancellationToken)"/>
         public async Task WaitForConnectionAsync(CancellationToken token)
         {
             bool isConnected = false;
             do
             {
-                // Wait for the stream to be available
-                await _streamReady.WaitAsync(token);
+                isConnected = await CheckConnectionAsync(token);
 
-                lock (_streamSync)
-                {
-                    try
-                    {
-                        if (null == _stream)
-                        {
-                            throw new InvalidOperationException("Stream is null but ready semaphore was released.");
-                        }
-                        else if (_stream is ExposedSocketNetworkStream networkStream)
-                        {
-                            // Upate Connected state of socket by sending non-blocking zero-byte data.
-                            Socket socket = networkStream.Socket;
-                            bool blocking = socket.Blocking;
-                            try
-                            {
-                                socket.Blocking = false;
-                                socket.Send(Array.Empty<byte>(), 0, SocketFlags.None);
-                            }
-                            catch (Exception)
-                            {
-                            }
-                            finally
-                            {
-                                socket.Blocking = blocking;
-                            }
-                            isConnected = socket.Connected;
-                        }
-                        else if (_stream is PipeStream pipeStream)
-                        {
-                            Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows), "Pipe stream should only be used on Windows.");
-
-                            // PeekNamedPipe will return false if the pipe is disconnected/broken.
-                            isConnected = NativeMethods.PeekNamedPipe(
-                                pipeStream.SafePipeHandle,
-                                null,
-                                0,
-                                IntPtr.Zero,
-                                IntPtr.Zero,
-                                IntPtr.Zero);
-                        }
-                    }
-                    finally
-                    {
-                        // WaitForConnectionAsync does not consume the stream, so release the semaphore so
-                        // that other operations may consume the already available stream.
-                        _streamReady.Release();
-                    }
-                }
-
-                // If the stream is not connected anymore, wait briefly to allow
+                // If the stream is not connected, wait briefly to allow
                 // the runtime instance to possibly repopulate a new connection stream.
                 if (!isConnected)
                 {
@@ -112,13 +59,88 @@ namespace Microsoft.Diagnostics.NETCore.Client
             while (!isConnected);
         }
 
-        /// <inheritdoc cref="IIpcEndpoint.Connect"/>
+        protected abstract Task<bool> CheckConnectionAsync(CancellationToken token);
+
+        protected bool TestStream(Stream stream)
+        {
+            if (null == stream)
+            {
+                throw new ArgumentNullException(nameof(stream));
+            }
+
+            if (stream is ExposedSocketNetworkStream networkStream)
+            {
+                // Update Connected state of socket by sending non-blocking zero-byte data.
+                Socket socket = networkStream.Socket;
+                bool blocking = socket.Blocking;
+                try
+                {
+                    socket.Blocking = false;
+                    socket.Send(Array.Empty<byte>(), 0, SocketFlags.None);
+                }
+                catch (Exception)
+                {
+                }
+                finally
+                {
+                    socket.Blocking = blocking;
+                }
+                return socket.Connected;
+            }
+            else if (stream is PipeStream pipeStream)
+            {
+                Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows), "Pipe stream should only be used on Windows.");
+
+                // PeekNamedPipe will return false if the pipe is disconnected/broken.
+                return NativeMethods.PeekNamedPipe(
+                    pipeStream.SafePipeHandle,
+                    null,
+                    0,
+                    IntPtr.Zero,
+                    IntPtr.Zero,
+                    IntPtr.Zero);
+            }
+
+            return false;
+        }
+    }
+
+    internal class ServerIpcEndpoint : BaseIpcEndpoint, IIpcEndpoint, IDisposable
+    {
+        private readonly SemaphoreSlim _streamReady = new SemaphoreSlim(0);
+        private readonly object _streamSync = new object();
+
+        private bool _disposed;
+        private Stream _stream;
+
+        /// <inheritdoc cref="BaseIpcEndpoint.CheckConnectionAsync(CancellationToken)"/>
+        protected override async Task<bool> CheckConnectionAsync(CancellationToken token)
+        {
+            // Wait for the stream to be available
+            await _streamReady.WaitAsync(token);
+
+            lock (_streamSync)
+            {
+                try
+                {
+                    return TestStream(_stream);
+                }
+                finally
+                {
+                    // WaitForConnectionAsync does not consume the stream, so release the semaphore so
+                    // that other operations may consume the already available stream.
+                    _streamReady.Release();
+                }
+            }
+        }
+
+        /// <inheritdoc cref="BaseIpcEndpoint.Connect"/>
         /// <remarks>
         /// This will block until the diagnostic stream is provided. This block can happen if
         /// the stream is acquired previously and the runtime instance has not yet reconnected
         /// to the reversed diagnostics server.
         /// </remarks>
-        public Stream Connect()
+        public override Stream Connect()
         {
             _streamReady.Wait();
 
@@ -158,7 +180,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
     }
 
-    internal class PidIpcEndpoint : IIpcEndpoint
+    internal class PidIpcEndpoint : BaseIpcEndpoint, IIpcEndpoint
     {
         private int _pid;
 
@@ -177,34 +199,30 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _pid = pid;
         }
 
-
-        /// <inheritdoc cref="IIpcEndpoint.WaitForConnectionAsync"/>
-        public async Task WaitForConnectionAsync(CancellationToken token)
+        /// <inheritdoc cref="BaseIpcEndpoint.CheckConnectionAsync(CancellationToken)"/>
+        protected override Task<bool> CheckConnectionAsync(CancellationToken token)
         {
-            bool transportExists = false;
-            do
+            // Check if the transport path exists
+            if (TryGetTransportName(_pid, out string transportName))
             {
-                // Check if the transport path exists
-                if (TryGetTransportName(_pid, out string transportName))
+                try
                 {
-                    transportExists = File.Exists(Path.Combine(IpcRootPath, transportName));
+                    // Connect to stream and check that it is usable.
+                    using (var stream = Connect())
+                    {
+                        return Task.FromResult(TestStream(stream));
+                    }
                 }
-
-                // If transport does not exist, wait briefly to allow
-                // the runtime instance to possibly repopulate a new connection stream.
-                if (!transportExists)
+                catch (Exception)
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(20), token);
                 }
             }
-            while (!transportExists);
+
+            return Task.FromResult(false);
         }
 
-        /// <summary>
-        /// Connects to the underlying IPC Transport and opens a read/write-able Stream
-        /// </summary>
-        /// <returns>A Stream for writing and reading data to and from the target .NET process</returns>
-        public Stream Connect()
+        /// <inheritdoc cref="BaseIpcEndpoint.Connect"/>
+        public override Stream Connect()
         {
             try
             {
