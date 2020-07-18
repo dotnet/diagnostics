@@ -201,19 +201,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             // Process exited so the endpoint should not have a valid transport anymore.
             await VerifyWaitForConnection(client, expectConnection: false);
 
-            // At this point, the target process has exited. The DiagnosticsClient should no longer be viable,
-            // thus the pipe should be broken (IOException).
-
-            var providersBrokenPipe = new List<EventPipeProvider>();
-            providersBrokenPipe.Add(CreateProvider("Microsoft-Windows-DotNETRuntime"));
-
-            EventPipeSession sessionBrokenPipe = null;
-            Assert.ThrowsAny<IOException>(() =>
-            {
-                sessionBrokenPipe = client.StartEventPipeSession(providersBrokenPipe);
-            });
-            Assert.Null(sessionBrokenPipe);
-
             connection?.Dispose();
 
             // There should not be any more available connections

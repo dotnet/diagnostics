@@ -80,7 +80,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         [Fact]
-        public async Task CheckSpecificProcessTest()
+        public async Task WaitForConnectionTest()
         {
             TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
             runner.Start(3000);

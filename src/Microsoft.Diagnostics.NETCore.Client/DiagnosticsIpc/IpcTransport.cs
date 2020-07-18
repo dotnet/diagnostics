@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
@@ -38,8 +39,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal abstract class BaseIpcEndpoint : IIpcEndpoint
     {
+        private readonly Queue<StreamTarget> _targets = new Queue<StreamTarget>();
+
+        private bool _disposed;
+        private Stream _stream;
+
         /// <inheritdoc cref="IIpcEndpoint.Connect"/>
-        public abstract Stream Connect();
+        /// <remarks>
+        /// This will block until the diagnostic stream is provided. This block can happen if
+        /// the stream is acquired previously and the runtime instance has not yet reconnected
+        /// to the reversed diagnostics server.
+        /// </remarks>
+        public Stream Connect()
+        {
+            using var target = new StreamEventTarget();
+
+            RegisterTarget(target);
+
+            target.Handle.WaitOne();
+
+            return target.Stream;
+        }
 
         /// <inheritdoc cref="IIpcEndpoint.WaitForConnectionAsync(CancellationToken)"/>
         public async Task WaitForConnectionAsync(CancellationToken token)
@@ -47,7 +67,38 @@ namespace Microsoft.Diagnostics.NETCore.Client
             bool isConnected = false;
             do
             {
-                isConnected = await CheckConnectionAsync(token);
+                using (var target = new StreamTaskTarget(token))
+                {
+                    Stream stream = null;
+                    try
+                    {
+                        RegisterTarget(target);
+
+                        // Wait for a stream to be provided by the target
+                        stream = await target.Task;
+
+                        // Test if the stream is viable
+                        isConnected = TestStream(stream);
+                    }
+                    catch (Exception ex) when (!(ex is OperationCanceledException))
+                    {
+                        // Handle all exceptions except cancellation
+                    }
+                    finally
+                    {
+                        // If the stream is not connected, it can be disposed;
+                        // otherwise, make the stream available again since waiting
+                        // for the stream to connect should not consume the stream.
+                        if (!isConnected)
+                        {
+                            stream?.Dispose();
+                        }
+                        else
+                        {
+                            ProvideStream(stream);
+                        }
+                    }
+                }
 
                 // If the stream is not connected, wait briefly to allow
                 // the runtime instance to possibly repopulate a new connection stream.
@@ -59,9 +110,64 @@ namespace Microsoft.Diagnostics.NETCore.Client
             while (!isConnected);
         }
 
-        protected abstract Task<bool> CheckConnectionAsync(CancellationToken token);
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                ProvideStream(stream: null);
 
-        protected bool TestStream(Stream stream)
+                _disposed = true;
+            }
+        }
+
+        protected void ProvideStream(Stream stream)
+        {
+            Stream previousStream;
+
+            lock (_targets)
+            {
+                // Get the previous stream in order to dispose it later
+                previousStream = _stream;
+
+                // If there are any targets waiting for a stream, provide
+                // it to the first target in the queue.
+                if (_targets.Count > 0)
+                {
+                    while (null != stream)
+                    {
+                        StreamTarget target = _targets.Dequeue();
+                        if (target.SetStream(stream))
+                        {
+                            stream = null;
+                        }
+                        else
+                        {
+                            // The target didn't accept the stream; this is due
+                            // to the thread that registered the target no longer
+                            // needing the stream (e.g. it was async awaiting and
+                            // was cancelled). Dispose the target to release any
+                            // resources it may have.
+                            target.Dispose();
+                        }
+                    }
+                }
+
+                // Store the stream for when a target registers for the stream. If
+                // a target was already provided the stream, this will be null, thus
+                // representing that no existing stream is waiting to be consumed.
+                _stream = stream;
+            }
+
+            // Dispose the previous stream if there was one.
+            previousStream?.Dispose();
+        }
+
+        protected virtual Stream RefreshStream()
+        {
+            return null;
+        }
+
+        private bool TestStream(Stream stream)
         {
             if (null == stream)
             {
@@ -103,90 +209,141 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             return false;
         }
+
+        private void RegisterTarget(StreamTarget target)
+        {
+            lock (_targets)
+            {
+                // Allow transport specific implementation to refresh
+                // the stream before possibly consuming it.
+                if (null == _stream)
+                {
+                    _stream = RefreshStream();
+                }
+
+                // If there is no current stream, add the target to the queue;
+                // it will be fulfilled at some point in the future when streams
+                // are made available. Otherwise, provide the stream to the target
+                // synchronously; set the current stream to null to signify that
+                // there is no current stream available.
+                if (null == _stream)
+                {
+                    _targets.Enqueue(target);
+                }
+                else if (target.SetStream(_stream))
+                {
+                    _stream = null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Base class for providing streams to callers.
+        /// </summary>
+        private abstract class StreamTarget : IDisposable
+        {
+            public void Dispose()
+            {
+                if (!IsDisposed)
+                {
+                    Dispose(disposing: true);
+
+                    IsDisposed = true;
+                }
+            }
+
+            protected abstract void Dispose(bool disposing);
+
+            public abstract bool SetStream(Stream stream);
+
+            public bool IsDisposed { get; private set; }
+        }
+
+        /// <summary>
+        /// Class allowing for synchronously waiting on the availability of a stream.
+        /// </summary>
+        private class StreamEventTarget : StreamTarget
+        {
+            private readonly ManualResetEvent _streamEvent = new ManualResetEvent(false);
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    _streamEvent.Dispose();
+                }
+            }
+
+            public override bool SetStream(Stream stream)
+            {
+                if (IsDisposed)
+                {
+                    return false;
+                }
+
+                _streamEvent.Set();
+                Stream = stream;
+                return true;
+            }
+
+            public WaitHandle Handle => _streamEvent;
+
+            public Stream Stream { get; private set; }
+        }
+
+        /// <summary>
+        /// Class allowing for asynchronously waiting on the availability of a stream.
+        /// </summary>
+        private class StreamTaskTarget : StreamTarget
+        {
+            private readonly IDisposable _registration;
+            private readonly TaskCompletionSource<Stream> _streamSource = new TaskCompletionSource<Stream>();
+
+            public StreamTaskTarget(CancellationToken token)
+            {
+                _registration = token.Register(() => _streamSource.TrySetCanceled());
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    _registration.Dispose();
+                }
+            }
+
+            public override bool SetStream(Stream stream)
+            {
+                if (IsDisposed)
+                {
+                    return false;
+                }
+
+                return _streamSource.TrySetResult(stream);
+            }
+
+            public Task<Stream> Task => _streamSource.Task;
+        }
     }
 
     internal class ServerIpcEndpoint : BaseIpcEndpoint, IIpcEndpoint, IDisposable
     {
-        private readonly SemaphoreSlim _streamReady = new SemaphoreSlim(0);
-        private readonly object _streamSync = new object();
-
-        private bool _disposed;
-        private Stream _stream;
-
-        /// <inheritdoc cref="BaseIpcEndpoint.CheckConnectionAsync(CancellationToken)"/>
-        protected override async Task<bool> CheckConnectionAsync(CancellationToken token)
-        {
-            // Wait for the stream to be available
-            await _streamReady.WaitAsync(token);
-
-            lock (_streamSync)
-            {
-                try
-                {
-                    return TestStream(_stream);
-                }
-                finally
-                {
-                    // WaitForConnectionAsync does not consume the stream, so release the semaphore so
-                    // that other operations may consume the already available stream.
-                    _streamReady.Release();
-                }
-            }
-        }
-
-        /// <inheritdoc cref="BaseIpcEndpoint.Connect"/>
-        /// <remarks>
-        /// This will block until the diagnostic stream is provided. This block can happen if
-        /// the stream is acquired previously and the runtime instance has not yet reconnected
-        /// to the reversed diagnostics server.
-        /// </remarks>
-        public override Stream Connect()
-        {
-            _streamReady.Wait();
-
-            return ExchangeStream(stream: null);
-        }
-
-        public void Dispose()
-        {
-            if (!_disposed)
-            {
-                ExchangeStream(stream: null)?.Dispose();
-
-                _streamReady.Dispose();
-
-                _disposed = true;
-            }
-        }
-
         /// <summary>
         /// Updates the endpoint with a new diagnostics stream.
         /// </summary>
         internal void SetStream(Stream stream)
         {
-            ExchangeStream(stream)?.Dispose();
-
-            _streamReady.Release();
-        }
-
-        private Stream ExchangeStream(Stream stream)
-        {
-            lock (_streamSync)
-            {
-                var previousStream = _stream;
-                _stream = stream;
-                return previousStream;
-            }
+            ProvideStream(stream);
         }
     }
 
     internal class PidIpcEndpoint : BaseIpcEndpoint, IIpcEndpoint
     {
-        private int _pid;
-
         private static double ConnectTimeoutMilliseconds { get; } = TimeSpan.FromSeconds(3).TotalMilliseconds;
         public static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
         public static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
+
+        private int _pid;
 
         /// <summary>
         /// Creates a reference to a .NET process's IPC Transport
@@ -199,30 +356,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _pid = pid;
         }
 
-        /// <inheritdoc cref="BaseIpcEndpoint.CheckConnectionAsync(CancellationToken)"/>
-        protected override Task<bool> CheckConnectionAsync(CancellationToken token)
-        {
-            // Check if the transport path exists
-            if (TryGetTransportName(_pid, out string transportName))
-            {
-                try
-                {
-                    // Connect to stream and check that it is usable.
-                    using (var stream = Connect())
-                    {
-                        return Task.FromResult(TestStream(stream));
-                    }
-                }
-                catch (Exception)
-                {
-                }
-            }
-
-            return Task.FromResult(false);
-        }
-
-        /// <inheritdoc cref="BaseIpcEndpoint.Connect"/>
-        public override Stream Connect()
+        protected override Stream RefreshStream()
         {
             try
             {
