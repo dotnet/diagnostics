@@ -3290,7 +3290,7 @@ size_t FunctionType (size_t EIP)
 //
 BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes)
 {
-    _ASSERTE(pFileInfo);
+    _ASSERTE(pFileInfo != nullptr);
     _ASSERTE(g_ExtSymbols2 != nullptr);
     _ASSERTE(g_pRuntime != nullptr);
 
@@ -3380,6 +3380,40 @@ bool IsRuntimeVersionAtLeast(VS_FIXEDFILEINFO& fileInfo, DWORD major)
             break;
     }
     return false;
+}
+
+// Returns true if there is a change in the data structures that SOS depends on like
+// stress log structs (StressMsg, StressLogChunck, ThreadStressLog, etc), exception
+// stack traces (StackTraceElement), the PredefinedTlsSlots enums, etc.
+bool CheckBreakingRuntimeChange(int* pVersion)
+{
+    bool result = false;
+
+    // Assume version 1 if no ISOSDacInterface9 (runtimes < 5.0)
+    int version = 1;
+
+    if (g_sos != nullptr)
+    {
+        ReleaseHolder<ISOSDacInterface9> sos9;
+        if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface9), &sos9)))
+        {
+            if (SUCCEEDED(sos9->GetBreakingChangeVersion(&version)))
+            {
+                if (version > SOS_BREAKING_CHANGE_VERSION)
+                {
+                    ExtWarn("WARNING: SOS needs to be upgraded for this version of the runtime. Some commands may not work correctly.\n");
+                    ExtWarn("For more information see https://aka.ms/sos_faq\n");
+                    ExtWarn("\n");
+                    result = true;
+                }
+            }
+        }
+    }
+    if (pVersion != nullptr)
+    {
+        *pVersion = version;
+    }
+    return result;
 }
 
 #ifndef FEATURE_PAL

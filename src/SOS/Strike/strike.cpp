@@ -2913,6 +2913,9 @@ DECLARE_API(PrintException)
     {
         return Status;
     }
+
+    CheckBreakingRuntimeChange();
+
     if (bLineNumbers)
     {
         ULONG symlines = 0;
@@ -7083,6 +7086,8 @@ DECLARE_API(Threads)
 
             if (bSupported)
             {
+                CheckBreakingRuntimeChange();
+
                 HRESULT Status2 = PrintSpecialThreads();
                 if (!SUCCEEDED(Status2))
                     Status = Status2;
@@ -10058,6 +10063,8 @@ DECLARE_API(DumpLog)
         ExtErr("DumpLog not supported on desktop runtime\n");
         return E_FAIL;
     }
+
+    CheckBreakingRuntimeChange();
 
     const char* fileName = "StressLog.txt";
     CLRDATA_ADDRESS StressLogAddress = NULL;
