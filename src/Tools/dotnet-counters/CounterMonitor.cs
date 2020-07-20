@@ -61,7 +61,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             try
             {
-                _session.Stop();
+                _session?.Stop();
             }
             catch (EndOfStreamException ex)
             {
