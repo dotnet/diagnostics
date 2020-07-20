@@ -910,7 +910,7 @@ This is a one-way transmission with no expectation of an ACK.  The Reverse Serve
 
 ## Dataflow
 
-Due to the potential for an optional continuation in teh Diagnostics IPC Protocol, each successful connection between the runtime and a reverse server is only usable once.  As a result, a .NET process will attempt to _reconnect_ to the Reverse Server after every command that is sent across an active connection.
+Due to the potential for an optional continuation in the Diagnostics IPC Protocol, each successful connection between the runtime and a reverse server is only usable once.  As a result, a .NET process will attempt to _reconnect_ to the Reverse Server after every command that is sent across an active connection.
 
 A typical dataflow has 2 actors, the Target application, `T` and the Diagnostics Monitor Application, `M`, and communicates like so:
 ```
