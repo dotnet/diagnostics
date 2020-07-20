@@ -30,9 +30,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
             new Command( name: "collect", description: "Capture dumps from a process")
             {
                 // Handler
-                CommandHandler.Create<IConsole, int, string, bool, Dumper.DumpTypeOption, string>(new Dumper().Collect),
+                CommandHandler.Create<IConsole, int, string, bool, Dumper.DumpTypeOption, string, string>(new Dumper().Collect),
                 // Options
-                ProcessIdOption(), OutputOption(), DiagnosticLoggingOption(), TypeOption(), ProcessNameOption()
+                ProcessIdOption(), OutputOption(), DiagnosticLoggingOption(), TypeOption(), ProcessNameOption(), ConditionOption()
             };
 
         private static Option ProcessIdOption() =>
@@ -49,6 +49,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 description: "The name of the process to collect a memory dump.")
             {
                 Argument = new Argument<string>(name: "name")
+            };
+
+        private static Option ConditionOption() =>
+            new Option(
+                aliases: new[] { "-c", "--condition" },
+                description: "The condition (TODO - documentation).")
+            {
+                Argument = new Argument<string>(name: "condition")
             };
 
         private static Option OutputOption() =>

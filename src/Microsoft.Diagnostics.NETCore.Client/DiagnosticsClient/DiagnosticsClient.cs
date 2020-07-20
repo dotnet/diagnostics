@@ -69,13 +69,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="dumpType">Type of the dump to be generated</param>
         /// <param name="dumpPath">Full path to the dump to be generated. By default it is /tmp/coredump.{pid}</param>
         /// <param name="logDumpGeneration">When set to true, display the dump generation debug log to the console.</param>
-        public void WriteDump(DumpType dumpType, string dumpPath, bool logDumpGeneration=false)
+        /// <param name="condition">The condition</param>
+        /// <param name="identity">The identity for cancellation</param>
+        public void WriteDump(DumpType dumpType, string dumpPath, bool logDumpGeneration=false, string condition=null, string identity=null)
         {
             if (string.IsNullOrEmpty(dumpPath))
                 throw new ArgumentNullException($"{nameof(dumpPath)} required");
 
-            byte[] payload = SerializeCoreDump(dumpPath, dumpType, logDumpGeneration);
-            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
+            byte[] payload = SerializeCoreDumpV2(dumpPath, dumpType, logDumpGeneration, condition, identity);
+            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump2, payload);
             IpcMessage response = IpcClient.SendMessage(_processId, message);
             switch ((DiagnosticsServerCommandId)response.Header.CommandId)
             {
@@ -145,7 +147,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 .Distinct();
         }
 
-        private static byte[] SerializeCoreDump(string dumpName, DumpType dumpType, bool diagnostics)
+        private static byte[] SerializeCoreDumpV2(string dumpName, DumpType dumpType, bool diagnostics, string condition, string identity)
         {
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
@@ -153,7 +155,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 writer.WriteString(dumpName);
                 writer.Write((uint)dumpType);
                 writer.Write((uint)(diagnostics ? 1 : 0));
-
+                writer.WriteString(condition);
+                writer.WriteString(identity);
                 writer.Flush();
                 return stream.ToArray();
             }

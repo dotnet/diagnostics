@@ -28,6 +28,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <returns></returns>
         private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name)
         {
+            // TODO, andrewau, support the condition option
+            // TODO, andrewau, handle Ctrl+C for cancellation for conditional request
             if (name != null)
             {
                 if (processId != 0)

@@ -28,11 +28,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         StopTracing     = 0x01,
         CollectTracing  = 0x02,
         CollectTracing2 = 0x03,
+        // TODO, andrewau, a new command for cancelling conditional dump collection
     }
 
     internal enum DumpCommandId : byte
     {
         GenerateCoreDump = 0x01,
+        GenerateCoreDump2 = 0x02,
     }
 
     internal enum ProfilerCommandId : byte

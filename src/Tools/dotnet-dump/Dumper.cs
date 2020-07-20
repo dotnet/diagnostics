@@ -33,8 +33,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
         }
 
-        public int Collect(IConsole console, int processId, string output, bool diag, DumpTypeOption type, string name)
+        public int Collect(IConsole console, int processId, string output, bool diag, DumpTypeOption type, string name, string condition)
         {
+            // TODO, andrewau, handle Control+C for cancellation of conditional request
             Console.WriteLine(name);
             if (name != null)
             {
@@ -83,6 +84,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
                 console.Out.WriteLine($"Writing {dumpTypeMessage} to {output}");
 
+                // TODO, andrewau, be backward compatible to older runtimes
+                /*
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     // Get the process
@@ -90,27 +93,27 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
                     Windows.CollectDump(process, output, type);
                 }
-                else
+                */
+
+                var client = new DiagnosticsClient(processId);
+
+                DumpType dumpType = DumpType.Normal;
+                switch (type)
                 {
-                    var client = new DiagnosticsClient(processId);
-
-                    DumpType dumpType = DumpType.Normal;
-                    switch (type)
-                    {
-                        case DumpTypeOption.Full:
-                            dumpType = DumpType.Full;
-                            break;
-                        case DumpTypeOption.Heap:
-                            dumpType = DumpType.WithHeap;
-                            break;
-                        case DumpTypeOption.Mini:
-                            dumpType = DumpType.Normal;
-                            break;
-                    }
-
-                    // Send the command to the runtime to initiate the core dump
-                    client.WriteDump(dumpType, output, diag);
+                    case DumpTypeOption.Full:
+                        dumpType = DumpType.Full;
+                        break;
+                    case DumpTypeOption.Heap:
+                        dumpType = DumpType.WithHeap;
+                        break;
+                    case DumpTypeOption.Mini:
+                        dumpType = DumpType.Normal;
+                        break;
                 }
+
+                // Send the command to the runtime to initiate the core dump
+                Guid identity = Guid.NewGuid();
+                client.WriteDump(dumpType, output, diag, condition, identity.ToString());
             }
             catch (Exception ex) when 
                 (ex is FileNotFoundException || 
