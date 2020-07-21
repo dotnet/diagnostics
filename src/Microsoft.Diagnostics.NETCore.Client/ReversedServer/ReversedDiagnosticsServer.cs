@@ -141,10 +141,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         endpoint = new ServerIpcEndpoint();
                         newConnection = new ReversedDiagnosticsConnection(this, endpoint, pid, runtimeCookie);
 
-                        _endpoints.TryAdd(runtimeCookie, endpoint);
+                        if (!_endpoints.TryAdd(runtimeCookie, endpoint))
+                        {
+                            newConnection.Dispose();
+                            newConnection = null;
+
+                            endpoint.Dispose();
+                            endpoint = null;
+                        }
                     }
 
-                    endpoint.SetStream(stream);
+                    if (null != endpoint)
+                    {
+                        endpoint.SetStream(stream);
+                    }
                 }
             }
             while (null == newConnection);
