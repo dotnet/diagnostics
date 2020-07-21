@@ -23,6 +23,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dbgutil.cpp" />
+    <ClCompile Include="elfreader.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="elfreader.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A9A7C879-C320-3327-BB84-16E1322E17AE}</ProjectGuid>

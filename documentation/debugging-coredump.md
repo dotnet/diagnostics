@@ -39,11 +39,11 @@ If the `--host-only` option is not found, update dotnet-symbol to the latest wit
 
 ### Install lldb ###
 
-See the instructions on the main [README.md](../README.md) under "Getting lldb".
+See the instructions [here](sos.md#getting-lldb) on installing lldb.
 
 ### Install the latest SOS ###
 
-See the instructions on the main [README.md](../README.md) under "Installing SOS".
+See the instructions [here](sos.md#installing-sos) on installing SOS.
 
 ### Launch lldb under Linux ###
 

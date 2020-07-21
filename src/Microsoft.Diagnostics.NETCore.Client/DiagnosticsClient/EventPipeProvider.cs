@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     public sealed class EventPipeProvider
     {
-        public EventPipeProvider(string name, EventLevel eventLevel, long keywords = 0, IDictionary<string, string> arguments = null)
+        public EventPipeProvider(string name, EventLevel eventLevel, long keywords = 0xF00000000000, IDictionary<string, string> arguments = null)
         {
             Name = name;
             EventLevel = eventLevel;

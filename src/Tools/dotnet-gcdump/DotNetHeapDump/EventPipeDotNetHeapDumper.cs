@@ -35,8 +35,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <returns></returns>
         public static bool DumpFromEventPipe(CancellationToken ct, int processID, MemoryGraph memoryGraph, TextWriter log, int timeout, DotNetHeapInfo dotNetInfo = null)
         {
-            var startTicks = Stopwatch.GetTimestamp();
-            Func<TimeSpan> getElapsed = () => TimeSpan.FromTicks(Stopwatch.GetTimestamp() - startTicks);
+            DateTime start = DateTime.Now;
+            Func<TimeSpan> getElapsed = () => DateTime.Now - start;
 
             var dumper = new DotNetHeapDumpGraphReader(log)
             {
@@ -190,7 +190,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     {
                         if (!(e is TaskCanceledException))
                         {
-                            throw ae;
+                            throw;
                         }
                     }
                 }

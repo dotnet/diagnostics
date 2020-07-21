@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// Current OS thread Id
         /// </summary>
-        public int CurrentThreadId { get; set; }
+        public uint? CurrentThreadId { get; set; }
 
         /// <summary>
         /// Cancellation token for current command

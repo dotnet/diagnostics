@@ -38,8 +38,8 @@
   <TestDesktop Condition="'$(TargetArchitecture)' == 'arm64'">false</TestDesktop>
 
   <!-- Build the debuggee for this framework version but run it on latest -->
-  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">netcoreapp3.0</BuildProjectFrameworkLatest>
-  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.0</BuildProjectFrameworkLatest>
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">netcoreapp3.1</BuildProjectFrameworkLatest>
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.1</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '2.1')">netcoreapp2.1</BuildProjectFrameworkLatest>
 
   <DesktopFrameworkPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</DesktopFrameworkPath>
@@ -72,13 +72,8 @@
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
         </Option>
         <Option Condition="'$(TestLatestOnly)' != 'true'">
-          <!-- The debuggee built for 3.0 but run it on 3.1 -->
-          <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+          <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
-        </Option>
-        <Option Condition="'$(TestLatestOnly)' != 'true'">
-          <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
         </Option>
         <Option Condition="'$(TestLatestOnly)' != 'true'">
           <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
@@ -97,13 +92,8 @@
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
             </Option>
             <Option Condition="'$(TestLatestOnly)' != 'true'">
-              <!-- Build the debuggee for 3.0 but run it on 3.1 -->
-              <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+              <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
-            </Option>
-            <Option Condition="'$(TestLatestOnly)' != 'true'">
-              <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
             </Option>
             <Option Condition="'$(TestLatestOnly)' != 'true'">
               <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
@@ -121,7 +111,7 @@
           <FrameworkVersion>$(AspNetCoreVersion21)</FrameworkVersion>
         </Option>
         <!--
-            SOS.WebApp3 and SOS.DualRuntimes (runs on 3.0, 3.1 and latest aspnetcore)
+            SOS.WebApp3 and SOS.DualRuntimes (runs on 3.1 and latest aspnetcore)
           -->
         <Option Condition="'$(TestWebApp3)' == 'true'">
           <Options>
@@ -141,15 +131,9 @@
               <FrameworkVersion>$(AspNetCoreVersionLatest)</FrameworkVersion>
             </Option>
             <Option Condition="'$(TestLatestOnly)' != 'true'">
-              <!-- Build the debuggee for 3.0 but run it on 3.1 -->
-              <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+              <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
               <FrameworkVersion>$(AspNetCoreVersion31)</FrameworkVersion>
-            </Option>
-            <Option Condition="'$(TestLatestOnly)' != 'true'">
-              <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
-              <FrameworkVersion>$(AspNetCoreVersion30)</FrameworkVersion>
             </Option>
           </Options>
         </Option>

@@ -16,6 +16,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Argument = new Argument<int>(name: "pid")
             };
 
+        public static Option NameOption() =>
+            new Option(
+                aliases: new[] { "-n", "--name" },
+                description: "The name of the process to collect the trace.")
+            {
+                Argument = new Argument<string>(name: "name")
+            };
+
         public static TraceFileFormat DefaultTraceFileFormat => TraceFileFormat.NetTrace;
 
         public static Option FormatOption() =>

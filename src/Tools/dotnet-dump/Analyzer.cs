@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             try
             { 
                 DataTarget target = null;
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
                     target = DataTarget.LoadCoreDump(dump_path.FullName);
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
@@ -89,6 +89,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         symweb: false,
                         tempDirectory: null,
                         symbolServerPath: null,
+                        authToken: null,
                         timeoutInMinutes: 0,
                         symbolCachePath: null,
                         symbolDirectoryPath: null,
@@ -143,13 +144,13 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             // Create common analyze context for commands
             var analyzeContext = new AnalyzeContext() {
-                CurrentThreadId = unchecked((int)target.DataReader.EnumerateAllThreads().FirstOrDefault())
+                CurrentThreadId = target.DataReader.EnumerateAllThreads().FirstOrDefault()
             };
             _serviceProvider.AddService(analyzeContext);
 
-            // Add the register, memory, SOSHost and ClrRuntime services
-            var registerService = new RegisterService(target);
-            _serviceProvider.AddService(registerService);
+            // Add the thread, memory, SOSHost and ClrRuntime services
+            var threadService = new ThreadService(target.DataReader);
+            _serviceProvider.AddService<IThreadService>(threadService);
 
             var memoryService = new MemoryService(target.DataReader);
             _serviceProvider.AddService(memoryService);
@@ -219,72 +220,52 @@ namespace Microsoft.Diagnostics.Tools.Dump
             return runtime;
         }
 
-        private string GetPlatformDacFileName(string dacFileName)
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return dacFileName.Replace("libmscordaccore.so", "mscordaccore.dll");
-            }
-            return dacFileName;
-        }
-
         private string GetDacFile(ClrInfo clrInfo)
         {
             if (_dacFilePath == null)
-            {            
-                Debug.Assert(!string.IsNullOrEmpty(clrInfo.DacInfo.FileName));
-                var analyzeContext = _serviceProvider.GetService<AnalyzeContext>();
-                string dacFilePath = null;
-                if (!string.IsNullOrEmpty(analyzeContext.RuntimeModuleDirectory))
-                {
-                    dacFilePath = Path.Combine(analyzeContext.RuntimeModuleDirectory, GetPlatformDacFileName(clrInfo.DacInfo.FileName));
-                    if (File.Exists(dacFilePath))
-                    {
-                        _dacFilePath = dacFilePath;
-                    }
-                }
+            {
+                string dacFileName = GetDacFileName(clrInfo, out OSPlatform platform);
+                _dacFilePath = GetLocalDacPath(clrInfo, dacFileName);
                 if (_dacFilePath == null)
                 {
-                    dacFilePath = GetPlatformDacFileName(clrInfo.LocalMatchingDac);
-                    if (!string.IsNullOrEmpty(dacFilePath) && File.Exists(dacFilePath))
+                    if (SymbolReader.IsSymbolStoreEnabled())
                     {
-                        _dacFilePath = dacFilePath;
-                    }
-                    else if (SymbolReader.IsSymbolStoreEnabled())
-                    {
-                        string dacFileName = Path.GetFileName(dacFilePath ?? GetPlatformDacFileName(clrInfo.DacInfo.FileName));
-                        if (dacFileName != null)
-                        {
-                            SymbolStoreKey key = null;
+                        SymbolStoreKey key = null;
 
+                        if (platform == OSPlatform.OSX)
+                        {
+                            unsafe
+                            {
+                                var memoryService = _serviceProvider.GetService<MemoryService>();
+                                SymbolReader.ReadMemoryDelegate readMemory = (ulong address, byte* buffer, int count) => {
+                                    return memoryService.ReadMemory(address, new Span<byte>(buffer, count), out int bytesRead) ? bytesRead : 0;
+                                };
+                                KeyGenerator generator = SymbolReader.GetKeyGenerator(
+                                    SymbolReader.RuntimeConfiguration.OSXCore, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.ImageBase, unchecked((int)clrInfo.ModuleInfo.FileSize), readMemory);
+
+                                key = generator.GetKeys(KeyTypeFlags.DacDbiKeys).SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
+                            }
+                        }
+                        else if (platform == OSPlatform.Linux)
+                        {
                             if (clrInfo.ModuleInfo.BuildId != null)
                             {
                                 IEnumerable<SymbolStoreKey> keys = ELFFileKeyGenerator.GetKeys(
-                                    KeyTypeFlags.ClrKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId, symbolFile: false, symbolFileName: null);
+                                    KeyTypeFlags.DacDbiKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId, symbolFile: false, symbolFileName: null);
 
                                 key = keys.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
+                            }
+                        }
+                        else if (platform == OSPlatform.Windows)
+                        {
+                            // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
+                            key = PEFileKeyGenerator.GetKey(dacFileName, clrInfo.ModuleInfo.TimeStamp, clrInfo.ModuleInfo.FileSize);
+                        }
 
-                                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                                {
-                                    // We are opening a Linux dump on Windows
-                                    // We need to use the Windows index and filename
-                                    key = new SymbolStoreKey(key.Index.Replace("libmscordaccore.so", "mscordaccore.dll"),
-                                                             key.FullPathName.Replace("libmscordaccore.so", "mscordaccore.dll"),
-                                                             key.IsClrSpecialFile,
-                                                             key.PdbChecksums);
-                                }
-                            }
-                            else
-                            {
-                                // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
-                                key = PEFileKeyGenerator.GetKey(dacFileName, clrInfo.ModuleInfo.TimeStamp, clrInfo.ModuleInfo.FileSize);
-                            }
-
-                            if (key != null)
-                            {
-                                // Now download the DAC module from the symbol server
-                                _dacFilePath = SymbolReader.GetSymbolFile(key);
-                            }
+                        if (key != null)
+                        {
+                            // Now download the DAC module from the symbol server
+                            _dacFilePath = SymbolReader.GetSymbolFile(key);
                         }
                     }
 
@@ -296,6 +277,51 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 _isDesktop = clrInfo.Flavor == ClrFlavor.Desktop;
             }
             return _dacFilePath;
+        }
+
+        private static string GetDacFileName(ClrInfo clrInfo, out OSPlatform platform)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(clrInfo.ModuleInfo.FileName));
+            Debug.Assert(!string.IsNullOrEmpty(clrInfo.DacInfo.FileName));
+
+            platform = OSPlatform.Windows;
+
+            switch (Path.GetFileName(clrInfo.ModuleInfo.FileName))
+            {
+                case "libcoreclr.dylib":
+                    platform = OSPlatform.OSX;
+                    return "libmscordaccore.dylib";
+
+                case "libcoreclr.so":
+                    platform = OSPlatform.Linux;
+
+                    // If this is the Linux runtime module name, but we are running on Windows return the cross-OS DAC name.
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        return "mscordaccore.dll";
+                    }
+                    break;
+            }
+            return clrInfo.DacInfo.FileName;
+        }
+
+        private string GetLocalDacPath(ClrInfo clrInfo, string dacFileName)
+        {
+            string dacFilePath;
+            var analyzeContext = _serviceProvider.GetService<AnalyzeContext>();
+            if (!string.IsNullOrEmpty(analyzeContext.RuntimeModuleDirectory))
+            {
+                dacFilePath = Path.Combine(analyzeContext.RuntimeModuleDirectory, dacFileName);
+            }
+            else
+            {
+                dacFilePath = Path.Combine(Path.GetDirectoryName(clrInfo.ModuleInfo.FileName), dacFileName);
+            }
+            if (!File.Exists(dacFilePath))
+            {
+                dacFilePath = null;
+            }
+            return dacFilePath;
         }
     }
 }

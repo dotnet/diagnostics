@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Internal.Common.Utils;
 using System;
 using System.CommandLine;
 using System.Diagnostics;
@@ -32,8 +33,23 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
         }
 
-        public async Task<int> Collect(IConsole console, int processId, string output, bool diag, DumpTypeOption type)
+        public int Collect(IConsole console, int processId, string output, bool diag, DumpTypeOption type, string name)
         {
+            Console.WriteLine(name);
+            if (name != null)
+            {
+                if (processId != 0)
+                {
+                    Console.WriteLine("Can only specify either --name or --process-id option.");
+                    return 0;
+                }
+                processId = CommandUtils.FindProcessIdWithName(name);
+                if (processId < 0)
+                {
+                    return 0;
+                }
+            }
+
             if (processId == 0) {
                 console.Error.WriteLine("ProcessId is required.");
                 return 1;
@@ -72,9 +88,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     // Get the process
                     Process process = Process.GetProcessById(processId);
 
-                    await Windows.CollectDumpAsync(process, output, type);
+                    Windows.CollectDump(process, output, type);
                 }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                else
                 {
                     var client = new DiagnosticsClient(processId);
 
@@ -94,9 +110,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
                     // Send the command to the runtime to initiate the core dump
                     client.WriteDump(dumpType, output, diag);
-                }
-                else {
-                    throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
                 }
             }
             catch (Exception ex) when 

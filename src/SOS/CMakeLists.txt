@@ -18,6 +18,7 @@ endif(WIN32)
 
 add_definitions(-D_SECURE_SCL=0)
 
+add_subdirectory(dbgutil)
 add_subdirectory(SOS.NETCore)
 add_subdirectory(Strike)
 
@@ -32,4 +33,3 @@ if(CLR_CMAKE_PLATFORM_UNIX)
 endif(CLR_CMAKE_PLATFORM_UNIX)
 
 add_subdirectory(debugshim)
-add_subdirectory(dbgutil)

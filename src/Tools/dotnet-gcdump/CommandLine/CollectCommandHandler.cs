@@ -3,18 +3,20 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Tools.Common;
+using Microsoft.Internal.Common.Utils;
 using System;
 using System.CommandLine;
 using System.CommandLine.Binding;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Graphs;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name);
 
         /// <summary>
         /// Collects a gcdump from a currently running process.
@@ -24,8 +26,22 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="processId">The process to collect the gcdump from.</param>
         /// <param name="output">The output path for the collected gcdump.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name)
         {
+            if (name != null)
+            {
+                if (processId != 0)
+                {
+                    Console.WriteLine("Can only specify either --name or --process-id option.");
+                    return -1;
+                }
+                processId = CommandUtils.FindProcessIdWithName(name);
+                if (processId < 0)
+                {
+                    return -1;
+                }
+            }
+
             try
             {
                 if (processId < 0)
@@ -39,10 +55,10 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     Console.Out.WriteLine($"-p|--process-id is required");
                     return -1;
                 }
-
-                output = string.IsNullOrEmpty(output) ? 
-                    $"{DateTime.Now.ToString(@"yyyyMMdd\_hhmmss")}_{processId}.gcdump" :
-                    output;
+                
+                output = string.IsNullOrEmpty(output)
+                    ? $"{DateTime.Now:yyyyMMdd\\_hhmmss}_{processId}.gcdump"
+                    : output;
 
                 FileInfo outputFileInfo = new FileInfo(output);
 
@@ -55,17 +71,18 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 {
                     outputFileInfo = new FileInfo(outputFileInfo.FullName + ".gcdump");
                 }
-
+                
                 Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
+
                 var dumpTask = Task.Run(() => 
                 {
-                    var memoryGraph = new Graphs.MemoryGraph(50_000);
-                    var heapInfo = new DotNetHeapInfo();
-                    if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, memoryGraph, verbose ? Console.Out : TextWriter.Null, timeout, heapInfo))
-                        return false;
-                    memoryGraph.AllowReading();
-                    GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
-                    return true;
+                    if (TryCollectMemoryGraph(ct, processId, timeout, verbose, out var memoryGraph))
+                    {
+                        GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
+                        return true;
+                    }
+
+                    return false;
                 });
 
                 var fDumpSuccess = await dumpTask;
@@ -94,23 +111,48 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
         }
 
+        internal static bool TryCollectMemoryGraph(CancellationToken ct, int processId, int timeout, bool verbose,
+            out MemoryGraph memoryGraph)
+        {
+            var heapInfo = new DotNetHeapInfo();
+            var log = verbose ? Console.Out : TextWriter.Null; 
+            
+            memoryGraph = new MemoryGraph(50_000);
+
+            if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, memoryGraph, log, timeout, heapInfo))
+            {
+                return false;
+            }
+
+            memoryGraph.AllowReading();
+            return true;
+        }
+
         public static Command CollectCommand() =>
             new Command(
                 name: "collect",
                 description: "Collects a diagnostic trace from a currently running process")
             {
                 // Handler
-                HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler(),
+                HandlerDescriptor.FromDelegate((CollectDelegate) Collect).GetCommandHandler(),
                 // Options
-                ProcessIdOption(), OutputPathOption(), VerboseOption(), TimeoutOption() 
+                ProcessIdOption(), OutputPathOption(), VerboseOption(), TimeoutOption(), NameOption()
             };
 
-        public static Option ProcessIdOption() =>
+        private static Option ProcessIdOption() =>
             new Option(
                 aliases: new[] { "-p", "--process-id" },
-                description: "The process id to collect the trace.")
+                description: "The process id to collect the gcdump.")
             {
                 Argument = new Argument<int>(name: "pid", defaultValue: 0),
+            };
+
+        private static Option NameOption() =>
+            new Option(
+                aliases: new[] { "-n", "--name" },
+                description: "The name of the process to collect the gcdump.")
+            {
+                Argument = new Argument<string>(name: "name")
             };
 
         private static Option OutputPathOption() =>
@@ -129,7 +171,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Argument = new Argument<bool>(name: "verbose", defaultValue: false)
             };
 
-        private static int DefaultTimeout = 30;
+        public static int DefaultTimeout = 30;
         private static Option TimeoutOption() =>
             new Option(
                 aliases: new[] { "-t", "--timeout" },

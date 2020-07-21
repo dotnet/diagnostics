@@ -82,8 +82,8 @@ public:
 
 
 public:
-	typedef void (*printfFtn)(const char* fmt, ...);
-	printfFtn gcPrintf;	
+    typedef void (*printfFtn)(const char* fmt, ...);
+    printfFtn gcPrintf;	
     UINT32              gcInfoVersion;
     //-------------------------------------------------------------------------
 protected:

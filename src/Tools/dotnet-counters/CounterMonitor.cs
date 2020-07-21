@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
+using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -60,7 +61,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             try
             {
-                _session.Stop();
+                _session?.Stop();
             }
             catch (EndOfStreamException ex)
             {
@@ -79,11 +80,29 @@ namespace Microsoft.Diagnostics.Tools.Counters
             catch (PlatformNotSupportedException)
             {
             }
+            // On non-abrupt exits, the socket may be already closed by the runtime and we won't be able to send a stop request through it. 
+            catch (ServerNotAvailableException)
+            {
+            }
             _renderer.Stop();
         }
 
-        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval)
+        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, string name)
         {
+            if (name != null)
+            {
+                if (processId != 0)
+                {
+                    Console.WriteLine("Can only specify either --name or --process-id option.");
+                    return 0;
+                }
+                processId = CommandUtils.FindProcessIdWithName(name);
+                if (processId < 0)
+                {
+                    return 0;
+                }
+            }
+
             try
             {
                 _ct = ct;
@@ -110,8 +129,22 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output)
+        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name)
         {
+            if (name != null)
+            {
+                if (processId != 0)
+                {
+                    Console.WriteLine("Can only specify either --name or --process-id option.");
+                    return 0;
+                }
+                processId = CommandUtils.FindProcessIdWithName(name);
+                if (processId < 0)
+                {
+                    return 0;
+                }
+            }
+
             try
             {
                 _ct = ct;
@@ -236,7 +269,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             Task monitorTask = new Task(() => {
                 try
                 {
-                    _session = _diagnosticsClient.StartEventPipeSession(Trace.Extensions.ToProviders(providerString), false);
+                    _session = _diagnosticsClient.StartEventPipeSession(Trace.Extensions.ToProviders(providerString), false, 10);
                     var source = new EventPipeEventSource(_session.EventStream);
                     source.Dynamic.All += DynamicAllMonitor;
                     _renderer.EventPipeSourceConnected();

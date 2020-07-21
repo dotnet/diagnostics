@@ -1,7 +1,7 @@
 .NET Core Diagnostics Repo
 ==========================
 
-This repository contains the source code for various .NET Core runtime diagnostic tools. It currently contains SOS, the managed portion of SOS, the lldb SOS plugin and various global diagnostic tools. The goals of this repo is to build SOS and the lldb SOS plugin for the portable (glibc based) Linux platform (Centos 7) and the platforms not supported by the portable (musl based) build (Centos 6, Alpine, and macOS) and to test across various indexes in a very large matrix: OSs/distros (Centos 6/7, Ubuntu, Alpine, Fedora, Debian, RHEL 7.2), architectures (x64, x86, arm, arm64), lldb versions (3.9 to 9.0) and .NET Core versions (1.1, 2.0.x, 2.1).
+This repository contains the source code for various .NET Core runtime diagnostic tools. It currently contains SOS, the managed portion of SOS, the lldb SOS plugin and various global diagnostic tools. The goals of this repo is to build SOS and the lldb SOS plugin for the portable (glibc based) Linux platform (Centos 7) and the platforms not supported by the portable (musl based) build (Centos 6, Alpine, and macOS) and to test across various indexes in a very large matrix: OSs/distros (Centos 6/7, Ubuntu, Alpine, Fedora, Debian, RHEL 7.2), architectures (x64, x86, arm, arm64), lldb versions (3.9 to 9.0) and .NET Core versions (2.1, 3.1, 5.0.x).
 
 Another goal to make it easier to obtain a version of lldb (currently 3.9) with scripts and documentation for platforms/distros like Centos, Alpine, Fedora, etc. that by default provide really old versions.
 
@@ -33,6 +33,7 @@ To install the platform's prerequisites and build:
 
 * [SOS](documentation/sos.md) - About the SOS debugger extension.
 * [dotnet-dump](documentation/dotnet-dump-instructions.md) - Dump collection and analysis utility.
+* [dotnet-gcdump](documentation/dotnet-gcdump-instructions.md) - Heap analysis tool that collects gcdumps of live .NET processes.
 * [dotnet-trace](documentation/dotnet-trace-instructions.md) - Enable the collection of events for a running .NET Core Application to a local trace file.
 * [dotnet-counters](documentation/dotnet-counters-instructions.md) - Monitor performance counters of a .NET Core application in real time. 
 
@@ -56,5 +57,4 @@ To install the platform's prerequisites and build:
 
 ## License
 
-The diagnostics repository is licensed under the [MIT license](LICENSE.TXT). This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).  For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
-
+The diagnostics repository is licensed under the [MIT license](LICENSE.TXT).
