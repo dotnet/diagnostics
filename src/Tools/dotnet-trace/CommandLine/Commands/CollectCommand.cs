@@ -13,6 +13,7 @@ using System.CommandLine.Rendering;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -171,7 +172,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         Console.Out.WriteLine($"Output File    : {fs.Name}");
                         if (shouldStopAfterDuration)
                             Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
-
                         Console.Out.WriteLine("\n\n");
 
                         var fileInfo = new FileInfo(output.FullName);
@@ -198,7 +198,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         while (!shouldExit.WaitOne(100) && !(Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
                             printStatus();
 
-                        if (hasConsole && Math.Abs(Console.CursorTop - Console.BufferHeight) == 1)
+                        // This behavior is different between Console/Terminals on Windows and Mac/Linux
+                        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && hasConsole && Math.Abs(Console.CursorTop - Console.BufferHeight) == 1)
                             rewriter.LineToClear--;
                         durationTimer?.Stop();
                         rundownRequested = true;
