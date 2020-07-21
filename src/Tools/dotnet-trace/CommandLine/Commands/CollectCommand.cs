@@ -72,8 +72,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     return ErrorCodes.ArgumentError;
                 }
 
-                bool hasConsole = console.GetTerminal() != null;
-
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
                 {
                     Console.Out.WriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
@@ -177,7 +175,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         var fileInfo = new FileInfo(output.FullName);
                         Task copyTask = session.EventStream.CopyToAsync(fs);
 
-                        if (hasConsole)
+                        if (!Console.IsOutputRedirected)
                         {
                             rewriter = new LineRewriter { LineToClear = Console.CursorTop -1 };
                             Console.CursorVisible = false;
@@ -185,7 +183,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                         Action printStatus = () =>
                         {
-                            if (hasConsole)
+                            if (!Console.IsOutputRedirected)
                                 rewriter?.RewriteConsoleLine();
 
                             fileInfo.Refresh();
@@ -195,11 +193,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 Console.Out.WriteLine("Stopping the trace. This may take up to minutes depending on the application being traced.");
                         };
 
-                        while (!shouldExit.WaitOne(100) && !(Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
+                        while (!shouldExit.WaitOne(100) &&  !(!Console.IsInputRedirected &&Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
                             printStatus();
 
                         // This behavior is different between Console/Terminals on Windows and Mac/Linux
-                        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && hasConsole && Math.Abs(Console.CursorTop - Console.BufferHeight) == 1)
+                        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !Console.IsOutputRedirected && Math.Abs(Console.CursorTop - Console.BufferHeight) == 1)
                             rewriter.LineToClear--;
                         durationTimer?.Stop();
                         rundownRequested = true;
