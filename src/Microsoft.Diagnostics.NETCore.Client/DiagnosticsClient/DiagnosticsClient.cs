@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </returns> 
         public EventPipeSession StartEventPipeSession(EventPipeProvider provider, bool requestRundown=true, int circularBufferMB=256)
         {
-            return new EventPipeSession(_processId, new[] { provider }, requestRundown, circularBufferMB);
+            return new EventPipeSession(_endpoint, new[] { provider }, requestRundown, circularBufferMB);
         }
 
         /// <summary>
