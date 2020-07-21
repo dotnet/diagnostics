@@ -39,6 +39,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal abstract class BaseIpcEndpoint : IIpcEndpoint
     {
+        // The amount of time to wait for a stream to be available for consumption by the Connect method.
+        // This should be a large timeout in order to allow the runtime instance to reconnect and provide
+        // a new stream once the previous stream has started its diagnostics request and response.
+        private static readonly TimeSpan ConnectWaitTimeout = TimeSpan.FromSeconds(30);
+        // The amount of time to wait for exclusive "lock" on the stream field. This should be relatively
+        // short since modification of the stream field so not take a significant amount of time.
+        private static readonly TimeSpan StreamSemaphoreWaitTimeout = TimeSpan.FromSeconds(5);
+        // The amount of time to wait before testing the stream again after previously
+        // testing the stream within the WaitForConnectionAsync method.
+        private static readonly TimeSpan WaitForConnectionInterval = TimeSpan.FromMilliseconds(20);
+
+        private readonly SemaphoreSlim _streamSemaphore = new SemaphoreSlim(1);
         private readonly Queue<StreamTarget> _targets = new Queue<StreamTarget>();
 
         private bool _disposed;
@@ -52,11 +64,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </remarks>
         public Stream Connect()
         {
-            using var target = new StreamEventTarget();
+            using var target = new StreamEventTarget(_streamSemaphore);
 
             RegisterTarget(target);
 
-            target.Handle.WaitOne();
+            target.Handle.WaitOne(ConnectWaitTimeout);
 
             return target.Stream;
         }
@@ -67,15 +79,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
             bool isConnected = false;
             do
             {
-                using (var target = new StreamTaskTarget(token))
+                using (var target = new StreamTaskTarget(_streamSemaphore, token))
                 {
                     Stream stream = null;
                     try
                     {
-                        RegisterTarget(target);
+                        await RegisterTargetAsync(target, token);
 
                         // Wait for a stream to be provided by the target
-                        stream = await target.Task;
+                        await target.Task;
+
+                        stream = target.Stream;
 
                         // Test if the stream is viable
                         isConnected = TestStream(stream);
@@ -93,9 +107,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         {
                             stream?.Dispose();
                         }
-                        else
+                        else if (ProvideStreamReleaseSemaphore(stream))
                         {
-                            ProvideStream(stream);
+                            // Another target was able to take ownership of the stream semaphore.
+                            // Update the current target to not release the semaphore on dispose.
+                            target.ReleaseSemaphoreOnDispose = false;
                         }
                     }
                 }
@@ -104,7 +120,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // the runtime instance to possibly repopulate a new connection stream.
                 if (!isConnected)
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(20), token);
+                    await Task.Delay(WaitForConnectionInterval, token);
                 }
             }
             while (!isConnected);
@@ -116,19 +132,33 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 ProvideStream(stream: null);
 
+                _streamSemaphore.Dispose();
+
                 _disposed = true;
             }
         }
 
         protected void ProvideStream(Stream stream)
         {
-            Stream previousStream;
-
-            lock (_targets)
+            if (!_streamSemaphore.Wait(StreamSemaphoreWaitTimeout))
             {
-                // Get the previous stream in order to dispose it later
-                previousStream = _stream;
+                throw new TimeoutException();
+            }
 
+            ProvideStreamReleaseSemaphore(stream);
+        }
+
+        /// <returns>
+        /// True if stream was accepted by a target and the target took ownership of the stream semaphore.
+        /// </returns>
+        private bool ProvideStreamReleaseSemaphore(Stream stream)
+        {
+            // Get the previous stream in order to dispose it later
+            Stream previousStream = _stream;
+            bool targetOwnsSemaphore = false;
+
+            try
+            {
                 // If there are any targets waiting for a stream, provide
                 // it to the first target in the queue.
                 if (_targets.Count > 0)
@@ -139,6 +169,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         if (target.SetStream(stream))
                         {
                             stream = null;
+
+                            targetOwnsSemaphore = target.ReleaseSemaphoreOnDispose;
                         }
                         else
                         {
@@ -156,10 +188,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // a target was already provided the stream, this will be null, thus
                 // representing that no existing stream is waiting to be consumed.
                 _stream = stream;
+
+                // Dispose the previous stream if there was one.
+                previousStream?.Dispose();
+            }
+            finally
+            {
+                // If a target took ownership of the semaphore, don't release it.
+                if (!targetOwnsSemaphore)
+                {
+                    _streamSemaphore.Release();
+                }
             }
 
-            // Dispose the previous stream if there was one.
-            previousStream?.Dispose();
+            // Return whether a target accepted the stream AND it acquired the stream
+            // semaphore so that the caller knows no to release the semaphore.
+            return targetOwnsSemaphore;
         }
 
         protected virtual Stream RefreshStream()
@@ -212,7 +256,28 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private void RegisterTarget(StreamTarget target)
         {
-            lock (_targets)
+            if (!_streamSemaphore.Wait(StreamSemaphoreWaitTimeout))
+            {
+                throw new TimeoutException();
+            }
+
+            RegisterTargetReleaseSemaphore(target);
+        }
+
+        private async Task RegisterTargetAsync(StreamTarget target, CancellationToken token)
+        {
+            if (!(await _streamSemaphore.WaitAsync(StreamSemaphoreWaitTimeout, token)))
+            {
+                throw new TimeoutException();
+            }
+
+            RegisterTargetReleaseSemaphore(target);
+        }
+
+        private void RegisterTargetReleaseSemaphore(StreamTarget target)
+        {
+            bool targetOwnsSemaphore = false;
+            try
             {
                 // Allow transport specific implementation to refresh
                 // the stream before possibly consuming it.
@@ -233,6 +298,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 else if (target.SetStream(_stream))
                 {
                     _stream = null;
+
+                    targetOwnsSemaphore = target.ReleaseSemaphoreOnDispose;
+                }
+            }
+            finally
+            {
+                // If a target took ownership of the semaphore, don't release it.
+                if (!targetOwnsSemaphore)
+                {
+                    _streamSemaphore.Release();
                 }
             }
         }
@@ -242,21 +317,59 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         private abstract class StreamTarget : IDisposable
         {
+            private readonly SemaphoreSlim _semaphore;
+
+            private bool _isDisposed;
+
+            protected StreamTarget(SemaphoreSlim semaphore, bool takeOwneshipOnAccept)
+            {
+                _semaphore = semaphore;
+
+                ReleaseSemaphoreOnDispose = takeOwneshipOnAccept;
+            }
+
             public void Dispose()
             {
-                if (!IsDisposed)
+                if (!_isDisposed)
                 {
                     Dispose(disposing: true);
 
-                    IsDisposed = true;
+                    if (ReleaseSemaphoreOnDispose)
+                    {
+                        _semaphore.Release();
+                    }
+
+                    _isDisposed = true;
                 }
             }
 
             protected abstract void Dispose(bool disposing);
 
-            public abstract bool SetStream(Stream stream);
+            public bool SetStream(Stream stream)
+            {
+                if (_isDisposed)
+                {
+                    return false;
+                }
 
-            public bool IsDisposed { get; private set; }
+                Stream = stream;
+
+                bool acceptedStream = AcceptStream();
+
+                if (!acceptedStream)
+                {
+                    ReleaseSemaphoreOnDispose = false;
+                    Stream = null;
+                }
+
+                return acceptedStream;
+            }
+
+            protected abstract bool AcceptStream();
+
+            public Stream Stream { get; private set; }
+
+            public bool ReleaseSemaphoreOnDispose { get; set; }
         }
 
         /// <summary>
@@ -266,6 +379,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             private readonly ManualResetEvent _streamEvent = new ManualResetEvent(false);
 
+            public StreamEventTarget(SemaphoreSlim semaphore)
+                : base(semaphore, takeOwneshipOnAccept: false)
+            {
+            }
+
             protected override void Dispose(bool disposing)
             {
                 if (disposing)
@@ -274,21 +392,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
             }
 
-            public override bool SetStream(Stream stream)
+            protected override bool AcceptStream()
             {
-                if (IsDisposed)
-                {
-                    return false;
-                }
-
-                Stream = stream;
-                _streamEvent.Set();
-                return true;
+                return _streamEvent.Set();
             }
 
             public WaitHandle Handle => _streamEvent;
-
-            public Stream Stream { get; private set; }
         }
 
         /// <summary>
@@ -297,9 +406,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private class StreamTaskTarget : StreamTarget
         {
             private readonly IDisposable _registration;
-            private readonly TaskCompletionSource<Stream> _streamSource = new TaskCompletionSource<Stream>();
+            private readonly TaskCompletionSource<object> _streamSource = new TaskCompletionSource<object>();
 
-            public StreamTaskTarget(CancellationToken token)
+            public StreamTaskTarget(SemaphoreSlim semaphore, CancellationToken token)
+                : base(semaphore, takeOwneshipOnAccept: true)
             {
                 _registration = token.Register(() => _streamSource.TrySetCanceled());
             }
@@ -312,17 +422,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
             }
 
-            public override bool SetStream(Stream stream)
+            protected override bool AcceptStream()
             {
-                if (IsDisposed)
-                {
-                    return false;
-                }
-
-                return _streamSource.TrySetResult(stream);
+                return _streamSource.TrySetResult(null);
             }
 
-            public Task<Stream> Task => _streamSource.Task;
+            public Task Task => _streamSource.Task;
         }
     }
 

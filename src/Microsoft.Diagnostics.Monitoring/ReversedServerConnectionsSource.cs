@@ -16,6 +16,14 @@ namespace Microsoft.Diagnostics.Monitoring
     /// </summary>
     internal class ReversedServerConnectionsSource : IDiagnosticsConnectionsSourceInternal, IAsyncDisposable
     {
+        // The amount of time to wait when checking if the a runtime instance connection should be
+        // pruned from the list of connections. If the runtime doesn't have a viable connection within
+        // this time, it will be pruned from the list.
+        private static readonly TimeSpan PruneWaitForConnectionTimeout = TimeSpan.FromMilliseconds(250);
+        // The amount of time to wait after issuing the ResumeRuntime command. If runtime instance does
+        // not reconnect within this time period, the runtime connection will not be added to the list.
+        private static readonly TimeSpan ResumeRuntimeTimeout = TimeSpan.FromMilliseconds(250);
+
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
         private readonly IList<ReversedDiagnosticsConnection> _connections = new List<ReversedDiagnosticsConnection>();
         private readonly SemaphoreSlim _connectionsSemaphore = new SemaphoreSlim(1);
@@ -124,12 +132,12 @@ namespace Microsoft.Diagnostics.Monitoring
 
         private async Task PruneConnectionIfNotViable(ReversedDiagnosticsConnection connection, CancellationToken token)
         {
-            using var timeoutSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+            using var timeoutSource = new CancellationTokenSource();
             using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutSource.Token);
 
             try
             {
-                timeoutSource.CancelAfter(TimeSpan.FromMilliseconds(100));
+                timeoutSource.CancelAfter(PruneWaitForConnectionTimeout);
 
                 await connection.Endpoint.WaitForConnectionAsync(linkedSource.Token);
             }
@@ -175,38 +183,50 @@ namespace Microsoft.Diagnostics.Monitoring
 
         private async Task ResumeAndQueueConnection(ReversedDiagnosticsConnection connection, CancellationToken token)
         {
-            // Send ResumeRuntime message for runtime instances that connect to the server. This will allow
-            // those instances that are configured to pause on start to resume after the diagnostics
-            // connection has been made. Instances that are not configured to pause on startup will ignore
-            // the command and return success.
-            var client = new DiagnosticsClient(connection.Endpoint);
             try
             {
-                client.ResumeRuntime();
-            }
-            catch (ServerErrorException)
-            {
-                // The runtime likely doesn't understand the ResumeRuntime command.
-            }
+                // Send ResumeRuntime message for runtime instances that connect to the server. This will allow
+                // those instances that are configured to pause on start to resume after the diagnostics
+                // connection has been made. Instances that are not configured to pause on startup will ignore
+                // the command and return success.
+                var client = new DiagnosticsClient(connection.Endpoint);
+                try
+                {
+                    client.ResumeRuntime();
+                }
+                catch (ServerErrorException)
+                {
+                    // The runtime likely doesn't understand the ResumeRuntime command.
+                }
 
-            // The ResumeRuntime message will consume the stream.
-            // Wait until the server repopulates the stream so that the source doesn't try to offer
-            // a connection that cannot be immediately used. If it is offered immediately, timing issues could ensue
-            // such as when the GetConnectionsAsync call prunes connections that fail the CheckTransport check.
-            using var timeoutSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
-            using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutSource.Token);
-            await connection.Endpoint.WaitForConnectionAsync(linkedSource.Token);
+                // The ResumeRuntime message will consume the stream.
+                // Wait until the server repopulates the stream so that the source doesn't try to offer
+                // a connection that cannot be immediately used. If it is offered immediately, timing issues could ensue
+                // such as when the GetConnectionsAsync call prunes connections that fail the WaitForConnectionAsync check.
+                using var timeoutSource = new CancellationTokenSource();
+                using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutSource.Token);
+                timeoutSource.CancelAfter(ResumeRuntimeTimeout);
 
-            await _connectionsSemaphore.WaitAsync(token);
-            try
-            {
-                _connections.Add(connection);
-            
-                OnNewConnection(connection);
+                await connection.Endpoint.WaitForConnectionAsync(linkedSource.Token);
+
+                await _connectionsSemaphore.WaitAsync(token);
+                try
+                {
+                    _connections.Add(connection);
+
+                    OnNewConnection(connection);
+                }
+                finally
+                {
+                    _connectionsSemaphore.Release();
+                }
             }
-            finally
+            catch (Exception)
             {
-                _connectionsSemaphore.Release();
+                // If any exceptions occur, dispose the connection so that it is removed from the server.
+                connection.Dispose();
+
+                throw;
             }
         }
 

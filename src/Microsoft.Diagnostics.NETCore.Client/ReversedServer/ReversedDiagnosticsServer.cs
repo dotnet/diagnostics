@@ -16,6 +16,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal sealed class ReversedDiagnosticsServer : IDisposable
     {
+        // The amount of time to allow parsing of the advertise data before cancelling. This allows the server to
+        // remain responsive in case the advertise data is incomplete and the stream is not closed.
+        private static readonly TimeSpan ParseAdvertiseTimeout = TimeSpan.FromSeconds(1);
+
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
         private readonly ConcurrentDictionary<Guid, ServerIpcEndpoint> _endpoints = new ConcurrentDictionary<Guid, ServerIpcEndpoint>();
         private readonly IpcServerTransport _transport;
@@ -110,7 +114,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 using var parseCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(linkedSource.Token);
                 try
                 {
-                    parseCancellationSource.CancelAfter(TimeSpan.FromSeconds(3));
+                    parseCancellationSource.CancelAfter(ParseAdvertiseTimeout);
 
                     advertise = await IpcAdvertise.ParseAsync(stream, parseCancellationSource.Token);
                 }

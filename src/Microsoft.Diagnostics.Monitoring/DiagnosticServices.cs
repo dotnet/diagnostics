@@ -21,6 +21,10 @@ namespace Microsoft.Diagnostics.Monitoring
     {
         private const int DockerEntrypointProcessId = 1;
 
+        // The amount of time to wait when checking if the docker entrypoint process is a .NET process
+        // with a diagnostics transport connection.
+        private static readonly TimeSpan DockerEntrypointWaitTimeout = TimeSpan.FromMilliseconds(250);
+
         private readonly IDiagnosticsConnectionsSourceInternal _connectionsSource;
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
@@ -140,7 +144,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 try
                 {
                     var client = await GetClientAsync(DockerEntrypointProcessId, token);
-                    using var timeoutSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+                    using var timeoutSource = new CancellationTokenSource(DockerEntrypointWaitTimeout);
                     
                     await client.WaitForConnectionAsync(timeoutSource.Token);
 
