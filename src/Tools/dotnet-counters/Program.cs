@@ -106,7 +106,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 aliases: new[] { "-r", "--runtime-version" },
                 description: "Version of runtime. Supported runtime version: 3.0, 3.1, 5.0") 
             {
-                Argument = new Argument<string>(name: "runtimeVersion", defaultValue: "5.0")
+                Argument = new Argument<string>(name: "runtimeVersion", defaultValue: "3.1")
             };
 
         private static readonly string[] s_SupportedRuntimeVersions = new[] { "3.0", "3.1", "5.0" };

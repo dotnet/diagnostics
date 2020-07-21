@@ -12,9 +12,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
 {
     internal static class KnownData
     {
-        private static readonly string defaultVersion = "5.0";
+        private static readonly string maxVersion = "5.0";
         private static readonly IReadOnlyDictionary<string, CounterProvider> _knownProviders =
-            CreateKnownProviders(defaultVersion).ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
+            CreateKnownProviders(maxVersion).ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
 
         private static IEnumerable<CounterProvider> CreateKnownProviders(string runtimeVersion)
         {
