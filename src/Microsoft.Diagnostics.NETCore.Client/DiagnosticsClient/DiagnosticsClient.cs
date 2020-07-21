@@ -58,6 +58,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
+        /// Start tracing the application and return an EventPipeSession object
+        /// </summary>
+        /// <param name="provider">An EventPipeProvider to turn on.</param>
+        /// <param name="requestRundown">If true, request rundown events from the runtime</param>
+        /// <param name="circularBufferMB">The size of the runtime's buffer for collecting events in MB</param>
+        /// <returns>
+        /// An EventPipeSession object representing the EventPipe session that just started.
+        /// </returns> 
+        public EventPipeSession StartEventPipeSession(EventPipeProvider provider, bool requestRundown=true, int circularBufferMB=256)
+        {
+            return new EventPipeSession(_processId, new[] { provider }, requestRundown, circularBufferMB);
+        }
+
+        /// <summary>
         /// Trigger a core dump generation.
         /// </summary> 
         /// <param name="dumpType">Type of the dump to be generated</param>

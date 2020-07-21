@@ -61,7 +61,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             try
             {
-                _session.Stop();
+                _session?.Stop();
             }
             catch (EndOfStreamException ex)
             {
@@ -78,6 +78,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
             // Since we are catching this in StopMonitor() we know that the pipe once existed (otherwise the exception would've 
             // been thrown in StartMonitor directly)
             catch (PlatformNotSupportedException)
+            {
+            }
+            // On non-abrupt exits, the socket may be already closed by the runtime and we won't be able to send a stop request through it. 
+            catch (ServerNotAvailableException)
             {
             }
             _renderer.Stop();

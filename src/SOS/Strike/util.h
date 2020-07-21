@@ -1754,6 +1754,7 @@ bool IsRuntimeVersion(DWORD major);
 bool IsRuntimeVersion(VS_FIXEDFILEINFO& fileInfo, DWORD major);
 bool IsRuntimeVersionAtLeast(DWORD major);
 bool IsRuntimeVersionAtLeast(VS_FIXEDFILEINFO& fileInfo, DWORD major);
+bool CheckBreakingRuntimeChange(int* pVersion = nullptr);
 #ifndef FEATURE_PAL
 BOOL IsRetailBuild (size_t base);
 BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo);

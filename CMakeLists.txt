@@ -44,9 +44,9 @@ if (WIN32)
 
       # Confirm that Windows SDK is present
       if(NOT DEFINED CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION OR CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION STREQUAL "" )
-	      message(FATAL_ERROR "Windows SDK is required for the Arm32 build.")
+          message(FATAL_ERROR "Windows SDK is required for the Arm32 build.")
       else()
-	      message("Using Windows SDK version ${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")
+          message("Using Windows SDK version ${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")
       endif()
 
       # Explicitly specify the assembler to be used for Arm32 compile

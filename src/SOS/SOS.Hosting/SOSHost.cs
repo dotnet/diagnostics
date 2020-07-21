@@ -58,6 +58,7 @@ namespace SOS
             bool symweb,
             string tempDirectory,
             string symbolServerPath,
+            string authToken,
             int timeoutInMintues,
             string symbolCachePath,
             string symbolDirectoryPath,
@@ -983,7 +984,7 @@ namespace SOS
                 ThreadInfo threadInfo = _threadService.GetThreadInfoFromIndex(unchecked((int)id));
                 AnalyzeContext.CurrentThreadId = threadInfo.ThreadId;
             }
-            catch (InvalidOperationException)
+            catch (DiagnosticsException)
             {
                 return E_FAIL;
             }
@@ -1044,7 +1045,7 @@ namespace SOS
                     id = (uint)threadInfo.ThreadIndex;
                     return S_OK;
                 }
-                catch (InvalidOperationException)
+                catch (DiagnosticsException)
                 {
                 }
             }
@@ -1056,21 +1057,21 @@ namespace SOS
             IntPtr self,
             ulong* offset)
         {
-            if (!AnalyzeContext.CurrentThreadId.HasValue)
+            if (AnalyzeContext.CurrentThreadId.HasValue)
             {
-                return E_FAIL;
+                uint threadId = AnalyzeContext.CurrentThreadId.Value;
+                try
+                {
+                    ulong teb = _threadService.GetThreadInfoFromId(threadId).ThreadTeb;
+                    Write(offset, teb);
+                    return S_OK;
+                }
+                catch (DiagnosticsException)
+                {
+                }
             }
-            uint threadId = AnalyzeContext.CurrentThreadId.Value;
-            try
-            {
-                ulong teb = _threadService.GetThreadInfoFromId(threadId).ThreadTeb;
-                Write(offset, teb);
-                return S_OK;
-            }
-            catch (InvalidOperationException)
-            {
-                return E_FAIL;
-            }
+            Write(offset, 0);
+            return E_FAIL;
         }
 
         internal int GetInstructionOffset(
@@ -1099,7 +1100,7 @@ namespace SOS
             string name,
             out uint index)
         {
-            if (_threadService.GetRegisterIndexByName(name, out int value)) {
+            if (!_threadService.GetRegisterIndexByName(name, out int value)) {
                 index = 0;
                 return E_INVALIDARG;
             }
@@ -1144,8 +1145,8 @@ namespace SOS
             string register,
             out ulong value)
         {
-            value = 0;
             if (!_threadService.GetRegisterIndexByName(register, out int index)) {
+                value = 0;
                 return E_INVALIDARG;
             }
             return GetRegister(index, out value);
@@ -1155,16 +1156,15 @@ namespace SOS
             int index, 
             out ulong value)
         {
-            if (!AnalyzeContext.CurrentThreadId.HasValue)
+            if (AnalyzeContext.CurrentThreadId.HasValue)
             {
-                value = 0;
-                return E_FAIL;
+                uint threadId = AnalyzeContext.CurrentThreadId.Value;
+                if (_threadService.GetRegisterValue(threadId, index, out value)) {
+                    return S_OK;
+                }
             }
-            uint threadId = AnalyzeContext.CurrentThreadId.Value;
-            if (!_threadService.GetRegisterValue(threadId, index, out value)) {
-                return E_FAIL;
-            }
-            return S_OK;
+            value = 0;
+            return E_FAIL;
         }
 
         internal static bool IsCoreClrRuntimeModule(ModuleInfo module)

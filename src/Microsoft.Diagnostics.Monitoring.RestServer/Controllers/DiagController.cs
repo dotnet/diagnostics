@@ -29,6 +29,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
     {
         private const TraceProfile DefaultTraceProfiles = TraceProfile.Cpu | TraceProfile.Http | TraceProfile.Metrics;
         private const string ContentTypeNdJson = "application/x-ndjson";
+        private const string ContentTypeJson = "application/json";
         private const string ContentTypeEventStream = "text/event-stream";
         private static readonly MediaTypeHeaderValue NdJsonHeader = new MediaTypeHeaderValue(ContentTypeNdJson);
         private static readonly MediaTypeHeaderValue EventStreamHeader = new MediaTypeHeaderValue(ContentTypeEventStream);
@@ -157,7 +158,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         }
 
         [HttpGet("logs/{pid?}")]
-        [Produces(ContentTypeEventStream, ContentTypeNdJson)]
+        [Produces(ContentTypeEventStream, ContentTypeNdJson, ContentTypeJson)]
         public Task<ActionResult> Logs(int? pid, [FromQuery][Range(-1, int.MaxValue)] int durationSeconds = 30, [FromQuery] LogLevel level = LogLevel.Debug)
         {
             TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);

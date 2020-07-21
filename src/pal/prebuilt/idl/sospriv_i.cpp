@@ -5,11 +5,11 @@
 /* link this file in with the server and any clients */
 
 
- /* File created by MIDL compiler version 8.00.0613 */
+ /* File created by MIDL compiler version 8.01.0622 */
 /* at Mon Jan 18 19:14:07 2038
  */
-/* Compiler settings for C:/ssd/coreclr/src/inc/sospriv.idl:
-    Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 8.00.0613 
+/* Compiler settings for C:/ssd/runtime/src/coreclr/src/inc/sospriv.idl:
+    Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 8.01.0622 
     protocol : dce , ms_ext, c_ext, robust
     error checks: allocation ref bounds_check enum stub_data 
     VC __declspec() decoration level: 
@@ -20,12 +20,14 @@
 
 #pragma warning( disable: 4049 )  /* more than 64k source lines */
 
-#include <rpc.h>
-#include <rpcndr.h>
 
 #ifdef __cplusplus
 extern "C"{
 #endif 
+
+
+#include <rpc.h>
+#include <rpcndr.h>
 
 #ifdef _MIDL_USE_GUIDDEF_
 
@@ -61,9 +63,9 @@ typedef IID CLSID;
 #endif // CLSID_DEFINED
 
 #define MIDL_DEFINE_GUID(type,name,l,w1,w2,b1,b2,b3,b4,b5,b6,b7,b8) \
-        const type name = {l,w1,w2,{b1,b2,b3,b4,b5,b6,b7,b8}}
+        EXTERN_C __declspec(selectany) const type name = {l,w1,w2,{b1,b2,b3,b4,b5,b6,b7,b8}}
 
-#endif !_MIDL_USE_GUIDDEF_
+#endif // !_MIDL_USE_GUIDDEF_
 
 MIDL_DEFINE_GUID(IID, IID_ISOSEnum,0x286CA186,0xE763,0x4F61,0x97,0x60,0x48,0x7D,0x43,0xAE,0x43,0x41);
 
@@ -92,11 +94,16 @@ MIDL_DEFINE_GUID(IID, IID_ISOSDacInterface4,0x74B9D34C,0xA612,0x4B07,0x93,0xDD,0
 MIDL_DEFINE_GUID(IID, IID_ISOSDacInterface5,0x127d6abe,0x6c86,0x4e48,0x8e,0x7b,0x22,0x07,0x81,0xc5,0x81,0x01);
 
 
-MIDL_DEFINE_GUID(IID, IID_ISOSDacInterface6,0x11206399,0x4b66,0x4edb,0x98,0xea,0x85,0x65,0x4e,0x59,0xad,0x45);
+MIDL_DEFINE_GUID(IID, IID_ISOSDacInterface6,0x11206399,0x4B66,0x4EDB,0x98,0xEA,0x85,0x65,0x4E,0x59,0xAD,0x45);
 
 
 MIDL_DEFINE_GUID(IID, IID_ISOSDacInterface7,0xc1020dde,0xfe98,0x4536,0xa5,0x3b,0xf3,0x5a,0x74,0xc3,0x27,0xeb);
 
+
+MIDL_DEFINE_GUID(IID, IID_ISOSDacInterface8,0xc12f35a9,0xe55c,0x4520,0xa8,0x94,0xb3,0xdc,0x51,0x65,0xdf,0xce);
+
+
+MIDL_DEFINE_GUID(IID, IID_ISOSDacInterface9,0x4eca42d8,0x7e7b,0x4c8a,0xa1,0x16,0x7b,0xfb,0xf6,0x92,0x92,0x67);
 
 #undef MIDL_DEFINE_GUID
 

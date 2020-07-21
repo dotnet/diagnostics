@@ -178,7 +178,7 @@ GCRootImpl::RootNode *GCRootImpl::NewNode(TADDR obj, MTInfo *mtInfo, bool fromDe
     // nodes unless we have to.  Instead we keep a stl list with free nodes to use.
     RootNode *toReturn = NULL;
 
-    if (mRootNewList.size())
+    if (!mRootNewList.empty())
     {
         toReturn = mRootNewList.back();
         mRootNewList.pop_back();
