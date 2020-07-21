@@ -431,7 +431,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             // Create task completion source that is completed when any events are provided; cancel it if cancellation is requested
             var receivedEventsSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(1));
             using var _ = cancellation.Token.Register(() => receivedEventsSource.TrySetCanceled());
 
             // Create continuation task that stops the session (which immediately stops event processing).
