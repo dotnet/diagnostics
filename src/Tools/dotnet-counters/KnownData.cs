@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="gen-1-size", Description="Gen 1 Heap Size", SupportedVersions=new[] { "3.0", "3.1", "5.0" } },
                     new CounterProfile{ Name="gen-2-size", Description="Gen 2 Heap Size", SupportedVersions=new[] { "3.0", "3.1", "5.0" } },
                     new CounterProfile{ Name="loh-size", Description="LOH Size", SupportedVersions=new[] { "3.0", "3.1", "5.0" } },
-                    new CounterProfile{ Name="poh-size", Description="POH (Pinned Object Heap) Size", SupportedVersions=new[] { "3.0", "3.1", "5.0" } },
+                    new CounterProfile{ Name="poh-size", Description="POH (Pinned Object Heap) Size", SupportedVersions=new[] { "5.0" } },
                     new CounterProfile{ Name="alloc-rate", Description="Number of bytes allocated in the managed heap per second", SupportedVersions=new[] { "3.0", "3.1", "5.0" } },
                     new CounterProfile{ Name="assembly-count", Description="Number of Assemblies Loaded", SupportedVersions=new[] { "3.0", "3.1", "5.0" } },
                     new CounterProfile{ Name="exception-count", Description="Number of Exceptions / sec", SupportedVersions=new[] { "3.0", "3.1", "5.0" } },
@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="monitor-lock-contention-count", Description="Number of times there were contention when trying to take the monitor lock per second", SupportedVersions=new[] { "3.0", "3.1", "5.0" } },
                     new CounterProfile{ Name="threadpool-queue-length", Description="ThreadPool Work Items Queue Length", SupportedVersions=new[] { "3.0", "3.1", "5.0" } },
                     new CounterProfile{ Name="threadpool-completed-items-count", Description="ThreadPool Completed Work Items Count", SupportedVersions=new[] { "3.0", "3.1", "5.0" } },
-                    new CounterProfile{ Name="active-timer-count", Description="Number of timers that are currently active", SupportedVersions=new[] { "5.0" } },
+                    new CounterProfile{ Name="active-timer-count", Description="Number of timers that are currently active", SupportedVersions=new[] { "3.0", "3.1", "5.0" } },
                     new CounterProfile{ Name="il-bytes-jitted", Description="Total IL bytes jitted", SupportedVersions=new[] { "5.0" } },
                     new CounterProfile{ Name="methods-jitted-count", Description="Number of methods jitted", SupportedVersions=new[] { "5.0" } }
                 },
