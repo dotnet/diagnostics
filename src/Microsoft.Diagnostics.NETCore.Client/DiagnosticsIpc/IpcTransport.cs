@@ -281,8 +281,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     return false;
                 }
 
-                _streamEvent.Set();
                 Stream = stream;
+                _streamEvent.Set();
                 return true;
             }
 
