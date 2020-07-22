@@ -72,6 +72,13 @@ namespace Microsoft.Diagnostics.Monitoring
                 app.UseHsts();
             }
 
+            CorsConfiguration corsConfiguration = new CorsConfiguration();
+            Configuration.Bind(nameof(CorsConfiguration), corsConfiguration);
+            if (!string.IsNullOrEmpty(corsConfiguration.AllowedOrigins))
+            {
+                app.UseCors(builder => builder.WithOrigins(corsConfiguration.GetOrigins()).AllowAnyHeader().AllowAnyMethod());
+            }
+
             app.UseResponseCompression();
             app.UseMvc();
         }
