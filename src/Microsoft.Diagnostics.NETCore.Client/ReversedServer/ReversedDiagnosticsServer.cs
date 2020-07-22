@@ -109,23 +109,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     // the information. Catch the exception and continue waiting for a new connection.
                 }
 
-                // Cancel parsing of advertise data after timeout period to
-                // mitigate runtimes that write partial data and do not close the stream (avoid waiting forever).
-                using var parseCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(linkedSource.Token);
-                try
+                if (null != stream)
                 {
-                    parseCancellationSource.CancelAfter(ParseAdvertiseTimeout);
+                    // Cancel parsing of advertise data after timeout period to
+                    // mitigate runtimes that write partial data and do not close the stream (avoid waiting forever).
+                    using var parseCancellationSource = new CancellationTokenSource();
+                    using var linkedSource2 = CancellationTokenSource.CreateLinkedTokenSource(linkedSource.Token, parseCancellationSource.Token);
+                    try
+                    {
+                        parseCancellationSource.CancelAfter(ParseAdvertiseTimeout);
 
-                    advertise = await IpcAdvertise.ParseAsync(stream, parseCancellationSource.Token);
-                }
-                catch (OperationCanceledException ex) when (ex.CancellationToken == linkedSource.Token)
-                {
-                    // Only handle cancellation if it was due to the parse timeout.
-                }
-                catch (Exception ex) when (!(ex is OperationCanceledException))
-                {
-                    // The advertise data could be incomplete if the runtime shuts down before completely writing
-                    // the information. Catch the exception and continue waiting for a new connection.
+                        advertise = await IpcAdvertise.ParseAsync(stream, linkedSource2.Token);
+                    }
+                    catch (OperationCanceledException) when (parseCancellationSource.IsCancellationRequested)
+                    {
+                        // Only handle cancellation if it was due to the parse timeout.
+                    }
+                    catch (Exception ex) when (!(ex is OperationCanceledException))
+                    {
+                        // The advertise data could be incomplete if the runtime shuts down before completely writing
+                        // the information. Catch the exception and continue waiting for a new connection.
+                    }
                 }
 
                 if (null != advertise)
@@ -139,25 +143,26 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     // to continuously invoke the AcceptAsync method in order to handle runtime instance reconnects,
                     // even if the consumer only wants to handle a single connection.
                     ServerIpcEndpoint endpoint = null;
-                    if (!_endpoints.TryGetValue(runtimeCookie, out endpoint))
+                    if (_endpoints.TryGetValue(runtimeCookie, out endpoint))
+                    {
+                        // Update endpoint stream
+                        endpoint.SetStream(stream);
+                    }
+                    else
                     {
                         // Create a new endpoint and connection that are cached an returned from this method.
                         endpoint = new ServerIpcEndpoint();
-                        newConnection = new ReversedDiagnosticsConnection(this, endpoint, pid, runtimeCookie);
-
-                        if (!_endpoints.TryAdd(runtimeCookie, endpoint))
+                        if (_endpoints.TryAdd(runtimeCookie, endpoint))
                         {
-                            newConnection.Dispose();
-                            newConnection = null;
+                            endpoint.SetStream(stream);
 
+                            newConnection = new ReversedDiagnosticsConnection(this, endpoint, pid, runtimeCookie);
+                        }
+                        else
+                        {
                             endpoint.Dispose();
                             endpoint = null;
                         }
-                    }
-
-                    if (null != endpoint)
-                    {
-                        endpoint.SetStream(stream);
                     }
                 }
             }
