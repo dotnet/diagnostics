@@ -50,7 +50,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 writer.Write((uint)Format);
                 writer.Write(RequestRundown);
 
-                writer.Write(Providers.Count());
+                writer.Write(Providers.Count);
                 foreach (var provider in Providers)
                 {
                     writer.Write(provider.Keywords);

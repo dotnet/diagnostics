@@ -737,7 +737,11 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </summary>
         public bool CreateDumpExists
         {
-            get { return OS.Kind == OSKind.Linux && IsNETCore && RuntimeFrameworkVersionMajor > 1; }
+            get
+            {
+                return OS.Kind == OSKind.Linux && IsNETCore && RuntimeFrameworkVersionMajor >= 2 ||
+                       OS.Kind == OSKind.Windows && IsNETCore && RuntimeFrameworkVersionMajor >= 5;
+            }
         }
 
         /// <summary>

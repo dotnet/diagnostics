@@ -150,6 +150,7 @@ dotnet tool install --global dotnet-counters
 
     dotnet-counters collect [-h||--help]
                             [-p|--process-id <pid>]
+                            [-n|--name <name>]
                             [-o|--output <name>]
                             [--format <csv|json>]
                             [--refreshInterval <sec>]
@@ -162,6 +163,9 @@ dotnet tool install --global dotnet-counters
     
     -p,--process-id
         The ID of the process that will be monitored
+
+    -n,--name
+        The name of the process that will be monitored. This can be specified in place of process-id.
 
     -o, --output
         The name of the output file

@@ -77,5 +77,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 runner[i].Stop();
             }
         }
+
+        [Fact]
+        public void CheckSpecificProcessTest()
+        {
+            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
+            runner.Start(3000);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Thread.Sleep(5000);
+            }
+
+            var client = new DiagnosticsClient(runner.Pid);
+            Assert.True(client.CheckTransport(), $"Unable to verify diagnostics transport for test process {runner.Pid}.");
+
+            runner.Stop();
+        }
     }
 }

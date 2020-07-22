@@ -2,11 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Repl;
 using SOS;
 using System;
-using System.CommandLine;
 using System.IO;
 using System.Linq;
 
@@ -15,6 +13,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [Command(Name = "clrstack",         AliasExpansion = "ClrStack",            Help = "Provides a stack trace of managed code only.")]
     [Command(Name = "clrthreads",       AliasExpansion = "Threads",             Help = "List the managed threads running.")]
     [Command(Name = "dbgout",           AliasExpansion = "dbgout",              Help = "Enable/disable (-off) internal SOS logging.")]
+    [Command(Name = "dumpalc",          AliasExpansion = "DumpALC",             Help = "Displays details about a collectible AssemblyLoadContext into which the specified object is loaded.")]
     [Command(Name = "dumparray",        AliasExpansion = "DumpArray",           Help = "Displays details about a managed array.")]
     [Command(Name = "dumpasync",        AliasExpansion = "DumpAsync",           Help = "Displays info about async state machines on the garbage-collected heap.")]
     [Command(Name = "dumpassembly",     AliasExpansion = "DumpAssembly",        Help = "Displays details about an assembly.")]
@@ -28,6 +27,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [Command(Name = "dumpmodule",       AliasExpansion = "DumpModule",          Help = "Displays information about a EE module structure at the specified address.")]
     [Command(Name = "dumpmt",           AliasExpansion = "DumpMT",              Help = "Displays information about a method table at the specified address.")]
     [Command(Name = "dumpobj",          AliasExpansion = "DumpObj",             Help = "Displays info about an object at the specified address.")]
+    [CommandAlias(Name = "do")]
     [Command(Name = "dumpvc",           AliasExpansion = "DumpVC",              Help = "Displays info about the fields of a value class.")]
     [Command(Name = "dumpstackobjects", AliasExpansion = "DumpStackObjects",    Help = "Displays all managed objects found within the bounds of the current stack.")]
     [CommandAlias(Name = "dso")]
@@ -47,7 +47,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [Command(Name = "histobj",          AliasExpansion = "HistObj",             Help = "Examines all stress log relocation records and displays the chain of garbage collection relocations that may have led to the address passed in as an argument.")]
     [Command(Name = "histobjfind",      AliasExpansion = "HistObjFind",         Help = "Displays all the log entries that reference an object at the specified address.")]
     [Command(Name = "histroot",         AliasExpansion = "HistRoot",            Help = "Displays information related to both promotions and relocations of the specified root.")]
-    [Command(Name = "setsymbolserver",  AliasExpansion = "SetSymbolServer",     Help = "Enables the symbol server support ")]
+    [Command(Name = "setsymbolserver",  AliasExpansion = "SetSymbolServer",     Help = "Enables the symbol server support.")]
+    [Command(Name = "verifyheap",       AliasExpansion = "VerifyHeap",          Help = "Checks the GC heap for signs of corruption.")]
+    [Command(Name = "threadpool",       AliasExpansion = "ThreadPool",          Help = "Lists basic information about the thread pool.")]
     [Command(Name = "dumprcw",          AliasExpansion = "DumpRCW",             Platform = CommandPlatform.Windows, Help = "Displays information about a Runtime Callable Wrapper.")]
     [Command(Name = "dumpccw",          AliasExpansion = "DumpCCW",             Platform = CommandPlatform.Windows, Help = "Displays information about a COM Callable Wrapper.")]
     [Command(Name = "dumppermissionset",AliasExpansion = "DumpPermissionSet",   Platform = CommandPlatform.Windows, Help = "Displays a PermissionSet object (debug build only).")]
@@ -57,7 +59,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [Command(Name = "listnearobj",      AliasExpansion = "ListNearObj",         Platform = CommandPlatform.Windows, Help = "Displays the object preceding and succeeding the address specified.")]
     [Command(Name = "gcheapstat",       AliasExpansion = "GCHeapStat",          Platform = CommandPlatform.Windows, Help = "Display various GC heap stats.")]
     [Command(Name = "watsonbuckets",    AliasExpansion = "WatsonBuckets",       Platform = CommandPlatform.Windows, Help = "Displays the Watson buckets.")]
-    [Command(Name = "threadpool",       AliasExpansion = "ThreadPool",          Platform = CommandPlatform.Windows, Help = "Lists basic information about the thread pool.")]
     [Command(Name = "comstate",         AliasExpansion = "COMState",            Platform = CommandPlatform.Windows, Help = "Lists the COM apartment model for each thread.")]
     [Command(Name = "gchandles",        AliasExpansion = "GCHandles",           Platform = CommandPlatform.Windows, Help = "Provides statistics about GCHandles in the process.")]
     [Command(Name = "objsize",          AliasExpansion = "ObjSize",             Platform = CommandPlatform.Windows, Help = "Lists the sizes of the all the objects found on managed threads.")]

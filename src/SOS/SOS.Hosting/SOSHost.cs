@@ -28,12 +28,12 @@ namespace SOS
         internal const int E_NOTIMPL = DebugClient.E_NOTIMPL;
         internal const int E_NOINTERFACE = DebugClient.E_NOINTERFACE;
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SOSCommandDelegate(
             IntPtr ILLDBServices,
             [In, MarshalAs(UnmanagedType.LPStr)] string args);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SOSInitializeDelegate(
             [In, MarshalAs(UnmanagedType.Struct)] ref SOSNetCoreCallbacks callbacks,
             int callbacksSize,
@@ -44,7 +44,7 @@ namespace SOS
             [In, MarshalAs(UnmanagedType.LPStr)] string dbiFilePath,
             bool symbolStoreEnabled);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate UIntPtr GetExpressionDelegate(
             [In, MarshalAs(UnmanagedType.LPStr)] string expression);
 
@@ -58,6 +58,7 @@ namespace SOS
             bool symweb,
             string tempDirectory,
             string symbolServerPath,
+            string authToken,
             int timeoutInMintues,
             string symbolCachePath,
             string symbolDirectoryPath,
@@ -71,10 +72,20 @@ namespace SOS
         private delegate void LoadNativeSymbolsDelegate(
             SymbolReader.SymbolFileCallback callback,
             IntPtr parameter,
+            SymbolReader.RuntimeConfiguration config,
             string moduleFilePath,
             ulong address,
             int size,
             SymbolReader.ReadMemoryDelegate readMemory);
+
+        private delegate void LoadNativeSymbolsFromIndexDelegate(
+            SymbolReader.SymbolFileCallback callback,
+            IntPtr parameter,
+            SymbolReader.RuntimeConfiguration config,
+            string moduleFilePath,
+            bool specialKeys,
+            int moduleIndexSize,
+            IntPtr moduleIndex);
 
         private delegate IntPtr LoadSymbolsForModuleDelegate(
             string assemblyPath,
@@ -130,6 +141,7 @@ namespace SOS
             public DisplaySymbolStoreDelegate DisplaySymbolStoreDelegate;
             public DisableSymbolStoreDelegate DisableSymbolStoreDelegate;
             public LoadNativeSymbolsDelegate LoadNativeSymbolsDelegate;
+            public LoadNativeSymbolsFromIndexDelegate LoadNativeSymbolsFromIndexDelegate;
             public LoadSymbolsForModuleDelegate LoadSymbolsForModuleDelegate;
             public DisposeDelegate DisposeDelegate;
             public ResolveSequencePointDelegate ResolveSequencePointDelegate;
@@ -144,6 +156,7 @@ namespace SOS
             DisplaySymbolStoreDelegate = SymbolReader.DisplaySymbolStore,
             DisableSymbolStoreDelegate = SymbolReader.DisableSymbolStore,
             LoadNativeSymbolsDelegate = SymbolReader.LoadNativeSymbols,
+            LoadNativeSymbolsFromIndexDelegate = SymbolReader.LoadNativeSymbolsFromIndex,
             LoadSymbolsForModuleDelegate = SymbolReader.LoadSymbolsForModule,
             DisposeDelegate = SymbolReader.Dispose,
             ResolveSequencePointDelegate = SymbolReader.ResolveSequencePoint,
@@ -158,7 +171,7 @@ namespace SOS
         internal readonly IDataReader DataReader;
         internal readonly AnalyzeContext AnalyzeContext;
 
-        private readonly RegisterService _registerService;
+        private readonly IThreadService _threadService;
         private readonly MemoryService _memoryService;
         private readonly IConsoleService _console;
         private readonly COMCallableIUnknown _ccw;  
@@ -191,7 +204,7 @@ namespace SOS
             _console = serviceProvider.GetService<IConsoleService>();
             AnalyzeContext = serviceProvider.GetService<AnalyzeContext>();
             _memoryService = serviceProvider.GetService<MemoryService>();
-            _registerService = serviceProvider.GetService<RegisterService>();
+            _threadService = serviceProvider.GetService<IThreadService>();
             _versionCache = new ReadVirtualCache(_memoryService);
 
             string rid = InstallHelper.GetRid();
@@ -221,7 +234,20 @@ namespace SOS
         {
             if (_sosLibrary == IntPtr.Zero)
             {
-                string sosPath = Path.Combine(SOSPath, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "sos.dll" : "libsos.so");
+                string sos;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                    sos = "sos.dll";
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
+                    sos = "libsos.so";
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+                    sos = "libsos.dylib";
+                }
+                else {
+                    throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
+                }
+                string sosPath = Path.Combine(SOSPath, sos);
                 try
                 {
                     _sosLibrary = DataTarget.PlatformFunctions.LoadLibrary(sosPath);
@@ -498,7 +524,7 @@ namespace SOS
             out uint loaded,
             out uint unloaded)
         {
-            loaded = (uint)DataReader.EnumerateModules().Count();
+            loaded = (uint)DataReader.EnumerateModules().Count;
             unloaded = 0;
             return S_OK;
         }
@@ -866,9 +892,27 @@ namespace SOS
             IntPtr context,
             uint contextSize)
         {
-            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
-            byte[] registerContext = _registerService.GetThreadContext(threadId);
-            if (registerContext == null) {
+            if (!AnalyzeContext.CurrentThreadId.HasValue)
+            {
+                return E_FAIL;
+            }
+            return GetThreadContextById(self, AnalyzeContext.CurrentThreadId.Value, 0, contextSize, context);
+        }
+
+        internal int GetThreadContextById(
+            IntPtr self,
+            uint threadId,
+            uint contextFlags,
+            uint contextSize,
+            IntPtr context)
+        {
+            byte[] registerContext;
+            try
+            {
+                registerContext = _threadService.GetThreadContext(threadId);
+            }
+            catch (DiagnosticsException)
+            {
                 return E_FAIL;
             }
             try
@@ -894,7 +938,7 @@ namespace SOS
             IntPtr self,
             out uint number)
         {
-            number = (uint)DataReader.EnumerateAllThreads().Count();
+            number = (uint)_threadService.EnumerateThreads().Count();
             return DebugClient.S_OK;
         }
 
@@ -903,7 +947,7 @@ namespace SOS
             out uint total,
             out uint largestProcess)
         {
-            total = (uint)DataReader.EnumerateAllThreads().Count();
+            total = (uint)_threadService.EnumerateThreads().Count();
             largestProcess = total;
             return DebugClient.S_OK;
         }
@@ -923,7 +967,12 @@ namespace SOS
             IntPtr self,
             out uint id)
         {
-            return GetThreadIdBySystemId(self, (uint)AnalyzeContext.CurrentThreadId, out id);
+            if (!AnalyzeContext.CurrentThreadId.HasValue)
+            {
+                id = 0;
+                return E_FAIL;
+            }
+            return GetThreadIdBySystemId(self, AnalyzeContext.CurrentThreadId.Value, out id);
         }
 
         internal int SetCurrentThreadId(
@@ -932,11 +981,10 @@ namespace SOS
         {
             try
             {
-                unchecked {
-                    AnalyzeContext.CurrentThreadId = (int)DataReader.EnumerateAllThreads().ElementAt((int)id);
-                }
+                ThreadInfo threadInfo = _threadService.GetThreadInfoFromIndex(unchecked((int)id));
+                AnalyzeContext.CurrentThreadId = threadInfo.ThreadId;
             }
-            catch (ArgumentOutOfRangeException)
+            catch (DiagnosticsException)
             {
                 return E_FAIL;
             }
@@ -947,7 +995,12 @@ namespace SOS
             IntPtr self,
             out uint sysId)
         {
-            sysId = (uint)AnalyzeContext.CurrentThreadId;
+            if (!AnalyzeContext.CurrentThreadId.HasValue)
+            {
+                sysId = 0;
+                return E_FAIL;
+            }
+            sysId = AnalyzeContext.CurrentThreadId.Value;
             return S_OK;
         }
 
@@ -958,11 +1011,11 @@ namespace SOS
             uint* ids,
             uint* sysIds)
         {
-            uint id = 0;
             int index = 0;
-            foreach (uint s in DataReader.EnumerateAllThreads())
+            foreach (ThreadInfo threadInfo in _threadService.EnumerateThreads())
             {
-                if (id >= count) {
+                uint id = (uint)threadInfo.ThreadIndex;
+                if (index >= count) {
                     break;
                 }
                 if (id >= start)
@@ -971,11 +1024,10 @@ namespace SOS
                         ids[index] = id;
                     }
                     if (sysIds != null) {
-                        sysIds[index] = s;
+                        sysIds[index] = threadInfo.ThreadId;
                     }
                     index++;
                 }
-                id++;
             }
             return DebugClient.S_OK;
         }
@@ -985,17 +1037,19 @@ namespace SOS
             uint sysId,
             out uint id)
         {
-            id = 0;
             if (sysId != 0)
             {
-                foreach (uint s in DataReader.EnumerateAllThreads())
+                try
                 {
-                    if (s == sysId) {
-                        return S_OK;
-                    }
-                    id++;
+                    ThreadInfo threadInfo = _threadService.GetThreadInfoFromId(sysId);
+                    id = (uint)threadInfo.ThreadIndex;
+                    return S_OK;
+                }
+                catch (DiagnosticsException)
+                {
                 }
             }
+            id = 0;
             return E_FAIL;
         }
 
@@ -1003,31 +1057,42 @@ namespace SOS
             IntPtr self,
             ulong* offset)
         {
-            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
-            ulong teb = DataReader.GetThreadTeb(threadId);
-            Write(offset, teb);
-            return S_OK;
+            if (AnalyzeContext.CurrentThreadId.HasValue)
+            {
+                uint threadId = AnalyzeContext.CurrentThreadId.Value;
+                try
+                {
+                    ulong teb = _threadService.GetThreadInfoFromId(threadId).ThreadTeb;
+                    Write(offset, teb);
+                    return S_OK;
+                }
+                catch (DiagnosticsException)
+                {
+                }
+            }
+            Write(offset, 0);
+            return E_FAIL;
         }
 
         internal int GetInstructionOffset(
             IntPtr self,
             out ulong offset)
         {
-            return GetRegister(_registerService.InstructionPointerIndex, out offset);
+            return GetRegister(_threadService.InstructionPointerIndex, out offset);
         }
 
         internal int GetStackOffset(
             IntPtr self,
             out ulong offset)
         {
-            return GetRegister(_registerService.StackPointerIndex, out offset);
+            return GetRegister(_threadService.StackPointerIndex, out offset);
         }
 
         internal int GetFrameOffset(
             IntPtr self,
             out ulong offset)
         {
-            return GetRegister(_registerService.FramePointerIndex, out offset);
+            return GetRegister(_threadService.FramePointerIndex, out offset);
         }
 
         internal int GetIndexByName(
@@ -1035,7 +1100,7 @@ namespace SOS
             string name,
             out uint index)
         {
-            if (_registerService.GetRegisterIndexByName(name, out int value)) {
+            if (!_threadService.GetRegisterIndexByName(name, out int value)) {
                 index = 0;
                 return E_INVALIDARG;
             }
@@ -1080,8 +1145,8 @@ namespace SOS
             string register,
             out ulong value)
         {
-            value = 0;
-            if (!_registerService.GetRegisterIndexByName(register, out int index)) {
+            if (!_threadService.GetRegisterIndexByName(register, out int index)) {
+                value = 0;
                 return E_INVALIDARG;
             }
             return GetRegister(index, out value);
@@ -1091,11 +1156,15 @@ namespace SOS
             int index, 
             out ulong value)
         {
-            uint threadId = (uint)AnalyzeContext.CurrentThreadId;
-            if (!_registerService.GetRegisterValue(threadId, index, out value)) {
-                return E_FAIL;
+            if (AnalyzeContext.CurrentThreadId.HasValue)
+            {
+                uint threadId = AnalyzeContext.CurrentThreadId.Value;
+                if (_threadService.GetRegisterValue(threadId, index, out value)) {
+                    return S_OK;
+                }
             }
-            return S_OK;
+            value = 0;
+            return E_FAIL;
         }
 
         internal static bool IsCoreClrRuntimeModule(ModuleInfo module)

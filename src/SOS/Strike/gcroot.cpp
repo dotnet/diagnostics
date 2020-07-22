@@ -3,9 +3,9 @@
 // See the LICENSE file in the project root for more information.
 
 // ==++==
-// 
- 
-// 
+//
+
+//
 // ==--==
 
 /*
@@ -24,7 +24,7 @@
  *          keep track of data have very fast lookups.  For example, to keep track of the objects we've considered
  *          we use a unordered_set.  Similarly to keep track of MethodTable data we use a unordered_map to track the
  *          mt -> mtinfo mapping.
- */ 
+ */
 
 #include "sos.h"
 #include "disasm.h"
@@ -142,7 +142,7 @@ void GCRootImpl::ClearAll()
         for (itr = mMTs.begin(); itr != mMTs.end(); ++itr)
             delete itr->second;
     }
-    
+
     {
         std::unordered_map<TADDR, RootNode*>::iterator itr;
         for (itr = mTargets.begin(); itr != mTargets.end(); ++itr)
@@ -155,7 +155,7 @@ void GCRootImpl::ClearAll()
     mSizes.clear();
     mDependentHandleMap.clear();
     mCache.ClearStats();
-    
+
     mAll = false;
     mSize = false;
 }
@@ -177,8 +177,8 @@ GCRootImpl::RootNode *GCRootImpl::NewNode(TADDR obj, MTInfo *mtInfo, bool fromDe
     // To avoid heap fragmentation (and since it's faster), we don't actually new/delete
     // nodes unless we have to.  Instead we keep a stl list with free nodes to use.
     RootNode *toReturn = NULL;
-    
-    if (mRootNewList.size())
+
+    if (!mRootNewList.empty())
     {
         toReturn = mRootNewList.back();
         mRootNewList.pop_back();
@@ -206,37 +206,37 @@ void GCRootImpl::GetDependentHandleMap(std::unordered_map<TADDR, std::list<TADDR
 {
     unsigned int type = HNDTYPE_DEPENDENT;
     ToRelease<ISOSHandleEnum> handles;
-    
+
     HRESULT hr = g_sos->GetHandleEnumForTypes(&type, 1, &handles);
-    
+
     if (FAILED(hr))
     {
         ExtOut("Failed to walk dependent handles.  GCRoot may miss paths.\n");
         return;
     }
-    
+
     SOSHandleData data[4];
     unsigned int fetched = 0;
-    
+
     do
     {
         hr = handles->Next(_countof(data), data, &fetched);
-        
+
         if (FAILED(hr))
         {
             ExtOut("Error walking dependent handles.  GCRoot may miss paths.\n");
             return;
         }
-        
+
         for (unsigned int i = 0; i < fetched; ++i)
         {
             if (data[i].Secondary != 0)
             {
                 TADDR obj = 0;
                 TADDR target = TO_TADDR(data[i].Secondary);
-                
+
                 MOVE(obj, TO_TADDR(data[i].Handle));
-                
+
                 map[obj].push_back(target);
             }
         }
@@ -250,7 +250,7 @@ int GCRootImpl::PrintRootsForObject(TADDR target, bool all, bool noStacks)
 {
     ClearAll();
     GetDependentHandleMap(mDependentHandleMap);
-    
+
     mAll = all;
 
     // Add "target" to the mTargets list.
@@ -260,10 +260,10 @@ int GCRootImpl::PrintRootsForObject(TADDR target, bool all, bool noStacks)
 
     // Look for roots on the HandleTable, FQ, and all threads.
     int count = 0;
-    
+
     if (!noStacks)
         count += PrintRootsOnAllThreads();
-    
+
     count += PrintRootsOnHandleTable();
     count += PrintRootsOnFQ();
 
@@ -287,7 +287,7 @@ bool GCRootImpl::PrintPathToObject(TADDR root, TADDR target)
 {
     ClearAll();
     GetDependentHandleMap(mDependentHandleMap);
-    
+
     // Add "target" to the mTargets list.
     TADDR mt = ReadPointerCached(target);
     RootNode *node = NewNode(target, GetMTInfo(mt));
@@ -305,11 +305,11 @@ bool GCRootImpl::PrintPathToObject(TADDR root, TADDR target)
             ExtOut("  -> %p %S%s\n",SOS_PTR(path->Object), path->GetTypeName(), path->FromDependentHandle ? " (dependent handle)" : "");
             path = path->Next;
         }
-        
+
         mCache.PrintStats(__FUNCTION__);
         return true;
     }
-    
+
     mCache.PrintStats(__FUNCTION__);
     return false;
 }
@@ -319,7 +319,7 @@ size_t GCRootImpl::ObjSize(TADDR root)
     // Calculates the size of the closure of objects kept alive by root.
     ClearAll();
     GetDependentHandleMap(mDependentHandleMap);
-    
+
     // mSize tells GCRootImpl to build the "mSizes" table with the total size
     // each object roots.
     mSize = true;
@@ -329,7 +329,7 @@ size_t GCRootImpl::ObjSize(TADDR root)
     // the algorithm will scan all objects and never terminate until it has walked
     // all objects in the closure.
     FindPathToTarget(root);
-    
+
     mCache.PrintStats(__FUNCTION__);
     return mSizes[root];
 }
@@ -344,7 +344,7 @@ void GCRootImpl::ObjSize()
     PrintRootsOnAllThreads();
     PrintRootsOnHandleTable();
     PrintRootsOnFQ();
-    
+
     mCache.PrintStats(__FUNCTION__);
 }
 
@@ -420,7 +420,7 @@ void GCRootImpl::ReportSizeInfo(DWORD thread, const SOSStackRefData &stackRef, T
     TADDR mt = ReadPointer(obj);
     MTInfo *mtInfo = GetMTInfo(mt);
     const WCHAR *type = mtInfo ? mtInfo->GetTypeName() : W("unknown type");
-    
+
     size_t size = mSizes[obj];
     ExtOut("Thread %x (%S): %S: %d (0x%x) bytes (%S)\n", thread, frame.c_str(), regOutput.c_str(), size, size, type);
 }
@@ -444,7 +444,7 @@ void GCRootImpl::ReportOnePath(DWORD thread, const SOSStackRefData &stackRef, Ro
 {
     if (printThread)
         ExtOut("Thread %x:\n", thread);
-        
+
     if (printFrame)
     {
         if (stackRef.SourceType == SOS_StackSourceIP)
@@ -458,10 +458,10 @@ void GCRootImpl::ReportOnePath(DWORD thread, const SOSStackRefData &stackRef, Ro
             ExtOut("    %p %S\n", SOS_PTR(stackRef.Source), frameName.c_str());
         }
     }
-    
+
     WString regOutput = BuildRegisterOutput(stackRef, false);
     ExtOut("        %S\n", regOutput.c_str());
-    
+
     while (path)
     {
         ExtOut("            ->  %p %S%s\n", SOS_PTR(path->Object), path->GetTypeName(), path->FromDependentHandle ? " (dependent handle)" : "");
@@ -525,7 +525,7 @@ int GCRootImpl::PrintRootsInOlderGen()
 
         ExtDbgOut("internal_root_array = %#p\n", SOS_PTR(analyzeData.internal_root_array));
         ExtDbgOut("internal_root_array_index = %#p\n", SOS_PTR(analyzeData.internal_root_array_index));
-        
+
         TADDR start = TO_TADDR(analyzeData.internal_root_array);
         TADDR stop = TO_TADDR(analyzeData.internal_root_array + sizeof(TADDR) * (size_t)analyzeData.internal_root_array_index);
 
@@ -567,7 +567,7 @@ int GCRootImpl::PrintRootsInOlderGen()
 
             ExtDbgOut("internal_root_array = %#p\n", SOS_PTR(analyzeData.internal_root_array));
             ExtDbgOut("internal_root_array_index = %#p\n", SOS_PTR(analyzeData.internal_root_array_index));
-            
+
             TADDR start = TO_TADDR(analyzeData.internal_root_array);
             TADDR stop = TO_TADDR(analyzeData.internal_root_array + sizeof(TADDR) * (size_t)analyzeData.internal_root_array_index);
 
@@ -638,7 +638,7 @@ int GCRootImpl::PrintRootsOnFQ(bool notReadyForFinalization)
                 ExtErr("Error requesting heap data for heap %d.\n", n);
                 continue;
             }
-            
+
             // If we include objects that are not ready for finalization, we may report
             // false positives.  False positives occur if the object is not ready for finalization
             // and does not re-register itself for finalization inside the finalizer.
@@ -654,7 +654,7 @@ int GCRootImpl::PrintRootsOnFQ(bool notReadyForFinalization)
                 start = TO_TADDR(SegQueue(heapDetails, CriticalFinalizerListSeg));
                 stop = TO_TADDR(SegQueueLimit(heapDetails, FinalizerListSeg));
             }
-            
+
             total += PrintRootsInRange(cache, start, stop, &GCRootImpl::ReportOneFQEntry, total == 0);
         }
 
@@ -671,7 +671,7 @@ int GCRootImpl::PrintRootsInRange(LinearReadCache &cache, TADDR start, TADDR sto
     {
         if (IsInterrupt())
             return total;
-        
+
         // Use the cache parameter here instead of mCache.  If you use mCache it will be reset
         // when calling into FindPathToTarget.
         TADDR root = 0;
@@ -703,7 +703,7 @@ int GCRootImpl::PrintRootsOnAllThreads()
     HRESULT hr = GetThreadList(&threadList, &numThreads);
     if (FAILED(hr) || !threadList)
         return 0;
-    
+
     // Walk each thread and process the roots on it.
     int total = 0;
     DacpThreadData vThread;
@@ -711,14 +711,14 @@ int GCRootImpl::PrintRootsOnAllThreads()
     {
         if (IsInterrupt())
             return total;
-        
+
         if (FAILED(vThread.Request(g_sos, threadList[i])))
             continue;
-        
+
         if (vThread.osThreadId)
             total += PrintRootsOnThread(vThread.osThreadId);
     }
-    
+
     return total;
 }
 
@@ -727,7 +727,7 @@ int GCRootImpl::PrintRootsOnThread(DWORD osThreadId)
     // Grab all object rootson the thread.
     unsigned int refCount = 0;
     ArrayHolder<SOSStackRefData> refs = NULL;
-    
+
     int total = 0;
     bool first = true;
     if (FAILED(::GetGCRefs(osThreadId, &refs, &refCount, NULL, NULL)))
@@ -743,7 +743,7 @@ int GCRootImpl::PrintRootsOnThread(DWORD osThreadId)
     {
         if (IsInterrupt())
             return total;
-        
+
         if (refs[i].Object)
         {
             if (mSize)
@@ -757,12 +757,12 @@ int GCRootImpl::PrintRootsOnThread(DWORD osThreadId)
                 first = false;
                 total++;
             }
-            
+
             if (mSize)
                 ReportSizeInfo(osThreadId, refs[i], TO_TADDR(refs[i].Object));
         }
     }
-    
+
     return total;
 }
 
@@ -771,7 +771,7 @@ int GCRootImpl::PrintRootsOnHandleTable(int gen)
     // Get handle data.
     ToRelease<ISOSHandleEnum> pEnum = NULL;
     HRESULT hr = S_OK;
-    
+
     if (gen == -1 || (ULONG)gen == GetMaxGeneration())
         hr = g_sos->GetHandleEnum(&pEnum);
     else
@@ -782,11 +782,11 @@ int GCRootImpl::PrintRootsOnHandleTable(int gen)
         ExtOut("Failed to walk the HandleTable!\n");
         return 0;
     }
-    
+
     int total = 0;
     unsigned int fetched = 0;
     SOSHandleData handles[8];
-    
+
     bool printHeader = true;
     do
     {
@@ -803,11 +803,11 @@ int GCRootImpl::PrintRootsOnHandleTable(int gen)
         {
             if (IsInterrupt())
                 return total;
-            
+
             // Ignore handles which aren't actually roots.
             if (!handles[i].StrongReference)
                 continue;
-            
+
             // clear the size table
             if (mAll)
                 ClearSizeData();
@@ -845,7 +845,7 @@ GCRootImpl::RootNode *GCRootImpl::FilterRoots(RootNode *&list)
     //   - Check to see if we've located the target object (or an object which points to the target).
     RootNode *curr = list;
     RootNode *keep = NULL;
-    
+
     while (curr)
     {
         // We don't check for Control-C in this loop to avoid inconsistent data.
@@ -895,7 +895,7 @@ GCRootImpl::RootNode *GCRootImpl::FindPathToTarget(TADDR root)
         return targetItr->second;
     else if (mConsidered.find(root) != mConsidered.end())
         return NULL;
-    
+
     // Add obj as a considered node (since we are considering it now).
     mConsidered.insert(root);
 
@@ -907,7 +907,7 @@ GCRootImpl::RootNode *GCRootImpl::FindPathToTarget(TADDR root)
     {
         if (IsInterrupt())
             return NULL;
-        
+
         // If this is a new reference we are walking, we haven't filled the list of objects
         // this one points to.  Update that first.
         if (!curr->FilledRefs)
@@ -924,7 +924,7 @@ GCRootImpl::RootNode *GCRootImpl::FindPathToTarget(TADDR root)
                 // Link the current to the target.
                 curr->Next = foundTarget;
                 foundTarget->Prev = curr;
-                
+
                 // If the user requested all paths, set each node in the path to be a target.
                 // Normally, we don't consider a node we've already seen, which means if we don't
                 // get a *completely* unique path, it's not printed out.  By adding each of the
@@ -933,17 +933,17 @@ GCRootImpl::RootNode *GCRootImpl::FindPathToTarget(TADDR root)
                 if (mAll)
                 {
                     RootNode *tmp = path;
-                    
+
                     while (tmp)
                     {
                         if (mTargets.find(tmp->Object) != mTargets.end())
                             break;
-                        
+
                         mTargets[tmp->Object] = tmp;
                         tmp = tmp->Next;
                     }
                 }
-                
+
                 return path;
             }
         }
@@ -972,7 +972,7 @@ GCRootImpl::RootNode *GCRootImpl::FindPathToTarget(TADDR root)
                 curr->Next = next;
                 next->Prev = curr;
                 curr = next;
-                
+
                 // Finally, insert the current object into the considered set.
                 mConsidered.insert(curr->Object);
                 // Now the next iteration will operate on "next".
@@ -1003,7 +1003,7 @@ GCRootImpl::RootNode *GCRootImpl::GetGCRefs(RootNode *path, RootNode *node)
     }
 
     node->FilledRefs = true;
-    
+
     // MTInfo can be null if we encountered an error reading out of the target
     // process, just early out here as if it has no references.
     if (!node->MTInfo)
@@ -1014,12 +1014,12 @@ GCRootImpl::RootNode *GCRootImpl::GetGCRefs(RootNode *path, RootNode *node)
     if (mSize || node->MTInfo->ContainsPointers || node->MTInfo->Collectible)
     {
         objSize = GetSizeOfObject(obj, node->MTInfo);
-        
+
         // Update object size list, if requested.
         if (mSize)
         {
             mSizes[obj] = 0;
-            
+
             while (path)
             {
                 mSizes[path->Object] += objSize;
@@ -1027,11 +1027,11 @@ GCRootImpl::RootNode *GCRootImpl::GetGCRefs(RootNode *path, RootNode *node)
             }
         }
     }
-    
+
     // Early out:  If the object doesn't contain any pointers, return.
     if (!node->MTInfo->ContainsPointers && !node->MTInfo->Collectible)
         return NULL;
-    
+
     // Make sure we have the object's data in the cache.
     mCache.EnsureRangeInCache(obj, (unsigned int)objSize);
 
@@ -1051,7 +1051,7 @@ GCRootImpl::RootNode *GCRootImpl::GetGCRefs(RootNode *path, RootNode *node)
             curr = curr->Next;
         }
     }
-    
+
     // Add edges from dependent handles.
     std::unordered_map<TADDR, std::list<TADDR>>::iterator itr = mDependentHandleMap.find(obj);
     if (itr != mDependentHandleMap.end())
@@ -1063,7 +1063,7 @@ GCRootImpl::RootNode *GCRootImpl::GetGCRefs(RootNode *path, RootNode *node)
             curr = curr->Next;
         }
     }
-    
+
     // The gcrefs actually start on refs->Next.
     curr = refs;
     refs = refs->Next;
@@ -1162,7 +1162,7 @@ GCRootImpl::MTInfo *GCRootImpl::GetMTInfo(TADDR mt)
             return NULL;
         }
 
-        if (nEntries < 0) 
+        if (nEntries < 0)
         {
             curr->ArrayOfVC = true;
             nEntries = -nEntries;
@@ -1176,13 +1176,13 @@ GCRootImpl::MTInfo *GCRootImpl::GetMTInfo(TADDR mt)
         curr->Buffer = new TADDR[nSlots];
 
         if (curr->Buffer == NULL)
-        {        
+        {
             ReportOOM();
             delete curr;
             return NULL;
         }
 
-        if (FAILED(g_ExtData->ReadVirtual(TO_CDADDR(mt - nSlots*sizeof(TADDR)), curr->Buffer, (ULONG)(nSlots*sizeof(TADDR)), NULL))) 
+        if (FAILED(g_ExtData->ReadVirtual(TO_CDADDR(mt - nSlots*sizeof(TADDR)), curr->Buffer, (ULONG)(nSlots*sizeof(TADDR)), NULL)))
         {
             ExtOut("Failed to read GCDesc for MethodTable %p.\n", SOS_PTR(mt));
             delete curr;
@@ -1229,7 +1229,7 @@ UINT FindAllPinnedAndStrong(DWORD_PTR handlearray[], UINT arraySize)
     unsigned int fetched = 0;
     SOSHandleData data[64];
     UINT pos = 0;
-    
+
     // We do not call GetHandleEnumByType here with a list of strong handles since we would be
     // statically setting the list of strong handles, which could change in a future release.
     // Instead we rely on the dac to provide whether a handle is strong or not.
@@ -1241,17 +1241,17 @@ UINT FindAllPinnedAndStrong(DWORD_PTR handlearray[], UINT arraySize)
         ExtOut("Failed to enumerate GC handles.  HRESULT=%x.\n", hr);
         return 0;
     }
-    
+
     do
     {
         hr = handles->Next(_countof(data), data, &fetched);
-        
+
         if (FAILED(hr))
         {
             ExtOut("Failed to enumerate GC handles.  HRESULT=%x.\n", hr);
             break;
         }
-            
+
         for (unsigned int i = 0; i < fetched; ++i)
         {
             if (pos >= arraySize)
@@ -1259,14 +1259,14 @@ UINT FindAllPinnedAndStrong(DWORD_PTR handlearray[], UINT arraySize)
                 ExtOut("Buffer overflow while enumerating handles.\n");
                 return pos;
             }
-            
+
             if (data[i].StrongReference)
             {
                 handlearray[pos++] = (DWORD_PTR)data[i].Handle;
             }
         }
     } while (fetched == _countof(data));
-    
+
     return pos;
 }
 
@@ -1279,16 +1279,16 @@ void PrintNotReachableInRange(TADDR rngStart, TADDR rngEnd, BOOL bExcludeReadyFo
 
     LinearReadCache cache(512);
     cache.EnsureRangeInCache(rngStart, (unsigned int)(rngEnd-rngStart));
-    
+
     for (TADDR p = rngStart; p < rngEnd; p += sizeof(TADDR))
     {
         if (IsInterrupt())
             break;
-        
+
         TADDR header = 0;
         TADDR obj = 0;
         TADDR taddrMT = 0;
-        
+
         bool read = cache.Read(p-sizeof(SIZEOF_OBJHEADER), &header);
         read = read && cache.Read(p, &obj);
         if (read && ((header & BIT_SBLK_FINALIZER_RUN) == 0) && liveObjs.find(obj) == liveObjs.end())
@@ -1300,7 +1300,7 @@ void PrintNotReachableInRange(TADDR rngStart, TADDR rngEnd, BOOL bExcludeReadyFo
             else
             {
                 DMLOut("%s ", DMLObject(obj));
-                if (SUCCEEDED(GetMTOfObject(obj, &taddrMT)) && taddrMT) 
+                if (SUCCEEDED(GetMTOfObject(obj, &taddrMT)) && taddrMT)
                 {
                     size_t s = ObjectSize(obj);
                     if (hpstat)
@@ -1311,7 +1311,7 @@ void PrintNotReachableInRange(TADDR rngStart, TADDR rngEnd, BOOL bExcludeReadyFo
             }
         }
     }
-    
+
     if (!bShort)
         ExtOut("\n");
 }
@@ -1323,7 +1323,7 @@ void PrintNotReachableInRange(TADDR rngStart, TADDR rngEnd, BOOL bExcludeReadyFo
 //
 #define card_word_width ((size_t)32)
 
-// 
+//
 // The value of card_size is determined empirically according to the average size of an object
 // In the code we also rely on the assumption that one card_table entry (DWORD) covers an entire os page
 //
@@ -1353,16 +1353,16 @@ size_t card_of ( BYTE* object)
     return (size_t)(object) / card_size;
 }
 
-BOOL CardIsSet(const DacpGcHeapDetails &heap, TADDR objAddr)
+BOOL CardIsSet(const GCHeapDetails &heap, TADDR objAddr)
 {
     // The card table has to be translated to look at the refcount, etc.
     // g_card_table[card_word(card_of(g_lowest_address))].
 
     TADDR card_table = TO_TADDR(heap.card_table);
     card_table = card_table + card_word(card_of((BYTE *)heap.lowest_address))*sizeof(DWORD);
-    
+
     do
-    {        
+    {
         TADDR card_table_lowest_addr;
         TADDR card_table_next;
 
@@ -1377,7 +1377,7 @@ BOOL CardIsSet(const DacpGcHeapDetails &heap, TADDR objAddr)
             ExtErr("Error getting next card table\n");
             return FALSE;
         }
-        
+
         size_t card = (objAddr - card_table_lowest_addr) / card_size;
         DWORD value;
         if (MOVE(value, card_table + card_word(card)*sizeof(DWORD)) != S_OK)
@@ -1385,10 +1385,10 @@ BOOL CardIsSet(const DacpGcHeapDetails &heap, TADDR objAddr)
             ExtErr("Error reading card bits\n");
             return FALSE;
         }
-        
+
         if (value & 1<<card_bit(card))
             return TRUE;
-        
+
         card_table = card_table_next;
     }
     while(card_table);
@@ -1430,7 +1430,7 @@ size_t mark_word_of(CLRDATA_ADDRESS add)
     return (size_t)(add / mark_word_size);
 }
 
-inline BOOL mark_array_marked(const DacpGcHeapDetails &heap, CLRDATA_ADDRESS add)
+inline BOOL mark_array_marked(const GCHeapDetails &heap, CLRDATA_ADDRESS add)
 {
 
     DWORD entry = 0;
@@ -1442,7 +1442,7 @@ inline BOOL mark_array_marked(const DacpGcHeapDetails &heap, CLRDATA_ADDRESS add
     return entry & (1 << mark_bit_bit_of(add));
 }
 
-BOOL background_object_marked(const DacpGcHeapDetails &heap, CLRDATA_ADDRESS o)
+BOOL background_object_marked(const GCHeapDetails &heap, CLRDATA_ADDRESS o)
 {
     BOOL m = TRUE;
 
@@ -1452,11 +1452,11 @@ BOOL background_object_marked(const DacpGcHeapDetails &heap, CLRDATA_ADDRESS o)
     return m;
 }
 
-BOOL fgc_should_consider_object(const DacpGcHeapDetails &heap, 
-                                CLRDATA_ADDRESS o, 
+BOOL fgc_should_consider_object(const GCHeapDetails &heap,
+                                CLRDATA_ADDRESS o,
                                 const DacpHeapSegmentData &seg,
-                                BOOL consider_bgc_mark_p, 
-                                BOOL check_current_sweep_p, 
+                                BOOL consider_bgc_mark_p,
+                                BOOL check_current_sweep_p,
                                 BOOL check_saved_sweep_p)
 {
     // the logic for this function must be kept in sync with the analogous function in gc.cpp
@@ -1506,9 +1506,9 @@ inline BOOL in_range_for_segment(const DacpHeapSegmentData &seg, CLRDATA_ADDRESS
     return (addr >= seg.mem) && (addr < seg.reserved);
 }
 
-void should_check_bgc_mark(const DacpGcHeapDetails &heap,
-                           const DacpHeapSegmentData &seg, 
-                           BOOL* consider_bgc_mark_p, 
+void should_check_bgc_mark(const GCHeapDetails &heap,
+                           const DacpHeapSegmentData &seg,
+                           BOOL* consider_bgc_mark_p,
                            BOOL* check_current_sweep_p,
                            BOOL* check_saved_sweep_p)
 {
@@ -1519,7 +1519,7 @@ void should_check_bgc_mark(const DacpGcHeapDetails &heap,
 
     if (heap.current_c_gc_state == c_gc_state_planning)
     {
-        // We are doing the next_sweep_obj comparison here because we have yet to 
+        // We are doing the next_sweep_obj comparison here because we have yet to
         // turn on the swept flag for the segment but in_range_for_segment will return
         // FALSE if the address is the same as reserved.
         if ((seg.flags & heap_segment_flags_swept) || (heap.next_sweep_obj == seg.reserved))
@@ -1545,7 +1545,7 @@ void should_check_bgc_mark(const DacpGcHeapDetails &heap,
 
 // TODO: FACTOR TOGETHER THE OBJECT MEMBER WALKING CODE FROM
 // TODO: VerifyObjectMember(), GetListOfRefs(), HeapTraverser::PrintRefs()
-BOOL VerifyObjectMember(const DacpGcHeapDetails &heap, DWORD_PTR objAddr)
+BOOL VerifyObjectMember(const GCHeapDetails &heap, DWORD_PTR objAddr)
 {
     BOOL ret = TRUE;
     BOOL bCheckCard = TRUE;
@@ -1561,7 +1561,7 @@ BOOL VerifyObjectMember(const DacpGcHeapDetails &heap, DWORD_PTR objAddr)
             }
             dwAddrCard += card_size;
         }
-        
+
         if (bCheckCard)
         {
             dwAddrCard = objAddr + size - 2*sizeof(PVOID);
@@ -1571,7 +1571,7 @@ BOOL VerifyObjectMember(const DacpGcHeapDetails &heap, DWORD_PTR objAddr)
             }
         }
     }
-    
+
     for (sos::RefIterator itr(TO_TADDR(objAddr)); itr; ++itr)
     {
         TADDR dwAddr1 = (DWORD_PTR)*itr;
@@ -1583,7 +1583,7 @@ BOOL VerifyObjectMember(const DacpGcHeapDetails &heap, DWORD_PTR objAddr)
            BOOL bPointers;
            TADDR dwAddrMethTable;
            if (FAILED(GetMTOfObject(dwAddr1, &dwAddrMethTable)) ||
-                (GetSizeEfficient(dwAddr1, dwAddrMethTable, FALSE, s, bPointers) == FALSE)) 
+                (GetSizeEfficient(dwAddr1, dwAddrMethTable, FALSE, s, bPointers) == FALSE))
            {
                DMLOut("object %s: bad member %p at %p\n", DMLObject(objAddr), SOS_PTR(dwAddr1), SOS_PTR(itr.GetOffset()));
                ret = FALSE;
@@ -1611,14 +1611,14 @@ BOOL VerifyObjectMember(const DacpGcHeapDetails &heap, DWORD_PTR objAddr)
 }
 
 // search for can_verify_deep in gc.cpp for examples of how these functions are used.
-BOOL VerifyObject(const DacpGcHeapDetails &heap, const DacpHeapSegmentData &seg, DWORD_PTR objAddr, DWORD_PTR MTAddr, size_t objSize, 
+BOOL VerifyObject(const GCHeapDetails &heap, const DacpHeapSegmentData &seg, DWORD_PTR objAddr, DWORD_PTR MTAddr, size_t objSize,
     BOOL bVerifyMember)
-{    
+{
     if (IsMTForFreeObj(MTAddr))
     {
         return TRUE;
     }
-        
+
     if (objSize < min_obj_size)
     {
         DMLOut("object %s: size %d too small\n", DMLObject(objAddr), objSize);
@@ -1639,19 +1639,19 @@ BOOL VerifyObject(const DacpGcHeapDetails &heap, const DacpHeapSegmentData &seg,
 }
 
 
-BOOL FindSegment(const DacpGcHeapDetails &heap, DacpHeapSegmentData &seg, CLRDATA_ADDRESS addr)
+BOOL FindSegment(const GCHeapDetails &heap, DacpHeapSegmentData &seg, CLRDATA_ADDRESS addr)
 {
     CLRDATA_ADDRESS dwAddrSeg = heap.generation_table[GetMaxGeneration()].start_segment;
 
     // Request the inital segment.
-    if (seg.Request(g_sos, dwAddrSeg, heap) != S_OK)
+    if (seg.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
     {
         ExtOut("Error requesting heap segment %p.\n", SOS_PTR(dwAddrSeg));
         return FALSE;
     }
 
     // Loop while the object is not in range of the segment.
-    while (addr < TO_TADDR(seg.mem) || 
+    while (addr < TO_TADDR(seg.mem) ||
            addr >= (dwAddrSeg == heap.ephemeral_heap_segment ? heap.alloc_allocated : TO_TADDR(seg.allocated)))
     {
         // get the next segment
@@ -1661,7 +1661,7 @@ BOOL FindSegment(const DacpGcHeapDetails &heap, DacpHeapSegmentData &seg, CLRDAT
         if (dwAddrSeg == NULL)
             return FALSE;
 
-        if (seg.Request(g_sos, dwAddrSeg, heap) != S_OK)
+        if (seg.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
         {
             ExtOut("Error requesting heap segment %p.\n", SOS_PTR(dwAddrSeg));
             return FALSE;
@@ -1671,7 +1671,7 @@ BOOL FindSegment(const DacpGcHeapDetails &heap, DacpHeapSegmentData &seg, CLRDAT
     return TRUE;
 }
 
-BOOL VerifyObject(const DacpGcHeapDetails &heap, DWORD_PTR objAddr, DWORD_PTR MTAddr, size_t objSize, BOOL bVerifyMember)
+BOOL VerifyObject(const GCHeapDetails &heap, DWORD_PTR objAddr, DWORD_PTR MTAddr, size_t objSize, BOOL bVerifyMember)
 {
     // This is only used by the other VerifyObject function if bVerifyMember is true,
     // so we only initialize it if we need it for verifying object members.
@@ -1691,8 +1691,8 @@ BOOL VerifyObject(const DacpGcHeapDetails &heap, DWORD_PTR objAddr, DWORD_PTR MT
 typedef void (*TYPETREEVISIT)(size_t methodTable, size_t ID, LPVOID token);
 
 // TODO remove this.   MethodTableCache already maps method tables to
-// various information.  We don't need TypeTree to do this too.   
-// Straightfoward to do, but low priority.  
+// various information.  We don't need TypeTree to do this too.
+// Straightfoward to do, but low priority.
 class TypeTree
 {
 private:
@@ -1701,7 +1701,7 @@ private:
     TypeTree *pLeft;
     TypeTree *pRight;
 
-public:    
+public:
     TypeTree(size_t MT) : methodTable(MT),ID(0),pLeft(NULL),pRight(NULL) { }
 
     BOOL isIn(size_t MT, size_t *pID)
@@ -1719,9 +1719,9 @@ public:
             else if (MT < pCur->methodTable)
                 pCur = pCur->pLeft;
             else
-                pCur = pCur->pRight;            
+                pCur = pCur->pRight;
         }
-            
+
         return FALSE;
     }
 
@@ -1741,16 +1741,16 @@ public:
                     break;
             }
             else if (pCur->pRight)
-                pCur = pCur->pRight;            
+                pCur = pCur->pRight;
             else
                 break;
-        }        
+        }
 
         // If we got here, we need to append at the current node.
         TypeTree *pNewNode = new TypeTree(MT);
         if (pNewNode == NULL)
             return FALSE;
-        
+
         if (MT < pCur->methodTable)
             pCur->pLeft = pNewNode;
         else
@@ -1768,7 +1768,7 @@ public:
             destroy(pCur->pLeft);
             destroy(pCur->pRight);
             delete [] pCur;
-        }        
+        }
     }
 
     static void visit_inorder(TypeTree *pStart, TYPETREEVISIT pFunc, LPVOID token)
@@ -1780,7 +1780,7 @@ public:
             visit_inorder(pCur->pLeft, pFunc, token);
             pFunc (pCur->methodTable, pCur->ID, token);
             visit_inorder(pCur->pRight, pFunc, token);
-        }        
+        }
     }
 
     static void setTypeIDs(TypeTree *pStart, size_t *pCurID)
@@ -1793,9 +1793,9 @@ public:
             pCur->ID = *pCurID;
             (*pCurID)++;
             setTypeIDs(pCur->pRight, pCurID);
-        }        
+        }
     }
-    
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1810,13 +1810,13 @@ HeapTraverser::HeapTraverser(bool verify)
     m_curNID = 1;
     m_verify = verify;
 }
-    
-HeapTraverser::~HeapTraverser() 
-{ 
-    if (m_pTypeTree) { 
-        TypeTree::destroy(m_pTypeTree); 
+
+HeapTraverser::~HeapTraverser()
+{
+    if (m_pTypeTree) {
+        TypeTree::destroy(m_pTypeTree);
         m_pTypeTree = NULL;
-    } 
+    }
 }
 
 BOOL HeapTraverser::Initialize()
@@ -1845,9 +1845,9 @@ BOOL HeapTraverser::CreateReport (FILE *fp, int format)
     m_file = fp;
     m_format = format;
 
-    PrintSection(TYPE_START,TRUE);                     
-    
-    PrintSection(TYPE_TYPES,TRUE);        
+    PrintSection(TYPE_START,TRUE);
+
+    PrintSection(TYPE_TYPES,TRUE);
     TypeTree::visit_inorder(m_pTypeTree, HeapTraverser::PrintOutTree, this);
     PrintSection(TYPE_TYPES,FALSE);
 
@@ -1856,20 +1856,20 @@ BOOL HeapTraverser::CreateReport (FILE *fp, int format)
     PrintRootHead();
 
     TraceHandles();
-    FindGCRootOnStacks();        
+    FindGCRootOnStacks();
 
     PrintRootTail();
     PrintSection(TYPE_ROOTS,FALSE);
-        
+
         // now print type tree
-    PrintSection(TYPE_OBJECTS,TRUE);        
+    PrintSection(TYPE_OBJECTS,TRUE);
     ExtOut("\nWalking heap...\n");
     m_objVisited = 0; // for UI updates
     GCHeapsTraverse (HeapTraverser::PrintHeap, this, FALSE);       // Never verify on the second pass
-    PrintSection(TYPE_OBJECTS,FALSE);        
-        
-    PrintSection(TYPE_START,FALSE);                     
-    
+    PrintSection(TYPE_OBJECTS,FALSE);
+
+    PrintSection(TYPE_START,FALSE);
+
     m_file = NULL;
     return TRUE;
 }
@@ -1903,7 +1903,7 @@ size_t HeapTraverser::getID(size_t mTable)
     {
         return ret;
     }
-    
+
     return 0;
 }
 
@@ -1912,7 +1912,7 @@ void replace(std::wstring &str, const WCHAR *toReplace, const WCHAR *replaceWith
 {
     const size_t replaceLen = _wcslen(toReplace);
     const size_t replaceWithLen = _wcslen(replaceWith);
-    
+
     size_t i = str.find(toReplace);
     while (i != std::wstring::npos)
     {
@@ -1967,7 +1967,7 @@ void HeapTraverser::PrintObjectHead(size_t objAddr,size_t typeID,size_t Size)
             (PBYTE)objAddr,m_curNID);
 
         m_curNID++;
-        
+
         fprintf(m_file,
             "o 0x%p %d %d ",
             (PBYTE)objAddr,typeID,Size);
@@ -2002,7 +2002,7 @@ void HeapTraverser::PrintObjectMember(size_t memberValue, bool dependentHandle)
     {
         fprintf(m_file,
             " 0x%p",
-            (PBYTE)memberValue);    
+            (PBYTE)memberValue);
     }
 }
 
@@ -2060,7 +2060,7 @@ void HeapTraverser::PrintSection(int Type,BOOL bOpening)
     const char *const pTypes[] = {"<gcheap>","<types>","<roots>","<objects>"};
     const char *const pTypeEnds[] = {"</gcheap>","</types>","</roots>","</objects>"};
 
-    if (m_format==FORMAT_XML)    
+    if (m_format==FORMAT_XML)
     {
         if ((Type >= 0) && (Type < TYPE_HIGHEST))
         {
@@ -2070,7 +2070,7 @@ void HeapTraverser::PrintSection(int Type,BOOL bOpening)
         {
             ExtOut ("INVALID TYPE %d\n", Type);
         }
-    }        
+    }
     else if (m_format==FORMAT_CLRPROFILER)
     {
         if ((Type == TYPE_START) && !bOpening) // a final newline is needed
@@ -2092,19 +2092,19 @@ void HeapTraverser::FindGCRootOnStacks()
         ExtOut("Failed to enumerate threads in the process.\n");
         return;
     }
-    
+
     int total = 0;
     DacpThreadData vThread;
     for (int i = 0; i < numThreads; i++)
     {
         if (FAILED(vThread.Request(g_sos, threadList[i])))
             continue;
-        
+
         if (vThread.osThreadId)
         {
             unsigned int refCount = 0;
             ArrayHolder<SOSStackRefData> refs = NULL;
-            
+
             if (FAILED(::GetGCRefs(vThread.osThreadId, &refs, &refCount, NULL, NULL)))
             {
                 ExtOut("Failed to walk thread %x\n", vThread.osThreadId);
@@ -2116,11 +2116,11 @@ void HeapTraverser::FindGCRootOnStacks()
                     PrintRoot(W("stack"), TO_TADDR(refs[i].Object));
         }
     }
-    
+
 }
 
 
-/* static */ void HeapTraverser::PrintOutTree(size_t methodTable, size_t ID, 
+/* static */ void HeapTraverser::PrintOutTree(size_t methodTable, size_t ID,
     LPVOID token)
 {
     HeapTraverser *pHolder = (HeapTraverser *) token;
@@ -2131,9 +2131,9 @@ void HeapTraverser::FindGCRootOnStacks()
 
 /* static */ void HeapTraverser::PrintHeap(DWORD_PTR objAddr,size_t Size,
     DWORD_PTR methodTable, LPVOID token)
-{    
+{
     if (!IsMTForFreeObj (methodTable))
-    {        
+    {
         HeapTraverser *pHolder = (HeapTraverser *) token;
         pHolder->m_objVisited++;
         size_t ID = pHolder->getID(methodTable);
@@ -2154,19 +2154,19 @@ void HeapTraverser::TraceHandles()
 {
     unsigned int fetched = 0;
     SOSHandleData data[64];
-    
+
     ToRelease<ISOSHandleEnum> handles;
     HRESULT hr = g_sos->GetHandleEnum(&handles);
     if (FAILED(hr))
         return;
-    
+
     do
     {
         hr = handles->Next(_countof(data), data, &fetched);
-        
+
         if (FAILED(hr))
             break;
-            
+
         for (unsigned int i = 0; i < fetched; ++i)
             PrintRoot(W("handle"), (size_t)data[i].Handle);
     } while (fetched == _countof(data));
@@ -2174,7 +2174,7 @@ void HeapTraverser::TraceHandles()
 
 /* static */ void HeapTraverser::GatherTypes(DWORD_PTR objAddr,size_t Size,
     DWORD_PTR methodTable, LPVOID token)
-{    
+{
     if (!IsMTForFreeObj (methodTable))
     {
         HeapTraverser *pHolder = (HeapTraverser *) token;
@@ -2185,17 +2185,17 @@ void HeapTraverser::TraceHandles()
 void HeapTraverser::PrintRefs(size_t obj, size_t methodTable, size_t size)
 {
     DWORD_PTR dwAddr = methodTable;
-    
+
     // TODO: pass info to callback having to lookup the MethodTableInfo again
     MethodTableInfo* info = g_special_mtCache.Lookup((DWORD_PTR)methodTable);
     _ASSERTE(info->IsInitialized());    // This is the second pass, so we should be initialized
 
     if (!info->bContainsPointers && !info->bCollectible)
         return;
-    
+
     if (info->bContainsPointers)
     {
-        // Fetch the GCInfo from the other process 
+        // Fetch the GCInfo from the other process
         CGCDesc *map = info->GCInfo;
         if (map == NULL)
         {
@@ -2207,7 +2207,7 @@ void HeapTraverser::PrintRefs(size_t obj, size_t methodTable, size_t size)
                 arrayOfVC = true;
                 nEntries = -nEntries;
             }
-        
+
             size_t nSlots = 1+nEntries*sizeof(CGCDescSeries)/sizeof(DWORD_PTR);
             info->GCInfoBuffer = new DWORD_PTR[nSlots];
             if (info->GCInfoBuffer == NULL)
@@ -2217,9 +2217,9 @@ void HeapTraverser::PrintRefs(size_t obj, size_t methodTable, size_t size)
             }
 
             if (FAILED(rvCache->Read(TO_CDADDR(dwAddr - nSlots*sizeof(DWORD_PTR)),
-                                            info->GCInfoBuffer, (ULONG) (nSlots*sizeof(DWORD_PTR)), NULL))) 
+                                            info->GCInfoBuffer, (ULONG) (nSlots*sizeof(DWORD_PTR)), NULL)))
                 return;
-        
+
             map = info->GCInfo = (CGCDesc*)(info->GCInfoBuffer+nSlots);
             info->ArrayOfVC = arrayOfVC;
         }
@@ -2240,7 +2240,7 @@ void HeapTraverser::PrintRefs(size_t obj, size_t methodTable, size_t size)
             }
         }
     }
-    
+
     std::unordered_map<TADDR, std::list<TADDR>>::iterator itr = mDependentHandleMap.find((TADDR)obj);
     if (itr != mDependentHandleMap.end())
     {
@@ -2289,10 +2289,10 @@ bool sos::ObjectIterator::VerifyObjectMembers(char *reason, size_t count) const
         BuildError(reason, count, "Object %s has a bad GCDesc.", DMLObject(objAddr));
         return false;
     }
-    
-    CGCDesc *map = (CGCDesc *)(buffer+nSlots);            
-    CGCDescSeries* cur = map->GetHighestSeries();                           
-    CGCDescSeries* last = map->GetLowestSeries();                                                 
+
+    CGCDesc *map = (CGCDesc *)(buffer+nSlots);
+    CGCDescSeries* cur = map->GetHighestSeries();
+    CGCDescSeries* last = map->GetLowestSeries();
 
     const size_t bufferSize = sizeof(size_t)*128;
     size_t objBuffer[bufferSize/sizeof(size_t)];
@@ -2300,7 +2300,7 @@ bool sos::ObjectIterator::VerifyObjectMembers(char *reason, size_t count) const
     size_t bytesInBuffer = bufferSize;
     if (size < bytesInBuffer)
         bytesInBuffer = size;
-    
+
 
     if (FAILED(g_ExtData->ReadVirtual(TO_CDADDR(dwBeginAddr), objBuffer, (ULONG) bytesInBuffer,NULL)))
     {
@@ -2330,14 +2330,14 @@ bool sos::ObjectIterator::VerifyObjectMembers(char *reason, size_t count) const
         }
     }
 
-    if (cur >= last)                                                        
-    {                                                                       
-        do                                                                  
-        {                                                                   
-            BYTE** parm = (BYTE**)((objAddr) + cur->GetSeriesOffset());           
-            BYTE** ppstop =                                                 
-                (BYTE**)((BYTE*)parm + cur->GetSeriesSize() + (size));      
-            while (parm < ppstop)                                           
+    if (cur >= last)
+    {
+        do
+        {
+            BYTE** parm = (BYTE**)((objAddr) + cur->GetSeriesOffset());
+            BYTE** ppstop =
+                (BYTE**)((BYTE*)parm + cur->GetSeriesSize() + (size));
+            while (parm < ppstop)
             {
                 CheckInterrupt();
                 size_t dwAddr1;
@@ -2370,22 +2370,22 @@ bool sos::ObjectIterator::VerifyObjectMembers(char *reason, size_t count) const
                     BOOL bPointers;
                     DWORD_PTR dwAddrMethTable;
                     if (FAILED(GetMTOfObject(dwAddr1, &dwAddrMethTable)) ||
-                         (GetSizeEfficient(dwAddr1, dwAddrMethTable, FALSE, s, bPointers) == FALSE)) 
+                         (GetSizeEfficient(dwAddr1, dwAddrMethTable, FALSE, s, bPointers) == FALSE))
                     {
                         BuildError(reason, count, "object %s: bad member %p at %p", DMLObject(objAddr),
                                SOS_PTR(dwAddr1), SOS_PTR(objAddr+(size_t)parm-objAddr));
 
                         return false;
                     }
-               
+
                     if (IsMTForFreeObj(dwAddrMethTable))
                     {
                         sos::Throw<HeapCorruption>("object %s contains free object %p at %p", DMLObject(objAddr),
                                SOS_PTR(dwAddr1), SOS_PTR(objAddr+(size_t)parm-objAddr));
                     }
-               
+
                     // verify card table
-                    if (bCheckCard && 
+                    if (bCheckCard &&
                         NeedCard(objAddr+(size_t)parm-objAddr,dwChild))
                     {
                         BuildError(reason, count, "Object %s: %s missing card_table entry for %p",
@@ -2395,7 +2395,7 @@ bool sos::ObjectIterator::VerifyObjectMembers(char *reason, size_t count) const
                         return false;
                     }
                 }
-                parm++;                                   
+                parm++;
             }
             cur--;
             CheckInterrupt();
@@ -2446,7 +2446,7 @@ bool sos::ObjectIterator::VerifyObjectMembers(char *reason, size_t count) const
                              BOOL bPointers;
                              DWORD_PTR dwAddrMethTable;
                              if (FAILED(GetMTOfObject(dwAddr1, &dwAddrMethTable)) ||
-                                  (GetSizeEfficient(dwAddr1, dwAddrMethTable, FALSE, s, bPointers) == FALSE)) 
+                                  (GetSizeEfficient(dwAddr1, dwAddrMethTable, FALSE, s, bPointers) == FALSE))
                              {
                                  BuildError(reason, count, "Object %s: Bad member %p at %p.\n", DMLObject(objAddr),
                                          SOS_PTR(dwAddr1), SOS_PTR(objAddr+(size_t)parm-objAddr));
@@ -2501,13 +2501,13 @@ bool sos::ObjectIterator::Verify(char *reason, size_t count) const
             BuildError(reason, count, "Object %s: Size %d is too small.", DMLObject(mCurrObj.GetAddress()), size);
             return false;
         }
-        
+
         if (mCurrObj.GetAddress() + mCurrObj.GetSize() > mSegmentEnd)
         {
             BuildError(reason, count, "Object %s is too large.  End of segment at %p.", DMLObject(mCurrObj), mSegmentEnd);
             return false;
         }
-        
+
         BOOL bVerifyMember = TRUE;
 
         // If we requested to verify the object's members, the GC may be in a state where that's not possible.

@@ -48,16 +48,16 @@ public:
     
     STDMETHOD(CanUnloadNow(HMODULE hModule));
 
-	//IUnknown methods:
-	STDMETHOD(QueryInterface(
+    //IUnknown methods:
+    STDMETHOD(QueryInterface(
                 REFIID riid,
                 void **ppvObject));
 
-	// Standard AddRef implementation
-	STDMETHOD_(ULONG, AddRef());
+    // Standard AddRef implementation
+    STDMETHOD_(ULONG, AddRef());
 
-	// Standard Release implementation.
-	STDMETHOD_(ULONG, Release());
+    // Standard Release implementation.
+    STDMETHOD_(ULONG, Release());
 
 
 
@@ -82,7 +82,7 @@ private:
                                     DWORD targetImageFileMachine,
                                     VS_FIXEDFILEINFO * pVersion);
 
-	volatile LONG m_cRef;
+    volatile LONG m_cRef;
     GUID m_skuId;
     bool m_isWindowsTarget;
 

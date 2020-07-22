@@ -1,5 +1,4 @@
-﻿<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
-<Project>
+﻿<Project>
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
 
   <PropertyGroup>
@@ -48,6 +47,10 @@
                 <TriggerSet>
                     <ModuleTrigger Name="coreclr.dll" />
                     <ModuleTrigger Name="libcoreclr.so" />
+                </TriggerSet>
+                <TriggerSet>
+                    <ModuleTrigger Name="libcoreclr.so" />
+                    <OSTrigger Name="Linux" />
                 </TriggerSet>
             </LoadTriggers>
             <EngineCommands>

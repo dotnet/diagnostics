@@ -55,7 +55,7 @@ class TestSosCommands(unittest.TestCase):
         except:
             pass
 
-	logfile = os.path.join(logfiledir, command)
+        logfile = os.path.join(logfiledir, command)
 
         cmd = (('%s -b ' % lldb) +
                ("-k \"script open('%s', 'a').close()\" " % fail_flag_lldb) +

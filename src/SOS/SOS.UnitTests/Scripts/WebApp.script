@@ -22,7 +22,7 @@ VERIFY:\s*<HEXVAL>\s+<HEXVAL>.*
 COMMAND:threads
 VERIFY:\s*<DECVAL>\s+0x<HEXVAL>\s+\(<DECVAL>\)\s+
 COMMAND:registers
-VERIFY:\s*([r|e]ip|pc) = <HEXVAL>\s+
+VERIFY:\s*([r|e]ip|pc) = 0x<HEXVAL>\s+
 ENDIF:DOTNETDUMP
 
 # Verify that ClrStack with no options works

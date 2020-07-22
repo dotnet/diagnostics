@@ -17,8 +17,6 @@ set(PALRT_SOURCES
     bstr.cpp
     coguid.cpp
     comem.cpp
-    decarith.cpp
-    decconv.cpp
     guid.cpp
     memorystream.cpp
     path.cpp

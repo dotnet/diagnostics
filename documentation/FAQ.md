@@ -21,3 +21,14 @@ Frequently Asked Questions
     First try enabling the symbol downloading with `setsymbolserver -ms`. This is already enabled for `dotnet-dump analyze` and if SOS for lldb was installed with `dotnet-sos install`.
 
     If that doesn't work, try using the `setclrpath <directory>` command with a directory that contains the matching version of the DAC module. This is useful for private runtimes or debug builds that haven't been published to our symbol servers.
+
+* If you receive this error message executing a SOS command:
+    ```
+    Failed to find runtime module (libcoreclr.so), 0x80004005
+    Extension commands need it in order to have something to do.
+    ClrStack  failed
+    ```
+    The following could be the problem:
+    * The process or core dump hasn't loaded the .NET Core runtime yet.
+    * The coredump was loaded under lldb without specifying the host (i.e `dotnet`). `target modules list` doesn't display `libcoreclr.so` or `libcoreclr.dylib`. Start lldb with the host as the target program and the core file, for example `lldb --core coredump /usr/share/dotnet/dotnet`. In case you don't have the host available, `dotnet symbol` is will be able to download them.
+    * If a coredump was loaded under lldb, a host was specified, and `target modules list` displays the runtime module but you still get that message lldb needs the correct version of libcoreclr.so/dylib next to the coredump. You can use `dotnet-symbol --modules <coredump>` to download the needed binaries.

@@ -224,7 +224,7 @@ while :; do
             shift
             ;;
 
-        -architecture)
+        -architecture|-a|-platform)
             __BuildArch="$(to_lowercase "$2")"
             shift
             ;;

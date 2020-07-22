@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
     internal class Program
     {
-        delegate Task<int> ExportDelegate(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output);
+        delegate Task<int> ExportDelegate(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string processName);
 
         private static Command MonitorCommand() =>
             new Command(
@@ -29,9 +29,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 description: "Start monitoring a .NET application")
             {
                 // Handler
-                CommandHandler.Create<CancellationToken, List<string>, IConsole, int, int>(new CounterMonitor().Monitor),
+                CommandHandler.Create<CancellationToken, List<string>, IConsole, int, int, string>(new CounterMonitor().Monitor),
                 // Arguments and Options
-                CounterList(), ProcessIdOption(), RefreshIntervalOption()
+                CounterList(), ProcessIdOption(), RefreshIntervalOption(), NameOption()
             };
 
         private static Command CollectCommand() =>
@@ -42,7 +42,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // Handler
                 HandlerDescriptor.FromDelegate((ExportDelegate)new CounterMonitor().Collect).GetCommandHandler(),
                 // Arguments and Options
-                CounterList(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption()
+                CounterList(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption(), NameOption()
+            };
+
+        private static Option NameOption() =>
+            new Option(
+                aliases: new[] { "-n", "--name" },
+                description: "The name of the process that will be monitored.")
+            {
+                Argument = new Argument<string>(name: "name")
             };
 
         private static Option ProcessIdOption() =>

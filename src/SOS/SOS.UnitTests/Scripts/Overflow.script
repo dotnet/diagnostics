@@ -9,17 +9,57 @@ CONTINUE
 
 LOADSOS
 
+IFDEF:DOTNETDUMP
+SOSCOMMAND:clrthreads -managedexception
+ENDIF:DOTNETDUMP
+!IFDEF:DOTNETDUMP
+SOSCOMMAND:Threads -managedexception
+ENDIF:DOTNETDUMP
+
 # 5) Verifying that PrintException gives us the right exception in the format above.
 SOSCOMMAND:PrintException
 
 IFDEF:DUMP
-IFDEF:WINDOWS
+
+IFDEF:MAJOR_RUNTIME_VERSION_5
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.StackOverflowException\s+
+VERIFY:Message:\s+<none>\s+
+VERIFY:InnerException:\s+<none>\s+
+VERIFY:StackTrace \(generated\):\s+
+ENDIF:MAJOR_RUNTIME_VERSION_5
+
+!IFDEF:MAJOR_RUNTIME_VERSION_5
 VERIFY:There is no current managed exception on this thread
-ENDIF:WINDOWS
+ENDIF:MAJOR_RUNTIME_VERSION_5
+
 ENDIF:DUMP
 
 IFDEF:LIVE
+
+IFDEF:WINDOWS
+VERIFY:There is no current managed exception on this thread
+ENDIF:WINDOWS
+
+!IFDEF:WINDOWS
+
+IFDEF:MAJOR_RUNTIME_VERSION_5
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.StackOverflowException\s+
+VERIFY:Message:\s+<none>\s+
+VERIFY:InnerException:\s+<none>\s+
+VERIFY:StackTrace \(generated\):\s+
+ENDIF:MAJOR_RUNTIME_VERSION_5
+
+!IFDEF:MAJOR_RUNTIME_VERSION_5
+!IFDEF:OSX
+VERIFY:There is no current managed exception on this thread
+ENDIF:OSX
 IFDEF:OSX
 VERIFY:The current thread is unmanaged
 ENDIF:OSX
+ENDIF:MAJOR_RUNTIME_VERSION_5
+
+ENDIF:WINDOWS
+
 ENDIF:LIVE

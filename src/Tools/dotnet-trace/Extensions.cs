@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -163,6 +164,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             int valEnd = 0;
             int curIdx = 0;
             bool inQuote = false;
+            argument = Regex.Unescape(argument);
             foreach (var c in argument)
             {
                 if (inQuote)
@@ -182,7 +184,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     else if (c == ';')
                     {
                         valEnd = curIdx;
-                        argumentDict.Add(argument.Substring(keyStart, keyEnd-keyStart), argument.Substring(valStart, valEnd-valStart));
+                        AddKeyValueToArgumentDict(argumentDict, argument, keyStart, keyEnd, valStart, valEnd);
                         keyStart = curIdx+1; // new key starts
                     }
                     else if (c == '\"')
@@ -192,10 +194,19 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
                 curIdx += 1;
             }
+            AddKeyValueToArgumentDict(argumentDict, argument, keyStart, keyEnd, valStart, valEnd);
+            return argumentDict;
+        }
+
+        private static void AddKeyValueToArgumentDict(Dictionary<string, string> argumentDict, string argument, int keyStart, int keyEnd, int valStart, int valEnd)
+        {
             string key = argument.Substring(keyStart, keyEnd - keyStart);
             string val = argument.Substring(valStart);
+            if (val.StartsWith("\"") && val.EndsWith("\""))
+            {
+                val = val.Substring(1, val.Length - 2);
+            }
             argumentDict.Add(key, val);
-            return argumentDict;
         }
     }
 }

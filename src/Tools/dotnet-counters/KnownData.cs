@@ -33,15 +33,18 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="gen-0-size", Description="Gen 0 Heap Size" },
                     new CounterProfile{ Name="gen-1-size", Description="Gen 1 Heap Size" },
                     new CounterProfile{ Name="gen-2-size", Description="Gen 2 Heap Size" },
-                    new CounterProfile{ Name="loh-size", Description="LOH Heap Size" },
-                    new CounterProfile{ Name="alloc-rate", Description="Allocation Rate" },
+                    new CounterProfile{ Name="loh-size", Description="LOH Size" },
+                    new CounterProfile{ Name="poh-size", Description="POH (Pinned Object Heap) Size" },
+                    new CounterProfile{ Name="alloc-rate", Description="Number of bytes allocated in the managed heap per second" },
                     new CounterProfile{ Name="assembly-count", Description="Number of Assemblies Loaded" },
                     new CounterProfile{ Name="exception-count", Description="Number of Exceptions / sec" },
                     new CounterProfile{ Name="threadpool-thread-count", Description="Number of ThreadPool Threads" },
-                    new CounterProfile{ Name="monitor-lock-contention-count", Description="Monitor Lock Contention Count" },
+                    new CounterProfile{ Name="monitor-lock-contention-count", Description="Number of times there were contention when trying to take the monitor lock per second" },
                     new CounterProfile{ Name="threadpool-queue-length", Description="ThreadPool Work Items Queue Length" },
                     new CounterProfile{ Name="threadpool-completed-items-count", Description="ThreadPool Completed Work Items Count" },
-                    new CounterProfile{ Name="active-timer-count", Description="Active Timers Count" },
+                    new CounterProfile{ Name="active-timer-count", Description="Number of timers that are currently active" },
+                    new CounterProfile{ Name="il-bytes-jitted", Description="Total IL bytes jitted" },
+                    new CounterProfile{ Name="methods-jitted-count", Description="Number of methods jitted" }
                 });
             yield return new CounterProvider(
                 "Microsoft.AspNetCore.Hosting", // Name
@@ -53,6 +56,34 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="total-requests", Description="Total number of requests" },
                     new CounterProfile{ Name="current-requests", Description="Current number of requests" },
                     new CounterProfile{ Name="failed-requests", Description="Failed number of requests" },
+                });
+            yield return new CounterProvider(
+                "Microsoft-AspNetCore-Server-Kestrel", // Name
+                "A set of performance counters provided by Kestrel.", // Description
+                "0x0", // Keywords
+                "4", // Level
+                new[] {
+                    new CounterProfile{ Name="connections-per-second", Description="Connection Rate" },
+                    new CounterProfile{ Name="total-connections", Description="Total Connections" },
+                    new CounterProfile{ Name="tls-handshakes-per-second", Description="Rate at which TLS Handshakes are made" },
+                    new CounterProfile{ Name="total-tls-handshakes", Description="Total number of TLS handshakes made" },
+                    new CounterProfile{ Name="current-tls-handshakes", Description="Number of currently active TLS handshakes" },
+                    new CounterProfile{ Name="failed-tls-handshakes", Description="Total number of failed TLS handshakes" },
+                    new CounterProfile{ Name="current-connections", Description="Number of current connections" },
+                    new CounterProfile{ Name="connection-queue-length", Description="Length of Kestrel Connection Queue" },
+                    new CounterProfile{ Name="request-queue-length", Description="Length total HTTP request queue" },
+                });
+            yield return new CounterProvider(
+                "System.Net.Http",
+                "A set of performance counters for System.Net.Http",
+                "0x0", // Keywords
+                "4", // Level
+                new[] {
+                    new CounterProfile{ Name="requests-started", Description="Requests Started" },
+                    new CounterProfile{ Name="requests-started-rate", Description="Requests Started Rate" },
+                    new CounterProfile{ Name="requests-aborted", Description="Requests Aborted" },
+                    new CounterProfile{ Name="requests-aborted-rate", Description="Requests Aborted Rate" },
+                    new CounterProfile{ Name="current-requests", Description="Current Requests" }
                 });
         }
 

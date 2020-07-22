@@ -215,7 +215,7 @@ public static void PrintEventsLive(int processId)
             session.Stop();
         });
 
-        Task.WaitAny(streamTask, sleepTask);
+        Task.WaitAny(streamTask, inputTask);
     }
 }
 ```
@@ -269,8 +269,19 @@ public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> pro
 
 Starts an EventPipe tracing session using the given providers and settings. 
 
-* `providers` : An `IEnumerable` of [`EventPipeProvider`](#class-eventpipeprovider)s to be collected.
+* `providers` : An `IEnumerable` of [`EventPipeProvider`](#class-eventpipeprovider)s to start tracing.
 * `requestRundown`: A `bool` specifying whether rundown provider events from the target app's runtime should be requested.
+* `circularBufferMB`: An `int` specifying the total size of circular buffer used by the target app's runtime on collecting events.
+
+
+```csharp
+public EventPipeSession StartEventPipeSession(EventPipeProvider providers, bool requestRundown=true, int circularBufferMB=256)
+```
+
+* `providers` : An [`EventPipeProvider`](#class-eventpipeprovider) to start tracing.
+* `requestRundown`: A `bool` specifying whether rundown provider events from the target app's runtime should be requested.
+* `circularBufferMB`: An `int` specifying the total size of circular buffer used by the target app's runtime on collecting events.
+
 
 **Remarks**
 

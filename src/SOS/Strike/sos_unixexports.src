@@ -5,6 +5,7 @@
 bpmd
 ClrStack
 dbgout
+DumpALC
 DumpArray
 DumpAssembly
 DumpAsync
@@ -47,12 +48,14 @@ PrintException
 PathTo
 StopOnCatch
 SetHostRuntime
+SetClrPath
 SetSymbolServer
 SOSFlush
 SOSStatus
 SuppressJitOptimization
 SyncBlk
 Threads
+ThreadPool
 ThreadState
 Token2EE
 u

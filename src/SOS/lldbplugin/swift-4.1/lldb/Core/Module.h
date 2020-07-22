@@ -413,7 +413,7 @@ public:
   ///     Source line to locate.
   ///
   /// @param[in] function
-  ///	    Optional filter function. Addresses within this function will be
+  ///     Optional filter function. Addresses within this function will be
   ///     added to the 'local' list. All others will be added to the 'extern'
   ///     list.
   ///

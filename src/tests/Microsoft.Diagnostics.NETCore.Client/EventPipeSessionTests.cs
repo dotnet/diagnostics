@@ -111,5 +111,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational)
             }));
         }
+
+        /// <summary>
+        /// Test for the method overload: public EventPipeSession StartEventPipeSession(EventPipeProvider provider, bool requestRundown=true, int circularBufferMB=256)
+        /// </summary>
+        [Fact]
+        public void StartEventPipeSessionWithSingleProviderTest()
+        {
+            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
+            runner.Start(3000);
+            DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
+            using (var session = client.StartEventPipeSession(new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational)))
+            {
+                Assert.True(session.EventStream != null);
+            }
+            runner.Stop();
+        }
     }
 }

@@ -4,21 +4,38 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
     <Description>Monitoring for dotnet</Description>
-    <IsPackable>false</IsPackable>
+    <!-- Tentatively create package so other teams can tenatively consume. -->
+    <IsPackable>true</IsPackable>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <IncludeSymbols>true</IncludeSymbols>
+    <!-- Do not ship this package until ready to be consumed. -->
     <IsShipping>false</IsShipping>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\Tools\dotnet-gcdump\DotNetHeapDump\DotNetHeapDumpGraphReader.cs" Link="DotNetHeapDump\DotNetHeapDumpGraphReader.cs" />
+    <Compile Include="..\Tools\dotnet-gcdump\DotNetHeapDump\DotNetHeapInfo.cs" Link="DotNetHeapDump\DotNetHeapInfo.cs" />
+    <Compile Include="..\Tools\dotnet-gcdump\DotNetHeapDump\GCHeapDump.cs" Link="DotNetHeapDump\GCHeapDump.cs" />
+    <Compile Include="..\Tools\dotnet-gcdump\DotNetHeapDump\Graph.cs" Link="DotNetHeapDump\Graph.cs" />
+    <Compile Include="..\Tools\dotnet-gcdump\DotNetHeapDump\MemoryGraph.cs" Link="DotNetHeapDump\MemoryGraph.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Bcl.HashCode" Version="$(MicrosoftBclHashCodeVersion)" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MicrosoftBclAsyncInterfacesVersion)" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensionsLoggingVersion)" />
     <PackageReference Include="System.Text.Json" Version="$(SystemTextJsonVersion)" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\Tools\dotnet-gcdump\DotNetHeapDump\README.md" Link="DotNetHeapDump\README.md" />
   </ItemGroup>
 </Project>
