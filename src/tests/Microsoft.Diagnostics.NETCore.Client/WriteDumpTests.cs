@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 runner.Start(3000);
                 DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
 
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && Environment.Version.ToString().StartsWith("3"))
                 {
                     Assert.Throws<PlatformNotSupportedException>(() => client.WriteDump(DumpType.Normal, dumpPath));
                 }
