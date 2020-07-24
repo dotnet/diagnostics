@@ -58,8 +58,9 @@ namespace Microsoft.Diagnostics.Monitoring
 
                 _currentTask = Task.Run( async () =>
                 {
-                    using var durationSource = new CancellationTokenSource(duration);
-                    using var durationRegistration = durationSource.Token.Register(() => _stopProcessingSource.TrySetResult(null));
+                    using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    linkedSource.CancelAfter(duration);
+                    using var _ = linkedSource.Token.Register(() => _stopProcessingSource.TrySetResult(null));
 
                     // Use TaskCompletionSource instead of Task.Delay with cancellation to avoid
                     // using exceptions for normal termination of event stream.
