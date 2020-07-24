@@ -12,20 +12,17 @@ using Microsoft.Diagnostics.NETCore.Client;
 namespace Microsoft.Diagnostics.Monitoring
 {
     /// <summary>
-    /// Aggregates diagnostics connections that are established at a transport path via a reversed server.
+    /// Aggregates diagnostic endpoints that are established at a transport path via a reversed server.
     /// </summary>
-    internal class ReversedServerConnectionsSource : IDiagnosticsConnectionsSourceInternal, IAsyncDisposable
+    internal class ServerEndpointInfoSource : IEndpointInfoSourceInternal, IAsyncDisposable
     {
         // The amount of time to wait when checking if the a runtime instance connection should be
         // pruned from the list of connections. If the runtime doesn't have a viable connection within
         // this time, it will be pruned from the list.
         private static readonly TimeSpan PruneWaitForConnectionTimeout = TimeSpan.FromMilliseconds(250);
-        // The amount of time to wait after issuing the ResumeRuntime command. If runtime instance does
-        // not reconnect within this time period, the runtime connection will not be added to the list.
-        private static readonly TimeSpan ResumeRuntimeTimeout = TimeSpan.FromMilliseconds(250);
 
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
-        private readonly IList<ReversedDiagnosticsConnection> _connections = new List<ReversedDiagnosticsConnection>();
+        private readonly IList<IpcEndpointInfo> _connections = new List<IpcEndpointInfo>();
         private readonly SemaphoreSlim _connectionsSemaphore = new SemaphoreSlim(1);
         private readonly string _transportPath;
 
@@ -34,7 +31,7 @@ namespace Microsoft.Diagnostics.Monitoring
         private ReversedDiagnosticsServer _server;
 
         /// <summary>
-        /// Constructs a <see cref="ReversedServerConnectionsSource"/> that aggreates diagnostics connection
+        /// Constructs a <see cref="ServerEndpointInfoSource"/> that aggreates diagnostic endpoints
         /// from a reversed diagnostics server at path specified by <paramref name="transportPath"/>.
         /// </summary>
         /// <param name="transportPath">
@@ -42,7 +39,7 @@ namespace Microsoft.Diagnostics.Monitoring
         /// On Windows, this can be a full pipe path or the name without the "\\.\pipe\" prefix.
         /// On all other systems, this must be the full file path of the socket.
         /// </param>
-        public ReversedServerConnectionsSource(string transportPath)
+        public ServerEndpointInfoSource(string transportPath)
         {
             _transportPath = transportPath;
         }
@@ -86,7 +83,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
             if (null != _server || null != _listenTask)
             {
-                throw new InvalidOperationException(nameof(ReversedServerConnectionsSource.Listen) + " method can only be called once.");
+                throw new InvalidOperationException(nameof(ServerEndpointInfoSource.Listen) + " method can only be called once.");
             }
 
             _server = new ReversedDiagnosticsServer(_transportPath);
@@ -95,11 +92,11 @@ namespace Microsoft.Diagnostics.Monitoring
         }
 
         /// <summary>
-        /// Gets the list of <see cref="ReversedDiagnosticsConnection"/> served from the reversed diagnostics server.
+        /// Gets the list of <see cref="IpcEndpointInfo"/> served from the reversed diagnostics server.
         /// </summary>
         /// <param name="token">The token to monitor for cancellation requests.</param>
-        /// <returns>A list of active <see cref="IDiagnosticsConnection"/> instances.</returns>
-        public async Task<IEnumerable<IDiagnosticsConnection>> GetConnectionsAsync(CancellationToken token)
+        /// <returns>A list of active <see cref="IEndpointInfo"/> instances.</returns>
+        public async Task<IEnumerable<IEndpointInfo>> GetConnectionsAsync(CancellationToken token)
         {
             VerifyNotDisposed();
 
@@ -115,9 +112,9 @@ namespace Microsoft.Diagnostics.Monitoring
                 var connections = _connections.ToList();
 
                 var pruneTasks = new List<Task>();
-                foreach (ReversedDiagnosticsConnection connection in connections)
+                foreach (IpcEndpointInfo info in connections)
                 {
-                    pruneTasks.Add(Task.Run(() => PruneConnectionIfNotViable(connection, linkedToken), linkedToken));
+                    pruneTasks.Add(Task.Run(() => PruneConnectionIfNotViable(info, linkedToken), linkedToken));
                 }
 
                 await Task.WhenAll(pruneTasks);
@@ -130,7 +127,7 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        private async Task PruneConnectionIfNotViable(ReversedDiagnosticsConnection connection, CancellationToken token)
+        private async Task PruneConnectionIfNotViable(IpcEndpointInfo info, CancellationToken token)
         {
             using var timeoutSource = new CancellationTokenSource();
             using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutSource.Token);
@@ -139,7 +136,7 @@ namespace Microsoft.Diagnostics.Monitoring
             {
                 timeoutSource.CancelAfter(PruneWaitForConnectionTimeout);
 
-                await connection.Endpoint.WaitForConnectionAsync(linkedSource.Token);
+                await info.Endpoint.WaitForConnectionAsync(linkedSource.Token);
             }
             catch
             {
@@ -147,12 +144,9 @@ namespace Microsoft.Diagnostics.Monitoring
                 // other than cancelling the pruning operation.
                 if (!token.IsCancellationRequested)
                 {
-                    _connections.Remove(connection);
-
-                    OnRemovedConnection(connection);
-
-                    // Dispose the connection to release the tracking resources in the reversed server.
-                    connection.Dispose();
+                    _connections.Remove(info);
+                    OnRemovedConnection(info);
+                    _server.RemoveConnection(info.RuntimeInstanceCookie);
                 }
             }
         }
@@ -171,9 +165,9 @@ namespace Microsoft.Diagnostics.Monitoring
             {
                 try
                 {
-                    ReversedDiagnosticsConnection connection = await _server.AcceptAsync(token);
+                    IpcEndpointInfo info = await _server.AcceptAsync(token);
 
-                    _ = Task.Run(() => ResumeAndQueueConnection(connection, token), token);
+                    _ = Task.Run(() => ResumeAndQueueEndpointInfo(info, token), token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -181,7 +175,7 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        private async Task ResumeAndQueueConnection(ReversedDiagnosticsConnection connection, CancellationToken token)
+        private async Task ResumeAndQueueEndpointInfo(IpcEndpointInfo info, CancellationToken token)
         {
             try
             {
@@ -189,7 +183,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 // those instances that are configured to pause on start to resume after the diagnostics
                 // connection has been made. Instances that are not configured to pause on startup will ignore
                 // the command and return success.
-                var client = new DiagnosticsClient(connection.Endpoint);
+                var client = new DiagnosticsClient(info.Endpoint);
                 try
                 {
                     client.ResumeRuntime();
@@ -199,22 +193,12 @@ namespace Microsoft.Diagnostics.Monitoring
                     // The runtime likely doesn't understand the ResumeRuntime command.
                 }
 
-                // The ResumeRuntime message will consume the stream.
-                // Wait until the server repopulates the stream so that the source doesn't try to offer
-                // a connection that cannot be immediately used. If it is offered immediately, timing issues could ensue
-                // such as when the GetConnectionsAsync call prunes connections that fail the WaitForConnectionAsync check.
-                using var timeoutSource = new CancellationTokenSource();
-                using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutSource.Token);
-                timeoutSource.CancelAfter(ResumeRuntimeTimeout);
-
-                await connection.Endpoint.WaitForConnectionAsync(linkedSource.Token);
-
                 await _connectionsSemaphore.WaitAsync(token);
                 try
                 {
-                    _connections.Add(connection);
+                    _connections.Add(info);
 
-                    OnNewConnection(connection);
+                    OnNewConnection(info);
                 }
                 finally
                 {
@@ -223,18 +207,17 @@ namespace Microsoft.Diagnostics.Monitoring
             }
             catch (Exception)
             {
-                // If any exceptions occur, dispose the connection so that it is removed from the server.
-                connection.Dispose();
+                _server.RemoveConnection(info.RuntimeInstanceCookie);
 
                 throw;
             }
         }
 
-        internal virtual void OnNewConnection(ReversedDiagnosticsConnection connection)
+        internal virtual void OnNewConnection(IpcEndpointInfo info)
         {
         }
 
-        internal virtual void OnRemovedConnection(ReversedDiagnosticsConnection connection)
+        internal virtual void OnRemovedConnection(IpcEndpointInfo info)
         {
         }
 
@@ -246,20 +229,20 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        private class DiagnosticsConnection : IDiagnosticsConnection
+        private class DiagnosticsConnection : IEndpointInfo
         {
-            private readonly ReversedDiagnosticsConnection _connection;
+            private readonly IpcEndpointInfo _info;
 
-            public DiagnosticsConnection(ReversedDiagnosticsConnection connection)
+            public DiagnosticsConnection(IpcEndpointInfo info)
             {
-                _connection = connection;
+                _info = info;
             }
 
-            public IIpcEndpoint Endpoint => _connection.Endpoint;
+            public IpcEndpoint Endpoint => _info.Endpoint;
 
-            public int ProcessId => _connection.ProcessId;
+            public int ProcessId => _info.ProcessId;
 
-            public Guid RuntimeInstanceCookie => _connection.RuntimeInstanceCookie;
+            public Guid RuntimeInstanceCookie => _info.RuntimeInstanceCookie;
         }
     }
 }

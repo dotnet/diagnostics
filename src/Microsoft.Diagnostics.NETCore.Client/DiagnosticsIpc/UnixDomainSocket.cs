@@ -3,9 +3,12 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -17,6 +20,28 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public UnixDomainSocket() :
             base(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified)
         {
+        }
+
+        public async Task<Socket> AcceptAsync(CancellationToken token)
+        {
+            using (token.Register(() => Close(0)))
+            {
+                try
+                {
+                    return await Task.Factory.FromAsync(BeginAccept, EndAccept, this);
+                }
+                // When the socket is closed, the FromAsync logic will try to call EndAccept on the socket,
+                // but that will throw an ObjectDisposedException. Only catch the exception if due to cancellation.
+                catch (ObjectDisposedException) when (token.IsCancellationRequested)
+                {
+                    // First check if the cancellation token caused the closing of the socket,
+                    // then rethrow the exception if it did not.
+                    token.ThrowIfCancellationRequested();
+
+                    Debug.Fail("Token should have thrown cancellation exception.");
+                    return null;
+                }
+            }
         }
 
         public void Bind(string path)
@@ -33,6 +58,29 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             _ownsSocketFile = false;
             _path = path;
+        }
+
+        public async Task ConnectAsync(string path, CancellationToken token)
+        {
+            using (token.Register(() => Close(0)))
+            {
+                try
+                {
+                    Func<AsyncCallback, object, IAsyncResult> beginConnect = (callback, state) =>
+                    {
+                        return BeginConnect(CreateUnixDomainSocketEndPoint(path), callback, state);
+                    };
+                    await Task.Factory.FromAsync(beginConnect, EndConnect, this);
+                }
+                // When the socket is closed, the FromAsync logic will try to call EndAccept on the socket,
+                // but that will throw an ObjectDisposedException. Only catch the exception if due to cancellation.
+                catch (ObjectDisposedException) when (token.IsCancellationRequested)
+                {
+                    // First check if the cancellation token caused the closing of the socket,
+                    // then rethrow the exception if it did not.
+                    token.ThrowIfCancellationRequested();
+                }
+            }
         }
 
         protected override void Dispose(bool disposing)

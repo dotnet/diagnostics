@@ -13,16 +13,16 @@ namespace Microsoft.Diagnostics.Monitoring
         {
             if (string.IsNullOrWhiteSpace(reversedServerAddress))
             {
-                return services.AddSingleton<IDiagnosticsConnectionsSource, ClientConnectionsSource>();
+                return services.AddSingleton<IEndpointInfoSource, ClientEndpointInfoSource>();
             }
             else
             {
                 // Construct the source now rather than delayed construction
                 // in order to be able to accept diagnostics connections immediately.
-                var serverSource = new ReversedServerConnectionsSource(reversedServerAddress);
+                var serverSource = new ServerEndpointInfoSource(reversedServerAddress);
                 serverSource.Listen(maxConnections.GetValueOrDefault(ReversedDiagnosticsServer.MaxAllowedConnections));
 
-                return services.AddSingleton<IDiagnosticsConnectionsSource>(serverSource);
+                return services.AddSingleton<IEndpointInfoSource>(serverSource);
             }
         }
     }

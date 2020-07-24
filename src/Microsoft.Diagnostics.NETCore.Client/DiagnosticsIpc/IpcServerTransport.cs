@@ -14,6 +14,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     internal abstract class IpcServerTransport : IDisposable
     {
+        private bool _disposed;
+
         public static IpcServerTransport Create(string transportPath, int maxConnections)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -28,7 +30,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public void Dispose()
         {
-            Dispose(disposing: true);
+            if (!_disposed)
+            {
+                Dispose(disposing: true);
+
+                _disposed = true;
+            }
         }
 
         protected virtual void Dispose(bool disposing)
@@ -51,13 +58,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
             }
         }
+
+        protected void VerifyNotDisposed()
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(this.GetType().Name);
+            }
+        }
     }
 
     internal sealed class WindowsPipeServerTransport : IpcServerTransport
     {
         private const string PipePrefix = @"\\.\pipe\";
 
-        private bool _disposed = false;
         private NamedPipeServerStream _stream;
 
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
@@ -73,22 +87,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            if (disposing)
             {
-                if (disposing)
-                {
-                    _cancellation.Cancel();
+                _cancellation.Cancel();
 
-                    _stream.Dispose();
+                _stream.Dispose();
 
-                    _cancellation.Dispose();
-                }
-                _disposed = true;
+                _cancellation.Dispose();
             }
         }
 
         public override async Task<Stream> AcceptAsync(CancellationToken token)
         {
+            VerifyNotDisposed();
+
             using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _cancellation.Token);
 
             NamedPipeServerStream connectedStream;
@@ -110,14 +122,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private void CreateNewPipeServer()
         {
-            _stream = new NamedPipeServerStream(_pipeName, PipeDirection.InOut, _maxInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+            _stream = new NamedPipeServerStream(
+                _pipeName,
+                PipeDirection.InOut,
+                _maxInstances,
+                PipeTransmissionMode.Byte,
+                PipeOptions.Asynchronous);
         }
     }
 
     internal sealed class UnixDomainSocketServerTransport : IpcServerTransport
     {
-        private bool _disposed = false;
-
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
         private readonly int _backlog;
         private readonly string _path;
@@ -134,60 +149,44 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            if (disposing)
             {
-                if (disposing)
+                _cancellation.Cancel();
+
+                try
                 {
-                    _cancellation.Cancel();
-
-                    try
-                    {
-                        _socket.Shutdown(SocketShutdown.Both);
-                    }
-                    catch { }
-                    finally
-                    {
-                        _socket.Close(0);
-                    }
-                    _socket.Dispose();
-
-                    _cancellation.Dispose();
+                    _socket.Shutdown(SocketShutdown.Both);
                 }
-                _disposed = true;
+                catch { }
+                finally
+                {
+                    _socket.Close(0);
+                }
+                _socket.Dispose();
+
+                _cancellation.Dispose();
             }
         }
 
         public override async Task<Stream> AcceptAsync(CancellationToken token)
         {
+            VerifyNotDisposed();
+
             using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _cancellation.Token);
-            using (linkedSource.Token.Register(() => _socket.Close(0)))
+            try
             {
-                Socket socket;
-                try
-                {
-                    socket = await Task.Factory.FromAsync(_socket.BeginAccept, _socket.EndAccept, _socket);
-                }
-                catch (Exception ex)
-                {
-                    // Recreate socket if transport is not disposed.
-                    if (!_cancellation.IsCancellationRequested)
-                    {
-                        CreateNewSocketServer();
-                    }
-
-                    // When the socket is closed, the FromAsync logic will try to call EndAccept on the socket,
-                    // but that will throw an ObjectDisposedException.
-                    if (ex is ObjectDisposedException)
-                    {
-                        // First check if the cancellation token caused the closing of the socket,
-                        // then rethrow the exception if it did not.
-                        token.ThrowIfCancellationRequested();
-                    }
-
-                    throw;
-                }
+                Socket socket = await _socket.AcceptAsync(linkedSource.Token);
 
                 return new ExposedSocketNetworkStream(socket, ownsSocket: true);
+            }
+            catch (Exception)
+            {
+                // Recreate socket if transport is not disposed.
+                if (!_cancellation.IsCancellationRequested)
+                {
+                    CreateNewSocketServer();
+                }
+                throw;
             }
         }
 

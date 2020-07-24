@@ -43,9 +43,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             runner.AddEnvVar("DOTNET_DiagnosticsMonitorAddress", transportName);
         }
 
-        public static string ToTestString(this ReversedDiagnosticsConnection connection)
+        public static string ToTestString(this IpcEndpointInfo info)
         {
-            return $"PID={connection.ProcessId}, COOKIE={connection.RuntimeInstanceCookie}";
+            return $"PID={info.ProcessId}, COOKIE={info.RuntimeInstanceCookie}";
         }
     }
 }

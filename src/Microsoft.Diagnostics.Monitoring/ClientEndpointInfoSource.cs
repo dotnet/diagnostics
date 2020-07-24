@@ -11,11 +11,11 @@ using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
-    internal sealed class ClientConnectionsSource : IDiagnosticsConnectionsSourceInternal
+    internal sealed class ClientEndpointInfoSource : IEndpointInfoSourceInternal
     {
-        public Task<IEnumerable<IDiagnosticsConnection>> GetConnectionsAsync(CancellationToken token)
+        public Task<IEnumerable<IEndpointInfo>> GetConnectionsAsync(CancellationToken token)
         {
-            List<IDiagnosticsConnection> connections = new List<IDiagnosticsConnection>();
+            List<IEndpointInfo> connections = new List<IEndpointInfo>();
             foreach (int pid in DiagnosticsClient.GetPublishedProcesses())
             {
                 // CONSIDER: Generate a "runtime instance identifier" based on the pipe name
@@ -26,7 +26,7 @@ namespace Microsoft.Diagnostics.Monitoring
             return Task.FromResult(connections.AsEnumerable());
         }
 
-        private class DiagnosticsConnection : IDiagnosticsConnection
+        private class DiagnosticsConnection : IEndpointInfo
         {
             public DiagnosticsConnection(int processId)
             {
@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 ProcessId = processId;
             }
 
-            public IIpcEndpoint Endpoint { get; }
+            public IpcEndpoint Endpoint { get; }
 
             public int ProcessId { get; }
 

@@ -15,10 +15,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private bool _requestRundown;
         private int _circularBufferMB;
         private long _sessionId;
-        private IIpcEndpoint _endpoint;
+        private IpcEndpoint _endpoint;
         private bool disposedValue = false; // To detect redundant calls
 
-        internal EventPipeSession(IIpcEndpoint endpoint, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB)
+        internal EventPipeSession(IpcEndpoint endpoint, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB)
         {
             _endpoint = endpoint;
             _providers = providers;

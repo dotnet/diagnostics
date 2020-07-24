@@ -25,12 +25,12 @@ namespace Microsoft.Diagnostics.Monitoring
         // with a diagnostics transport connection.
         private static readonly TimeSpan DockerEntrypointWaitTimeout = TimeSpan.FromMilliseconds(250);
 
-        private readonly IDiagnosticsConnectionsSourceInternal _connectionsSource;
+        private readonly IEndpointInfoSourceInternal _connectionsSource;
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
-        public DiagnosticServices(IDiagnosticsConnectionsSource connectionsSource)
+        public DiagnosticServices(IEndpointInfoSource connectionsSource)
         {
-            _connectionsSource = (IDiagnosticsConnectionsSourceInternal)connectionsSource;
+            _connectionsSource = (IEndpointInfoSourceInternal)connectionsSource;
         }
 
         public async Task<IEnumerable<IProcessInfo>> GetProcessesAsync(CancellationToken token)

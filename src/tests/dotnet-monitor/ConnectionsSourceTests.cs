@@ -24,7 +24,7 @@ namespace DotnetMonitor.UnitTests
 
         /// <summary>
         /// Tests that the server connections source has no connections
-        /// if <see cref="ReversedServerConnectionsSource.Listen"/> is not called.
+        /// if <see cref="ServerEndpointInfoSource.Listen"/> is not called.
         /// </summary>
         [Fact]
         public async Task ServerConnectionsSourceNoListenTest()
@@ -84,8 +84,8 @@ namespace DotnetMonitor.UnitTests
 
         /// <summary>
         /// Tests that server connections source should throw an exception from
-        /// <see cref="ReversedServerConnectionsSource.Listen"/> and
-        /// <see cref="ReversedServerConnectionsSource.Listen(int)"/> after listening was already started.
+        /// <see cref="ServerEndpointInfoSource.Listen"/> and
+        /// <see cref="ServerEndpointInfoSource.Listen(int)"/> after listening was already started.
         /// </summary>
         [Fact]
         public async Task ServerConnectionsSourceThrowsWhenMultipleListenTest()
@@ -150,7 +150,7 @@ namespace DotnetMonitor.UnitTests
             return RemoteTestExecution.StartProcess(exePath + " " + loggerCategory, _outputHelper, transportName);
         }
 
-        private async Task<IEnumerable<IDiagnosticsConnection>> GetConnectionsAsync(ReversedServerConnectionsSource source)
+        private async Task<IEnumerable<IEndpointInfo>> GetConnectionsAsync(ServerEndpointInfoSource source)
         {
             _outputHelper.WriteLine("Getting connections.");
             using CancellationTokenSource cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -160,7 +160,7 @@ namespace DotnetMonitor.UnitTests
         /// <summary>
         /// Verifies basic information on the connection and that it matches the target process from the runner.
         /// </summary>
-        private static void VerifyConnection(TestRunner runner, IDiagnosticsConnection connection)
+        private static void VerifyConnection(TestRunner runner, IEndpointInfo connection)
         {
             Assert.NotNull(runner);
             Assert.NotNull(connection);
@@ -215,7 +215,7 @@ namespace DotnetMonitor.UnitTests
             }
         }
 
-        private sealed class TestReversedServerConnectionsSource : ReversedServerConnectionsSource
+        private sealed class TestReversedServerConnectionsSource : ServerEndpointInfoSource
         {
             private readonly ITestOutputHelper _outputHelper;
 
@@ -225,15 +225,15 @@ namespace DotnetMonitor.UnitTests
                 _outputHelper = outputHelper;
             }
 
-            internal override void OnNewConnection(ReversedDiagnosticsConnection connection)
+            internal override void OnNewConnection(IpcEndpointInfo info)
             {
-                _outputHelper.WriteLine($"Added connection to collection: {connection.ToTestString()}");
+                _outputHelper.WriteLine($"Added connection to collection: {info.ToTestString()}");
                 NewConnection(this, EventArgs.Empty);
             }
 
-            internal override void OnRemovedConnection(ReversedDiagnosticsConnection connection)
+            internal override void OnRemovedConnection(IpcEndpointInfo info)
             {
-                _outputHelper.WriteLine($"Removed connection from collection: {connection.ToTestString()}");
+                _outputHelper.WriteLine($"Removed connection from collection: {info.ToTestString()}");
             }
 
             public event EventHandler NewConnection;

@@ -19,14 +19,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     public sealed class DiagnosticsClient
     {
-        private readonly IIpcEndpoint _endpoint;
+        private readonly IpcEndpoint _endpoint;
 
         public DiagnosticsClient(int processId) :
             this(new PidIpcEndpoint(processId))
         {
         }
 
-        internal DiagnosticsClient(IIpcEndpoint endpoint)
+        internal DiagnosticsClient(IpcEndpoint endpoint)
         {
             _endpoint = endpoint;
         }

@@ -10,21 +10,21 @@ using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
-    internal interface IDiagnosticsConnection
+    internal interface IEndpointInfo
     {
-        IIpcEndpoint Endpoint { get; }
+        IpcEndpoint Endpoint { get; }
 
         int ProcessId { get; }
 
         Guid RuntimeInstanceCookie { get; }
     }
 
-    public interface IDiagnosticsConnectionsSource
+    public interface IEndpointInfoSource
     {
     }
 
-    internal interface IDiagnosticsConnectionsSourceInternal : IDiagnosticsConnectionsSource
+    internal interface IEndpointInfoSourceInternal : IEndpointInfoSource
     {
-        Task<IEnumerable<IDiagnosticsConnection>> GetConnectionsAsync(CancellationToken token);
+        Task<IEnumerable<IEndpointInfo>> GetConnectionsAsync(CancellationToken token);
     }
 }
