@@ -204,7 +204,7 @@ inline void EENotLoadedMessage(HRESULT Status)
     ExtOut("Failed to find runtime module (%s or %s or %s), 0x%08x\n", GetRuntimeDllName(IRuntime::Core), GetRuntimeDllName(IRuntime::WindowsDesktop), GetRuntimeDllName(IRuntime::UnixCore), Status);
 #endif
     ExtOut("Extension commands need it in order to have something to do.\n");
-    ExtOut("For more information see https://aka.ms/sos_faq\n");
+    ExtOut("For more information see https://go.microsoft.com/fwlink/?linkid=2135652\n");
 }
 
 inline void DACMessage(HRESULT Status)
@@ -248,7 +248,7 @@ inline void DACMessage(HRESULT Status)
         ExtOut("path is pointing to %s as well.\n", GetRuntimeDllName());
     }
     ExtOut("\n");
-    ExtOut("For more information see https://aka.ms/sos_faq\n");
+    ExtOut("For more information see https://go.microsoft.com/fwlink/?linkid=2135652\n");
 }
 
 HRESULT CheckEEDll();
