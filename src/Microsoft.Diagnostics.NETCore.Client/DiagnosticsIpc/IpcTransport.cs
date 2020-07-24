@@ -42,10 +42,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         // The amount of time to wait for a stream to be available for consumption by the Connect method.
         // This should be a large timeout in order to allow the runtime instance to reconnect and provide
         // a new stream once the previous stream has started its diagnostics request and response.
-        private static readonly TimeSpan ConnectWaitTimeout = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan ConnectWaitTimeout = TimeSpan.FromSeconds(5);
         // The amount of time to wait for exclusive "lock" on the stream field. This should be relatively
         // short since modification of the stream field so not take a significant amount of time.
-        private static readonly TimeSpan StreamSemaphoreWaitTimeout = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan StreamSemaphoreWaitTimeout = TimeSpan.FromSeconds(1);
         // The amount of time to wait before testing the stream again after previously
         // testing the stream within the WaitForConnectionAsync method.
         private static readonly TimeSpan WaitForConnectionInterval = TimeSpan.FromMilliseconds(20);
@@ -64,13 +64,26 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </remarks>
         public Stream Connect()
         {
-            using var target = new StreamEventTarget(_streamSemaphore);
+            using var cancellationSource = new CancellationTokenSource();
+            using var target = new StreamTarget(cancellationSource.Token);
 
-            RegisterTarget(target);
+            if (!_streamSemaphore.Wait(StreamSemaphoreWaitTimeout))
+            {
+                throw new TimeoutException();
+            }
 
-            target.Handle.WaitOne(ConnectWaitTimeout);
+            try
+            {
+                RegisterTarget(target);
+            }
+            finally
+            {
+                _streamSemaphore.Release();
+            }
 
-            return target.Stream;
+            cancellationSource.CancelAfter(ConnectWaitTimeout);
+
+            return target.GetStream();
         }
 
         /// <inheritdoc cref="IIpcEndpoint.WaitForConnectionAsync(CancellationToken)"/>
@@ -79,48 +92,42 @@ namespace Microsoft.Diagnostics.NETCore.Client
             bool isConnected = false;
             do
             {
-                using (var target = new StreamTaskTarget(_streamSemaphore, token))
+                using var target = new StreamTarget(token);
+
+                if (!(await _streamSemaphore.WaitAsync(StreamSemaphoreWaitTimeout, token)))
                 {
-                    Stream stream = null;
-                    try
-                    {
-                        await RegisterTargetAsync(target, token);
-
-                        // Wait for a stream to be provided by the target
-                        await target.Task;
-
-                        stream = target.Stream;
-
-                        // Test if the stream is viable
-                        isConnected = TestStream(stream);
-                    }
-                    catch (Exception ex) when (!(ex is OperationCanceledException))
-                    {
-                        // Handle all exceptions except cancellation
-                    }
-                    finally
-                    {
-                        // If the stream is not connected, it can be disposed;
-                        // otherwise, make the stream available again since waiting
-                        // for the stream to connect should not consume the stream.
-                        if (!isConnected)
-                        {
-                            stream?.Dispose();
-                        }
-                        else if (ProvideStreamReleaseSemaphore(stream))
-                        {
-                            // Another target was able to take ownership of the stream semaphore.
-                            // Update the current target to not release the semaphore on dispose.
-                            target.ReleaseSemaphoreOnDispose = false;
-                        }
-                    }
+                    throw new TimeoutException();
                 }
 
-                // If the stream is not connected, wait briefly to allow
-                // the runtime instance to possibly repopulate a new connection stream.
+                try
+                {
+                    RegisterTarget(target);
+                }
+                finally
+                {
+                    _streamSemaphore.Release();
+                }
+
+                // Wait for a stream to be provided by the target
+                Stream stream = await target.Task;
+
+                // Test if the stream is viable
+                isConnected = TestStream(stream);
+
+                // If the stream is not connected, it can be disposed;
+                // otherwise, make the stream available again since waiting
+                // for the stream to connect should not consume the stream.
                 if (!isConnected)
                 {
+                    stream?.Dispose();
+
+                    // Wait briefly to allow the runtime instance to
+                    // possibly repopulate a new connection stream.
                     await Task.Delay(WaitForConnectionInterval, token);
+                }
+                else
+                {
+                    ProvideStream(stream);
                 }
             }
             while (!isConnected);
@@ -138,39 +145,28 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
+        /// <summary>
+        /// Provides the stream to a waiting target or stores it for a future target.
+        /// </summary>
         protected void ProvideStream(Stream stream)
         {
-            if (!_streamSemaphore.Wait(StreamSemaphoreWaitTimeout))
-            {
-                throw new TimeoutException();
-            }
+            _streamSemaphore.Wait(StreamSemaphoreWaitTimeout);
 
-            ProvideStreamReleaseSemaphore(stream);
-        }
-
-        /// <returns>
-        /// True if stream was accepted by a target and the target took ownership of the stream semaphore.
-        /// </returns>
-        private bool ProvideStreamReleaseSemaphore(Stream stream)
-        {
             // Get the previous stream in order to dispose it later
             Stream previousStream = _stream;
-            bool targetOwnsSemaphore = false;
 
             try
             {
                 // If there are any targets waiting for a stream, provide
                 // it to the first target in the queue.
-                if (_targets.Count > 0)
+                if (null != stream && _targets.Count > 0)
                 {
-                    while (null != stream)
+                    do
                     {
                         StreamTarget target = _targets.Dequeue();
-                        if (target.SetStream(stream))
+                        if (target.TrySetStream(stream))
                         {
                             stream = null;
-
-                            targetOwnsSemaphore = target.ReleaseSemaphoreOnDispose;
                         }
                         else
                         {
@@ -182,28 +178,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
                             target.Dispose();
                         }
                     }
+                    while (null != stream);
                 }
 
                 // Store the stream for when a target registers for the stream. If
                 // a target was already provided the stream, this will be null, thus
                 // representing that no existing stream is waiting to be consumed.
                 _stream = stream;
-
-                // Dispose the previous stream if there was one.
-                previousStream?.Dispose();
             }
             finally
             {
                 // If a target took ownership of the semaphore, don't release it.
-                if (!targetOwnsSemaphore)
-                {
-                    _streamSemaphore.Release();
-                }
+                _streamSemaphore.Release();
             }
 
-            // Return whether a target accepted the stream AND it acquired the stream
-            // semaphore so that the caller knows no to release the semaphore.
-            return targetOwnsSemaphore;
+            // Dispose the previous stream if there was one.
+            previousStream?.Dispose();
         }
 
         protected virtual Stream RefreshStream()
@@ -256,178 +246,82 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private void RegisterTarget(StreamTarget target)
         {
-            if (!_streamSemaphore.Wait(StreamSemaphoreWaitTimeout))
+            // Allow transport specific implementation to refresh
+            // the stream before possibly consuming it.
+            if (null == _stream)
             {
-                throw new TimeoutException();
+                _stream = RefreshStream();
             }
 
-            RegisterTargetReleaseSemaphore(target);
-        }
-
-        private async Task RegisterTargetAsync(StreamTarget target, CancellationToken token)
-        {
-            if (!(await _streamSemaphore.WaitAsync(StreamSemaphoreWaitTimeout, token)))
+            // If there is no current stream, add the target to the queue;
+            // it will be fulfilled at some point in the future when streams
+            // are made available. Otherwise, provide the stream to the target
+            // synchronously; set the current stream to null to signify that
+            // there is no current stream available.
+            if (null == _stream)
             {
-                throw new TimeoutException();
+                _targets.Enqueue(target);
             }
-
-            RegisterTargetReleaseSemaphore(target);
-        }
-
-        private void RegisterTargetReleaseSemaphore(StreamTarget target)
-        {
-            bool targetOwnsSemaphore = false;
-            try
+            else if (target.TrySetStream(_stream))
             {
-                // Allow transport specific implementation to refresh
-                // the stream before possibly consuming it.
-                if (null == _stream)
-                {
-                    _stream = RefreshStream();
-                }
-
-                // If there is no current stream, add the target to the queue;
-                // it will be fulfilled at some point in the future when streams
-                // are made available. Otherwise, provide the stream to the target
-                // synchronously; set the current stream to null to signify that
-                // there is no current stream available.
-                if (null == _stream)
-                {
-                    _targets.Enqueue(target);
-                }
-                else if (target.SetStream(_stream))
-                {
-                    _stream = null;
-
-                    targetOwnsSemaphore = target.ReleaseSemaphoreOnDispose;
-                }
-            }
-            finally
-            {
-                // If a target took ownership of the semaphore, don't release it.
-                if (!targetOwnsSemaphore)
-                {
-                    _streamSemaphore.Release();
-                }
+                _stream = null;
             }
         }
 
-        /// <summary>
-        /// Base class for providing streams to callers.
-        /// </summary>
-        private abstract class StreamTarget : IDisposable
+        private sealed class StreamTarget : IDisposable
         {
-            private readonly SemaphoreSlim _semaphore;
+            private readonly IDisposable _cancellationRegistration;
+            private readonly EventWaitHandle _completionHandle = new ManualResetEvent(false);
+            private readonly TaskCompletionSource<Stream> _completionSource = new TaskCompletionSource<Stream>();
+            private readonly CancellationToken _token;
 
             private bool _isDisposed;
 
-            protected StreamTarget(SemaphoreSlim semaphore, bool takeOwneshipOnAccept)
+            public StreamTarget(CancellationToken token)
             {
-                _semaphore = semaphore;
-
-                ReleaseSemaphoreOnDispose = takeOwneshipOnAccept;
+                _token = token;
+                _cancellationRegistration = token.Register(() => _completionSource.TrySetCanceled(token));
             }
 
             public void Dispose()
             {
-                if (!_isDisposed)
+                if (_isDisposed)
                 {
-                    Dispose(disposing: true);
+                    _completionSource.TrySetCanceled();
 
-                    if (ReleaseSemaphoreOnDispose)
-                    {
-                        _semaphore.Release();
-                    }
+                    _completionHandle.Dispose();
+
+                    _cancellationRegistration.Dispose();
 
                     _isDisposed = true;
                 }
             }
 
-            protected abstract void Dispose(bool disposing);
-
-            public bool SetStream(Stream stream)
+            public bool TrySetStream(Stream stream)
             {
-                if (_isDisposed)
+                if (_completionSource.TrySetResult(stream))
                 {
-                    return false;
+                    _completionHandle.Set();
+                    return true;
+                }
+                return false;
+            }
+
+            public Stream GetStream()
+            {
+                // Wait for the completion wait handle or the cancellation wait handle. If cancellation
+                // wait handle is signalled first, then throw exception noting cancellation.
+                if (1 == WaitHandle.WaitAny(new WaitHandle[] { _completionHandle, _token.WaitHandle }))
+                {
+                    Debug.Assert(_token.IsCancellationRequested);
+                    _token.ThrowIfCancellationRequested();
                 }
 
-                Stream = stream;
-
-                bool acceptedStream = AcceptStream();
-
-                if (!acceptedStream)
-                {
-                    ReleaseSemaphoreOnDispose = false;
-                    Stream = null;
-                }
-
-                return acceptedStream;
+                Debug.Assert(_completionSource.Task.IsCompleted);
+                return _completionSource.Task.Result;
             }
 
-            protected abstract bool AcceptStream();
-
-            public Stream Stream { get; private set; }
-
-            public bool ReleaseSemaphoreOnDispose { get; set; }
-        }
-
-        /// <summary>
-        /// Class allowing for synchronously waiting on the availability of a stream.
-        /// </summary>
-        private class StreamEventTarget : StreamTarget
-        {
-            private readonly ManualResetEvent _streamEvent = new ManualResetEvent(false);
-
-            public StreamEventTarget(SemaphoreSlim semaphore)
-                : base(semaphore, takeOwneshipOnAccept: false)
-            {
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                if (disposing)
-                {
-                    _streamEvent.Dispose();
-                }
-            }
-
-            protected override bool AcceptStream()
-            {
-                return _streamEvent.Set();
-            }
-
-            public WaitHandle Handle => _streamEvent;
-        }
-
-        /// <summary>
-        /// Class allowing for asynchronously waiting on the availability of a stream.
-        /// </summary>
-        private class StreamTaskTarget : StreamTarget
-        {
-            private readonly IDisposable _registration;
-            private readonly TaskCompletionSource<object> _streamSource = new TaskCompletionSource<object>();
-
-            public StreamTaskTarget(SemaphoreSlim semaphore, CancellationToken token)
-                : base(semaphore, takeOwneshipOnAccept: true)
-            {
-                _registration = token.Register(() => _streamSource.TrySetCanceled());
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                if (disposing)
-                {
-                    _registration.Dispose();
-                }
-            }
-
-            protected override bool AcceptStream()
-            {
-                return _streamSource.TrySetResult(null);
-            }
-
-            public Task Task => _streamSource.Task;
+            public Task<Stream> Task => _completionSource.Task;
         }
     }
 
