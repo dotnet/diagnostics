@@ -203,22 +203,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </remarks>
         internal Stream Connect(Guid runtimeId, TimeSpan timeout)
         {
-            // Using a TaskCompletionSource so that there is a single thread safe
-            // way to track the waiting-to-cancelled or waiting-to-success transitions.
-            var hasStreamSource = new TaskCompletionSource<bool>();
+            const int StreamStatePending = 0;
+            const int StreamStateComplete = 1;
+            const int StreamStateCancelled = 2;
+
+            Stream stream = null;
+            int streamState = StreamStatePending;
+            using var streamEvent = new ManualResetEvent(false);
             var cancellationSource = new CancellationTokenSource();
 
-            using var cancelledEvent = new ManualResetEvent(false);
-            using var _ = cancellationSource.Token.Register(() =>
+            bool TrySetStream(int state, Stream value)
             {
-                if (hasStreamSource.TrySetCanceled(cancellationSource.Token))
+                if (StreamStatePending == Interlocked.CompareExchange(ref streamState, state, 0))
                 {
-                    cancelledEvent.Set();
+                    stream = value;
+                    streamEvent.Set();
+                    return true;
                 }
-            });
-            
-            using var streamEvent = new ManualResetEvent(false);
-            Stream stream = null;
+                return false;
+            }
+
+            using var _ = cancellationSource.Token.Register(() => TrySetStream(StreamStateCancelled, value: null));
 
             RegisterHandler(runtimeId, (Guid id, ref Stream cachedStream) =>
             {
@@ -227,14 +232,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     return false;
                 }
 
-                // Try to set the completion source to check if it was cancelled.
-                // If not cancelled, then provide the stream to the registrant.
-                if (hasStreamSource.TrySetResult(true))
+                if (TrySetStream(StreamStateComplete, cachedStream))
                 {
-                    stream = cachedStream;
                     cachedStream = null;
-
-                    streamEvent.Set();
                 }
 
                 // Regardless of the registrant previously waiting or cancelled,
@@ -242,9 +242,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 return true;
             });
 
-            WaitHandle.WaitAny(new WaitHandle[] { streamEvent, cancelledEvent });
+            streamEvent.WaitOne();
 
-            if (cancelledEvent.WaitOne(0))
+            if (StreamStateCancelled == streamState)
             {
                 throw new TimeoutException();
             }
