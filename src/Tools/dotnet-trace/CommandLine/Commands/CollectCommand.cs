@@ -198,7 +198,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                         // This behavior is different between Console/Terminals on Windows and Mac/Linux
                         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !Console.IsOutputRedirected && Math.Abs(Console.CursorTop - Console.BufferHeight) == 1)
-                            rewriter.LineToClear--;
+                            rewriter?.LineToClear--;
                         durationTimer?.Stop();
                         rundownRequested = true;
                         session.Stop();
@@ -209,8 +209,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         } while (!copyTask.Wait(100));
                     }
 
-                    Console.Out.WriteLine();
-                    Console.Out.WriteLine("Trace completed.");
+                    Console.Out.WriteLine("\nTrace completed.");
 
                     if (format != TraceFileFormat.NetTrace)
                         TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
