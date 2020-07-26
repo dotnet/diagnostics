@@ -203,10 +203,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </remarks>
         internal Stream Connect(Guid runtimeId, TimeSpan timeout)
         {
+            VerifyNotDisposed();
+
             const int StreamStatePending = 0;
             const int StreamStateComplete = 1;
             const int StreamStateCancelled = 2;
 
+            // CancellationTokenSource is used to trigger the timeout path in order to avoid inadvertently consuming
+            // the stream via the handler while processing the timeout after failing to wait for the stream event
+            // to be signaled within the timeout period. The source of truth of whether the stream was consumed or
+            // whether the timeout occurred is captured by the streamState variable.
             Stream stream = null;
             int streamState = StreamStatePending;
             using var streamEvent = new ManualResetEvent(false);
@@ -242,6 +248,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 return true;
             });
 
+            cancellationSource.CancelAfter(timeout);
             streamEvent.WaitOne();
 
             if (StreamStateCancelled == streamState)
@@ -254,7 +261,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal async Task WaitForConnectionAsync(Guid runtimeId, CancellationToken token)
         {
-            TaskCompletionSource<bool> hasConnectedStreamSource = new TaskCompletionSource<bool>();
+            VerifyNotDisposed();
+
+            var hasConnectedStreamSource = new TaskCompletionSource<bool>(TaskContinuationOptions.RunContinuationsAsynchronously);
             using var _ = token.Register(() => hasConnectedStreamSource.TrySetCanceled());
 
             RegisterHandler(runtimeId, (Guid id, ref Stream cachedStream) =>
@@ -296,7 +305,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        void ProvideStream(Guid runtimeId, Stream stream)
+        private void ProvideStream(Guid runtimeId, Stream stream)
         {
             // Get the previous stream in order to dispose it later
             Stream previousStream = null;
@@ -378,11 +387,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             lock (_lock)
             {
-                _handlers.Add(handler);
-                Stream s = _cachedStreams[runtimeId];
-                if (s != null)
+                if (!_cachedStreams.TryGetValue(runtimeId, out Stream stream))
                 {
-                    RunStreamHandlers(runtimeId, s);
+                    throw new InvalidOperationException($"Runtime instance with identifier '{runtimeId}' is not registered.");
+                }
+
+                _handlers.Add(handler);
+
+                if (stream != null)
+                {
+                    RunStreamHandlers(runtimeId, stream);
                 }
             }
         }

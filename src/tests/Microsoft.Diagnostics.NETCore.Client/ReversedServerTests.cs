@@ -5,10 +5,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Dia2Lib;
 using Microsoft.Diagnostics.Tracing;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,41 +23,26 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Tests that server and connections should throw ObjectDisposedException
-        /// from API surface after being disposed.
+        /// Tests that server throws appropriate exceptions when disposed.
         /// </summary>
         [Fact]
-        public async Task ReversedServerThrowsWhenDisposedTest()
+        public async Task ReversedServerDisposeTest()
         {
             var server = StartReversedServer(out string transportName);
-            await using var accepter = new ConnectionAccepter(server, _outputHelper);
 
-            IpcEndpointInfo info;
-            TestRunner runner = null;
-            try
-            {
-                // Start client pointing to diagnostics server
-                runner = StartTracee(transportName);
-
-                // Get client connection
-                info = await AcceptAsync(accepter);
-            }
-            finally
-            {
-                _outputHelper.WriteLine("Stopping tracee.");
-                runner?.Stop();
-            }
-
-            // Wait some time for the process to exit
-            await Task.Delay(TimeSpan.FromSeconds(1));
-
-            await VerifyConnection(runner, info, expectAvailableConnection: false);
+            using CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            Task acceptTask = server.AcceptAsync(cancellation.Token);
 
             // Validate server surface throws after disposal
             server.Dispose();
 
+            // Pending tasks should be cancelled and throw TaskCanceledException
+            await Assert.ThrowsAsync<TaskCanceledException>(() => acceptTask);
+            Assert.True(acceptTask.IsCanceled);
+
+            // Calls after dispose should throw ObjectDisposedException
             await Assert.ThrowsAsync<ObjectDisposedException>(
-                () => server.AcceptAsync(CancellationToken.None));
+                () => server.AcceptAsync(cancellation.Token));
 
             Assert.Throws<ObjectDisposedException>(
                 () => server.RemoveConnection(Guid.Empty));
@@ -79,22 +62,32 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _outputHelper.WriteLine("Waiting for connection from server.");
             Task acceptTask = server.AcceptAsync(cancellationSource.Token);
 
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => acceptTask);
+            await Assert.ThrowsAnyAsync<TaskCanceledException>(() => acceptTask);
             Assert.True(acceptTask.IsCanceled);
         }
 
         /// <summary>
-        /// Tests that removing a nonexisting connection from the server should fail.
+        /// Tests that invoking server methods with non-existing runtime identifier appropriately fail.
         /// </summary>
         [Fact]
-        public async Task ReversedServerRemoveConnectionNonExistingTest()
+        public async Task ReversedServerNonExistingRuntimeIdentifierTest()
         {
             using var server = StartReversedServer(out string transportName);
 
-            await Task.Delay(TimeSpan.FromSeconds(1));
+            Guid nonExistingRuntimeId = Guid.NewGuid();
 
-            _outputHelper.WriteLine("Removing connection.");
-            Assert.False(server.RemoveConnection(Guid.NewGuid()), "Removal of nonexisting connection should fail.");
+            using CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+
+            _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.WaitForConnectionAsync)}");
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => server.WaitForConnectionAsync(nonExistingRuntimeId, cancellation.Token));
+
+            _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.Connect)}");
+            Assert.Throws<InvalidOperationException>(
+                () => server.Connect(nonExistingRuntimeId, TimeSpan.FromSeconds(3)));
+
+            _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.RemoveConnection)}");
+            Assert.False(server.RemoveConnection(nonExistingRuntimeId), "Removal of nonexisting connection should fail.");
         }
 
         /// <summary>
@@ -294,7 +287,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             else
             {
-                await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                await Assert.ThrowsAsync<TaskCanceledException>(
                     () => client.WaitForConnectionAsync(connectionCancellation.Token));
             }
         }
@@ -308,7 +301,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             else
             {
-                await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                await Assert.ThrowsAsync<TaskCanceledException>(
                     () => info.Endpoint.WaitForConnectionAsync(connectionCancellation.Token));
             }
         }
@@ -323,7 +316,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(1));
 
             Task acceptTask = accepter.AcceptAsync(cancellationSource.Token);
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => acceptTask);
+            await Assert.ThrowsAsync<OperationCanceledException>(() => acceptTask);
             Assert.True(acceptTask.IsCanceled);
 
             _outputHelper.WriteLine("Verified there are no more connections.");
@@ -516,7 +509,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         _acceptedCount++;
                         _outputHelper.WriteLine($"Accepted connection #{_acceptedCount} from server: {info.ToTestString()}");
                     }
-                    catch (OperationCanceledException)
+                    catch (TaskCanceledException)
                     {
                         break;
                     }
