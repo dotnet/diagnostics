@@ -435,7 +435,9 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
 
 #endif
 
+#if !ClrMD2
         static ClrModule CoreLibModule;
+#endif
         public ClrModule GetMscorlib()
         {
 #if ClrMD2

@@ -30,9 +30,9 @@ namespace SOS
         private static void AddDebugSymbols(VTableBuilder builder, SOSHost soshost)
         {
             builder.AddMethod(new GetSymbolOptionsDelegate(soshost.GetSymbolOptions));
-            builder.AddMethod(new AddSymbolOptionsDelegate((self, options) => DebugClient.S_OK));
-            builder.AddMethod(new RemoveSymbolOptionsDelegate((self, options) => DebugClient.S_OK));
-            builder.AddMethod(new SetSymbolOptionsDelegate((self, options) => DebugClient.S_OK));
+            builder.AddMethod(new AddSymbolOptionsDelegate((self, options) => HResult.S_OK));
+            builder.AddMethod(new RemoveSymbolOptionsDelegate((self, options) => HResult.S_OK));
+            builder.AddMethod(new SetSymbolOptionsDelegate((self, options) => HResult.S_OK));
             builder.AddMethod(new GetNameByOffsetDelegate(soshost.GetNameByOffset));
             builder.AddMethod(new GetOffsetByNameDelegate((self, symbol, offset) => DebugClient.NotImplemented));
             builder.AddMethod(new GetNearNameByOffsetDelegate((self, offset, delta, nameBuffer, nameBufferSize, nameSize, displacement) => DebugClient.NotImplemented));

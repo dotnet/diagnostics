@@ -74,16 +74,10 @@ namespace Microsoft.Diagnostics.DebugServices
         public bool ReadMemory(ulong address, Span<byte> buffer, out int bytesRead)
         {
             int bytesRequested = buffer.Length;
-            bool result = false;
-            unsafe
-            {
-                fixed (byte* ptr = buffer)
-                {
-                    result = _dataReader.ReadMemory(address, new IntPtr(ptr), bytesRequested, out bytesRead);
-                }
-            }
+            bytesRead = _dataReader.Read(address, buffer);
+
             // If the read failed or a successful partial read
-            if (!result || (bytesRequested != bytesRead))
+            if (bytesRequested != bytesRead)
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
@@ -91,11 +85,10 @@ namespace Microsoft.Diagnostics.DebugServices
                     if (_memoryCache.ReadMemory(address + (uint)bytesRead, buffer.Slice(bytesRead), out int read))
                     {
                         bytesRead += read;
-                        result = true;
                     }
                 }
             }
-            return result;
+            return bytesRead > 0;
         }
 
         /// <summary>
@@ -108,14 +101,14 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <returns>bytes read or null if error</returns>
         private byte[] ReadMemoryFromModule(ulong address, int bytesRequested)
         {
-            ulong ignoreAddressBitsMask = _dataReader.GetPointerSize() == 4 ? 0xffffffff00000000 : 0;
+            ulong ignoreAddressBitsMask = _dataReader.PointerSize == 4 ? 0xffffffff00000000 : 0;
             address = address & ~ignoreAddressBitsMask;
 
             // Check if there is a module that contains the address range being read and map it into the virtual address space.
             foreach (ModuleInfo module in _dataReader.EnumerateModules())
             {
                 ulong start = module.ImageBase & ~ignoreAddressBitsMask;
-                ulong end = start + module.FileSize;
+                ulong end = start + (ulong)module.IndexFileSize;
                 if (address >= start && address < end)
                 {
                     Trace.TraceInformation("ReadMemory: address {0:X16} size {1:X8} found module {2}", address, bytesRequested, module.FileName);
@@ -172,7 +165,7 @@ namespace Microsoft.Diagnostics.DebugServices
                 {
                     if (SymbolReader.IsSymbolStoreEnabled())
                     {
-                        SymbolStoreKey key = PEFileKeyGenerator.GetKey(Path.GetFileName(downloadFilePath), module.TimeStamp, module.FileSize);
+                        SymbolStoreKey key = PEFileKeyGenerator.GetKey(Path.GetFileName(downloadFilePath), (uint)module.IndexTimeStamp, (uint)module.IndexFileSize);
                         if (key != null)
                         {
                             // Now download the module from the symbol server

@@ -9,6 +9,7 @@
   
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
+    <PackageReference Include="Microsoft.Diagnostics.Runtime.Utilities" Version="$(MicrosoftDiagnosticsRuntimeVersionUtilities)" />
   </ItemGroup>
   
   <ItemGroup>
