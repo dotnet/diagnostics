@@ -193,12 +193,18 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 Console.Out.WriteLine("Stopping the trace. This may take up to minutes depending on the application being traced.");
                         };
 
-                        while (!shouldExit.WaitOne(100) &&  !(!Console.IsInputRedirected &&Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
+                        while (!shouldExit.WaitOne(100) &&  !(!Console.IsInputRedirected && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
                             printStatus();
 
-                        // This behavior is different between Console/Terminals on Windows and Mac/Linux
-                        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !Console.IsOutputRedirected && Math.Abs(Console.CursorTop - Console.BufferHeight) == 1)
-                            rewriter?.LineToClear--;
+                        // Behavior concerning Enter moving text in the terminal buffer when at the bottom of the buffer
+                        // is different between Console/Terminals on Windows and Mac/Linux
+                        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && 
+                            !Console.IsOutputRedirected && 
+                            rewriter != null && 
+                            Math.Abs(Console.CursorTop - Console.BufferHeight) == 1)
+                        {
+                            rewriter.LineToClear--;
+                        }
                         durationTimer?.Stop();
                         rundownRequested = true;
                         session.Stop();
