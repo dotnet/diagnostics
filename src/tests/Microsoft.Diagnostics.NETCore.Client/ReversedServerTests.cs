@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             server.Dispose();
 
             // Pending tasks should be cancelled and throw TaskCanceledException
-            await Assert.ThrowsAsync<TaskCanceledException>(() => acceptTask);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => acceptTask);
             Assert.True(acceptTask.IsCanceled);
 
             // Calls after dispose should throw ObjectDisposedException
@@ -509,7 +509,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         _acceptedCount++;
                         _outputHelper.WriteLine($"Accepted connection #{_acceptedCount} from server: {info.ToTestString()}");
                     }
-                    catch (TaskCanceledException)
+                    catch (OperationCanceledException)
                     {
                         break;
                     }
