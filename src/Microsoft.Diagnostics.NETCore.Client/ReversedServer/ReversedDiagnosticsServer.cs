@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -28,8 +27,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         // remain responsive in case the advertise data is incomplete and the stream is not closed.
         private static readonly TimeSpan ParseAdvertiseTimeout = TimeSpan.FromSeconds(1);
 
-        private readonly ConcurrentDictionary<Guid, ServerIpcEndpoint> _cachedEndpoints = new ConcurrentDictionary<Guid, ServerIpcEndpoint>();
+        private readonly Dictionary<Guid, ServerIpcEndpoint> _cachedEndpoints = new Dictionary<Guid, ServerIpcEndpoint>();
         private readonly Dictionary<Guid, Stream> _cachedStreams = new Dictionary<Guid, Stream>();
+        private readonly CancellationTokenSource _disposalSource = new CancellationTokenSource();
         private readonly List<StreamHandler> _handlers = new List<StreamHandler>();
         private readonly object _lock = new object();
         private readonly IpcServerTransport _transport;
@@ -69,21 +69,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (!_disposed)
             {
-                IEnumerable<ServerIpcEndpoint> endpoints = _cachedEndpoints.Values;
-                _cachedEndpoints.Clear();
+                _disposalSource.Cancel();
 
                 lock (_lock)
                 {
-                    foreach (Stream s in _cachedStreams.Values)
+                    _cachedEndpoints.Clear();
+
+                    foreach (Stream stream in _cachedStreams.Values)
                     {
-                        s?.Dispose();
+                        stream?.Dispose();
                     }
                     _cachedStreams.Clear();
-
-                    //TODO: do we want to cancel the outstanding handlers in some way?
                 }
 
                 _transport.Dispose();
+
+                _disposalSource.Dispose();
 
                 _disposed = true;
             }
@@ -144,16 +145,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     Guid runtimeCookie = advertise.RuntimeInstanceCookie;
                     int pid = unchecked((int)advertise.ProcessId);
 
-                    ProvideStream(runtimeCookie, stream);
-                    // Consumers should hold onto the endpoint info and use it for diagnostic communication,
-                    // regardless of the number of times the same runtime instance connects. This requires consumers
-                    // to continuously invoke the AcceptAsync method in order to handle runtime instance reconnects,
-                    // even if the consumer only wants to handle a single endpoint.
-                    if (!_cachedEndpoints.TryGetValue(runtimeCookie, out _))
+                    lock (_lock)
                     {
-                        ServerIpcEndpoint endpoint = new ServerIpcEndpoint(this, runtimeCookie);
-                        if (_cachedEndpoints.TryAdd(runtimeCookie, endpoint))
+                        ProvideStream(runtimeCookie, stream);
+                        // Consumers should hold onto the endpoint info and use it for diagnostic communication,
+                        // regardless of the number of times the same runtime instance connects. This requires consumers
+                        // to continuously invoke the AcceptAsync method in order to handle runtime instance reconnects,
+                        // even if the consumer only wants to handle a single endpoint.
+                        if (!_cachedEndpoints.TryGetValue(runtimeCookie, out _))
                         {
+                            ServerIpcEndpoint endpoint = new ServerIpcEndpoint(this, runtimeCookie);
+                            _cachedEndpoints.Add(runtimeCookie, endpoint);
                             return new IpcEndpointInfo(endpoint, pid, runtimeCookie);
                         }
                     }
@@ -170,22 +172,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             VerifyNotDisposed();
 
-            if (_cachedEndpoints.TryRemove(runtimeCookie, out _))
+            bool endpointExisted = false;
+            Stream previousStream = null;
+
+            lock (_lock)
             {
-                Stream previousStream;
-                lock (_lock)
+                endpointExisted = _cachedEndpoints.Remove(runtimeCookie);
+                if (endpointExisted)
                 {
                     if (_cachedStreams.TryGetValue(runtimeCookie, out previousStream))
                     {
                         _cachedStreams.Remove(runtimeCookie);
                     }
                 }
-
-                previousStream?.Dispose();
-
-                return true;
             }
-            return false;
+
+            previousStream?.Dispose();
+
+            return endpointExisted;
         }
 
         private void VerifyNotDisposed()
@@ -229,7 +233,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 return false;
             }
 
-            using var _ = cancellationSource.Token.Register(() => TrySetStream(StreamStateCancelled, value: null));
+            using var methodRegistration = cancellationSource.Token.Register(() => TrySetStream(StreamStateCancelled, value: null));
+            using var disposalRegistration = _disposalSource.Token.Register(() => TrySetStream(StreamStateCancelled, value: null));
 
             RegisterHandler(runtimeId, (Guid id, ref Stream cachedStream) =>
             {
@@ -251,6 +256,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             cancellationSource.CancelAfter(timeout);
             streamEvent.WaitOne();
 
+            // Check that the event wasn't signaled due to disposal.
+            VerifyNotDisposed();
+
             if (StreamStateCancelled == streamState)
             {
                 throw new TimeoutException();
@@ -264,7 +272,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             VerifyNotDisposed();
 
             var hasConnectedStreamSource = new TaskCompletionSource<bool>(TaskContinuationOptions.RunContinuationsAsynchronously);
-            using var _ = token.Register(() => hasConnectedStreamSource.TrySetCanceled());
+            using var methodRegistration = token.Register(() => hasConnectedStreamSource.TrySetCanceled(token));
+            using var disposalRegistration = _disposalSource.Token.Register(
+                () => hasConnectedStreamSource.TrySetException(new ObjectDisposedException(nameof(ReversedDiagnosticsServer))));
 
             RegisterHandler(runtimeId, (Guid id, ref Stream cachedStream) =>
             {
@@ -307,13 +317,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private void ProvideStream(Guid runtimeId, Stream stream)
         {
+            Debug.Assert(Monitor.IsEntered(_lock));
+
             // Get the previous stream in order to dispose it later
-            Stream previousStream = null;
-            lock (_lock)
-            {
-                _cachedStreams.TryGetValue(runtimeId, out previousStream);
-                RunStreamHandlers(runtimeId, stream);
-            }
+            _cachedStreams.TryGetValue(runtimeId, out Stream previousStream);
+
+            RunStreamHandlers(runtimeId, stream);
+
             // Dispose the previous stream if there was one.
             previousStream?.Dispose();
         }
