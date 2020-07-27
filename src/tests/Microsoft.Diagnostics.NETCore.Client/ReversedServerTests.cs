@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _outputHelper.WriteLine("Waiting for connection from server.");
             Task acceptTask = server.AcceptAsync(cancellationSource.Token);
 
-            await Assert.ThrowsAnyAsync<TaskCanceledException>(() => acceptTask);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => acceptTask);
             Assert.True(acceptTask.IsCanceled);
         }
 
