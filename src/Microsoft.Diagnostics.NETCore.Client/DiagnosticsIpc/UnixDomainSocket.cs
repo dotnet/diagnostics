@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 try
                 {
-                    return await Task.Factory.FromAsync(BeginAccept, EndAccept, this);
+                    return await Task.Factory.FromAsync(BeginAccept, EndAccept, this).ConfigureAwait(false);
                 }
                 // When the socket is closed, the FromAsync logic will try to call EndAccept on the socket,
                 // but that will throw an ObjectDisposedException. Only catch the exception if due to cancellation.
@@ -70,7 +70,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     {
                         return BeginConnect(CreateUnixDomainSocketEndPoint(path), callback, state);
                     };
-                    await Task.Factory.FromAsync(beginConnect, EndConnect, this);
+                    await Task.Factory.FromAsync(beginConnect, EndConnect, this).ConfigureAwait(false);
                 }
                 // When the socket is closed, the FromAsync logic will try to call EndAccept on the socket,
                 // but that will throw an ObjectDisposedException. Only catch the exception if due to cancellation.

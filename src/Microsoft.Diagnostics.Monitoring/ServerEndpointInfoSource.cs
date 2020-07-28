@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
                 if (null != _listenTask)
                 {
-                    await _listenTask;
+                    await _listenTask.ConfigureAwait(false);
                 }
 
                 _server?.Dispose();
@@ -105,7 +105,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
             // Prune connections that no longer have an active runtime instance before
             // returning the list of connections.
-            await _connectionsSemaphore.WaitAsync(linkedToken);
+            await _connectionsSemaphore.WaitAsync(linkedToken).ConfigureAwait(false);
             try
             {
                 // Check the transport for each connection and remove the connection if the check fails.
@@ -117,7 +117,7 @@ namespace Microsoft.Diagnostics.Monitoring
                     pruneTasks.Add(Task.Run(() => PruneConnectionIfNotViable(info, linkedToken), linkedToken));
                 }
 
-                await Task.WhenAll(pruneTasks);
+                await Task.WhenAll(pruneTasks).ConfigureAwait(false);
 
                 return _connections.Select(c => new DiagnosticsConnection(c));
             }
@@ -136,7 +136,7 @@ namespace Microsoft.Diagnostics.Monitoring
             {
                 timeoutSource.CancelAfter(PruneWaitForConnectionTimeout);
 
-                await info.Endpoint.WaitForConnectionAsync(linkedSource.Token);
+                await info.Endpoint.WaitForConnectionAsync(linkedSource.Token).ConfigureAwait(false);
             }
             catch
             {
@@ -165,7 +165,7 @@ namespace Microsoft.Diagnostics.Monitoring
             {
                 try
                 {
-                    IpcEndpointInfo info = await _server.AcceptAsync(token);
+                    IpcEndpointInfo info = await _server.AcceptAsync(token).ConfigureAwait(false);
 
                     _ = Task.Run(() => ResumeAndQueueEndpointInfo(info, token), token);
                 }
@@ -193,7 +193,7 @@ namespace Microsoft.Diagnostics.Monitoring
                     // The runtime likely doesn't understand the ResumeRuntime command.
                 }
 
-                await _connectionsSemaphore.WaitAsync(token);
+                await _connectionsSemaphore.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
                     _connections.Add(info);

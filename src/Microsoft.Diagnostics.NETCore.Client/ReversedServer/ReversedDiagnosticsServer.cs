@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 IpcAdvertise advertise = null;
                 try
                 {
-                    stream = await _transport.AcceptAsync(token);
+                    stream = await _transport.AcceptAsync(token).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (!(ex is OperationCanceledException))
                 {
@@ -128,7 +128,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     {
                         parseCancellationSource.CancelAfter(ParseAdvertiseTimeout);
 
-                        advertise = await IpcAdvertise.ParseAsync(stream, linkedSource.Token);
+                        advertise = await IpcAdvertise.ParseAsync(stream, linkedSource.Token).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException) when (parseCancellationSource.IsCancellationRequested)
                     {
@@ -307,7 +307,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             try
             {
                 // Wait for the handler to verify we have a connected stream
-                await hasConnectedStreamSource.Task;
+                await hasConnectedStreamSource.Task.ConfigureAwait(false);
             }
             catch (Exception ex) when (!(ex is OperationCanceledException))
             {

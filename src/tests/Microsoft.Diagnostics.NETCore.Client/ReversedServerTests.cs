@@ -484,7 +484,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _cancellation.Token);
 
                 _outputHelper.WriteLine("Waiting for connection from accepter.");
-                await _connectionsSemaphore.WaitAsync(linkedSource.Token);
+                await _connectionsSemaphore.WaitAsync(linkedSource.Token).ConfigureAwait(false);
                 _outputHelper.WriteLine("Received connection from accepter.");
 
                 return _connections.Dequeue();
@@ -504,7 +504,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     try
                     {
                         _outputHelper.WriteLine("Waiting for connection from server.");
-                        info = await _server.AcceptAsync(token);
+                        info = await _server.AcceptAsync(token).ConfigureAwait(false);
 
                         _acceptedCount++;
                         _outputHelper.WriteLine($"Accepted connection #{_acceptedCount} from server: {info.ToTestString()}");

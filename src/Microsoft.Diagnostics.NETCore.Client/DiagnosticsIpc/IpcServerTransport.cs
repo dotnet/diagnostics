@@ -106,7 +106,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             NamedPipeServerStream connectedStream;
             try
             {
-                await _stream.WaitForConnectionAsync(linkedSource.Token);
+                await _stream.WaitForConnectionAsync(linkedSource.Token).ConfigureAwait(false);
 
                 connectedStream = _stream;
             }
@@ -175,7 +175,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _cancellation.Token);
             try
             {
-                Socket socket = await _socket.AcceptAsync(linkedSource.Token);
+                Socket socket = await _socket.AcceptAsync(linkedSource.Token).ConfigureAwait(false);
 
                 return new ExposedSocketNetworkStream(socket, ownsSocket: true);
             }

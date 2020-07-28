@@ -56,7 +56,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override async Task WaitForConnectionAsync(CancellationToken token)
         {
-            await _server.WaitForConnectionAsync(_runtimeId, token);
+            await _server.WaitForConnectionAsync(_runtimeId, token).ConfigureAwait(false);
         }
 
         public override bool Equals(object obj)
@@ -114,7 +114,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override async Task WaitForConnectionAsync(CancellationToken token)
         {
-            using var _ = await ConnectStreamAsync(token);
+            using var _ = await ConnectStreamAsync(token).ConfigureAwait(false);
         }
 
         async Task<Stream> ConnectStreamAsync(CancellationToken token)
@@ -128,13 +128,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     PipeDirection.InOut,
                     PipeOptions.None,
                     TokenImpersonationLevel.Impersonation);
-                await namedPipe.ConnectAsync(token);
+                await namedPipe.ConnectAsync(token).ConfigureAwait(false);
                 return namedPipe;
             }
             else
             {
                 var socket = new UnixDomainSocket();
-                await socket.ConnectAsync(Path.Combine(IpcRootPath, address), token);
+                await socket.ConnectAsync(Path.Combine(IpcRootPath, address), token).ConfigureAwait(false);
                 return new ExposedSocketNetworkStream(socket, ownsSocket: true);
             }
         }
