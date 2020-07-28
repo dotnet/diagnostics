@@ -118,6 +118,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     // the information. Catch the exception and continue waiting for a new connection.
                 }
 
+                token.ThrowIfCancellationRequested();
+
                 if (null != stream)
                 {
                     // Cancel parsing of advertise data after timeout period to
@@ -140,6 +142,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                 }
 
+                token.ThrowIfCancellationRequested();
+
                 if (null != advertise)
                 {
                     Guid runtimeCookie = advertise.RuntimeInstanceCookie;
@@ -160,6 +164,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         }
                     }
                 }
+
+                token.ThrowIfCancellationRequested();
             }
         }
 
@@ -212,6 +218,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             const int StreamStatePending = 0;
             const int StreamStateComplete = 1;
             const int StreamStateCancelled = 2;
+            const int StreamStateDisposed = 3;
 
             // CancellationTokenSource is used to trigger the timeout path in order to avoid inadvertently consuming
             // the stream via the handler while processing the timeout after failing to wait for the stream event
@@ -234,7 +241,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             using var methodRegistration = cancellationSource.Token.Register(() => TrySetStream(StreamStateCancelled, value: null));
-            using var disposalRegistration = _disposalSource.Token.Register(() => TrySetStream(StreamStateCancelled, value: null));
+            using var disposalRegistration = _disposalSource.Token.Register(() => TrySetStream(StreamStateDisposed, value: null));
 
             RegisterHandler(runtimeId, (Guid id, ref Stream cachedStream) =>
             {
@@ -256,12 +263,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
             cancellationSource.CancelAfter(timeout);
             streamEvent.WaitOne();
 
-            // Check that the event wasn't signaled due to disposal.
-            VerifyNotDisposed();
-
             if (StreamStateCancelled == streamState)
             {
                 throw new TimeoutException();
+            }
+
+            if (StreamStateDisposed == streamState)
+            {
+                throw new ObjectDisposedException(nameof(ReversedDiagnosticsServer));
             }
 
             return stream;
