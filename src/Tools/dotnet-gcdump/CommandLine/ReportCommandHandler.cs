@@ -109,7 +109,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }.ExistingOnly();
         
         private static Option<int> ProcessIdOption() =>
-            new Option<int>(new[] { "-p", "--process-id" }, "The process id to collect the trace.");
+            new Option<int>(new[] { "-p", "--process-id" }, "The process id to collect the gcdump from.");
         
         private static Option<ReportType> ReportTypeOption() =>
             new Option<ReportType>(new[] { "-t", "--report-type" }, "The type of report to generate. Available options: heapstat (default)")
