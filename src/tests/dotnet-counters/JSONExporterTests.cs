@@ -39,7 +39,7 @@ namespace DotnetCounters.UnitTests
                 foreach (JSONCounterPayload payload in counterTrace.events)
                 {
                     Assert.Equal("myProvider", payload.provider);
-                    Assert.Equal("Incrementing Counter One / 1 sec", payload.name);
+                    Assert.Equal("Incrementing Counter One (Count / 1 sec)", payload.name);
                     Assert.Equal("Rate", payload.counterType);
                     Assert.Equal(1.0, payload.value);
                 }

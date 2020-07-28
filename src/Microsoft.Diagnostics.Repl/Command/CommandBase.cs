@@ -41,6 +41,15 @@ namespace Microsoft.Diagnostics.Repl
         /// Display text
         /// </summary>
         /// <param name="message">text message</param>
+        protected void Write(string message)
+        {
+            Console.Write(message);
+        }
+
+        /// <summary>
+        /// Display line
+        /// </summary>
+        /// <param name="message">line message</param>
         protected void WriteLine(string message)
         {
             Console.Write(message + Environment.NewLine);

@@ -92,15 +92,18 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public string GetDisplay()
         {
-            if (m_DisplayUnits.Length > 0)
-                return $"{m_DisplayName} / {m_Interval} ({m_DisplayUnits})";
-
-            return $"{m_DisplayName} / {m_Interval}";
+            return $"{m_DisplayName} ({GetDisplayUnits()} / {m_Interval})";
         }
 
         public string GetCounterType()
         {
             return "Rate";
+        }
+
+        private string GetDisplayUnits()
+        {
+            if (m_DisplayUnits.Length == 0) return "Count";
+            return m_DisplayUnits;
         }
     }
 }

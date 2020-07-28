@@ -2913,6 +2913,9 @@ DECLARE_API(PrintException)
     {
         return Status;
     }
+
+    CheckBreakingRuntimeChange();
+
     if (bLineNumbers)
     {
         ULONG symlines = 0;
@@ -6580,9 +6583,7 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
 
     const bool hosted = (ThreadStore.fHostConfig & CLRTASKHOSTED) != 0;
     table.ReInit(hosted ? 12 : 11, POINTERSIZE_HEX);
-    table.SetWidths(10, 4, 4, 4, _max(9, POINTERSIZE_HEX),
-                      8, 11, 1+POINTERSIZE_HEX*2, POINTERSIZE_HEX,
-                      5, 3, POINTERSIZE_HEX);
+    table.SetWidths(10, 4, 4, 8, _max(9, POINTERSIZE_HEX), 8, 11, 1+POINTERSIZE_HEX*2, POINTERSIZE_HEX, 5, 3, POINTERSIZE_HEX);
 
     table.SetColAlignment(0, AlignRight);
     table.SetColAlignment(1, AlignRight);
@@ -7085,6 +7086,8 @@ DECLARE_API(Threads)
 
             if (bSupported)
             {
+                CheckBreakingRuntimeChange();
+
                 HRESULT Status2 = PrintSpecialThreads();
                 if (!SUCCEEDED(Status2))
                     Status = Status2;
@@ -10060,6 +10063,8 @@ DECLARE_API(DumpLog)
         ExtErr("DumpLog not supported on desktop runtime\n");
         return E_FAIL;
     }
+
+    CheckBreakingRuntimeChange();
 
     const char* fileName = "StressLog.txt";
     CLRDATA_ADDRESS StressLogAddress = NULL;

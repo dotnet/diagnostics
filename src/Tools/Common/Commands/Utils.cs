@@ -41,4 +41,28 @@ namespace Microsoft.Internal.Common.Utils
             return commonId;
         }
     }
+
+    internal class LineRewriter
+    {
+        public int LineToClear { get; set; } = 0;
+
+        public LineRewriter() {}
+
+        // ANSI escape codes:
+        //  [2K => clear current line
+        //  [{LineToClear};0H => move cursor to column 0 of row `LineToClear`
+        public void RewriteConsoleLine()
+        {
+            // first attempt ANSI Codes
+            int before = Console.CursorTop;
+            Console.Out.Write($"\u001b[2K\u001b[{LineToClear};0H");
+            int after = Console.CursorTop;
+            // Some consoles claim to be VT100 compliant, but don't respect
+            // all of the ANSI codes, so fallback to the System.Console impl in that case
+            if (before == after)
+                SystemConsoleLineRewriter();
+        }
+
+        private void SystemConsoleLineRewriter() => Console.SetCursorPosition(0, LineToClear);
+    }
 }

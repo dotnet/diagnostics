@@ -8,16 +8,16 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest symstore version updated by darc -->
-    <MicrosoftSymbolStoreVersion>1.0.135601</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.136501</MicrosoftSymbolStoreVersion>
     <!-- Runtime versions to test -->
     <MicrosoftNETCoreApp21Version>2.1.18</MicrosoftNETCoreApp21Version>
     <MicrosoftAspNetCoreApp21Version>$(MicrosoftNETCoreApp21Version)</MicrosoftAspNetCoreApp21Version>
     <MicrosoftNETCoreApp31Version>3.1.5</MicrosoftNETCoreApp31Version>
     <MicrosoftAspNetCoreApp31Version>$(MicrosoftNETCoreApp31Version)</MicrosoftAspNetCoreApp31Version>
     <!-- Latest shared runtime version updated by darc -->
-    <MicrosoftNETCoreAppVersion>5.0.0-preview.8.20361.2</MicrosoftNETCoreAppVersion>
+    <MicrosoftNETCoreAppVersion>5.0.0-rc.1.20371.13</MicrosoftNETCoreAppVersion>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefVersion>5.0.0-preview.8.20358.10</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefVersion>5.0.0-rc.1.20377.3</MicrosoftAspNetCoreAppRefVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
@@ -53,7 +53,7 @@
     <SystemThreadingChannelsVersion>4.7.0</SystemThreadingChannelsVersion>
     <XUnitVersion>2.4.1</XUnitVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-    <MicrosoftDotNetRemoteExecutorVersion>5.0.0-beta.20316.1</MicrosoftDotNetRemoteExecutorVersion>
+    <MicrosoftDotNetRemoteExecutorVersion>5.0.0-beta.20364.3</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
   </PropertyGroup>
   <PropertyGroup>

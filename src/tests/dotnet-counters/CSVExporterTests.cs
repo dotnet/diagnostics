@@ -48,7 +48,7 @@ namespace DotnetCounters.UnitTests
                     string[] tokens = lines[i].Split(',');
 
                     Assert.Equal("myProvider", tokens[1]);
-                    Assert.Equal($"Incrementing Counter One: {i-1} / 1 sec", tokens[2]);
+                    Assert.Equal($"Incrementing Counter One: {i-1} (Count / 1 sec)", tokens[2]);
                     Assert.Equal("Rate", tokens[3]);
                     Assert.Equal((i - 1).ToString(), tokens[4]);
                 }
@@ -131,7 +131,7 @@ namespace DotnetCounters.UnitTests
                     string[] tokens = lines[i].Split(',');
 
                     Assert.Equal("myProvider", tokens[1]);
-                    Assert.Equal($"Incrementing Counter One: {i-1} / 1 sec", tokens[2]);
+                    Assert.Equal($"Incrementing Counter One: {i-1} (Count / 1 sec)", tokens[2]);
                     Assert.Equal("Rate", tokens[3]);
                     Assert.Equal((i-1).ToString(), tokens[4]);
                 }
@@ -172,7 +172,7 @@ namespace DotnetCounters.UnitTests
                     string[] tokens = lines[i].Split(',');
 
                     Assert.Equal("myProvider", tokens[1]);
-                    Assert.Equal($"Allocation Rate Gen: {i-1} / 1 sec (MB)", tokens[2]);
+                    Assert.Equal($"Allocation Rate Gen: {i-1} (MB / 1 sec)", tokens[2]);
                     Assert.Equal("Rate", tokens[3]);
                     Assert.Equal((i-1).ToString(), tokens[4]);
                 }
