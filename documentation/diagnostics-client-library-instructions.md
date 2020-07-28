@@ -242,7 +242,7 @@ This section describes the APIs of the library.
 public DiagnosticsClient
 {
     public DiagnosticsClient(int processId);
-    public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown=true, int circularBufferMB=256);
+    public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown=true, int circularBufferMB=256, EventPipeSerializationFormat traceFormat=EventPipeSerializationFormat.NetTrace);
     public void WriteDump(DumpType dumpType, string dumpPath=null, bool logDumpGeneration=false);
     public void AttachProfiler(TimeSpan attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData=null);
     public static IEnumerable<int> GetPublishedProcesses();        
@@ -264,7 +264,7 @@ Creates a new instance of `DiagnosticsClient` for a compatible .NET process runn
 
 
 ```csharp
-public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown=true, int circularBufferMB=256)
+public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown=true, int circularBufferMB=256, EventPipeSerializationFormat traceFormat=EventPipeSerializationFormat.NetTrace)
 ```
 
 Starts an EventPipe tracing session using the given providers and settings. 
@@ -272,6 +272,7 @@ Starts an EventPipe tracing session using the given providers and settings.
 * `providers` : An `IEnumerable` of [`EventPipeProvider`](#class-eventpipeprovider)s to start tracing.
 * `requestRundown`: A `bool` specifying whether rundown provider events from the target app's runtime should be requested.
 * `circularBufferMB`: An `int` specifying the total size of circular buffer used by the target app's runtime on collecting events.
+* `EventPipeSerializationFormat`: An `EventPipeSerializationFormat` enum specifying the trace format to be used when requesting a trace session. Currently supported types: `EventPipeSerializationFormat.NetPerf` (legacy), and `EventPipeSerializationFormat.NetTrace` (default).
 
 
 ```csharp
@@ -463,6 +464,20 @@ Represents the type of dump that can be requested.
 * `Full`: Include all accessible memory in the process. The raw memory data is included at the end, so that the initial structures can be mapped directly without the raw memory information. This option can result in a very large dump file.
 
 
+### enum EventPipeSerializationFormat
+
+```csharp
+public enum EventPipeSerializationFormat
+{
+    NetPerf,
+    NetTrace
+}
+```
+
+Represents the serialization format that EventPipe can use for producing the trace.
+
+* `NetPerf`: This is the format that EventPipe first used in .NET Core 2.2 and early preview releases of .NET Core 3.0. It is a legacy format that is still supported by CoreCLR.
+* `NetTrace`: This is the default format chosen if it is not specified. It is the most up-to-date EventPipe serialization format. This option should be used in most cases unless there is a specific reason to use the legacy NetPerf format.
 
 ### Exceptions
 
