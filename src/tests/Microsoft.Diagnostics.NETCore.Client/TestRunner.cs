@@ -3,18 +3,13 @@
 // See the LICENSE file in the project root for more information.
 
 
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.TestHelpers;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.NETCore.Client
@@ -50,9 +45,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             if (outputHelper != null)
                 outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName);
 
-            testProcess = Process.Start(startInfo);
+            testProcess = new Process();
+            testProcess.StartInfo = startInfo;
+            testProcess.EnableRaisingEvents = true;
 
-            if (testProcess == null)
+            if (!testProcess.Start())
             {
                 outputHelper.WriteLine($"Could not start process: " + startInfo.FileName);
             }
@@ -123,6 +120,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
             else
             {
                 outputHelper.WriteLine($"Process {testProcess.Id} status: Running");
+            }
+        }
+
+        public async Task WaitForExitAsync(CancellationToken token)
+        {
+            TaskCompletionSource<object> exitedSource = new TaskCompletionSource<object>(TaskContinuationOptions.RunContinuationsAsynchronously);
+            EventHandler exitedHandler = (s, e) => exitedSource.TrySetResult(null);
+
+            testProcess.Exited += exitedHandler;
+            try
+            {
+                if (!testProcess.HasExited)
+                {
+                    using var _ = token.Register(() => exitedSource.TrySetCanceled(token));
+
+                    await exitedSource.Task;
+                }
+            }
+            finally
+            {
+                testProcess.Exited -= exitedHandler;
             }
         }
     }

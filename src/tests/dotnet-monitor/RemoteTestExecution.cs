@@ -4,6 +4,7 @@
 
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Xunit.Abstractions;
@@ -17,13 +18,16 @@ namespace DotnetMonitor.UnitTests
     {
         private Task IoReadingTask { get; }
 
-        private RemoteTestExecution(TestRunner runner, Task ioReadingTask)
+        private ITestOutputHelper OutputHelper { get; }
+
+        public TestRunner TestRunner { get; }
+
+        private RemoteTestExecution(TestRunner runner, Task ioReadingTask, ITestOutputHelper outputHelper)
         {
             TestRunner = runner;
             IoReadingTask = ioReadingTask;
+            OutputHelper = outputHelper;
         }
-
-        public TestRunner TestRunner { get; }
 
         public void Start()
         {
@@ -49,7 +53,7 @@ namespace DotnetMonitor.UnitTests
 
             Task readingTask = ReadAllOutput(runner.StandardOutput, runner.StandardError, outputHelper);
 
-            return new RemoteTestExecution(runner, readingTask);
+            return new RemoteTestExecution(runner, readingTask, outputHelper);
         }
 
         private static Task ReadAllOutput(StreamReader output, StreamReader error, ITestOutputHelper outputHelper)
@@ -92,6 +96,18 @@ namespace DotnetMonitor.UnitTests
         public async ValueTask DisposeAsync()
         {
             SendSignal();
+
+            using var timeoutSource = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            try
+            {
+                await TestRunner.WaitForExitAsync(timeoutSource.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                OutputHelper.WriteLine("Remote process did not exit within timeout period. Forcefully stopping process.");
+                TestRunner.Stop();
+            }
+
             await IoReadingTask;
         }
     }
