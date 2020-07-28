@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.Monitoring
         {
             try
             {
-                var connections = await _connectionsSource.GetConnectionsAsync(token);
+                var connections = await _connectionsSource.GetEndpointInfoAsync(token);
 
                 return connections.Select(c => new ProcessInfo(c.RuntimeInstanceCookie, c.ProcessId));
             }
@@ -178,7 +178,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         private async Task<DiagnosticsClient> GetClientAsync(int processId, CancellationToken token)
         {
-            var connections = await _connectionsSource.GetConnectionsAsync(token);
+            var connections = await _connectionsSource.GetEndpointInfoAsync(token);
             var connection = connections.FirstOrDefault(c => c.ProcessId == processId);
 
             if (null == connection)

@@ -13,22 +13,22 @@ namespace Microsoft.Diagnostics.Monitoring
 {
     internal sealed class ClientEndpointInfoSource : IEndpointInfoSourceInternal
     {
-        public Task<IEnumerable<IEndpointInfo>> GetConnectionsAsync(CancellationToken token)
+        public Task<IEnumerable<IEndpointInfo>> GetEndpointInfoAsync(CancellationToken token)
         {
             List<IEndpointInfo> connections = new List<IEndpointInfo>();
             foreach (int pid in DiagnosticsClient.GetPublishedProcesses())
             {
                 // CONSIDER: Generate a "runtime instance identifier" based on the pipe name
                 // e.g. pid + disambiguator in GUID form.
-                connections.Add(new DiagnosticsConnection(pid));
+                connections.Add(new EndpointInfo(pid));
             }
 
             return Task.FromResult(connections.AsEnumerable());
         }
 
-        private class DiagnosticsConnection : IEndpointInfo
+        private class EndpointInfo : IEndpointInfo
         {
-            public DiagnosticsConnection(int processId)
+            public EndpointInfo(int processId)
             {
                 Endpoint = new PidIpcEndpoint(processId);
                 ProcessId = processId;

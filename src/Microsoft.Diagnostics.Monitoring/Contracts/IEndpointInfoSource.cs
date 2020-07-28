@@ -25,6 +25,6 @@ namespace Microsoft.Diagnostics.Monitoring
 
     internal interface IEndpointInfoSourceInternal : IEndpointInfoSource
     {
-        Task<IEnumerable<IEndpointInfo>> GetConnectionsAsync(CancellationToken token);
+        Task<IEnumerable<IEndpointInfo>> GetEndpointInfoAsync(CancellationToken token);
     }
 }

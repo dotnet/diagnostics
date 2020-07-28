@@ -13,11 +13,11 @@ using Xunit.Abstractions;
 
 namespace DotnetMonitor.UnitTests
 {
-    public class ConnectionsSourceTests
+    public class EndpointInfoSourceTests
     {
         private readonly ITestOutputHelper _outputHelper;
 
-        public ConnectionsSourceTests(ITestOutputHelper outputHelper)
+        public EndpointInfoSourceTests(ITestOutputHelper outputHelper)
         {
             _outputHelper = outputHelper;
         }
@@ -27,9 +27,9 @@ namespace DotnetMonitor.UnitTests
         /// if <see cref="ServerEndpointInfoSource.Listen"/> is not called.
         /// </summary>
         [Fact]
-        public async Task ServerConnectionsSourceNoListenTest()
+        public async Task ServerSourceNoListenTest()
         {
-            await using var source = StartReversedServerConnectionsSource(out string transportName);
+            await using var source = CreateServerSource(out string transportName);
             // Intentionally do not call Listen
 
             await using (var execution1 = StartTraceeProcess("LoggerRemoteTest", transportName))
@@ -38,7 +38,7 @@ namespace DotnetMonitor.UnitTests
 
                 await Task.Delay(TimeSpan.FromSeconds(1));
 
-                var connections = await GetConnectionsAsync(source);
+                var connections = await GetEndpointInfoAsync(source);
 
                 Assert.Empty(connections);
 
@@ -50,12 +50,12 @@ namespace DotnetMonitor.UnitTests
         /// Tests that the server connections source has not connections if no processes connect to it.
         /// </summary>
         [Fact]
-        public async Task ServerConnectionsSourceNoConnectionsTest()
+        public async Task ServerSourceNoConnectionsTest()
         {
-            await using var source = StartReversedServerConnectionsSource(out _);
+            await using var source = CreateServerSource(out _);
             source.Listen();
 
-            var connections = await GetConnectionsAsync(source);
+            var connections = await GetEndpointInfoAsync(source);
             Assert.Empty(connections);
         }
 
@@ -64,9 +64,9 @@ namespace DotnetMonitor.UnitTests
         /// from API surface after being disposed.
         /// </summary>
         [Fact]
-        public async Task ServerConnectionsSourceThrowsWhenDisposedTest()
+        public async Task ServerSourceThrowsWhenDisposedTest()
         {
-            var source = StartReversedServerConnectionsSource(out _);
+            var source = CreateServerSource(out _);
             source.Listen();
 
             await source.DisposeAsync();
@@ -79,7 +79,7 @@ namespace DotnetMonitor.UnitTests
                 () => source.Listen(1));
 
             await Assert.ThrowsAsync<ObjectDisposedException>(
-                () => source.GetConnectionsAsync(CancellationToken.None));
+                () => source.GetEndpointInfoAsync(CancellationToken.None));
         }
 
         /// <summary>
@@ -88,9 +88,9 @@ namespace DotnetMonitor.UnitTests
         /// <see cref="ServerEndpointInfoSource.Listen(int)"/> after listening was already started.
         /// </summary>
         [Fact]
-        public async Task ServerConnectionsSourceThrowsWhenMultipleListenTest()
+        public async Task ServerSourceThrowsWhenMultipleListenTest()
         {
-            await using var source = StartReversedServerConnectionsSource(out _);
+            await using var source = CreateServerSource(out _);
             source.Listen();
 
             Assert.Throws<InvalidOperationException>(
@@ -105,23 +105,23 @@ namespace DotnetMonitor.UnitTests
         /// target connects to it and "disconnects" from it.
         /// </summary>
         [Fact]
-        public async Task ServerConnectionsSourceAddRemoveSingleConnectionTest()
+        public async Task ServerSourceAddRemoveSingleConnectionTest()
         {
-            await using var source = StartReversedServerConnectionsSource(out string transportName);
+            await using var source = CreateServerSource(out string transportName);
             source.Listen();
 
-            var connections = await GetConnectionsAsync(source);
+            var connections = await GetEndpointInfoAsync(source);
             Assert.Empty(connections);
 
-            using var newConnectionHelper = new NewConnectionHelper(source, _outputHelper);
+            using var newEndpointInfoHelper = new NewEndpointInfoHelper(source, _outputHelper);
 
             await using (var execution1 = StartTraceeProcess("LoggerRemoteTest", transportName))
             {
-                await newConnectionHelper.WaitForNewConnectionAsync(TimeSpan.FromSeconds(5));
+                await newEndpointInfoHelper.WaitForNewEndpointInfoAsync(TimeSpan.FromSeconds(5));
 
                 execution1.Start();
 
-                connections = await GetConnectionsAsync(source);
+                connections = await GetEndpointInfoAsync(source);
 
                 var connection1 = Assert.Single(connections);
                 VerifyConnection(execution1.TestRunner, connection1);
@@ -131,16 +131,16 @@ namespace DotnetMonitor.UnitTests
 
             await Task.Delay(TimeSpan.FromSeconds(3));
 
-            connections = await GetConnectionsAsync(source);
+            connections = await GetEndpointInfoAsync(source);
 
             Assert.Empty(connections);
         }
 
-        private TestReversedServerConnectionsSource StartReversedServerConnectionsSource(out string transportName)
+        private TestServerEndpointInfoSource CreateServerSource(out string transportName)
         {
             transportName = ReversedServerHelper.CreateServerTransportName();
-            _outputHelper.WriteLine("Starting reversed connections source at '" + transportName + "'.");
-            return new TestReversedServerConnectionsSource(transportName, _outputHelper);
+            _outputHelper.WriteLine("Starting server endpoint info source at '" + transportName + "'.");
+            return new TestServerEndpointInfoSource(transportName, _outputHelper);
         }
 
         private RemoteTestExecution StartTraceeProcess(string loggerCategory, string transportName = null)
@@ -150,11 +150,11 @@ namespace DotnetMonitor.UnitTests
             return RemoteTestExecution.StartProcess(exePath + " " + loggerCategory, _outputHelper, transportName);
         }
 
-        private async Task<IEnumerable<IEndpointInfo>> GetConnectionsAsync(ServerEndpointInfoSource source)
+        private async Task<IEnumerable<IEndpointInfo>> GetEndpointInfoAsync(ServerEndpointInfoSource source)
         {
-            _outputHelper.WriteLine("Getting connections.");
+            _outputHelper.WriteLine("Getting endpoint infos.");
             using CancellationTokenSource cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            return await source.GetConnectionsAsync(cancellationSource.Token);
+            return await source.GetEndpointInfoAsync(cancellationSource.Token);
         }
 
         /// <summary>
@@ -175,7 +175,7 @@ namespace DotnetMonitor.UnitTests
         /// for a specified amount of time and then testing for the new connection (and possibly repeating
         /// if a new connection was not found).
         /// </summary>
-        private sealed class NewConnectionHelper : IDisposable
+        private sealed class NewEndpointInfoHelper : IDisposable
         {
             private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
             private readonly EventTaskSource<EventHandler> _newConnectionSource;
@@ -183,14 +183,14 @@ namespace DotnetMonitor.UnitTests
 
             private bool _disposed;
 
-            public NewConnectionHelper(TestReversedServerConnectionsSource source, ITestOutputHelper outputHelper)
+            public NewEndpointInfoHelper(TestServerEndpointInfoSource source, ITestOutputHelper outputHelper)
             {
                 // Create a task source that is signaled
                 // when the NewConnection event is raise.
                 _newConnectionSource = new EventTaskSource<EventHandler>(
                     complete => (s, e) => complete(),
-                    h => source.NewConnection += h,
-                    h => source.NewConnection -= h,
+                    h => source.AddedEndpointInfo += h,
+                    h => source.AddedEndpointInfo -= h,
                     _cancellation.Token);
                 _outputHelper = outputHelper;
             }
@@ -206,7 +206,7 @@ namespace DotnetMonitor.UnitTests
                 }
             }
 
-            public async Task WaitForNewConnectionAsync(TimeSpan timeout)
+            public async Task WaitForNewEndpointInfoAsync(TimeSpan timeout)
             {
                 _outputHelper.WriteLine("Waiting for new connection.");
                 _cancellation.CancelAfter(timeout);
@@ -215,28 +215,28 @@ namespace DotnetMonitor.UnitTests
             }
         }
 
-        private sealed class TestReversedServerConnectionsSource : ServerEndpointInfoSource
+        private sealed class TestServerEndpointInfoSource : ServerEndpointInfoSource
         {
             private readonly ITestOutputHelper _outputHelper;
 
-            public TestReversedServerConnectionsSource(string transportPath, ITestOutputHelper outputHelper)
+            public TestServerEndpointInfoSource(string transportPath, ITestOutputHelper outputHelper)
                 : base(transportPath)
             {
                 _outputHelper = outputHelper;
             }
 
-            internal override void OnNewConnection(IpcEndpointInfo info)
+            internal override void OnAddedEndpointInfo(IpcEndpointInfo info)
             {
                 _outputHelper.WriteLine($"Added connection to collection: {info.ToTestString()}");
-                NewConnection(this, EventArgs.Empty);
+                AddedEndpointInfo(this, EventArgs.Empty);
             }
 
-            internal override void OnRemovedConnection(IpcEndpointInfo info)
+            internal override void OnRemovedEndpointInfo(IpcEndpointInfo info)
             {
                 _outputHelper.WriteLine($"Removed connection from collection: {info.ToTestString()}");
             }
 
-            public event EventHandler NewConnection;
+            public event EventHandler AddedEndpointInfo;
         }
     }
 }

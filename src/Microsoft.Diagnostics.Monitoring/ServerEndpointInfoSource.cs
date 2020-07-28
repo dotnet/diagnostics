@@ -96,7 +96,7 @@ namespace Microsoft.Diagnostics.Monitoring
         /// </summary>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <returns>A list of active <see cref="IEndpointInfo"/> instances.</returns>
-        public async Task<IEnumerable<IEndpointInfo>> GetConnectionsAsync(CancellationToken token)
+        public async Task<IEnumerable<IEndpointInfo>> GetEndpointInfoAsync(CancellationToken token)
         {
             VerifyNotDisposed();
 
@@ -119,7 +119,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
                 await Task.WhenAll(pruneTasks).ConfigureAwait(false);
 
-                return _connections.Select(c => new DiagnosticsConnection(c));
+                return _connections.Select(c => new EndpointInfo(c));
             }
             finally
             {
@@ -145,7 +145,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 if (!token.IsCancellationRequested)
                 {
                     _connections.Remove(info);
-                    OnRemovedConnection(info);
+                    OnRemovedEndpointInfo(info);
                     _server.RemoveConnection(info.RuntimeInstanceCookie);
                 }
             }
@@ -198,7 +198,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 {
                     _connections.Add(info);
 
-                    OnNewConnection(info);
+                    OnAddedEndpointInfo(info);
                 }
                 finally
                 {
@@ -213,11 +213,11 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        internal virtual void OnNewConnection(IpcEndpointInfo info)
+        internal virtual void OnAddedEndpointInfo(IpcEndpointInfo info)
         {
         }
 
-        internal virtual void OnRemovedConnection(IpcEndpointInfo info)
+        internal virtual void OnRemovedEndpointInfo(IpcEndpointInfo info)
         {
         }
 
@@ -229,11 +229,11 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        private class DiagnosticsConnection : IEndpointInfo
+        private class EndpointInfo : IEndpointInfo
         {
             private readonly IpcEndpointInfo _info;
 
-            public DiagnosticsConnection(IpcEndpointInfo info)
+            public EndpointInfo(IpcEndpointInfo info)
             {
                 _info = info;
             }
