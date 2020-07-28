@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    internal enum EventPipeSerializationFormat
+    public enum EventPipeSerializationFormat
     {
         NetPerf,
         NetTrace

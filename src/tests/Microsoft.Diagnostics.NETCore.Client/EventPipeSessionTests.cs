@@ -127,5 +127,23 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             runner.Stop();
         }
+
+        /// <summary>
+        /// A test that checks if we can create an EventPipeSession on a child process with the legacy NetPerf format.
+        /// </summary>
+        [Fact]
+        public void EventPipeNetPerfSessionTest()
+        {
+            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
+            runner.Start(3000);
+            DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
+            using (var session = client.StartEventPipeSession(
+                new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational), true, 256, EventPipeSerializationFormat.NetPerf))
+            {
+                Assert.True(session.EventStream != null);
+            }
+            runner.Stop();
+        }
+
     }
 }

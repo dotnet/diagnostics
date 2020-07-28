@@ -18,14 +18,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private int _processId;
         private bool disposedValue = false; // To detect redundant calls
 
-        internal EventPipeSession(int processId, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB)
+        internal EventPipeSession(int processId, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB, EventPipeSerializationFormat traceFormat)
         {
             _processId = processId;
             _providers = providers;
             _requestRundown = requestRundown;
             _circularBufferMB = circularBufferMB;
             
-            var config = new EventPipeSessionConfiguration(circularBufferMB, EventPipeSerializationFormat.NetTrace, providers, requestRundown);
+            var config = new EventPipeSessionConfiguration(circularBufferMB, traceFormat, providers, requestRundown);
             var message = new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.CollectTracing2, config.SerializeV2());
             EventStream = IpcClient.SendMessage(processId, message, out var response);
             switch ((DiagnosticsServerCommandId)response.Header.CommandId)

@@ -41,12 +41,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="providers">An IEnumerable containing the list of Providers to turn on.</param>
         /// <param name="requestRundown">If true, request rundown events from the runtime</param>
         /// <param name="circularBufferMB">The size of the runtime's buffer for collecting events in MB</param>
+        /// <param name="traceFormat">The serialization format to be used for the trace. Default is NetTrace format.</param>
         /// <returns>
         /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns> 
-        public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown=true, int circularBufferMB=256)
+        public EventPipeSession StartEventPipeSession(
+            IEnumerable<EventPipeProvider> providers,
+            bool requestRundown=true,
+            int circularBufferMB=256,
+            EventPipeSerializationFormat traceFormat=EventPipeSerializationFormat.NetTrace
+        )
         {
-            return new EventPipeSession(_processId, providers, requestRundown, circularBufferMB);
+            return new EventPipeSession(_processId, providers, requestRundown, circularBufferMB, traceFormat);
         }
 
         /// <summary>
@@ -55,12 +61,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="provider">An EventPipeProvider to turn on.</param>
         /// <param name="requestRundown">If true, request rundown events from the runtime</param>
         /// <param name="circularBufferMB">The size of the runtime's buffer for collecting events in MB</param>
+        /// <param name="traceFormat">The serialization format to be used for the trace. Default is NetTrace format.</param>
         /// <returns>
         /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns> 
-        public EventPipeSession StartEventPipeSession(EventPipeProvider provider, bool requestRundown=true, int circularBufferMB=256)
+        public EventPipeSession StartEventPipeSession(
+            EventPipeProvider provider,
+            bool requestRundown=true,
+            int circularBufferMB=256,
+            EventPipeSerializationFormat traceFormat=EventPipeSerializationFormat.NetTrace
+        )
         {
-            return new EventPipeSession(_processId, new[] { provider }, requestRundown, circularBufferMB);
+            return new EventPipeSession(_processId, new[] { provider }, requestRundown, circularBufferMB, traceFormat);
         }
 
         /// <summary>
