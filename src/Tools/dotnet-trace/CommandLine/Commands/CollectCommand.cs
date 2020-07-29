@@ -184,11 +184,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         Action printStatus = () =>
                         {
                             if (!Console.IsOutputRedirected)
+                            {
                                 rewriter?.RewriteConsoleLine();
+                                fileInfo.Refresh();
+                                Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fileInfo.Length)}");
+                                Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
+                            }
 
-                            fileInfo.Refresh();
-                            Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fileInfo.Length)}");
-                            Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
                             if (rundownRequested)
                                 Console.Out.WriteLine("Stopping the trace. This may take up to minutes depending on the application being traced.");
                         };
