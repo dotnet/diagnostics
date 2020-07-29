@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 if (processId == 0)
                 {
-                    Console.Out.WriteLine($"-p|--process-id is required");
+                    Console.Out.WriteLine("-p|--process-id is required");
                     return -1;
                 }
                 
@@ -95,12 +95,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 }
                 else if (ct.IsCancellationRequested)
                 {
-                    Console.Out.WriteLine($"\tCancelled.");
+                    Console.Out.WriteLine("\tCancelled.");
                     return -1;
                 }
                 else
                 {
-                    Console.Out.WriteLine($"\tFailed to collect gcdump. Try running with '-v' for more information.");
+                    Console.Out.WriteLine("\tFailed to collect gcdump. Try running with '-v' for more information.");
                     return -1;
                 }
             }
@@ -142,7 +142,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         private static Option ProcessIdOption() =>
             new Option(
                 aliases: new[] { "-p", "--process-id" },
-                description: "The process id to collect the gcdump.")
+                description: "The process id to collect the gcdump from.")
             {
                 Argument = new Argument<int>(name: "pid", defaultValue: 0),
             };
@@ -166,7 +166,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         private static Option VerboseOption() =>
             new Option(
                 aliases: new[] { "-v", "--verbose" },
-                description: $"Output the log while collecting the gcdump.") 
+                description: "Output the log while collecting the gcdump.") 
             {
                 Argument = new Argument<bool>(name: "verbose", defaultValue: false)
             };
