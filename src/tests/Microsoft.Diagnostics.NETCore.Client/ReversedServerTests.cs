@@ -119,7 +119,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // There should not be any more available connections
                 await VerifyNoMoreConnections(accepter);
 
-                await VerifyMultipleSessions(info);
+                ResumeRuntime(info);
+
+                await VerifySingleSession(info);
             }
             finally
             {
@@ -149,7 +151,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await using var accepter = new ConnectionAccepter(server, _outputHelper);
 
             TestRunner runner = null;
-            DiagnosticsClient client = null;
             IpcEndpointInfo info;
             try
             {
@@ -164,11 +165,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // There should not be any more available connections
                 await VerifyNoMoreConnections(accepter);
 
-                client = new DiagnosticsClient(info.Endpoint);
+                ResumeRuntime(info);
 
-                ResumeRuntime(info, client);
-
-                await VerifyWaitForConnection(client);
+                await VerifyWaitForConnection(info);
             }
             finally
             {
@@ -180,7 +179,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await Task.Delay(TimeSpan.FromSeconds(1));
 
             // Process exited so the endpoint should not have a valid transport anymore.
-            await VerifyWaitForConnection(client, expectConnection: false);
+            await VerifyWaitForConnection(info, expectAvailableConnection: false);
 
             Assert.True(server.RemoveConnection(info.RuntimeInstanceCookie), "Expected to be able to remove connection from server.");
 
@@ -221,15 +220,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // There should not be any more available connections
                 await VerifyNoMoreConnections(accepter);
 
-                Task target1VerificationTask = VerifyMultipleSessions(info1);
-                Task target2VerificationTask = VerifyMultipleSessions(info2);
+                ResumeRuntime(info1);
+                ResumeRuntime(info2);
 
-                // Allow target verifications to run in parallel
-                await Task.WhenAll(target1VerificationTask, target2VerificationTask);
-
-                // Check status of each verification task
-                await target1VerificationTask;
-                await target2VerificationTask;
+                await VerifySingleSession(info1);
+                await VerifySingleSession(info2);
             }
             finally
             {
@@ -278,10 +273,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return new EventPipeProvider(name, EventLevel.Verbose, (long)EventKeywords.All);
         }
 
-        private async Task VerifyWaitForConnection(DiagnosticsClient client, bool expectConnection = true)
+        private async Task VerifyWaitForConnection(DiagnosticsClient client, bool expectAvailableConnection = true)
         {
             using var connectionCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(1));
-            if (expectConnection)
+            if (expectAvailableConnection)
             {
                 await client.WaitForConnectionAsync(connectionCancellation.Token);
             }
@@ -338,8 +333,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _outputHelper.WriteLine($"Connection: {info.ToTestString()}");
         }
 
-        private void ResumeRuntime(IpcEndpointInfo info, DiagnosticsClient client)
+        private void ResumeRuntime(IpcEndpointInfo info)
         {
+            var client = new DiagnosticsClient(info.Endpoint);
+
             _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Resuming runtime instance.");
             try
             {
@@ -356,85 +353,87 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Verifies that a client can handle multiple operations simultaneously.
         /// </summary>
-        private async Task VerifyMultipleSessions(IpcEndpointInfo info)
+        private async Task VerifySingleSession(IpcEndpointInfo info)
         {
             var client = new DiagnosticsClient(info.Endpoint);
 
             await VerifyWaitForConnection(client);
 
-            _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #1 - Creating session.");
-            var providers1 = new List<EventPipeProvider>();
-            providers1.Add(CreateProvider("Microsoft-Windows-DotNETRuntime"));
-            var session1 = client.StartEventPipeSession(providers1);
+            _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Creating session #1.");
+            var providers = new List<EventPipeProvider>();
+            providers.Add(new EventPipeProvider(
+                "System.Runtime",
+                EventLevel.Informational,
+                0,
+                new Dictionary<string, string>() {
+                    { "EventCounterIntervalSec", "1" }
+                }));
+            using var session = client.StartEventPipeSession(providers);
 
-            var verify1Task = Task.Run(() => VerifyEventStreamProvidesEventsAsync(info, session1, 1));
+            _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Verifying session produces events.");
+            await VerifyEventStreamProvidesEventsAsync(info, session, 1);
 
-            _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #2 - Creating session.");
-            var providers2 = new List<EventPipeProvider>();
-            providers2.Add(CreateProvider("Microsoft-DotNETCore-SampleProfiler"));
-            var session2 = client.StartEventPipeSession(providers2);
-
-            var verify2Task = Task.Run(() => VerifyEventStreamProvidesEventsAsync(info, session2, 2));
-
-            ResumeRuntime(info, client);
-
-            // Allow session verifications to run in parallel
-            _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Waiting for session verifications.");
-            await Task.WhenAll(verify1Task, verify2Task);
-
-            _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Sessions finished.");
-            await verify1Task;
-            await verify2Task;
-
-            // Check that sessions and streams are unique
-            Assert.NotEqual(session1, session2);
-            Assert.NotEqual(session1.EventStream, session2.EventStream);
-            _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Sessions verified.");
-
-            session1.Dispose();
-            session2.Dispose();
+            _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session verification complete.");
         }
 
         /// <summary>
         /// Verifies that an event stream does provide events.
         /// </summary>
-        private async Task VerifyEventStreamProvidesEventsAsync(IpcEndpointInfo info, EventPipeSession session, int sessionNumber)
+        private Task VerifyEventStreamProvidesEventsAsync(IpcEndpointInfo info, EventPipeSession session, int sessionNumber)
         {
             Assert.NotNull(session);
             Assert.NotNull(session.EventStream);
 
-            _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Checking produces events.");
-
-            // This blocks for a while due to this bug: https://github.com/microsoft/perfview/issues/1172
-            using var eventSource = new EventPipeEventSource(session.EventStream);
-
-            // Create task completion source that is completed when any events are provided; cancel it if cancellation is requested
-            var receivedEventsSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(1));
-            using var _ = cancellation.Token.Register(() => receivedEventsSource.TrySetCanceled());
-
-            // Create continuation task that stops the session (which immediately stops event processing).
-            Task stoppedProcessingTask = receivedEventsSource.Task
-                .ContinueWith(_ => session.Stop());
-
-            // Signal task source when an event is received.
-            Action<TraceEvent> allEventsHandler = _ =>
+            return Task.Run(async () =>
             {
-                receivedEventsSource.TrySetResult(null);
-            };
+                _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Creating event source.");
 
-            // Start processing events.
-            eventSource.Dynamic.All += allEventsHandler;
-            eventSource.Process();
-            eventSource.Dynamic.All -= allEventsHandler;
+                // This blocks for a while due to this bug: https://github.com/microsoft/perfview/issues/1172
+                using var eventSource = new EventPipeEventSource(session.EventStream);
 
-            // Wait on the task source to verify if it ran to completion or was cancelled.
-            _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Waiting to receive any events.");
-            await receivedEventsSource.Task;
+                _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Setup event handlers.");
 
-            _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Waiting for session to stop.");
-            await stoppedProcessingTask;
+                // Create task completion source that is completed when any events are provided; cancel it if cancellation is requested
+                var receivedEventsSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+                using var _ = cancellation.Token.Register(() =>
+                {
+                    if (receivedEventsSource.TrySetCanceled())
+                    {
+                        _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Cancelled event processing.");
+                    }
+                });
+
+                // Create continuation task that stops the session (which immediately stops event processing).
+                Task stoppedProcessingTask = receivedEventsSource.Task
+                    .ContinueWith(_ =>
+                    {
+                        _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Stopping session.");
+                        session.Stop();
+                    });
+
+                // Signal task source when an event is received.
+                Action<TraceEvent> allEventsHandler = _ =>
+                {
+                    if (receivedEventsSource.TrySetResult(null))
+                    {
+                        _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Received an event and set result on completion source.");
+                    }
+                };
+
+                _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Start processing events.");
+                eventSource.Dynamic.All += allEventsHandler;
+                eventSource.Process();
+                eventSource.Dynamic.All -= allEventsHandler;
+                _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Stopped processing events.");
+
+                // Wait on the task source to verify if it ran to completion or was cancelled.
+                await receivedEventsSource.Task;
+
+                _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Waiting for session to stop.");
+                await stoppedProcessingTask;
+            });
         }
 
         /// <summary>
