@@ -150,7 +150,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         private static Option NameOption() =>
             new Option(
                 aliases: new[] { "-n", "--name" },
-                description: "The name of the process to collect the gcdump.")
+                description: "The name of the process to collect the gcdump from.")
             {
                 Argument = new Argument<string>(name: "name")
             };
