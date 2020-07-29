@@ -125,7 +125,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public async Task WaitForExitAsync(CancellationToken token)
         {
-            TaskCompletionSource<object> exitedSource = new TaskCompletionSource<object>(TaskContinuationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource<object> exitedSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             EventHandler exitedHandler = (s, e) => exitedSource.TrySetResult(null);
 
             testProcess.Exited += exitedHandler;

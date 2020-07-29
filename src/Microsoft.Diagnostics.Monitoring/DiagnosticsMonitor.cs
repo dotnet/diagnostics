@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Monitoring
         public DiagnosticsMonitor(MonitoringSourceConfiguration sourceConfig)
         {
             _sourceConfig = sourceConfig;
-            _stopProcessingSource = new TaskCompletionSource<object>(TaskContinuationOptions.RunContinuationsAsynchronously);
+            _stopProcessingSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         public Task CurrentProcessingTask => _currentTask;

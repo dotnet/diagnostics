@@ -280,7 +280,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             VerifyNotDisposed();
 
-            var hasConnectedStreamSource = new TaskCompletionSource<bool>(TaskContinuationOptions.RunContinuationsAsynchronously);
+            var hasConnectedStreamSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             using var methodRegistration = token.Register(() => hasConnectedStreamSource.TrySetCanceled(token));
             using var disposalRegistration = _disposalSource.Token.Register(
                 () => hasConnectedStreamSource.TrySetException(new ObjectDisposedException(nameof(ReversedDiagnosticsServer))));
