@@ -145,6 +145,26 @@ namespace Microsoft.Diagnostics.NETCore.Client
             switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
                 case DiagnosticsServerResponseId.Error:
+                    // Try fallback for Preview 7 and Preview 8
+                    ResumeRuntimeFallback();
+                    //var hr = BitConverter.ToInt32(response.Payload, 0);
+                    //throw new ServerErrorException($"Resume runtime failed (HRESULT: 0x{hr:X8})");
+                    return;
+                case DiagnosticsServerResponseId.OK:
+                    return;
+                default:
+                    throw new ServerErrorException($"Resume runtime failed - server responded with unknown command");
+            }
+        }
+
+        // Fallback command for .NET 5 Preview 7 and Preview 8
+        internal void ResumeRuntimeFallback()
+        {
+            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Server, (byte)DiagnosticServerCommandId.ResumeRuntime);
+            var response = IpcClient.SendMessage(_endpoint, message);
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
+            {
+                case DiagnosticsServerResponseId.Error:
                     var hr = BitConverter.ToInt32(response.Payload, 0);
                     throw new ServerErrorException($"Resume runtime failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerResponseId.OK:
