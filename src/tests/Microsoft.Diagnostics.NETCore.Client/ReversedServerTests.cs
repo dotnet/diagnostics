@@ -223,8 +223,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 ResumeRuntime(info1);
                 ResumeRuntime(info2);
 
-                await VerifySingleSession(info1);
-                await VerifySingleSession(info2);
+                var verify1Task = VerifySingleSession(info1);
+                var verify2Task = VerifySingleSession(info2);
+
+                await Task.WhenAll(verify1Task, verify2Task);
+
+                await verify1Task;
+                await verify2Task;
             }
             finally
             {
