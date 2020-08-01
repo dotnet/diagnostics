@@ -53,14 +53,25 @@ namespace Microsoft.Internal.Common.Utils
         //  [{LineToClear};0H => move cursor to column 0 of row `LineToClear`
         public void RewriteConsoleLine()
         {
-            // first attempt ANSI Codes
-            int before = Console.CursorTop;
-            Console.Out.Write($"\u001b[2K\u001b[{LineToClear};0H");
-            int after = Console.CursorTop;
-            // Some consoles claim to be VT100 compliant, but don't respect
-            // all of the ANSI codes, so fallback to the System.Console impl in that case
-            if (before == after)
+            var useConsoleFallback = true;
+            if (!Console.IsInputRedirected)
+            {
+                // in case of console input redirection, the control ANSI codes would appear
+
+                // first attempt ANSI Codes
+                int before = Console.CursorTop;
+                Console.Out.Write($"\u001b[2K\u001b[{LineToClear};0H");
+                int after = Console.CursorTop;
+
+                // Some consoles claim to be VT100 compliant, but don't respect
+                // all of the ANSI codes, so fallback to the System.Console impl in that case
+                useConsoleFallback = (before == after);
+            }
+
+            if (useConsoleFallback)
+            {
                 SystemConsoleLineRewriter();
+            }
         }
 
         private void SystemConsoleLineRewriter() => Console.SetCursorPosition(0, LineToClear);
