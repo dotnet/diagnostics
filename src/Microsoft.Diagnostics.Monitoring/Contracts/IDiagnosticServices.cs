@@ -2,12 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
@@ -19,15 +20,15 @@ namespace Microsoft.Diagnostics.Monitoring
     {
         Task<IEnumerable<IProcessInfo>> GetProcessesAsync(CancellationToken token);
 
-        Task<int> ResolveProcessAsync(int? pid, CancellationToken token);
+        Task<IProcessInfo> GetProcessAsync(ProcessFilter? filter, CancellationToken token);
 
-        Task<Stream> GetDump(int pid, DumpType mode, CancellationToken token);
+        Task<Stream> GetDump(IProcessInfo pi, DumpType mode, CancellationToken token);
 
-        Task<Stream> GetGcDump(int pid, CancellationToken token);
+        Task<Stream> GetGcDump(IProcessInfo pi, CancellationToken token);
 
-        Task<IStreamWithCleanup> StartTrace(int pid, MonitoringSourceConfiguration configuration, TimeSpan duration, CancellationToken token);
+        Task<IStreamWithCleanup> StartTrace(IProcessInfo pi, MonitoringSourceConfiguration configuration, TimeSpan duration, CancellationToken token);
 
-        Task StartLogs(Stream outputStream, int pid, TimeSpan duration, LogFormat logFormat, LogLevel logLevel, CancellationToken token);
+        Task StartLogs(Stream outputStream, IProcessInfo pi, TimeSpan duration, LogFormat logFormat, LogLevel logLevel, CancellationToken token);
     }
 
     public interface IStreamWithCleanup : IAsyncDisposable
@@ -37,6 +38,8 @@ namespace Microsoft.Diagnostics.Monitoring
 
     public interface IProcessInfo
     {
+        DiagnosticsClient Client { get; }
+
         int Pid { get; }
 
         Guid Uid { get; }
