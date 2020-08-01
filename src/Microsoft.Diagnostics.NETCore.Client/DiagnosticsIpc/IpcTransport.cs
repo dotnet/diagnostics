@@ -24,11 +24,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public abstract Stream Connect(TimeSpan timeout);
 
         /// <summary>
-        /// Wait for an available diagnostic connection to the runtime instance.
+        /// Wait for an available diagnostic endpoint to the runtime instance.
         /// </summary>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <returns>
-        /// A task the completes when a diagnostic connection to the runtime instance becomes available.
+        /// A task the completes when a diagnostic endpoint to the runtime instance becomes available.
         /// </returns>
         public abstract Task WaitForConnectionAsync(CancellationToken token);
     }

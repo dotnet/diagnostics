@@ -23,7 +23,7 @@ namespace DotnetMonitor.UnitTests
         }
 
         /// <summary>
-        /// Tests that the server connections source has no connections
+        /// Tests that the server endpoint info source has no connections
         /// if <see cref="ServerEndpointInfoSource.Listen"/> is not called.
         /// </summary>
         [Fact]
@@ -38,16 +38,16 @@ namespace DotnetMonitor.UnitTests
 
                 await Task.Delay(TimeSpan.FromSeconds(1));
 
-                var connections = await GetEndpointInfoAsync(source);
+                var endpointInfos = await GetEndpointInfoAsync(source);
 
-                Assert.Empty(connections);
+                Assert.Empty(endpointInfos);
 
                 _outputHelper.WriteLine("Stopping tracee.");
             }
         }
 
         /// <summary>
-        /// Tests that the server connections source has not connections if no processes connect to it.
+        /// Tests that the server endpoint info source has not connections if no processes connect to it.
         /// </summary>
         [Fact]
         public async Task ServerSourceNoConnectionsTest()
@@ -55,12 +55,12 @@ namespace DotnetMonitor.UnitTests
             await using var source = CreateServerSource(out _);
             source.Listen();
 
-            var connections = await GetEndpointInfoAsync(source);
-            Assert.Empty(connections);
+            var endpointInfos = await GetEndpointInfoAsync(source);
+            Assert.Empty(endpointInfos);
         }
 
         /// <summary>
-        /// Tests that server connections source should throw ObjectDisposedException
+        /// Tests that server endpoint info source should throw ObjectDisposedException
         /// from API surface after being disposed.
         /// </summary>
         [Fact]
@@ -83,7 +83,7 @@ namespace DotnetMonitor.UnitTests
         }
 
         /// <summary>
-        /// Tests that server connections source should throw an exception from
+        /// Tests that server endpoint info source should throw an exception from
         /// <see cref="ServerEndpointInfoSource.Listen"/> and
         /// <see cref="ServerEndpointInfoSource.Listen(int)"/> after listening was already started.
         /// </summary>
@@ -101,7 +101,7 @@ namespace DotnetMonitor.UnitTests
         }
 
         /// <summary>
-        /// Tests that the server connection source can properly enumerate connections when a single
+        /// Tests that the server endpoint info source can properly enumerate endpoint infos when a single
         /// target connects to it and "disconnects" from it.
         /// </summary>
         [Fact]
@@ -110,8 +110,8 @@ namespace DotnetMonitor.UnitTests
             await using var source = CreateServerSource(out string transportName);
             source.Listen();
 
-            var connections = await GetEndpointInfoAsync(source);
-            Assert.Empty(connections);
+            var endpointInfos = await GetEndpointInfoAsync(source);
+            Assert.Empty(endpointInfos);
 
             using var newEndpointInfoHelper = new NewEndpointInfoHelper(source, _outputHelper);
 
@@ -121,19 +121,19 @@ namespace DotnetMonitor.UnitTests
 
                 execution1.Start();
 
-                connections = await GetEndpointInfoAsync(source);
+                endpointInfos = await GetEndpointInfoAsync(source);
 
-                var connection1 = Assert.Single(connections);
-                VerifyConnection(execution1.TestRunner, connection1);
+                var endpointInfo = Assert.Single(endpointInfos);
+                VerifyConnection(execution1.TestRunner, endpointInfo);
 
                 _outputHelper.WriteLine("Stopping tracee.");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(3));
+            await Task.Delay(TimeSpan.FromSeconds(1));
 
-            connections = await GetEndpointInfoAsync(source);
+            endpointInfos = await GetEndpointInfoAsync(source);
 
-            Assert.Empty(connections);
+            Assert.Empty(endpointInfos);
         }
 
         private TestServerEndpointInfoSource CreateServerSource(out string transportName)
@@ -160,13 +160,13 @@ namespace DotnetMonitor.UnitTests
         /// <summary>
         /// Verifies basic information on the connection and that it matches the target process from the runner.
         /// </summary>
-        private static void VerifyConnection(TestRunner runner, IEndpointInfo connection)
+        private static void VerifyConnection(TestRunner runner, IEndpointInfo endpointInfo)
         {
             Assert.NotNull(runner);
-            Assert.NotNull(connection);
-            Assert.Equal(runner.Pid, connection.ProcessId);
-            Assert.NotEqual(Guid.Empty, connection.RuntimeInstanceCookie);
-            Assert.NotNull(connection.Endpoint);
+            Assert.NotNull(endpointInfo);
+            Assert.Equal(runner.Pid, endpointInfo.ProcessId);
+            Assert.NotEqual(Guid.Empty, endpointInfo.RuntimeInstanceCookie);
+            Assert.NotNull(endpointInfo.Endpoint);
         }
 
         /// <summary>
@@ -178,7 +178,7 @@ namespace DotnetMonitor.UnitTests
         private sealed class NewEndpointInfoHelper : IDisposable
         {
             private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
-            private readonly EventTaskSource<EventHandler> _newConnectionSource;
+            private readonly EventTaskSource<EventHandler> _newEndpointInfoSource;
             private readonly ITestOutputHelper _outputHelper;
 
             private bool _disposed;
@@ -186,8 +186,8 @@ namespace DotnetMonitor.UnitTests
             public NewEndpointInfoHelper(TestServerEndpointInfoSource source, ITestOutputHelper outputHelper)
             {
                 // Create a task source that is signaled
-                // when the NewConnection event is raise.
-                _newConnectionSource = new EventTaskSource<EventHandler>(
+                // when the AddedEndpointInfo event is raise.
+                _newEndpointInfoSource = new EventTaskSource<EventHandler>(
                     complete => (s, e) => complete(),
                     h => source.AddedEndpointInfo += h,
                     h => source.AddedEndpointInfo -= h,
@@ -208,10 +208,10 @@ namespace DotnetMonitor.UnitTests
 
             public async Task WaitForNewEndpointInfoAsync(TimeSpan timeout)
             {
-                _outputHelper.WriteLine("Waiting for new connection.");
+                _outputHelper.WriteLine("Waiting for new endpoint info.");
                 _cancellation.CancelAfter(timeout);
-                await _newConnectionSource.Task;
-                _outputHelper.WriteLine("Notified of new connection.");
+                await _newEndpointInfoSource.Task;
+                _outputHelper.WriteLine("Notified of new endpoint info.");
             }
         }
 
@@ -227,13 +227,13 @@ namespace DotnetMonitor.UnitTests
 
             internal override void OnAddedEndpointInfo(IpcEndpointInfo info)
             {
-                _outputHelper.WriteLine($"Added connection to collection: {info.ToTestString()}");
+                _outputHelper.WriteLine($"Added endpoint info to collection: {info.ToTestString()}");
                 AddedEndpointInfo(this, EventArgs.Empty);
             }
 
             internal override void OnRemovedEndpointInfo(IpcEndpointInfo info)
             {
-                _outputHelper.WriteLine($"Removed connection from collection: {info.ToTestString()}");
+                _outputHelper.WriteLine($"Removed endpoint info from collection: {info.ToTestString()}");
             }
 
             public event EventHandler AddedEndpointInfo;

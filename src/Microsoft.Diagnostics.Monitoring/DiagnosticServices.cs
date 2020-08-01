@@ -25,21 +25,21 @@ namespace Microsoft.Diagnostics.Monitoring
         // with a diagnostics transport connection.
         private static readonly TimeSpan DockerEntrypointWaitTimeout = TimeSpan.FromMilliseconds(250);
 
-        private readonly IEndpointInfoSourceInternal _connectionsSource;
+        private readonly IEndpointInfoSourceInternal _endpointInfoSource;
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
-        public DiagnosticServices(IEndpointInfoSource connectionsSource)
+        public DiagnosticServices(IEndpointInfoSource endpointInfoSource)
         {
-            _connectionsSource = (IEndpointInfoSourceInternal)connectionsSource;
+            _endpointInfoSource = (IEndpointInfoSourceInternal)endpointInfoSource;
         }
 
         public async Task<IEnumerable<IProcessInfo>> GetProcessesAsync(CancellationToken token)
         {
             try
             {
-                var connections = await _connectionsSource.GetEndpointInfoAsync(token);
+                var endpointInfos = await _endpointInfoSource.GetEndpointInfoAsync(token);
 
-                return connections.Select(c => new ProcessInfo(c.RuntimeInstanceCookie, c.ProcessId));
+                return endpointInfos.Select(c => new ProcessInfo(c.RuntimeInstanceCookie, c.ProcessId));
             }
             catch (UnauthorizedAccessException)
             {
@@ -178,15 +178,15 @@ namespace Microsoft.Diagnostics.Monitoring
 
         private async Task<DiagnosticsClient> GetClientAsync(int processId, CancellationToken token)
         {
-            var connections = await _connectionsSource.GetEndpointInfoAsync(token);
-            var connection = connections.FirstOrDefault(c => c.ProcessId == processId);
+            var endpointInfos = await _endpointInfoSource.GetEndpointInfoAsync(token);
+            var endpointInfo = endpointInfos.FirstOrDefault(c => c.ProcessId == processId);
 
-            if (null == connection)
+            if (null == endpointInfo)
             {
                 throw new InvalidOperationException($"Diagnostics client for process ID {processId} does not exist.");
             }
 
-            return new DiagnosticsClient(connection.Endpoint);
+            return new DiagnosticsClient(endpointInfo.Endpoint);
         }
 
         public void Dispose()

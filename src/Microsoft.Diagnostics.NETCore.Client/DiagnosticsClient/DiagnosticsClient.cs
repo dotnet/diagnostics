@@ -32,11 +32,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Wait for an available diagnostics connection to the runtime instance.
+        /// Wait for an available diagnostic endpoint to the runtime instance.
         /// </summary>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <returns>
-        /// A task the completes when a diagnostics connection to the runtime instance becomes available.
+        /// A task the completes when a diagnostic endpoint to the runtime instance becomes available.
         /// </returns>
         internal Task WaitForConnectionAsync(CancellationToken token)
         {

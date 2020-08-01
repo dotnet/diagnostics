@@ -50,7 +50,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 })
                 .ConfigureServices((WebHostBuilderContext context, IServiceCollection services) =>
                 {
-                    services.AddDiagnosticsConnectionSource(reversedServerAddress);
+                    services.AddEndpointInfoSource(reversedServerAddress);
                     //TODO Many of these service additions should be done through extension methods
                     services.AddSingleton<IDiagnosticServices, DiagnosticServices>();
                     if (metrics)

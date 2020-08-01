@@ -9,7 +9,7 @@ namespace Microsoft.Diagnostics.Monitoring
 {
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddDiagnosticsConnectionSource(this IServiceCollection services, string reversedServerAddress, int? maxConnections = null)
+        public static IServiceCollection AddEndpointInfoSource(this IServiceCollection services, string reversedServerAddress, int? maxConnections = null)
         {
             if (string.IsNullOrWhiteSpace(reversedServerAddress))
             {

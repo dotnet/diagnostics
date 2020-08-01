@@ -16,14 +16,14 @@ namespace Microsoft.Diagnostics.Monitoring
     /// </summary>
     internal class ServerEndpointInfoSource : IEndpointInfoSourceInternal, IAsyncDisposable
     {
-        // The amount of time to wait when checking if the a runtime instance connection should be
-        // pruned from the list of connections. If the runtime doesn't have a viable connection within
+        // The amount of time to wait when checking if the a endpoint info should be
+        // pruned from the list of endpoint infos. If the runtime doesn't have a viable connection within
         // this time, it will be pruned from the list.
         private static readonly TimeSpan PruneWaitForConnectionTimeout = TimeSpan.FromMilliseconds(250);
 
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
-        private readonly IList<IpcEndpointInfo> _connections = new List<IpcEndpointInfo>();
-        private readonly SemaphoreSlim _connectionsSemaphore = new SemaphoreSlim(1);
+        private readonly IList<IpcEndpointInfo> _endpointInfos = new List<IpcEndpointInfo>();
+        private readonly SemaphoreSlim _endpointInfosSemaphore = new SemaphoreSlim(1);
         private readonly string _transportPath;
 
         private Task _listenTask;
@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
                 _server?.Dispose();
 
-                _connectionsSemaphore.Dispose();
+                _endpointInfosSemaphore.Dispose();
 
                 _cancellation.Dispose();
 
@@ -105,29 +105,29 @@ namespace Microsoft.Diagnostics.Monitoring
 
             // Prune connections that no longer have an active runtime instance before
             // returning the list of connections.
-            await _connectionsSemaphore.WaitAsync(linkedToken).ConfigureAwait(false);
+            await _endpointInfosSemaphore.WaitAsync(linkedToken).ConfigureAwait(false);
             try
             {
-                // Check the transport for each connection and remove the connection if the check fails.
-                var connections = _connections.ToList();
+                // Check the transport for each endpoint info and remove it if the check fails.
+                var endpointInfos = _endpointInfos.ToList();
 
                 var pruneTasks = new List<Task>();
-                foreach (IpcEndpointInfo info in connections)
+                foreach (IpcEndpointInfo info in endpointInfos)
                 {
-                    pruneTasks.Add(Task.Run(() => PruneConnectionIfNotViable(info, linkedToken), linkedToken));
+                    pruneTasks.Add(Task.Run(() => PruneIfNotViable(info, linkedToken), linkedToken));
                 }
 
                 await Task.WhenAll(pruneTasks).ConfigureAwait(false);
 
-                return _connections.Select(c => new EndpointInfo(c));
+                return _endpointInfos.Select(c => new EndpointInfo(c));
             }
             finally
             {
-                _connectionsSemaphore.Release();
+                _endpointInfosSemaphore.Release();
             }
         }
 
-        private async Task PruneConnectionIfNotViable(IpcEndpointInfo info, CancellationToken token)
+        private async Task PruneIfNotViable(IpcEndpointInfo info, CancellationToken token)
         {
             using var timeoutSource = new CancellationTokenSource();
             using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutSource.Token);
@@ -140,11 +140,11 @@ namespace Microsoft.Diagnostics.Monitoring
             }
             catch
             {
-                // Only remove the connection if due to some exception
+                // Only remove the endpoint info if due to some exception
                 // other than cancelling the pruning operation.
                 if (!token.IsCancellationRequested)
                 {
-                    _connections.Remove(info);
+                    _endpointInfos.Remove(info);
                     OnRemovedEndpointInfo(info);
                     _server.RemoveConnection(info.RuntimeInstanceCookie);
                 }
@@ -152,12 +152,12 @@ namespace Microsoft.Diagnostics.Monitoring
         }
 
         /// <summary>
-        /// Accepts connections from the reversed diagnostics server.
+        /// Accepts endpoint infos from the reversed diagnostics server.
         /// </summary>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         private async Task ListenAsync(CancellationToken token)
         {
-            // Continuously accept connections from the reversed diagnostics server so
+            // Continuously accept endpoint infos from the reversed diagnostics server so
             // that <see cref="ReversedDiagnosticsServer.AcceptAsync(CancellationToken)"/>
             // is always awaited in order to to handle new runtime instance connections
             // as well as existing runtime instance reconnections.
@@ -193,16 +193,16 @@ namespace Microsoft.Diagnostics.Monitoring
                     // The runtime likely doesn't understand the ResumeRuntime command.
                 }
 
-                await _connectionsSemaphore.WaitAsync(token).ConfigureAwait(false);
+                await _endpointInfosSemaphore.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
-                    _connections.Add(info);
+                    _endpointInfos.Add(info);
 
                     OnAddedEndpointInfo(info);
                 }
                 finally
                 {
-                    _connectionsSemaphore.Release();
+                    _endpointInfosSemaphore.Release();
                 }
             }
             catch (Exception)

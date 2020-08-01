@@ -15,15 +15,15 @@ namespace Microsoft.Diagnostics.Monitoring
     {
         public Task<IEnumerable<IEndpointInfo>> GetEndpointInfoAsync(CancellationToken token)
         {
-            List<IEndpointInfo> connections = new List<IEndpointInfo>();
+            List<IEndpointInfo> endpointInfos = new List<IEndpointInfo>();
             foreach (int pid in DiagnosticsClient.GetPublishedProcesses())
             {
                 // CONSIDER: Generate a "runtime instance identifier" based on the pipe name
                 // e.g. pid + disambiguator in GUID form.
-                connections.Add(new EndpointInfo(pid));
+                endpointInfos.Add(new EndpointInfo(pid));
             }
 
-            return Task.FromResult(connections.AsEnumerable());
+            return Task.FromResult(endpointInfos.AsEnumerable());
         }
 
         private class EndpointInfo : IEndpointInfo

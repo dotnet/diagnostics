@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     /// <summary>
     /// Establishes server endpoint for runtime instances to connect when
-    /// configured to provide diagnostics connection in reverse mode.
+    /// configured to provide diagnostic endpoints in reverse mode.
     /// </summary>
     internal sealed class ReversedDiagnosticsServer : IDisposable
     {
