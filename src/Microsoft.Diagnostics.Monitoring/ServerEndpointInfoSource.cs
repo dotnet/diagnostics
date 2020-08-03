@@ -55,7 +55,10 @@ namespace Microsoft.Diagnostics.Monitoring
                     await _listenTask.ConfigureAwait(false);
                 }
 
-                _server?.Dispose();
+                if (null != _server)
+                {
+                    await _server.DisposeAsync().ConfigureAwait(false);
+                }
 
                 _endpointInfosSemaphore.Dispose();
 
@@ -68,27 +71,27 @@ namespace Microsoft.Diagnostics.Monitoring
         /// <summary>
         /// Starts listening to the reversed diagnostics server for new connections.
         /// </summary>
-        public void Listen()
+        public void Start()
         {
-            Listen(ReversedDiagnosticsServer.MaxAllowedConnections);
+            Start(ReversedDiagnosticsServer.MaxAllowedConnections);
         }
 
         /// <summary>
         /// Starts listening to the reversed diagnostics server for new connections.
         /// </summary>
         /// <param name="maxConnections">The maximum number of connections the server will support.</param>
-        public void Listen(int maxConnections)
+        public void Start(int maxConnections)
         {
             VerifyNotDisposed();
 
-            if (null != _server || null != _listenTask)
+            if (IsListening)
             {
-                throw new InvalidOperationException(nameof(ServerEndpointInfoSource.Listen) + " method can only be called once.");
+                throw new InvalidOperationException(nameof(ServerEndpointInfoSource.Start) + " method can only be called once.");
             }
 
-            _server = new ReversedDiagnosticsServer(_transportPath, maxConnections);
+            _server = new ReversedDiagnosticsServer(_transportPath);
 
-            _listenTask = ListenAsync(_cancellation.Token);
+            _listenTask = ListenAsync(maxConnections, _cancellation.Token);
         }
 
         /// <summary>
@@ -100,12 +103,15 @@ namespace Microsoft.Diagnostics.Monitoring
         {
             VerifyNotDisposed();
 
+            VerifyIsListening();
+
             using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _cancellation.Token);
             CancellationToken linkedToken = linkedSource.Token;
 
             // Prune connections that no longer have an active runtime instance before
             // returning the list of connections.
             await _endpointInfosSemaphore.WaitAsync(linkedToken).ConfigureAwait(false);
+
             try
             {
                 // Check the transport for each endpoint info and remove it if the check fails.
@@ -146,7 +152,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 {
                     _endpointInfos.Remove(info);
                     OnRemovedEndpointInfo(info);
-                    _server.RemoveConnection(info.RuntimeInstanceCookie);
+                    _server?.RemoveConnection(info.RuntimeInstanceCookie);
                 }
             }
         }
@@ -155,8 +161,9 @@ namespace Microsoft.Diagnostics.Monitoring
         /// Accepts endpoint infos from the reversed diagnostics server.
         /// </summary>
         /// <param name="token">The token to monitor for cancellation requests.</param>
-        private async Task ListenAsync(CancellationToken token)
+        private async Task ListenAsync(int maxConnections, CancellationToken token)
         {
+            _server.Start(maxConnections);
             // Continuously accept endpoint infos from the reversed diagnostics server so
             // that <see cref="ReversedDiagnosticsServer.AcceptAsync(CancellationToken)"/>
             // is always awaited in order to to handle new runtime instance connections
@@ -207,7 +214,7 @@ namespace Microsoft.Diagnostics.Monitoring
             }
             catch (Exception)
             {
-                _server.RemoveConnection(info.RuntimeInstanceCookie);
+                _server?.RemoveConnection(info.RuntimeInstanceCookie);
 
                 throw;
             }
@@ -228,6 +235,16 @@ namespace Microsoft.Diagnostics.Monitoring
                 throw new ObjectDisposedException(nameof(ServerEndpointInfoSource));
             }
         }
+
+        private void VerifyIsListening()
+        {
+            if (!IsListening)
+            {
+                throw new InvalidOperationException(nameof(ServerEndpointInfoSource.Start) + " method must be called before invoking this operation.");
+            }
+        }
+
+        private bool IsListening => null != _server && null != _listenTask;
 
         private class EndpointInfo : IEndpointInfo
         {
