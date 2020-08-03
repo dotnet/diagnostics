@@ -113,11 +113,11 @@ namespace DotnetMonitor.UnitTests
             var endpointInfos = await GetEndpointInfoAsync(source);
             Assert.Empty(endpointInfos);
 
-            using var newEndpointInfoHelper = new NewEndpointInfoHelper(source, _outputHelper);
+            Task newEndpointInfoTask = source.WaitForNewEndpointInfoAsync(TimeSpan.FromSeconds(5));
 
             await using (var execution1 = StartTraceeProcess("LoggerRemoteTest", transportName))
             {
-                await newEndpointInfoHelper.WaitForNewEndpointInfoAsync(TimeSpan.FromSeconds(5));
+                await newEndpointInfoTask;
 
                 execution1.Start();
 
@@ -169,55 +169,10 @@ namespace DotnetMonitor.UnitTests
             Assert.NotNull(endpointInfo.Endpoint);
         }
 
-        /// <summary>
-        /// Helper class for waiting for notification of a new connection from the connection source.
-        /// This aids in allowing to wait for a new connection with a timeout rather than waiting
-        /// for a specified amount of time and then testing for the new connection (and possibly repeating
-        /// if a new connection was not found).
-        /// </summary>
-        private sealed class NewEndpointInfoHelper : IDisposable
-        {
-            private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
-            private readonly EventTaskSource<EventHandler> _newEndpointInfoSource;
-            private readonly ITestOutputHelper _outputHelper;
-
-            private bool _disposed;
-
-            public NewEndpointInfoHelper(TestServerEndpointInfoSource source, ITestOutputHelper outputHelper)
-            {
-                // Create a task source that is signaled
-                // when the AddedEndpointInfo event is raise.
-                _newEndpointInfoSource = new EventTaskSource<EventHandler>(
-                    complete => (s, e) => complete(),
-                    h => source.AddedEndpointInfo += h,
-                    h => source.AddedEndpointInfo -= h,
-                    _cancellation.Token);
-                _outputHelper = outputHelper;
-            }
-
-            public void Dispose()
-            {
-                if (!_disposed)
-                {
-                    _cancellation.Cancel();
-                    _cancellation.Dispose();
-
-                    _disposed = true;
-                }
-            }
-
-            public async Task WaitForNewEndpointInfoAsync(TimeSpan timeout)
-            {
-                _outputHelper.WriteLine("Waiting for new endpoint info.");
-                _cancellation.CancelAfter(timeout);
-                await _newEndpointInfoSource.Task;
-                _outputHelper.WriteLine("Notified of new endpoint info.");
-            }
-        }
-
         private sealed class TestServerEndpointInfoSource : ServerEndpointInfoSource
         {
             private readonly ITestOutputHelper _outputHelper;
+            private readonly List<TaskCompletionSource<IpcEndpointInfo>> _addedEndpointInfoSources = new List<TaskCompletionSource<IpcEndpointInfo>>();
 
             public TestServerEndpointInfoSource(string transportPath, ITestOutputHelper outputHelper)
                 : base(transportPath)
@@ -225,18 +180,44 @@ namespace DotnetMonitor.UnitTests
                 _outputHelper = outputHelper;
             }
 
+            public async Task<IpcEndpointInfo> WaitForNewEndpointInfoAsync(TimeSpan timeout)
+            {
+                TaskCompletionSource<IpcEndpointInfo> addedEndpointInfoSource = new TaskCompletionSource<IpcEndpointInfo>(TaskCreationOptions.RunContinuationsAsynchronously);
+                using var timeoutCancellation = new CancellationTokenSource();
+                var token = timeoutCancellation.Token;
+                using var _ = token.Register(() => addedEndpointInfoSource.TrySetCanceled(token));
+
+                lock (_addedEndpointInfoSources)
+                {
+                    _addedEndpointInfoSources.Add(addedEndpointInfoSource);
+                }
+
+                _outputHelper.WriteLine("Waiting for new endpoint info.");
+                timeoutCancellation.CancelAfter(timeout);
+                IpcEndpointInfo endpointInfo = await addedEndpointInfoSource.Task;
+                _outputHelper.WriteLine("Notified of new endpoint info.");
+
+                return endpointInfo;
+            }
+
             internal override void OnAddedEndpointInfo(IpcEndpointInfo info)
             {
                 _outputHelper.WriteLine($"Added endpoint info to collection: {info.ToTestString()}");
-                AddedEndpointInfo(this, EventArgs.Empty);
+                
+                lock (_addedEndpointInfoSources)
+                {
+                    foreach (var source in _addedEndpointInfoSources)
+                    {
+                        source.TrySetResult(info);
+                    }
+                    _addedEndpointInfoSources.Clear();
+                }
             }
 
             internal override void OnRemovedEndpointInfo(IpcEndpointInfo info)
             {
                 _outputHelper.WriteLine($"Removed endpoint info from collection: {info.ToTestString()}");
             }
-
-            public event EventHandler AddedEndpointInfo;
         }
     }
 }

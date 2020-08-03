@@ -225,7 +225,7 @@ namespace Microsoft.Diagnostics.Monitoring
         {
             if (_disposed)
             {
-                throw new ObjectDisposedException(nameof(ReversedDiagnosticsServer));
+                throw new ObjectDisposedException(nameof(ServerEndpointInfoSource));
             }
         }
 

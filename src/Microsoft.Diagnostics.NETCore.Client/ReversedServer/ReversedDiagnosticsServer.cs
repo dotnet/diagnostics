@@ -312,16 +312,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // the handler should be removed from consideration.
                 return true;
             });
-            
-            try
-            {
-                // Wait for the handler to verify we have a connected stream
-                await hasConnectedStreamSource.Task.ConfigureAwait(false);
-            }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
-            {
-                // Handle all exceptions except cancellation
-            }
+           
+            // Wait for the handler to verify we have a connected stream
+            await hasConnectedStreamSource.Task.ConfigureAwait(false);
         }
 
         private void ProvideStream(Guid runtimeId, Stream stream)
