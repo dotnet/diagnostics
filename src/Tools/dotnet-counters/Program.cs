@@ -115,7 +115,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             if (!s_SupportedRuntimeVersions.Contains(runtimeVersion))
             {
-                Console.WriteLine($"{runtimeVersion} is not a supported version.");
+                Console.WriteLine($"{runtimeVersion} is not a supported version string or a supported runtime version.");
+                Console.WriteLine("Supported version strings: 3.0, 3.1, 5.0");
                 return 0;
             }
             var profiles = KnownData.GetAllProviders(runtimeVersion);
