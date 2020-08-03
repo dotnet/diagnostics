@@ -52,12 +52,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _path = path;
         }
 
-        public void Connect(string path)
+        public void Connect(string path, TimeSpan timeout)
         {
-            Connect(CreateUnixDomainSocketEndPoint(path));
+            IAsyncResult result = BeginConnect(CreateUnixDomainSocketEndPoint(path), null, null);
 
-            _ownsSocketFile = false;
-            _path = path;
+            if (result.AsyncWaitHandle.WaitOne(timeout))
+            {
+                EndConnect(result);
+
+                _ownsSocketFile = false;
+                _path = path;
+            }
+            else
+            {
+                Close(0);
+                throw new TimeoutException();
+            }
         }
 
         public async Task ConnectAsync(string path, CancellationToken token)

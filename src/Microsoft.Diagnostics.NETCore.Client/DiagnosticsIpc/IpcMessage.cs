@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public IpcMessage()
         { }
 
-        public IpcMessage(IpcHeader header, byte[] payload)
+        public IpcMessage(IpcHeader header, byte[] payload = null)
         {
             Payload = payload ?? Array.Empty<byte>();
             Header = header;

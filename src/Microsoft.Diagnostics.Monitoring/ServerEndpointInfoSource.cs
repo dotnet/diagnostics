@@ -86,7 +86,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 throw new InvalidOperationException(nameof(ServerEndpointInfoSource.Listen) + " method can only be called once.");
             }
 
-            _server = new ReversedDiagnosticsServer(_transportPath);
+            _server = new ReversedDiagnosticsServer(_transportPath, maxConnections);
 
             _listenTask = ListenAsync(_cancellation.Token);
         }

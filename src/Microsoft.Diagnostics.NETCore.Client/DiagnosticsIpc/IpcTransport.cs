@@ -99,15 +99,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 var namedPipe = new NamedPipeClientStream(
-                    ".", address, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Impersonation);
+                    ".",
+                    address,
+                    PipeDirection.InOut,
+                    PipeOptions.None,
+                    TokenImpersonationLevel.Impersonation);
                 namedPipe.Connect((int)timeout.TotalMilliseconds);
                 return namedPipe;
             }
             else
             {
                 var socket = new UnixDomainSocket();
-                // BUG? this path makes no use of the timeout
-                socket.Connect(Path.Combine(IpcRootPath, address));
+                socket.Connect(Path.Combine(IpcRootPath, address), timeout);
                 return new ExposedSocketNetworkStream(socket, ownsSocket: true);
             }
         }

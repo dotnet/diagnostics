@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
      * the runtime must advertise itself over the connection. ALL SUBSEQUENT COMMUNICATION 
      * IS STANDARD DIAGNOSTICS IPC PROTOCOL COMMUNICATION.
      * 
-     * The flow for Advertise is a one-way burst of 24 bytes consisting of
+     * The flow for Advertise is a one-way burst of 34 bytes consisting of
      * 8 bytes  - "ADVR_V1\0" (ASCII chars + null byte)
      * 16 bytes - CLR Instance Cookie (little-endian)
      * 8 bytes  - PID (little-endian)
@@ -27,6 +27,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal sealed class IpcAdvertise
     {
         private static byte[] Magic_V1 => Encoding.ASCII.GetBytes("ADVR_V1" + '\0');
+        private static readonly int IpcAdvertiseV1SizeInBytes = Magic_V1.Length + 16 + 8 + 2; // 34 bytes
 
         private IpcAdvertise(byte[] magic, Guid cookie, UInt64 pid, UInt16 future)
         {
@@ -38,7 +39,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public static async Task<IpcAdvertise> ParseAsync(Stream stream, CancellationToken token)
         {
-            byte[] buffer = new byte[Magic_V1.Length + 16 + 8 + 2];
+            byte[] buffer = new byte[IpcAdvertiseV1SizeInBytes];
 
             int totalRead = 0;
             do
