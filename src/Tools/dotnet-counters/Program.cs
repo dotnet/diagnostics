@@ -121,7 +121,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
             var profiles = KnownData.GetAllProviders(runtimeVersion);
             var maxNameLength = profiles.Max(p => p.Name.Length);
             Console.WriteLine($"Showing well-known counters for .NET (Core) version {runtimeVersion} only. Specific processes may support additional counters.");
-            Console.WriteLine("To see counters supported in other veresions of .NET (Core), try using --runtime-version flag.\n");
             foreach (var profile in profiles)
             {
                 var counters = profile.GetAllCounters();
