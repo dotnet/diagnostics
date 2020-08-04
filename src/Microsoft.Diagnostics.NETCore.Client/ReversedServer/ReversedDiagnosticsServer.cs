@@ -156,7 +156,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         // regardless of the number of times the same runtime instance connects. This requires consumers
                         // to continuously invoke the AcceptAsync method in order to handle runtime instance reconnects,
                         // even if the consumer only wants to handle a single endpoint.
-                        if (!_cachedEndpoints.TryGetValue(runtimeCookie, out _))
+                        if (!_cachedEndpoints.ContainsKey(runtimeCookie))
                         {
                             ServerIpcEndpoint endpoint = new ServerIpcEndpoint(this, runtimeCookie);
                             _cachedEndpoints.Add(runtimeCookie, endpoint);
