@@ -41,6 +41,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="loh-size", Description="LOH Size", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="poh-size", Description="POH (Pinned Object Heap) Size", SupportedVersions=new[] { net50 } },
                     new CounterProfile{ Name="alloc-rate", Description="Number of bytes allocated in the managed heap per second", SupportedVersions=new[] { net30, net31, net50 } },
+                    new CounterProfile{ Name="gc-fragmentation", Description="GC Heap Fragmentation", SupportedVersions=new[] { net50 } },
                     new CounterProfile{ Name="assembly-count", Description="Number of Assemblies Loaded", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="exception-count", Description="Number of Exceptions / sec", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="threadpool-thread-count", Description="Number of ThreadPool Threads", SupportedVersions=new[] { net30, net31, net50 } },
