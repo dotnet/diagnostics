@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 }
                 
                 output = string.IsNullOrEmpty(output)
-                    ? $"{DateTime.Now:yyyyMMdd\\_hhmmss}_{processId}.gcdump"
+                    ? $"{DateTime.Now:yyyyMMdd\\_HHmmss}_{processId}.gcdump"
                     : output;
 
                 FileInfo outputFileInfo = new FileInfo(output);
