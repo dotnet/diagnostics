@@ -2,22 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Monitoring;
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel.DataCollection;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Monitoring;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
@@ -43,7 +37,7 @@ namespace DotnetMonitor.UnitTests
 
             var outputStream = new MemoryStream();
 
-            await using (var testExecution = RemoteTestExecution.StartRemoteProcess("LoggerRemoteTest", _output))
+            await using (var testExecution = StartTraceeProcess("LoggerRemoteTest"))
             {
                 //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
 
@@ -51,10 +45,10 @@ namespace DotnetMonitor.UnitTests
 
                 DiagnosticsEventPipeProcessor diagnosticsEventPipeProcessor = new DiagnosticsEventPipeProcessor(
                     PipeMode.Logs,
-                    loggerFactory,
-                    Enumerable.Empty<IMetricsLogger>());
+                    loggerFactory);
 
-                var processingTask = diagnosticsEventPipeProcessor.Process(testExecution.TestRunner.Pid, TimeSpan.FromSeconds(10), CancellationToken.None);
+                var client = new DiagnosticsClient(testExecution.TestRunner.Pid);
+                var processingTask = diagnosticsEventPipeProcessor.Process(client, testExecution.TestRunner.Pid, TimeSpan.FromSeconds(10), CancellationToken.None);
 
                 //Add a small delay to make sure diagnostic processor had a chance to initialize
                 await Task.Delay(1000);
@@ -106,6 +100,11 @@ namespace DotnetMonitor.UnitTests
                 //TODO For now this will always be a string
                 Assert.Equal(expectedValue.value, value.GetString());
             }
+        }
+
+        private RemoteTestExecution StartTraceeProcess(string loggerCategory)
+        {
+            return RemoteTestExecution.StartProcess(CommonHelper.GetTraceePath("EventPipeTracee") + " " + loggerCategory, _output);
         }
 
         private sealed class LoggerTestResult

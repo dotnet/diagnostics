@@ -9,13 +9,21 @@ namespace Tracee
 {
     class Program
     {
+        private const int LoopCount = 30;
+
         static void Main(string[] args)
         {
+            Console.WriteLine("Sleep in loop for {0} seconds.", LoopCount);
+
             // Runs for max of 30 sec
-            for(var i = 0; i < 30; i++)
+            for (var i = 0; i < LoopCount; i++)
             {
+                Console.WriteLine("Iteration #{0}", i);
                 Thread.Sleep(1000);
             }
+
+            Console.WriteLine("Press any key to exit.");
+            Console.ReadKey();
         }
     }
 }

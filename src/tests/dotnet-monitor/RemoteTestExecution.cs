@@ -2,16 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client;
 using Xunit.Abstractions;
 
 namespace DotnetMonitor.UnitTests
@@ -23,13 +18,16 @@ namespace DotnetMonitor.UnitTests
     {
         private Task IoReadingTask { get; }
 
-        private RemoteTestExecution(TestRunner runner, Task ioReadingTask)
+        private ITestOutputHelper OutputHelper { get; }
+
+        public TestRunner TestRunner { get; }
+
+        private RemoteTestExecution(TestRunner runner, Task ioReadingTask, ITestOutputHelper outputHelper)
         {
             TestRunner = runner;
             IoReadingTask = ioReadingTask;
+            OutputHelper = outputHelper;
         }
-
-        public TestRunner TestRunner { get; }
 
         public void Start()
         {
@@ -44,15 +42,18 @@ namespace DotnetMonitor.UnitTests
             TestRunner.StandardInput.Flush();
         }
 
-        public static RemoteTestExecution StartRemoteProcess(string loggerCategory, ITestOutputHelper outputHelper)
+        public static RemoteTestExecution StartProcess(string commandLine, ITestOutputHelper outputHelper, string reversedServerTransportName = null)
         {
-            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath("EventPipeTracee") + " " + loggerCategory,
-                outputHelper, redirectError: true, redirectInput: true);
+            TestRunner runner = new TestRunner(commandLine, outputHelper, redirectError: true, redirectInput: true);
+            if (!string.IsNullOrEmpty(reversedServerTransportName))
+            {
+                runner.AddReversedServer(reversedServerTransportName);
+            }
             runner.Start();
 
             Task readingTask = ReadAllOutput(runner.StandardOutput, runner.StandardError, outputHelper);
 
-            return new RemoteTestExecution(runner, readingTask);
+            return new RemoteTestExecution(runner, readingTask, outputHelper);
         }
 
         private static Task ReadAllOutput(StreamReader output, StreamReader error, ITestOutputHelper outputHelper)
@@ -95,6 +96,18 @@ namespace DotnetMonitor.UnitTests
         public async ValueTask DisposeAsync()
         {
             SendSignal();
+
+            using var timeoutSource = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            try
+            {
+                await TestRunner.WaitForExitAsync(timeoutSource.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                OutputHelper.WriteLine("Remote process did not exit within timeout period. Forcefully stopping process.");
+                TestRunner.Stop();
+            }
+
             await IoReadingTask;
         }
     }

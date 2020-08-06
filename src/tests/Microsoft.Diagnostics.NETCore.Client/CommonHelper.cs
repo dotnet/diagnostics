@@ -15,11 +15,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 "..\\..\\..\\..\\..\\.dotnet\\dotnet.exe") : 
             "../../../../../.dotnet/dotnet";
         
-        public static string GetTraceePath(string traceeName = "Tracee")
+        public static string GetTraceePath(string traceeName = "Tracee", string targetFramework = "netcoreapp3.1")
         {
             var curPath = Directory.GetCurrentDirectory();
 ;
-            var traceePath = curPath.Replace(System.Reflection.Assembly.GetCallingAssembly().GetName().Name, traceeName);
+            var traceePath = curPath
+                .Replace(System.Reflection.Assembly.GetCallingAssembly().GetName().Name, traceeName)
+                .Replace("netcoreapp3.1", targetFramework);
 
             return Path.Combine(traceePath, Path.ChangeExtension(traceeName, ".dll"));
         }
