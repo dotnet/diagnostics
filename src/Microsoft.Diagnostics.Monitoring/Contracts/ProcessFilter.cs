@@ -7,13 +7,13 @@ namespace Microsoft.Diagnostics.Monitoring
     [TypeConverter(typeof(ProcessFilterTypeConverter))]
     public struct ProcessFilter
     {
-        internal ProcessFilter(int processId)
+        public ProcessFilter(int processId)
         {
             ProcessId = processId;
             RuntimeInstanceCookie = null;
         }
 
-        internal ProcessFilter(Guid runtimeInstanceCookie)
+        public ProcessFilter(Guid runtimeInstanceCookie)
         {
             ProcessId = null;
             RuntimeInstanceCookie = runtimeInstanceCookie;

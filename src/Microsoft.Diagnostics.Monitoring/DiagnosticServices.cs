@@ -201,19 +201,6 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        private async Task<DiagnosticsClient> GetClientAsync(int processId, CancellationToken token)
-        {
-            var endpointInfos = await _endpointInfoSource.GetEndpointInfoAsync(token);
-            var endpointInfo = endpointInfos.FirstOrDefault(c => c.ProcessId == processId);
-
-            if (null == endpointInfo)
-            {
-                throw new InvalidOperationException($"Diagnostics client for process ID {processId} does not exist.");
-            }
-
-            return new DiagnosticsClient(endpointInfo.Endpoint);
-        }
-
         public void Dispose()
         {
             _tokenSource.Cancel();
