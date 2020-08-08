@@ -37,6 +37,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 })
                 .SetCompatibilityVersion(CompatibilityVersion.Latest)
                 .AddApplicationPart(typeof(DiagController).Assembly);
+
             services.Configure<ApiBehaviorOptions>(options =>
             {
                 options.InvalidModelStateResponseFactory = context =>
