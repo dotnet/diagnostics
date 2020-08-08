@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,12 +16,22 @@ namespace Microsoft.Diagnostics.Monitoring
     {
         public Task<IEnumerable<IEndpointInfo>> GetEndpointInfoAsync(CancellationToken token)
         {
+            bool isInDockerContainer = RuntimeInfo.IsInDockerContainer;
+            int currentPid = Process.GetCurrentProcess().Id;
+
             List<IEndpointInfo> endpointInfos = new List<IEndpointInfo>();
             foreach (int pid in DiagnosticsClient.GetPublishedProcesses())
             {
-                // CONSIDER: Generate a "runtime instance identifier" based on the pipe name
-                // e.g. pid + disambiguator in GUID form.
-                endpointInfos.Add(new EndpointInfo(pid));
+                // If in Docker container, allow adding all processes to the list because
+                // multi-container environments could have the same process ID. Expect that
+                // user to have set COMPLUS_EnableDiagnostics=0 for this process. Otherwise,
+                // filter out the current process ID.
+                if (isInDockerContainer || pid != currentPid)
+                {
+                    // CONSIDER: Generate a "runtime instance identifier" based on the pipe name
+                    // e.g. pid + disambiguator in GUID form.
+                    endpointInfos.Add(new EndpointInfo(pid));
+                }
             }
 
             return Task.FromResult(endpointInfos.AsEnumerable());
