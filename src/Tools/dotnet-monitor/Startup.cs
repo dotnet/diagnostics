@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Diagnostics.Monitoring.RestServer.Controllers;
 using Microsoft.Extensions.Configuration;
@@ -47,15 +48,22 @@ namespace Microsoft.Diagnostics.Monitoring
                 };
             });
 
-            services.Configure<GzipCompressionProviderOptions>(options =>
+            services.Configure<BrotliCompressionProviderOptions>(options =>
             {
                 options.Level = CompressionLevel.Optimal;
             });
 
             services.AddResponseCompression(configureOptions =>
             {
-                configureOptions.Providers.Add<GzipCompressionProvider>();
+                configureOptions.Providers.Add<BrotliCompressionProvider>();
                 configureOptions.MimeTypes = new List<string> { "application/octet-stream" };
+            });
+
+            // This is needed to allow the StreamingLogger to synchronously write to the output stream.
+            // Eventually should switch StreamingLoggger to something that allows for async operations.
+            services.Configure<KestrelServerOptions>(options =>
+            {
+                options.AllowSynchronousIO = true;
             });
 
             var config = new PrometheusConfiguration();
