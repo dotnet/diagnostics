@@ -105,7 +105,7 @@ static HRESULT GetSingleFileInfo(PULONG pModuleIndex, PULONG64 pModuleAddress, R
 \**********************************************************************/
 HRESULT Runtime::CreateInstance(RuntimeConfiguration configuration, Runtime **ppRuntime)
 {
-    PCSTR runtimeModuleName = GetRuntimeModuleName(configuration);
+    PCSTR runtimeModuleName = ::GetRuntimeModuleName(configuration);
     ULONG moduleIndex = 0;
     ULONG64 moduleAddress = 0;
     ULONG64 moduleSize = 0;
@@ -142,16 +142,16 @@ HRESULT Runtime::CreateInstance(RuntimeConfiguration configuration, Runtime **pp
 
                 if (params.SymbolType == SymDeferred)
                 {
+                    PCSTR runtimeDllName = ::GetRuntimeDllName(configuration);
                     std::string reloadCommand;
                     reloadCommand.append("/f ");
-                    reloadCommand.append(runtimeModuleName);
-                    reloadCommand.append(".dll");
+                    reloadCommand.append(runtimeDllName);
                     g_ExtSymbols->Reload(reloadCommand.c_str());
                     g_ExtSymbols->GetModuleParameters(1, &moduleAddress, 0, &params);
 
                     if (params.SymbolType != SymPdb && params.SymbolType != SymDia)
                     {
-                        ExtOut("PDB symbol for %s not loaded\n", runtimeModuleName);
+                        ExtOut("Symbols for %s not loaded. Some SOS commands may not work.\n", runtimeDllName);
                     }
                 }
             }
