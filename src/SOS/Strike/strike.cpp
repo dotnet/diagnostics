@@ -228,7 +228,7 @@ DECLARE_API (MinidumpMode)
     DWORD_PTR Value=0;
 
     CMDValue arg[] =
-    {   // vptr, type
+    {   // vptr, type;
         {&Value, COHEX}
     };
 
@@ -10986,7 +10986,6 @@ DECLARE_API(Token2EE)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     StringHolder DllName;
     ULONG64 token = 0;
@@ -11012,7 +11011,7 @@ DECLARE_API(Token2EE)
     }
     if (nArg!=2)
     {
-        ExtOut("Usage: !Token2EE module_name mdToken\n");
+        ExtOut("Usage: " SOSPrefix "Token2EE module_name mdToken\n");
         ExtOut("       You can pass * for module_name to search all modules.\n");
         return Status;
     }
@@ -11051,7 +11050,7 @@ DECLARE_API(Token2EE)
             FileNameForModule(dwAddr, FileName);
 
             // We'd like a short form for this output
-            LPWSTR pszFilename = _wcsrchr (FileName, DIRECTORY_SEPARATOR_CHAR_W);
+            LPWSTR pszFilename = _wcsrchr (FileName, GetTargetDirectorySeparatorW());
             if (pszFilename == NULL)
             {
                 pszFilename = FileName;
@@ -11181,7 +11180,7 @@ DECLARE_API(Name2EE)
             FileNameForModule (dwAddr, FileName);
 
             // We'd like a short form for this output
-            LPWSTR pszFilename = _wcsrchr (FileName, DIRECTORY_SEPARATOR_CHAR_W);
+            LPWSTR pszFilename = _wcsrchr (FileName, GetTargetDirectorySeparatorW());
             if (pszFilename == NULL)
             {
                 pszFilename = FileName;
@@ -14887,25 +14886,26 @@ static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp,
             }
         }
     }
-    ULONG Index;
+    ULONG index;
     ULONG64 base;
-    if (g_ExtSymbols->GetModuleByOffset(UL64_TO_CDA(addrInModule), 0, &Index, &base) == S_OK)
+    if (g_ExtSymbols->GetModuleByOffset(UL64_TO_CDA(addrInModule), 0, &index, &base) == S_OK)
     {
         ArrayHolder<char> szModuleName = new char[MAX_LONGPATH+1];
-        if (g_ExtSymbols->GetModuleNames(Index, base, NULL, 0, NULL, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL) == S_OK)
+        if (g_ExtSymbols->GetModuleNames(index, base, NULL, 0, NULL, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL) == S_OK)
         {
             MultiByteToWideChar (CP_ACP, 0, szModuleName, MAX_LONGPATH, wszNameBuffer, MAX_LONGPATH);
             DOAPPEND (wszNameBuffer);
             bModuleNameWorked = TRUE;
         }
     }
-    else
+    // If the dbgeng functions fail to get the module/assembly name, use the DAC API
+    if (!bModuleNameWorked)
     {
         if (g_sos->GetPEFileName(dmd.File, MAX_LONGPATH, wszNameBuffer, NULL) == S_OK)
         {
             if (wszNameBuffer[0] != W('\0'))
             {
-                WCHAR *pJustName = _wcsrchr(wszNameBuffer, DIRECTORY_SEPARATOR_CHAR_W);
+                WCHAR *pJustName = _wcsrchr(wszNameBuffer, GetTargetDirectorySeparatorW());
                 if (pJustName == NULL)
                     pJustName = wszNameBuffer - 1;
 

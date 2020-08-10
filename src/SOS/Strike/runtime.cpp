@@ -322,7 +322,7 @@ LPCSTR Runtime::GetRuntimeDirectory()
                 return nullptr;
             }
             // Parse off the file name
-            char* lastSlash = strrchr(szModuleName, DIRECTORY_SEPARATOR_CHAR_A);
+            char* lastSlash = strrchr(szModuleName, GetTargetDirectorySeparatorW());
             if (lastSlash != nullptr)
             {
                 *lastSlash = '\0';

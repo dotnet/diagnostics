@@ -234,6 +234,16 @@ ULONG DebuggeeType()
     return Class;
 }
 
+const WCHAR GetTargetDirectorySeparatorW()
+{
+    if (IsWindowsTarget()) {
+        return W('\\');
+    }
+    else {
+        return W('/');
+    }
+}
+
 #ifndef FEATURE_PAL
 
 // Check if a file exist
@@ -5189,7 +5199,7 @@ static void AddAssemblyName(WString& methodOutput, CLRDATA_ADDRESS mdesc)
                 {
                     if (wszFileName[0] != W('\0'))
                     {
-                        WCHAR *pJustName = _wcsrchr(wszFileName, DIRECTORY_SEPARATOR_CHAR_W);
+                        WCHAR *pJustName = _wcsrchr(wszFileName, GetTargetDirectorySeparatorW());
                         if (pJustName == NULL)
                             pJustName = wszFileName - 1;
                         methodOutput += (pJustName + 1);
