@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.Monitoring
                     if (_mode == PipeMode.ProcessInfo)
                     {
                         // ProcessInfo
-                        HandleProcessInfo(source, stopFunc, token);
+                        handleEventsTask = HandleProcessInfo(source, stopFunc, token);
                     }
 
                     source.Process();
@@ -470,17 +470,36 @@ namespace Microsoft.Diagnostics.Monitoring
             _gcGraph.AllowReading();
         }
 
-        private void HandleProcessInfo(EventPipeEventSource source, Func<Task> stopFunc, CancellationToken token)
+        private async Task HandleProcessInfo(EventPipeEventSource source, Func<Task> stopFunc, CancellationToken token)
         {
-            source.Dynamic.AddCallbackForProviderEvent(MonitoringSourceConfiguration.EventPipeProviderName, "ProcessInfo", traceEvent =>
+            Action<TraceEvent, Action> processInfoHandler = (TraceEvent traceEvent, Action taskComplete) =>
             {
                 _processInfoCallback?.Invoke((string)traceEvent.PayloadByName("CommandLine"));
-            });
-
-            source.Dynamic.All += traceEvent =>
-            {
-                stopFunc();
+                taskComplete();
             };
+
+            // Completed when the ProcessInfo event of the Microsoft-DotNETCore-EventPipe event provider is handled
+            using var processInfoTaskSource = new EventTaskSource<Action<TraceEvent>>(
+                taskComplete => traceEvent => processInfoHandler(traceEvent, taskComplete),
+                handler => source.Dynamic.AddCallbackForProviderEvent(MonitoringSourceConfiguration.EventPipeProviderName, "ProcessInfo", handler),
+                handler => source.Dynamic.RemoveCallback(handler),
+                token);
+
+            // Completed when any trace event is handled
+            using var anyEventTaskSource = new EventTaskSource<Action<TraceEvent>>(
+                taskComplete => traceEvent => taskComplete(),
+                handler => source.Dynamic.All += handler,
+                handler => source.Dynamic.All -= handler,
+                token);
+
+            // Wait for any trace event to be processed
+            await anyEventTaskSource.Task;
+
+            // Stop the event pipe session
+            await stopFunc();
+
+            // Wait for the ProcessInfo event to be processed
+            await processInfoTaskSource.Task;
         }
 
         public async ValueTask DisposeAsync()

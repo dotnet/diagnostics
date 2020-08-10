@@ -23,7 +23,7 @@ namespace Microsoft.Diagnostics.Monitoring
         private static readonly TimeSpan PruneWaitForConnectionTimeout = TimeSpan.FromMilliseconds(250);
 
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
-        private readonly IList<IpcEndpointInfo> _endpointInfos = new List<IpcEndpointInfo>();
+        private readonly IList<EndpointInfo> _endpointInfos = new List<EndpointInfo>();
         private readonly SemaphoreSlim _endpointInfosSemaphore = new SemaphoreSlim(1);
         private readonly string _transportPath;
 
@@ -126,14 +126,14 @@ namespace Microsoft.Diagnostics.Monitoring
                 var endpointInfos = _endpointInfos.ToList();
 
                 var pruneTasks = new List<Task>();
-                foreach (IpcEndpointInfo info in endpointInfos)
+                foreach (EndpointInfo info in endpointInfos)
                 {
                     pruneTasks.Add(Task.Run(() => PruneIfNotViable(info, linkedToken), linkedToken));
                 }
 
                 await Task.WhenAll(pruneTasks).ConfigureAwait(false);
 
-                return _endpointInfos.Select(c => new EndpointInfo(c));
+                return _endpointInfos.ToList();
             }
             finally
             {
@@ -141,7 +141,7 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        private async Task PruneIfNotViable(IpcEndpointInfo info, CancellationToken token)
+        private async Task PruneIfNotViable(EndpointInfo info, CancellationToken token)
         {
             using var timeoutSource = new CancellationTokenSource();
             using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutSource.Token);
@@ -208,12 +208,14 @@ namespace Microsoft.Diagnostics.Monitoring
                     // The runtime likely doesn't understand the ResumeRuntime command.
                 }
 
+                EndpointInfo endpointInfo = EndpointInfo.FromIpcEndpointInfo(info);
+
                 await _endpointInfosSemaphore.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
-                    _endpointInfos.Add(info);
+                    _endpointInfos.Add(endpointInfo);
 
-                    OnAddedEndpointInfo(info);
+                    OnAddedEndpointInfo(endpointInfo);
                 }
                 finally
                 {
@@ -228,11 +230,11 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        internal virtual void OnAddedEndpointInfo(IpcEndpointInfo info)
+        internal virtual void OnAddedEndpointInfo(EndpointInfo info)
         {
         }
 
-        internal virtual void OnRemovedEndpointInfo(IpcEndpointInfo info)
+        internal virtual void OnRemovedEndpointInfo(EndpointInfo info)
         {
         }
 
@@ -253,21 +255,5 @@ namespace Microsoft.Diagnostics.Monitoring
         }
 
         private bool IsListening => null != _server && null != _listenTask;
-
-        private class EndpointInfo : IEndpointInfo
-        {
-            private readonly IpcEndpointInfo _info;
-
-            public EndpointInfo(IpcEndpointInfo info)
-            {
-                _info = info;
-            }
-
-            public IpcEndpoint Endpoint => _info.Endpoint;
-
-            public int ProcessId => _info.ProcessId;
-
-            public Guid RuntimeInstanceCookie => _info.RuntimeInstanceCookie;
-        }
     }
 }
