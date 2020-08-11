@@ -49,7 +49,6 @@
                 </TriggerSet>
                 <TriggerSet>
                     <ModuleTrigger Name="libcoreclr.so" />
-                    <OSTrigger Name="Linux" />
                 </TriggerSet>
             </LoadTriggers>
             <EngineCommands>

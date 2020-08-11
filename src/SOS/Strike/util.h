@@ -1761,6 +1761,7 @@ BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo);
 #endif
 
 BOOL IsDumpFile ();
+const WCHAR GetTargetDirectorySeparatorW();
 
 // IsMiniDumpFile will return true if 1) we are in
 // a small format minidump, and g_InMinidumpSafeMode is true.
