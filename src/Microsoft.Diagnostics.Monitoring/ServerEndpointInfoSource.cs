@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -52,7 +53,14 @@ namespace Microsoft.Diagnostics.Monitoring
 
                 if (null != _listenTask)
                 {
-                    await _listenTask.ConfigureAwait(false);
+                    try
+                    {
+                        await _listenTask.ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.Fail(ex.Message);
+                    }
                 }
 
                 if (null != _server)

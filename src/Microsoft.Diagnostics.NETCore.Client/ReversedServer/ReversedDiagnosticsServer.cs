@@ -21,10 +21,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal sealed class ReversedDiagnosticsServer : IAsyncDisposable
     {
         // Returns true if the handler is complete and should be removed from the list
-        delegate bool StreamHandler(Guid runtimeId, ref Stream stream);
+        delegate bool StreamHandler(Guid runtimeId, Stream stream, out bool consumed);
 
         // Returns true if the handler is complete and should be removed from the list
-        delegate bool EndpointInfoHandler(ref IpcEndpointInfo? endpointInfo);
+        delegate bool EndpointInfoHandler(IpcEndpointInfo endpointInfo, out bool consumed);
 
         // The amount of time to allow parsing of the advertise data before cancelling. This allows the server to
         // remain responsive in case the advertise data is incomplete and the stream is not closed.
@@ -65,7 +65,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 if (null != _listenTask)
                 {
-                    await _listenTask.ConfigureAwait(false);
+                    try
+                    {
+                        await _listenTask.ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.Fail(ex.Message);
+                    }
                 }
 
                 lock (_streamLock)
@@ -127,14 +134,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using var disposalRegistration = _disposalSource.Token.Register(
                 () => endpointInfoSource.TrySetException(new ObjectDisposedException(nameof(ReversedDiagnosticsServer))));
 
-            RegisterEndpointInfoHandler((ref IpcEndpointInfo? endpointInfo) =>
+            RegisterEndpointInfoHandler((IpcEndpointInfo endpointInfo, out bool consumed) =>
             {
-                Debug.Assert(endpointInfo.HasValue);
-
-                if (endpointInfoSource.TrySetResult(endpointInfo.Value))
-                {
-                    endpointInfo = null;
-                }
+                consumed = endpointInfoSource.TrySetResult(endpointInfo);
 
                 // Regardless of the registrant previously waiting or cancelled,
                 // the handler should be removed from consideration.
@@ -293,17 +295,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using var methodRegistration = cancellationSource.Token.Register(() => TrySetStream(StreamStateCancelled, value: null));
             using var disposalRegistration = _disposalSource.Token.Register(() => TrySetStream(StreamStateDisposed, value: null));
 
-            RegisterStreamHandler(runtimeId, (Guid id, ref Stream cachedStream) =>
+            RegisterStreamHandler(runtimeId, (Guid id, Stream cachedStream, out bool consumed) =>
             {
+                consumed = false;
+
                 if (id != runtimeId)
                 {
                     return false;
                 }
 
-                if (TrySetStream(StreamStateComplete, cachedStream))
-                {
-                    cachedStream = null;
-                }
+                consumed = TrySetStream(StreamStateComplete, cachedStream);
 
                 // Regardless of the registrant previously waiting or cancelled,
                 // the handler should be removed from consideration.
@@ -337,8 +338,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using var disposalRegistration = _disposalSource.Token.Register(
                 () => hasConnectedStreamSource.TrySetException(new ObjectDisposedException(nameof(ReversedDiagnosticsServer))));
 
-            RegisterStreamHandler(runtimeId, (Guid id, ref Stream cachedStream) =>
+            RegisterStreamHandler(runtimeId, (Guid id, Stream cachedStream, out bool consumed) =>
             {
+                consumed = false;
+
                 if (runtimeId != id)
                 {
                     return false;
@@ -353,7 +356,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 if (!TestStream(cachedStream))
                 {
                     cachedStream.Dispose();
-                    cachedStream = null;
+                    consumed = true;
                     return false;
                 }
 
@@ -388,20 +391,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             // If there are any handlers waiting for a stream, provide
             // it to the first handler in the queue.
-            for (int i = 0; (i < _streamHandlers.Count) && (null != stream); i++)
+            bool consumedStream = false;
+            for (int i = 0; !consumedStream && i < _streamHandlers.Count; i++)
             {
                 StreamHandler handler = _streamHandlers[i];
-                if (handler(runtimeId, ref stream))
+                if (handler(runtimeId, stream, out consumedStream))
                 {
                     _streamHandlers.RemoveAt(i);
                     i--;
                 }
             }
 
-            // Store the stream for when a handler registers later. If
-            // a handler already captured the stream, this will be null, thus
-            // representing that no existing stream is waiting to be consumed.
-            _cachedStreams[runtimeId] = stream;
+            // Store the stream for when a handler registers later.
+            _cachedStreams[runtimeId] = consumedStream ? null : stream;
         }
 
         private void RegisterStreamHandler(Guid runtimeId, StreamHandler handler)
@@ -469,13 +471,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             lock (_newEndpointInfoLock)
             {
-                IpcEndpointInfo? endpointInfoNullable = endpointInfo;
+                bool consumedEndpointInfo = false;
                 // Provide the endpoint info to the first handler that will accept it.
-                for (int i = 0; i < _newEndpointInfoHandlers.Count && endpointInfoNullable.HasValue; i++)
+                for (int i = 0; !consumedEndpointInfo && i < _newEndpointInfoHandlers.Count; i++)
                 {
                     EndpointInfoHandler handler = _newEndpointInfoHandlers[i];
                     // Handler will return true if it has completed
-                    if (handler(ref endpointInfoNullable))
+                    if (handler(endpointInfo, out consumedEndpointInfo))
                     {
                         _newEndpointInfoHandlers.RemoveAt(i);
                         i--;
@@ -483,7 +485,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
 
                 // If the endpoint info was not consumed, add it to the list
-                if (endpointInfoNullable.HasValue)
+                if (!consumedEndpointInfo)
                 {
                     _newEndpointInfos.Add(endpointInfo);
                 }
@@ -497,15 +499,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // Attempt to accept an endpoint info
                 for (int i = 0; i < _newEndpointInfos.Count && null != handler; i++)
                 {
-                    IpcEndpointInfo? endpointInfoNullable = _newEndpointInfos[i];
+                    bool consumedEnpointInfo = false;
                     // Handler will return true if it has completed
-                    if (handler(ref endpointInfoNullable))
+                    if (handler(_newEndpointInfos[i], out consumedEnpointInfo))
                     {
                         handler = null;
                     }
 
                     // Handler will set endpoint info parameter to null when it is consumed.
-                    if (!endpointInfoNullable.HasValue)
+                    if (!consumedEnpointInfo)
                     {
                         _newEndpointInfos.RemoveAt(i);
                         i--;
