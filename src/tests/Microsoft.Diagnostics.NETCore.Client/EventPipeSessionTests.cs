@@ -81,6 +81,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     catch (Exception e)
                     {
                         Console.WriteLine("Error encountered while processing events");
+                        Console.WriteLine(e.ToString());
                         Assert.Equal("", e.ToString());
                     }
                     finally
