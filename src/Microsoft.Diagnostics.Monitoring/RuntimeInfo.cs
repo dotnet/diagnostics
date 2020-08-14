@@ -1,10 +1,20 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
     public static class RuntimeInfo
     {
+        public static bool IsDiagnosticsEnabled
+        {
+            get
+            {
+                string enableDiagnostics = Environment.GetEnvironmentVariable("COMPlus_EnableDiagnostics");
+                return string.IsNullOrEmpty(enableDiagnostics) || !"0".Equals(enableDiagnostics, StringComparison.Ordinal);
+            }
+        }
+
         public static bool IsInDockerContainer
         {
             get

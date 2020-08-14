@@ -26,31 +26,42 @@ namespace Microsoft.Diagnostics.Monitoring
         // with a diagnostics transport connection.
         private static readonly TimeSpan DockerEntrypointWaitTimeout = TimeSpan.FromMilliseconds(250);
 
-        private readonly DiagnosticPortConnectionMode _connectionMode;
         private readonly IEndpointInfoSourceInternal _endpointInfoSource;
-        private readonly Guid? _runtimeInstanceCookie;
+        private readonly int? _processIdToFilterOut;
+        private readonly Guid? _runtimeInstanceCookieToFilterOut;
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
         public DiagnosticServices(
             IEndpointInfoSource endpointInfoSource,
             IDiagnosticPortDescription diagnosticPortDescription)
         {
-            _connectionMode = diagnosticPortDescription.Mode;
             _endpointInfoSource = (IEndpointInfoSourceInternal)endpointInfoSource;
 
-            // Attempt to determine the runtime instance cookie of this process
-            try
+            // Filter out the current process based on the connection mode.
+            if (RuntimeInfo.IsDiagnosticsEnabled)
             {
-                var client = new DiagnosticsClient(Process.GetCurrentProcess().Id);
+                int pid = Process.GetCurrentProcess().Id;
 
-                Guid runtimeInstanceCookie = client.GetProcessInfo().RuntimeInstanceCookie;
-                if (Guid.Empty != runtimeInstanceCookie)
+                // Regardless of connection mode, can use the runtime instance cookie to filter self out.
+                try
                 {
-                    _runtimeInstanceCookie = runtimeInstanceCookie;
+                    var client = new DiagnosticsClient(pid);
+                    Guid runtimeInstanceCookie = client.GetProcessInfo().RuntimeInstanceCookie;
+                    if (Guid.Empty != runtimeInstanceCookie)
+                    {
+                        _runtimeInstanceCookieToFilterOut = runtimeInstanceCookie;
+                    }
                 }
-            }
-            catch (Exception)
-            {
+                catch (Exception)
+                {
+                }
+
+                // If connecting to runtime instances, filter self out. In listening mode, it's likely
+                // that multiple processes have the same PID in multi-container scenarios.
+                if (DiagnosticPortConnectionMode.Connect == diagnosticPortDescription.Mode)
+                {
+                    _processIdToFilterOut = pid;
+                }
             }
         }
 
@@ -189,21 +200,14 @@ namespace Microsoft.Diagnostics.Monitoring
         {
             var endpointInfos = await _endpointInfoSource.GetEndpointInfoAsync(token);
 
-            // Filter out the current process based on the connection mode.
-            switch (_connectionMode)
+            if (_processIdToFilterOut.HasValue)
             {
-                case DiagnosticPortConnectionMode.Connect:
-                    int pid = Process.GetCurrentProcess().Id;
-                    endpointInfos = endpointInfos.Where(info => info.ProcessId != pid);
-                    break;
-                case DiagnosticPortConnectionMode.Listen:
-                    if (_runtimeInstanceCookie.HasValue)
-                    {
-                        endpointInfos = endpointInfos.Where(info => info.RuntimeInstanceCookie != _runtimeInstanceCookie.Value);
-                    }
-                    break;
-                default:
-                    throw new InvalidOperationException($"Unhandled connection mode: {_connectionMode}");
+                endpointInfos = endpointInfos.Where(info => info.ProcessId != _processIdToFilterOut.Value);
+            }
+
+            if (_runtimeInstanceCookieToFilterOut.HasValue)
+            {
+                endpointInfos = endpointInfos.Where(info => info.RuntimeInstanceCookie != _runtimeInstanceCookieToFilterOut.Value);
             }
 
             return endpointInfos;
