@@ -80,6 +80,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                     catch (Exception e)
                     {
+                        // This exception can happen if the target process exits while EventPipeEventSource is in the middle of reading from the pipe.
                         Console.WriteLine("Error encountered while processing events");
                         Console.WriteLine(e.ToString());
                     }
