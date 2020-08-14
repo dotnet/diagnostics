@@ -26,19 +26,39 @@ namespace Microsoft.Diagnostics.Monitoring
         // with a diagnostics transport connection.
         private static readonly TimeSpan DockerEntrypointWaitTimeout = TimeSpan.FromMilliseconds(250);
 
+        private readonly DiagnosticPortConnectionMode _connectionMode;
         private readonly IEndpointInfoSourceInternal _endpointInfoSource;
+        private readonly Guid? _runtimeInstanceCookie;
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
-        public DiagnosticServices(IEndpointInfoSource endpointInfoSource)
+        public DiagnosticServices(
+            IEndpointInfoSource endpointInfoSource,
+            IDiagnosticPortDescription diagnosticPortDescription)
         {
+            _connectionMode = diagnosticPortDescription.Mode;
             _endpointInfoSource = (IEndpointInfoSourceInternal)endpointInfoSource;
+
+            // Attempt to determine the runtime instance cookie of this process
+            try
+            {
+                var client = new DiagnosticsClient(Process.GetCurrentProcess().Id);
+
+                Guid runtimeInstanceCookie = client.GetProcessInfo().RuntimeInstanceCookie;
+                if (Guid.Empty != runtimeInstanceCookie)
+                {
+                    _runtimeInstanceCookie = runtimeInstanceCookie;
+                }
+            }
+            catch (Exception)
+            {
+            }
         }
 
         public async Task<IEnumerable<IProcessInfo>> GetProcessesAsync(CancellationToken token)
         {
             try
             {
-                var endpointInfos = await _endpointInfoSource.GetEndpointInfoAsync(token);
+                var endpointInfos = await GetEndpointInfosAsync(token);
 
                 return endpointInfos.Select(ProcessInfo.FromEndpointInfo);
             }
@@ -130,7 +150,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public async Task<IProcessInfo> GetProcessAsync(ProcessFilter? filter, CancellationToken token)
         {
-            var endpointInfos = await _endpointInfoSource.GetEndpointInfoAsync(token);
+            var endpointInfos = await GetEndpointInfosAsync(token);
 
             if (filter.HasValue)
             {
@@ -163,6 +183,30 @@ namespace Microsoft.Diagnostics.Monitoring
             return GetSingleProcessInfo(
                 endpointInfos,
                 filter: null);
+        }
+
+        private async Task<IEnumerable<IEndpointInfo>> GetEndpointInfosAsync(CancellationToken token)
+        {
+            var endpointInfos = await _endpointInfoSource.GetEndpointInfoAsync(token);
+
+            // Filter out the current process based on the connection mode.
+            switch (_connectionMode)
+            {
+                case DiagnosticPortConnectionMode.Connect:
+                    int pid = Process.GetCurrentProcess().Id;
+                    endpointInfos = endpointInfos.Where(info => info.ProcessId != pid);
+                    break;
+                case DiagnosticPortConnectionMode.Listen:
+                    if (_runtimeInstanceCookie.HasValue)
+                    {
+                        endpointInfos = endpointInfos.Where(info => info.RuntimeInstanceCookie != _runtimeInstanceCookie.Value);
+                    }
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unhandled connection mode: {_connectionMode}");
+            }
+
+            return endpointInfos;
         }
 
         private IProcessInfo GetSingleProcessInfo(IEnumerable<IEndpointInfo> endpointInfos, ProcessFilter? filter)

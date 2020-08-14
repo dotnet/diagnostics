@@ -174,6 +174,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
+        internal ProcessInfo GetProcessInfo()
+        {
+            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo);
+            var response = IpcClient.SendMessage(_endpoint, message);
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
+            {
+                case DiagnosticsServerResponseId.Error:
+                    var hr = BitConverter.ToInt32(response.Payload, 0);
+                    throw new ServerErrorException($"Get process info failed (HRESULT: 0x{hr:X8})");
+                case DiagnosticsServerResponseId.OK:
+                    return ProcessInfo.Parse(response.Payload);
+                default:
+                    throw new ServerErrorException($"Get process info failed - server responded with unknown command");
+            }
+        }
+
         /// <summary>
         /// Get all the active processes that can be attached to.
         /// </summary>
