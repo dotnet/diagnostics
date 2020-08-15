@@ -209,7 +209,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         }
                         durationTimer?.Stop();
                         rundownRequested = true;
-                        session.Stop();
+                        try
+                        {
+                            session.Stop();
+                        }
+                        // Timeout exception can occur if the target app has exited prior to requesting session to be stopped.
+                        catch (System.TimeoutException)
+                        {
+                        }
 
                         do
                         {
