@@ -98,7 +98,8 @@ public void TriggerDumpOnCpuUsage(int processId, int threshold)
             if (obj.EventName.Equals("EventCounters"))
             {
                 // I know this part is ugly. But this is all TraceEvent.
-                var payloadFields = (IDictionary<string, object>)(obj.GetPayloadValueByName("Payload"));
+                IDictionary<string, object> payloadVal = (IDictionary<string, object>)(obj.PayloadValue(0));
+                IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
                 if (payloadFields["Name"].ToString().Equals("cpu-usage"))
                 {
                     double cpuUsage = Double.Parse(payloadFields["Mean"]);

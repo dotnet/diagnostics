@@ -8,9 +8,9 @@
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>f6192d1e284a08ac05041d05fa6e60dec74b24f5</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.SymbolStore" Version="1.0.140301">
+    <Dependency Name="Microsoft.SymbolStore" Version="1.0.141001">
       <Uri>https://github.com/dotnet/symstore</Uri>
-      <Sha>c9ca5cbbfae52c6c76c7be64bd57145c37122f7c</Sha>
+      <Sha>facabfb7992467f9bf4fdf985fe355896d7fbd47</Sha>
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
@@ -18,13 +18,13 @@
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>f6192d1e284a08ac05041d05fa6e60dec74b24f5</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.NETCore.App" Version="5.0.0-rc.1.20406.11">
+    <Dependency Name="Microsoft.NETCore.App" Version="5.0.0-rc.1.20412.8">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>9b2f548c3b0da290bc57f1a0460cd0c5c408095e</Sha>
+      <Sha>0db8ecbea291c09cfd84d7f33ea049f5c0cec94f</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-rc.1.20405.9">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-rc.1.20414.2">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>b052c4fcc200633443ccfedb0007e03b4b2340a8</Sha>
+      <Sha>a2a6db2ee3f8569177c2a4c9b436dd5b504674f5</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>
