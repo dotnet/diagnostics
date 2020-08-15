@@ -60,10 +60,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return value;
         }
 
-        public UInt64 ProcessId;
-        public Guid RuntimeInstanceCookie;
-        public string CommandLine;
-        public string OperatingSystem;
-        public string ProcessArchitecture;
+        public UInt64 ProcessId { get; private set; }
+        public Guid RuntimeInstanceCookie { get; private set; }
+        public string CommandLine { get; private set; }
+        public string OperatingSystem { get; private set; }
+        public string ProcessArchitecture { get; private set; }
     }
 }
