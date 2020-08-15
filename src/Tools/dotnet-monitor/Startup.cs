@@ -67,9 +67,9 @@ namespace Microsoft.Diagnostics.Monitoring
                 options.AllowSynchronousIO = true;
             });
 
-            var config = new PrometheusConfiguration();
-            Configuration.Bind(nameof(PrometheusConfiguration), config);
-            if (config.Enabled)
+            var prometheusConfig = new PrometheusConfiguration();
+            Configuration.Bind(nameof(PrometheusConfiguration), prometheusConfig);
+            if (prometheusConfig.Enabled)
             {
                 services.AddSingleton<MetricsStoreService>();
                 services.AddHostedService<MetricsService>();

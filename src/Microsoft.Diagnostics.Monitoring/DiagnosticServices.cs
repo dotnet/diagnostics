@@ -27,49 +27,18 @@ namespace Microsoft.Diagnostics.Monitoring
         private static readonly TimeSpan DockerEntrypointWaitTimeout = TimeSpan.FromMilliseconds(250);
 
         private readonly IEndpointInfoSourceInternal _endpointInfoSource;
-        private readonly int? _processIdToFilterOut;
-        private readonly Guid? _runtimeInstanceCookieToFilterOut;
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
-        public DiagnosticServices(
-            IEndpointInfoSource endpointInfoSource,
-            IDiagnosticPortDescription diagnosticPortDescription)
+        public DiagnosticServices(IEndpointInfoSource endpointInfoSource)
         {
             _endpointInfoSource = (IEndpointInfoSourceInternal)endpointInfoSource;
-
-            // Filter out the current process based on the connection mode.
-            if (RuntimeInfo.IsDiagnosticsEnabled)
-            {
-                int pid = Process.GetCurrentProcess().Id;
-
-                // Regardless of connection mode, can use the runtime instance cookie to filter self out.
-                try
-                {
-                    var client = new DiagnosticsClient(pid);
-                    Guid runtimeInstanceCookie = client.GetProcessInfo().RuntimeInstanceCookie;
-                    if (Guid.Empty != runtimeInstanceCookie)
-                    {
-                        _runtimeInstanceCookieToFilterOut = runtimeInstanceCookie;
-                    }
-                }
-                catch (Exception)
-                {
-                }
-
-                // If connecting to runtime instances, filter self out. In listening mode, it's likely
-                // that multiple processes have the same PID in multi-container scenarios.
-                if (DiagnosticPortConnectionMode.Connect == diagnosticPortDescription.Mode)
-                {
-                    _processIdToFilterOut = pid;
-                }
-            }
         }
 
         public async Task<IEnumerable<IProcessInfo>> GetProcessesAsync(CancellationToken token)
         {
             try
             {
-                var endpointInfos = await GetEndpointInfosAsync(token);
+                var endpointInfos = await _endpointInfoSource.GetEndpointInfoAsync(token);
 
                 return endpointInfos.Select(ProcessInfo.FromEndpointInfo);
             }
@@ -161,7 +130,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public async Task<IProcessInfo> GetProcessAsync(ProcessFilter? filter, CancellationToken token)
         {
-            var endpointInfos = await GetEndpointInfosAsync(token);
+            var endpointInfos = await _endpointInfoSource.GetEndpointInfoAsync(token);
 
             if (filter.HasValue)
             {
@@ -194,23 +163,6 @@ namespace Microsoft.Diagnostics.Monitoring
             return GetSingleProcessInfo(
                 endpointInfos,
                 filter: null);
-        }
-
-        private async Task<IEnumerable<IEndpointInfo>> GetEndpointInfosAsync(CancellationToken token)
-        {
-            var endpointInfos = await _endpointInfoSource.GetEndpointInfoAsync(token);
-
-            if (_processIdToFilterOut.HasValue)
-            {
-                endpointInfos = endpointInfos.Where(info => info.ProcessId != _processIdToFilterOut.Value);
-            }
-
-            if (_runtimeInstanceCookieToFilterOut.HasValue)
-            {
-                endpointInfos = endpointInfos.Where(info => info.RuntimeInstanceCookie != _runtimeInstanceCookieToFilterOut.Value);
-            }
-
-            return endpointInfos;
         }
 
         private IProcessInfo GetSingleProcessInfo(IEnumerable<IEndpointInfo> endpointInfos, ProcessFilter? filter)
