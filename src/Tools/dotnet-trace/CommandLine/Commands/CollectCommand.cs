@@ -173,7 +173,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         Console.Out.WriteLine("\n\n");
 
                         var fileInfo = new FileInfo(output.FullName);
-                        Task copyTask = session.EventStream.CopyToAsync(fs);
+                        Task copyTask = session.EventStream.CopyToAsync(fs).ContinueWith((task) => shouldExit.Set());
 
                         if (!Console.IsOutputRedirected)
                         {
@@ -198,23 +198,27 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         while (!shouldExit.WaitOne(100) &&  !(!Console.IsInputRedirected && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
                             printStatus();
 
-                        // Behavior concerning Enter moving text in the terminal buffer when at the bottom of the buffer
-                        // is different between Console/Terminals on Windows and Mac/Linux
-                        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && 
-                            !Console.IsOutputRedirected && 
-                            rewriter != null && 
-                            Math.Abs(Console.CursorTop - Console.BufferHeight) == 1)
+                        // if the CopyToAsync ended early (target program exited, etc.), the we don't need to stop the session.
+                        if (!copyTask.Wait(0))
                         {
-                            rewriter.LineToClear--;
-                        }
-                        durationTimer?.Stop();
-                        rundownRequested = true;
-                        session.Stop();
+                            // Behavior concerning Enter moving text in the terminal buffer when at the bottom of the buffer
+                            // is different between Console/Terminals on Windows and Mac/Linux
+                            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && 
+                                !Console.IsOutputRedirected && 
+                                rewriter != null && 
+                                Math.Abs(Console.CursorTop - Console.BufferHeight) == 1)
+                            {
+                                rewriter.LineToClear--;
+                            }
+                            durationTimer?.Stop();
+                            rundownRequested = true;
+                            session.Stop();
 
-                        do
-                        {
-                            printStatus();
-                        } while (!copyTask.Wait(100));
+                            do
+                            {
+                                printStatus();
+                            } while (!copyTask.Wait(100));
+                        }
                     }
 
                     Console.Out.WriteLine("\nTrace completed.");
