@@ -12,4 +12,10 @@
     <IncludeSymbols>true</IncludeSymbols>
     <IsShipping>true</IsShipping>
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DotnetMonitor.UnitTests" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.NETCore.Client.UnitTests" />
+  </ItemGroup>
 </Project>

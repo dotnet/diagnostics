@@ -18,6 +18,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostic.Tools.Dump.ExtensionCommands;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -162,6 +163,11 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 sosHost.InitializeSOSHost(SymbolReader.TempDirectory, _isDesktop, _dacFilePath, dbiFilePath: null);
                 return sosHost;
             });
+
+            // ClrMD helper for extended commands
+            _serviceProvider.AddServiceFactory(typeof(ClrMDHelper), () =>
+                new ClrMDHelper(_serviceProvider)
+            );
         }
 
         /// <summary>

@@ -234,6 +234,16 @@ ULONG DebuggeeType()
     return Class;
 }
 
+const WCHAR GetTargetDirectorySeparatorW()
+{
+    if (IsWindowsTarget()) {
+        return W('\\');
+    }
+    else {
+        return W('/');
+    }
+}
+
 #ifndef FEATURE_PAL
 
 // Check if a file exist
@@ -1457,7 +1467,7 @@ HRESULT FileNameForModule (DWORD_PTR pModuleAddr, __out_ecount (MAX_LONGPATH) WC
 *                                                                      *
 \**********************************************************************/
 // fileName should be at least MAX_LONGPATH
-HRESULT FileNameForModule (DacpModuleData *pModule, __out_ecount (MAX_LONGPATH) WCHAR *fileName)
+HRESULT FileNameForModule (const DacpModuleData * const pModule, __out_ecount (MAX_LONGPATH) WCHAR *fileName)
 {
     fileName[0] = L'\0';
     
@@ -1753,7 +1763,7 @@ BOOL IsSameModuleName (const char *str1, const char *str2)
         ptr2--;
         ptr1--;
     }
-    if (ptr1 >= str1 && *ptr1 != DIRECTORY_SEPARATOR_CHAR_A && *ptr1 != ':')
+    if (ptr1 >= str1 && *ptr1 != GetTargetDirectorySeparatorW() && *ptr1 != ':')
     {
         return FALSE;
     }
@@ -2263,7 +2273,7 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
                     if (mName != NULL)
                     {
                         ArrayHolder<WCHAR> moduleName = new WCHAR[MAX_LONGPATH];
-                        FileNameForModule((DWORD_PTR)ModuleAddr, moduleName);
+                        FileNameForModule(&ModuleData, moduleName);
 
                         int bytesWritten = WideCharToMultiByte(CP_ACP, 0, moduleName, -1, fileName, MAX_LONGPATH, NULL, NULL);
                         _ASSERTE(bytesWritten > 0);
@@ -5189,7 +5199,7 @@ static void AddAssemblyName(WString& methodOutput, CLRDATA_ADDRESS mdesc)
                 {
                     if (wszFileName[0] != W('\0'))
                     {
-                        WCHAR *pJustName = _wcsrchr(wszFileName, DIRECTORY_SEPARATOR_CHAR_W);
+                        WCHAR *pJustName = _wcsrchr(wszFileName, GetTargetDirectorySeparatorW());
                         if (pJustName == NULL)
                             pJustName = wszFileName - 1;
                         methodOutput += (pJustName + 1);

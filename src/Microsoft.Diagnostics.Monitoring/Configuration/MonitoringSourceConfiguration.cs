@@ -15,6 +15,8 @@ namespace Microsoft.Diagnostics.Monitoring
         public const string GrpcAspNetCoreServer = "Grpc.AspNetCore.Server";
         public const string DiagnosticSourceEventSource = "Microsoft-Diagnostics-DiagnosticSource";
         public const string TplEventSource = "System.Threading.Tasks.TplEventSource";
+        public const string SampleProfilerProviderName = "Microsoft-DotNETCore-SampleProfiler";
+        public const string EventPipeProviderName = "Microsoft-DotNETCore-EventPipe";
 
         public abstract IList<EventPipeProvider> GetProviders();
 
