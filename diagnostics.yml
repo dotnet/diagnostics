@@ -457,7 +457,7 @@ stages:
         publishInstallersAndChecksums: true
         SDLValidationParameters:
           enable: true
-          continueOnError: false
+          continueOnError: true
           params: ' -SourceToolsList @("policheck","credscan")
           -TsaInstanceURL $(_TsaInstanceURL)
           -TsaProjectName $(_TsaProjectName)

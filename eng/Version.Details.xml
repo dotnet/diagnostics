@@ -4,27 +4,27 @@
       <Uri>https://github.com/dotnet/command-line-api</Uri>
       <Sha>166610c56ff732093f0145a2911d4f6c40b786da</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="5.0.0-beta.20364.3">
+    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="5.0.0-beta.20374.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>ff5d4b6c8dbdaeacb6e6159d3f8185118dffd915</Sha>
+      <Sha>f6192d1e284a08ac05041d05fa6e60dec74b24f5</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.SymbolStore" Version="1.0.136501">
+    <Dependency Name="Microsoft.SymbolStore" Version="1.0.141001">
       <Uri>https://github.com/dotnet/symstore</Uri>
-      <Sha>47187e979e7e023223aa1d219183e7c0ef825d80</Sha>
+      <Sha>facabfb7992467f9bf4fdf985fe355896d7fbd47</Sha>
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="5.0.0-beta.20364.3">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="5.0.0-beta.20374.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>ff5d4b6c8dbdaeacb6e6159d3f8185118dffd915</Sha>
+      <Sha>f6192d1e284a08ac05041d05fa6e60dec74b24f5</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.NETCore.App" Version="5.0.0-rc.1.20371.13">
+    <Dependency Name="Microsoft.NETCore.App" Version="5.0.0-rc.1.20412.8">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>d8cf13e0ba9b369a15a83472b6b97463c6d07fe2</Sha>
+      <Sha>0db8ecbea291c09cfd84d7f33ea049f5c0cec94f</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-rc.1.20377.3">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-rc.1.20414.12">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>780d527f0b9df4594672c1a699eb2fc955de3d58</Sha>
+      <Sha>a9026f1e0ff2000eaf918aa0ec07f8d701f80dd6</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>

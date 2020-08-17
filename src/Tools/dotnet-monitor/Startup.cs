@@ -37,8 +37,18 @@ namespace Microsoft.Diagnostics.Monitoring
                 // HACK We need to disable EndpointRouting in order to run properly in 3.1
                 System.Reflection.PropertyInfo prop = options.GetType().GetProperty("EnableEndpointRouting");
                 prop?.SetValue(options, false);
-
             }).SetCompatibilityVersion(CompatibilityVersion.Latest);
+
+            services.Configure<ApiBehaviorOptions>(options =>
+            {
+                options.InvalidModelStateResponseFactory = context =>
+                {
+                    var details = new ValidationProblemDetails(context.ModelState);
+                    var result = new BadRequestObjectResult(details);
+                    result.ContentTypes.Add("application/problem+json");
+                    return result;
+                };
+            });
 
             services.Configure<GzipCompressionProviderOptions>(options =>
             {
