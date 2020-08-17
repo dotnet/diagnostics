@@ -506,8 +506,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         handler = null;
                     }
 
-                    // Handler will set endpoint info parameter to null when it is consumed.
-                    if (!consumedEnpointInfo)
+                    // If the endpoint info was consumed, remove it from the list
+                    if (consumedEnpointInfo)
                     {
                         _newEndpointInfos.RemoveAt(i);
                         i--;
