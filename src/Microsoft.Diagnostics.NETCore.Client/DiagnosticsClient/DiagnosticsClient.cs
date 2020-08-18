@@ -34,6 +34,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Wait for an available diagnostic endpoint to the runtime instance.
         /// </summary>
+        /// <param name="timeout">The amount of time to wait before cancelling the wait for the connection.</param>
+        internal void WaitForConnection(TimeSpan timeout)
+        {
+            _endpoint.WaitForConnection(timeout);
+        }
+
+        /// <summary>
+        /// Wait for an available diagnostic endpoint to the runtime instance.
+        /// </summary>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <returns>
         /// A task the completes when a diagnostic endpoint to the runtime instance becomes available.
