@@ -103,7 +103,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         {
             if (_source is ServerEndpointInfoSource source)
             {
-                source.Listen(_configuration.MaxConnections.GetValueOrDefault(ReversedDiagnosticsServer.MaxAllowedConnections));
+                source.Start(_configuration.MaxConnections.GetValueOrDefault(ReversedDiagnosticsServer.MaxAllowedConnections));
             }
         }
     }

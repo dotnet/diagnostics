@@ -18,10 +18,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// Establishes server endpoint for runtime instances to connect when
     /// configured to provide diagnostic endpoints in reverse mode.
     /// </summary>
-    internal sealed class ReversedDiagnosticsServer : IDisposable
+    internal sealed class ReversedDiagnosticsServer : IAsyncDisposable
     {
         // Returns true if the handler is complete and should be removed from the list
-        delegate bool StreamHandler(Guid runtimeId, ref Stream stream);
+        delegate bool StreamHandler(Guid runtimeId, Stream stream, out bool consumed);
+
+        // Returns true if the handler is complete and should be removed from the list
+        delegate bool EndpointInfoHandler(IpcEndpointInfo endpointInfo, out bool consumed);
 
         // The amount of time to allow parsing of the advertise data before cancelling. This allows the server to
         // remain responsive in case the advertise data is incomplete and the stream is not closed.
@@ -30,11 +33,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private readonly Dictionary<Guid, ServerIpcEndpoint> _cachedEndpoints = new Dictionary<Guid, ServerIpcEndpoint>();
         private readonly Dictionary<Guid, Stream> _cachedStreams = new Dictionary<Guid, Stream>();
         private readonly CancellationTokenSource _disposalSource = new CancellationTokenSource();
-        private readonly List<StreamHandler> _handlers = new List<StreamHandler>();
-        private readonly object _lock = new object();
-        private readonly IpcServerTransport _transport;
+        private readonly List<EndpointInfoHandler> _newEndpointInfoHandlers = new List<EndpointInfoHandler>();
+        private readonly List<IpcEndpointInfo> _newEndpointInfos = new List<IpcEndpointInfo>();
+        private readonly object _newEndpointInfoLock = new object();
+        private readonly List<StreamHandler> _streamHandlers = new List<StreamHandler>();
+        private readonly object _streamLock = new object();
+        private readonly string _transportPath;
 
         private bool _disposed = false;
+        private Task _listenTask;
 
         /// <summary>
         /// Constructs the <see cref="ReversedDiagnosticsServer"/> instance with an endpoint bound
@@ -46,33 +53,32 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// On all other systems, this must be the full file path of the socket.
         /// </param>
         public ReversedDiagnosticsServer(string transportPath)
-            : this(transportPath, MaxAllowedConnections)
         {
+            _transportPath = transportPath;
         }
 
-        /// <summary>
-        /// Constructs the <see cref="ReversedDiagnosticsServer"/> instance with an endpoint bound
-        /// to the location specified by <paramref name="transportPath"/>.
-        /// </summary>
-        /// <param name="transportPath">
-        /// The path of the server endpoint.
-        /// On Windows, this can be a full pipe path or the name without the "\\.\pipe\" prefix.
-        /// On all other systems, this must be the full file path of the socket.
-        /// </param>
-        /// <param name="maxConnections">The maximum number of connections the server will support.</param>
-        public ReversedDiagnosticsServer(string transportPath, int maxConnections)
-        {
-            _transport = IpcServerTransport.Create(transportPath, maxConnections);
-        }
-
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
             if (!_disposed)
             {
                 _disposalSource.Cancel();
 
-                lock (_lock)
+                if (null != _listenTask)
                 {
+                    try
+                    {
+                        await _listenTask.ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.Fail(ex.Message);
+                    }
+                }
+
+                lock (_streamLock)
+                {
+                    _newEndpointInfos.Clear();
+
                     _cachedEndpoints.Clear();
 
                     foreach (Stream stream in _cachedStreams.Values)
@@ -82,8 +88,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     _cachedStreams.Clear();
                 }
 
-                _transport.Dispose();
-
                 _disposalSource.Dispose();
 
                 _disposed = true;
@@ -91,82 +95,56 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Provides endpoint information when a new runtime instance connects to the server.
+        /// Starts listening at the transport path for new connections.
+        /// </summary>
+        public void Start()
+        {
+            Start(MaxAllowedConnections);
+        }
+
+        /// <summary>
+        /// Starts listening at the transport path for new connections.
+        /// </summary>
+        /// <param name="maxConnections">The maximum number of connections the server will support.</param>
+        public void Start(int maxConnections)
+        {
+            VerifyNotDisposed();
+
+            if (IsStarted)
+            {
+                throw new InvalidOperationException(nameof(ReversedDiagnosticsServer.Start) + " method can only be called once.");
+            }
+
+            _listenTask = ListenAsync(maxConnections, _disposalSource.Token);
+        }
+
+        /// <summary>
+        /// Gets endpoint information when a new runtime instance connects to the server.
         /// </summary>
         /// <param name="token">The token to monitor for cancellation requests.</param>
-        /// <returns>A <see cref="IpcEndpointInfo"/> that contains information about the new runtime instance connection.</returns>
-        /// <remarks>
-        /// This will only provide endpoint information on the first time a runtime connects to the server.
-        /// If a connection is removed using <see cref="RemoveConnection(Guid)"/> and the same runtime instance,
-        /// reconnects after this call, then a new <see cref="IpcEndpointInfo"/> will be produced.
-        /// </remarks>
+        /// <returns>A task that completes with a <see cref="IpcEndpointInfo"/> value that contains information about the new runtime instance connection.</returns>
         public async Task<IpcEndpointInfo> AcceptAsync(CancellationToken token)
         {
             VerifyNotDisposed();
 
-            while (true)
+            VerifyIsStarted();
+
+            var endpointInfoSource = new TaskCompletionSource<IpcEndpointInfo>(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var methodRegistration = token.Register(() => endpointInfoSource.TrySetCanceled(token));
+            using var disposalRegistration = _disposalSource.Token.Register(
+                () => endpointInfoSource.TrySetException(new ObjectDisposedException(nameof(ReversedDiagnosticsServer))));
+
+            RegisterEndpointInfoHandler((IpcEndpointInfo endpointInfo, out bool consumed) =>
             {
-                Stream stream = null;
-                IpcAdvertise advertise = null;
-                try
-                {
-                    stream = await _transport.AcceptAsync(token).ConfigureAwait(false);
-                }
-                catch (Exception ex) when (!(ex is OperationCanceledException))
-                {
-                    // The advertise data could be incomplete if the runtime shuts down before completely writing
-                    // the information. Catch the exception and continue waiting for a new connection.
-                }
+                consumed = endpointInfoSource.TrySetResult(endpointInfo);
 
-                token.ThrowIfCancellationRequested();
+                // Regardless of the registrant previously waiting or cancelled,
+                // the handler should be removed from consideration.
+                return true;
+            });
 
-                if (null != stream)
-                {
-                    // Cancel parsing of advertise data after timeout period to
-                    // mitigate runtimes that write partial data and do not close the stream (avoid waiting forever).
-                    using var parseCancellationSource = new CancellationTokenSource();
-                    using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, parseCancellationSource.Token);
-                    try
-                    {
-                        parseCancellationSource.CancelAfter(ParseAdvertiseTimeout);
-
-                        advertise = await IpcAdvertise.ParseAsync(stream, linkedSource.Token).ConfigureAwait(false);
-                    }
-                    catch (OperationCanceledException) when (parseCancellationSource.IsCancellationRequested)
-                    {
-                        // Only handle cancellation if it was due to the parse timeout.
-                    }
-                    catch (Exception ex) when (!(ex is OperationCanceledException))
-                    {
-                        // Catch all other exceptions and continue waiting for a new connection.
-                    }
-                }
-
-                token.ThrowIfCancellationRequested();
-
-                if (null != advertise)
-                {
-                    Guid runtimeCookie = advertise.RuntimeInstanceCookie;
-                    int pid = unchecked((int)advertise.ProcessId);
-
-                    lock (_lock)
-                    {
-                        ProvideStream(runtimeCookie, stream);
-                        // Consumers should hold onto the endpoint info and use it for diagnostic communication,
-                        // regardless of the number of times the same runtime instance connects. This requires consumers
-                        // to continuously invoke the AcceptAsync method in order to handle runtime instance reconnects,
-                        // even if the consumer only wants to handle a single endpoint.
-                        if (!_cachedEndpoints.ContainsKey(runtimeCookie))
-                        {
-                            ServerIpcEndpoint endpoint = new ServerIpcEndpoint(this, runtimeCookie);
-                            _cachedEndpoints.Add(runtimeCookie, endpoint);
-                            return new IpcEndpointInfo(endpoint, pid, runtimeCookie);
-                        }
-                    }
-                }
-
-                token.ThrowIfCancellationRequested();
-            }
+            // Wait for the handler to verify we have a connected stream
+            return await endpointInfoSource.Task.ConfigureAwait(false);
         }
 
         /// <summary>
@@ -178,10 +156,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             VerifyNotDisposed();
 
+            VerifyIsStarted();
+
             bool endpointExisted = false;
             Stream previousStream = null;
 
-            lock (_lock)
+            lock (_streamLock)
             {
                 endpointExisted = _cachedEndpoints.Remove(runtimeCookie);
                 if (endpointExisted)
@@ -206,6 +186,76 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
+        private void VerifyIsStarted()
+        {
+            if (!IsStarted)
+            {
+                throw new InvalidOperationException(nameof(ReversedDiagnosticsServer.Start) + " method must be called before invoking this operation.");
+            }
+        }
+
+        /// <summary>
+        /// Listens at the transport path for new connections.
+        /// </summary>
+        /// <param name="maxConnections">The maximum number of connections the server will support.</param>
+        /// <param name="token">The token to monitor for cancellation requests.</param>
+        /// <returns>A task that completes when the server is no longer listening at the transport path.</returns>
+        private async Task ListenAsync(int maxConnections, CancellationToken token)
+        {
+            using var transport = IpcServerTransport.Create(_transportPath, maxConnections);
+            while (!token.IsCancellationRequested)
+            {
+                Stream stream = null;
+                IpcAdvertise advertise = null;
+                try
+                {
+                    stream = await transport.AcceptAsync(token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                }
+                catch (Exception)
+                {
+                    // The advertise data could be incomplete if the runtime shuts down before completely writing
+                    // the information. Catch the exception and continue waiting for a new connection.
+                }
+
+                if (null != stream)
+                {
+                    // Cancel parsing of advertise data after timeout period to
+                    // mitigate runtimes that write partial data and do not close the stream (avoid waiting forever).
+                    using var parseCancellationSource = new CancellationTokenSource();
+                    using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, parseCancellationSource.Token);
+                    try
+                    {
+                        parseCancellationSource.CancelAfter(ParseAdvertiseTimeout);
+
+                        advertise = await IpcAdvertise.ParseAsync(stream, linkedSource.Token).ConfigureAwait(false);
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+
+                if (null != advertise)
+                {
+                    Guid runtimeCookie = advertise.RuntimeInstanceCookie;
+                    int pid = unchecked((int)advertise.ProcessId);
+
+                    lock (_streamLock)
+                    {
+                        ProvideStream(runtimeCookie, stream);
+                        if (!_cachedEndpoints.ContainsKey(runtimeCookie))
+                        {
+                            ServerIpcEndpoint endpoint = new ServerIpcEndpoint(this, runtimeCookie);
+                            _cachedEndpoints.Add(runtimeCookie, endpoint);
+                            ProvideEndpointInfo(new IpcEndpointInfo(endpoint, pid, runtimeCookie));
+                        }
+                    }
+                }
+            }
+        }
+
         /// <remarks>
         /// This will block until the diagnostic stream is provided. This block can happen if
         /// the stream is acquired previously and the runtime instance has not yet reconnected
@@ -214,6 +264,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         internal Stream Connect(Guid runtimeId, TimeSpan timeout)
         {
             VerifyNotDisposed();
+
+            VerifyIsStarted();
 
             const int StreamStatePending = 0;
             const int StreamStateComplete = 1;
@@ -243,17 +295,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using var methodRegistration = cancellationSource.Token.Register(() => TrySetStream(StreamStateCancelled, value: null));
             using var disposalRegistration = _disposalSource.Token.Register(() => TrySetStream(StreamStateDisposed, value: null));
 
-            RegisterHandler(runtimeId, (Guid id, ref Stream cachedStream) =>
+            RegisterStreamHandler(runtimeId, (Guid id, Stream cachedStream, out bool consumed) =>
             {
+                consumed = false;
+
                 if (id != runtimeId)
                 {
                     return false;
                 }
 
-                if (TrySetStream(StreamStateComplete, cachedStream))
-                {
-                    cachedStream = null;
-                }
+                consumed = TrySetStream(StreamStateComplete, cachedStream);
 
                 // Regardless of the registrant previously waiting or cancelled,
                 // the handler should be removed from consideration.
@@ -280,13 +331,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             VerifyNotDisposed();
 
+            VerifyIsStarted();
+
             var hasConnectedStreamSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             using var methodRegistration = token.Register(() => hasConnectedStreamSource.TrySetCanceled(token));
             using var disposalRegistration = _disposalSource.Token.Register(
                 () => hasConnectedStreamSource.TrySetException(new ObjectDisposedException(nameof(ReversedDiagnosticsServer))));
 
-            RegisterHandler(runtimeId, (Guid id, ref Stream cachedStream) =>
+            RegisterStreamHandler(runtimeId, (Guid id, Stream cachedStream, out bool consumed) =>
             {
+                consumed = false;
+
                 if (runtimeId != id)
                 {
                     return false;
@@ -301,7 +356,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 if (!TestStream(cachedStream))
                 {
                     cachedStream.Dispose();
-                    cachedStream = null;
+                    consumed = true;
                     return false;
                 }
 
@@ -312,14 +367,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // the handler should be removed from consideration.
                 return true;
             });
-           
+
             // Wait for the handler to verify we have a connected stream
             await hasConnectedStreamSource.Task.ConfigureAwait(false);
         }
 
         private void ProvideStream(Guid runtimeId, Stream stream)
         {
-            Debug.Assert(Monitor.IsEntered(_lock));
+            Debug.Assert(Monitor.IsEntered(_streamLock));
 
             // Get the previous stream in order to dispose it later
             _cachedStreams.TryGetValue(runtimeId, out Stream previousStream);
@@ -332,24 +387,38 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private void RunStreamHandlers(Guid runtimeId, Stream stream)
         {
-            Debug.Assert(Monitor.IsEntered(_lock));
+            Debug.Assert(Monitor.IsEntered(_streamLock));
 
             // If there are any handlers waiting for a stream, provide
             // it to the first handler in the queue.
-            for (int i = 0; (i < _handlers.Count) && (null != stream); i++)
+            bool consumedStream = false;
+            for (int i = 0; !consumedStream && i < _streamHandlers.Count; i++)
             {
-                StreamHandler handler = _handlers[i];
-                if (handler(runtimeId, ref stream))
+                StreamHandler handler = _streamHandlers[i];
+                if (handler(runtimeId, stream, out consumedStream))
                 {
-                    _handlers.RemoveAt(i);
+                    _streamHandlers.RemoveAt(i);
                     i--;
                 }
             }
 
-            // Store the stream for when a handler registers later. If
-            // a handler already captured the stream, this will be null, thus
-            // representing that no existing stream is waiting to be consumed.
-            _cachedStreams[runtimeId] = stream;
+            // Store the stream for when a handler registers later.
+            _cachedStreams[runtimeId] = consumedStream ? null : stream;
+        }
+
+        private void RegisterStreamHandler(Guid runtimeId, StreamHandler handler)
+        {
+            lock (_streamLock)
+            {
+                _cachedStreams.TryGetValue(runtimeId, out Stream stream);
+
+                _streamHandlers.Add(handler);
+
+                if (stream != null)
+                {
+                    RunStreamHandlers(runtimeId, stream);
+                }
+            }
         }
 
         private bool TestStream(Stream stream)
@@ -395,23 +464,62 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return false;
         }
 
-        private void RegisterHandler(Guid runtimeId, StreamHandler handler)
+        private void ProvideEndpointInfo(in IpcEndpointInfo endpointInfo)
         {
-            lock (_lock)
+            lock (_newEndpointInfoLock)
             {
-                if (!_cachedStreams.TryGetValue(runtimeId, out Stream stream))
+                bool consumedEndpointInfo = false;
+                // Provide the endpoint info to the first handler that will accept it.
+                for (int i = 0; !consumedEndpointInfo && i < _newEndpointInfoHandlers.Count; i++)
                 {
-                    throw new InvalidOperationException($"Runtime instance with identifier '{runtimeId}' is not registered.");
+                    EndpointInfoHandler handler = _newEndpointInfoHandlers[i];
+                    // Handler will return true if it has completed
+                    if (handler(endpointInfo, out consumedEndpointInfo))
+                    {
+                        _newEndpointInfoHandlers.RemoveAt(i);
+                        i--;
+                    }
                 }
 
-                _handlers.Add(handler);
-
-                if (stream != null)
+                // If the endpoint info was not consumed, add it to the list
+                if (!consumedEndpointInfo)
                 {
-                    RunStreamHandlers(runtimeId, stream);
+                    _newEndpointInfos.Add(endpointInfo);
                 }
             }
         }
+
+        private void RegisterEndpointInfoHandler(EndpointInfoHandler handler)
+        {
+            lock (_newEndpointInfoLock)
+            {
+                // Attempt to accept an endpoint info
+                for (int i = 0; i < _newEndpointInfos.Count && null != handler; i++)
+                {
+                    bool consumedEnpointInfo = false;
+                    // Handler will return true if it has completed
+                    if (handler(_newEndpointInfos[i], out consumedEnpointInfo))
+                    {
+                        handler = null;
+                    }
+
+                    // If the endpoint info was consumed, remove it from the list
+                    if (consumedEnpointInfo)
+                    {
+                        _newEndpointInfos.RemoveAt(i);
+                        i--;
+                    }
+                }
+
+                // If the handler did not signal completion, then add it to the handlers list.
+                if (null != handler)
+                {
+                    _newEndpointInfoHandlers.Add(handler);
+                }
+            }
+        }
+
+        private bool IsStarted => null != _listenTask;
 
         public static int MaxAllowedConnections = IpcServerTransport.MaxAllowedConnections;
     }
