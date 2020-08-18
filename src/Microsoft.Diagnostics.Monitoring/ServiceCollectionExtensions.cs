@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 // Construct the source now rather than delayed construction
                 // in order to be able to accept diagnostics connections immediately.
                 var serverSource = new ServerEndpointInfoSource(reversedServerAddress);
-                serverSource.Listen(maxConnections.GetValueOrDefault(ReversedDiagnosticsServer.MaxAllowedConnections));
+                serverSource.Start(maxConnections.GetValueOrDefault(ReversedDiagnosticsServer.MaxAllowedConnections));
 
                 return services.AddSingleton<IEndpointInfoSource>(serverSource);
             }
