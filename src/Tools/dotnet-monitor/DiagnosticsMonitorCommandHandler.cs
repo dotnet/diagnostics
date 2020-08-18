@@ -40,6 +40,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             IWebHostBuilder builder = WebHost.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((IConfigurationBuilder builder) =>
                 {
+                    ConfigureEndpointInfoSource(builder, reversedServerAddress);
                     if (metrics)
                     {
                         //Note these are in precedence order.
@@ -50,8 +51,10 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 })
                 .ConfigureServices((WebHostBuilderContext context, IServiceCollection services) =>
                 {
-                    services.AddEndpointInfoSource(reversedServerAddress);
                     //TODO Many of these service additions should be done through extension methods
+                    services.Configure<DiagnosticPortConfiguration>(context.Configuration.GetSection(nameof(DiagnosticPortConfiguration)));
+                    services.AddSingleton<IEndpointInfoSource, FilteredEndpointInfoSource>();
+                    services.AddHostedService<FilteredEndpointInfoSourceHostedService>();
                     services.AddSingleton<IDiagnosticServices, DiagnosticServices>();
                     if (metrics)
                     {
@@ -72,6 +75,16 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.Enabled)), true.ToString()},
                 {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.UpdateIntervalSeconds)), 10.ToString()},
                 {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.MetricCount)), 3.ToString()}
+            });
+        }
+
+        private static void ConfigureEndpointInfoSource(IConfigurationBuilder builder, string diagnosticPort)
+        {
+            DiagnosticPortConnectionMode connectionMode = string.IsNullOrEmpty(diagnosticPort) ? DiagnosticPortConnectionMode.Connect : DiagnosticPortConnectionMode.Listen;
+            builder.AddInMemoryCollection(new Dictionary<string, string>
+            {
+                {MakeKey(nameof(DiagnosticPortConfiguration), nameof(DiagnosticPortConfiguration.ConnectionMode)), connectionMode.ToString()},
+                {MakeKey(nameof(DiagnosticPortConfiguration), nameof(DiagnosticPortConfiguration.EndpointName)), diagnosticPort}
             });
         }
 

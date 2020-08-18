@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="dotnet-monitor" />
     <InternalsVisibleTo Include="DotnetMonitor.UnitTests" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.NETCore.Client.UnitTests" />
