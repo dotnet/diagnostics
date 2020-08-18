@@ -410,10 +410,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             lock (_streamLock)
             {
-                if (!_cachedStreams.TryGetValue(runtimeId, out Stream stream))
-                {
-                    throw new InvalidOperationException($"Runtime instance with identifier '{runtimeId}' is not registered.");
-                }
+                _cachedStreams.TryGetValue(runtimeId, out Stream stream);
 
                 _streamHandlers.Add(handler);
 

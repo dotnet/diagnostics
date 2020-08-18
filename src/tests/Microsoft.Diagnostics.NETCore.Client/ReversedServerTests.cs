@@ -108,11 +108,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(1));
 
             _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.WaitForConnectionAsync)}");
-            await Assert.ThrowsAsync<InvalidOperationException>(
+            await Assert.ThrowsAsync<TaskCanceledException>(
                 () => server.WaitForConnectionAsync(nonExistingRuntimeId, cancellation.Token));
 
             _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.Connect)}");
-            Assert.Throws<InvalidOperationException>(
+            Assert.Throws<TimeoutException>(
                 () => server.Connect(nonExistingRuntimeId, TimeSpan.FromSeconds(1)));
 
             _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.RemoveConnection)}");
