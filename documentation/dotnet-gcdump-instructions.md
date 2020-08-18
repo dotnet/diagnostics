@@ -44,7 +44,7 @@ Writing gcdump to 'C:\git\diagnostics\src\Tools\dotnet-gcdump\20191023_042913_24
 
 ## Viewing the gcdump captured from dotnet-gcdump
 
-On Windows, `.gcdump` files can be viewed in PerfView (https://github.com/microsoft/perfview) for analysis or in Visual Studio. There is not currently a way of opening a `.gcdump` on non-Windows platforms.
+On Windows, `.gcdump` files can be viewed in [PerfView](https://github.com/microsoft/perfview) for analysis or in Visual Studio. There is not currently a way of opening a `.gcdump` on non-Windows platforms.
 
 You can collect multiple `.gcdump`s and open them simultaneously in Visual Studio to get a comparison experience.
 
