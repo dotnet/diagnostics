@@ -227,9 +227,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private async Task<IpcEndpointInfo> AcceptAsync(ReversedDiagnosticsServer server)
         {
-            using (var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
+            using (var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
             {
-                return await server.AcceptAsync(CancellationToken.None);
+                return await server.AcceptAsync(cancellationSource);
             }
         }
 
