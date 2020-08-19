@@ -2,15 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Tracing.Analysis;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer
 {
@@ -46,8 +43,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
                     {
                         //TODO In multi-process scenarios, how do we decide which process to choose?
                         //One possibility is to enable metrics after a request to begin polling for metrics
-                        int pid = _services.ResolveProcess(pid: null);
-                        await _pipeProcessor.Process(pid, Timeout.InfiniteTimeSpan, stoppingToken);
+                        IProcessInfo pi = await _services.GetProcessAsync(filter: null, stoppingToken);
+                        await _pipeProcessor.Process(pi.Client, pi.Pid, Timeout.InfiniteTimeSpan, stoppingToken);
                     }
                     catch(Exception e) when (!(e is OperationCanceledException))
                     {

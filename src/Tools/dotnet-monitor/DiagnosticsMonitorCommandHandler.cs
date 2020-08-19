@@ -2,21 +2,18 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections.Generic;
+using System.CommandLine;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.CommandLine;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
@@ -25,15 +22,15 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         private const string ConfigPrefix = "DotnetMonitor_";
         private const string ConfigPath = "/etc/dotnet-monitor";
 
-        public async Task<int> Start(CancellationToken token, IConsole console, string[] urls, string[] metricUrls, bool metrics)
+        public async Task<int> Start(CancellationToken token, IConsole console, string[] urls, string[] metricUrls, bool metrics, string reversedServerAddress)
         {
             //CONSIDER The console logger uses the standard AddConsole, and therefore disregards IConsole.
-            using IWebHost host = CreateWebHostBuilder(console, urls, metricUrls, metrics).Build();
+            using IWebHost host = CreateWebHostBuilder(console, urls, metricUrls, metrics, reversedServerAddress).Build();
             await host.RunAsync(token);
             return 0;
         }
 
-        public IWebHostBuilder CreateWebHostBuilder(IConsole console, string[] urls, string[] metricUrls, bool metrics)
+        public IWebHostBuilder CreateWebHostBuilder(IConsole console, string[] urls, string[] metricUrls, bool metrics, string reversedServerAddress)
         {
             if (metrics)
             {
@@ -53,6 +50,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 })
                 .ConfigureServices((WebHostBuilderContext context, IServiceCollection services) =>
                 {
+                    services.AddEndpointInfoSource(reversedServerAddress);
                     //TODO Many of these service additions should be done through extension methods
                     services.AddSingleton<IDiagnosticServices, DiagnosticServices>();
                     if (metrics)

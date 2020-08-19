@@ -97,14 +97,31 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 name: "list",
                 description: "Display a list of counter names and descriptions, grouped by provider.")
             {
-                Handler = CommandHandler.Create<IConsole>(List)
+                CommandHandler.Create<IConsole, string>(List),
+                RuntimeVersionOption()
             };
 
-        public static int List(IConsole console)
+        private static Option RuntimeVersionOption() =>
+            new Option(
+                aliases: new[] { "-r", "--runtime-version" },
+                description: "Version of runtime. Supported runtime version: 3.0, 3.1, 5.0") 
+            {
+                Argument = new Argument<string>(name: "runtimeVersion", defaultValue: "3.1")
+            };
+
+        private static readonly string[] s_SupportedRuntimeVersions = new[] { "3.0", "3.1", "5.0" };
+
+        public static int List(IConsole console, string runtimeVersion)
         {
-            var profiles = KnownData.GetAllProviders();
+            if (!s_SupportedRuntimeVersions.Contains(runtimeVersion))
+            {
+                Console.WriteLine($"{runtimeVersion} is not a supported version string or a supported runtime version.");
+                Console.WriteLine("Supported version strings: 3.0, 3.1, 5.0");
+                return 0;
+            }
+            var profiles = KnownData.GetAllProviders(runtimeVersion);
             var maxNameLength = profiles.Max(p => p.Name.Length);
-            Console.WriteLine("Showing well-known counters only. Specific processes may support additional counters.\n");
+            Console.WriteLine($"Showing well-known counters for .NET (Core) version {runtimeVersion} only. Specific processes may support additional counters.");
             foreach (var profile in profiles)
             {
                 var counters = profile.GetAllCounters();

@@ -2,21 +2,18 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
     public sealed class DiagnosticsMonitor : IAsyncDisposable
     {
         private readonly MonitoringSourceConfiguration _sourceConfig;
-        private readonly CancellationTokenSource _stopProcessingSource;
+        private readonly TaskCompletionSource<object> _stopProcessingSource;
         private readonly object _lock = new object();
         private Task _currentTask;
         private bool _disposed;
@@ -24,12 +21,12 @@ namespace Microsoft.Diagnostics.Monitoring
         public DiagnosticsMonitor(MonitoringSourceConfiguration sourceConfig)
         {
             _sourceConfig = sourceConfig;
-            _stopProcessingSource = new CancellationTokenSource();
+            _stopProcessingSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         public Task CurrentProcessingTask => _currentTask;
 
-        public Task<Stream> ProcessEvents(int processId, TimeSpan duration, CancellationToken cancellationToken)
+        public Task<Stream> ProcessEvents(DiagnosticsClient client, TimeSpan duration, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -46,8 +43,6 @@ namespace Microsoft.Diagnostics.Monitoring
                 }
 
                 EventPipeSession session = null;
-                var client = new DiagnosticsClient(processId);
-
                 try
                 {
                     session = client.StartEventPipeSession(_sourceConfig.GetProviders(), _sourceConfig.RequestRundown, _sourceConfig.BufferSizeInMB);
@@ -61,19 +56,17 @@ namespace Microsoft.Diagnostics.Monitoring
                     throw new InvalidOperationException("Failed to start the event pipe session", ex);
                 }
 
-                CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(_stopProcessingSource.Token, cancellationToken);
-
                 _currentTask = Task.Run( async () =>
                 {
-                    try
-                    {
-                        await Task.Delay(duration, linkedSource.Token);
-                    }
-                    finally
-                    {
-                        linkedSource.Dispose();
-                        StopSession(session);
-                    }
+                    using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    linkedSource.CancelAfter(duration);
+                    using var _ = linkedSource.Token.Register(() => _stopProcessingSource.TrySetResult(null));
+
+                    // Use TaskCompletionSource instead of Task.Delay with cancellation to avoid
+                    // using exceptions for normal termination of event stream.
+                    await _stopProcessingSource.Task.ConfigureAwait(false);
+                    
+                    StopSession(session);
                 });
 
                 return Task.FromResult(session.EventStream);
@@ -82,7 +75,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public void StopProcessing()
         {
-            _stopProcessingSource.Cancel();
+            _stopProcessingSource.TrySetResult(null);
         }
 
         private static void StopSession(EventPipeSession session)
@@ -127,18 +120,17 @@ namespace Microsoft.Diagnostics.Monitoring
                 _currentTask = null;
                 _disposed = true;
             }
-            _stopProcessingSource.Cancel();
+            _stopProcessingSource.TrySetResult(null);
             if (currentTask != null)
             {
                 try
                 {
-                    await currentTask;
+                    await currentTask.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
                 }
             }
-            _stopProcessingSource?.Dispose();
         }
     }
 }

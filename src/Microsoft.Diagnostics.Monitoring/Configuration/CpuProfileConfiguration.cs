@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.Monitoring
         public override IList<EventPipeProvider> GetProviders() =>
             new EventPipeProvider[]
             {
-                new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", System.Diagnostics.Tracing.EventLevel.Informational),
+                new EventPipeProvider(SampleProfilerProviderName, System.Diagnostics.Tracing.EventLevel.Informational),
                 new EventPipeProvider("Microsoft-Windows-DotNETRuntime", System.Diagnostics.Tracing.EventLevel.Informational, (long) Tracing.Parsers.ClrTraceEventParser.Keywords.Default)
             };
     }
