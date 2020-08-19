@@ -122,6 +122,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private void CreateNewPipeServer()
         {
+            // TODO(josalem): investigate buffersize & asynchronous PipeOption
             _stream = new NamedPipeServerStream(
                 _pipeName,
                 PipeDirection.InOut,

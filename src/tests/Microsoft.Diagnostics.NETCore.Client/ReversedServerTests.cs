@@ -131,6 +131,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task ReversedServerSingleTargetMultipleUseClientTest()
         {
+            // TODO(josalem): this is 1/3 failing tests
             await using var server = CreateReversedServer(out string transportName);
             server.Start();
 
@@ -176,6 +177,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task ReversedServerSingleTargetExitsClientInviableTest()
         {
+            // TODO(josalem): this is 1/3 failing tests
             await using var server = CreateReversedServer(out string transportName);
             server.Start();
 
