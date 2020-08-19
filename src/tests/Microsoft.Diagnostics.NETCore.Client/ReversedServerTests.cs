@@ -229,7 +229,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             using (var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
             {
-                return await server.AcceptAsync(cancellationSource);
+                return await server.AcceptAsync(cancellationSource.Token);
             }
         }
 
