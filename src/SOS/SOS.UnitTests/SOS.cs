@@ -306,7 +306,7 @@ public class SOS
             // Create the python script process runner
             ProcessRunner processRunner = new ProcessRunner(program, arguments.ToString()).
                 WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
-                WithTimeout(TimeSpan.FromMinutes(5)).
+                WithTimeout(TimeSpan.FromMinutes(10)).
                 WithExpectedExitCode(0).
                 WithWorkingDirectory(scriptDir).
                 // Turn on stress logging so the dumplog and histinit commands pass
