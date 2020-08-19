@@ -246,7 +246,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private async Task VerifyWaitForConnection(IpcEndpointInfo info, bool expectValid = true)
         {
-            using var connectionCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            using var connectionCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             if (expectValid)
             {
                 await info.Endpoint.WaitForConnectionAsync(CancellationToken.None);
@@ -254,7 +254,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             else
             {
                 await Assert.ThrowsAsync<TaskCanceledException>(
-                    () => info.Endpoint.WaitForConnectionAsync(CancellationToken.None));
+                    () => info.Endpoint.WaitForConnectionAsync(connectionCancellation.Token));
             }
         }
 
@@ -265,9 +265,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             _outputHelper.WriteLine("Verifying there are no more connections.");
 
-            using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(60));
 
-            Task acceptTask = server.AcceptAsync(CancellationToken.None);
+            Task acceptTask = server.AcceptAsync(cancellationSource.Token);
             await Assert.ThrowsAsync<TaskCanceledException>(() => acceptTask);
             Assert.True(acceptTask.IsCanceled);
 
