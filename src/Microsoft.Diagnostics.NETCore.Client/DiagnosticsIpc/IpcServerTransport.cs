@@ -128,7 +128,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 PipeDirection.InOut,
                 _maxInstances,
                 PipeTransmissionMode.Byte,
-                PipeOptions.Asynchronous);
+                PipeOptions.None);
         }
     }
 
