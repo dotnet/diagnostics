@@ -23,22 +23,49 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
+        /// Tests that server throws appropriate exceptions when not started.
+        /// </summary>
+        [Fact]
+        public async Task ReversedServerNoStartTest()
+        {
+            await using var server = CreateReversedServer(out string transportName);
+            // Intentionally did not start server
+
+            TimeSpan CancellationTimeout = TimeSpan.FromSeconds(1);
+            using CancellationTokenSource cancellation = new CancellationTokenSource(CancellationTimeout);
+
+            // All API surface (except for Start) should throw InvalidOperationException
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => server.AcceptAsync(cancellation.Token));
+
+            Assert.Throws<InvalidOperationException>(
+                () => server.Connect(Guid.Empty, CancellationTimeout));
+
+            Assert.Throws<InvalidOperationException>(
+                () => server.RemoveConnection(Guid.Empty));
+
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => server.WaitForConnectionAsync(Guid.Empty, cancellation.Token));
+        }
+
+        /// <summary>
         /// Tests that server throws appropriate exceptions when disposed.
         /// </summary>
         [Fact]
         public async Task ReversedServerDisposeTest()
         {
-            var server = StartReversedServer(out string transportName);
+            var server = CreateReversedServer(out string transportName);
+            server.Start();
 
             using CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(1));
             Task acceptTask = server.AcceptAsync(cancellation.Token);
 
             // Validate server surface throws after disposal
-            server.Dispose();
+            await server.DisposeAsync();
 
-            // Pending tasks should be cancelled and throw TaskCanceledException
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => acceptTask);
-            Assert.True(acceptTask.IsCanceled);
+            // Pending tasks should throw ObjectDisposedException
+            await Assert.ThrowsAnyAsync<ObjectDisposedException>(() => acceptTask);
+            Assert.True(acceptTask.IsFaulted);
 
             // Calls after dispose should throw ObjectDisposedException
             await Assert.ThrowsAsync<ObjectDisposedException>(
@@ -55,7 +82,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task ReversedServerAcceptAsyncYieldsTest()
         {
-            using var server = StartReversedServer(out string transportName);
+            await using var server = CreateReversedServer(out string transportName);
+            server.Start();
 
             using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(1));
 
@@ -72,18 +100,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task ReversedServerNonExistingRuntimeIdentifierTest()
         {
-            using var server = StartReversedServer(out string transportName);
+            await using var server = CreateReversedServer(out string transportName);
+            server.Start();
 
             Guid nonExistingRuntimeId = Guid.NewGuid();
 
             using CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(1));
 
             _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.WaitForConnectionAsync)}");
-            await Assert.ThrowsAsync<InvalidOperationException>(
+            await Assert.ThrowsAsync<TaskCanceledException>(
                 () => server.WaitForConnectionAsync(nonExistingRuntimeId, cancellation.Token));
 
             _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.Connect)}");
-            Assert.Throws<InvalidOperationException>(
+            Assert.Throws<TimeoutException>(
                 () => server.Connect(nonExistingRuntimeId, TimeSpan.FromSeconds(1)));
 
             _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.RemoveConnection)}");
@@ -102,8 +131,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task ReversedServerSingleTargetMultipleUseClientTest()
         {
-            using var server = StartReversedServer(out string transportName);
-            await using var accepter = new EndpointInfoAccepter(server, _outputHelper);
+            await using var server = CreateReversedServer(out string transportName);
+            server.Start();
 
             TestRunner runner = null;
             IpcEndpointInfo info;
@@ -112,12 +141,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // Start client pointing to diagnostics server
                 runner = StartTracee(transportName);
 
-                info = await AcceptAsync(accepter);
+                info = await AcceptAsync(server);
 
                 await VerifyEndpointInfo(runner, info);
 
                 // There should not be any new endpoint infos
-                await VerifyNoNewEndpointInfos(accepter);
+                await VerifyNoNewEndpointInfos(server);
 
                 ResumeRuntime(info);
 
@@ -138,7 +167,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.True(server.RemoveConnection(info.RuntimeInstanceCookie), "Expected to be able to remove connection from server.");
 
             // There should not be any more endpoint infos
-            await VerifyNoNewEndpointInfos(accepter);
+            await VerifyNoNewEndpointInfos(server);
         }
 
         /// <summary>
@@ -147,8 +176,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task ReversedServerSingleTargetExitsClientInviableTest()
         {
-            using var server = StartReversedServer(out string transportName);
-            await using var accepter = new EndpointInfoAccepter(server, _outputHelper);
+            await using var server = CreateReversedServer(out string transportName);
+            server.Start();
 
             TestRunner runner = null;
             IpcEndpointInfo info;
@@ -158,12 +187,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 runner = StartTracee(transportName);
 
                 // Get client connection
-                info = await AcceptAsync(accepter);
+                info = await AcceptAsync(server);
 
                 await VerifyEndpointInfo(runner, info);
 
                 // There should not be any new endpoint infos
-                await VerifyNoNewEndpointInfos(accepter);
+                await VerifyNoNewEndpointInfos(server);
 
                 ResumeRuntime(info);
 
@@ -184,21 +213,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.True(server.RemoveConnection(info.RuntimeInstanceCookie), "Expected to be able to remove connection from server.");
 
             // There should not be any more endpoint infos
-            await VerifyNoNewEndpointInfos(accepter);
+            await VerifyNoNewEndpointInfos(server);
         }
 
-        private ReversedDiagnosticsServer StartReversedServer(out string transportName)
+        private ReversedDiagnosticsServer CreateReversedServer(out string transportName)
         {
             transportName = ReversedServerHelper.CreateServerTransportName();
             _outputHelper.WriteLine("Starting reversed server at '" + transportName + "'.");
             return new ReversedDiagnosticsServer(transportName);
         }
 
-        private async Task<IpcEndpointInfo> AcceptAsync(EndpointInfoAccepter accepter)
+        private async Task<IpcEndpointInfo> AcceptAsync(ReversedDiagnosticsServer server)
         {
             using (var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
             {
-                return await accepter.AcceptAsync(cancellationSource.Token);
+                return await server.AcceptAsync(cancellationSource.Token);
             }
         }
 
@@ -230,14 +259,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Checks that the accepter does not provide a new endpoint info.
         /// </summary>
-        private async Task VerifyNoNewEndpointInfos(EndpointInfoAccepter accepter)
+        private async Task VerifyNoNewEndpointInfos(ReversedDiagnosticsServer server)
         {
             _outputHelper.WriteLine("Verifying there are no more connections.");
 
             using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(1));
 
-            Task acceptTask = accepter.AcceptAsync(cancellationSource.Token);
-            await Assert.ThrowsAsync<OperationCanceledException>(() => acceptTask);
+            Task acceptTask = server.AcceptAsync(cancellationSource.Token);
+            await Assert.ThrowsAsync<TaskCanceledException>(() => acceptTask);
             Assert.True(acceptTask.IsCanceled);
 
             _outputHelper.WriteLine("Verified there are no more connections.");
@@ -360,89 +389,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Waiting for session to stop.");
                 await stoppedProcessingTask;
             });
-        }
-
-        /// <summary>
-        /// Helper class for consuming endpoint infos from the reverse diagnostics server.
-        /// </summary>
-        /// <remarks>
-        /// The diagnostics server requires that something is continuously attempting to accept endpoint infos
-        /// in order to process incoming connections. This helps facilitate that continuous accepting of
-        /// endpoint infos so the individual tests don't have to know about the behavior. 
-        /// </remarks>
-        private class EndpointInfoAccepter : IAsyncDisposable
-        {
-            private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
-            private readonly Queue<IpcEndpointInfo> _connections = new Queue<IpcEndpointInfo>();
-            private readonly SemaphoreSlim _connectionsSemaphore = new SemaphoreSlim(0);
-            private readonly Task _listenTask;
-            private readonly ITestOutputHelper _outputHelper;
-            private readonly ReversedDiagnosticsServer _server;
-
-            private int _acceptedCount;
-            private bool _disposed;
-
-            public EndpointInfoAccepter(ReversedDiagnosticsServer server, ITestOutputHelper outputHelper)
-            {
-                _server = server;
-                _outputHelper = outputHelper;
-
-                _listenTask = ListenAsync(_cancellation.Token);
-            }
-
-            public async ValueTask DisposeAsync()
-            {
-                if (!_disposed)
-                {
-                    _cancellation.Cancel();
-
-                    await _listenTask;
-
-                    _cancellation.Dispose();
-
-                    _disposed = true;
-                }
-            }
-
-            public async Task<IpcEndpointInfo> AcceptAsync(CancellationToken token)
-            {
-                using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _cancellation.Token);
-
-                _outputHelper.WriteLine("Waiting for connection from accepter.");
-                await _connectionsSemaphore.WaitAsync(linkedSource.Token).ConfigureAwait(false);
-                _outputHelper.WriteLine("Received connection from accepter.");
-
-                return _connections.Dequeue();
-            }
-
-            /// <summary>
-            /// Continuously accept endpoint infos from the reversed diagnostics server so
-            /// that <see cref="ReversedDiagnosticsServer.AcceptAsync(CancellationToken)"/>
-            /// is always awaited in order to to handle new runtime instance connections
-            /// as well as existing runtime instance reconnections.
-            /// </summary>
-            private async Task ListenAsync(CancellationToken token)
-            {
-                while (!token.IsCancellationRequested)
-                {
-                    IpcEndpointInfo info;
-                    try
-                    {
-                        _outputHelper.WriteLine("Waiting for connection from server.");
-                        info = await _server.AcceptAsync(token).ConfigureAwait(false);
-
-                        _acceptedCount++;
-                        _outputHelper.WriteLine($"Accepted connection #{_acceptedCount} from server: {info.ToTestString()}");
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        break;
-                    }
-
-                    _connections.Enqueue(info);
-                    _connectionsSemaphore.Release();
-                }
-            }
         }
     }
 }
