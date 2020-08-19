@@ -229,7 +229,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             using (var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
             {
-                return await server.AcceptAsync(cancellationSource.Token);
+                return await server.AcceptAsync(CancellationToken.None);
             }
         }
 
@@ -249,12 +249,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using var connectionCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(1));
             if (expectValid)
             {
-                await info.Endpoint.WaitForConnectionAsync(connectionCancellation.Token);
+                await info.Endpoint.WaitForConnectionAsync(CancellationToken.None);
             }
             else
             {
                 await Assert.ThrowsAsync<TaskCanceledException>(
-                    () => info.Endpoint.WaitForConnectionAsync(connectionCancellation.Token));
+                    () => info.Endpoint.WaitForConnectionAsync(CancellationToken.None));
             }
         }
 
@@ -267,7 +267,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(1));
 
-            Task acceptTask = server.AcceptAsync(cancellationSource.Token);
+            Task acceptTask = server.AcceptAsync(CancellationToken.None);
             await Assert.ThrowsAsync<TaskCanceledException>(() => acceptTask);
             Assert.True(acceptTask.IsCanceled);
 

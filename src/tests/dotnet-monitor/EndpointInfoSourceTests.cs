@@ -147,7 +147,7 @@ namespace DotnetMonitor.UnitTests
         {
             _outputHelper.WriteLine("Getting endpoint infos.");
             using CancellationTokenSource cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            return await source.GetEndpointInfoAsync(cancellationSource.Token);
+            return await source.GetEndpointInfoAsync(CancellationToken.None);
         }
 
         /// <summary>
@@ -186,7 +186,7 @@ namespace DotnetMonitor.UnitTests
                 }
 
                 _outputHelper.WriteLine("Waiting for new endpoint info.");
-                timeoutCancellation.CancelAfter(timeout);
+                // timeoutCancellation.CancelAfter(timeout);
                 IpcEndpointInfo endpointInfo = await addedEndpointInfoSource.Task;
                 _outputHelper.WriteLine("Notified of new endpoint info.");
 
