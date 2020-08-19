@@ -2,19 +2,18 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
 using System.IO.Compression;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
-using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Diagnostics.Monitoring.RestServer;
+using Microsoft.Diagnostics.Monitoring.RestServer.Controllers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
@@ -30,14 +29,14 @@ namespace Microsoft.Diagnostics.Monitoring
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc((MvcOptions options) =>
-            {
-                options.Filters.Add(new ProducesAttribute("application/json"));
+            services.AddMvc(options =>
+                {
+                    options.Filters.Add(new ProducesAttribute("application/json"));
 
-                // HACK We need to disable EndpointRouting in order to run properly in 3.1
-                System.Reflection.PropertyInfo prop = options.GetType().GetProperty("EnableEndpointRouting");
-                prop?.SetValue(options, false);
-            }).SetCompatibilityVersion(CompatibilityVersion.Latest);
+                    options.EnableEndpointRouting = false;
+                })
+                .SetCompatibilityVersion(CompatibilityVersion.Latest)
+                .AddApplicationPart(typeof(DiagController).Assembly);
 
             services.Configure<ApiBehaviorOptions>(options =>
             {
@@ -50,20 +49,27 @@ namespace Microsoft.Diagnostics.Monitoring
                 };
             });
 
-            services.Configure<GzipCompressionProviderOptions>(options =>
+            services.Configure<BrotliCompressionProviderOptions>(options =>
             {
                 options.Level = CompressionLevel.Optimal;
             });
 
             services.AddResponseCompression(configureOptions =>
             {
-                configureOptions.Providers.Add<GzipCompressionProvider>();
+                configureOptions.Providers.Add<BrotliCompressionProvider>();
                 configureOptions.MimeTypes = new List<string> { "application/octet-stream" };
             });
 
-            var config = new PrometheusConfiguration();
-            Configuration.Bind(nameof(PrometheusConfiguration), config);
-            if (config.Enabled)
+            // This is needed to allow the StreamingLogger to synchronously write to the output stream.
+            // Eventually should switch StreamingLoggger to something that allows for async operations.
+            services.Configure<KestrelServerOptions>(options =>
+            {
+                options.AllowSynchronousIO = true;
+            });
+
+            var prometheusConfig = new PrometheusConfiguration();
+            Configuration.Bind(nameof(PrometheusConfiguration), prometheusConfig);
+            if (prometheusConfig.Enabled)
             {
                 services.AddSingleton<MetricsStoreService>();
                 services.AddHostedService<MetricsService>();
@@ -71,7 +77,7 @@ namespace Microsoft.Diagnostics.Monitoring
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {

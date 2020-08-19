@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <RuntimeIdentifiers>linux-x64;linux-musl-x64;win-x64</RuntimeIdentifiers>
     <PackAsToolShimRuntimeIdentifiers>linux-x64;linux-musl-x64;win-x64</PackAsToolShimRuntimeIdentifiers>
     <RootNamespace>Microsoft.Diagnostics.Tools.Monitor</RootNamespace>
@@ -10,6 +10,7 @@
     <PackageTags>Diagnostic</PackageTags>
     <IsShipping>false</IsShipping>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <RollForward>Major</RollForward>
     <!-- This forces the creation of a checksum file and uploads it to blob storage
          using this name as part of the blob relative path. -->
     <BlobGroupPrefix>monitor</BlobGroupPrefix>

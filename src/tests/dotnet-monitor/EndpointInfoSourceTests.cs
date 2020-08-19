@@ -23,27 +23,20 @@ namespace DotnetMonitor.UnitTests
         }
 
         /// <summary>
-        /// Tests that the server endpoint info source has no connections
-        /// if <see cref="ServerEndpointInfoSource.Listen"/> is not called.
+        /// Tests that other <see cref="ServerEndpointInfoSource"> methods throw if
+        /// <see cref="ServerEndpointInfoSource.Start"/> is not called.
         /// </summary>
         [Fact]
-        public async Task ServerSourceNoListenTest()
+        public async Task ServerSourceNoStartTest()
         {
             await using var source = CreateServerSource(out string transportName);
-            // Intentionally do not call Listen
+            // Intentionally do not call Start
 
-            await using (var execution1 = StartTraceeProcess("LoggerRemoteTest", transportName))
-            {
-                execution1.Start();
+            TimeSpan CancellationTimeout = TimeSpan.FromSeconds(1);
+            using CancellationTokenSource cancellation = new CancellationTokenSource(CancellationTimeout);
 
-                await Task.Delay(TimeSpan.FromSeconds(1));
-
-                var endpointInfos = await GetEndpointInfoAsync(source);
-
-                Assert.Empty(endpointInfos);
-
-                _outputHelper.WriteLine("Stopping tracee.");
-            }
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => source.GetEndpointInfoAsync(cancellation.Token));
         }
 
         /// <summary>
@@ -53,7 +46,7 @@ namespace DotnetMonitor.UnitTests
         public async Task ServerSourceNoConnectionsTest()
         {
             await using var source = CreateServerSource(out _);
-            source.Listen();
+            source.Start();
 
             var endpointInfos = await GetEndpointInfoAsync(source);
             Assert.Empty(endpointInfos);
@@ -67,16 +60,16 @@ namespace DotnetMonitor.UnitTests
         public async Task ServerSourceThrowsWhenDisposedTest()
         {
             var source = CreateServerSource(out _);
-            source.Listen();
+            source.Start();
 
             await source.DisposeAsync();
 
             // Validate source surface throws after disposal
             Assert.Throws<ObjectDisposedException>(
-                () => source.Listen());
+                () => source.Start());
 
             Assert.Throws<ObjectDisposedException>(
-                () => source.Listen(1));
+                () => source.Start(1));
 
             await Assert.ThrowsAsync<ObjectDisposedException>(
                 () => source.GetEndpointInfoAsync(CancellationToken.None));
@@ -84,20 +77,20 @@ namespace DotnetMonitor.UnitTests
 
         /// <summary>
         /// Tests that server endpoint info source should throw an exception from
-        /// <see cref="ServerEndpointInfoSource.Listen"/> and
-        /// <see cref="ServerEndpointInfoSource.Listen(int)"/> after listening was already started.
+        /// <see cref="ServerEndpointInfoSource.Start"/> and
+        /// <see cref="ServerEndpointInfoSource.Start(int)"/> after listening was already started.
         /// </summary>
         [Fact]
-        public async Task ServerSourceThrowsWhenMultipleListenTest()
+        public async Task ServerSourceThrowsWhenMultipleStartTest()
         {
             await using var source = CreateServerSource(out _);
-            source.Listen();
+            source.Start();
 
             Assert.Throws<InvalidOperationException>(
-                () => source.Listen());
+                () => source.Start());
 
             Assert.Throws<InvalidOperationException>(
-                () => source.Listen(1));
+                () => source.Start(1));
         }
 
         /// <summary>
@@ -108,7 +101,7 @@ namespace DotnetMonitor.UnitTests
         public async Task ServerSourceAddRemoveSingleConnectionTest()
         {
             await using var source = CreateServerSource(out string transportName);
-            source.Listen();
+            source.Start();
 
             var endpointInfos = await GetEndpointInfoAsync(source);
             Assert.Empty(endpointInfos);
