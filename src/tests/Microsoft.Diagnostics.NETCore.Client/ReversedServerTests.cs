@@ -207,7 +207,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             // Wait some time for the process to exit
-            await Task.Delay(TimeSpan.FromSeconds(1));
+            await Task.Delay(TimeSpan.FromSeconds(10));
 
             // Process exited so the endpoint should not have a valid transport anymore.
             await VerifyWaitForConnection(info, expectValid: false);
