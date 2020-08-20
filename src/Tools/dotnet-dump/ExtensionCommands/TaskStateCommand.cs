@@ -7,7 +7,7 @@ using Microsoft.Diagnostics.Repl;
 
 namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
 {
-    [Command(Name = "taskstate", AliasExpansion = "TaskState", Help = "Display a Task state in a human readable format.")]
+    [Command(Name = "taskstate", Help = "Display a Task state in a human readable format.")]
     [CommandAlias(Name = "tks")]
     public class TaskStateCommand : ExtensionCommandBase
     {
@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
                 if (Address.StartsWith("0x"))
                     Address = Address.Substring(2);
                 Address = Address.TrimStart('0');
-                
+
                 if (!ulong.TryParse(Address, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out var address))
                 {
                     WriteLine("Numeric value expected: either a task address or -v <state value>..." + Environment.NewLine);
@@ -47,12 +47,8 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
                 stateFlag = Helper.GetTaskStateFromAddress(address);
                 if (stateFlag == 0)
                 {
-                    // otherwise, it might be a valid flag but in decimal format
-                    if (!ulong.TryParse(Address, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out stateFlag))
-                    {
-                        WriteLine("Numeric value expected: either a task address or -v <state value>..." + Environment.NewLine);
-                        return;
-                    }
+                    WriteLine("Either a valid task address or -v <state value> is expected..." + Environment.NewLine);
+                    return;
                 }
             }
 
@@ -77,7 +73,7 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
 
         readonly string DetailedHelpText =
             "-------------------------------------------------------------------------------" + Environment.NewLine +
-            "TaskState [hexa address] -v <decimal state value>" + Environment.NewLine +
+            "TaskState [hexa address] [-v <decimal state value>]" + Environment.NewLine +
             Environment.NewLine +
             "TaskState translates a Task m_stateFlags field value into human readable format." + Environment.NewLine +
             "It supports hexadecimal address corresponding to a task instance or -v <decimal state value>." + Environment.NewLine +
