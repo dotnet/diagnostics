@@ -5,6 +5,7 @@
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
@@ -19,6 +20,72 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
             _clr = provider.GetService<ClrRuntime>();
             _heap = _clr.Heap;
         }
+
+
+        public ulong GetTaskStateFromAddress(ulong address)
+        {
+            const string stateFieldName = "m_stateFlags";
+
+            var type = _heap.GetObjectType(address);
+            if ((type != null) && (type.Name.StartsWith("System.Threading.Tasks.Task")))
+            {
+#if ClrMD2
+            // could be other Task-prefixed types in the same namespace such as TaskCompletionSource
+            if (type.GetFieldByName(stateFieldName) == null)
+                return 0;
+
+            return (ulong)_heap.GetObject(address).ReadField<int>(stateFieldName);
+#else
+                var val = GetFieldValue(address, stateFieldName);
+                // could be other Task-prefixed types in the same namespace such as TaskCompletionSource
+                if (val == null)
+                    return 0;
+
+                try
+                {
+                    return (ulong)(int)val;
+                }
+                catch (InvalidCastException)
+                {
+                }
+#endif
+            }
+
+            return 0;
+        }
+
+        public static string GetTaskState(ulong flag)
+        {
+            TaskStatus tks;
+
+            if ((flag & TASK_STATE_FAULTED) != 0) tks = TaskStatus.Faulted;
+            else if ((flag & TASK_STATE_CANCELED) != 0) tks = TaskStatus.Canceled;
+            else if ((flag & TASK_STATE_RAN_TO_COMPLETION) != 0) tks = TaskStatus.RanToCompletion;
+            else if ((flag & TASK_STATE_WAITING_ON_CHILDREN) != 0) tks = TaskStatus.WaitingForChildrenToComplete;
+            else if ((flag & TASK_STATE_DELEGATE_INVOKED) != 0) tks = TaskStatus.Running;
+            else if ((flag & TASK_STATE_STARTED) != 0) tks = TaskStatus.WaitingToRun;
+            else if ((flag & TASK_STATE_WAITINGFORACTIVATION) != 0) tks = TaskStatus.WaitingForActivation;
+            else if (flag == 0) tks = TaskStatus.Created;
+            else return null;
+
+            return tks.ToString();
+        }
+
+        // from CLR implementation in https://github.com/dotnet/runtime/blob/master/src/libraries/System.Private.CoreLib/src/System/Threading/Tasks/Task.cs#L141
+        internal const int TASK_STATE_STARTED                      = 0x00010000;
+        internal const int TASK_STATE_DELEGATE_INVOKED             = 0x00020000;
+        internal const int TASK_STATE_DISPOSED                     = 0x00040000;
+        internal const int TASK_STATE_EXCEPTIONOBSERVEDBYPARENT    = 0x00080000;
+        internal const int TASK_STATE_CANCELLATIONACKNOWLEDGED     = 0x00100000;
+        internal const int TASK_STATE_FAULTED                      = 0x00200000;
+        internal const int TASK_STATE_CANCELED                     = 0x00400000;
+        internal const int TASK_STATE_WAITING_ON_CHILDREN          = 0x00800000;
+        internal const int TASK_STATE_RAN_TO_COMPLETION            = 0x01000000;
+        internal const int TASK_STATE_WAITINGFORACTIVATION         = 0x02000000;
+        internal const int TASK_STATE_COMPLETION_RESERVED          = 0x04000000;
+        internal const int TASK_STATE_WAIT_COMPLETION_NOTIFICATION = 0x10000000;
+        internal const int TASK_STATE_EXECUTIONCONTEXT_IS_NULL     = 0x20000000;
+        internal const int TASK_STATE_TASKSCHEDULED_WAS_FIRED      = 0x40000000;
 
 
 #if ClrMD2
