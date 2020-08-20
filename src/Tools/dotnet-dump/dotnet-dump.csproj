@@ -13,7 +13,7 @@
     <SOSPackagePathPrefix>tools/$(TargetFramework)/any</SOSPackagePathPrefix>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+  <PropertyGroup>
     <DefineConstants>ClrMD2</DefineConstants>
   </PropertyGroup>
 
