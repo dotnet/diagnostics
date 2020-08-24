@@ -124,7 +124,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             if (!(target.DataReader is IThreadReader threadReader))
             {
-                throw new NotImplementedException("IThreadReader not implemented");
+                throw new InvalidOperationException("IThreadReader not implemented");
             }
 
             // Create common analyze context for commands
