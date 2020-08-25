@@ -73,16 +73,15 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
 
         public IEnumerable<TimerInfo> EnumerateTimers()
         {
-            // the implementation is different between .NET Framework/.NET Core 2.0 and .NET Core 2.1+
+            // the implementation is different between .NET Framework/.NET Core 2.*, and .NET Core 3.0+
             // - the former is relying on a single static TimerQueue.s_queue 
             // - the latter uses an array of TimerQueue (static TimerQueue.Instances field)
-            // each queue refers to TimerQueueTimer linked list via its m_timers field
-            //
+            // each queue refers to TimerQueueTimer linked list via its m_timers or _shortTimers/_longTimers fields
             var timerQueueType = GetMscorlib().GetTypeByName("System.Threading.TimerQueue");
             if (timerQueueType == null)
                 yield break;
 
-            // .NET Core 2.1+ case
+            // .NET Core case
             ClrStaticField instancesField = timerQueueType.GetStaticFieldByName("<Instances>k__BackingField");
             if (instancesField != null)
             {
@@ -96,20 +95,37 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
                     if (string.Compare(objType.Name, "System.Threading.TimerQueue", StringComparison.Ordinal) != 0)
                         continue;
 
-                    // m_timers is the start of the linked list of TimerQueueTimer
-                    var currentTimerQueueTimer = obj.ReadObjectField("m_timers");
-                
-                    // iterate on each TimerQueueTimer in the linked list
-                    while (currentTimerQueueTimer.Address != 0)
+                    // m_timers is the start of the linked list of TimerQueueTimer in pre 3.0
+                    var timersField = objType.GetFieldByName("m_timers");
+                    if (timersField != null)
                     {
-                        var ti = GetTimerInfo(currentTimerQueueTimer);
+                        var currentTimerQueueTimer = obj.ReadObjectField("m_timers");
+                        foreach (var timer in GetTimers(currentTimerQueueTimer, false))
+                        {
+                            yield return timer;
+                        }
+                    }
+                    else
+                    {
+                        // get short timers
+                        timersField = objType.GetFieldByName("_shortTimers");
+                        if (timersField == null)
+                            throw new InvalidOperationException("Missing _shortTimers field. Check the .NET Core version implementation of TimerQueue.");
 
-                        if (ti == null)
-                            continue;
+                        var currentTimerQueueTimer = obj.ReadObjectField("_shortTimers");
+                        foreach (var timer in GetTimers(currentTimerQueueTimer, true))
+                        {
+                            timer.IsShort = true;
+                            yield return timer;
+                        }
 
-                        yield return ti;
-
-                        currentTimerQueueTimer = currentTimerQueueTimer.ReadObjectField("m_next");
+                        // get long timers
+                        currentTimerQueueTimer = obj.ReadObjectField("_longTimers");
+                        foreach (var timer in GetTimers(currentTimerQueueTimer, true))
+                        {
+                            timer.IsShort = false;
+                            yield return timer;
+                        }
                     }
                 }
             }
@@ -128,18 +144,27 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
 
                     // m_timers is the start of the list of TimerQueueTimer
                     var currentTimerQueueTimer = timerQueue.ReadObjectField("m_timers");
-                
-                    while (currentTimerQueueTimer.IsValid)
+                    foreach (var timer in GetTimers(currentTimerQueueTimer, false))
                     {
-                        var ti = GetTimerInfo(currentTimerQueueTimer);
-                        if (ti == null)
-                            continue;
-
-                        yield return ti;
-
-                        currentTimerQueueTimer = currentTimerQueueTimer.ReadObjectField("m_next");
+                        yield return timer;
                     }
                 }
+            }
+        }
+
+        private IEnumerable<TimerInfo> GetTimers(ClrObject timerQueueTimer, bool is30Format)
+        {
+            while (timerQueueTimer.Address != 0)
+            {
+                var ti = GetTimerInfo(timerQueueTimer);
+                if (ti == null)
+                    continue;
+
+                yield return ti;
+
+                timerQueueTimer = is30Format ?
+                    timerQueueTimer.ReadObjectField("_next") :
+                    timerQueueTimer.ReadObjectField("m_next");
             }
         }
 
@@ -150,11 +175,24 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
                 TimerQueueTimerAddress = currentTimerQueueTimer.Address
             };
 
-            ti.DueTime = currentTimerQueueTimer.ReadField<uint>("m_dueTime");
-            ti.Period = currentTimerQueueTimer.ReadField<uint>("m_period");
-            ti.Cancelled = currentTimerQueueTimer.ReadField<bool>("m_canceled");
+            // field names prefix changes from "m_" to "_" in .NET Core 3.0
+            var is30Format = currentTimerQueueTimer.Type.GetFieldByName("_dueTime") != null;
+            ClrObject state;
+            if (is30Format)
+            {
+                ti.DueTime = currentTimerQueueTimer.ReadField<uint>("_dueTime");
+                ti.Period = currentTimerQueueTimer.ReadField<uint>("_period");
+                ti.Cancelled = currentTimerQueueTimer.ReadField<bool>("_canceled");
+                state = currentTimerQueueTimer.ReadObjectField("_state");
+            }
+            else
+            {
+                ti.DueTime = currentTimerQueueTimer.ReadField<uint>("m_dueTime");
+                ti.Period = currentTimerQueueTimer.ReadField<uint>("m_period");
+                ti.Cancelled = currentTimerQueueTimer.ReadField<bool>("m_canceled");
+                state = currentTimerQueueTimer.ReadObjectField("m_state");
+            }
 
-            var state = currentTimerQueueTimer.ReadObjectField("m_state");
             ti.StateAddress = 0;
             if (state.IsValid)
             {
@@ -167,7 +205,9 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
             }
 
             // decipher the callback details
-            var timerCallback = currentTimerQueueTimer.ReadObjectField("m_timerCallback");
+            var timerCallback = is30Format ?
+                currentTimerQueueTimer.ReadObjectField("_timerCallback") :
+                currentTimerQueueTimer.ReadObjectField("m_timerCallback");
             if (timerCallback.IsValid)
             {
                 var elementType = timerCallback.Type;
@@ -192,6 +232,7 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
                 ti.MethodName = "???";
             }
 
+
             return ti;
         }
 
@@ -200,8 +241,6 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
             var methodPtr = timerCallback.ReadField<ulong>("_methodPtr");
             if (methodPtr != 0)
             {
-                // NOTE: can't find a replacement for ClrMD 1.1 GetMethodByAddress
-                // GetMethodByInstructionPointer always returns null
                 var method = _clr.GetMethodByInstructionPointer(methodPtr);
                 if (method != null)
                 {
