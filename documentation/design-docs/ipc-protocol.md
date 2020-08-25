@@ -749,6 +749,44 @@ Header: `{ Magic; size; 0xFF00; 0x0000; }`
 
 There is no payload.
 
+### `ProcessEnvironment`
+
+Command Code: `0x0402`
+
+The `ProcessEnvironment` command queries the runtime for its environment block.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0402; 0x0000 }`
+
+There is no payload.
+
+#### Returns (as an IPC Message Payload + continuation):
+
+Header: `{ Magic; size; 0xFF00; 0x0000; }`
+
+Payload:
+* `uint32_t nIncomingBytes`: the number of bytes to expect in the continuation stream
+* `uint16_t future`: unused
+
+Continuation:
+* `Array<Array<WCHAR>> environmentBlock`: The environment block written as a length prefixed array of length prefixed arrays of `WCHAR`.
+
+Note: it is valid for `nIncomingBytes` to be `4` and the continuation to simply contain the value `0`.
+
+##### Details:
+
+Returns:
+```c++
+struct Payload
+{
+    uint32_t nIncomingBytes;
+    uint16_t future;
+}
+```
+
 ## Errors
 
 In the event an error occurs in the handling of an Ipc Message, the Diagnostic Server will attempt to send an Ipc Message encoding the error and subsequently close the connection.  The connection will be closed **regardless** of the success of sending the error message.  The Client is expected to be resilient in the event of a connection being abruptly closed.

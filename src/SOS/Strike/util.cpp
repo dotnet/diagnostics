@@ -315,19 +315,13 @@ BOOL IsRetailBuild (size_t base)
 *    only up to the edge of the page containing "offset".              *
 *                                                                      *
 \**********************************************************************/
-BOOL SafeReadMemory (TADDR offset, PVOID lpBuffer, ULONG cb,
-                     PULONG lpcbBytesRead)
+BOOL SafeReadMemory (TADDR offset, PVOID lpBuffer, ULONG cb, PULONG lpcbBytesRead)
 {
-    BOOL bRet = FALSE;
-
-    bRet = SUCCEEDED(g_ExtData->ReadVirtual(TO_CDADDR(offset), lpBuffer, cb,
-                                            lpcbBytesRead));
-    
+    BOOL bRet = SUCCEEDED(g_ExtData->ReadVirtual(TO_CDADDR(offset), lpBuffer, cb, lpcbBytesRead));
     if (!bRet)
     {
-        cb   = (ULONG)(NextOSPageAddress(offset) - offset);
-        bRet = SUCCEEDED(g_ExtData->ReadVirtual(TO_CDADDR(offset), lpBuffer, cb,
-                                                lpcbBytesRead));
+        cb = _min(cb, (ULONG)(NextOSPageAddress(offset) - offset));
+        bRet = SUCCEEDED(g_ExtData->ReadVirtual(TO_CDADDR(offset), lpBuffer, cb, lpcbBytesRead));
     }
     return bRet;
 }

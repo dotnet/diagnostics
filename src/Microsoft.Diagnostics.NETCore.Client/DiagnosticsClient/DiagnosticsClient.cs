@@ -192,6 +192,25 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
+        public Dictionary<string,string> GetProcessEnvironment()
+        {
+            var message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessEnvironment);
+            Stream continuation = IpcClient.SendMessage(_endpoint, message, out IpcMessage response);
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
+            {
+                case DiagnosticsServerResponseId.Error:
+                    int hr = BitConverter.ToInt32(response.Payload, 0);
+                    throw new ServerErrorException($"Get process environment failed (HRESULT: 0x{hr:X8})");
+                case DiagnosticsServerResponseId.OK:
+                    ProcessEnvironmentHelper helper = ProcessEnvironmentHelper.Parse(response.Payload);
+                    Task<Dictionary<string,string>> envTask = helper.ReadEnvironmentAsync(continuation);
+                    envTask.Wait();
+                    return envTask.Result;
+                default:
+                    throw new ServerErrorException($"Get process environment failed - server responded with unknown command");
+            }
+        }
+
         /// <summary>
         /// Get all the active processes that can be attached to.
         /// </summary>
