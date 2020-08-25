@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     public class ReversedServerTests
     {
         // Generous timeout to allow APIs to respond on slower or more constrained machines
-        private static readonly TimeSpan DefaultPositiveVerificationTimeout = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan DefaultPositiveVerificationTimeout = TimeSpan.FromSeconds(30);
         private static readonly TimeSpan DefaultNegativeVerificationTimeout = TimeSpan.FromSeconds(2);
 
         private readonly ITestOutputHelper _outputHelper;
@@ -101,7 +101,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await using var server = CreateReversedServer(out string transportName);
             server.Start();
 
-            using var cancellationSource = new CancellationTokenSource(DefaultPositiveVerificationTimeout);
+            using var cancellationSource = new CancellationTokenSource(DefaultNegativeVerificationTimeout);
 
             _outputHelper.WriteLine("Waiting for connection from server.");
             Task acceptTask = server.AcceptAsync(cancellationSource.Token);

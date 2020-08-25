@@ -16,7 +16,7 @@ namespace DotnetMonitor.UnitTests
     public class EndpointInfoSourceTests
     {
         // Generous timeout to allow APIs to respond on slower or more constrained machines
-        private static readonly TimeSpan DefaultPositiveVerificationTimeout = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan DefaultPositiveVerificationTimeout = TimeSpan.FromSeconds(30);
         private static readonly TimeSpan DefaultNegativeVerificationTimeout = TimeSpan.FromSeconds(2);
 
         private readonly ITestOutputHelper _outputHelper;
