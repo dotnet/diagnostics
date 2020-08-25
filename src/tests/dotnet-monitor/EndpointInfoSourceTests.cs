@@ -15,6 +15,10 @@ namespace DotnetMonitor.UnitTests
 {
     public class EndpointInfoSourceTests
     {
+        // Generous timeout to allow APIs to respond on slower or more constrained machines
+        private static readonly TimeSpan DefaultPositiveVerificationTimeout = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan DefaultNegativeVerificationTimeout = TimeSpan.FromSeconds(2);
+
         private readonly ITestOutputHelper _outputHelper;
 
         public EndpointInfoSourceTests(ITestOutputHelper outputHelper)
@@ -32,8 +36,7 @@ namespace DotnetMonitor.UnitTests
             await using var source = CreateServerSource(out string transportName);
             // Intentionally do not call Start
 
-            TimeSpan CancellationTimeout = TimeSpan.FromSeconds(1);
-            using CancellationTokenSource cancellation = new CancellationTokenSource(CancellationTimeout);
+            using CancellationTokenSource cancellation = new CancellationTokenSource(DefaultNegativeVerificationTimeout);
 
             await Assert.ThrowsAsync<InvalidOperationException>(
                 () => source.GetEndpointInfoAsync(cancellation.Token));
@@ -71,8 +74,9 @@ namespace DotnetMonitor.UnitTests
             Assert.Throws<ObjectDisposedException>(
                 () => source.Start(1));
 
+            using var cancellation = new CancellationTokenSource(DefaultNegativeVerificationTimeout);
             await Assert.ThrowsAsync<ObjectDisposedException>(
-                () => source.GetEndpointInfoAsync(CancellationToken.None));
+                () => source.GetEndpointInfoAsync(cancellation.Token));
         }
 
         /// <summary>
@@ -106,7 +110,7 @@ namespace DotnetMonitor.UnitTests
             var endpointInfos = await GetEndpointInfoAsync(source);
             Assert.Empty(endpointInfos);
 
-            Task newEndpointInfoTask = source.WaitForNewEndpointInfoAsync(TimeSpan.FromSeconds(5));
+            Task newEndpointInfoTask = source.WaitForNewEndpointInfoAsync(DefaultPositiveVerificationTimeout);
 
             await using (var execution1 = StartTraceeProcess("LoggerRemoteTest", transportName))
             {

@@ -15,7 +15,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     public class KeyedHandleableCollectionTests
     {
-        private static readonly TimeSpan DefaultHandleTimeout = TimeSpan.FromMilliseconds(50);
+        // Generous timeout to allow APIs to respond on slower or more constrained machines
+        private static readonly TimeSpan DefaultPositiveVerificationTimeout = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan DefaultNegativeVerificationTimeout = TimeSpan.FromSeconds(2);
 
         private readonly ITestOutputHelper _outputHelper;
 
@@ -37,13 +39,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 return "none" == item;
             };
 
-            TimeSpan longTimeout = TimeSpan.FromSeconds(5);
-            using var cancellation = new CancellationTokenSource(longTimeout);
+            using var cancellation = new CancellationTokenSource(DefaultPositiveVerificationTimeout);
 
-            Task handleTask = Task.Run(() => collection.Handle(20, handler, longTimeout));
+            Task handleTask = Task.Run(() => collection.Handle(20, handler, DefaultPositiveVerificationTimeout));
             Task handleAsyncTask = collection.HandleAsync(25, handler, cancellation.Token);
 
-            Task delayTask = Task.Delay(DefaultHandleTimeout);
+            // Task.Delay intentionally shorter than default timeout to check that Handle*
+            // calls did not complete quickly.
+            Task delayTask = Task.Delay(TimeSpan.FromSeconds(1));
             Task completedTask = await Task.WhenAny(delayTask, handleTask, handleAsyncTask);
 
             // Check that the handle tasks didn't complete
@@ -60,10 +63,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 () => collection.Add(10, "ten"));
 
             Assert.Throws<ObjectDisposedException>(
-                () => collection.Handle(10, DefaultHandleTimeout));
+                () => collection.Handle(10, DefaultPositiveVerificationTimeout));
 
             Assert.Throws<ObjectDisposedException>(
-                () => collection.Handle(10, handler, DefaultHandleTimeout));
+                () => collection.Handle(10, handler, DefaultPositiveVerificationTimeout));
 
             await Assert.ThrowsAsync<ObjectDisposedException>(
                 () => collection.HandleAsync(10, cancellation.Token));
@@ -119,7 +122,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             int expectedCollectionCount = collection.Count();
             for (int key = 0; key < 10; key++)
             {
-                string handledValue = await shim.Handle(key, DefaultHandleTimeout);
+                string handledValue = await shim.Handle(key, DefaultPositiveVerificationTimeout);
                 expectedCollectionCount--;
 
                 Assert.Equal(expectedValues[key], handledValue);
@@ -128,7 +131,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             Assert.Empty(collection);
 
-            await shim.HandleThrowsForTimeout(20, DefaultHandleTimeout);
+            await shim.HandleThrowsForTimeout(20, DefaultNegativeVerificationTimeout);
         }
 
         [Fact]
@@ -170,9 +173,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 return true;
             };
 
-            Task<string> handledValueTask = Task.Run(() => shim.Handle(2, handler, 5 * DefaultHandleTimeout));
+            Task<string> handledValueTask = Task.Run(() => shim.Handle(2, handler, DefaultPositiveVerificationTimeout));
 
-            Task delayTask = Task.Delay(DefaultHandleTimeout);
+            // Task.Delay intentionally shorter than default timeout to check that Handle*
+            // calls did not complete quickly.
+            Task delayTask = Task.Delay(TimeSpan.FromSeconds(1));
             Task completedTask = await Task.WhenAny(delayTask, handledValueTask);
 
             // Check that the handler task didn't complete
@@ -186,7 +191,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             const string expectedValue = "one + one";
             collection.Add(2, expectedValue);
 
-            delayTask = Task.Delay(DefaultHandleTimeout);
+            // Task.Delay intentionally longer than default timeout to allow Handle* calls to complete.
+            // The Task.Delay is to ensure that the test doesn't stall forever if the Handle* calls
+            // never return for some reason.
+            delayTask = Task.Delay(5 * DefaultPositiveVerificationTimeout);
             completedTask = await Task.WhenAny(delayTask, handledValueTask);
 
             // Check that the handler did complete
@@ -224,12 +232,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             var shim = new KeyedHandleableCollectionApiShim<int, string>(collection, useAsync);
 
             // Register to be notified when handler is beginning to be processed
-            Task handlerBeginTask = collection.WaitForHandlerBeginAsync(DefaultHandleTimeout);
+            Task handlerBeginTask = collection.WaitForHandlerBeginAsync(DefaultPositiveVerificationTimeout);
 
             const string expectedValue = "three";
 
             // Create task that will start handling BEFORE an item is added
-            Task<string> handleValueTask = Task.Run(() => shim.Handle(3, DefaultHandleTimeout));
+            Task<string> handleValueTask = Task.Run(() => shim.Handle(3, DefaultPositiveVerificationTimeout));
 
             // Wait for handler to begin processing
             await handlerBeginTask;

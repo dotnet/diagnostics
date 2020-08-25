@@ -16,6 +16,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     public class ReversedServerTests
     {
+        // Generous timeout to allow APIs to respond on slower or more constrained machines
+        private static readonly TimeSpan DefaultPositiveVerificationTimeout = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan DefaultNegativeVerificationTimeout = TimeSpan.FromSeconds(2);
+
         private readonly ITestOutputHelper _outputHelper;
 
         public ReversedServerTests(ITestOutputHelper outputHelper)
@@ -32,18 +36,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await using var server = CreateReversedServer(out string transportName);
             // Intentionally did not start server
 
-            TimeSpan cancellationTimeout = TimeSpan.FromSeconds(1);
-            using CancellationTokenSource cancellation = new CancellationTokenSource(cancellationTimeout);
+            using CancellationTokenSource cancellation = new CancellationTokenSource(DefaultPositiveVerificationTimeout);
 
             // All API surface (except for Start) should throw InvalidOperationException
             Assert.Throws<InvalidOperationException>(
-                () => server.Accept(cancellationTimeout));
+                () => server.Accept(DefaultPositiveVerificationTimeout));
 
             await Assert.ThrowsAsync<InvalidOperationException>(
                 () => server.AcceptAsync(cancellation.Token));
 
             Assert.Throws<InvalidOperationException>(
-                () => server.Connect(Guid.Empty, cancellationTimeout));
+                () => server.Connect(Guid.Empty, DefaultPositiveVerificationTimeout));
 
             await Assert.ThrowsAsync<InvalidOperationException>(
                 () => server.ConnectAsync(Guid.Empty, cancellation.Token));
@@ -52,7 +55,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 () => server.RemoveConnection(Guid.Empty));
 
             Assert.Throws<InvalidOperationException>(
-                () => server.WaitForConnection(Guid.Empty, cancellationTimeout));
+                () => server.WaitForConnection(Guid.Empty, DefaultPositiveVerificationTimeout));
 
             await Assert.ThrowsAsync<InvalidOperationException>(
                 () => server.WaitForConnectionAsync(Guid.Empty, cancellation.Token));
@@ -67,8 +70,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             var server = CreateReversedServer(out string transportName);
             server.Start();
 
-            TimeSpan cancellationTimeout = TimeSpan.FromSeconds(1);
-            using CancellationTokenSource cancellation = new CancellationTokenSource();
+            using CancellationTokenSource cancellation = new CancellationTokenSource(DefaultPositiveVerificationTimeout);
             Task acceptTask = server.AcceptAsync(cancellation.Token);
 
             // Validate server surface throws after disposal
@@ -79,7 +81,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.True(acceptTask.IsFaulted);
 
             Assert.Throws<ObjectDisposedException>(
-                () => server.Accept(cancellationTimeout));
+                () => server.Accept(DefaultPositiveVerificationTimeout));
 
             // Calls after dispose should throw ObjectDisposedException
             await Assert.ThrowsAsync<ObjectDisposedException>(
@@ -99,7 +101,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await using var server = CreateReversedServer(out string transportName);
             server.Start();
 
-            using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            using var cancellationSource = new CancellationTokenSource(DefaultPositiveVerificationTimeout);
 
             _outputHelper.WriteLine("Waiting for connection from server.");
             Task acceptTask = server.AcceptAsync(cancellationSource.Token);
@@ -133,13 +135,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             Guid nonExistingRuntimeId = Guid.NewGuid();
 
-            TimeSpan cancellationTimeout = TimeSpan.FromSeconds(1);
-
             _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.WaitForConnectionAsync)}");
-            await shim.WaitForConnection(nonExistingRuntimeId, cancellationTimeout, expectTimeout: true);
+            await shim.WaitForConnection(nonExistingRuntimeId, DefaultNegativeVerificationTimeout, expectTimeout: true);
 
             _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.Connect)}");
-            await shim.Connect(nonExistingRuntimeId, cancellationTimeout, expectTimeout: true);
+            await shim.Connect(nonExistingRuntimeId, DefaultNegativeVerificationTimeout, expectTimeout: true);
 
             _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.RemoveConnection)}");
             Assert.False(server.RemoveConnection(nonExistingRuntimeId), "Removal of nonexisting connection should fail.");
@@ -199,7 +199,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await Task.Delay(TimeSpan.FromSeconds(1));
 
             // Process exited so the endpoint should not have a valid transport anymore.
-            await VerifyWaitForConnection(info, useAsync, expectValid: false);
+            await VerifyWaitForConnection(info, useAsync, expectTimeout: true);
 
             Assert.True(server.RemoveConnection(info.RuntimeInstanceCookie), "Expected to be able to remove connection from server.");
 
@@ -256,7 +256,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await Task.Delay(TimeSpan.FromSeconds(1));
 
             // Process exited so the endpoint should not have a valid transport anymore.
-            await VerifyWaitForConnection(info, useAsync, expectValid: false);
+            await VerifyWaitForConnection(info, useAsync, expectTimeout: true);
 
             Assert.True(server.RemoveConnection(info.RuntimeInstanceCookie), "Expected to be able to remove connection from server.");
 
@@ -275,7 +275,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             var shim = new ReversedDiagnosticsServerApiShim(server, useAsync);
             
-            return await shim.Accept(TimeSpan.FromSeconds(3));
+            return await shim.Accept(DefaultPositiveVerificationTimeout);
         }
 
         private TestRunner StartTracee(string transportName)
@@ -284,11 +284,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return ReversedServerHelper.StartTracee(_outputHelper, transportName);
         }
 
-        private async Task VerifyWaitForConnection(IpcEndpointInfo info, bool useAsync, bool expectValid = true)
+        private async Task VerifyWaitForConnection(IpcEndpointInfo info, bool useAsync, bool expectTimeout = false)
         {
             var shim = new IpcEndpointApiShim(info.Endpoint, useAsync);
 
-            await shim.WaitForConnection(TimeSpan.FromSeconds(1), expectTimeout: !expectValid);
+            TimeSpan timeout = expectTimeout ? DefaultNegativeVerificationTimeout : DefaultPositiveVerificationTimeout;
+            await shim.WaitForConnection(timeout, expectTimeout);
         }
 
         /// <summary>
@@ -300,7 +301,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             var shim = new ReversedDiagnosticsServerApiShim(server, useAsync);
 
-            await shim.Accept(TimeSpan.FromSeconds(1), expectTimeout: true);
+            await shim.Accept(DefaultNegativeVerificationTimeout, expectTimeout: true);
 
             _outputHelper.WriteLine("Verified there are no more connections.");
         }
@@ -308,7 +309,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Verifies basic information on the endpoint info and that it matches the target process from the runner.
         /// </summary>
-        private async Task VerifyEndpointInfo(TestRunner runner, IpcEndpointInfo info, bool useAsync, bool expectValid = true)
+        private async Task VerifyEndpointInfo(TestRunner runner, IpcEndpointInfo info, bool useAsync, bool expectTimeout = false)
         {
             _outputHelper.WriteLine($"Verifying connection information for process ID {runner.Pid}.");
             Assert.NotNull(runner);
@@ -316,7 +317,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.NotEqual(Guid.Empty, info.RuntimeInstanceCookie);
             Assert.NotNull(info.Endpoint);
 
-            await VerifyWaitForConnection(info, useAsync, expectValid);
+            await VerifyWaitForConnection(info, useAsync, expectTimeout);
 
             _outputHelper.WriteLine($"Connection: {info.ToTestString()}");
         }

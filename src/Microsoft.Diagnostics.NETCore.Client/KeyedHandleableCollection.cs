@@ -38,7 +38,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentNullException(nameof(key));
             }
 
-            // CONSIDER: Check that the key does not already exist.
+            if (this.Any(tuple => tuple.Item1.Equals(key)))
+            {
+                throw new ArgumentException(FormattableString.Invariant($"An item with the same key has already been added. Key: {key}"));
+            }
+
             Add(Tuple.Create(key, value));
         }
 
