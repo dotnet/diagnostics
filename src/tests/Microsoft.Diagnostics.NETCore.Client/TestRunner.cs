@@ -47,6 +47,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             testProcess = new Process();
             testProcess.StartInfo = startInfo;
+            testProcess.Exited += (s,e) =>
+            {
+                outputHelper?.WriteLine($"[{DateTime.Now.ToString()}] Tracee exited!");
+            };
+
             testProcess.EnableRaisingEvents = true;
 
             if (!testProcess.Start())
@@ -92,6 +97,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         var matchingFiles = Directory.GetFiles(Path.GetTempPath(), $"dotnet-diagnostic-{testProcess.Id}-*-socket"); // Try best match.
                         if (matchingFiles.Length > 0)
                         {
+                            outputHelper?.WriteLine($"[{DateTime.Now.ToString()}] matchingFiles.Length = {matchingFiles.Length}");
                             break;
                         }
                     }
