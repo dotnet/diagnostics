@@ -26,8 +26,8 @@
     <!-- Build tools -->
     <MicrosoftNetCompilersVersion>3.0.0</MicrosoftNetCompilersVersion>
     <!-- CoreFX -->
-    <SystemReflectionMetadataVersion>1.6.0</SystemReflectionMetadataVersion>
-    <SystemCollectionsImmutableVersion>1.5.0</SystemCollectionsImmutableVersion>
+    <SystemReflectionMetadataVersion>1.8.1</SystemReflectionMetadataVersion>
+    <SystemCollectionsImmutableVersion>1.7.1</SystemCollectionsImmutableVersion>
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
     <!-- Other libs -->
     <MicrosoftAspNetCoreVersion>2.1.7</MicrosoftAspNetCoreVersion>
@@ -36,7 +36,8 @@
     <MicrosoftAspNetCoreResponseCompressionVersion>2.1.1</MicrosoftAspNetCoreResponseCompressionVersion>
     <MicrosoftBclHashCodeVersion>1.1.0</MicrosoftBclHashCodeVersion>
     <MicrosoftBclAsyncInterfacesVersion>1.1.0</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>1.1.132302</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>2.0.142103</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeVersionUtilities>2.0.142103</MicrosoftDiagnosticsRuntimeVersionUtilities>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.57</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftExtensionsConfigurationJsonVersion>2.1.1</MicrosoftExtensionsConfigurationJsonVersion>
@@ -49,7 +50,7 @@
     <MicrosoftExtensionsLoggingEventSourceVersion>3.1.4</MicrosoftExtensionsLoggingEventSourceVersion>
     <SystemCommandLineExperimentalVersion>0.3.0-alpha.19602.1</SystemCommandLineExperimentalVersion>
     <SystemCommandLineRenderingVersion>0.3.0-alpha.19602.1</SystemCommandLineRenderingVersion>
-    <SystemMemoryVersion>4.5.3</SystemMemoryVersion>
+    <SystemMemoryVersion>4.5.4</SystemMemoryVersion>
     <SystemTextJsonVersion>4.7.1</SystemTextJsonVersion>
     <SystemThreadingChannelsVersion>4.7.0</SystemThreadingChannelsVersion>
     <XUnitVersion>2.4.1</XUnitVersion>
