@@ -174,7 +174,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <returns>A task that completes with the item on which the handler completes.</returns>
         public async Task<T> HandleAsync(Handler handler, CancellationToken token)
         {
-            var completionSource = new TaskCompletionSource<T>();
+            var completionSource = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
             using var _ = token.Register(() => completionSource.TrySetCanceled(token));
 
             RunOrQueueHandler(handler, completionSource);
