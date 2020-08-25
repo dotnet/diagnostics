@@ -9,21 +9,22 @@ namespace Tracee
 {
     class Program
     {
-        private const int LoopCount = 300;
+        // private const int LoopCount = 300;
 
         static void Main(string[] args)
         {
-            Console.WriteLine("Sleep in loop for {0} seconds.", LoopCount);
+            // Console.WriteLine("Sleep in loop for {0} seconds.", LoopCount);
 
-            // Runs for max of 300 sec
-            for (var i = 0; i < LoopCount; i++)
-            {
-                Console.WriteLine("Iteration #{0}", i);
-                Thread.Sleep(1000);
-            }
+            // // Runs for max of 300 sec
+            // for (var i = 0; i < LoopCount; i++)
+            // {
+            //     Console.WriteLine("Iteration #{0}", i);
+            //     Thread.Sleep(1000);
+            // }
 
-            Console.WriteLine("Press any key to exit.");
-            Console.ReadKey();
+            Console.WriteLine("Press Enter to exit.");
+            var input = Console.ReadLine();
+            Console.WriteLine($"Saw \"{input}\".  Exiting...");
         }
     }
 }

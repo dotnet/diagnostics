@@ -20,14 +20,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private ProcessStartInfo startInfo;
         private ITestOutputHelper outputHelper;
 
-        public TestRunner(string testExePath, ITestOutputHelper _outputHelper = null,
-            bool redirectError = false, bool redirectInput = false)
+        public TestRunner(string testExePath, ITestOutputHelper _outputHelper = null)
         {
             startInfo = new ProcessStartInfo(CommonHelper.HostExe, testExePath);
             startInfo.UseShellExecute = false;
             startInfo.RedirectStandardOutput = true;
-            startInfo.RedirectStandardError = redirectError;
-            startInfo.RedirectStandardInput = redirectInput;
+            startInfo.RedirectStandardError = true;
+            startInfo.RedirectStandardInput = true;
             outputHelper = _outputHelper;
         }
 
@@ -110,7 +109,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public void Stop()
         {
-            testProcess.Kill();
+            // testProcess.Kill();
+            outputHelper?.WriteLine($"[{DateTime.Now.ToString()}] Stopping Tracee");
+            StandardInput.WriteLine("Exit");
+            StandardInput.Close();
+            if (!testProcess.WaitForExit(5000))
+            {
+                outputHelper?.WriteLine($"[{DateTime.Now.ToString()}] tracee didn't exit in 5 seconds.  Calling Process.Kill");
+                testProcess.Kill();
+                testProcess.WaitForExit();
+            }
         }
 
         public int Pid {

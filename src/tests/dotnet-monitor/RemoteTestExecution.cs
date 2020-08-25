@@ -44,7 +44,7 @@ namespace DotnetMonitor.UnitTests
 
         public static RemoteTestExecution StartProcess(string commandLine, ITestOutputHelper outputHelper, string reversedServerTransportName = null)
         {
-            TestRunner runner = new TestRunner(commandLine, outputHelper, redirectError: true, redirectInput: true);
+            TestRunner runner = new TestRunner(commandLine, outputHelper);
             if (!string.IsNullOrEmpty(reversedServerTransportName))
             {
                 runner.AddReversedServer(reversedServerTransportName);
