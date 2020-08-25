@@ -23,8 +23,10 @@ namespace Tracee
             // }
 
             Console.WriteLine("Press Enter to exit.");
-            var input = Console.ReadLine();
-            Console.WriteLine($"Saw \"{input}\".  Exiting...");
+            int input = '~';
+            if ((input = Console.Read()) == -1)
+                throw new InvalidOperationException("Unable to read stop signal");
+            Console.WriteLine($"Saw '{(char)input}'.  Exiting...");
         }
     }
 }

@@ -97,7 +97,7 @@ namespace DotnetMonitor.UnitTests
         {
             SendSignal();
 
-            using var timeoutSource = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            using var timeoutSource = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             try
             {
                 await TestRunner.WaitForExitAsync(timeoutSource.Token);

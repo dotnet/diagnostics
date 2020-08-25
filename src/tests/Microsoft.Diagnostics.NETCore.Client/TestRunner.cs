@@ -111,8 +111,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             // testProcess.Kill();
             outputHelper?.WriteLine($"[{DateTime.Now.ToString()}] Stopping Tracee");
-            StandardInput.WriteLine("Exit");
-            StandardInput.Close();
+            StandardInput.Write('0');
+            StandardInput.Flush();
             if (!testProcess.WaitForExit(5000))
             {
                 outputHelper?.WriteLine($"[{DateTime.Now.ToString()}] tracee didn't exit in 5 seconds.  Calling Process.Kill");
