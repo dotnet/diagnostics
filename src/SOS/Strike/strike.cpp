@@ -277,9 +277,7 @@ DECLARE_API(IP2MD)
     TADDR IP = 0;
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -469,9 +467,7 @@ DECLARE_API(DumpStack)
         {"-EE", &DSFlag.fEEonly, COBOOL, FALSE},
         {"-n",  &DSFlag.fSuppressSrcInfo, COBOOL, FALSE},
         {"-unwind",  &unwind, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE}
-#endif
     };
     CMDValue arg[] = {
         // vptr, type
@@ -529,9 +525,7 @@ DECLARE_API (EEStack)
     {   // name, vptr, type, hasValue
         {"-EE", &DSFlag.fEEonly, COBOOL, FALSE},
         {"-short", &bShortList, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE}
-#endif
     };
 
     if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
@@ -710,9 +704,7 @@ DECLARE_API(DumpStackObjects)
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-verify", &bVerify, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE}
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -748,9 +740,7 @@ DECLARE_API(DumpMD)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -867,8 +857,9 @@ DECLARE_API(DumpIL)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE},
+        {"-i", &fILPointerDirectlySpecified, COBOOL, FALSE},
         {"/i", &fILPointerDirectlySpecified, COBOOL, FALSE},
+        {"/d", &dml, COBOOL, FALSE},
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -1166,9 +1157,7 @@ DECLARE_API(DumpClass)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -1289,9 +1278,7 @@ DECLARE_API(DumpMT)
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-MD", &bDumpMDTable, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE}
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -1852,9 +1839,7 @@ DECLARE_API(DumpArray)
         {"-length", &flags.Length, COSIZE_T, TRUE},
         {"-details", &flags.bDetail, COBOOL, FALSE},
         {"-nofields", &flags.bNoFieldsForElement, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -2070,9 +2055,7 @@ DECLARE_API(DumpObj)
     {   // name, vptr, type, hasValue
         {"-nofields", &bNoFields, COBOOL, FALSE},
         {"-refs", &bRefs, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -2130,9 +2113,7 @@ DECLARE_API(DumpALC)
     StringHolder str_Object;
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -2900,9 +2881,7 @@ DECLARE_API(PrintException)
         {"-lines", &bLineNumbers, COBOOL, FALSE},
         {"-l", &bLineNumbers, COBOOL, FALSE},
         {"-ccw", &bCCW, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE}
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -3067,9 +3046,7 @@ DECLARE_API(DumpVC)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE}
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -3937,9 +3914,7 @@ public:
             {"-max", &mMaxSize, COHEX, TRUE},        // max size of objects to display
             {"-live", &mLive, COHEX, FALSE},         // only print live objects
             {"-dead", &mDead, COHEX, FALSE},         // only print dead objects
-#ifndef FEATURE_PAL
             {"/d", &mDML, COBOOL, FALSE},            // Debugger Markup Language
-#endif
         };
 
         CMDValue arg[] =
@@ -4647,9 +4622,7 @@ DECLARE_API(DumpAsync)
             { "-fields", &dumpFields, COBOOL, FALSE },          // show relevant fields of found async objects
             { "-stacks", &includeStacks, COBOOL, FALSE },       // gather and output continuation/stack information
             { "-roots", &includeRoots, COBOOL, FALSE },         // gather and output GC root information
-#ifndef FEATURE_PAL
             { "/d", &dml, COBOOL, FALSE },                      // Debugger Markup Language
-#endif
         };
         if (!GetCMDOption(args, option, _countof(option), NULL, 0, &nArg) || nArg != 0)
         {
@@ -5328,16 +5301,6 @@ DECLARE_API(ListNearObj)
 
     TADDR taddrArg = 0;
     TADDR taddrObj = 0;
-    // we may want to provide a more exact version of searching for the
-    // previous object in the heap, using the brick table, instead of
-    // looking for what may be valid method tables...
-    //BOOL bExact;
-    //CMDOption option[] =
-    //{
-    //    // name, vptr, type, hasValue
-    //    {"-exact", &bExact, COBOOL, FALSE}
-    //};
-
     BOOL dml = FALSE;
     CMDOption option[] =
     {   // name, vptr, type, hasValue
@@ -6180,9 +6143,7 @@ DECLARE_API(DumpModule)
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-mt", &bMethodTables, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
         {"-prof", &bProfilerModified, COBOOL, FALSE},
     };
     CMDValue arg[] =
@@ -6351,9 +6312,7 @@ DECLARE_API(DumpDomain)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -6474,9 +6433,7 @@ DECLARE_API(DumpAssembly)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -7044,9 +7001,7 @@ DECLARE_API(Threads)
         {"-special", &bPrintSpecialThreads, COBOOL, FALSE},
         {"-live", &bPrintLiveThreadsOnly, COBOOL, FALSE},
         {"-managedexception", &bSwitchToManagedExceptionThread, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
     {
@@ -8569,9 +8524,7 @@ DECLARE_API(ThreadPool)
         {   // name, vptr, type, hasValue
             {"-ti", &doHCDump, COBOOL, FALSE},
             {"-wi", &doWorkItemDump, COBOOL, FALSE},
-#ifndef FEATURE_PAL
             {"/d", &dml, COBOOL, FALSE},
-#endif
         };
 
         if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
@@ -8874,9 +8827,7 @@ DECLARE_API(FindAppDomain)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -9537,9 +9488,7 @@ DECLARE_API(u)
         {"-o", &bDisplayOffsets, COBOOL, FALSE},
         {"-il", &bIL, COBOOL, FALSE},
         {"-map", &bDisplayILMap, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -10993,9 +10942,7 @@ DECLARE_API(Token2EE)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
 
     CMDValue arg[] =
@@ -11087,9 +11034,7 @@ DECLARE_API(Name2EE)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
 
     CMDValue arg[] =
@@ -11263,9 +11208,7 @@ DECLARE_API(GCRoot)
     {   // name, vptr, type, hasValue
         {"-nostacks", &bNoStacks, COBOOL, FALSE},
         {"-all", &all, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
 
@@ -14491,9 +14434,7 @@ DECLARE_API(ClrStack)
         {"-gc", &bGC, COBOOL, FALSE},
         {"-f", &bFull, COBOOL, FALSE},
         {"-r", &bDisplayRegVals, COBOOL, FALSE },
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
