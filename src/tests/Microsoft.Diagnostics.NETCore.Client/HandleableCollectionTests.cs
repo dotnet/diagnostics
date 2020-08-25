@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             AddRangeAndVerifyItems(collection, endInclusive: 9);
 
-            HandleableCollection<int>.Handler handler = (in int item, out bool removeItem) =>
+            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) =>
             {
                 removeItem = false;
                 return 20 == item;
@@ -63,6 +63,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 () => collection.Add(10));
 
             Assert.Throws<ObjectDisposedException>(
+                () => collection.ClearItems());
+
+            Assert.Throws<ObjectDisposedException>(
                 () => collection.Handle(DefaultPositiveVerificationTimeout));
 
             Assert.Throws<ObjectDisposedException>(
@@ -73,14 +76,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             await Assert.ThrowsAsync<ObjectDisposedException>(
                 () => collection.HandleAsync(handler, cancellation.Token));
-
-            HandleableCollection<int>.Predicate predicate = (in int item) => false;
-
-            Assert.Throws<ObjectDisposedException>(
-                () => collection.TryRemove(predicate, out int oldItem));
-
-            Assert.Throws<ObjectDisposedException>(
-                () => collection.TryReplace(predicate, 10, out int oldItem));
 
             Assert.Throws<ObjectDisposedException>(
                 () => ((IEnumerable)collection).GetEnumerator());
@@ -156,7 +151,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             const int expectedItem = 7;
             AddRangeAndVerifyItems(collection, endInclusive: expectedItem);
 
-            HandleableCollection<int>.Handler handler = (in int item, out bool removeItem) =>
+            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) =>
             {
                 removeItem = false;
 
@@ -201,7 +196,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Task handlerBeginTask = collection.WaitForHandlerBeginAsync(DefaultPositiveVerificationTimeout);
 
             const int expectedItem = 3;
-            HandleableCollection<int>.Handler handler = (in int item, out bool removeItem) =>
+            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) =>
             {
                 // Terminate handler on some item in the middle of the collection
                 if (expectedItem == item)
@@ -266,7 +261,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             AddRangeAndVerifyItems(collection, endInclusive: 4);
 
             const int expectedItem = 2;
-            HandleableCollection<int>.Handler handler = (in int item, out bool removeItem) =>
+            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) =>
             {
                 // Do not remove any item (the purpose of this test is to handle an
                 // item without removing it).
@@ -284,69 +279,60 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Tests that the <see cref="HandleableCollection{T}.TryRemove(HandleableCollection{T}.Predicate, out T)"/> method
-        /// removes an item if the predicate is satisfied and does not make modifications if not satisfied.
-        /// </summary>
+        /// Tests that items can be cleared from the collection without removing the handlers.
         [Fact]
-        public void HandleableCollectionTryRemoveTest()
+        public async Task HandleableCollectionClearItemsTest()
         {
             using var collection = new HandleableCollection<int>();
             Assert.Empty(collection);
 
             AddRangeAndVerifyItems(collection, endInclusive: 4);
 
-            const int expectedItem = 2;
-            HandleableCollection<int>.Predicate successPredicate = (in int item) =>
+            HandleableCollection<int>.Handler handler = (int value, out bool removeItem) =>
             {
-                return expectedItem == item;
+                if (value == 7)
+                {
+                    removeItem = true;
+                    return true;
+                }
+
+                removeItem = false;
+                return false;
             };
 
-            int oldItem;
-            Assert.True(collection.TryRemove(successPredicate, out oldItem));
-            Assert.Equal(expectedItem, oldItem);
-            Assert.Equal(new int[] { 0, 1, 3, 4 }, collection);
+            using var cancellation = new CancellationTokenSource(DefaultPositiveVerificationTimeout);
+            Task handleAsyncTask = Task.Run(() => collection.HandleAsync(handler, cancellation.Token));
 
-            HandleableCollection<int>.Predicate failedPredicate = (in int item) =>
-            {
-                return 8 == item;
-            };
+            // Task.Delay intentionally shorter than default timeout to check that HandleAsync
+            // calls did not complete quickly.
+            Task delayTask = Task.Delay(TimeSpan.FromSeconds(1));
+            Task completedTask = await Task.WhenAny(delayTask, handleAsyncTask);
 
-            Assert.False(collection.TryRemove(failedPredicate, out oldItem));
-            Assert.Equal(default, oldItem);
-            Assert.Equal(new int[] { 0, 1, 3, 4 }, collection);
-        }
+            // Check that the handle task didn't complete
+            Assert.Equal(delayTask, completedTask);
 
-        /// <summary>
-        /// Tests that the <see cref="HandleableCollection{T}.TryReplace(HandleableCollection{T}.Predicate, in T, out T)"/> method
-        /// replaces an item if the predicate is satisfied and does not make modifications if not satisfied.
-        /// </summary>
-        [Fact]
-        public void HandleableCollectionTryReplaceTest()
-        {
-            using var collection = new HandleableCollection<int>();
+            collection.ClearItems();
             Assert.Empty(collection);
 
-            AddRangeAndVerifyItems(collection, endInclusive: 4);
+            // The remainder of the test checks that the previously registered handler is still
+            // registered with the collection and was not removed by calling ClearItems.
+            IList<(int, int)> itemsAndCounts = new List<(int, int)>();
+            itemsAndCounts.Add((6, 1));
+            itemsAndCounts.Add((7, 1)); // Item is consumed immediately, thus collection count does not change
+            itemsAndCounts.Add((8, 2));
+            AddAndVerifyItems(collection, itemsAndCounts);
 
-            const int expectedItem = 2;
-            HandleableCollection<int>.Predicate successPredicate = (in int item) =>
-            {
-                return expectedItem == item;
-            };
+            // Task.Delay intentionally longer than default timeout to check that HandleAsync
+            // does complete by handling a value. The delay Task is used in case the handler doesn't
+            // handle a value and doesn't respect cancellation so as to not stall the test indefinitely.
+            delayTask = Task.Delay(2 * DefaultPositiveVerificationTimeout);
+            completedTask = await Task.WhenAny(delayTask, handleAsyncTask);
 
-            int oldItem;
-            Assert.True(collection.TryReplace(successPredicate, 10, out oldItem));
-            Assert.Equal(expectedItem, oldItem);
-            Assert.Equal(new int[] { 0, 1, 10, 3, 4 }, collection);
+            // Check that the handle task did complete
+            Assert.Equal(handleAsyncTask, completedTask);
 
-            HandleableCollection<int>.Predicate failedPredicate = (in int item) =>
-            {
-                return 8 == item;
-            };
-
-            Assert.False(collection.TryReplace(failedPredicate, 15, out oldItem));
-            Assert.Equal(default, oldItem);
-            Assert.Equal(new int[] { 0, 1, 10, 3, 4 }, collection);
+            // Check that the value was removed
+            Assert.Equal(new int[] { 6, 8 }, collection);
         }
 
         private static void AddAndVerifyItems<T>(HandleableCollection<T> collection, IEnumerable<(T, int)> itemsAndCounts)

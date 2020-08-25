@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -27,7 +28,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private readonly HashSet<Guid> _runtimeInstanceCookies = new HashSet<Guid>();
         private readonly CancellationTokenSource _disposalSource = new CancellationTokenSource();
         private readonly HandleableCollection<IpcEndpointInfo> _endpointInfos = new HandleableCollection<IpcEndpointInfo>();
-        private readonly KeyedHandleableCollection<Guid, Stream> _streams = new KeyedHandleableCollection<Guid, Stream>();
+        private readonly ConcurrentDictionary<Guid, HandleableCollection<Stream>> _streamCollections = new ConcurrentDictionary<Guid, HandleableCollection<Stream>>();
         private readonly string _transportPath;
 
         private bool _disposed = false;
@@ -67,12 +68,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 _endpointInfos.Dispose();
 
-                foreach (Stream stream in _streams.Values)
+                foreach (HandleableCollection<Stream> streamCollection in _streamCollections.Values)
                 {
-                    stream.Dispose();
+                    streamCollection.Dispose();
                 }
 
-                _streams.Dispose();
+                _streamCollections.Clear();
 
                 _runtimeInstanceCookies.Clear();
 
@@ -124,12 +125,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <returns>A task that completes with a <see cref="IpcEndpointInfo"/> value that contains information about the new runtime instance connection.</returns>
-        public async Task<IpcEndpointInfo> AcceptAsync(CancellationToken token)
+        public Task<IpcEndpointInfo> AcceptAsync(CancellationToken token)
         {
             VerifyNotDisposed();
             VerifyIsStarted();
 
-            return await _endpointInfos.HandleAsync(token).ConfigureAwait(false);
+            return _endpointInfos.HandleAsync(token);
         }
 
         /// <summary>
@@ -145,12 +146,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             bool endpointExisted = false;
 
             endpointExisted = _runtimeInstanceCookies.Remove(runtimeCookie);
-            if (endpointExisted)
+            if (endpointExisted && _streamCollections.TryRemove(runtimeCookie, out HandleableCollection<Stream> streamCollection))
             {
-                if (_streams.TryRemove(runtimeCookie, out Stream previousStream))
-                {
-                    previousStream?.Dispose();
-                }
+                streamCollection.ClearItems();
             }
 
             return endpointExisted;
@@ -220,15 +218,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     Guid runtimeCookie = advertise.RuntimeInstanceCookie;
                     int pid = unchecked((int)advertise.ProcessId);
 
-                    // Attempt to update the existing stream or add as new stream
-                    if (_streams.TryReplace(runtimeCookie, stream, out Stream previousStream))
-                    {
-                        previousStream?.Dispose();
-                    }
-                    else
-                    {
-                        _streams.Add(runtimeCookie, stream);
-                    }
+                    HandleableCollection<Stream> streamCollection = GetStreams(runtimeCookie);
+                    streamCollection.ClearItems();
+                    streamCollection.Add(stream);
 
                     // Add new endpoint information if not already tracked
                     if (_runtimeInstanceCookies.Add(runtimeCookie))
@@ -240,20 +232,25 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
+        private HandleableCollection<Stream> GetStreams(Guid runtimeCookie)
+        {
+            return _streamCollections.GetOrAdd(runtimeCookie, _ => new HandleableCollection<Stream>());
+        }
+
         internal Stream Connect(Guid runtimeInstanceCookie, TimeSpan timeout)
         {
             VerifyNotDisposed();
             VerifyIsStarted();
 
-            return _streams.Handle(runtimeInstanceCookie, timeout);
+            return GetStreams(runtimeInstanceCookie).Handle(timeout);
         }
 
-        internal async Task<Stream> ConnectAsync(Guid runtimeInstanceCookie, CancellationToken token)
+        internal Task<Stream> ConnectAsync(Guid runtimeInstanceCookie, CancellationToken token)
         {
             VerifyNotDisposed();
             VerifyIsStarted();
 
-            return await _streams.HandleAsync(runtimeInstanceCookie, token).ConfigureAwait(false);
+            return GetStreams(runtimeInstanceCookie).HandleAsync(token);
         }
 
         internal void WaitForConnection(Guid runtimeInstanceCookie, TimeSpan timeout)
@@ -261,7 +258,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             VerifyNotDisposed();
             VerifyIsStarted();
 
-            _streams.Handle(runtimeInstanceCookie, WaitForConnectionHandler, timeout);
+            GetStreams(runtimeInstanceCookie).Handle(WaitForConnectionHandler, timeout);
         }
 
         internal async Task WaitForConnectionAsync(Guid runtimeInstanceCookie, CancellationToken token)
@@ -269,10 +266,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             VerifyNotDisposed();
             VerifyIsStarted();
 
-            await _streams.HandleAsync(runtimeInstanceCookie, WaitForConnectionHandler, token).ConfigureAwait(false);
+            await GetStreams(runtimeInstanceCookie).HandleAsync(WaitForConnectionHandler, token).ConfigureAwait(false);
         }
 
-        private static bool WaitForConnectionHandler(in Stream item, out bool removeItem)
+        private static bool WaitForConnectionHandler(Stream item, out bool removeItem)
         {
             if (!TestStream(item))
             {
