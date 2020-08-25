@@ -128,7 +128,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// because of how the endpoint is updated with new stream information each
         /// time the target process reconnects to the server.
         /// </remarks>
-        [Fact(Skip = "Test fails in latest darc updates. See https://github.com/dotnet/diagnostics/issues/1482")]
+        [Fact]
         public async Task ReversedServerSingleTargetMultipleUseClientTest()
         {
             // TODO(josalem): this is 1/3 failing tests
@@ -174,7 +174,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Tests that a DiagnosticsClient is not viable after target exists.
         /// </summary>
-        [Fact(Skip = "Test fails in latest darc updates. See https://github.com/dotnet/diagnostics/issues/1482")]
+        [Fact]
         public async Task ReversedServerSingleTargetExitsClientInviableTest()
         {
             // TODO(josalem): this is 1/3 failing tests
