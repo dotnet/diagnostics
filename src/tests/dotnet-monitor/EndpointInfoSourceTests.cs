@@ -4,12 +4,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Diagnostics.NETCore.Client;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Extensions;
 
 namespace DotnetMonitor.UnitTests
 {
@@ -101,9 +103,11 @@ namespace DotnetMonitor.UnitTests
         /// Tests that the server endpoint info source can properly enumerate endpoint infos when a single
         /// target connects to it and "disconnects" from it.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public async Task ServerSourceAddRemoveSingleConnectionTest()
         {
+            SkipOnWindowsX86();
+
             await using var source = CreateServerSource(out string transportName);
             source.Start();
 
@@ -131,6 +135,14 @@ namespace DotnetMonitor.UnitTests
             endpointInfos = await GetEndpointInfoAsync(source);
 
             Assert.Empty(endpointInfos);
+        }
+
+        private void SkipOnWindowsX86()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !Environment.Is64BitOperatingSystem)
+            {
+                throw new SkipTestException("Test fails due to not seeing test application connect to reversed server. See https://github.com/dotnet/diagnostics/issues/1482");
+            }
         }
 
         private TestServerEndpointInfoSource CreateServerSource(out string transportName)

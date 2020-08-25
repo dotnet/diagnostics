@@ -6,11 +6,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Tracing;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Extensions;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -145,15 +147,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.False(server.RemoveConnection(nonExistingRuntimeId), "Removal of nonexisting connection should fail.");
         }
 
-        [Fact]
+        [SkippableFact]
         public async Task ReversedServerSingleTargetMultipleUseClientTest()
         {
+            SkipOnWindowsX86();
+
             await ReversedServerSingleTargetMultipleUseClientTestCore(useAsync: false);
         }
 
-        [Fact]
+        [SkippableFact]
         public async Task ReversedServerSingleTargetMultipleUseClientTestAsync()
         {
+            SkipOnWindowsX86();
+
             await ReversedServerSingleTargetMultipleUseClientTestCore(useAsync: true);
         }
 
@@ -207,15 +213,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await VerifyNoNewEndpointInfos(server, useAsync);
         }
 
-        [Fact]
+        [SkippableFact]
         public async Task ReversedServerSingleTargetExitsClientInviableTest()
         {
+            SkipOnWindowsX86();
+
             await ReversedServerSingleTargetExitsClientInviableTestCore(useAsync: false);
         }
 
-        [Fact]
+        [SkippableFact]
         public async Task ReversedServerSingleTargetExitsClientInviableTestAsync()
         {
+            SkipOnWindowsX86();
+
             await ReversedServerSingleTargetExitsClientInviableTestCore(useAsync: true);
         }
 
@@ -262,6 +272,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             // There should not be any more endpoint infos
             await VerifyNoNewEndpointInfos(server, useAsync);
+        }
+
+        private void SkipOnWindowsX86()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !Environment.Is64BitOperatingSystem)
+            {
+                throw new SkipTestException("Test fails due to not seeing test application connect to reversed server. See https://github.com/dotnet/diagnostics/issues/1482");
+            }
         }
 
         private ReversedDiagnosticsServer CreateReversedServer(out string transportName)
