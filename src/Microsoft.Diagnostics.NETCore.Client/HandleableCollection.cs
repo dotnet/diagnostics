@@ -226,7 +226,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             catch (Exception ex)
             {
-                Debug.Fail("Handler exception", ex.ToString());
+                completionSource.TrySetException(ex);
+                return true;
             }
 
             if (stopHandling)
