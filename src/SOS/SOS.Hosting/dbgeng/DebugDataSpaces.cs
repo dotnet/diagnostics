@@ -42,7 +42,7 @@ namespace SOS
             builder.AddMethod(new ReadBusDataDelegate((self, busDataType, busNumber, slotNumber, offset, buffer, bufferSize, bytesRead) => DebugClient.NotImplemented));
             builder.AddMethod(new WriteBusDataDelegate((self, busDataType, busNumber, slotNumber, offset, buffer, bufferSize, bytesWritten) => DebugClient.NotImplemented));
             builder.AddMethod(new CheckLowMemoryDelegate((self) => DebugClient.NotImplemented));
-            builder.AddMethod(new ReadDebuggerDataDelegate((self, index, buffer, bufferSize, dataSize) => DebugClient.E_NOTIMPL));
+            builder.AddMethod(new ReadDebuggerDataDelegate((self, index, buffer, bufferSize, dataSize) => HResult.E_NOTIMPL));
             builder.AddMethod(new ReadProcessorSystemDataDelegate((self, processor, index, buffer, bufferSize, dataSize) => DebugClient.NotImplemented));
         }
 
