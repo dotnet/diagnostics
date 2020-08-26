@@ -183,13 +183,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             TestRunner runner = null;
             IpcEndpointInfo info;
-            try
-            {
+            // try
+            // {
                 // Start client pointing to diagnostics server
                 runner = StartTracee(transportName);
 
                 // Get client connection
+                _outputHelper?.WriteLine($"[{DateTime.Now.ToString()}] about to accept l192");
                 info = await AcceptAsync(server);
+                _outputHelper?.WriteLine($"[{DateTime.Now.ToString()}] ACCEPTED! l192");
 
                 await VerifyEndpointInfo(runner, info);
 
@@ -199,12 +201,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 ResumeRuntime(info);
 
                 await VerifyWaitForConnection(info);
-            }
-            finally
-            {
+            // }
+            // catch (Exception e)
+            // {
+            //     _outputHelper?.WriteLine($"[{DateTime.Now.ToString()}] Saw exception");
+            //     _outputHelper?.WriteLine($"[{DateTime.Now.ToString()}] {e.ToString()}");
+            // }
+            // finally
+            // {
                 _outputHelper.WriteLine("Stopping tracee.");
                 runner?.Stop();
-            }
+            // }
 
             // Wait some time for the process to exit
             await Task.Delay(TimeSpan.FromSeconds(10));
@@ -249,7 +256,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using var connectionCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             if (expectValid)
             {
-                await info.Endpoint.WaitForConnectionAsync(CancellationToken.None);
+                await info.Endpoint.WaitForConnectionAsync(connectionCancellation.Token);
             }
             else
             {

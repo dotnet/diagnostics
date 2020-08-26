@@ -59,6 +59,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
             runner.PrintStatus();
             output.WriteLine($"[{DateTime.Now.ToString()}] Trying to start an EventPipe session on process {runner.Pid}");
+            Task streamTask = null;
             using (var session = client.StartEventPipeSession(new List<EventPipeProvider>()
             {
                 new EventPipeProvider("System.Runtime", EventLevel.Informational, 0, new Dictionary<string, string>() {
@@ -68,7 +69,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 var evntCnt = 0;
 
-                Task streamTask = Task.Run(() => {
+                streamTask = Task.Run(() => {
                     var source = new EventPipeEventSource(session.EventStream);
                     source.Dynamic.All += (TraceEvent obj) => {
                         output.WriteLine("Got an event");
@@ -81,8 +82,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     catch (Exception e)
                     {
                         // This exception can happen if the target process exits while EventPipeEventSource is in the middle of reading from the pipe.
-                        Console.WriteLine("Error encountered while processing events");
-                        Console.WriteLine(e.ToString());
+                        output?.WriteLine("Error encountered while processing events");
+                        output?.WriteLine(e.ToString());
                     }
                     finally
                     {
@@ -94,6 +95,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 output.WriteLine("Done waiting for stream Task");
                 Assert.True(evntCnt > 0);
             }
+
+            streamTask?.Wait();
         }
 
         /// <summary>

@@ -41,6 +41,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public static void AddReversedServer(this TestRunner runner, string transportName)
         {
             runner.AddEnvVar("DOTNET_DiagnosticsMonitorAddress", transportName);
+            runner.AddEnvVar("DOTNET_DiagnosticPorts", $"{transportName},nosuspend;");
         }
 
         public static string ToTestString(this IpcEndpointInfo info)

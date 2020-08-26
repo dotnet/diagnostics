@@ -110,6 +110,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public void Stop()
         {
             // testProcess.Kill();
+            if (testProcess.HasExited)
+                return;
             outputHelper?.WriteLine($"[{DateTime.Now.ToString()}] Stopping Tracee");
             StandardInput.Write('0');
             StandardInput.Flush();

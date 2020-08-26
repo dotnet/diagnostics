@@ -146,8 +146,8 @@ namespace DotnetMonitor.UnitTests
         private async Task<IEnumerable<IEndpointInfo>> GetEndpointInfoAsync(ServerEndpointInfoSource source)
         {
             _outputHelper.WriteLine("Getting endpoint infos.");
-            using CancellationTokenSource cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            return await source.GetEndpointInfoAsync(CancellationToken.None);
+            using CancellationTokenSource cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            return await source.GetEndpointInfoAsync(cancellationSource.Token);
         }
 
         /// <summary>
