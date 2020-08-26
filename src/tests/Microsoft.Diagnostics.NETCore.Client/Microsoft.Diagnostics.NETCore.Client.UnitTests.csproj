@@ -1,8 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project InitialTargets="InjectDARCVersion" Sdk="Microsoft.NET.Sdk">
 
-  <Target Name="InjectDARCVersion" BeforeTargets="Restore">
+  <Target Name="InjectDARCVersion">
     <PropertyGroup>
       <DARCVersionFile>
+<![CDATA[
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
@@ -14,16 +15,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     public partial class CommonHelper
     {
-        public static readonly string CurrentDARCVersion = "$(MicrosoftNETCoreAppVersion)"%3B
+        public static readonly string CurrentDARCVersion = "$(MicrosoftNETCoreAppVersion)";
     }
 }
+]]>
       </DARCVersionFile>
     </PropertyGroup>
 
     <WriteLinesToFile
-      File="./DARCVersion.cs"
+      File="$(MSBuildProjectDirectory)/DARCVersion.cs"
       Overwrite="true"
-      Lines="$(DARCVersionFile)" />
+      Lines="$(DARCVersionFile.Replace(';', '%3B'))" />
   </Target>
 
   <PropertyGroup>
