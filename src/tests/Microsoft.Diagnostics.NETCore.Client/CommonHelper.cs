@@ -8,11 +8,8 @@ using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    public class CommonHelper
+    public partial class CommonHelper
     {
-        // This is a stopgap until Arcade updates to an RC version of the SDK.
-        // KEEP IN SYNC WITH eng/Versions.xml
-        public static readonly string CurrentDARCVersion = "5.0.0-rc.1.20425.1";
         public static string HostExe = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 
             (RuntimeInformation.ProcessArchitecture == Architecture.X86 ? 
                 "..\\..\\..\\..\\..\\.dotnet\\x86\\dotnet.exe" : 
@@ -29,7 +26,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             traceePath = Path.Combine(traceePath, Path.ChangeExtension(traceeName, ".dll"));
 
-            if (targetFramework.Equals("net5.0", StringComparison.InvariantCultureIgnoreCase))
+            if (targetFramework.Equals("net5.0", StringComparison.InvariantCultureIgnoreCase) && !CurrentDARCVersion.Equals("DEFAULT_VALUE", StringComparison.InvariantCultureIgnoreCase))
                 traceePath = $"--fx-version {CurrentDARCVersion} {traceePath}";
 
             return traceePath;

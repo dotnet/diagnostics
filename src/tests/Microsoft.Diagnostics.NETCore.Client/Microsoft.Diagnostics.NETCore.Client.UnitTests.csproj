@@ -1,5 +1,31 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <Target Name="InjectDARCVersion" BeforeTargets="Restore">
+    <PropertyGroup>
+      <DARCVersionFile>
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+
+// THIS FILE IS AUTO-GENERATED DURING BUILD.  MODIFICATIONS _WILL_ BE OVERWRITTEN!
+
+namespace Microsoft.Diagnostics.NETCore.Client
+{
+    public partial class CommonHelper
+    {
+        public static readonly string CurrentDARCVersion = "$(MicrosoftNETCoreAppVersion)"%3B
+    }
+}
+      </DARCVersionFile>
+    </PropertyGroup>
+
+    <WriteLinesToFile
+      File="./DARCVersion.cs"
+      Overwrite="true"
+      Lines="$(DARCVersionFile)" />
+  </Target>
+
   <PropertyGroup>
     <TargetFrameworks>netcoreapp3.1;net5.0</TargetFrameworks>
   </PropertyGroup>
