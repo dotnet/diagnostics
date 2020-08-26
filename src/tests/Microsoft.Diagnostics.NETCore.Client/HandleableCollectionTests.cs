@@ -121,7 +121,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             Assert.Empty(collection);
 
-            await shim.HandleThrowsForTimeout(DefaultNegativeVerificationTimeout);
+            await shim.Handle(DefaultNegativeVerificationTimeout, expectTimeout: true);
         }
 
         [Fact]
@@ -335,6 +335,71 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.Equal(new int[] { 6, 8 }, collection);
         }
 
+        [Fact]
+        public async Task HandleableCollectionHandlerThrowsTest()
+        {
+            await HandleableCollectionHandlerThrowsTestCore(useAsync: false);
+        }
+
+        [Fact]
+        public async Task HandleableCollectionHandlerThrowsTestAsync()
+        {
+            await HandleableCollectionHandlerThrowsTestCore(useAsync: true);
+        }
+
+        /// <summary>
+        /// Tests that handler does not have to remove an item from the collection
+        /// and that the handled item is the item on which the handler completed.
+        /// </summary>
+        private async Task HandleableCollectionHandlerThrowsTestCore(bool useAsync)
+        {
+            using var collection = new HandleableCollection<int>();
+            Assert.Empty(collection);
+
+            var shim = new HandleableCollectionApiShim<int>(collection, useAsync);
+
+            AddRangeAndVerifyItems(collection, endInclusive: 4);
+
+            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) =>
+            {
+                if (6 == item)
+                {
+                    throw new InvalidOperationException();
+                }
+
+                removeItem = false;
+                return false;
+            };
+
+            Task<int> handleTask = Task.Run(() => shim.Handle(handler, DefaultPositiveVerificationTimeout));
+
+            // Task.Delay intentionally shorter than default timeout to check that Handle*
+            // calls did not complete quickly.
+            Task delayTask = Task.Delay(TimeSpan.FromSeconds(1));
+            Task completedTask = await Task.WhenAny(delayTask, handleTask);
+
+            // Check that the handle task didn't complete
+            Assert.Equal(delayTask, completedTask);
+
+            IList<(int, int)> itemsAndCounts = new List<(int, int)>();
+            itemsAndCounts.Add((5, 6));
+            itemsAndCounts.Add((6, 7)); // Handler should fault on this task
+            itemsAndCounts.Add((7, 8));
+            AddAndVerifyItems(collection, itemsAndCounts);
+
+            // Task.Delay intentionally longer than default timeout to check that Handle*
+            // does complete by handling a value. The delay Task is used in case the handler doesn't
+            // handle a value and doesn't respect cancellation so as to not stall the test indefinitely.
+            delayTask = Task.Delay(2 * DefaultPositiveVerificationTimeout);
+            completedTask = await Task.WhenAny(delayTask, handleTask);
+
+            // Check that the handle task faulted and the collection did not change
+            Assert.Equal(handleTask, completedTask);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => handleTask);
+
+            Assert.Equal(new int[] { 0, 1, 2, 3, 4, 5, 6, 7 }, collection);
+        }
+
         private static void AddAndVerifyItems<T>(HandleableCollection<T> collection, IEnumerable<(T, int)> itemsAndCounts)
         {
             // Pairs of (item to be added, expected collection count after adding item)
@@ -371,16 +436,32 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 _useAsync = useAsync;
             }
 
-            public async Task<T> Handle(TimeSpan timeout)
+            public async Task<T> Handle(TimeSpan timeout, bool expectTimeout = false)
             {
                 if (_useAsync)
                 {
                     using var cancellation = new CancellationTokenSource(timeout);
-                    return await _collection.HandleAsync(cancellation.Token);
+                    if (expectTimeout)
+                    {
+                        await Assert.ThrowsAsync<TaskCanceledException>(() => _collection.HandleAsync(cancellation.Token));
+                        return default;
+                    }
+                    else
+                    {
+                        return await _collection.HandleAsync(cancellation.Token);
+                    }
                 }
                 else
                 {
-                    return _collection.Handle(timeout);
+                    if (expectTimeout)
+                    {
+                        Assert.Throws<TimeoutException>(() => _collection.Handle(timeout));
+                        return default;
+                    }
+                    else
+                    {
+                        return _collection.Handle(timeout);
+                    }
                 }
             }
 
@@ -394,19 +475,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 else
                 {
                     return _collection.Handle(handler, timeout);
-                }
-            }
-
-            public async Task HandleThrowsForTimeout(TimeSpan timeout)
-            {
-                if (_useAsync)
-                {
-                    using var cancellation = new CancellationTokenSource(timeout);
-                    await Assert.ThrowsAsync<TaskCanceledException>(() => _collection.HandleAsync(cancellation.Token));
-                }
-                else
-                {
-                    Assert.Throws<TimeoutException>(() => _collection.Handle(timeout));
                 }
             }
         }
