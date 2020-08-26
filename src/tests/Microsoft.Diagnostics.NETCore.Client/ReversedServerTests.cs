@@ -225,7 +225,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private async Task<IpcEndpointInfo> AcceptAsync(ReversedDiagnosticsServer server)
         {
-            using (var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
+            using (var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
             {
                 return await server.AcceptAsync(cancellationSource.Token);
             }
@@ -244,7 +244,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private async Task VerifyWaitForConnection(IpcEndpointInfo info, bool expectValid = true)
         {
-            using var connectionCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            using var connectionCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             if (expectValid)
             {
                 await info.Endpoint.WaitForConnectionAsync(connectionCancellation.Token);
