@@ -26,7 +26,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// A simple test that collects process environment.
         /// </summary>
-        [Fact(Skip="Requires 5.0-rc1* or newer.  Re-enable once consuming this version or newer.")]
+        [Fact]
         public void BasicEnvTest()
         {
             // as the attribute says, this test requires 5.0-rc1 or newer.  This has been tested locally on
