@@ -97,7 +97,7 @@ namespace DotnetMonitor.UnitTests
         /// Tests that the server endpoint info source can properly enumerate endpoint infos when a single
         /// target connects to it and "disconnects" from it.
         /// </summary>
-        [Fact(Skip = "Test fails in latest darc updates. See https://github.com/dotnet/diagnostics/issues/1482")]
+        [Fact]
         public async Task ServerSourceAddRemoveSingleConnectionTest()
         {
             await using var source = CreateServerSource(out string transportName);
