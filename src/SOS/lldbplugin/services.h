@@ -29,7 +29,7 @@ private:
     DWORD_PTR GetRegister(lldb::SBFrame& frame, const char *name);
 
     bool GetVersionStringFromSection(lldb::SBTarget& target, lldb::SBSection& section, char* versionBuffer);
-    bool SearchVersionString(ULONG64 address, ULONG64 size, char* versionBuffer, int versionBufferSize);
+    bool SearchVersionString(uint64_t address, int32_t size, char* versionBuffer, int versionBufferSize);
     bool ReadVirtualCache(ULONG64 address, PVOID buffer, ULONG bufferSize, PULONG pcbBytesRead);
 
     void ClearCache()
