@@ -92,7 +92,7 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
                     var objType = obj.Type;
                     if (objType == null) continue;
                     if (objType == _heap.FreeType) continue;
-                    if (string.Compare(objType.Name, "System.Threading.TimerQueue", StringComparison.Ordinal) != 0)
+                    if (string.CompareOrdinal(objType.Name, "System.Threading.TimerQueue") != 0)
                         continue;
 
                     // m_timers is the start of the linked list of TimerQueueTimer in pre 3.0
@@ -273,10 +273,749 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
             }
         }
 
+        public IEnumerable<ThreadPoolItem> EnumerateGlobalThreadPoolItems()
+        {
+            ClrModule mscorlib = GetMscorlib();
+            return IsNetCore() ?
+                EnumerateGlobalThreadPoolItemsInNetCore(mscorlib) :
+                EnumerateGlobalThreadPoolItemsInNetFramework(mscorlib);
+        }
+
+        public IEnumerable<ThreadPoolItem> EnumerateLocalThreadPoolItems()
+        {
+            ClrModule mscorlib = GetMscorlib();
+            return IsNetCore() ?
+                EnumerateLocalThreadPoolItemsInNetCore(mscorlib) :
+                EnumerateLocalThreadPoolItemsInNetFramework(mscorlib);
+        }
+
+        // here is the code to enumerate thread pool items from ThreadPool.cs
+        //      internal static IEnumerable<IThreadPoolWorkItem> GetQueuedWorkItems()
+        //      {
+        //          // Enumerate global queue
+        //          foreach (IThreadPoolWorkItem workItem in ThreadPoolGlobals.workQueue.workItems)
+        //          {
+        //              yield return workItem;
+        //          }
+        //
+        //          // Enumerate each local queue
+        //          foreach (ThreadPoolWorkQueue.WorkStealingQueue wsq in ThreadPoolWorkQueue.WorkStealingQueueList.Queues)
+        //          {
+        //              if (wsq != null && wsq.m_array != null)
+        //              {
+        //                  IThreadPoolWorkItem[] items = wsq.m_array;
+        //                  for (int i = 0; i < items.Length; i++)
+        //                  {
+        //                      IThreadPoolWorkItem item = items[i];
+        //                      if (item != null)
+        //                      {
+        //                          yield return item;
+        //                      }
+        //                  }
+        //              }
+        //          }
+        //      }
+        //
+        private IEnumerable<ThreadPoolItem> EnumerateGlobalThreadPoolItemsInNetCore(ClrModule corelib)
+        {
+            // in .NET Core, global queue is stored in ThreadPoolGlobals.workQueue (a ThreadPoolWorkQueue)
+            // and each thread has a dedicated WorkStealingQueue stored in WorkStealingQueueList._queues (a WorkStealingQueue[])
+            //
+            // until we can access static fields values in .NET Core with ClrMD, we need to browse the whole heap...
+            var heap = _clr.Heap;
+            if (!heap.CanWalkHeap)
+                yield break;
+
+            foreach (var obj in _heap.EnumerateObjects())
+            {
+
+                var objType = obj.Type;
+                if (objType == null) continue;
+                if (objType == _heap.FreeType) continue;
+
+                if (string.CompareOrdinal(objType.Name, "System.Threading.ThreadPoolWorkQueue") == 0)
+                {
+                    // work items are stored in a ConcurrentQueue stored in the "workItems" field
+                    var workItemsField = objType.GetFieldByName("workItems");
+                    if (workItemsField == null)
+                        throw new InvalidOperationException("Unsupported version of .NET: missing 'workItems' field in ThreadPoolWorkQueue");
+
+                    var workItems = obj.ReadObjectField("workItems");
+
+                    foreach (var workItem in EnumerateWorkItemsAddressInConcurrentQueue(workItems.Address))
+                    {
+                        yield return GetThreadPoolItem(workItem);
+                    }
+                    break;
+                }
+            }
+        }
+        private ThreadPoolItem GetThreadPoolItem(ClrObject item)
+        {
+            ClrType itemType = item.Type;
+            if (itemType.Name == "System.Threading.Tasks.Task")
+            {
+                return GetTask(item);
+            }
+
+            if (
+                (string.CompareOrdinal(itemType.Name, "System.Threading.QueueUserWorkItemCallback") == 0) ||
+                // new to .NET Core
+                (string.CompareOrdinal(itemType.Name, "System.Threading.QueueUserWorkItemCallbackDefaultContext") == 0)
+               )
+            {
+                return GetQueueUserWorkItemCallback(item);
+            }
+
+            // create a raw information
+            ThreadPoolItem tpi = new ThreadPoolItem()
+            {
+                Type = ThreadRoot.Raw,
+                Address = item.Address,
+                MethodName = itemType.Name
+            };
+
+            return tpi;
+        }
+
+        private ThreadPoolItem GetTask(ClrObject task)
+        {
+            ThreadPoolItem tpi = new ThreadPoolItem()
+            {
+                Address = task.Address,
+                Type = ThreadRoot.Task
+            };
+
+            // look for the context in m_action._target
+            var action = task.ReadObjectField("m_action");
+            if (!action.IsValid)
+            {
+                tpi.MethodName = " [no action]";
+                return tpi;
+            }
+
+            var target = action.ReadObjectField("_target");
+            if (!target.IsValid)
+            {
+                tpi.MethodName = " [no target]";
+                return tpi;
+            }
+
+            tpi.MethodName = BuildDelegateMethodName(target.Type, action);
+
+            // get the task scheduler if any
+            var taskScheduler = task.ReadObjectField("m_taskScheduler");
+            if (taskScheduler.IsValid)
+            {
+                var schedulerType = taskScheduler.Type.ToString();
+                if (string.CompareOrdinal("System.Threading.Tasks.ThreadPoolTaskScheduler", schedulerType) != 0)
+                    tpi.MethodName = $"{tpi.MethodName} [{schedulerType}]";
+            }
+            return tpi;
+        }
+
+        private ThreadPoolItem GetQueueUserWorkItemCallback(ClrObject element)
+        {
+            ThreadPoolItem tpi = new ThreadPoolItem()
+            {
+                Address = (ulong)element,
+                Type = ThreadRoot.WorkItem
+            };
+
+            // look for the callback given to ThreadPool.QueueUserWorkItem()
+            // for .NET Core, the callback is stored in a different field _callback
+            var elementType = element.Type;
+            ClrObject callback;
+            if (elementType.GetFieldByName("_callback") != null)
+            {
+                callback = element.ReadObjectField("_callback");
+            }
+            else if (elementType.GetFieldByName("callback") != null)
+            {
+                callback = element.ReadObjectField("callback");
+            }
+            else
+            {
+                tpi.MethodName = "[no callback]";
+                return tpi;
+            }
+
+            var target = callback.ReadObjectField("_target");
+            if (!target.IsValid)
+            {
+                tpi.MethodName = "[no callback target]";
+                return tpi;
+            }
+
+            ClrType targetType = target.Type;
+            if (targetType == null)
+            {
+                tpi.MethodName = $" [target=0x{target.Address}]";
+            }
+            else
+            {
+                // look for method name
+                tpi.MethodName = BuildDelegateMethodName(targetType, callback);
+            }
+
+            return tpi;
+        }
+
+        internal string BuildDelegateMethodName(ClrType targetType, ClrObject action)
+        {
+            var methodPtr = action.ReadField<ulong>("_methodPtr");
+            if (methodPtr != 0)
+            {
+                ClrMethod method = _clr.GetMethodByInstructionPointer(methodPtr);
+                if (method == null)
+                {
+                    // could happen in case of static method
+                    methodPtr = action.ReadField<ulong>("_methodPtrAux");
+                    method = _clr.GetMethodByInstructionPointer(methodPtr);
+                }
+
+                if (method != null)
+                {
+                    // anonymous method
+                    if (method.Type.Name == targetType.Name)
+                    {
+                        return $"{targetType.Name}.{method.Name}";
+                    }
+                    else
+                    // method is implemented by an class inherited from targetType
+                    // ... or a simple delegate indirection to a static/instance method
+                    {
+                        if (
+                            (string.CompareOrdinal(targetType.Name, "System.Threading.WaitCallback") == 0) ||
+                             targetType.Name.StartsWith("System.Action<", StringComparison.Ordinal)
+                            )
+                        {
+                            return $"{method.Type.Name}.{method.Name}";
+                        }
+                        else
+                        {
+                            return $"({targetType.Name}){method.Type.Name}.{method.Name}";
+                        }
+                    }
+                }
+            }
+
+            return "";
+        }
+
+        private IEnumerable<ClrObject> EnumerateWorkItemsAddressInConcurrentQueue(ulong address)
+        {
+            // Look at EnumerateConcurrentQueue() for more details about ConcurrentQueue
+            var cq = _heap.GetObject(address);
+            var currentSegment = cq.ReadObjectField("_head");
+            while (!currentSegment.IsNull && currentSegment.IsValid)
+            {
+                var slots = currentSegment.ReadObjectField("_slots").AsArray();
+                var count = slots.Length;
+                for (int current = 0; current < count; current++)
+                {
+                    var slot = slots.GetStructValue(current, true);
+                    var slotEntry = slot.ReadField<UIntPtr>("Item");
+
+                    // skip empty null slots
+                    if (slotEntry == UIntPtr.Zero)
+                        continue;
+
+                    yield return _heap.GetObject(slotEntry.ToUInt64());
+                }
+
+                currentSegment = currentSegment.ReadObjectField("_nextSegment");
+            };
+        }
+
+        private IEnumerable<ThreadPoolItem> EnumerateLocalThreadPoolItemsInNetCore(ClrModule corelib)
+        {
+            // in .NET Core, each thread has a dedicated WorkStealingQueue stored in WorkStealingQueueList._queues (a WorkStealingQueue[])
+            //
+            // until we can access static fields values in .NET Core with ClrMD, we need to browse the whole heap...
+            var heap = _clr.Heap;
+            if (!heap.CanWalkHeap)
+                yield break;
+
+            foreach (var obj in heap.EnumerateObjects())
+            {
+                if (!obj.IsValid)
+                    continue;
+                var type = obj.Type;
+                if (type == null)
+                    continue;
+
+                if (string.CompareOrdinal(type.Name, "System.Threading.ThreadPoolWorkQueue+WorkStealingQueue") == 0)
+                {
+                    var stealingQueue = obj;
+                    var workItems = stealingQueue.ReadObjectField("m_array").AsArray();
+                    for (int current = 0; current < workItems.Length; current++)
+                    {
+                        var workItem = workItems.GetObjectValue(current);
+                        if (!workItem.IsValid)
+                            continue;
+
+                        yield return GetThreadPoolItem(workItem);
+                    }
+                }
+            }
+        }
+
+        // The ThreadPool is keeping track of the pending work items into two different areas:
+        // - a global queue: stored by ThreadPoolWorkQueue instances of the ThreadPoolGlobals.workQueue static field
+        // - several per thread (TLS) local queues: stored in SparseArray<ThreadPoolWorkQueue+WorkStealingQueue> linked from ThreadPoolWorkQueue.allThreadQueues static fields
+        // both are using arrays of Task or QueueUserWorkItemCallback
+        //
+        // NOTE: don't show other thread pool related topics such as timer callbacks or wait objects
+        //
+        private IEnumerable<ThreadPoolItem> EnumerateGlobalThreadPoolItemsInNetFramework(ClrModule mscorlib)
+        {
+
+            ClrType queueType = mscorlib.GetTypeByName("System.Threading.ThreadPoolGlobals");
+            if (queueType == null)
+                yield break;
+
+            ClrStaticField workQueueField = queueType.GetStaticFieldByName("workQueue");
+            if (workQueueField == null)
+                yield break;
+
+            // the CLR keeps one static instance per application domain
+            foreach (var appDomain in _clr.AppDomains)
+            {
+                var workQueue = workQueueField.ReadObject(appDomain);
+                if (!workQueue.IsValid)
+                    continue;
+
+                // should be  System.Threading.ThreadPoolWorkQueue
+                var workQueueType = workQueue.Type;
+                if (workQueueType == null)
+                    continue;
+                if (string.CompareOrdinal(workQueueType.Name, "System.Threading.ThreadPoolWorkQueue") != 0)
+                    continue;
+
+                foreach (var item in EnumerateThreadPoolWorkQueue(workQueue))
+                {
+                    yield return item;
+                }
+            }
+        }
+
+        private IEnumerable<ThreadPoolItem> EnumerateThreadPoolWorkQueue(ClrObject workQueue)
+        {
+            // start from the tail and follow the Next
+            var currentQueueSegment = workQueue.ReadObjectField("queueTail");
+            while (currentQueueSegment.IsValid)
+            {
+                // get the System.Threading.ThreadPoolWorkQueue+QueueSegment nodes array
+                var nodes = currentQueueSegment.ReadObjectField("nodes").AsArray();
+                for (int currentNode = 0; currentNode < nodes.Length; currentNode++)
+                {
+                    var item = nodes.GetObjectValue(currentNode);
+                    if (!item.IsValid)
+                        continue;
+
+                    yield return GetThreadPoolItem(item);
+                }
+
+                currentQueueSegment = currentQueueSegment.ReadObjectField("Next");
+            }
+        }
+
+        private IEnumerable<ThreadPoolItem> EnumerateLocalThreadPoolItemsInNetFramework(ClrModule mscorlib)
+        {
+            // look into the local stealing queues in each thread TLS
+            // hopefully, they are all stored in static (one per app domain) instance
+            // of ThreadPoolWorkQueue.SparseArray<ThreadPoolWorkQueue.WorkStealingQueue>
+            //
+            var queueType = mscorlib.GetTypeByName("System.Threading.ThreadPoolWorkQueue");
+            if (queueType == null)
+                yield break;
+
+            ClrStaticField threadQueuesField = queueType.GetStaticFieldByName("allThreadQueues");
+            if (threadQueuesField == null)
+                yield break;
+
+            foreach (ClrAppDomain domain in _clr.AppDomains)
+            {
+                var threadQueue = threadQueuesField.ReadObject(domain);
+                if (!threadQueue.IsValid)
+                    continue;
+
+                var sparseArray = threadQueue.ReadObjectField("m_array").AsArray();
+                for (int current = 0; current < sparseArray.Length; current++)
+                {
+                    var stealingQueue = sparseArray.GetObjectValue(current);
+                    if (!stealingQueue.IsValid)
+                        continue;
+
+                    foreach (var item in EnumerateThreadPoolStealingQueue(stealingQueue))
+                    {
+                        yield return item;
+                    }
+                }
+            }
+        }
+
+        private IEnumerable<ThreadPoolItem> EnumerateThreadPoolStealingQueue(ClrObject stealingQueue)
+        {
+            var array = stealingQueue.ReadObjectField("m_array").AsArray();
+            for (int current = 0; current < array.Length; current++)
+            {
+                var item = array.GetObjectValue(current);
+                if (!item.IsValid)
+                    continue;
+
+                yield return GetThreadPoolItem(item);
+            }
+        }
+
+        public IEnumerable<string> EnumerateConcurrentQueue(ulong address)
+        {
+            return IsNetCore() ? EnumerateConcurrentQueueCore(address) : EnumerateConcurrentQueueFramework(address);
+        }
+
+        private IEnumerable<string> EnumerateConcurrentQueueCore(ulong address)
+        {
+            // A ConcurrentQueue<T> contains a linked list of Segment starting from _head
+            // and each Segment contains an array of Slot<T> value type in _slots
+            // Each Slot<T> is a value type that contains the real T in its Item field
+            var itemIsValueType = true;
+            ClrType itemType = null;
+            var cqType = _heap.GetObjectType(address);
+            var cq = _heap.GetObject(address);
+            var currentSegment = cq.ReadObjectField("_head");
+            while (!currentSegment.IsNull && currentSegment.IsValid)
+            {
+                var s = currentSegment.ReadObjectField("_slots");
+
+                var slots = currentSegment.ReadObjectField("_slots").AsArray();
+                if (itemType == null)
+                {
+                    itemType = _heap.GetObjectType(slots.Address).ComponentType;
+                    if (itemType == null)
+                    {
+                        yield return $"dumparray {slots.Address:x16}";
+
+                        currentSegment = currentSegment.ReadObjectField("_nextSegment");
+                        continue;
+                    }
+
+                    // look for the first slot Item field that contains the T value
+                    // could be a reference or a value type
+                    var slot = slots.GetStructValue(0);
+                    if (!slot.IsValid)
+                    {
+                        yield return $"dumparray {slots.Address:x16}";
+
+                        currentSegment = currentSegment.ReadObjectField("_nextSegment");
+                        continue;
+                    }
+
+                    var itemField = slot.Type.GetFieldByName("Item");
+                    itemType = itemField.Type;
+
+                    if (itemType == null)
+                    {
+                        yield return $"dumparray {slots.Address:x16}";
+
+                        currentSegment = currentSegment.ReadObjectField("_nextSegment");
+                        continue;
+                    }
+
+                    // canonical implementation is for reference types
+                    itemIsValueType = (itemType.Name != "System.__Canon");
+
+                    // in case of non simple value type, no way to get the values
+                    // so just dump the array
+                    if (itemIsValueType && !IsSimpleType(itemType.Name))
+                    {
+                        yield return $"dumparray {slots.Address:x16}";
+
+                        currentSegment = currentSegment.ReadObjectField("_nextSegment");
+                        continue;
+                    }
+                }
+
+                var count = slots.Length;
+                for (int current = 0; current < count; current++)
+                {
+                    var slot = slots.GetStructValue(current, true);
+                    if (itemIsValueType)
+                    {
+                        if (HasFieldSimpleValue(slot, itemType, "Item", out var content))
+                        {
+                            yield return content;
+                        }
+                        else
+                        {
+                            // in case of non simple type, only the address of the array of slots is shown
+                            yield return $"dumparray {slots.Address:x16}";
+
+                            currentSegment = currentSegment.ReadObjectField("_nextSegment");
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        // Item is holding the reference to the object in the heap
+                        var slotEntry = slot.ReadField<UIntPtr>("Item");
+
+                        // skip empty null slots
+                        if (slotEntry == UIntPtr.Zero)
+                            continue;
+
+                        var slotType = _heap.GetObjectType(slotEntry.ToUInt64());
+                        if (slotType.IsString)
+                        {
+                            yield return $"\"{new ClrObject(slotEntry.ToUInt64(), slotType).AsString()}\"";
+                        }
+                        else
+                        {
+                            yield return $"dumpobj 0x{slotEntry.ToUInt64():x16}";
+                        }
+
+                    }
+                }
+
+                currentSegment = currentSegment.ReadObjectField("_nextSegment");
+            };
+        }
+
+        private IEnumerable<string> EnumerateConcurrentQueueFramework(ulong address)
+        {
+            // A ConcurrentQueue<T> contains a linked list of Segment starting from m_head
+            // and each Segment contains an array of T in m_array
+            var itemIsValueType = true;
+            var cq = _heap.GetObject(address);
+            ClrType itemType = null;
+            var currentSegment = cq.ReadObjectField("m_head");
+            while (!currentSegment.IsNull && currentSegment.IsValid)
+            {
+                var items = currentSegment.ReadObjectField("m_array").AsArray();
+                if (itemType == null)
+                {
+                    itemType = _heap.GetObjectType(items.Address)?.ComponentType;
+
+                    // nothing more can be done than just dumping the array
+                    if (itemType == null)
+                    {
+                        yield return $"dumparray 0x{items.Address:x16}";
+                        currentSegment = currentSegment.ReadObjectField("m_next");
+                        continue;
+                    }
+
+                    itemIsValueType = itemType.IsValueType;
+                }
+
+                var count = items.Length;
+                for (int current = 0; current < count; current++)
+                {
+                    if (itemIsValueType)
+                    {
+                        var item = items.GetStructValue(current);
+
+                        // display value for simple types such as numbers and bool
+                        if ((item.Type != null) && HasSimpleValue(items, current, item, out var content))
+                        {
+                            yield return content;
+                        }
+                        else
+                        {
+                            yield return $"dumpvc 0x{itemType.MethodTable:x16} 0x{item.Address:x16}";
+                        }
+                    }
+                    else
+                    {
+                        var item = items.GetObjectValue(current);
+                        if (item.IsNull || !item.IsValid)
+                        {
+                            // skip null reference special case
+                            continue;
+                        }
+                        else
+                        {
+                            // reference type
+
+                            // check automatically marshaled types
+                            if (item.Type.IsString)
+                            {
+                                yield return $"\"{item.AsString()}\"";
+                            }
+                            else
+                            {
+                                yield return $"dumpobj 0x{item.Address:x16}";
+                            }
+                        }
+                    }
+                }
+
+                currentSegment = currentSegment.ReadObjectField("m_next");
+            }
+        }
+
+        private static bool IsSimpleType(string typeName)
+        {
+            switch (typeName)
+            {
+                case "System.Char":
+                case "System.Boolean":
+                case "System.SByte":
+                case "System.Byte":
+                case "System.Int16":
+                case "System.UInt16":
+                case "System.Int32":
+                case "System.UInt32":
+                case "System.Int64":
+                case "System.UInt64":
+                case "System.Single":
+                case "System.Double":
+                case "System.IntPtr":
+                case "System.UIntPtr":
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static bool HasSimpleValue(ClrArray items, int index, ClrValueType item, out string content)
+        {
+            content = null;
+            var typeName = item.Type.Name;
+            switch (typeName)
+            {
+                case "System.Char":
+                    content = $"'{items.GetValue<System.Char>(index)}'";
+                    break;
+                case "System.Boolean":
+                    content = items.GetValue<System.Boolean>(index).ToString();
+                    break;
+                case "System.SByte":
+                    content = items.GetValue<System.SByte>(index).ToString();
+                    break;
+                case "System.Byte":
+                    content = items.GetValue<System.Byte>(index).ToString();
+                    break;
+                case "System.Int16":
+                    content = items.GetValue<System.Int16>(index).ToString();
+                    break;
+                case "System.UInt16":
+                    content = items.GetValue<System.UInt16>(index).ToString();
+                    break;
+                case "System.Int32":
+                    content = items.GetValue<System.Int32>(index).ToString();
+                    break;
+                case "System.UInt32":
+                    content = items.GetValue<System.UInt32>(index).ToString();
+                    break;
+                case "System.Int64":
+                    content = items.GetValue<System.Int64>(index).ToString();
+                    break;
+                case "System.UInt64":
+                    content = items.GetValue<System.UInt64>(index).ToString();
+                    break;
+                case "System.Single":
+                    content = items.GetValue<System.Single>(index).ToString();
+                    break;
+                case "System.Double":
+                    content = items.GetValue<System.Double>(index).ToString();
+                    break;
+                case "System.IntPtr":
+                    {
+                        var val = items.GetValue<System.IntPtr>(index);
+                        content = (val == IntPtr.Zero) ? "null" : $"0x{val.ToInt64():x16}";
+                    }
+                    break;
+                case "System.UIntPtr":
+                    {
+                        var val = items.GetValue<System.UIntPtr>(index);
+                        content = (val == UIntPtr.Zero) ? "null" : $"0x{val.ToUInt64():x16}";
+                    }
+                    break;
+
+                default:
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static bool HasFieldSimpleValue(ClrValueType item, ClrType type, string fieldName, out string content)
+        {
+            content = null;
+            var typeName = type.Name;
+            switch (typeName)
+            {
+                case "System.Char":
+                    content = $"'{item.ReadField<System.Char>(fieldName)}'";
+                    break;
+                case "System.Boolean":
+                    content = item.ReadField<System.Boolean>(fieldName).ToString();
+                    break;
+                case "System.SByte":
+                    content = item.ReadField<System.SByte>(fieldName).ToString();
+                    break;
+                case "System.Byte":
+                    content = item.ReadField<System.Byte>(fieldName).ToString();
+                    break;
+                case "System.Int16":
+                    content = item.ReadField<System.Int16>(fieldName).ToString();
+                    break;
+                case "System.UInt16":
+                    content = item.ReadField<System.UInt16>(fieldName).ToString();
+                    break;
+                case "System.Int32":
+                    content = item.ReadField<System.Int32>(fieldName).ToString();
+                    break;
+                case "System.UInt32":
+                    content = item.ReadField<System.UInt32>(fieldName).ToString();
+                    break;
+                case "System.Int64":
+                    content = item.ReadField<System.Int64>(fieldName).ToString();
+                    break;
+                case "System.UInt64":
+                    content = item.ReadField<System.UInt64>(fieldName).ToString();
+                    break;
+                case "System.Single":
+                    content = item.ReadField<System.Single>(fieldName).ToString();
+                    break;
+                case "System.Double":
+                    content = item.ReadField<System.Double>(fieldName).ToString();
+                    break;
+                case "System.IntPtr":
+                    {
+                        var val = item.ReadField<System.IntPtr>(fieldName);
+                        content = (val == IntPtr.Zero) ? "null" : $"0x{val.ToInt64():x}";
+                    }
+                    break;
+                case "System.UIntPtr":
+                    {
+                        var val = item.ReadField<System.UIntPtr>(fieldName);
+                        content = (val == UIntPtr.Zero) ? "null" : $"0x{val.ToUInt64():x}";
+                    }
+                    break;
+
+                default:
+                    return false;
+            }
+
+            return true;
+        }
+
+
         public ClrModule GetMscorlib()
         {
             var bclModule = _clr.BaseClassLibrary;
             return bclModule;
+        }
+
+        public bool IsNetCore()
+        {
+            var coreLib = GetMscorlib();
+            if (coreLib == null)
+                throw new InvalidOperationException("Impossible to find core library");
+
+            return (coreLib.Name.ToLower().Contains("corelib"));
         }
     }
 }
