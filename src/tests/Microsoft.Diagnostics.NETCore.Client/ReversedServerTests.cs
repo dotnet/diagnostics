@@ -141,8 +141,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.Connect)}");
             await shim.Connect(nonExistingRuntimeId, DefaultNegativeVerificationTimeout, expectTimeout: true);
 
-            _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.RemoveConnection)}");
-            Assert.False(server.RemoveConnection(nonExistingRuntimeId), "Removal of nonexisting connection should fail.");
+            _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.RemoveConnection)} with previously used identifier.");
+            Assert.True(server.RemoveConnection(nonExistingRuntimeId));
+
+            _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.RemoveConnection)} with previously unused identifier.");
+            Assert.False(server.RemoveConnection(Guid.NewGuid()), "Removal of nonexisting connection should fail.");
         }
 
         [Fact(Skip = "Test fails in latest darc updates. See https://github.com/dotnet/diagnostics/issues/1482")]

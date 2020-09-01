@@ -4,7 +4,6 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
@@ -25,7 +24,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         // remain responsive in case the advertise data is incomplete and the stream is not closed.
         private static readonly TimeSpan ParseAdvertiseTimeout = TimeSpan.FromMilliseconds(250);
 
-        private readonly HashSet<Guid> _runtimeInstanceCookies = new HashSet<Guid>();
         private readonly CancellationTokenSource _disposalSource = new CancellationTokenSource();
         private readonly HandleableCollection<IpcEndpointInfo> _endpointInfos = new HandleableCollection<IpcEndpointInfo>();
         private readonly ConcurrentDictionary<Guid, HandleableCollection<Stream>> _streamCollections = new ConcurrentDictionary<Guid, HandleableCollection<Stream>>();
@@ -74,8 +72,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
 
                 _streamCollections.Clear();
-
-                _runtimeInstanceCookies.Clear();
 
                 _disposalSource.Dispose();
 
@@ -143,15 +139,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             VerifyNotDisposed();
             VerifyIsStarted();
 
-            bool endpointExisted = false;
-
-            endpointExisted = _runtimeInstanceCookies.Remove(runtimeCookie);
-            if (endpointExisted && _streamCollections.TryRemove(runtimeCookie, out HandleableCollection<Stream> streamCollection))
+            if (_streamCollections.TryRemove(runtimeCookie, out HandleableCollection<Stream> streamCollection))
             {
-                streamCollection.ClearItems();
+                streamCollection.Dispose();
+                return true;
             }
-
-            return endpointExisted;
+            return false;
         }
 
         private void VerifyNotDisposed()
@@ -210,6 +203,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                     catch (Exception)
                     {
+                        stream.Dispose();
                     }
                 }
 
@@ -218,15 +212,33 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     Guid runtimeCookie = advertise.RuntimeInstanceCookie;
                     int pid = unchecked((int)advertise.ProcessId);
 
-                    HandleableCollection<Stream> streamCollection = GetStreams(runtimeCookie);
-                    streamCollection.ClearItems();
-                    streamCollection.Add(stream);
+                    // The valueFactory parameter of the GetOrAdd overload that uses Func<TKey, TValue> valueFactory
+                    // does not execute the factory under a lock thus it is not thread-safe. Create the collection and
+                    // use a thread-safe version of GetOrAdd; use equality comparison on the result to determine if
+                    // the new collection was added to the dictionary or if an existing one was returned.
+                    var newStreamCollection = new HandleableCollection<Stream>();
+                    var streamCollection = _streamCollections.GetOrAdd(runtimeCookie, newStreamCollection);
 
-                    // Add new endpoint information if not already tracked
-                    if (_runtimeInstanceCookies.Add(runtimeCookie))
+                    try
                     {
-                        ServerIpcEndpoint endpoint = new ServerIpcEndpoint(this, runtimeCookie);
-                        _endpointInfos.Add(new IpcEndpointInfo(endpoint, pid, runtimeCookie));
+                        streamCollection.ClearItems();
+                        streamCollection.Add(stream);
+
+                        if (newStreamCollection == streamCollection)
+                        {
+                            ServerIpcEndpoint endpoint = new ServerIpcEndpoint(this, runtimeCookie);
+                            _endpointInfos.Add(new IpcEndpointInfo(endpoint, pid, runtimeCookie));
+                        }
+                        else
+                        {
+                            newStreamCollection.Dispose();
+                        }
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // The stream collection could be disposed by RemoveConnection which would cause an
+                        // ObjectDisposedException to be thrown if trying to clear/add the stream.
+                        stream.Dispose();
                     }
                 }
             }
