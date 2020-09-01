@@ -18,6 +18,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that traces can be collected"))
                 .AddCommand(ListProfilesCommandHandler.ListProfilesCommand())
                 .AddCommand(ConvertCommandHandler.ConvertCommand())
+                .AddCommand(RunCommandHandler.RunCommand())
                 .UseDefaults()
                 .Build();
 
