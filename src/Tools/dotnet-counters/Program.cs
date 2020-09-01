@@ -33,6 +33,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // Arguments and Options
                 CounterList(), ProcessIdOption(), RefreshIntervalOption(), NameOption()
             };
+        
+        private static Command RunCommand() =>
+            new Command(
+                name: "run",
+                description: "Launch and start montioring a .NET application")
+            {
+                // Handler
+                CommandHandler.Create<CancellationToken, List<string>, IConsole, string, string, int>(new CounterMonitor().Run),
+                CounterList(), TargetFileOption(), ArgumentOption(), RefreshIntervalOption()
+            };
 
         private static Command CollectCommand() =>
             new Command(
@@ -43,6 +53,22 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 HandlerDescriptor.FromDelegate((ExportDelegate)new CounterMonitor().Collect).GetCommandHandler(),
                 // Arguments and Options
                 CounterList(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption(), NameOption()
+            };
+        
+        private static Option TargetFileOption() =>
+            new Option(
+                aliases: new[] { "--exec", "--executable" },
+                description: "The target executable to start monitoring.")
+            {
+                Argument = new Argument<string>(name: "exec")
+            };
+
+        private static Option ArgumentOption() =>
+            new Option(
+                aliases: new[] { "--args", "--arguments" },
+                description: "The arguments to pass to the target process.")
+            {
+                Argument = new Argument<string>(name: "args")
             };
 
         private static Option NameOption() =>
@@ -142,6 +168,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 .AddCommand(MonitorCommand())
                 .AddCommand(CollectCommand())
                 .AddCommand(ListCommand())
+                .AddCommand(RunCommand())
                 .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that can be monitored"))
                 .UseDefaults()
                 .Build();
