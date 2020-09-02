@@ -1,6 +1,8 @@
-<Project InitialTargets="InjectDARCVersion" Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
-  <Target Name="InjectDARCVersion">
+  <Target Name="_generateDARCVersionCs"
+          Inputs="$(VersionsPropsPath)"
+          Outputs="$(IntermediateOutputPath)/DARCVersion.g.cs">
     <PropertyGroup>
       <DARCVersionFile>
 <![CDATA[
@@ -22,11 +24,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
       </DARCVersionFile>
     </PropertyGroup>
 
-    <WriteLinesToFile
-      File="$(MSBuildProjectDirectory)/DARCVersion.cs"
-      Overwrite="true"
-      Lines="$(DARCVersionFile.Replace(';', '%3B'))" />
+    <WriteLinesToFile File="$(IntermediateOutputPath)/DARCVersion.g.cs"
+                      Overwrite="true"
+                      Lines="$(DARCVersionFile.Replace(';', '%3B'))"
+                      WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <FileWrites Include="$(IntermediateOutputPath)/DARCVersion.g.cs" />
+      <Compile Include="$(IntermediateOutputPath)/DARCVersion.g.cs" />
+    </ItemGroup>
   </Target>
+
+  <Target Name="InjectDARCVersion" BeforeTargets="BeforeCompile" DependsOnTargets="_generateDARCVersionCs" />
 
   <PropertyGroup>
     <TargetFrameworks>netcoreapp3.1;net5.0</TargetFrameworks>
