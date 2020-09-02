@@ -163,7 +163,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
             IpcEndpointInfo endpointInfo = await server.AcceptAsync(cts.Token);
-            Console.WriteLine("Here");
             try
             {
                 _ct = ct;
@@ -172,9 +171,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _processId = endpointInfo.ProcessId;
                 _diagnosticsClient = new DiagnosticsClient(endpointInfo.Endpoint);
                 _renderer = new ConsoleWriter();
+                _interval = refreshInterval;
 
                 _diagnosticsClient.ResumeRuntime();
-
+                string providerString = BuildProviderString();
+                if (providerString.Length == 0)
+                {
+                    return 1;
+                }
                 return await Start();
             }
             catch (Exception e)
@@ -229,7 +233,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         processName = Process.GetProcessById(_processId).ProcessName;
                     }
                     catch (Exception) { }
-                    _renderer = new JSONExporter(output, processName); ;
+                    _renderer = new JSONExporter(output, processName);
                 }
                 else
                 {
