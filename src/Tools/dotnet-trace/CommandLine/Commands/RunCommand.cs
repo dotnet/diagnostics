@@ -120,7 +120,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 PrintProviders(providerCollection, enabledBy);
                 
-                Thread.Sleep(1000);
+                CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                IpcEndpointInfo endpointInfo = await server.AcceptAsync(cts.Token);
                 var process = targetProcess;
                 var processId = process.Id;
                 var shouldExit = new ManualResetEvent(false);
