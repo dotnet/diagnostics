@@ -16,7 +16,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 "..\\..\\..\\..\\..\\.dotnet\\dotnet.exe") : 
             "../../../../../.dotnet/dotnet";
         
-        public static string GetTraceePath(string traceeName = "Tracee", string targetFramework = "netcoreapp3.1")
+        /// <summary>
+        /// gets the tracee path, with args for the dotnet host for finding the correct version of the runtime.!--
+        /// example: "--fx-version 5.0.0-rc.1.12345.12 /path/to/tracee"
+        /// </summary>
+        public static string GetTraceePathWithArgs(string traceeName = "Tracee", string targetFramework = "netcoreapp3.1")
         {
             var curPath = Directory.GetCurrentDirectory();
 
@@ -26,7 +30,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             traceePath = Path.Combine(traceePath, Path.ChangeExtension(traceeName, ".dll"));
 
-            if (targetFramework.Equals("net5.0", StringComparison.InvariantCultureIgnoreCase) && !CurrentDARCVersion.Equals("DEFAULT_VALUE", StringComparison.InvariantCultureIgnoreCase))
+
+            // CurrentDARCVersion is generated at build time by Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj
+            // This value will be set to whatever the value for the newest runtime in eng/Versions.Props is
+            if (targetFramework.Equals("net5.0", StringComparison.InvariantCultureIgnoreCase))
                 traceePath = $"--fx-version {CurrentDARCVersion} {traceePath}";
 
             return traceePath;

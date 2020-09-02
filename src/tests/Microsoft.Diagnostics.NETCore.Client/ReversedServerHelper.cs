@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         public static TestRunner StartTracee(ITestOutputHelper _outputHelper, string transportName)
         {
-            var runner = new TestRunner(CommonHelper.GetTraceePath(targetFramework: "net5.0"), _outputHelper);
+            var runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(targetFramework: "net5.0"), _outputHelper);
             runner.AddReversedServer(transportName);
             runner.Start();
             return runner;

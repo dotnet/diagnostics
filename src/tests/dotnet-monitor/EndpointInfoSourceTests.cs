@@ -139,7 +139,7 @@ namespace DotnetMonitor.UnitTests
         private RemoteTestExecution StartTraceeProcess(string loggerCategory, string transportName = null)
         {
             _outputHelper.WriteLine("Starting tracee.");
-            string exePath = CommonHelper.GetTraceePath("EventPipeTracee", targetFramework: "net5.0");
+            string exePath = CommonHelper.GetTraceePathWithArgs("EventPipeTracee", targetFramework: "net5.0");
             return RemoteTestExecution.StartProcess(exePath + " " + loggerCategory, _outputHelper, transportName);
         }
 
