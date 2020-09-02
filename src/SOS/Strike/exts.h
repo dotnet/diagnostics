@@ -349,8 +349,15 @@ class IMachine
 public:
     // Returns the IMAGE_FILE_MACHINE_*** constant corresponding to the target machine
     virtual ULONG GetPlatform() const = 0;
+
     // Returns the size of the CONTEXT for the target machine
     virtual ULONG GetContextSize() const = 0;
+
+    // Returns the architecture's DT_CONTEXT_FULL flags 
+    virtual ULONG GetFullContextFlags() const = 0;
+
+    // Sets the context flags in the context
+    virtual void SetContextFlags(BYTE* context, ULONG32 contextFlags) = 0;
 
     // Disassembles a managed method specified by the IPBegin-IPEnd range
     virtual void Unassembly(

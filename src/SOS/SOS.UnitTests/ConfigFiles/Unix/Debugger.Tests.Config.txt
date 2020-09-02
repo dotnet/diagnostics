@@ -28,6 +28,11 @@
   <TestWebApp3>true</TestWebApp3>
   <TestWebApp3 Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp3>
 
+  <TestRuntime21>true</TestRuntime21>
+  <TestRuntime21 Condition="'$(TestLatestOnly)' == 'true'">false</TestRuntime21>
+  <TestRuntime21 Condition="'$(TargetArchitecture)' == 'arm'">false</TestRuntime21>
+  <TestRuntime21 Condition="'$(TargetArchitecture)' == 'arm64'">false</TestRuntime21>
+
   <!-- Build the debuggee for this framework version but run it on latest -->
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net5.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">net5.0</BuildProjectFrameworkLatest>
@@ -56,7 +61,7 @@
       <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
     </Option>
-    <Option Condition="'$(TestLatestOnly)' != 'true'">
+    <Option Condition="'$(TestRuntime21)' == 'true'">
       <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
     </Option>
@@ -76,7 +81,7 @@
           <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
         </Option>
-        <Option Condition="'$(TestLatestOnly)' != 'true'">
+        <Option Condition="'$(TestRuntime21)' == 'true'">
           <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
         </Option>

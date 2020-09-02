@@ -1797,7 +1797,7 @@ HRESULT ExpressionNode::EnumerateFrames(FrameEnumCallback pCallback, VOID* pUser
         CROSS_PLATFORM_CONTEXT context;
         ULONG32 cbContextActual;
         if ((Status=pStackWalk->GetContext(
-            DT_CONTEXT_FULL, 
+            g_targetMachine->GetFullContextFlags(), 
             sizeof(context),
             &cbContextActual,
             (BYTE *)&context))!=S_OK)
