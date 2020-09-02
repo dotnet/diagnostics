@@ -56,10 +56,6 @@
       <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
     </Option>
-    <Option Condition="'$(TestLatestOnly)' != 'true'">
-      <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-      <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
-    </Option>
     <!--
         SOS.StackAndOtherTests (cli because tested with embedded and portable PDBs)
       -->
@@ -75,10 +71,6 @@
         <Option Condition="'$(TestLatestOnly)' != 'true'">
           <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
-        </Option>
-        <Option Condition="'$(TestLatestOnly)' != 'true'">
-          <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
         </Option>
       </Options>
     </Option>

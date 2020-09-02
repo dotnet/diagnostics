@@ -9,6 +9,10 @@
       "dotnet/x86": [
         "$(MicrosoftNETCoreApp31Version)",
         "$(MicrosoftNETCoreAppVersion)"
+      ],
+      "dotnet/arm64": [
+        "$(MicrosoftNETCoreApp31Version)",
+        "$(MicrosoftNETCoreAppVersion)"
       ]
     }
   },
