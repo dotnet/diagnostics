@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public void Start(int timeoutInMS=15000)
         {
             if (outputHelper != null)
-                outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName);
+                outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName + " " + startInfo.Arguments);
 
             testProcess = new Process();
             testProcess.StartInfo = startInfo;
