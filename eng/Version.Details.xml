@@ -20,6 +20,10 @@
       <Uri>https://github.com/Microsoft/clrmd</Uri>
       <Sha>627a7dec8ec5f7ac3f5616ac4e9ca088072006c1</Sha>
     </Dependency>
+    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="5.0.100-rc.2.20453.6">
+      <Uri>https://github.com/dotnet/installer</Uri>
+      <Sha>436c7250953dcff3862820e7a8a291110b7da25e</Sha>
+    </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
     <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="5.0.0-beta.20427.5">
