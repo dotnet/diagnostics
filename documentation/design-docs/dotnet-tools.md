@@ -237,12 +237,12 @@ COLLECT
 
     1. Collect the runtime performance counters at a refresh interval of 10 seconds and export it as a JSON file named "test.json".
 ```
-    dotnet run collect --process-id 863148 --refresh-interval 10 --output test --format json
+    dotnet-counters collect --process-id 863148 --refresh-interval 10 --output test --format json
 ```
 
     2. Collect the runtime performance counters as well as the ASP.NET hosting performance counters at the default refresh interval (1 second) and export it as a CSV file named "mycounter.csv". 
 ```
-    dotnet run collect --process-id 863148 --output mycounter --format csv System.Runtime Microsoft.AspNetCore.Hosting
+    dotnet-counters collect --process-id 863148 --output mycounter --format csv System.Runtime Microsoft.AspNetCore.Hosting
 ```
 
 
@@ -279,6 +279,50 @@ COLLECT
         provider and counter names, use the list command.
 
 ```
+
+RUN (on .NET 5 or later)
+
+    Examples:
+
+    1. Launch my-server-app.exe and start monitoring it from its startup with default list of counters and interval.
+```
+    dotnet-counters run --exec C:\path\to\my-server-app.exe
+```
+
+    2. Launch my-server-app.exe and start monitoring it from its startup with the runtime and Kestrel counters and update interval of once per minute.
+```
+    dotnet-counters run System.Runtime Microsoft-AspNetCore-Server-Kestrel --exec C:\path\to\my-server-app.exe --refresh-interval 60
+```
+
+    Syntax:
+
+```
+    dotnet-counters collect [-h||--help]
+                            [--exec|--executable <path>]
+                            [-o|--output <name>]
+                            [--format <csv|json>]
+                            [--refreshInterval <sec>]
+                            counter_list
+
+    -h, --help
+        Show command line help
+
+    --exec,--executable
+        The full path to the executable to be monitored from startup
+
+    -o, --output
+        The name of the output file
+
+    --format
+        The format to be exported. Currently available: csv, json
+
+    --refresh-interval
+        The number of seconds to delay between updating the displayed counters
+
+    counter_list
+        A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the
+        provider_name is used without a qualifying counter_name then all counters will be shown. To discover
+        provider and counter names, use the list command.
 
 
 ### dotnet-trace
@@ -395,6 +439,61 @@ CONVERT
       > dotnet-trace convert trace.nettrace -f speedscope
       Writing:       ./trace.speedscope.json
       Conversion complete
+
+
+RUN (on .NET 5 or later)
+
+    dotnet-trace run -e|--exec <path>
+                     [--args <arguments to pass to the given executable>]
+                     [-h|--help]
+                     [-o|--output <trace-file-path>]
+                     [--profile <profile_name>]
+                     [--providers <list-of-comma-separated-providers>]
+                     [--format <trace-file-format>]
+
+    Launches the given executable and collect a trace of it from its startup.
+
+    -exec, --executable
+        The full path to the executable file to launch
+
+    --args
+        Arguments to pass to the target app being launched
+
+    -h, --help
+        Show command line help
+
+    -o, --output
+        The output path for the collected trace data. If not specified it defaults to ./trace.nettrace
+
+    --profile
+        A named pre-defined set of provider configurations that allows common tracing scenarios to be specified
+        succinctly. The options are:
+        cpu-sampling    Useful for tracking CPU usage and general .NET runtime information. This is the default 
+                        option if no profile or providers are specified.
+        gc-verbose      Tracks GC collection and sampled object allocations
+        gc-collect      Tracks GC collection only at very low overhead
+
+    --providers
+        A list of comma separated EventPipe providers to be enabled.
+        These providers are in addition to any providers implied by the --profile argument. If there is any
+        discrepancy for a particular provider, the configuration here takes precedence over the implicit
+        configuration from the profile.
+        A provider consists of the name and optionally the keywords, verbosity level, and custom key/value pairs.
+
+        The string is written 'Provider[,Provider]'
+            Provider format: KnownProviderName[:Keywords[:Level][:KeyValueArgs]]
+                KnownProviderName       - The provider's name
+                Keywords                - 8 character hex number bit mask
+                Level                   - A number in the range [0, 5], or their corresponding text values (refer to https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.tracing.eventlevel?view=netframework-4.8).
+                KeyValueArgs            - A semicolon separated list of key=value
+            KeyValueArgs format: '[key1=value1][;key2=value2]'
+
+    --buffersize <Size>
+        Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
+
+    --format
+        The format of the output trace file. The default value is nettrace.
+
 
 ### dotnet-dump
 
