@@ -286,12 +286,12 @@ RUN (on .NET 5 or later)
 
     1. Launch my-server-app.exe and start monitoring it from its startup with default list of counters and interval.
 ```
-    dotnet-counters run --exec C:\path\to\my-server-app.exe
+    dotnet-counters run --exec C:\path\to\my-server-app.exe --mode monitor
 ```
 
-    2. Launch my-server-app.exe and start monitoring it from its startup with the runtime and Kestrel counters and update interval of once per minute.
+    2. Launch my-server-app.exe and start collecting metrics into a CSV file from its startup with the runtime and Kestrel counters and update interval of once per minute.
 ```
-    dotnet-counters run System.Runtime Microsoft-AspNetCore-Server-Kestrel --exec C:\path\to\my-server-app.exe --refresh-interval 60
+    dotnet-counters run System.Runtime Microsoft-AspNetCore-Server-Kestrel --exec C:\path\to\my-server-app.exe --refresh-interval 60 --mode collect --format csv
 ```
 
     Syntax:
@@ -300,6 +300,7 @@ RUN (on .NET 5 or later)
     dotnet-counters collect [-h||--help]
                             [--exec|--executable <path>]
                             [-o|--output <name>]
+                            [--mode <monitor|collect>]
                             [--format <csv|json>]
                             [--refreshInterval <sec>]
                             counter_list
@@ -310,11 +311,14 @@ RUN (on .NET 5 or later)
     --exec,--executable
         The full path to the executable to be monitored from startup
 
+    --mode
+        The UI mode - either collect the values into an exported file, or monitor the metrics in real time.
+
     -o, --output
-        The name of the output file
+        The name of the output file. Only valid if --mode is specified as collect.
 
     --format
-        The format to be exported. Currently available: csv, json
+        The format to be exported. Only valid if --mode is specified to be collect. Currently available: csv, json
 
     --refresh-interval
         The number of seconds to delay between updating the displayed counters
@@ -455,7 +459,7 @@ RUN (on .NET 5 or later)
 
     -exec, --executable
         The full path to the executable file to launch
-
+    
     --args
         Arguments to pass to the target app being launched
 
