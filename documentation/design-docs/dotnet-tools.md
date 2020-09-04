@@ -280,18 +280,18 @@ COLLECT
 
 ```
 
-RUN (on .NET 5 or later)
+MONITOR / COLLECT on Startup (on .NET 5 or later)
 
     Examples:
 
     1. Launch my-server-app.exe and start monitoring it from its startup with default list of counters and interval.
 ```
-    dotnet-counters run --exec C:\path\to\my-server-app.exe --mode monitor
+    dotnet-counters monitor -- C:\path\to\my-server-app.exe
 ```
 
     2. Launch my-server-app.exe and start collecting metrics into a CSV file from its startup with the runtime and Kestrel counters and update interval of once per minute.
 ```
-    dotnet-counters run System.Runtime Microsoft-AspNetCore-Server-Kestrel --exec C:\path\to\my-server-app.exe --refresh-interval 60 --mode collect --format csv
+    dotnet-counters collect System.Runtime Microsoft-AspNetCore-Server-Kestrel --format csv -- C:\path\to\my-server-app.exe --refresh-interval 60
 ```
 
     Syntax:
@@ -304,6 +304,7 @@ RUN (on .NET 5 or later)
                             [--format <csv|json>]
                             [--refreshInterval <sec>]
                             counter_list
+                            [ -- <command-to-execute>]
 
     -h, --help
         Show command line help
@@ -445,23 +446,16 @@ CONVERT
       Conversion complete
 
 
-RUN (on .NET 5 or later)
+COLLECT on startup (on .NET 5 or later)
 
-    dotnet-trace run -e|--exec <path>
-                     [--args <arguments to pass to the given executable>]
+    dotnet-trace collect 
                      [-h|--help]
                      [-o|--output <trace-file-path>]
                      [--profile <profile_name>]
                      [--providers <list-of-comma-separated-providers>]
                      [--format <trace-file-format>]
-
+                     -- <command-to-execute>
     Launches the given executable and collect a trace of it from its startup.
-
-    -exec, --executable
-        The full path to the executable file to launch
-    
-    --args
-        Arguments to pass to the target app being launched
 
     -h, --help
         Show command line help
