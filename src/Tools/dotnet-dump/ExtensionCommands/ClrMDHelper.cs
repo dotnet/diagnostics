@@ -289,36 +289,12 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
                 EnumerateLocalThreadPoolItemsInNetFramework(mscorlib);
         }
 
-        // here is the code to enumerate thread pool items from ThreadPool.cs
-        //      internal static IEnumerable<IThreadPoolWorkItem> GetQueuedWorkItems()
-        //      {
-        //          // Enumerate global queue
-        //          foreach (IThreadPoolWorkItem workItem in ThreadPoolGlobals.workQueue.workItems)
-        //          {
-        //              yield return workItem;
-        //          }
-        //
-        //          // Enumerate each local queue
-        //          foreach (ThreadPoolWorkQueue.WorkStealingQueue wsq in ThreadPoolWorkQueue.WorkStealingQueueList.Queues)
-        //          {
-        //              if (wsq != null && wsq.m_array != null)
-        //              {
-        //                  IThreadPoolWorkItem[] items = wsq.m_array;
-        //                  for (int i = 0; i < items.Length; i++)
-        //                  {
-        //                      IThreadPoolWorkItem item = items[i];
-        //                      if (item != null)
-        //                      {
-        //                          yield return item;
-        //                      }
-        //                  }
-        //              }
-        //          }
-        //      }
-        //
         private IEnumerable<ThreadPoolItem> EnumerateGlobalThreadPoolItemsInNetCore(ClrModule corelib)
         {
-            // in .NET Core, global queue is stored in ThreadPoolGlobals.workQueue (a ThreadPoolWorkQueue)
+            // Look at the code to enumerate ThreadPool items from ThreadPool.cs
+            // in https://github.com/dotnet/runtime/blob/ee9dc4984ce172697d94471a6be57d61116e34b6/src/libraries/System.Private.CoreLib/src/System/Threading/ThreadPool.cs#L1184
+            //
+            // Global queue is stored in ThreadPoolGlobals.workQueue (a ThreadPoolWorkQueue)
             // and each thread has a dedicated WorkStealingQueue stored in WorkStealingQueueList._queues (a WorkStealingQueue[])
             //
             // until we can access static fields values in .NET Core with ClrMD, we need to browse the whole heap...
