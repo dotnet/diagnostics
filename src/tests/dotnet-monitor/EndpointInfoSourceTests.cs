@@ -101,7 +101,7 @@ namespace DotnetMonitor.UnitTests
         /// Tests that the server endpoint info source can properly enumerate endpoint infos when a single
         /// target connects to it and "disconnects" from it.
         /// </summary>
-        [Fact(Skip = "Test fails in latest darc updates. See https://github.com/dotnet/diagnostics/issues/1482")]
+        [Fact]
         public async Task ServerSourceAddRemoveSingleConnectionTest()
         {
             await using var source = CreateServerSource(out string transportName);
@@ -143,7 +143,7 @@ namespace DotnetMonitor.UnitTests
         private RemoteTestExecution StartTraceeProcess(string loggerCategory, string transportName = null)
         {
             _outputHelper.WriteLine("Starting tracee.");
-            string exePath = CommonHelper.GetTraceePath("EventPipeTracee", targetFramework: "net5.0");
+            string exePath = CommonHelper.GetTraceePathWithArgs("EventPipeTracee", targetFramework: "net5.0");
             return RemoteTestExecution.StartProcess(exePath + " " + loggerCategory, _outputHelper, transportName);
         }
 

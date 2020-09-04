@@ -148,13 +148,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.False(server.RemoveConnection(Guid.NewGuid()), "Removal of nonexisting connection should fail.");
         }
 
-        [Fact(Skip = "Test fails in latest darc updates. See https://github.com/dotnet/diagnostics/issues/1482")]
+        [Fact]
         public async Task ReversedServerSingleTargetMultipleUseClientTest()
         {
             await ReversedServerSingleTargetMultipleUseClientTestCore(useAsync: false);
         }
 
-        [Fact(Skip = "Test fails in latest darc updates. See https://github.com/dotnet/diagnostics/issues/1482")]
+        [Fact]
         public async Task ReversedServerSingleTargetMultipleUseClientTestAsync()
         {
             await ReversedServerSingleTargetMultipleUseClientTestCore(useAsync: true);
@@ -190,7 +190,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 ResumeRuntime(info);
 
-                await VerifySingleSession(info);
+                await VerifySingleSession(info, useAsync);
             }
             finally
             {
@@ -210,13 +210,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await VerifyNoNewEndpointInfos(server, useAsync);
         }
 
-        [Fact(Skip = "Test fails in latest darc updates. See https://github.com/dotnet/diagnostics/issues/1482")]
+        [Fact]
         public async Task ReversedServerSingleTargetExitsClientInviableTest()
         {
             await ReversedServerSingleTargetExitsClientInviableTestCore(useAsync: false);
         }
 
-        [Fact(Skip = "Test fails in latest darc updates. See https://github.com/dotnet/diagnostics/issues/1482")]
+        [Fact]
         public async Task ReversedServerSingleTargetExitsClientInviableTestAsync()
         {
             await ReversedServerSingleTargetExitsClientInviableTestCore(useAsync: true);
@@ -277,7 +277,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private async Task<IpcEndpointInfo> AcceptEndpointInfo(ReversedDiagnosticsServer server, bool useAsync)
         {
             var shim = new ReversedDiagnosticsServerApiShim(server, useAsync);
-            
+
             return await shim.Accept(DefaultPositiveVerificationTimeout);
         }
 
@@ -345,9 +345,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Verifies that a client can handle multiple operations simultaneously.
         /// </summary>
-        private async Task VerifySingleSession(IpcEndpointInfo info)
+        private async Task VerifySingleSession(IpcEndpointInfo info, bool useAsync)
         {
-            await VerifyWaitForConnection(info, useAsync: true);
+            await VerifyWaitForConnection(info, useAsync);
 
             var client = new DiagnosticsClient(info.Endpoint);
 

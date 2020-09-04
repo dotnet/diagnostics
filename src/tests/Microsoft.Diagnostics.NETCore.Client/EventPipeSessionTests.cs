@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void BasicEventPipeSessionTest()
         {
-            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
+            TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
             runner.Start(3000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
             using (var session = client.StartEventPipeSession(new List<EventPipeProvider>()
@@ -54,7 +54,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void EventPipeSessionStreamTest()
         {
-            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
+            TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
             runner.Start(3000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
             runner.PrintStatus();
@@ -119,7 +119,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void StartEventPipeSessionWithSingleProviderTest()
         {
-            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
+            TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
             runner.Start(3000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
             using (var session = client.StartEventPipeSession(new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational)))

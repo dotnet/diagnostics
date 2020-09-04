@@ -315,19 +315,13 @@ BOOL IsRetailBuild (size_t base)
 *    only up to the edge of the page containing "offset".              *
 *                                                                      *
 \**********************************************************************/
-BOOL SafeReadMemory (TADDR offset, PVOID lpBuffer, ULONG cb,
-                     PULONG lpcbBytesRead)
+BOOL SafeReadMemory (TADDR offset, PVOID lpBuffer, ULONG cb, PULONG lpcbBytesRead)
 {
-    BOOL bRet = FALSE;
-
-    bRet = SUCCEEDED(g_ExtData->ReadVirtual(TO_CDADDR(offset), lpBuffer, cb,
-                                            lpcbBytesRead));
-    
+    BOOL bRet = SUCCEEDED(g_ExtData->ReadVirtual(TO_CDADDR(offset), lpBuffer, cb, lpcbBytesRead));
     if (!bRet)
     {
-        cb   = (ULONG)(NextOSPageAddress(offset) - offset);
-        bRet = SUCCEEDED(g_ExtData->ReadVirtual(TO_CDADDR(offset), lpBuffer, cb,
-                                                lpcbBytesRead));
+        cb = _min(cb, (ULONG)(NextOSPageAddress(offset) - offset));
+        bRet = SUCCEEDED(g_ExtData->ReadVirtual(TO_CDADDR(offset), lpBuffer, cb, lpcbBytesRead));
     }
     return bRet;
 }
@@ -4146,7 +4140,7 @@ HRESULT ReadVirtualCache::Read(TADDR address, PVOID buffer, ULONG bufferSize, PU
         return g_ExtData->ReadVirtual(TO_CDADDR(address), buffer, bufferSize, lpcbBytesRead);
     }
 
-    if (!m_cacheValid || (address < m_startCache) || (address > (m_startCache + (m_cacheSize - bufferSize))))
+    if (!m_cacheValid || (address < m_startCache) || (address > (m_startCache + m_cacheSize - bufferSize)))
     {
         ULONG cbBytesRead = 0;
 
@@ -4167,12 +4161,21 @@ HRESULT ReadVirtualCache::Read(TADDR address, PVOID buffer, ULONG bufferSize, PU
         m_cacheValid = TRUE;
     }
 
-    int size = _min(bufferSize, m_cacheSize);
-    memcpy(buffer, (LPVOID) ((ULONG64)m_cache + (address - m_startCache)), size);
-
-    if (lpcbBytesRead != NULL)
+    // If the address is within the cache, copy the cached memory to the input buffer
+    LONG_PTR cacheOffset = address - m_startCache;
+    if (cacheOffset >= 0 && cacheOffset < CACHE_SIZE)
     {
-        *lpcbBytesRead = size;
+        int size = _min(bufferSize, m_cacheSize);
+        memcpy(buffer, (LPVOID)(m_cache + cacheOffset), size);
+
+        if (lpcbBytesRead != NULL)
+        {
+            *lpcbBytesRead = size;
+        }
+    }
+    else
+    {
+        return E_FAIL;
     }
 
     return S_OK;

@@ -19,6 +19,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostic.Tools.Dump.ExtensionCommands;
+using Microsoft.Diagnostics.Runtime.DataReaders.Implementation;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -52,30 +53,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             try
             { 
-                DataTarget target = null;
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
-                    target = DataTarget.LoadCoreDump(dump_path.FullName);
-                }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                    try
-                    {
-                        target = DataTarget.LoadCoreDump(dump_path.FullName);
-                    }
-                    catch (InvalidDataException)
-                    {
-                        // This condition occurs when we try to load a Windows dump as a Elf core dump.
-                    }
-
-                    if (target == null)
-                    {
-                        target = DataTarget.LoadCrashDump(dump_path.FullName, CrashDumpReader.ClrMD);
-                    }
-                }
-                else {
-                    throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
-                }
-
-                using (target)
+                using (DataTarget target = DataTarget.LoadDump(dump_path.FullName))
                 {
                     _consoleProvider.WriteLine("Ready to process analysis commands. Type 'help' to list available commands or 'help [command]' to get detailed help on a command.");
                     _consoleProvider.WriteLine("Type 'quit' or 'exit' to exit the session.");
@@ -139,13 +117,19 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private void AddServices(DataTarget target)
         {
             _serviceProvider.AddService(target);
+            _serviceProvider.AddService(target.DataReader);
             _serviceProvider.AddService<IConsoleService>(_consoleProvider);
             _serviceProvider.AddService(_commandProcessor);
             _serviceProvider.AddServiceFactory(typeof(IHelpBuilder), _commandProcessor.CreateHelpBuilder);
 
+            if (!(target.DataReader is IThreadReader threadReader))
+            {
+                throw new InvalidOperationException("IThreadReader not implemented");
+            }
+
             // Create common analyze context for commands
             var analyzeContext = new AnalyzeContext() {
-                CurrentThreadId = target.DataReader.EnumerateAllThreads().FirstOrDefault()
+                CurrentThreadId = threadReader.EnumerateOSThreadIds().FirstOrDefault()
             };
             _serviceProvider.AddService(analyzeContext);
 
@@ -247,7 +231,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                                     return memoryService.ReadMemory(address, new Span<byte>(buffer, count), out int bytesRead) ? bytesRead : 0;
                                 };
                                 KeyGenerator generator = SymbolReader.GetKeyGenerator(
-                                    SymbolReader.RuntimeConfiguration.OSXCore, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.ImageBase, unchecked((int)clrInfo.ModuleInfo.FileSize), readMemory);
+                                    SymbolReader.RuntimeConfiguration.OSXCore, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.ImageBase, clrInfo.ModuleInfo.IndexFileSize, readMemory);
 
                                 key = generator.GetKeys(KeyTypeFlags.DacDbiKeys).SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
                             }
@@ -257,7 +241,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                             if (clrInfo.ModuleInfo.BuildId != null)
                             {
                                 IEnumerable<SymbolStoreKey> keys = ELFFileKeyGenerator.GetKeys(
-                                    KeyTypeFlags.DacDbiKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId, symbolFile: false, symbolFileName: null);
+                                    KeyTypeFlags.DacDbiKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId.ToArray(), symbolFile: false, symbolFileName: null);
 
                                 key = keys.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
                             }
@@ -265,7 +249,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         else if (platform == OSPlatform.Windows)
                         {
                             // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
-                            key = PEFileKeyGenerator.GetKey(dacFileName, clrInfo.ModuleInfo.TimeStamp, clrInfo.ModuleInfo.FileSize);
+                            key = PEFileKeyGenerator.GetKey(dacFileName, (uint)clrInfo.ModuleInfo.IndexTimeStamp, (uint)clrInfo.ModuleInfo.IndexFileSize);
                         }
 
                         if (key != null)
@@ -288,7 +272,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private static string GetDacFileName(ClrInfo clrInfo, out OSPlatform platform)
         {
             Debug.Assert(!string.IsNullOrEmpty(clrInfo.ModuleInfo.FileName));
-            Debug.Assert(!string.IsNullOrEmpty(clrInfo.DacInfo.FileName));
+            Debug.Assert(!string.IsNullOrEmpty(clrInfo.DacInfo.PlatformSpecificFileName));
 
             platform = OSPlatform.Windows;
 
@@ -308,7 +292,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     }
                     break;
             }
-            return clrInfo.DacInfo.FileName;
+            return clrInfo.DacInfo.PlatformSpecificFileName;
         }
 
         private string GetLocalDacPath(ClrInfo clrInfo, string dacFileName)

@@ -1162,7 +1162,7 @@ LLDBServices::GetModuleNames(
         int size = fileSpec.GetPath(imageNameBuffer, imageNameBufferSize);
         if (imageNameSize)
         {
-            *imageNameSize = size;
+            *imageNameSize = size + 1; // include null
         }
     }
     if (moduleNameBuffer)
@@ -1175,7 +1175,7 @@ LLDBServices::GetModuleNames(
         stpncpy(moduleNameBuffer, fileName, moduleNameBufferSize);
         if (moduleNameSize)
         {
-            *moduleNameSize = strlen(fileName);
+            *moduleNameSize = strlen(fileName) + 1;
         }
     }
     if (loadedImageNameBuffer)
@@ -1183,7 +1183,7 @@ LLDBServices::GetModuleNames(
         int size = fileSpec.GetPath(loadedImageNameBuffer, loadedImageNameBufferSize);
         if (loadedImageNameSize)
         {
-            *loadedImageNameSize = size;
+            *loadedImageNameSize = size + 1; // include null
         }
     }
     return S_OK;
@@ -2168,8 +2168,8 @@ static const char* g_versionString = "@(#)Version ";
 
 bool 
 LLDBServices::SearchVersionString(
-    ULONG64 address, 
-    ULONG64 size, 
+    uint64_t address, 
+    int32_t size,
     char* versionBuffer,
     int versionBufferSize)
 {
@@ -2234,10 +2234,15 @@ LLDBServices::ReadVirtualCache(ULONG64 address, PVOID buffer, ULONG bufferSize, 
 
     if (!m_cacheValid || (address < m_startCache) || (address > (m_startCache + m_cacheSize - bufferSize)))
     {
+        ULONG cbBytesRead = 0;
+
         m_cacheValid = false;
         m_startCache = address;
 
-        ULONG cbBytesRead = 0;
+        // Avoid an int overflow
+        if (m_startCache + CACHE_SIZE < m_startCache)
+            m_startCache = (ULONG64)(-CACHE_SIZE);
+
         HRESULT hr = ReadVirtual(m_startCache, m_cache, CACHE_SIZE, &cbBytesRead);
         if (hr != S_OK)
         {
@@ -2248,11 +2253,21 @@ LLDBServices::ReadVirtualCache(ULONG64 address, PVOID buffer, ULONG bufferSize, 
         m_cacheValid = true;
     }
 
-    memcpy(buffer, (LPVOID)((ULONG64)m_cache + (address - m_startCache)), bufferSize);
-
-    if (pcbBytesRead != NULL)
+    // If the address is within the cache, copy the cached memory to the input buffer
+    LONG_PTR cacheOffset = address - m_startCache;
+    if (cacheOffset >= 0 && cacheOffset < CACHE_SIZE)
     {
-        *pcbBytesRead = bufferSize;
+        int size = std::min(bufferSize, m_cacheSize);
+        memcpy(buffer, (LPVOID)(m_cache + cacheOffset), size);
+
+        if (pcbBytesRead != NULL)
+        {
+            *pcbBytesRead = size;
+        }
+    }
+    else
+    {
+        return false;
     }
 
     return true;

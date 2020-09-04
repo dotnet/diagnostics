@@ -26,7 +26,7 @@ namespace SOS
         private static void AddDebugControl(VTableBuilder builder, SOSHost soshost)
         {
             builder.AddMethod(new GetInterruptDelegate(soshost.GetInterrupt));
-            builder.AddMethod(new SetInterruptDelegate((self, flags) => DebugClient.S_OK));
+            builder.AddMethod(new SetInterruptDelegate((self, flags) => HResult.S_OK));
             builder.AddMethod(new GetInterruptTimeoutDelegate((self, seconds) => DebugClient.NotImplemented));
             builder.AddMethod(new SetInterruptTimeoutDelegate((self, seconds) => DebugClient.NotImplemented));
             builder.AddMethod(new GetLogFileDelegate((self, buffer, bufferSize, fileSize, append) => DebugClient.NotImplemented));
@@ -75,8 +75,8 @@ namespace SOS
             builder.AddMethod(new SetExecutionStatusDelegate((self, status) => DebugClient.NotImplemented));
             builder.AddMethod(new GetCodeLevelDelegate((self, level) => DebugClient.NotImplemented));
             builder.AddMethod(new SetCodeLevelDelegate((self, level) => DebugClient.NotImplemented));
-            builder.AddMethod(new GetEngineOptionsDelegate((self, options) => DebugClient.E_NOTIMPL));
-            builder.AddMethod(new AddEngineOptionsDelegate((self, options) => DebugClient.E_NOTIMPL));
+            builder.AddMethod(new GetEngineOptionsDelegate((self, options) => HResult.E_NOTIMPL));
+            builder.AddMethod(new AddEngineOptionsDelegate((self, options) => HResult.E_NOTIMPL));
             builder.AddMethod(new RemoveEngineOptionsDelegate((self, options) => DebugClient.NotImplemented));
             builder.AddMethod(new SetEngineOptionsDelegate((self, options) => DebugClient.NotImplemented));
             builder.AddMethod(new GetSystemErrorControlDelegate((self, outputLevel, breakLevel) => DebugClient.NotImplemented));

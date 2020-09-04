@@ -22,15 +22,15 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         public override void Invoke()
         {
-            foreach (ModuleInfo module in DataTarget.DataReader.EnumerateModules())
+            foreach (ModuleInfo module in DataTarget.EnumerateModules())
             {
                 if (Verbose)
                 {
                     WriteLine("{0}", module.FileName);
                     WriteLine("    Address:   {0:X16}", module.ImageBase);
                     WriteLine("    IsManaged: {0}", module.IsManaged);
-                    WriteLine("    FileSize:  {0:X8}", module.FileSize);
-                    WriteLine("    TimeStamp: {0:X8}", module.TimeStamp);
+                    WriteLine("    FileSize:  {0:X8}", module.IndexFileSize);
+                    WriteLine("    TimeStamp: {0:X8}", module.IndexTimeStamp);
                     WriteLine("    Version:   {0}", module.Version);
                     WriteLine("    PdbInfo:   {0}", module.Pdb?.ToString() ?? "<none>");
                     if (module.BuildId != null) {
@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
                 else
                 {
-                    WriteLine("{0:X16} {1:X8} {2}", module.ImageBase, module.FileSize, module.FileName);
+                    WriteLine("{0:X16} {1:X8} {2}", module.ImageBase, module.IndexFileSize, module.FileName);
                 }
             }
         }

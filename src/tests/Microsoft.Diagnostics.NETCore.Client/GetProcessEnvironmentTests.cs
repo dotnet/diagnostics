@@ -26,12 +26,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// A simple test that collects process environment.
         /// </summary>
-        [Fact(Skip="Requires 5.0-rc1* or newer.  Re-enable once consuming this version or newer.")]
+        [Fact]
         public void BasicEnvTest()
         {
             // as the attribute says, this test requires 5.0-rc1 or newer.  This has been tested locally on
             // an rc1 build and passes.  It is equivalent to the dotnet/runtime version of this test.
-            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(targetFramework: "net5.0"), output);
+            TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(targetFramework: "net5.0"), output);
             string testKey = "FOO";
             string testVal = "BAR";
             runner.AddEnvVar(testKey, testVal);

@@ -367,10 +367,6 @@ DebugClient::Release()
     LONG ref = InterlockedDecrement(&m_ref);
     if (ref == 0)
     {
-        m_lldbservices->Release();
-        if (m_lldbservices2 != nullptr) {
-            m_lldbservices2->Release();
-        }
         delete this;
     }
     return ref;

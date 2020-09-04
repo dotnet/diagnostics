@@ -4,27 +4,39 @@
       <Uri>https://github.com/dotnet/command-line-api</Uri>
       <Sha>166610c56ff732093f0145a2911d4f6c40b786da</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="5.0.0-beta.20419.21">
+    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="5.0.0-beta.20427.5">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>56a95cc477558c1ccdf16d7abe962849ea970ba4</Sha>
+      <Sha>f2b7fe854a0b1f78c04dfc065164d6d61040f5b8</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.SymbolStore" Version="1.0.142101">
+    <Dependency Name="Microsoft.SymbolStore" Version="1.0.143102">
       <Uri>https://github.com/dotnet/symstore</Uri>
-      <Sha>449a9035d245f837e1de8879dfa71c318c20b913</Sha>
+      <Sha>ccfa77ef0d395362d70a84404c24c8f30e81f039</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="2.0.142103">
+      <Uri>https://github.com/Microsoft/clrmd</Uri>
+      <Sha>627a7dec8ec5f7ac3f5616ac4e9ca088072006c1</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="2.0.142103">
+      <Uri>https://github.com/Microsoft/clrmd</Uri>
+      <Sha>627a7dec8ec5f7ac3f5616ac4e9ca088072006c1</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="5.0.100-rc.2.20453.6">
+      <Uri>https://github.com/dotnet/installer</Uri>
+      <Sha>436c7250953dcff3862820e7a8a291110b7da25e</Sha>
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="5.0.0-beta.20419.21">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="5.0.0-beta.20427.5">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>56a95cc477558c1ccdf16d7abe962849ea970ba4</Sha>
+      <Sha>f2b7fe854a0b1f78c04dfc065164d6d61040f5b8</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.NETCore.App" Version="5.0.0-rc.1.20423.8">
+    <Dependency Name="Microsoft.NETCore.App" Version="5.0.0-rc.1.20452.14">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>9aa4e069b5e9f6a33f7304fa7d58de26424588fb</Sha>
+      <Sha>d2e8221c4d18df2f01010eb3867f989fe9cfc7b3</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-rc.1.20424.2">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-rc.1.20451.17">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>8c8cfe611a005433007544a95daeb9821aa92c8b</Sha>
+      <Sha>ecdcc752d4639061c2c49727ee77a1039bbbca22</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>

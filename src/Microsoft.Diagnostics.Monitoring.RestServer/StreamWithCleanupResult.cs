@@ -26,6 +26,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         {
             try
             {
+#if !NETSTANDARD2_0
+                context.HttpContext.Features.Get<AspNetCore.Http.Features.IHttpResponseBodyFeature>()?.DisableBuffering();
+#else
+                context.HttpContext.Features.Get<AspNetCore.Http.Features.IHttpBufferingFeature>()?.DisableResponseBuffering();
+#endif
                 await base.ExecuteResultAsync(context);
             }
             finally
