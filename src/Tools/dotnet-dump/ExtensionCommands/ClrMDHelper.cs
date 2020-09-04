@@ -514,7 +514,7 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
                 var count = slots.Length;
                 for (int current = 0; current < count; current++)
                 {
-                    var slot = slots.GetStructValue(current, true);
+                    var slot = slots.GetStructValue(current);
                     var slotEntry = slot.ReadField<UIntPtr>("Item");
 
                     // skip empty null slots
@@ -739,7 +739,7 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
                 var count = slots.Length;
                 for (int current = 0; current < count; current++)
                 {
-                    var slot = slots.GetStructValue(current, true);
+                    var slot = slots.GetStructValue(current);
                     if (itemIsValueType)
                     {
                         if (HasFieldSimpleValue(slot, itemType, "Item", out var content))
