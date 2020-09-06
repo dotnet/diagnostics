@@ -289,14 +289,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CommonOptions.NameOption()
             };
 
-        private static uint DefaultCircularBufferSizeInMB => 256;
+        private static uint DefaultCircularBufferSizeInMB() => 256;
 
         private static Option CircularBufferOption() =>
             new Option(
                 alias: "--buffersize",
-                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB.")
+                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB()} MB.")
             {
-                Argument = new Argument<uint>(name: "size", defaultValue: DefaultCircularBufferSizeInMB)
+                Argument = new Argument<uint>(name: "size", getDefaultValue: DefaultCircularBufferSizeInMB)
             };
 
         public static string DefaultTraceName => "trace.nettrace";
@@ -306,7 +306,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 aliases: new[] { "-o", "--output" },
                 description: $"The output path for the collected trace data. If not specified it defaults to '{DefaultTraceName}'.")
             {
-                Argument = new Argument<FileInfo>(name: "trace-file-path", defaultValue: new FileInfo(DefaultTraceName))
+                Argument = new Argument<FileInfo>(name: "trace-file-path", getDefaultValue: () => new FileInfo(DefaultTraceName))
             };
 
         private static Option ProvidersOption() =>
@@ -314,7 +314,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 alias: "--providers",
                 description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'. These providers are in addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the configuration here takes precedence over the implicit configuration from the profile.")
             {
-                Argument = new Argument<string>(name: "list-of-comma-separated-providers", defaultValue: "") // TODO: Can we specify an actual type?
+                Argument = new Argument<string>(name: "list-of-comma-separated-providers", getDefaultValue: () => string.Empty) // TODO: Can we specify an actual type?
             };
 
         private static Option ProfileOption() =>
@@ -322,7 +322,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 alias: "--profile",
                 description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.")
             {
-                Argument = new Argument<string>(name: "profile-name", defaultValue: "")
+                Argument = new Argument<string>(name: "profile-name", getDefaultValue: () => string.Empty)
             };
 
         private static Option DurationOption() =>
@@ -330,7 +330,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 alias: "--duration",
                 description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.")
             {
-                Argument = new Argument<TimeSpan>(name: "duration-timespan", defaultValue: default)
+                Argument = new Argument<TimeSpan>(name: "duration-timespan", getDefaultValue: default)
             };
         
         private static Option CLREventsOption() => 
@@ -338,7 +338,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 alias: "--clrevents",
                 description: @"List of CLR runtime events to emit.")
             {
-                Argument = new Argument<string>(name: "clrevents", defaultValue: "")
+                Argument = new Argument<string>(name: "clrevents", getDefaultValue: () => string.Empty)
             };
 
         private static Option CLREventLevelOption() => 
@@ -346,7 +346,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 alias: "--clreventlevel",
                 description: @"Verbosity of CLR events to be emitted.")
             {
-                Argument = new Argument<string>(name: "clreventlevel", defaultValue: "")
+                Argument = new Argument<string>(name: "clreventlevel", getDefaultValue: () => string.Empty)
             };
     }
 }
