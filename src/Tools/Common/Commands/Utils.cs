@@ -10,7 +10,7 @@ using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Internal.Common.Utils
 {
-    internal class CommandUtils
+    internal static class CommandUtils
     {
         // Returns processId that matches the given name.
         // It also checks whether the process has a diagnostics server port.

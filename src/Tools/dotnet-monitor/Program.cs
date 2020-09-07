@@ -6,6 +6,7 @@ using System;
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
+using System.CommandLine.Parsing;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Monitoring;
@@ -38,7 +39,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 aliases: new[] { "-u", "--urls" },
                 description: "Bindings for the REST api.")
             {
-                Argument = new Argument<string[]>(name: "urls", defaultValue: new[] { "http://localhost:52323" })
+                Argument = new Argument<string[]>(name: "urls", getDefaultValue: () => new[] { "http://localhost:52323" })
             };
 
         private static Option MetricUrls() =>
@@ -46,7 +47,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 aliases: new[] { "--metricUrls" },
                 description: "Bindings for metrics")
             {
-                Argument = new Argument<string[]>(name: "metricUrls", defaultValue: new[]{ GetDefaultMetricsEndpoint() })
+                Argument = new Argument<string[]>(name: "metricUrls", getDefaultValue: () => new[]{ GetDefaultMetricsEndpoint() })
             };
     
         private static Option ProvideMetrics() =>
@@ -54,7 +55,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 aliases: new[] { "-m", "--metrics" },
                 description: "Enable publishing of metrics")
             {
-                Argument = new Argument<bool>(name: "metrics", defaultValue: true )
+                Argument = new Argument<bool>(name: "metrics", getDefaultValue: () => true )
             };
 
         private static Option ReversedServerAddress() =>

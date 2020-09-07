@@ -11,6 +11,7 @@ using System.CommandLine;
 using System.CommandLine.Binding;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
+using System.CommandLine.Parsing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -66,7 +67,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 alias: "--refresh-interval",
                 description: "The number of seconds to delay between updating the displayed counters.")
             {
-                Argument = new Argument<int>(name: "refresh-interval", defaultValue: 1)
+                Argument = new Argument<int>(name: "refresh-interval", getDefaultValue: () => 1)
             };
 
         private static Option ExportFormatOption() =>
@@ -74,7 +75,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 alias: "--format",
                 description: "The format of exported counter data.")
             {
-                Argument = new Argument<CountersExportFormat>(name: "format", defaultValue: CountersExportFormat.csv)
+                Argument = new Argument<CountersExportFormat>(name: "format", getDefaultValue: () => CountersExportFormat.csv)
             };
 
         private static Option ExportFileNameOption() =>
@@ -82,11 +83,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 aliases: new[] { "-o", "--output" },
                 description: "The output file name.") 
             {
-                Argument = new Argument<string>(name: "output", defaultValue: "counter")
+                Argument = new Argument<string>(name: "output", getDefaultValue: () => "counter")
             };
 
         private static Argument CounterList() =>
-            new Argument<List<string>>(name: "counter_list", defaultValue: new List<string>()) 
+            new Argument<List<string>>(name: "counter_list", getDefaultValue: () => new List<string>())
             {
                 Description = @"A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the provider_name is used without a qualifying counter_name then all counters will be shown. To discover provider and counter names, use the list command.",
                 Arity = ArgumentArity.ZeroOrMore
@@ -106,7 +107,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 aliases: new[] { "-r", "--runtime-version" },
                 description: "Version of runtime. Supported runtime version: 3.0, 3.1, 5.0") 
             {
-                Argument = new Argument<string>(name: "runtimeVersion", defaultValue: "3.1")
+                Argument = new Argument<string>(name: "runtimeVersion", getDefaultValue: () => "3.1")
             };
 
         private static readonly string[] s_SupportedRuntimeVersions = new[] { "3.0", "3.1", "5.0" };

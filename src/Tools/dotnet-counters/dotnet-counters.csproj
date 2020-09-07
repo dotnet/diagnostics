@@ -13,6 +13,7 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)..\dotnet-trace\Extensions.cs" Link="Extensions.cs" />
     <Compile Include="..\Common\CommandExtensions.cs" Link="CommandExtensions.cs" />
+    <Compile Include="..\Common\CommandLineExtensions.cs" Link="CommandLineExtensions.cs" />
     <Compile Include="..\Common\Commands\ProcessStatus.cs" Link="ProcessStatus.cs" />
     <Compile Include="..\Common\Commands\Utils.cs" Link="Utils.cs" />
   </ItemGroup>
@@ -23,7 +24,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" />
-    <PackageReference Include="System.CommandLine.Experimental" Version="$(SystemCommandLineExperimentalVersion)" />
+    <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
+    <PackageReference Include="DotNetConfig" Version="1.0.0-rc" />
   </ItemGroup>
 
   <ItemGroup>

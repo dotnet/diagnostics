@@ -144,7 +144,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 aliases: new[] { "-p", "--process-id" },
                 description: "The process id to collect the gcdump from.")
             {
-                Argument = new Argument<int>(name: "pid", defaultValue: 0),
+                Argument = new Argument<int>(name: "pid", getDefaultValue: () => 0),
             };
 
         private static Option NameOption() =>
@@ -160,7 +160,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 aliases: new[] { "-o", "--output" },
                 description: $@"The path where collected gcdumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump' where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.")
             {
-                Argument = new Argument<string>(name: "gcdump-file-path", defaultValue: "")
+                Argument = new Argument<string>(name: "gcdump-file-path", getDefaultValue: () => "")
             };
 
         private static Option VerboseOption() =>
@@ -168,7 +168,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 aliases: new[] { "-v", "--verbose" },
                 description: "Output the log while collecting the gcdump.") 
             {
-                Argument = new Argument<bool>(name: "verbose", defaultValue: false)
+                Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => false)
             };
 
         public static int DefaultTimeout = 30;
@@ -177,7 +177,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 aliases: new[] { "-t", "--timeout" },
                 description: $"Give up on collecting the gcdump if it takes longer than this many seconds. The default value is {DefaultTimeout}s.")
             {
-                Argument = new Argument<int>(name: "timeout", defaultValue: DefaultTimeout)
+                Argument = new Argument<int>(name: "timeout", getDefaultValue: () => DefaultTimeout)
             };
     }
 }

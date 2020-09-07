@@ -6,7 +6,9 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Builder;
+using System.CommandLine.Help;
 using System.CommandLine.Invocation;
+using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
@@ -70,8 +72,7 @@ namespace Microsoft.Diagnostics.Repl
         /// <returns>exit code</returns>
         public Task<int> Parse(string commandLine)
         {
-            ParseResult result = _parser.Parse(commandLine);
-            return _parser.InvokeAsync(result, _console);
+            return _parser.InvokeAsync(commandLine, _console);
         }
 
         /// <summary>

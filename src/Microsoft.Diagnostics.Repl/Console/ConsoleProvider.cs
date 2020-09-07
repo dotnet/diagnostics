@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.IO;
 using System.IO;
 using System.Text;
 using System.Threading;

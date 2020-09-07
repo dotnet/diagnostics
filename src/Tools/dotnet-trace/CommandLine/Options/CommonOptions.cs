@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 alias: "--format",
                 description: $"Sets the output format for the trace file.  Default is {DefaultTraceFileFormat}.")
             {
-                Argument = new Argument<TraceFileFormat>(name: "trace-file-format", defaultValue: DefaultTraceFileFormat)
+                Argument = new Argument<TraceFileFormat>(name: "trace-file-format", getDefaultValue: () => DefaultTraceFileFormat)
             };
 
         public static Option ConvertFormatOption() =>
