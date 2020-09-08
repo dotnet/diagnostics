@@ -40,6 +40,7 @@
     <MicrosoftBclAsyncInterfacesVersion>1.1.0</MicrosoftBclAsyncInterfacesVersion>
     <MicrosoftDiagnosticsRuntimeVersion>2.0.145801</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiagnosticsRuntimeUtilitiesVersion>2.0.145801</MicrosoftDiagnosticsRuntimeUtilitiesVersion>
+    <ParallelStacksVersion>2.0.1</ParallelStacksVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.57</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftExtensionsConfigurationJsonVersion>2.1.1</MicrosoftExtensionsConfigurationJsonVersion>
