@@ -12,13 +12,13 @@
       <Uri>https://github.com/dotnet/symstore</Uri>
       <Sha>ccfa77ef0d395362d70a84404c24c8f30e81f039</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="2.0.145301">
+    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="2.0.145801">
       <Uri>https://github.com/Microsoft/clrmd</Uri>
-      <Sha>57edd90ce03858515830f0e1dd9da1ac8a577ada</Sha>
+      <Sha>65581c6cbfacf38b3e6cf19b1bab2206b766d658</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="2.0.145301">
+    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="2.0.145801">
       <Uri>https://github.com/Microsoft/clrmd</Uri>
-      <Sha>57edd90ce03858515830f0e1dd9da1ac8a577ada</Sha>
+      <Sha>65581c6cbfacf38b3e6cf19b1bab2206b766d658</Sha>
     </Dependency>
     <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="5.0.100-rc.2.20459.1">
       <Uri>https://github.com/dotnet/installer</Uri>
