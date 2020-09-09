@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.Build.NoTargets">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <SupportedRids>win-x64;win-x86;win-arm;win-arm64;linux-x64;linux-musl-arm64;osx-x64;linux-arm64;linux-musl-x64;linux-arm</SupportedRids>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- for doing the whole world -->
+    <_ProjectToBundle Include="$(RepoRoot)src/Tools/**/*.csproj" Exclude="$(RepoRoot)src/Tools/dotnet-monitor/**/*.csproj;$(RepoRoot)src/Tools/dotnet-analyze/**/*.csproj" />
+    <SupportedRids Include="$(SupportedRids)"/>
+  </ItemGroup>
+
+  <Target Name="FanoutBundle" AfterTargets="Build">
+    <ItemGroup>
+      <ProjectToBundle Include="@(_ProjectToBundle)">
+        <AdditionalProperties>Configuration=$(Configuration);BundleTools=true;RuntimeIdentifiers=$(SupportedRids);RuntimeIdentifier=%(SupportedRids.Identity)</AdditionalProperties>
+      </ProjectToBundle>
+    </ItemGroup>
+
+    <MSBuild Projects="@(ProjectToBundle)"
+        BuildInParallel="true"
+        SkipNonexistentProjects="false"
+        SkipNonexistentTargets="false"
+        StopOnFirstFailure="true"
+        Targets="Restore;Publish"
+        ContinueOnError="false" />
+  </Target>
+
+</Project>

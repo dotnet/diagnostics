@@ -1,0 +1,5 @@
+<Project>
+  <ItemGroup Condition=" '$(BundleTools)' == 'true' ">
+    <ProjectToBuild Include="$(RepoRoot)singlefile-tools.proj" />
+  </ItemGroup>
+</Project>

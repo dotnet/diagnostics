@@ -7,6 +7,7 @@ Param(
     [switch] $ci,
     [switch] $skipmanaged,
     [switch] $skipnative,
+    [switch] $bundletools,
     [string] $privatebuildpath = "",
     [switch] $cleanupprivatebuild,
     [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimeversion = 'default',
@@ -40,6 +41,13 @@ $logdir = Join-Path $logdir Windows_NT.$architecture.$configuration
 
 if ($ci) {
     $remainingargs = "-ci " + $remainingargs
+}
+
+if ($bundletools) {
+    $remainingargs = "/p:BundleTools=true " + $remainingargs
+    # TODO: Ensure all native assets are built.
+    $skipnative = $True
+    $test = $False
 }
 
 # Remove the private build registry keys
