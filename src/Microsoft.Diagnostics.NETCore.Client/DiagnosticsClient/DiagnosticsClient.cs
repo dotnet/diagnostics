@@ -219,9 +219,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             static IEnumerable<int> GetAllPublishedProcesses()
             {
-                foreach (var namedPipe in Directory.GetFiles(PidIpcEndpoint.IpcRootPath))
+                foreach (var port in Directory.GetFiles(PidIpcEndpoint.IpcRootPath))
                 {
-                    var fileName = new FileInfo(namedPipe).Name;
+                    var fileName = new FileInfo(port).Name;
                     var match = Regex.Match(fileName, PidIpcEndpoint.DiagnosticsPortPattern);
                     if (!match.Success) continue;
                     var group = match.Groups[1].Value;
