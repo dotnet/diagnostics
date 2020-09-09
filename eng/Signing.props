@@ -1,6 +1,16 @@
 <Project>
-  <ItemGroup>
+  <ItemGroup Condition="'$(SignTools)' != 'true'">
     <ItemsToSign Include="$(ArtifactsPackagesDir)**\*.zip"/>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(SignTools)' == 'true'">
+    <ItemsToSign Remove="@(ItemsToSign)"/>
+  </ItemGroup>
+
+  <Import Project="$(SignatureManifest)"
+      Condition="'$(SignTools)' == 'true'" />
+
+  <ItemGroup>
     <FileSignInfo Include="Newtonsoft.Json.dll" CertificateName="3PartySHA2" />
     <FileSignInfo Include="Newtonsoft.Json.Bson.dll" CertificateName="3PartySHA2" />
   </ItemGroup>

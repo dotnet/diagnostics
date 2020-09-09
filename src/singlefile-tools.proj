@@ -1,0 +1,84 @@
+<Project Sdk="Microsoft.Build.NoTargets">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <SupportedRids>win-x64;win-x86;win-arm;win-arm64;linux-x64;linux-musl-arm64;osx-x64;linux-arm64;linux-musl-x64;linux-arm</SupportedRids>
+    <ArcadeSdkMSBuildProjectDir>$([System.IO.Path]::GetDirectoryName('$(ArcadeSdkBuildTasksAssembly)'))\..\</ArcadeSdkMSBuildProjectDir>
+    <ArcadeSdkSignProject>$(ArcadeSdkMSBuildProjectDir)Sign.proj</ArcadeSdkSignProject>
+    <SignatureManifest>$(ArtifactsTmpDir)bundleFiles.props</SignatureManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- for doing the whole world -->
+    <_ProjectToBundle Include="$(RepoRoot)src/Tools/**/*.csproj" Exclude="$(RepoRoot)src/Tools/dotnet-monitor/**/*.csproj;$(RepoRoot)src/Tools/dotnet-analyze/**/*.csproj" />
+    <!-- <_ProjectToBundle Include="$(RepoRoot)src\Tools\dotnet-trace\dotnet-trace.csproj" /> -->
+    <SupportedRids Include="$(SupportedRids)"/>
+  </ItemGroup>
+
+  <Target Name="FanoutBundle" AfterTargets="Build">
+    <ItemGroup>
+      <ProjectToBundle Include="@(_ProjectToBundle)">
+        <AdditionalProperties>Configuration=$(Configuration);BundleTools=true;RuntimeIdentifiers=$(SupportedRids);RuntimeIdentifier=%(SupportedRids.Identity)</AdditionalProperties>
+      </ProjectToBundle>
+    </ItemGroup>
+
+    <MSBuild Projects="@(ProjectToBundle)"
+        BuildInParallel="true"
+        SkipNonexistentProjects="false"
+        SkipNonexistentTargets="false"
+        StopOnFirstFailure="true"
+        Targets="Restore;Build"
+        ContinueOnError="false" />
+    
+    <MSBuild Projects="@(ProjectToBundle)"
+        BuildInParallel="true"
+        SkipNonexistentProjects="false"
+        SkipNonexistentTargets="false"
+        StopOnFirstFailure="true"
+        Targets="ComputeFilesToBundle"
+        ContinueOnError="false">
+        <Output TaskParameter="TargetOutputs" ItemName="ItemsNeedingSigning" />
+    </MSBuild>
+
+    <!-- Only include items we build. -->
+    <ItemGroup>
+      <ItemsToSign Include="%(ItemsNeedingSigning.FullPath)" 
+          Condition="$([System.String]::new('%(FullPath)').StartsWith('$(ArtifactsDir)')) and 
+            ('%(Extension)' == '.exe' or '%(Extension)' == '.dll')" />
+        
+      <ItemsNeedingSigning Remove="@(ItemsNeedingSigning)"/>
+      <ItemsNeedingSigning Include="@(ItemsToSign->Distinct())"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <LinesToWrite Include="&lt;Project&gt;" />
+      <LinesToWrite Include=" &lt;ItemGroup&gt;" />
+      <LinesToWrite Include="   &lt;ItemsToSign Include=&quot;%(ItemsNeedingSigning.FullPath)&quot; /&gt;"/>
+      <LinesToWrite Include=" &lt;/ItemGroup&gt;" />
+      <LinesToWrite Include="&lt;/Project&gt;" />
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(SignatureManifest)" Lines="@(LinesToWrite)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    
+    <!-- Sign -->
+    <MSBuild
+      Projects="$(ArcadeSdkSignProject)"
+      Targets="Sign"
+      Properties="
+        DotNetSignType=$(DotnetSignType);
+        SignTools=true;
+        SignatureManifest=$(SignatureManifest)" />
+    
+    <Delete Files="$(SignatureManifest)"/>
+
+    <MSBuild Projects="@(ProjectToBundle)"
+        BuildInParallel="true"
+        Properties="NoBuild=true"
+        SkipNonexistentProjects="false"
+        SkipNonexistentTargets="false"
+        StopOnFirstFailure="true"
+        Targets="Publish"
+        ContinueOnError="false" />
+  </Target>
+
+</Project>
