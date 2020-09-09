@@ -64,6 +64,7 @@
     <MSBuild
       Projects="$(ArcadeSdkSignProject)"
       Targets="Sign"
+      Condition="'$(OfficialBuild)' == 'true' and '$(ContinuousIntegrationBuild)' == 'true'"
       Properties="
         DotNetSignType=$(DotnetSignType);
         SignTools=true;
