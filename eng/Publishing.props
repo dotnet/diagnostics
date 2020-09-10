@@ -30,7 +30,7 @@
       <ItemsToPushToBlobFeed Include="@(_BundleFiles)">
         <IsShipping>true</IsShipping>
         <PublishFlatContainer>true</PublishFlatContainer>
-        <RelativeBlobPath>diagnostics/toolBundles/$(_PackageVersion)/%(RID)/%(Filename)%(Extension)</RelativeBlobPath>
+        <RelativeBlobPath>diagnostics/toolBundles/$(_PackageVersion)/%(_BundleFiles.RID)/%(Filename)%(Extension)</RelativeBlobPath>
       </ItemsToPushToBlobFeed>
     </ItemGroup>
 
