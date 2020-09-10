@@ -20,6 +20,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
     <PackageReference Include="Microsoft.SymbolStore" Version="$(MicrosoftSymbolStoreVersion)" />
+    <PackageReference Include="ParallelStacks.Runtime" Version="$(ParallelStacksRuntimeVersion)" />
   </ItemGroup>
 
   <ItemGroup>
