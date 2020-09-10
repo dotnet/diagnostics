@@ -45,7 +45,8 @@ if ($ci) {
 
 if ($bundletools) {
     $remainingargs = "/p:BundleTools=true " + $remainingargs
-    # TODO: Ensure all native assets are built.
+    $remainingargs = '/bl:"$logdir\BundleTools.binlog" ' + $remainingargs
+    $remainingargs = '-noBl ' + $remainingargs
     $skipnative = $True
     $test = $False
 }

@@ -1,6 +1,7 @@
 <Project>
   <ItemGroup Condition="'$(SignTools)' != 'true'">
     <ItemsToSign Include="$(ArtifactsPackagesDir)**\*.zip"/>
+    <ItemsToSign Include="$(ArtifactsDir)toolBundles\**\*.exe" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(SignTools)' == 'true'">

@@ -422,7 +422,29 @@ stages:
                 -prepareMachine
                 -verbosity normal
                 $(_InternalBuildArgs)
-              displayName: Sign / Package
+              displayName: Package
+              continueOnError: true
+              condition: succeeded()
+
+            - script: $(Build.SourcesDirectory)\build.cmd
+                -configuration Release
+                -ci
+                -bundletools
+                -verbosity normal
+                $(_InternalBuildArgs)
+              displayName: Create Single File Bundles
+              continueOnError: true
+              condition: succeeded()
+
+            - powershell: $(Build.SourcesDirectory)\eng\common\build.ps1
+                -configuration Release
+                -prepareMachine
+                -verbosity normal
+                -restore -publish -sign
+                -ci -nobl
+                /bl:$(Build.SourcesDirectory)/artifacts/log/Release/SignPublish.binlog
+                $(_InternalBuildArgs)
+              displayName: Sign and generate manifests
               continueOnError: true
               condition: succeeded()
 
@@ -434,6 +456,15 @@ stages:
                 publishLocation: Container
                 pathtoPublish: '$(Build.SourcesDirectory)/artifacts/packages'
                 artifactName: Packages
+              continueOnError: true
+              condition: always()
+
+            - task: PublishBuildArtifacts@1
+              displayName: Publish Bundled Tools
+              inputs:
+                publishLocation: Container
+                pathtoPublish: '$(Build.SourcesDirectory)/artifacts/toolBundles'
+                artifactName: ToolBundles
               continueOnError: true
               condition: always()
 

@@ -1,9 +1,25 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.targets"/>
 
-  <Target Name="ComputeFilesToBundle"
+  <Target Name="_GetPackageVersionInfo" DependsOnTargets="$(GetPackageVersionDependsOn)"
+          Returns="@(_ProjectPathWithVersion)">
+    <ItemGroup>
+      <_ProjectPathWithVersion Include="$(MSBuildProjectFullPath)">
+        <PackageVersion>$(Version)</PackageVersion>
+      </_ProjectPathWithVersion>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="CollectBundleFilesToSign"
           DependsOnTargets="ComputeFilesToPublish"
-          Outputs="@(_FilesToBundle)" />
+          AfterTargets="ComputeFilesToPublish"
+          Returns="@(FilesInBundleToSign)">
+    <ItemGroup>
+      <FilesInBundleToSign Include="@(_FilesToBundle)" />
+    </ItemGroup>
+  
+    <Message Importance="Low" Text="@(FilesInBundleToSign)"/>
+  </Target>
 
   <Target Name="PrepareForBundling"
           BeforeTargets="GenerateSingleFileBundle"

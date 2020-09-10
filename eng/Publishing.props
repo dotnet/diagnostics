@@ -1,13 +1,40 @@
 <Project>
 
   <PropertyGroup>
-    <PublishDependsOnTargets>$(PublishDependsOnTargets);CollectPackageArtifactFiles</PublishDependsOnTargets>
+    <BundleOutputDir>$(ArtifactsDir)toolBundles</BundleOutputDir>
+    <PublishDependsOnTargets>$(PublishDependsOnTargets);CollectToolBundles;CollectPackageArtifactFiles</PublishDependsOnTargets>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageFile Include="$(ArtifactsShippingPackagesDir)**\*.nupkg" IsShipping="true" />
     <PackageFile Include="$(ArtifactsNonShippingPackagesDir)**\*.nupkg" IsShipping="false" />
+    <FilesToPublishToSymbolServer Include="$(BundleOutputDir)\**\*.pdb" />
+    <_BundleFiles Include="$(BundleOutputDir)\**\*" Exclude="@(FilesToPublishToSymbolServer)" IsShipping="true">
+      <FilePath>$([System.IO.Directory]::GetParent(%(_BundleFiles.Identity)))</FilePath>
+      <RID>$([System.IO.Path]::GetFileName(%(_BundleFiles.FilePath)))</RID>			
+    </_BundleFiles>
   </ItemGroup>
+
+  <Target Name="CollectToolBundles">
+    <MSBuild Projects="$(RepoRoot)src\Tools\dotnet-trace\dotnet-trace.csproj"
+        Targets="_GetPackageVersionInfo"
+        SkipNonexistentProjects="false">
+      <Output TaskParameter="TargetOutputs" ItemName="_ResolvedPackageVersionInfo" />
+    </MSBuild>
+
+    <PropertyGroup>
+      <_PackageVersion>@(_ResolvedPackageVersionInfo->'%(PackageVersion)')</_PackageVersion>
+    </PropertyGroup>
+    
+    <ItemGroup>
+      <ItemsToPushToBlobFeed Include="@(_BundleFiles)">
+        <IsShipping>true</IsShipping>
+        <PublishFlatContainer>true</PublishFlatContainer>
+        <RelativeBlobPath>diagnostics/toolBundles/$(_PackageVersion)/%(RID)/%(Filename)%(Extension)</RelativeBlobPath>
+      </ItemsToPushToBlobFeed>
+    </ItemGroup>
+
+  </Target>
 
   <!-- Run the CollectPackageArtifactFiles target on each PackageFile by target batching on a non-existing file.
        This allows using the ReadLinesFromFile task to read the blob group file, which was written with WriteLinesToFile,

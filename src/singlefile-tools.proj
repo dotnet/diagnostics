@@ -9,9 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- for doing the whole world -->
     <_ProjectToBundle Include="$(RepoRoot)src/Tools/**/*.csproj" Exclude="$(RepoRoot)src/Tools/dotnet-monitor/**/*.csproj;$(RepoRoot)src/Tools/dotnet-analyze/**/*.csproj" />
-    <!-- <_ProjectToBundle Include="$(RepoRoot)src\Tools\dotnet-trace\dotnet-trace.csproj" /> -->
     <SupportedRids Include="$(SupportedRids)"/>
   </ItemGroup>
 
@@ -35,7 +33,7 @@
         SkipNonexistentProjects="false"
         SkipNonexistentTargets="false"
         StopOnFirstFailure="true"
-        Targets="ComputeFilesToBundle"
+        Targets="CollectBundleFilesToSign"
         ContinueOnError="false">
         <Output TaskParameter="TargetOutputs" ItemName="ItemsNeedingSigning" />
     </MSBuild>
@@ -69,7 +67,7 @@
         DotNetSignType=$(DotnetSignType);
         SignTools=true;
         SignatureManifest=$(SignatureManifest)" />
-    
+
     <Delete Files="$(SignatureManifest)"/>
 
     <MSBuild Projects="@(ProjectToBundle)"
