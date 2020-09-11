@@ -50,7 +50,7 @@ else()
     elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL arm)
         set(PAL_CMAKE_PLATFORM_ARCH_ARM 1)
         add_definitions(-D_ARM_)
-    elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL aarch64)
+    elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL aarch64 OR CMAKE_SYSTEM_PROCESSOR STREQUAL arm64)
         set(PAL_CMAKE_PLATFORM_ARCH_ARM64 1)
         add_definitions(-D_ARM64_)
     elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL i686)
@@ -63,14 +63,6 @@ else()
         message(FATAL_ERROR "Only ARM, AMD64, ARM64, MIPS64 and I386 is supported")
     endif()
 endif()
-
-if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
-  add_definitions(-D_TARGET_MAC64)
-  add_definitions(-DXSTATE_SUPPORTED)
-  set(PLATFORM_SOURCES
-    arch/amd64/context.S
-  )
-endif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
 
 add_definitions(-DPLATFORM_UNIX=1)
 add_definitions(-DLP64COMPATIBLE=1)
@@ -97,6 +89,14 @@ elseif(PAL_CMAKE_PLATFORM_ARCH_MIPS64)
   add_definitions(-D_WIN64=1)
   set(PAL_ARCH_SOURCES_DIR mips64)
 endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+  add_definitions(-D_TARGET_MAC64)
+  add_definitions(-DXSTATE_SUPPORTED)
+  set(PLATFORM_SOURCES
+    arch/${PAL_ARCH_SOURCES_DIR}/context.S
+  )
+endif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
 
 if(PAL_CMAKE_PLATFORM_ARCH_AMD64 AND CMAKE_SYSTEM_NAME STREQUAL Linux AND NOT CLR_CMAKE_PLATFORM_ALPINE_LINUX)
   # Currently the _xstate is not available on Alpine Linux
