@@ -20,9 +20,9 @@
       <Uri>https://github.com/Microsoft/clrmd</Uri>
       <Sha>65581c6cbfacf38b3e6cf19b1bab2206b766d658</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="5.0.100-rc.2.20460.5">
+    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="5.0.100-rc.2.20461.4">
       <Uri>https://github.com/dotnet/installer</Uri>
-      <Sha>26354077a47c24c311abfb90d1d36c7a7d773796</Sha>
+      <Sha>27562268889e80d80190cd5cdaeda8d75bd4e2ba</Sha>
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
