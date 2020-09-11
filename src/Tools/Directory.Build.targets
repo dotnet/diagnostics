@@ -15,7 +15,7 @@
           AfterTargets="ComputeFilesToPublish"
           Returns="@(FilesInBundleToSign)">
     <ItemGroup>
-      <FilesInBundleToSign Include="@(_FilesToBundle)" />
+      <FilesInBundleToSign Include="@(_FilesToBundle)" Condition="'%(_FilesToBundle.FileName)%(_FilesToBundle.Extension)' != '$(PublishedSingleFileName)'"/>
     </ItemGroup>
   
     <Message Importance="Low" Text="@(FilesInBundleToSign)"/>
