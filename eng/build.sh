@@ -72,15 +72,29 @@ to_lowercase() {
 #
 # Set the default arguments for build
 
-# Use uname to determine what the CPU is.
-CPUName=$(uname -p)
-# Some Linux platforms report unknown for platform, but the arch for machine.
-if [ "$CPUName" == "unknown" ]; then
-    CPUName=$(uname -m)
+OSName=$(uname -s)
+if [ "$OSName" = "Darwin" ]; then
+    # On OSX universal binaries make uname -m unreliable.  The uname -m response changes
+    # based on what hardware is being emulated.
+    # Use sysctl instead
+    if [ "$(sysctl -q -n hw.optional.arm64)" = "1" ]; then
+        CPUName=arm64
+    elif [ "$(sysctl -q -n hw.optional.x86_64)" = "1" ]; then
+        CPUName=x86_64
+    else
+        CPUName=$(uname -m)
+    fi
+else
+    # Use uname to determine what the CPU is.
+    CPUName=$(uname -p)
+    # Some Linux platforms report unknown for platform, but the arch for machine.
+    if [ "$CPUName" == "unknown" ]; then
+        CPUName=$(uname -m)
+    fi
 fi
 
 case $CPUName in
-    i686)
+    i686|i386)
         echo "Unsupported CPU $CPUName detected, build might not succeed!"
         __BuildArch=x86
         __HostArch=x86
@@ -97,7 +111,7 @@ case $CPUName in
         __HostArch=arm
         ;;
 
-    aarch64)
+    aarch64|arm64)
         __BuildArch=arm64
         __HostArch=arm64
         ;;
@@ -412,8 +426,8 @@ fi
 
 if [ "$__HostOS" == "OSX" ]; then
     export LLDB_H=$__ProjectRoot/src/SOS/lldbplugin/swift-4.0
-    export LLDB_LIB=/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/LLDB
-    export LLDB_PATH=/Applications/Xcode.app/Contents/Developer/usr/bin/lldb
+    export LLDB_LIB=$(xcode-select -p)/../SharedFrameworks/LLDB.framework/LLDB
+    export LLDB_PATH=$(xcode-select -p)/usr/bin/lldb
 
     export MACOSX_DEPLOYMENT_TARGET=10.12
 
@@ -435,6 +449,15 @@ if [ "$__HostOS" == "OSX" ]; then
     export PATH=/usr/bin:$PATH
     which python
     python --version
+
+    if [[ "$__BuildArch" == x64 ]]; then
+        __ExtraCmakeArgs="-DCMAKE_OSX_ARCHITECTURES=\"x86_64\" $__ExtraCmakeArgs"
+    elif [[ "$__BuildArch" == arm64 ]]; then
+        __ExtraCmakeArgs="-DCMAKE_OSX_ARCHITECTURES=\"arm64\" $__ExtraCmakeArgs"
+    else
+        echo "Error: Unknown OSX architecture $__BuildArch."
+        exit 1
+    fi
 fi
 
 #

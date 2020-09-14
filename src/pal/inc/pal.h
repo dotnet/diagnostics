@@ -2122,6 +2122,8 @@ GetThreadTimes(
 #define PAL_CS_NATIVE_DATA_SIZE 76
 #elif defined(__APPLE__) && defined(__x86_64__)
 #define PAL_CS_NATIVE_DATA_SIZE 120
+#elif defined(__APPLE__) && defined(__arm64__)
+#define PAL_CS_NATIVE_DATA_SIZE 120
 #elif defined(__FreeBSD__) && defined(_X86_)
 #define PAL_CS_NATIVE_DATA_SIZE 12
 #elif defined(__FreeBSD__) && defined(__x86_64__)
