@@ -351,7 +351,6 @@ COLLECT
     --format
         The format of the output trace file. The default value is nettrace.
 
-
     Examples:
       
       To perform a default `cpu-tracing` profiling:
@@ -395,6 +394,68 @@ CONVERT
       > dotnet-trace convert trace.nettrace -f speedscope
       Writing:       ./trace.speedscope.json
       Conversion complete
+
+MONITOR
+
+    dotnet-trace monitor [-h|--help]
+                         [-p|--process-id]
+                         [--profile <profile-name>]
+                         [--providers <list-of-comma-separated-providers>]
+
+    Start collecting trace from a currently running process and print its content directly to the console
+
+    -p, --process-id
+        The process to collect the trace from
+
+    -h, --help
+        Show command line help
+
+    -o, --output
+        The output path for the collected trace data. If not specified it defaults to ./trace.nettrace
+
+    --profile
+        A named pre-defined set of provider configurations that allows common tracing scenarios to be specified. It also pretty-prints the event payload suited for these commonly-used scenarios.
+
+        The options are:
+
+        gc-verbose      Tracks GC collection and sampled object allocations
+        gc-collect      Tracks GC collection only at very low overhead
+        assembly-loader Tracks assembly binder and loader logs
+
+
+    --providers
+        A list of comma separated EventPipe providers to be enabled.
+        These providers are in addition to any providers implied by the --profile argument. If there is any
+        discrepancy for a particular provider, the configuration here takes precedence over the implicit
+        configuration from the profile.
+        A provider consists of the name and optionally the keywords, verbosity level, and custom key/value pairs.
+
+        The string is written 'Provider[,Provider]'
+            Provider format: KnownProviderName[:Keywords[:Level][:KeyValueArgs]]
+                KnownProviderName       - The provider's name
+                Keywords                - 8 character hex number bit mask
+                Level                   - A number in the range [0, 5], or their corresponding text values (refer to https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.tracing.eventlevel?view=netframework-4.8).
+                KeyValueArgs            - A semicolon separated list of key=value
+            KeyValueArgs format: '[key1=value1][;key2=value2]'
+
+        For providers that are not well-known (i.e. the runtime providers), the payload will be printed as-is without formatting.
+
+    --buffersize <Size>
+        Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
+
+EXAMPLES
+
+1. To get all the assembly binder logs from startup (similar to fuslogvw.exe):
+
+```
+    dotnet-trace monitor -p 3136 --profile assembly-loader -- my-dotnet-app.exe
+```
+
+2. Print logs from the GC as well as a custom provider `MyCustomEventSource` on attach:
+```
+    dotnet-trace monitor -p 3136 --profile gc --providers MyCustomEventSource
+```
+
 
 ### dotnet-dump
 
@@ -862,9 +923,9 @@ Add a serialization format for profiles that lets users author new ones and spec
 
 Add a command that interrogates a running process (or maybe binary?) to extract a set of providers and events it supports emitting.
 
-- Monitor command
+- Formatting for monitor command
 
-Add a command similar to collect, except it prints event data to the console as a real time log
+Add a way to format the payload from monitor command for not well-known providers.
 
 - Report command
 
