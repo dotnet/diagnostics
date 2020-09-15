@@ -305,7 +305,7 @@ public class SOSRunner : IDisposable
                         // Start dotnet-dump collect
                         var dotnetDumpArguments = new StringBuilder();
                         dotnetDumpArguments.Append(config.DotNetDumpPath());
-                        dotnetDumpArguments.AppendFormat(" collect --process-id {0} --output %DUMP_NAME%", processRunner.ProcessId);
+                        dotnetDumpArguments.AppendFormat(" collect --diag --process-id {0} --output %DUMP_NAME%", processRunner.ProcessId);
 
                         ProcessRunner dotnetDumpRunner = new ProcessRunner(config.DotNetDumpHost(), ReplaceVariables(variables, dotnetDumpArguments.ToString())).
                             WithLog(new TestRunner.TestLogger(dotnetDumpOutputHelper)).
