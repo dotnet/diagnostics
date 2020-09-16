@@ -72,9 +72,12 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[\\
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
 SOSCOMMAND:SetSymbolServer -disable
 
+# Issue: https://github.com/dotnet/diagnostics/issues/1567
+!IFDEF:ALPINE
 # Test eeversion command
 SOSCOMMAND:EEVersion
 VERIFY:\s+<DECVAL>.<DECVAL>.<DECVAL>.<DECVAL>.*
+ENDIF:ALPINE
 
 # Verify that ClrStack with managed/native mixed works
 SOSCOMMAND:ClrStack -f
