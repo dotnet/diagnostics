@@ -6,9 +6,12 @@ CONTINUE
 
 LOADSOS
 
+# Issue: https://github.com/dotnet/diagnostics/issues/1567
+!IFDEF:ALPINE
 # Test eeversion command
 SOSCOMMAND:EEVersion
 VERIFY:\s+<DECVAL>.<DECVAL>.<DECVAL>.<DECVAL>.*
+ENDIF:ALPINE
 
 # 1) Verifying that ClrStack with no options works
 SOSCOMMAND:ClrStack
