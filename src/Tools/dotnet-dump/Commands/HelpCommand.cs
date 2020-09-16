@@ -4,6 +4,7 @@
 
 using Microsoft.Diagnostics.Repl;
 using System.CommandLine;
+using System.CommandLine.Help;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
