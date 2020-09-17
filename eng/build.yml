@@ -58,6 +58,14 @@ jobs:
       ${{ if and(eq(parameters.osGroup, 'MacOS'), eq(variables['System.TeamProject'], 'public')) }}:
         vmImage: macOS-10.14
 
+      # Public OSX Xcode 12 Build Pool
+      ${{ if and(eq(parameters.osGroup, 'MacOS_cross'), ne(variables['System.TeamProject'], 'public')) }}:
+        queue: OSX.1100.Amd64.Public
+
+      # Official Build OSX Xcode 12 Pool
+      ${{ if and(eq(parameters.osGroup, 'MacOS_cross'), eq(variables['System.TeamProject'], 'public')) }}:
+        queue: OSX.1100.Amd64
+
       # Official Build Windows Pool
       ${{ if and(eq(parameters.osGroup, 'Windows_NT'), ne(variables['System.TeamProject'], 'public')) }}:
         name: NetCoreInternal-Pool
@@ -157,7 +165,17 @@ jobs:
           $(_InternalInstallArgs)
         displayName: Build / Test
         condition: succeeded()
- 
+
+     - ${{ if eq(parameters.osGroup, 'MacOS_cross') }}:
+      - script: $(Build.SourcesDirectory)/eng/cibuild.sh
+          --configuration $(_BuildConfig)
+          --architecture $(_BuildArch)
+          --prepareMachine
+          /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+          $(_InternalInstallArgs)
+        displayName: Build / Test
+        condition: succeeded()
+
     - ${{ if ne(variables['System.TeamProject'], 'public') }}:
       - task: PublishBuildArtifacts@1
         displayName: Publish Build Artifacts
