@@ -1,15 +1,15 @@
 <Project>
-  <ItemGroup Condition="'$(SignTools)' != 'true'">
+  <ItemGroup Condition="'$(SignFilesToBundle)' != 'true'">
     <ItemsToSign Include="$(ArtifactsPackagesDir)**\*.zip"/>
-    <ItemsToSign Include="$(ArtifactsDir)toolBundles\**\*.exe" />
+    <ItemsToSign Include="$(ArtifactsDir)bundledtools\**\*.exe" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(SignTools)' == 'true'">
+  <ItemGroup Condition="'$(SignFilesToBundle)' == 'true'">
     <ItemsToSign Remove="@(ItemsToSign)"/>
   </ItemGroup>
 
   <Import Project="$(SignatureManifest)"
-      Condition="'$(SignTools)' == 'true'" />
+      Condition="'$(SignFilesToBundle)' == 'true'" />
 
   <ItemGroup>
     <FileSignInfo Include="Newtonsoft.Json.dll" CertificateName="3PartySHA2" />

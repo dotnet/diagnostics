@@ -11,7 +11,7 @@
     <When Condition="'$(BundleTools)' == 'true'">
       <PropertyGroup>
         <SelfContained>false</SelfContained>
-        <PublishDir>$(ArtifactsDir)toolBundles\$(Configuration)\$(RuntimeIdentifier)\</PublishDir>
+        <PublishDir>$(ArtifactsDir)bundledtools\$(Configuration)\$(RuntimeIdentifier)\</PublishDir>
         <PublishSingleFile>true</PublishSingleFile>
         <PublishTrimmed>$(SelfContained)</PublishTrimmed>
       </PropertyGroup>

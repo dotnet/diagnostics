@@ -1,21 +1,21 @@
 <Project>
 
   <PropertyGroup>
-    <BundleOutputDir>$(ArtifactsDir)toolBundles</BundleOutputDir>
-    <PublishDependsOnTargets>$(PublishDependsOnTargets);CollectToolBundles;CollectPackageArtifactFiles</PublishDependsOnTargets>
+    <BundleOutputDir>$(ArtifactsDir)bundledtools</BundleOutputDir>
+    <PublishDependsOnTargets>$(PublishDependsOnTargets);CollectBundledTools;CollectPackageArtifactFiles</PublishDependsOnTargets>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageFile Include="$(ArtifactsShippingPackagesDir)**\*.nupkg" IsShipping="true" />
     <PackageFile Include="$(ArtifactsNonShippingPackagesDir)**\*.nupkg" IsShipping="false" />
     <FilesToPublishToSymbolServer Include="$(BundleOutputDir)\**\*.pdb" />
-    <_BundleFiles Include="$(BundleOutputDir)\**\*" Exclude="@(FilesToPublishToSymbolServer)" IsShipping="true">
-      <FilePath>$([System.IO.Directory]::GetParent(%(_BundleFiles.Identity)))</FilePath>
-      <RID>$([System.IO.Path]::GetFileName(%(_BundleFiles.FilePath)))</RID>			
-    </_BundleFiles>
+    <_BundledTools Include="$(BundleOutputDir)\**\*" Exclude="@(FilesToPublishToSymbolServer)" IsShipping="true">
+      <FilePath>$([System.IO.Directory]::GetParent(%(_BundledTools.Identity)))</FilePath>
+      <RID>$([System.IO.Path]::GetFileName(%(_BundledTools.FilePath)))</RID>			
+    </_BundledTools>
   </ItemGroup>
 
-  <Target Name="CollectToolBundles">
+  <Target Name="CollectBundledTools">
     <MSBuild Projects="$(RepoRoot)src\Tools\dotnet-trace\dotnet-trace.csproj"
         Targets="_GetPackageVersionInfo"
         SkipNonexistentProjects="false">
@@ -27,10 +27,10 @@
     </PropertyGroup>
     
     <ItemGroup>
-      <ItemsToPushToBlobFeed Include="@(_BundleFiles)">
+      <ItemsToPushToBlobFeed Include="@(_BundledTools)">
         <IsShipping>true</IsShipping>
         <PublishFlatContainer>true</PublishFlatContainer>
-        <RelativeBlobPath>diagnostics/toolBundles/$(_PackageVersion)/%(_BundleFiles.RID)/%(Filename)%(Extension)</RelativeBlobPath>
+        <RelativeBlobPath>diagnostics/bundledtools/$(_PackageVersion)/%(_BundledTools.RID)/%(Filename)%(Extension)</RelativeBlobPath>
       </ItemsToPushToBlobFeed>
     </ItemGroup>
 

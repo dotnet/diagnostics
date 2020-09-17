@@ -463,8 +463,8 @@ stages:
               displayName: Publish Bundled Tools
               inputs:
                 publishLocation: Container
-                pathtoPublish: '$(Build.SourcesDirectory)/artifacts/toolBundles'
-                artifactName: ToolBundles
+                pathtoPublish: '$(Build.SourcesDirectory)/artifacts/bundledtools'
+                artifactName: BundledTools
               continueOnError: true
               condition: always()
 
