@@ -29,7 +29,7 @@
   <TestWebApp3 Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp3>
 
   <TestRuntime21>true</TestRuntime21>
-  <TestRuntime21 Condition="'$(TestLatestOnly)" == 'true'">false</TestRuntime21>
+  <TestRuntime21 Condition="'$(TestLatestOnly)' == 'true'">false</TestRuntime21>
   <TestRuntime21 Condition="'$(TargetArchitecture)' == 'arm'">false</TestRuntime21>
   <TestRuntime21 Condition="'$(TargetArchitecture)' == 'arm64'">false</TestRuntime21>
 
