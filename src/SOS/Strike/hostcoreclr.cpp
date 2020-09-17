@@ -630,6 +630,7 @@ HRESULT InitializeHosting()
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "GetLocalVariableName", (void **)&g_SOSNetCoreCallbacks.GetLocalVariableNameDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, SymbolReaderClassName, "GetLineByILOffset", (void **)&g_SOSNetCoreCallbacks.GetLineByILOffsetDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, MetadataHelperClassName, "GetMetadataLocator", (void **)&g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate));
+    IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, MetadataHelperClassName, "GetICorDebugMetadataLocator", (void **)&g_SOSNetCoreCallbacks.GetICorDebugMetadataLocatorDelegate));
 
     g_hostingInitialized = true;
     return Status;
@@ -837,6 +838,24 @@ HRESULT GetMetadataLocator(
 
     _ASSERTE(g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate != nullptr);
     return g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate(imagePath, imageTimestamp, imageSize, mvid, mdRva, flags, bufferSize, buffer, dataSize);
+}
+
+/**********************************************************************\
+ * Returns the metadata from a local or downloaded assembly
+\**********************************************************************/
+HRESULT GetICorDebugMetadataLocator(
+    LPCWSTR imagePath,
+    ULONG32 imageTimestamp,
+    ULONG32 imageSize,
+    ULONG32 cchPathBuffer,
+    ULONG32 *pcchPathBuffer,
+    WCHAR wszPathBuffer[])
+{
+    HRESULT Status = S_OK;
+    IfFailRet(InitializeSymbolStore());
+
+    _ASSERTE(g_SOSNetCoreCallbacks.GetICorDebugMetadataLocatorDelegate != nullptr);
+    return g_SOSNetCoreCallbacks.GetICorDebugMetadataLocatorDelegate(imagePath, imageTimestamp, imageSize, cchPathBuffer, pcchPathBuffer, wszPathBuffer);
 }
 
 #ifndef FEATURE_PAL
