@@ -10,6 +10,10 @@
         "$(MicrosoftNETCoreApp31Version)",
         "$(MicrosoftNETCoreAppVersion)"
       ],
+      "dotnet/arm": [
+        "$(MicrosoftNETCoreApp31Version)",
+        "$(MicrosoftNETCoreAppVersion)"
+      ],
       "dotnet/arm64": [
         "$(MicrosoftNETCoreApp31Version)",
         "$(MicrosoftNETCoreAppVersion)"
