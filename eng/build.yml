@@ -166,7 +166,7 @@ jobs:
         displayName: Build / Test
         condition: succeeded()
 
-     - ${{ if eq(parameters.osGroup, 'MacOS_cross') }}:
+    - ${{ if eq(parameters.osGroup, 'MacOS_cross') }}:
       - script: $(Build.SourcesDirectory)/eng/cibuild.sh
           --configuration $(_BuildConfig)
           --architecture $(_BuildArch)
