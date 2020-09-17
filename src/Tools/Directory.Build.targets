@@ -1,15 +1,25 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.targets"/>
 
-  <Target Name="_GetPackageVersionInfo" DependsOnTargets="$(GetPackageVersionDependsOn)"
-          Returns="@(_ProjectPathWithVersion)">
+  <!-- This just returns the package version of a tool. It's used in the publishing
+  infrastructure to query the version of an arbitrary tool. Given every tool can
+  decide their own publishing mechanism, this is esential. -->
+  <Target Name="_GetPackageVersionInfo" Returns="@(_ProjectPackageVersion)">
     <ItemGroup>
-      <_ProjectPathWithVersion Include="$(MSBuildProjectFullPath)">
+      <_ProjectPackageVersion Include="$(MSBuildProjectFullPath)">
         <PackageVersion>$(Version)</PackageVersion>
-      </_ProjectPathWithVersion>
+      </_ProjectPackageVersion>
     </ItemGroup>
   </Target>
 
+  <!-- This is meant to be an extension point that hooks into ComputeFilesToPublish of any tool
+  so that it can be called from outside the project and get a list of the files that will get
+  bundled when PublishSingleFile=true. This is used to generate single-file tools signed in a single pass.
+
+  This uses the private ItemGroup _FilesToBundle that gets populated in the target chain:
+      ComputeFilesToPublish -> GenerateSingleFileBundle -> _ComputeFilesToBundle.
+  There was no extensibility point to get this, but the single file team confirmed this
+  would be the cleanest way currently and that it allows to easily consume the extension point when added. -->
   <Target Name="CollectBundleFilesToSign"
           DependsOnTargets="ComputeFilesToPublish"
           AfterTargets="ComputeFilesToPublish"
@@ -17,7 +27,6 @@
     <ItemGroup>
       <FilesInBundleToSign Include="@(_FilesToBundle)" Condition="'%(_FilesToBundle.FileName)%(_FilesToBundle.Extension)' != '$(PublishedSingleFileName)'"/>
     </ItemGroup>
-  
     <Message Importance="Low" Text="@(FilesInBundleToSign)"/>
   </Target>
 
