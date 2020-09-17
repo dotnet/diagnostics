@@ -38,7 +38,7 @@
       <ItemsToPushToBlobFeed Include="@(_BundledTools)">
         <IsShipping>true</IsShipping>
         <PublishFlatContainer>true</PublishFlatContainer>
-        <RelativeBlobPath>diagnostics/bundledtools/$(_PackageVersion)/%(_BundledTools.RID)/%(Filename)%(Extension)</RelativeBlobPath>
+        <RelativeBlobPath>diagnostics/bundledtools/%(_BundledTools.RID)/$(_PackageVersion)/%(Filename)%(Extension)</RelativeBlobPath>
       </ItemsToPushToBlobFeed>
     </ItemGroup>
 
