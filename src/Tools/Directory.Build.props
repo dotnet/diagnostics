@@ -13,7 +13,6 @@
         <SelfContained>false</SelfContained>
         <PublishDir>$(ArtifactsDir)bundledtools\$(Configuration)\$(RuntimeIdentifier)\</PublishDir>
         <PublishSingleFile>true</PublishSingleFile>
-        <AssemblyName>$(MSBuildProjectName)_$(RuntimeIdentifier)</AssemblyName>
         <PublishTrimmed>$(SelfContained)</PublishTrimmed>
       </PropertyGroup>
     </When>
