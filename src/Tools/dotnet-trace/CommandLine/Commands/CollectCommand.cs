@@ -330,7 +330,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 alias: "--duration",
                 description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.")
             {
-                Argument = new Argument<TimeSpan>(name: "duration-timespan", getDefaultValue: default)
+                Argument = new Argument<TimeSpan>(name: "duration-timespan", getDefaultValue: () => default)
             };
         
         private static Option CLREventsOption() => 
