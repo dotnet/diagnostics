@@ -22,7 +22,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration.KeyPerFile" Version="$(MicrosoftExtensionsConfigurationKeyPerFileVersion)" />
-    <PackageReference Include="System.CommandLine.Experimental" Version="$(SystemCommandLineExperimentalVersion)" />
+    <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
   </ItemGroup>
 
   <ItemGroup>

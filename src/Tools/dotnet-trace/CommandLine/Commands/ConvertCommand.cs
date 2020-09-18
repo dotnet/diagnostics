@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             };
 
         private static Argument InputFileArgument() =>
-            new Argument<FileInfo>(name: "input-filename", defaultValue: new FileInfo(CollectCommandHandler.DefaultTraceName))
+            new Argument<FileInfo>(name: "input-filename", getDefaultValue: () => new FileInfo(CollectCommandHandler.DefaultTraceName))
             {
                 Description = $"Input trace file to be converted. Defaults to '{CollectCommandHandler.DefaultTraceName}'."
             }.ExistingOnly();

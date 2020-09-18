@@ -6,11 +6,10 @@ using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Utils;
 using System;
 using System.CommandLine;
+using System.CommandLine.IO;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {

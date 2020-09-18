@@ -100,7 +100,7 @@ HRESULT STDMETHODCALLTYPE
 DataTarget::GetPointerSize(
     /* [out] */ ULONG32 *size)
 {
-#if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
+#if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64) || defined(SOS_TARGET_MIPS64)
     *size = 8;
 #elif defined(SOS_TARGET_ARM) || defined(SOS_TARGET_X86)
     *size = 4;
@@ -261,6 +261,9 @@ DataTarget::GetThreadContext(
 
     // Ok, do it!
     hr = g_ExtAdvanced->GetThreadContext((LPVOID) context, contextSize);
+
+    // GetThreadContext clears ContextFlags
+    ((CONTEXT*)context)->ContextFlags = contextFlags;
 
     // This is cleanup; failure here doesn't mean GetThreadContext should fail
     // (that's determined by hr).

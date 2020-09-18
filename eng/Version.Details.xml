@@ -12,19 +12,31 @@
       <Uri>https://github.com/dotnet/symstore</Uri>
       <Sha>ccfa77ef0d395362d70a84404c24c8f30e81f039</Sha>
     </Dependency>
+    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="2.0.146402">
+      <Uri>https://github.com/Microsoft/clrmd</Uri>
+      <Sha>232a21f5474ae34eb91f15a52e0e329fa3e8247f</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="2.0.146402">
+      <Uri>https://github.com/Microsoft/clrmd</Uri>
+      <Sha>232a21f5474ae34eb91f15a52e0e329fa3e8247f</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="5.0.100-rc.2.20465.34">
+      <Uri>https://github.com/dotnet/installer</Uri>
+      <Sha>7e7de71fc48ef905b9137a8fd3f3d80a8d0e95b3</Sha>
+    </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
     <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="5.0.0-beta.20427.5">
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>f2b7fe854a0b1f78c04dfc065164d6d61040f5b8</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.NETCore.App" Version="5.0.0-rc.1.20452.14">
+    <Dependency Name="Microsoft.NETCore.App" Version="5.0.0-rc.2.20465.7">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>d2e8221c4d18df2f01010eb3867f989fe9cfc7b3</Sha>
+      <Sha>e24e67a8dd52a20e5aa07b934ce7790c96808b1b</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-rc.1.20451.17">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-rc.2.20466.1">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>ecdcc752d4639061c2c49727ee77a1039bbbca22</Sha>
+      <Sha>70bc346d25f1e089d1df4dcdcf2368acf3bb4471</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>

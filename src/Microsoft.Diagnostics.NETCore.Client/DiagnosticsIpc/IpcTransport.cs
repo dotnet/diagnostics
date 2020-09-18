@@ -20,15 +20,30 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// Connects to the underlying IPC transport and opens a read/write-able Stream
         /// </summary>
         /// <param name="timeout">The amount of time to block attempting to connect</param>
-        /// <returns>A Stream for writing and reading data to and from the target .NET process</returns>
+        /// <returns>A stream used for writing and reading data to and from the target .NET process</returns>
         public abstract Stream Connect(TimeSpan timeout);
+
+        /// <summary>
+        /// Connects to the underlying IPC transport and opens a read/write-able Stream
+        /// </summary>
+        /// <param name="token">The token to monitor for cancellation requests.</param>
+        /// <returns>
+        /// A task that completes with a stream used for writing and reading data to and from the target .NET process.
+        /// </returns>
+        public abstract Task<Stream> ConnectAsync(CancellationToken token);
+
+        /// <summary>
+        /// Wait for an available diagnostic endpoint to the runtime instance.
+        /// </summary>
+        /// <param name="timeout">The amount of time to wait before cancelling the wait for the connection.</param>
+        public abstract void WaitForConnection(TimeSpan timeout);
 
         /// <summary>
         /// Wait for an available diagnostic endpoint to the runtime instance.
         /// </summary>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <returns>
-        /// A task the completes when a diagnostic endpoint to the runtime instance becomes available.
+        /// A task that completes when a diagnostic endpoint to the runtime instance becomes available.
         /// </returns>
         public abstract Task WaitForConnectionAsync(CancellationToken token);
     }
@@ -54,9 +69,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return _server.Connect(_runtimeId, timeout);
         }
 
-        public override async Task WaitForConnectionAsync(CancellationToken token)
+        public override Task<Stream> ConnectAsync(CancellationToken token)
         {
-            await _server.WaitForConnectionAsync(_runtimeId, token).ConfigureAwait(false);
+            return _server.ConnectAsync(_runtimeId, token);
+        }
+
+        public override void WaitForConnection(TimeSpan timeout)
+        {
+            _server.WaitForConnection(_runtimeId, timeout);
+        }
+
+        public override Task WaitForConnectionAsync(CancellationToken token)
+        {
+            return _server.WaitForConnectionAsync(_runtimeId, token);
         }
 
         public override bool Equals(object obj)
@@ -115,12 +140,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        public override async Task WaitForConnectionAsync(CancellationToken token)
-        {
-            using var _ = await ConnectStreamAsync(token).ConfigureAwait(false);
-        }
-
-        async Task<Stream> ConnectStreamAsync(CancellationToken token)
+        public override async Task<Stream> ConnectAsync(CancellationToken token)
         {
             string address = GetDefaultAddress();
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -140,6 +160,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 await socket.ConnectAsync(Path.Combine(IpcRootPath, address), token).ConfigureAwait(false);
                 return new ExposedSocketNetworkStream(socket, ownsSocket: true);
             }
+        }
+
+        public override void WaitForConnection(TimeSpan timeout)
+        {
+            using var _ = Connect(timeout);
+        }
+
+        public override async Task WaitForConnectionAsync(CancellationToken token)
+        {
+            using var _ = await ConnectAsync(token).ConfigureAwait(false);
         }
 
         private string GetDefaultAddress()

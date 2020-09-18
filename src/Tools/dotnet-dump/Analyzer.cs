@@ -20,6 +20,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostic.Tools.Dump.ExtensionCommands;
 using Microsoft.Diagnostics.Runtime.DataReaders.Implementation;
+using System.CommandLine.Help;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
