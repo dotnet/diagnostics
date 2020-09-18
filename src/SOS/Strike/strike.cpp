@@ -1475,11 +1475,25 @@ void PrintRuntimeTypeInfo(TADDR p_rtObject, const DacpObjectData & rtObjectData)
     }
 }
 
+void DisplayInvalidStructuresMessage()
+{
+    ExtOut("The garbage collector data structures are not in a valid state for traversal.\n");
+    ExtOut("It is either in the \"plan phase,\" where objects are being moved around, or\n");
+    ExtOut("we are at the initialization or shutdown of the gc heap. Commands related to \n");
+    ExtOut("displaying, finding or traversing objects as well as gc heap segments may not \n");
+    ExtOut("work properly. !dumpheap and !verifyheap may incorrectly complain of heap \n");
+    ExtOut("consistency errors.\n");
+}
+
 HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
 {
     if (!sos::IsObject(taObj, true))
     {
         ExtOut("<Note: this object has an invalid CLASS field>\n");
+        if (!GetGcStructuresValid())
+        {
+            DisplayInvalidStructuresMessage();
+        }
     }
 
     DacpObjectData objData;
@@ -2641,7 +2655,11 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
     DacpObjectData objData;
     if ((Status=objData.Request(g_sos, taObj)) != S_OK)
     {
-        ExtOut("Invalid object\n");
+        ExtOut("Invalid exception object: %016llx\n", taObj);
+        if (!GetGcStructuresValid())
+        {
+            DisplayInvalidStructuresMessage();
+        }
         return Status;
     }
 
@@ -3457,16 +3475,6 @@ void GCPrintGenerationInfo(DacpGcHeapDetails &heap);
 void GCPrintSegmentInfo(DacpGcHeapDetails &heap, DWORD_PTR &total_size);
 
 #endif // FEATURE_PAL
-
-void DisplayInvalidStructuresMessage()
-{
-    ExtOut("The garbage collector data structures are not in a valid state for traversal.\n");
-    ExtOut("It is either in the \"plan phase,\" where objects are being moved around, or\n");
-    ExtOut("we are at the initialization or shutdown of the gc heap. Commands related to \n");
-    ExtOut("displaying, finding or traversing objects as well as gc heap segments may not \n");
-    ExtOut("work properly. !dumpheap and !verifyheap may incorrectly complain of heap \n");
-    ExtOut("consistency errors.\n");
-}
 
 /**********************************************************************\
 * Routine Description:                                                 *

@@ -9,7 +9,7 @@
 
 <Configuration>
   <RepoRootDir>../../../../..</RepoRootDir>
-  <DotNetRoot>$(RepoRootDir)/.dotnet</DotNetRoot>
+  <DotNetRoot>$(RepoRootDir)/.dotnet-test</DotNetRoot>
 
   <Import ConfigFile="Debugger.Tests.Common.txt" />
   <Import ConfigFile="$(DotNetRoot)/Debugger.Tests.Versions.txt" />
@@ -29,7 +29,8 @@
   <TestWebApp3 Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp3>
 
   <!-- Build the debuggee for this framework version but run it on latest -->
-  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">netcoreapp3.1</BuildProjectFrameworkLatest>
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net5.0</BuildProjectFrameworkLatest>
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">net5.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.1</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '2.1')">netcoreapp2.1</BuildProjectFrameworkLatest>
 
@@ -111,15 +112,15 @@
   <Options>
     <Option Condition="$(OS) == Linux">
       <SOSPath>$(InstallDir)/libsosplugin.so</SOSPath>
-      <DotNetDumpHost>$(DotNetRoot)/dotnet</DotNetDumpHost>
-      <DotNetDumpPath>$(RootBinDir)/bin/dotnet-dump/$(TargetConfiguration)/netcoreapp2.1/publish/dotnet-dump.dll</DotNetDumpPath>
-      <DebuggeeDumpOutputRootDir>$(DumpDir)/$(TestProduct)/$(RuntimeFrameworkVersion)/$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>
-      <DebuggeeDumpInputRootDir>$(DebuggeeDumpOutputRootDir)</DebuggeeDumpInputRootDir>
     </Option>
     <Option Condition="$(OS) == OSX">
       <SOSPath>$(InstallDir)/libsosplugin.dylib</SOSPath>
-      <!-- Dump testing is disabled on macOS. gdb can't run processes because it needs to be code signed and lldb on macOS's "process save-core" is too slow -->
     </Option>
   </Options>
+
+  <DotNetDumpHost>$(DotNetRoot)/dotnet</DotNetDumpHost>
+  <DotNetDumpPath>$(RootBinDir)/bin/dotnet-dump/$(TargetConfiguration)/netcoreapp2.1/publish/dotnet-dump.dll</DotNetDumpPath>
+  <DebuggeeDumpOutputRootDir>$(DumpDir)/$(TestProduct)/$(RuntimeFrameworkVersion)/$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>
+  <DebuggeeDumpInputRootDir>$(DebuggeeDumpOutputRootDir)</DebuggeeDumpInputRootDir>
 
 </Configuration>

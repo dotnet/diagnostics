@@ -218,6 +218,7 @@ public class SOSRunner : IDisposable
                 // Get the full debuggee launch command line (includes the host if required)
                 string exePath = debuggeeConfig.BinaryExePath;
                 var arguments = new StringBuilder();
+
                 if (!string.IsNullOrWhiteSpace(config.HostExe))
                 {
                     exePath = config.HostExe;
@@ -248,15 +249,12 @@ public class SOSRunner : IDisposable
 
                 // Create the debuggee process runner
                 ProcessRunner processRunner = new ProcessRunner(exePath, ReplaceVariables(variables, arguments.ToString())).
+                    WithEnvironmentVariable("COMPlus_DbgEnableElfDumpOnMacOS", "1").
                     WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
                     WithTimeout(TimeSpan.FromMinutes(5));
 
                 if (dumpGeneration == DumpGenerator.CreateDump)
                 {
-                    if (OS.Kind == OSKind.OSX)
-                    {
-                        throw new SkipTestException("Createdump doesn't exists on MacOS");
-                    }
                     // Run the debuggee with the createdump environment variables set to generate a coredump on unhandled exception
                     processRunner.
                         WithEnvironmentVariable("COMPlus_DbgEnableMiniDump", "1").
@@ -307,7 +305,7 @@ public class SOSRunner : IDisposable
                         // Start dotnet-dump collect
                         var dotnetDumpArguments = new StringBuilder();
                         dotnetDumpArguments.Append(config.DotNetDumpPath());
-                        dotnetDumpArguments.AppendFormat(" collect --process-id {0} --output %DUMP_NAME%", processRunner.ProcessId);
+                        dotnetDumpArguments.AppendFormat(" collect --diag --process-id {0} --output %DUMP_NAME%", processRunner.ProcessId);
 
                         ProcessRunner dotnetDumpRunner = new ProcessRunner(config.DotNetDumpHost(), ReplaceVariables(variables, dotnetDumpArguments.ToString())).
                             WithLog(new TestRunner.TestLogger(dotnetDumpOutputHelper)).
@@ -415,7 +413,7 @@ public class SOSRunner : IDisposable
             string debuggerPath = GetNativeDebuggerPath(debugger, config);
             if (string.IsNullOrWhiteSpace(debuggerPath) || !File.Exists(debuggerPath))
             {
-                throw new FileNotFoundException($"Native debugger path not set or does not exist: {debuggerPath}");
+                throw new FileNotFoundException($"Native debugger ({debugger}) path not set or does not exist: {debuggerPath}");
             }
 
             // Get the debugger arguments and commands to run initially
