@@ -39,6 +39,7 @@
         <IsShipping>true</IsShipping>
         <PublishFlatContainer>true</PublishFlatContainer>
         <RelativeBlobPath>diagnostics/bundledtools/%(_BundledTools.RID)/$(_PackageVersion)/%(Filename)%(Extension)</RelativeBlobPath>
+        <ManifestArtifactData>Category=OTHER</ManifestArtifactData>
       </ItemsToPushToBlobFeed>
     </ItemGroup>
 
