@@ -147,6 +147,8 @@ public class SOS
         await RunTest("Overflow.script", information: new SOSRunner.TestInformation {
             TestConfiguration = config,
             DebuggeeName = "Overflow",
+            // Generating the logging for overflow test causes so much output from createdump that it hangs/timesout the test run
+            DumpDiagnostics = false,
             DumpGenerator = config.StackOverflowCreatesDump ? SOSRunner.DumpGenerator.CreateDump : SOSRunner.DumpGenerator.NativeDebugger
         });
     }

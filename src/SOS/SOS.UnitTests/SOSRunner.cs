@@ -88,6 +88,8 @@ public class SOSRunner : IDisposable
 
         public bool UsePipeSync { get; set; } = false;
 
+        public bool DumpDiagnostics { get; set; } = true;
+
         public bool IsValid()
         {
             return TestConfiguration != null && OutputHelper != null && DebuggeeName != null;
@@ -258,8 +260,12 @@ public class SOSRunner : IDisposable
                     // Run the debuggee with the createdump environment variables set to generate a coredump on unhandled exception
                     processRunner.
                         WithEnvironmentVariable("COMPlus_DbgEnableMiniDump", "1").
-                        WithEnvironmentVariable("COMPlus_CreateDumpDiagnostics", "1").
                         WithEnvironmentVariable("COMPlus_DbgMiniDumpName", ReplaceVariables(variables, "%DUMP_NAME%"));
+
+                    if (information.DumpDiagnostics)
+                    {
+                        processRunner.WithEnvironmentVariable("COMPlus_CreateDumpDiagnostics", "1");
+                    }
 
                     // TODO: temporary hack to disable using createdump for triage type until the failures can be fixed
                     DumpType dumpType = information.DumpType;
@@ -305,8 +311,11 @@ public class SOSRunner : IDisposable
                         // Start dotnet-dump collect
                         var dotnetDumpArguments = new StringBuilder();
                         dotnetDumpArguments.Append(config.DotNetDumpPath());
-                        dotnetDumpArguments.AppendFormat(" collect --diag --process-id {0} --output %DUMP_NAME%", processRunner.ProcessId);
-
+                        dotnetDumpArguments.AppendFormat(" collect --process-id {0} --output %DUMP_NAME%", processRunner.ProcessId);
+                        if (information.DumpDiagnostics)
+                        {
+                            dotnetDumpArguments.Append(" --diag");
+                        }
                         ProcessRunner dotnetDumpRunner = new ProcessRunner(config.DotNetDumpHost(), ReplaceVariables(variables, dotnetDumpArguments.ToString())).
                             WithLog(new TestRunner.TestLogger(dotnetDumpOutputHelper)).
                             WithTimeout(TimeSpan.FromMinutes(5)).
