@@ -1,7 +1,7 @@
 <Project>
   <ItemGroup Condition="'$(SignFilesToBundle)' != 'true'">
-    <ItemsToSign Include="$(ArtifactsPackagesDir)**\*.zip"/>
-    <ItemsToSign Include="$(ArtifactsDir)bundledtools\**\*.exe" />
+    <ItemsToSign Include="$(ArtifactsPackagesDir)**/*.zip"/>
+    <ItemsToSign Include="$(ArtifactsDir)bundledtools/**/*.zip" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(SignFilesToBundle)' == 'true'">
@@ -9,7 +9,7 @@
   </ItemGroup>
 
   <Import Project="$(SignatureManifest)"
-      Condition="'$(SignFilesToBundle)' == 'true'" />
+          Condition="'$(SignFilesToBundle)' == 'true'" />
 
   <ItemGroup>
     <FileSignInfo Include="ParallelStacks.Runtime.dll" CertificateName="3PartySHA2" />
