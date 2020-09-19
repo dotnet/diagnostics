@@ -117,10 +117,6 @@ namespace Microsoft.Diagnostics.Repl
             {
                 if (baseAttribute is CommandAttribute commandAttribute && IsValidPlatform(commandAttribute))
                 {
-                    if (command != null)
-                    {
-                        rootBuilder.AddCommand(command);
-                    }
                     command = new Command(commandAttribute.Name, commandAttribute.Help);
                     var properties = new List<(PropertyInfo, Option)>();
                     var arguments = new List<(PropertyInfo, Argument)>();
@@ -168,6 +164,7 @@ namespace Microsoft.Diagnostics.Repl
                     var handler = new Handler(this, commandAttribute.AliasExpansion, arguments, properties, type);
                     _commandHandlers.Add(command.Name, handler);
                     command.Handler = handler;
+                    rootBuilder.AddCommand(command);
                 }
 
                 if (baseAttribute is CommandAliasAttribute commandAliasAttribute && IsValidPlatform(commandAliasAttribute))
@@ -178,11 +175,6 @@ namespace Microsoft.Diagnostics.Repl
                     }
                     command.AddAlias(commandAliasAttribute.Name);
                 }
-            }
-
-            if (command != null)
-            {
-                rootBuilder.AddCommand(command);
             }
         }
 
