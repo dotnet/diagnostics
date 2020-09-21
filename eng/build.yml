@@ -169,7 +169,10 @@ jobs:
 
     - ${{ if eq(parameters.osGroup, 'MacOS_cross') }}:
       - script: /bin/bash -c "sudo xcode-select -s /Applications/Xcode_12_beta.app/Contents/Developer"
-      - script: $(Build.SourcesDirectory)/eng/cibuild.sh
+      - script: $(Build.SourcesDirectory)/eng/build.sh
+          --restore
+          --ci
+          --stripsymbols
           --configuration $(_BuildConfig)
           --architecture $(_BuildArch)
           --prepareMachine
