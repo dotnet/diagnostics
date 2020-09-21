@@ -163,11 +163,10 @@ stages:
         osGroup: MacOS_cross
         strategy:
           matrix:
-            ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              Build_Release:
-                _BuildConfig: Release
-                _BuildArch: arm64
-                _PublishArtifacts: bin/OSX.arm64.Release
+            Build_Release:
+              _BuildConfig: Release
+              _BuildArch: arm64
+              _PublishArtifacts: bin/OSX.arm64.Release
             ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
               Build_Debug:
                 _BuildConfig: Debug

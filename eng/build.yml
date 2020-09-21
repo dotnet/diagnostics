@@ -61,6 +61,7 @@ jobs:
       # Public OSX Xcode 12 Build Pool
       ${{ if and(eq(parameters.osGroup, 'MacOS_cross'), ne(variables['System.TeamProject'], 'public')) }}:
         name: Hosted Mac Internal
+        vmImage: macOS-10.15
 
       # Official Build OSX Xcode 12 Pool
       ${{ if and(eq(parameters.osGroup, 'MacOS_cross'), eq(variables['System.TeamProject'], 'public')) }}:
@@ -167,8 +168,7 @@ jobs:
         condition: succeeded()
 
     - ${{ if eq(parameters.osGroup, 'MacOS_cross') }}:
-      - ${{ if eq(variables['System.TeamProject'], 'public') }}:
-        - script: /bin/bash -c "sudo xcode-select -s /Applications/Xcode_12.app/Contents/Developer"
+      - script: /bin/bash -c "sudo xcode-select -s /Applications/Xcode_12_beta.app/Contents/Developer"
       - script: $(Build.SourcesDirectory)/eng/cibuild.sh
           --configuration $(_BuildConfig)
           --architecture $(_BuildArch)
