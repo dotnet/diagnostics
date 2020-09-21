@@ -88,7 +88,7 @@ public class SOSRunner : IDisposable
 
         public bool UsePipeSync { get; set; } = false;
 
-        public bool DumpDiagnostics { get; set; } = true;
+        public bool DumpDiagnostics { get; set; } = false;
 
         public bool IsValid()
         {
