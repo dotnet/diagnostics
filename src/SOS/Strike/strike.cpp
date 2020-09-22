@@ -10011,6 +10011,7 @@ DECLARE_API(DumpLog)
     }
 
     CheckBreakingRuntimeChange();
+    LoadRuntimeSymbols();
 
     const char* fileName = "StressLog.txt";
     CLRDATA_ADDRESS StressLogAddress = NULL;

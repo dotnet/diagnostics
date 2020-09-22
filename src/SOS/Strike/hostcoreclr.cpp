@@ -733,7 +733,7 @@ void InitializeSymbolStoreFromSymPath()
                         nullptr,                // symbolDirectoryPath
                         symbolPath))            // windowsSymbolPath
                     {
-                        ExtErr("Windows symbol path parsing FAILED\n");
+                        ExtErr("Windows symbol path parsing FAILED %s\n", symbolPath.GetPtr());
                         return;
                     }
                     g_symbolStoreInitialized = true;

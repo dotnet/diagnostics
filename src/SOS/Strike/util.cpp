@@ -97,6 +97,8 @@ void __cdecl operator delete[](void* pObj) throw()
 DWORD_PTR GetValueFromExpression(___in __in_z const char *const instr)
 {
     _ASSERTE(g_pRuntime != nullptr);
+    LoadRuntimeSymbols();
+
     std::string symbol;
     symbol.append(GetRuntimeModuleName());
     symbol.append("!");
@@ -4002,6 +4004,39 @@ HRESULT LoadClrDebugDll(void)
         return hr;
     }
     return S_OK;
+}
+
+/// <summary>
+/// Loads the runtime module symbols for the commands like dumplog that 
+/// lookup runtime symbols. This is done on-demand because it takes a 
+/// long time under windbg/cdb and not needed for most commands.
+/// </summary>
+void LoadRuntimeSymbols()
+{
+    _ASSERTE(g_pRuntime != nullptr);
+#ifndef FEATURE_PAL
+    ULONG64 moduleAddress = g_pRuntime->GetModuleAddress();
+
+    DEBUG_MODULE_PARAMETERS params;
+    HRESULT hr = g_ExtSymbols->GetModuleParameters(1, &moduleAddress, 0, &params);
+    if (SUCCEEDED(hr))
+    {
+        if (params.SymbolType == SymDeferred)
+        {
+            PCSTR runtimeDllName = ::GetRuntimeDllName();
+            std::string reloadCommand;
+            reloadCommand.append("/f ");
+            reloadCommand.append(runtimeDllName);
+            g_ExtSymbols->Reload(reloadCommand.c_str());
+            g_ExtSymbols->GetModuleParameters(1, &moduleAddress, 0, &params);
+
+            if (params.SymbolType != SymPdb && params.SymbolType != SymDia)
+            {
+                ExtOut("Symbols for %s not loaded. Some SOS commands may not work.\n", runtimeDllName);
+            }
+        }
+    }
+#endif
 }
 
 typedef enum

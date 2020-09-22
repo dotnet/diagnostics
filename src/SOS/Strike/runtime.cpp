@@ -139,21 +139,6 @@ HRESULT Runtime::CreateInstance(RuntimeConfiguration configuration, Runtime **pp
             if (SUCCEEDED(hr))
             {
                 moduleSize = params.Size;
-
-                if (params.SymbolType == SymDeferred)
-                {
-                    PCSTR runtimeDllName = ::GetRuntimeDllName(configuration);
-                    std::string reloadCommand;
-                    reloadCommand.append("/f ");
-                    reloadCommand.append(runtimeDllName);
-                    g_ExtSymbols->Reload(reloadCommand.c_str());
-                    g_ExtSymbols->GetModuleParameters(1, &moduleAddress, 0, &params);
-
-                    if (params.SymbolType != SymPdb && params.SymbolType != SymDia)
-                    {
-                        ExtOut("Symbols for %s not loaded. Some SOS commands may not work.\n", runtimeDllName);
-                    }
-                }
             }
 #endif
         }
