@@ -1011,23 +1011,24 @@ namespace SOS
             uint* ids,
             uint* sysIds)
         {
+            int number = _threadService.EnumerateThreads().Count();
+            if (start >= number || start + count > number)
+            {
+                return HResult.E_INVALIDARG;
+            }
             int index = 0;
             foreach (ThreadInfo threadInfo in _threadService.EnumerateThreads())
             {
-                uint id = (uint)threadInfo.ThreadIndex;
-                if (index >= count) {
-                    break;
-                }
-                if (id >= start)
+                if (index >= start && index < start + count)
                 {
                     if (ids != null) {
-                        ids[index] = id;
+                        ids[index] = (uint)threadInfo.ThreadIndex;
                     }
                     if (sysIds != null) {
                         sysIds[index] = threadInfo.ThreadId;
                     }
-                    index++;
                 }
+                index++;
             }
             return HResult.S_OK;
         }
