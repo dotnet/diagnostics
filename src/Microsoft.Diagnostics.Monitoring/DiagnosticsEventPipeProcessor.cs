@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.Monitoring
         private readonly PipeMode _mode;
         private readonly int _metricIntervalSeconds;
         private readonly LogLevel _logsLevel;
-        private readonly Action<string> _processInfoCallback;
+        private readonly Func<string, Task> _processInfoCallback;
 
         public DiagnosticsEventPipeProcessor(
             PipeMode mode,
@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.Monitoring
             IEnumerable<IMetricsLogger> metricLoggers = null, // PipeMode = Metrics
             int metricIntervalSeconds = 10,                   // PipeMode = Metrics
             MemoryGraph gcGraph = null,                       // PipeMode = GCDump
-            Action<string> processInfoCallback = null         // PipeMode = ProcessInfo
+            Func<string, Task> processInfoCallback = null     // PipeMode = ProcessInfo
             )
         {
             _metricLoggers = metricLoggers ?? Enumerable.Empty<IMetricsLogger>();
@@ -472,9 +472,10 @@ namespace Microsoft.Diagnostics.Monitoring
 
         private async Task HandleProcessInfo(EventPipeEventSource source, Func<Task> stopFunc, CancellationToken token)
         {
+            string commandLine = null;
             Action<TraceEvent, Action> processInfoHandler = (TraceEvent traceEvent, Action taskComplete) =>
             {
-                _processInfoCallback?.Invoke((string)traceEvent.PayloadByName("CommandLine"));
+                commandLine = (string)traceEvent.PayloadByName("CommandLine");
                 taskComplete();
             };
 
@@ -500,6 +501,9 @@ namespace Microsoft.Diagnostics.Monitoring
 
             // Wait for the ProcessInfo event to be processed
             await processInfoTaskSource.Task;
+
+            // Notify of command line information
+            await _processInfoCallback(commandLine);
         }
 
         public async ValueTask DisposeAsync()

@@ -317,7 +317,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 {
                     await using var processor = new DiagnosticsEventPipeProcessor(
                         PipeMode.ProcessInfo,
-                        processInfoCallback: cmdLine => { commandLine = cmdLine; });
+                        processInfoCallback: cmdLine => { commandLine = cmdLine; return Task.CompletedTask; });
 
                     try
                     {
@@ -336,12 +336,26 @@ namespace Microsoft.Diagnostics.Monitoring
                 if (!string.IsNullOrEmpty(commandLine))
                 {
                     // Get the process name from the command line
-                    bool isWindows = ProcessOperatingSystemWindowsValue.Equals(endpointInfo.OperatingSystem, StringComparison.OrdinalIgnoreCase);
-                    string processPath = CommandLineHelper.ExtractExecutablePath(commandLine, isWindows);
+                    bool isWindowsProcess = false;
+                    if (string.IsNullOrEmpty(endpointInfo.OperatingSystem))
+                    {
+                        // If operating system is null, the process is likely .NET Core 3.1 (which doesn't have the GetProcessInfo command).
+                        // Since the underlying diagnostic communication channel used by the .NET runtime requires that the diagnostic process
+                        // must be running on the same type of operating system as the target process (e.g. dotnet-monitor must be running on Windows
+                        // if the target process is running on Windows), then checking the local operating system should be a sufficient heuristic
+                        // to determine the operating system of the target process.
+                        isWindowsProcess = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+                    }
+                    else
+                    {
+                        isWindowsProcess = ProcessOperatingSystemWindowsValue.Equals(endpointInfo.OperatingSystem, StringComparison.OrdinalIgnoreCase);
+                    }
+
+                    string processPath = CommandLineHelper.ExtractExecutablePath(commandLine, isWindowsProcess);
                     if (!string.IsNullOrEmpty(processPath))
                     {
                         processName = Path.GetFileName(processPath);
-                        if (isWindows)
+                        if (isWindowsProcess)
                         {
                             // Remove the extension on Windows to match the behavior of Process.ProcessName
                             processName = Path.GetFileNameWithoutExtension(processName);
