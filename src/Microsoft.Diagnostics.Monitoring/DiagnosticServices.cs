@@ -19,6 +19,14 @@ namespace Microsoft.Diagnostics.Monitoring
 {
     public sealed class DiagnosticServices : IDiagnosticServices
     {
+        // String returned for a process field when its value could not be retrieved. This is the same
+        // value that is returned by the runtime when it could not determine the value for each of those fields.
+        private const string ProcessFieldUnknownValue = "unknown";
+
+        // The value of the operating system field of the ProcessInfo result when the target process is running
+        // on a Windows operating system.
+        private const string ProcessOperatingSystemWindowsValue = "windows";
+
         // A Docker container's entrypoint process ID is 1
         private static readonly ProcessFilter DockerEntrypointProcessFilter = new ProcessFilter(1);
 
@@ -41,7 +49,7 @@ namespace Microsoft.Diagnostics.Monitoring
         {
             try
             {
-                using CancellationTokenSource extendedInfoCancellation = new CancellationTokenSource();
+                using CancellationTokenSource extendedInfoCancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
                 IList<Task<ProcessInfo>> processInfoTasks = new List<Task<ProcessInfo>>();
                 foreach (IEndpointInfo endpointInfo in await _endpointInfoSource.GetEndpointInfoAsync(token))
                 {
@@ -328,7 +336,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 if (!string.IsNullOrEmpty(commandLine))
                 {
                     // Get the process name from the command line
-                    bool isWindows = "windows".Equals(endpointInfo.OperatingSystem, StringComparison.OrdinalIgnoreCase);
+                    bool isWindows = ProcessOperatingSystemWindowsValue.Equals(endpointInfo.OperatingSystem, StringComparison.OrdinalIgnoreCase);
                     string processPath = CommandLineHelper.ExtractExecutablePath(commandLine, isWindows);
                     if (!string.IsNullOrEmpty(processPath))
                     {
@@ -349,10 +357,10 @@ namespace Microsoft.Diagnostics.Monitoring
                     client,
                     endpointInfo.RuntimeInstanceCookie,
                     endpointInfo.ProcessId,
-                    processName ?? "unknown",
-                    commandLine ?? "unknown",
-                    endpointInfo.OperatingSystem ?? "unknown",
-                    endpointInfo.ProcessArchitecture ?? "unknown");
+                    processName ?? ProcessFieldUnknownValue,
+                    commandLine ?? ProcessFieldUnknownValue,
+                    endpointInfo.OperatingSystem ?? ProcessFieldUnknownValue,
+                    endpointInfo.ProcessArchitecture ?? ProcessFieldUnknownValue);
             }
 
             public DiagnosticsClient Client { get; }
