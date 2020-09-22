@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework Condition="'$(BundleTools)' == 'true'">netcoreapp3.1</TargetFramework>
+    <TargetFramework Condition="'$(BundleTools)' != 'true'">netcoreapp2.1</TargetFramework>
     <RootNamespace>Microsoft.Diagnostics.Tools.Trace</RootNamespace>
     <ToolCommandName>dotnet-trace</ToolCommandName>
     <Description>.NET Core Performance Trace Tool</Description>
@@ -12,7 +13,7 @@
   <ItemGroup>
     <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
     <PackageReference Include="System.CommandLine.Rendering" Version="$(SystemCommandLineRenderingVersion)" />
-    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" GeneratePathProperty="true" />
   </ItemGroup>
 
   <ItemGroup>
