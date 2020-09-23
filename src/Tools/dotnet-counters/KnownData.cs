@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "0xffffffff", // Keywords
                 "5", // Level 
                 new[] { // Counters
-                    new CounterProfile{ Name="cpu-usage", Description="Amount of time the process has utilized the CPU (ms)", SupportedVersions=new[] { net30, net31, net50 } },
+                    new CounterProfile{ Name="cpu-usage", Description="Percentage of time the process has utilized the CPU (%)", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="working-set", Description="Amount of working set used by the process (MB)", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="gc-heap-size", Description="Total heap size reported by the GC (MB)", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="gen-0-gc-count", Description="Number of Gen 0 GCs / min", SupportedVersions=new[] { net30, net31, net50 } },
