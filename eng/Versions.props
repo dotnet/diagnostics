@@ -17,7 +17,7 @@
     <!-- Latest shared runtime version updated by darc -->
     <MicrosoftNETCoreAppVersion>5.0.0-rc.2.20471.13</MicrosoftNETCoreAppVersion>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefVersion>5.0.0-rc.2.20472.15</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefVersion>5.0.0-rc.2.20473.12</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
     <MicrosoftDotnetSdkInternalVersion>5.0.100-rc.2.20472.10</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
