@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.Monitoring
         private readonly PipeMode _mode;
         private readonly int _metricIntervalSeconds;
         private readonly LogLevel _logsLevel;
-        private readonly Action<string> _processInfoCallback;
+        private readonly Func<string, Task> _processInfoCallback;
 
         public DiagnosticsEventPipeProcessor(
             PipeMode mode,
@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.Monitoring
             IEnumerable<IMetricsLogger> metricLoggers = null, // PipeMode = Metrics
             int metricIntervalSeconds = 10,                   // PipeMode = Metrics
             MemoryGraph gcGraph = null,                       // PipeMode = GCDump
-            Action<string> processInfoCallback = null         // PipeMode = ProcessInfo
+            Func<string, Task> processInfoCallback = null     // PipeMode = ProcessInfo
             )
         {
             _metricLoggers = metricLoggers ?? Enumerable.Empty<IMetricsLogger>();
@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.Monitoring
                     if (_mode == PipeMode.ProcessInfo)
                     {
                         // ProcessInfo
-                        HandleProcessInfo(source, stopFunc, token);
+                        handleEventsTask = HandleProcessInfo(source, stopFunc, token);
                     }
 
                     source.Process();
@@ -470,17 +470,40 @@ namespace Microsoft.Diagnostics.Monitoring
             _gcGraph.AllowReading();
         }
 
-        private void HandleProcessInfo(EventPipeEventSource source, Func<Task> stopFunc, CancellationToken token)
+        private async Task HandleProcessInfo(EventPipeEventSource source, Func<Task> stopFunc, CancellationToken token)
         {
-            source.Dynamic.AddCallbackForProviderEvent(MonitoringSourceConfiguration.EventPipeProviderName, "ProcessInfo", traceEvent =>
+            string commandLine = null;
+            Action<TraceEvent, Action> processInfoHandler = (TraceEvent traceEvent, Action taskComplete) =>
             {
-                _processInfoCallback?.Invoke((string)traceEvent.PayloadByName("CommandLine"));
-            });
-
-            source.Dynamic.All += traceEvent =>
-            {
-                stopFunc();
+                commandLine = (string)traceEvent.PayloadByName("CommandLine");
+                taskComplete();
             };
+
+            // Completed when the ProcessInfo event of the Microsoft-DotNETCore-EventPipe event provider is handled
+            using var processInfoTaskSource = new EventTaskSource<Action<TraceEvent>>(
+                taskComplete => traceEvent => processInfoHandler(traceEvent, taskComplete),
+                handler => source.Dynamic.AddCallbackForProviderEvent(MonitoringSourceConfiguration.EventPipeProviderName, "ProcessInfo", handler),
+                handler => source.Dynamic.RemoveCallback(handler),
+                token);
+
+            // Completed when any trace event is handled
+            using var anyEventTaskSource = new EventTaskSource<Action<TraceEvent>>(
+                taskComplete => traceEvent => taskComplete(),
+                handler => source.Dynamic.All += handler,
+                handler => source.Dynamic.All -= handler,
+                token);
+
+            // Wait for any trace event to be processed
+            await anyEventTaskSource.Task;
+
+            // Stop the event pipe session
+            await stopFunc();
+
+            // Wait for the ProcessInfo event to be processed
+            await processInfoTaskSource.Task;
+
+            // Notify of command line information
+            await _processInfoCallback(commandLine);
         }
 
         public async ValueTask DisposeAsync()
