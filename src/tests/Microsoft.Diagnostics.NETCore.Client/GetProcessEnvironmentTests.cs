@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             // as the attribute says, this test requires 5.0-rc1 or newer.  This has been tested locally on
             // an rc1 build and passes.  It is equivalent to the dotnet/runtime version of this test.
-            TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(targetFramework: "net5.0"), output);
+            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(targetFramework: "net5.0"), output);
             string testKey = "FOO";
             string testVal = "BAR";
             runner.AddEnvVar(testKey, testVal);
