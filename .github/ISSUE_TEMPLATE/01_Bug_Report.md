@@ -25,6 +25,8 @@ assignees: ''
 * What is the architecture (x64, x86, ARM, ARM64)?
 * Do you know whether it is specific to that configuration?
 * Are you running in any particular type of environment? (e.g. Containers, a cloud scenario, app you are trying to target is a different user)
+* Is it a self-contained published application?
+* What's the output of `dotnet info`
   -->
 
 ### Regression?
@@ -40,3 +42,5 @@ assignees: ''
 * If you have an idea where the problem might lie, let us know that here. Please include any pointers to code, relevant changes, or related issues you know of.
 * Do you know of any workarounds?
   -->
+
+<!-- Thanks for taking the time to report this! -->
