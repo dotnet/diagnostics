@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 var dumpPath = "./myDump.dmp";
-                TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
+                using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
                 runner.Start(3000);
                 DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
 
@@ -65,7 +65,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             var heapDumpPath = "./myDump-heap.dmp";
             var triageDumpPath = "./myDump-triage.dmp";
             var fullDumpPath = "./myDump-full.dmp";
-            TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
+            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
             runner.Start(3000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
 

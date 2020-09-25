@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void BasicEventPipeSessionTest()
         {
-            TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
+            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
             runner.Start(3000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
             using (var session = client.StartEventPipeSession(new List<EventPipeProvider>()
@@ -81,8 +81,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     catch (Exception e)
                     {
                         // This exception can happen if the target process exits while EventPipeEventSource is in the middle of reading from the pipe.
-                        Console.WriteLine("Error encountered while processing events");
-                        Console.WriteLine(e.ToString());
+                        output.WriteLine("Error encountered while processing events");
+                        output.WriteLine(e.ToString());
                     }
                     finally
                     {
@@ -119,7 +119,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void StartEventPipeSessionWithSingleProviderTest()
         {
-            TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
+            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
             runner.Start(3000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
             using (var session = client.StartEventPipeSession(new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational)))
