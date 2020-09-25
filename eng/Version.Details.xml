@@ -20,9 +20,9 @@
       <Uri>https://github.com/Microsoft/clrmd</Uri>
       <Sha>232a21f5474ae34eb91f15a52e0e329fa3e8247f</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="5.0.100-rc.2.20468.21">
+    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="5.0.100-rc.2.20472.10">
       <Uri>https://github.com/dotnet/installer</Uri>
-      <Sha>50b4b3f1e497e8c635869389cdb4cdbd2b3ce332</Sha>
+      <Sha>2e14d4e8b01e73d68536b9b17b9e3d6fc5b6fa5a</Sha>
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
@@ -30,13 +30,13 @@
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>b63ea25b8dc50bb3dfcef128d415254bd5ca4dc8</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.NETCore.App" Version="5.0.0-rc.2.20468.4">
+    <Dependency Name="Microsoft.NETCore.App" Version="5.0.0-rc.2.20473.9">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>906b4a81f72967bcf5749436a971a8277d37871a</Sha>
+      <Sha>467647115ce628504762ee3555d4439ae2da6582</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-rc.2.20468.17">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0-rc.2.20474.12">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>bf91253cd3a7797f417845b4f013e5a70fa8055d</Sha>
+      <Sha>284a2705832c664ef4006e7c569730e67806df25</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>

@@ -1,0 +1,46 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.targets"/>
+
+  <!-- This just returns the package version of a tool. It's used in the publishing
+  infrastructure to query the version of an arbitrary tool. Given every tool can
+  decide their own publishing mechanism, this is esential. -->
+  <Target Name="_GetPackageVersionInfo" Returns="@(_ProjectPackageVersion)">
+    <ItemGroup>
+      <_ProjectPackageVersion Include="$(MSBuildProjectFullPath)">
+        <PackageVersion>$(Version)</PackageVersion>
+      </_ProjectPackageVersion>
+    </ItemGroup>
+  </Target>
+
+  <!-- This is meant to be an extension point that hooks into ComputeFilesToPublish of any tool
+  so that it can be called from outside the project and get a list of the files that will get
+  bundled when PublishSingleFile=true. This is used to generate single-file tools signed in a single pass.
+
+  This uses the private ItemGroup _FilesToBundle that gets populated in the target chain:
+      ComputeFilesToPublish -> GenerateSingleFileBundle -> _ComputeFilesToBundle.
+  There was no extensibility point to get this, but the single file team confirmed this
+  would be the cleanest way currently and that it allows to easily consume the extension point when added. -->
+  <Target Name="CollectBundleFilesToSign"
+          DependsOnTargets="ComputeFilesToPublish"
+          AfterTargets="ComputeFilesToPublish"
+          Returns="@(FilesInBundleToSign)">
+    <ItemGroup>
+      <FilesInBundleToSign Include="@(_FilesToBundle)" Condition="'%(_FilesToBundle.FileName)%(_FilesToBundle.Extension)' != '$(PublishedSingleFileName)'"/>
+    </ItemGroup>
+    <Message Importance="Low" Text="@(FilesInBundleToSign)"/>
+  </Target>
+
+  <Target Name="PrepareForBundling"
+          BeforeTargets="GenerateSingleFileBundle"
+          AfterTargets="_ComputeFilesToBundle"
+          DependsOnTargets="RemoveDupeAssemblies" />
+
+  <!-- Workaround for https://github.com/microsoft/perfview/issues/1002 -->
+  <Target Name="RemoveDupeAssemblies">
+    <ItemGroup>
+      <_FilesToBundle Remove="$(PkgMicrosoft_Diagnostics_Tracing_TraceEvent)\lib\netstandard1.6\Dia2Lib.dll" />
+      <_FilesToBundle Remove="$(PkgMicrosoft_Diagnostics_Tracing_TraceEvent)\lib\netstandard1.6\OSExtensions.dll" />
+      <_FilesToBundle Remove="$(PkgMicrosoft_Diagnostics_Tracing_TraceEvent)\lib\netstandard1.6\TraceReloggerLib.dll" />
+    </ItemGroup>
+  </Target>
+</Project>

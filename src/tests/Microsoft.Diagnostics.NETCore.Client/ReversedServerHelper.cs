@@ -43,10 +43,5 @@ namespace Microsoft.Diagnostics.NETCore.Client
             runner.AddEnvVar("DOTNET_DiagnosticsMonitorAddress", transportName);
             runner.AddEnvVar("DOTNET_DiagnosticPorts", $"{transportName},nosuspend;");
         }
-
-        public static string ToTestString(this IpcEndpointInfo info)
-        {
-            return $"PID={info.ProcessId}, COOKIE={info.RuntimeInstanceCookie}";
-        }
     }
 }
