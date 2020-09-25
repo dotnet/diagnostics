@@ -41,15 +41,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             try
             {
-                // Make a good will attempt to make sure that the tracee process
-                // and it's process tree
+                // Make a good will attempt to end the tracee process
+                // and its process tree
                 testProcess?.Kill(entireProcessTree: true);
             }
             catch {}
 
             if(disposing)
             {
-                testProcess.Dispose();
+                testProcess?.Dispose();
             }
         }
 
