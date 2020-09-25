@@ -42,25 +42,25 @@ namespace Microsoft.Diagnostics.DebugServices
                 case Architecture.Amd64:
                     // Dumps generated with newer dbgeng have bigger context buffers and clrmd requires the context size to at least be that size.
                     _contextSize = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 0x700 : AMD64Context.Size;
-                    _contextFlags = AMD64Context.ContextControl | AMD64Context.ContextInteger | AMD64Context.ContextSegments;
+                    _contextFlags = AMD64Context.ContextControl | AMD64Context.ContextInteger | AMD64Context.ContextSegments | AMD64Context.ContextFloatingPoint;
                     contextType = typeof(AMD64Context);
                     break;
 
                 case Architecture.X86:
                     _contextSize = X86Context.Size;
-                    _contextFlags = X86Context.ContextControl | X86Context.ContextInteger | X86Context.ContextSegments;
+                    _contextFlags = X86Context.ContextControl | X86Context.ContextInteger | X86Context.ContextSegments | X86Context.ContextFloatingPoint;
                     contextType = typeof(X86Context);
                     break;
 
                 case Architecture.Arm64:
                     _contextSize = Arm64Context.Size;
-                    _contextFlags = Arm64Context.ContextControl | Arm64Context.ContextInteger;
+                    _contextFlags = Arm64Context.ContextControl | Arm64Context.ContextInteger | Arm64Context.ContextFloatingPoint;
                     contextType = typeof(Arm64Context);
                     break;
 
                 case Architecture.Arm:
                     _contextSize = ArmContext.Size;
-                    _contextFlags = ArmContext.ContextControl | ArmContext.ContextInteger;
+                    _contextFlags = ArmContext.ContextControl | ArmContext.ContextInteger | ArmContext.ContextFloatingPoint;
                     contextType = typeof(ArmContext);
                     break;
 
