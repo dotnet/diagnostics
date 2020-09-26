@@ -25,8 +25,9 @@
     <!-- Opt-in/out repo features -->
     <UsingToolXliff>false</UsingToolXliff>
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
-    <!-- Build tools -->
-    <MicrosoftNetCompilersVersion>3.0.0</MicrosoftNetCompilersVersion>
+    <!-- Use `dotnet test` to have the ability to collect dumps on hanging tests.  -->
+    <UseVSTestRunner>true</UseVSTestRunner>
+    <MicrosoftTestPlatformVersion>16.8.0-preview-20200921-01</MicrosoftTestPlatformVersion>
     <!-- CoreFX -->
     <SystemReflectionMetadataVersion>1.8.1</SystemReflectionMetadataVersion>
     <SystemCollectionsImmutableVersion>1.7.1</SystemCollectionsImmutableVersion>
