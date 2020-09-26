@@ -56,6 +56,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
             runner.Start(3000);
+            output.WriteLine($"[{DateTime.Now.ToString()}] TEST");
+            Thread.Sleep(10_000_000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
             runner.PrintStatus();
             output.WriteLine($"[{DateTime.Now.ToString()}] Trying to start an EventPipe session on process {runner.Pid}");
