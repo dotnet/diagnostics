@@ -12,6 +12,7 @@
 [Aa]rtifacts/
 [Dd]ebug/
 [Rr]elease/
+!eng/[Rr]elease
 [Bb]in/
 [Oo]bj/
 [Pp]ackages/
