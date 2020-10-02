@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void PublishedProcessTest1()
         {
-            TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
+            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
             runner.Start(3000);
             // On Windows, runner.Start will not wait for named pipe creation since for other tests, NamedPipeClientStream will
             // just wait until the named pipe is created.
@@ -82,7 +82,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task WaitForConnectionTest()
         {
-            TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
+            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
             runner.Start(3000);
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {

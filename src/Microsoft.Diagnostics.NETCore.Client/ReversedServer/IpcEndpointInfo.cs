@@ -10,7 +10,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// <summary>
     /// Represents a runtine instance connection to a reversed diagnostics server.
     /// </summary>
-    [DebuggerDisplay("PID={ProcessId}, Cookie={RuntimeInstanceCookie}")]
+    [DebuggerDisplay("{DebuggerDisplay,nq}")]
     internal struct IpcEndpointInfo
     {
         internal IpcEndpointInfo(IpcEndpoint endpoint, int processId, Guid runtimeInstanceCookie)
@@ -34,5 +34,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// The unique identifier of the runtime instance.
         /// </summary>
         public Guid RuntimeInstanceCookie { get; }
+
+        internal string DebuggerDisplay => FormattableString.Invariant($"PID={ProcessId}, Cookie={RuntimeInstanceCookie}");
     }
 }

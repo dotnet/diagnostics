@@ -322,7 +322,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             await VerifyWaitForConnection(info, useAsync, expectTimeout);
 
-            _outputHelper.WriteLine($"Connection: {info.ToTestString()}");
+            _outputHelper.WriteLine($"Connection: {info.DebuggerDisplay}");
         }
 
         private void ResumeRuntime(IpcEndpointInfo info)

@@ -17,6 +17,12 @@ namespace Microsoft.Diagnostics.Monitoring
         int ProcessId { get; }
 
         Guid RuntimeInstanceCookie { get; }
+
+        string CommandLine { get; }
+
+        string OperatingSystem { get; }
+
+        string ProcessArchitecture { get; }
     }
 
     public interface IEndpointInfoSource

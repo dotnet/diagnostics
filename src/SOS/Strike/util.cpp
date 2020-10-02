@@ -4054,8 +4054,10 @@ BOOL GetGcStructuresValid()
     // We don't want to use the cached HeapData, because this can change
     // each time the program runs for a while.
     DacpGcHeapData heapData;
-    if (heapData.Request(g_sos) != S_OK)
+    HRESULT hr;
+    if ((hr = heapData.Request(g_sos)) != S_OK)
     {
+        ExtOut("GetGcStructuresValid: request heap data FAILED %08x\n", hr);
         return FALSE;
     }
 

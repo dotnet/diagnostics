@@ -26,11 +26,8 @@
 // ByteSwapContext.
 //
 
-// For now, the only cross-platform CONTEXTs we support are x86/PAL and ARM/Win. Look in
-// rotor/pal/inc/rotor_pal.h for the original PAL definitions.
-
 //
-// **** NOTE: Keep these in sync with rotor/pal/inc/rotor_pal.h ****
+// **** NOTE: Keep these in sync with pal/inc/pal.h ****
 //
 
 // This odd define pattern is needed because in DBI we set _TARGET_ to match the host and

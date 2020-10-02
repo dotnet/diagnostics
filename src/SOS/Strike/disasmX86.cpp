@@ -392,8 +392,7 @@ void HandleCall(TADDR callee, Register *reg)
     // A jump thunk?
 
     CONTEXT ctx = {0};
-
-    ctx.ContextFlags = (CONTEXT_AMD64 | CONTEXT_CONTROL | CONTEXT_INTEGER);
+    ctx.ContextFlags = (DT_CONTEXT_AMD64 | DT_CONTEXT_CONTROL | DT_CONTEXT_INTEGER);
 
     for (unsigned ireg = 0; ireg < 16; ireg++)
     {
@@ -826,7 +825,7 @@ eTargetType GetFinalTarget(TADDR callee, TADDR* finalMDorIP)
     // A jump thunk?
 
     CONTEXT ctx = {0};
-    ctx.ContextFlags = (CONTEXT_AMD64 | CONTEXT_CONTROL | CONTEXT_INTEGER);
+    ctx.ContextFlags = (DT_CONTEXT_AMD64 | DT_CONTEXT_CONTROL | DT_CONTEXT_INTEGER);
     ctx.Rip = callee;
 
     CLRDATA_ADDRESS ip = 0, md = 0;
@@ -930,11 +929,10 @@ BOOL
 #ifndef FEATURE_PAL
 #ifdef SOS_TARGET_X86
     X86_CONTEXT * cxr = &pcxr->X86Context;
-    size_t contextSize = offsetof(CONTEXT, ExtendedRegisters);
 #elif defined(SOS_TARGET_AMD64)
     AMD64_CONTEXT * cxr = &pcxr->Amd64Context;
-    size_t contextSize = offsetof(CONTEXT, FltSave);
 #endif
+    size_t contextSize = GetContextSize();
 
     static TADDR IPRetAddr[4] = {0, 0, 0, 0};
 

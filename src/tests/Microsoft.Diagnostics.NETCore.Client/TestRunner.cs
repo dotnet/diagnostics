@@ -14,7 +14,7 @@ using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    public class TestRunner
+    public class TestRunner : IDisposable
     {
         private Process testProcess;
         private ProcessStartInfo startInfo;
@@ -29,6 +29,28 @@ namespace Microsoft.Diagnostics.NETCore.Client
             startInfo.RedirectStandardError = redirectError;
             startInfo.RedirectStandardInput = redirectInput;
             outputHelper = _outputHelper;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            try
+            {
+                // Make a good will attempt to end the tracee process
+                // and its process tree
+                testProcess?.Kill(entireProcessTree: true);
+            }
+            catch {}
+
+            if(disposing)
+            {
+                testProcess?.Dispose();
+            }
         }
 
         public void AddEnvVar(string key, string value)

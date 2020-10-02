@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -13,32 +12,19 @@ namespace Microsoft.Diagnostics.Monitoring
 {
     internal sealed class ClientEndpointInfoSource : IEndpointInfoSourceInternal
     {
-        public Task<IEnumerable<IEndpointInfo>> GetEndpointInfoAsync(CancellationToken token)
+        public async Task<IEnumerable<IEndpointInfo>> GetEndpointInfoAsync(CancellationToken token)
         {
-            List<IEndpointInfo> endpointInfos = new List<IEndpointInfo>();
+            var endpointInfoTasks = new List<Task<EndpointInfo>>();
+            // Run the EndpointInfo creation parallel. The call to FromProcessId sends
+            // a GetProcessInfo command to the runtime instance to get additional information.
             foreach (int pid in DiagnosticsClient.GetPublishedProcesses())
             {
-                // CONSIDER: Generate a "runtime instance identifier" based on the pipe name
-                // e.g. pid + disambiguator in GUID form.
-                endpointInfos.Add(new EndpointInfo(pid));
+                endpointInfoTasks.Add(Task.Run(() => EndpointInfo.FromProcessId(pid)));
             }
 
-            return Task.FromResult(endpointInfos.AsEnumerable());
-        }
+            await Task.WhenAll(endpointInfoTasks);
 
-        private class EndpointInfo : IEndpointInfo
-        {
-            public EndpointInfo(int processId)
-            {
-                Endpoint = new PidIpcEndpoint(processId);
-                ProcessId = processId;
-            }
-
-            public IpcEndpoint Endpoint { get; }
-
-            public int ProcessId { get; }
-
-            public Guid RuntimeInstanceCookie => Guid.Empty;
+            return endpointInfoTasks.Select(t => t.Result);
         }
     }
 }
