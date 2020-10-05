@@ -612,7 +612,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         }
 
         /// <summary>
-        /// The framework type/version used to build the debuggee like "netcoreapp2.0" or "netstandard1.0".
+        /// The framework type/version used to build the debuggee like "netcoreapp2.1" or "netstandard2.0".
         /// </summary>
         public string BuildProjectFramework
         {
@@ -740,6 +740,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             get
             {
                 return OS.Kind == OSKind.Linux && IsNETCore && RuntimeFrameworkVersionMajor >= 2 ||
+                       OS.Kind == OSKind.OSX && IsNETCore && RuntimeFrameworkVersionMajor >= 5 ||
                        OS.Kind == OSKind.Windows && IsNETCore && RuntimeFrameworkVersionMajor >= 5;
             }
         }

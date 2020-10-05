@@ -595,7 +595,7 @@ BOOL ARMMachine::GetExceptionContext (TADDR stack, TADDR PC, TADDR *cxrAddr, CRO
         return FALSE;
     *cxrAddr = stack;
 
-    if (FAILED (g_ExtData->ReadVirtual(TO_CDADDR(stack), cxr, sizeof(DT_CONTEXT), NULL))) {
+    if (FAILED (g_ExtData->ReadVirtual(TO_CDADDR(stack), cxr, GetContextSize(), NULL))) {
         return FALSE;
     }
 

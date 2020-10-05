@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework Condition="'$(BundleTools)' == 'true'">netcoreapp3.1</TargetFramework>
+    <TargetFramework Condition="'$(BundleTools)' != 'true'">netcoreapp2.1</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <RuntimeFrameworkVersion>2.1.0</RuntimeFrameworkVersion>
     <ToolCommandName>dotnet-dump</ToolCommandName>
     <RootNamespace>Microsoft.Diagnostic.Tools.Dump</RootNamespace>
     <Description>Diagnostic dump collect and analyze tool</Description>
@@ -20,6 +20,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
     <PackageReference Include="Microsoft.SymbolStore" Version="$(MicrosoftSymbolStoreVersion)" />
+    <PackageReference Include="ParallelStacks.Runtime" Version="$(ParallelStacksRuntimeVersion)" />
   </ItemGroup>
 
   <ItemGroup>

@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Tracing;
@@ -15,6 +16,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     public class ReversedServerTests
     {
+        // Generous timeout to allow APIs to respond on slower or more constrained machines
+        private static readonly TimeSpan DefaultPositiveVerificationTimeout = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan DefaultNegativeVerificationTimeout = TimeSpan.FromSeconds(2);
+
         private readonly ITestOutputHelper _outputHelper;
 
         public ReversedServerTests(ITestOutputHelper outputHelper)
@@ -31,18 +36,26 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await using var server = CreateReversedServer(out string transportName);
             // Intentionally did not start server
 
-            TimeSpan CancellationTimeout = TimeSpan.FromSeconds(1);
-            using CancellationTokenSource cancellation = new CancellationTokenSource(CancellationTimeout);
+            using CancellationTokenSource cancellation = new CancellationTokenSource(DefaultPositiveVerificationTimeout);
 
             // All API surface (except for Start) should throw InvalidOperationException
+            Assert.Throws<InvalidOperationException>(
+                () => server.Accept(DefaultPositiveVerificationTimeout));
+
             await Assert.ThrowsAsync<InvalidOperationException>(
                 () => server.AcceptAsync(cancellation.Token));
 
             Assert.Throws<InvalidOperationException>(
-                () => server.Connect(Guid.Empty, CancellationTimeout));
+                () => server.Connect(Guid.Empty, DefaultPositiveVerificationTimeout));
+
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => server.ConnectAsync(Guid.Empty, cancellation.Token));
 
             Assert.Throws<InvalidOperationException>(
                 () => server.RemoveConnection(Guid.Empty));
+
+            Assert.Throws<InvalidOperationException>(
+                () => server.WaitForConnection(Guid.Empty, DefaultPositiveVerificationTimeout));
 
             await Assert.ThrowsAsync<InvalidOperationException>(
                 () => server.WaitForConnectionAsync(Guid.Empty, cancellation.Token));
@@ -57,7 +70,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             var server = CreateReversedServer(out string transportName);
             server.Start();
 
-            using CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            using CancellationTokenSource cancellation = new CancellationTokenSource(DefaultPositiveVerificationTimeout);
             Task acceptTask = server.AcceptAsync(cancellation.Token);
 
             // Validate server surface throws after disposal
@@ -66,6 +79,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             // Pending tasks should throw ObjectDisposedException
             await Assert.ThrowsAnyAsync<ObjectDisposedException>(() => acceptTask);
             Assert.True(acceptTask.IsFaulted);
+
+            Assert.Throws<ObjectDisposedException>(
+                () => server.Accept(DefaultPositiveVerificationTimeout));
 
             // Calls after dispose should throw ObjectDisposedException
             await Assert.ThrowsAsync<ObjectDisposedException>(
@@ -85,7 +101,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await using var server = CreateReversedServer(out string transportName);
             server.Start();
 
-            using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            using var cancellationSource = new CancellationTokenSource(DefaultNegativeVerificationTimeout);
 
             _outputHelper.WriteLine("Waiting for connection from server.");
             Task acceptTask = server.AcceptAsync(cancellationSource.Token);
@@ -94,29 +110,54 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.True(acceptTask.IsCanceled);
         }
 
-        /// <summary>
-        /// Tests that invoking server methods with non-existing runtime identifier appropriately fail.
-        /// </summary>
         [Fact]
         public async Task ReversedServerNonExistingRuntimeIdentifierTest()
         {
+            await ReversedServerNonExistingRuntimeIdentifierTestCore(useAsync: false);
+        }
+
+        [Fact]
+        public async Task ReversedServerNonExistingRuntimeIdentifierTestAsync()
+        {
+            await ReversedServerNonExistingRuntimeIdentifierTestCore(useAsync: true);
+        }
+
+        /// <summary>
+        /// Tests that invoking server methods with non-existing runtime identifier appropriately fail.
+        /// </summary>
+        private async Task ReversedServerNonExistingRuntimeIdentifierTestCore(bool useAsync)
+        {
             await using var server = CreateReversedServer(out string transportName);
+
+            var shim = new ReversedDiagnosticsServerApiShim(server, useAsync);
+
             server.Start();
 
             Guid nonExistingRuntimeId = Guid.NewGuid();
 
-            using CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(1));
-
             _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.WaitForConnectionAsync)}");
-            await Assert.ThrowsAsync<TaskCanceledException>(
-                () => server.WaitForConnectionAsync(nonExistingRuntimeId, cancellation.Token));
+            await shim.WaitForConnection(nonExistingRuntimeId, DefaultNegativeVerificationTimeout, expectTimeout: true);
 
             _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.Connect)}");
-            Assert.Throws<TimeoutException>(
-                () => server.Connect(nonExistingRuntimeId, TimeSpan.FromSeconds(1)));
+            await shim.Connect(nonExistingRuntimeId, DefaultNegativeVerificationTimeout, expectTimeout: true);
 
-            _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.RemoveConnection)}");
-            Assert.False(server.RemoveConnection(nonExistingRuntimeId), "Removal of nonexisting connection should fail.");
+            _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.RemoveConnection)} with previously used identifier.");
+            Assert.True(server.RemoveConnection(nonExistingRuntimeId));
+
+            _outputHelper.WriteLine($"Testing {nameof(ReversedDiagnosticsServer.RemoveConnection)} with previously unused identifier.");
+            Assert.False(server.RemoveConnection(Guid.NewGuid()), "Removal of nonexisting connection should fail.");
+        }
+
+        [Fact]
+        public async Task ReversedServerSingleTargetMultipleUseClientTest()
+        {
+            await ReversedServerSingleTargetMultipleUseClientTestCore(useAsync: false);
+        }
+
+        [Fact]
+        public async Task ReversedServerSingleTargetMultipleUseClientTestAsync()
+        {
+            await ReversedServerSingleTargetMultipleUseClientTestCore(useAsync: true);
         }
 
         /// <summary>
@@ -128,8 +169,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// because of how the endpoint is updated with new stream information each
         /// time the target process reconnects to the server.
         /// </remarks>
-        [Fact(Skip = "Test fails in latest darc updates. See https://github.com/dotnet/diagnostics/issues/1482")]
-        public async Task ReversedServerSingleTargetMultipleUseClientTest()
+        private async Task ReversedServerSingleTargetMultipleUseClientTestCore(bool useAsync)
         {
             await using var server = CreateReversedServer(out string transportName);
             server.Start();
@@ -141,16 +181,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // Start client pointing to diagnostics server
                 runner = StartTracee(transportName);
 
-                info = await AcceptAsync(server);
+                info = await AcceptEndpointInfo(server, useAsync);
 
-                await VerifyEndpointInfo(runner, info);
+                await VerifyEndpointInfo(runner, info, useAsync);
 
                 // There should not be any new endpoint infos
-                await VerifyNoNewEndpointInfos(server);
+                await VerifyNoNewEndpointInfos(server, useAsync);
 
                 ResumeRuntime(info);
 
-                await VerifySingleSession(info);
+                await VerifySingleSession(info, useAsync);
             }
             finally
             {
@@ -162,19 +202,30 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await Task.Delay(TimeSpan.FromSeconds(1));
 
             // Process exited so the endpoint should not have a valid transport anymore.
-            await VerifyWaitForConnection(info, expectValid: false);
+            await VerifyWaitForConnection(info, useAsync, expectTimeout: true);
 
             Assert.True(server.RemoveConnection(info.RuntimeInstanceCookie), "Expected to be able to remove connection from server.");
 
             // There should not be any more endpoint infos
-            await VerifyNoNewEndpointInfos(server);
+            await VerifyNoNewEndpointInfos(server, useAsync);
+        }
+
+        [Fact]
+        public async Task ReversedServerSingleTargetExitsClientInviableTest()
+        {
+            await ReversedServerSingleTargetExitsClientInviableTestCore(useAsync: false);
+        }
+
+        [Fact]
+        public async Task ReversedServerSingleTargetExitsClientInviableTestAsync()
+        {
+            await ReversedServerSingleTargetExitsClientInviableTestCore(useAsync: true);
         }
 
         /// <summary>
         /// Tests that a DiagnosticsClient is not viable after target exists.
         /// </summary>
-        [Fact(Skip = "Test fails in latest darc updates. See https://github.com/dotnet/diagnostics/issues/1482")]
-        public async Task ReversedServerSingleTargetExitsClientInviableTest()
+        private async Task ReversedServerSingleTargetExitsClientInviableTestCore(bool useAsync)
         {
             await using var server = CreateReversedServer(out string transportName);
             server.Start();
@@ -187,16 +238,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 runner = StartTracee(transportName);
 
                 // Get client connection
-                info = await AcceptAsync(server);
+                info = await AcceptEndpointInfo(server, useAsync);
 
-                await VerifyEndpointInfo(runner, info);
+                await VerifyEndpointInfo(runner, info, useAsync);
 
                 // There should not be any new endpoint infos
-                await VerifyNoNewEndpointInfos(server);
+                await VerifyNoNewEndpointInfos(server, useAsync);
 
                 ResumeRuntime(info);
 
-                await VerifyWaitForConnection(info);
+                await VerifyWaitForConnection(info, useAsync);
             }
             finally
             {
@@ -208,12 +259,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await Task.Delay(TimeSpan.FromSeconds(1));
 
             // Process exited so the endpoint should not have a valid transport anymore.
-            await VerifyWaitForConnection(info, expectValid: false);
+            await VerifyWaitForConnection(info, useAsync, expectTimeout: true);
 
             Assert.True(server.RemoveConnection(info.RuntimeInstanceCookie), "Expected to be able to remove connection from server.");
 
             // There should not be any more endpoint infos
-            await VerifyNoNewEndpointInfos(server);
+            await VerifyNoNewEndpointInfos(server, useAsync);
         }
 
         private ReversedDiagnosticsServer CreateReversedServer(out string transportName)
@@ -223,12 +274,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return new ReversedDiagnosticsServer(transportName);
         }
 
-        private async Task<IpcEndpointInfo> AcceptAsync(ReversedDiagnosticsServer server)
+        private async Task<IpcEndpointInfo> AcceptEndpointInfo(ReversedDiagnosticsServer server, bool useAsync)
         {
-            using (var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
-            {
-                return await server.AcceptAsync(cancellationSource.Token);
-            }
+            var shim = new ReversedDiagnosticsServerApiShim(server, useAsync);
+
+            return await shim.Accept(DefaultPositiveVerificationTimeout);
         }
 
         private TestRunner StartTracee(string transportName)
@@ -237,37 +287,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return ReversedServerHelper.StartTracee(_outputHelper, transportName);
         }
 
-        private static EventPipeProvider CreateProvider(string name)
+        private async Task VerifyWaitForConnection(IpcEndpointInfo info, bool useAsync, bool expectTimeout = false)
         {
-            return new EventPipeProvider(name, EventLevel.Verbose, (long)EventKeywords.All);
-        }
+            var shim = new IpcEndpointApiShim(info.Endpoint, useAsync);
 
-        private async Task VerifyWaitForConnection(IpcEndpointInfo info, bool expectValid = true)
-        {
-            using var connectionCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(1));
-            if (expectValid)
-            {
-                await info.Endpoint.WaitForConnectionAsync(connectionCancellation.Token);
-            }
-            else
-            {
-                await Assert.ThrowsAsync<TaskCanceledException>(
-                    () => info.Endpoint.WaitForConnectionAsync(connectionCancellation.Token));
-            }
+            TimeSpan timeout = expectTimeout ? DefaultNegativeVerificationTimeout : DefaultPositiveVerificationTimeout;
+            await shim.WaitForConnection(timeout, expectTimeout);
         }
 
         /// <summary>
         /// Checks that the accepter does not provide a new endpoint info.
         /// </summary>
-        private async Task VerifyNoNewEndpointInfos(ReversedDiagnosticsServer server)
+        private async Task VerifyNoNewEndpointInfos(ReversedDiagnosticsServer server, bool useAsync)
         {
             _outputHelper.WriteLine("Verifying there are no more connections.");
 
-            using var cancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            var shim = new ReversedDiagnosticsServerApiShim(server, useAsync);
 
-            Task acceptTask = server.AcceptAsync(cancellationSource.Token);
-            await Assert.ThrowsAsync<TaskCanceledException>(() => acceptTask);
-            Assert.True(acceptTask.IsCanceled);
+            await shim.Accept(DefaultNegativeVerificationTimeout, expectTimeout: true);
 
             _outputHelper.WriteLine("Verified there are no more connections.");
         }
@@ -275,7 +312,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Verifies basic information on the endpoint info and that it matches the target process from the runner.
         /// </summary>
-        private async Task VerifyEndpointInfo(TestRunner runner, IpcEndpointInfo info, bool expectValid = true)
+        private async Task VerifyEndpointInfo(TestRunner runner, IpcEndpointInfo info, bool useAsync, bool expectTimeout = false)
         {
             _outputHelper.WriteLine($"Verifying connection information for process ID {runner.Pid}.");
             Assert.NotNull(runner);
@@ -283,9 +320,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.NotEqual(Guid.Empty, info.RuntimeInstanceCookie);
             Assert.NotNull(info.Endpoint);
 
-            await VerifyWaitForConnection(info, expectValid);
+            await VerifyWaitForConnection(info, useAsync, expectTimeout);
 
-            _outputHelper.WriteLine($"Connection: {info.ToTestString()}");
+            _outputHelper.WriteLine($"Connection: {info.DebuggerDisplay}");
         }
 
         private void ResumeRuntime(IpcEndpointInfo info)
@@ -308,9 +345,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Verifies that a client can handle multiple operations simultaneously.
         /// </summary>
-        private async Task VerifySingleSession(IpcEndpointInfo info)
+        private async Task VerifySingleSession(IpcEndpointInfo info, bool useAsync)
         {
-            await VerifyWaitForConnection(info);
+            await VerifyWaitForConnection(info, useAsync);
 
             var client = new DiagnosticsClient(info.Endpoint);
 
@@ -389,6 +426,171 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Waiting for session to stop.");
                 await stoppedProcessingTask;
             });
+        }
+
+        private class ReversedDiagnosticsServerApiShim
+        {
+            private ReversedDiagnosticsServer _server;
+            private readonly bool _useAsync;
+
+            public ReversedDiagnosticsServerApiShim(ReversedDiagnosticsServer server, bool useAsync)
+            {
+                _server = server;
+                _useAsync = useAsync;
+            }
+
+            public async Task<IpcEndpointInfo> Accept(TimeSpan timeout, bool expectTimeout = false)
+            {
+                if (_useAsync)
+                {
+                    using var cancellation = new CancellationTokenSource(timeout);
+                    if (expectTimeout)
+                    {
+                        await Assert.ThrowsAsync<TaskCanceledException>(() => _server.AcceptAsync(cancellation.Token));
+                        return default;
+                    }
+                    else
+                    {
+                        return await _server.AcceptAsync(cancellation.Token);
+                    }
+                }
+                else
+                {
+                    if (expectTimeout)
+                    {
+                        Assert.Throws<TimeoutException>(() => _server.Accept(timeout));
+                        return default;
+                    }
+                    else
+                    {
+                        return _server.Accept(timeout);
+                    }
+                }
+            }
+
+            public async Task<Stream> Connect(Guid runtimeInstanceCookie, TimeSpan timeout, bool expectTimeout = false)
+            {
+                if (_useAsync)
+                {
+                    using var cancellation = new CancellationTokenSource(timeout);
+                    if (expectTimeout)
+                    {
+                        await Assert.ThrowsAsync<TaskCanceledException>(() => _server.ConnectAsync(runtimeInstanceCookie, cancellation.Token));
+                        return null;
+                    }
+                    else
+                    {
+                        return await _server.ConnectAsync(runtimeInstanceCookie, cancellation.Token);
+                    }
+                }
+                else
+                {
+                    if (expectTimeout)
+                    {
+                        Assert.Throws<TimeoutException>(() => _server.Connect(runtimeInstanceCookie, timeout));
+                        return null;
+                    }
+                    else
+                    {
+                        return _server.Connect(runtimeInstanceCookie, timeout);
+                    }
+                }
+            }
+
+            public async Task WaitForConnection(Guid runtimeInstanceCookie, TimeSpan timeout, bool expectTimeout = false)
+            {
+                if (_useAsync)
+                {
+                    using var cancellation = new CancellationTokenSource(timeout);
+                    if (expectTimeout)
+                    {
+                        await Assert.ThrowsAsync<TaskCanceledException>(() => _server.WaitForConnectionAsync(runtimeInstanceCookie, cancellation.Token));
+                    }
+                    else
+                    {
+                        await _server.WaitForConnectionAsync(runtimeInstanceCookie, cancellation.Token);
+                    }
+                }
+                else
+                {
+                    if (expectTimeout)
+                    {
+                        Assert.Throws<TimeoutException>(() => _server.WaitForConnection(runtimeInstanceCookie, timeout));
+                    }
+                    else
+                    {
+                        _server.WaitForConnection(runtimeInstanceCookie, timeout);
+                    }
+                }
+            }
+        }
+
+        private class IpcEndpointApiShim
+        {
+            private IpcEndpoint _endpoint;
+            private readonly bool _useAsync;
+
+            public IpcEndpointApiShim(IpcEndpoint endpoint, bool useAsync)
+            {
+                _endpoint = endpoint;
+                _useAsync = useAsync;
+            }
+
+            public async Task<Stream> Connect(TimeSpan timeout, bool expectTimeout = false)
+            {
+                if (_useAsync)
+                {
+                    using var cancellation = new CancellationTokenSource(timeout);
+                    if (expectTimeout)
+                    {
+                        await Assert.ThrowsAsync<TaskCanceledException>(() => _endpoint.ConnectAsync(cancellation.Token));
+                        return null;
+                    }
+                    else
+                    {
+                        return await _endpoint.ConnectAsync(cancellation.Token);
+                    }
+                }
+                else
+                {
+                    if (expectTimeout)
+                    {
+                        Assert.Throws<TimeoutException>(() => _endpoint.Connect(timeout));
+                        return null;
+                    }
+                    else
+                    {
+                        return _endpoint.Connect(timeout);
+                    }
+                }
+            }
+
+            public async Task WaitForConnection(TimeSpan timeout, bool expectTimeout = false)
+            {
+                if (_useAsync)
+                {
+                    using var cancellation = new CancellationTokenSource(timeout);
+                    if (expectTimeout)
+                    {
+                        await Assert.ThrowsAsync<TaskCanceledException>(() => _endpoint.WaitForConnectionAsync(cancellation.Token));
+                    }
+                    else
+                    {
+                        await _endpoint.WaitForConnectionAsync(cancellation.Token);
+                    }
+                }
+                else
+                {
+                    if (expectTimeout)
+                    {
+                        Assert.Throws<TimeoutException>(() => _endpoint.WaitForConnection(timeout));
+                    }
+                    else
+                    {
+                        _endpoint.WaitForConnection(timeout);
+                    }
+                }
+            }
         }
     }
 }

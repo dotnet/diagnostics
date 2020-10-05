@@ -416,14 +416,9 @@ stages:
               condition: succeeded()
 
             # Create nuget packages, sign binaries and publish to blob feed
-            
-            - script: $(Build.SourcesDirectory)\eng\cipack.cmd
-                -configuration Release
-                -prepareMachine
-                -verbosity normal
-                $(_InternalBuildArgs)
-              displayName: Sign / Package
-              continueOnError: true
+            - script: $(Build.SourcesDirectory)\eng\ci-prepare-artifacts.cmd $(_InternalBuildArgs)
+              displayName: Package, Sign, and Publish
+              continueOnError: false
               condition: succeeded()
 
             # Publish package and log build artifacts
@@ -434,6 +429,15 @@ stages:
                 publishLocation: Container
                 pathtoPublish: '$(Build.SourcesDirectory)/artifacts/packages'
                 artifactName: Packages
+              continueOnError: true
+              condition: always()
+
+            - task: PublishBuildArtifacts@1
+              displayName: Publish Bundled Tools
+              inputs:
+                publishLocation: Container
+                pathtoPublish: '$(Build.SourcesDirectory)/artifacts/bundledtools'
+                artifactName: BundledTools
               continueOnError: true
               condition: always()
 

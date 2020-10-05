@@ -123,6 +123,14 @@ namespace SOS
             IntPtr buffer,
             IntPtr dataSize);
 
+        private delegate int GetICorDebugMetadataLocatorDelegate(
+            [MarshalAs(UnmanagedType.LPWStr)] string imagePath,
+            uint imageTimestamp,
+            uint imageSize,
+            uint pathBufferSize,
+            IntPtr pPathBufferSize,
+            IntPtr pPathBuffer);
+
         #endregion
 
         /// <summary>
@@ -143,6 +151,7 @@ namespace SOS
             public GetLocalVariableNameDelegate GetLocalVariableNameDelegate;
             public GetMetadataLocatorDelegate GetMetadataLocatorDelegate;
             public GetExpressionDelegate GetExpressionDelegate;
+            public GetICorDebugMetadataLocatorDelegate GetICorDebugMetadataLocatorDelegate;
         }
 
         static SOSNetCoreCallbacks s_callbacks = new SOSNetCoreCallbacks {
@@ -158,6 +167,7 @@ namespace SOS
             GetLocalVariableNameDelegate = SymbolReader.GetLocalVariableName,
             GetMetadataLocatorDelegate = MetadataHelper.GetMetadataLocator,
             GetExpressionDelegate = SOSHost.GetExpression,
+            GetICorDebugMetadataLocatorDelegate = MetadataHelper.GetICorDebugMetadataLocator
         };
 
         const string DesktopRuntimeModuleName = "clr";

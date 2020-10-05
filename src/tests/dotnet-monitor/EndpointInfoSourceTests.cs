@@ -15,6 +15,10 @@ namespace DotnetMonitor.UnitTests
 {
     public class EndpointInfoSourceTests
     {
+        // Generous timeout to allow APIs to respond on slower or more constrained machines
+        private static readonly TimeSpan DefaultPositiveVerificationTimeout = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan DefaultNegativeVerificationTimeout = TimeSpan.FromSeconds(2);
+
         private readonly ITestOutputHelper _outputHelper;
 
         public EndpointInfoSourceTests(ITestOutputHelper outputHelper)
@@ -32,8 +36,7 @@ namespace DotnetMonitor.UnitTests
             await using var source = CreateServerSource(out string transportName);
             // Intentionally do not call Start
 
-            TimeSpan CancellationTimeout = TimeSpan.FromSeconds(1);
-            using CancellationTokenSource cancellation = new CancellationTokenSource(CancellationTimeout);
+            using CancellationTokenSource cancellation = new CancellationTokenSource(DefaultNegativeVerificationTimeout);
 
             await Assert.ThrowsAsync<InvalidOperationException>(
                 () => source.GetEndpointInfoAsync(cancellation.Token));
@@ -71,8 +74,9 @@ namespace DotnetMonitor.UnitTests
             Assert.Throws<ObjectDisposedException>(
                 () => source.Start(1));
 
+            using var cancellation = new CancellationTokenSource(DefaultNegativeVerificationTimeout);
             await Assert.ThrowsAsync<ObjectDisposedException>(
-                () => source.GetEndpointInfoAsync(CancellationToken.None));
+                () => source.GetEndpointInfoAsync(cancellation.Token));
         }
 
         /// <summary>
@@ -97,7 +101,7 @@ namespace DotnetMonitor.UnitTests
         /// Tests that the server endpoint info source can properly enumerate endpoint infos when a single
         /// target connects to it and "disconnects" from it.
         /// </summary>
-        [Fact(Skip = "Test fails in latest darc updates. See https://github.com/dotnet/diagnostics/issues/1482")]
+        [Fact]
         public async Task ServerSourceAddRemoveSingleConnectionTest()
         {
             await using var source = CreateServerSource(out string transportName);
@@ -106,7 +110,7 @@ namespace DotnetMonitor.UnitTests
             var endpointInfos = await GetEndpointInfoAsync(source);
             Assert.Empty(endpointInfos);
 
-            Task newEndpointInfoTask = source.WaitForNewEndpointInfoAsync(TimeSpan.FromSeconds(5));
+            Task newEndpointInfoTask = source.WaitForNewEndpointInfoAsync(DefaultPositiveVerificationTimeout);
 
             await using (var execution1 = StartTraceeProcess("LoggerRemoteTest", transportName))
             {
@@ -117,6 +121,9 @@ namespace DotnetMonitor.UnitTests
                 endpointInfos = await GetEndpointInfoAsync(source);
 
                 var endpointInfo = Assert.Single(endpointInfos);
+                Assert.NotNull(endpointInfo.CommandLine);
+                Assert.NotNull(endpointInfo.OperatingSystem);
+                Assert.NotNull(endpointInfo.ProcessArchitecture);
                 VerifyConnection(execution1.TestRunner, endpointInfo);
 
                 _outputHelper.WriteLine("Stopping tracee.");
@@ -139,7 +146,7 @@ namespace DotnetMonitor.UnitTests
         private RemoteTestExecution StartTraceeProcess(string loggerCategory, string transportName = null)
         {
             _outputHelper.WriteLine("Starting tracee.");
-            string exePath = CommonHelper.GetTraceePath("EventPipeTracee", targetFramework: "net5.0");
+            string exePath = CommonHelper.GetTraceePathWithArgs("EventPipeTracee", targetFramework: "net5.0");
             return RemoteTestExecution.StartProcess(exePath + " " + loggerCategory, _outputHelper, transportName);
         }
 
@@ -165,7 +172,7 @@ namespace DotnetMonitor.UnitTests
         private sealed class TestServerEndpointInfoSource : ServerEndpointInfoSource
         {
             private readonly ITestOutputHelper _outputHelper;
-            private readonly List<TaskCompletionSource<IpcEndpointInfo>> _addedEndpointInfoSources = new List<TaskCompletionSource<IpcEndpointInfo>>();
+            private readonly List<TaskCompletionSource<EndpointInfo>> _addedEndpointInfoSources = new List<TaskCompletionSource<EndpointInfo>>();
 
             public TestServerEndpointInfoSource(string transportPath, ITestOutputHelper outputHelper)
                 : base(transportPath)
@@ -173,9 +180,9 @@ namespace DotnetMonitor.UnitTests
                 _outputHelper = outputHelper;
             }
 
-            public async Task<IpcEndpointInfo> WaitForNewEndpointInfoAsync(TimeSpan timeout)
+            public async Task<EndpointInfo> WaitForNewEndpointInfoAsync(TimeSpan timeout)
             {
-                TaskCompletionSource<IpcEndpointInfo> addedEndpointInfoSource = new TaskCompletionSource<IpcEndpointInfo>(TaskCreationOptions.RunContinuationsAsynchronously);
+                TaskCompletionSource<EndpointInfo> addedEndpointInfoSource = new TaskCompletionSource<EndpointInfo>(TaskCreationOptions.RunContinuationsAsynchronously);
                 using var timeoutCancellation = new CancellationTokenSource();
                 var token = timeoutCancellation.Token;
                 using var _ = token.Register(() => addedEndpointInfoSource.TrySetCanceled(token));
@@ -187,15 +194,15 @@ namespace DotnetMonitor.UnitTests
 
                 _outputHelper.WriteLine("Waiting for new endpoint info.");
                 timeoutCancellation.CancelAfter(timeout);
-                IpcEndpointInfo endpointInfo = await addedEndpointInfoSource.Task;
+                EndpointInfo endpointInfo = await addedEndpointInfoSource.Task;
                 _outputHelper.WriteLine("Notified of new endpoint info.");
 
                 return endpointInfo;
             }
 
-            internal override void OnAddedEndpointInfo(IpcEndpointInfo info)
+            internal override void OnAddedEndpointInfo(EndpointInfo info)
             {
-                _outputHelper.WriteLine($"Added endpoint info to collection: {info.ToTestString()}");
+                _outputHelper.WriteLine($"Added endpoint info to collection: {info.DebuggerDisplay}");
                 
                 lock (_addedEndpointInfoSources)
                 {
@@ -207,9 +214,9 @@ namespace DotnetMonitor.UnitTests
                 }
             }
 
-            internal override void OnRemovedEndpointInfo(IpcEndpointInfo info)
+            internal override void OnRemovedEndpointInfo(EndpointInfo info)
             {
-                _outputHelper.WriteLine($"Removed endpoint info from collection: {info.ToTestString()}");
+                _outputHelper.WriteLine($"Removed endpoint info from collection: {info.DebuggerDisplay}");
             }
         }
     }

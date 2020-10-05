@@ -331,22 +331,13 @@ DECLARE_API(IP2MD)
 // (MAX_STACK_FRAMES is also used by x86 to prevent infinite loops in _EFN_StackTrace)
 #define MAX_STACK_FRAMES 1000
 
-#if defined(_TARGET_WIN64_)
-#define DEBUG_STACK_CONTEXT AMD64_CONTEXT
-#elif defined(_TARGET_ARM_) // _TARGET_WIN64_
-#define DEBUG_STACK_CONTEXT ARM_CONTEXT
-#elif defined(_TARGET_X86_) // _TARGET_ARM_
-#define DEBUG_STACK_CONTEXT X86_CONTEXT
-#endif // _TARGET_X86_
-
-#ifdef DEBUG_STACK_CONTEXT
 // I use a global set of frames for stack walking on win64 because the debugger's
 // GetStackTrace function doesn't provide a way to find out the total size of a stackwalk,
 // and I'd like to have a reasonably big maximum without overflowing the stack by declaring
 // the buffer locally and I also want to get a managed trace in a low memory environment
 // (so no dynamic allocation if possible).
 DEBUG_STACK_FRAME g_Frames[MAX_STACK_FRAMES];
-DEBUG_STACK_CONTEXT g_FrameContexts[MAX_STACK_FRAMES];
+CROSS_PLATFORM_CONTEXT g_FrameContexts[MAX_STACK_FRAMES];
 
 static HRESULT
 GetContextStackTrace(ULONG osThreadId, PULONG pnumFrames)
@@ -385,8 +376,6 @@ GetContextStackTrace(ULONG osThreadId, PULONG pnumFrames)
     }
     return hr;
 }
-
-#endif // DEBUG_STACK_CONTEXT
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -1475,11 +1464,25 @@ void PrintRuntimeTypeInfo(TADDR p_rtObject, const DacpObjectData & rtObjectData)
     }
 }
 
+void DisplayInvalidStructuresMessage()
+{
+    ExtOut("The garbage collector data structures are not in a valid state for traversal.\n");
+    ExtOut("It is either in the \"plan phase,\" where objects are being moved around, or\n");
+    ExtOut("we are at the initialization or shutdown of the gc heap. Commands related to \n");
+    ExtOut("displaying, finding or traversing objects as well as gc heap segments may not \n");
+    ExtOut("work properly. !dumpheap and !verifyheap may incorrectly complain of heap \n");
+    ExtOut("consistency errors.\n");
+}
+
 HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
 {
     if (!sos::IsObject(taObj, true))
     {
         ExtOut("<Note: this object has an invalid CLASS field>\n");
+        if (!GetGcStructuresValid())
+        {
+            DisplayInvalidStructuresMessage();
+        }
     }
 
     DacpObjectData objData;
@@ -2641,7 +2644,11 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
     DacpObjectData objData;
     if ((Status=objData.Request(g_sos, taObj)) != S_OK)
     {
-        ExtOut("Invalid object\n");
+        ExtOut("Invalid exception object: %016llx\n", taObj);
+        if (!GetGcStructuresValid())
+        {
+            DisplayInvalidStructuresMessage();
+        }
         return Status;
     }
 
@@ -3457,16 +3464,6 @@ void GCPrintGenerationInfo(DacpGcHeapDetails &heap);
 void GCPrintSegmentInfo(DacpGcHeapDetails &heap, DWORD_PTR &total_size);
 
 #endif // FEATURE_PAL
-
-void DisplayInvalidStructuresMessage()
-{
-    ExtOut("The garbage collector data structures are not in a valid state for traversal.\n");
-    ExtOut("It is either in the \"plan phase,\" where objects are being moved around, or\n");
-    ExtOut("we are at the initialization or shutdown of the gc heap. Commands related to \n");
-    ExtOut("displaying, finding or traversing objects as well as gc heap segments may not \n");
-    ExtOut("work properly. !dumpheap and !verifyheap may incorrectly complain of heap \n");
-    ExtOut("consistency errors.\n");
-}
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -13438,7 +13435,7 @@ public:
             ArrayHolder<CROSS_PLATFORM_CONTEXT> context = new CROSS_PLATFORM_CONTEXT[1];
             ULONG32 cbContextActual;
             if ((Status = pStackWalk->GetContext(
-                DT_CONTEXT_FULL,
+                g_targetMachine->GetFullContextFlags(),
                 sizeof(CROSS_PLATFORM_CONTEXT),
                 &cbContextActual,
                 (BYTE *)context.GetPtr())) != S_OK)
@@ -13661,7 +13658,6 @@ public:
             return;
         }
 
-#ifdef DEBUG_STACK_CONTEXT
         PDEBUG_STACK_FRAME currentNativeFrame = NULL;
         ULONG numNativeFrames = 0;
         if (bFull)
@@ -13674,7 +13670,6 @@ public:
             }
             currentNativeFrame = &g_Frames[0];
         }
-#endif // DEBUG_STACK_CONTEXT
 
         unsigned int refCount = 0, errCount = 0;
         ArrayHolder<SOSStackRefData> pRefs = NULL;
@@ -13703,7 +13698,6 @@ public:
                 if (SUCCEEDED(frameDataResult) && FrameData.frameAddr)
                     sp = FrameData.frameAddr;
 
-#ifdef DEBUG_STACK_CONTEXT
                 while ((numNativeFrames > 0) && (currentNativeFrame->StackOffset <= sp))
                 {
                     if (currentNativeFrame->StackOffset != sp)
@@ -13713,7 +13707,6 @@ public:
                     currentNativeFrame++;
                     numNativeFrames--;
                 }
-#endif // DEBUG_STACK_CONTEXT
 
                 // Print the stack pointer.
                 out.WriteColumn(0, sp);
@@ -13797,19 +13790,19 @@ public:
             }
 #endif // FEATURE_PAL
         }
-#ifdef DEBUG_STACK_CONTEXT
+
         while (numNativeFrames > 0)
         {
             PrintNativeStackFrame(out, currentNativeFrame, bSuppressLines);
             currentNativeFrame++;
             numNativeFrames--;
         }
-#endif // DEBUG_STACK_CONTEXT
     }
+
     static HRESULT PrintManagedFrameContext(IXCLRDataStackWalk *pStackWalk)
     {
         CROSS_PLATFORM_CONTEXT context;
-        HRESULT hr = pStackWalk->GetContext(DT_CONTEXT_FULL, g_targetMachine->GetContextSize(), NULL, (BYTE*)&context);
+        HRESULT hr = pStackWalk->GetContext(g_targetMachine->GetFullContextFlags(), g_targetMachine->GetContextSize(), NULL, (BYTE*)&context);
         if (FAILED(hr))
         {
             ExtOut("GetFrameContext failed: %lx\n", hr);
@@ -13825,8 +13818,8 @@ public:
         if (IsDbgTargetAmd64())
         {
             foundPlatform = true;
-            String outputFormat3 = "    %3s=%016" PRIx64" %3s=%016" PRIx64" %3s=%016" PRIx64"\n";
-            String outputFormat2 = "    %3s=%016" PRIx64" %3s=%016" PRIx64"\n";
+            String outputFormat3 = "    %3s=%016llx %3s=%016llx %3s=%016llx\n";
+            String outputFormat2 = "    %3s=%016llx %3s=%016llx\n";
             ExtOut(outputFormat3, "rsp", context.Amd64Context.Rsp, "rbp", context.Amd64Context.Rbp, "rip", context.Amd64Context.Rip);
             ExtOut(outputFormat3, "rax", context.Amd64Context.Rax, "rbx", context.Amd64Context.Rbx, "rcx", context.Amd64Context.Rcx);
             ExtOut(outputFormat3, "rdx", context.Amd64Context.Rdx, "rsi", context.Amd64Context.Rsi, "rdi", context.Amd64Context.Rdi);
@@ -13872,11 +13865,11 @@ public:
             for (int i = 0; i < 29; ++i)
             {
                 if (i <10) ExtOut(" ");
-                ExtOut(" x%d=%016" PRIx64, i, X[i]);
+                ExtOut(" x%d=%016llx", i, X[i]);
                 if ((i % 3) == 2) ExtOut("\n   ");
             }
-            ExtOut("  fp=%016" PRIx64"\n", context.Arm64Context.Fp);
-            ExtOut("     lr=%016" PRIx64"  sp=%016" PRIx64"  pc=%016" PRIx64"\n", context.Arm64Context.Lr, context.Arm64Context.Sp, context.Arm64Context.Pc);
+            ExtOut("  fp=%016llx\n", context.Arm64Context.Fp);
+            ExtOut("     lr=%016llx  sp=%016llx  pc=%016llx\n", context.Arm64Context.Lr, context.Arm64Context.Sp, context.Arm64Context.Pc);
             ExtOut("           cpsr=%08x        fpcr=%08x        fpsr=%08x\n", context.Arm64Context.Cpsr, context.Arm64Context.Fpcr, context.Arm64Context.Fpsr);
         }
 #endif
@@ -13891,7 +13884,7 @@ public:
     static HRESULT GetFrameLocation(IXCLRDataStackWalk *pStackWalk, CLRDATA_ADDRESS *ip, CLRDATA_ADDRESS *sp)
     {
         CROSS_PLATFORM_CONTEXT context;
-        HRESULT hr = pStackWalk->GetContext(DT_CONTEXT_FULL, g_targetMachine->GetContextSize(), NULL, (BYTE *)&context);
+        HRESULT hr = pStackWalk->GetContext(g_targetMachine->GetFullContextFlags(), g_targetMachine->GetContextSize(), NULL, (BYTE *)&context);
         if (FAILED(hr))
         {
             ExtOut("GetFrameContext failed: %lx\n", hr);
@@ -15085,8 +15078,7 @@ Exit:
         }
 
         CROSS_PLATFORM_CONTEXT context;
-        if ((Status=pStackWalk->GetContext(DT_CONTEXT_FULL, g_targetMachine->GetContextSize(),
-                                           NULL, (BYTE *)&context))!=S_OK)
+        if ((Status=pStackWalk->GetContext(g_targetMachine->GetFullContextFlags(), g_targetMachine->GetContextSize(), NULL, (BYTE *)&context)) != S_OK)
         {
             goto Exit;
         }

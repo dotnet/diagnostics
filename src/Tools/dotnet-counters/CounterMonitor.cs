@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Microsoft.Internal.Common.Utils;
+using System.CommandLine.IO;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {

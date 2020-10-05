@@ -14,7 +14,7 @@ using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    public class TestRunner
+    public class TestRunner : IDisposable
     {
         private Process testProcess;
         private ProcessStartInfo startInfo;
@@ -31,6 +31,28 @@ namespace Microsoft.Diagnostics.NETCore.Client
             outputHelper = _outputHelper;
         }
 
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            try
+            {
+                // Make a good will attempt to end the tracee process
+                // and its process tree
+                testProcess?.Kill(entireProcessTree: true);
+            }
+            catch {}
+
+            if(disposing)
+            {
+                testProcess?.Dispose();
+            }
+        }
+
         public void AddEnvVar(string key, string value)
         {
             startInfo.EnvironmentVariables[key] = value;
@@ -43,7 +65,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public void Start(int timeoutInMS=15000)
         {
             if (outputHelper != null)
-                outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName);
+                outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName + " " + startInfo.Arguments);
 
             testProcess = new Process();
             testProcess.StartInfo = startInfo;

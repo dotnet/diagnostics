@@ -4,9 +4,11 @@
 
 using Microsoft.Internal.Common.Commands;
 using Microsoft.Tools.Common;
+using System;
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
+using System.CommandLine.Parsing;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -74,7 +76,7 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
                 description: @"The dump type determines the kinds of information that are collected from the process. There are several types: full - The largest dump containing all memory including the module images. heap - A large and relatively comprehensive dump containing module lists, thread lists, all stacks, exception information, handle information, and all memory except for mapped 
 images. mini - A small dump containing module lists, thread lists, exception information and all stacks. If not specified 'full' is the default.")
             {
-                Argument = new Argument<Dumper.DumpTypeOption>(name: "dump_type", defaultValue: Dumper.DumpTypeOption.Full)
+                Argument = new Argument<Dumper.DumpTypeOption>(name: "dump_type", getDefaultValue: () => Dumper.DumpTypeOption.Full)
             };
 
         private static Command AnalyzeCommand() =>
@@ -101,7 +103,7 @@ images. mini - A small dump containing module lists, thread lists, exception inf
                 aliases: new[] { "-c", "--command" }, 
                 description: "Run the command on start.") 
             {
-                Argument = new Argument<string[]>(name: "command", defaultValue: System.Array.Empty<string>()) { Arity = ArgumentArity.ZeroOrMore }
+                Argument = new Argument<string[]>(name: "command", getDefaultValue: () => Array.Empty<string>()) { Arity = ArgumentArity.ZeroOrMore }
             };
     }
 }

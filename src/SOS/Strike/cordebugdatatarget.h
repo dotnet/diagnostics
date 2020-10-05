@@ -144,16 +144,16 @@ public:
         ULONG32 contextSize,
         BYTE * context)
     {
+        HRESULT hr;
 #ifdef FEATURE_PAL
         if (g_ExtServices == NULL)
         {
             return E_UNEXPECTED;
         }
-        return g_ExtServices->GetThreadContextById(dwThreadOSID, contextFlags, contextSize, context);
+        hr = g_ExtServices->GetThreadContextById(dwThreadOSID, contextFlags, contextSize, context);
 #else
         ULONG ulThreadIDOrig;
         ULONG ulThreadIDRequested;
-        HRESULT hr;
 
         hr = g_ExtSystem->GetCurrentThreadId(&ulThreadIDOrig);
         if (FAILED(hr))
@@ -175,7 +175,7 @@ public:
 
         // Prepare context structure
         ZeroMemory(context, contextSize);
-        ((CONTEXT*) context)->ContextFlags = contextFlags;
+        g_targetMachine->SetContextFlags(context, contextFlags);
 
         // Ok, do it!
         hr = g_ExtAdvanced->GetThreadContext((LPVOID) context, contextSize);
@@ -183,9 +183,12 @@ public:
         // This is cleanup; failure here doesn't mean GetThreadContext should fail
         // (that's determined by hr).
         g_ExtSystem->SetCurrentThreadId(ulThreadIDOrig);
+#endif // FEATURE_PAL
+
+        // GetThreadContext clears ContextFlags or sets them incorrectly and DBI needs it set to know what registers to copy
+        g_targetMachine->SetContextFlags(context, contextFlags);
 
         return hr;
-#endif // FEATURE_PAL
     }
 
     //
@@ -230,7 +233,7 @@ public:
         /* [annotation][length_is][size_is][out] */ 
         _Out_writes_to_(cchPathBuffer, *pcchPathBuffer) WCHAR wszPathBuffer[])
     {
-        return E_NOTIMPL;
+        return ::GetICorDebugMetadataLocator(wszImagePath, dwImageTimeStamp, dwImageSize, cchPathBuffer, pcchPathBuffer, wszPathBuffer);
     }
 
     //

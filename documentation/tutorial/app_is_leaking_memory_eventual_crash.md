@@ -13,7 +13,7 @@ Next, lets run the webapi (dotnet run) and before hitting the above URL that wil
 > dotnet-counters monitor --refresh-interval 1 -p 4807
 > ```
 
-4807 is the process identifier which can be found using dotnet-trace list-processes. The refresh-interval is the number of seconds before refreshes. 
+4807 is the process identifier which can be found using dotnet-trace ps. The refresh-interval is the number of seconds before refreshes.
 
 The output should be similar to the below:
 
@@ -45,7 +45,7 @@ Most commonly when analyzing possible memory leaks, we need access to as much of
 > sudo ./dotnet-dump collect -p 4807
 > ```
 
-4807 is the process identifier which can be found using dotnet-trace list-processes. The result is a core dump located in the same folder. Please note that to generate core dumps, dotnet-dump requires sudo.  
+4807 is the process identifier which can be found using dotnet-trace ps. The result is a core dump located in the same folder. Please note that to generate core dumps, dotnet-dump requires sudo.
 
 
 ### Analyzing the core dump

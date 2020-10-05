@@ -13,5 +13,6 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
         public ulong StateAddress { get; set; }
         public string StateTypeName { get; set; }
         public string MethodName { get; set; }
+        public bool? IsShort { get; set; }
     }
 }
