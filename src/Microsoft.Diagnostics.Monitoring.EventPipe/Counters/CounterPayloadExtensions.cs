@@ -4,19 +4,19 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    public static class CounterPayloadExtensions
+    internal static class CounterPayloadExtensions
     {
         public static string GetDisplay(this ICounterPayload counterPayload)
         {
-            if (string.Equals(counterPayload.GetCounterType(), "Rate", StringComparison.OrdinalIgnoreCase))
+            if (counterPayload.CounterType == CounterType.Rate)
             {
-                return $"{counterPayload.GetDisplayName()} ({counterPayload.GetUnit()} / {counterPayload.GetInterval()} sec)";
+                return $"{counterPayload.DisplayName} ({counterPayload.Unit} / {counterPayload.Interval} sec)";
             }
-            if (!string.IsNullOrEmpty(counterPayload.GetUnit()))
+            if (!string.IsNullOrEmpty(counterPayload.Unit))
             {
-                return $"{counterPayload.GetDisplayName()} ({counterPayload.GetUnit()})";
+                return $"{counterPayload.DisplayName} ({counterPayload.Unit})";
             }
-            return $"{counterPayload.GetDisplayName()}";
+            return $"{counterPayload.DisplayName}";
         }
     }
 }

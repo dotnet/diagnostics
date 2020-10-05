@@ -12,7 +12,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Diagnostics.Monitoring.Contracts;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.Monitoring.RestServer.Models;
 using Microsoft.Diagnostics.Monitoring.RestServer.Validation;
@@ -125,28 +124,21 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 EventGCPipelineSettings settings = new EventGCPipelineSettings
                 {
                     Duration = Timeout.InfiniteTimeSpan,
-                    ProcessId = processInfo.ProcessId
                 };
-                EventGCPipeline pipeline = new EventGCPipeline(processInfo.Client, settings, graph);
-                
-                try
-                {
-                    await pipeline.RunAsync(HttpContext.RequestAborted);
-                    var dumper = new GCHeapDump(graph);
-                    dumper.CreationTool = "dotnet-monitor";
+                await using var pipeline = new EventGCDumpPipeline(processInfo.Client, settings, graph);
+                await pipeline.RunAsync(HttpContext.RequestAborted);
+                var dumper = new GCHeapDump(graph);
+                dumper.CreationTool = "dotnet-monitor";
 
-                    var stream = new MemoryStream();
-                    var serializer = new FastSerialization.Serializer(stream, dumper, leaveOpen: true);
-                    serializer.Close();
+                //We can't use FastSerialization directly against the Response stream because
+                //the response stream size is not known.
+                var stream = new MemoryStream();
+                var serializer = new FastSerialization.Serializer(stream, dumper, leaveOpen: true);
+                serializer.Close();
 
-                    stream.Position = 0;
+                stream.Position = 0;
 
-                    return File(stream, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.ProcessId}.gcdump"));
-                }
-                finally
-                {
-                    await pipeline.DisposeAsync();
-                }
+                return File(stream, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.ProcessId}.gcdump"));
             });
         }
 
@@ -252,7 +244,6 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     {
                         Duration = duration,
                         LogLevel = level,
-                        ProcessId = processInfo.ProcessId
                     };
                     await using EventLogsPipeline pipeline = new EventLogsPipeline(processInfo.Client, settings, loggerFactory);
                     await pipeline.RunAsync(token);
@@ -272,14 +263,15 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             {
                 Func<Stream, CancellationToken, Task> streamAvailable = async (Stream eventStream, CancellationToken token) =>
                 {
-                    await eventStream.CopyToAsync(outputStream, 0x1000, token);
+                    //Buffer size matches FileStreamResult
+                    //CONSIDER Should we allow client to change the buffer size?
+                    await eventStream.CopyToAsync(outputStream, 0x10000, token);
                 };
 
                 await using EventTracePipeline pipeProcessor = new EventTracePipeline(processInfo.Client, new EventTracePipelineSettings
                 {
                     Configuration = configuration,
                     Duration = duration,
-                    ProcessId = processInfo.ProcessId
                 }, streamAvailable);
 
                 await pipeProcessor.RunAsync(token);

@@ -9,7 +9,7 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    public class EventLogsPipelineSettings : EventSourcePipelineSettings
+    internal class EventLogsPipelineSettings : EventSourcePipelineSettings
     {
         public LogLevel LogLevel { get; set; }
     }

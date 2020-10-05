@@ -10,11 +10,11 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    public interface IMetricsLogger : IDisposable
+    internal interface ICountersLogger
     {
         //TODO Consider making these async.
 
-        void LogMetrics(ICounterPayload metric);
+        void Log(ICounterPayload counter);
         void PipelineStarted();
         void PipelineStopped();
     }

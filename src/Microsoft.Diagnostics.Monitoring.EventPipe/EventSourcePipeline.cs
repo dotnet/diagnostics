@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using Graphs;
-using Microsoft.Diagnostics.Monitoring.Contracts;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
 using System;
@@ -15,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    public abstract class EventSourcePipeline<T> : Pipeline where T : EventSourcePipelineSettings
+    internal abstract class EventSourcePipeline<T> : Pipeline where T : EventSourcePipelineSettings
     {
         private readonly Lazy<DiagnosticsEventPipeProcessor> _processor;
         public DiagnosticsClient Client { get; }
@@ -32,17 +31,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override Task OnRun(CancellationToken token)
         {
-            return _processor.Value.Process(Client, Settings.ProcessId, Settings.Duration, token);
+            return _processor.Value.Process(Client, Settings.Duration, token);
         }
 
-        protected override ValueTask OnDispose()
+        protected override async Task OnCleanup()
         {
             if (_processor.IsValueCreated)
             {
-                return _processor.Value.DisposeAsync();
+                await _processor.Value.DisposeAsync();
             }
-            return default;
-            
+            await base.OnCleanup();
         }
 
         protected override Task OnStop(CancellationToken token)
@@ -52,9 +50,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 Task stoppingTask = _processor.Value.StopProcessing(token);
 
                 var taskCompletionSource = new TaskCompletionSource<bool>();
-                var src = new TaskCompletionSource<T>();
-                token.Register(() => src.SetCanceled());
-                return Task.WhenAny(stoppingTask, src.Task).Unwrap();
+                token.Register(() => taskCompletionSource.SetCanceled());
+                return Task.WhenAny(stoppingTask, taskCompletionSource.Task).Unwrap();
             }
             return Task.CompletedTask;
         }

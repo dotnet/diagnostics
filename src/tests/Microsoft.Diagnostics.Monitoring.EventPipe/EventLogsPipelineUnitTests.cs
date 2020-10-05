@@ -3,15 +3,16 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
-using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.NETCore.Client.UnitTests;
 using Microsoft.Extensions.Logging;
@@ -19,49 +20,33 @@ using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
 
-namespace DotnetMonitor.UnitTests
+namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
-    public class DiagnosticsMonitorTests
+    public class EventLogsPipelineUnitTests
     {
         private readonly ITestOutputHelper _output;
 
-        public DiagnosticsMonitorTests(ITestOutputHelper output)
+        public EventLogsPipelineUnitTests(ITestOutputHelper output)
         {
             _output = output;
         }
 
-        [SkippableFact]
-        public async Task TestDiagnosticsEventPipeProcessorLogs()
+        [Fact]
+        public async Task TestLogs()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                throw new SkipTestException("Unstable test on OSX");
-            }
-
             var outputStream = new MemoryStream();
 
             await using (var testExecution = StartTraceeProcess("LoggerRemoteTest"))
             {
                 //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
 
-                var loggerFactory = new LoggerFactory(new[] { new StreamingLoggerProvider(outputStream, LogFormat.Json) });
-
-                DiagnosticsEventPipeProcessor diagnosticsEventPipeProcessor = new DiagnosticsEventPipeProcessor(
-                    PipeMode.Logs,
-                    loggerFactory);
-
+                using var loggerFactory = new LoggerFactory(new[] { new TestStreamingLoggerProvider(outputStream) });
                 var client = new DiagnosticsClient(testExecution.TestRunner.Pid);
-                var processingTask = diagnosticsEventPipeProcessor.Process(client, testExecution.TestRunner.Pid, TimeSpan.FromSeconds(10), CancellationToken.None);
 
-                //Add a small delay to make sure diagnostic processor had a chance to initialize
-                await Task.Delay(1000);
+                var logSettings = new EventLogsPipelineSettings { Duration = Timeout.InfiniteTimeSpan};
+                await using var pipeline = new EventLogsPipeline(client, logSettings, loggerFactory);
 
-                //Send signal to proceed with event collection
-                testExecution.Start();
-
-                await processingTask;
-                await diagnosticsEventPipeProcessor.DisposeAsync();
-                loggerFactory.Dispose();
+                await PipelineTestUtilities.ExecutePipelineWithDebugee(pipeline, testExecution);
             }
 
             outputStream.Position = 0L;

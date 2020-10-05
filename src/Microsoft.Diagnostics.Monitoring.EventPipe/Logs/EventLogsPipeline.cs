@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    public class EventLogsPipeline : EventSourcePipeline<EventLogsPipelineSettings>
+    internal class EventLogsPipeline : EventSourcePipeline<EventLogsPipelineSettings>
     {
         private readonly ILoggerFactory _factory;
         public EventLogsPipeline(DiagnosticsClient client, EventLogsPipelineSettings settings, ILoggerFactory factory) 

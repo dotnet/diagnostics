@@ -1,5 +1,4 @@
-﻿using Microsoft.Diagnostics.Monitoring.Contracts;
-using System;
+﻿using System;
 using System.Runtime.Serialization;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer.Models

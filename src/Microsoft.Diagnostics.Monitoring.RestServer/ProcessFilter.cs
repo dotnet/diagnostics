@@ -2,7 +2,7 @@
 using System.ComponentModel;
 using System.Globalization;
 
-namespace Microsoft.Diagnostics.Monitoring.Contracts
+namespace Microsoft.Diagnostics.Monitoring
 {
     [TypeConverter(typeof(ProcessFilterTypeConverter))]
     public struct ProcessFilter

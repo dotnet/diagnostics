@@ -8,10 +8,8 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    public class EventSourcePipelineSettings
+    internal class EventSourcePipelineSettings
     {
-        public int ProcessId { get; set; }
-
         public TimeSpan Duration { get; set; }
     }
 }

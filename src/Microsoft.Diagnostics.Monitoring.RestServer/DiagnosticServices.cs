@@ -10,7 +10,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.Monitoring.Contracts;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.NETCore.Client;
 
@@ -244,17 +243,16 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
                 string commandLine = endpointInfo.CommandLine;
                 if (string.IsNullOrEmpty(commandLine))
                 {
-                    await using var processor = new DiagnosticsEventPipeProcessor(
-                        PipeMode.ProcessInfo,
-                        processInfoCallback: cmdLine => { commandLine = cmdLine; return Task.CompletedTask; });
-
                     try
                     {
-                        await processor.Process(
-                            client,
-                            endpointInfo.ProcessId,
-                            Timeout.InfiniteTimeSpan,
-                            extendedInfoCancellationToken);
+                        var infoSettings = new EventProcessInfoPipelineSettings
+                        {
+                            Duration = Timeout.InfiniteTimeSpan,
+                            CommandLineCallback = (cmdLine, token) => { commandLine = cmdLine; return Task.CompletedTask; }
+                        };
+
+                        await using var pipeline = new EventProcessInfoPipeline(client, infoSettings);
+                        await pipeline.RunAsync(extendedInfoCancellationToken);
                     }
                     catch
                     {

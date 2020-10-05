@@ -27,4 +27,8 @@
     <ProjectReference Include="..\Microsoft.Diagnostics.Monitoring.EventPipe\Microsoft.Diagnostics.Monitoring.EventPipe.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="dotnet-monitor" />
+  </ItemGroup>
+
 </Project>

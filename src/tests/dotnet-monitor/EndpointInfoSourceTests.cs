@@ -117,7 +117,7 @@ namespace DotnetMonitor.UnitTests
             {
                 await newEndpointInfoTask;
 
-                execution1.Start();
+                execution1.SendSignal();
 
                 endpointInfos = await GetEndpointInfoAsync(source);
 

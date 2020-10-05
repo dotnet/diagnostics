@@ -29,17 +29,23 @@ namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
             OutputHelper = outputHelper;
         }
 
-        public void Start()
-        {
-            SendSignal();
-        }
+        //Very simple signals that synchronize execution between the test process and the debuggee process.
 
-        private void SendSignal()
+        public void SendSignal()
         {
             //We cannot use named synchronization primitives since they do not work across processes
             //on Linux. Use redirected standard input instead.
             TestRunner.StandardInput.Write('0');
             TestRunner.StandardInput.Flush();
+        }
+
+        public void WaitForSignal()
+        {
+            var result = TestRunner.StandardOutput.ReadLine();
+            if (string.Equals(result, "1"))
+            {
+                return;
+            }
         }
 
         public static RemoteTestExecution StartProcess(string commandLine, ITestOutputHelper outputHelper, string reversedServerTransportName = null)
@@ -62,18 +68,11 @@ namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
             {
                 try
                 {
-                    Task<string> stdOutputTask = output.ReadToEndAsync();
                     Task<string> stdErrorTask = error.ReadToEndAsync();
 
                     try
                     {
-                        string result = await stdOutputTask;
-                        outputHelper.WriteLine("Stdout:");
-                        if (result != null)
-                        {
-                            outputHelper.WriteLine(result);
-                        }
-                        result = await stdErrorTask;
+                        string result = await stdErrorTask;
                         outputHelper.WriteLine("Stderr:");
                         if (result != null)
                         {
@@ -95,8 +94,6 @@ namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
 
         public async ValueTask DisposeAsync()
         {
-            SendSignal();
-
             using var timeoutSource = new CancellationTokenSource(TimeSpan.FromSeconds(1));
             try
             {

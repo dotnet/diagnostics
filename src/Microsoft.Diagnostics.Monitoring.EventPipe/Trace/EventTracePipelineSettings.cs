@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    public class EventTracePipelineSettings : EventSourcePipelineSettings
+    internal class EventTracePipelineSettings : EventSourcePipelineSettings
     {
         public MonitoringSourceConfiguration Configuration { get; set; }
     }

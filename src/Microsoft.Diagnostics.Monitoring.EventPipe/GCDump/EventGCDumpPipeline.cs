@@ -13,11 +13,11 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    public class EventGCPipeline : EventSourcePipeline<EventGCPipelineSettings>
+    internal class EventGCDumpPipeline : EventSourcePipeline<EventGCPipelineSettings>
     {
         private readonly MemoryGraph _gcGraph;
 
-        public EventGCPipeline(DiagnosticsClient client, EventGCPipelineSettings settings, MemoryGraph gcGraph) : base(client, settings)
+        public EventGCDumpPipeline(DiagnosticsClient client, EventGCPipelineSettings settings, MemoryGraph gcGraph) : base(client, settings)
         {
             _gcGraph = gcGraph ?? throw new ArgumentNullException(nameof(gcGraph));
         }

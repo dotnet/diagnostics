@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Monitoring.Contracts;
+using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using System;
 using System.Collections.Generic;
@@ -36,22 +36,22 @@ namespace DotnetMonitor.UnitTests
             var secondStartCall = timePipeline.RunAsync(token);
             Assert.Equal(startTask, secondStartCall);
 
-            var timeoutSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            var stopTask = timePipeline.StopAsync(timeoutSource.Token);
-            var secondStopCall = timePipeline.StopAsync(timeoutSource.Token);
+            var stopSource = new CancellationTokenSource();
+            var stopTask = timePipeline.StopAsync(stopSource.Token);
+            var secondStopCall = timePipeline.StopAsync(stopSource.Token);
             Assert.Equal(stopTask, secondStopCall);
+
+            stopSource.Cancel();
 
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => stopTask);
 
             cancellationTokenSource.Cancel();
-            
+
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => startTask);
 
             await timePipeline.DisposeAsync();
 
-            await Assert.ThrowsAsync<ObjectDisposedException>(() => timePipeline.RunAsync(token));
-
-            Assert.Equal(1, timePipeline.ExecutedAbort);
+            Assert.Equal(1, timePipeline.ExecutedCleanup);
         }
 
         [Fact]
@@ -59,14 +59,17 @@ namespace DotnetMonitor.UnitTests
         {
             var timePipeline = new DelayPipeline(TimeSpan.Zero);
             await timePipeline.RunAsync(CancellationToken.None);
+
+            Assert.Equal(1, timePipeline.ExecutedCleanup);
+
             await timePipeline.DisposeAsync();
 
-            Assert.Equal(0, timePipeline.ExecutedAbort);
+            Assert.Equal(1, timePipeline.ExecutedCleanup);
         }
 
         private sealed class DelayPipeline : Pipeline
         {
-            public int ExecutedAbort { get; private set; } = 0;
+            public int ExecutedCleanup { get; private set; } = 0;
             public TimeSpan Delay { get; }
 
             public DelayPipeline() : this(Timeout.InfiniteTimeSpan) 
@@ -88,15 +91,10 @@ namespace DotnetMonitor.UnitTests
                 return Task.Delay(Delay, token);
             }
 
-            protected override Task OnAbort()
+            protected override Task OnCleanup()
             {
-                ExecutedAbort++;
-                return base.OnAbort();
-            }
-
-            protected override ValueTask OnDispose()
-            {
-                return base.OnDispose();
+                ExecutedCleanup++;
+                return base.OnCleanup();
             }
         }
     }

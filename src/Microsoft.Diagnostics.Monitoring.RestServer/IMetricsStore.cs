@@ -15,7 +15,7 @@ namespace Microsoft.Diagnostics.Monitoring
     /// <summary>
     /// Used to store metrics. A snapshot will be requested periodically.
     /// </summary>
-    public interface IMetricsStore : IDisposable
+    internal interface IMetricsStore : IDisposable
     {
         void AddMetric(ICounterPayload metric);
 

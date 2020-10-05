@@ -8,18 +8,31 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    public interface ICounterPayload
+    internal enum CounterType
     {
-        string GetName();
-        double GetValue();
-        string GetCounterType();
+        //Same as average or mean
+        Metric,
 
-        //Consider pushing this to extended counter interface
-        string GetProvider();
-        string GetDisplayName();
-        string GetUnit();
-        DateTime GetTimestamp();
+        //Same as sum
+        Rate
+    }
 
-        float GetInterval();
+    internal interface ICounterPayload
+    {
+        string Name { get; }
+
+        double Value { get; }
+
+        CounterType CounterType { get; }
+
+        string Provider { get; }
+
+        string DisplayName { get; }
+
+        string Unit { get; }
+
+        DateTime Timestamp { get; }
+
+        float Interval { get; }
     }
 }

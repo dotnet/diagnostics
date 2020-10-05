@@ -5,7 +5,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.Monitoring.Contracts;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.Monitoring.RestServer.Controllers;
 using Microsoft.Diagnostics.NETCore.Client;
@@ -17,7 +16,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
     /// <summary>
     /// Periodically gets metrics from the app, and persists these to a metrics store.
     /// </summary>
-    public sealed class MetricsService : BackgroundService
+    internal sealed class MetricsService : BackgroundService
     {
         private EventCounterPipeline _counterPipeline;
         private readonly IDiagnosticServices _services;
@@ -50,13 +49,12 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
                         {
                             CounterGroups = Array.Empty<EventPipeCounterGroup>(),
                             Duration = Timeout.InfiniteTimeSpan,
-                            ProcessId = pi.ProcessId,
                             RefreshInterval = TimeSpan.FromSeconds(_metricsConfiguration.UpdateIntervalSeconds)
                         }, metricsLogger: new[] { new MetricsLogger(_store.MetricsStore) });
 
                         await _counterPipeline.RunAsync(stoppingToken);
                     }
-                    catch(Exception)
+                    catch (Exception e) when (!(e is OperationCanceledException))
                     {
                         //Most likely we failed to resolve the pid. Attempt to do this again.
                         if (_counterPipeline != null)
@@ -72,7 +70,10 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         public override async void Dispose()
         {
             base.Dispose();
-            await _counterPipeline.DisposeAsync();
+            if (_counterPipeline != null)
+            {
+                await _counterPipeline.DisposeAsync();
+            }
         }
     }
 }

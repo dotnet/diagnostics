@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.Monitoring
     /// <summary>
     /// Stores metrics, and produces a snapshot in Prometheus exposition format.
     /// </summary>
-    public sealed class MetricsStore : IMetricsStore
+    internal sealed class MetricsStore : IMetricsStore
     {
         private static readonly Dictionary<string, string> KnownUnits = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -41,8 +41,8 @@ namespace Microsoft.Diagnostics.Monitoring
             public override int GetHashCode()
             {
                 HashCode code = new HashCode();
-                code.Add(_metric.GetProvider());
-                code.Add(_metric.GetName());
+                code.Add(_metric.Provider);
+                code.Add(_metric.Name);
                 return code.ToHashCode();
             }
 
@@ -109,7 +109,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
                 //TODO Some clr metrics claim to be incrementing, but are really gauges.
 
-                await writer.WriteLineAsync(FormattableString.Invariant($"# HELP {metricName} {metricInfo.GetDisplayName()}"));
+                await writer.WriteLineAsync(FormattableString.Invariant($"# HELP {metricName} {metricInfo.DisplayName}"));
                 await writer.WriteLineAsync(FormattableString.Invariant($"# TYPE {metricName} {metricType}"));
 
                 foreach (var metric in metricGroup.Value)
@@ -126,32 +126,32 @@ namespace Microsoft.Diagnostics.Monitoring
                     string metricValue)
         {
             await writer.WriteAsync(metricName);
-            await writer.WriteLineAsync(FormattableString.Invariant($" {metricValue} {new DateTimeOffset(metric.GetTimestamp()).ToUnixTimeMilliseconds()}"));
+            await writer.WriteLineAsync(FormattableString.Invariant($" {metricValue} {new DateTimeOffset(metric.Timestamp).ToUnixTimeMilliseconds()}"));
         }
 
         private static string GetPrometheusMetric(ICounterPayload metric, out string metricValue)
         {
             string unitSuffix = string.Empty;
 
-            if ((metric.GetUnit() != null) && (!KnownUnits.TryGetValue(metric.GetUnit(), out unitSuffix)))
+            if ((metric.Unit != null) && (!KnownUnits.TryGetValue(metric.Unit, out unitSuffix)))
             {
                 //TODO The prometheus data model does not allow certain characters. Units we are not expecting could cause a scrape failure.
-                unitSuffix = "_" + metric.GetUnit();
+                unitSuffix = "_" + metric.Unit;
             }
 
-            double value = metric.GetValue();
-            if (string.Equals(metric.GetUnit(), "MB", StringComparison.OrdinalIgnoreCase))
+            double value = metric.Value;
+            if (string.Equals(metric.Unit, "MB", StringComparison.OrdinalIgnoreCase))
             {
                 value *= 1_000_000; //Note that the metric uses MB not MiB
             }
 
             metricValue = value.ToString(CultureInfo.InvariantCulture);
-            return FormattableString.Invariant($"{metric.GetProvider().Replace(".", string.Empty).ToLowerInvariant()}_{metric.GetName().Replace('-', '_')}{unitSuffix}");
+            return FormattableString.Invariant($"{metric.Provider.Replace(".", string.Empty).ToLowerInvariant()}_{metric.Name.Replace('-', '_')}{unitSuffix}");
         }
 
         private static bool CompareMetrics(ICounterPayload first, ICounterPayload second)
         {
-            return string.Equals(first.GetName(), second.GetName());
+            return string.Equals(first.Name, second.Name);
         }
 
         public void Clear()

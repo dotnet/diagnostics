@@ -23,14 +23,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private readonly MemoryGraph _gcGraph;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly IEnumerable<IMetricsLogger> _metricLoggers;
+        private readonly IEnumerable<ICountersLogger> _metricLoggers;
         private readonly PipeMode _mode;
         private readonly int _metricIntervalSeconds;
         private readonly CounterFilter _counterFilter;
         private readonly LogLevel _logsLevel;
-        private readonly Func<string, Task> _processInfoCallback;
+        private readonly Func<string, CancellationToken, Task> _processInfoCallback;
         private readonly MonitoringSourceConfiguration _userConfig;
-        private readonly Func<Stream, CancellationToken, Task> _streamAvailable;
+        private readonly Func<Stream, CancellationToken, Task> _onStreamAvailable;
 
         private readonly object _lock = new object();
 
@@ -42,16 +42,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             PipeMode mode,
             ILoggerFactory loggerFactory = null,              // PipeMode = Logs
             LogLevel logsLevel = LogLevel.Debug,              // PipeMode = Logs
-            IEnumerable<IMetricsLogger> metricLoggers = null, // PipeMode = Metrics
+            IEnumerable<ICountersLogger> metricLoggers = null, // PipeMode = Metrics
             int metricIntervalSeconds = 10,                   // PipeMode = Metrics
             CounterFilter metricFilter = null,                // PipeMode = Metrics
             MemoryGraph gcGraph = null,                       // PipeMode = GCDump
             MonitoringSourceConfiguration configuration = null, // PipeMode = Nettrace
-            Func<Stream, CancellationToken, Task> streamAvailable = null, // PipeMode = Nettrace
-            Func<string, Task> processInfoCallback = null     // PipeMode = ProcessInfo
+            Func<Stream, CancellationToken, Task> onStreamAvailable = null, // PipeMode = Nettrace
+            Func<string, CancellationToken, Task> processInfoCallback = null     // PipeMode = ProcessInfo
             )
         {
-            _metricLoggers = metricLoggers ?? Enumerable.Empty<IMetricsLogger>();
+            _metricLoggers = metricLoggers ?? Enumerable.Empty<ICountersLogger>();
             _mode = mode;
             _loggerFactory = loggerFactory;
             _gcGraph = gcGraph;
@@ -59,14 +59,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _logsLevel = logsLevel;
             _processInfoCallback = processInfoCallback;
             _userConfig = configuration;
-            _streamAvailable = streamAvailable;
+            _onStreamAvailable = onStreamAvailable;
             _processInfoCallback = processInfoCallback;
             _counterFilter = metricFilter;
 
             _sessionStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
-        public async Task Process(DiagnosticsClient client, int pid, TimeSpan duration, CancellationToken token)
+        public async Task Process(DiagnosticsClient client, TimeSpan duration, CancellationToken token)
         {
             //No need to guard against reentrancy here, since the calling pipeline does this already.
             IDisposable registration = token.Register(() => _sessionStarted.TrySetCanceled());
@@ -104,8 +104,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                     if (_mode == PipeMode.Nettrace)
                     {
-                        _sessionStarted.TrySetResult(true);
-                        await _streamAvailable(sessionStream, token);
+                        if (!_sessionStarted.TrySetResult(true))
+                        {
+                            token.ThrowIfCancellationRequested();
+                        }
+
+                        await _onStreamAvailable(sessionStream, token);
                         return;
                     }
 
@@ -127,7 +131,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     else if (_mode == PipeMode.GCDump)
                     {
                         // GC
-                        handleEventsTask = HandleGCEvents(source, pid, stopFunc, token);
+                        handleEventsTask = HandleGCEvents(source, stopFunc, token);
                     }
 
                     else if (_mode == PipeMode.ProcessInfo)
@@ -141,7 +145,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         _eventPipeSession = source;
                     }
                     registration.Dispose();
-                    _sessionStarted.TrySetResult(true);
+                    if (!_sessionStarted.TrySetResult(true))
+                    {
+                        token.ThrowIfCancellationRequested();
+                    }
 
                     source.Process();
                     token.ThrowIfCancellationRequested();
@@ -152,7 +159,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 finally
                 {
-                    ExecuteMetricLoggerAction((metricLogger) => metricLogger.PipelineStopped());
+                    ExecuteCounterLoggerAction((metricLogger) => metricLogger.PipelineStopped());
 
                     registration.Dispose();
                     EventPipeEventSource session = null;
@@ -333,7 +340,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         private void HandleEventCounters(EventPipeEventSource source)
         {
-            ExecuteMetricLoggerAction((metricLogger) => metricLogger.PipelineStarted());
+            ExecuteCounterLoggerAction((metricLogger) => metricLogger.PipelineStarted());
 
             source.Dynamic.All += traceEvent =>
             {
@@ -353,7 +360,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         }
 
                         string counterName = payloadFields["Name"].ToString();
-                        if (!_counterFilter.Include(traceEvent.ProviderName, counterName))
+                        if (!_counterFilter.IsIncluded(traceEvent.ProviderName, counterName))
                         {
                             return;
                         }
@@ -362,7 +369,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         string displayName = payloadFields["DisplayName"].ToString();
                         string displayUnits = payloadFields["DisplayUnits"].ToString();
                         double value = 0;
-                        MetricType metricType = MetricType.Avg;
+                        CounterType counterType = CounterType.Metric;
 
                         if (payloadFields["CounterType"].Equals("Mean"))
                         {
@@ -370,7 +377,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         }
                         else if (payloadFields["CounterType"].Equals("Sum"))
                         {
-                            metricType = MetricType.Sum;
+                            counterType = CounterType.Rate;
                             value = (double)payloadFields["Increment"];
                             if (string.IsNullOrEmpty(displayUnits))
                             {
@@ -381,15 +388,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                         // Note that dimensional data such as pod and namespace are automatically added in prometheus and azure monitor scenarios.
                         // We no longer added it here.
-                        var metric = new Metric(traceEvent.TimeStamp,
+                        var counterPayload = new CounterPayload(traceEvent.TimeStamp,
                             traceEvent.ProviderName,
                             counterName, displayName,
                             displayUnits,
                             value,
-                            metricType,
+                            counterType,
                             intervalSec);
 
-                        ExecuteMetricLoggerAction((metricLogger) => metricLogger.LogMetrics(metric));
+                        ExecuteCounterLoggerAction((metricLogger) => metricLogger.Log(counterPayload));
                     }
                 }
                 catch (Exception)
@@ -409,9 +416,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             return interval;
         }
 
-        private void ExecuteMetricLoggerAction(Action<IMetricsLogger> action)
+        private void ExecuteCounterLoggerAction(Action<ICountersLogger> action)
         {
-            foreach (IMetricsLogger metricLogger in _metricLoggers)
+            foreach (ICountersLogger metricLogger in _metricLoggers)
             {
                 try
                 {
@@ -423,17 +430,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private async Task HandleGCEvents(EventPipeEventSource source, int pid, Func<Task> stopFunc, CancellationToken token)
+        private async Task HandleGCEvents(EventPipeEventSource source, Func<Task> stopFunc, CancellationToken token)
         {
             int gcNum = -1;
 
             Action<GCStartTraceData, Action> gcStartHandler = (GCStartTraceData data, Action taskComplete) =>
             {
-                if (data.ProcessID != pid)
-                {
-                    return;
-                }
-
                 taskComplete();
 
                 if (gcNum < 0 && data.Depth == 2 && data.Type != GCType.BackgroundGC)
@@ -444,21 +446,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             Action<GCBulkNodeTraceData, Action> gcBulkNodeHandler = (GCBulkNodeTraceData data, Action taskComplete) =>
             {
-                if (data.ProcessID != pid)
-                {
-                    return;
-                }
-
                 taskComplete();
             };
 
             Action<GCEndTraceData, Action> gcEndHandler = (GCEndTraceData data, Action taskComplete) =>
             {
-                if (data.ProcessID != pid)
-                {
-                    return;
-                }
-
                 if (data.Count == gcNum)
                 {
                     taskComplete();
@@ -495,7 +487,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 DotNetHeapInfo = new DotNetHeapInfo()
             };
-            dumper.SetupCallbacks(_gcGraph, source, pid.ToString(CultureInfo.InvariantCulture));
+            dumper.SetupCallbacks(_gcGraph, source);
 
             // The event source will not always provide the GC events when it starts listening. However,
             // they will be provided when the event source is told to stop processing events. Give the
@@ -565,7 +557,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             await processInfoTaskSource.Task;
 
             // Notify of command line information
-            await _processInfoCallback(commandLine);
+            await _processInfoCallback(commandLine, token);
         }
 
         public async ValueTask DisposeAsync()
@@ -589,18 +581,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
 
             _eventPipeSession?.Dispose();
-
-            foreach (IMetricsLogger logger in _metricLoggers)
-            {
-                if (logger is IAsyncDisposable asyncDisposable)
-                {
-                    await asyncDisposable.DisposeAsync();
-                }
-                else
-                {
-                    logger?.Dispose();
-                }
-            }
         }
 
         private class LogActivityItem

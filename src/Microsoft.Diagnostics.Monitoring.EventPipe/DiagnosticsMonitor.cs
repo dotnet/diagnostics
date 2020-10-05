@@ -78,9 +78,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 // On Unix platforms, we may actually get a PNSE since the pipe is gone with the process, and Runtime Client Library
                 // does not know how to distinguish a situation where there is no pipe to begin with, or where the process has exited
-                // before dotnet-counters and got rid of a pipe that once existed.
-                // Since we are catching this in StopMonitor() we know that the pipe once existed (otherwise the exception would've 
-                // been thrown in StartMonitor directly)
+                // before collection started and got rid of a pipe that once existed.
+                // Since we are catching this at the end of a session we know that the pipe once existed (otherwise the exception would've 
+                // been thrown at the beginning directly)
                 catch (PlatformNotSupportedException)
                 {
                 }

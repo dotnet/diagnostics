@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public IEnumerable<string> GetProviders() => _enabledCounters.Keys;
 
-        public bool Include(string providerName, string counterName)
+        public bool IsIncluded(string providerName, string counterName)
         {
             if (_enabledCounters.Count == 0)
             {

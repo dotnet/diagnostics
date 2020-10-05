@@ -4,7 +4,7 @@
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    public enum PipeMode
+    internal enum PipeMode
     {
         Logs = 1,
         Metrics,
