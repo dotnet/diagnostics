@@ -90,16 +90,24 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, string name)
         {
-            if (name != null)
+            if (!ProcessLauncher.Launcher.HasChildProc)
             {
-                if (processId != 0)
+                if (name != null)
                 {
-                    Console.WriteLine("Can only specify either --name or --process-id option.");
-                    return 0;
+                    if (processId != 0)
+                    {
+                        Console.WriteLine("Can only specify either --name or --process-id option.");
+                        return 0;
+                    }
+                    processId = CommandUtils.FindProcessIdWithName(name);
+                    if (processId < 0)
+                    {
+                        return 0;
+                    }
                 }
-                processId = CommandUtils.FindProcessIdWithName(name);
-                if (processId < 0)
+                else if (processId == 0)
                 {
+                    Console.WriteLine("Must specify either --name or --process-id option to start monitoring.");
                     return 0;
                 }
             }
@@ -112,8 +120,22 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _processId = processId;
                 _interval = refreshInterval;
                 _renderer = new ConsoleWriter();
-                _diagnosticsClient = new DiagnosticsClient(processId);
+                // Check if we are attaching at startup.
+                if (ProcessLauncher.Launcher.HasChildProc)
+                {
+                    string diagnosticTransportName = GetRandomTransportName();
+                    ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(diagnosticTransportName);
+                    server.Start();
+                    ProcessLauncher.Launcher.Start(false, diagnosticTransportName);
 
+                    IpcEndpointInfo endpointInfo = await server.AcceptAsync(new CancellationTokenSource(TimeSpan.FromSeconds(20)).Token);
+                    _diagnosticsClient = new DiagnosticsClient(endpointInfo.Endpoint);
+                    _diagnosticsClient.ResumeRuntime();
+                }
+                else
+                {
+                    _diagnosticsClient = new DiagnosticsClient(processId);
+                }
                 return await Start();
             }
 
@@ -203,6 +225,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     return 0;
                 }
+            }
+            else if (processId == 0)
+            {
+                Console.WriteLine("Must specify either --name or --process-id option to start collecting.");
+                return 0;
             }
 
             try

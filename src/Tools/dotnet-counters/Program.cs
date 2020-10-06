@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Internal.Common.Commands;
+using Microsoft.Internal.Common.Utils;
 using Microsoft.Tools.Common;
 using System;
 using System.Collections.Generic;
@@ -23,6 +24,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
     {
         delegate Task<int> ExportDelegate(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string processName);
 
+        private IEnumerable<Command> StartupCommands
+        {
+            get
+            {
+                yield return MonitorCommand();
+                yield return CollectCommand();
+            }
+            
+        }
+
         private static Command MonitorCommand() =>
             new Command(
                 name: "monitor",
@@ -34,16 +45,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 CounterList(), ProcessIdOption(), RefreshIntervalOption(), NameOption()
             };
         
-        private static Command RunCommand() =>
-            new Command(
-                name: "run",
-                description: "Launch and start montioring a .NET application")
-            {
-                // Handler
-                CommandHandler.Create<CancellationToken, List<string>, IConsole, string, string, int>(new CounterMonitor().Run),
-                CounterList(), TargetFileOption(), ArgumentOption(), RefreshIntervalOption()
-            };
-
         private static Command CollectCommand() =>
             new Command(
                 name: "collect",
@@ -168,10 +169,25 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 .AddCommand(MonitorCommand())
                 .AddCommand(CollectCommand())
                 .AddCommand(ListCommand())
-                .AddCommand(RunCommand())
                 .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that can be monitored"))
                 .UseDefaults()
                 .Build();
+
+            ParseResult parseResult = parser.Parse(args);
+            string parsedCommandName = parseResult.CommandResult.Command.Name;
+            Console.WriteLine("Hello");
+            Console.WriteLine(parsedCommandName);
+            if (parsedCommandName == "monitor" || parsedCommandName == "collect" || parsedCommandName == "run")
+            {
+                IReadOnlyCollection<string> unparsedTokens = parseResult.UnparsedTokens;
+                Console.WriteLine(unparsedTokens.Count);
+                // If we notice there are unparsed tokens, user might want to attach on startup.
+                if (unparsedTokens.Count > 0)
+                {
+                    ProcessLauncher.Launcher.PrepareChildProcess(unparsedTokens.ToList());
+                }
+            }
+
             return parser.InvokeAsync(args);
         }
     }
