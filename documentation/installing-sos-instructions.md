@@ -1,7 +1,7 @@
 Installing SOS on Linux and MacOS
 =================================
 
-The first step is to install the dotnet-sos CLI global tool. This requires at least the 2.1 or greater .NET Core SDK to be installed. If you see the error message `Tool 'dotnet-sos' is already installed`, you will need to uninstall the global tool (see below). 
+The first step is to install the dotnet-sos CLI global tool. Installing the `dotnet-sos` requires at least the 2.1 or greater .NET Core SDK to be installed. If you see the error message `Tool 'dotnet-sos' is already installed`, you will need to uninstall the global tool (see below). 
 
     $ dotnet tool install -g dotnet-sos
     You can invoke the tool using the following command: dotnet-sos

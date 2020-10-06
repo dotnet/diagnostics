@@ -8,7 +8,7 @@ several scenarios:
 * analyzing roots of objects (answering questions like, "what still has a reference to this type?")
 * collecting general statistics about the counts of objects on the heap.
 
-dotnet-gcdump can be used on Linux, Mac, and Windows with runtime versions 3.1 or newer.
+`dotnet-gcdump` can be used on Linux, Mac, and Windows with runtime versions 3.1 or newer.
 
 ## Installing dotnet-gcdump
 
