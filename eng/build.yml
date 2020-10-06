@@ -50,20 +50,19 @@ jobs:
       ${{ if and(eq(parameters.osGroup, 'FreeBSD'), ne(variables['System.TeamProject'], 'public')) }}:
         name: dnceng-freebsd-internal
 
-      # Public OSX Build Pool
+      # Official Build OSX Pool
       ${{ if and(eq(parameters.osGroup, 'MacOS'), ne(variables['System.TeamProject'], 'public')) }}:
         name: Hosted Mac Internal
 
-      # Official Build OSX Pool
+      # Public OSX Build Pool
       ${{ if and(eq(parameters.osGroup, 'MacOS'), eq(variables['System.TeamProject'], 'public')) }}:
         vmImage: macOS-10.14
 
-      # Public OSX Xcode 12 Build Pool
-      ${{ if and(eq(parameters.osGroup, 'MacOS_cross'), ne(variables['System.TeamProject'], 'public')) }}:
-        name: Hosted Mac Internal
-        vmImage: macOS-10.15
-
       # Official Build OSX Xcode 12 Pool
+      ${{ if and(eq(parameters.osGroup, 'MacOS_cross'), ne(variables['System.TeamProject'], 'public')) }}:
+        vmImage: macos-10.15
+
+      # Public OSX Xcode 12 Build Pool
       ${{ if and(eq(parameters.osGroup, 'MacOS_cross'), eq(variables['System.TeamProject'], 'public')) }}:
         vmImage: macOS-10.15
 
@@ -168,7 +167,7 @@ jobs:
         condition: succeeded()
 
     - ${{ if eq(parameters.osGroup, 'MacOS_cross') }}:
-      - script: /bin/bash -c "sudo xcode-select -s /Applications/Xcode_12_beta.app/Contents/Developer"
+      - script: /bin/bash -c "sudo xcode-select -s /Applications/Xcode_12.2.app/Contents/Developer"
       - script: $(Build.SourcesDirectory)/eng/build.sh
           --restore
           --ci
