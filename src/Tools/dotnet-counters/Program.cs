@@ -175,12 +175,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             ParseResult parseResult = parser.Parse(args);
             string parsedCommandName = parseResult.CommandResult.Command.Name;
-            Console.WriteLine("Hello");
-            Console.WriteLine(parsedCommandName);
-            if (parsedCommandName == "monitor" || parsedCommandName == "collect" || parsedCommandName == "run")
+            if (parsedCommandName == "monitor" || parsedCommandName == "collect")
             {
                 IReadOnlyCollection<string> unparsedTokens = parseResult.UnparsedTokens;
-                Console.WriteLine(unparsedTokens.Count);
                 // If we notice there are unparsed tokens, user might want to attach on startup.
                 if (unparsedTokens.Count > 0)
                 {

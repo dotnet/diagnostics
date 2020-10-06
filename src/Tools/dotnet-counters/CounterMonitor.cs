@@ -153,63 +153,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
         }
 
         private static string GetRandomTransportName() => "DOTNET_TOOL_PATH" + Path.GetRandomFileName();
-        internal async Task<int> Run(CancellationToken ct, List<string> counter_list, IConsole console, string exec, string args, int refreshInterval)
-        {
-            if (!File.Exists(exec))
-            {
-                console.Out.WriteLine($"{exec} does not exist.");
-                return 0;
-            }
-
-            string diagnosticTransportName = GetRandomTransportName();
-            ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(diagnosticTransportName);
-            server.Start();
-
-            Process targetProcess = new Process();
-            targetProcess.StartInfo.FileName = exec;
-            targetProcess.StartInfo.Arguments = args;
-            targetProcess.StartInfo.Environment.Add("DOTNET_DiagnosticsMonitorAddress", diagnosticTransportName);
-            targetProcess.StartInfo.UseShellExecute = false;
-            targetProcess.StartInfo.RedirectStandardOutput = true;
-            targetProcess.StartInfo.RedirectStandardError = true;
-            
-            Task processRunnerTask = Task.Run(() => {
-                try
-                {
-                    targetProcess.Start();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                }
-            });
-
-            CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-            IpcEndpointInfo endpointInfo = await server.AcceptAsync(cts.Token);
-            try
-            {
-                _ct = ct;
-                _counterList = counter_list;
-                _console = console;
-                _processId = endpointInfo.ProcessId;
-                _diagnosticsClient = new DiagnosticsClient(endpointInfo.Endpoint);
-                _renderer = new ConsoleWriter();
-                _interval = refreshInterval;
-
-                _diagnosticsClient.ResumeRuntime();
-                string providerString = BuildProviderString();
-                if (providerString.Length == 0)
-                {
-                    return 1;
-                }
-                return await Start();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-            return 1;
-        }
 
         public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name)
         {
