@@ -156,25 +156,28 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name)
         {
-            if (name != null)
+            if (!ProcessLauncher.Launcher.HasChildProc)
             {
-                if (processId != 0)
+                if (name != null)
                 {
-                    Console.WriteLine("Can only specify either --name or --process-id option.");
-                    return 0;
+                    if (processId != 0)
+                    {
+                        Console.WriteLine("Can only specify either --name or --process-id option.");
+                        return 0;
+                    }
+                    processId = CommandUtils.FindProcessIdWithName(name);
+                    if (processId < 0)
+                    {
+                        return 0;
+                    }
                 }
-                processId = CommandUtils.FindProcessIdWithName(name);
-                if (processId < 0)
+                else if (processId == 0)
                 {
+                    Console.WriteLine("Must specify either --name or --process-id option to start collecting.");
                     return 0;
                 }
             }
-            else if (processId == 0)
-            {
-                Console.WriteLine("Must specify either --name or --process-id option to start collecting.");
-                return 0;
-            }
-
+            
             try
             {
                 _ct = ct;
@@ -183,7 +186,21 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _processId = processId;
                 _interval = refreshInterval;
                 _output = output;
-                _diagnosticsClient = new DiagnosticsClient(processId);
+                // _diagnosticsClient = new DiagnosticsClient(processId);
+                if (ProcessLauncher.Launcher.HasChildProc)
+                {
+                    string diagnosticTransportName = GetRandomTransportName();
+                    ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(diagnosticTransportName);
+                    server.Start();
+                    ProcessLauncher.Launcher.Start(true, diagnosticTransportName);
+                    IpcEndpointInfo endpointInfo = await server.AcceptAsync(new CancellationTokenSource(TimeSpan.FromSeconds(20)).Token);
+                    _diagnosticsClient = new DiagnosticsClient(endpointInfo.Endpoint);
+                    _diagnosticsClient.ResumeRuntime();
+                }
+                else
+                {
+                    _diagnosticsClient = new DiagnosticsClient(processId);
+                }
 
                 if (_output.Length == 0)
                 {
