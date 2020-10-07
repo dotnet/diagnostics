@@ -123,13 +123,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // Check if we are attaching at startup.
                 if (ProcessLauncher.Launcher.HasChildProc)
                 {
-                    string diagnosticTransportName = GetRandomTransportName();
-                    ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(diagnosticTransportName);
-                    server.Start();
-                    ProcessLauncher.Launcher.Start(false, diagnosticTransportName);
-
-                    IpcEndpointInfo endpointInfo = await server.AcceptAsync(new CancellationTokenSource(TimeSpan.FromSeconds(20)).Token);
-                    _diagnosticsClient = new DiagnosticsClient(endpointInfo.Endpoint);
+                    ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder();
+                    _diagnosticsClient = await builder.Build(false);
                     _diagnosticsClient.ResumeRuntime();
                 }
                 else
@@ -152,7 +147,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        private static string GetRandomTransportName() => "DOTNET_TOOL_PATH" + Path.GetRandomFileName();
 
         public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name)
         {
@@ -177,7 +171,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     return 0;
                 }
             }
-            
             try
             {
                 _ct = ct;
@@ -188,15 +181,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _output = output;
                 if (ProcessLauncher.Launcher.HasChildProc)
                 {
-                    string diagnosticTransportName = GetRandomTransportName();
-                    ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(diagnosticTransportName);
-                    server.Start();
-                    if (!ProcessLauncher.Launcher.Start(true, diagnosticTransportName))
-                    {
-                        return 0;
-                    }
-                    IpcEndpointInfo endpointInfo = await server.AcceptAsync(new CancellationTokenSource(TimeSpan.FromSeconds(20)).Token);
-                    _diagnosticsClient = new DiagnosticsClient(endpointInfo.Endpoint);
+                    ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder();
+                    _diagnosticsClient = await builder.Build(true);
                     _diagnosticsClient.ResumeRuntime();
                 }
                 else

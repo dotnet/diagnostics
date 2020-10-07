@@ -2,9 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.NETCore.Client;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Internal.Common.Utils
 {
@@ -22,7 +26,7 @@ namespace Microsoft.Internal.Common.Utils
         {
             _childProc = new Process();
             _childProc.StartInfo.FileName = args[0];
-            _childProc.StartInfo.Arguments = String.Join(" ", args.GetRange(1, args.Count-1));
+            _childProc.StartInfo.Arguments = String.Join(" ", args.GetRange(1, args.Count - 1));
         }
 
         public bool HasChildProc
@@ -40,7 +44,6 @@ namespace Microsoft.Internal.Common.Utils
                 return _childProc;
             }
         }
-
 
         public bool Start(bool isInteractive, string diagnosticTransportName)
         {
@@ -74,6 +77,30 @@ namespace Microsoft.Internal.Common.Utils
         public void KillChildProc()
         {
             _childProc.Kill();
+        }
+    }
+
+    internal class ReversedDiagnosticsClientBuilder
+    {
+        private static string GetRandomTransportName() => "DOTNET_TOOL_PATH" + Path.GetRandomFileName();
+        private string diagnosticTransportName;
+        public ReversedDiagnosticsClientBuilder()
+        {
+            diagnosticTransportName = GetRandomTransportName();
+            ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(diagnosticTransportName);
+            server.Start();
+        }
+
+        public async Task<DiagnosticsClient> Build(bool isInteractive)
+        {
+            if (!ProcessLauncher.Launcher.HasChildProc)
+            {
+                throw new InvalidOperationException("Must have a valid child process to launch.");
+            }
+            ProcessLauncher.Launcher.Start(isInteractive, diagnosticTransportName);
+            ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(diagnosticTransportName);
+            IpcEndpointInfo endpointInfo = await server.AcceptAsync(new CancellationTokenSource(TimeSpan.FromSeconds(20)).Token);
+            return new DiagnosticsClient(endpointInfo.Endpoint);
         }
     }
 }
