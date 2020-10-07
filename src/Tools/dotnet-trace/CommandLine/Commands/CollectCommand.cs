@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             return ErrorCodes.ArgumentError;
                         }
                     }
-
+                    processId = CommandUtils.FindProcessIdWithName(name);
                     if (processId < 0)
                     {
                         Console.Error.WriteLine("Process ID should not be negative.");
@@ -254,6 +254,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 if (console.GetTerminal() != null)
                     Console.CursorVisible = true;
+                
+                // If we launched a child proc that hasn't exited yet, terminate it before we exit.
+                if (ProcessLauncher.Launcher.HasChildProc && !ProcessLauncher.Launcher.ChildProc.HasExited)
+                {
+                    ProcessLauncher.Launcher.ChildProc.Kill();
+                }
             }
 
             return await Task.FromResult(0);

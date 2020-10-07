@@ -144,13 +144,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 console.Out.WriteLine($"Complete");
                 return 1;
             }
-            finally
-            {
-                if (ProcessLauncher.Launcher.HasChildProc)
-                {
-                    ProcessLauncher.Launcher.ChildProc.Kill();
-                }
-            }
         }
 
 
@@ -363,6 +356,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     pauseCmdSet = false;
                 }
+            }
+
+            // If we launched a child proc that hasn't exited yet, terminate it before we exit
+            if (ProcessLauncher.Launcher.HasChildProc)
+            {
+                ProcessLauncher.Launcher.ChildProc.Kill();
             }
             return await Task.FromResult(0);
         }
