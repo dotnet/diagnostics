@@ -45,22 +45,13 @@ namespace Microsoft.Internal.Common.Utils
                 return _childProc;
             }
         }
-        public bool Start(bool isInteractive, string diagnosticTransportName)
+        public bool Start(string diagnosticTransportName)
         {
             HasExited = new ManualResetEvent(false);
-            if (!isInteractive)
-            {
-                _childProc.StartInfo.UseShellExecute = false;
-                _childProc.StartInfo.RedirectStandardOutput = true;
-                _childProc.StartInfo.RedirectStandardError = true;
-            }
-            else
-            {
-                // TODO FIXME: Might not be necessary here.
-                _childProc.StartInfo.UseShellExecute = false;
-                _childProc.StartInfo.RedirectStandardOutput = false;
-                _childProc.StartInfo.RedirectStandardError = false;
-            }
+            _childProc.StartInfo.UseShellExecute = false;
+            _childProc.StartInfo.RedirectStandardOutput = true;
+            _childProc.StartInfo.RedirectStandardError = true;
+            _childProc.StartInfo.RedirectStandardInput = true;
             _childProc.StartInfo.Environment.Add("DOTNET_DiagnosticPorts", $"{diagnosticTransportName},suspend");
             _childProc.Exited += new EventHandler(OnExited);
             try
@@ -82,29 +73,39 @@ namespace Microsoft.Internal.Common.Utils
         }
     }
 
+    // <summary>
+    // This class acts a helper class for building a DiagnosticsClient instance
+    // </summary>
     internal class ReversedDiagnosticsClientBuilder
     {
         private static string GetRandomTransportName() => "DOTNET_TOOL_PATH" + Path.GetRandomFileName();
         private string diagnosticTransportName;
         private ReversedDiagnosticsServer server;
-        public ReversedDiagnosticsClientBuilder()
+        private ProcessLauncher _childProcLauncher;
+
+        public ReversedDiagnosticsClientBuilder(ProcessLauncher childProcLauncher)
         {
             diagnosticTransportName = GetRandomTransportName();
+            _childProcLauncher = childProcLauncher;
             server = new ReversedDiagnosticsServer(diagnosticTransportName);
             server.Start();
         }
 
-        public async Task<DiagnosticsClient> Build(bool isInteractive)
+        // <summary>
+        // Starts the child process and returns the diagnostics client once the child proc connects to the reversed diagnostics pipe.
+        // The callee needs to resume the diagnostics client at appropriate time.
+        // </summary>
+        public async Task<DiagnosticsClient> Build(int timeoutInSec)
         {
-            if (!ProcessLauncher.Launcher.HasChildProc)
+            if (!_childProcLauncher.HasChildProc)
             {
                 throw new InvalidOperationException("Must have a valid child process to launch.");
             }
-            if (!ProcessLauncher.Launcher.Start(isInteractive, diagnosticTransportName))
+            if (!_childProcLauncher.Start(diagnosticTransportName))
             {
                 throw new InvalidOperationException("Failed to start dotnet-counters.");
             }
-            IpcEndpointInfo endpointInfo = await server.AcceptAsync(new CancellationTokenSource(TimeSpan.FromSeconds(20)).Token);
+            IpcEndpointInfo endpointInfo = await server.AcceptAsync(new CancellationTokenSource(TimeSpan.FromSeconds(timeoutInSec)).Token);
             return new DiagnosticsClient(endpointInfo.Endpoint);
         }
     }

@@ -123,8 +123,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // Check if we are attaching at startup.
                 if (ProcessLauncher.Launcher.HasChildProc)
                 {
-                    ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder();
-                    _diagnosticsClient = await builder.Build(false);
+                    ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder(ProcessLauncher.Launcher);
+                    _diagnosticsClient = await builder.Build(10);
                 }
                 else
                 {
@@ -187,8 +187,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _output = output;
                 if (ProcessLauncher.Launcher.HasChildProc)
                 {
-                    ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder();
-                    _diagnosticsClient = await builder.Build(true);
+                    ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder(ProcessLauncher.Launcher);
+                    _diagnosticsClient = await builder.Build(10);
                 }
                 else
                 {

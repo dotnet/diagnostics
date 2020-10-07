@@ -131,8 +131,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Process process;
                 if (ProcessLauncher.Launcher.HasChildProc)
                 {
-                    ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder();
-                    diagnosticsClient = await builder.Build(false);
+                    ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder(ProcessLauncher.Launcher);
+                    diagnosticsClient = await builder.Build(10);
                     process = ProcessLauncher.Launcher.ChildProc;
                 }
                 else
