@@ -31,7 +31,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 yield return MonitorCommand();
                 yield return CollectCommand();
             }
-            
         }
 
         private static Command MonitorCommand() =>
@@ -54,22 +53,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 HandlerDescriptor.FromDelegate((ExportDelegate)new CounterMonitor().Collect).GetCommandHandler(),
                 // Arguments and Options
                 CounterList(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption(), NameOption()
-            };
-        
-        private static Option TargetFileOption() =>
-            new Option(
-                aliases: new[] { "--exec", "--executable" },
-                description: "The target executable to start monitoring.")
-            {
-                Argument = new Argument<string>(name: "exec")
-            };
-
-        private static Option ArgumentOption() =>
-            new Option(
-                aliases: new[] { "--args", "--arguments" },
-                description: "The arguments to pass to the target process.")
-            {
-                Argument = new Argument<string>(name: "args")
             };
 
         private static Option NameOption() =>

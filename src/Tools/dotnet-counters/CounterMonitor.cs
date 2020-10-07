@@ -145,6 +145,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 console.Out.WriteLine($"Complete");
                 return 1;
             }
+            finally
+            {
+                if (ProcessLauncher.Launcher.HasChildProc)
+                {
+                    ProcessLauncher.Launcher.ChildProc.Kill();
+                }
+            }
         }
 
 
@@ -216,10 +223,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     _console.Error.WriteLine($"The output format {format} is not a valid output format.");
                     return 0;
                 }
-                return await Start();
+                await Start();
             }
             catch (OperationCanceledException)
             {
+            }
+
+            while (ProcessLauncher.Launcher.HasChildProc && !ProcessLauncher.Launcher.ChildProc.HasExited)
+            {
+                // Wait for child process to exit here.
+                Thread.Sleep(500);
             }
 
             return 1;
@@ -349,7 +362,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     pauseCmdSet = false;
                 }
             }
-
             return await Task.FromResult(0);
         }
     }
