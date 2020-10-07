@@ -133,7 +133,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 {
                     ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder();
                     diagnosticsClient = await builder.Build(false);
-                    diagnosticsClient.ResumeRuntime();
                     process = ProcessLauncher.Launcher.ChildProc;
                 }
                 else
@@ -154,6 +153,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     try
                     {
                         session = diagnosticsClient.StartEventPipeSession(providerCollection, true, (int)buffersize);
+                        if (ProcessLauncher.Launcher.HasChildProc)
+                        {
+                            diagnosticsClient.ResumeRuntime();
+                        }
                     }
                     catch (DiagnosticsClientException e)
                     {

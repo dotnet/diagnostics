@@ -125,7 +125,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder();
                     _diagnosticsClient = await builder.Build(false);
-                    _diagnosticsClient.ResumeRuntime();
                 }
                 else
                 {
@@ -190,7 +189,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder();
                     _diagnosticsClient = await builder.Build(true);
-                    _diagnosticsClient.ResumeRuntime();
                 }
                 else
                 {
@@ -312,6 +310,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 try
                 {
                     _session = _diagnosticsClient.StartEventPipeSession(Trace.Extensions.ToProviders(providerString), false, 10);
+                    if (ProcessLauncher.Launcher.HasChildProc)
+                    {
+                        _diagnosticsClient.ResumeRuntime();
+                    }
                     var source = new EventPipeEventSource(_session.EventStream);
                     source.Dynamic.All += DynamicAllMonitor;
                     _renderer.EventPipeSourceConnected();
