@@ -186,13 +186,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _processId = processId;
                 _interval = refreshInterval;
                 _output = output;
-                // _diagnosticsClient = new DiagnosticsClient(processId);
                 if (ProcessLauncher.Launcher.HasChildProc)
                 {
                     string diagnosticTransportName = GetRandomTransportName();
                     ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(diagnosticTransportName);
                     server.Start();
-                    ProcessLauncher.Launcher.Start(true, diagnosticTransportName);
+                    if (!ProcessLauncher.Launcher.Start(true, diagnosticTransportName))
+                    {
+                        return 0;
+                    }
                     IpcEndpointInfo endpointInfo = await server.AcceptAsync(new CancellationTokenSource(TimeSpan.FromSeconds(20)).Token);
                     _diagnosticsClient = new DiagnosticsClient(endpointInfo.Endpoint);
                     _diagnosticsClient.ResumeRuntime();

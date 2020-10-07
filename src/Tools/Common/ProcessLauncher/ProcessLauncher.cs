@@ -42,7 +42,7 @@ namespace Microsoft.Internal.Common.Utils
         }
 
 
-        public void Start(bool isInteractive, string diagnosticTransportName)
+        public bool Start(bool isInteractive, string diagnosticTransportName)
         {
             if (!isInteractive)
             {
@@ -58,7 +58,22 @@ namespace Microsoft.Internal.Common.Utils
                 _childProc.StartInfo.RedirectStandardError = false;
             }
             _childProc.StartInfo.Environment.Add("DOTNET_DiagnosticPorts", $"{diagnosticTransportName},suspend");
-            _childProc.Start();
+            try
+            {
+                _childProc.Start();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Cannot start target process: {_childProc.StartInfo.FileName}");
+                Console.WriteLine(e.ToString());
+                return false;
+            }
+            return true;
+        }
+
+        public void KillChildProc()
+        {
+            _childProc.Kill();
         }
     }
 }
