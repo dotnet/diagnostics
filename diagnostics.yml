@@ -157,6 +157,21 @@ stages:
                 _BuildConfig: Debug
                 _BuildArch: x64
 
+    - template: /eng/build.yml
+      parameters:
+        name: MacOS_cross
+        osGroup: MacOS_cross
+        strategy:
+          matrix:
+            Build_Release:
+              _BuildConfig: Release
+              _BuildArch: arm64
+              _PublishArtifacts: bin/OSX.arm64.Release
+            ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+              Build_Debug:
+                _BuildConfig: Debug
+                _BuildArch: arm64
+
     - ${{ if ne(variables['System.TeamProject'], 'public') }}:
       - template: /eng/build.yml
         parameters:
@@ -310,6 +325,7 @@ stages:
             - CentOS_7
             - Alpine3_6
             - MacOS
+            - MacOS_cross
             - Linux_cross
             - Linux_cross64
             - Alpine3_6_cross64
@@ -413,6 +429,15 @@ stages:
               inputs:
                 artifactName: MacOS_x64_Release
                 targetPath: '$(Build.SourcesDirectory)/artifacts/bin/OSX.x64.Release'
+              condition: succeeded()
+
+            # MacOS arm64 download
+
+            - task: DownloadPipelineArtifact@2
+              displayName: Download MacOS arm64 Artifacts
+              inputs:
+                artifactName: MacOS_cross_arm64_Release
+                targetPath: '$(Build.SourcesDirectory)/artifacts/bin/OSX.arm64.Release'
               condition: succeeded()
 
             # Create nuget packages, sign binaries and publish to blob feed
