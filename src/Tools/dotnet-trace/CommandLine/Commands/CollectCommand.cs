@@ -139,6 +139,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     catch (TimeoutException e)
                     {
                         Console.Error.WriteLine("Unable to start tracing session - the target app failed to connect to the diagnostics transport. This may happen if the target application is running .NET Core 3.1 or older versions. Attaching at startup is only available from .NET 5.0 or later.");
+                        if (!ProcessLauncher.Launcher.ChildProc.HasExited)
+                        {
+                            ProcessLauncher.Launcher.ChildProc.Kill();
+                        }
                         return ErrorCoodes.SessionCreationError;
                     }
                     process = ProcessLauncher.Launcher.ChildProc;
