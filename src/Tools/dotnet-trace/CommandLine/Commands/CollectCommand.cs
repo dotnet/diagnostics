@@ -132,7 +132,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (ProcessLauncher.Launcher.HasChildProc)
                 {
                     ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder(ProcessLauncher.Launcher);
-                    diagnosticsClient = await builder.Build(10);
+                    try
+                    {
+                        diagnosticsClient = builder.Build(10);
+                    }
+                    catch (TimeoutException e)
+                    {
+                        Console.Error.WriteLine("Unable to start tracing session - the target app failed to connect to the diagnostics transport. This may happen if the target application is running .NET Core 3.1 or older versions. Attaching at startup is only available from .NET 5.0 or later.");
+                        return ErrorCoodes.SessionCreationError;
+                    }
                     process = ProcessLauncher.Launcher.ChildProc;
                 }
                 else

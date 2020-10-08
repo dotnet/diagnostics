@@ -124,7 +124,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 if (ProcessLauncher.Launcher.HasChildProc)
                 {
                     ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder(ProcessLauncher.Launcher);
-                    _diagnosticsClient = await builder.Build(10);
+                    try
+                    {
+                        _diagnosticsClient = builder.Build(10);
+                    }
+                    catch (TimeoutException)
+                    {
+                        Console.Error.WriteLine("Unable to start counter session - the target app failed to connect to the diagnostics transport. This may happen if the target application is running .NET Core 3.1 or older versions. Attaching at startup is only available from .NET 5.0 or later.");
+                        return 0;
+                    }
                 }
                 else
                 {
@@ -132,7 +140,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 return await Start();
             }
-
             catch (OperationCanceledException)
             {
                 try
@@ -178,16 +185,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _processId = processId;
                 _interval = refreshInterval;
                 _output = output;
-                if (ProcessLauncher.Launcher.HasChildProc)
-                {
-                    ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder(ProcessLauncher.Launcher);
-                    _diagnosticsClient = await builder.Build(10);
-                }
-                else
-                {
-                    _diagnosticsClient = new DiagnosticsClient(processId);
-                }
-
                 if (_output.Length == 0)
                 {
                     _console.Error.WriteLine("Output cannot be an empty string");
@@ -213,6 +210,24 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     _console.Error.WriteLine($"The output format {format} is not a valid output format.");
                     return 0;
+                }
+
+                if (ProcessLauncher.Launcher.HasChildProc)
+                {
+                    ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder(ProcessLauncher.Launcher);
+                    try
+                    {
+                        _diagnosticsClient = builder.Build(10);
+                    }
+                    catch (TimeoutException)
+                    {
+                        Console.Error.WriteLine("Unable to start tracing session - the target app failed to connect to the diagnostics transport. This may happen if the target application is running .NET Core 3.1 or older versions. Attaching at startup is only available from .NET 5.0 or later.");
+                        return 0;
+                    }
+                }
+                else
+                {
+                    _diagnosticsClient = new DiagnosticsClient(processId);
                 }
                 return await Start();
             }

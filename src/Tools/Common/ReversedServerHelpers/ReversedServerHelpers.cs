@@ -95,7 +95,7 @@ namespace Microsoft.Internal.Common.Utils
         // Starts the child process and returns the diagnostics client once the child proc connects to the reversed diagnostics pipe.
         // The callee needs to resume the diagnostics client at appropriate time.
         // </summary>
-        public async Task<DiagnosticsClient> Build(int timeoutInSec)
+        public DiagnosticsClient Build(int timeoutInSec)
         {
             if (!_childProcLauncher.HasChildProc)
             {
@@ -105,7 +105,7 @@ namespace Microsoft.Internal.Common.Utils
             {
                 throw new InvalidOperationException("Failed to start dotnet-counters.");
             }
-            IpcEndpointInfo endpointInfo = await server.AcceptAsync(new CancellationTokenSource(TimeSpan.FromSeconds(timeoutInSec)).Token);
+            IpcEndpointInfo endpointInfo = server.Accept(TimeSpan.FromSeconds(timeoutInSec));
             return new DiagnosticsClient(endpointInfo.Endpoint);
         }
     }
