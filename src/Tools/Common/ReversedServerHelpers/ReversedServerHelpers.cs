@@ -78,7 +78,7 @@ namespace Microsoft.Internal.Common.Utils
     // </summary>
     internal class ReversedDiagnosticsClientBuilder
     {
-        private static string GetRandomTransportName() => "DOTNET_TOOL_PATH" + Path.GetRandomFileName();
+        private static string GetRandomTransportName() => "DOTNET_TOOL_REVERSE_TRANSPORT_" + Path.GetRandomFileName();
         private string diagnosticTransportName;
         private ReversedDiagnosticsServer server;
         private ProcessLauncher _childProcLauncher;
