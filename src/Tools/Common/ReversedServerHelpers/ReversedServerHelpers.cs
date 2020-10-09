@@ -18,8 +18,7 @@ namespace Microsoft.Internal.Common.Utils
     // </summary>
     internal class ProcessLauncher
     {
-        private Process _childProc;
-        public ManualResetEvent HasExited;
+        private Process _childProc = null;
 
         internal static ProcessLauncher Launcher = new ProcessLauncher();
 
@@ -47,29 +46,35 @@ namespace Microsoft.Internal.Common.Utils
         }
         public bool Start(string diagnosticTransportName)
         {
-            HasExited = new ManualResetEvent(false);
             _childProc.StartInfo.UseShellExecute = false;
             _childProc.StartInfo.RedirectStandardOutput = true;
             _childProc.StartInfo.RedirectStandardError = true;
             _childProc.StartInfo.RedirectStandardInput = true;
             _childProc.StartInfo.Environment.Add("DOTNET_DiagnosticPorts", $"{diagnosticTransportName},suspend");
-            _childProc.Exited += new EventHandler(OnExited);
             try
             {
                 _childProc.Start();
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Cannot start target process: {_childProc.StartInfo.FileName}");
+                Console.WriteLine($"Cannot start target process: {_childProc.StartInfo.FileName} {_childProc.StartInfo.Arguments}");
                 Console.WriteLine(e.ToString());
                 return false;
             }
             return true;
         }
 
-        private static void OnExited(object sender, EventArgs args)
+        public void Cleanup()
         {
-            ProcessLauncher.Launcher.HasExited.Set();
+            if (_childProc != null && !_childProc.HasExited)
+            {
+                try
+                {
+                    _childProc.Kill();
+                }
+                // if process exited while we were trying to kill it, it can throw IOE 
+                catch (InvalidOperationException) { }
+            }
         }
     }
 
@@ -78,34 +83,37 @@ namespace Microsoft.Internal.Common.Utils
     // </summary>
     internal class ReversedDiagnosticsClientBuilder
     {
-        private static string GetRandomTransportName() => "DOTNET_TOOL_REVERSE_TRANSPORT_" + Path.GetRandomFileName();
-        private string diagnosticTransportName;
-        private ReversedDiagnosticsServer server;
-        private ProcessLauncher _childProcLauncher;
-
-        public ReversedDiagnosticsClientBuilder(ProcessLauncher childProcLauncher)
-        {
-            diagnosticTransportName = GetRandomTransportName();
-            _childProcLauncher = childProcLauncher;
-            server = new ReversedDiagnosticsServer(diagnosticTransportName);
-            server.Start();
-        }
+        private static string GetTransportName(string toolName) => $"{toolName}-{Process.GetCurrentProcess().Id}-{DateTime.Now:yyyyMMdd_HHmmss}.socket";
 
         // <summary>
         // Starts the child process and returns the diagnostics client once the child proc connects to the reversed diagnostics pipe.
         // The callee needs to resume the diagnostics client at appropriate time.
         // </summary>
-        public DiagnosticsClient Build(int timeoutInSec)
+        public static DiagnosticsClient Build(ProcessLauncher childProcLauncher, string toolName, int timeoutInSec)
         {
-            if (!_childProcLauncher.HasChildProc)
+            if (!childProcLauncher.HasChildProc)
             {
                 throw new InvalidOperationException("Must have a valid child process to launch.");
             }
-            if (!_childProcLauncher.Start(diagnosticTransportName))
+            // Create and start the reversed server            
+            string diagnosticTransportName = GetTransportName(toolName);
+            ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(diagnosticTransportName);
+            server.Start();
+
+            // Start the child proc
+            if (!childProcLauncher.Start(diagnosticTransportName))
             {
                 throw new InvalidOperationException("Failed to start dotnet-counters.");
             }
+
+            // Wait for attach
             IpcEndpointInfo endpointInfo = server.Accept(TimeSpan.FromSeconds(timeoutInSec));
+
+            // If for some reason a different process attached to us, wait until the expected process attaches.
+            while (endpointInfo.ProcessId != childProcLauncher.ChildProc.Id)
+            {
+               endpointInfo = server.Accept(TimeSpan.FromSeconds(timeoutInSec)); 
+            }
             return new DiagnosticsClient(endpointInfo.Endpoint);
         }
     }

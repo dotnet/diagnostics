@@ -88,61 +88,34 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _renderer.Stop();
         }
 
-        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, string name)
+        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string name)
         {
-            if (!ProcessLauncher.Launcher.HasChildProc)
+            if (!ValidateAndSetProcessId(processId, name))
             {
-                if (name != null)
-                {
-                    if (processId != 0)
-                    {
-                        Console.WriteLine("Can only specify either --name or --process-id option.");
-                        return 0;
-                    }
-                    processId = CommandUtils.FindProcessIdWithName(name);
-                    if (processId < 0)
-                    {
-                        return 0;
-                    }
-                }
-                else if (processId == 0)
-                {
-                    Console.WriteLine("Must specify either --name or --process-id option to start monitoring.");
-                    return 0;
-                }
+                return 0;
             }
 
             try
             {
                 _ct = ct;
-                _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
-                _console = console;
-                _processId = processId;
-                _interval = refreshInterval;
-                _renderer = new ConsoleWriter();
-                // Check if we are attaching at startup.
-                if (ProcessLauncher.Launcher.HasChildProc)
+                if (processId != 0)
                 {
-                    ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder(ProcessLauncher.Launcher);
-                    try
-                    {
-                        _diagnosticsClient = builder.Build(10);
-                    }
-                    catch (TimeoutException)
-                    {
-                        Console.Error.WriteLine("Unable to start counter session - the target app failed to connect to the diagnostics transport. This may happen if the target application is running .NET Core 3.1 or older versions. Attaching at startup is only available from .NET 5.0 or later.");
-                        if (!ProcessLauncher.Launcher.ChildProc.HasExited)
-                        {
-                            ProcessLauncher.Launcher.ChildProc.Kill();
-                        }
-                        return 0;
-                    }
+                    _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
                 }
                 else
                 {
-                    _diagnosticsClient = new DiagnosticsClient(processId);
+                    _counterList = GenerateCounterList(counters);
                 }
-                return await Start();
+                _console = console;
+                _interval = refreshInterval;
+                _renderer = new ConsoleWriter();
+                if (!BuildDiagnosticsClient())
+                {
+                    return 0;
+                }
+                int ret = await Start();
+                ProcessLauncher.Launcher.Cleanup();
+                return ret;
             }
             catch (OperationCanceledException)
             {
@@ -158,40 +131,34 @@ namespace Microsoft.Diagnostics.Tools.Counters
         }
 
 
-        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name)
+        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name)
         {
-            if (!ProcessLauncher.Launcher.HasChildProc)
+            if (!ValidateAndSetProcessId(processId, name))
             {
-                if (name != null)
-                {
-                    if (processId != 0)
-                    {
-                        Console.WriteLine("Can only specify either --name or --process-id option.");
-                        return 0;
-                    }
-                    processId = CommandUtils.FindProcessIdWithName(name);
-                    if (processId < 0)
-                    {
-                        return 0;
-                    }
-                }
-                else if (processId == 0)
-                {
-                    Console.WriteLine("Must specify either --name or --process-id option to start collecting.");
-                    return 0;
-                }
+                return 0;
             }
             try
             {
                 _ct = ct;
-                _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
+                if (processId != 0)
+                {
+                    _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
+                }
+                else
+                {
+                    _counterList = GenerateCounterList(counters);
+                }
                 _console = console;
-                _processId = processId;
                 _interval = refreshInterval;
                 _output = output;
                 if (_output.Length == 0)
                 {
                     _console.Error.WriteLine("Output cannot be an empty string");
+                    return 0;
+                }
+
+                if (!BuildDiagnosticsClient())
+                {
                     return 0;
                 }
 
@@ -205,6 +172,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     string processName = "";
                     try
                     {
+                        if (ProcessLauncher.Launcher.HasChildProc)
+                        {
+                            _processId = ProcessLauncher.Launcher.ChildProc.Id;
+                        }
                         processName = Process.GetProcessById(_processId).ProcessName;
                     }
                     catch (Exception) { }
@@ -216,33 +187,97 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     return 0;
                 }
 
-                if (ProcessLauncher.Launcher.HasChildProc)
-                {
-                    ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder(ProcessLauncher.Launcher);
-                    try
-                    {
-                        _diagnosticsClient = builder.Build(10);
-                    }
-                    catch (TimeoutException)
-                    {
-                        Console.Error.WriteLine("Unable to start tracing session - the target app failed to connect to the diagnostics transport. This may happen if the target application is running .NET Core 3.1 or older versions. Attaching at startup is only available from .NET 5.0 or later.");
-                        if (!ProcessLauncher.Launcher.ChildProc.HasExited)
-                        {
-                            ProcessLauncher.Launcher.ChildProc.Kill();
-                        }
-                        return 0;
-                    }
-                }
-                else
-                {
-                    _diagnosticsClient = new DiagnosticsClient(processId);
-                }
-                return await Start();
+                int ret = await Start();
+                ProcessLauncher.Launcher.Cleanup();
+                return ret;
             }
             catch (OperationCanceledException)
             {
             }
             return 1;
+        }
+        internal List<string> GenerateCounterList(string counters)
+        {
+            List<string> counterList = new List<string>();
+            bool inParen = false;
+            int startIdx = -1;
+            for (int i = 0; i < counters.Length; i++)
+            {
+                if (!inParen)
+                {
+                    if (counters[i] == '[')
+                    {
+                        inParen = true;
+                        continue;
+                    }
+                    else if (counters[i] == ',')
+                    {
+                        counterList.Add(counters.Substring(startIdx, i - startIdx));
+                        startIdx = -1;
+                    }
+                    else if (startIdx == -1 && counters[i] != ' ')
+                    {
+                        startIdx = i;
+                    }
+                }
+                else if (inParen && counters[i] == ']')
+                {
+                    inParen = false;
+                }
+            }
+            counterList.Add(counters.Substring(startIdx, counters.Length - startIdx));
+            return counterList;
+        }
+        
+        private bool ValidateAndSetProcessId(int processId, string name)
+        {
+            if (!ProcessLauncher.Launcher.HasChildProc)
+            {
+                if (name != null)
+                {
+                    if (processId != 0)
+                    {
+                        Console.WriteLine("Can only specify either --name or --process-id option.");
+                        return false;
+                    }
+                    processId = CommandUtils.FindProcessIdWithName(name);
+                    if (processId < 0)
+                    {
+                        return false;
+                    }
+                }
+                else if (processId == 0)
+                {
+                    Console.WriteLine("Must specify either --name or --process-id option to start collecting.");
+                    return false;
+                }
+            }
+            _processId = processId;
+            return true;
+        }
+        private bool BuildDiagnosticsClient()
+        {
+            if (ProcessLauncher.Launcher.HasChildProc)
+            {
+                try
+                {
+                    _diagnosticsClient = ReversedDiagnosticsClientBuilder.Build(ProcessLauncher.Launcher, "dotnet-counters", 10);
+                }
+                catch (TimeoutException)
+                {
+                    Console.Error.WriteLine("Unable to start tracing session - the target app failed to connect to the diagnostics port. This may happen if the target application is running .NET Core 3.1 or older versions. Attaching at startup is only available from .NET 5.0 or later.");
+                    if (!ProcessLauncher.Launcher.ChildProc.HasExited)
+                    {
+                        ProcessLauncher.Launcher.ChildProc.Kill();
+                    }
+                    return false;
+                }
+            }
+            else
+            {
+                _diagnosticsClient = new DiagnosticsClient(_processId);
+            }
+            return true;
         }
 
         private string BuildProviderString()
@@ -301,7 +336,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             return providerString;
         }
-        
 
         private async Task<int> Start()
         {
@@ -372,12 +406,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     pauseCmdSet = false;
                 }
-            }
-
-            // If we launched a child proc that hasn't exited yet, terminate it before we exit
-            if (ProcessLauncher.Launcher.HasChildProc)
-            {
-                ProcessLauncher.Launcher.ChildProc.Kill();
             }
             return await Task.FromResult(0);
         }

@@ -62,7 +62,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             return ErrorCodes.ArgumentError;
                         }
                     }
-                    processId = CommandUtils.FindProcessIdWithName(name);
                     if (processId < 0)
                     {
                         Console.Error.WriteLine("Process ID should not be negative.");
@@ -131,14 +130,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Process process;
                 if (ProcessLauncher.Launcher.HasChildProc)
                 {
-                    ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder(ProcessLauncher.Launcher);
                     try
                     {
-                        diagnosticsClient = builder.Build(10);
+                        diagnosticsClient = ReversedDiagnosticsClientBuilder.Build(ProcessLauncher.Launcher, "dotnet-trace", 10);
                     }
                     catch (TimeoutException)
                     {
-                        Console.Error.WriteLine("Unable to start tracing session - the target app failed to connect to the diagnostics transport. This may happen if the target application is running .NET Core 3.1 or older versions. Attaching at startup is only available from .NET 5.0 or later.");
+                        Console.Error.WriteLine("Unable to start tracing session - the target app failed to connect to the diagnostics port. This may happen if the target application is running .NET Core 3.1 or older versions. Attaching at startup is only available from .NET 5.0 or later.");
                         if (!ProcessLauncher.Launcher.ChildProc.HasExited)
                         {
                             ProcessLauncher.Launcher.ChildProc.Kill();

@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
     internal class Program
     {
-        delegate Task<int> ExportDelegate(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string processName);
+        delegate Task<int> ExportDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string processName);
 
         private IEnumerable<Command> StartupCommands
         {
@@ -39,9 +39,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 description: "Start monitoring a .NET application")
             {
                 // Handler
-                CommandHandler.Create<CancellationToken, List<string>, IConsole, int, int, string>(new CounterMonitor().Monitor),
+                CommandHandler.Create<CancellationToken, List<string>, string, IConsole, int, int, string>(new CounterMonitor().Monitor),
                 // Arguments and Options
-                CounterList(), ProcessIdOption(), RefreshIntervalOption(), NameOption()
+                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), NameOption()
             };
         
         private static Command CollectCommand() =>
@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // Handler
                 HandlerDescriptor.FromDelegate((ExportDelegate)new CounterMonitor().Collect).GetCommandHandler(),
                 // Arguments and Options
-                CounterList(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption(), NameOption()
+                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption(), NameOption()
             };
 
         private static Option NameOption() =>
@@ -93,6 +93,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 description: "The output file name.") 
             {
                 Argument = new Argument<string>(name: "output", getDefaultValue: () => "counter")
+            };
+
+        private static Option CounterOption() =>
+            new Option(
+                alias: "--counters",
+                description: "List of counter providers.")
+            {
+                Argument = new Argument<string>(name: "counters", getDefaultValue: () => "System.Runtime")
             };
 
         private static Argument CounterList() =>
