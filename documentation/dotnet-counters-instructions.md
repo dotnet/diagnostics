@@ -136,13 +136,13 @@ dotnet tool install --global dotnet-counters
 1. Collect the runtime performance counters at a refresh interval of 10 seconds and export it as a JSON file named "test.json".
 
 ```
-    dotnet run collect --process-id 863148 --refresh-interval 10 --output test --format json
+    dotnet-counters collect --process-id 863148 --refresh-interval 10 --output test --format json
 ```
 
 2. Collect the runtime performance counters as well as the ASP.NET hosting performance counters at the default refresh interval (1 second) and export it as a CSV file named "mycounter.csv". 
 
 ```
-    dotnet run collect --process-id 863148 --output mycounter --format csv System.Runtime Microsoft.AspNetCore.Hosting
+    dotnet-counters collect --process-id 863148 --output mycounter --format csv System.Runtime Microsoft.AspNetCore.Hosting
 ```
 
 
