@@ -1567,7 +1567,10 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
                         DMLOut("             %s\n", DMLCCWrapper(pArray[i]));
                     }
                 }
-                // TODO: should there be an error message when we fail on the second call?
+                else
+                {
+                    ExtOut("Failed to get ComWrappers RCW/CCW data for the object\n");
+                }
             }
             else
             {
