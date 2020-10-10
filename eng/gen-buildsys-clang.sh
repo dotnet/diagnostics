@@ -121,7 +121,9 @@ if [[ -n "$LLDB_INCLUDE_DIR" ]]; then
     cmake_extra_defines="$cmake_extra_defines -DWITH_LLDB_INCLUDES=$LLDB_INCLUDE_DIR"
 fi
 if [ "$CROSSCOMPILE" == "1" ]; then
-    if ! [[ -n "$ROOTFS_DIR" ]]; then
+    platform="$(uname)"
+    # OSX doesn't use rootfs
+    if ! [[ -n "$ROOTFS_DIR" || "$platform" == "Darwin" ]]; then
         echo "ROOTFS_DIR not set for crosscompile"
         exit 1
     fi
@@ -130,8 +132,13 @@ if [ "$CROSSCOMPILE" == "1" ]; then
     fi
     export TARGET_BUILD_ARCH=$build_arch
     cmake_extra_defines="$cmake_extra_defines -C $CONFIG_DIR/tryrun.cmake"
-    cmake_extra_defines="$cmake_extra_defines -DCMAKE_TOOLCHAIN_FILE=$CONFIG_DIR/toolchain.cmake"
     cmake_extra_defines="$cmake_extra_defines -DCLR_UNIX_CROSS_BUILD=1"
+
+    if [[ "$platform" == "Darwin" ]]; then
+        cmake_extra_defines="$cmake_extra_defines -DCMAKE_SYSTEM_NAME=Darwin"
+    else
+        cmake_extra_defines="$cmake_extra_defines -DCMAKE_TOOLCHAIN_FILE=$CONFIG_DIR/toolchain.cmake"
+    fi
 fi
 if [ $OS == "Linux" ]; then
     linux_id_file="/etc/os-release"

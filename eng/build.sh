@@ -320,14 +320,16 @@ if [[ "$__BuildArch" == "armel" ]]; then
 fi
 
 # Configure environment if we are doing a cross compile.
-if [ "${__BuildArch}" != "${__HostArch}" -a "${__BuildOS}" != "OSX" ]; then
+if [ "${__BuildArch}" != "${__HostArch}" ]; then
     __CrossBuild=true
     export CROSSCOMPILE=1
-    if ! [[ -n "$ROOTFS_DIR" ]]; then
-        echo "ERROR: ROOTFS_DIR not set for cross build"
-        exit 1
+    if [ "${__BuildOS}" != "OSX" ]; then
+        if ! [[ -n "$ROOTFS_DIR" ]]; then
+            echo "ERROR: ROOTFS_DIR not set for cross build"
+            exit 1
+        fi
+        echo "ROOTFS_DIR: $ROOTFS_DIR"
     fi
-    echo "ROOTFS_DIR: $ROOTFS_DIR"
 fi
 
 mkdir -p "$__IntermediatesDir"
@@ -378,8 +380,8 @@ initTargetDistroRid()
 
     local passedRootfsDir=""
 
-    # Only pass ROOTFS_DIR if cross is specified.
-    if [ $__CrossBuild == true ]; then
+    # Only pass ROOTFS_DIR if cross is specified and the current platform is not OSX that doesn't use rootfs
+    if [ $__CrossBuild == true  -a "$__HostOS" != "OSX" ]; then
         passedRootfsDir=${ROOTFS_DIR}
     fi
 
