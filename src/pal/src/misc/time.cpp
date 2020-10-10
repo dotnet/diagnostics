@@ -224,44 +224,6 @@ QueryPerformanceFrequency(
 
 /*++
 Function:
-  QueryThreadCycleTime
-
-Puts the execution time (in nanoseconds) for the thread pointed to by ThreadHandle, into the unsigned long
-pointed to by CycleTime. ThreadHandle must refer to the current thread. Returns TRUE on success, FALSE on
-failure.
---*/
-
-BOOL
-PALAPI
-QueryThreadCycleTime(
-    IN HANDLE ThreadHandle,
-    OUT PULONG64 CycleTime
-    )
-{
-
-    ULONG64 calcTime;
-    FILETIME kernelTime, userTime;
-    BOOL retval = TRUE;
-
-    if(!GetThreadTimesInternal(ThreadHandle, &kernelTime, &userTime))
-    {
-        ASSERT("Could not get cycle time for current thread");
-        retval = FALSE;
-        goto EXIT;
-    }
-
-    calcTime = ((ULONG64)kernelTime.dwHighDateTime << 32);
-    calcTime += (ULONG64)kernelTime.dwLowDateTime;
-    calcTime += ((ULONG64)userTime.dwHighDateTime << 32);
-    calcTime += (ULONG64)userTime.dwLowDateTime;
-    *CycleTime = calcTime;
-
-EXIT:
-    return retval;
-}
-
-/*++
-Function:
   GetTickCount64
 
 Returns a 64-bit tick count with a millisecond resolution. It tries its best
