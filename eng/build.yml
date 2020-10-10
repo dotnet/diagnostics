@@ -17,8 +17,6 @@ parameters:
   # Optional: Docker image to use
   dockerImage: ''
 
-  crossBuild: false
-
   # Optional: ROOTFS_DIR to use
   crossrootfsDir: ''
 
