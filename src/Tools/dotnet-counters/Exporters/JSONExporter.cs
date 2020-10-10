@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Globalization;
 using System.IO;
 using System.Text;
 
@@ -36,9 +37,10 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             }
 
             builder = new StringBuilder();
-            builder.Append($"{{ \"TargetProcess\": \"{_processName}\", ");
-            builder.Append($"\"StartTime\": \"{DateTime.Now.ToString()}\", ");
-            builder.Append($"\"Events\": [");
+            builder
+                .Append("{ \"TargetProcess\": \"").Append(_processName).Append("\", ")
+                .Append("\"StartTime\": \"").Append(DateTime.Now.ToString()).Append("\", ")
+                .Append("\"Events\": [");
         }
 
         public void EventPipeSourceConnected()
@@ -57,17 +59,19 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 File.AppendAllText(_output, builder.ToString());
                 builder.Clear();
             }
-            builder.Append($"{{ \"timestamp\": \"{DateTime.Now.ToString("u")}\", ");
-            builder.Append($" \"provider\": \"{providerName}\", ");
-            builder.Append($" \"name\": \"{payload.GetDisplay()}\", ");
-            builder.Append($" \"counterType\": \"{payload.GetCounterType()}\", ");
-            builder.Append($" \"value\": {payload.GetValue()} }},");
+
+            builder
+                .Append("{ \"timestamp\": \"").Append(DateTime.Now.ToString("u")).Append("\", ")
+                .Append(" \"provider\": \"").Append(providerName).Append("\", ")
+                .Append(" \"name\": \"").Append(payload.GetDisplay()).Append("\", ")
+                .Append(" \"counterType\": \"").Append(payload.GetCounterType()).Append("\", ")
+                .Append(" \"value\": ").Append(payload.GetValue().ToString(CultureInfo.InvariantCulture)).Append(" },");
         }
 
         public void Stop()
         {
             builder.Remove(builder.Length - 1, 1); // Remove the last comma to ensure valid JSON format.
-            builder.Append($"]}}");
+            builder.Append("]}");
             // Append all the remaining text to the file.
             File.AppendAllText(_output, builder.ToString());
             Console.WriteLine("File saved to " + _output);
