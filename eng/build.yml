@@ -50,20 +50,8 @@ jobs:
       ${{ if and(eq(parameters.osGroup, 'FreeBSD'), ne(variables['System.TeamProject'], 'public')) }}:
         name: dnceng-freebsd-internal
 
-      # Official Build OSX Pool
-      ${{ if and(eq(parameters.osGroup, 'MacOS'), ne(variables['System.TeamProject'], 'public')) }}:
-        name: Hosted Mac Internal
-
-      # Public OSX Build Pool
-      ${{ if and(eq(parameters.osGroup, 'MacOS'), eq(variables['System.TeamProject'], 'public')) }}:
-        vmImage: macOS-10.14
-
-      # Official Build OSX Xcode 12 Pool
-      ${{ if and(eq(parameters.osGroup, 'MacOS_cross'), ne(variables['System.TeamProject'], 'public')) }}:
-        vmImage: macos-10.15
-
-      # Public OSX Xcode 12 Build Pool
-      ${{ if and(eq(parameters.osGroup, 'MacOS_cross'), eq(variables['System.TeamProject'], 'public')) }}:
+      # Build OSX Pool  (we don't have on-prem OSX BuildPool)
+      ${{ if in(parameters.osGroup, 'MacOS', 'MacOS_cross') }}:
         vmImage: macOS-10.15
 
       # Official Build Windows Pool
@@ -155,8 +143,6 @@ jobs:
         condition: succeeded()
 
     - ${{ if eq(parameters.osGroup, 'MacOS') }}:
-      - ${{ if eq(variables['System.TeamProject'], 'public') }}:
-        - script: /bin/bash -c "sudo xcode-select -s /Applications/Xcode_10.3.app/Contents/Developer"
       - script: $(Build.SourcesDirectory)/eng/cibuild.sh
           --configuration $(_BuildConfig) 
           --architecture $(_BuildArch)
