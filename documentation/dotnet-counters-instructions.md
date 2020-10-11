@@ -90,7 +90,7 @@ dotnet tool install --global dotnet-counters
 
     2. Monitoring just CPU usage and GC heap size from `System.Runtime` at a refresh interval of 5 seconds:
 
-      > dotnet-counters monitor --process-id 1902 System.Runtime[cpu-usage,gc-heap-size,exception-count]
+      > dotnet-counters monitor --process-id 1902 --refresh-interval 5 System.Runtime[cpu-usage,gc-heap-size,exception-count]
 
     Press p to pause, r to resume, q to quit.
       System.Runtime:
