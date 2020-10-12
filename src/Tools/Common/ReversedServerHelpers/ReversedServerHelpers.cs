@@ -3,12 +3,14 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing.Parsers.Clr;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace Microsoft.Internal.Common.Utils
 {
@@ -22,11 +24,41 @@ namespace Microsoft.Internal.Common.Utils
 
         internal static ProcessLauncher Launcher = new ProcessLauncher();
 
-        public void PrepareChildProcess(List<string> args)
+        public void PrepareChildProcess(string[] args)
         {
+            int unparsedTokenIdx = FindUnparsedTokenIndex(args);
+            if (unparsedTokenIdx < 0)
+            {
+                return;
+            }
+
             _childProc = new Process();
-            _childProc.StartInfo.FileName = args[0];
-            _childProc.StartInfo.Arguments = String.Join(" ", args.GetRange(1, args.Count - 1));
+            _childProc.StartInfo.FileName = args[unparsedTokenIdx];
+            string arguments = "";
+            for (int i = unparsedTokenIdx+1; i < args.Length; i++)
+            {
+                if (args[i].Contains(" "))
+                {
+                    arguments += $"\"{args[i].Replace("\"", "\\\"")}\"";
+                }
+                else
+                {
+                    arguments += args[i];
+                }
+
+                if (i != args.Length)
+                    arguments += " ";
+            }
+            _childProc.StartInfo.Arguments = arguments;
+        }
+
+        private int FindUnparsedTokenIndex(string[] args)
+        {
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i] == "--" && i < (args.Length - 1)) return i+1;
+            }
+            return -1;
         }
 
         public bool HasChildProc
