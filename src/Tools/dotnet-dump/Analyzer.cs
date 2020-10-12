@@ -75,6 +75,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         symbolDirectoryPath: null,
                         windowsSymbolPath: null);
 
+                    target.BinaryLocator = new BinaryLocator();
+
                     // Run the commands from the dotnet-dump command line
                     if (command != null)
                     {
