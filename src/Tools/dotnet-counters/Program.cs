@@ -12,7 +12,6 @@ using System.CommandLine.Binding;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -172,7 +171,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // If we notice there are unparsed tokens, user might want to attach on startup.
                 if (unparsedTokens.Count > 0)
                 {
-                    ProcessLauncher.Launcher.PrepareChildProcess(unparsedTokens.ToList());
+                    ProcessLauncher.Launcher.PrepareChildProcess(args);
                 }
             }
 
