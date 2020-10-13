@@ -88,35 +88,28 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _renderer.Stop();
         }
 
-        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, string name)
+        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string name)
         {
-            if (name != null)
+            if (!ValidateAndSetProcessId(processId, name))
             {
-                if (processId != 0)
-                {
-                    Console.WriteLine("Can only specify either --name or --process-id option.");
-                    return 0;
-                }
-                processId = CommandUtils.FindProcessIdWithName(name);
-                if (processId < 0)
-                {
-                    return 0;
-                }
+                return 0;
             }
 
             try
             {
+                InitializeCounterList(counters, counter_list);
                 _ct = ct;
-                _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
                 _console = console;
-                _processId = processId;
                 _interval = refreshInterval;
                 _renderer = new ConsoleWriter();
-                _diagnosticsClient = new DiagnosticsClient(processId);
-
-                return await Start();
+                if (!BuildDiagnosticsClient())
+                {
+                    return 0;
+                }
+                int ret = await Start();
+                ProcessLauncher.Launcher.Cleanup();
+                return ret;
             }
-
             catch (OperationCanceledException)
             {
                 try
@@ -130,35 +123,28 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name)
-        {
-            if (name != null)
-            {
-                if (processId != 0)
-                {
-                    Console.WriteLine("Can only specify either --name or --process-id option.");
-                    return 0;
-                }
-                processId = CommandUtils.FindProcessIdWithName(name);
-                if (processId < 0)
-                {
-                    return 0;
-                }
-            }
 
+        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name)
+        {
+            if (!ValidateAndSetProcessId(processId, name))
+            {
+                return 0;
+            }
             try
             {
+                InitializeCounterList(counters, counter_list);
                 _ct = ct;
-                _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
                 _console = console;
-                _processId = processId;
                 _interval = refreshInterval;
                 _output = output;
-                _diagnosticsClient = new DiagnosticsClient(processId);
-
                 if (_output.Length == 0)
                 {
                     _console.Error.WriteLine("Output cannot be an empty string");
+                    return 0;
+                }
+
+                if (!BuildDiagnosticsClient())
+                {
                     return 0;
                 }
 
@@ -172,23 +158,144 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     string processName = "";
                     try
                     {
+                        if (ProcessLauncher.Launcher.HasChildProc)
+                        {
+                            _processId = ProcessLauncher.Launcher.ChildProc.Id;
+                        }
                         processName = Process.GetProcessById(_processId).ProcessName;
                     }
                     catch (Exception) { }
-                    _renderer = new JSONExporter(output, processName); ;
+                    _renderer = new JSONExporter(output, processName);
                 }
                 else
                 {
                     _console.Error.WriteLine($"The output format {format} is not a valid output format.");
                     return 0;
                 }
-                return await Start();
+
+                int ret = await Start();
+                ProcessLauncher.Launcher.Cleanup();
+                return ret;
             }
             catch (OperationCanceledException)
             {
             }
-
             return 1;
+        }
+
+        private void InitializeCounterList(string counters, List<string> counterList)
+        {
+            if (_processId != 0)
+            {
+                GenerateCounterList(counters, counterList);
+                _counterList = counterList;
+            }
+            else
+            {
+                _counterList = GenerateCounterList(counters);
+            }
+        }
+
+        internal List<string> GenerateCounterList(string counters)
+        {
+            List<string> counterList = new List<string>();
+            bool inParen = false;
+            int startIdx = -1;
+            for (int i = 0; i < counters.Length; i++)
+            {
+                if (!inParen)
+                {
+                    if (counters[i] == '[')
+                    {
+                        inParen = true;
+                        continue;
+                    }
+                    else if (counters[i] == ',')
+                    {
+                        counterList.Add(counters.Substring(startIdx, i - startIdx));
+                        startIdx = -1;
+                    }
+                    else if (startIdx == -1 && counters[i] != ' ')
+                    {
+                        startIdx = i;
+                    }
+                }
+                else if (inParen && counters[i] == ']')
+                {
+                    inParen = false;
+                }
+            }
+            counterList.Add(counters.Substring(startIdx, counters.Length - startIdx));
+            return counterList;
+        }
+
+        /// <summary>
+        /// This gets invoked by Collect/Monitor when user specifies target process (instead of launching at startup)
+        /// The user may specify --counters option as well as the default list of counters, so we try to merge it here.
+        /// </summary>
+        /// <param name="counters"></param>
+        /// <param name="counter_list"></param>
+        internal void GenerateCounterList(string counters, List<string> counter_list)
+        {
+            List<string> counterOptionList = GenerateCounterList(counters);
+            foreach (string counter in counterOptionList)
+            {
+                if (!counter_list.Contains(counter))
+                {
+                    counter_list.Add(counter);
+                }
+            }
+        }
+        
+        private bool ValidateAndSetProcessId(int processId, string name)
+        {
+            if (!ProcessLauncher.Launcher.HasChildProc)
+            {
+                if (name != null)
+                {
+                    if (processId != 0)
+                    {
+                        Console.WriteLine("Can only specify either --name or --process-id option.");
+                        return false;
+                    }
+                    processId = CommandUtils.FindProcessIdWithName(name);
+                    if (processId < 0)
+                    {
+                        return false;
+                    }
+                }
+                else if (processId == 0)
+                {
+                    Console.WriteLine("Must specify either --name or --process-id option to start collecting.");
+                    return false;
+                }
+            }
+            _processId = processId;
+            return true;
+        }
+        private bool BuildDiagnosticsClient()
+        {
+            if (ProcessLauncher.Launcher.HasChildProc)
+            {
+                try
+                {
+                    _diagnosticsClient = ReversedDiagnosticsClientBuilder.Build(ProcessLauncher.Launcher, "dotnet-counters", 10);
+                }
+                catch (TimeoutException)
+                {
+                    Console.Error.WriteLine("Unable to start tracing session - the target app failed to connect to the diagnostics port. This may happen if the target application is running .NET Core 3.1 or older versions. Attaching at startup is only available from .NET 5.0 or later.");
+                    if (!ProcessLauncher.Launcher.ChildProc.HasExited)
+                    {
+                        ProcessLauncher.Launcher.ChildProc.Kill();
+                    }
+                    return false;
+                }
+            }
+            else
+            {
+                _diagnosticsClient = new DiagnosticsClient(_processId);
+            }
+            return true;
         }
 
         private string BuildProviderString()
@@ -247,16 +354,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             return providerString;
         }
-        
 
         private async Task<int> Start()
         {
-            if (_processId == 0)
-            {
-                _console.Error.WriteLine("--process-id is required.");
-                return 1;
-            }
-
             string providerString = BuildProviderString();
             if (providerString.Length == 0)
             {
@@ -271,6 +371,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 try
                 {
                     _session = _diagnosticsClient.StartEventPipeSession(Trace.Extensions.ToProviders(providerString), false, 10);
+                    if (ProcessLauncher.Launcher.HasChildProc)
+                    {
+                        _diagnosticsClient.ResumeRuntime();
+                    }
                     var source = new EventPipeEventSource(_session.EventStream);
                     source.Dynamic.All += DynamicAllMonitor;
                     _renderer.EventPipeSourceConnected();
@@ -282,7 +386,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[ERROR] {ex.ToString()}");
+                    Console.WriteLine($"[ERROR] {ex.ToString()}");
                 }
                 finally
                 {
@@ -321,7 +425,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     pauseCmdSet = false;
                 }
             }
-
             return await Task.FromResult(0);
         }
     }

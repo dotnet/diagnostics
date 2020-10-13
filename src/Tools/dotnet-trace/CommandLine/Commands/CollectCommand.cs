@@ -46,30 +46,32 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
 
-                // Either processName or processId has to be specified.
-                if (name != null)
+                if (!ProcessLauncher.Launcher.HasChildProc)
                 {
-                    if (processId != 0)
+                    // Either processName or processId has to be specified.
+                    if (name != null)
                     {
-                        Console.WriteLine("Can only specify either --name or --process-id option.");
-                        return ErrorCodes.ArgumentError;
+                        if (processId != 0)
+                        {
+                            Console.WriteLine("Can only specify either --name or --process-id option.");
+                            return ErrorCodes.ArgumentError;
+                        }
+                        processId = CommandUtils.FindProcessIdWithName(name);
+                        if (processId < 0)
+                        {
+                            return ErrorCodes.ArgumentError;
+                        }
                     }
-                    processId = CommandUtils.FindProcessIdWithName(name);
                     if (processId < 0)
                     {
+                        Console.Error.WriteLine("Process ID should not be negative.");
                         return ErrorCodes.ArgumentError;
                     }
-                }
-
-                if (processId < 0)
-                {
-                    Console.Error.WriteLine("Process ID should not be negative.");
-                    return ErrorCodes.ArgumentError;
-                }
-                else if (processId == 0)
-                {
-                    Console.Error.WriteLine("--process-id is required");
-                    return ErrorCodes.ArgumentError;
+                    else if (processId == 0)
+                    {
+                        Console.Error.WriteLine("--process-id is required");
+                        return ErrorCodes.ArgumentError;
+                    }
                 }
 
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
@@ -124,7 +126,30 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 PrintProviders(providerCollection, enabledBy);
 
-                var process = Process.GetProcessById(processId);
+                DiagnosticsClient diagnosticsClient;
+                Process process;
+                if (ProcessLauncher.Launcher.HasChildProc)
+                {
+                    try
+                    {
+                        diagnosticsClient = ReversedDiagnosticsClientBuilder.Build(ProcessLauncher.Launcher, "dotnet-trace", 10);
+                    }
+                    catch (TimeoutException)
+                    {
+                        Console.Error.WriteLine("Unable to start tracing session - the target app failed to connect to the diagnostics port. This may happen if the target application is running .NET Core 3.1 or older versions. Attaching at startup is only available from .NET 5.0 or later.");
+                        if (!ProcessLauncher.Launcher.ChildProc.HasExited)
+                        {
+                            ProcessLauncher.Launcher.ChildProc.Kill();
+                        }
+                        return ErrorCodes.SessionCreationError;
+                    }
+                    process = ProcessLauncher.Launcher.ChildProc;
+                }
+                else
+                {
+                    diagnosticsClient = new DiagnosticsClient(processId);
+                    process = Process.GetProcessById(processId);
+                }
                 var shouldExit = new ManualResetEvent(false);
                 var shouldStopAfterDuration = duration != default(TimeSpan);
                 var rundownRequested = false;
@@ -132,13 +157,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 ct.Register(() => shouldExit.Set());
 
-                var diagnosticsClient = new DiagnosticsClient(processId);
                 using (VirtualTerminalMode vTermMode = VirtualTerminalMode.TryEnable())
                 {
                     EventPipeSession session = null;
                     try
                     {
                         session = diagnosticsClient.StartEventPipeSession(providerCollection, true, (int)buffersize);
+                        if (ProcessLauncher.Launcher.HasChildProc)
+                        {
+                            diagnosticsClient.ResumeRuntime();
+                        }
                     }
                     catch (DiagnosticsClientException e)
                     {
@@ -236,6 +264,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 if (console.GetTerminal() != null)
                     Console.CursorVisible = true;
+                
+                // If we launched a child proc that hasn't exited yet, terminate it before we exit.
+                if (ProcessLauncher.Launcher.HasChildProc && !ProcessLauncher.Launcher.ChildProc.HasExited)
+                {
+                    ProcessLauncher.Launcher.ChildProc.Kill();
+                }
             }
 
             return await Task.FromResult(0);
