@@ -312,7 +312,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler(),
                 // Options
                 CommonOptions.ProcessIdOption(),
-                CircularBufferOption(),
+                CommonOptions.CircularBufferOption(),
                 OutputPathOption(),
                 ProvidersOption(),
                 ProfileOption(),
@@ -321,16 +321,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CLREventsOption(),
                 CLREventLevelOption(),
                 CommonOptions.NameOption()
-            };
-
-        private static uint DefaultCircularBufferSizeInMB() => 256;
-
-        private static Option CircularBufferOption() =>
-            new Option(
-                alias: "--buffersize",
-                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB()} MB.")
-            {
-                Argument = new Argument<uint>(name: "size", getDefaultValue: DefaultCircularBufferSizeInMB)
             };
 
         public static string DefaultTraceName => "trace.nettrace";

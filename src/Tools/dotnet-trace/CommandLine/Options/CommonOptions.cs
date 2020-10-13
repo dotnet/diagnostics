@@ -41,5 +41,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Argument = new Argument<TraceFileFormat>(name: "trace-file-format")
             };
+
+        public static uint DefaultCircularBufferSizeInMB() => 256;
+
+        public static Option CircularBufferOption() =>
+        new Option(
+            alias: "--buffersize",
+            description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB()} MB.")
+        {
+            Argument = new Argument<uint>(name: "size", getDefaultValue: DefaultCircularBufferSizeInMB)
+        };
     }
 }
