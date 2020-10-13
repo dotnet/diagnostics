@@ -68,7 +68,6 @@ namespace DiagnosticsReleaseTool.Impl
         private static ILogger GetDiagLogger(bool verbose)
         {
             var loggingConfiguration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("logging.json", optional: false, reloadOnChange: false)
                 .Build();
 
