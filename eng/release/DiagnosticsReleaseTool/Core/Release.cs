@@ -89,7 +89,7 @@ namespace ReleaseTool.Core
 
         private void EnsureLoggerAvailable()
         {
-            if (_logger is object)
+            if (_logger is not null)
             {
                 return;
             }

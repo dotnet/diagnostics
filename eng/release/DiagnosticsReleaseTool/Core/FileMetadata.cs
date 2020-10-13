@@ -37,7 +37,7 @@ namespace ReleaseTool.Core
                 throw new ArgumentException("AssetCategory for file can't be null or empty");
             }
 
-            if (sha512 is object)
+            if (sha512 is not null)
             {
                 // TODO: Validate hex
                 bool validSha = sha512.Length == 128;
