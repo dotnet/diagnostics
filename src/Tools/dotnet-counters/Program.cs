@@ -24,15 +24,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
     {
         delegate Task<int> ExportDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string processName);
 
-        private IEnumerable<Command> StartupCommands
-        {
-            get
-            {
-                yield return MonitorCommand();
-                yield return CollectCommand();
-            }
-        }
-
         private static Command MonitorCommand() =>
             new Command(
                 name: "monitor",
