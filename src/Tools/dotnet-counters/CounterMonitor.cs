@@ -97,15 +97,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             try
             {
+                InitializeCounterList(counters, counter_list);
                 _ct = ct;
-                if (processId != 0)
-                {
-                    _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
-                }
-                else
-                {
-                    _counterList = GenerateCounterList(counters);
-                }
                 _console = console;
                 _interval = refreshInterval;
                 _renderer = new ConsoleWriter();
@@ -139,15 +132,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             try
             {
+                InitializeCounterList(counters, counter_list);
                 _ct = ct;
-                if (processId != 0)
-                {
-                    _counterList = counter_list; // NOTE: This variable name has an underscore because that's the "name" that the CLI displays. System.CommandLine doesn't like it if we change the variable to camelcase. 
-                }
-                else
-                {
-                    _counterList = GenerateCounterList(counters);
-                }
                 _console = console;
                 _interval = refreshInterval;
                 _output = output;
@@ -196,6 +182,20 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             return 1;
         }
+
+        private void InitializeCounterList(string counters, List<string> counterList)
+        {
+            if (_processId != 0)
+            {
+                GenerateCounterList(counters, counterList);
+                _counterList = counterList;
+            }
+            else
+            {
+                _counterList = GenerateCounterList(counters);
+            }
+        }
+
         internal List<string> GenerateCounterList(string counters)
         {
             List<string> counterList = new List<string>();
@@ -227,6 +227,24 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             counterList.Add(counters.Substring(startIdx, counters.Length - startIdx));
             return counterList;
+        }
+
+        /// <summary>
+        /// This gets invoked by Collect/Monitor when user specifies target process (instead of launching at startup)
+        /// The user may specify --counters option as well as the default list of counters, so we try to merge it here.
+        /// </summary>
+        /// <param name="counters"></param>
+        /// <param name="counter_list"></param>
+        internal void GenerateCounterList(string counters, List<string> counter_list)
+        {
+            List<string> counterOptionList = GenerateCounterList(counters);
+            foreach (string counter in counterOptionList)
+            {
+                if (!counter_list.Contains(counter))
+                {
+                    counter_list.Add(counter);
+                }
+            }
         }
         
         private bool ValidateAndSetProcessId(int processId, string name)

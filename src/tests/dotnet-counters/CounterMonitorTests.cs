@@ -57,5 +57,28 @@ namespace DotnetCounters.UnitTests
             Assert.Equal("MySource2[mycounter1]", counterList[1]);
             Assert.Equal("System.Runtime[cpu-usage,working-set]", counterList[2]);
         }
+
+        [Fact]
+        public void GenerateCounterListWithOptionAndArgumentsTest()
+        {
+            CounterMonitor monitor = new CounterMonitor();
+            List<string> counters = new List<string>() { "System.Runtime", "MyEventSource" };
+            monitor.GenerateCounterList("MyEventSource1,MyEventSource2", counters);
+            Assert.Contains("MyEventSource", counters);
+            Assert.Contains("MyEventSource1", counters);
+            Assert.Contains("MyEventSource2", counters);
+            Assert.Contains("System.Runtime", counters);
+        }
+
+        [Fact]
+        public void GenerateCounterListWithOptionAndArgumentsTestWithDupEntries()
+        {
+            CounterMonitor monitor = new CounterMonitor();
+            List<string> counters = new List<string>() { "System.Runtime", "MyEventSource" };
+            monitor.GenerateCounterList("System.Runtime,MyEventSource", counters);
+            Assert.Equal(2, counters.Count);
+            Assert.Contains("MyEventSource", counters);
+            Assert.Contains("System.Runtime", counters);
+        }
     }
 }
