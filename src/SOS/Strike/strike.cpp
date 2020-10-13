@@ -122,9 +122,6 @@
 
 #include "ExpressionNode.h"
 #include "WatchCmd.h"
-
-#include <algorithm>
-
 #include "tls.h"
 
 typedef struct _VM_COUNTERS {
@@ -155,13 +152,13 @@ const UINT kcMaxMethodDescsForProfiler = 100;
 #include <tuple>
 #include <memory>
 #include <functional>
+#include <algorithm>
 
 BOOL ControlC = FALSE;
 WCHAR g_mdName[mdNameLen];
 
 #ifndef FEATURE_PAL
 HMODULE g_hInstance = NULL;
-#include <algorithm>
 #endif // !FEATURE_PAL
 
 #ifdef _MSC_VER
@@ -4061,13 +4058,11 @@ public:
             ExtOut("If you need this functionality, get a full memory dump with \".dump /ma mydump.dmp\"\n");
         }
 
-#ifndef FEATURE_PAL
-        if (IsWindowsTarget() && (mLive || mDead))
+        if (mLive || mDead)
         {
             GCRootImpl gcroot;
             mLiveness = gcroot.GetLiveObjects();
         }
-#endif
 
         // Some of the "specialty" versions of DumpHeap have slightly
         // different implementations than the standard version of DumpHeap.
@@ -4174,17 +4169,14 @@ private:
 
     bool IsCorrectLiveness(const sos::Object &obj)
     {
-#ifndef FEATURE_PAL
-        if (IsWindowsTarget() && mLive && mLiveness.find(obj.GetAddress()) == mLiveness.end())
+        if (mLive && mLiveness.find(obj.GetAddress()) == mLiveness.end())
             return false;
 
-        if (IsWindowsTarget() && mDead && (mLiveness.find(obj.GetAddress()) != mLiveness.end() || obj.IsFree()))
+        if (mDead && (mLiveness.find(obj.GetAddress()) != mLiveness.end() || obj.IsFree()))
             return false;
-#endif
+
         return true;
     }
-
-
 
     inline void PrintHeader()
     {
@@ -4278,15 +4270,6 @@ private:
 
     void DumpHeapStrings(sos::GCHeap &gcheap)
     {
-#ifdef FEATURE_PAL
-        ExtOut("Not implemented.\n");
-#else
-        if (!IsWindowsTarget())
-        {
-            ExtOut("Not implemented.\n");
-            return;
-        }
-
         const int offset = sos::Object::GetStringDataOffset();
         typedef std::set<StringSetEntry> Set;
         Set set;            // A set keyed off of the string's text
@@ -4348,7 +4331,6 @@ private:
             Flatten(vitr->str, (unsigned int)_wcslen(vitr->str));
             out.WriteRow(Decimal(vitr->size), Decimal(vitr->count), vitr->str);
         }
-#endif // FEATURE_PAL
     }
 
     void DumpHeapShort(sos::GCHeap &gcheap)
@@ -4407,37 +4389,23 @@ private:
     WCHAR *mType;
 
 private:
-#if !defined(FEATURE_PAL)
-    // Windows only
     std::unordered_set<TADDR> mLiveness;
     typedef std::list<sos::FragmentationBlock> FragmentationList;
     FragmentationList mFrag;
 
     void InitFragmentationList()
     {
-        if (!IsWindowsTarget())
-        {
-            return;
-        }
         mFrag.clear();
     }
 
     void ReportFreeObject(TADDR addr, size_t size, TADDR next, TADDR mt)
     {
-        if (!IsWindowsTarget())
-        {
-            return;
-        }
         if (size >= MIN_FRAGMENTATIONBLOCK_BYTES)
             mFrag.push_back(sos::FragmentationBlock(addr, size, next, mt));
     }
 
     void PrintFragmentationReport()
     {
-        if (!IsWindowsTarget())
-        {
-            return;
-        }
         if (mFrag.size() > 0)
         {
             ExtOut("Fragmented blocks larger than 0.5 MB:\n");
@@ -4454,11 +4422,6 @@ private:
             }
         }
     }
-#else
-    void InitFragmentationList() {}
-    void ReportFreeObject(TADDR, TADDR, size_t, TADDR) {}
-    void PrintFragmentationReport() {}
-#endif
 };
 
 /**********************************************************************\
@@ -10097,6 +10060,7 @@ DECLARE_API(DumpLog)
     }
 
     CheckBreakingRuntimeChange();
+    LoadRuntimeSymbols();
 
     const char* fileName = "StressLog.txt";
     CLRDATA_ADDRESS StressLogAddress = NULL;

@@ -36,7 +36,6 @@
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Interpreter/OptionValueEnumeration.h"
 #include "lldb/Interpreter/OptionValueFileSpec.h"
-#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/ABI.h"
