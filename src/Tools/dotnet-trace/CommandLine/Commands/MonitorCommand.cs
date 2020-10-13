@@ -5,7 +5,8 @@
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tools.Trace.CommandLine.Options;
 using Microsoft.Diagnostics.Tools.Trace.DiagnosticProfileHandlers;
-using Microsoft.Diagnostics.Tracing.Parsers.AspNet;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Internal.Common.Utils;
 using Microsoft.Tools.Common;
 using System;
@@ -14,6 +15,7 @@ using System.CommandLine;
 using System.CommandLine.Binding;
 using System.CommandLine.Rendering;
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -32,6 +34,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             int processId,
             string name,
             uint buffersize,
+            // user-defined providers
+            string providers,
             // diagnostic profiles
             string gcPause,
             string http,
@@ -58,6 +62,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             int processId,
             string name,
             uint buffersize,
+            // user-defined providers
+            string providers,
             // diagnostic profiles
             string gcPause,
             string http,
@@ -69,7 +75,119 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console.WriteLine($"Received --gc-pause option: {gcPause}");
 
             await Task.Delay(100);
+
+            if (!ProcessLauncher.Launcher.HasChildProc)
+            {
+                // Either processName or processId has to be specified.
+                if (name != null)
+                {
+                    if (processId != 0)
+                    {
+                        Console.WriteLine("Can only specify either --name or --process-id option.");
+                        return ErrorCodes.ArgumentError;
+                    }
+                    processId = CommandUtils.FindProcessIdWithName(name);
+                    if (processId < 0)
+                    {
+                        return ErrorCodes.ArgumentError;
+                    }
+                }
+                if (processId < 0)
+                {
+                    Console.Error.WriteLine("Process ID should not be negative.");
+                    return ErrorCodes.ArgumentError;
+                }
+                else if (processId == 0)
+                {
+                    Console.Error.WriteLine("--process-id is required");
+                    return ErrorCodes.ArgumentError;
+                }
+            }
+
+            // Build provider string
+            var providerCollection = Extensions.ToProviders(providers);
+            providerCollection.AddRange(GetWellKnownProviders(gcPause, http, loaderBinder));
+
+            // Build DiagnosticsClient
+            DiagnosticsClient diagnosticsClient;
+            if (ProcessLauncher.Launcher.HasChildProc)
+            {
+                ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder(ProcessLauncher.Launcher);
+                try
+                {
+                    diagnosticsClient = builder.Build(10);
+                }
+                catch (TimeoutException)
+                {
+                    Console.Error.WriteLine("Unable to start tracing session - the target app failed to connect to the diagnostics transport. This may happen if the target application is running .NET Core 3.1 or older versions. Attaching at startup is only available from .NET 5.0 or later.");
+                    if (!ProcessLauncher.Launcher.ChildProc.HasExited)
+                    {
+                        ProcessLauncher.Launcher.ChildProc.Kill();
+                    }
+                    return ErrorCodes.SessionCreationError;
+                }
+            }
+            else
+            {
+                diagnosticsClient = new DiagnosticsClient(processId);
+            }
+
+            EventPipeSession session = diagnosticsClient.StartEventPipeSession(providerCollection);
+            if (ProcessLauncher.Launcher.HasChildProc)
+            {
+                diagnosticsClient.ResumeRuntime();
+            }
+            Task parserTask = Task.Run(() =>
+            {
+                EventPipeEventSource source = new EventPipeEventSource(session.EventStream);
+
+                foreach (IDiagnosticProfileHandler handler in GetAllHandlers(gcPause, http, loaderBinder))
+                {
+                    handler.AddHandler(source);
+                }
+                source.Process();
+            });
+
+            Task.WaitAll(parserTask);
+
             return 1;
+        }
+
+        private static List<EventPipeProvider> GetWellKnownProviders(string gcPause, string http, string loaderBinder)
+        {
+            List<EventPipeProvider> providers = new List<EventPipeProvider>();
+
+            bool ClrProviderSet = false;
+            int ClrLevel = 0;
+            long ClrKeywords = 0;
+
+            if (gcPause != null)
+            {
+                ClrKeywords |= (long)ClrTraceEventParser.Keywords.GC;
+                ClrLevel = ClrLevel < 4 ? 4 : ClrLevel;
+                ClrProviderSet = true;
+            }
+
+            if (http != null)
+            {
+                // TODO: Add HTTP
+            }
+
+            if (loaderBinder != null)
+            {
+                ClrKeywords |= (long)ClrTraceEventParser.Keywords.Binder;
+                ClrKeywords |= (long)ClrTraceEventParser.Keywords.Loader;
+                ClrLevel = ClrLevel < 4 ? 4 : ClrLevel;
+                ClrProviderSet = true;
+            }
+
+            if (ClrProviderSet)
+            {
+                providers.Add(new EventPipeProvider("Microsoft-Windows-DotNETRuntime", (EventLevel)ClrLevel, ClrKeywords));
+            }
+            // TODO: Other providers may be added here
+
+            return providers;
         }
 
         /// <summary>
@@ -88,6 +206,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 handlers.Add(new GcPauseHandler(gcPause));
             }
             // TODO: add http, loader-binder here.
+            return handlers;
         }
 
         public static Command MonitorCommand() =>
@@ -101,6 +220,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                  CommonOptions.ProcessIdOption(),
                  CommonOptions.CircularBufferOption(),
                  CommonOptions.NameOption(),
+                 // Option for specifying custom providers
+                 CommonOptions.ProvidersOption(),
                  // Options for diagnostic profiles
                  DiagnosticProfiles.GCPauseProfileOption(),
                  DiagnosticProfiles.HttpProfileOption(),

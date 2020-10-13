@@ -25,7 +25,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 .Build();
             ParseResult parseResult = parser.Parse(args);
             string parsedCommandName = parseResult.CommandResult.Command.Name;
-            if (parsedCommandName == "collect")
+            if (parsedCommandName == "collect" || parsedCommandName == "monitor")
             {
                 IReadOnlyCollection<string> unparsedTokens = parseResult.UnparsedTokens;
                 // If we notice there are unparsed tokens, user might want to attach on startup.

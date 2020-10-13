@@ -45,11 +45,19 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static uint DefaultCircularBufferSizeInMB() => 256;
 
         public static Option CircularBufferOption() =>
-        new Option(
-            alias: "--buffersize",
-            description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB()} MB.")
-        {
-            Argument = new Argument<uint>(name: "size", getDefaultValue: DefaultCircularBufferSizeInMB)
-        };
+            new Option(
+                alias: "--buffersize",
+                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB()} MB.")
+            {
+                Argument = new Argument<uint>(name: "size", getDefaultValue: DefaultCircularBufferSizeInMB)
+            };
+
+        public static Option ProvidersOption() =>
+            new Option(
+                alias: "--providers",
+                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'. These providers are in addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the configuration here takes precedence over the implicit configuration from the profile.")
+            {
+                Argument = new Argument<string>(name: "list-of-comma-separated-providers", getDefaultValue: () => string.Empty)
+            };
     }
 }

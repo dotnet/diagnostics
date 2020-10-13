@@ -314,7 +314,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CommonOptions.ProcessIdOption(),
                 CommonOptions.CircularBufferOption(),
                 OutputPathOption(),
-                ProvidersOption(),
+                CommonOptions.ProvidersOption(),
                 ProfileOption(),
                 CommonOptions.FormatOption(),
                 DurationOption(),
@@ -331,14 +331,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 description: $"The output path for the collected trace data. If not specified it defaults to '{DefaultTraceName}'.")
             {
                 Argument = new Argument<FileInfo>(name: "trace-file-path", getDefaultValue: () => new FileInfo(DefaultTraceName))
-            };
-
-        private static Option ProvidersOption() =>
-            new Option(
-                alias: "--providers",
-                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'. These providers are in addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the configuration here takes precedence over the implicit configuration from the profile.")
-            {
-                Argument = new Argument<string>(name: "list-of-comma-separated-providers", getDefaultValue: () => string.Empty) // TODO: Can we specify an actual type?
             };
 
         private static Option ProfileOption() =>

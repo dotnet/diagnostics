@@ -15,31 +15,11 @@ namespace Microsoft.Diagnostics.Tools.Trace.DiagnosticProfileHandlers
     /// </summary>
     internal class GcPauseHandler : IDiagnosticProfileHandler
     {
-        public void GCHandler(string gcHandlerOption)
-        {
-            // check if there's many options
-            if (gcHandlerOption.Contains(","))
-            {
-                string[] options = gcHandlerOption.Split(',');
-                for (int i = 0; i < options.Length; i++)
-                {
-                    AddFilter(string option)
-                }
-            }
-            else
-            {
-                AddFilter(Option);
-            }
-        }
+        private string option;
 
-        private static AddFilter(string option)
+        public GcPauseHandler(string gcHandlerOption)
         {
-            switch (option)
-            {
-                case "all":
-                    
-            }
-            
+            option = gcHandlerOption;
         }
 
         public void AddHandler(EventPipeEventSource source)
@@ -56,9 +36,13 @@ namespace Microsoft.Diagnostics.Tools.Trace.DiagnosticProfileHandlers
 
             source.Clr.GCSuspendEEStart += (GCSuspendEETraceData data) =>
             {
+                Console.WriteLine($"GC SuspendEEStart: {data.Dump(true)}");
+            };
 
-
-            }
+            source.Clr.GCSuspendEEStop += (GCNoUserDataTraceData data) =>
+            {
+                Console.WriteLine($"GC SuspendEEStop: {data.Dump(true)}");
+            };
         }
     }
 }
