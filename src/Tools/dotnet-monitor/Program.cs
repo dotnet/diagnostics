@@ -61,7 +61,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         private static Option DiagnosticPort() =>
             new Option(
                 alias: "--diagnostic-port",
-                description: "A fully qualified path and filename of the listening diagnostic port to which runtime instances can connect.")
+                description: "The fully qualified path and filename of the diagnostic port to which runtime instances can connect.")
             {
                 Argument = new Argument<string>(name: "diagnosticPort")
             };
