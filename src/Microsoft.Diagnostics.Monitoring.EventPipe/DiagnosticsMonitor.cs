@@ -84,6 +84,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 catch (PlatformNotSupportedException)
                 {
                 }
+                // On non-abrupt exits, the socket may be already closed by the runtime and we won't be able to send a stop request through it. 
+                catch (ServerNotAvailableException)
+                {
+                }
             }
 
             public async ValueTask DisposeAsync()
