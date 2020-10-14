@@ -11,7 +11,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal class IpcClient
     {
         // The amount of time to wait for a stream to be available for consumption by the Connect method.
-        private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(3);
+        // Normally expect the runtime to respond quickly but resource constrained machines may take longer.
+        private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(30);
 
         /// <summary>
         /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId.
