@@ -36,7 +36,7 @@
     </Dependency>
     <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="5.0.0">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>aa50176707accac8ba97f83f39ae693f13941675</Sha>
+      <Sha>cee17d5b3b6b23e73a8beaaf4d828726a6181fd2</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>
