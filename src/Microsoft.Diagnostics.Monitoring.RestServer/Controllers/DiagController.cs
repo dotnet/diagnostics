@@ -2,6 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Diagnostics.Monitoring.EventPipe;
+using Microsoft.Diagnostics.Monitoring.RestServer.Models;
+using Microsoft.Diagnostics.Monitoring.RestServer.Validation;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Net.Http.Headers;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -10,14 +19,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Diagnostics.Monitoring.EventPipe;
-using Microsoft.Diagnostics.Monitoring.RestServer.Models;
-using Microsoft.Diagnostics.Monitoring.RestServer.Validation;
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Extensions.Logging;
-using Microsoft.Net.Http.Headers;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 {
@@ -27,19 +28,16 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
     public class DiagController : ControllerBase
     {
         private const TraceProfile DefaultTraceProfiles = TraceProfile.Cpu | TraceProfile.Http | TraceProfile.Metrics;
-        private const string ContentTypeNdJson = "application/x-ndjson";
-        private const string ContentTypeJson = "application/json";
-        private const string ContentTypeEventStream = "text/event-stream";
-        private static readonly MediaTypeHeaderValue NdJsonHeader = new MediaTypeHeaderValue(ContentTypeNdJson);
-        private static readonly MediaTypeHeaderValue EventStreamHeader = new MediaTypeHeaderValue(ContentTypeEventStream);
+        private static readonly MediaTypeHeaderValue NdJsonHeader = new MediaTypeHeaderValue(ContentTypes.ApplicationNdJson);
+        private static readonly MediaTypeHeaderValue EventStreamHeader = new MediaTypeHeaderValue(ContentTypes.TextEventStream);
 
         private readonly ILogger<DiagController> _logger;
         private readonly IDiagnosticServices _diagnosticServices;
 
-        public DiagController(ILogger<DiagController> logger, IDiagnosticServices diagnosticServices)
+        public DiagController(ILogger<DiagController> logger, IServiceProvider serviceProvider)
         {
             _logger = logger;
-            _diagnosticServices = diagnosticServices;
+            _diagnosticServices = serviceProvider.GetRequiredService<IDiagnosticServices>();
         }
 
         [HttpGet("processes")]
@@ -80,9 +78,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     processFilter,
                     HttpContext.RequestAborted);
 
+                var client = new DiagnosticsClient(processInfo.EndpointInfo.Endpoint);
+
                 try
                 {
-                    return processInfo.Client.GetProcessEnvironment();
+                    return client.GetProcessEnvironment();
                 }
                 catch (ServerErrorException)
                 {
@@ -94,51 +94,86 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         [HttpGet("dump/{processFilter?}")]
         public Task<ActionResult> GetDump(
             ProcessFilter? processFilter,
-            [FromQuery] DumpType type = DumpType.WithHeap)
+            [FromQuery] DumpType type = DumpType.WithHeap,
+            [FromQuery] string egressEndpoint = null)
         {
             return this.InvokeService(async () =>
             {
                 IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(processFilter, HttpContext.RequestAborted);
-                Stream result = await _diagnosticServices.GetDump(processInfo, type, HttpContext.RequestAborted);
 
                 string dumpFileName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
                     FormattableString.Invariant($"dump_{GetFileNameTimeStampUtcNow()}.dmp") :
                     FormattableString.Invariant($"core_{GetFileNameTimeStampUtcNow()}");
 
-                //Compression is done automatically by the response
-                //Chunking is done because the result has no content-length
-                return File(result, "application/octet-stream", dumpFileName);
+                if (string.IsNullOrEmpty(egressEndpoint))
+                {
+                    Stream dumpStream = await _diagnosticServices.GetDump(processInfo, type, HttpContext.RequestAborted);
+
+                    return File(dumpStream, ContentTypes.ApplicationOctectStream, dumpFileName);
+                }
+                else
+                {
+                    return new EgressStreamResult(
+                        token => _diagnosticServices.GetDump(processInfo, type, token),
+                        egressEndpoint,
+                        dumpFileName,
+                        processInfo.EndpointInfo);
+                }
             });
         }
 
         [HttpGet("gcdump/{processFilter?}")]
         public Task<ActionResult> GetGcDump(
-            ProcessFilter? processFilter)
+            ProcessFilter? processFilter,
+            [FromQuery] string egressEndpoint = null)
         {
             return this.InvokeService(async () =>
             {
                 IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(processFilter, HttpContext.RequestAborted);
 
-                var graph = new Graphs.MemoryGraph(50_000);
+                string fileName = FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.EndpointInfo.ProcessId}.gcdump");
 
-                EventGCPipelineSettings settings = new EventGCPipelineSettings
-                {
-                    Duration = Timeout.InfiniteTimeSpan,
+                Func<CancellationToken, Task<Stream>> action = async (token) => {
+                    var graph = new Graphs.MemoryGraph(50_000);
+
+                    EventGCPipelineSettings settings = new EventGCPipelineSettings
+                    {
+                        Duration = Timeout.InfiniteTimeSpan,
+                    };
+
+                    var client = new DiagnosticsClient(processInfo.EndpointInfo.Endpoint);
+
+                    await using var pipeline = new EventGCDumpPipeline(client, settings, graph);
+                    await pipeline.RunAsync(token);
+                    var dumper = new GCHeapDump(graph);
+                    dumper.CreationTool = "dotnet-monitor";
+
+                    // We can't use FastSerialization directly against the Response stream because
+                    // the response stream size is not known.
+                    var stream = new MemoryStream();
+                    var serializer = new FastSerialization.Serializer(stream, dumper, leaveOpen: true);
+                    serializer.Close();
+
+                    stream.Position = 0;
+
+                    return stream;
                 };
-                await using var pipeline = new EventGCDumpPipeline(processInfo.Client, settings, graph);
-                await pipeline.RunAsync(HttpContext.RequestAborted);
-                var dumper = new GCHeapDump(graph);
-                dumper.CreationTool = "dotnet-monitor";
 
-                //We can't use FastSerialization directly against the Response stream because
-                //the response stream size is not known.
-                var stream = new MemoryStream();
-                var serializer = new FastSerialization.Serializer(stream, dumper, leaveOpen: true);
-                serializer.Close();
-
-                stream.Position = 0;
-
-                return File(stream, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.ProcessId}.gcdump"));
+                if (string.IsNullOrEmpty(egressEndpoint))
+                {
+                    return new OutputStreamResult(
+                        action,
+                        ContentTypes.ApplicationOctectStream,
+                        fileName);
+                }
+                else
+                {
+                    return new EgressStreamResult(
+                        action,
+                        egressEndpoint,
+                        fileName,
+                        processInfo.EndpointInfo);
+                }
             });
         }
 
@@ -147,7 +182,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             ProcessFilter? processFilter,
             [FromQuery]TraceProfile profile = DefaultTraceProfiles,
             [FromQuery][Range(-1, int.MaxValue)] int durationSeconds = 30,
-            [FromQuery][Range(1, int.MaxValue)] int metricsIntervalSeconds = 1)
+            [FromQuery][Range(1, int.MaxValue)] int metricsIntervalSeconds = 1,
+            [FromQuery] string egressEndpoint = null)
         {
             TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
 
@@ -173,7 +209,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
                 var aggregateConfiguration = new AggregateSourceConfiguration(configurations.ToArray());
 
-                return await StartTrace(processFilter, aggregateConfiguration, duration);
+                return await StartTrace(processFilter, aggregateConfiguration, duration, egressEndpoint);
             });
         }
 
@@ -181,7 +217,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         public Task<ActionResult> TraceCustomConfiguration(
             ProcessFilter? processFilter,
             [FromBody][Required] EventPipeConfigurationModel configuration,
-            [FromQuery][Range(-1, int.MaxValue)] int durationSeconds = 30)
+            [FromQuery][Range(-1, int.MaxValue)] int durationSeconds = 30,
+            [FromQuery] string egressEndpoint = null)
         {
             TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
 
@@ -209,16 +246,17 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     requestRundown: configuration.RequestRundown,
                     bufferSizeInMB: configuration.BufferSizeInMB);
 
-                return await StartTrace(processFilter, traceConfiguration, duration);
+                return await StartTrace(processFilter, traceConfiguration, duration, egressEndpoint);
             });
         }
 
         [HttpGet("logs/{processFilter?}")]
-        [Produces(ContentTypeEventStream, ContentTypeNdJson, ContentTypeJson)]
+        [Produces(ContentTypes.TextEventStream, ContentTypes.ApplicationNdJson, ContentTypes.ApplicationJson)]
         public Task<ActionResult> Logs(
             ProcessFilter? processFilter,
             [FromQuery][Range(-1, int.MaxValue)] int durationSeconds = 30,
-            [FromQuery] LogLevel level = LogLevel.Debug)
+            [FromQuery] LogLevel level = LogLevel.Debug,
+            [FromQuery] string egressEndpoint = null)
         {
             TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
             return this.InvokeService(async () =>
@@ -231,10 +269,10 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     return this.NotAcceptable();
                 }
 
-                string contentType = (format == LogFormat.EventStream) ? ContentTypeEventStream : ContentTypeNdJson;
-                string downloadName = (format == LogFormat.EventStream) ? null : FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.ProcessId}.txt");
+                string fileName = FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.EndpointInfo.ProcessId}.txt");
+                string contentType = format == LogFormat.EventStream ? ContentTypes.TextEventStream : ContentTypes.ApplicationNdJson;
 
-                return new OutputStreamResult(async (outputStream, token) =>
+                Func<Stream, CancellationToken, Task> action = async (outputStream, token) =>
                 {
                     using var loggerFactory = new LoggerFactory();
 
@@ -245,21 +283,44 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                         Duration = duration,
                         LogLevel = level,
                     };
-                    await using EventLogsPipeline pipeline = new EventLogsPipeline(processInfo.Client, settings, loggerFactory);
-                    await pipeline.RunAsync(token);
 
-                }, contentType, downloadName);
+                    var client = new DiagnosticsClient(processInfo.EndpointInfo.Endpoint);
+
+                    await using EventLogsPipeline pipeline = new EventLogsPipeline(client, settings, loggerFactory);
+                    await pipeline.RunAsync(token);
+                };
+
+                if (!string.IsNullOrEmpty(egressEndpoint))
+                {
+                    return new EgressStreamResult(
+                        action,
+                        egressEndpoint,
+                        fileName,
+                        processInfo.EndpointInfo,
+                        contentType);
+                }
+                else
+                {
+                    string downloadName = format == LogFormat.EventStream ? null : fileName;
+                    return new OutputStreamResult(
+                        action,
+                        contentType,
+                        downloadName);
+                }
             });
         }
 
         private async Task<ActionResult> StartTrace(
             ProcessFilter? processFilter,
             MonitoringSourceConfiguration configuration,
-            TimeSpan duration)
+            TimeSpan duration,
+            string egressEndpoint)
         {
             IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(processFilter, HttpContext.RequestAborted);
 
-            return new OutputStreamResult(async (outputStream, token) =>
+            string fileName = FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.EndpointInfo.ProcessId}.nettrace");
+
+            Func<Stream, CancellationToken, Task> action = async (outputStream, token) =>
             {
                 Func<Stream, CancellationToken, Task> streamAvailable = async (Stream eventStream, CancellationToken token) =>
                 {
@@ -268,14 +329,32 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     await eventStream.CopyToAsync(outputStream, 0x10000, token);
                 };
 
-                await using EventTracePipeline pipeProcessor = new EventTracePipeline(processInfo.Client, new EventTracePipelineSettings
+                var client = new DiagnosticsClient(processInfo.EndpointInfo.Endpoint);
+
+                await using EventTracePipeline pipeProcessor = new EventTracePipeline(client, new EventTracePipelineSettings
                 {
                     Configuration = configuration,
                     Duration = duration,
                 }, streamAvailable);
 
                 await pipeProcessor.RunAsync(token);
-            }, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.ProcessId}.nettrace"));
+            };
+
+            if (string.IsNullOrEmpty(egressEndpoint))
+            {
+                return new OutputStreamResult(
+                    action,
+                    ContentTypes.ApplicationOctectStream,
+                    fileName);
+            }
+            else
+            {
+                return new EgressStreamResult(
+                    action,
+                    egressEndpoint,
+                    fileName,
+                    processInfo.EndpointInfo);
+            }
         }
 
         private static TimeSpan ConvertSecondsToTimeSpan(int durationSeconds)

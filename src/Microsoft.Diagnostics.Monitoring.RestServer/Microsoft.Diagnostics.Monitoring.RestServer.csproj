@@ -24,6 +24,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Diagnostics.Monitoring.Egress.AzureStorage\Microsoft.Diagnostics.Monitoring.Egress.AzureStorage.csproj" />
+    <ProjectReference Include="..\Microsoft.Diagnostics.Monitoring.Egress\Microsoft.Diagnostics.Monitoring.Egress.csproj" />
     <ProjectReference Include="..\Microsoft.Diagnostics.Monitoring.EventPipe\Microsoft.Diagnostics.Monitoring.EventPipe.csproj" />
   </ItemGroup>
 

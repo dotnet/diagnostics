@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <NoWarn>;1591;1701</NoWarn>
+    <Description>Egress for dotnet-monitor</Description>
+    <!-- Tentatively create package so other teams can tenatively consume. -->
+    <IsPackable>true</IsPackable>
+    <PackageTags>Diagnostic</PackageTags>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <!-- Do not ship this package until ready to be consumed. -->
+    <IsShipping>false</IsShipping>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="dotnet-monitor" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.Egress.AzureStorage" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.RestServer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Diagnostics.Monitoring\Microsoft.Diagnostics.Monitoring.csproj" />
+  </ItemGroup>
+
+</Project>

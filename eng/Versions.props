@@ -34,6 +34,7 @@
     <SystemCollectionsImmutableVersion>1.7.1</SystemCollectionsImmutableVersion>
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
     <!-- Other libs -->
+    <AzureStorageBlobsVersion>12.4.4</AzureStorageBlobsVersion>
     <MicrosoftAspNetCoreVersion>2.1.7</MicrosoftAspNetCoreVersion>
     <MicrosoftAspNetCoreHttpsPolicyVersion>2.1.1</MicrosoftAspNetCoreHttpsPolicyVersion>
     <MicrosoftAspNetCoreMvcVersion>2.1.3</MicrosoftAspNetCoreMvcVersion>
@@ -45,6 +46,7 @@
     <ParallelStacksRuntimeVersion>2.0.1</ParallelStacksRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.57</MicrosoftDiagnosticsTracingTraceEventVersion>
+    <MicrosoftExtensionsConfigurationAbstractionsVersion>2.1.1</MicrosoftExtensionsConfigurationAbstractionsVersion>
     <MicrosoftExtensionsConfigurationJsonVersion>2.1.1</MicrosoftExtensionsConfigurationJsonVersion>
     <MicrosoftExtensionsConfigurationKeyPerFileVersion>2.1.1</MicrosoftExtensionsConfigurationKeyPerFileVersion>
     <MicrosoftExtensionsDependencyInjectionVersion>2.1.1</MicrosoftExtensionsDependencyInjectionVersion>
@@ -53,6 +55,8 @@
     <MicrosoftExtensionsLoggingConsoleVersion>2.1.1</MicrosoftExtensionsLoggingConsoleVersion>
     <!-- We use a newer version of LoggingEventSource due to a bug in an older version-->
     <MicrosoftExtensionsLoggingEventSourceVersion>3.1.4</MicrosoftExtensionsLoggingEventSourceVersion>
+    <MicrosoftExtensionsOptionsVersion>2.1.1</MicrosoftExtensionsOptionsVersion>
+    <MicrosoftExtensionsOptionsConfigurationExtensionsVersion>2.1.1</MicrosoftExtensionsOptionsConfigurationExtensionsVersion>
     <SystemCommandLineVersion>2.0.0-beta1.20468.1</SystemCommandLineVersion>
     <SystemCommandLineRenderingVersion>2.0.0-beta1.20074.1</SystemCommandLineRenderingVersion>
     <SystemMemoryVersion>4.5.4</SystemMemoryVersion>

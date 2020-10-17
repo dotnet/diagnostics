@@ -2,12 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,11 +17,23 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         private readonly string _contentType;
         private readonly string _fileDownloadName;
 
-        public OutputStreamResult(Func<Stream, CancellationToken, Task> action, string contentType, string fileDownloadName = null)
+        public OutputStreamResult(Func<CancellationToken, Task<Stream>> action, string contentType, string fileDownloadName = null)
         {
-            _action = action;
             _contentType = contentType;
             _fileDownloadName = fileDownloadName;
+            _action = async (stream, token) =>
+            {
+                using var sourceStream = await action(token);
+
+                await sourceStream.CopyToAsync(stream, 0x1000, token);
+            };
+        }
+
+        public OutputStreamResult(Func<Stream, CancellationToken, Task> action, string contentType, string fileDownloadName = null)
+        {
+            _contentType = contentType;
+            _fileDownloadName = fileDownloadName;
+            _action = action;
         }
 
         public override async Task ExecuteResultAsync(ActionContext context)

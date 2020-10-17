@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer
 {
@@ -15,7 +14,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
     /// Set of services provided by the monitoring tool. These are consumed by
     /// the REST Api.
     /// </summary>
-    public interface IDiagnosticServices : IDisposable
+    internal interface IDiagnosticServices : IDisposable
     {
         Task<IEnumerable<IProcessInfo>> GetProcessesAsync(CancellationToken token);
 
@@ -25,9 +24,9 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
     }
 
 
-    public interface IProcessInfo
+    internal interface IProcessInfo
     {
-        DiagnosticsClient Client { get; }
+        IEndpointInfo EndpointInfo { get; }
 
         string CommandLine { get; }
 
@@ -36,10 +35,6 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         public string ProcessArchitecture { get; }
 
         string ProcessName { get; }
-
-        int ProcessId { get; }
-
-        Guid RuntimeInstanceCookie { get; }
     }
 
     public enum DumpType

@@ -15,7 +15,7 @@ using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer
 {
-    public sealed class DiagnosticServices : IDiagnosticServices
+    internal sealed class DiagnosticServices : IDiagnosticServices
     {
         // String returned for a process field when its value could not be retrieved. This is the same
         // value that is returned by the runtime when it could not determine the value for each of those fields.
@@ -71,20 +71,21 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 
         public async Task<Stream> GetDump(IProcessInfo pi, DumpType mode, CancellationToken token)
         {
-            string dumpFilePath = Path.Combine(Path.GetTempPath(), FormattableString.Invariant($"{Guid.NewGuid()}_{pi.ProcessId}"));
+            string dumpFilePath = Path.Combine(Path.GetTempPath(), FormattableString.Invariant($"{Guid.NewGuid()}_{pi.EndpointInfo.ProcessId}"));
             NETCore.Client.DumpType dumpType = MapDumpType(mode);
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 // Get the process
-                Process process = Process.GetProcessById(pi.ProcessId);
+                Process process = Process.GetProcessById(pi.EndpointInfo.ProcessId);
                 await Dumper.CollectDumpAsync(process, dumpFilePath, dumpType);
             }
             else
             {
                 await Task.Run(() =>
                 {
-                    pi.Client.WriteDump(dumpType, dumpFilePath);
+                    var client = new DiagnosticsClient(pi.EndpointInfo.Endpoint);
+                    client.WriteDump(dumpType, dumpFilePath);
                 });
             }
 
@@ -130,7 +131,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 
                     using var timeoutSource = new CancellationTokenSource(DockerEntrypointWaitTimeout);
 
-                    await processInfo.Client.WaitForConnectionAsync(timeoutSource.Token);
+                    var client = new DiagnosticsClient(processInfo.EndpointInfo.Endpoint);
+                    await client.WaitForConnectionAsync(timeoutSource.Token);
 
                     return processInfo;
                 }
@@ -205,21 +207,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         private sealed class ProcessInfo : IProcessInfo
         {
             public ProcessInfo(
-                DiagnosticsClient client,
-                Guid runtimeInstanceIdentifier,
-                int processId,
-                string processName,
-                string commandLine,
-                string operatingSystem,
-                string processArchitecture)
+                IEndpointInfo endpointInfo,
+                string processName)
             {
-                Client = client;
-                CommandLine = commandLine;
-                ProcessId = processId;
+                EndpointInfo = endpointInfo;
                 ProcessName = processName;
-                RuntimeInstanceCookie = runtimeInstanceIdentifier;
-                OperatingSystem = operatingSystem;
-                ProcessArchitecture = processArchitecture;
             }
 
             public static async Task<ProcessInfo> FromEndpointInfoAsync(IEndpointInfo endpointInfo)
@@ -296,28 +288,19 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
                 // process is running on one that is not predefined. Mimic the same behavior here
                 // when the extra process information was not provided.
                 return new ProcessInfo(
-                    client,
-                    endpointInfo.RuntimeInstanceCookie,
-                    endpointInfo.ProcessId,
-                    processName ?? ProcessFieldUnknownValue,
-                    commandLine ?? ProcessFieldUnknownValue,
-                    endpointInfo.OperatingSystem ?? ProcessFieldUnknownValue,
-                    endpointInfo.ProcessArchitecture ?? ProcessFieldUnknownValue);
+                    endpointInfo,
+                    processName ?? ProcessFieldUnknownValue);
             }
 
-            public DiagnosticsClient Client { get; }
+            public IEndpointInfo EndpointInfo { get; }
 
-            public string CommandLine { get; }
+            public string CommandLine => EndpointInfo.CommandLine ?? ProcessFieldUnknownValue;
 
-            public string OperatingSystem { get; }
+            public string OperatingSystem => EndpointInfo.OperatingSystem ?? ProcessFieldUnknownValue;
 
-            public string ProcessArchitecture { get; }
-
-            public int ProcessId { get; }
+            public string ProcessArchitecture => EndpointInfo.ProcessArchitecture ?? ProcessFieldUnknownValue;
 
             public string ProcessName { get; }
-
-            public Guid RuntimeInstanceCookie { get; }
         }
     }
 }
