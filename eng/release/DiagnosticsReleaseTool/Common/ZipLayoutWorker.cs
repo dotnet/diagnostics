@@ -8,36 +8,40 @@ namespace ReleaseTool.Core
 {
     public sealed class ZipLayoutWorker : ILayoutWorker
     {
-        private readonly Func<FileInfo, bool> _shouldHandleFileFunc;
-        private readonly Func<FileInfo, FileInfo, string> _getRelPathFromZipAndInnerFileFunc;
-        private readonly Func<FileInfo, FileInfo, FileMetadata> _getMetadataForInnerFileFunc;
+        private Func<FileInfo, bool> _shouldHandleFileFunc;
+        private Func<FileInfo, FileInfo, string> _getRelativePathFromZipAndInnerFileFunc;
+        private Func<FileInfo, FileInfo, FileMetadata> _getMetadataForInnerFileFunc;
+        private readonly string _stagingPath;
 
         public ZipLayoutWorker(
-            Func<FileInfo, bool> shouldHandleFileFunc = null,
-            Func<FileInfo, FileInfo, string> getRelPathFromZipAndInnerFileFunc = null,
-            Func<FileInfo, FileInfo, FileMetadata> getMetadataForInnerFileFunc = null)
+            Func<FileInfo, bool> shouldHandleFileFunc,
+            Func<FileInfo, FileInfo, string> getRelativePathFromZipAndInnerFileFunc,
+            Func<FileInfo, FileInfo, FileMetadata> getMetadataForInnerFileFunc,
+            string stagingPath)
         {
 
             _shouldHandleFileFunc = shouldHandleFileFunc is null 
                                         ? file => file.Extension == ".zip"
                                         : shouldHandleFileFunc;
 
-            _getRelPathFromZipAndInnerFileFunc = getRelPathFromZipAndInnerFileFunc is null 
+            _getRelativePathFromZipAndInnerFileFunc = getRelativePathFromZipAndInnerFileFunc is null 
                                                     ? (zipFile, innerFile) => Path.Combine(zipFile.Name, innerFile.Name)
-                                                    : getRelPathFromZipAndInnerFileFunc;
+                                                    : getRelativePathFromZipAndInnerFileFunc;
 
             _getMetadataForInnerFileFunc = getMetadataForInnerFileFunc is null
                                                 ? (_, _) => new FileMetadata(FileClass.Blob)
                                                 : getMetadataForInnerFileFunc;
+
+            _stagingPath = stagingPath;
         }
 
         public void Dispose() { }
 
-        public ValueTask<LayoutWorkerResult> HandleFileAsync(FileInfo file, CancellationToken ct)
+        public async ValueTask<LayoutWorkerResult> HandleFileAsync(FileInfo file, CancellationToken ct)
         {
             if (!_shouldHandleFileFunc(file))
             {
-                return new ValueTask<LayoutWorkerResult>(new LayoutWorkerResult(LayoutResultStatus.FileNotHandled));
+                return new LayoutWorkerResult(LayoutResultStatus.FileNotHandled);
             }
 
             DirectoryInfo unzipDirInfo = null;
@@ -54,7 +58,7 @@ namespace ReleaseTool.Core
             }
             catch(Exception ex) when (ex is IOException || ex is System.Security.SecurityException)
             {
-                return new ValueTask<LayoutWorkerResult>(new LayoutWorkerResult(LayoutResultStatus.Error));
+                return new LayoutWorkerResult(LayoutResultStatus.Error);
             }
 
 
@@ -64,18 +68,31 @@ namespace ReleaseTool.Core
             {
                 if (ct.IsCancellationRequested)
                 {
-                    return ValueTask.FromResult(new LayoutWorkerResult(LayoutResultStatus.Error));
+                    return new LayoutWorkerResult(LayoutResultStatus.Error);
                 }
 
                 string relPath = _getRelPathFromZipAndInnerFileFunc(file, extractedFile);
                 relPath = Path.Combine(relPath, extractedFile.Name);
 
-                var fileMap = new FileMapping(extractedFile.FullName, relPath);
+                string localPath = extractedFile.FullName;
+
+                if (_stagingPath is not null)
+                {
+                    localPath = Path.Combine(_stagingPath, relPath);
+                    Directory.CreateDirectory(Path.GetDirectoryName(localPath));
+                    using (FileStream srcStream = new FileStream(extractedFile.FullName, FileMode.Open, FileAccess.Read))
+                    using (FileStream destStream = new FileStream(localPath, FileMode.OpenOrCreate, FileAccess.Write))
+                    {
+                        await srcStream.CopyToAsync(destStream, ct);
+                    }
+                }
+
+                var fileMap = new FileMapping(localPath, relPath);
                 FileMetadata metadata = _getMetadataForInnerFileFunc(file, extractedFile);
                 filesInToolBundleToPublish.Add((fileMap, metadata));
             }
 
-            return ValueTask.FromResult(new LayoutWorkerResult(LayoutResultStatus.FileHandled, filesInToolBundleToPublish));
+            return new LayoutWorkerResult(LayoutResultStatus.FileHandled, filesInToolBundleToPublish);
         }
     }
 }

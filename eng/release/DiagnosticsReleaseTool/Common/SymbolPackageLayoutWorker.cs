@@ -4,10 +4,11 @@ namespace ReleaseTool.Core
 {
     public class SymbolPackageLayoutWorker : PassThroughLayoutWorker
     {
-        public SymbolPackageLayoutWorker() : base(
+        public SymbolPackageLayoutWorker(string stagingPath) : base(
             shouldHandleFileFunc: ShouldHandleFile,
-            getRelPublishPathFromFileFunc: GetSymbolPackagePublishRelPath,
-            getMetadataForFileFunc: (_) => new FileMetadata(FileClass.SymbolPackage)
+            getRelativePublishPathFromFileFunc: GetSymbolPackagePublishRelPath,
+            getMetadataForFileFunc: (_) => new FileMetadata(FileClass.SymbolPackage),
+            stagingPath
         ) {}
 
         private static bool ShouldHandleFile(FileInfo file) => file.Name.EndsWith(".symbols.nupkg");

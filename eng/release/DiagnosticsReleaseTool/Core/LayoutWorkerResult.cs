@@ -18,7 +18,7 @@ namespace ReleaseTool.Core
             IEnumerable<(FileMapping fileMap, FileMetadata fileMetadata)> fileLayoutDataEnumerable)
         {
             Status = status;
-            LayoutDataEnumerable = Status == LayoutResultStatus.FileHandled && fileLayoutDataEnumerable is object
+            LayoutDataEnumerable = Status == LayoutResultStatus.FileHandled && fileLayoutDataEnumerable is not null
                                                 ? fileLayoutDataEnumerable
                                                 : System.Linq.Enumerable.Empty<(FileMapping, FileMetadata)>();
         }

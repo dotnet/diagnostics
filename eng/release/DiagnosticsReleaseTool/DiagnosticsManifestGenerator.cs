@@ -57,7 +57,7 @@ namespace DiagnosticsReleaseTool.Impl
             foreach (FileReleaseData fileToRelease in nugetFiles)
             {
                 writer.WriteStartObject();
-                writer.WriteString("FilePath", fileToRelease.FileMap.LocalSourcePath);
+                writer.WriteString("PublishRelativePath", fileToRelease.FileMap.RelativeOutputPath);
                 writer.WriteString("PublishedPath", fileToRelease.PublishUri);
                 writer.WriteEndObject();
             }

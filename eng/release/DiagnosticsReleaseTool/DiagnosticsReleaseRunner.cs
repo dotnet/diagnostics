@@ -26,12 +26,13 @@ namespace DiagnosticsReleaseTool.Impl
             var layoutWorkerList = new List<ILayoutWorker>
             {
                 // TODO: We may want to inject a logger.
-                new NugetLayoutWorker(),
-                new SymbolPackageLayoutWorker(),
+                new NugetLayoutWorker(releaseConfig.StagingDirectory.FullName),
+                new SymbolPackageLayoutWorker(releaseConfig.StagingDirectory.FullName),
                 new ZipLayoutWorker(
                     shouldHandleFileFunc: DiagnosticsRepoHelpers.IsBundledToolArchive,
-                    getRelPathFromZipAndInnerFileFunc: DiagnosticsRepoHelpers.GetToolPublishRelativePath,
-                    getMetadataForInnerFileFunc: DiagnosticsRepoHelpers.GetMetadataForToolFile
+                    getRelativePathFromZipAndInnerFileFunc: DiagnosticsRepoHelpers.GetToolPublishRelativePath,
+                    getMetadataForInnerFileFunc: DiagnosticsRepoHelpers.GetMetadataForToolFile,
+                    releaseConfig.StagingDirectory.FullName
                 )
             };
 
