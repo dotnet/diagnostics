@@ -129,6 +129,7 @@ namespace DiagnosticsReleaseTool.Impl
 
                 string metadataValue = metadataGroup.Value switch {
                     "FileName" => fi.Name,
+                    "FileNameNoExt" => Path.GetFileNameWithoutExtension(fi.Name),
                     "Rid" => fileToRelease.FileMetadata.Rid,
                     "Sha512" => fileToRelease.FileMetadata.Sha512,
                     "AssetCategory" => fileToRelease.FileMetadata.AssetCategory,

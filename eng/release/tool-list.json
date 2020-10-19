@@ -1,6 +1,6 @@
 {
   "ToolBundleAssets": {
-    "AkaMsSchema": "https://aka.ms/<FileName>/<Rid>",
+    "AkaMsSchema": "https://aka.ms/<FileNameNoExt>/<Rid>",
     "AssetList": [
       {
         "name": "dotnet-counters",

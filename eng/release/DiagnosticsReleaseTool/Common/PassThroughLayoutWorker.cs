@@ -43,13 +43,13 @@ namespace ReleaseTool.Core
                 return new LayoutWorkerResult(LayoutResultStatus.FileNotHandled);
             }
 
-            string publishRelPath = Path.Combine(_getRelPublishPathFromFileFunc(file), file.Name);
+            string publishReleasePath = Path.Combine(_getRelativePublishPathFromFileFunc(file), file.Name);
 
             string localPath = file.FullName;
 
             if (_stagingPath is not null)
             {
-                localPath = Path.Combine(_stagingPath, publishRelPath);
+                localPath = Path.Combine(_stagingPath, publishReleasePath);
                 Directory.CreateDirectory(Path.GetDirectoryName(localPath));
                 using (FileStream srcStream = new FileStream(file.FullName, FileMode.Open, FileAccess.Read))
                 using (FileStream destStream = new FileStream(localPath, FileMode.OpenOrCreate, FileAccess.Write))
@@ -58,7 +58,7 @@ namespace ReleaseTool.Core
                 }
             }
 
-            var fileMap = new FileMapping(localPath, publishRelPath);
+            var fileMap = new FileMapping(localPath, publishReleasePath);
             var metadata = _getMetadataForFileFunc(file);
 
             return new LayoutWorkerResult(
