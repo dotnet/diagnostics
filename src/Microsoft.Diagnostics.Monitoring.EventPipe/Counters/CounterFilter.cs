@@ -16,6 +16,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public CounterFilter()
         {
+            //Provider names are not case sensitive, but counter names are.
             _enabledCounters = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         }
 
@@ -40,7 +41,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
             if (_enabledCounters.TryGetValue(providerName, out List<string> enabledCounters))
             {
-                return enabledCounters.Count == 0 || enabledCounters.Contains(counterName, StringComparer.OrdinalIgnoreCase);
+                return enabledCounters.Count == 0 || enabledCounters.Contains(counterName, StringComparer.Ordinal);
             }
             return false;
         }

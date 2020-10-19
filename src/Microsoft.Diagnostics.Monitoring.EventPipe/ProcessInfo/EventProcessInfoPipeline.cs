@@ -12,14 +12,17 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal class EventProcessInfoPipeline : EventSourcePipeline<EventProcessInfoPipelineSettings>
     {
-        public EventProcessInfoPipeline(DiagnosticsClient client, EventProcessInfoPipelineSettings settings)
+        private readonly Func<string, CancellationToken, Task> _onCommandLine;
+
+        public EventProcessInfoPipeline(DiagnosticsClient client, EventProcessInfoPipelineSettings settings, Func<string, CancellationToken, Task> onCommandLine)
             : base(client, settings)
         {
+            _onCommandLine = onCommandLine ?? throw new ArgumentNullException(nameof(onCommandLine));
         }
 
         internal override DiagnosticsEventPipeProcessor CreateProcessor() =>
             new DiagnosticsEventPipeProcessor(
                 PipeMode.ProcessInfo,
-                processInfoCallback: Settings.CommandLineCallback);
+                processInfoCallback: _onCommandLine);
     }
 }

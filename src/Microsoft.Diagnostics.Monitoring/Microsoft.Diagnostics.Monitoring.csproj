@@ -24,10 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="DotnetCounters.UnitTests" />
-  </ItemGroup>
-
-  <ItemGroup>
     <InternalsVisibleTo Include="dotnet-monitor" />
     <!-- This is temporary until IEndpointInfoSourceInternal becomes public-->
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.RestServer" />

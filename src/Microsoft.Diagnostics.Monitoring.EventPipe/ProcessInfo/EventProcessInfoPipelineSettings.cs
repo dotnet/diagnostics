@@ -8,7 +8,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal class EventProcessInfoPipelineSettings : EventSourcePipelineSettings
     {
-        public Func<string, CancellationToken, Task> CommandLineCallback { get; set; }
     }
 
 }

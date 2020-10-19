@@ -15,9 +15,9 @@ namespace Microsoft.Diagnostics.Monitoring
 {
     /// <summary>
     /// A pipeline controls data which is flowing from some source to sink asynchronously.
-    /// This interface is allows the flow to be started and stopped. The concrete class
+    /// This class allows the flow to be started and stopped. The concrete class
     /// determines what data is being collected and where it will flow to.
-    /// 
+    ///
     /// The pipeline is logically in one of these states:
     /// Unstarted - After the object is constructed and prior to calling RunAsync or
     /// StopAsync. No data is flowing.
@@ -32,6 +32,12 @@ namespace Microsoft.Diagnostics.Monitoring
     /// work left to be done. The only way to be certain you have reached this state is to
     /// observe that the Task returned by StopAsync() or RunAsync() is completed or cancelled,
     /// usually by awaiting it.
+    /// Aborting - Entered by cancelling any of the tokens to StopAsync or RunAsync, or by explicitly
+    /// calling DisposeAsync.
+    /// Unstarted -> Running -> Stopping -> Stopped
+    ///           |           |               ^
+    ///           |           V               |
+    ///           -------> Aborting ----------|
     /// </summary>
     internal abstract class Pipeline : IAsyncDisposable
     {
@@ -92,6 +98,12 @@ namespace Microsoft.Diagnostics.Monitoring
                     linkedSource.Token.ThrowIfCancellationRequested();
                     await OnRun(linkedSource.Token);
                 }
+                catch (OperationCanceledException)
+                {
+                    //Give precedence to the parameter token rather than the linked token
+                    token.ThrowIfCancellationRequested();
+                    throw;
+                }
                 finally
                 {
                     await Cleanup();
@@ -150,6 +162,8 @@ namespace Microsoft.Diagnostics.Monitoring
                 catch (OperationCanceledException)
                 {
                     await Cleanup();
+                    //Give precedence to the parameter token rather than the linked token
+                    token.ThrowIfCancellationRequested();
                     throw;
                 }
             }
@@ -169,6 +183,11 @@ namespace Microsoft.Diagnostics.Monitoring
             return cleanupTask;
         }
 
+        /// <summary>
+        /// Requests that the pipeline abort the data flow as quickly as possible and transitions
+        /// to Stopped state. Note that this will not cause the pipeline to trigger ObjectDisposedException.
+        /// </summary>
+        /// <returns></returns>
         public async ValueTask DisposeAsync()
         {
             lock (_lock)
@@ -206,14 +225,6 @@ namespace Microsoft.Diagnostics.Monitoring
                 catch
                 {
                 }
-            }
-        }
-
-        private void ThrowIfDisposed()
-        {
-            if (_isCleanedUp)
-            {
-                throw new ObjectDisposedException(GetType().Name);
             }
         }
     }

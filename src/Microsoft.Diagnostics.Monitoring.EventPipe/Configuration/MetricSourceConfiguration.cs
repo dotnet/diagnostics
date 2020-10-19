@@ -38,10 +38,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _eventPipeProviders = providers.Select((string provider) => new EventPipeProvider(provider,
                EventLevel.Informational,
                (long)ClrTraceEventParser.Keywords.None,
-                   new Dictionary<string, string>() {
-                        { "EventCounterIntervalSec", MetricIntervalSeconds }
-                   }
-               )).ToList();
+               new Dictionary<string, string>()
+               {
+                    { "EventCounterIntervalSec", MetricIntervalSeconds }
+               })).ToList();
         }
 
         private string MetricIntervalSeconds { get; }

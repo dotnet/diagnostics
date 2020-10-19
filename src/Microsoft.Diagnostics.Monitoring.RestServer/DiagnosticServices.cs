@@ -248,10 +248,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
                         var infoSettings = new EventProcessInfoPipelineSettings
                         {
                             Duration = Timeout.InfiniteTimeSpan,
-                            CommandLineCallback = (cmdLine, token) => { commandLine = cmdLine; return Task.CompletedTask; }
                         };
 
-                        await using var pipeline = new EventProcessInfoPipeline(client, infoSettings);
+                        await using var pipeline = new EventProcessInfoPipeline(client, infoSettings,
+                            (cmdLine, token) => { commandLine = cmdLine; return Task.CompletedTask; });
+
                         await pipeline.RunAsync(extendedInfoCancellationToken);
                     }
                     catch

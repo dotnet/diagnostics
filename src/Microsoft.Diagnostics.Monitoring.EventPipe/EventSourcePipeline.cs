@@ -31,7 +31,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override Task OnRun(CancellationToken token)
         {
-            return _processor.Value.Process(Client, Settings.Duration, token);
+            try
+            {
+                return _processor.Value.Process(Client, Settings.Duration, token);
+            }
+            catch (InvalidOperationException e)
+            {
+                throw new PipelineException(e.Message, e);
+            }
         }
 
         protected override async Task OnCleanup()

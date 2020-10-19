@@ -12,11 +12,11 @@ namespace Microsoft.Diagnostics.Monitoring
 {
     internal static class PipelineExtensions
     {
-        public static Task StopAsync(this Pipeline pipeline, TimeSpan timeout)
+        public static async Task StopAsync(this Pipeline pipeline, TimeSpan timeout)
         {
-            CancellationTokenSource cts = new CancellationTokenSource();
+            using CancellationTokenSource cts = new CancellationTokenSource();
             cts.CancelAfter(timeout);
-            return pipeline.StopAsync(cts.Token);
+            await pipeline.StopAsync(cts.Token);
         }
     }
 }
