@@ -112,10 +112,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             DiagnosticsClient diagnosticsClient;
             if (ProcessLauncher.Launcher.HasChildProc)
             {
-                ReversedDiagnosticsClientBuilder builder = new ReversedDiagnosticsClientBuilder(ProcessLauncher.Launcher);
                 try
                 {
-                    diagnosticsClient = builder.Build(10);
+                    diagnosticsClient = ReversedDiagnosticsClientBuilder.Build(ProcessLauncher.Launcher, "dotnet-trace", 10);
                 }
                 catch (TimeoutException)
                 {
@@ -141,7 +140,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 EventPipeEventSource source = new EventPipeEventSource(session.EventStream);
 
-                foreach (IDiagnosticProfileHandler handler in GetAllHandlers(gcPause, http, loaderBinder))
+                foreach (IDiagnosticProfileHandler handler in GetAllHandlers(providerCollection))
                 {
                     handler.AddHandler(source);
                 }
@@ -198,12 +197,23 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="http">Option for --http</param>
         /// <param name="loaderBinder">Option for --loader-binder</param>
         /// <returns></returns>
-        private static List<IDiagnosticProfileHandler> GetAllHandlers(string gcPause, string http, string loaderBinder)
+        private static List<IDiagnosticProfileHandler> GetAllHandlers(List<EventPipeProvider> providers)
         {
             List<IDiagnosticProfileHandler> handlers = new List<IDiagnosticProfileHandler>();
-            if (gcPause != null)
+            
+            foreach (EventPipeProvider provider in providers)
             {
-                handlers.Add(new GcPauseHandler(gcPause));
+                if (provider.Name.Equals("Microsoft-Windows-DotNETRuntime"))
+                {
+                    if ((provider.Keywords & (long)ClrTraceEventParser.Keywords.GC) > 0)
+                    {
+                        handlers.Add(new GcPauseHandler());
+                    }
+                    if (((provider.Keywords & (long)ClrTraceEventParser.Keywords.Loader) > 0) && (provider.Keywords & (long)ClrTraceEventParser.Keywords.Binder) > 0)
+                    {
+                        handlers.Add(new LoaderBinderHandler());
+                    }
+                }
             }
             // TODO: add http, loader-binder here.
             return handlers;

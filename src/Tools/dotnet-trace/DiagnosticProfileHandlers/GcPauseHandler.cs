@@ -15,11 +15,9 @@ namespace Microsoft.Diagnostics.Tools.Trace.DiagnosticProfileHandlers
     /// </summary>
     internal class GcPauseHandler : IDiagnosticProfileHandler
     {
-        private string option;
 
-        public GcPauseHandler(string gcHandlerOption)
+        public GcPauseHandler()
         {
-            option = gcHandlerOption;
         }
 
         public void AddHandler(EventPipeEventSource source)
