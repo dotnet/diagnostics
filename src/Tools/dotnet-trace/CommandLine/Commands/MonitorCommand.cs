@@ -93,6 +93,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
             }
 
+            if (Console.IsInputRedirected)
+            {
+                Console.Error.WriteLine("Input redirection is not supported with this command.");
+                return ErrorCodes.ArgumentError;
+            }
+
             // Build provider string
             var providerCollection = Extensions.ToProviders(providers);
             providerCollection.AddRange(GetWellKnownProviders(profiles));
@@ -139,13 +145,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 try
                 {
-                    EventPipeEventSource source = new EventPipeEventSource(session.EventStream);
-
-                    foreach (IDiagnosticProfileHandler handler in GetAllHandlers(providerCollection))
+                    using (EventPipeEventSource source = new EventPipeEventSource(session.EventStream))
                     {
-                        handler.AddHandler(source);
+
+                        foreach (IDiagnosticProfileHandler handler in GetAllHandlers(providerCollection))
+                        {
+                            handler.RegisterHandler(source);
+                        }
+                        source.Process();
                     }
-                    source.Process();
                 }
                 catch (Exception ex)
                 {
@@ -184,7 +192,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         /// <summary>
         /// Small wrapper around EventPipeSession.Stop() to catch any Timeout exceptions
-        /// A timeout exception may be thrown while stopping the session in the case of:
+        /// A TimeoutException or ServerNotAvailableException may be thrown while stopping the session in the case of:
         ///     1. The app exited before the user stopped the tool.
         ///     2. The app exited after the user stopped the tool, but before the tool sent stop command.
         /// </summary>
@@ -196,6 +204,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 session.Stop();
             }
             catch (TimeoutException) { }
+            catch (ServerNotAvailableException) { }
         }
 
         private static List<EventPipeProvider> GetWellKnownProviders(string profiles)
