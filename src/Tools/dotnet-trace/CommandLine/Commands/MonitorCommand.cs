@@ -37,9 +37,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             // user-defined providers
             string providers,
             // diagnostic profiles
-            string gcPause,
-            string http,
-            string loaderBinder
+            string profiles
         );
 
         /// <summary>
@@ -65,14 +63,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             // user-defined providers
             string providers,
             // diagnostic profiles
-            string gcPause,
-            string http,
-            string loaderBinder
+            string profiles
         )
         {
             //Debug.Assert(processId > 0 || name != null);
             Console.WriteLine("Hello");
-            Console.WriteLine($"Received --gc-pause option: {gcPause}");
+            Console.WriteLine($"Received --profile option: {profiles}");
 
             await Task.Delay(100);
 
@@ -106,7 +102,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             // Build provider string
             var providerCollection = Extensions.ToProviders(providers);
-            providerCollection.AddRange(GetWellKnownProviders(gcPause, http, loaderBinder));
+            providerCollection.AddRange(GetWellKnownProviders(profiles));
 
             // Build DiagnosticsClient
             DiagnosticsClient diagnosticsClient;
@@ -136,55 +132,112 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 diagnosticsClient.ResumeRuntime();
             }
+
+            ManualResetEvent shouldExit = new ManualResetEvent(false);
+            ct.Register(() => shouldExit.Set());
+
             Task parserTask = Task.Run(() =>
             {
-                EventPipeEventSource source = new EventPipeEventSource(session.EventStream);
-
-                foreach (IDiagnosticProfileHandler handler in GetAllHandlers(providerCollection))
+                try
                 {
-                    handler.AddHandler(source);
+                    EventPipeEventSource source = new EventPipeEventSource(session.EventStream);
+
+                    foreach (IDiagnosticProfileHandler handler in GetAllHandlers(providerCollection))
+                    {
+                        handler.AddHandler(source);
+                    }
+                    source.Process();
                 }
-                source.Process();
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex.ToString());
+                }
+                finally
+                {
+                    shouldExit.Set();
+                }
             });
 
-            Task.WaitAll(parserTask);
+            while(!shouldExit.WaitOne(250))
+            {
+                while (true)
+                {
+                    if (shouldExit.WaitOne(250))
+                    {
+                        StopSession(session);
+                        return 0;
+                    }
+                    if (Console.KeyAvailable)
+                    {
+                        break;
+                    }
+                }
+                ConsoleKey cmd = Console.ReadKey(true).Key;
+                if (cmd == ConsoleKey.Q)
+                {
+                    StopSession(session);
+                    break;
+                }
+            }
 
-            return 1;
+            return await Task.FromResult(1);
         }
 
-        private static List<EventPipeProvider> GetWellKnownProviders(string gcPause, string http, string loaderBinder)
+        /// <summary>
+        /// Small wrapper around EventPipeSession.Stop() to catch any Timeout exceptions
+        /// A timeout exception may be thrown while stopping the session in the case of:
+        ///     1. The app exited before the user stopped the tool.
+        ///     2. The app exited after the user stopped the tool, but before the tool sent stop command.
+        /// </summary>
+        /// <param name="session"></param>
+        private static void StopSession(EventPipeSession session)
+        {
+            try
+            {
+                session.Stop();
+            }
+            catch (TimeoutException) { }
+        }
+
+        private static List<EventPipeProvider> GetWellKnownProviders(string profiles)
         {
             List<EventPipeProvider> providers = new List<EventPipeProvider>();
 
+            if (profiles == null)
+            {
+                return providers;
+            }
+
+            string[] profileCandidates = profiles.Split(',');
             bool ClrProviderSet = false;
             int ClrLevel = 0;
             long ClrKeywords = 0;
 
-            if (gcPause != null)
-            {
-                ClrKeywords |= (long)ClrTraceEventParser.Keywords.GC;
-                ClrLevel = ClrLevel < 4 ? 4 : ClrLevel;
-                ClrProviderSet = true;
-            }
 
-            if (http != null)
+            foreach (string profile in profileCandidates)
             {
-                // TODO: Add HTTP
-            }
-
-            if (loaderBinder != null)
-            {
-                ClrKeywords |= (long)ClrTraceEventParser.Keywords.Binder;
-                ClrKeywords |= (long)ClrTraceEventParser.Keywords.Loader;
-                ClrLevel = ClrLevel < 4 ? 4 : ClrLevel;
-                ClrProviderSet = true;
+                switch (profile)
+                {
+                    case "gc-pause":
+                        ClrKeywords |= (long)ClrTraceEventParser.Keywords.GC;
+                        ClrLevel = ClrLevel < 4 ? 4 : ClrLevel;
+                        ClrProviderSet = true;
+                        break;
+                    case "loader-binder":
+                        ClrKeywords |= ((long)ClrTraceEventParser.Keywords.Binder | (long)ClrTraceEventParser.Keywords.Loader);
+                        ClrLevel = ClrLevel < 4 ? 4 : ClrLevel;
+                        ClrProviderSet = true;
+                        break;
+                    // TODO: Add more diagnostic profiles here
+                    default:
+                        throw new ArgumentException($"{profile} is not a valid diagnostic profile.");
+                }
             }
 
             if (ClrProviderSet)
             {
                 providers.Add(new EventPipeProvider("Microsoft-Windows-DotNETRuntime", (EventLevel)ClrLevel, ClrKeywords));
             }
-            // TODO: Other providers may be added here
 
             return providers;
         }
@@ -193,9 +246,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// Generates a List of appropriate IDiagnosticProfileHandlers with the given options from users.
         /// This may throw if the user specified invalid options for any of the diagnostic profile they specified.
         /// </summary>
-        /// <param name="gcPause">Option for --gc-pause</param>
-        /// <param name="http">Option for --http</param>
-        /// <param name="loaderBinder">Option for --loader-binder</param>
+        /// <param name="providers">List of EventPipeProviders</param>
         /// <returns></returns>
         private static List<IDiagnosticProfileHandler> GetAllHandlers(List<EventPipeProvider> providers)
         {
@@ -214,10 +265,20 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         handlers.Add(new LoaderBinderHandler());
                     }
                 }
+                else
+                {
+                    handlers.Add(new CustomProviderHandler());
+                }
             }
-            // TODO: add http, loader-binder here.
             return handlers;
         }
+        public static Option DiagnosticProfileOption() =>
+            new Option(
+                alias: "--profiles",
+                description: "List of diagnostic profiles to enable. Use comma-separated list to specify multiple diagnostic profiles.")
+            {
+                Argument = new Argument<string>(name: "profiles", getDefaultValue: () => null)
+            };
 
         public static Command MonitorCommand() =>
              new Command(
@@ -233,9 +294,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                  // Option for specifying custom providers
                  CommonOptions.ProvidersOption(),
                  // Options for diagnostic profiles
-                 DiagnosticProfiles.GCPauseProfileOption(),
-                 DiagnosticProfiles.HttpProfileOption(),
-                 DiagnosticProfiles.LoaderBinderProfileOption()
+                 DiagnosticProfileOption(),
              };
 
 
