@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- 
-    DARCVersionFileName, GenerateDARCVersion, and InjectDARCVersion are used for injecting the value of MicrosoftNETCoreAppVersion
+    DARCVersionFileName, GenerateDARCVersion, and InjectDARCVersion are used for injecting the value of MicrosoftNETCoreAppRuntimewinx64Version
     int csharp code so that it can be used by testing harnesses for running tests under a specific runtime version.  This specifically
     allows tests to run on a version of the runtime besides whatever was included with Arcade's SDK.
    -->
@@ -27,7 +27,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     public partial class CommonHelper
     {
-        public static readonly string CurrentDARCVersion = "$(MicrosoftNETCoreAppVersion)";
+        public static readonly string CurrentDARCVersion = "$(MicrosoftNETCoreAppRuntimewinx64Version)";
     }
 }
 ]]>

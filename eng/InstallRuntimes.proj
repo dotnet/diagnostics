@@ -15,7 +15,12 @@
 
      $(MicrosoftDotnetSdkInternalVersion) - .NET SDK to use for testing
 
-     $(MicrosoftNETCoreAppVersion)   $(MicrosoftAspNetCoreAppRefVersion) - latest dotnet runtime/aspnetcore version to install/test
+     $(MicrosoftNETCoreAppVersion)               - latest dotnet runtime package version (the version to install)
+     $(MicrosoftNETCoreAppRuntimewinx64Version)  - latest dotnet runtime stable version (the version that actually is installed)
+
+     $(MicrosoftAspNetCoreAppRefInternalVersion) - latest dotnet aspnetcore package version (the version to install)
+     $(MicrosoftAspNetCoreAppRefVersion)         - latest dotnet aspnetcore stable version (the version that actually is installed)
+
      $(MicrosoftNETCoreApp31Version) $(MicrosoftAspNetCoreApp31Version)  - 3.1 version
      $(MicrosoftNETCoreApp21Version) $(MicrosoftAspNetCoreApp21Version)  - 2.1 version
 
@@ -48,7 +53,7 @@
 
   <PropertyGroup>
     <CommonInstallArgs>-NoPath -SkipNonVersionedFiles -Architecture $(BuildArch) -InstallDir $(DotNetInstallRoot)</CommonInstallArgs>
-    <DotNetInstallDir>$(DotNetInstallRoot.Replace("\", "\\"))shared\\Microsoft.NETCore.App\\$(MicrosoftNETCoreAppVersion)\\</DotNetInstallDir>
+    <DotNetInstallDir>$(DotNetInstallRoot.Replace("\", "\\"))shared\\Microsoft.NETCore.App\\$(MicrosoftNETCoreAppRuntimewinx64Version)\\</DotNetInstallDir>
     <TestConfigFileName>$(DotNetInstallRoot)Debugger.Tests.Versions.txt</TestConfigFileName>
     <AddRegeditFileName>$(DotNetInstallRoot)AddPrivateTesting.reg</AddRegeditFileName>
     <RemoveRegeditFileName>$(DotNetInstallRoot)RemovePrivateTesting.reg</RemoveRegeditFileName>
@@ -70,14 +75,14 @@
   </Choose>
 
   <ItemGroup Condition="!$(InternalReleaseTesting) and !$(PrivateBuildTesting)">
-    <TestVersions Include="Latest" RuntimeVersion="$(MicrosoftNETCoreAppVersion)" AspNetVersion="$(MicrosoftAspNetCoreAppRefVersion)" />
+    <TestVersions Include="Latest" RuntimeVersion="$(MicrosoftNETCoreAppVersion)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
     <TestVersions Include="31" RuntimeVersion="$(MicrosoftNETCoreApp31Version)" AspNetVersion="$(MicrosoftAspNetCoreApp31Version)" />
     <TestVersions Condition="'$(BuildArch)' != 'arm' and '$(BuildArch)' != 'arm64'" Include="21" RuntimeVersion="$(MicrosoftNETCoreApp21Version)" AspNetVersion="$(MicrosoftAspNetCoreApp21Version)" />
   </ItemGroup>
 
   <!-- Local private build testing -->
   <ItemGroup Condition="$(PrivateBuildTesting)">
-    <TestVersions Include="Latest" RuntimeVersion="$(MicrosoftNETCoreAppVersion)" AspNetVersion="$(MicrosoftAspNetCoreAppRefVersion)" />
+    <TestVersions Include="Latest" RuntimeVersion="$(MicrosoftNETCoreAppVersion)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
   </ItemGroup>
 
   <!-- Internal service release testing -->
@@ -140,7 +145,7 @@
           Outputs="$(TestConfigFileName)">
 
     <PropertyGroup>
-      <RuntimeVersionLatest>$(MicrosoftNETCoreAppVersion)</RuntimeVersionLatest>
+      <RuntimeVersionLatest>$(MicrosoftNETCoreAppRuntimewinx64Version)</RuntimeVersionLatest>
       <RuntimeVersionLatest Condition="$(InternalReleaseTesting)">$(DotnetRuntimeVersion)</RuntimeVersionLatest>
       <TestConfigFileLines>
 <![CDATA[
@@ -155,7 +160,7 @@
   <AspNetCoreVersion31>$(MicrosoftAspNetCoreApp31Version)</AspNetCoreVersion31>
 
   <RuntimeVersionLatest>$(RuntimeVersionLatest)</RuntimeVersionLatest>
-  <AspNetCoreVersionLatest>$(MicrosoftAspNetCoreAppRefVersion)</AspNetCoreVersionLatest>
+  <AspNetCoreVersionLatest>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetCoreVersionLatest>
 </Configuration>
 ]]>
       </TestConfigFileLines>
