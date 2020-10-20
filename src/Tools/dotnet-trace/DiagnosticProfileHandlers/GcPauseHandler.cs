@@ -1,11 +1,8 @@
 ﻿using Microsoft.Diagnostics.Tracing;
-using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Diagnostics.Tracing.Parsers.Clr;
 using System;
 using System.Collections.Generic;
-using System.CommandLine;
-using System.ComponentModel;
-using System.Text;
+using System.Globalization;
 
 namespace Microsoft.Diagnostics.Tools.Trace.DiagnosticProfileHandlers
 {
@@ -34,26 +31,26 @@ namespace Microsoft.Diagnostics.Tools.Trace.DiagnosticProfileHandlers
             source.Clr.GCStart += (GCStartTraceData data) =>
             {
                 GCStartTimeCache[data.Count] = data.TimeStamp;
-                Console.WriteLine($"[CLR-GC|GCStart] Count={data.Count};Reason={GetGCReason(data.Reason)};Type={GetGCType(data.Type)}");
+                Console.WriteLine($"[CLR-GC|GCStart|{data.TimeStamp.ToString("s", CultureInfo.InvariantCulture)}] Count={data.Count};Reason={GetGCReason(data.Reason)};Type={GetGCType(data.Type)}");
             };
 
             source.Clr.GCStop += (GCEndTraceData data) =>
             {
                 if (GCStartTimeCache.Remove(data.Count, out DateTime startTime))
                 {
-                    Console.WriteLine($"[CLR-GC|GCEnd] Count={data.Count};Generation={data.Depth};PauseTime={(data.TimeStamp - startTime).TotalMilliseconds} ms");
+                    Console.WriteLine($"[CLR-GC|GCEnd|{data.TimeStamp.ToString("s", CultureInfo.InvariantCulture)}] Count={data.Count};Generation={data.Depth};PauseTime={(data.TimeStamp - startTime).TotalMilliseconds} ms");
                 }
             };
 
             source.Clr.GCSuspendEEStart += (GCSuspendEETraceData data) =>
             {
                 lastKnownEESuspensionStartTimeStamp = data.TimeStamp;
-                Console.WriteLine($"[CLR-GC|EESuspendStart] Reason={GetEESuspendReason(data.Reason)}");
+                Console.WriteLine($"[CLR-GC|EESuspendStart|{data.TimeStamp.ToString("s", CultureInfo.InvariantCulture)}] Reason={GetEESuspendReason(data.Reason)}");
             };
 
             source.Clr.GCSuspendEEStop += (GCNoUserDataTraceData data) =>
             {
-                Console.WriteLine($"[CLR-GC|EESuspendStop] SuspensionTime: {(data.TimeStamp - lastKnownEESuspensionStartTimeStamp).TotalMilliseconds} ms");
+                Console.WriteLine($"[CLR-GC|EESuspendStop|{data.TimeStamp.ToString("s", CultureInfo.InvariantCulture)}] SuspensionTime: {(data.TimeStamp - lastKnownEESuspensionStartTimeStamp).TotalMilliseconds} ms");
             };
         }
 

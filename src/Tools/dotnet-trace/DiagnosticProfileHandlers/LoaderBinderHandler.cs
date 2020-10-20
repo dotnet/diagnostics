@@ -1,8 +1,7 @@
 ﻿using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers.Clr;
 using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Globalization;
 
 namespace Microsoft.Diagnostics.Tools.Trace.DiagnosticProfileHandlers
 {
@@ -26,72 +25,72 @@ namespace Microsoft.Diagnostics.Tools.Trace.DiagnosticProfileHandlers
             source.Clr.LoaderModuleUnload += Clr_LoaderModuleUnload;
         }
 
-        private void WriteLoaderBinderLog(string evtName, string msg)
+        private void WriteLoaderBinderLog(string evtName, DateTime timestamp, string msg)
         {
-            Console.WriteLine($"[CLR-LoaderBinder|{evtName}] {msg}");
+            Console.WriteLine($"[CLR-LoaderBinder|{evtName}|{timestamp.ToString("s", CultureInfo.InvariantCulture)}] {msg}");
         }
 
         private void Clr_AssemblyLoaderStart(AssemblyLoadStartTraceData obj)
         {
-            WriteLoaderBinderLog("AssemblyLoaderStart", $"Name={obj.AssemblyName};Path={obj.AssemblyPath};LoadContext={obj.AssemblyLoadContext};RequestingAssembly={obj.RequestingAssembly};RequestingAssemblyLoadContext={obj.RequestingAssemblyLoadContext}");
+            WriteLoaderBinderLog("AssemblyLoaderStart", obj.TimeStamp, $"Name={obj.AssemblyName};Path={obj.AssemblyPath};LoadContext={obj.AssemblyLoadContext};RequestingAssembly={obj.RequestingAssembly};RequestingAssemblyLoadContext={obj.RequestingAssemblyLoadContext}");
         }
 
         private void Clr_AssemblyLoaderStop(AssemblyLoadStopTraceData obj)
         {
             string loadSuccess = obj.Success ? "Load Successful" : "Load Failed";
-            WriteLoaderBinderLog("AssemblyLoaderStop", $"{loadSuccess} Name={obj.ResultAssemblyName};Path={obj.ResultAssemblyPath};LoadContext={obj.AssemblyLoadContext};Cached={obj.Cached};RequestingAssembly={obj.RequestingAssembly};RequestingAssemblyLoadContext={obj.RequestingAssemblyLoadContext}");
+            WriteLoaderBinderLog("AssemblyLoaderStop", obj.TimeStamp, $"{loadSuccess} Name={obj.ResultAssemblyName};Path={obj.ResultAssemblyPath};LoadContext={obj.AssemblyLoadContext};Cached={obj.Cached};RequestingAssembly={obj.RequestingAssembly};RequestingAssemblyLoadContext={obj.RequestingAssemblyLoadContext}");
         }
 
         private void Clr_AssemblyLoaderResolutionAttempted(ResolutionAttemptedTraceData obj)
         {
             if (obj.Result == ResolutionAttemptedResult.Success)
             {
-                WriteLoaderBinderLog("ResolutionAttempted", $"Name={obj.AssemblyName};Stage={GetAssemblyResolutionStage(obj.Stage)};Result={GetAssemblyResolutionResult(obj.Result)};ResultAssemblyName={obj.ResultAssemblyName};ResultAssemblyPath={obj.ResultAssemblyPath}");
+                WriteLoaderBinderLog("ResolutionAttempted", obj.TimeStamp, $"Name={obj.AssemblyName};Stage={GetAssemblyResolutionStage(obj.Stage)};Result={GetAssemblyResolutionResult(obj.Result)};ResultAssemblyName={obj.ResultAssemblyName};ResultAssemblyPath={obj.ResultAssemblyPath}");
             }
             else
             {
-                WriteLoaderBinderLog("ResolutionAttempted", $"Name={obj.AssemblyName};Stage={GetAssemblyResolutionStage(obj.Stage)};Result={GetAssemblyResolutionResult(obj.Result)};ErrorMessage={obj.ErrorMessage}");
+                WriteLoaderBinderLog("ResolutionAttempted", obj.TimeStamp, $"Name={obj.AssemblyName};Stage={GetAssemblyResolutionStage(obj.Stage)};Result={GetAssemblyResolutionResult(obj.Result)};ErrorMessage={obj.ErrorMessage}");
             }
         }
  
         private void Clr_AssemblyLoaderAppDomainAssemblyResolveHandlerInvoked(AppDomainAssemblyResolveHandlerInvokedTraceData obj)
         {
-            WriteLoaderBinderLog("AppDomainAssemblyResolveHandlerInvoked", $"Name={obj.AssemblyName};HandlerName={obj.HandlerName};ResultAssemblyName={obj.ResultAssemblyName};ResultAssemblyPath={obj.ResultAssemblyPath}");
+            WriteLoaderBinderLog("AppDomainAssemblyResolveHandlerInvoked", obj.TimeStamp, $"Name={obj.AssemblyName};HandlerName={obj.HandlerName};ResultAssemblyName={obj.ResultAssemblyName};ResultAssemblyPath={obj.ResultAssemblyPath}");
         }
 
         private void Clr_AssemblyLoaderAssemblyLoadContextResolvingHandlerInvoked(AssemblyLoadContextResolvingHandlerInvokedTraceData obj)
         {
-            WriteLoaderBinderLog("AssemblyLoadContextResolvingHandlerInvoked", $"Name={obj.AssemblyName};HandlerName={obj.HandlerName};AssemblyLoadContext={obj.AssemblyLoadContext};ResultAssemblyName={obj.ResultAssemblyName};ResultAssemblyPath={obj.ResultAssemblyPath}");
+            WriteLoaderBinderLog("AssemblyLoadContextResolvingHandlerInvoked", obj.TimeStamp, $"Name={obj.AssemblyName};HandlerName={obj.HandlerName};AssemblyLoadContext={obj.AssemblyLoadContext};ResultAssemblyName={obj.ResultAssemblyName};ResultAssemblyPath={obj.ResultAssemblyPath}");
         }
 
         private void Clr_AssemblyLoaderAssemblyLoadFromResolveHandlerInvoked(AssemblyLoadFromResolveHandlerInvokedTraceData obj)
         {
-            WriteLoaderBinderLog("AssemblyLoadFromResolveHandlerInvoked", $"Name={obj.AssemblyName};IsTracked={obj.IsTrackedLoad};RequestingAssemblyPath={obj.RequestingAssemblyPath};ComputedRequestedAssemblyPath={obj.ComputedRequestedAssemblyPath}");
+            WriteLoaderBinderLog("AssemblyLoadFromResolveHandlerInvoked", obj.TimeStamp, $"Name={obj.AssemblyName};IsTracked={obj.IsTrackedLoad};RequestingAssemblyPath={obj.RequestingAssemblyPath};ComputedRequestedAssemblyPath={obj.ComputedRequestedAssemblyPath}");
         }
 
         private void Clr_AssemblyLoaderKnownPathProbed(KnownPathProbedTraceData obj)
         {
-            WriteLoaderBinderLog("KnownPathProbed", $"FilePath={obj.FilePath};Source={GetKnownPathSource(obj.PathSource)};Result={obj.Result}");
+            WriteLoaderBinderLog("KnownPathProbed", obj.TimeStamp, $"FilePath={obj.FilePath};Source={GetKnownPathSource(obj.PathSource)};Result={obj.Result}");
         }
 
         private void Clr_LoaderModuleUnload(ModuleLoadUnloadTraceData obj)
         {
-            WriteLoaderBinderLog("ModuleUnload", $"ModuleID={obj.ModuleID};AssemblyID={obj.AssemblyID};ModuleFlags={obj.ModuleFlags};ModuleILPath={obj.ModuleILPath};ModuleNativePath={obj.ModuleNativePath};ManagedPdbSignature={obj.ManagedPdbSignature};ManagedPdbAge={obj.ManagedPdbAge};ManagedPdbBuildPath={obj.ManagedPdbBuildPath};NativePdbSiganture={obj.NativePdbSignature};NatviePdbAge={obj.NativePdbAge};NativePdbBuildPath={obj.NativePdbBuildPath}");
+            WriteLoaderBinderLog("ModuleUnload", obj.TimeStamp, $"ModuleID={obj.ModuleID};AssemblyID={obj.AssemblyID};ModuleFlags={obj.ModuleFlags};ModuleILPath={obj.ModuleILPath};ModuleNativePath={obj.ModuleNativePath};ManagedPdbSignature={obj.ManagedPdbSignature};ManagedPdbAge={obj.ManagedPdbAge};ManagedPdbBuildPath={obj.ManagedPdbBuildPath};NativePdbSiganture={obj.NativePdbSignature};NatviePdbAge={obj.NativePdbAge};NativePdbBuildPath={obj.NativePdbBuildPath}");
         }
 
         private void Clr_LoaderModuleLoad(ModuleLoadUnloadTraceData obj)
         {
-            WriteLoaderBinderLog("ModuleLoad", $"ModuleID={obj.ModuleID};AssemblyID={obj.AssemblyID};ModuleFlags={obj.ModuleFlags};ModuleILPath={obj.ModuleILPath};ModuleNativePath={obj.ModuleNativePath};ManagedPdbSignature={obj.ManagedPdbSignature};ManagedPdbAge={obj.ManagedPdbAge};ManagedPdbBuildPath={obj.ManagedPdbBuildPath};NativePdbSiganture={obj.NativePdbSignature};NatviePdbAge={obj.NativePdbAge};NativePdbBuildPath={obj.NativePdbBuildPath}");
+            WriteLoaderBinderLog("ModuleLoad", obj.TimeStamp, $"ModuleID={obj.ModuleID};AssemblyID={obj.AssemblyID};ModuleFlags={obj.ModuleFlags};ModuleILPath={obj.ModuleILPath};ModuleNativePath={obj.ModuleNativePath};ManagedPdbSignature={obj.ManagedPdbSignature};ManagedPdbAge={obj.ManagedPdbAge};ManagedPdbBuildPath={obj.ManagedPdbBuildPath};NativePdbSiganture={obj.NativePdbSignature};NatviePdbAge={obj.NativePdbAge};NativePdbBuildPath={obj.NativePdbBuildPath}");
         }
 
         private void Clr_LoaderAssemblyUnload(AssemblyLoadUnloadTraceData obj)
         {
-            WriteLoaderBinderLog("AssemblyUnload", $"AssemblyID={obj.AssemblyID};AppDomainID={obj.AppDomainID};BindingID={obj.BindingID};AssemblyName={obj.FullyQualifiedAssemblyName};Flags={GetAssemblyFlagName(obj.AssemblyFlags)}");
+            WriteLoaderBinderLog("AssemblyUnload", obj.TimeStamp, $"AssemblyID={obj.AssemblyID};AppDomainID={obj.AppDomainID};BindingID={obj.BindingID};AssemblyName={obj.FullyQualifiedAssemblyName};Flags={GetAssemblyFlagName(obj.AssemblyFlags)}");
         }
 
         private void Clr_LoaderAssemblyLoad(AssemblyLoadUnloadTraceData obj)
         {
-            WriteLoaderBinderLog("AssemblyLoad", $"AssemblyID={obj.AssemblyID};AppDomainID={obj.AppDomainID};BindingID={obj.BindingID};AssemblyName={obj.FullyQualifiedAssemblyName};Flags={GetAssemblyFlagName(obj.AssemblyFlags)}");
+            WriteLoaderBinderLog("AssemblyLoad", obj.TimeStamp, $"AssemblyID={obj.AssemblyID};AppDomainID={obj.AppDomainID};BindingID={obj.BindingID};AssemblyName={obj.FullyQualifiedAssemblyName};Flags={GetAssemblyFlagName(obj.AssemblyFlags)}");
         }
 
         private string GetAssemblyFlagName(AssemblyFlags flag)
