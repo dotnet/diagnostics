@@ -1,5 +1,6 @@
 param(
   [Parameter(Mandatory=$true)][string] $ManifestPath,
+  [Parameter(Mandatory=$true)][string] $StagingPath,
   [Parameter(Mandatory=$true)][string] $FeedEndpoint,
   [Parameter(Mandatory=$true)][string] $FeedPat,
   [switch] $help,
@@ -8,9 +9,10 @@ param(
 function Write-Help() {
     Write-Host "Publish packages specified in a manifest. This should not be used for large manifests."
     Write-Host "Common settings:"
-    Write-Host "  -BarBuildId <value>               BAR Build ID of the diagnostics build to publish."
-    Write-Host "  -ReleaseVersion <value>           Name to give the diagnostics release."
-    Write-Host "  -DownloadTargetPath <value>       Path to download the build to."
+    Write-Host "  -ManifestPath <value>      Path to a publishing manifest where the NuGet packages to publish can be found."
+    Write-Host "  -StagingPath <value>       Path where the assets in the manifests are laid out."
+    Write-Host "  -FeedEndpoint <value>      NuGet feed to publish the packages to."
+    Write-Host "  -FeedPat <value>           PAT to use in the publish process."
     Write-Host ""
 }
 
@@ -45,7 +47,8 @@ $manifestJson = Get-Content -Raw -Path $ManifestPath | ConvertFrom-Json
 $failedToPublish = 0
 foreach ($nugetPack in $manifestJson.NugetAssets)
 {
-    & "$PSScriptRoot/../../../dotnet.cmd" nuget push $nugetPack.FilePath --source $FeedEndpoint --api-key $FeedPat
+    $nugetPack.PublishRelativePath
+    & "$PSScriptRoot/../../../dotnet.cmd" nuget push  --source $FeedEndpoint --api-key $FeedPat
     if ($LastExitCode -ne 0)
     {
         Write-Host "Error: unable to publish $($nugetPack.FilePath)."
