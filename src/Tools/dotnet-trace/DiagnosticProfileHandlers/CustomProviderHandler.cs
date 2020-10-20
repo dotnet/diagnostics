@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.DiagnosticProfileHandlers
     internal class CustomProviderHandler : IDiagnosticProfileHandler
     {
         private Guid RundownProviderGuid = new Guid("A669021C-C450-4609-A035-5AF59AF4DF18");
-        public void AddHandler(EventPipeEventSource source)
+        public void RegisterHandler(EventPipeEventSource source)
         {
             source.Dynamic.All += Dynamic_All;
         }

@@ -26,7 +26,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.DiagnosticProfileHandlers
         /// the GCStartTimeCache dictionary to be thread-safe.
         /// </summary>
         /// <param name="source"></param>
-        public void AddHandler(EventPipeEventSource source)
+        public void RegisterHandler(EventPipeEventSource source)
         {
             source.Clr.GCStart += (GCStartTraceData data) =>
             {

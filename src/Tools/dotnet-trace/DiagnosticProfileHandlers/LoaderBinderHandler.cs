@@ -10,7 +10,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.DiagnosticProfileHandlers
     /// </summary>
     internal class LoaderBinderHandler : IDiagnosticProfileHandler
     {
-        public void AddHandler(EventPipeEventSource source)
+        public void RegisterHandler(EventPipeEventSource source)
         {
             source.Clr.AssemblyLoaderStart += Clr_AssemblyLoaderStart;
             source.Clr.AssemblyLoaderStop += Clr_AssemblyLoaderStop;

@@ -7,6 +7,6 @@ namespace Microsoft.Diagnostics.Tools.Trace.DiagnosticProfileHandlers
 {
     internal interface IDiagnosticProfileHandler
     {
-        public void AddHandler(EventPipeEventSource source);
+        public void RegisterHandler(EventPipeEventSource source);
     }
 }

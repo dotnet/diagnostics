@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tools.Trace.CommandLine.Options;
 using Microsoft.Diagnostics.Tools.Trace.DiagnosticProfileHandlers;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers;
@@ -216,7 +215,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             foreach (string profile in profileCandidates)
             {
-                switch (profile)
+                switch (profile.ToLowerInvariant())
                 {
                     case "gc-pause":
                         ClrKeywords |= (long)ClrTraceEventParser.Keywords.GC;
