@@ -554,7 +554,7 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
 \**********************************************************************/
 void Runtime::DisplayStatus()
 {
-    ExtOut("%s runtime at %p size %08llx\n", GetRuntimeConfigurationName(GetRuntimeConfiguration()), m_address, m_size);
+    ExtOut("%s runtime at %08llx size %08llx\n", GetRuntimeConfigurationName(GetRuntimeConfiguration()), m_address, m_size);
     if (m_runtimeInfo != nullptr) {
         ArrayHolder<char> szModuleName = new char[MAX_LONGPATH + 1];
         HRESULT hr = g_ExtSymbols->GetModuleNames(m_index, 0, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);

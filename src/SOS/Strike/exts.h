@@ -48,17 +48,9 @@
 #define TO_TADDR(cdaddr) ((TADDR)(cdaddr))
 #define TO_CDADDR(taddr) ((CLRDATA_ADDRESS)(LONG_PTR)(taddr))
 
-// We also need a "correction" macro: there are a number of places in the DAC
-// where instead of using the CLRDATA_ADDRESS sign-extension convention
-// we 0-extend (most notably DacpGcHeapDetails)
-#define NEED_DAC_CLRDATA_ADDRESS_CORRECTION 1
-#if NEED_DAC_CLRDATA_ADDRESS_CORRECTION == 1
-    // the macro below "corrects" a CDADDR to always represent the
-    // sign-extended equivalent ULONG64 value of the original TADDR
-    #define UL64_TO_CDA(ul64) (TO_CDADDR(TO_TADDR(ul64)))
-#else
-    #define UL64_TO_CDA(ul64) (ul64)
-#endif // NEED_DAC_CLRDATA_ADDRESS_CORRECTION 1
+// the macro below "corrects" a CDADDR to always represent the
+// sign-extended equivalent ULONG64 value of the original TADDR
+#define UL64_TO_CDA(ul64) (TO_CDADDR(TO_TADDR(ul64)))
 
 // The macro below removes the sign extension, returning the  
 // equivalent ULONG64 value to the original TADDR. Useful when 

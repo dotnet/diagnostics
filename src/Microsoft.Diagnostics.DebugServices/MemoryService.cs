@@ -24,6 +24,7 @@ namespace Microsoft.Diagnostics.DebugServices
         private readonly IDataReader _dataReader;
         private readonly MemoryCache _memoryCache;
         private readonly Dictionary<string, PEReader> _pathToPeReader = new Dictionary<string, PEReader>();
+        private readonly ulong _ignoreAddressBitsMask;
 
         /// <summary>
         /// Memory service constructor
@@ -33,6 +34,7 @@ namespace Microsoft.Diagnostics.DebugServices
         {
             _dataReader = dataReader;
             _memoryCache = new MemoryCache(ReadMemoryFromModule);
+            _ignoreAddressBitsMask = dataReader.PointerSize == 4 ? uint.MaxValue : ulong.MaxValue;
         }
 
         /// <summary>
@@ -73,13 +75,14 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <returns>true if any bytes were read at all, false if the read failed (and no bytes were read)</returns>
         public bool ReadMemory(ulong address, Span<byte> buffer, out int bytesRead)
         {
+            address &= _ignoreAddressBitsMask;
             int bytesRequested = buffer.Length;
             bytesRead = _dataReader.Read(address, buffer);
 
             // If the read failed or a successful partial read
             if (bytesRequested != bytesRead)
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                if (_dataReader.TargetPlatform == OSPlatform.Windows)
                 {
                     // Check if the memory is in a module and cache it if it is
                     if (_memoryCache.ReadMemory(address + (uint)bytesRead, buffer.Slice(bytesRead), out int read))
@@ -101,13 +104,10 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <returns>bytes read or null if error</returns>
         private byte[] ReadMemoryFromModule(ulong address, int bytesRequested)
         {
-            ulong ignoreAddressBitsMask = _dataReader.PointerSize == 4 ? 0xffffffff00000000 : 0;
-            address = address & ~ignoreAddressBitsMask;
-
             // Check if there is a module that contains the address range being read and map it into the virtual address space.
             foreach (ModuleInfo module in _dataReader.EnumerateModules())
             {
-                ulong start = module.ImageBase & ~ignoreAddressBitsMask;
+                ulong start = module.ImageBase & _ignoreAddressBitsMask;
                 ulong end = start + (ulong)module.IndexFileSize;
                 if (address >= start && address < end)
                 {
