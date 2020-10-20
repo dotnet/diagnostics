@@ -643,7 +643,7 @@ HRESULT InitializeHosting()
 int ReadMemoryForSymbols(ULONG64 address, uint8_t *buffer, int cb)
 {
     ULONG read;
-    if (SUCCEEDED(g_ExtData->ReadVirtual(address, buffer, cb, &read)))
+    if (SafeReadMemory(TO_TADDR(address), (PVOID)buffer, cb, &read))
     {
         return read;
     }
