@@ -46,7 +46,7 @@ namespace ReleaseTool.Core
                 localPath = Path.Combine(_stagingPath, publishReleasePath);
                 Directory.CreateDirectory(Path.GetDirectoryName(localPath));
                 using (FileStream srcStream = new FileStream(file.FullName, FileMode.Open, FileAccess.Read))
-                using (FileStream destStream = new FileStream(localPath, FileMode.Truncate, FileAccess.Write))
+                using (FileStream destStream = new FileStream(localPath, FileMode.Create, FileAccess.Write))
                 {
                     await srcStream.CopyToAsync(destStream, ct);
                 }
