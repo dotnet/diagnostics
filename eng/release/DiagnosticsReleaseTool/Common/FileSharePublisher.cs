@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace ReleaseTool.Core
 {
-    internal class FileSharePublisher : IPublisher
+    public class FileSharePublisher : IPublisher
     {
         private readonly string _sharePath;
 

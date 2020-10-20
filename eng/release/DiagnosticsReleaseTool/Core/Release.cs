@@ -41,7 +41,7 @@ namespace ReleaseTool.Core
             _logger = logger;
         }
 
-        internal async Task<int> RunAsync(CancellationToken ct)
+        public async Task<int> RunAsync(CancellationToken ct)
         {
             EnsureLoggerAvailable();
 
