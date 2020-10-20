@@ -66,12 +66,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string profiles
         )
         {
-            //Debug.Assert(processId > 0 || name != null);
-            Console.WriteLine("Hello");
-            Console.WriteLine($"Received --profile option: {profiles}");
-
-            await Task.Delay(100);
-
             if (!ProcessLauncher.Launcher.HasChildProc)
             {
                 // Either processName or processId has to be specified.
@@ -103,6 +97,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             // Build provider string
             var providerCollection = Extensions.ToProviders(providers);
             providerCollection.AddRange(GetWellKnownProviders(profiles));
+
+            if (providerCollection.Count == 0)
+            {
+                Console.Error.WriteLine("No providers were specified. Use --profiles or --providers option to target at least one event provider to monitor.");
+                return ErrorCodes.ArgumentError;
+            }
 
             // Build DiagnosticsClient
             DiagnosticsClient diagnosticsClient;
