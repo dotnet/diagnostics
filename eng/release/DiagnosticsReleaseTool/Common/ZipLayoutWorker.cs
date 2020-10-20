@@ -71,23 +71,23 @@ namespace ReleaseTool.Core
                     return new LayoutWorkerResult(LayoutResultStatus.Error);
                 }
 
-                string relPath = _getRelPathFromZipAndInnerFileFunc(file, extractedFile);
-                relPath = Path.Combine(relPath, extractedFile.Name);
+                string relativePath = _getRelativePathFromZipAndInnerFileFunc(file, extractedFile);
+                relativePath = Path.Combine(relativePath, extractedFile.Name);
 
                 string localPath = extractedFile.FullName;
 
                 if (_stagingPath is not null)
                 {
-                    localPath = Path.Combine(_stagingPath, relPath);
+                    localPath = Path.Combine(_stagingPath, relativePath);
                     Directory.CreateDirectory(Path.GetDirectoryName(localPath));
                     using (FileStream srcStream = new FileStream(extractedFile.FullName, FileMode.Open, FileAccess.Read))
-                    using (FileStream destStream = new FileStream(localPath, FileMode.OpenOrCreate, FileAccess.Write))
+                    using (FileStream destStream = new FileStream(localPath, FileMode.Truncate, FileAccess.Write))
                     {
                         await srcStream.CopyToAsync(destStream, ct);
                     }
                 }
 
-                var fileMap = new FileMapping(localPath, relPath);
+                var fileMap = new FileMapping(localPath, relativePath);
                 FileMetadata metadata = _getMetadataForInnerFileFunc(file, extractedFile);
                 filesInToolBundleToPublish.Add((fileMap, metadata));
             }

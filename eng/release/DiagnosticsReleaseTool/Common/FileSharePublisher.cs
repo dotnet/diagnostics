@@ -30,7 +30,7 @@ namespace ReleaseTool.Core
             }
 
             using (FileStream srcStream = new FileStream(fileMap.LocalSourcePath, FileMode.Open, FileAccess.Read))
-            using (FileStream destStream = new FileStream(destinationUri, FileMode.OpenOrCreate, FileAccess.Write))
+            using (FileStream destStream = new FileStream(destinationUri, FileMode.Truncate, FileAccess.Write))
             {
                 await srcStream.CopyToAsync(destStream, ct);
             }

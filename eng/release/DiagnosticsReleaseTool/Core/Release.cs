@@ -105,7 +105,7 @@ namespace ReleaseTool.Core
             FileInfo fi = new FileInfo(_manifestSavePath);
             fi.Directory.Create();
 
-            using (var fs = new FileStream(_manifestSavePath, FileMode.OpenOrCreate, FileAccess.Write))
+            using (FileStream fs = fi.Open(FileMode.Truncate, FileAccess.Write))
             {
                 await manifestStream.CopyToAsync(fs, ct);
             }
