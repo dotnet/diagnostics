@@ -21,7 +21,6 @@ namespace DiagnosticsReleaseTool.Impl
             var darcLayoutHelper = new DarcHelpers(releaseConfig.DropPath);
 
             ILogger logger = GetDiagLogger(verbose);
-            for (int i = 0; i < 100; i++) System.GC.Collect();
 
             var layoutWorkerList = new List<ILayoutWorker>
             {

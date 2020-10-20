@@ -19,17 +19,11 @@ namespace ReleaseTool.Core
             string stagingPath)
         {
 
-            _shouldHandleFileFunc = shouldHandleFileFunc is null 
-                                        ? _ => true
-                                        : shouldHandleFileFunc;
+            _shouldHandleFileFunc = shouldHandleFileFunc ?? (_ => true);
 
-            _getRelativePublishPathFromFileFunc = getRelativePublishPathFromFileFunc is null 
-                                                ? (file) => Path.Combine(FileMetadata.GetDefaultCatgoryForClass(FileClass.Unknown), file.Name)
-                                                : getRelativePublishPathFromFileFunc;
+            _getRelativePublishPathFromFileFunc = getRelativePublishPathFromFileFunc ?? (file => Path.Combine(FileMetadata.GetDefaultCatgoryForClass(FileClass.Unknown), file.Name));
 
-            _getMetadataForFileFunc = getMetadataForFileFunc is null
-                                        ? (_) => new FileMetadata(FileClass.Unknown)
-                                        : getMetadataForFileFunc;
+            _getMetadataForFileFunc = getMetadataForFileFunc ?? (_ => new FileMetadata(FileClass.Unknown));
 
             _stagingPath = stagingPath;
         }

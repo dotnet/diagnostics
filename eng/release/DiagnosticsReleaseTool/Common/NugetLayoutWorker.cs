@@ -6,12 +6,12 @@ namespace ReleaseTool.Core
     {
         public NugetLayoutWorker(string stagingPath) : base(
             shouldHandleFileFunc: ShouldHandleFile,
-            getRelativePublishPathFromFileFunc: GetNugetPublishRelPath,
+            getRelativePublishPathFromFileFunc: GetNugetPublishRelativePath,
             getMetadataForFileFunc: (_) => new FileMetadata(FileClass.Nuget),
             stagingPath
         ) {}
 
         private static bool ShouldHandleFile(FileInfo file) => file.Extension == ".nupkg" && !file.Name.EndsWith(".symbols.nupkg");
-        private static string GetNugetPublishRelPath(FileInfo file) => FileMetadata.GetDefaultCatgoryForClass(FileClass.Nuget);
+        private static string GetNugetPublishRelativePath(FileInfo file) => FileMetadata.GetDefaultCatgoryForClass(FileClass.Nuget);
     }
 }

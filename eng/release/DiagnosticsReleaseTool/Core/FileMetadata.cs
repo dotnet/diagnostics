@@ -39,7 +39,6 @@ namespace ReleaseTool.Core
 
             if (sha512 is not null)
             {
-                // TODO: Validate hex
                 bool validSha = sha512.Length == 128;
                 for (int idx = 0; idx < sha512.Length && validSha; idx++)
                 {

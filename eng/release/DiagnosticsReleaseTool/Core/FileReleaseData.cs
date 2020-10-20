@@ -5,7 +5,7 @@ namespace ReleaseTool.Core
         public FileReleaseData(FileMapping fileMap, FileMetadata fileMetadata)
             : this(fileMap, fileMetadata, null) {}
 
-        public FileReleaseData(FileMapping fileMap, FileMetadata fileMetadata, string publishUri)
+        private FileReleaseData(FileMapping fileMap, FileMetadata fileMetadata, string publishUri)
         {
             FileMap = fileMap;
             FileMetadata = fileMetadata;

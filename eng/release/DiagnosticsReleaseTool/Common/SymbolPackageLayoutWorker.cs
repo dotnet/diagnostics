@@ -6,12 +6,12 @@ namespace ReleaseTool.Core
     {
         public SymbolPackageLayoutWorker(string stagingPath) : base(
             shouldHandleFileFunc: ShouldHandleFile,
-            getRelativePublishPathFromFileFunc: GetSymbolPackagePublishRelPath,
+            getRelativePublishPathFromFileFunc: GetSymbolPackagePublishRelativePath,
             getMetadataForFileFunc: (_) => new FileMetadata(FileClass.SymbolPackage),
             stagingPath
         ) {}
 
         private static bool ShouldHandleFile(FileInfo file) => file.Name.EndsWith(".symbols.nupkg");
-        private static string GetSymbolPackagePublishRelPath(FileInfo file) => FileMetadata.GetDefaultCatgoryForClass(FileClass.SymbolPackage);
+        private static string GetSymbolPackagePublishRelativePath(FileInfo file) => FileMetadata.GetDefaultCatgoryForClass(FileClass.SymbolPackage);
     }
 }

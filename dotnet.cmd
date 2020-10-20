@@ -1,4 +1,5 @@
 @echo off
+setlocal
 
 powershell -ExecutionPolicy ByPass -NoProfile -Command "& { . '%~dp0eng\common\tools.ps1'; InitializeDotNetCli $true $true }"
 

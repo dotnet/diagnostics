@@ -26,7 +26,7 @@ namespace ReleaseTool.Core
             if (fi.Exists && fi.Attributes.HasFlag(FileAttributes.Directory))
             {
                 // Filestream will deal with files, but not directories
-                Directory.Delete(destinationUri, true);
+                Directory.Delete(destinationUri, recursive: true);
             }
 
             using (FileStream srcStream = new FileStream(fileMap.LocalSourcePath, FileMode.Open, FileAccess.Read))

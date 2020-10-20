@@ -20,17 +20,11 @@ namespace ReleaseTool.Core
             string stagingPath)
         {
 
-            _shouldHandleFileFunc = shouldHandleFileFunc is null 
-                                        ? file => file.Extension == ".zip"
-                                        : shouldHandleFileFunc;
+            _shouldHandleFileFunc = shouldHandleFileFunc ?? (file => file.Extension == ".zip");
 
-            _getRelativePathFromZipAndInnerFileFunc = getRelativePathFromZipAndInnerFileFunc is null 
-                                                    ? (zipFile, innerFile) => Path.Combine(zipFile.Name, innerFile.Name)
-                                                    : getRelativePathFromZipAndInnerFileFunc;
+            _getRelativePathFromZipAndInnerFileFunc = getRelativePathFromZipAndInnerFileFunc ?? ((zipFile, innerFile) => Path.Combine(zipFile.Name, innerFile.Name));
 
-            _getMetadataForInnerFileFunc = getMetadataForInnerFileFunc is null
-                                                ? (_, _) => new FileMetadata(FileClass.Blob)
-                                                : getMetadataForInnerFileFunc;
+            _getMetadataForInnerFileFunc = getMetadataForInnerFileFunc ?? ((_, _) => new FileMetadata(FileClass.Blob));
 
             _stagingPath = stagingPath;
         }

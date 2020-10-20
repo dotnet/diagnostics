@@ -87,22 +87,14 @@ namespace ReleaseTool.Core
             }
         }
 
-        private void EnsureLoggerAvailable()
-        {
-            if (_logger is not null)
-            {
-                return;
-            }
-
-            _logger = NullLogger.Instance;
-        }
+        private void EnsureLoggerAvailable() => _logger ??= NullLogger.Instance;
 
         private async Task<int> GenerateAndPublishManifestAsync(CancellationToken ct)
         {
             // Manifest
-            using var scope = _logger.BeginScope("Manifest Generation");
+            using IDisposable scope = _logger.BeginScope("Manifest Generation");
             Stream manifestStream = _manifestGenerator.GenerateManifest(_filesToRelease);
-            FileInfo fi = new FileInfo(_manifestSavePath);
+            var fi = new FileInfo(_manifestSavePath);
             fi.Directory.Create();
 
             using (FileStream fs = fi.Open(FileMode.Truncate, FileAccess.Write))
@@ -110,7 +102,7 @@ namespace ReleaseTool.Core
                 await manifestStream.CopyToAsync(fs, ct);
             }
 
-           _logger.LogInformation("Manifest saved to {_manifestSavePath}", _manifestSavePath);
+            _logger.LogInformation("Manifest saved to {_manifestSavePath}", _manifestSavePath);
 
             // We save the manifest at the root.
             string manifestPublishPath = await _publisher.PublishFileAsync(
@@ -133,13 +125,13 @@ namespace ReleaseTool.Core
         {
             int unpublishedFiles = 0;
 
-           using var scope = _logger.BeginScope("Publishing files");
+            using IDisposable scope = _logger.BeginScope("Publishing files");
 
             foreach (FileReleaseData releaseData in _filesToRelease)
             {
                 if (ct.IsCancellationRequested)
                 {
-                   _logger.LogError("Cancellation issued.");
+                    _logger.LogError("Cancellation issued.");
                     return -1;
                 }
 
@@ -164,7 +156,7 @@ namespace ReleaseTool.Core
         private async Task<int> LayoutFilesAsync(CancellationToken ct)
         {
             int unhandledFiles = 0;
-            var relPublishPathsUsed = new HashSet<string>();
+            var relativePublishPathsUsed = new HashSet<string>();
 
             using var scope = _logger.BeginScope("Laying out files");
 
@@ -181,7 +173,7 @@ namespace ReleaseTool.Core
                 {
                     if (ct.IsCancellationRequested)
                     {
-                       _logger.LogError($"Cancellation issued.");
+                        _logger.LogError($"Cancellation issued.");
                         return -1;
                     }
 
@@ -190,7 +182,7 @@ namespace ReleaseTool.Core
 
                     if (layoutResult.Status == LayoutResultStatus.Error)
                     {
-                       _logger.LogError($"Error handling file.");
+                        _logger.LogError($"Error handling file.");
                         return -1;
                     }
 
@@ -200,7 +192,7 @@ namespace ReleaseTool.Core
                         {
                             // TODO: Might be worth to relax this limitation. It just needs to turn the
                             //      source -> fileData relationship to something like source -> List<FileData>).
-                           _logger.LogError("File {file} is getting handled by several workers.", file);
+                            _logger.LogError("File {file} is getting handled by several workers.", file);
                             return -1;
                         }
 
@@ -210,12 +202,12 @@ namespace ReleaseTool.Core
                         {
                             string srcPath = fileMap.LocalSourcePath;
                             string dstPath = fileMap.RelativeOutputPath;
-                            if (relPublishPathsUsed.Contains(dstPath))
+                            if (relativePublishPathsUsed.Contains(dstPath))
                             {
-                               _logger.LogError("File {srcPath} is getting published to relative path {dstPath} which is already in use.", srcPath, dstPath);
+                                _logger.LogError("File {srcPath} is getting published to relative path {dstPath} which is already in use.", srcPath, dstPath);
                                 return -1;
                             }
-                            relPublishPathsUsed.Add(dstPath);
+                            relativePublishPathsUsed.Add(dstPath);
                             _logger.LogTrace("{srcPath} -> {dstPath} [{fileMetadata}]", srcPath, dstPath, fileMetadata);
                             _filesToRelease.Add(new FileReleaseData(fileMap, fileMetadata));
                         }
