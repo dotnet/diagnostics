@@ -47,8 +47,8 @@ $manifestJson = Get-Content -Raw -Path $ManifestPath | ConvertFrom-Json
 $failedToPublish = 0
 foreach ($nugetPack in $manifestJson.NugetAssets)
 {
-    $nugetPack.PublishRelativePath
-    & "$PSScriptRoot/../../../dotnet.cmd" nuget push  --source $FeedEndpoint --api-key $FeedPat
+    $packagePath = Join-Path $StagingPath $nugetPack.PublishRelativePath
+    & "$PSScriptRoot/../../../dotnet.cmd" nuget push $packagePath --source $FeedEndpoint --api-key $FeedPat
     if ($LastExitCode -ne 0)
     {
         Write-Host "Error: unable to publish $($nugetPack.FilePath)."
