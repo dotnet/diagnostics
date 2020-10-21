@@ -53,7 +53,7 @@
 
   <PropertyGroup>
     <CommonInstallArgs>-NoPath -SkipNonVersionedFiles -Architecture $(BuildArch) -InstallDir $(DotNetInstallRoot)</CommonInstallArgs>
-    <DotNetInstallDir>$(DotNetInstallRoot.Replace("\", "\\"))shared\\Microsoft.NETCore.App\\$(MicrosoftNETCoreAppRuntimewinx64Version)\\</DotNetInstallDir>
+    <DotNetInstallDir>$([MSBuild]::NormalizeDirectory('$(DotNetInstallRoot)', 'shared', 'Microsoft.NETCore.App', '$(MicrosoftNETCoreAppRuntimewinx64Version)'))</DotNetInstallDir>
     <TestConfigFileName>$(DotNetInstallRoot)Debugger.Tests.Versions.txt</TestConfigFileName>
     <AddRegeditFileName>$(DotNetInstallRoot)AddPrivateTesting.reg</AddRegeditFileName>
     <RemoveRegeditFileName>$(DotNetInstallRoot)RemovePrivateTesting.reg</RemoveRegeditFileName>
