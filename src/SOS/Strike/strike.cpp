@@ -13748,9 +13748,9 @@ public:
                 if (SUCCEEDED(frameDataResult) && FrameData.frameAddr)
                     sp = FrameData.frameAddr;
 
-                while ((numNativeFrames > 0) && (currentNativeFrame->StackOffset <= sp))
+                while ((numNativeFrames > 0) && (currentNativeFrame->StackOffset <= CDA_TO_UL64(sp)))
                 {
-                    if (currentNativeFrame->StackOffset != sp)
+                    if (currentNativeFrame->StackOffset != CDA_TO_UL64(sp))
                     {
                         PrintNativeStackFrame(out, currentNativeFrame, bSuppressLines);
                     }
