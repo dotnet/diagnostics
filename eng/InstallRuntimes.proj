@@ -160,7 +160,7 @@
   <AspNetCoreVersion31>$(MicrosoftAspNetCoreApp31Version)</AspNetCoreVersion31>
 
   <RuntimeVersionLatest>$(RuntimeVersionLatest)</RuntimeVersionLatest>
-  <AspNetCoreVersionLatest>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetCoreVersionLatest>
+  <AspNetCoreVersionLatest>$(MicrosoftAspNetCoreAppRefVersion)</AspNetCoreVersionLatest>
 </Configuration>
 ]]>
       </TestConfigFileLines>
