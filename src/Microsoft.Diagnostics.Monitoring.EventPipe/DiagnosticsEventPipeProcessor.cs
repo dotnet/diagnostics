@@ -36,6 +36,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         private TaskCompletionSource<bool> _sessionStarted;
         private EventPipeEventSource _eventPipeSession;
+        private Func<Task> _stopFunc;
         private bool _disposed;
 
         public DiagnosticsEventPipeProcessor(
@@ -100,6 +101,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     }
 
                     monitor = new DiagnosticsMonitor(config);
+                    // Allows the event handling routines to stop processing before the duration expires.
+                    Func<Task> stopFunc = () => Task.Run(() => { monitor.StopProcessing(); });
+
                     Stream sessionStream = await monitor.ProcessEvents(client, duration, token);
 
                     if (_mode == PipeMode.Nettrace)
@@ -109,14 +113,18 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                             token.ThrowIfCancellationRequested();
                         }
 
+                        lock (_lock)
+                        {
+                            //Save the stop function for later, so that we can stop a trace later.
+                            _stopFunc = stopFunc;
+                        }
+
                         await _onStreamAvailable(sessionStream, token);
                         return;
                     }
 
                     source = new EventPipeEventSource(sessionStream);
 
-                    // Allows the event handling routines to stop processing before the duration expires.
-                    Func<Task> stopFunc = () => Task.Run(() => { monitor.StopProcessing(); });
 
                     if (_mode == PipeMode.Metrics)
                     {
@@ -143,6 +151,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     lock(_lock)
                     {
                         _eventPipeSession = source;
+                        _stopFunc = stopFunc;
                     }
                     registration.Dispose();
                     if (!_sessionStarted.TrySetResult(true))
@@ -190,13 +199,20 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             await _sessionStarted.Task;
 
             EventPipeEventSource session = null;
+            Func<Task> stopFunc = null;
             lock (_lock)
             {
                 session = _eventPipeSession;
+                stopFunc = _stopFunc;
             }
             if (session != null)
             {
+                //TODO This API is not sufficient to stop data flow.
                 session.StopProcessing();
+            }
+            if (stopFunc != null)
+            {
+                await stopFunc();
             }
         }
 

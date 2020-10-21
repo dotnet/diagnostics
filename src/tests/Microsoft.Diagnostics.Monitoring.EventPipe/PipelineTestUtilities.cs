@@ -23,10 +23,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             //Signal for the pipeline to stop
             await pipeline.StopAsync();
 
+            //After a pipeline is stopped, we should expect the RunTask to eventually finish
+            await processingTask;
+
             //Signal for debugee that's ok to end/move on.
             testExecution.SendSignal();
 
-            await processingTask;
         }
     }
 }
