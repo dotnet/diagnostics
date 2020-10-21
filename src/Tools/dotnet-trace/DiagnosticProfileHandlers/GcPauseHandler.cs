@@ -7,8 +7,7 @@ using System.Globalization;
 namespace Microsoft.Diagnostics.Tools.Trace.DiagnosticProfileHandlers
 {
     /// <summary>
-    /// This class handles parsing for GC-triggered Pauses - specifically by parsing the GC/SuspendEEStart and GC/SuspendEEStop events.
-    /// 
+    /// This class handles parsing for GC-triggered Pauses - specifically by parsing the GC/SuspendEEStart, GC/SuspendEEStop, GC/GCStart, GC/GCEnd events.
     /// </summary>
     internal class GcPauseHandler : IDiagnosticProfileHandler
     {
