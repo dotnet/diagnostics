@@ -101,7 +101,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             // Build provider string
             var providerCollection = Extensions.ToProviders(providers);
-            providerCollection.AddRange(GetWellKnownProviders(profiles));
+            providerCollection.AddRange(DiagnosticProfileBuilder.GetProfileProviders(profiles));
 
             if (providerCollection.Count == 0)
             {
@@ -205,49 +205,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             catch (TimeoutException) { }
             catch (ServerNotAvailableException) { }
-        }
-
-        private static List<EventPipeProvider> GetWellKnownProviders(string profiles)
-        {
-            List<EventPipeProvider> providers = new List<EventPipeProvider>();
-
-            if (profiles == null)
-            {
-                return providers;
-            }
-
-            string[] profileCandidates = profiles.Split(',');
-            bool ClrProviderSet = false;
-            int ClrLevel = 0;
-            long ClrKeywords = 0;
-
-
-            foreach (string profile in profileCandidates)
-            {
-                switch (profile.ToLowerInvariant())
-                {
-                    case "gc-pause":
-                        ClrKeywords |= (long)ClrTraceEventParser.Keywords.GC;
-                        ClrLevel = ClrLevel < 4 ? 4 : ClrLevel;
-                        ClrProviderSet = true;
-                        break;
-                    case "loader-binder":
-                        ClrKeywords |= ((long)ClrTraceEventParser.Keywords.Binder | (long)ClrTraceEventParser.Keywords.Loader);
-                        ClrLevel = ClrLevel < 4 ? 4 : ClrLevel;
-                        ClrProviderSet = true;
-                        break;
-                    // TODO: Add more diagnostic profiles here
-                    default:
-                        throw new ArgumentException($"{profile} is not a valid diagnostic profile.");
-                }
-            }
-
-            if (ClrProviderSet)
-            {
-                providers.Add(new EventPipeProvider("Microsoft-Windows-DotNETRuntime", (EventLevel)ClrLevel, ClrKeywords));
-            }
-
-            return providers;
         }
 
         /// <summary>
