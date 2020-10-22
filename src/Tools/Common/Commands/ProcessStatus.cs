@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.NETCore.Client;
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.CommandLine.IO;
 using System.Linq;
 using System.Text;
 using Process = System.Diagnostics.Process;

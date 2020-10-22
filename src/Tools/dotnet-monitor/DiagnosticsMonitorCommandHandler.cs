@@ -22,15 +22,15 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         private const string ConfigPrefix = "DotnetMonitor_";
         private const string ConfigPath = "/etc/dotnet-monitor";
 
-        public async Task<int> Start(CancellationToken token, IConsole console, string[] urls, string[] metricUrls, bool metrics, string reversedServerAddress)
+        public async Task<int> Start(CancellationToken token, IConsole console, string[] urls, string[] metricUrls, bool metrics, string diagnosticPort)
         {
             //CONSIDER The console logger uses the standard AddConsole, and therefore disregards IConsole.
-            using IWebHost host = CreateWebHostBuilder(console, urls, metricUrls, metrics, reversedServerAddress).Build();
+            using IWebHost host = CreateWebHostBuilder(console, urls, metricUrls, metrics, diagnosticPort).Build();
             await host.RunAsync(token);
             return 0;
         }
 
-        public IWebHostBuilder CreateWebHostBuilder(IConsole console, string[] urls, string[] metricUrls, bool metrics, string reversedServerAddress)
+        public IWebHostBuilder CreateWebHostBuilder(IConsole console, string[] urls, string[] metricUrls, bool metrics, string diagnosticPort)
         {
             if (metrics)
             {
@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             IWebHostBuilder builder = WebHost.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((IConfigurationBuilder builder) =>
                 {
-                    ConfigureEndpointInfoSource(builder, reversedServerAddress);
+                    ConfigureEndpointInfoSource(builder, diagnosticPort);
                     if (metrics)
                     {
                         //Note these are in precedence order.

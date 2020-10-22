@@ -7,6 +7,7 @@ Param(
     [switch] $ci,
     [switch] $skipmanaged,
     [switch] $skipnative,
+    [switch] $bundletools,
     [string] $privatebuildpath = "",
     [switch] $cleanupprivatebuild,
     [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimeversion = 'default',
@@ -42,6 +43,14 @@ if ($ci) {
     $remainingargs = "-ci " + $remainingargs
 }
 
+if ($bundletools) {
+    $remainingargs = "/p:BundleTools=true " + $remainingargs
+    $remainingargs = '/bl:"$logdir\BundleTools.binlog" ' + $remainingargs
+    $remainingargs = '-noBl ' + $remainingargs
+    $skipnative = $True
+    $test = $False
+}
+
 # Remove the private build registry keys
 if ($cleanupprivatebuild) {
     Invoke-Expression "& `"$engroot\common\msbuild.ps1`" $engroot\CleanupPrivateBuild.csproj /v:$verbosity /t:CleanupPrivateBuild /p:BuildArch=$architecture /p:TestArchitectures=$architecture"
@@ -50,7 +59,7 @@ if ($cleanupprivatebuild) {
 
 # Install sdk for building, restore and build managed components.
 if (-not $skipmanaged) {
-    Invoke-Expression "& `"$engroot\common\build.ps1`" -build -binaryLog -configuration $configuration -verbosity $verbosity /p:BuildArch=$architecture /p:TestArchitectures=$architecture $remainingargs"
+    Invoke-Expression "& `"$engroot\common\build.ps1`" -build -configuration $configuration -verbosity $verbosity /p:BuildArch=$architecture /p:TestArchitectures=$architecture $remainingargs"
     if ($lastExitCode -ne 0) {
         exit $lastExitCode
     }

@@ -139,21 +139,6 @@ HRESULT Runtime::CreateInstance(RuntimeConfiguration configuration, Runtime **pp
             if (SUCCEEDED(hr))
             {
                 moduleSize = params.Size;
-
-                if (params.SymbolType == SymDeferred)
-                {
-                    PCSTR runtimeDllName = ::GetRuntimeDllName(configuration);
-                    std::string reloadCommand;
-                    reloadCommand.append("/f ");
-                    reloadCommand.append(runtimeDllName);
-                    g_ExtSymbols->Reload(reloadCommand.c_str());
-                    g_ExtSymbols->GetModuleParameters(1, &moduleAddress, 0, &params);
-
-                    if (params.SymbolType != SymPdb && params.SymbolType != SymDia)
-                    {
-                        ExtOut("Symbols for %s not loaded. Some SOS commands may not work.\n", runtimeDllName);
-                    }
-                }
             }
 #endif
         }
@@ -569,7 +554,7 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
 \**********************************************************************/
 void Runtime::DisplayStatus()
 {
-    ExtOut("%s runtime at %p size %08llx\n", GetRuntimeConfigurationName(GetRuntimeConfiguration()), m_address, m_size);
+    ExtOut("%s runtime at %08llx size %08llx\n", GetRuntimeConfigurationName(GetRuntimeConfiguration()), m_address, m_size);
     if (m_runtimeInfo != nullptr) {
         ArrayHolder<char> szModuleName = new char[MAX_LONGPATH + 1];
         HRESULT hr = g_ExtSymbols->GetModuleNames(m_index, 0, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);

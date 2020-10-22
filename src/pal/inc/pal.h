@@ -86,6 +86,8 @@ extern "C" {
 #define _M_ARM 7
 #elif defined(__aarch64__) && !defined(_M_ARM64)
 #define _M_ARM64 1
+#elif defined(__mips64__) && !defined(_M_MIPS64)
+#define _M_MIPS64 1
 #endif
 
 #if defined(_M_IX86) && !defined(_X86_)
@@ -1954,6 +1956,152 @@ typedef struct _KNONVOLATILE_CONTEXT_POINTERS {
 
 } KNONVOLATILE_CONTEXT_POINTERS, *PKNONVOLATILE_CONTEXT_POINTERS;
 
+#elif defined(_MIPS64_)
+
+#define CONTEXT_MIPS64   0x00800000
+
+#define CONTEXT_CONTROL (CONTEXT_MIPS64 | 0x1)
+#define CONTEXT_INTEGER (CONTEXT_MIPS64 | 0x2)
+#define CONTEXT_FLOATING_POINT  (CONTEXT_MIPS64 | 0x4)
+#define CONTEXT_DEBUG_REGISTERS (CONTEXT_MIPS64 | 0x8)
+
+#define CONTEXT_FULL (CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_FLOATING_POINT)
+
+#define CONTEXT_ALL (CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_FLOATING_POINT | CONTEXT_DEBUG_REGISTERS)
+
+#define CONTEXT_EXCEPTION_ACTIVE 0x8000000
+#define CONTEXT_SERVICE_ACTIVE 0x10000000
+#define CONTEXT_EXCEPTION_REQUEST 0x40000000
+#define CONTEXT_EXCEPTION_REPORTING 0x80000000
+
+//
+// This flag is set by the unwinder if it has unwound to a call
+// site, and cleared whenever it unwinds through a trap frame.
+// It is used by language-specific exception handlers to help
+// differentiate exception scopes during dispatching.
+//
+
+#define CONTEXT_UNWOUND_TO_CALL 0x20000000
+
+// begin_ntoshvp
+
+//
+// Specify the number of breakpoints and watchpoints that the OS
+// will track. Architecturally, MIPS64 supports up to 16. In practice,
+// however, almost no one implements more than 4 of each.
+//
+
+#define MIPS64_MAX_BREAKPOINTS     8
+#define MIPS64_MAX_WATCHPOINTS     2
+
+//
+// Context Frame
+//
+//  This frame has a several purposes: 1) it is used as an argument to
+//  NtContinue, 2) it is used to constuct a call frame for APC delivery,
+//  and 3) it is used in the user level thread creation routines.
+//
+//
+// The flags field within this record controls the contents of a CONTEXT
+// record.
+//
+// If the context record is used as an input parameter, then for each
+// portion of the context record controlled by a flag whose value is
+// set, it is assumed that that portion of the context record contains
+// valid context. If the context record is being used to modify a threads
+// context, then only that portion of the threads context is modified.
+//
+// If the context record is used as an output parameter to capture the
+// context of a thread, then only those portions of the thread's context
+// corresponding to set flags will be returned.
+//
+
+typedef struct DECLSPEC_ALIGN(16) _CONTEXT {
+
+    //
+    // Control flags.
+    //
+
+    DWORD ContextFlags;
+
+    //
+    // Integer registers, abi=N64.
+    //
+    DWORD64 R0;
+    DWORD64 At;
+    DWORD64 V0;
+    DWORD64 V1;
+    DWORD64 A0;
+    DWORD64 A1;
+    DWORD64 A2;
+    DWORD64 A3;
+    DWORD64 A4;
+    DWORD64 A5;
+    DWORD64 A6;
+    DWORD64 A7;
+    DWORD64 T0;
+    DWORD64 T1;
+    DWORD64 T2;
+    DWORD64 T3;
+    DWORD64 S0;
+    DWORD64 S1;
+    DWORD64 S2;
+    DWORD64 S3;
+    DWORD64 S4;
+    DWORD64 S5;
+    DWORD64 S6;
+    DWORD64 S7;
+    DWORD64 T8;
+    DWORD64 T9;
+    DWORD64 K0;
+    DWORD64 K1;
+    DWORD64 Gp;
+    DWORD64 Sp;
+    DWORD64 Fp;
+    DWORD64 Ra;
+    DWORD64 Pc;
+
+    //
+    // Floating Point Registers
+    //
+    DWORD64 F[32];
+    DWORD Fcsr;
+
+    DWORD64 Hi;
+    DWORD64 Lo;
+} CONTEXT, *PCONTEXT, *LPCONTEXT;
+
+//
+// Nonvolatile context pointer record.
+//
+
+typedef struct _KNONVOLATILE_CONTEXT_POINTERS {
+
+    PDWORD64 S0;
+    PDWORD64 S1;
+    PDWORD64 S2;
+    PDWORD64 S3;
+    PDWORD64 S4;
+    PDWORD64 S5;
+    PDWORD64 S6;
+    PDWORD64 S7;
+    PDWORD64 Gp;
+    PDWORD64 Fp;
+    PDWORD64 Ra;
+
+    PDWORD64 F24;
+    PDWORD64 F25;
+    PDWORD64 F26;
+    PDWORD64 F27;
+    PDWORD64 F28;
+    PDWORD64 F29;
+    PDWORD64 F30;
+    PDWORD64 F31;
+
+    PDWORD64 Hi;
+    PDWORD64 Lo;
+} KNONVOLATILE_CONTEXT_POINTERS, *PKNONVOLATILE_CONTEXT_POINTERS;
+
 #else
 #error Unknown architecture for defining CONTEXT.
 #endif
@@ -1974,6 +2122,8 @@ GetThreadTimes(
 #define PAL_CS_NATIVE_DATA_SIZE 76
 #elif defined(__APPLE__) && defined(__x86_64__)
 #define PAL_CS_NATIVE_DATA_SIZE 120
+#elif defined(__APPLE__) && defined(__arm64__)
+#define PAL_CS_NATIVE_DATA_SIZE 120
 #elif defined(__FreeBSD__) && defined(_X86_)
 #define PAL_CS_NATIVE_DATA_SIZE 12
 #elif defined(__FreeBSD__) && defined(__x86_64__)
@@ -1992,6 +2142,8 @@ GetThreadTimes(
 #define PAL_CS_NATIVE_DATA_SIZE 56
 #elif defined(__NetBSD__) && defined(__i386__)
 #define PAL_CS_NATIVE_DATA_SIZE 56
+#elif defined(__linux__) && defined(_MIPS64_)
+#define PAL_CS_NATIVE_DATA_SIZE 116
 #else 
 #warning 
 #error  PAL_CS_NATIVE_DATA_SIZE is not defined for this architecture

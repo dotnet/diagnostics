@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.DataReaders.Implementation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,6 +19,7 @@ namespace Microsoft.Diagnostics.DebugServices
     public class ThreadService : IThreadService
     {
         private readonly IDataReader _dataReader;
+        private readonly IThreadReader _threadReader;
         private readonly int _contextSize;
         private readonly uint _contextFlags;
         private readonly int _instructionPointerIndex;
@@ -32,37 +34,38 @@ namespace Microsoft.Diagnostics.DebugServices
         public ThreadService(IDataReader dataReader)
         {
             _dataReader = dataReader;
+            _threadReader = (IThreadReader)dataReader;
 
             Type contextType;
-            switch (dataReader.GetArchitecture())
+            switch (dataReader.Architecture)
             {
                 case Architecture.Amd64:
                     // Dumps generated with newer dbgeng have bigger context buffers and clrmd requires the context size to at least be that size.
                     _contextSize = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 0x700 : AMD64Context.Size;
-                    _contextFlags = AMD64Context.ContextControl | AMD64Context.ContextInteger | AMD64Context.ContextSegments;
+                    _contextFlags = AMD64Context.ContextControl | AMD64Context.ContextInteger | AMD64Context.ContextSegments | AMD64Context.ContextFloatingPoint;
                     contextType = typeof(AMD64Context);
                     break;
 
                 case Architecture.X86:
                     _contextSize = X86Context.Size;
-                    _contextFlags = X86Context.ContextControl | X86Context.ContextInteger | X86Context.ContextSegments;
+                    _contextFlags = X86Context.ContextControl | X86Context.ContextInteger | X86Context.ContextSegments | X86Context.ContextFloatingPoint;
                     contextType = typeof(X86Context);
                     break;
 
                 case Architecture.Arm64:
                     _contextSize = Arm64Context.Size;
-                    _contextFlags = Arm64Context.ContextControl | Arm64Context.ContextInteger;
+                    _contextFlags = Arm64Context.ContextControl | Arm64Context.ContextInteger | Arm64Context.ContextFloatingPoint;
                     contextType = typeof(Arm64Context);
                     break;
 
                 case Architecture.Arm:
                     _contextSize = ArmContext.Size;
-                    _contextFlags = ArmContext.ContextControl | ArmContext.ContextInteger;
+                    _contextFlags = ArmContext.ContextControl | ArmContext.ContextInteger | ArmContext.ContextFloatingPoint;
                     contextType = typeof(ArmContext);
                     break;
 
                 default:
-                    throw new PlatformNotSupportedException($"Unsupported architecture: {dataReader.GetArchitecture()}");
+                    throw new PlatformNotSupportedException($"Unsupported architecture: {dataReader.Architecture}");
             }
 
             var registers = new List<RegisterInfo>();
@@ -221,24 +224,18 @@ namespace Microsoft.Diagnostics.DebugServices
             }
             else
             {
-                unsafe
+                threadContext = new byte[_contextSize];
+                try
                 {
-                    threadContext = new byte[_contextSize];
-                    fixed (byte* ptr = threadContext)
+                    if (_dataReader.GetThreadContext(threadId, _contextFlags, new Span<byte>(threadContext, 0, _contextSize)))
                     {
-                        try
-                        {
-                            if (_dataReader.GetThreadContext(threadId, _contextFlags, (uint)_contextSize, new IntPtr(ptr)))
-                            {
-                                _threadContextCache.Add(threadId, threadContext);
-                                return threadContext;
-                            }
-                        }
-                        catch (ClrDiagnosticsException ex)
-                        {
-                            throw new DiagnosticsException(ex.Message, ex);
-                        }
+                        _threadContextCache.Add(threadId, threadContext);
+                        return threadContext;
                     }
+                }
+                catch (ClrDiagnosticsException ex)
+                {
+                    throw new DiagnosticsException(ex.Message, ex);
                 }
             }
             throw new DiagnosticsException();
@@ -252,7 +249,7 @@ namespace Microsoft.Diagnostics.DebugServices
         {
             if (_threadInfos == null)
             {
-                _threadInfos = _dataReader.EnumerateAllThreads()
+                _threadInfos = _threadReader.EnumerateOSThreadIds()
                     .OrderBy((uint threadId) => threadId)
                     .Select((uint threadId, int threadIndex) => {
                         ulong teb = 0;
@@ -260,7 +257,7 @@ namespace Microsoft.Diagnostics.DebugServices
                         {
                             try
                             {
-                                teb = _dataReader.GetThreadTeb(threadId);
+                                teb = _threadReader.GetThreadTeb(threadId);
                             }
                             catch (NotImplementedException)
                             {

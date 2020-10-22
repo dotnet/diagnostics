@@ -111,7 +111,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return new UnixDomainSocketEndPoint(path);
 #elif NETSTANDARD2_0
             // UnixDomainSocketEndPoint is not part of .NET Standard 2.0
-            var type = typeof(Socket).Assembly.GetType("System.Net.Sockets.UnixDomainSocketEndPoint");
+            var type = typeof(Socket).Assembly.GetType("System.Net.Sockets.UnixDomainSocketEndPoint")
+                        ?? Type.GetType("System.Net.Sockets.UnixDomainSocketEndPoint, System.Core");
             if (type == null)
             {
                 throw new PlatformNotSupportedException("Current process is not running a compatible .NET runtime.");

@@ -56,6 +56,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal enum ProcessCommandId : byte
     {
         GetProcessInfo = 0x00,
-        ResumeRuntime  = 0x01
+        ResumeRuntime  = 0x01,
+        GetProcessEnvironment = 0x02,
     }
 }

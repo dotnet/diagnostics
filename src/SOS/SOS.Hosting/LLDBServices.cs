@@ -111,20 +111,20 @@ namespace SOS
             uint contextSize,
             byte[] context)
         {
-            return E_NOTIMPL;
+            return HResult.E_NOTIMPL;
         }
 
         int SetExceptionCallback(
             IntPtr self,
             PFN_EXCEPTION_CALLBACK callback)
         {
-            return S_OK;
+            return HResult.S_OK;
         }
 
         int ClearExceptionCallback(
             IntPtr self)
         {
-            return S_OK;
+            return HResult.S_OK;
         }
 
         int GetContextStackTrace(
@@ -140,7 +140,7 @@ namespace SOS
         {
             // Don't fail, but always return 0 native frames so "clrstack -f" still prints the managed frames
             SOSHost.Write(framesFilled);
-            return S_OK;
+            return HResult.S_OK;
         }
 
         int GetValueByName(
@@ -168,16 +168,16 @@ namespace SOS
                 {
                     if (SOSHost.IsCoreClrRuntimeModule(module))
                     {
-                        callback(IntPtr.Zero, module.FileName, module.ImageBase, unchecked((int)module.FileSize));
+                        callback(IntPtr.Zero, module.FileName, module.ImageBase, module.IndexFileSize);
                         break;
                     }
                 }
                 else
                 {
-                    callback(IntPtr.Zero, module.FileName, module.ImageBase, unchecked((int)module.FileSize));
+                    callback(IntPtr.Zero, module.FileName, module.ImageBase, module.IndexFileSize);
                 }
             }
-            return S_OK;
+            return HResult.S_OK;
         }
 
         int AddModuleSymbol(
@@ -185,7 +185,7 @@ namespace SOS
             IntPtr parameter,
             string symbolFilename)
         {
-            return S_OK;
+            return HResult.S_OK;
         }
 
         unsafe int GetModuleInfo(
@@ -198,16 +198,16 @@ namespace SOS
             {
                 ModuleInfo module = _soshost.DataReader.EnumerateModules().ElementAt((int)index);
                 if (module == null) {
-                    return E_FAIL;
+                    return HResult.E_FAIL;
                 }
                 SOSHost.Write(moduleBase, module.ImageBase);
-                SOSHost.Write(moduleSize, module.FileSize);
+                SOSHost.Write(moduleSize, (uint)module.IndexFileSize);
             }
             catch (ArgumentOutOfRangeException)
             {
-                return E_FAIL;
+                return HResult.E_FAIL;
             }
-            return S_OK;
+            return HResult.S_OK;
         }
 
         #endregion

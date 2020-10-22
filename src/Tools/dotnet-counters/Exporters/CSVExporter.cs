@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Globalization;
 using System.IO;
 using System.Text;
 
@@ -56,11 +57,13 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 File.AppendAllText(_output, builder.ToString());
                 builder.Clear();
             }
-            builder.Append(DateTime.UtcNow.ToString() + ",");
-            builder.Append(providerName + ",");
-            builder.Append(payload.GetDisplay() + ",");
-            builder.Append(payload.GetCounterType() + ",");
-            builder.Append(payload.GetValue() + "\n");
+
+            builder
+                .Append(DateTime.UtcNow.ToString()).Append(',')
+                .Append(providerName).Append(',')
+                .Append(payload.GetDisplay()).Append(',')
+                .Append(payload.GetCounterType()).Append(',')
+                .Append(payload.GetValue().ToString(CultureInfo.InvariantCulture)).Append('\n');
         }
 
         public void Stop()

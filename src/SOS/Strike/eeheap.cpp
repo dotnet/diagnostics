@@ -1189,24 +1189,7 @@ BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEA
             }
             else
             {
-                if (!bPinnedDone && heap.has_poh)
-                {
-                    bPinnedDone = TRUE;
-                    dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration() + 2].start_segment;
-                    dwAddr = dwAddrSeg;
-
-                    if (segment.Request(g_sos, dwAddr, heap.original_heap_details) != S_OK)
-                    {
-                        ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddr));
-                        return FALSE;
-                    }
-
-                    dwAddrCurrObj = (DWORD_PTR)segment.mem;
-                }
-                else
-                {
-                    break;  // Done Verifying Heap
-                }
+                break;  // Done Verifying Heap
             }
         }
 
@@ -1281,7 +1264,7 @@ BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEA
         dwAddrCurrObj += s;
     }
 
-    // Now for the large object generation:
+    // Now for the large object and pinned object generations:
     dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration()+1].start_segment;
     dwAddr = dwAddrSeg;
 
@@ -1317,6 +1300,7 @@ BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEA
                 }
                 return FALSE;
             }
+
             dwAddrSeg = (DWORD_PTR)segment.next;
             if (dwAddrSeg)
             {
@@ -1329,8 +1313,24 @@ BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEA
                 dwAddrCurrObj = (DWORD_PTR)segment.mem;
                 continue;
             }
+            else if (heap.has_poh && !bPinnedDone)
+            {
+                bPinnedDone = TRUE;
+                dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration() + 2].start_segment;
+                dwAddr = dwAddrSeg;
+
+                if (segment.Request(g_sos, dwAddr, heap.original_heap_details) != S_OK)
+                {
+                    ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddr));
+                    return FALSE;
+                }
+
+                dwAddrCurrObj = (DWORD_PTR)segment.mem;
+            }
             else
+            {
                 break;  // Done Verifying Heap
+            }
         }
 
         if (FAILED(GetMTOfObject(dwAddrCurrObj, &dwAddrMethTable)))

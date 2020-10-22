@@ -22,16 +22,17 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         public override void Invoke()
         {
-            foreach (ClrModule module in Runtime.Modules)
+            foreach (ClrModule module in Runtime.EnumerateModules())
             {
                 if (Verbose)
                 {
-                    WriteLine("{0}", module.FileName);
-                    WriteLine("    Name:            {0}", module.Name);
+                    WriteLine("{0}", module.Name);
+                    WriteLine("    AssemblyName:    {0}", module.AssemblyName);
                     WriteLine("    ImageBase:       {0:X16}", module.ImageBase);
                     WriteLine("    Size:            {0:X8}", module.Size);
                     WriteLine("    Address:         {0:X16}", module.Address);
-                    WriteLine("    IsFile:          {0}", module.IsFile);
+                    WriteLine("    IsPEFile:        {0}", module.IsPEFile);
+                    WriteLine("    Layout:          {0}", module.Layout);
                     WriteLine("    IsDynamic:       {0}", module.IsDynamic);
                     WriteLine("    MetadataAddress: {0:X16}", module.MetadataAddress);
                     WriteLine("    MetadataSize:    {0:X16}", module.MetadataLength);
@@ -42,7 +43,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
                 else
                 {
-                    WriteLine("{0:X16} {1:X8} {2}", module.ImageBase, module.Size, module.FileName);
+                    WriteLine("{0:X16} {1:X8} {2}", module.ImageBase, module.Size, module.Name);
                 }
             }
         }

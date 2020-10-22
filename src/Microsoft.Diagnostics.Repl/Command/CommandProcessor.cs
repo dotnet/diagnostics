@@ -6,7 +6,10 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Builder;
+using System.CommandLine.Help;
 using System.CommandLine.Invocation;
+using System.CommandLine.IO;
+using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
@@ -38,12 +41,11 @@ namespace Microsoft.Diagnostics.Repl
             _console = console;
 
             var rootBuilder = new CommandLineBuilder(new Command(">"));
-            rootBuilder.UseHelp()
-                       .UseHelpBuilder((bindingContext) => GetService<IHelpBuilder>())
+            rootBuilder.UseHelpBuilder((bindingContext) => GetService<IHelpBuilder>())
                        .UseParseDirective()
                        .UseSuggestDirective()
                        .UseParseErrorReporting()
-                       .UseExceptionHandler();
+                       .UseExceptionHandler(OnException);
 
             if (assemblies != null) {
                 BuildCommands(rootBuilder, assemblies);
@@ -53,6 +55,21 @@ namespace Microsoft.Diagnostics.Repl
             }
             _rootCommand = rootBuilder.Command;
             _parser = rootBuilder.Build();
+        }
+
+        private void OnException(Exception ex, InvocationContext context)
+        {
+            if (ex is NullReferenceException || 
+                ex is ArgumentException || 
+                ex is ArgumentNullException || 
+                ex is ArgumentOutOfRangeException || 
+                ex is NotImplementedException) {
+                context.Console.Error.WriteLine(ex.ToString());
+            }
+            else {
+                context.Console.Error.WriteLine(ex.Message);
+            }
+            Trace.TraceError(ex.ToString());
         }
 
         /// <summary>
@@ -70,8 +87,7 @@ namespace Microsoft.Diagnostics.Repl
         /// <returns>exit code</returns>
         public Task<int> Parse(string commandLine)
         {
-            ParseResult result = _parser.Parse(commandLine);
-            return _parser.InvokeAsync(result, _console);
+            return _parser.InvokeAsync(commandLine, _console);
         }
 
         /// <summary>
@@ -164,7 +180,6 @@ namespace Microsoft.Diagnostics.Repl
                     var handler = new Handler(this, commandAttribute.AliasExpansion, arguments, properties, type);
                     _commandHandlers.Add(command.Name, handler);
                     command.Handler = handler;
-
                     rootBuilder.AddCommand(command);
                 }
 

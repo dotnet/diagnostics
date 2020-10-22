@@ -100,7 +100,7 @@ HRESULT STDMETHODCALLTYPE
 DataTarget::GetPointerSize(
     /* [out] */ ULONG32 *size)
 {
-#if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
+#if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64) || defined(SOS_TARGET_MIPS64)
     *size = 8;
 #elif defined(SOS_TARGET_ARM) || defined(SOS_TARGET_X86)
     *size = 4;
@@ -167,7 +167,7 @@ DataTarget::ReadVirtual(
     HRESULT hr = g_ExtData->ReadVirtual(address, (PVOID)buffer, request, (PULONG)done);
     if (FAILED(hr)) 
     {
-        ExtDbgOut("DataTarget::ReadVirtual FAILED %08x address %p size %08x\n", hr, address, request);
+        ExtDbgOut("DataTarget::ReadVirtual FAILED %08x address %08llx size %08x\n", hr, address, request);
     }
     return hr;
 }
@@ -222,12 +222,13 @@ DataTarget::GetThreadContext(
     /* [in] */ ULONG32 contextSize,
     /* [out, size_is(contextSize)] */ PBYTE context)
 {
+    HRESULT hr;
 #ifdef FEATURE_PAL
     if (g_ExtServices == NULL)
     {
         return E_UNEXPECTED;
     }
-    return g_ExtServices->GetThreadContextById(threadID, contextFlags, contextSize, context);
+    hr = g_ExtServices->GetThreadContextById(threadID, contextFlags, contextSize, context);
 #else
     if (g_ExtSystem == NULL || g_ExtAdvanced == NULL)
     {
@@ -235,7 +236,6 @@ DataTarget::GetThreadContext(
     }
     ULONG ulThreadIDOrig;
     ULONG ulThreadIDRequested;
-    HRESULT hr;
 
     hr = g_ExtSystem->GetCurrentThreadId(&ulThreadIDOrig);
     if (FAILED(hr))
@@ -257,7 +257,7 @@ DataTarget::GetThreadContext(
 
     // Prepare context structure
     ZeroMemory(context, contextSize);
-    ((CONTEXT*) context)->ContextFlags = contextFlags;
+    g_targetMachine->SetContextFlags(context, contextFlags);
 
     // Ok, do it!
     hr = g_ExtAdvanced->GetThreadContext((LPVOID) context, contextSize);
@@ -265,9 +265,12 @@ DataTarget::GetThreadContext(
     // This is cleanup; failure here doesn't mean GetThreadContext should fail
     // (that's determined by hr).
     g_ExtSystem->SetCurrentThreadId(ulThreadIDOrig);
+#endif
+
+    // GetThreadContext clears ContextFlags or sets them incorrectly and DBI needs it set to know what registers to copy
+    g_targetMachine->SetContextFlags(context, contextFlags);
 
     return hr;
-#endif
 }
 
 HRESULT STDMETHODCALLTYPE
