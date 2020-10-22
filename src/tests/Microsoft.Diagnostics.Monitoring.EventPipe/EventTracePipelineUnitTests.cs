@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.NETCore.Client.UnitTests;
+using Microsoft.Diagnostics.Tracing;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
@@ -38,7 +39,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
 
                 var client = new DiagnosticsClient(testExecution.TestRunner.Pid);
-
                 var settings = new EventTracePipelineSettings()
                 {
                     Duration = Timeout.InfiniteTimeSpan,
@@ -55,6 +55,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             }
 
             Assert.True(buffer.Length > 0);
+
+            var eventSource = new EventPipeEventSource(buffer);
+            bool foundCpuProvider = false;
+
+            eventSource.Dynamic.All += (TraceEvent obj) =>
+            {
+                if (string.Equals(obj.ProviderName, MonitoringSourceConfiguration.SampleProfilerProviderName, StringComparison.OrdinalIgnoreCase))
+                {
+                    foundCpuProvider = true;
+                }
+            };
+            Assert.True(eventSource.Process());
+            Assert.True(foundCpuProvider);
         }
 
         private RemoteTestExecution StartTraceeProcess(string loggerCategory)

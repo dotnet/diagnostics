@@ -92,42 +92,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.True(logger.Metrics.All(m => string.Equals(m.Provider, expectedProvider)));
         }
 
-        [Fact]
-        public async Task TestStopAsync()
-        {
-            var logger = new TestMetricsLogger(_output);
-            
-            var expectedCounters = new[] { "cpu-usage", "working-set" };
-            string expectedProvider = "System.Runtime";
-
-            await using (var testExecution = StartTraceeProcess("CounterStopTest"))
-            {
-                //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
-
-                var client = new DiagnosticsClient(testExecution.TestRunner.Pid);
-
-                await using EventCounterPipeline pipeline = new EventCounterPipeline(client, new EventPipeCounterPipelineSettings
-                {
-                    Duration = Timeout.InfiniteTimeSpan,
-                    CounterGroups = new[]
-                    {
-                        new EventPipeCounterGroup
-                        {
-                            ProviderName = expectedProvider,
-                            CounterNames = expectedCounters
-                        }
-                    },
-                    RefreshInterval = TimeSpan.FromSeconds(1)
-                }, new[] { logger });
-
-                await PipelineTestUtilities.ExecutePipelineWithDebugee(pipeline, testExecution);
-            }
-
-            var actualMetrics = logger.Metrics.Select(m => m.Name).OrderBy(m => m);
-            Assert.Equal(expectedCounters, actualMetrics);
-            Assert.True(logger.Metrics.All(m => string.Equals(m.Provider, expectedProvider)));
-        }
-
         private RemoteTestExecution StartTraceeProcess(string loggerCategory)
         {
             return RemoteTestExecution.StartProcess(CommonHelper.GetTraceePathWithArgs("EventPipeTracee") + " " + loggerCategory, _output);

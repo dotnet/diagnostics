@@ -50,17 +50,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             await base.OnCleanup();
         }
 
-        protected override Task OnStop(CancellationToken token)
+        protected override async Task OnStop(CancellationToken token)
         {
             if (_processor.IsValueCreated)
             {
                 Task stoppingTask = _processor.Value.StopProcessing(token);
 
                 var taskCompletionSource = new TaskCompletionSource<bool>();
-                token.Register(() => taskCompletionSource.SetCanceled());
-                return Task.WhenAny(stoppingTask, taskCompletionSource.Task).Unwrap();
+                using IDisposable registration = token.Register(() => taskCompletionSource.SetCanceled());
+                await Task.WhenAny(stoppingTask, taskCompletionSource.Task).Unwrap();
             }
-            return Task.CompletedTask;
         }
     }
 }
