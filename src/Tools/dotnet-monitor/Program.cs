@@ -2,14 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.Monitoring;
+using Microsoft.Tools.Common;
 using System;
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
+using System.CommandLine.Parsing;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.Monitoring;
-using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
@@ -30,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
               {
                 // Handler
                 CommandHandler.Create<CancellationToken, IConsole, string[], string[], bool, string>(new DiagnosticsMonitorCommandHandler().Start),
-                Urls(), MetricUrls(), ProvideMetrics(), ReversedServerAddress()
+                Urls(), MetricUrls(), ProvideMetrics(), DiagnosticPort()
               };
 
         private static Option Urls() =>
@@ -38,7 +39,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 aliases: new[] { "-u", "--urls" },
                 description: "Bindings for the REST api.")
             {
-                Argument = new Argument<string[]>(name: "urls", defaultValue: new[] { "http://localhost:52323" })
+                Argument = new Argument<string[]>(name: "urls", getDefaultValue: () => new[] { "http://localhost:52323" })
             };
 
         private static Option MetricUrls() =>
@@ -46,7 +47,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 aliases: new[] { "--metricUrls" },
                 description: "Bindings for metrics")
             {
-                Argument = new Argument<string[]>(name: "metricUrls", defaultValue: new[]{ GetDefaultMetricsEndpoint() })
+                Argument = new Argument<string[]>(name: "metricUrls", getDefaultValue: () => new[] { GetDefaultMetricsEndpoint() })
             };
     
         private static Option ProvideMetrics() =>
@@ -54,15 +55,15 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 aliases: new[] { "-m", "--metrics" },
                 description: "Enable publishing of metrics")
             {
-                Argument = new Argument<bool>(name: "metrics", defaultValue: true )
+                Argument = new Argument<bool>(name: "metrics", getDefaultValue: () => true )
             };
 
-        private static Option ReversedServerAddress() =>
+        private static Option DiagnosticPort() =>
             new Option(
-                alias: "--reversed-server-address",
-                description: "A fully qualified path and filename for the OS transport to communicate over.")
+                alias: "--diagnostic-port",
+                description: "The fully qualified path and filename of the diagnostic port to which runtime instances can connect.")
             {
-                Argument = new Argument<string>(name: "reversedServerAddress")
+                Argument = new Argument<string>(name: "diagnosticPort")
             };
 
         private static string GetDefaultMetricsEndpoint()

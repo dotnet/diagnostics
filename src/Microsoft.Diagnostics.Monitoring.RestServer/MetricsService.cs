@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
                         //TODO In multi-process scenarios, how do we decide which process to choose?
                         //One possibility is to enable metrics after a request to begin polling for metrics
                         IProcessInfo pi = await _services.GetProcessAsync(filter: null, stoppingToken);
-                        await _pipeProcessor.Process(pi.Client, pi.Pid, Timeout.InfiniteTimeSpan, stoppingToken);
+                        await _pipeProcessor.Process(pi.Client, pi.ProcessId, Timeout.InfiniteTimeSpan, stoppingToken);
                     }
                     catch(Exception e) when (!(e is OperationCanceledException))
                     {

@@ -51,6 +51,15 @@ typedef  BOOL (*GetMetadataLocatorDelegate)(
     unsigned int* pMetadataSize
 );
 
+typedef  BOOL (*GetICorDebugMetadataLocatorDelegate)(
+    LPCWSTR imagePath,
+    unsigned int imageTimestamp,
+    unsigned int imageSize,
+    ULONG32 cchPathBuffer,
+    ULONG32* pcchPathBuffer,
+    WCHAR* pwszPathBuffer
+);
+
 struct SOSNetCoreCallbacks
 {
     InitializeSymbolStoreDelegate InitializeSymbolStoreDelegate;
@@ -65,6 +74,7 @@ struct SOSNetCoreCallbacks
     GetLocalVariableNameDelegate GetLocalVariableNameDelegate;
     GetMetadataLocatorDelegate GetMetadataLocatorDelegate;
     GetExpressionDelegate GetExpressionDelegate;
+    GetICorDebugMetadataLocatorDelegate GetICorDebugMetadataLocatorDelegate;
 };
 
 static const char *SOSManagedDllName = "SOS.NETCore";
@@ -114,6 +124,14 @@ extern HRESULT GetMetadataLocator(
     ULONG32 bufferSize,
     BYTE* buffer,
     ULONG32* dataSize);
+
+extern HRESULT GetICorDebugMetadataLocator(
+    LPCWSTR imagePath,
+    ULONG32 imageTimestamp,
+    ULONG32 imageSize,
+    ULONG32 cchPathBuffer,
+    ULONG32* pcchPathBuffer,
+    WCHAR wszPathBuffer[]);
 
 class SymbolReader
 {

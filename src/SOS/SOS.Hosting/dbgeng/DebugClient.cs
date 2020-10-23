@@ -12,12 +12,6 @@ namespace SOS
 {
     internal unsafe class DebugClient : COMCallableIUnknown
     {
-        new internal const int S_OK = COMHelper.S_OK;
-        new internal const int E_INVALIDARG = COMHelper.E_INVALIDARG;
-        new internal const int E_FAIL = COMHelper.E_FAIL;
-        new internal const int E_NOTIMPL = COMHelper.E_NOTIMPL;
-        new internal const int E_NOINTERFACE = COMHelper.E_NOINTERFACE;
-
         internal readonly IntPtr IDebugClient;
 
         readonly DebugAdvanced _debugAdvanced;
@@ -100,7 +94,7 @@ namespace SOS
         {
             get {
                 System.Diagnostics.Debugger.Break();
-                return E_NOTIMPL;
+                return HResult.E_NOTIMPL;
             }
         }
 

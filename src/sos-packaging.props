@@ -55,6 +55,11 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib" TargetRid="osx-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsos.dylib" TargetRid="osx-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\sosdocsunix.txt" TargetRid="osx-x64" />
+
+    <SosRequiredBinaries Include="$(SOSNETCoreBinaries)" TargetRid="osx-arm64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\OSX.arm64.$(Configuration)\libsosplugin.dylib" TargetRid="osx-arm64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\OSX.arm64.$(Configuration)\libsos.dylib" TargetRid="osx-arm64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\OSX.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="osx-arm64" />
   </ItemGroup>
 
   <!-- What and where to pack SOS assets in the final packages. -->

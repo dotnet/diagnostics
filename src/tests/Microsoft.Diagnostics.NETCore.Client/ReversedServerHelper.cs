@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         public static TestRunner StartTracee(ITestOutputHelper _outputHelper, string transportName)
         {
-            var runner = new TestRunner(CommonHelper.GetTraceePath(targetFramework: "net5.0"), _outputHelper);
+            var runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(targetFramework: "net5.0"), _outputHelper);
             runner.AddReversedServer(transportName);
             runner.Start();
             return runner;
@@ -41,11 +41,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public static void AddReversedServer(this TestRunner runner, string transportName)
         {
             runner.AddEnvVar("DOTNET_DiagnosticsMonitorAddress", transportName);
-        }
-
-        public static string ToTestString(this IpcEndpointInfo info)
-        {
-            return $"PID={info.ProcessId}, COOKIE={info.RuntimeInstanceCookie}";
+            runner.AddEnvVar("DOTNET_DiagnosticPorts", $"{transportName},nosuspend;");
         }
     }
 }

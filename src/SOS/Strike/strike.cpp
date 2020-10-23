@@ -122,9 +122,6 @@
 
 #include "ExpressionNode.h"
 #include "WatchCmd.h"
-
-#include <algorithm>
-
 #include "tls.h"
 
 typedef struct _VM_COUNTERS {
@@ -155,13 +152,13 @@ const UINT kcMaxMethodDescsForProfiler = 100;
 #include <tuple>
 #include <memory>
 #include <functional>
+#include <algorithm>
 
 BOOL ControlC = FALSE;
 WCHAR g_mdName[mdNameLen];
 
 #ifndef FEATURE_PAL
 HMODULE g_hInstance = NULL;
-#include <algorithm>
 #endif // !FEATURE_PAL
 
 #ifdef _MSC_VER
@@ -277,9 +274,7 @@ DECLARE_API(IP2MD)
     TADDR IP = 0;
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -333,22 +328,13 @@ DECLARE_API(IP2MD)
 // (MAX_STACK_FRAMES is also used by x86 to prevent infinite loops in _EFN_StackTrace)
 #define MAX_STACK_FRAMES 1000
 
-#if defined(_TARGET_WIN64_)
-#define DEBUG_STACK_CONTEXT AMD64_CONTEXT
-#elif defined(_TARGET_ARM_) // _TARGET_WIN64_
-#define DEBUG_STACK_CONTEXT ARM_CONTEXT
-#elif defined(_TARGET_X86_) // _TARGET_ARM_
-#define DEBUG_STACK_CONTEXT X86_CONTEXT
-#endif // _TARGET_X86_
-
-#ifdef DEBUG_STACK_CONTEXT
 // I use a global set of frames for stack walking on win64 because the debugger's
 // GetStackTrace function doesn't provide a way to find out the total size of a stackwalk,
 // and I'd like to have a reasonably big maximum without overflowing the stack by declaring
 // the buffer locally and I also want to get a managed trace in a low memory environment
 // (so no dynamic allocation if possible).
 DEBUG_STACK_FRAME g_Frames[MAX_STACK_FRAMES];
-DEBUG_STACK_CONTEXT g_FrameContexts[MAX_STACK_FRAMES];
+CROSS_PLATFORM_CONTEXT g_FrameContexts[MAX_STACK_FRAMES];
 
 static HRESULT
 GetContextStackTrace(ULONG osThreadId, PULONG pnumFrames)
@@ -387,8 +373,6 @@ GetContextStackTrace(ULONG osThreadId, PULONG pnumFrames)
     }
     return hr;
 }
-
-#endif // DEBUG_STACK_CONTEXT
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -469,9 +453,7 @@ DECLARE_API(DumpStack)
         {"-EE", &DSFlag.fEEonly, COBOOL, FALSE},
         {"-n",  &DSFlag.fSuppressSrcInfo, COBOOL, FALSE},
         {"-unwind",  &unwind, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE}
-#endif
     };
     CMDValue arg[] = {
         // vptr, type
@@ -529,9 +511,7 @@ DECLARE_API (EEStack)
     {   // name, vptr, type, hasValue
         {"-EE", &DSFlag.fEEonly, COBOOL, FALSE},
         {"-short", &bShortList, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE}
-#endif
     };
 
     if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
@@ -710,9 +690,7 @@ DECLARE_API(DumpStackObjects)
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-verify", &bVerify, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE}
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -748,9 +726,7 @@ DECLARE_API(DumpMD)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -867,8 +843,9 @@ DECLARE_API(DumpIL)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE},
+        {"-i", &fILPointerDirectlySpecified, COBOOL, FALSE},
         {"/i", &fILPointerDirectlySpecified, COBOOL, FALSE},
+        {"/d", &dml, COBOOL, FALSE},
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -1166,9 +1143,7 @@ DECLARE_API(DumpClass)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -1289,9 +1264,7 @@ DECLARE_API(DumpMT)
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-MD", &bDumpMDTable, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE}
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -1488,11 +1461,25 @@ void PrintRuntimeTypeInfo(TADDR p_rtObject, const DacpObjectData & rtObjectData)
     }
 }
 
+void DisplayInvalidStructuresMessage()
+{
+    ExtOut("The garbage collector data structures are not in a valid state for traversal.\n");
+    ExtOut("It is either in the \"plan phase,\" where objects are being moved around, or\n");
+    ExtOut("we are at the initialization or shutdown of the gc heap. Commands related to \n");
+    ExtOut("displaying, finding or traversing objects as well as gc heap segments may not \n");
+    ExtOut("work properly. !dumpheap and !verifyheap may incorrectly complain of heap \n");
+    ExtOut("consistency errors.\n");
+}
+
 HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
 {
     if (!sos::IsObject(taObj, true))
     {
         ExtOut("<Note: this object has an invalid CLASS field>\n");
+        if (!GetGcStructuresValid())
+        {
+            DisplayInvalidStructuresMessage();
+        }
     }
 
     DacpObjectData objData;
@@ -1534,6 +1521,49 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
     if (objData.CCW != NULL)
     {
         DMLOut("CCW:         %s\n", DMLCCWrapper(objData.CCW));
+    }
+
+    // Check for ComWrappers CCWs
+    ReleaseHolder<ISOSDacInterface10> sos10;
+    if (SUCCEEDED(Status = g_sos->QueryInterface(__uuidof(ISOSDacInterface10), &sos10)))
+    {
+        CLRDATA_ADDRESS objAddr = TO_CDADDR(taObj);
+        CLRDATA_ADDRESS rcwNative;
+        unsigned int needed;
+       if (SUCCEEDED(sos10->GetObjectComWrappersData(objAddr, &rcwNative, 0, NULL, &needed)) 
+            && (needed > 0 || rcwNative != 0))
+        {
+            ArrayHolder<CLRDATA_ADDRESS> pArray = new NOTHROW CLRDATA_ADDRESS[needed];
+            if (pArray != NULL)
+            {
+                if (SUCCEEDED(sos10->GetObjectComWrappersData(objAddr, &rcwNative, needed, pArray, NULL)))
+                {
+                    if (rcwNative != 0)
+                    {
+                        DMLOut("ComWrappers RCW: %s\n", DMLRCWrapper(rcwNative));
+                    }
+
+                    if (needed > 0)
+                    {
+                        ExtOut("ComWrappers CCWs:\n");
+                    }
+
+                    for (unsigned int i = 0; i < needed; ++i)
+                    {
+                        DMLOut("             %s\n", DMLCCWrapper(pArray[i]));
+                    }
+                }
+                else
+                {
+                    ExtOut("Failed to get ComWrappers RCW/CCW data for the object\n");
+                }
+            }
+            else
+            {
+                ReportOOM();
+            }
+
+        }
     }
 
     DWORD_PTR size = (DWORD_PTR)objData.Size;
@@ -1852,9 +1882,7 @@ DECLARE_API(DumpArray)
         {"-length", &flags.Length, COSIZE_T, TRUE},
         {"-details", &flags.bDetail, COBOOL, FALSE},
         {"-nofields", &flags.bNoFieldsForElement, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -2070,9 +2098,7 @@ DECLARE_API(DumpObj)
     {   // name, vptr, type, hasValue
         {"-nofields", &bNoFields, COBOOL, FALSE},
         {"-refs", &bRefs, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -2130,9 +2156,7 @@ DECLARE_API(DumpALC)
     StringHolder str_Object;
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -2660,7 +2684,11 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
     DacpObjectData objData;
     if ((Status=objData.Request(g_sos, taObj)) != S_OK)
     {
-        ExtOut("Invalid object\n");
+        ExtOut("Invalid exception object: %016llx\n", taObj);
+        if (!GetGcStructuresValid())
+        {
+            DisplayInvalidStructuresMessage();
+        }
         return Status;
     }
 
@@ -2900,9 +2928,7 @@ DECLARE_API(PrintException)
         {"-lines", &bLineNumbers, COBOOL, FALSE},
         {"-l", &bLineNumbers, COBOOL, FALSE},
         {"-ccw", &bCCW, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE}
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -3067,9 +3093,7 @@ DECLARE_API(DumpVC)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE}
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -3112,7 +3136,7 @@ DECLARE_API(DumpRCW)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE}
+        {"/d", &dml, COBOOL, FALSE},
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -3139,69 +3163,90 @@ DECLARE_API(DumpRCW)
         }
         else
         {
-            DacpRCWData rcwData;
-            if ((Status = rcwData.Request(g_sos, p_RCW)) != S_OK)
+            ReleaseHolder<ISOSDacInterface10> sos10;
+            BOOL isComWrappersRCW = FALSE;
+            if (SUCCEEDED(Status = g_sos->QueryInterface(__uuidof(ISOSDacInterface10), &sos10))
+                && SUCCEEDED(sos10->IsComWrappersRCW(p_RCW, &isComWrappersRCW))
+                && isComWrappersRCW)
             {
-                ExtOut("Error requesting RCW data\n");
-                return Status;
+                CLRDATA_ADDRESS identity;
+                if (SUCCEEDED(Status = sos10->GetComWrappersRCWData(p_RCW, &identity)))
+                {
+                    ExtOut("ComWrappers RCW found\n");
+                    DMLOut("Identity:       %p\n", SOS_PTR(identity));
+                }
+                else
+                {
+                    ExtOut("Error requesting RCW data\n");
+                    return Status;
+                }
             }
-            BOOL isDCOMProxy;
-            if (FAILED(rcwData.IsDCOMProxy(g_sos, p_RCW, &isDCOMProxy)))
+            else
             {
-                isDCOMProxy = FALSE;
-            }
+                DacpRCWData rcwData;
+                if ((Status = rcwData.Request(g_sos, p_RCW)) != S_OK)
+                {
+                    ExtOut("Error requesting RCW data\n");
+                    return Status;
+                }
+                BOOL isDCOMProxy;
+                if (FAILED(rcwData.IsDCOMProxy(g_sos, p_RCW, &isDCOMProxy)))
+                {
+                    isDCOMProxy = FALSE;
+                }
 
-            DMLOut("Managed object:             %s\n", DMLObject(rcwData.managedObject));
-            DMLOut("Creating thread:            %p\n", SOS_PTR(rcwData.creatorThread));
-            ExtOut("IUnknown pointer:           %p\n", SOS_PTR(rcwData.unknownPointer));
-            ExtOut("COM Context:                %p\n", SOS_PTR(rcwData.ctxCookie));
-            ExtOut("Managed ref count:          %d\n", rcwData.refCount);
-            ExtOut("IUnknown V-table pointer :  %p (captured at RCW creation time)\n", SOS_PTR(rcwData.vtablePtr));
+                DMLOut("Managed object:             %s\n", DMLObject(rcwData.managedObject));
+                DMLOut("Creating thread:            %p\n", SOS_PTR(rcwData.creatorThread));
+                ExtOut("IUnknown pointer:           %p\n", SOS_PTR(rcwData.unknownPointer));
+                ExtOut("COM Context:                %p\n", SOS_PTR(rcwData.ctxCookie));
+                ExtOut("Managed ref count:          %d\n", rcwData.refCount);
+                ExtOut("IUnknown V-table pointer :  %p (captured at RCW creation time)\n", SOS_PTR(rcwData.vtablePtr));
 
-            ExtOut("Flags:                      %s%s%s%s%s%s%s%s\n",
-                (rcwData.isDisconnected? "IsDisconnected " : ""),
-                (rcwData.supportsIInspectable? "SupportsIInspectable " : ""),
-                (rcwData.isAggregated? "IsAggregated " : ""),
-                (rcwData.isContained? "IsContained " : ""),
-                (rcwData.isJupiterObject? "IsJupiterObject " : ""),
-                (rcwData.isFreeThreaded? "IsFreeThreaded " : ""),
-                (rcwData.identityPointer == TO_CDADDR(p_RCW)? "IsUnique " : ""),
-                (isDCOMProxy ? "IsDCOMProxy " : "")
-                );
+                ExtOut("Flags:                      %s%s%s%s%s%s%s%s\n",
+                    (rcwData.isDisconnected? "IsDisconnected " : ""),
+                    (rcwData.supportsIInspectable? "SupportsIInspectable " : ""),
+                    (rcwData.isAggregated? "IsAggregated " : ""),
+                    (rcwData.isContained? "IsContained " : ""),
+                    (rcwData.isJupiterObject? "IsJupiterObject " : ""),
+                    (rcwData.isFreeThreaded? "IsFreeThreaded " : ""),
+                    (rcwData.identityPointer == TO_CDADDR(p_RCW)? "IsUnique " : ""),
+                    (isDCOMProxy ? "IsDCOMProxy " : "")
+                    );
 
-            // Jupiter data hidden by default
-            if (rcwData.isJupiterObject)
-            {
-                ExtOut("IJupiterObject:    %p\n", SOS_PTR(rcwData.jupiterObject));
-            }
+                // Jupiter data hidden by default
+                if (rcwData.isJupiterObject)
+                {
+                    ExtOut("IJupiterObject:    %p\n", SOS_PTR(rcwData.jupiterObject));
+                }
 
-            ExtOut("COM interface pointers:\n");
+                ExtOut("COM interface pointers:\n");
 
-            ArrayHolder<DacpCOMInterfacePointerData> pArray = new NOTHROW DacpCOMInterfacePointerData[rcwData.interfaceCount];
-            if (pArray == NULL)
-            {
-                ReportOOM();
-                return Status;
-            }
+                ArrayHolder<DacpCOMInterfacePointerData> pArray = new NOTHROW DacpCOMInterfacePointerData[rcwData.interfaceCount];
+                if (pArray == NULL)
+                {
+                    ReportOOM();
+                    return Status;
+                }
 
-            if ((Status = g_sos->GetRCWInterfaces(p_RCW, rcwData.interfaceCount, pArray, NULL)) != S_OK)
-            {
-                ExtOut("Error requesting COM interface pointers\n");
-                return Status;
-            }
+                if ((Status = g_sos->GetRCWInterfaces(p_RCW, rcwData.interfaceCount, pArray, NULL)) != S_OK)
+                {
+                    ExtOut("Error requesting COM interface pointers\n");
+                    return Status;
+                }
 
-            ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s Type\n", "IP", "Context", "MT");
-            for (int i = 0; i < rcwData.interfaceCount; i++)
-            {
-                // Ignore any NULL MethodTable interface cache. At this point only IJupiterObject
-                // is saved as NULL MethodTable at first slot, and we've already printed outs its
-                // value earlier.
-                if (pArray[i].methodTable == NULL)
-                    continue;
+                ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s Type\n", "IP", "Context", "MT");
+                for (int i = 0; i < rcwData.interfaceCount; i++)
+                {
+                    // Ignore any NULL MethodTable interface cache. At this point only IJupiterObject
+                    // is saved as NULL MethodTable at first slot, and we've already printed outs its
+                    // value earlier.
+                    if (pArray[i].methodTable == NULL)
+                        continue;
 
-                NameForMT_s(TO_TADDR(pArray[i].methodTable), g_mdName, mdNameLen);
+                    NameForMT_s(TO_TADDR(pArray[i].methodTable), g_mdName, mdNameLen);
 
-                DMLOut("%p %p %s %S\n", SOS_PTR(pArray[i].interfacePtr), SOS_PTR(pArray[i].comContext), DMLMethodTable(pArray[i].methodTable), g_mdName);
+                    DMLOut("%p %p %s %S\n", SOS_PTR(pArray[i].interfacePtr), SOS_PTR(pArray[i].comContext), DMLMethodTable(pArray[i].methodTable), g_mdName);
+                }
             }
         }
     }
@@ -3219,7 +3264,7 @@ DECLARE_API(DumpCCW)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE}
+        {"/d", &dml, COBOOL, FALSE},
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -3237,12 +3282,34 @@ DECLARE_API(DumpCCW)
         ExtOut("Missing CCW address\n");
         return Status;
     }
+    
+
+    DWORD_PTR p_CCW = GetExpression(strObject.data);
+    if (p_CCW == 0)
+    {
+        ExtOut("Invalid CCW %s\n", args);
+    }
     else
     {
-        DWORD_PTR p_CCW = GetExpression(strObject.data);
-        if (p_CCW == 0)
+        ReleaseHolder<ISOSDacInterface10> sos10;
+        BOOL isComWrappersCCW = FALSE;
+        if (SUCCEEDED(Status = g_sos->QueryInterface(__uuidof(ISOSDacInterface10), &sos10))
+            && SUCCEEDED(sos10->IsComWrappersCCW(p_CCW, &isComWrappersCCW))
+            && isComWrappersCCW)
         {
-            ExtOut("Invalid CCW %s\n", args);
+            CLRDATA_ADDRESS managedObject;
+            int refCount;
+            if (SUCCEEDED(Status = sos10->GetComWrappersCCWData(p_CCW, &managedObject, &refCount)))
+            {
+                ExtOut("ComWrappers CCW found\n");
+                DMLOut("Managed object:    %s\n", DMLObject(managedObject));
+                ExtOut("Ref count:         %d\n", refCount);
+            }
+            else
+            {
+                ExtOut("Error requesting CCW data\n");
+                return Status;
+            }
         }
         else
         {
@@ -3480,16 +3547,6 @@ void GCPrintGenerationInfo(DacpGcHeapDetails &heap);
 void GCPrintSegmentInfo(DacpGcHeapDetails &heap, DWORD_PTR &total_size);
 
 #endif // FEATURE_PAL
-
-void DisplayInvalidStructuresMessage()
-{
-    ExtOut("The garbage collector data structures are not in a valid state for traversal.\n");
-    ExtOut("It is either in the \"plan phase,\" where objects are being moved around, or\n");
-    ExtOut("we are at the initialization or shutdown of the gc heap. Commands related to \n");
-    ExtOut("displaying, finding or traversing objects as well as gc heap segments may not \n");
-    ExtOut("work properly. !dumpheap and !verifyheap may incorrectly complain of heap \n");
-    ExtOut("consistency errors.\n");
-}
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -3937,9 +3994,7 @@ public:
             {"-max", &mMaxSize, COHEX, TRUE},        // max size of objects to display
             {"-live", &mLive, COHEX, FALSE},         // only print live objects
             {"-dead", &mDead, COHEX, FALSE},         // only print dead objects
-#ifndef FEATURE_PAL
             {"/d", &mDML, COBOOL, FALSE},            // Debugger Markup Language
-#endif
         };
 
         CMDValue arg[] =
@@ -4003,13 +4058,11 @@ public:
             ExtOut("If you need this functionality, get a full memory dump with \".dump /ma mydump.dmp\"\n");
         }
 
-#ifndef FEATURE_PAL
-        if (IsWindowsTarget() && (mLive || mDead))
+        if (mLive || mDead)
         {
             GCRootImpl gcroot;
             mLiveness = gcroot.GetLiveObjects();
         }
-#endif
 
         // Some of the "specialty" versions of DumpHeap have slightly
         // different implementations than the standard version of DumpHeap.
@@ -4116,17 +4169,14 @@ private:
 
     bool IsCorrectLiveness(const sos::Object &obj)
     {
-#ifndef FEATURE_PAL
-        if (IsWindowsTarget() && mLive && mLiveness.find(obj.GetAddress()) == mLiveness.end())
+        if (mLive && mLiveness.find(obj.GetAddress()) == mLiveness.end())
             return false;
 
-        if (IsWindowsTarget() && mDead && (mLiveness.find(obj.GetAddress()) != mLiveness.end() || obj.IsFree()))
+        if (mDead && (mLiveness.find(obj.GetAddress()) != mLiveness.end() || obj.IsFree()))
             return false;
-#endif
+
         return true;
     }
-
-
 
     inline void PrintHeader()
     {
@@ -4220,15 +4270,6 @@ private:
 
     void DumpHeapStrings(sos::GCHeap &gcheap)
     {
-#ifdef FEATURE_PAL
-        ExtOut("Not implemented.\n");
-#else
-        if (!IsWindowsTarget())
-        {
-            ExtOut("Not implemented.\n");
-            return;
-        }
-
         const int offset = sos::Object::GetStringDataOffset();
         typedef std::set<StringSetEntry> Set;
         Set set;            // A set keyed off of the string's text
@@ -4290,7 +4331,6 @@ private:
             Flatten(vitr->str, (unsigned int)_wcslen(vitr->str));
             out.WriteRow(Decimal(vitr->size), Decimal(vitr->count), vitr->str);
         }
-#endif // FEATURE_PAL
     }
 
     void DumpHeapShort(sos::GCHeap &gcheap)
@@ -4349,37 +4389,23 @@ private:
     WCHAR *mType;
 
 private:
-#if !defined(FEATURE_PAL)
-    // Windows only
     std::unordered_set<TADDR> mLiveness;
     typedef std::list<sos::FragmentationBlock> FragmentationList;
     FragmentationList mFrag;
 
     void InitFragmentationList()
     {
-        if (!IsWindowsTarget())
-        {
-            return;
-        }
         mFrag.clear();
     }
 
     void ReportFreeObject(TADDR addr, size_t size, TADDR next, TADDR mt)
     {
-        if (!IsWindowsTarget())
-        {
-            return;
-        }
         if (size >= MIN_FRAGMENTATIONBLOCK_BYTES)
             mFrag.push_back(sos::FragmentationBlock(addr, size, next, mt));
     }
 
     void PrintFragmentationReport()
     {
-        if (!IsWindowsTarget())
-        {
-            return;
-        }
         if (mFrag.size() > 0)
         {
             ExtOut("Fragmented blocks larger than 0.5 MB:\n");
@@ -4396,11 +4422,6 @@ private:
             }
         }
     }
-#else
-    void InitFragmentationList() {}
-    void ReportFreeObject(TADDR, TADDR, size_t, TADDR) {}
-    void PrintFragmentationReport() {}
-#endif
 };
 
 /**********************************************************************\
@@ -4647,9 +4668,7 @@ DECLARE_API(DumpAsync)
             { "-fields", &dumpFields, COBOOL, FALSE },          // show relevant fields of found async objects
             { "-stacks", &includeStacks, COBOOL, FALSE },       // gather and output continuation/stack information
             { "-roots", &includeRoots, COBOOL, FALSE },         // gather and output GC root information
-#ifndef FEATURE_PAL
             { "/d", &dml, COBOOL, FALSE },                      // Debugger Markup Language
-#endif
         };
         if (!GetCMDOption(args, option, _countof(option), NULL, 0, &nArg) || nArg != 0)
         {
@@ -5328,16 +5347,6 @@ DECLARE_API(ListNearObj)
 
     TADDR taddrArg = 0;
     TADDR taddrObj = 0;
-    // we may want to provide a more exact version of searching for the
-    // previous object in the heap, using the brick table, instead of
-    // looking for what may be valid method tables...
-    //BOOL bExact;
-    //CMDOption option[] =
-    //{
-    //    // name, vptr, type, hasValue
-    //    {"-exact", &bExact, COBOOL, FALSE}
-    //};
-
     BOOL dml = FALSE;
     CMDOption option[] =
     {   // name, vptr, type, hasValue
@@ -6180,9 +6189,7 @@ DECLARE_API(DumpModule)
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-mt", &bMethodTables, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
         {"-prof", &bProfilerModified, COBOOL, FALSE},
     };
     CMDValue arg[] =
@@ -6351,9 +6358,7 @@ DECLARE_API(DumpDomain)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -6474,9 +6479,7 @@ DECLARE_API(DumpAssembly)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -7044,9 +7047,7 @@ DECLARE_API(Threads)
         {"-special", &bPrintSpecialThreads, COBOOL, FALSE},
         {"-live", &bPrintLiveThreadsOnly, COBOOL, FALSE},
         {"-managedexception", &bSwitchToManagedExceptionThread, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
     {
@@ -8569,9 +8570,7 @@ DECLARE_API(ThreadPool)
         {   // name, vptr, type, hasValue
             {"-ti", &doHCDump, COBOOL, FALSE},
             {"-wi", &doWorkItemDump, COBOOL, FALSE},
-#ifndef FEATURE_PAL
             {"/d", &dml, COBOOL, FALSE},
-#endif
         };
 
         if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
@@ -8874,9 +8873,7 @@ DECLARE_API(FindAppDomain)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -9537,9 +9534,7 @@ DECLARE_API(u)
         {"-o", &bDisplayOffsets, COBOOL, FALSE},
         {"-il", &bIL, COBOOL, FALSE},
         {"-map", &bDisplayILMap, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -10065,6 +10060,7 @@ DECLARE_API(DumpLog)
     }
 
     CheckBreakingRuntimeChange();
+    LoadRuntimeSymbols();
 
     const char* fileName = "StressLog.txt";
     CLRDATA_ADDRESS StressLogAddress = NULL;
@@ -10993,9 +10989,7 @@ DECLARE_API(Token2EE)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
 
     CMDValue arg[] =
@@ -11087,9 +11081,7 @@ DECLARE_API(Name2EE)
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
 
     CMDValue arg[] =
@@ -11263,9 +11255,7 @@ DECLARE_API(GCRoot)
     {   // name, vptr, type, hasValue
         {"-nostacks", &bNoStacks, COBOOL, FALSE},
         {"-all", &all, COBOOL, FALSE},
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
 
@@ -13495,7 +13485,7 @@ public:
             ArrayHolder<CROSS_PLATFORM_CONTEXT> context = new CROSS_PLATFORM_CONTEXT[1];
             ULONG32 cbContextActual;
             if ((Status = pStackWalk->GetContext(
-                DT_CONTEXT_FULL,
+                g_targetMachine->GetFullContextFlags(),
                 sizeof(CROSS_PLATFORM_CONTEXT),
                 &cbContextActual,
                 (BYTE *)context.GetPtr())) != S_OK)
@@ -13718,7 +13708,6 @@ public:
             return;
         }
 
-#ifdef DEBUG_STACK_CONTEXT
         PDEBUG_STACK_FRAME currentNativeFrame = NULL;
         ULONG numNativeFrames = 0;
         if (bFull)
@@ -13731,7 +13720,6 @@ public:
             }
             currentNativeFrame = &g_Frames[0];
         }
-#endif // DEBUG_STACK_CONTEXT
 
         unsigned int refCount = 0, errCount = 0;
         ArrayHolder<SOSStackRefData> pRefs = NULL;
@@ -13760,17 +13748,15 @@ public:
                 if (SUCCEEDED(frameDataResult) && FrameData.frameAddr)
                     sp = FrameData.frameAddr;
 
-#ifdef DEBUG_STACK_CONTEXT
-                while ((numNativeFrames > 0) && (currentNativeFrame->StackOffset <= sp))
+                while ((numNativeFrames > 0) && (currentNativeFrame->StackOffset <= CDA_TO_UL64(sp)))
                 {
-                    if (currentNativeFrame->StackOffset != sp)
+                    if (currentNativeFrame->StackOffset != CDA_TO_UL64(sp))
                     {
                         PrintNativeStackFrame(out, currentNativeFrame, bSuppressLines);
                     }
                     currentNativeFrame++;
                     numNativeFrames--;
                 }
-#endif // DEBUG_STACK_CONTEXT
 
                 // Print the stack pointer.
                 out.WriteColumn(0, sp);
@@ -13854,19 +13840,19 @@ public:
             }
 #endif // FEATURE_PAL
         }
-#ifdef DEBUG_STACK_CONTEXT
+
         while (numNativeFrames > 0)
         {
             PrintNativeStackFrame(out, currentNativeFrame, bSuppressLines);
             currentNativeFrame++;
             numNativeFrames--;
         }
-#endif // DEBUG_STACK_CONTEXT
     }
+
     static HRESULT PrintManagedFrameContext(IXCLRDataStackWalk *pStackWalk)
     {
         CROSS_PLATFORM_CONTEXT context;
-        HRESULT hr = pStackWalk->GetContext(DT_CONTEXT_FULL, g_targetMachine->GetContextSize(), NULL, (BYTE*)&context);
+        HRESULT hr = pStackWalk->GetContext(g_targetMachine->GetFullContextFlags(), g_targetMachine->GetContextSize(), NULL, (BYTE*)&context);
         if (FAILED(hr))
         {
             ExtOut("GetFrameContext failed: %lx\n", hr);
@@ -13882,8 +13868,8 @@ public:
         if (IsDbgTargetAmd64())
         {
             foundPlatform = true;
-            String outputFormat3 = "    %3s=%016" PRIx64" %3s=%016" PRIx64" %3s=%016" PRIx64"\n";
-            String outputFormat2 = "    %3s=%016" PRIx64" %3s=%016" PRIx64"\n";
+            String outputFormat3 = "    %3s=%016llx %3s=%016llx %3s=%016llx\n";
+            String outputFormat2 = "    %3s=%016llx %3s=%016llx\n";
             ExtOut(outputFormat3, "rsp", context.Amd64Context.Rsp, "rbp", context.Amd64Context.Rbp, "rip", context.Amd64Context.Rip);
             ExtOut(outputFormat3, "rax", context.Amd64Context.Rax, "rbx", context.Amd64Context.Rbx, "rcx", context.Amd64Context.Rcx);
             ExtOut(outputFormat3, "rdx", context.Amd64Context.Rdx, "rsi", context.Amd64Context.Rsi, "rdi", context.Amd64Context.Rdi);
@@ -13929,11 +13915,11 @@ public:
             for (int i = 0; i < 29; ++i)
             {
                 if (i <10) ExtOut(" ");
-                ExtOut(" x%d=%016" PRIx64, i, X[i]);
+                ExtOut(" x%d=%016llx", i, X[i]);
                 if ((i % 3) == 2) ExtOut("\n   ");
             }
-            ExtOut("  fp=%016" PRIx64"\n", context.Arm64Context.Fp);
-            ExtOut("     lr=%016" PRIx64"  sp=%016" PRIx64"  pc=%016" PRIx64"\n", context.Arm64Context.Lr, context.Arm64Context.Sp, context.Arm64Context.Pc);
+            ExtOut("  fp=%016llx\n", context.Arm64Context.Fp);
+            ExtOut("     lr=%016llx  sp=%016llx  pc=%016llx\n", context.Arm64Context.Lr, context.Arm64Context.Sp, context.Arm64Context.Pc);
             ExtOut("           cpsr=%08x        fpcr=%08x        fpsr=%08x\n", context.Arm64Context.Cpsr, context.Arm64Context.Fpcr, context.Arm64Context.Fpsr);
         }
 #endif
@@ -13948,7 +13934,7 @@ public:
     static HRESULT GetFrameLocation(IXCLRDataStackWalk *pStackWalk, CLRDATA_ADDRESS *ip, CLRDATA_ADDRESS *sp)
     {
         CROSS_PLATFORM_CONTEXT context;
-        HRESULT hr = pStackWalk->GetContext(DT_CONTEXT_FULL, g_targetMachine->GetContextSize(), NULL, (BYTE *)&context);
+        HRESULT hr = pStackWalk->GetContext(g_targetMachine->GetFullContextFlags(), g_targetMachine->GetContextSize(), NULL, (BYTE *)&context);
         if (FAILED(hr))
         {
             ExtOut("GetFrameContext failed: %lx\n", hr);
@@ -14491,9 +14477,7 @@ DECLARE_API(ClrStack)
         {"-gc", &bGC, COBOOL, FALSE},
         {"-f", &bFull, COBOOL, FALSE},
         {"-r", &bDisplayRegVals, COBOOL, FALSE },
-#ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
-#endif
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -15144,8 +15128,7 @@ Exit:
         }
 
         CROSS_PLATFORM_CONTEXT context;
-        if ((Status=pStackWalk->GetContext(DT_CONTEXT_FULL, g_targetMachine->GetContextSize(),
-                                           NULL, (BYTE *)&context))!=S_OK)
+        if ((Status=pStackWalk->GetContext(g_targetMachine->GetFullContextFlags(), g_targetMachine->GetContextSize(), NULL, (BYTE *)&context)) != S_OK)
         {
             goto Exit;
         }

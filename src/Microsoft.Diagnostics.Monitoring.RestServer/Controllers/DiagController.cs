@@ -5,10 +5,8 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.Tracing;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,16 +42,51 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         }
 
         [HttpGet("processes")]
-        public Task<ActionResult<IEnumerable<ProcessModel>>> GetProcesses()
+        public Task<ActionResult<IEnumerable<ProcessIdentifierModel>>> GetProcesses()
         {
             return this.InvokeService(async () =>
             {
-                IList<ProcessModel> processes = new List<ProcessModel>();
+                IList<ProcessIdentifierModel> processesIdentifiers = new List<ProcessIdentifierModel>();
                 foreach (IProcessInfo p in await _diagnosticServices.GetProcessesAsync(HttpContext.RequestAborted))
                 {
-                    processes.Add(ProcessModel.FromProcessInfo(p));
+                    processesIdentifiers.Add(ProcessIdentifierModel.FromProcessInfo(p));
                 }
-                return new ActionResult<IEnumerable<ProcessModel>>(processes);
+                return new ActionResult<IEnumerable<ProcessIdentifierModel>>(processesIdentifiers);
+            });
+        }
+
+        [HttpGet("processes/{processFilter}")]
+        public Task<ActionResult<ProcessModel>> GetProcess(
+            ProcessFilter processFilter)
+        {
+            return this.InvokeService<ProcessModel>(async () =>
+            {
+                IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(
+                    processFilter,
+                    HttpContext.RequestAborted);
+
+                return ProcessModel.FromProcessInfo(processInfo);
+            });
+        }
+
+        [HttpGet("processes/{processFilter}/env")]
+        public Task<ActionResult<Dictionary<string, string>>> GetProcessEnvironment(
+            ProcessFilter processFilter)
+        {
+            return this.InvokeService<Dictionary<string, string>>(async () =>
+            {
+                IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(
+                    processFilter,
+                    HttpContext.RequestAborted);
+
+                try
+                {
+                    return processInfo.Client.GetProcessEnvironment();
+                }
+                catch (ServerErrorException)
+                {
+                    throw new InvalidOperationException("Unable to get process environment.");
+                }
             });
         }
 
@@ -85,7 +118,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             {
                 IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(processFilter, HttpContext.RequestAborted);
                 Stream result = await _diagnosticServices.GetGcDump(processInfo, this.HttpContext.RequestAborted);
-                return File(result, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.Pid}.gcdump"));
+                return File(result, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.ProcessId}.gcdump"));
             });
         }
 
@@ -179,7 +212,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 }
 
                 string contentType = (format == LogFormat.EventStream) ? ContentTypeEventStream : ContentTypeNdJson;
-                string downloadName = (format == LogFormat.EventStream) ? null : FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.Pid}.txt");
+                string downloadName = (format == LogFormat.EventStream) ? null : FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.ProcessId}.txt");
 
                 return new OutputStreamResult(async (outputStream, token) =>
                 {
@@ -195,7 +228,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         {
             IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(processFilter, HttpContext.RequestAborted);
             IStreamWithCleanup result = await _diagnosticServices.StartTrace(processInfo, configuration, duration, this.HttpContext.RequestAborted);
-            return new StreamWithCleanupResult(result, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.Pid}.nettrace"));
+            return new StreamWithCleanupResult(result, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.ProcessId}.nettrace"));
         }
 
         private static TimeSpan ConvertSecondsToTimeSpan(int durationSeconds)

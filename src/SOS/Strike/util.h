@@ -562,6 +562,8 @@ namespace Output
         DML_ManagedVar,
         DML_Async,
         DML_IL,
+        DML_ComWrapperRCW,
+        DML_ComWrapperCCW
     };
 
     /**********************************************************************\
@@ -667,6 +669,8 @@ inline void ExtOutIndent()  { WhitespaceOut(Output::g_Indent << 2); }
 #define DMLManagedVar(expansionName,frame,simpleName) Output::BuildManagedVarValue(expansionName, frame, simpleName, Output::DML_ManagedVar).GetPtr()
 #define DMLAsync(addr) Output::BuildHexValue(addr, Output::DML_Async).GetPtr()
 #define DMLIL(addr) Output::BuildHexValue(addr, Output::DML_IL).GetPtr()
+#define DMLComWrapperRCW(addr) Output::BuildHexValue(addr, Output::DML_ComWrapperRCW).GetPtr()
+#define DMLComWrapperCCW(addr) Output::BuildHexValue(addr, Output::DML_ComWrapperCCW).GetPtr()
 
 bool IsDMLEnabled();
 
@@ -1771,7 +1775,7 @@ BOOL IsMiniDumpFile();
 void ReportOOM();
 
 BOOL SafeReadMemory (TADDR offset, PVOID lpBuffer, ULONG cb, PULONG lpcbBytesRead);
-#if !defined(_TARGET_WIN64_) && !defined(_ARM64_)
+#if !defined(_TARGET_WIN64_) && !defined(_ARM64_) && !defined(_MIPS64_)
 // on 64-bit platforms TADDR and CLRDATA_ADDRESS are identical
 inline BOOL SafeReadMemory (CLRDATA_ADDRESS offset, PVOID lpBuffer, ULONG cb, PULONG lpcbBytesRead)
 { return SafeReadMemory(TO_TADDR(offset), lpBuffer, cb, lpcbBytesRead); }
@@ -1784,6 +1788,7 @@ WCHAR *CreateMethodTableName(TADDR mt, TADDR cmt = NULL);
 
 void isRetAddr(DWORD_PTR retAddr, DWORD_PTR* whereCalled);
 DWORD_PTR GetValueFromExpression (___in __in_z const char *const str);
+void LoadRuntimeSymbols();
 
 enum ModuleHeapType
 {

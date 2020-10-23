@@ -51,7 +51,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Debug.Assert(_sessionId > 0);
 
             byte[] payload = BitConverter.GetBytes(_sessionId);
-            var response = IpcClient.SendMessage(_endpoint, new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.StopTracing, payload));
+            IpcMessage response;
+            try
+            {
+                response = IpcClient.SendMessage(_endpoint, new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.StopTracing, payload));
+            }
+            // On non-abrupt exits (i.e. the target process has already exited and pipe is gone, sending Stop command will fail).
+            catch (IOException)
+            {
+                throw new ServerNotAvailableException("Could not send Stop command. The target process may have exited.");
+            }
 
             switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {

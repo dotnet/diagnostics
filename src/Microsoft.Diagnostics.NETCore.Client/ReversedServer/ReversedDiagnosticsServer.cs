@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
@@ -20,24 +20,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal sealed class ReversedDiagnosticsServer : IAsyncDisposable
     {
-        // Returns true if the handler is complete and should be removed from the list
-        delegate bool StreamHandler(Guid runtimeId, Stream stream, out bool consumed);
-
-        // Returns true if the handler is complete and should be removed from the list
-        delegate bool EndpointInfoHandler(IpcEndpointInfo endpointInfo, out bool consumed);
-
         // The amount of time to allow parsing of the advertise data before cancelling. This allows the server to
         // remain responsive in case the advertise data is incomplete and the stream is not closed.
         private static readonly TimeSpan ParseAdvertiseTimeout = TimeSpan.FromMilliseconds(250);
 
-        private readonly Dictionary<Guid, ServerIpcEndpoint> _cachedEndpoints = new Dictionary<Guid, ServerIpcEndpoint>();
-        private readonly Dictionary<Guid, Stream> _cachedStreams = new Dictionary<Guid, Stream>();
         private readonly CancellationTokenSource _disposalSource = new CancellationTokenSource();
-        private readonly List<EndpointInfoHandler> _newEndpointInfoHandlers = new List<EndpointInfoHandler>();
-        private readonly List<IpcEndpointInfo> _newEndpointInfos = new List<IpcEndpointInfo>();
-        private readonly object _newEndpointInfoLock = new object();
-        private readonly List<StreamHandler> _streamHandlers = new List<StreamHandler>();
-        private readonly object _streamLock = new object();
+        private readonly HandleableCollection<IpcEndpointInfo> _endpointInfos = new HandleableCollection<IpcEndpointInfo>();
+        private readonly ConcurrentDictionary<Guid, HandleableCollection<Stream>> _streamCollections = new ConcurrentDictionary<Guid, HandleableCollection<Stream>>();
         private readonly string _transportPath;
 
         private bool _disposed = false;
@@ -75,18 +64,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                 }
 
-                lock (_streamLock)
+                _endpointInfos.Dispose();
+
+                foreach (HandleableCollection<Stream> streamCollection in _streamCollections.Values)
                 {
-                    _newEndpointInfos.Clear();
-
-                    _cachedEndpoints.Clear();
-
-                    foreach (Stream stream in _cachedStreams.Values)
-                    {
-                        stream?.Dispose();
-                    }
-                    _cachedStreams.Clear();
+                    streamCollection.Dispose();
                 }
+
+                _streamCollections.Clear();
 
                 _disposalSource.Dispose();
 
@@ -121,30 +106,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Gets endpoint information when a new runtime instance connects to the server.
         /// </summary>
-        /// <param name="token">The token to monitor for cancellation requests.</param>
-        /// <returns>A task that completes with a <see cref="IpcEndpointInfo"/> value that contains information about the new runtime instance connection.</returns>
-        public async Task<IpcEndpointInfo> AcceptAsync(CancellationToken token)
+        /// <param name="timeout">The amount of time to wait before cancelling the accept operation.</param>
+        /// <returns>An <see cref="IpcEndpointInfo"/> value that contains information about the new runtime instance connection.</returns>
+        public IpcEndpointInfo Accept(TimeSpan timeout)
         {
             VerifyNotDisposed();
-
             VerifyIsStarted();
 
-            var endpointInfoSource = new TaskCompletionSource<IpcEndpointInfo>(TaskCreationOptions.RunContinuationsAsynchronously);
-            using var methodRegistration = token.Register(() => endpointInfoSource.TrySetCanceled(token));
-            using var disposalRegistration = _disposalSource.Token.Register(
-                () => endpointInfoSource.TrySetException(new ObjectDisposedException(nameof(ReversedDiagnosticsServer))));
+            return _endpointInfos.Handle(timeout);
+        }
 
-            RegisterEndpointInfoHandler((IpcEndpointInfo endpointInfo, out bool consumed) =>
-            {
-                consumed = endpointInfoSource.TrySetResult(endpointInfo);
+        /// <summary>
+        /// Gets endpoint information when a new runtime instance connects to the server.
+        /// </summary>
+        /// <param name="token">The token to monitor for cancellation requests.</param>
+        /// <returns>A task that completes with a <see cref="IpcEndpointInfo"/> value that contains information about the new runtime instance connection.</returns>
+        public Task<IpcEndpointInfo> AcceptAsync(CancellationToken token)
+        {
+            VerifyNotDisposed();
+            VerifyIsStarted();
 
-                // Regardless of the registrant previously waiting or cancelled,
-                // the handler should be removed from consideration.
-                return true;
-            });
-
-            // Wait for the handler to verify we have a connected stream
-            return await endpointInfoSource.Task.ConfigureAwait(false);
+            return _endpointInfos.HandleAsync(token);
         }
 
         /// <summary>
@@ -155,27 +137,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public bool RemoveConnection(Guid runtimeCookie)
         {
             VerifyNotDisposed();
-
             VerifyIsStarted();
 
-            bool endpointExisted = false;
-            Stream previousStream = null;
-
-            lock (_streamLock)
+            if (_streamCollections.TryRemove(runtimeCookie, out HandleableCollection<Stream> streamCollection))
             {
-                endpointExisted = _cachedEndpoints.Remove(runtimeCookie);
-                if (endpointExisted)
-                {
-                    if (_cachedStreams.TryGetValue(runtimeCookie, out previousStream))
-                    {
-                        _cachedStreams.Remove(runtimeCookie);
-                    }
-                }
+                streamCollection.Dispose();
+                return true;
             }
-
-            previousStream?.Dispose();
-
-            return endpointExisted;
+            return false;
         }
 
         private void VerifyNotDisposed()
@@ -234,6 +203,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                     catch (Exception)
                     {
+                        stream.Dispose();
                     }
                 }
 
@@ -242,186 +212,89 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     Guid runtimeCookie = advertise.RuntimeInstanceCookie;
                     int pid = unchecked((int)advertise.ProcessId);
 
-                    lock (_streamLock)
+                    // The valueFactory parameter of the GetOrAdd overload that uses Func<TKey, TValue> valueFactory
+                    // does not execute the factory under a lock thus it is not thread-safe. Create the collection and
+                    // use a thread-safe version of GetOrAdd; use equality comparison on the result to determine if
+                    // the new collection was added to the dictionary or if an existing one was returned.
+                    var newStreamCollection = new HandleableCollection<Stream>();
+                    var streamCollection = _streamCollections.GetOrAdd(runtimeCookie, newStreamCollection);
+
+                    try
                     {
-                        ProvideStream(runtimeCookie, stream);
-                        if (!_cachedEndpoints.ContainsKey(runtimeCookie))
+                        streamCollection.ClearItems();
+                        streamCollection.Add(stream);
+
+                        if (newStreamCollection == streamCollection)
                         {
                             ServerIpcEndpoint endpoint = new ServerIpcEndpoint(this, runtimeCookie);
-                            _cachedEndpoints.Add(runtimeCookie, endpoint);
-                            ProvideEndpointInfo(new IpcEndpointInfo(endpoint, pid, runtimeCookie));
+                            _endpointInfos.Add(new IpcEndpointInfo(endpoint, pid, runtimeCookie));
                         }
+                        else
+                        {
+                            newStreamCollection.Dispose();
+                        }
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // The stream collection could be disposed by RemoveConnection which would cause an
+                        // ObjectDisposedException to be thrown if trying to clear/add the stream.
+                        stream.Dispose();
                     }
                 }
             }
         }
 
-        /// <remarks>
-        /// This will block until the diagnostic stream is provided. This block can happen if
-        /// the stream is acquired previously and the runtime instance has not yet reconnected
-        /// to the reversed diagnostics server.
-        /// </remarks>
-        internal Stream Connect(Guid runtimeId, TimeSpan timeout)
+        private HandleableCollection<Stream> GetStreams(Guid runtimeCookie)
+        {
+            return _streamCollections.GetOrAdd(runtimeCookie, _ => new HandleableCollection<Stream>());
+        }
+
+        internal Stream Connect(Guid runtimeInstanceCookie, TimeSpan timeout)
         {
             VerifyNotDisposed();
-
             VerifyIsStarted();
 
-            const int StreamStatePending = 0;
-            const int StreamStateComplete = 1;
-            const int StreamStateCancelled = 2;
-            const int StreamStateDisposed = 3;
+            return GetStreams(runtimeInstanceCookie).Handle(timeout);
+        }
 
-            // CancellationTokenSource is used to trigger the timeout path in order to avoid inadvertently consuming
-            // the stream via the handler while processing the timeout after failing to wait for the stream event
-            // to be signaled within the timeout period. The source of truth of whether the stream was consumed or
-            // whether the timeout occurred is captured by the streamState variable.
-            Stream stream = null;
-            int streamState = StreamStatePending;
-            using var streamEvent = new ManualResetEvent(false);
-            var cancellationSource = new CancellationTokenSource();
+        internal Task<Stream> ConnectAsync(Guid runtimeInstanceCookie, CancellationToken token)
+        {
+            VerifyNotDisposed();
+            VerifyIsStarted();
 
-            bool TrySetStream(int state, Stream value)
+            return GetStreams(runtimeInstanceCookie).HandleAsync(token);
+        }
+
+        internal void WaitForConnection(Guid runtimeInstanceCookie, TimeSpan timeout)
+        {
+            VerifyNotDisposed();
+            VerifyIsStarted();
+
+            GetStreams(runtimeInstanceCookie).Handle(WaitForConnectionHandler, timeout);
+        }
+
+        internal async Task WaitForConnectionAsync(Guid runtimeInstanceCookie, CancellationToken token)
+        {
+            VerifyNotDisposed();
+            VerifyIsStarted();
+
+            await GetStreams(runtimeInstanceCookie).HandleAsync(WaitForConnectionHandler, token).ConfigureAwait(false);
+        }
+
+        private static bool WaitForConnectionHandler(Stream item, out bool removeItem)
+        {
+            if (!TestStream(item))
             {
-                if (StreamStatePending == Interlocked.CompareExchange(ref streamState, state, 0))
-                {
-                    stream = value;
-                    streamEvent.Set();
-                    return true;
-                }
+                item?.Dispose();
+                removeItem = true;
                 return false;
             }
 
-            using var methodRegistration = cancellationSource.Token.Register(() => TrySetStream(StreamStateCancelled, value: null));
-            using var disposalRegistration = _disposalSource.Token.Register(() => TrySetStream(StreamStateDisposed, value: null));
-
-            RegisterStreamHandler(runtimeId, (Guid id, Stream cachedStream, out bool consumed) =>
-            {
-                consumed = false;
-
-                if (id != runtimeId)
-                {
-                    return false;
-                }
-
-                consumed = TrySetStream(StreamStateComplete, cachedStream);
-
-                // Regardless of the registrant previously waiting or cancelled,
-                // the handler should be removed from consideration.
-                return true;
-            });
-
-            cancellationSource.CancelAfter(timeout);
-            streamEvent.WaitOne();
-
-            if (StreamStateCancelled == streamState)
-            {
-                throw new TimeoutException();
-            }
-
-            if (StreamStateDisposed == streamState)
-            {
-                throw new ObjectDisposedException(nameof(ReversedDiagnosticsServer));
-            }
-
-            return stream;
+            removeItem = false;
+            return true;
         }
 
-        internal async Task WaitForConnectionAsync(Guid runtimeId, CancellationToken token)
-        {
-            VerifyNotDisposed();
-
-            VerifyIsStarted();
-
-            var hasConnectedStreamSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-            using var methodRegistration = token.Register(() => hasConnectedStreamSource.TrySetCanceled(token));
-            using var disposalRegistration = _disposalSource.Token.Register(
-                () => hasConnectedStreamSource.TrySetException(new ObjectDisposedException(nameof(ReversedDiagnosticsServer))));
-
-            RegisterStreamHandler(runtimeId, (Guid id, Stream cachedStream, out bool consumed) =>
-            {
-                consumed = false;
-
-                if (runtimeId != id)
-                {
-                    return false;
-                }
-
-                // Check if the registrant was already finished.
-                if (hasConnectedStreamSource.Task.IsCompleted)
-                {
-                    return true;
-                }
-
-                if (!TestStream(cachedStream))
-                {
-                    cachedStream.Dispose();
-                    consumed = true;
-                    return false;
-                }
-
-                // Found a stream that is valid; signal completion if possible.
-                hasConnectedStreamSource.TrySetResult(true);
-
-                // Regardless of the registrant previously waiting or cancelled,
-                // the handler should be removed from consideration.
-                return true;
-            });
-
-            // Wait for the handler to verify we have a connected stream
-            await hasConnectedStreamSource.Task.ConfigureAwait(false);
-        }
-
-        private void ProvideStream(Guid runtimeId, Stream stream)
-        {
-            Debug.Assert(Monitor.IsEntered(_streamLock));
-
-            // Get the previous stream in order to dispose it later
-            _cachedStreams.TryGetValue(runtimeId, out Stream previousStream);
-
-            RunStreamHandlers(runtimeId, stream);
-
-            // Dispose the previous stream if there was one.
-            previousStream?.Dispose();
-        }
-
-        private void RunStreamHandlers(Guid runtimeId, Stream stream)
-        {
-            Debug.Assert(Monitor.IsEntered(_streamLock));
-
-            // If there are any handlers waiting for a stream, provide
-            // it to the first handler in the queue.
-            bool consumedStream = false;
-            for (int i = 0; !consumedStream && i < _streamHandlers.Count; i++)
-            {
-                StreamHandler handler = _streamHandlers[i];
-                if (handler(runtimeId, stream, out consumedStream))
-                {
-                    _streamHandlers.RemoveAt(i);
-                    i--;
-                }
-            }
-
-            // Store the stream for when a handler registers later.
-            _cachedStreams[runtimeId] = consumedStream ? null : stream;
-        }
-
-        private void RegisterStreamHandler(Guid runtimeId, StreamHandler handler)
-        {
-            lock (_streamLock)
-            {
-                _cachedStreams.TryGetValue(runtimeId, out Stream stream);
-
-                _streamHandlers.Add(handler);
-
-                if (stream != null)
-                {
-                    RunStreamHandlers(runtimeId, stream);
-                }
-            }
-        }
-
-        private bool TestStream(Stream stream)
+        private static bool TestStream(Stream stream)
         {
             if (null == stream)
             {
@@ -462,61 +335,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             return false;
-        }
-
-        private void ProvideEndpointInfo(in IpcEndpointInfo endpointInfo)
-        {
-            lock (_newEndpointInfoLock)
-            {
-                bool consumedEndpointInfo = false;
-                // Provide the endpoint info to the first handler that will accept it.
-                for (int i = 0; !consumedEndpointInfo && i < _newEndpointInfoHandlers.Count; i++)
-                {
-                    EndpointInfoHandler handler = _newEndpointInfoHandlers[i];
-                    // Handler will return true if it has completed
-                    if (handler(endpointInfo, out consumedEndpointInfo))
-                    {
-                        _newEndpointInfoHandlers.RemoveAt(i);
-                        i--;
-                    }
-                }
-
-                // If the endpoint info was not consumed, add it to the list
-                if (!consumedEndpointInfo)
-                {
-                    _newEndpointInfos.Add(endpointInfo);
-                }
-            }
-        }
-
-        private void RegisterEndpointInfoHandler(EndpointInfoHandler handler)
-        {
-            lock (_newEndpointInfoLock)
-            {
-                // Attempt to accept an endpoint info
-                for (int i = 0; i < _newEndpointInfos.Count && null != handler; i++)
-                {
-                    bool consumedEnpointInfo = false;
-                    // Handler will return true if it has completed
-                    if (handler(_newEndpointInfos[i], out consumedEnpointInfo))
-                    {
-                        handler = null;
-                    }
-
-                    // If the endpoint info was consumed, remove it from the list
-                    if (consumedEnpointInfo)
-                    {
-                        _newEndpointInfos.RemoveAt(i);
-                        i--;
-                    }
-                }
-
-                // If the handler did not signal completion, then add it to the handlers list.
-                if (null != handler)
-                {
-                    _newEndpointInfoHandlers.Add(handler);
-                }
-            }
         }
 
         private bool IsStarted => null != _listenTask;

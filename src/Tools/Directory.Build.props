@@ -3,11 +3,26 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <IsPackable>true</IsPackable>
-    <PackAsTool>true</PackAsTool>
-    <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;win-arm;osx-x64</PackAsToolShimRuntimeIdentifiers>
-    <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <IsShipping>true</IsShipping>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
+
+  <Choose>
+    <When Condition="'$(BundleTools)' == 'true'">
+      <PropertyGroup>
+        <SelfContained>false</SelfContained>
+        <PublishDir>$(BundledToolsPath)$(Configuration)\$(RuntimeIdentifier)\</PublishDir>
+        <PublishSingleFile>true</PublishSingleFile>
+        <PublishTrimmed>$(SelfContained)</PublishTrimmed>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <IsPackable>true</IsPackable>
+        <PackAsTool>true</PackAsTool>
+        <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;win-arm;osx-x64</PackAsToolShimRuntimeIdentifiers>
+        <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
 </Project>

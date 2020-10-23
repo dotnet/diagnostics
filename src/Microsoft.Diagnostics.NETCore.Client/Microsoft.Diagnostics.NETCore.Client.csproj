@@ -22,5 +22,7 @@
     <InternalsVisibleTo Include="DotnetMonitor.UnitTests" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.NETCore.Client.UnitTests" />
+    <InternalsVisibleTo Include="dotnet-counters" />
+    <InternalsVisibleTo Include="dotnet-trace" />
   </ItemGroup>
 </Project>

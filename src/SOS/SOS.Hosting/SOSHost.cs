@@ -22,12 +22,6 @@ namespace SOS
     /// </summary>
     public sealed class SOSHost
     {
-        internal const int S_OK = DebugClient.S_OK;
-        internal const int E_INVALIDARG = DebugClient.E_INVALIDARG;
-        internal const int E_FAIL = DebugClient.E_FAIL;
-        internal const int E_NOTIMPL = DebugClient.E_NOTIMPL;
-        internal const int E_NOINTERFACE = DebugClient.E_NOINTERFACE;
-
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SOSCommandDelegate(
             IntPtr ILLDBServices,
@@ -129,6 +123,14 @@ namespace SOS
             IntPtr buffer,
             IntPtr dataSize);
 
+        private delegate int GetICorDebugMetadataLocatorDelegate(
+            [MarshalAs(UnmanagedType.LPWStr)] string imagePath,
+            uint imageTimestamp,
+            uint imageSize,
+            uint pathBufferSize,
+            IntPtr pPathBufferSize,
+            IntPtr pPathBuffer);
+
         #endregion
 
         /// <summary>
@@ -149,6 +151,7 @@ namespace SOS
             public GetLocalVariableNameDelegate GetLocalVariableNameDelegate;
             public GetMetadataLocatorDelegate GetMetadataLocatorDelegate;
             public GetExpressionDelegate GetExpressionDelegate;
+            public GetICorDebugMetadataLocatorDelegate GetICorDebugMetadataLocatorDelegate;
         }
 
         static SOSNetCoreCallbacks s_callbacks = new SOSNetCoreCallbacks {
@@ -164,6 +167,7 @@ namespace SOS
             GetLocalVariableNameDelegate = SymbolReader.GetLocalVariableName,
             GetMetadataLocatorDelegate = MetadataHelper.GetMetadataLocator,
             GetExpressionDelegate = SOSHost.GetExpression,
+            GetICorDebugMetadataLocatorDelegate = MetadataHelper.GetICorDebugMetadataLocator
         };
 
         const string DesktopRuntimeModuleName = "clr";
@@ -199,8 +203,7 @@ namespace SOS
         /// <param name="serviceProvider">Service provider</param>
         public SOSHost(IServiceProvider serviceProvider)
         {
-            DataTarget dataTarget = serviceProvider.GetService<DataTarget>();
-            DataReader = dataTarget.DataReader;
+            DataReader = serviceProvider.GetService<IDataReader>();
             _console = serviceProvider.GetService<IConsoleService>();
             AnalyzeContext = serviceProvider.GetService<AnalyzeContext>();
             _memoryService = serviceProvider.GetService<MemoryService>();
@@ -268,7 +271,7 @@ namespace SOS
                 {
                     throw new FileNotFoundException($"SOS module {sosPath} not found");
                 }
-                IntPtr initializeAddress = DataTarget.PlatformFunctions.GetProcAddress(_sosLibrary, SOSInitialize);
+                IntPtr initializeAddress = DataTarget.PlatformFunctions.GetLibraryExport(_sosLibrary, SOSInitialize);
                 if (initializeAddress == IntPtr.Zero)
                 {
                     throw new EntryPointNotFoundException($"Can not find SOS module initialization function: {SOSInitialize}");
@@ -326,7 +329,7 @@ namespace SOS
         {
             Debug.Assert(_sosLibrary != null);
 
-            IntPtr commandAddress = DataTarget.PlatformFunctions.GetProcAddress(_sosLibrary, command);
+            IntPtr commandAddress = DataTarget.PlatformFunctions.GetLibraryExport(_sosLibrary, command);
             if (commandAddress == IntPtr.Zero)
             {
                 throw new EntryPointNotFoundException($"Can not find SOS command: {command}");
@@ -358,7 +361,7 @@ namespace SOS
         internal int GetInterrupt(
             IntPtr self)
         {
-            return AnalyzeContext.CancellationToken.IsCancellationRequested ? S_OK : E_FAIL;
+            return AnalyzeContext.CancellationToken.IsCancellationRequested ? HResult.S_OK : HResult.E_FAIL;
         }
 
         internal int OutputVaList(
@@ -376,7 +379,7 @@ namespace SOS
             {
                 // ctrl-c interrupted the command
             }
-            return S_OK;
+            return HResult.S_OK;
         }
 
         internal unsafe int GetDebuggeeType(
@@ -386,7 +389,7 @@ namespace SOS
         {
             *debugClass = DEBUG_CLASS.USER_WINDOWS;
             *qualifier = DEBUG_CLASS_QUALIFIER.USER_WINDOWS_DUMP;
-            return S_OK;
+            return HResult.S_OK;
         }
 
         internal unsafe int GetDumpFormatFlags(
@@ -394,7 +397,7 @@ namespace SOS
             DEBUG_FORMAT* formatFlags)
         {
             *formatFlags = DEBUG_FORMAT.DEFAULT;
-            return DebugClient.S_OK;
+            return HResult.S_OK;
         }
 
         internal unsafe int GetPageSize(
@@ -402,14 +405,14 @@ namespace SOS
             uint* size)
         {
             *size = 4096;
-            return S_OK;
+            return HResult.S_OK;
         }
 
         internal unsafe int GetExecutingProcessorType(
             IntPtr self,
             IMAGE_FILE_MACHINE* type)
         {
-            switch (DataReader.GetArchitecture())
+            switch (DataReader.Architecture)
             {
                 case Microsoft.Diagnostics.Runtime.Architecture.Amd64:
                     *type = IMAGE_FILE_MACHINE.AMD64;
@@ -427,7 +430,7 @@ namespace SOS
                     *type = IMAGE_FILE_MACHINE.UNKNOWN;
                     break;
             }
-            return S_OK;
+            return HResult.S_OK;
         }
 
         internal int Execute(
@@ -436,7 +439,7 @@ namespace SOS
             string command,
             DEBUG_EXECUTE flags)
         {
-            return E_NOTIMPL;
+            return HResult.E_NOTIMPL;
         }
 
         internal unsafe int GetLastEventInformation(
@@ -467,7 +470,7 @@ namespace SOS
             buffer.Clear();
             Write(disassemblySize);
             Write(endOffset, offset);
-            return E_NOTIMPL;
+            return HResult.E_NOTIMPL;
         }
 
         internal unsafe int ReadVirtual(
@@ -480,9 +483,9 @@ namespace SOS
             if (_memoryService.ReadMemory(address, buffer, unchecked((int)bytesRequested), out int bytesRead))
             {
                 Write(pbytesRead, (uint)bytesRead);
-                return S_OK;
+                return HResult.S_OK;
             }
-            return E_FAIL;
+            return HResult.E_FAIL;
         }
 
         internal unsafe int WriteVirtual(
@@ -494,7 +497,7 @@ namespace SOS
         {
             // This gets used by MemoryBarrier() calls in the dac, which really shouldn't matter what we do here.
             Write(pbytesWritten, bytesRequested);
-            return S_OK;
+            return HResult.S_OK;
         }
 
         internal int GetSymbolOptions(
@@ -502,7 +505,7 @@ namespace SOS
             out SYMOPT options)
         {
             options = SYMOPT.LOAD_LINES;
-            return S_OK;
+            return HResult.S_OK;
         }
 
         internal unsafe int GetNameByOffset(
@@ -516,7 +519,7 @@ namespace SOS
             nameBuffer?.Clear();
             Write(nameSize);
             Write(displacement);
-            return E_NOTIMPL;
+            return HResult.E_NOTIMPL;
         }
 
         internal int GetNumberModules(
@@ -524,9 +527,9 @@ namespace SOS
             out uint loaded,
             out uint unloaded)
         {
-            loaded = (uint)DataReader.EnumerateModules().Count;
+            loaded = (uint)DataReader.EnumerateModules().Count();
             unloaded = 0;
-            return S_OK;
+            return HResult.S_OK;
         }
 
         internal int GetModuleByIndex(
@@ -540,15 +543,15 @@ namespace SOS
                 ModuleInfo module = DataReader.EnumerateModules().ElementAt((int)index);
                 if (module == null)
                 {
-                    return E_FAIL;
+                    return HResult.E_FAIL;
                 }
                 baseAddress = module.ImageBase;
             }
             catch (ArgumentOutOfRangeException)
             {
-                return E_FAIL;
+                return HResult.E_FAIL;
             }
-            return S_OK;
+            return HResult.S_OK;
         }
 
         internal unsafe int GetModuleByModuleName(
@@ -569,11 +572,11 @@ namespace SOS
                 {
                     Write(index, i);
                     Write(baseAddress, module.ImageBase);
-                    return S_OK;
+                    return HResult.S_OK;
                 }
                 i++;
             }
-            return E_FAIL;
+            return HResult.E_FAIL;
         }
 
         internal unsafe int GetModuleByOffset(
@@ -594,16 +597,16 @@ namespace SOS
                 uint i = 0;
                 foreach (ModuleInfo module in DataReader.EnumerateModules())
                 {
-                    if (offset >= module.ImageBase && offset < (module.ImageBase + module.FileSize))
+                    if (offset >= module.ImageBase && offset < (module.ImageBase + (ulong)module.IndexFileSize))
                     {
                         Write(index, i);
                         Write(baseAddress, module.ImageBase);
-                        return S_OK;
+                        return HResult.S_OK;
                     }
                     i++;
                 }
             }
-            return E_FAIL;
+            return HResult.E_FAIL;
         }
 
         internal unsafe int GetModuleNames(
@@ -635,11 +638,11 @@ namespace SOS
                     string moduleName = GetModuleName(module);
                     moduleNameBuffer?.Append(moduleName);
                     Write(moduleNameSize, (uint)moduleName.Length + 1);
-                    return S_OK;
+                    return HResult.S_OK;
                 }
                 i++;
             }
-            return E_FAIL;
+            return HResult.E_FAIL;
         }
 
         internal unsafe int GetModuleParameters(
@@ -659,8 +662,8 @@ namespace SOS
                     if (bases[i] == module.ImageBase)
                     {
                         moduleParams[i].Base = module.ImageBase;
-                        moduleParams[i].Size = module.FileSize;
-                        moduleParams[i].TimeDateStamp = module.TimeStamp;
+                        moduleParams[i].Size = (uint)module.IndexFileSize;
+                        moduleParams[i].TimeDateStamp = (uint)module.IndexTimeStamp;
                         moduleParams[i].Checksum = 0;
                         moduleParams[i].Flags = DEBUG_MODULE.LOADED;
                         moduleParams[i].SymbolType = DEBUG_SYMTYPE.PDB;
@@ -678,7 +681,7 @@ namespace SOS
                     }
                 }
             }
-            return S_OK;
+            return HResult.S_OK;
         }
 
         internal unsafe int GetModuleVersionInformation(
@@ -704,7 +707,7 @@ namespace SOS
                         Write(verInfoSize, versionSize);
                         if (bufferSize < versionSize)
                         {
-                            return E_INVALIDARG;
+                            return HResult.E_INVALIDARG;
                         }
                         VS_FIXEDFILEINFO* fileInfo = (VS_FIXEDFILEINFO*)buffer;
                         fileInfo->dwSignature = 0;
@@ -717,7 +720,7 @@ namespace SOS
                             VersionInfo versionInfo = module.Version;
                             fileInfo->dwFileVersionMS = (uint)versionInfo.Minor | (uint)versionInfo.Major << 16;
                             fileInfo->dwFileVersionLS = (uint)versionInfo.Patch | (uint)versionInfo.Revision << 16;
-                            return S_OK;
+                            return HResult.S_OK;
                         }
                         else
                         {
@@ -736,7 +739,7 @@ namespace SOS
                                         Version versionInfo = Version.Parse(versionToParse);
                                         fileInfo->dwFileVersionMS = (uint)versionInfo.Minor | (uint)versionInfo.Major << 16;
                                         fileInfo->dwFileVersionLS = (uint)versionInfo.Revision | (uint)versionInfo.Build << 16;
-                                        return S_OK;
+                                        return HResult.S_OK;
                                     }
                                     catch (ArgumentException ex)
                                     {
@@ -751,7 +754,7 @@ namespace SOS
                     {
                         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                         {
-                            return E_INVALIDARG;
+                            return HResult.E_INVALIDARG;
                         }
                         else
                         {
@@ -759,30 +762,30 @@ namespace SOS
                             {
                                 byte[] source = Encoding.ASCII.GetBytes(versionString + '\0');
                                 Marshal.Copy(source, 0, new IntPtr(buffer), Math.Min(source.Length, (int)bufferSize));
-                                return S_OK;
+                                return HResult.S_OK;
                             }
                             break;
                         }
                     }
                     else
                     {
-                        return E_INVALIDARG;
+                        return HResult.E_INVALIDARG;
                     }
                 }
                 i++;
             }
 
-            return E_FAIL;
+            return HResult.E_FAIL;
         }
 
         private static readonly byte[] s_versionString = Encoding.ASCII.GetBytes("@(#)Version ");
-        private static readonly uint s_versionLength = (uint)s_versionString.Length;
+        private static readonly int s_versionLength = s_versionString.Length;
 
         private bool SearchVersionString(ModuleInfo moduleInfo, out string fileVersion)
         {
             byte[] buffer = new byte[s_versionString.Length];
             ulong address = moduleInfo.ImageBase;
-            uint size = moduleInfo.FileSize;
+            int size = moduleInfo.IndexFileSize;
 
             _versionCache.Clear();
 
@@ -792,7 +795,7 @@ namespace SOS
                 {
                     if (s_versionString.SequenceEqual(buffer))
                     {
-                        address += s_versionLength;
+                        address += (ulong)s_versionLength;
                         size -= s_versionLength;
 
                         var sb = new StringBuilder();
@@ -824,7 +827,7 @@ namespace SOS
                 }
                 else
                 {
-                    address += s_versionLength;
+                    address += (ulong)s_versionLength;
                     size -= s_versionLength;
                 }
             }
@@ -845,7 +848,7 @@ namespace SOS
             Write(line);
             Write(fileSize);
             Write(displacement);
-            return E_NOTIMPL;
+            return HResult.E_NOTIMPL;
         }
 
         internal unsafe int GetSourceFileLineOffsets(
@@ -856,7 +859,7 @@ namespace SOS
             uint* fileLines)
         {
             Write(fileLines);
-            return E_NOTIMPL;
+            return HResult.E_NOTIMPL;
         }
 
         internal unsafe int FindSourceFile(
@@ -871,7 +874,7 @@ namespace SOS
         {
             Write(foundElement);
             Write(foundSize);
-            return E_NOTIMPL;
+            return HResult.E_NOTIMPL;
         }
 
         internal unsafe int GetSymbolPath(
@@ -884,7 +887,7 @@ namespace SOS
                 buffer.Clear();
             }
             Write(pathSize);
-            return S_OK;
+            return HResult.S_OK;
         }
 
         internal int GetThreadContext(
@@ -894,7 +897,7 @@ namespace SOS
         {
             if (!AnalyzeContext.CurrentThreadId.HasValue)
             {
-                return E_FAIL;
+                return HResult.E_FAIL;
             }
             return GetThreadContextById(self, AnalyzeContext.CurrentThreadId.Value, 0, contextSize, context);
         }
@@ -913,7 +916,7 @@ namespace SOS
             }
             catch (DiagnosticsException)
             {
-                return E_FAIL;
+                return HResult.E_FAIL;
             }
             try
             {
@@ -921,9 +924,9 @@ namespace SOS
             }
             catch (Exception ex) when (ex is ArgumentOutOfRangeException || ex is ArgumentNullException)
             {
-                return E_INVALIDARG;
+                return HResult.E_INVALIDARG;
             }
-            return S_OK;
+            return HResult.S_OK;
         }
 
         internal int SetThreadContext(
@@ -939,7 +942,7 @@ namespace SOS
             out uint number)
         {
             number = (uint)_threadService.EnumerateThreads().Count();
-            return DebugClient.S_OK;
+            return HResult.S_OK;
         }
 
         internal int GetTotalNumberThreads(
@@ -949,18 +952,15 @@ namespace SOS
         {
             total = (uint)_threadService.EnumerateThreads().Count();
             largestProcess = total;
-            return DebugClient.S_OK;
+            return HResult.S_OK;
         }
 
         internal int GetCurrentProcessId(
             IntPtr self,
             out uint id)
         {
-            id = 0;
-            if (DataReader is IDataReader2 dataReader2) {
-                id = dataReader2.ProcessId;
-            }
-            return S_OK;
+            id = (uint)DataReader.ProcessId;
+            return HResult.S_OK;
         }
 
         internal int GetCurrentThreadId(
@@ -970,7 +970,7 @@ namespace SOS
             if (!AnalyzeContext.CurrentThreadId.HasValue)
             {
                 id = 0;
-                return E_FAIL;
+                return HResult.E_FAIL;
             }
             return GetThreadIdBySystemId(self, AnalyzeContext.CurrentThreadId.Value, out id);
         }
@@ -986,9 +986,9 @@ namespace SOS
             }
             catch (DiagnosticsException)
             {
-                return E_FAIL;
+                return HResult.E_FAIL;
             }
-            return S_OK;
+            return HResult.S_OK;
         }
 
         internal int GetCurrentThreadSystemId(
@@ -998,10 +998,10 @@ namespace SOS
             if (!AnalyzeContext.CurrentThreadId.HasValue)
             {
                 sysId = 0;
-                return E_FAIL;
+                return HResult.E_FAIL;
             }
             sysId = AnalyzeContext.CurrentThreadId.Value;
-            return S_OK;
+            return HResult.S_OK;
         }
 
         internal unsafe int GetThreadIdsByIndex(
@@ -1011,25 +1011,26 @@ namespace SOS
             uint* ids,
             uint* sysIds)
         {
+            int number = _threadService.EnumerateThreads().Count();
+            if (start >= number || start + count > number)
+            {
+                return HResult.E_INVALIDARG;
+            }
             int index = 0;
             foreach (ThreadInfo threadInfo in _threadService.EnumerateThreads())
             {
-                uint id = (uint)threadInfo.ThreadIndex;
-                if (index >= count) {
-                    break;
-                }
-                if (id >= start)
+                if (index >= start && index < start + count)
                 {
                     if (ids != null) {
-                        ids[index] = id;
+                        ids[index] = (uint)threadInfo.ThreadIndex;
                     }
                     if (sysIds != null) {
                         sysIds[index] = threadInfo.ThreadId;
                     }
-                    index++;
                 }
+                index++;
             }
-            return DebugClient.S_OK;
+            return HResult.S_OK;
         }
 
         internal int GetThreadIdBySystemId(
@@ -1043,14 +1044,14 @@ namespace SOS
                 {
                     ThreadInfo threadInfo = _threadService.GetThreadInfoFromId(sysId);
                     id = (uint)threadInfo.ThreadIndex;
-                    return S_OK;
+                    return HResult.S_OK;
                 }
                 catch (DiagnosticsException)
                 {
                 }
             }
             id = 0;
-            return E_FAIL;
+            return HResult.E_FAIL;
         }
 
         internal unsafe int GetCurrentThreadTeb(
@@ -1064,14 +1065,14 @@ namespace SOS
                 {
                     ulong teb = _threadService.GetThreadInfoFromId(threadId).ThreadTeb;
                     Write(offset, teb);
-                    return S_OK;
+                    return HResult.S_OK;
                 }
                 catch (DiagnosticsException)
                 {
                 }
             }
             Write(offset, 0);
-            return E_FAIL;
+            return HResult.E_FAIL;
         }
 
         internal int GetInstructionOffset(
@@ -1102,10 +1103,10 @@ namespace SOS
         {
             if (!_threadService.GetRegisterIndexByName(name, out int value)) {
                 index = 0;
-                return E_INVALIDARG;
+                return HResult.E_INVALIDARG;
             }
             index = (uint)value;
-            return S_OK;
+            return HResult.S_OK;
         }
 
         internal int GetValue(
@@ -1117,7 +1118,7 @@ namespace SOS
 
             // SOS expects the DEBUG_VALUE field to be set based on the 
             // processor architecture instead of the register size.
-            switch (DataReader.GetPointerSize())
+            switch (DataReader.PointerSize)
             {
                 case 8:
                     value = new DEBUG_VALUE {
@@ -1135,7 +1136,7 @@ namespace SOS
 
                 default:
                     value = new DEBUG_VALUE();
-                    hr = E_FAIL;
+                    hr = HResult.E_FAIL;
                     break;
             }
             return hr;
@@ -1147,7 +1148,7 @@ namespace SOS
         {
             if (!_threadService.GetRegisterIndexByName(register, out int index)) {
                 value = 0;
-                return E_INVALIDARG;
+                return HResult.E_INVALIDARG;
             }
             return GetRegister(index, out value);
         }
@@ -1160,11 +1161,11 @@ namespace SOS
             {
                 uint threadId = AnalyzeContext.CurrentThreadId.Value;
                 if (_threadService.GetRegisterValue(threadId, index, out value)) {
-                    return S_OK;
+                    return HResult.S_OK;
                 }
             }
             value = 0;
-            return E_FAIL;
+            return HResult.E_FAIL;
         }
 
         internal static bool IsCoreClrRuntimeModule(ModuleInfo module)

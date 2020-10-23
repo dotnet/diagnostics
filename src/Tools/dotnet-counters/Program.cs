@@ -2,8 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Commands;
+using Microsoft.Internal.Common.Utils;
 using Microsoft.Tools.Common;
 using System;
 using System.Collections.Generic;
@@ -11,6 +11,7 @@ using System.CommandLine;
 using System.CommandLine.Binding;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
+using System.CommandLine.Parsing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,7 +22,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
     internal class Program
     {
-        delegate Task<int> ExportDelegate(CancellationToken ct, List<string> counter_list, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string processName);
+        delegate Task<int> ExportDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string processName);
 
         private static Command MonitorCommand() =>
             new Command(
@@ -29,11 +30,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 description: "Start monitoring a .NET application")
             {
                 // Handler
-                CommandHandler.Create<CancellationToken, List<string>, IConsole, int, int, string>(new CounterMonitor().Monitor),
+                CommandHandler.Create<CancellationToken, List<string>, string, IConsole, int, int, string>(new CounterMonitor().Monitor),
                 // Arguments and Options
-                CounterList(), ProcessIdOption(), RefreshIntervalOption(), NameOption()
+                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), NameOption()
             };
-
+        
         private static Command CollectCommand() =>
             new Command(
                 name: "collect",
@@ -42,7 +43,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // Handler
                 HandlerDescriptor.FromDelegate((ExportDelegate)new CounterMonitor().Collect).GetCommandHandler(),
                 // Arguments and Options
-                CounterList(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption(), NameOption()
+                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption(), NameOption()
             };
 
         private static Option NameOption() =>
@@ -66,7 +67,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 alias: "--refresh-interval",
                 description: "The number of seconds to delay between updating the displayed counters.")
             {
-                Argument = new Argument<int>(name: "refresh-interval", defaultValue: 1)
+                Argument = new Argument<int>(name: "refresh-interval", getDefaultValue: () => 1)
             };
 
         private static Option ExportFormatOption() =>
@@ -74,7 +75,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 alias: "--format",
                 description: "The format of exported counter data.")
             {
-                Argument = new Argument<CountersExportFormat>(name: "format", defaultValue: CountersExportFormat.csv)
+                Argument = new Argument<CountersExportFormat>(name: "format", getDefaultValue: () => CountersExportFormat.csv)
             };
 
         private static Option ExportFileNameOption() =>
@@ -82,11 +83,19 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 aliases: new[] { "-o", "--output" },
                 description: "The output file name.") 
             {
-                Argument = new Argument<string>(name: "output", defaultValue: "counter")
+                Argument = new Argument<string>(name: "output", getDefaultValue: () => "counter")
+            };
+
+        private static Option CounterOption() =>
+            new Option(
+                alias: "--counters",
+                description: "List of counter providers.")
+            {
+                Argument = new Argument<string>(name: "counters", getDefaultValue: () => "System.Runtime")
             };
 
         private static Argument CounterList() =>
-            new Argument<List<string>>(name: "counter_list", defaultValue: new List<string>()) 
+            new Argument<List<string>>(name: "counter_list", getDefaultValue: () => new List<string>() ) 
             {
                 Description = @"A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the provider_name is used without a qualifying counter_name then all counters will be shown. To discover provider and counter names, use the list command.",
                 Arity = ArgumentArity.ZeroOrMore
@@ -106,7 +115,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 aliases: new[] { "-r", "--runtime-version" },
                 description: "Version of runtime. Supported runtime version: 3.0, 3.1, 5.0") 
             {
-                Argument = new Argument<string>(name: "runtimeVersion", defaultValue: "3.1")
+                Argument = new Argument<string>(name: "runtimeVersion", getDefaultValue: () => "3.1")
             };
 
         private static readonly string[] s_SupportedRuntimeVersions = new[] { "3.0", "3.1", "5.0" };
@@ -145,6 +154,19 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that can be monitored"))
                 .UseDefaults()
                 .Build();
+
+            ParseResult parseResult = parser.Parse(args);
+            string parsedCommandName = parseResult.CommandResult.Command.Name;
+            if (parsedCommandName == "monitor" || parsedCommandName == "collect")
+            {
+                IReadOnlyCollection<string> unparsedTokens = parseResult.UnparsedTokens;
+                // If we notice there are unparsed tokens, user might want to attach on startup.
+                if (unparsedTokens.Count > 0)
+                {
+                    ProcessLauncher.Launcher.PrepareChildProcess(args);
+                }
+            }
+
             return parser.InvokeAsync(args);
         }
     }

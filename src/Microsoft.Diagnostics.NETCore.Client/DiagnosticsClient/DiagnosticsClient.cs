@@ -34,6 +34,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Wait for an available diagnostic endpoint to the runtime instance.
         /// </summary>
+        /// <param name="timeout">The amount of time to wait before cancelling the wait for the connection.</param>
+        internal void WaitForConnection(TimeSpan timeout)
+        {
+            _endpoint.WaitForConnection(timeout);
+        }
+
+        /// <summary>
+        /// Wait for an available diagnostic endpoint to the runtime instance.
+        /// </summary>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <returns>
         /// A task the completes when a diagnostic endpoint to the runtime instance becomes available.
@@ -190,6 +199,25 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
+        public Dictionary<string,string> GetProcessEnvironment()
+        {
+            var message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessEnvironment);
+            Stream continuation = IpcClient.SendMessage(_endpoint, message, out IpcMessage response);
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
+            {
+                case DiagnosticsServerResponseId.Error:
+                    int hr = BitConverter.ToInt32(response.Payload, 0);
+                    throw new ServerErrorException($"Get process environment failed (HRESULT: 0x{hr:X8})");
+                case DiagnosticsServerResponseId.OK:
+                    ProcessEnvironmentHelper helper = ProcessEnvironmentHelper.Parse(response.Payload);
+                    Task<Dictionary<string,string>> envTask = helper.ReadEnvironmentAsync(continuation);
+                    envTask.Wait();
+                    return envTask.Result;
+                default:
+                    throw new ServerErrorException($"Get process environment failed - server responded with unknown command");
+            }
+        }
+
         /// <summary>
         /// Get all the active processes that can be attached to.
         /// </summary>
@@ -198,11 +226,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </returns>
         public static IEnumerable<int> GetPublishedProcesses()
         {
-            return Directory.GetFiles(PidIpcEndpoint.IpcRootPath)
-                .Select(namedPipe => (new FileInfo(namedPipe)).Name)
-                .Where(input => Regex.IsMatch(input, PidIpcEndpoint.DiagnosticsPortPattern))
-                .Select(input => int.Parse(Regex.Match(input, PidIpcEndpoint.DiagnosticsPortPattern).Groups[1].Value, NumberStyles.Integer))
-                .Distinct();
+            static IEnumerable<int> GetAllPublishedProcesses()
+            {
+                foreach (var port in Directory.GetFiles(PidIpcEndpoint.IpcRootPath))
+                {
+                    var fileName = new FileInfo(port).Name;
+                    var match = Regex.Match(fileName, PidIpcEndpoint.DiagnosticsPortPattern);
+                    if (!match.Success) continue;
+                    var group = match.Groups[1].Value;
+                    if (!int.TryParse(group, NumberStyles.Integer, CultureInfo.InvariantCulture, out var processId))
+                        continue;
+
+                    yield return processId;
+                }
+            }
+
+            return GetAllPublishedProcesses().Distinct();
         }
 
         private static byte[] SerializeCoreDump(string dumpName, DumpType dumpType, bool diagnostics)

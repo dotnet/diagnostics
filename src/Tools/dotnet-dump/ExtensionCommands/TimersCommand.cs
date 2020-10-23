@@ -9,7 +9,7 @@ using Microsoft.Diagnostics.Repl;
 
 namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
 {
-    [Command(Name = "timerinfo", AliasExpansion = "TimerInfo", Help = "Display running timers details.")]
+    [Command(Name = "timerinfo", Help = "Display running timers details.")]
     [CommandAlias(Name = "ti")]
     public class TimersCommand : ExtensionCommandBase
     {
@@ -24,13 +24,30 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
                     totalCount++;
 
                     string line = string.Intern(GetTimerString(timer));
-                    string key = string.Intern(string.Format(
-                        "@{0,8} ms every {1,8} ms | ({2}) -> {3}",
-                        timer.DueTime.ToString(),
-                        (timer.Period == 4294967295) ? "  ------" : timer.Period.ToString(),
-                        timer.StateTypeName,
-                        timer.MethodName
+                    string key;
+                    if (timer.IsShort.HasValue)
+                    {
+                        key = string.Intern(string.Format(
+                            "({0}) @{1,8} ms every {2,8} ms | {3} ({4}) -> {5}",
+                            (timer.IsShort == true) ? "S" : "L",
+                            timer.DueTime.ToString(),
+                            (timer.Period == 4294967295) ? "  ------" : timer.Period.ToString(),
+                            timer.StateAddress.ToString("X16"),
+                            timer.StateTypeName,
+                            timer.MethodName
                         ));
+                    }
+                    else
+                    {
+                        key = string.Intern(string.Format(
+                            "@{0,8} ms every {1,8} ms | {2} ({3}) -> {4}",
+                            timer.DueTime.ToString(),
+                            (timer.Period == 4294967295) ? "  ------" : timer.Period.ToString(),
+                            timer.StateAddress.ToString("X16"),
+                            timer.StateTypeName,
+                            timer.MethodName
+                        ));
+                    }
 
                     if (!stats.TryGetValue(key, out var stat))
                     {
@@ -62,15 +79,32 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
 
         static string GetTimerString(TimerInfo timer)
         {
-            return string.Format(
-                "0x{0} @{1,8} ms every {2,8} ms |  0x{3} ({4}) -> {5}",
-                timer.TimerQueueTimerAddress.ToString("X16"),
-                timer.DueTime.ToString(),
-                (timer.Period == 4294967295) ? "  ------" : timer.Period.ToString(),
-                timer.StateAddress.ToString("X16"),
-                timer.StateTypeName,
-                timer.MethodName
-            );
+            if (timer.IsShort.HasValue)
+            {
+                return string.Format(
+                    "({0}) 0x{1} @{2,8} ms every {3,8} ms |  {4} ({5}) -> {6}",
+                    timer.IsShort.Value ? "S" : "L",
+                    timer.TimerQueueTimerAddress.ToString("X16"),
+                    timer.DueTime.ToString(),
+                    (timer.Period == 4294967295) ? "  ------" : timer.Period.ToString(),
+                    timer.StateAddress.ToString("X16"),
+                    timer.StateTypeName,
+                    timer.MethodName
+                );
+            }
+            else
+            {
+                return string.Format(
+                    "0x{0} @{1,8} ms every {2,8} ms |  {3} ({4}) -> {5}",
+                    timer.TimerQueueTimerAddress.ToString("X16"),
+                    timer.DueTime.ToString(),
+                    (timer.Period == 4294967295) ? "  ------" : timer.Period.ToString(),
+                    timer.StateAddress.ToString("X16"),
+                    timer.StateTypeName,
+                    timer.MethodName
+                );
+            }
+
         }
 
         protected override string GetDetailedHelp()

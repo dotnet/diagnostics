@@ -306,7 +306,7 @@ namespace SOS
                     }
                     catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException || ex is TaskCanceledException)
                     {
-                        s_tracer.Error("{0}/{1:X16}: {2}", moduleFilePath, address, ex.Message);
+                        s_tracer.Error("{0} address {1:X16}: {2}", moduleFilePath, address, ex.Message);
                     }
                 }
             }

@@ -52,34 +52,42 @@ public class SOS
 
         if (testDump)
         {
-            // Generate a crash dump.
-            if (information.TestConfiguration.DebuggeeDumpOutputRootDir() != null)
+            // Create and test dumps on OSX only if the runtime is 5.0 or greater
+            if (OS.Kind != OSKind.OSX || information.TestConfiguration.RuntimeFrameworkVersionMajor >= 5)
             {
-                if (information.DumpGenerator == SOSRunner.DumpGenerator.NativeDebugger && SOSRunner.IsAlpine())
+                // Generate a crash dump.
+                if (information.TestConfiguration.DebuggeeDumpOutputRootDir() != null)
                 {
-                    throw new SkipTestException("lldb tests not supported on Alpine");
-                }
-                await SOSRunner.CreateDump(information);
-            }
-
-            // Test against a crash dump.
-            if (information.TestConfiguration.DebuggeeDumpInputRootDir() != null)
-            {
-                if (!SOSRunner.IsAlpine())
-                {
-                    // With cdb (Windows) or lldb (Linux or OSX)
-                    using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDump))
+                    if (information.DumpGenerator == SOSRunner.DumpGenerator.NativeDebugger && SOSRunner.IsAlpine())
                     {
-                        await runner.RunScript(scriptName);
+                        throw new SkipTestException("lldb tests not supported on Alpine");
                     }
+                    await SOSRunner.CreateDump(information);
                 }
 
-                // Using the dotnet-dump analyze tool if the path exists in the config file. Don't test dotnet-dump on triage dumps when running on desktop CLR.
-                if (information.TestConfiguration.DotNetDumpPath() != null && (information.TestConfiguration.IsNETCore || information.DumpType != SOSRunner.DumpType.Triage))
+                // Test against a crash dump.
+                if (information.TestConfiguration.DebuggeeDumpInputRootDir() != null)
                 {
-                    using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDumpWithDotNetDump))
+                    if (!SOSRunner.IsAlpine() && OS.Kind != OSKind.OSX)
                     {
-                        await runner.RunScript(scriptName);
+                        // With cdb (Windows) or lldb (Linux)
+                        using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDump))
+                        {
+                            await runner.RunScript(scriptName);
+                        }
+                    }
+
+                    // Using the dotnet-dump analyze tool if the path exists in the config file.
+                    if (information.TestConfiguration.DotNetDumpPath() != null)
+                    {
+                        // Don't test dotnet-dump on triage dumps when running on desktop CLR.
+                        if (information.TestConfiguration.IsNETCore || information.DumpType != SOSRunner.DumpType.Triage)
+                        {
+                            using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDumpWithDotNetDump))
+                            {
+                                await runner.RunScript(scriptName);
+                            }
+                        }
                     }
                 }
             }
@@ -139,6 +147,8 @@ public class SOS
         await RunTest("Overflow.script", information: new SOSRunner.TestInformation {
             TestConfiguration = config,
             DebuggeeName = "Overflow",
+            // Generating the logging for overflow test causes so much output from createdump that it hangs/timesout the test run
+            DumpDiagnostics = false,
             DumpGenerator = config.StackOverflowCreatesDump ? SOSRunner.DumpGenerator.CreateDump : SOSRunner.DumpGenerator.NativeDebugger
         });
     }

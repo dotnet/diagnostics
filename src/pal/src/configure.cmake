@@ -406,16 +406,14 @@ int main()
 }" HAVE_CLOCK_MONOTONIC_COARSE)
 check_cxx_source_runs("
 #include <stdlib.h>
-#include <mach/mach_time.h>
+#include <time.h>
 
 int main()
 {
   int ret;
-  mach_timebase_info_data_t timebaseInfo;
-  ret = mach_timebase_info(&timebaseInfo);
-  mach_absolute_time();
-  exit(ret);
-}" HAVE_MACH_ABSOLUTE_TIME)
+  ret = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+  exit((ret == 0) ? 1 : 0);
+}" HAVE_CLOCK_GETTIME_NSEC_NP)
 check_cxx_source_runs("
 #include <stdlib.h>
 #include <time.h>

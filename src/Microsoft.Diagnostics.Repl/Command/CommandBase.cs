@@ -74,5 +74,21 @@ namespace Microsoft.Diagnostics.Repl
         {
             Console.WriteError(string.Format(format, args) + Environment.NewLine);
         }
+
+        /// <summary>
+        /// Convert hexadecimal string address into ulong
+        /// </summary>
+        /// <param name="addressInHexa">0x12345678 or 000012345670 format are supported</param>
+        /// <param name="address">parsed hexadecimal address</param>
+        /// <returns></returns>
+        protected bool TryParseAddress(string addressInHexa, out ulong address)
+        {
+            // skip 0x or leading 0000 if needed
+            if (addressInHexa.StartsWith("0x"))
+                addressInHexa = addressInHexa.Substring(2);
+            addressInHexa = addressInHexa.TrimStart('0');
+
+            return ulong.TryParse(addressInHexa, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out address);
+        }
     }
 }

@@ -25,7 +25,7 @@ http://localhost:5000/api/diagscenario/deadlock
 Let the request run for about 10-15 seconds. The first thing we need in order to generate a core dump is to find the process identifier of our webapi process:
 
 > ```bash
-> $ dotnet-trace list-processes
+> $ dotnet-trace list-ps
 > ...
 > 80926 webapi     /home/marioh/webapi/bin/Debug/netcoreapp3.0/webapi
 > sudo dotnet triggerdump.dll 80926 500

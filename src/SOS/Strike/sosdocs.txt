@@ -1873,7 +1873,7 @@ COMMAND: dumpil.
 !DumpIL <Managed DynamicMethod object> | 
         <DynamicMethodDesc pointer> |
         <MethodDesc pointer> |
-        /i <IL pointer>
+        -i <IL pointer>
 
 !DumpIL prints the IL code associated with a managed method. We added this
 function specifically to debug DynamicMethod code which was constructed on
@@ -1887,7 +1887,7 @@ You can use it in four ways:
      IL associated with the dynamic method.
   3) If you have an ordinary MethodDesc, you can see the IL for that as well,
      just pass it as the first argument.
-  4) If you have a pointer directly to the IL, specify /i followed by the
+  4) If you have a pointer directly to the IL, specify -i followed by the
      the IL address.  This is useful for writers of profilers that instrument
      IL.
      

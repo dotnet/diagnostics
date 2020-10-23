@@ -22,6 +22,10 @@
 #define IMAGE_FILE_MACHINE_ARM64             0xAA64  // ARM64 Little-Endian
 #endif
 
+#ifndef IMAGE_FILE_MACHINE_MIPS64
+#define IMAGE_FILE_MACHINE_MIPS64             0xDD64  // MIPS64 Little-Endian
+#endif
+
 // making the defines very clear, these represent the host architecture - aka
 // the arch on which this code is running
 #if defined(_X86_)
@@ -32,6 +36,8 @@
 #define _HOST_ARM_
 #elif defined(_ARM64_)
 #define _HOST_ARM64_
+#elif defined(_MIPS64_)
+#define _HOST_MIPS64_
 #endif
 
 //*****************************************************************************
@@ -501,6 +507,10 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget* pDataTarget,
             const WCHAR * resourceName = W("CLRDEBUGINFOCORESYSARM64");
     #endif
 
+    #if !defined (HOST_IS_WINDOWS_OS) && defined(_HOST_MIPS64_)
+            const WCHAR * resourceName = W("CLRDEBUGINFOCORESYSMIPS64");
+    #endif
+
     #if defined (HOST_IS_WINDOWS_OS) && defined(_HOST_ARM_)
             const WCHAR * resourceName = W("CLRDEBUGINFOWINDOWSARM");
     #endif
@@ -636,6 +646,8 @@ HRESULT CLRDebuggingImpl::FormatLongDacModuleName(__out_z __inout_ecount(cchBuff
     const WCHAR* pHostArch = W("arm");
 #elif defined(_HOST_ARM64_)
     const WCHAR* pHostArch = W("arm64");
+#elif defined(_HOST_MIPS64_)
+    const WCHAR* pHostArch = W("mips64");
 #else
     _ASSERTE(!"Unknown host arch");
     return E_NOTIMPL;
@@ -668,6 +680,10 @@ HRESULT CLRDebuggingImpl::FormatLongDacModuleName(__out_z __inout_ecount(cchBuff
     else if(targetImageFileMachine == IMAGE_FILE_MACHINE_ARM64)
     {
         pTargetArch = W("arm64");
+    }
+    else if(targetImageFileMachine == IMAGE_FILE_MACHINE_MIPS64)
+    {
+        pTargetArch = W("mips64");
     }
     else
     {

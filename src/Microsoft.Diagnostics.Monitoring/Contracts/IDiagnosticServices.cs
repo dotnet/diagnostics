@@ -40,9 +40,17 @@ namespace Microsoft.Diagnostics.Monitoring
     {
         DiagnosticsClient Client { get; }
 
-        int Pid { get; }
+        string CommandLine { get; }
 
-        Guid Uid { get; }
+        public string OperatingSystem { get; }
+
+        public string ProcessArchitecture { get; }
+
+        string ProcessName { get; }
+
+        int ProcessId { get; }
+
+        Guid RuntimeInstanceCookie { get; }
     }
 
     public enum DumpType
