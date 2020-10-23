@@ -4,9 +4,6 @@
 
 using Microsoft.Extensions.Options;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer
 {
@@ -15,7 +12,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         public MetricsStore MetricsStore { get; }
         
         public MetricsStoreService(
-            IOptions<PrometheusConfiguration> options)
+            IOptions<MetricsOptions> options)
         {
             MetricsStore = new MetricsStore(options.Value.MetricCount);
         }

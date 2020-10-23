@@ -2,12 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer
 {
@@ -21,13 +20,13 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         private readonly MetricsStoreService _store;
 
         public MetricsService(IDiagnosticServices services,
-            IOptions<PrometheusConfiguration> metricsConfiguration,
+            IOptions<MetricsOptions> metricsOptions,
             MetricsStoreService metricsStore)
         {
             _store = metricsStore;
 
             _pipeProcessor = new DiagnosticsEventPipeProcessor(PipeMode.Metrics, metricLoggers: new[] { new MetricsLogger(_store.MetricsStore) },
-                metricIntervalSeconds: metricsConfiguration.Value.UpdateIntervalSeconds);
+                metricIntervalSeconds: metricsOptions.Value.UpdateIntervalSeconds);
             _services = services;
         }
         
