@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -21,11 +22,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         private readonly PrometheusConfiguration _prometheusConfiguration;
 
         public MetricsController(ILogger<MetricsController> logger,
-            MetricsStoreService metricsStore,
+            IServiceProvider serviceProvider,
             IOptions<PrometheusConfiguration> prometheusConfiguration)
         {
             _logger = logger;
-            _metricsStore = metricsStore;
+            _metricsStore = serviceProvider.GetService<MetricsStoreService>();
             _prometheusConfiguration = prometheusConfiguration.Value;
         }
 

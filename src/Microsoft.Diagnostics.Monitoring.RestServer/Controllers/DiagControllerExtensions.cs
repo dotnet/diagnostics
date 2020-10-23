@@ -61,6 +61,10 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             {
                 return controller.BadRequest(FromException(e));
             }
+            catch (PipelineException e)
+            {
+                return controller.BadRequest(FromException(e));
+            }
         }
 
         private static ProblemDetails FromException(Exception e)

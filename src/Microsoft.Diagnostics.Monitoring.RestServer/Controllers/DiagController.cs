@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.Monitoring.RestServer.Models;
 using Microsoft.Diagnostics.Monitoring.RestServer.Validation;
 using Microsoft.Diagnostics.NETCore.Client;
@@ -117,8 +118,27 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             return this.InvokeService(async () =>
             {
                 IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(processFilter, HttpContext.RequestAborted);
-                Stream result = await _diagnosticServices.GetGcDump(processInfo, this.HttpContext.RequestAborted);
-                return File(result, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.ProcessId}.gcdump"));
+
+                var graph = new Graphs.MemoryGraph(50_000);
+
+                EventGCPipelineSettings settings = new EventGCPipelineSettings
+                {
+                    Duration = Timeout.InfiniteTimeSpan,
+                };
+                await using var pipeline = new EventGCDumpPipeline(processInfo.Client, settings, graph);
+                await pipeline.RunAsync(HttpContext.RequestAborted);
+                var dumper = new GCHeapDump(graph);
+                dumper.CreationTool = "dotnet-monitor";
+
+                //We can't use FastSerialization directly against the Response stream because
+                //the response stream size is not known.
+                var stream = new MemoryStream();
+                var serializer = new FastSerialization.Serializer(stream, dumper, leaveOpen: true);
+                serializer.Close();
+
+                stream.Position = 0;
+
+                return File(stream, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.ProcessId}.gcdump"));
             });
         }
 
@@ -148,7 +168,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 }
                 if (profile.HasFlag(TraceProfile.Metrics))
                 {
-                    configurations.Add(new MetricSourceConfiguration(metricsIntervalSeconds));
+                    configurations.Add(new MetricSourceConfiguration(metricsIntervalSeconds, Enumerable.Empty<string>()));
                 }
 
                 var aggregateConfiguration = new AggregateSourceConfiguration(configurations.ToArray());
@@ -216,19 +236,46 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
                 return new OutputStreamResult(async (outputStream, token) =>
                 {
-                    await _diagnosticServices.StartLogs(outputStream, processInfo, duration, format, level, token);
+                    using var loggerFactory = new LoggerFactory();
+
+                    loggerFactory.AddProvider(new StreamingLoggerProvider(outputStream, format, level));
+
+                    var settings = new EventLogsPipelineSettings
+                    {
+                        Duration = duration,
+                        LogLevel = level,
+                    };
+                    await using EventLogsPipeline pipeline = new EventLogsPipeline(processInfo.Client, settings, loggerFactory);
+                    await pipeline.RunAsync(token);
+
                 }, contentType, downloadName);
             });
         }
 
-        private async Task<StreamWithCleanupResult> StartTrace(
+        private async Task<ActionResult> StartTrace(
             ProcessFilter? processFilter,
             MonitoringSourceConfiguration configuration,
             TimeSpan duration)
         {
             IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(processFilter, HttpContext.RequestAborted);
-            IStreamWithCleanup result = await _diagnosticServices.StartTrace(processInfo, configuration, duration, this.HttpContext.RequestAborted);
-            return new StreamWithCleanupResult(result, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.ProcessId}.nettrace"));
+
+            return new OutputStreamResult(async (outputStream, token) =>
+            {
+                Func<Stream, CancellationToken, Task> streamAvailable = async (Stream eventStream, CancellationToken token) =>
+                {
+                    //Buffer size matches FileStreamResult
+                    //CONSIDER Should we allow client to change the buffer size?
+                    await eventStream.CopyToAsync(outputStream, 0x10000, token);
+                };
+
+                await using EventTracePipeline pipeProcessor = new EventTracePipeline(processInfo.Client, new EventTracePipelineSettings
+                {
+                    Configuration = configuration,
+                    Duration = duration,
+                }, streamAvailable);
+
+                await pipeProcessor.RunAsync(token);
+            }, "application/octet-stream", FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.ProcessId}.nettrace"));
         }
 
         private static TimeSpan ConvertSecondsToTimeSpan(int durationSeconds)

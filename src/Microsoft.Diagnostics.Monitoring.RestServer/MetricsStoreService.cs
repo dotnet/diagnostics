@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer
 {
-    public sealed class MetricsStoreService : IDisposable
+    internal sealed class MetricsStoreService : IDisposable
     {
         public MetricsStore MetricsStore { get; }
         
