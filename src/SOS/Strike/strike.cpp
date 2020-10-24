@@ -8643,7 +8643,7 @@ DECLARE_API(ThreadPool)
         CLRDATA_ADDRESS cdaTpMethodTable;
         {
             TADDR tpMethodTableAddr = NULL;
-            if (FAILED(GetMTOfObject(cdaTpInstance, &tpMethodTableAddr)))
+            if (FAILED(GetMTOfObject(TO_TADDR(cdaTpInstance), &tpMethodTableAddr)))
             {
                 break;
             }
@@ -8728,13 +8728,13 @@ DECLARE_API(ThreadPool)
             threadpool.HillClimbingLogSize = 0;
 
             // Get the hill climbing instance
-            if (FAILED(Status =
-                GetNonSharedStaticFieldValueFromName(
-                    &ui64Value,
-                    corelibModule,
-                    "System.Threading.PortableThreadPool+HillClimbing",
-                    W("ThreadPoolHillClimber"),
-                    ELEMENT_TYPE_CLASS)) ||
+            if (FAILED(
+                    GetNonSharedStaticFieldValueFromName(
+                        &ui64Value,
+                        corelibModule,
+                        "System.Threading.PortableThreadPool+HillClimbing",
+                        W("ThreadPoolHillClimber"),
+                        ELEMENT_TYPE_CLASS)) ||
                 ui64Value == 0)
             {
                 // The type was not loaded yet, or the static field was not found, etc. For now assume that the hill climber has
@@ -8747,7 +8747,7 @@ DECLARE_API(ThreadPool)
             CLRDATA_ADDRESS cdaTpHcMethodTable;
             {
                 TADDR tpHcMethodTableAddr = NULL;
-                if (FAILED(GetMTOfObject(cdaTpHcInstance, &tpHcMethodTableAddr)))
+                if (FAILED(GetMTOfObject(TO_TADDR(cdaTpHcInstance), &tpHcMethodTableAddr)))
                 {
                     ExtOut("    %s\n", "Failed to get method table for PortableThreadPool.HillClimbing");
                     break;
