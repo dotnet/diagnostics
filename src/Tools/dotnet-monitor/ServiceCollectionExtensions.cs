@@ -5,6 +5,7 @@
 using Microsoft.Diagnostics.Monitoring.Egress;
 using Microsoft.Diagnostics.Monitoring.Egress.AzureStorage;
 using Microsoft.Diagnostics.Monitoring.Egress.FileSystem;
+using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;

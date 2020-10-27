@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Diagnostics.Monitoring.Egress;
 using Microsoft.Diagnostics.Monitoring.Egress.AzureStorage;
 using Microsoft.Diagnostics.Monitoring.Egress.FileSystem;
+using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Options;
 using System;
 using System.IO;
