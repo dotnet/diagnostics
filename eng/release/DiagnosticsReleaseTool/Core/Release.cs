@@ -126,6 +126,7 @@ namespace ReleaseTool.Core
             int unpublishedFiles = 0;
 
             using IDisposable scope = _logger.BeginScope("Publishing files");
+            _logger.LogInformation("Publishing {fileCount} files", _filesToRelease.Count);
 
             foreach (FileReleaseData releaseData in _filesToRelease)
             {
