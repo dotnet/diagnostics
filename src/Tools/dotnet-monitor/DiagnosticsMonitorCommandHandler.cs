@@ -2,18 +2,18 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.CommandLine;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.CommandLine;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
@@ -45,20 +45,22 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                     {
                         //Note these are in precedence order.
                         ConfigureMetricsEndpoint(builder, metricUrls);
-                        builder.AddKeyPerFile(ConfigPath, optional: true);
-                        builder.AddEnvironmentVariables(ConfigPrefix);
                     }
+
+                    builder.AddKeyPerFile(ConfigPath, optional: true);
+
+                    builder.AddEnvironmentVariables(ConfigPrefix);
                 })
                 .ConfigureServices((WebHostBuilderContext context, IServiceCollection services) =>
                 {
                     //TODO Many of these service additions should be done through extension methods
-                    services.Configure<DiagnosticPortConfiguration>(context.Configuration.GetSection(nameof(DiagnosticPortConfiguration)));
+                    services.Configure<DiagnosticPortOptions>(context.Configuration.GetSection(DiagnosticPortOptions.ConfigurationKey));
                     services.AddSingleton<IEndpointInfoSource, FilteredEndpointInfoSource>();
                     services.AddHostedService<FilteredEndpointInfoSourceHostedService>();
                     services.AddSingleton<IDiagnosticServices, DiagnosticServices>();
                     if (metrics)
                     {
-                        services.Configure<PrometheusConfiguration>(context.Configuration.GetSection(nameof(PrometheusConfiguration)));
+                        services.Configure<MetricsOptions>(context.Configuration.GetSection(MetricsOptions.ConfigurationKey));
                     }
                 })
                 .UseUrls(urls)
@@ -71,10 +73,10 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         {
             builder.AddInMemoryCollection(new Dictionary<string, string>
             {
-                {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.Endpoints)), string.Join(';', metricEndpoints)},
-                {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.Enabled)), true.ToString()},
-                {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.UpdateIntervalSeconds)), 10.ToString()},
-                {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.MetricCount)), 3.ToString()}
+                {MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.Endpoints)), string.Join(';', metricEndpoints)},
+                {MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.Enabled)), true.ToString()},
+                {MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.UpdateIntervalSeconds)), 10.ToString()},
+                {MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.MetricCount)), 3.ToString()}
             });
         }
 
@@ -83,8 +85,8 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             DiagnosticPortConnectionMode connectionMode = string.IsNullOrEmpty(diagnosticPort) ? DiagnosticPortConnectionMode.Connect : DiagnosticPortConnectionMode.Listen;
             builder.AddInMemoryCollection(new Dictionary<string, string>
             {
-                {MakeKey(nameof(DiagnosticPortConfiguration), nameof(DiagnosticPortConfiguration.ConnectionMode)), connectionMode.ToString()},
-                {MakeKey(nameof(DiagnosticPortConfiguration), nameof(DiagnosticPortConfiguration.EndpointName)), diagnosticPort}
+                {MakeKey(DiagnosticPortOptions.ConfigurationKey, nameof(DiagnosticPortOptions.ConnectionMode)), connectionMode.ToString()},
+                {MakeKey(DiagnosticPortOptions.ConfigurationKey, nameof(DiagnosticPortOptions.EndpointName)), diagnosticPort}
             });
         }
 

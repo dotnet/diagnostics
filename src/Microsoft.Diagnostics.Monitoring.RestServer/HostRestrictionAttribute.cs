@@ -3,14 +3,10 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.AspNetCore.Mvc.ActionConstraints;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer
 {
@@ -42,8 +38,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 
         public IActionConstraint CreateInstance(IServiceProvider services)
         {
-            var metricOptions = services.GetRequiredService<IOptions<PrometheusConfiguration>>();
-            return new HostConstraint(metricOptions.Value.Enabled ? metricOptions.Value.Ports : Array.Empty<int?>());
+            var metricsOptions = services.GetRequiredService<IOptions<MetricsOptions>>();
+            return new HostConstraint(metricsOptions.Value.Enabled ? metricsOptions.Value.Ports : Array.Empty<int?>());
         }
     }
 }
