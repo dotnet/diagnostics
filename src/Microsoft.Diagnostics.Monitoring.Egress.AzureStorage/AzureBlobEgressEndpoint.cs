@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
 {
-    internal class AzureBlobEgressEndpoint : IEgressEndpoint<AzureBlobEgressStreamOptions>
+    internal class AzureBlobEgressEndpoint : EgressEndpoint<AzureBlobEgressStreamOptions>
     {
         private readonly AzureBlobEgressEndpointOptions _settings;
 
@@ -20,7 +20,8 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             _settings = settings;
         }
 
-        public async Task<EgressResult> EgressAsync(
+        // Overridden to prvent unnecessary creation of intermediate stream.
+        public override async Task<EgressResult> EgressAsync(
             Func<CancellationToken, Task<Stream>> action,
             string name,
             AzureBlobEgressStreamOptions options,
@@ -31,7 +32,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             return await Upload(stream, name, options, token);
         }
 
-        public async Task<EgressResult> EgressAsync(
+        public override async Task<EgressResult> EgressAsync(
             Func<Stream, CancellationToken, Task> action,
             string name,
             AzureBlobEgressStreamOptions options,

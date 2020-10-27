@@ -9,15 +9,27 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.Egress
 {
-    internal interface IEgressEndpoint<TOptions>
+    internal abstract class EgressEndpoint<TOptions>
     {
-        Task<EgressResult> EgressAsync(
+        public virtual Task<EgressResult> EgressAsync(
             Func<CancellationToken, Task<Stream>> action,
             string name,
             TOptions streamOptions,
-            CancellationToken token);
+            CancellationToken token)
+        {
+            return EgressAsync(
+                async (outputStream, token) =>
+                {
+                    using var inputStream = await action(token);
 
-        Task<EgressResult> EgressAsync(
+                    await inputStream.CopyToAsync(outputStream, 0x1000, token);
+                },
+                name,
+                streamOptions,
+                token);
+        }
+
+        public abstract Task<EgressResult> EgressAsync(
             Func<Stream, CancellationToken, Task> action,
             string name,
             TOptions streamOptions,
