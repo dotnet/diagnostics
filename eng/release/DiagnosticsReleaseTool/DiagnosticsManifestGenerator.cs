@@ -100,13 +100,26 @@ namespace DiagnosticsReleaseTool.Impl
                 akaLink = GenerateLinkFromMetadata(fileToRelease, linkSchema.GetString());
             }
 
+            string subPath = GenerateSubpath(fileToRelease);
+
             return new FileWithCdnData(
                 filePath: fileToRelease.PublishUri,
                 sha512: fileToRelease.FileMetadata.Sha512,
-                publishUrlSubPath: null,
+                publishUrlSubPath: subPath,
                 akaMsLink: akaLink,
                 comment: null
             );
+        }
+
+        private string GenerateSubpath(FileReleaseData fileToRelease)
+        {
+            var fi = new FileInfo(fileToRelease.FileMap.LocalSourcePath);
+            using var hash = System.Security.Cryptography.SHA256Managed.Create();
+            var enc = System.Text.Encoding.UTF8;
+            byte[] hashResult = hash.ComputeHash(enc.GetBytes(fileToRelease.FileMap.RelativeOutputPath));
+            string pathHash = BitConverter.ToString(hashResult).Replace("-", String.Empty);
+
+            return $"{_productReleaseMetadata.ReleaseVersion}/{pathHash}/{fi.Name}";
         }
 
         private static readonly Regex s_akaMsMetadataMatcher = new Regex(
