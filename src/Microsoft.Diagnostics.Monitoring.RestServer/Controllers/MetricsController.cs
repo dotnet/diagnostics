@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
@@ -18,11 +19,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         private readonly MetricsOptions _metricsOptions;
 
         public MetricsController(ILogger<MetricsController> logger,
-            MetricsStoreService metricsStore,
+            IServiceProvider serviceProvider,
             IOptions<MetricsOptions> metricsOptions)
         {
             _logger = logger;
-            _metricsStore = metricsStore;
+            _metricsStore = serviceProvider.GetService<MetricsStoreService>();
             _metricsOptions = metricsOptions.Value;
         }
 

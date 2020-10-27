@@ -481,7 +481,11 @@ stages:
         # This is to enable SDL runs part of Post-Build Validation Stage.
         # as well as NuGet, SourceLink, and signing validation.
         # The variables get imported from group dotnet-diagnostics-sdl-params
+        publishingInfraVersion: 3
         enableSourceLinkValidation: true
+        enableSigningValidation: true
+        enableSymbolValidation: false
+        enableNugetValidation: true
         symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
         publishInstallersAndChecksums: true
         SDLValidationParameters:
