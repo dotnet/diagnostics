@@ -20,15 +20,15 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         private EventCounterPipeline _counterPipeline;
         private readonly IDiagnosticServices _services;
         private readonly MetricsStoreService _store;
-        private readonly PrometheusConfiguration _metricsConfiguration;
+        private readonly MetricsOptions _options;
 
         public MetricsService(IDiagnosticServices services,
-            IOptions<PrometheusConfiguration> metricsConfiguration,
+            IOptions<MetricsOptions> metricsOptions,
             MetricsStoreService metricsStore)
         {
             _store = metricsStore;
             _services = services;
-            _metricsConfiguration = metricsConfiguration.Value;
+            _options = metricsOptions.Value;
         }
         
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -51,7 +51,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
                         {
                             CounterGroups = Array.Empty<EventPipeCounterGroup>(),
                             Duration = Timeout.InfiniteTimeSpan,
-                            RefreshInterval = TimeSpan.FromSeconds(_metricsConfiguration.UpdateIntervalSeconds)
+                            RefreshInterval = TimeSpan.FromSeconds(_options.UpdateIntervalSeconds)
                         }, metricsLogger: new[] { new MetricsLogger(_store.MetricsStore) });
 
                         await _counterPipeline.RunAsync(stoppingToken);

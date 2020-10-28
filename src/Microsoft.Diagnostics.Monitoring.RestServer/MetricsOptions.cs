@@ -2,13 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
+using System;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer
 {
@@ -18,11 +14,13 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
     /// TODO How do we determine which process to scrape in multi-proc situations? How do we configure this
     /// for situations where the pid is not known or ambiguous?
     /// </summary>
-    public class PrometheusConfiguration
+    public class MetricsOptions
     {
+        public const string ConfigurationKey = "Metrics";
+
         private readonly Lazy<int?[]> _ports;
         
-        public PrometheusConfiguration()
+        public MetricsOptions()
         {
             _ports = new Lazy<int?[]>(() =>
                 {

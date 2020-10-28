@@ -78,14 +78,14 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 .ConfigureServices((WebHostBuilderContext context, IServiceCollection services) =>
                 {
                     //TODO Many of these service additions should be done through extension methods
-                    services.Configure<DiagnosticPortConfiguration>(context.Configuration.GetSection(nameof(DiagnosticPortConfiguration)));
+                    services.Configure<DiagnosticPortOptions>(context.Configuration.GetSection(DiagnosticPortOptions.ConfigurationKey));
                     services.AddSingleton<IEndpointInfoSource, FilteredEndpointInfoSource>();
                     services.AddHostedService<FilteredEndpointInfoSourceHostedService>();
                     services.AddSingleton<IDiagnosticServices, DiagnosticServices>();
                     services.ConfigureEgress(context.Configuration);
                     if (metrics)
                     {
-                        services.Configure<PrometheusConfiguration>(context.Configuration.GetSection(nameof(PrometheusConfiguration)));
+                        services.Configure<MetricsOptions>(context.Configuration.GetSection(MetricsOptions.ConfigurationKey));
                     }
                 })
                 .UseUrls(urls)
@@ -98,10 +98,10 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         {
             builder.AddInMemoryCollection(new Dictionary<string, string>
             {
-                {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.Endpoints)), string.Join(';', metricEndpoints)},
-                {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.Enabled)), true.ToString()},
-                {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.UpdateIntervalSeconds)), 10.ToString()},
-                {MakeKey(nameof(PrometheusConfiguration), nameof(PrometheusConfiguration.MetricCount)), 3.ToString()}
+                {MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.Endpoints)), string.Join(';', metricEndpoints)},
+                {MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.Enabled)), true.ToString()},
+                {MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.UpdateIntervalSeconds)), 10.ToString()},
+                {MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.MetricCount)), 3.ToString()}
             });
         }
 
@@ -110,8 +110,8 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             DiagnosticPortConnectionMode connectionMode = string.IsNullOrEmpty(diagnosticPort) ? DiagnosticPortConnectionMode.Connect : DiagnosticPortConnectionMode.Listen;
             builder.AddInMemoryCollection(new Dictionary<string, string>
             {
-                {MakeKey(nameof(DiagnosticPortConfiguration), nameof(DiagnosticPortConfiguration.ConnectionMode)), connectionMode.ToString()},
-                {MakeKey(nameof(DiagnosticPortConfiguration), nameof(DiagnosticPortConfiguration.EndpointName)), diagnosticPort}
+                {MakeKey(DiagnosticPortOptions.ConfigurationKey, nameof(DiagnosticPortOptions.ConnectionMode)), connectionMode.ToString()},
+                {MakeKey(DiagnosticPortOptions.ConfigurationKey, nameof(DiagnosticPortOptions.EndpointName)), diagnosticPort}
             });
         }
 

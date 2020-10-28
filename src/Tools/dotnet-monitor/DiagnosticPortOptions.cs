@@ -4,8 +4,10 @@
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
-    public class DiagnosticPortConfiguration
+    public class DiagnosticPortOptions
     {
+        public const string ConfigurationKey = "DiagnosticPort";
+
         public DiagnosticPortConnectionMode ConnectionMode { get; set; }
 
         public string EndpointName { get; set; }
