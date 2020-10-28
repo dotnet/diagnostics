@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using FastSerialization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
@@ -133,7 +134,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
                 string fileName = FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.EndpointInfo.ProcessId}.gcdump");
 
-                Func<CancellationToken, Task<Stream>> action = async (token) => {
+                Func<CancellationToken, Task<IFastSerializable>> action = async (token) => {
                     var graph = new Graphs.MemoryGraph(50_000);
 
                     EventGCPipelineSettings settings = new EventGCPipelineSettings
@@ -145,31 +146,24 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
                     await using var pipeline = new EventGCDumpPipeline(client, settings, graph);
                     await pipeline.RunAsync(token);
-                    var dumper = new GCHeapDump(graph);
-                    dumper.CreationTool = "dotnet-monitor";
 
-                    // We can't use FastSerialization directly against the Response stream because
-                    // the response stream size is not known.
-                    var stream = new MemoryStream();
-                    var serializer = new FastSerialization.Serializer(stream, dumper, leaveOpen: true);
-                    serializer.Close();
-
-                    stream.Position = 0;
-
-                    return stream;
+                    return new GCHeapDump(graph)
+                    {
+                        CreationTool = "dotnet-monitor"
+                    };
                 };
 
                 if (string.IsNullOrEmpty(egressEndpoint))
                 {
                     return new OutputStreamResult(
-                        action,
+                        ConvertFastSerializeAction(action),
                         ContentTypes.ApplicationOctectStream,
                         fileName);
                 }
                 else
                 {
                     return new EgressStreamResult(
-                        action,
+                        ConvertFastSerializeAction(action),
                         egressEndpoint,
                         fileName,
                         processInfo.EndpointInfo);
@@ -393,6 +387,44 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 return LogFormat.Json;
             }
             return LogFormat.None;
+        }
+
+        private static Func<Stream, CancellationToken, Task> ConvertFastSerializeAction(Func<CancellationToken, Task<IFastSerializable>> action)
+        {
+            return async (stream, token) =>
+            {
+                IFastSerializable fastSerializable = await action(token);
+
+                // FastSerialization requests the length of the stream before serializing to the stream.
+                // If the stream is a response stream, requesting the length or setting the position is
+                // not supported. Create an intermediate buffer if testing the stream fails.
+                bool useIntermediateStream = false;
+                try
+                {
+                    _ = stream.Length;
+                }
+                catch (NotSupportedException)
+                {
+                    useIntermediateStream = true;
+                }
+
+                if (useIntermediateStream)
+                {
+                    using var intermediateStream = new MemoryStream();
+
+                    var serializer = new Serializer(intermediateStream, fastSerializable, leaveOpen: true);
+                    serializer.Close();
+
+                    intermediateStream.Position = 0;
+
+                    await intermediateStream.CopyToAsync(stream, 0x1000, token);
+                }
+                else
+                {
+                    var serializer = new Serializer(stream, fastSerializable, leaveOpen: true);
+                    serializer.Close();
+                }
+            };
         }
     }
 }

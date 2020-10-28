@@ -17,18 +17,6 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         private readonly string _contentType;
         private readonly string _fileDownloadName;
 
-        public OutputStreamResult(Func<CancellationToken, Task<Stream>> action, string contentType, string fileDownloadName = null)
-        {
-            _contentType = contentType;
-            _fileDownloadName = fileDownloadName;
-            _action = async (stream, token) =>
-            {
-                using var sourceStream = await action(token);
-
-                await sourceStream.CopyToAsync(stream, 0x1000, token);
-            };
-        }
-
         public OutputStreamResult(Func<Stream, CancellationToken, Task> action, string contentType, string fileDownloadName = null)
         {
             _contentType = contentType;
