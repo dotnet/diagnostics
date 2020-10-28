@@ -73,6 +73,7 @@ if(WIN32)
     gchist.cpp
     gcroot.cpp
     hostcoreclr.cpp
+    hostdesktop.cpp
     metadata.cpp
     runtime.cpp
     sigparser.cpp
@@ -110,6 +111,7 @@ if(WIN32)
     advapi32.lib
     psapi.lib
     ntdll.lib
+    mscoree.lib
   )
 else(WIN32)
   add_definitions(-DFEATURE_ENABLE_HARDWARE_EXCEPTIONS)

@@ -40,23 +40,29 @@
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
 #endif
 
-bool g_dotnetDumpHost = false;
-static bool g_hostingInitialized = false;
-bool g_symbolStoreInitialized = false;
-LPCSTR g_hostRuntimeDirectory = nullptr;
-LPCSTR g_tmpPath = nullptr;
-SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
-#ifndef FEATURE_PAL
-HMODULE g_hmoduleSymBinder = nullptr;
-ISymUnmanagedBinder3 *g_pSymBinder = nullptr;
-#endif
-
 #ifdef FEATURE_PAL
 #define TPALIST_SEPARATOR_STR_A ":"
 #else
 #define TPALIST_SEPARATOR_STR_A ";"
 #endif
 
+#ifndef FEATURE_PAL
+extern HRESULT InitializeDesktopClrHost();
+extern void UninitializeDesktopClrHost();
+#endif
+
+bool g_dotnetDumpHost = false;
+static bool g_hostingInitialized = false;
+bool g_symbolStoreInitialized = false;
+LPCSTR g_hostRuntimeDirectory = nullptr;
+LPCSTR g_tmpPath = nullptr;
+SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
+
+#ifndef FEATURE_PAL
+bool g_useDesktopClrHost = true;
+HMODULE g_hmoduleSymBinder = nullptr;
+ISymUnmanagedBinder3 *g_pSymBinder = nullptr;
+#endif
 //
 // Build the TPA list of assemblies for the runtime hosting api.
 //
@@ -456,6 +462,24 @@ void CleanupTempDirectory()
     }
 }
 
+#ifndef FEATURE_PAL
+
+/**********************************************************************\
+ * Called when the desktop clr is initialized on Windows
+\**********************************************************************/
+extern "C" HRESULT InitializeBySymbolReader(
+    SOSNetCoreCallbacks * callbacks,
+    int callbacksSize)
+{
+    if (memcpy_s(&g_SOSNetCoreCallbacks, sizeof(g_SOSNetCoreCallbacks), callbacks, callbacksSize) != 0)
+    {
+        return E_INVALIDARG;
+    }
+    return S_OK;
+}
+
+#endif
+
 /**********************************************************************\
  * Called when the managed SOS Host loads/initializes SOS.
 \**********************************************************************/
@@ -511,13 +535,26 @@ HRESULT InitializeHosting()
     {
         return S_OK;
     }
+    HRESULT Status;
+#ifndef FEATURE_PAL
+    if (g_useDesktopClrHost)
+    {
+        Status = InitializeDesktopClrHost();
+        if (SUCCEEDED(Status))
+        {
+            OnUnloadTask::Register(UninitializeDesktopClrHost);
+            g_hostingInitialized = true;
+            return Status;
+        }
+    }
+#endif
     coreclr_initialize_ptr initializeCoreCLR = nullptr;
     coreclr_create_delegate_ptr createDelegate = nullptr;
     std::string hostRuntimeDirectory;
     std::string sosModuleDirectory;
     std::string coreClrPath;
 
-    HRESULT Status = GetHostRuntime(coreClrPath, hostRuntimeDirectory);
+    Status = GetHostRuntime(coreClrPath, hostRuntimeDirectory);
     if (FAILED(Status))
     {
         ExtDbgOut("Error: Failed to get host runtime directory\n");

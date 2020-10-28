@@ -109,6 +109,8 @@
           <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
           <FrameworkVersion>$(AspNetCoreVersion21)</FrameworkVersion>
+          <!-- Do at least one test hosted on .NET Core. -->
+          <SOSHostRuntime>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeVersion21)</SOSHostRuntime>
         </Option>
         <!--
             SOS.WebApp3 and SOS.DualRuntimes (runs on 3.1 and latest aspnetcore)
@@ -141,7 +143,6 @@
 
       <FrameworkVersion Condition="'$(FrameworkVersion)' == ''">$(RuntimeFrameworkVersion)</FrameworkVersion>
       <RuntimeSymbolsPath>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
-      <SOSHostRuntime>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)</SOSHostRuntime>
       <HostExe>$(DotNetRoot)\dotnet.exe</HostExe>
       <HostArgs>--fx-version $(FrameworkVersion)</HostArgs>
     </Option>
@@ -163,7 +164,6 @@
       <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
       <DebugType>full</DebugType>
       <RuntimeSymbolsPath>$(DesktopFrameworkPath)</RuntimeSymbolsPath>
-      <SOSHostRuntime>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeVersion21)</SOSHostRuntime>
     </Option>
   </Options>
 

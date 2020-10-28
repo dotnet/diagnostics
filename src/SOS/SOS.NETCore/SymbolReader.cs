@@ -12,6 +12,7 @@ using Microsoft.SymbolStore.SymbolStores;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
@@ -154,6 +155,9 @@ namespace SOS
         const string MsdlSymbolServer = "http://msdl.microsoft.com/download/symbols/";
         const string SymwebSymbolServer = "http://symweb.corp.microsoft.com/";
 
+        [DllImport("sos.dll")]
+        private static extern int InitializeBySymbolReader([In, MarshalAs(UnmanagedType.Struct)] ref SOSNetCoreCallbacks callbacks, int callbacksSize);
+
         /// <summary>
         /// Read memory callback
         /// </summary>
@@ -173,6 +177,137 @@ namespace SOS
         /// <param name="symbolFileName">symbol file name and path</param>
         public delegate void SymbolFileCallback(IntPtr parameter, [MarshalAs(UnmanagedType.LPStr)] string moduleFileName, [MarshalAs(UnmanagedType.LPStr)] string symbolFileName);
 
+        #region SOS.NETCore function delegates
+
+        public delegate bool InitializeSymbolStoreDelegate(
+            bool logging,
+            bool msdl,
+            bool symweb,
+            string tempDirectory,
+            string symbolServerPath,
+            string authToken,
+            int timeoutInMintues,
+            string symbolCachePath,
+            string symbolDirectoryPath,
+            string windowsSymbolPath);
+
+        public delegate void DisplaySymbolStoreDelegate(
+            SymbolReader.WriteLine writeLine);
+
+        public delegate void DisableSymbolStoreDelegate();
+
+        public delegate void LoadNativeSymbolsDelegate(
+            SymbolReader.SymbolFileCallback callback,
+            IntPtr parameter,
+            SymbolReader.RuntimeConfiguration config,
+            string moduleFilePath,
+            ulong address,
+            int size,
+            SymbolReader.ReadMemoryDelegate readMemory);
+
+        public delegate void LoadNativeSymbolsFromIndexDelegate(
+            SymbolReader.SymbolFileCallback callback,
+            IntPtr parameter,
+            SymbolReader.RuntimeConfiguration config,
+            string moduleFilePath,
+            bool specialKeys,
+            int moduleIndexSize,
+            IntPtr moduleIndex);
+
+        public delegate IntPtr LoadSymbolsForModuleDelegate(
+            string assemblyPath,
+            bool isFileLayout,
+            ulong loadedPeAddress,
+            int loadedPeSize,
+            ulong inMemoryPdbAddress,
+            int inMemoryPdbSize,
+            SymbolReader.ReadMemoryDelegate readMemory);
+
+        public delegate void DisposeDelegate(
+            IntPtr symbolReaderHandle);
+
+        public delegate bool ResolveSequencePointDelegate(
+            IntPtr symbolReaderHandle,
+            string filePath,
+            int lineNumber,
+            out int methodToken,
+            out int ilOffset);
+
+        public delegate bool GetLineByILOffsetDelegate(
+            IntPtr symbolReaderHandle,
+            int methodToken,
+            long ilOffset,
+            out int lineNumber,
+            out IntPtr fileName);
+
+        public delegate bool GetLocalVariableNameDelegate(
+            IntPtr symbolReaderHandle,
+            int methodToken,
+            int localIndex,
+            out IntPtr localVarName);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        public delegate UIntPtr GetExpressionDelegate(
+            [In, MarshalAs(UnmanagedType.LPStr)] string expression);
+
+        public delegate int GetMetadataLocatorDelegate(
+            [MarshalAs(UnmanagedType.LPWStr)] string imagePath,
+            uint imageTimestamp,
+            uint imageSize,
+            [MarshalAs(UnmanagedType.LPArray, SizeConst = 16)] byte[] mvid,
+            uint mdRva,
+            uint flags,
+            uint bufferSize,
+            IntPtr buffer,
+            IntPtr dataSize);
+
+        public delegate int GetICorDebugMetadataLocatorDelegate(
+            [MarshalAs(UnmanagedType.LPWStr)] string imagePath,
+            uint imageTimestamp,
+            uint imageSize,
+            uint pathBufferSize,
+            IntPtr pPathBufferSize,
+            IntPtr pPathBuffer);
+
+        #endregion
+
+        /// <summary>
+        /// Symbol service callback table
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
+        public struct SOSNetCoreCallbacks
+        {
+            public InitializeSymbolStoreDelegate InitializeSymbolStoreDelegate;
+            public DisplaySymbolStoreDelegate DisplaySymbolStoreDelegate;
+            public DisableSymbolStoreDelegate DisableSymbolStoreDelegate;
+            public LoadNativeSymbolsDelegate LoadNativeSymbolsDelegate;
+            public LoadNativeSymbolsFromIndexDelegate LoadNativeSymbolsFromIndexDelegate;
+            public LoadSymbolsForModuleDelegate LoadSymbolsForModuleDelegate;
+            public DisposeDelegate DisposeDelegate;
+            public ResolveSequencePointDelegate ResolveSequencePointDelegate;
+            public GetLineByILOffsetDelegate GetLineByILOffsetDelegate;
+            public GetLocalVariableNameDelegate GetLocalVariableNameDelegate;
+            public GetMetadataLocatorDelegate GetMetadataLocatorDelegate;
+            public GetExpressionDelegate GetExpressionDelegate;
+            public GetICorDebugMetadataLocatorDelegate GetICorDebugMetadataLocatorDelegate;
+        }
+
+        public static SOSNetCoreCallbacks SymbolCallbacks = new SOSNetCoreCallbacks {
+            InitializeSymbolStoreDelegate = SymbolReader.InitializeSymbolStore,
+            DisplaySymbolStoreDelegate = SymbolReader.DisplaySymbolStore,
+            DisableSymbolStoreDelegate = SymbolReader.DisableSymbolStore,
+            LoadNativeSymbolsDelegate = SymbolReader.LoadNativeSymbols,
+            LoadNativeSymbolsFromIndexDelegate = SymbolReader.LoadNativeSymbolsFromIndex,
+            LoadSymbolsForModuleDelegate = SymbolReader.LoadSymbolsForModule,
+            DisposeDelegate = SymbolReader.Dispose,
+            ResolveSequencePointDelegate = SymbolReader.ResolveSequencePoint,
+            GetLineByILOffsetDelegate = SymbolReader.GetLineByILOffset,
+            GetLocalVariableNameDelegate = SymbolReader.GetLocalVariableName,
+            GetMetadataLocatorDelegate = MetadataHelper.GetMetadataLocator,
+            GetExpressionDelegate = SymbolReader.GetExpression,
+            GetICorDebugMetadataLocatorDelegate = MetadataHelper.GetICorDebugMetadataLocator
+        };
+
         /// <summary>
         /// Temporary directory for dac/symbols
         /// </summary>
@@ -180,6 +315,16 @@ namespace SOS
 
         static readonly ITracer s_tracer = new Tracer();
         static SymbolStore s_symbolStore = null;
+
+        /// <summary>
+        /// Entry point from the desktop hosting code.
+        /// </summary>
+        /// <param name="argument">SOS module path</param>
+        /// <returns>0 success, !0 failure</returns>
+        public static int InitializeSymbolReader(string argument)
+        {
+            return InitializeBySymbolReader(ref SymbolCallbacks, Marshal.SizeOf<SymbolReader.SOSNetCoreCallbacks>());
+        }
 
         /// <summary>
         /// Initializes symbol loading. Adds the symbol server and/or the cache path (if not null) to the list of
@@ -532,6 +677,24 @@ namespace SOS
             catch
             {
             }
+        }
+
+        /// <summary>
+        /// Get expression helper for native SOS.
+        /// </summary>
+        /// <param name="expression">hex number</param>
+        /// <returns>value</returns>
+        public static UIntPtr GetExpression(
+            string expression)
+        {
+            if (expression != null)
+            {
+                if (ulong.TryParse(expression.Replace("0x", ""), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ulong result))
+                {
+                    return new UIntPtr(result);
+                }
+            }
+            return UIntPtr.Zero;
         }
 
         /// <summary>
