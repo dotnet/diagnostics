@@ -35,21 +35,6 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             }
 
             public override async Task<EgressResult> EgressAsync(
-                Func<CancellationToken, Task<Stream>> action,
-                string fileName,
-                string contentType,
-                IEndpointInfo source,
-                CancellationToken token)
-            {
-                var streamOptions = new FileSystemEgressStreamOptions();
-
-                var endpoint = new FileSystemEgressEndpoint(CreateEndpointOptions());
-                string filepath = await endpoint.EgressAsync(action, fileName, streamOptions, token);
-
-                return new EgressResult("path", filepath);
-            }
-
-            public override async Task<EgressResult> EgressAsync(
                 Func<Stream, CancellationToken, Task> action,
                 string fileName,
                 string contentType,

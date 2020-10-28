@@ -20,18 +20,6 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             _settings = settings;
         }
 
-        // Overridden to prvent unnecessary creation of intermediate stream.
-        public override async Task<string> EgressAsync(
-            Func<CancellationToken, Task<Stream>> action,
-            string name,
-            AzureBlobEgressStreamOptions options,
-            CancellationToken token)
-        {
-            using var stream = await action(token);
-
-            return await Upload(stream, name, options, token);
-        }
-
         public override async Task<string> EgressAsync(
             Func<Stream, CancellationToken, Task> action,
             string name,

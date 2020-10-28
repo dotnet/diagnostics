@@ -14,14 +14,6 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
     {
         Task<EgressResult> EgressAsync(
             string endpointName,
-            Func<CancellationToken, Task<Stream>> action,
-            string fileName,
-            string contentType,
-            IEndpointInfo source,
-            CancellationToken token);
-
-        Task<EgressResult> EgressAsync(
-            string endpointName,
             Func<Stream, CancellationToken, Task> action,
             string fileName,
             string contentType,

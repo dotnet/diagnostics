@@ -14,13 +14,6 @@ namespace Microsoft.Diagnostics.Tools.Monitor
     internal abstract class ConfiguredEgressEndpoint
     {
         public abstract Task<EgressResult> EgressAsync(
-            Func<CancellationToken, Task<Stream>> action,
-            string fileName,
-            string contentType,
-            IEndpointInfo source,
-            CancellationToken token);
-
-        public abstract Task<EgressResult> EgressAsync(
             Func<Stream, CancellationToken, Task> action,
             string fileName,
             string contentType,

@@ -11,24 +11,6 @@ namespace Microsoft.Diagnostics.Monitoring.Egress
 {
     internal abstract class EgressEndpoint<TOptions>
     {
-        public virtual Task<string> EgressAsync(
-            Func<CancellationToken, Task<Stream>> action,
-            string name,
-            TOptions streamOptions,
-            CancellationToken token)
-        {
-            return EgressAsync(
-                async (outputStream, token) =>
-                {
-                    using var inputStream = await action(token);
-
-                    await inputStream.CopyToAsync(outputStream, 0x1000, token);
-                },
-                name,
-                streamOptions,
-                token);
-        }
-
         public abstract Task<string> EgressAsync(
             Func<Stream, CancellationToken, Task> action,
             string name,

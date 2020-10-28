@@ -50,33 +50,6 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             }
 
             public override async Task<EgressResult> EgressAsync(
-                Func<CancellationToken, Task<Stream>> action,
-                string fileName,
-                string contentType,
-                IEndpointInfo source,
-                CancellationToken token)
-            {
-                var endpointOptions = new AzureBlobEgressEndpointOptions(_optionsTemplate);
-
-                // If SAS token is not specified, use the one from the SAS token configuration that has
-                // a name that matches the endpoint name.
-                if (string.IsNullOrEmpty(endpointOptions.SharedAccessSignature) &&
-                    _azureStorageOptions.CurrentValue.SharedAccessSignatures.TryGetValue(_endpointName, out string sasToken))
-                {
-                    endpointOptions.SharedAccessSignature = sasToken;
-                }
-
-                // TODO: Add metadata based on source
-                var streamOptions = new AzureBlobEgressStreamOptions();
-                streamOptions.ContentType = contentType;
-
-                var endpoint = new AzureBlobEgressEndpoint(endpointOptions);
-                string blobUri = await endpoint.EgressAsync(action, fileName, streamOptions, token);
-
-                return new EgressResult("uri", blobUri);
-            }
-
-            public override async Task<EgressResult> EgressAsync(
                 Func<Stream, CancellationToken, Task> action,
                 string fileName,
                 string contentType,
