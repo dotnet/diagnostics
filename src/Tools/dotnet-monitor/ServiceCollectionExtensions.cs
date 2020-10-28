@@ -2,14 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Monitoring.Egress;
-using Microsoft.Diagnostics.Monitoring.Egress.AzureStorage;
-using Microsoft.Diagnostics.Monitoring.Egress.FileSystem;
 using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
@@ -20,27 +19,14 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             // Configure AzureStorageOptions to bind to the AzureStorage configuration key.
             services.Configure<AzureStorageOptions>(configuration.GetSection(AzureStorageOptions.ConfigurationKey));
 
-            IConfigurationSection egressSection = configuration.GetSection(EgressOptions.ConfigurationKey);
-
             // Register change token for EgressOptions binding
-            services.AddSingleton((IOptionsChangeTokenSource<EgressOptions>)new ConfigurationChangeTokenSource<EgressOptions>(egressSection));
+            services.AddSingleton((IOptionsChangeTokenSource<EgressOptions>)new ConfigurationChangeTokenSource<EgressOptions>(GetEgressSection(configuration)));
 
             // Configure EgressOptions to bind to the Egress configuration key.
             // The options are manually created due to how the Endpoints property
             // hold concrete implementations that are based on the 'type' property
             // for each endpoint entry.
-            services.Configure<EgressOptions>(egress => {
-                IConfigurationSection endpointsSection = egressSection
-                    .GetSection(nameof(EgressOptions.Endpoints));
-
-                foreach (var child in endpointsSection.GetChildren())
-                {
-                    if (TryCreateSettings(child, out var settings))
-                    {
-                        egress.Endpoints.Add(child.Key, settings);
-                    }
-                }
-            });
+            services.AddSingleton<IConfigureOptions<EgressOptions>, EgressConfigureOptions>();
 
             // Register IEgressService implementation that provides egressing
             // of artifacts for the REST server.
@@ -49,38 +35,76 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             return services;
         }
 
-        private static bool TryCreateSettings(IConfigurationSection section, out EgressEndpointOptions settings)
+        private static IConfigurationSection GetEgressSection(IConfiguration configuration)
         {
-            EndpointType endpointType;
-            try
-            {
-                endpointType = section.GetValue("type", EndpointType.Unknown);
-            }
-            catch (InvalidOperationException)
-            {
-                settings = null;
-                return false;
-            }
-
-            switch (endpointType)
-            {
-                case EndpointType.AzureBlobStorage:
-                    settings = section.Get<AzureBlobEgressEndpointOptions>();
-                    return true;
-                case EndpointType.FileSystem:
-                    settings = section.Get<FileSystemEgressEndpointOptions>();
-                    return true;
-            }
-
-            settings = null;
-            return false;
+            return configuration.GetSection(EgressOptions.ConfigurationKey);
         }
 
-        private enum EndpointType
+        private class EgressConfigureOptions : IConfigureOptions<EgressOptions>
         {
-            Unknown = 0,
-            FileSystem,
-            AzureBlobStorage
+            private readonly IConfiguration _configuration;
+            private readonly ILogger<EgressConfigureOptions> _logger;
+            private readonly IDictionary<string, EgressProvider> _providers
+                = new Dictionary<string, EgressProvider>(StringComparer.OrdinalIgnoreCase);
+
+            public EgressConfigureOptions(
+                ILogger<EgressConfigureOptions> logger,
+                IConfiguration configuration,
+                IOptionsMonitor<AzureStorageOptions> azureStorageOptions)
+            {
+                _configuration = configuration;
+                _logger = logger;
+
+                // Register egress providers
+                _providers.Add("AzureBlobStorage", new AzureBlobEgressProvider(azureStorageOptions));
+                _providers.Add("FileSystem", new FileSystemEgressProvider());
+            }
+
+            public void Configure(EgressOptions options)
+            {
+                IConfigurationSection endpointsSection = GetEgressSection(_configuration)
+                    .GetSection(nameof(EgressOptions.Endpoints));
+
+                foreach (var endpointSection in endpointsSection.GetChildren())
+                {
+                    string endpointName = endpointSection.Key;
+
+                    if (!TryGetEgressType(endpointSection, out string egressTypeName))
+                    {
+                        _logger.LogWarning("Egress endpoint '{0}' does not have a 'type' setting.", endpointName);
+                        continue;
+                    }
+                    
+                    if (!_providers.TryGetValue(egressTypeName, out EgressProvider provider))
+                    {
+                        _logger.LogWarning("Egress type '{0}' on endpoint '{1}' is not supported.", egressTypeName, endpointName);
+                        continue;
+                    }
+                    
+                    if (!provider.TryParse(endpointName, endpointSection, out ConfiguredEgressEndpoint endpoint))
+                    {
+                        _logger.LogWarning("Unable to create egress endpoint '{0}' due to invalid options.", endpointName);
+                        continue;
+                    }
+
+                    options.Endpoints.Add(endpointName, endpoint);
+                }
+            }
+
+            private static bool TryGetEgressType(IConfigurationSection section, out string endpointTypeName)
+            {
+                try
+                {
+                    endpointTypeName = section.GetValue<string>("type", defaultValue: null);
+                }
+                catch (InvalidOperationException)
+                {
+                    endpointTypeName = null;
+                    return false;
+                }
+
+                return !string.IsNullOrEmpty(endpointTypeName);
+            }
         }
     }
 }

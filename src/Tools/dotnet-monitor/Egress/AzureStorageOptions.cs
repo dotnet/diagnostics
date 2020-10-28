@@ -2,17 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Monitoring.Egress;
 using System;
 using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
-    internal class EgressOptions
+    internal class AzureStorageOptions
     {
-        public const string ConfigurationKey = "Egress";
+        public const string ConfigurationKey = "AzureStorage";
 
-        public Dictionary<string, EgressEndpointOptions> Endpoints { get; }
-            = new Dictionary<string, EgressEndpointOptions>(StringComparer.Ordinal);
+        public Dictionary<string, string> SasTokens { get; }
+            = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     }
 }

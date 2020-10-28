@@ -1,0 +1,108 @@
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using Microsoft.Diagnostics.Monitoring;
+using Microsoft.Diagnostics.Monitoring.Egress;
+using Microsoft.Diagnostics.Monitoring.Egress.AzureStorage;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
+using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Microsoft.Diagnostics.Tools.Monitor
+{
+    internal class AzureBlobEgressProvider : EgressProvider
+    {
+        private readonly IOptionsMonitor<AzureStorageOptions> _azureStorageOptions;
+
+        public AzureBlobEgressProvider(IOptionsMonitor<AzureStorageOptions> azureStorageOptions)
+        {
+            _azureStorageOptions = azureStorageOptions;
+        }
+
+        public override bool TryParse(string endpointName, IConfigurationSection config, out ConfiguredEgressEndpoint endpoint)
+        {
+            var optionsTemplate = config.Get<AzureBlobEgressEndpointOptions>();
+
+            // TODO: Validate options
+
+            endpoint = new Endpoint(endpointName, optionsTemplate, _azureStorageOptions);
+            return true;
+        }
+
+        private class Endpoint : ConfiguredEgressEndpoint
+        {
+            private readonly IOptionsMonitor<AzureStorageOptions> _azureStorageOptions;
+            private readonly string _endpointName;
+            private readonly AzureBlobEgressEndpointOptions _optionsTemplate;
+
+            public Endpoint(
+                string endpointName,
+                AzureBlobEgressEndpointOptions optionsTemplate,
+                IOptionsMonitor<AzureStorageOptions> azureStorageOptions)
+            {
+                _azureStorageOptions = azureStorageOptions;
+                _endpointName = endpointName;
+                _optionsTemplate = optionsTemplate;
+            }
+
+            public override Task<EgressResult> EgressAsync(
+                Func<CancellationToken, Task<Stream>> action,
+                string fileName,
+                string contentType,
+                IEndpointInfo source,
+                CancellationToken token)
+            {
+                var endpointOptions = new AzureBlobEgressEndpointOptions(_optionsTemplate);
+
+                // If SAS token is not specified, use the one from the SAS token configuration that has
+                // a name that matches the endpoint name.
+                if (string.IsNullOrEmpty(endpointOptions.SasToken) &&
+                    _azureStorageOptions.CurrentValue.SasTokens.TryGetValue(_endpointName, out string sasToken))
+                {
+                    endpointOptions.SasToken = sasToken;
+                }
+
+                // TODO: Add metadata based on source
+                var streamOptions = new AzureBlobEgressStreamOptions();
+                streamOptions.ContentType = contentType;
+
+                var endpoint = new AzureBlobEgressEndpoint(endpointOptions);
+                return endpoint.EgressAsync(action, fileName, streamOptions, token);
+            }
+
+            public override Task<EgressResult> EgressAsync(
+                Func<Stream, CancellationToken, Task> action,
+                string fileName,
+                string contentType,
+                IEndpointInfo source,
+                CancellationToken token)
+            {
+                // TODO: Add metadata based on source
+                var streamOptions = new AzureBlobEgressStreamOptions();
+                streamOptions.ContentType = contentType;
+
+                var endpoint = new AzureBlobEgressEndpoint(CreateEndpointOptions());
+                return endpoint.EgressAsync(action, fileName, streamOptions, token);
+            }
+
+            private AzureBlobEgressEndpointOptions CreateEndpointOptions()
+            {
+                var endpointOptions = new AzureBlobEgressEndpointOptions(_optionsTemplate);
+
+                // If SAS token is not specified, use the one from the SAS token configuration that has
+                // a name that matches the endpoint name.
+                if (string.IsNullOrEmpty(endpointOptions.SasToken) &&
+                    _azureStorageOptions.CurrentValue.SasTokens.TryGetValue(_endpointName, out string sasToken))
+                {
+                    endpointOptions.SasToken = sasToken;
+                }
+
+                return endpointOptions;
+            }
+        }
+    }
+}

@@ -7,11 +7,11 @@ using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
-    internal class AzureStorageOptions
+    internal class EgressOptions
     {
-        public const string ConfigurationKey = "AzureStorage";
+        public const string ConfigurationKey = "Egress";
 
-        public Dictionary<string, string> SasTokens { get; }
-            = new Dictionary<string, string>(StringComparer.Ordinal);
+        public Dictionary<string, ConfiguredEgressEndpoint> Endpoints { get; }
+            = new Dictionary<string, ConfiguredEgressEndpoint>(StringComparer.OrdinalIgnoreCase);
     }
 }
