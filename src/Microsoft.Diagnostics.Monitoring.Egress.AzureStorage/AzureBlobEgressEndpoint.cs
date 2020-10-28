@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
         }
 
         // Overridden to prvent unnecessary creation of intermediate stream.
-        public override async Task<EgressResult> EgressAsync(
+        public override async Task<string> EgressAsync(
             Func<CancellationToken, Task<Stream>> action,
             string name,
             AzureBlobEgressStreamOptions options,
@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             return await Upload(stream, name, options, token);
         }
 
-        public override async Task<EgressResult> EgressAsync(
+        public override async Task<string> EgressAsync(
             Func<Stream, CancellationToken, Task> action,
             string name,
             AzureBlobEgressStreamOptions options,
@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             return await Upload(stream, name, options, token);
         }
 
-        private async Task<EgressResult> Upload(
+        private async Task<string> Upload(
             Stream stream,
             string fileName,
             AzureBlobEgressStreamOptions options,
@@ -86,7 +86,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             UriBuilder outputBuilder = new UriBuilder(blobClient.Uri);
             outputBuilder.Query = null;
 
-            return new EgressResult("uri", outputBuilder.Uri.AbsoluteUri);
+            return outputBuilder.Uri.AbsoluteUri;
         }
     }
 }

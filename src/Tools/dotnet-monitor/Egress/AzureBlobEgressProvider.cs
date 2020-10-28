@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Monitoring;
-using Microsoft.Diagnostics.Monitoring.Egress;
 using Microsoft.Diagnostics.Monitoring.Egress.AzureStorage;
+using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using System;
@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 _optionsTemplate = optionsTemplate;
             }
 
-            public override Task<EgressResult> EgressAsync(
+            public override async Task<EgressResult> EgressAsync(
                 Func<CancellationToken, Task<Stream>> action,
                 string fileName,
                 string contentType,
@@ -71,10 +71,12 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 streamOptions.ContentType = contentType;
 
                 var endpoint = new AzureBlobEgressEndpoint(endpointOptions);
-                return endpoint.EgressAsync(action, fileName, streamOptions, token);
+                string blobUri = await endpoint.EgressAsync(action, fileName, streamOptions, token);
+
+                return new EgressResult("uri", blobUri);
             }
 
-            public override Task<EgressResult> EgressAsync(
+            public override async Task<EgressResult> EgressAsync(
                 Func<Stream, CancellationToken, Task> action,
                 string fileName,
                 string contentType,
@@ -86,7 +88,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 streamOptions.ContentType = contentType;
 
                 var endpoint = new AzureBlobEgressEndpoint(CreateEndpointOptions());
-                return endpoint.EgressAsync(action, fileName, streamOptions, token);
+                string blobUri = await endpoint.EgressAsync(action, fileName, streamOptions, token);
+
+                return new EgressResult("uri", blobUri);
             }
 
             private AzureBlobEgressEndpointOptions CreateEndpointOptions()

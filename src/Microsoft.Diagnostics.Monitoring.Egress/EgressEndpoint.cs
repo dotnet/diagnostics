@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress
 {
     internal abstract class EgressEndpoint<TOptions>
     {
-        public virtual Task<EgressResult> EgressAsync(
+        public virtual Task<string> EgressAsync(
             Func<CancellationToken, Task<Stream>> action,
             string name,
             TOptions streamOptions,
@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress
                 token);
         }
 
-        public abstract Task<EgressResult> EgressAsync(
+        public abstract Task<string> EgressAsync(
             Func<Stream, CancellationToken, Task> action,
             string name,
             TOptions streamOptions,

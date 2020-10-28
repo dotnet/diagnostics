@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Monitoring;
-using Microsoft.Diagnostics.Monitoring.Egress;
 using Microsoft.Diagnostics.Monitoring.Egress.FileSystem;
+using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.IO;
@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 _optionsTemplate = optionsTemplate;
             }
 
-            public override Task<EgressResult> EgressAsync(
+            public override async Task<EgressResult> EgressAsync(
                 Func<CancellationToken, Task<Stream>> action,
                 string fileName,
                 string contentType,
@@ -44,10 +44,12 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 var streamOptions = new FileSystemEgressStreamOptions();
 
                 var endpoint = new FileSystemEgressEndpoint(CreateEndpointOptions());
-                return endpoint.EgressAsync(action, fileName, streamOptions, token);
+                string filepath = await endpoint.EgressAsync(action, fileName, streamOptions, token);
+
+                return new EgressResult("path", filepath);
             }
 
-            public override Task<EgressResult> EgressAsync(
+            public override async Task<EgressResult> EgressAsync(
                 Func<Stream, CancellationToken, Task> action,
                 string fileName,
                 string contentType,
@@ -57,7 +59,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 var streamOptions = new FileSystemEgressStreamOptions();
 
                 var endpoint = new FileSystemEgressEndpoint(CreateEndpointOptions());
-                return endpoint.EgressAsync(action, fileName, streamOptions, token);
+                string filepath = await endpoint.EgressAsync(action, fileName, streamOptions, token);
+
+                return new EgressResult("path", filepath);
             }
 
             private FileSystemEgressEndpointOptions CreateEndpointOptions()

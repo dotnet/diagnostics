@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
             _endpointOptions = endpointOptions;
         }
 
-        public override async Task<EgressResult> EgressAsync(
+        public override async Task<string> EgressAsync(
             Func<Stream, CancellationToken, Task> action,
             string name,
             FileSystemEgressStreamOptions streamOptions,
@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
 
             await fileStream.FlushAsync(token);
 
-            return new EgressResult("path", filePath);
+            return filePath;
         }
     }
 }
