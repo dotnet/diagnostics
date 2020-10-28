@@ -13,17 +13,17 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
         public AzureBlobEgressEndpointOptions(AzureBlobEgressEndpointOptions settings)
         {
             ContainerName = settings.ContainerName;
-            AccountName = settings.AccountName;
-            SasToken = settings.SasToken;
-            BlobDirectoryPath = settings.BlobDirectoryPath;
+            AccountUri = settings.AccountUri;
+            SharedAccessSignature = settings.SharedAccessSignature;
+            BlobDirectory = settings.BlobDirectory;
         }
 
         public string ContainerName { get; set; }
 
-        public string AccountName { get; set; }
+        public string AccountUri { get; set; }
 
-        public string SasToken { get; set; }
+        public string SharedAccessSignature { get; set; }
 
-        public string BlobDirectoryPath { get; set; }
+        public string BlobDirectory { get; set; }
     }
 }

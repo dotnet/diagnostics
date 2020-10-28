@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
     {
         public const string ConfigurationKey = "AzureStorage";
 
-        public Dictionary<string, string> SasTokens { get; }
+        public Dictionary<string, string> SharedAccessSignatures { get; }
             = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     }
 }

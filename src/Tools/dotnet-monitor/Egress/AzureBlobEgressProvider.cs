@@ -60,10 +60,10 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
                 // If SAS token is not specified, use the one from the SAS token configuration that has
                 // a name that matches the endpoint name.
-                if (string.IsNullOrEmpty(endpointOptions.SasToken) &&
-                    _azureStorageOptions.CurrentValue.SasTokens.TryGetValue(_endpointName, out string sasToken))
+                if (string.IsNullOrEmpty(endpointOptions.SharedAccessSignature) &&
+                    _azureStorageOptions.CurrentValue.SharedAccessSignatures.TryGetValue(_endpointName, out string sasToken))
                 {
-                    endpointOptions.SasToken = sasToken;
+                    endpointOptions.SharedAccessSignature = sasToken;
                 }
 
                 // TODO: Add metadata based on source
@@ -99,10 +99,10 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
                 // If SAS token is not specified, use the one from the SAS token configuration that has
                 // a name that matches the endpoint name.
-                if (string.IsNullOrEmpty(endpointOptions.SasToken) &&
-                    _azureStorageOptions.CurrentValue.SasTokens.TryGetValue(_endpointName, out string sasToken))
+                if (string.IsNullOrEmpty(endpointOptions.SharedAccessSignature) &&
+                    _azureStorageOptions.CurrentValue.SharedAccessSignatures.TryGetValue(_endpointName, out string sasToken))
                 {
-                    endpointOptions.SasToken = sasToken;
+                    endpointOptions.SharedAccessSignature = sasToken;
                 }
 
                 return endpointOptions;

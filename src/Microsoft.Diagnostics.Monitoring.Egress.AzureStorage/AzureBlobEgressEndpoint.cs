@@ -53,11 +53,9 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             AzureBlobEgressStreamOptions options,
             CancellationToken token)
         {
-            var serviceUriBuilder = new UriBuilder()
+            var serviceUriBuilder = new UriBuilder(_settings.AccountUri)
             {
-                Scheme = "https",
-                Host = string.Format("{0}.blob.core.windows.net", _settings.AccountName),
-                Query = _settings.SasToken
+                Query = _settings.SharedAccessSignature
             };
 
             BlobServiceClient serviceClient = new BlobServiceClient(serviceUriBuilder.Uri);
@@ -66,9 +64,9 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             await containerClient.CreateIfNotExistsAsync(cancellationToken: token);
 
             string blobName = fileName;
-            if (!string.IsNullOrEmpty(_settings.BlobDirectoryPath))
+            if (!string.IsNullOrEmpty(_settings.BlobDirectory))
             {
-                blobName = string.Concat(_settings.BlobDirectoryPath, "/", fileName);
+                blobName = string.Concat(_settings.BlobDirectory, "/", fileName);
             }
 
             BlobHttpHeaders headers = new BlobHttpHeaders();
