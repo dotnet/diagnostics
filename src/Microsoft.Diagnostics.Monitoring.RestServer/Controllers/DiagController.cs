@@ -110,6 +110,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 {
                     Stream dumpStream = await _diagnosticServices.GetDump(processInfo, type, HttpContext.RequestAborted);
 
+                    //Compression is done automatically by the response
+                    //Chunking is done because the result has no content-length
                     return File(dumpStream, ContentTypes.ApplicationOctectStream, dumpFileName);
                 }
                 else
