@@ -40,7 +40,7 @@ namespace DiagnosticsReleaseTool.Impl
                 WriteMetadata(writer);
 
                 WritePublishingInstructions(writer, filesProcessed);
-                WriteToolBundles(writer, filesProcessed);
+                WriteBundledTools(writer, filesProcessed);
                 WriteNugetShippingPackages(writer, filesProcessed);
 
                 writer.WriteEndObject();
@@ -49,16 +49,16 @@ namespace DiagnosticsReleaseTool.Impl
             return stream;
         }
 
-        private void WriteToolBundles(Utf8JsonWriter writer, IEnumerable<FileReleaseData> filesProcessed)
+        private void WriteBundledTools(Utf8JsonWriter writer, IEnumerable<FileReleaseData> filesProcessed)
         {
             writer.WritePropertyName(DiagnosticsRepoHelpers.BundledToolsCategory);
             writer.WriteStartArray();
 
-            IEnumerable<FileReleaseData> nugetFiles = 
+            IEnumerable<FileReleaseData> bundledTools = 
                 filesProcessed.Where(
                     file => file.FileMetadata.AssetCategory == DiagnosticsRepoHelpers.BundledToolsCategory);
 
-            foreach (FileReleaseData fileToRelease in nugetFiles)
+            foreach (FileReleaseData fileToRelease in bundledTools)
             {
                 writer.WriteStartObject();
                 writer.WriteString("ToolName", Path.GetFileNameWithoutExtension(fileToRelease.FileMap.LocalSourcePath));
