@@ -22,7 +22,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
     internal class Program
     {
-        delegate Task<int> ExportDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string processName);
+        delegate Task<int> CollectDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string processName, string port);
+        delegate Task<int> MonitorDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string processName, string port);
 
         private static Command MonitorCommand() =>
             new Command(
@@ -30,9 +31,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 description: "Start monitoring a .NET application")
             {
                 // Handler
-                CommandHandler.Create<CancellationToken, List<string>, string, IConsole, int, int, string>(new CounterMonitor().Monitor),
+                HandlerDescriptor.FromDelegate((MonitorDelegate)new CounterMonitor().Monitor).GetCommandHandler(),
                 // Arguments and Options
-                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), NameOption()
+                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), NameOption(), DiagnosticPortOption(),
             };
         
         private static Command CollectCommand() =>
@@ -41,9 +42,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 description: "Monitor counters in a .NET application and export the result into a file")
             {
                 // Handler
-                HandlerDescriptor.FromDelegate((ExportDelegate)new CounterMonitor().Collect).GetCommandHandler(),
+                HandlerDescriptor.FromDelegate((CollectDelegate)new CounterMonitor().Collect).GetCommandHandler(),
                 // Arguments and Options
-                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption(), NameOption()
+                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption(), NameOption(), DiagnosticPortOption()
             };
 
         private static Option NameOption() =>
@@ -116,6 +117,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 description: "Version of runtime. Supported runtime version: 3.0, 3.1, 5.0") 
             {
                 Argument = new Argument<string>(name: "runtimeVersion", getDefaultValue: () => "3.1")
+            };
+
+        private static Option DiagnosticPortOption() =>
+            new Option(
+                alias: "--port",
+                description: "The path to diagnostic port")
+            {
+                Argument = new Argument<string>(name: "port", getDefaultValue: () => "")
             };
 
         private static readonly string[] s_SupportedRuntimeVersions = new[] { "3.0", "3.1", "5.0" };

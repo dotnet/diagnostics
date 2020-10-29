@@ -88,9 +88,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _renderer.Stop();
         }
 
-        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string name)
+        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string name, string port)
         {
-            if (!ValidateAndSetProcessId(processId, name))
+            if (!ValidateArguments(processId, name, port))
             {
                 return 0;
             }
@@ -102,7 +102,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _console = console;
                 _interval = refreshInterval;
                 _renderer = new ConsoleWriter();
-                if (!BuildDiagnosticsClient())
+                if (!BuildDiagnosticsClient(port))
                 {
                     return 0;
                 }
@@ -124,9 +124,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
         }
 
 
-        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name)
+        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name, string port)
         {
-            if (!ValidateAndSetProcessId(processId, name))
+            if (!ValidateArguments(processId, name, port))
             {
                 return 0;
             }
@@ -143,7 +143,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     return 0;
                 }
 
-                if (!BuildDiagnosticsClient())
+                if (!BuildDiagnosticsClient(port))
                 {
                     return 0;
                 }
@@ -247,33 +247,49 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
         
-        private bool ValidateAndSetProcessId(int processId, string name)
+        private bool ValidateArguments(int processId, string name, string port)
         {
             if (!ProcessLauncher.Launcher.HasChildProc)
             {
-                if (name != null)
+                if (processId != 0 && name != null && port.Length != 0)
                 {
-                    if (processId != 0)
-                    {
-                        Console.WriteLine("Can only specify either --name or --process-id option.");
-                        return false;
-                    }
+                    Console.WriteLine("Can only one of specify --name, --process-id, --port option.");
+                    return false;
+                }
+                else if (processId != 0 && name != null)
+                {
+                    Console.WriteLine("Can only one of specify --name or --process-id.");
+                    return false;
+                }
+                else if (processId != 0 && port.Length != 0)
+                {
+                    Console.WriteLine("Can only one of specify --process-id or --port.");
+                    return false;
+                }
+                else if (name != null && port.Length != 0)
+                {
+                    Console.WriteLine("Can only one of specify --name or --port.");
+                    return false;
+                }
+                // If we got here it means only one of name/port/processId was specified
+                else if (port.Length != 0)
+                {
+                    return true;
+                }
+                // Resolve name option
+                else if (name != null)
+                {
                     processId = CommandUtils.FindProcessIdWithName(name);
                     if (processId < 0)
                     {
                         return false;
                     }
                 }
-                else if (processId == 0)
-                {
-                    Console.WriteLine("Must specify either --name or --process-id option to start collecting.");
-                    return false;
-                }
             }
             _processId = processId;
             return true;
         }
-        private bool BuildDiagnosticsClient()
+        private bool BuildDiagnosticsClient(string port)
         {
             if (ProcessLauncher.Launcher.HasChildProc)
             {
@@ -290,6 +306,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                     return false;
                 }
+            }
+            else if (port.Length != 0)
+            {
+                ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(port);
+                server.Start();
+                Console.WriteLine($"Waiting for connection on {port}");
+                IpcEndpointInfo endpointInfo = server.Accept(TimeSpan.FromMilliseconds(Int32.MaxValue));
+                Console.WriteLine($"Connection established");
+                _diagnosticsClient = new DiagnosticsClient(endpointInfo.Endpoint);
+                _diagnosticsClient.ResumeRuntime();
             }
             else
             {
