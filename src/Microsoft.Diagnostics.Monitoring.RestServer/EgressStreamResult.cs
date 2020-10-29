@@ -16,12 +16,12 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
     {
         private readonly Func<IEgressService, CancellationToken, Task<EgressResult>> _egress;
 
-        public EgressStreamResult(Func<CancellationToken, Task<Stream>> action, string endpointName, string artifactName, IEndpointInfo source, string contentType = null)
+        public EgressStreamResult(Func<CancellationToken, Task<Stream>> action, string endpointName, string artifactName, IEndpointInfo source, string contentType)
             : this(ConvertAction(action), endpointName, artifactName, source, contentType)
         {
         }
 
-        public EgressStreamResult(Func<Stream, CancellationToken, Task> action, string endpointName, string artifactName, IEndpointInfo source, string contentType = null)
+        public EgressStreamResult(Func<Stream, CancellationToken, Task> action, string endpointName, string artifactName, IEndpointInfo source, string contentType)
         {
             _egress = (service, token) => service.EgressAsync(endpointName, action, artifactName, contentType, source, token);
         }

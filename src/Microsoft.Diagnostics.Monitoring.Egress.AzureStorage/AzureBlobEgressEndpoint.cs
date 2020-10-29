@@ -4,6 +4,7 @@
 
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Blobs.Specialized;
 using System;
 using System.IO;
 using System.Threading;
@@ -26,21 +27,6 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             AzureBlobEgressStreamOptions options,
             CancellationToken token)
         {
-            using var stream = new MemoryStream();
-
-            await action(stream, token);
-
-            stream.Position = 0;
-
-            return await Upload(stream, name, options, token);
-        }
-
-        private async Task<string> Upload(
-            Stream stream,
-            string fileName,
-            AzureBlobEgressStreamOptions options,
-            CancellationToken token)
-        {
             var serviceUriBuilder = new UriBuilder(_settings.AccountUri)
             {
                 Query = _settings.SharedAccessSignature
@@ -51,21 +37,29 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(_settings.ContainerName);
             await containerClient.CreateIfNotExistsAsync(cancellationToken: token);
 
-            string blobName = fileName;
+            string blobName = name;
             if (!string.IsNullOrEmpty(_settings.BlobDirectory))
             {
-                blobName = string.Concat(_settings.BlobDirectory, "/", fileName);
+                blobName = string.Concat(_settings.BlobDirectory, "/", name);
             }
 
+            BlockBlobClient blobClient = containerClient.GetBlockBlobClient(blobName);
+
+            // Write blob content
+            using (Stream blobStream = await blobClient.OpenWriteAsync(overwrite: true, cancellationToken: token))
+            {
+                await action(blobStream, token);
+
+                await blobStream.FlushAsync(token);
+            }
+
+            // Write blob headers
             BlobHttpHeaders headers = new BlobHttpHeaders();
             headers.ContentType = options.ContentType;
+            await blobClient.SetHttpHeadersAsync(headers, cancellationToken: token);
 
-            BlobClient blobClient = containerClient.GetBlobClient(blobName);
-            await blobClient.UploadAsync(
-                stream,
-                httpHeaders: headers,
-                metadata: options.Metadata,
-                cancellationToken: token);
+            // Write blob metadata
+            await blobClient.SetMetadataAsync(options.Metadata, cancellationToken: token);
 
             // The BlobClient URI has the SAS token as the query parameter
             // Remove the SAS token before returning the URI

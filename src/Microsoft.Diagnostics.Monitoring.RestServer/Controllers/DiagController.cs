@@ -118,7 +118,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                         token => _diagnosticServices.GetDump(processInfo, type, token),
                         egressEndpoint,
                         dumpFileName,
-                        processInfo.EndpointInfo);
+                        processInfo.EndpointInfo,
+                        ContentTypes.ApplicationOctectStream);
                 }
             });
         }
@@ -166,7 +167,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                         ConvertFastSerializeAction(action),
                         egressEndpoint,
                         fileName,
-                        processInfo.EndpointInfo);
+                        processInfo.EndpointInfo,
+                        ContentTypes.ApplicationOctectStream);
                 }
             });
         }
@@ -347,7 +349,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     action,
                     egressEndpoint,
                     fileName,
-                    processInfo.EndpointInfo);
+                    processInfo.EndpointInfo,
+                    ContentTypes.ApplicationOctectStream);
             }
         }
 
