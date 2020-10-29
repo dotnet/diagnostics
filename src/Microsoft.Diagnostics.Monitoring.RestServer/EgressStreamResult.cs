@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
             {
                 using var actionStream = await action(token);
 
-                await actionStream.CopyToAsync(stream, 0x1000, token);
+                await actionStream.CopyToAsync(stream, 0x10000, token);
             };
         }
     }

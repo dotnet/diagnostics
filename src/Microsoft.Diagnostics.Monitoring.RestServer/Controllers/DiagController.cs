@@ -420,7 +420,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
                     intermediateStream.Position = 0;
 
-                    await intermediateStream.CopyToAsync(stream, 0x1000, token);
+                    await intermediateStream.CopyToAsync(stream, 0x10000, token);
                 }
                 else
                 {
