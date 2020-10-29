@@ -869,18 +869,32 @@ For example, if the Diagnostic Server finds incorrectly encoded data while parsi
   </tr>
 </table>
 
-# Reverse Diagnostics Server
+# Diagnostic Ports
 
 > Available since .NET 5.0
 
 .NET applications can be configured with the following environment variables:
 
- * `DOTNET_DiagnosticsMonitorAddress`: A string that is the address for a diagnostics monitoring server
-   * On Windows, this is the name of a Named Pipe that exists under `\\.\pipe\` without the any prefix, e.g., `MyDiagnosticsPipe` points to `\\.\pipe\MyDiagnosticsPipe` and `\app1\mypipe` points to `\\.\pipe\app1\mypipe`
-   * On non-Windows, this is the path to a Unix Domain Socket
- * `DOTNET_DiagnosticsMonitorPauseOnStart`: `0` or `1` (default if `DOTNET_DiagnosticsMonitorAddress` is set) indicating whether the runtime should pause at a known location in `EEStartupHelper` in `ceemain.cpp`.  If there is a Diagnostics Monitor Address configured, this is on _by default_, but is off otherwise.
+ * `DOTNET_DiagnosticPorts=<port address>[,tag[...]][;<port address>[,tag[...]][...]]`
 
-This functionality is referred to as a Reverse Diagnostics Server.  When A Reverse Server is configured, the runtime will attempt to connect to the provided address in a retry loop while also listening on the traditional server.  The retry loop has an initial timeout of 10ms with a falloff factor of 1.25x and a max timeout of 500 ms.  A successful connection will result in an infinite timeout.  The runtime is resilient to the Reverse Server transport failing, e.g., closing, not `Accepting`, etc.
+where:
+
+* `<port address>` is a NamedPipe name without `\\.\pipe\` on Windows, and the full path to a Unix domain socket on other platforms
+* `tag ::= <SUSPEND_MODE> | <PORT_TYPE>`
+* `<SUSPEND_MODE> ::= suspend | nosuspend` (default value is nosuspend)`
+* `<PORT_TYPE> ::= connect` (future types such as additional listen ports could be added to this list)
+
+Any diagnostic ports specified in this configuration will be created in addition to the default port (`dotnet-diagnostic-<pid>-<epoch>`). The suspend mode of the default port is set via the new environment variable `DOTNET_DefaultDotnetPortSuspend` which defaults to 0 for `nosuspend`.
+
+Each port configuration specifies whether it is a `suspend` or `nosuspend` port. Ports specifying `suspend` in their configuration will cause the runtime to pause early on the startup path before most systems are available. This allows any agent to receive a connection and properly setup before the application startup continues. Since multiple ports can individually request suspension, the `resume` command now needs to be sent by each suspend port connection before the event will be set and the runtime resumes execution.
+
+If a config specifies multiple tag values from a tag type, for example  `"<path>,nosuspend,suspend,suspend,"`, only the first one is respected.
+
+The port address value is required for a port configuration. If a configuration doesn't specify an address and only specifies tags, then the first tag will be treated as the path. For example, a configuration `suspend,connect` would cause a port with the name `suspend` to be created, in the default `nosuspend` mode.
+
+The runtime will make a best attempt to generate a port from a port configuration. A bad port configuration won't cause an error state, but could lead to consumed resources. For example it could cause the runtime to continuously poll for a connect port that will never exist.
+
+When a DiagnosticPort is configured, the runtime will attempt to connect to the provided address in a retry loop while also listening on the traditional server. The retry loop has an initial timeout of 10ms with a falloff factor of 1.25x and a max timeout of 500 ms.  A successful connection will result in an infinite timeout.  The runtime is resilient to the Reverse Server transport failing, e.g., closing, not `Accepting`, etc.
 
 ## Advertise Protocol
 
