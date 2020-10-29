@@ -871,7 +871,7 @@ For example, if the Diagnostic Server finds incorrectly encoded data while parsi
 
 # DiagnosticPorts
 
-> Available since .NET 5.0 Preview 8
+> Available since .NET 5.0
 
 .NET applications can be configured with the following environment variables:
 
