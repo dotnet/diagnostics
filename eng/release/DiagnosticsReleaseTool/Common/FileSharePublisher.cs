@@ -1,3 +1,5 @@
+using System;
+using System.Buffers;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,6 +8,9 @@ namespace ReleaseTool.Core
 {
     public class FileSharePublisher : IPublisher
     {
+        private const int MaxRetries = 5;
+        private const int DelayMsec = 100;
+
         private readonly string _sharePath;
 
         public FileSharePublisher(string sharePath)
@@ -17,25 +22,107 @@ namespace ReleaseTool.Core
 
         public async Task<string> PublishFileAsync(FileMapping fileMap, CancellationToken ct)
         {
-            // TODO: Make sure to handle the can't access case.
             // TODO: Be resilient to "can't cancel case".
             string destinationUri = Path.Combine(_sharePath, fileMap.RelativeOutputPath);
-            FileInfo fi = new FileInfo(destinationUri);
-            fi.Directory.Create();
+            FileInfo fi = null;
 
-            if (fi.Exists && fi.Attributes.HasFlag(FileAttributes.Directory))
+            try
             {
-                // Filestream will deal with files, but not directories
-                Directory.Delete(destinationUri, recursive: true);
+                fi = new FileInfo(destinationUri);
+            }
+            catch (Exception)
+            {
+                // TODO: We probably want logging here.
+                return null;
             }
 
-            using (FileStream srcStream = new FileStream(fileMap.LocalSourcePath, FileMode.Open, FileAccess.Read))
-            using (FileStream destStream = new FileStream(destinationUri, FileMode.Create, FileAccess.Write))
+            int retries = 0;
+            int delay = 0;
+            bool completed = false;
+
+            do
             {
-                await srcStream.CopyToAsync(destStream, ct);
-            }
+                await Task.Delay(delay, ct);
+                try
+                {
+                    if (fi.Exists && fi.Attributes.HasFlag(FileAttributes.Directory))
+                    {
+                        // Filestream will deal with files, but not directories
+                        Directory.Delete(destinationUri, recursive: true);
+                    }
+
+                    fi.Directory.Create();
+
+                    using var srcStream = new FileStream(fileMap.LocalSourcePath, FileMode.Open, FileAccess.Read);
+                    using var destStream = new FileStream(destinationUri, FileMode.Create, FileAccess.ReadWrite);
+                    await srcStream.CopyToAsync(destStream, ct);
+
+                    destStream.Position = 0;
+                    srcStream.Position = 0;
+
+                    completed = await VerifyFileStreamsMatchAsync(srcStream, destStream, ct);
+                }
+                catch (IOException ex) when (!(ex is PathTooLongException || ex is FileNotFoundException))
+                {
+                    /* Retry IO exceptions */
+                }
+                catch (Exception)
+                {
+                    return null;
+                }
+
+                retries++;
+                delay = delay * 2 + DelayMsec;
+            } while (retries < MaxRetries && !completed);
 
             return destinationUri;
+        }
+
+        private async Task<bool> VerifyFileStreamsMatchAsync(FileStream srcStream, FileStream destStream, CancellationToken ct)
+        {
+            if (srcStream.Length != destStream.Length)
+            {
+                return false;
+            }
+
+            using IMemoryOwner<byte> memOwnerSrc = MemoryPool<byte>.Shared.Rent(minBufferSize: 16_384);
+            using IMemoryOwner<byte> memOwnerDest = MemoryPool<byte>.Shared.Rent(minBufferSize: 16_384);
+            Memory<byte> memSrc = memOwnerSrc.Memory;
+            Memory<byte> memDest = memOwnerDest.Memory;
+
+            int bytesProcessed = 0;
+            int srcBytesRemainingFromPrevRead = 0;
+            int destBytesRemainingFromPrevRead = 0;
+
+            while (bytesProcessed != srcStream.Length)
+            {
+                int srcBytesRead = await srcStream.ReadAsync(memSrc.Slice(srcBytesRemainingFromPrevRead), ct);
+                srcBytesRead += srcBytesRemainingFromPrevRead;
+                int destBytesRead = await destStream.ReadAsync(memDest.Slice(destBytesRemainingFromPrevRead), ct);
+                destBytesRead += destBytesRemainingFromPrevRead;
+
+                int bytesToCompare = Math.Min(srcBytesRead, destBytesRead);
+
+                if (bytesToCompare == 0)
+                {
+                    return false;
+                }
+
+                bytesProcessed += bytesToCompare;
+                srcBytesRemainingFromPrevRead = srcBytesRead - bytesToCompare;
+                destBytesRemainingFromPrevRead = destBytesRead - bytesToCompare;
+
+                bool isChunkEquals = memDest.Span.Slice(0, bytesToCompare).SequenceEqual(memSrc.Span.Slice(0, bytesToCompare));
+                if (!isChunkEquals)
+                {
+                    return false;
+                }
+
+                memSrc.Slice(bytesToCompare, srcBytesRemainingFromPrevRead).CopyTo(memSrc);
+                memDest.Slice(bytesToCompare, destBytesRemainingFromPrevRead).CopyTo(memDest);
+            }
+
+            return true;
         }
     }
 }
