@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using DiagnosticsReleaseTool.Util;
 using Microsoft.Extensions.Logging;
 using ReleaseTool.Core;
 
@@ -38,13 +39,36 @@ namespace DiagnosticsReleaseTool.Impl
 
                 WriteMetadata(writer);
 
-                WriteNugetShippingPackages(writer, filesProcessed);
                 WritePublishingInstructions(writer, filesProcessed);
+                WriteToolBundles(writer, filesProcessed);
+                WriteNugetShippingPackages(writer, filesProcessed);
 
                 writer.WriteEndObject();
             }
             stream.Position = 0;
             return stream;
+        }
+
+        private void WriteToolBundles(Utf8JsonWriter writer, IEnumerable<FileReleaseData> filesProcessed)
+        {
+            writer.WritePropertyName(DiagnosticsRepoHelpers.BundledToolsCategory);
+            writer.WriteStartArray();
+
+            IEnumerable<FileReleaseData> nugetFiles = 
+                filesProcessed.Where(
+                    file => file.FileMetadata.AssetCategory == DiagnosticsRepoHelpers.BundledToolsCategory);
+
+            foreach (FileReleaseData fileToRelease in nugetFiles)
+            {
+                writer.WriteStartObject();
+                writer.WriteString("ToolName", Path.GetFileNameWithoutExtension(fileToRelease.FileMap.LocalSourcePath));
+                writer.WriteString("Rid", fileToRelease.FileMetadata.Rid);
+                writer.WriteString("PublishRelativePath", fileToRelease.FileMap.RelativeOutputPath);
+                writer.WriteString("PublishedPath", fileToRelease.PublishUri);
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
         }
 
         private void WriteNugetShippingPackages(Utf8JsonWriter writer, IEnumerable<FileReleaseData> filesProcessed)
