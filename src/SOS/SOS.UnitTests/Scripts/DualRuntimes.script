@@ -75,7 +75,7 @@ IFDEF:TRIAGE_DUMP
 SOSCOMMAND:setclrpath %DESKTOP_RUNTIME_PATH%
 ENDIF:TRIAGE_DUMP
 
-SOSCOMMAND:SOSStatus -desktop
+SOSCOMMAND:SOSStatus -netfx
 VERIFY:\s*Switched to desktop CLR runtime successfully\s+
 
 # Currently not on a desktop CLR thread so using the -all option to dump it.

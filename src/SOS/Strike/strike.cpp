@@ -10932,7 +10932,7 @@ DECLARE_API(SOSStatus)
     CMDOption option[] =
     {   // name, vptr, type, hasValue
 #ifndef FEATURE_PAL
-        {"-desktop", &bDesktop, COBOOL, FALSE},
+        {"-netfx", &bDesktop, COBOOL, FALSE},
         {"-netcore", &bNetCore, COBOOL, FALSE},
 #endif
         {"-reset", &bReset, COBOOL, FALSE},
@@ -10957,7 +10957,7 @@ DECLARE_API(SOSStatus)
         }
         else
         {
-            ExtErr("The '-desktop' and '-netcore' options are only supported on Windows targets\n");
+            ExtErr("The '-netfx' and '-netcore' options are only supported on Windows targets\n");
             return E_FAIL;
         }
     }
@@ -10983,7 +10983,7 @@ DECLARE_API(SOSStatus)
     }
 #ifndef FEATURE_PAL
     if (g_useDesktopClrHost) {
-        ExtOut("Using the desktop framework to host the managed SOS code\n");
+        ExtOut("Using the desktop .NET Framework to host the managed SOS code\n");
     }
     else 
 #endif
@@ -16496,7 +16496,7 @@ DECLARE_API(SetHostRuntime)
     CMDOption option[] =
     {   // name, vptr, type, hasValue
 #ifndef FEATURE_PAL
-        {"-desktop", &bDesktop, COBOOL, FALSE},
+        {"-netfx", &bDesktop, COBOOL, FALSE},
         {"-netcore", &bNetCore, COBOOL, FALSE},
 #endif
     };
@@ -16546,7 +16546,7 @@ DECLARE_API(SetHostRuntime)
 #ifndef FEATURE_PAL
     if (g_useDesktopClrHost)
     {
-        ExtOut("Using the desktop framework to host the managed SOS code\n");
+        ExtOut("Using the desktop .NET Framework to host the managed SOS code\n");
     }
     else 
 #endif
