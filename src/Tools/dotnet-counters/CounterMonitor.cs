@@ -105,10 +105,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _renderer = new ConsoleWriter();
                 if (!BuildDiagnosticsClient(port))
                 {
+                    CleanupPort(port);
                     return 0;
                 }
                 int ret = await Start();
                 ProcessLauncher.Launcher.Cleanup();
+                CleanupPort(port);
                 return ret;
             }
             catch (OperationCanceledException)
@@ -120,6 +122,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 catch (Exception) {} // Swallow all exceptions for now.
                 
                 console.Out.WriteLine($"Complete");
+                CleanupPort(port);
                 return 1;
             }
         }
@@ -146,6 +149,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                 if (!BuildDiagnosticsClient(port))
                 {
+                    CleanupPort(port);
                     return 0;
                 }
 
@@ -171,15 +175,18 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 else
                 {
                     _console.Error.WriteLine($"The output format {format} is not a valid output format.");
+                    CleanupPort(port);
                     return 0;
                 }
 
                 int ret = await Start();
                 ProcessLauncher.Launcher.Cleanup();
+                CleanupPort(port);
                 return ret;
             }
             catch (OperationCanceledException)
             {
+                CleanupPort(port);
             }
             return 1;
         }
@@ -245,6 +252,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     counter_list.Add(counter);
                 }
+            }
+        }
+
+        private void CleanupPort(string port)
+        {
+            if (File.Exists(port))
+            {
+                File.Delete(port);
             }
         }
         
