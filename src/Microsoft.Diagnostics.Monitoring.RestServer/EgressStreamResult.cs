@@ -26,19 +26,22 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
             _egress = (service, token) => service.EgressAsync(endpointName, action, artifactName, contentType, source, token);
         }
 
-        public override async Task ExecuteResultAsync(ActionContext context)
+        public override Task ExecuteResultAsync(ActionContext context)
         {
-            IEgressService egressService = context.HttpContext.RequestServices
-                .GetRequiredService<IEgressService>();
+            return context.InvokeAsync(async (token) =>
+            {
+                IEgressService egressService = context.HttpContext.RequestServices
+                    .GetRequiredService<IEgressService>();
 
-            EgressResult egressResult = await _egress(egressService, context.HttpContext.RequestAborted);
+                EgressResult egressResult = await _egress(egressService, token);
 
-            IDictionary<string, string> data = new Dictionary<string, string>(StringComparer.Ordinal);
-            data.Add(egressResult.Name, egressResult.Value);
+                IDictionary<string, string> data = new Dictionary<string, string>(StringComparer.Ordinal);
+                data.Add(egressResult.Name, egressResult.Value);
 
-            ActionResult jsonResult = new JsonResult(data);
+                ActionResult jsonResult = new JsonResult(data);
 
-            await jsonResult.ExecuteResultAsync(context);
+                await jsonResult.ExecuteResultAsync(context);
+            });
         }
 
         private static Func<Stream, CancellationToken, Task> ConvertAction(Func<CancellationToken, Task<Stream>> action)

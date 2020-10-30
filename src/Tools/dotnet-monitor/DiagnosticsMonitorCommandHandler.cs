@@ -5,7 +5,6 @@
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Diagnostics.Monitoring;
-using Microsoft.Diagnostics.Monitoring.Egress;
 using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
