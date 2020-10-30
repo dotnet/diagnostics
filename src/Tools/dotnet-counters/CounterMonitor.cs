@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -311,11 +312,29 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(port);
                 server.Start();
-                Console.WriteLine($"Waiting for connection on {port}");
-                IpcEndpointInfo endpointInfo = server.Accept(TimeSpan.FromMilliseconds(Int32.MaxValue));
-                Console.WriteLine($"Connection established");
-                _diagnosticsClient = new DiagnosticsClient(endpointInfo.Endpoint);
-                _diagnosticsClient.ResumeRuntime();
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    Console.WriteLine($"Waiting for connection on {port}");
+                    Console.WriteLine($"Start an application with the following environment variable: DOTNET_DiagnosticPorts={port}");
+                }
+                else
+                {
+                    Console.WriteLine($"Waiting for connection on {Path.GetFullPath(port)}");
+                    Console.WriteLine($"Start an application with the following environment variable: DOTNET_DiagnosticPorts={Path.GetFullPath(port)}");
+                }
+
+                ManualResetEvent shouldExit = new ManualResetEvent(false);
+                _ct.Register(() => shouldExit.Set());
+
+                Task acceptTask = Task.Run(() =>
+                {
+                    IpcEndpointInfo endpointInfo = server.Accept(TimeSpan.FromMilliseconds(Int32.MaxValue));
+                    Console.WriteLine($"Connection established");
+                    _diagnosticsClient = new DiagnosticsClient(endpointInfo.Endpoint);
+                    _diagnosticsClient.ResumeRuntime();
+                    shouldExit.Set();
+                });
+                shouldExit.WaitOne();
             }
             else
             {
