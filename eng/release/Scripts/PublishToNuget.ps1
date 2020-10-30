@@ -32,6 +32,7 @@ if ($null -ne $properties) {
 if (!(Test-Path $ManifestPath))
 {
     Write-Error "Error: unable to find maifest at $ManifestPath."
+    exit 1
 }
 
 $manifestSize = $(Get-ChildItem $ManifestPath).length / 1kb
@@ -40,6 +41,7 @@ $manifestSize = $(Get-ChildItem $ManifestPath).length / 1kb
 if ($manifestSize -gt 500) 
 {
     Write-Error "Error: Manifest $ManifestPath too large."
+    exit 1
 }
 
 $manifestJson = Get-Content -Raw -Path $ManifestPath | ConvertFrom-Json
@@ -47,22 +49,30 @@ $manifestJson = Get-Content -Raw -Path $ManifestPath | ConvertFrom-Json
 $failedToPublish = 0
 foreach ($nugetPack in $manifestJson.NugetAssets)
 {
-    $progressPreference = 'silentlyContinue'
     $packagePath = Join-Path $StagingPath $nugetPack.PublishRelativePath
-    Write-Host "Downloading: $nugetPack."
-    Invoke-WebRequest $nugetPack.PublishedPath -OutFile (New-Item -Path $packagePath -Force)
-    $progressPreference = 'Continue'
+    try
+    {
+        Write-Host "Downloading: $nugetPack."
+        $progressPreference = 'silentlyContinue'
+        Invoke-WebRequest -Uri $nugetPack -OutFile (New-Item -Path $packagePath -Force)
+        $progressPreference = 'Continue'
 
-    Write-Host "Publishing $packagePath."
-    & "$PSScriptRoot/../../../dotnet.cmd" nuget push $packagePath --source $FeedEndpoint --api-key $FeedPat
-    if ($LastExitCode -ne 0)
+        Write-Host "Publishing $packagePath."
+        & "$PSScriptRoot/../../../dotnet.cmd" nuget push $packagePath --source $FeedEndpoint --api-key $FeedPat
+        if ($LastExitCode -ne 0)
+        {
+            Write-Error "Error: unable to publish $($nugetPack.FilePath)."
+            $failedToPublish++
+        }
+    }
+    catch
     {
         Write-Error "Error: unable to publish $($nugetPack.FilePath)."
         $failedToPublish++
     }
 }
 
-if ($LastExitCode -ne 0)
+if ($failedToPublish -ne 0)
 {
     Write-Error "Error: $failedToPublish packages unpublished."
     exit 1
