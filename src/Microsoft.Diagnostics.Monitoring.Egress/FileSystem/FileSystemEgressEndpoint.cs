@@ -9,13 +9,11 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
 {
-    internal class FileSystemEgressEndpoint : EgressEndpoint<FileSystemEgressStreamOptions>
+    internal class FileSystemEgressEndpoint : EgressEndpoint<FileSystemEgressEndpointOptions, FileSystemEgressStreamOptions>
     {
-        private readonly FileSystemEgressEndpointOptions _endpointOptions;
-
         public FileSystemEgressEndpoint(FileSystemEgressEndpointOptions endpointOptions)
+            : base(endpointOptions)
         {
-            _endpointOptions = endpointOptions;
         }
 
         public override async Task<string> EgressAsync(
@@ -25,12 +23,12 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
             CancellationToken token)
         {
 
-            if (!Directory.Exists(_endpointOptions.DirectoryPath))
+            if (!Directory.Exists(EndpointOptions.DirectoryPath))
             {
-                Directory.CreateDirectory(_endpointOptions.DirectoryPath);
+                Directory.CreateDirectory(EndpointOptions.DirectoryPath);
             }
 
-            string filePath = Path.Combine(_endpointOptions.DirectoryPath, name);
+            string filePath = Path.Combine(EndpointOptions.DirectoryPath, name);
 
             using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read);
 

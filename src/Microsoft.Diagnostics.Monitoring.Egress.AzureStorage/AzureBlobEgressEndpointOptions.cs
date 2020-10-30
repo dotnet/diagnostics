@@ -4,7 +4,8 @@
 
 namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
 {
-    internal class AzureBlobEgressEndpointOptions
+    internal class AzureBlobEgressEndpointOptions :
+        EgressEndpointOptions
     {
         public AzureBlobEgressEndpointOptions()
         {

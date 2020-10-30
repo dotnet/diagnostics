@@ -4,7 +4,8 @@
 
 namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
 {
-    internal class FileSystemEgressEndpointOptions
+    internal class FileSystemEgressEndpointOptions :
+        EgressEndpointOptions
     {
         public FileSystemEgressEndpointOptions()
         {

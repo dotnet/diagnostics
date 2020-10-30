@@ -50,6 +50,23 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             }
 
             public override async Task<EgressResult> EgressAsync(
+                Func<CancellationToken, Task<Stream>> action,
+                string fileName,
+                string contentType,
+                IEndpointInfo source,
+                CancellationToken token)
+            {
+                // TODO: Add metadata based on source
+                var streamOptions = new AzureBlobEgressStreamOptions();
+                streamOptions.ContentType = contentType;
+
+                var endpoint = new AzureBlobEgressEndpoint(CreateEndpointOptions());
+                string blobUri = await endpoint.EgressAsync(action, fileName, streamOptions, token);
+
+                return new EgressResult("uri", blobUri);
+            }
+
+            public override async Task<EgressResult> EgressAsync(
                 Func<Stream, CancellationToken, Task> action,
                 string fileName,
                 string contentType,
