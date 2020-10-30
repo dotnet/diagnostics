@@ -54,7 +54,7 @@ foreach ($nugetPack in $manifestJson.NugetAssets)
     {
         Write-Host "Downloading: $nugetPack."
         $progressPreference = 'silentlyContinue'
-        Invoke-WebRequest -Uri $nugetPack -OutFile (New-Item -Path $packagePath -Force)
+        Invoke-WebRequest -Uri $nugetPack.PublishedPath -OutFile (New-Item -Path $packagePath -Force)
         $progressPreference = 'Continue'
 
         Write-Host "Publishing $packagePath."
