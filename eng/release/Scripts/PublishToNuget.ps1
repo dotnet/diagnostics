@@ -61,13 +61,13 @@ foreach ($nugetPack in $manifestJson.NugetAssets)
         & "$PSScriptRoot/../../../dotnet.cmd" nuget push $packagePath --source $FeedEndpoint --api-key $FeedPat
         if ($LastExitCode -ne 0)
         {
-            Write-Error "Error: unable to publish $($nugetPack.FilePath)."
+            Write-Error "Error: unable to publish $($nugetPack.PublishRelativePath)."
             $failedToPublish++
         }
     }
     catch
     {
-        Write-Error "Error: unable to publish $($nugetPack.FilePath)."
+        Write-Error "Error: unable to publish $($nugetPack.PublishRelativePath)."
         $failedToPublish++
     }
 }
