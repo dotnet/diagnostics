@@ -85,7 +85,7 @@ function Post-GithubRelease($manifest, [string]$releaseBody, [string]$checksumCs
     $zipPath = Join-Path $extractionPath "ghcli.zip"
     $ghTool = [IO.Path]::Combine($extractionPath, "bin", "gh.exe")
 
-    Write-Host "Downloading GitHub CLI from $cliLink."
+    Write-Host "Downloading GitHub CLI from $GhCliLink."
     try
     {
         $progressPreference = 'silentlyContinue'
