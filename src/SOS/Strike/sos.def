@@ -242,3 +242,4 @@ EXPORTS
 #endif
 
     SOSInitializeByHost
+    InitializeBySymbolReader

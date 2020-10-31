@@ -158,6 +158,7 @@ BOOL ControlC = FALSE;
 WCHAR g_mdName[mdNameLen];
 
 #ifndef FEATURE_PAL
+extern bool g_useDesktopClrHost;
 HMODULE g_hInstance = NULL;
 #endif // !FEATURE_PAL
 
@@ -10931,7 +10932,7 @@ DECLARE_API(SOSStatus)
     CMDOption option[] =
     {   // name, vptr, type, hasValue
 #ifndef FEATURE_PAL
-        {"-desktop", &bDesktop, COBOOL, FALSE},
+        {"-netfx", &bDesktop, COBOOL, FALSE},
         {"-netcore", &bNetCore, COBOOL, FALSE},
 #endif
         {"-reset", &bReset, COBOOL, FALSE},
@@ -10956,7 +10957,7 @@ DECLARE_API(SOSStatus)
         }
         else
         {
-            ExtErr("The '-desktop' and '-netcore' options are only supported on Windows targets\n");
+            ExtErr("The '-netfx' and '-netcore' options are only supported on Windows targets\n");
             return E_FAIL;
         }
     }
@@ -10980,6 +10981,12 @@ DECLARE_API(SOSStatus)
     if (g_tmpPath != nullptr) {
         ExtOut("Temp path: %s\n", g_tmpPath);
     }
+#ifndef FEATURE_PAL
+    if (g_useDesktopClrHost) {
+        ExtOut("Using the desktop .NET Framework to host the managed SOS code\n");
+    }
+    else 
+#endif
     if (g_hostRuntimeDirectory != nullptr) {
         ExtOut("Host runtime path: %s\n", g_hostRuntimeDirectory);
     }
@@ -16484,32 +16491,71 @@ DECLARE_API(SetHostRuntime)
 {
     INIT_API_EXT();
 
+    BOOL bDesktop = FALSE;
+    BOOL bNetCore = FALSE;
+    CMDOption option[] =
+    {   // name, vptr, type, hasValue
+#ifndef FEATURE_PAL
+        {"-netfx", &bDesktop, COBOOL, FALSE},
+        {"-netcore", &bNetCore, COBOOL, FALSE},
+#endif
+    };
     StringHolder hostRuntimeDirectory;
     CMDValue arg[] =
     {
         {&hostRuntimeDirectory.data, COSTRING},
     };
     size_t narg;
-    if (!GetCMDOption(args, nullptr, 0, arg, _countof(arg), &narg))
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &narg))
     {
         return E_FAIL;
     }
+#ifndef FEATURE_PAL
+    if (narg > 0 || bNetCore || bDesktop)
+#else
     if (narg > 0)
+#endif
     {
         if (IsHostingInitialized())
         {
-            ExtErr("Runtime hosting already initialized %s\n", g_hostRuntimeDirectory);
+            ExtErr("Runtime hosting already initialized %s\n", g_hostRuntimeDirectory != nullptr ? g_hostRuntimeDirectory : "");
             return E_FAIL;
         }
+    }
+#ifndef FEATURE_PAL
+    if (bNetCore)
+    {
+        g_useDesktopClrHost = false;
+    }
+    else if (bDesktop)
+    {
+        g_useDesktopClrHost = true;
+    }
+#endif
+    if (narg > 0)
+    {
         if (g_hostRuntimeDirectory != nullptr)
         {
             free((void*)g_hostRuntimeDirectory);
         }
         g_hostRuntimeDirectory = _strdup(hostRuntimeDirectory.data);
+#ifndef FEATURE_PAL
+        g_useDesktopClrHost = false;
+#endif
     }
-    if (g_hostRuntimeDirectory != nullptr)
+#ifndef FEATURE_PAL
+    if (g_useDesktopClrHost)
     {
-        ExtOut("Host runtime path: %s\n", g_hostRuntimeDirectory);
+        ExtOut("Using the desktop .NET Framework to host the managed SOS code\n");
+    }
+    else 
+#endif
+    {
+        ExtOut("Using the .NET Core runtime to host the managed SOS code\n");
+        if (g_hostRuntimeDirectory != nullptr) 
+        {
+            ExtOut("Host runtime path: %s\n", g_hostRuntimeDirectory);
+        }
     }
     return S_OK;
 }

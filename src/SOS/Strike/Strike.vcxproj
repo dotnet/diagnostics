@@ -390,6 +390,7 @@
     <ClCompile Include="exts.cpp" />
     <ClCompile Include="gchist.cpp" />
     <ClCompile Include="gcroot.cpp" />
+    <ClCompile Include="hostdesktop.cpp" />
     <ClCompile Include="metadata.cpp" />
     <ClCompile Include="runtime.cpp" />
     <ClCompile Include="sildasm.cpp" />
