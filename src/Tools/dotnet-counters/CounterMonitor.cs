@@ -91,7 +91,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string name, string port)
         {
-            if (!ValidateArguments(processId, name, port))
+            if (!CommandUtils.ValidateArguments(processId, name, port, out _processId))
             {
                 return 0;
             }
@@ -130,10 +130,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Collect(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name, string port)
         {
-            if (!ValidateArguments(processId, name, port))
+            if (!CommandUtils.ValidateArguments(processId, name, port, out _processId))
             {
                 return 0;
             }
+
             try
             {
                 InitializeCounterList(counters, counter_list);
@@ -302,7 +303,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                 }
             }
-            _processId = processId;
             return true;
         }
         private bool BuildDiagnosticsClient(string port)

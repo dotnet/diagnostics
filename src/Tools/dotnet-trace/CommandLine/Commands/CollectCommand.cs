@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port);
 
         /// <summary>
         /// Collects a diagnostic trace from a currently running process.
@@ -38,8 +38,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="duration">The duration of trace to be taken. </param>
         /// <param name="clrevents">A list of CLR events to be emitted.</param>
         /// <param name="clreventlevel">The verbosity level of CLR events</param>
+        /// <param name="port">Path to the diagnostic port to be created.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port)
         {
             try
             {
@@ -48,29 +49,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (!ProcessLauncher.Launcher.HasChildProc)
                 {
-                    // Either processName or processId has to be specified.
+                    CommandUtils.ValidateArguments(processId, name, port);
                     if (name != null)
                     {
-                        if (processId != 0)
-                        {
-                            Console.WriteLine("Can only specify either --name or --process-id option.");
-                            return ErrorCodes.ArgumentError;
-                        }
                         processId = CommandUtils.FindProcessIdWithName(name);
-                        if (processId < 0)
-                        {
-                            return ErrorCodes.ArgumentError;
-                        }
-                    }
-                    if (processId < 0)
-                    {
-                        Console.Error.WriteLine("Process ID should not be negative.");
-                        return ErrorCodes.ArgumentError;
-                    }
-                    else if (processId == 0)
-                    {
-                        Console.Error.WriteLine("--process-id is required");
-                        return ErrorCodes.ArgumentError;
                     }
                 }
 
@@ -144,6 +126,35 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return ErrorCodes.SessionCreationError;
                     }
                     process = ProcessLauncher.Launcher.ChildProc;
+                }
+                else if (port.Length != 0)
+                {
+                    ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(port);
+                    server.Start();
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        Console.WriteLine($"Waiting for connection on {port}");
+                        Console.WriteLine($"Start an application with the following environment variable: DOTNET_DiagnosticPorts={port}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Waiting for connection on {Path.GetFullPath(port)}");
+                        Console.WriteLine($"Start an application with the following environment variable: DOTNET_DiagnosticPorts={Path.GetFullPath(port)}");
+                    }
+
+                    ManualResetEvent acceptEvent = new ManualResetEvent(false);
+                    IpcEndpointInfo endpointInfo = new IpcEndpointInfo();
+                    ct.Register(() => acceptEvent.Set());
+                    Task acceptTask = Task.Run(() =>
+                    {
+                        endpointInfo = server.Accept(TimeSpan.FromMilliseconds(Int32.MaxValue));
+                        Console.WriteLine($"Connection established");
+                        acceptEvent.Set();
+                    });
+                    acceptEvent.WaitOne();
+                    diagnosticsClient = new DiagnosticsClient(endpointInfo.Endpoint);
+                    diagnosticsClient.ResumeRuntime();
+                    process = Process.GetProcessById(endpointInfo.ProcessId);
                 }
                 else
                 {
@@ -320,7 +331,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 DurationOption(),
                 CLREventsOption(),
                 CLREventLevelOption(),
-                CommonOptions.NameOption()
+                CommonOptions.NameOption(),
+                DiagnosticPortOption(),
             };
 
         private static uint DefaultCircularBufferSizeInMB() => 256;
@@ -381,6 +393,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 description: @"Verbosity of CLR events to be emitted.")
             {
                 Argument = new Argument<string>(name: "clreventlevel", getDefaultValue: () => string.Empty)
+            };
+        private static Option DiagnosticPortOption() =>
+            new Option(
+                alias: "--port",
+                description: @"The path to a diagnostic port to be created.")
+            {
+                Argument = new Argument<string>(name: "port", getDefaultValue: () => string.Empty)
             };
     }
 }

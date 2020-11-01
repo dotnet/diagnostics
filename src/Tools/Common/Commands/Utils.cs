@@ -40,6 +40,56 @@ namespace Microsoft.Internal.Common.Utils
             }
             return commonId;
         }
+
+        /// <summary>
+        /// A helper method for validating --process-id, --name, --port options for collect and monitor commands.
+        /// Only one of these options can be specified, so it checks for duplicate options specified and if there is 
+        /// such duplication, it prints the appropriate error message.
+        /// </summary>
+        /// <param name="processId">process ID</param>
+        /// <param name="name">name</param>
+        /// <param name="port">port</param>
+        /// <returns></returns>
+        public static bool ValidateArguments(int processId, string name, string port, out int resolvedProcessId)
+        {
+            resolvedProcessId = -1;
+            if (processId != 0 && name != null && port.Length != 0)
+            {
+                Console.WriteLine("Can only one of specify --name, --process-id, --port option.");
+                return false;
+            }
+            else if (processId != 0 && name != null)
+            {
+                Console.WriteLine("Can only one of specify --name or --process-id.");
+                return false;
+            }
+            else if (processId != 0 && port.Length != 0)
+            {
+                Console.WriteLine("Can only one of specify --process-id or --port.");
+                return false;
+            }
+            else if (name != null && port.Length != 0)
+            {
+                Console.WriteLine("Can only one of specify --name or --port.");
+                return false;
+            }
+            // If we got this far it means only one of name/port/processId was specified
+            else if (port.Length != 0)
+            {
+                return true;
+            }
+            // Resolve name option
+            else if (name != null)
+            {
+                processId = CommandUtils.FindProcessIdWithName(name);
+                if (processId < 0)
+                {
+                    return false;
+                }
+            }
+            resolvedProcessId = processId;
+            return true;
+        }
     }
 
     internal class LineRewriter
