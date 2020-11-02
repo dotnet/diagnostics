@@ -306,52 +306,73 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
     // If the hosting runtime isn't already set, use the runtime we are debugging
     if (g_hostRuntimeDirectory == nullptr)
     {
+        char* dotnetRoot = getenv("DOTNET_ROOT");
+        if (dotnetRoot != nullptr)
+        {
+            hostRuntimeDirectory.assign(dotnetRoot);
+            hostRuntimeDirectory.append(DIRECTORY_SEPARATOR_STR_A);
+            hostRuntimeDirectory.append("shared");
+            hostRuntimeDirectory.append(DIRECTORY_SEPARATOR_STR_A);
+            hostRuntimeDirectory.append("Microsoft.NETCore.App");
+#ifdef FEATURE_PAL
+            if (access(hostRuntimeDirectory.c_str(), F_OK) != 0)
+#else
+            if (GetFileAttributesA(hostRuntimeDirectory.c_str()) == INVALID_FILE_ATTRIBUTES)
+#endif
+            {
+                ExtErr("DOTNET_ROOT (%s) path doesn't exist\n", hostRuntimeDirectory.c_str());
+                return E_FAIL;
+            }
+        }
+        else 
+        {
 #ifdef FEATURE_PAL
 #if defined (__FreeBSD__) || defined(__NetBSD__)
-        ExtErr("Hosting on FreeBSD or NetBSD not supported\n");
-        return E_FAIL;
+            ExtErr("Hosting on FreeBSD or NetBSD not supported\n");
+            return E_FAIL;
 #else
-        char* line = nullptr;
-        size_t lineLen = 0;
+            char* line = nullptr;
+            size_t lineLen = 0;
 
-        // Start with Linux location file if exists
-        FILE* locationFile = fopen("/etc/dotnet/install_location", "r");
-        if (locationFile != nullptr)
-        {
-            if (getline(&line, &lineLen, locationFile) != -1)
+            // Start with Linux location file if exists
+            FILE* locationFile = fopen("/etc/dotnet/install_location", "r");
+            if (locationFile != nullptr)
             {
-                hostRuntimeDirectory.assign(line);
-                size_t newLinePostion = hostRuntimeDirectory.rfind('\n');
-                if (newLinePostion != std::string::npos) {
-                    hostRuntimeDirectory.erase(newLinePostion);
-                    hostRuntimeDirectory.append("/shared/Microsoft.NETCore.App");
-                }
-                free(line);
-            }
-        }
-        if (hostRuntimeDirectory.empty())
-        {
-            // Now try the possible runtime locations
-            for (int i = 0; i < _countof(g_linuxPaths); i++)
-            {
-                hostRuntimeDirectory.assign(g_linuxPaths[i]);
-                if (access(hostRuntimeDirectory.c_str(), F_OK) == 0)
+                if (getline(&line, &lineLen, locationFile) != -1)
                 {
-                    break;
+                    hostRuntimeDirectory.assign(line);
+                    size_t newLinePostion = hostRuntimeDirectory.rfind('\n');
+                    if (newLinePostion != std::string::npos) {
+                        hostRuntimeDirectory.erase(newLinePostion);
+                        hostRuntimeDirectory.append("/shared/Microsoft.NETCore.App");
+                    }
+                    free(line);
                 }
             }
-        }
+            if (hostRuntimeDirectory.empty())
+            {
+                // Now try the possible runtime locations
+                for (int i = 0; i < _countof(g_linuxPaths); i++)
+                {
+                    hostRuntimeDirectory.assign(g_linuxPaths[i]);
+                    if (access(hostRuntimeDirectory.c_str(), F_OK) == 0)
+                    {
+                        break;
+                    }
+                }
+            }
 #endif // defined (__FreeBSD__) || defined(__NetBSD__)
 #else
-        ArrayHolder<CHAR> programFiles = new CHAR[MAX_LONGPATH];
-        if (GetEnvironmentVariableA("PROGRAMFILES", programFiles, MAX_LONGPATH) == 0)
-        {
-            ExtErr("PROGRAMFILES environment variable not found\n");
-            return E_FAIL;
-        }
-        hostRuntimeDirectory.assign(programFiles);
-        hostRuntimeDirectory.append("\\dotnet\\shared\\Microsoft.NETCore.App");
+            ArrayHolder<CHAR> programFiles = new CHAR[MAX_LONGPATH];
+            if (GetEnvironmentVariableA("PROGRAMFILES", programFiles, MAX_LONGPATH) == 0)
+            {
+                ExtErr("PROGRAMFILES environment variable not found\n");
+                return E_FAIL;
+            }
+            hostRuntimeDirectory.assign(programFiles);
+            hostRuntimeDirectory.append("\\dotnet\\shared\\Microsoft.NETCore.App");
 #endif // FEATURE_PAL
+        }
         hostRuntimeDirectory.append(DIRECTORY_SEPARATOR_STR_A);
 
         // First attempt find the highest LTS version. We want to start with the LTSs
