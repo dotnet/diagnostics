@@ -330,12 +330,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     Console.WriteLine($"Waiting for connection on {port}");
-                    Console.WriteLine($"Start an application with the following environment variable: DOTNET_DiagnosticPorts={port}");
+                    Console.WriteLine($"Start an application with the following environment variable: DOTNET_DiagnosticPorts={port},suspend");
                 }
                 else
                 {
                     Console.WriteLine($"Waiting for connection on {Path.GetFullPath(port)}");
-                    Console.WriteLine($"Start an application with the following environment variable: DOTNET_DiagnosticPorts={Path.GetFullPath(port)}");
+                    Console.WriteLine($"Start an application with the following environment variable: DOTNET_DiagnosticPorts={Path.GetFullPath(port)},suspend");
                 }
 
                 ManualResetEvent shouldExit = new ManualResetEvent(false);
