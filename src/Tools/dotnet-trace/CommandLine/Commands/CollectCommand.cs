@@ -49,10 +49,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (!ProcessLauncher.Launcher.HasChildProc)
                 {
-                    CommandUtils.ValidateArguments(processId, name, port);
-                    if (name != null)
+                    if (CommandUtils.ValidateArguments(processId, name, port, out int resolvedProcessId))
                     {
-                        processId = CommandUtils.FindProcessIdWithName(name);
+                        processId = resolvedProcessId;
+                    }
+                    else
+                    {
+                        return ErrorCodes.ArgumentError;
                     }
                 }
 

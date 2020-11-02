@@ -91,7 +91,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string name, string port)
         {
-            if (!CommandUtils.ValidateArguments(processId, name, port, out _processId))
+            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArguments(processId, name, port, out _processId))
             {
                 return 0;
             }
@@ -130,7 +130,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Collect(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name, string port)
         {
-            if (!CommandUtils.ValidateArguments(processId, name, port, out _processId))
+            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArguments(processId, name, port, out _processId))
             {
                 return 0;
             }
