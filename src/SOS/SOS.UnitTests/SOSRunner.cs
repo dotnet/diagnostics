@@ -1127,7 +1127,16 @@ public class SOSRunner : IDisposable
         };
         try
         {
-            defines.Add("MAJOR_RUNTIME_VERSION_" + _config.RuntimeFrameworkVersionMajor.ToString());
+            int major = _config.RuntimeFrameworkVersionMajor;
+            defines.Add("MAJOR_RUNTIME_VERSION_" + major.ToString());
+            if (major >= 3)
+            {
+                defines.Add("MAJOR_RUNTIME_VERSION_GE_3");
+            }
+            if (major >= 5)
+            {
+                defines.Add("MAJOR_RUNTIME_VERSION_GE_5");
+            }
         }
         catch (SkipTestException)
         {

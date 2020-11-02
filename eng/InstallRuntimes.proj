@@ -21,6 +21,7 @@
      $(MicrosoftAspNetCoreAppRefInternalVersion) - latest dotnet aspnetcore package version (the version to install)
      $(MicrosoftAspNetCoreAppRefVersion)         - latest dotnet aspnetcore stable version (the version that actually is installed)
 
+     $(MicrosoftNETCoreApp50Version) $(MicrosoftAspNetCoreApp50Version)  - 5.0 version
      $(MicrosoftNETCoreApp31Version) $(MicrosoftAspNetCoreApp31Version)  - 3.1 version
      $(MicrosoftNETCoreApp21Version) $(MicrosoftAspNetCoreApp21Version)  - 2.1 version
 
@@ -144,23 +145,43 @@
           Inputs="$(VersionsPropsPath)" 
           Outputs="$(TestConfigFileName)">
 
+    <PropertyGroup Condition="'$(PrivateBuildTesting)' != 'true' AND '$(InternalReleaseTesting)' != 'true'">
+      <RuntimeVersion21>$(MicrosoftNETCoreApp21Version)</RuntimeVersion21>
+      <AspNetCoreVersion21>$(MicrosoftAspNetCoreApp21Version)</AspNetCoreVersion21>
+
+      <RuntimeVersion31>$(MicrosoftNETCoreApp31Version)</RuntimeVersion31>
+      <AspNetCoreVersion31>$(MicrosoftAspNetCoreApp31Version)</AspNetCoreVersion31>
+
+      <!--
+      <RuntimeVersion50>$(MicrosoftNETCoreApp50Version)</RuntimeVersion50>
+      <AspNetCoreVersion50>$(MicrosoftAspNetCoreApp50Version)</AspNetCoreVersion50>
+       -->
+    </PropertyGroup>
+
     <PropertyGroup>
       <RuntimeVersionLatest>$(MicrosoftNETCoreAppRuntimewinx64Version)</RuntimeVersionLatest>
       <RuntimeVersionLatest Condition="$(InternalReleaseTesting)">$(DotnetRuntimeVersion)</RuntimeVersionLatest>
+      <AspNetCoreVersionLatest>$(MicrosoftAspNetCoreAppRefVersion)</AspNetCoreVersionLatest>
+    </PropertyGroup>
+
+    <PropertyGroup>
       <TestConfigFileLines>
 <![CDATA[
 <Configuration>
   <PrivateBuildTesting>$(PrivateBuildTesting)</PrivateBuildTesting>
   <InternalReleaseTesting>$(InternalReleaseTesting)</InternalReleaseTesting>
 
-  <RuntimeVersion21>$(MicrosoftNETCoreApp21Version)</RuntimeVersion21>
-  <AspNetCoreVersion21>$(MicrosoftAspNetCoreApp21Version)</AspNetCoreVersion21>
+  <RuntimeVersion21>$(RuntimeVersion21)</RuntimeVersion21>
+  <AspNetCoreVersion21>$(AspNetCoreVersion21)</AspNetCoreVersion21>
 
-  <RuntimeVersion31>$(MicrosoftNETCoreApp31Version)</RuntimeVersion31>
-  <AspNetCoreVersion31>$(MicrosoftAspNetCoreApp31Version)</AspNetCoreVersion31>
+  <RuntimeVersion31>$(RuntimeVersion31)</RuntimeVersion31>
+  <AspNetCoreVersion31>$(AspNetCoreVersion31)</AspNetCoreVersion31>
+
+  <RuntimeVersion50>$(RuntimeVersion50)</RuntimeVersion50>
+  <AspNetCoreVersion50>$(AspNetCoreVersion50)</AspNetCoreVersion50>
 
   <RuntimeVersionLatest>$(RuntimeVersionLatest)</RuntimeVersionLatest>
-  <AspNetCoreVersionLatest>$(MicrosoftAspNetCoreAppRefVersion)</AspNetCoreVersionLatest>
+  <AspNetCoreVersionLatest>$(AspNetCoreVersionLatest)</AspNetCoreVersionLatest>
 </Configuration>
 ]]>
       </TestConfigFileLines>
