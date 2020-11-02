@@ -399,7 +399,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             };
         private static Option DiagnosticPortOption() =>
             new Option(
-                alias: "--port",
+                alias: "--diagnostic-port",
                 description: @"The path to a diagnostic port to be created.")
             {
                 Argument = new Argument<string>(name: "port", getDefaultValue: () => string.Empty)
