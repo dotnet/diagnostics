@@ -46,9 +46,10 @@
 #define TPALIST_SEPARATOR_STR_A ";"
 #endif
 
-#ifndef FEATURE_PAL
+#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
 extern HRESULT InitializeDesktopClrHost();
 extern void UninitializeDesktopClrHost();
+bool g_useDesktopClrHost = true;
 #endif
 
 bool g_dotnetDumpHost = false;
@@ -59,7 +60,6 @@ LPCSTR g_tmpPath = nullptr;
 SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
 
 #ifndef FEATURE_PAL
-bool g_useDesktopClrHost = true;
 HMODULE g_hmoduleSymBinder = nullptr;
 ISymUnmanagedBinder3 *g_pSymBinder = nullptr;
 #endif
@@ -557,7 +557,7 @@ HRESULT InitializeHosting()
         return S_OK;
     }
     HRESULT Status;
-#ifndef FEATURE_PAL
+#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
     if (g_useDesktopClrHost)
     {
         Status = InitializeDesktopClrHost();
