@@ -13,5 +13,8 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
         public Dictionary<string, ConfiguredEgressEndpoint> Endpoints { get; }
             = new Dictionary<string, ConfiguredEgressEndpoint>(StringComparer.OrdinalIgnoreCase);
+
+        public Dictionary<string, string> Properties { get; }
+            = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     }
 }

@@ -16,9 +16,6 @@ namespace Microsoft.Diagnostics.Tools.Monitor
     {
         public static IServiceCollection ConfigureEgress(this IServiceCollection services, IConfiguration configuration)
         {
-            // Configure AzureStorageOptions to bind to the AzureStorage configuration key.
-            services.Configure<AzureStorageOptions>(configuration.GetSection(AzureStorageOptions.ConfigurationKey));
-
             // Register change token for EgressOptions binding
             services.AddSingleton((IOptionsChangeTokenSource<EgressOptions>)new ConfigurationChangeTokenSource<EgressOptions>(GetEgressSection(configuration)));
 
@@ -49,22 +46,24 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
             public EgressConfigureOptions(
                 ILogger<EgressConfigureOptions> logger,
-                IConfiguration configuration,
-                IOptionsMonitor<AzureStorageOptions> azureStorageOptions)
+                IConfiguration configuration)
             {
                 _configuration = configuration;
                 _logger = logger;
 
                 // Register egress providers
-                _providers.Add("AzureBlobStorage", new AzureBlobEgressProvider(azureStorageOptions));
+                _providers.Add("AzureBlobStorage", new AzureBlobEgressProvider());
                 _providers.Add("FileSystem", new FileSystemEgressProvider());
             }
 
             public void Configure(EgressOptions options)
             {
-                IConfigurationSection endpointsSection = GetEgressSection(_configuration)
-                    .GetSection(nameof(EgressOptions.Endpoints));
+                IConfigurationSection egressSection = GetEgressSection(_configuration);
 
+                IConfigurationSection propertiesSection = egressSection.GetSection(nameof(EgressOptions.Properties));
+                propertiesSection.Bind(options.Properties);
+
+                IConfigurationSection endpointsSection = egressSection.GetSection(nameof(EgressOptions.Endpoints));
                 foreach (var endpointSection in endpointsSection.GetChildren())
                 {
                     string endpointName = endpointSection.Key;
@@ -81,7 +80,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                         continue;
                     }
                     
-                    if (!provider.TryParse(endpointName, endpointSection, out ConfiguredEgressEndpoint endpoint))
+                    if (!provider.TryParse(endpointName, endpointSection, options.Properties, out ConfiguredEgressEndpoint endpoint))
                     {
                         _logger.LogWarning("Unable to create egress endpoint '{0}' due to invalid options.", endpointName);
                         continue;

@@ -7,6 +7,7 @@ using Microsoft.Diagnostics.Monitoring.Egress.FileSystem;
 using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,23 +16,27 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 {
     internal class FileSystemEgressProvider : EgressProvider
     {
-        public override bool TryParse(string endpointName, IConfigurationSection config, out ConfiguredEgressEndpoint endpoint)
+        public override bool TryParse(
+            string endpointName,
+            IConfigurationSection endpointSection,
+            Dictionary<string, string> egressProperties,
+            out ConfiguredEgressEndpoint endpoint)
         {
-            var optionsTemplate = config.Get<FileSystemEgressEndpointOptions>();
+            var endpointOptions = endpointSection.Get<FileSystemEgressEndpointOptions>();
 
             // TODO: Validate options
 
-            endpoint = new Endpoint(optionsTemplate);
+            endpoint = new Endpoint(endpointOptions);
             return true;
         }
 
         private class Endpoint : ConfiguredEgressEndpoint
         {
-            private readonly FileSystemEgressEndpointOptions _optionsTemplate;
+            private readonly FileSystemEgressEndpointOptions _endpointOptions;
 
-            public Endpoint(FileSystemEgressEndpointOptions optionsTemplate)
+            public Endpoint(FileSystemEgressEndpointOptions endpointOptions)
             {
-                _optionsTemplate = optionsTemplate;
+                _endpointOptions = endpointOptions;
             }
 
             public override async Task<EgressResult> EgressAsync(
@@ -43,7 +48,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             {
                 var streamOptions = new FileSystemEgressStreamOptions();
 
-                var endpoint = new FileSystemEgressEndpoint(CreateEndpointOptions());
+                var endpoint = new FileSystemEgressEndpoint(_endpointOptions);
                 string filepath = await endpoint.EgressAsync(action, fileName, streamOptions, token);
 
                 return new EgressResult("path", filepath);
@@ -58,15 +63,10 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             {
                 var streamOptions = new FileSystemEgressStreamOptions();
 
-                var endpoint = new FileSystemEgressEndpoint(CreateEndpointOptions());
+                var endpoint = new FileSystemEgressEndpoint(_endpointOptions);
                 string filepath = await endpoint.EgressAsync(action, fileName, streamOptions, token);
 
                 return new EgressResult("path", filepath);
-            }
-
-            private FileSystemEgressEndpointOptions CreateEndpointOptions()
-            {
-                return new FileSystemEgressEndpointOptions(_optionsTemplate);
             }
         }
     }

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
@@ -25,38 +26,19 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             AzureBlobEgressStreamOptions streamOptions,
             CancellationToken token)
         {
-            var serviceUriBuilder = new UriBuilder(EndpointOptions.AccountUri)
-            {
-                Query = EndpointOptions.SharedAccessSignature
-            };
-
-            BlobServiceClient serviceClient = new BlobServiceClient(serviceUriBuilder.Uri);
+            BlobServiceClient serviceClient = CreateBlobServiceClient();
 
             BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(EndpointOptions.ContainerName);
             await containerClient.CreateIfNotExistsAsync(cancellationToken: token);
 
-            string blobName = name;
-            if (!string.IsNullOrEmpty(EndpointOptions.BlobDirectory))
-            {
-                blobName = string.Concat(EndpointOptions.BlobDirectory, "/", name);
-            }
-
-            BlobClient blobClient = containerClient.GetBlobClient(blobName);
-
-            BlobHttpHeaders headers = new BlobHttpHeaders();
-            headers.ContentType = streamOptions.ContentType;
+            BlobClient blobClient = containerClient.GetBlobClient(GetBlobName(name));
 
             using var stream = await action(token);
 
             // Write blob content, headers, and metadata
-            await blobClient.UploadAsync(stream, headers, streamOptions.Metadata, cancellationToken: token);
+            await blobClient.UploadAsync(stream, CreateHttpHeaders(streamOptions), streamOptions.Metadata, cancellationToken: token);
 
-            // The BlobClient URI has the SAS token as the query parameter
-            // Remove the SAS token before returning the URI
-            UriBuilder outputBuilder = new UriBuilder(blobClient.Uri);
-            outputBuilder.Query = null;
-
-            return outputBuilder.Uri.AbsoluteUri;
+            return GetBlobUri(blobClient);
         }
 
         public override async Task<string> EgressAsync(
@@ -65,23 +47,12 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             AzureBlobEgressStreamOptions streamOptions,
             CancellationToken token)
         {
-            var serviceUriBuilder = new UriBuilder(EndpointOptions.AccountUri)
-            {
-                Query = EndpointOptions.SharedAccessSignature
-            };
-
-            BlobServiceClient serviceClient = new BlobServiceClient(serviceUriBuilder.Uri);
+            BlobServiceClient serviceClient = CreateBlobServiceClient();
 
             BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(EndpointOptions.ContainerName);
             await containerClient.CreateIfNotExistsAsync(cancellationToken: token);
 
-            string blobName = name;
-            if (!string.IsNullOrEmpty(EndpointOptions.BlobDirectory))
-            {
-                blobName = string.Concat(EndpointOptions.BlobDirectory, "/", name);
-            }
-
-            BlockBlobClient blobClient = containerClient.GetBlockBlobClient(blobName);
+            BlockBlobClient blobClient = containerClient.GetBlockBlobClient(GetBlobName(name));
 
             // Write blob content
             using (Stream blobStream = await blobClient.OpenWriteAsync(overwrite: true, cancellationToken: token))
@@ -92,16 +63,65 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             }
 
             // Write blob headers
-            BlobHttpHeaders headers = new BlobHttpHeaders();
-            headers.ContentType = streamOptions.ContentType;
-            await blobClient.SetHttpHeadersAsync(headers, cancellationToken: token);
+            await blobClient.SetHttpHeadersAsync(CreateHttpHeaders(streamOptions), cancellationToken: token);
 
             // Write blob metadata
             await blobClient.SetMetadataAsync(streamOptions.Metadata, cancellationToken: token);
 
+            return GetBlobUri(blobClient);
+        }
+
+        private BlobServiceClient CreateBlobServiceClient()
+        {
+            if (!string.IsNullOrWhiteSpace(EndpointOptions.SharedAccessSignature))
+            {
+                var serviceUriBuilder = new UriBuilder(EndpointOptions.AccountUri)
+                {
+                    Query = EndpointOptions.SharedAccessSignature
+                };
+
+                return new BlobServiceClient(serviceUriBuilder.Uri);
+            }
+            else if (!string.IsNullOrEmpty(EndpointOptions.AccountKey))
+            {
+                var serviceUri = new Uri(EndpointOptions.AccountUri);
+
+                var blobUriBuilder = new BlobUriBuilder(serviceUri);
+
+                StorageSharedKeyCredential credential = new StorageSharedKeyCredential(
+                    blobUriBuilder.AccountName,
+                    EndpointOptions.AccountKey);
+
+                return new BlobServiceClient(serviceUri, credential);
+            }
+
+            throw new InvalidOperationException("SharedAccessSignature or AccountKey must be specified.");
+        }
+
+        private string GetBlobName(string fileName)
+        {
+            if (string.IsNullOrEmpty(EndpointOptions.BlobDirectory))
+            {
+                return fileName;
+            }
+            else
+            {
+                return string.Concat(EndpointOptions.BlobDirectory, "/", fileName);
+            }
+        }
+
+        private BlobHttpHeaders CreateHttpHeaders(AzureBlobEgressStreamOptions streamOptions)
+        {
+            BlobHttpHeaders headers = new BlobHttpHeaders();
+            headers.ContentType = streamOptions.ContentType;
+            return headers;
+        }
+
+        private static string GetBlobUri(BlobBaseClient client)
+        {
             // The BlobClient URI has the SAS token as the query parameter
             // Remove the SAS token before returning the URI
-            UriBuilder outputBuilder = new UriBuilder(blobClient.Uri);
+            UriBuilder outputBuilder = new UriBuilder(client.Uri);
             outputBuilder.Query = null;
 
             return outputBuilder.Uri.AbsoluteUri;

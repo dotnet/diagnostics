@@ -7,23 +7,17 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
     internal class AzureBlobEgressEndpointOptions :
         EgressEndpointOptions
     {
-        public AzureBlobEgressEndpointOptions()
-        {
-        }
-
-        public AzureBlobEgressEndpointOptions(AzureBlobEgressEndpointOptions settings)
-        {
-            ContainerName = settings.ContainerName;
-            AccountUri = settings.AccountUri;
-            SharedAccessSignature = settings.SharedAccessSignature;
-            BlobDirectory = settings.BlobDirectory;
-        }
-
         public string ContainerName { get; set; }
 
         public string AccountUri { get; set; }
 
+        public string AccountKey { get; set; }
+
+        public string AccountKeyName { get; set; }
+
         public string SharedAccessSignature { get; set; }
+
+        public string SharedAccessSignatureName { get; set; }
 
         public string BlobDirectory { get; set; }
     }

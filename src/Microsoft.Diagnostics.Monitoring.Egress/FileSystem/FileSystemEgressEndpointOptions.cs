@@ -7,15 +7,6 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
     internal class FileSystemEgressEndpointOptions :
         EgressEndpointOptions
     {
-        public FileSystemEgressEndpointOptions()
-        {
-        }
-
-        public FileSystemEgressEndpointOptions(FileSystemEgressEndpointOptions settings)
-        {
-            DirectoryPath = settings.DirectoryPath;
-        }
-
         public string DirectoryPath { get; set; }
     }
 }

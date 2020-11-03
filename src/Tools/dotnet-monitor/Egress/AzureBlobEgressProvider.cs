@@ -6,8 +6,8 @@ using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Diagnostics.Monitoring.Egress.AzureStorage;
 using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,37 +16,50 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 {
     internal class AzureBlobEgressProvider : EgressProvider
     {
-        private readonly IOptionsMonitor<AzureStorageOptions> _azureStorageOptions;
-
-        public AzureBlobEgressProvider(IOptionsMonitor<AzureStorageOptions> azureStorageOptions)
+        public override bool TryParse(
+            string endpointName,
+            IConfigurationSection endpointSection,
+            Dictionary<string, string> egressProperties,
+            out ConfiguredEgressEndpoint endpoint)
         {
-            _azureStorageOptions = azureStorageOptions;
-        }
-
-        public override bool TryParse(string endpointName, IConfigurationSection config, out ConfiguredEgressEndpoint endpoint)
-        {
-            var optionsTemplate = config.Get<AzureBlobEgressEndpointOptions>();
+            var endpointOptions = endpointSection.Get<AzureBlobEgressEndpointOptions>();
 
             // TODO: Validate options
 
-            endpoint = new Endpoint(endpointName, optionsTemplate, _azureStorageOptions);
+            if (string.IsNullOrEmpty(endpointOptions.AccountKey) &&
+                    !string.IsNullOrEmpty(endpointOptions.AccountKeyName))
+            {
+                if (egressProperties.TryGetValue(endpointOptions.AccountKeyName, out string key))
+                {
+                    endpointOptions.AccountKey = key;
+                }
+            }
+
+
+            if (string.IsNullOrEmpty(endpointOptions.SharedAccessSignature) &&
+                !string.IsNullOrEmpty(endpointOptions.SharedAccessSignatureName))
+            {
+                if (egressProperties.TryGetValue(endpointOptions.SharedAccessSignatureName, out string signature))
+                {
+                    endpointOptions.SharedAccessSignature = signature;
+                }
+            }
+
+            endpoint = new Endpoint(endpointName, endpointOptions);
             return true;
         }
 
         private class Endpoint : ConfiguredEgressEndpoint
         {
-            private readonly IOptionsMonitor<AzureStorageOptions> _azureStorageOptions;
             private readonly string _endpointName;
-            private readonly AzureBlobEgressEndpointOptions _optionsTemplate;
+            private readonly AzureBlobEgressEndpointOptions _endpointOptions;
 
             public Endpoint(
                 string endpointName,
-                AzureBlobEgressEndpointOptions optionsTemplate,
-                IOptionsMonitor<AzureStorageOptions> azureStorageOptions)
+                AzureBlobEgressEndpointOptions endpointOptions)
             {
-                _azureStorageOptions = azureStorageOptions;
                 _endpointName = endpointName;
-                _optionsTemplate = optionsTemplate;
+                _endpointOptions = endpointOptions;
             }
 
             public override async Task<EgressResult> EgressAsync(
@@ -60,7 +73,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 var streamOptions = new AzureBlobEgressStreamOptions();
                 streamOptions.ContentType = contentType;
 
-                var endpoint = new AzureBlobEgressEndpoint(CreateEndpointOptions());
+                var endpoint = new AzureBlobEgressEndpoint(_endpointOptions);
                 string blobUri = await endpoint.EgressAsync(action, fileName, streamOptions, token);
 
                 return new EgressResult("uri", blobUri);
@@ -77,25 +90,10 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 var streamOptions = new AzureBlobEgressStreamOptions();
                 streamOptions.ContentType = contentType;
 
-                var endpoint = new AzureBlobEgressEndpoint(CreateEndpointOptions());
+                var endpoint = new AzureBlobEgressEndpoint(_endpointOptions);
                 string blobUri = await endpoint.EgressAsync(action, fileName, streamOptions, token);
 
                 return new EgressResult("uri", blobUri);
-            }
-
-            private AzureBlobEgressEndpointOptions CreateEndpointOptions()
-            {
-                var endpointOptions = new AzureBlobEgressEndpointOptions(_optionsTemplate);
-
-                // If SAS token is not specified, use the one from the SAS token configuration that has
-                // a name that matches the endpoint name.
-                if (string.IsNullOrEmpty(endpointOptions.SharedAccessSignature) &&
-                    _azureStorageOptions.CurrentValue.SharedAccessSignatures.TryGetValue(_endpointName, out string sasToken))
-                {
-                    endpointOptions.SharedAccessSignature = sasToken;
-                }
-
-                return endpointOptions;
             }
         }
     }

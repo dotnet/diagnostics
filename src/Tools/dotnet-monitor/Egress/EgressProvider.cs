@@ -3,11 +3,16 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Configuration;
+using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
     internal abstract class EgressProvider
     {
-        public abstract bool TryParse(string endpointName, IConfigurationSection section, out ConfiguredEgressEndpoint endpoint);
+        public abstract bool TryParse(
+            string endpointName,
+            IConfigurationSection endpointSection,
+            Dictionary<string, string> egressProperties,
+            out ConfiguredEgressEndpoint endpoint);
     }
 }
