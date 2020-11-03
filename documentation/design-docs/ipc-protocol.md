@@ -873,7 +873,9 @@ For example, if the Diagnostic Server finds incorrectly encoded data while parsi
 
 > Available since .NET 5.0
 
-.NET applications can be configured with the following environment variables:
+A Diagnostic Port is a mechanism for communicating the Diagnostics IPC Protocol to a .NET application from out of process.  There are two flavors of Diagnostic Port: `connect` and `listen`.  A `listen` Port is when the runtime creates an IPC transport and listens for incoming connections.  The default Diagnostic Port is an example of a `listen` Port.  You cannot currently configure additional `listen` Ports.  A `connect` Port is when the runtime attempts to connect to an IPC transport owned by another process.  Upon connection to a `connect` Port, the runtime will send an [Advertise](#advertise-protocol) message signalling that it is ready to accept Diagnostics IPC Protocol commands.  Each command consumes a connection, and the runtime will reconnect to the `connect` Port to wait for more commands.
+
+.NET applications can configure Diagnostic Ports with the following environment variables:
 
  * `DOTNET_DiagnosticPorts=<port address>[,tag[...]][;<port address>[,tag[...]][...]]`
 
@@ -881,20 +883,26 @@ where:
 
 * `<port address>` is a NamedPipe name without `\\.\pipe\` on Windows, and the full path to a Unix domain socket on other platforms
 * `tag ::= <SUSPEND_MODE> | <PORT_TYPE>`
-* `<SUSPEND_MODE> ::= suspend | nosuspend` (default value is nosuspend)`
+* `<SUSPEND_MODE> ::= suspend | nosuspend` (default value is suspend)`
 * `<PORT_TYPE> ::= connect` (future types such as additional listen ports could be added to this list)
 
-Any diagnostic ports specified in this configuration will be created in addition to the default port (`dotnet-diagnostic-<pid>-<epoch>`). The suspend mode of the default port is set via the new environment variable `DOTNET_DefaultDotnetPortSuspend` which defaults to 0 for `nosuspend`.
+Example usage:
 
-Each port configuration specifies whether it is a `suspend` or `nosuspend` port. Ports specifying `suspend` in their configuration will cause the runtime to pause early on the startup path before most systems are available. This allows any agent to receive a connection and properly setup before the application startup continues. Since multiple ports can individually request suspension, the `resume` command now needs to be sent by each suspend port connection before the event will be set and the runtime resumes execution.
+```shell
+$ export DOTNET_DiagnosticPorts=$DOTNET_DiagnosticPorts;~/mydiagport.sock,nosuspend;
+```
+
+Any diagnostic ports specified in this configuration will be created in addition to the default port (`dotnet-diagnostic-<pid>-<epoch>`). The suspend mode of the default port is set via the new environment variable `DOTNET_DefaultDotnetPortSuspend` which defaults to `0` for `nosuspend`.
+
+Each port configuration specifies whether it is a `suspend` or `nosuspend` port. Ports specifying `suspend` in their configuration will cause the runtime to pause early on in the startup path before most runtime subsystems have started. This allows any agent to receive a connection and properly setup before the application startup continues. Since multiple ports can individually request suspension, the `resume` command needs to be sent by each suspended port connection before the runtime resumes execution.
 
 If a config specifies multiple tag values from a tag type, for example  `"<path>,nosuspend,suspend,suspend,"`, only the first one is respected.
 
-The port address value is required for a port configuration. If a configuration doesn't specify an address and only specifies tags, then the first tag will be treated as the path. For example, a configuration `suspend,connect` would cause a port with the name `suspend` to be created, in the default `nosuspend` mode.
+The port address value is **required* for a port configuration. If a configuration doesn't specify an address and only specifies tags, then the first tag will be treated as the path. For example, a configuration `suspend,connect` would cause a port with the name `suspend` to be created, in the default `suspend` mode.
 
-The runtime will make a best attempt to generate a port from a port configuration. A bad port configuration won't cause an error state, but could lead to consumed resources. For example it could cause the runtime to continuously poll for a connect port that will never exist.
+The runtime will make a best effort attempt to generate a port from a port configuration. A bad port configuration won't cause an error state, but could lead to consumed resources. For example it could cause the runtime to continuously poll for a connect port that will never exist.
 
-When a DiagnosticPort is configured, the runtime will attempt to connect to the provided address in a retry loop while also listening on the traditional server. The retry loop has an initial timeout of 10ms with a falloff factor of 1.25x and a max timeout of 500 ms.  A successful connection will result in an infinite timeout.  The runtime is resilient to the Reverse Server transport failing, e.g., closing, not `Accepting`, etc.
+When a DiagnosticPort is configured, the runtime will attempt to connect to the provided address in a retry loop while also listening on the traditional server. The retry loop has an initial timeout of 10ms with a falloff factor of 1.25x and a max timeout of 500 ms.  A successful connection will result in an infinite timeout.  The runtime is resilient to the remote end of the Diagnostic Port failing, e.g., closing, not `Accepting`, etc.
 
 ## Advertise Protocol
 
@@ -903,7 +911,7 @@ Upon successful connection, the runtime will send a fixed-size, 34 byte buffer c
  * `char[8] magic`: (8 bytes) `"ADVR_V1\0"` (ASCII chars + null byte)
  * `GUID runtimeCookie`: (16 bytes) CLR Instance Cookie (little-endian)
  * `uint64_t processId`: (8 bytes) PID (little-endian)
- * `uint16_t future`: (2 bytes) unused for futureproofing
+ * `uint16_t future`: (2 bytes) unused for future-proofing
 
 With the following layout:
 
@@ -958,11 +966,11 @@ With the following layout:
   </tr>
 </table>
 
-This is a one-way transmission with no expectation of an ACK.  The Reverse Server is expected to consume this message and then hold on to the now active connection until it chooses to send a Diagnostics IPC command.
+This is a one-way transmission with no expectation of an ACK.  The tool owning the Diagnostic Port is expected to consume this message and then hold on to the now active connection until it chooses to send a Diagnostics IPC command.
 
 ## Dataflow
 
-Due to the potential for an optional continuation in the Diagnostics IPC Protocol, each successful connection between the runtime and a reverse server is only usable once.  As a result, a .NET process will attempt to _reconnect_ to the Reverse Server after every command that is sent across an active connection.
+Due to the potential for an *optional continuation* in the Diagnostics IPC Protocol, each successful connection between the runtime and a Diagnostic Port is only usable **once**.  As a result, a .NET process will attempt to _reconnect_ to the Reverse Server immediately after every command that is sent across an active connection.
 
 A typical dataflow has 2 actors, the Target application, `T` and the Diagnostics Monitor Application, `M`, and communicates like so:
 ```
@@ -973,3 +981,5 @@ T -> M : [ Advertise ] - Target sends advertise message to Monitor
 T <- M : [ Diagnostics IPC Protocol ] - Monitor sends a Diagnostics IPC Protocol command
 T -> M : [ Advertise ] - Target reconnects to Monitor with a _new_ connection and re-sends the advertise message
 ```
+
+It is important to emphasize that a connection **_should not_** be reused for multiple Diagnostic IPC Protocol commands.
