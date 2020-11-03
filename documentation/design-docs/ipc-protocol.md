@@ -898,11 +898,11 @@ Each port configuration specifies whether it is a `suspend` or `nosuspend` port.
 
 If a config specifies multiple tag values from a tag type, for example  `"<path>,nosuspend,suspend,suspend,"`, only the first one is respected.
 
-The port address value is **required* for a port configuration. If a configuration doesn't specify an address and only specifies tags, then the first tag will be treated as the path. For example, a configuration `suspend,connect` would cause a port with the name `suspend` to be created, in the default `suspend` mode.
+The port address value is **required** for a port configuration. If a configuration doesn't specify an address and only specifies tags, then the first tag will be treated as the path. For example, the configuration `DOTNET_DefaultDotnetPortSuspend=nosuspend,connect` would cause a port with the name `nosuspend` to be created, in the default `suspend` mode.
 
 The runtime will make a best effort attempt to generate a port from a port configuration. A bad port configuration won't cause an error state, but could lead to consumed resources. For example it could cause the runtime to continuously poll for a connect port that will never exist.
 
-When a DiagnosticPort is configured, the runtime will attempt to connect to the provided address in a retry loop while also listening on the traditional server. The retry loop has an initial timeout of 10ms with a falloff factor of 1.25x and a max timeout of 500 ms.  A successful connection will result in an infinite timeout.  The runtime is resilient to the remote end of the Diagnostic Port failing, e.g., closing, not `Accepting`, etc.
+When a Diagnostic Port is configured, the runtime will attempt to connect to the provided address in a retry loop while also listening on the traditional server. The retry loop has an initial timeout of 10ms with a falloff factor of 1.25x and a max timeout of 500 ms.  A successful connection will result in an infinite timeout.  The runtime is resilient to the remote end of the Diagnostic Port failing, e.g., closing, not `Accepting`, etc.
 
 ## Advertise Protocol
 
