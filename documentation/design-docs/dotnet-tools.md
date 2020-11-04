@@ -301,7 +301,6 @@ COMMANDS
     ps              Lists dotnet processes that can be attached to.
     list-profiles   Lists pre-built tracing profiles with a description of what providers and filters are in each profile.
     convert         Converts traces to alternate formats for use with alternate trace analysis tools
-    stack           Print the stack trace for every thread in teh target process
 
 COLLECT
 
