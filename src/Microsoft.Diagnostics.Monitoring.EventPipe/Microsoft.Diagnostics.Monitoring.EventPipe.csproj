@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
     <Description>EventPipe package for collecting logs, metrics, and gcdumps.</Description>
-    <!-- Tentatively create package so other teams can tenatively consume. -->
+    <!-- Tentatively create package so other teams can tentatively consume. -->
     <IsPackable>true</IsPackable>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>

@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
+
 namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
 {
     internal class AzureBlobEgressProviderOptions :
@@ -9,7 +11,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
     {
         public string ContainerName { get; set; }
 
-        public string AccountUri { get; set; }
+        public Uri AccountUri { get; set; }
 
         public string AccountKey { get; set; }
 

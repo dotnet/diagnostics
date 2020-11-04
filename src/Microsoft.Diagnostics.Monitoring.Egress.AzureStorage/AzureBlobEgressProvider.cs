@@ -79,15 +79,13 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             }
             else if (!string.IsNullOrEmpty(Options.AccountKey))
             {
-                var serviceUri = new Uri(Options.AccountUri);
-
-                var blobUriBuilder = new BlobUriBuilder(serviceUri);
+                var blobUriBuilder = new BlobUriBuilder(Options.AccountUri);
 
                 StorageSharedKeyCredential credential = new StorageSharedKeyCredential(
                     blobUriBuilder.AccountName,
                     Options.AccountKey);
 
-                serviceClient = new BlobServiceClient(serviceUri, credential);
+                serviceClient = new BlobServiceClient(Options.AccountUri, credential);
             }
             else
             {
@@ -115,6 +113,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
         private BlobHttpHeaders CreateHttpHeaders(AzureBlobEgressStreamOptions streamOptions)
         {
             BlobHttpHeaders headers = new BlobHttpHeaders();
+            headers.ContentEncoding = streamOptions.ContentEncoding;
             headers.ContentType = streamOptions.ContentType;
             return headers;
         }

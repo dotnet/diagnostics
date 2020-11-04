@@ -9,6 +9,8 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
 {
     internal class AzureBlobEgressStreamOptions
     {
+        public string ContentEncoding { get; set; }
+
         public string ContentType { get; set; }
 
         public Dictionary<string, string> Metadata { get; }
