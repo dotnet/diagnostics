@@ -77,6 +77,7 @@
 
   <ItemGroup Condition="!$(InternalReleaseTesting) and !$(PrivateBuildTesting)">
     <TestVersions Include="Latest" RuntimeVersion="$(MicrosoftNETCoreAppVersion)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
+    <TestVersions Include="50" RuntimeVersion="$(MicrosoftNETCoreApp50Version)" AspNetVersion="$(MicrosoftAspNetCoreApp50Version)" />
     <TestVersions Include="31" RuntimeVersion="$(MicrosoftNETCoreApp31Version)" AspNetVersion="$(MicrosoftAspNetCoreApp31Version)" />
     <TestVersions Condition="'$(BuildArch)' != 'arm' and '$(BuildArch)' != 'arm64'" Include="21" RuntimeVersion="$(MicrosoftNETCoreApp21Version)" AspNetVersion="$(MicrosoftAspNetCoreApp21Version)" />
   </ItemGroup>
@@ -152,10 +153,8 @@
       <RuntimeVersion31>$(MicrosoftNETCoreApp31Version)</RuntimeVersion31>
       <AspNetCoreVersion31>$(MicrosoftAspNetCoreApp31Version)</AspNetCoreVersion31>
 
-      <!--
       <RuntimeVersion50>$(MicrosoftNETCoreApp50Version)</RuntimeVersion50>
       <AspNetCoreVersion50>$(MicrosoftAspNetCoreApp50Version)</AspNetCoreVersion50>
-       -->
     </PropertyGroup>
 
     <PropertyGroup>
