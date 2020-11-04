@@ -2,10 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Azure;
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Threading;
@@ -15,8 +17,8 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
 {
     internal class AzureBlobEgressProvider : EgressProvider<AzureBlobEgressProviderOptions, AzureBlobEgressStreamOptions>
     {
-        public AzureBlobEgressProvider(AzureBlobEgressProviderOptions options)
-            : base(options)
+        public AzureBlobEgressProvider(AzureBlobEgressProviderOptions options, ILogger logger = null)
+            : base(options, logger)
         {
         }
 
@@ -26,16 +28,35 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             AzureBlobEgressStreamOptions streamOptions,
             CancellationToken token)
         {
-            var containerClient = await GetBlobContainerClientAsync(token);
+            LogAndValidateOptions(streamOptions, name);
 
-            BlobClient blobClient = containerClient.GetBlobClient(GetBlobName(name));
+            try
+            {
+                var containerClient = await GetBlobContainerClientAsync(token);
 
-            using var stream = await action(token);
+                BlobClient blobClient = containerClient.GetBlobClient(GetBlobName(name));
 
-            // Write blob content, headers, and metadata
-            await blobClient.UploadAsync(stream, CreateHttpHeaders(streamOptions), streamOptions.Metadata, cancellationToken: token);
+                Logger?.LogDebug("Start invoking stream action.");
+                using var stream = await action(token);
+                Logger?.LogDebug("End invoking stream action.");
 
-            return GetBlobUri(blobClient);
+                // Write blob content, headers, and metadata
+                Logger?.LogDebug("Start uploading to storage with headers and metadata.");
+                await blobClient.UploadAsync(stream, CreateHttpHeaders(streamOptions), streamOptions.Metadata, cancellationToken: token);
+                Logger?.LogDebug("End uploading to storage with headers and metadata.");
+
+                string blobUriString = GetBlobUri(blobClient);
+                Logger?.LogInformation("Uploaded stream to {0}", blobUriString);
+                return blobUriString;
+            }
+            catch (AggregateException ex) when (ex.InnerException is RequestFailedException innerException)
+            {
+                throw new InvalidOperationException(innerException.Message);
+            }
+            catch (RequestFailedException ex)
+            {
+                throw new InvalidOperationException(ex.Message);
+            }
         }
 
         public override async Task<string> EgressAsync(
@@ -44,25 +65,55 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             AzureBlobEgressStreamOptions streamOptions,
             CancellationToken token)
         {
-            var containerClient = await GetBlobContainerClientAsync(token);
+            LogAndValidateOptions(streamOptions, name);
 
-            BlockBlobClient blobClient = containerClient.GetBlockBlobClient(GetBlobName(name));
-
-            // Write blob content
-            using (Stream blobStream = await blobClient.OpenWriteAsync(overwrite: true, cancellationToken: token))
+            try
             {
-                await action(blobStream, token);
+                var containerClient = await GetBlobContainerClientAsync(token);
 
-                await blobStream.FlushAsync(token);
+                BlockBlobClient blobClient = containerClient.GetBlockBlobClient(GetBlobName(name));
+
+                // Write blob content
+                Logger?.LogDebug("Start uploading to storage.");
+                using (Stream blobStream = await blobClient.OpenWriteAsync(overwrite: true, cancellationToken: token))
+                {
+                    await action(blobStream, token);
+
+                    await blobStream.FlushAsync(token);
+                }
+                Logger?.LogDebug("End uploading to storage.");
+
+                // Write blob headers
+                Logger?.LogDebug("Start writing headers.");
+                await blobClient.SetHttpHeadersAsync(CreateHttpHeaders(streamOptions), cancellationToken: token);
+                Logger?.LogDebug("End writing headers.");
+
+                // Write blob metadata
+                Logger?.LogDebug("Start writing metadata.");
+                await blobClient.SetMetadataAsync(streamOptions.Metadata, cancellationToken: token);
+                Logger?.LogDebug("End writing metadata.");
+
+                string blobUriString = GetBlobUri(blobClient);
+                Logger?.LogInformation("Uploaded stream to {0}", blobUriString);
+                return blobUriString;
             }
+            catch (AggregateException ex) when (ex.InnerException is RequestFailedException innerException)
+            {
+                throw new InvalidOperationException(innerException.Message);
+            }
+            catch (RequestFailedException ex)
+            {
+                throw new InvalidOperationException(ex.Message);
+            }
+        }
 
-            // Write blob headers
-            await blobClient.SetHttpHeadersAsync(CreateHttpHeaders(streamOptions), cancellationToken: token);
+        private void LogAndValidateOptions(AzureBlobEgressStreamOptions streamOptions, string fileName)
+        {
+            Options.Log(Logger);
+            streamOptions.Log(Logger);
+            Logger?.LogDebug($"File name: {fileName}");
 
-            // Write blob metadata
-            await blobClient.SetMetadataAsync(streamOptions.Metadata, cancellationToken: token);
-
-            return GetBlobUri(blobClient);
+            ValidateOptions();
         }
 
         private async Task<BlobContainerClient> GetBlobContainerClientAsync(CancellationToken token)
@@ -70,6 +121,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             BlobServiceClient serviceClient;
             if (!string.IsNullOrWhiteSpace(Options.SharedAccessSignature))
             {
+                Logger?.LogDebug("Using shared access signature.");
                 var serviceUriBuilder = new UriBuilder(Options.AccountUri)
                 {
                     Query = Options.SharedAccessSignature
@@ -79,6 +131,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             }
             else if (!string.IsNullOrEmpty(Options.AccountKey))
             {
+                Logger?.LogDebug("Using account key.");
                 var blobUriBuilder = new BlobUriBuilder(Options.AccountUri);
 
                 StorageSharedKeyCredential credential = new StorageSharedKeyCredential(
@@ -92,8 +145,10 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
                 throw new InvalidOperationException("SharedAccessSignature or AccountKey must be specified.");
             }
 
+            Logger?.LogDebug("Start creating blob container if not exists.");
             BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(Options.ContainerName);
             await containerClient.CreateIfNotExistsAsync(cancellationToken: token);
+            Logger?.LogDebug("End creating blob container if not exists.");
 
             return containerClient;
         }

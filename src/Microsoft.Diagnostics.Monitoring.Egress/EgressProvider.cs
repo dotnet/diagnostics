@@ -2,7 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Extensions.Logging;
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,8 +14,9 @@ namespace Microsoft.Diagnostics.Monitoring.Egress
     internal abstract class EgressProvider<TProviderOptions, TStreamOptions>
         where TProviderOptions : EgressProviderOptions
     {
-        protected EgressProvider(TProviderOptions options)
+        protected EgressProvider(TProviderOptions options, ILogger logger = null)
         {
+            Logger = logger;
             Options = options;
         }
 
@@ -28,9 +31,13 @@ namespace Microsoft.Diagnostics.Monitoring.Egress
                 {
                     using var sourceStream = await action(token);
 
+                    int copyBufferSize = Options.CopyBufferSize.GetValueOrDefault(0x100000);
+
+                    Logger?.LogDebug("Copying action stream to egress stream with buffer size {0}", copyBufferSize);
+
                     await sourceStream.CopyToAsync(
                         targetStream,
-                        Options.CopyBufferSize.GetValueOrDefault(0x100000),
+                        copyBufferSize,
                         token);
                 },
                 name,
@@ -43,6 +50,14 @@ namespace Microsoft.Diagnostics.Monitoring.Egress
             string name,
             TStreamOptions streamOptions,
             CancellationToken token);
+
+        protected void ValidateOptions()
+        {
+            ValidationContext context = new ValidationContext(Options);
+            Validator.ValidateObject(Options, context, validateAllProperties: true);
+        }
+
+        protected ILogger Logger { get; }
 
         protected TProviderOptions Options { get; }
     }

@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Diagnostics.Monitoring.Egress.FileSystem;
 using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,6 +17,14 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 {
     internal class FileSystemEgressFactory : EgressFactory
     {
+        private ILoggerFactory _loggerFactory;
+
+        public FileSystemEgressFactory(ILoggerFactory loggerFactory)
+            : base(loggerFactory.CreateLogger<FileSystemEgressFactory>())
+        {
+            _loggerFactory = loggerFactory;
+        }
+
         public override bool TryCreate(
             string providerName,
             IConfigurationSection providerSection,
@@ -24,18 +33,24 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         {
             var options = providerSection.Get<FileSystemEgressProviderOptions>();
 
-            // TODO: Validate options
+            if (!TryValidateOptions(options, providerName))
+            {
+                provider = null;
+                return false;
+            }
 
-            provider = new Provider(options);
+            provider = new Provider(options, _loggerFactory);
             return true;
         }
 
         private class Provider : ConfiguredEgressProvider
         {
+            private readonly ILoggerFactory _loggerFactory;
             private readonly FileSystemEgressProviderOptions _options;
 
-            public Provider(FileSystemEgressProviderOptions options)
+            public Provider(FileSystemEgressProviderOptions options, ILoggerFactory loggerFactory)
             {
+                _loggerFactory = loggerFactory;
                 _options = options;
             }
 
@@ -48,7 +63,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             {
                 var streamOptions = new FileSystemEgressStreamOptions();
 
-                var provider = new FileSystemEgressProvider(_options);
+                var provider = new FileSystemEgressProvider(_options, _loggerFactory.CreateLogger<FileSystemEgressProvider>());
                 string filepath = await provider.EgressAsync(action, fileName, streamOptions, token);
 
                 return new EgressResult("path", filepath);
@@ -63,7 +78,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             {
                 var streamOptions = new FileSystemEgressStreamOptions();
 
-                var provider = new FileSystemEgressProvider(_options);
+                var provider = new FileSystemEgressProvider(_options, _loggerFactory.CreateLogger<FileSystemEgressProvider>());
                 string filepath = await provider.EgressAsync(action, fileName, streamOptions, token);
 
                 return new EgressResult("path", filepath);

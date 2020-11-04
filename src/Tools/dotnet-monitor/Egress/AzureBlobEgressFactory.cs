@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Diagnostics.Monitoring.Egress.AzureStorage;
 using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,6 +17,14 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 {
     internal class AzureBlobEgressFactory : EgressFactory
     {
+        private readonly ILoggerFactory _loggerFactory;
+
+        public AzureBlobEgressFactory(ILoggerFactory loggerFactory)
+            : base(loggerFactory.CreateLogger<AzureBlobEgressFactory>())
+        {
+            _loggerFactory = loggerFactory;
+        }
+
         public override bool TryCreate(
             string providerName,
             IConfigurationSection providerSection,
@@ -33,7 +42,6 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 }
             }
 
-
             if (string.IsNullOrEmpty(options.SharedAccessSignature) &&
                 !string.IsNullOrEmpty(options.SharedAccessSignatureName))
             {
@@ -43,19 +51,25 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 }
             }
 
-            // TODO: Validate options
+            if (!TryValidateOptions(options, providerName))
+            {
+                provider = null;
+                return false;
+            }
 
-            provider = new Provider(options);
+            provider = new Provider(options, _loggerFactory);
             return true;
         }
 
         private class Provider : ConfiguredEgressProvider
         {
+            private readonly ILoggerFactory _loggerFactory;
             private readonly AzureBlobEgressProviderOptions _options;
 
-            public Provider(AzureBlobEgressProviderOptions options)
+            public Provider(AzureBlobEgressProviderOptions options, ILoggerFactory loggerFactory)
             {
                 _options = options;
+                _loggerFactory = loggerFactory;
             }
 
             public override async Task<EgressResult> EgressAsync(
@@ -69,7 +83,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 var streamOptions = new AzureBlobEgressStreamOptions();
                 streamOptions.ContentType = contentType;
 
-                var provider = new AzureBlobEgressProvider(_options);
+                var provider = new AzureBlobEgressProvider(_options, _loggerFactory.CreateLogger<AzureBlobEgressProvider>());
                 string blobUri = await provider.EgressAsync(action, fileName, streamOptions, token);
 
                 return new EgressResult("uri", blobUri);
@@ -86,7 +100,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 var streamOptions = new AzureBlobEgressStreamOptions();
                 streamOptions.ContentType = contentType;
 
-                var provider = new AzureBlobEgressProvider(_options);
+                var provider = new AzureBlobEgressProvider(_options, _loggerFactory.CreateLogger<AzureBlobEgressProvider>());
                 string blobUri = await provider.EgressAsync(action, fileName, streamOptions, token);
 
                 return new EgressResult("uri", blobUri);
