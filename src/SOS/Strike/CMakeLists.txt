@@ -73,7 +73,6 @@ if(WIN32)
     gchist.cpp
     gcroot.cpp
     hostcoreclr.cpp
-    hostdesktop.cpp
     metadata.cpp
     runtime.cpp
     sigparser.cpp
@@ -111,8 +110,18 @@ if(WIN32)
     advapi32.lib
     psapi.lib
     ntdll.lib
-    mscoree.lib
   )
+
+  if(NOT CLR_CMAKE_PLATFORM_ARCH_ARM64)
+    list(APPEND 
+      SOS_LIBRARY 
+        mscoree.lib)
+
+    list(APPEND 
+      SOS_SOURCES 
+        hostdesktop.cpp)
+  endif(NOT CLR_CMAKE_PLATFORM_ARCH_ARM64)
+
 else(WIN32)
   add_definitions(-DFEATURE_ENABLE_HARDWARE_EXCEPTIONS)
   add_definitions(-DPAL_STDCPP_COMPAT=1)

@@ -158,9 +158,12 @@ BOOL ControlC = FALSE;
 WCHAR g_mdName[mdNameLen];
 
 #ifndef FEATURE_PAL
-extern bool g_useDesktopClrHost;
 HMODULE g_hInstance = NULL;
 #endif // !FEATURE_PAL
+
+#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
+extern bool g_useDesktopClrHost;
+#endif
 
 #ifdef _MSC_VER
 #pragma warning(disable:4244)   // conversion from 'unsigned int' to 'unsigned short', possible loss of data
@@ -10981,7 +10984,7 @@ DECLARE_API(SOSStatus)
     if (g_tmpPath != nullptr) {
         ExtOut("Temp path: %s\n", g_tmpPath);
     }
-#ifndef FEATURE_PAL
+#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
     if (g_useDesktopClrHost) {
         ExtOut("Using the desktop .NET Framework to host the managed SOS code\n");
     }
@@ -16522,7 +16525,7 @@ DECLARE_API(SetHostRuntime)
             return E_FAIL;
         }
     }
-#ifndef FEATURE_PAL
+#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
     if (bNetCore)
     {
         g_useDesktopClrHost = false;
@@ -16539,11 +16542,11 @@ DECLARE_API(SetHostRuntime)
             free((void*)g_hostRuntimeDirectory);
         }
         g_hostRuntimeDirectory = _strdup(hostRuntimeDirectory.data);
-#ifndef FEATURE_PAL
+#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
         g_useDesktopClrHost = false;
 #endif
     }
-#ifndef FEATURE_PAL
+#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
     if (g_useDesktopClrHost)
     {
         ExtOut("Using the desktop .NET Framework to host the managed SOS code\n");
