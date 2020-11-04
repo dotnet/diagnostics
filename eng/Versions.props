@@ -14,6 +14,8 @@
     <MicrosoftAspNetCoreApp21Version>$(MicrosoftNETCoreApp21Version)</MicrosoftAspNetCoreApp21Version>
     <MicrosoftNETCoreApp31Version>3.1.8</MicrosoftNETCoreApp31Version>
     <MicrosoftAspNetCoreApp31Version>$(MicrosoftNETCoreApp31Version)</MicrosoftAspNetCoreApp31Version>
+    <MicrosoftNETCoreApp50Version></MicrosoftNETCoreApp50Version>
+    <MicrosoftAspNetCoreApp50Version></MicrosoftAspNetCoreApp50Version>
     <!-- Latest shared runtime version updated by darc -->
     <MicrosoftNETCoreAppVersion>5.0.0-rtm.20529.3</MicrosoftNETCoreAppVersion>
     <MicrosoftNETCoreAppRuntimewinx64Version>5.0.0</MicrosoftNETCoreAppRuntimewinx64Version>
