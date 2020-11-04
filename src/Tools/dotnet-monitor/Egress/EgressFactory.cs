@@ -7,12 +7,12 @@ using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
-    internal abstract class EgressProvider
+    internal abstract class EgressFactory
     {
-        public abstract bool TryParse(
-            string endpointName,
-            IConfigurationSection endpointSection,
+        public abstract bool TryCreate(
+            string providerName,
+            IConfigurationSection providerSection,
             Dictionary<string, string> egressProperties,
-            out ConfiguredEgressEndpoint endpoint);
+            out ConfiguredEgressProvider provider);
     }
 }

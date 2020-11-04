@@ -96,7 +96,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         public Task<ActionResult> GetDump(
             ProcessFilter? processFilter,
             [FromQuery] DumpType type = DumpType.WithHeap,
-            [FromQuery] string egressEndpoint = null)
+            [FromQuery] string egressProvider = null)
         {
             return this.InvokeService(async () =>
             {
@@ -106,7 +106,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     FormattableString.Invariant($"dump_{GetFileNameTimeStampUtcNow()}.dmp") :
                     FormattableString.Invariant($"core_{GetFileNameTimeStampUtcNow()}");
 
-                if (string.IsNullOrEmpty(egressEndpoint))
+                if (string.IsNullOrEmpty(egressProvider))
                 {
                     Stream dumpStream = await _diagnosticServices.GetDump(processInfo, type, HttpContext.RequestAborted);
 
@@ -118,7 +118,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 {
                     return new EgressStreamResult(
                         token => _diagnosticServices.GetDump(processInfo, type, token),
-                        egressEndpoint,
+                        egressProvider,
                         dumpFileName,
                         processInfo.EndpointInfo,
                         ContentTypes.ApplicationOctectStream);
@@ -129,7 +129,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         [HttpGet("gcdump/{processFilter?}")]
         public Task<ActionResult> GetGcDump(
             ProcessFilter? processFilter,
-            [FromQuery] string egressEndpoint = null)
+            [FromQuery] string egressProvider = null)
         {
             return this.InvokeService(async () =>
             {
@@ -156,7 +156,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     };
                 };
 
-                if (string.IsNullOrEmpty(egressEndpoint))
+                if (string.IsNullOrEmpty(egressProvider))
                 {
                     return new OutputStreamResult(
                         ConvertFastSerializeAction(action),
@@ -167,7 +167,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 {
                     return new EgressStreamResult(
                         ConvertFastSerializeAction(action),
-                        egressEndpoint,
+                        egressProvider,
                         fileName,
                         processInfo.EndpointInfo,
                         ContentTypes.ApplicationOctectStream);
@@ -181,7 +181,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             [FromQuery]TraceProfile profile = DefaultTraceProfiles,
             [FromQuery][Range(-1, int.MaxValue)] int durationSeconds = 30,
             [FromQuery][Range(1, int.MaxValue)] int metricsIntervalSeconds = 1,
-            [FromQuery] string egressEndpoint = null)
+            [FromQuery] string egressProvider = null)
         {
             TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
 
@@ -207,7 +207,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
                 var aggregateConfiguration = new AggregateSourceConfiguration(configurations.ToArray());
 
-                return await StartTrace(processFilter, aggregateConfiguration, duration, egressEndpoint);
+                return await StartTrace(processFilter, aggregateConfiguration, duration, egressProvider);
             });
         }
 
@@ -216,7 +216,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             ProcessFilter? processFilter,
             [FromBody][Required] EventPipeConfigurationModel configuration,
             [FromQuery][Range(-1, int.MaxValue)] int durationSeconds = 30,
-            [FromQuery] string egressEndpoint = null)
+            [FromQuery] string egressProvider = null)
         {
             TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
 
@@ -244,7 +244,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     requestRundown: configuration.RequestRundown,
                     bufferSizeInMB: configuration.BufferSizeInMB);
 
-                return await StartTrace(processFilter, traceConfiguration, duration, egressEndpoint);
+                return await StartTrace(processFilter, traceConfiguration, duration, egressProvider);
             });
         }
 
@@ -254,7 +254,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             ProcessFilter? processFilter,
             [FromQuery][Range(-1, int.MaxValue)] int durationSeconds = 30,
             [FromQuery] LogLevel level = LogLevel.Debug,
-            [FromQuery] string egressEndpoint = null)
+            [FromQuery] string egressProvider = null)
         {
             TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
             return this.InvokeService(async () =>
@@ -288,11 +288,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     await pipeline.RunAsync(token);
                 };
 
-                if (!string.IsNullOrEmpty(egressEndpoint))
+                if (!string.IsNullOrEmpty(egressProvider))
                 {
                     return new EgressStreamResult(
                         action,
-                        egressEndpoint,
+                        egressProvider,
                         fileName,
                         processInfo.EndpointInfo,
                         contentType);
@@ -312,7 +312,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             ProcessFilter? processFilter,
             MonitoringSourceConfiguration configuration,
             TimeSpan duration,
-            string egressEndpoint)
+            string egressProvider)
         {
             IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(processFilter, HttpContext.RequestAborted);
 
@@ -338,7 +338,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 await pipeProcessor.RunAsync(token);
             };
 
-            if (string.IsNullOrEmpty(egressEndpoint))
+            if (string.IsNullOrEmpty(egressProvider))
             {
                 return new OutputStreamResult(
                     action,
@@ -349,7 +349,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             {
                 return new EgressStreamResult(
                     action,
-                    egressEndpoint,
+                    egressProvider,
                     fileName,
                     processInfo.EndpointInfo,
                     ContentTypes.ApplicationOctectStream);

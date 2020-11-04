@@ -20,9 +20,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             services.AddSingleton((IOptionsChangeTokenSource<EgressOptions>)new ConfigurationChangeTokenSource<EgressOptions>(GetEgressSection(configuration)));
 
             // Configure EgressOptions to bind to the Egress configuration key.
-            // The options are manually created due to how the Endpoints property
-            // hold concrete implementations that are based on the 'type' property
-            // for each endpoint entry.
+            // The options are manually created due to how the Providers property
+            // holds concrete implementations that are based on the 'type' property
+            // for each provider entry.
             services.AddSingleton<IConfigureOptions<EgressOptions>, EgressConfigureOptions>();
 
             // Register IEgressService implementation that provides egressing
@@ -41,8 +41,8 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         {
             private readonly IConfiguration _configuration;
             private readonly ILogger<EgressConfigureOptions> _logger;
-            private readonly IDictionary<string, EgressProvider> _providers
-                = new Dictionary<string, EgressProvider>(StringComparer.OrdinalIgnoreCase);
+            private readonly IDictionary<string, EgressFactory> _factories
+                = new Dictionary<string, EgressFactory>(StringComparer.OrdinalIgnoreCase);
 
             public EgressConfigureOptions(
                 ILogger<EgressConfigureOptions> logger,
@@ -52,8 +52,8 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 _logger = logger;
 
                 // Register egress providers
-                _providers.Add("AzureBlobStorage", new AzureBlobEgressProvider());
-                _providers.Add("FileSystem", new FileSystemEgressProvider());
+                _factories.Add("AzureBlobStorage", new AzureBlobEgressFactory());
+                _factories.Add("FileSystem", new FileSystemEgressFactory());
             }
 
             public void Configure(EgressOptions options)
@@ -63,46 +63,46 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 IConfigurationSection propertiesSection = egressSection.GetSection(nameof(EgressOptions.Properties));
                 propertiesSection.Bind(options.Properties);
 
-                IConfigurationSection endpointsSection = egressSection.GetSection(nameof(EgressOptions.Endpoints));
-                foreach (var endpointSection in endpointsSection.GetChildren())
+                IConfigurationSection providersSection = egressSection.GetSection(nameof(EgressOptions.Providers));
+                foreach (var providerSection in providersSection.GetChildren())
                 {
-                    string endpointName = endpointSection.Key;
+                    string providerName = providerSection.Key;
 
-                    if (!TryGetEgressType(endpointSection, out string egressTypeName))
+                    if (!TryGetProviderType(providerSection, out string providerType))
                     {
-                        _logger.LogWarning("Egress endpoint '{0}' does not have a 'type' setting.", endpointName);
+                        _logger.LogWarning("Egress provider '{0}' does not have a 'type' setting.", providerName);
                         continue;
                     }
                     
-                    if (!_providers.TryGetValue(egressTypeName, out EgressProvider provider))
+                    if (!_factories.TryGetValue(providerType, out EgressFactory factory))
                     {
-                        _logger.LogWarning("Egress type '{0}' on endpoint '{1}' is not supported.", egressTypeName, endpointName);
+                        _logger.LogWarning("Provider type '{0}' on provider '{1}' is not supported.", providerType, providerName);
                         continue;
                     }
                     
-                    if (!provider.TryParse(endpointName, endpointSection, options.Properties, out ConfiguredEgressEndpoint endpoint))
+                    if (!factory.TryCreate(providerName, providerSection, options.Properties, out ConfiguredEgressProvider provider))
                     {
-                        _logger.LogWarning("Unable to create egress endpoint '{0}' due to invalid options.", endpointName);
+                        _logger.LogWarning("Unable to create egress provider '{0}' due to invalid options.", providerName);
                         continue;
                     }
 
-                    options.Endpoints.Add(endpointName, endpoint);
+                    options.Providers.Add(providerName, provider);
                 }
             }
 
-            private static bool TryGetEgressType(IConfigurationSection section, out string endpointTypeName)
+            private static bool TryGetProviderType(IConfigurationSection section, out string providerTypeName)
             {
                 try
                 {
-                    endpointTypeName = section.GetValue<string>("type", defaultValue: null);
+                    providerTypeName = section.GetValue<string>("type", defaultValue: null);
                 }
                 catch (InvalidOperationException)
                 {
-                    endpointTypeName = null;
+                    providerTypeName = null;
                     return false;
                 }
 
-                return !string.IsNullOrEmpty(endpointTypeName);
+                return !string.IsNullOrEmpty(providerTypeName);
             }
         }
     }

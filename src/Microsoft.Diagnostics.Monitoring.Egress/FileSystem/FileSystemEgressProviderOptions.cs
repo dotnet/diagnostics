@@ -2,10 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.Diagnostics.Monitoring.Egress
+namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
 {
-    internal abstract class EgressEndpointOptions
+    internal class FileSystemEgressProviderOptions :
+        EgressProviderOptions
     {
-        public int? CopyBufferSize { get; set; }
+        public string DirectoryPath { get; set; }
     }
 }

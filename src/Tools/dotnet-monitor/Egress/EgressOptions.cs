@@ -11,8 +11,8 @@ namespace Microsoft.Diagnostics.Tools.Monitor
     {
         public const string ConfigurationKey = "Egress";
 
-        public Dictionary<string, ConfiguredEgressEndpoint> Endpoints { get; }
-            = new Dictionary<string, ConfiguredEgressEndpoint>(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, ConfiguredEgressProvider> Providers { get; }
+            = new Dictionary<string, ConfiguredEgressProvider>(StringComparer.OrdinalIgnoreCase);
 
         public Dictionary<string, string> Properties { get; }
             = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

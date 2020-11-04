@@ -9,12 +9,12 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.Egress
 {
-    internal abstract class EgressEndpoint<TEndpointOptions, TStreamOptions>
-        where TEndpointOptions : EgressEndpointOptions
+    internal abstract class EgressProvider<TProviderOptions, TStreamOptions>
+        where TProviderOptions : EgressProviderOptions
     {
-        protected EgressEndpoint(TEndpointOptions endpointOptions)
+        protected EgressProvider(TProviderOptions options)
         {
-            EndpointOptions = endpointOptions;
+            Options = options;
         }
 
         public virtual Task<string> EgressAsync(
@@ -30,7 +30,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress
 
                     await sourceStream.CopyToAsync(
                         targetStream,
-                        EndpointOptions.CopyBufferSize.GetValueOrDefault(0x100000),
+                        Options.CopyBufferSize.GetValueOrDefault(0x100000),
                         token);
                 },
                 name,
@@ -44,6 +44,6 @@ namespace Microsoft.Diagnostics.Monitoring.Egress
             TStreamOptions streamOptions,
             CancellationToken token);
 
-        protected TEndpointOptions EndpointOptions { get; }
+        protected TProviderOptions Options { get; }
     }
 }

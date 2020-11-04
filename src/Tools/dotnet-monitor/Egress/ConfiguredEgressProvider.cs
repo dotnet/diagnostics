@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
-    internal abstract class ConfiguredEgressEndpoint
+    internal abstract class ConfiguredEgressProvider
     {
         public abstract Task<EgressResult> EgressAsync(
             Func<CancellationToken, Task<Stream>> action,

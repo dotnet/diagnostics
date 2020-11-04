@@ -21,22 +21,22 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             _egressOptions = egressOptions;
         }
 
-        public Task<EgressResult> EgressAsync(string endpointName, Func<CancellationToken, Task<Stream>> action, string fileName, string contentType, IEndpointInfo source, CancellationToken token)
+        public Task<EgressResult> EgressAsync(string providerName, Func<CancellationToken, Task<Stream>> action, string fileName, string contentType, IEndpointInfo source, CancellationToken token)
         {
-            if (_egressOptions.CurrentValue.Endpoints.TryGetValue(endpointName, out ConfiguredEgressEndpoint endpoint))
+            if (_egressOptions.CurrentValue.Providers.TryGetValue(providerName, out ConfiguredEgressProvider provider))
             {
-                return endpoint.EgressAsync(action, fileName, contentType, source, token);
+                return provider.EgressAsync(action, fileName, contentType, source, token);
             }
-            throw new InvalidOperationException(FormattableString.Invariant($"Egress endpoint '{endpointName}' does not exist."));
+            throw new InvalidOperationException(FormattableString.Invariant($"Egress provider '{providerName}' does not exist."));
         }
 
-        public Task<EgressResult> EgressAsync(string endpointName, Func<Stream, CancellationToken, Task> action, string fileName, string contentType, IEndpointInfo source, CancellationToken token)
+        public Task<EgressResult> EgressAsync(string providerName, Func<Stream, CancellationToken, Task> action, string fileName, string contentType, IEndpointInfo source, CancellationToken token)
         {
-            if (_egressOptions.CurrentValue.Endpoints.TryGetValue(endpointName, out ConfiguredEgressEndpoint endpoint))
+            if (_egressOptions.CurrentValue.Providers.TryGetValue(providerName, out ConfiguredEgressProvider provider))
             {
-                return endpoint.EgressAsync(action, fileName, contentType, source, token);
+                return provider.EgressAsync(action, fileName, contentType, source, token);
             }
-            throw new InvalidOperationException(FormattableString.Invariant($"Egress endpoint '{endpointName}' does not exist."));
+            throw new InvalidOperationException(FormattableString.Invariant($"Egress provider '{providerName}' does not exist."));
         }
     }
 }

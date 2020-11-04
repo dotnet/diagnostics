@@ -14,29 +14,29 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
-    internal class FileSystemEgressProvider : EgressProvider
+    internal class FileSystemEgressFactory : EgressFactory
     {
-        public override bool TryParse(
-            string endpointName,
-            IConfigurationSection endpointSection,
+        public override bool TryCreate(
+            string providerName,
+            IConfigurationSection providerSection,
             Dictionary<string, string> egressProperties,
-            out ConfiguredEgressEndpoint endpoint)
+            out ConfiguredEgressProvider provider)
         {
-            var endpointOptions = endpointSection.Get<FileSystemEgressEndpointOptions>();
+            var options = providerSection.Get<FileSystemEgressProviderOptions>();
 
             // TODO: Validate options
 
-            endpoint = new Endpoint(endpointOptions);
+            provider = new Provider(options);
             return true;
         }
 
-        private class Endpoint : ConfiguredEgressEndpoint
+        private class Provider : ConfiguredEgressProvider
         {
-            private readonly FileSystemEgressEndpointOptions _endpointOptions;
+            private readonly FileSystemEgressProviderOptions _options;
 
-            public Endpoint(FileSystemEgressEndpointOptions endpointOptions)
+            public Provider(FileSystemEgressProviderOptions options)
             {
-                _endpointOptions = endpointOptions;
+                _options = options;
             }
 
             public override async Task<EgressResult> EgressAsync(
@@ -48,8 +48,8 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             {
                 var streamOptions = new FileSystemEgressStreamOptions();
 
-                var endpoint = new FileSystemEgressEndpoint(_endpointOptions);
-                string filepath = await endpoint.EgressAsync(action, fileName, streamOptions, token);
+                var provider = new FileSystemEgressProvider(_options);
+                string filepath = await provider.EgressAsync(action, fileName, streamOptions, token);
 
                 return new EgressResult("path", filepath);
             }
@@ -63,8 +63,8 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             {
                 var streamOptions = new FileSystemEgressStreamOptions();
 
-                var endpoint = new FileSystemEgressEndpoint(_endpointOptions);
-                string filepath = await endpoint.EgressAsync(action, fileName, streamOptions, token);
+                var provider = new FileSystemEgressProvider(_options);
+                string filepath = await provider.EgressAsync(action, fileName, streamOptions, token);
 
                 return new EgressResult("path", filepath);
             }

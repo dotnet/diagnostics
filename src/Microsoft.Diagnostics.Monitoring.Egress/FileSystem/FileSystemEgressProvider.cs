@@ -9,10 +9,10 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
 {
-    internal class FileSystemEgressEndpoint : EgressEndpoint<FileSystemEgressEndpointOptions, FileSystemEgressStreamOptions>
+    internal class FileSystemEgressProvider : EgressProvider<FileSystemEgressProviderOptions, FileSystemEgressStreamOptions>
     {
-        public FileSystemEgressEndpoint(FileSystemEgressEndpointOptions endpointOptions)
-            : base(endpointOptions)
+        public FileSystemEgressProvider(FileSystemEgressProviderOptions options)
+            : base(options)
         {
         }
 
@@ -23,12 +23,12 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
             CancellationToken token)
         {
 
-            if (!Directory.Exists(EndpointOptions.DirectoryPath))
+            if (!Directory.Exists(Options.DirectoryPath))
             {
-                Directory.CreateDirectory(EndpointOptions.DirectoryPath);
+                Directory.CreateDirectory(Options.DirectoryPath);
             }
 
-            string filePath = Path.Combine(EndpointOptions.DirectoryPath, name);
+            string filePath = Path.Combine(Options.DirectoryPath, name);
 
             using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read);
 

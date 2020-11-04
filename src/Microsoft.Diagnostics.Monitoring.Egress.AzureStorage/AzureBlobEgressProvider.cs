@@ -13,10 +13,10 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
 {
-    internal class AzureBlobEgressEndpoint : EgressEndpoint<AzureBlobEgressEndpointOptions, AzureBlobEgressStreamOptions>
+    internal class AzureBlobEgressProvider : EgressProvider<AzureBlobEgressProviderOptions, AzureBlobEgressStreamOptions>
     {
-        public AzureBlobEgressEndpoint(AzureBlobEgressEndpointOptions endpointOptions)
-            : base(endpointOptions)
+        public AzureBlobEgressProvider(AzureBlobEgressProviderOptions options)
+            : base(options)
         {
         }
 
@@ -68,24 +68,24 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
         private async Task<BlobContainerClient> GetBlobContainerClientAsync(CancellationToken token)
         {
             BlobServiceClient serviceClient;
-            if (!string.IsNullOrWhiteSpace(EndpointOptions.SharedAccessSignature))
+            if (!string.IsNullOrWhiteSpace(Options.SharedAccessSignature))
             {
-                var serviceUriBuilder = new UriBuilder(EndpointOptions.AccountUri)
+                var serviceUriBuilder = new UriBuilder(Options.AccountUri)
                 {
-                    Query = EndpointOptions.SharedAccessSignature
+                    Query = Options.SharedAccessSignature
                 };
 
                 serviceClient = new BlobServiceClient(serviceUriBuilder.Uri);
             }
-            else if (!string.IsNullOrEmpty(EndpointOptions.AccountKey))
+            else if (!string.IsNullOrEmpty(Options.AccountKey))
             {
-                var serviceUri = new Uri(EndpointOptions.AccountUri);
+                var serviceUri = new Uri(Options.AccountUri);
 
                 var blobUriBuilder = new BlobUriBuilder(serviceUri);
 
                 StorageSharedKeyCredential credential = new StorageSharedKeyCredential(
                     blobUriBuilder.AccountName,
-                    EndpointOptions.AccountKey);
+                    Options.AccountKey);
 
                 serviceClient = new BlobServiceClient(serviceUri, credential);
             }
@@ -94,7 +94,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
                 throw new InvalidOperationException("SharedAccessSignature or AccountKey must be specified.");
             }
 
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(EndpointOptions.ContainerName);
+            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(Options.ContainerName);
             await containerClient.CreateIfNotExistsAsync(cancellationToken: token);
 
             return containerClient;
@@ -102,13 +102,13 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
 
         private string GetBlobName(string fileName)
         {
-            if (string.IsNullOrEmpty(EndpointOptions.BlobPrefix))
+            if (string.IsNullOrEmpty(Options.BlobPrefix))
             {
                 return fileName;
             }
             else
             {
-                return string.Concat(EndpointOptions.BlobPrefix, "/", fileName);
+                return string.Concat(Options.BlobPrefix, "/", fileName);
             }
         }
 
