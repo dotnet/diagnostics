@@ -13,12 +13,8 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
 
         public string AccountKey { get; set; }
 
-        public string AccountKeyName { get; set; }
-
         public string SharedAccessSignature { get; set; }
 
-        public string SharedAccessSignatureName { get; set; }
-
-        public string BlobDirectory { get; set; }
+        public string BlobPrefix { get; set; }
     }
 }

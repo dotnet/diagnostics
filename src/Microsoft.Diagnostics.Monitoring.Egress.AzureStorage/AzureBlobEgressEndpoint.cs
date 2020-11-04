@@ -26,10 +26,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             AzureBlobEgressStreamOptions streamOptions,
             CancellationToken token)
         {
-            BlobServiceClient serviceClient = CreateBlobServiceClient();
-
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(EndpointOptions.ContainerName);
-            await containerClient.CreateIfNotExistsAsync(cancellationToken: token);
+            var containerClient = await GetBlobContainerClientAsync(token);
 
             BlobClient blobClient = containerClient.GetBlobClient(GetBlobName(name));
 
@@ -47,10 +44,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             AzureBlobEgressStreamOptions streamOptions,
             CancellationToken token)
         {
-            BlobServiceClient serviceClient = CreateBlobServiceClient();
-
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(EndpointOptions.ContainerName);
-            await containerClient.CreateIfNotExistsAsync(cancellationToken: token);
+            var containerClient = await GetBlobContainerClientAsync(token);
 
             BlockBlobClient blobClient = containerClient.GetBlockBlobClient(GetBlobName(name));
 
@@ -71,8 +65,9 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             return GetBlobUri(blobClient);
         }
 
-        private BlobServiceClient CreateBlobServiceClient()
+        private async Task<BlobContainerClient> GetBlobContainerClientAsync(CancellationToken token)
         {
+            BlobServiceClient serviceClient;
             if (!string.IsNullOrWhiteSpace(EndpointOptions.SharedAccessSignature))
             {
                 var serviceUriBuilder = new UriBuilder(EndpointOptions.AccountUri)
@@ -80,7 +75,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
                     Query = EndpointOptions.SharedAccessSignature
                 };
 
-                return new BlobServiceClient(serviceUriBuilder.Uri);
+                serviceClient = new BlobServiceClient(serviceUriBuilder.Uri);
             }
             else if (!string.IsNullOrEmpty(EndpointOptions.AccountKey))
             {
@@ -92,21 +87,28 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
                     blobUriBuilder.AccountName,
                     EndpointOptions.AccountKey);
 
-                return new BlobServiceClient(serviceUri, credential);
+                serviceClient = new BlobServiceClient(serviceUri, credential);
+            }
+            else
+            {
+                throw new InvalidOperationException("SharedAccessSignature or AccountKey must be specified.");
             }
 
-            throw new InvalidOperationException("SharedAccessSignature or AccountKey must be specified.");
+            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(EndpointOptions.ContainerName);
+            await containerClient.CreateIfNotExistsAsync(cancellationToken: token);
+
+            return containerClient;
         }
 
         private string GetBlobName(string fileName)
         {
-            if (string.IsNullOrEmpty(EndpointOptions.BlobDirectory))
+            if (string.IsNullOrEmpty(EndpointOptions.BlobPrefix))
             {
                 return fileName;
             }
             else
             {
-                return string.Concat(EndpointOptions.BlobDirectory, "/", fileName);
+                return string.Concat(EndpointOptions.BlobPrefix, "/", fileName);
             }
         }
 

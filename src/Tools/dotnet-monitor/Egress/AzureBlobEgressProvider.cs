@@ -22,12 +22,10 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             Dictionary<string, string> egressProperties,
             out ConfiguredEgressEndpoint endpoint)
         {
-            var endpointOptions = endpointSection.Get<AzureBlobEgressEndpointOptions>();
-
-            // TODO: Validate options
+            var endpointOptions = endpointSection.Get<ConfigurationOptions>();
 
             if (string.IsNullOrEmpty(endpointOptions.AccountKey) &&
-                    !string.IsNullOrEmpty(endpointOptions.AccountKeyName))
+                !string.IsNullOrEmpty(endpointOptions.AccountKeyName))
             {
                 if (egressProperties.TryGetValue(endpointOptions.AccountKeyName, out string key))
                 {
@@ -44,6 +42,8 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                     endpointOptions.SharedAccessSignature = signature;
                 }
             }
+
+            // TODO: Validate options
 
             endpoint = new Endpoint(endpointName, endpointOptions);
             return true;
@@ -95,6 +95,13 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
                 return new EgressResult("uri", blobUri);
             }
+        }
+
+        private class ConfigurationOptions : AzureBlobEgressEndpointOptions
+        {
+            public string AccountKeyName { get; set; }
+
+            public string SharedAccessSignatureName { get; set; }
         }
     }
 }
