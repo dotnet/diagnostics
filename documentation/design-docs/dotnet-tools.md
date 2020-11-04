@@ -398,61 +398,83 @@ CONVERT
       Conversion complete
 
 
-CONVERT
+### dotnet-stack
 
-    dotnet-trace stack -p|--process-id <pid>
-                       [-h|--help]
+SYNOPSIS
 
-    Prints the stack for every thread in the target process
+    dotnet-stack [options] [command] [<args>]
+
+OPTIONS
+
+    --version
+        Display the version of the dotnet-trace utility.
+
+    -h, --help
+        Show command line help
+
+COMMANDS
+
+    report         Displays stack traces for the target process
+
+REPORT
+
+    dotnet-stack report -p|--process-id <pid>
+                        [-t|--report-type <report-type>]
+                        [-h|--help]
+
+    Prints the managed stack from every thread in the target process
+
+    -t, ---report-type <report-type>
+        The way to represent the stack data.  (default: standard)
 
     -h, --help
         Show command line help
 
     Examples:
       > dotnet-trace stack -p 1234
-      Stack for Thread (2207382):
-          UNMANAGED_CODE_TIME
-          System.Private.CoreLib!System.Threading.ManualResetEventSlim.Wait(int32,value class System.Threading.CancellationToken)
-          System.Private.CoreLib!System.Threading.Tasks.Task.SpinThenBlockingWait(int32,value class System.Threading.CancellationToken)
-          System.Private.CoreLib!System.Threading.Tasks.Task.InternalWaitCore(int32,value class System.Threading.CancellationToken)
-          System.Private.CoreLib!System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(class System.Threading.Tasks.Task)
+      Stack for Thread (0x1):
+          [Native Frames]
+          System.Private.CoreLib!System.Threading.ManualResetEventSlim.Wait(int, System.Threading.CancellationToken)
+          System.Private.CoreLib!System.Threading.Tasks.Task.SpinThenBlockingWait(int, System.Threading.CancellationToken)
+          System.Private.CoreLib!System.Threading.Tasks.Task.InternalWaitCore(int, System.Threading.CancellationToken)
+          System.Private.CoreLib!System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(System.Threading.Tasks.Task)
           System.Private.CoreLib!System.Runtime.CompilerServices.TaskAwaiter.GetResult()
-          Microsoft.Extensions.Hosting.Abstractions!Microsoft.Extensions.Hosting.HostingAbstractionsHostExtensions.Run(class Microsoft.Extensions.Hosting.IHost)
-          testtesttest!testtesttest.Program.Main(class System.String[])
+          Microsoft.Extensions.Hosting.Abstractions!Microsoft.Extensions.Hosting.HostingAbstractionsHostExtensions.Run(Microsoft.Extensions.Hosting.IHost)
+          testtesttest!testtesttest.Program.Main(System.String[])
 
-      Stack for Thread (2207415):
-          UNMANAGED_CODE_TIME
-          System.IO.FileSystem.Watcher!System.IO.FileSystemWatcher+RunningInstance+StaticWatcherRunLoopManager.WatchForFileSystemEventsThreadStart(class System.Threading.ManualResetEventSlim,class Microsoft.Win32.SafeHandles.SafeEventStreamHandle)
-          System.IO.FileSystem.Watcher!System.IO.FileSystemWatcher+RunningInstance+StaticWatcherRunLoopManager+<>c.<ScheduleEventStream>b__3_0(class System.Object)
-          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart_Context(class System.Object)
-          System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(class System.Threading.ExecutionContext,class System.Threading.ContextCallback,class System.Object)
-          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(class System.Object)
+      Stack for Thread (0x2):
+          [Native Frames]
+          System.IO.FileSystem.Watcher!System.IO.FileSystemWatcher.RunningInstance.StaticWatcherRunLoopManager.WatchForFileSystemEventsThreadStart(System.Threading.ManualResetEventSlim, Microsoft.Win32.SafeHandles.SafeEventStreamHandle)
+          System.IO.FileSystem.Watcher!System.IO.FileSystemWatcher.RunningInstance.StaticWatcherRunLoopManager.<>c.<ScheduleEventStream>(System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart_Context(System.Object)
+          System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(System.Threading.ExecutionContext, System.Threading.ContextCallback, System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(System.Object)
 
-      Stack for Thread (2207469):
-          UNMANAGED_CODE_TIME
-          System.Private.CoreLib!System.Threading.SemaphoreSlim.WaitUntilCountOrTimeout(int32,unsigned int32,value class System.Threading.CancellationToken)
-          System.Private.CoreLib!System.Threading.SemaphoreSlim.Wait(int32,value class System.Threading.CancellationToken)
-          System.Collections.Concurrent!System.Collections.Concurrent.BlockingCollection`1[Microsoft.Extensions.Logging.Console.LogMessageEntry].TryTakeWithNoTimeValidation(!0&,int32,value class System.Threading.CancellationToken,class System.Threading.CancellationTokenSource)
-          System.Collections.Concurrent!System.Collections.Concurrent.BlockingCollection`1+<GetConsumingEnumerable>d__68[Microsoft.Extensions.Logging.Console.LogMessageEntry].MoveNext()
+      Stack for Thread (0x3):
+          [Native Frames]
+          System.Private.CoreLib!System.Threading.SemaphoreSlim.WaitUntilCountOrTimeout(int, uint, System.Threading.CancellationToken)
+          System.Private.CoreLib!System.Threading.SemaphoreSlim.Wait(int, System.Threading.CancellationToken)
+          System.Collections.Concurrent!System.Collections.Concurrent.BlockingCollection<Microsoft.Extensions.Logging.Console.LogMessageEntry>.TryTakeWithNoTimeValidation(int, System.Threading.CancellationToken, System.Threading.CancellationTokenSource)
+          System.Collections.Concurrent!System.Collections.Concurrent.BlockingCollection<Microsoft.Extensions.Logging.Console.LogMessageEntry>.GetConsumingEnumerable().MoveNext()
           Microsoft.Extensions.Logging.Console!Microsoft.Extensions.Logging.Console.ConsoleLoggerProcessor.ProcessLogQueue()
-          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart_Context(class System.Object)
-          System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(class System.Threading.ExecutionContext,class System.Threading.ContextCallback,class System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart_Context(System.Object)
+          System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(System.Threading.ExecutionContext, System.Threading.ContextCallback, System.Object)
           System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart()
 
-      Stack for Thread (2207474):
-          UNMANAGED_CODE_TIME
-          System.Private.CoreLib!System.Threading.Thread.Sleep(value class System.TimeSpan)
+      Stack for Thread (0x4):
+          [Native Frames]
+          System.Private.CoreLib!System.Threading.Thread.Sleep(System.TimeSpan)
           Microsoft.AspNetCore.Server.Kestrel.Core!Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Heartbeat.TimerLoop()
-          Microsoft.AspNetCore.Server.Kestrel.Core!Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Heartbeat+<>c.<.ctor>b__8_0(class System.Object)
-          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart_Context(class System.Object)
-          System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(class System.Threading.ExecutionContext,class System.Threading.ContextCallback,class System.Object)
-          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(class System.Object)
+          Microsoft.AspNetCore.Server.Kestrel.Core!Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Heartbeat.ctor(System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart_Context(System.Object)
+          System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(System.Threading.ExecutionContext, System.Threading.ContextCallback, System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(System.Object)
 
-      Stack for Thread (2207860):
-          UNMANAGED_CODE_TIME
+      Stack for Thread (0x5):
+          [Native Frames]
           System.Net.Sockets!System.Net.Sockets.SocketAsyncEngine.EventLoop()
-          System.Net.Sockets!System.Net.Sockets.SocketAsyncEngine+<>c.<.ctor>b__14_0(class System.Object)
-          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(class System.Object)
+          System.Net.Sockets!System.Net.Sockets.SocketAsyncEngine.ctor( System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(System.Object)
 
 ### dotnet-dump
 
