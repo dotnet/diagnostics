@@ -8,5 +8,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
         EgressProviderOptions
     {
         public string DirectoryPath { get; set; }
+
+        public bool UseIntermediateFile { get; set; }
     }
 }

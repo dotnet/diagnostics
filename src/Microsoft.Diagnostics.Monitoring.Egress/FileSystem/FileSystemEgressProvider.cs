@@ -28,15 +28,31 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
                 Directory.CreateDirectory(Options.DirectoryPath);
             }
 
-            string filePath = Path.Combine(Options.DirectoryPath, name);
+            string targetPath = Path.Combine(Options.DirectoryPath, name);
 
-            using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read);
+            if (Options.UseIntermediateFile)
+            {
+                string intermediatePath = Path.Combine(Path.GetTempPath(), Path.GetTempFileName());
+
+                await WriteFileAsync(action, intermediatePath, token);
+
+                File.Move(intermediatePath, targetPath);
+            }
+            else
+            {
+                await WriteFileAsync(action, targetPath, token);
+            }
+
+            return targetPath;
+        }
+
+        private async Task WriteFileAsync(Func<Stream, CancellationToken, Task> action, string filePath, CancellationToken token)
+        {
+            using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
 
             await action(fileStream, token);
 
             await fileStream.FlushAsync(token);
-
-            return filePath;
         }
     }
 }
