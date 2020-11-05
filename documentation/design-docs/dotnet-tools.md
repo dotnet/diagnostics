@@ -418,20 +418,16 @@ COMMANDS
 REPORT
 
     dotnet-stack report -p|--process-id <pid>
-                        [-t|--report-type <report-type>]
                         [-h|--help]
 
     Prints the managed stack from every thread in the target process
-
-    -t, ---report-type <report-type>
-        The way to represent the stack data.  (default: standard)
 
     -h, --help
         Show command line help
 
     Examples:
-      > dotnet-trace stack -p 1234
-      Stack for Thread (0x1):
+      > dotnet-stack report -p 1234
+      Stack for Thread (0x151c):
           [Native Frames]
           System.Private.CoreLib!System.Threading.ManualResetEventSlim.Wait(int, System.Threading.CancellationToken)
           System.Private.CoreLib!System.Threading.Tasks.Task.SpinThenBlockingWait(int, System.Threading.CancellationToken)
@@ -441,7 +437,7 @@ REPORT
           Microsoft.Extensions.Hosting.Abstractions!Microsoft.Extensions.Hosting.HostingAbstractionsHostExtensions.Run(Microsoft.Extensions.Hosting.IHost)
           testtesttest!testtesttest.Program.Main(System.String[])
 
-      Stack for Thread (0x2):
+      Stack for Thread (0x152b):
           [Native Frames]
           System.IO.FileSystem.Watcher!System.IO.FileSystemWatcher.RunningInstance.StaticWatcherRunLoopManager.WatchForFileSystemEventsThreadStart(System.Threading.ManualResetEventSlim, Microsoft.Win32.SafeHandles.SafeEventStreamHandle)
           System.IO.FileSystem.Watcher!System.IO.FileSystemWatcher.RunningInstance.StaticWatcherRunLoopManager.<>c.<ScheduleEventStream>(System.Object)
@@ -449,7 +445,7 @@ REPORT
           System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(System.Threading.ExecutionContext, System.Threading.ContextCallback, System.Object)
           System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(System.Object)
 
-      Stack for Thread (0x3):
+      Stack for Thread (0x153a):
           [Native Frames]
           System.Private.CoreLib!System.Threading.SemaphoreSlim.WaitUntilCountOrTimeout(int, uint, System.Threading.CancellationToken)
           System.Private.CoreLib!System.Threading.SemaphoreSlim.Wait(int, System.Threading.CancellationToken)
@@ -460,7 +456,7 @@ REPORT
           System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(System.Threading.ExecutionContext, System.Threading.ContextCallback, System.Object)
           System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart()
 
-      Stack for Thread (0x4):
+      Stack for Thread (0x4125):
           [Native Frames]
           System.Private.CoreLib!System.Threading.Thread.Sleep(System.TimeSpan)
           Microsoft.AspNetCore.Server.Kestrel.Core!Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Heartbeat.TimerLoop()
@@ -469,7 +465,7 @@ REPORT
           System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(System.Threading.ExecutionContext, System.Threading.ContextCallback, System.Object)
           System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(System.Object)
 
-      Stack for Thread (0x5):
+      Stack for Thread (0x5hf3):
           [Native Frames]
           System.Net.Sockets!System.Net.Sockets.SocketAsyncEngine.EventLoop()
           System.Net.Sockets!System.Net.Sockets.SocketAsyncEngine.ctor( System.Object)
