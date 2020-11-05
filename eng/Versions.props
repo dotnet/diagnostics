@@ -65,13 +65,4 @@
     <MicrosoftDotNetRemoteExecutorVersion>6.0.0-beta.20529.1</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
   </PropertyGroup>
-  <PropertyGroup>
-    <RestoreSources>
-      $(RestoreSources);
-      https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json;
-      https://dotnet.myget.org/F/dotnet-core/api/v3/index.json;
-      https://dotnet.myget.org/F/dotnet-buildtools/api/v3/index.json;
-      https://dotnet.myget.org/F/system-commandline/api/v3/index.json
-    </RestoreSources>
-  </PropertyGroup>
 </Project>
