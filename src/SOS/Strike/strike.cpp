@@ -541,7 +541,7 @@ DECLARE_API (EEStack)
         DacpThreadData Thread;
         if ((Status = Thread.Request(g_sos, CurThread)) != S_OK)
         {
-            ExtOut("Failed to request Thread at %p\n", CurThread);
+            ExtOut("Failed to request Thread at %p\n", SOS_PTR(CurThread));
             return Status;
         }
 
@@ -1184,7 +1184,7 @@ DECLARE_API(DumpClass)
 
     WCHAR fileName[MAX_LONGPATH];
     FileNameForModule(TO_TADDR(mtdata.Module), fileName);
-    ExtOut("mdToken:         %p\n", mtdata.cl);
+    ExtOut("mdToken:         %p\n", SOS_PTR(mtdata.cl));
     ExtOut("File:            %S\n", fileName);
 
     CLRDATA_ADDRESS ParentEEClass = NULL;
@@ -2770,7 +2770,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
                 NameForMT_s(taMT, g_mdName, mdNameLen);
                 ExtOut("%S, ", g_mdName);
                 if (IsDMLEnabled())
-                    DMLOut("Use <exec cmd=\"!PrintException /d %p\">!PrintException %p</exec> to see more.\n", taInnerExc, taInnerExc);
+                    DMLOut("Use <exec cmd=\"!PrintException /d %p\">!PrintException %p</exec> to see more.\n", SOS_PTR(taInnerExc), SOS_PTR(taInnerExc));
                 else
                     ExtOut("Use !PrintException %p to see more.\n", SOS_PTR(taInnerExc));
             }
@@ -3375,7 +3375,7 @@ DECLARE_API(DumpCCW)
                     NameForMT_s(TO_TADDR(pArray[i].methodTable), g_mdName, mdNameLen);
                 }
 
-                DMLOut("%p %s %S\n", pArray[i].interfacePtr, DMLMethodTable(pArray[i].methodTable), g_mdName);
+                DMLOut("%p %s %S\n", SOS_PTR(pArray[i].interfacePtr), DMLMethodTable(pArray[i].methodTable), g_mdName);
             }
         }
     }
@@ -5796,10 +5796,10 @@ DECLARE_API(SyncBlk)
             ExtOut("%5d ", nb);
             if (!syncBlockData.bFree || nb != nbAsked)
             {
-                ExtOut("%p  ", syncBlockData.SyncBlockPointer);
+                ExtOut("%p  ", SOS_PTR(syncBlockData.SyncBlockPointer));
                 ExtOut("%11d ", syncBlockData.MonitorHeld);
                 ExtOut("%9d ", syncBlockData.Recursion);
-                ExtOut("%p ", syncBlockData.HoldingThread);
+                ExtOut("%p ", SOS_PTR(syncBlockData.HoldingThread));
 
                 if (syncBlockData.HoldingThread == ~0ul)
                 {
@@ -5810,7 +5810,7 @@ DECLARE_API(SyncBlk)
                     DacpThreadData Thread;
                     if ((Status = Thread.Request(g_sos, syncBlockData.HoldingThread)) != S_OK)
                     {
-                        ExtOut("Failed to request Thread at %p\n", syncBlockData.HoldingThread);
+                        ExtOut("Failed to request Thread at %p\n", SOS_PTR(syncBlockData.HoldingThread));
                         return Status;
                     }
 
@@ -6644,7 +6644,7 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
         table.WriteColumn(3, Pointer(CurThread));
         table.WriteColumn(4, ThreadState(Thread.state));
         table.WriteColumn(5,  Thread.preemptiveGCDisabled == 1 ? "Cooperative" : "Preemptive");
-        table.WriteColumnFormat(6, "%p:%p", Thread.allocContextPtr, Thread.allocContextLimit);
+        table.WriteColumnFormat(6, "%p:%p", SOS_PTR(Thread.allocContextPtr), SOS_PTR(Thread.allocContextLimit));
 
         if (Thread.domain)
         {
@@ -7228,9 +7228,9 @@ void IssueDebuggerBPCommand ( CLRDATA_ADDRESS addr )
         }
 
 #ifndef FEATURE_PAL
-        sprintf_s(buffer, _countof(buffer), "bp %p", (void*) (size_t) addr);
+        sprintf_s(buffer, _countof(buffer), "bp %p", SOS_PTR(addr));
 #else
-        sprintf_s(buffer, _countof(buffer), "breakpoint set --address 0x%p", (void*) (size_t) addr);
+        sprintf_s(buffer, _countof(buffer), "breakpoint set --address 0x%p", SOS_PTR(addr));
 #endif
         ExtOut("Setting breakpoint: %s [%S]\n", buffer, wszNameBuffer);
         g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
@@ -7404,9 +7404,9 @@ public:
             ULONG64 modulePtr = (ULONG64)pCur->pModule;
 
             if(pCur->szModuleName[0] != L'\0')
-                ExtOut("%d - %ws!%ws+%d, 0x%p, 0x%08x\n", iBreakpointIndex, pCur->szModuleName, pCur->szFunctionName, pCur->ilOffset, modulePtr, pCur->methodToken);
+                ExtOut("%d - %ws!%ws+%d, 0x%p, 0x%08x\n", iBreakpointIndex, pCur->szModuleName, pCur->szFunctionName, pCur->ilOffset, SOS_PTR(modulePtr), pCur->methodToken);
             else
-                ExtOut("%d - %ws:%d, 0x%p, 0x%08x\n",  iBreakpointIndex, pCur->szFilename, pCur->lineNumber, modulePtr, pCur->methodToken);
+                ExtOut("%d - %ws:%d, 0x%p, 0x%08x\n",  iBreakpointIndex, pCur->szFilename, pCur->lineNumber, SOS_PTR(modulePtr), pCur->methodToken);
             iBreakpointIndex++;
             pCur = pCur->pNext;
         }
@@ -7445,7 +7445,7 @@ public:
         {
             if (breakPointToClear == iBreakpointIndex)
             {
-                ExtOut("%d - %ws, %ws, %p\n", iBreakpointIndex, pCur->szModuleName, pCur->szFunctionName, pCur->pModule);
+                ExtOut("%d - %ws, %ws, %p\n", iBreakpointIndex, pCur->szModuleName, pCur->szFunctionName, SOS_PTR(pCur->pModule));
                 ExtOut("Cleared\n");
                 Delete(pCur);
                 break;
@@ -7990,9 +7990,9 @@ public:
             {
                 CHAR buffer[100];
 #ifndef FEATURE_PAL
-                sprintf_s(buffer, _countof(buffer), "bp /1 %p", (void*) (size_t) (startAddr+catcherNativeOffset));
+                sprintf_s(buffer, _countof(buffer), "bp /1 %p", SOS_PTR(startAddr+catcherNativeOffset));
 #else
-                sprintf_s(buffer, _countof(buffer), "breakpoint set --one-shot --address 0x%p", (void*) (size_t) (startAddr+catcherNativeOffset));
+                sprintf_s(buffer, _countof(buffer), "breakpoint set --one-shot --address 0x%p", SOS_PTR(startAddr+catcherNativeOffset));
 #endif
                 g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
             }
@@ -8421,7 +8421,7 @@ DECLARE_API(bpmd)
             {
                 // BPs via file name will enumerate through modules so there will be legitimate failures.
                 // for module/type name we already found a match so this shouldn't fail (this is the original behavior).
-                ExtOut("Error getting MethodDescs for module %p\n", moduleList[iModule]);
+                ExtOut("Error getting MethodDescs for module %p\n", SOS_PTR(moduleList[iModule]));
                 return Status;
             }
 
@@ -8495,7 +8495,7 @@ DECLARE_API(bpmd)
             // Dynamic methods don't have JIT notifications. This is something we must
             // fix in the next release. Until then, you have a cumbersome user experience.
             ExtOut("This DynamicMethodDesc is not yet JITTED. Placing memory breakpoint at %p\n",
-                MethodDescData.AddressOfNativeCodeSlot);
+                SOS_PTR(MethodDescData.AddressOfNativeCodeSlot));
 
             sprintf_s(buffer, _countof(buffer),
 #ifdef _TARGET_WIN64_
@@ -8505,8 +8505,8 @@ DECLARE_API(bpmd)
 #endif // _TARGET_WIN64_
 
                 " /1 %p \"bp poi(%p); g\"",
-                (void*) (size_t) MethodDescData.AddressOfNativeCodeSlot,
-                (void*) (size_t) MethodDescData.AddressOfNativeCodeSlot);
+                SOS_PTR(MethodDescData.AddressOfNativeCodeSlot),
+                SOS_PTR(MethodDescData.AddressOfNativeCodeSlot));
 
             Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
             if (FAILED(Status))
@@ -8515,7 +8515,7 @@ DECLARE_API(bpmd)
                 ExtOut("Attempted to run: %s\n", buffer);
             }
 #else
-            ExtErr("This DynamicMethodDesc is not yet JITTED %p\n", MethodDescData.AddressOfNativeCodeSlot);
+            ExtErr("This DynamicMethodDesc is not yet JITTED %p\n", SOS_PTR(MethodDescData.AddressOfNativeCodeSlot));
 #endif // FEATURE_PAL
         }
         else
@@ -9234,9 +9234,9 @@ DECLARE_API(FindAppDomain)
         ExtOut("The type is declared in the shared domain and other\n");
         ExtOut("methods of finding the AppDomain failed. Try running\n");
         if (IsDMLEnabled())
-            DMLOut("<exec cmd=\"!gcroot /d %p\">!gcroot %p</exec>, and if you find a root on a\n", p_Object, p_Object);
+            DMLOut("<exec cmd=\"!gcroot /d %p\">!gcroot %p</exec>, and if you find a root on a\n", SOS_PTR(p_Object), SOS_PTR(p_Object));
         else
-            ExtOut(SOSPrefix "gcroot %p, and if you find a root on a\n", p_Object);
+            ExtOut(SOSPrefix "gcroot %p, and if you find a root on a\n", SOS_PTR(p_Object));
         ExtOut("stack, check the AppDomain of that stack with " SOSThreads ".\n");
         ExtOut("Note that the Thread could have transitioned between\n");
         ExtOut("multiple AppDomains.\n");
@@ -10323,7 +10323,7 @@ HRESULT GetIntermediateLangMap(BOOL bIL, const DacpCodeHeaderData& codeHeaderDat
             {
                 // TODO: These information should be interleaved with the disassembly
                 // Decoded IL can be obtained through refactoring DumpIL code.
-                ExtOut("%08x %p %p\n", map[i].ilOffset, map[i].startAddress, map[i].endAddress);
+                ExtOut("%08x %p %p\n", map[i].ilOffset, SOS_PTR(map[i].startAddress), SOS_PTR(map[i].endAddress));
             }
         }
     }
@@ -14337,7 +14337,7 @@ public:
 
             if ((Status = Thread.Request(g_sos, CurThread)) != S_OK)
             {
-                ExtErr("Failed to request thread at %p\n", CurThread);
+                ExtErr("Failed to request thread at %p\n", SOS_PTR(CurThread));
                 return;
             }
             if (Thread.osThreadId != 0)
@@ -15157,7 +15157,7 @@ static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp,
 
     if (Flags & SOS_STACKTRACE_SHOWADDRESSES)
     {
-        _snwprintf_s(wszNameBuffer, MAX_LONGPATH, MAX_LONGPATH, W("%p %p "), (void*)(size_t) Esp, (void*)(size_t) IPAddr); // _TRUNCATE
+        _snwprintf_s(wszNameBuffer, MAX_LONGPATH, MAX_LONGPATH, W("%p %p "), SOS_PTR(Esp), SOS_PTR(IPAddr)); // _TRUNCATE
         DOAPPEND(wszNameBuffer);
     }
 
@@ -15673,7 +15673,7 @@ BOOL FormatFromRemoteString(DWORD_PTR strObjPointer, __out_ecount(cchString) PWS
         WCHAR wszLineBuffer[mdNameLen + 8 + sizeof(size_t)*2];
 
         // Note that we don't add a newline because we have this embedded in wszLineBuffer
-        swprintf_s(wszLineBuffer, _countof(wszLineBuffer), W("    %p %p %s"), (void*)(size_t)-1, (void*)(size_t)-1, pwszPointer);
+        swprintf_s(wszLineBuffer, _countof(wszLineBuffer), W("    %p %p %s"), SOS_PTR(-1), SOS_PTR(-1), pwszPointer);
         Length += (UINT)_wcslen(wszLineBuffer);
 
         if (wszBuffer)
@@ -16021,7 +16021,7 @@ DECLARE_API(VerifyStackTrace)
         for (size_t j=0; j < contextLength; j++)
         {
             CROSS_PLATFORM_CONTEXT *pCtx = (CROSS_PLATFORM_CONTEXT*)(pContexts + j*g_targetMachine->GetContextSize());
-            ExtOut("%p %p %p\n", GetBP(*pCtx), GetSP(*pCtx), GetIP(*pCtx));
+            ExtOut("%p %p %p\n", SOS_PTR(GetBP(*pCtx)), SOS_PTR(GetSP(*pCtx)), SOS_PTR(GetIP(*pCtx)));
         }
 
         delete [] pContexts;
@@ -16437,7 +16437,7 @@ DECLARE_API(VerifyGMT)
         ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
         if (SUCCEEDED(hr)) {
-            ExtOut("%08x %p\n", osThreadId, managedThread);
+            ExtOut("%08x %p\n", osThreadId, SOS_PTR(managedThread));
         }
         else {
             ExtErr("_EFN_GetManagedThread FAILED %08x\n", hr);
