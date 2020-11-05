@@ -898,7 +898,7 @@ Each port configuration specifies whether it is a `suspend` or `nosuspend` port.
 
 If a config specifies multiple tag values from a tag type, for example  `"<path>,nosuspend,suspend,suspend,"`, only the first one is respected.
 
-The port address value is **required** for a port configuration. If a configuration doesn't specify an address and only specifies tags, then the first tag will be treated as the path. For example, the configuration `DOTNET_DefaultDotnetPortSuspend=nosuspend,connect` would cause a port with the name `nosuspend` to be created, in the default `suspend` mode.
+The port address value is **required** for a port configuration. If a configuration doesn't specify an address and only specifies tags, then the first tag will be treated as the path. For example, the configuration `DOTNET_DiagnosticPorts=nosuspend,connect` would cause a port with the name `nosuspend` to be created, in the default `suspend` mode.
 
 The runtime will make a best effort attempt to generate a port from a port configuration. A bad port configuration won't cause an error state, but could lead to consumed resources. For example it could cause the runtime to continuously poll for a connect port that will never exist.
 
