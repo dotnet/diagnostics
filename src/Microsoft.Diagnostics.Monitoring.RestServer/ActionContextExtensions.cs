@@ -5,6 +5,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Diagnostics.NETCore.Client;
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,7 +43,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
             {
                 await context.ProblemAsync(ex);
             }
-            catch (PipelineException ex)
+            catch (MonitoringException ex)
+            {
+                await context.ProblemAsync(ex);
+            }
+            catch (ValidationException ex)
             {
                 await context.ProblemAsync(ex);
             }

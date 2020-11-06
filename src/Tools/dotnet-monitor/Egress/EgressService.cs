@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Monitoring;
+using Microsoft.Diagnostics.Monitoring.Egress;
 using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Options;
 using System;
@@ -27,7 +28,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             {
                 return provider.EgressAsync(action, fileName, contentType, source, token);
             }
-            throw new InvalidOperationException(FormattableString.Invariant($"Egress provider '{providerName}' does not exist."));
+            throw new EgressException($"Egress provider '{providerName}' does not exist.");
         }
 
         public Task<EgressResult> EgressAsync(string providerName, Func<Stream, CancellationToken, Task> action, string fileName, string contentType, IEndpointInfo source, CancellationToken token)
@@ -36,7 +37,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             {
                 return provider.EgressAsync(action, fileName, contentType, source, token);
             }
-            throw new InvalidOperationException(FormattableString.Invariant($"Egress provider '{providerName}' does not exist."));
+            throw new EgressException($"Egress provider '{providerName}' does not exist.");
         }
     }
 }

@@ -5,6 +5,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Diagnostics.NETCore.Client;
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -63,7 +64,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             {
                 return controller.Problem(e);
             }
-            catch (PipelineException e)
+            catch (MonitoringException e)
+            {
+                return controller.Problem(e);
+            }
+            catch (ValidationException e)
             {
                 return controller.Problem(e);
             }

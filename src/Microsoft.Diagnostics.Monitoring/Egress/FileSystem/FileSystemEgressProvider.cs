@@ -5,6 +5,7 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
+using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,7 +31,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
             if (!Directory.Exists(Options.DirectoryPath))
             {
                 Logger?.LogDebug("Start creating target directory.");
-                Directory.CreateDirectory(Options.DirectoryPath);
+                WrapException(() => Directory.CreateDirectory(Options.DirectoryPath));
                 Logger?.LogDebug("End creating target directory.");
             }
 
@@ -42,7 +43,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
                 if (!Directory.Exists(Options.IntermediateDirectoryPath))
                 {
                     Logger?.LogDebug("Start creating intermediate directory.");
-                    Directory.CreateDirectory(Options.IntermediateDirectoryPath);
+                    WrapException(() => Directory.CreateDirectory(Options.IntermediateDirectoryPath));
                     Logger?.LogDebug("End creating intermediate directory.");
                 }
 
@@ -62,13 +63,13 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
 
                     if (intermediatePathExists)
                     {
-                        throw new InvalidOperationException($"Unable to create unique intermediate file in '{Options.IntermediateDirectoryPath}' directory.");
+                        throw CreateException($"Unable to create unique intermediate file in '{Options.IntermediateDirectoryPath}' directory.");
                     }
 
                     await WriteFileAsync(action, intermediateFilePath, token);
 
                     Logger?.LogDebug("Start moving intermediate file to destination.");
-                    File.Move(intermediateFilePath, targetPath);
+                    WrapException(() => File.Move(intermediateFilePath, targetPath));
                     Logger?.LogDebug("End moving intermediate file to destination.");
                 }
                 finally
@@ -110,7 +111,9 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
         private async Task WriteFileAsync(Func<Stream, CancellationToken, Task> action, string filePath, CancellationToken token)
         {
             Logger?.LogDebug("Opening file stream.");
-            using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
+
+            using Stream fileStream = WrapException(
+                () => new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None));
 
             Logger?.LogDebug("Start writing to file.");
 
@@ -120,6 +123,92 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
 
             await fileStream.FlushAsync(token);
             Logger?.LogDebug("End writing to file.");
+        }
+
+        private static void WrapException(Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (PathTooLongException ex)
+            {
+                throw CreateException(ex);
+            }
+            catch (DirectoryNotFoundException ex)
+            {
+                throw CreateException(ex);
+            }
+            catch (IOException ex)
+            {
+                throw CreateException(ex);
+            }
+            catch (NotSupportedException ex)
+            {
+                throw CreateException(ex);
+            }
+            catch (SecurityException ex)
+            {
+                throw CreateException(ex);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                throw CreateException(ex);
+            }
+        }
+
+        private static T WrapException<T>(Func<T> func)
+        {
+            try
+            {
+                return func();
+            }
+            catch (DirectoryNotFoundException ex)
+            {
+                throw CreateException(ex);
+            }
+            catch (PathTooLongException ex)
+            {
+                throw CreateException(ex);
+            }
+            catch (IOException ex)
+            {
+                throw CreateException(ex);
+            }
+            catch (NotSupportedException ex)
+            {
+                throw CreateException(ex);
+            }
+            catch (SecurityException ex)
+            {
+                throw CreateException(ex);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                throw CreateException(ex);
+            }
+        }
+
+        private static EgressException CreateException(string message)
+        {
+            return new EgressException(WrapMessage(message));
+        }
+
+        private static EgressException CreateException(Exception innerException)
+        {
+            return new EgressException(WrapMessage(innerException.Message), innerException);
+        }
+
+        private static string WrapMessage(string innerMessage)
+        {
+            if (!string.IsNullOrEmpty(innerMessage))
+            {
+                return $"File system egress failed: {innerMessage}";
+            }
+            else
+            {
+                return "File system egress failed.";
+            }
         }
     }
 }

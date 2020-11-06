@@ -51,11 +51,11 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             }
             catch (AggregateException ex) when (ex.InnerException is RequestFailedException innerException)
             {
-                throw new InvalidOperationException(innerException.Message, ex.InnerException);
+                throw CreateException(innerException);
             }
             catch (RequestFailedException ex)
             {
-                throw new InvalidOperationException(ex.Message, ex.InnerException);
+                throw CreateException(ex);
             }
         }
 
@@ -99,11 +99,11 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             }
             catch (AggregateException ex) when (ex.InnerException is RequestFailedException innerException)
             {
-                throw new InvalidOperationException(innerException.Message, ex.InnerException);
+                throw CreateException(innerException);
             }
             catch (RequestFailedException ex)
             {
-                throw new InvalidOperationException(ex.Message, ex.InnerException);
+                throw CreateException(ex);
             }
         }
 
@@ -163,7 +163,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             }
             else
             {
-                throw new InvalidOperationException("SharedAccessSignature or AccountKey must be specified.");
+                throw CreateException("SharedAccessSignature or AccountKey must be specified.");
             }
 
             Logger?.LogDebug("Start creating blob container if not exists.");
@@ -202,6 +202,28 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             outputBuilder.Query = null;
 
             return outputBuilder.Uri.ToString();
+        }
+
+        private static EgressException CreateException(string message)
+        {
+            return new EgressException(WrapMessage(message));
+        }
+
+        private static EgressException CreateException(Exception innerException)
+        {
+            return new EgressException(WrapMessage(innerException.Message), innerException);
+        }
+
+        private static string WrapMessage(string innerMessage)
+        {
+            if (!string.IsNullOrEmpty(innerMessage))
+            {
+                return $"Azure blob egress failed: {innerMessage}";
+            }
+            else
+            {
+                return "Azure blob egress failed.";
+            }
         }
     }
 }
