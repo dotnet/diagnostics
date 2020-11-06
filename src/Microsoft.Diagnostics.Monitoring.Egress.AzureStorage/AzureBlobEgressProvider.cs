@@ -109,11 +109,31 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
 
         private void LogAndValidateOptions(AzureBlobEgressStreamOptions streamOptions, string fileName)
         {
-            Options.Log(Logger);
-            streamOptions.Log(Logger);
+            Logger?.LogDebug("Provider options:");
+            Logger?.LogProviderOption(nameof(Options.AccountKey), Options.AccountKey, redact: true);
+            Logger?.LogProviderOption(nameof(Options.AccountUri), GetAccountUri(out _));
+            Logger?.LogProviderOption(nameof(Options.BlobPrefix), Options.BlobPrefix);
+            Logger?.LogProviderOption(nameof(Options.ContainerName), Options.ContainerName);
+            Logger?.LogProviderOption(nameof(Options.SharedAccessSignature), Options.SharedAccessSignature, redact: true);
+            Logger?.LogDebug("Stream options:");
+            Logger?.LogStreamOption(nameof(streamOptions.ContentEncoding), streamOptions.ContentEncoding);
+            Logger?.LogStreamOption(nameof(streamOptions.ContentType), streamOptions.ContentType);
+            Logger?.LogStreamOption(nameof(streamOptions.Metadata), "[" + string.Join(", ", streamOptions.Metadata.Keys) + "]");
             Logger?.LogDebug($"File name: {fileName}");
 
             ValidateOptions();
+        }
+
+        private Uri GetAccountUri(out string accountName)
+        {
+            var blobUriBuilder = new BlobUriBuilder(Options.AccountUri);
+            blobUriBuilder.Query = null;
+            blobUriBuilder.BlobName = null;
+            blobUriBuilder.BlobContainerName = null;
+
+            accountName = blobUriBuilder.AccountName;
+
+            return blobUriBuilder.ToUri();
         }
 
         private async Task<BlobContainerClient> GetBlobContainerClientAsync(CancellationToken token)
@@ -122,6 +142,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             if (!string.IsNullOrWhiteSpace(Options.SharedAccessSignature))
             {
                 Logger?.LogDebug("Using shared access signature.");
+
                 var serviceUriBuilder = new UriBuilder(Options.AccountUri)
                 {
                     Query = Options.SharedAccessSignature
@@ -132,13 +153,15 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             else if (!string.IsNullOrEmpty(Options.AccountKey))
             {
                 Logger?.LogDebug("Using account key.");
-                var blobUriBuilder = new BlobUriBuilder(Options.AccountUri);
+
+                // Remove Query in case SAS token was specified
+                Uri accountUri = GetAccountUri(out string accountName);
 
                 StorageSharedKeyCredential credential = new StorageSharedKeyCredential(
-                    blobUriBuilder.AccountName,
+                    accountName,
                     Options.AccountKey);
 
-                serviceClient = new BlobServiceClient(Options.AccountUri, credential);
+                serviceClient = new BlobServiceClient(accountUri, credential);
             }
             else
             {
@@ -180,7 +203,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             UriBuilder outputBuilder = new UriBuilder(client.Uri);
             outputBuilder.Query = null;
 
-            return outputBuilder.Uri.AbsoluteUri;
+            return outputBuilder.Uri.ToString();
         }
     }
 }

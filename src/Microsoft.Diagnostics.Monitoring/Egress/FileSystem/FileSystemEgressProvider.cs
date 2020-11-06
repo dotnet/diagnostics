@@ -59,7 +59,8 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
         private void LogAndValidateOptions(string fileName)
         {
             Logger?.LogDebug("Provider options:");
-            Options.Log(Logger);
+            Logger?.LogProviderOption(nameof(Options.DirectoryPath), Options.DirectoryPath);
+            Logger?.LogProviderOption(nameof(Options.UseIntermediateFile), Options.UseIntermediateFile);
             Logger?.LogDebug($"File name: {fileName}");
 
             ValidateOptions();
