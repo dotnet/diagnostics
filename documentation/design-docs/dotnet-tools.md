@@ -396,6 +396,81 @@ CONVERT
       Writing:       ./trace.speedscope.json
       Conversion complete
 
+### dotnet-stack
+
+SYNOPSIS
+
+    dotnet-stack [options] [command] [<args>]
+
+OPTIONS
+
+    --version
+        Display the version of the dotnet-trace utility.
+
+    -h, --help
+        Show command line help
+
+COMMANDS
+
+    report         Displays stack traces for the target process
+
+REPORT
+
+    dotnet-stack report -p|--process-id <pid>
+                        -n|--name <process-name>
+                        [-h|--help]
+
+    Prints the managed stack from every thread in the target process
+
+    -h, --help
+        Show command line help
+
+    Examples:
+      > dotnet-stack report -p 1234
+      Thread (0x151c):
+          [Native Frames]
+          System.Private.CoreLib!System.Threading.ManualResetEventSlim.Wait(int, System.Threading.CancellationToken)
+          System.Private.CoreLib!System.Threading.Tasks.Task.SpinThenBlockingWait(int, System.Threading.CancellationToken)
+          System.Private.CoreLib!System.Threading.Tasks.Task.InternalWaitCore(int, System.Threading.CancellationToken)
+          System.Private.CoreLib!System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(System.Threading.Tasks.Task)
+          System.Private.CoreLib!System.Runtime.CompilerServices.TaskAwaiter.GetResult()
+          Microsoft.Extensions.Hosting.Abstractions!Microsoft.Extensions.Hosting.HostingAbstractionsHostExtensions.Run(Microsoft.Extensions.Hosting.IHost)
+          testtesttest!testtesttest.Program.Main(System.String[])
+
+      Thread (0x152b):
+          [Native Frames]
+          System.IO.FileSystem.Watcher!System.IO.FileSystemWatcher.RunningInstance.StaticWatcherRunLoopManager.WatchForFileSystemEventsThreadStart(System.Threading.ManualResetEventSlim, Microsoft.Win32.SafeHandles.SafeEventStreamHandle)
+          System.IO.FileSystem.Watcher!System.IO.FileSystemWatcher.RunningInstance.StaticWatcherRunLoopManager.<>c.<ScheduleEventStream>(System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart_Context(System.Object)
+          System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(System.Threading.ExecutionContext, System.Threading.ContextCallback, System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(System.Object)
+
+      Thread (0x153a):
+          [Native Frames]
+          System.Private.CoreLib!System.Threading.SemaphoreSlim.WaitUntilCountOrTimeout(int, uint, System.Threading.CancellationToken)
+          System.Private.CoreLib!System.Threading.SemaphoreSlim.Wait(int, System.Threading.CancellationToken)
+          System.Collections.Concurrent!System.Collections.Concurrent.BlockingCollection<Microsoft.Extensions.Logging.Console.LogMessageEntry>.TryTakeWithNoTimeValidation(int, System.Threading.CancellationToken, System.Threading.CancellationTokenSource)
+          System.Collections.Concurrent!System.Collections.Concurrent.BlockingCollection<Microsoft.Extensions.Logging.Console.LogMessageEntry>.GetConsumingEnumerable().MoveNext()
+          Microsoft.Extensions.Logging.Console!Microsoft.Extensions.Logging.Console.ConsoleLoggerProcessor.ProcessLogQueue()
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart_Context(System.Object)
+          System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(System.Threading.ExecutionContext, System.Threading.ContextCallback, System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart()
+
+      Thread (0x4125):
+          [Native Frames]
+          System.Private.CoreLib!System.Threading.Thread.Sleep(System.TimeSpan)
+          Microsoft.AspNetCore.Server.Kestrel.Core!Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Heartbeat.TimerLoop()
+          Microsoft.AspNetCore.Server.Kestrel.Core!Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Heartbeat.ctor(System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart_Context(System.Object)
+          System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(System.Threading.ExecutionContext, System.Threading.ContextCallback, System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(System.Object)
+
+      Thread (0x5hf3):
+          [Native Frames]
+          System.Net.Sockets!System.Net.Sockets.SocketAsyncEngine.EventLoop()
+          System.Net.Sockets!System.Net.Sockets.SocketAsyncEngine.ctor( System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(System.Object)
+
 ### dotnet-dump
 
 SYNOPSIS
@@ -710,80 +785,6 @@ Examples:
 ## Future suggestions
 
 Work described in here captures potential future directions these tools could take given time and customer interest. Some of these might come relatively soon, others feel quite speculative or duplicative with existing technology. Regardless, understanding potential future options helps to ensure that we don't unknowingly paint ourselves into a corner or build an incoherent offering.
-
-### dotnet-stack
-
-SYNOPSIS
-
-    dotnet-stack [options] [command] [<args>]
-
-OPTIONS
-
-    --version
-        Display the version of the dotnet-trace utility.
-
-    -h, --help
-        Show command line help
-
-COMMANDS
-
-    report         Displays stack traces for the target process
-
-REPORT
-
-    dotnet-stack report -p|--process-id <pid>
-                        [-h|--help]
-
-    Prints the managed stack from every thread in the target process
-
-    -h, --help
-        Show command line help
-
-    Examples:
-      > dotnet-stack report -p 1234
-      Thread (0x151c):
-          [Native Frames]
-          System.Private.CoreLib!System.Threading.ManualResetEventSlim.Wait(int, System.Threading.CancellationToken)
-          System.Private.CoreLib!System.Threading.Tasks.Task.SpinThenBlockingWait(int, System.Threading.CancellationToken)
-          System.Private.CoreLib!System.Threading.Tasks.Task.InternalWaitCore(int, System.Threading.CancellationToken)
-          System.Private.CoreLib!System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(System.Threading.Tasks.Task)
-          System.Private.CoreLib!System.Runtime.CompilerServices.TaskAwaiter.GetResult()
-          Microsoft.Extensions.Hosting.Abstractions!Microsoft.Extensions.Hosting.HostingAbstractionsHostExtensions.Run(Microsoft.Extensions.Hosting.IHost)
-          testtesttest!testtesttest.Program.Main(System.String[])
-
-      Thread (0x152b):
-          [Native Frames]
-          System.IO.FileSystem.Watcher!System.IO.FileSystemWatcher.RunningInstance.StaticWatcherRunLoopManager.WatchForFileSystemEventsThreadStart(System.Threading.ManualResetEventSlim, Microsoft.Win32.SafeHandles.SafeEventStreamHandle)
-          System.IO.FileSystem.Watcher!System.IO.FileSystemWatcher.RunningInstance.StaticWatcherRunLoopManager.<>c.<ScheduleEventStream>(System.Object)
-          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart_Context(System.Object)
-          System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(System.Threading.ExecutionContext, System.Threading.ContextCallback, System.Object)
-          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(System.Object)
-
-      Thread (0x153a):
-          [Native Frames]
-          System.Private.CoreLib!System.Threading.SemaphoreSlim.WaitUntilCountOrTimeout(int, uint, System.Threading.CancellationToken)
-          System.Private.CoreLib!System.Threading.SemaphoreSlim.Wait(int, System.Threading.CancellationToken)
-          System.Collections.Concurrent!System.Collections.Concurrent.BlockingCollection<Microsoft.Extensions.Logging.Console.LogMessageEntry>.TryTakeWithNoTimeValidation(int, System.Threading.CancellationToken, System.Threading.CancellationTokenSource)
-          System.Collections.Concurrent!System.Collections.Concurrent.BlockingCollection<Microsoft.Extensions.Logging.Console.LogMessageEntry>.GetConsumingEnumerable().MoveNext()
-          Microsoft.Extensions.Logging.Console!Microsoft.Extensions.Logging.Console.ConsoleLoggerProcessor.ProcessLogQueue()
-          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart_Context(System.Object)
-          System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(System.Threading.ExecutionContext, System.Threading.ContextCallback, System.Object)
-          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart()
-
-      Thread (0x4125):
-          [Native Frames]
-          System.Private.CoreLib!System.Threading.Thread.Sleep(System.TimeSpan)
-          Microsoft.AspNetCore.Server.Kestrel.Core!Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Heartbeat.TimerLoop()
-          Microsoft.AspNetCore.Server.Kestrel.Core!Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Heartbeat.ctor(System.Object)
-          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart_Context(System.Object)
-          System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(System.Threading.ExecutionContext, System.Threading.ContextCallback, System.Object)
-          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(System.Object)
-
-      Thread (0x5hf3):
-          [Native Frames]
-          System.Net.Sockets!System.Net.Sockets.SocketAsyncEngine.EventLoop()
-          System.Net.Sockets!System.Net.Sockets.SocketAsyncEngine.ctor( System.Object)
-          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(System.Object)
 
 ### dotnet-counters
 
