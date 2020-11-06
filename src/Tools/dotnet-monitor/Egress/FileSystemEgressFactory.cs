@@ -45,13 +45,11 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
         private class Provider : ConfiguredEgressProvider
         {
-            private readonly ILoggerFactory _loggerFactory;
-            private readonly FileSystemEgressProviderOptions _options;
+            private readonly FileSystemEgressProvider _provider;
 
             public Provider(FileSystemEgressProviderOptions options, ILoggerFactory loggerFactory)
             {
-                _loggerFactory = loggerFactory;
-                _options = options;
+                _provider = new FileSystemEgressProvider(options, loggerFactory.CreateLogger<FileSystemEgressProvider>());
             }
 
             public override async Task<EgressResult> EgressAsync(
@@ -63,8 +61,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             {
                 var streamOptions = new FileSystemEgressStreamOptions();
 
-                var provider = new FileSystemEgressProvider(_options, _loggerFactory.CreateLogger<FileSystemEgressProvider>());
-                string filepath = await provider.EgressAsync(action, fileName, streamOptions, token);
+                string filepath = await _provider.EgressAsync(action, fileName, streamOptions, token);
 
                 return new EgressResult("path", filepath);
             }
@@ -78,8 +75,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             {
                 var streamOptions = new FileSystemEgressStreamOptions();
 
-                var provider = new FileSystemEgressProvider(_options, _loggerFactory.CreateLogger<FileSystemEgressProvider>());
-                string filepath = await provider.EgressAsync(action, fileName, streamOptions, token);
+                string filepath = await _provider.EgressAsync(action, fileName, streamOptions, token);
 
                 return new EgressResult("path", filepath);
             }

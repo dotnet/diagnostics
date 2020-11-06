@@ -63,13 +63,11 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
         private class Provider : ConfiguredEgressProvider
         {
-            private readonly ILoggerFactory _loggerFactory;
-            private readonly AzureBlobEgressProviderOptions _options;
+            private readonly AzureBlobEgressProvider _provider;
 
             public Provider(AzureBlobEgressProviderOptions options, ILoggerFactory loggerFactory)
             {
-                _options = options;
-                _loggerFactory = loggerFactory;
+                _provider = new AzureBlobEgressProvider(options, loggerFactory.CreateLogger<AzureBlobEgressProvider>());
             }
 
             public override async Task<EgressResult> EgressAsync(
@@ -83,8 +81,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 var streamOptions = new AzureBlobEgressStreamOptions();
                 streamOptions.ContentType = contentType;
 
-                var provider = new AzureBlobEgressProvider(_options, _loggerFactory.CreateLogger<AzureBlobEgressProvider>());
-                string blobUri = await provider.EgressAsync(action, fileName, streamOptions, token);
+                string blobUri = await _provider.EgressAsync(action, fileName, streamOptions, token);
 
                 return new EgressResult("uri", blobUri);
             }
@@ -100,8 +97,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 var streamOptions = new AzureBlobEgressStreamOptions();
                 streamOptions.ContentType = contentType;
 
-                var provider = new AzureBlobEgressProvider(_options, _loggerFactory.CreateLogger<AzureBlobEgressProvider>());
-                string blobUri = await provider.EgressAsync(action, fileName, streamOptions, token);
+                string blobUri = await _provider.EgressAsync(action, fileName, streamOptions, token);
 
                 return new EgressResult("uri", blobUri);
             }
