@@ -4,7 +4,6 @@
 
 using Microsoft.Extensions.Logging;
 using System;
-using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,25 +26,68 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
         {
             LogAndValidateOptions(name);
 
-            Logger?.LogDebug("Check if directory exists.");
+            Logger?.LogDebug("Check if target directory exists.");
             if (!Directory.Exists(Options.DirectoryPath))
             {
-                Logger?.LogDebug("Start creating directory.");
+                Logger?.LogDebug("Start creating target directory.");
                 Directory.CreateDirectory(Options.DirectoryPath);
-                Logger?.LogDebug("End creating directory.");
+                Logger?.LogDebug("End creating target directory.");
             }
 
             string targetPath = Path.Combine(Options.DirectoryPath, name);
 
-            if (Options.UseIntermediateFile)
+            if (!string.IsNullOrEmpty(Options.IntermediateDirectoryPath))
             {
-                string intermediatePath = Path.Combine(Path.GetTempPath(), Path.GetTempFileName());
+                Logger?.LogDebug("Check if intermediate directory exists.");
+                if (!Directory.Exists(Options.IntermediateDirectoryPath))
+                {
+                    Logger?.LogDebug("Start creating intermediate directory.");
+                    Directory.CreateDirectory(Options.IntermediateDirectoryPath);
+                    Logger?.LogDebug("End creating intermediate directory.");
+                }
 
-                await WriteFileAsync(action, intermediatePath, token);
+                string intermediateFilePath = null;
+                try
+                {
+                    Logger?.LogDebug("Generating intermediate file.");
+                    int remainingAttempts = 10;
+                    bool intermediatePathExists;
+                    do
+                    {
+                        intermediateFilePath = Path.Combine(Options.IntermediateDirectoryPath, Path.GetRandomFileName());
+                        intermediatePathExists = File.Exists(intermediateFilePath);
+                        remainingAttempts--;
+                    }
+                    while (intermediatePathExists && remainingAttempts > 0);
 
-                Logger?.LogDebug("Start moving intermediate file to destination.");
-                File.Move(intermediatePath, targetPath);
-                Logger?.LogDebug("End moving intermediate file to destination.");
+                    if (intermediatePathExists)
+                    {
+                        throw new InvalidOperationException($"Unable to create unique intermediate file in '{Options.IntermediateDirectoryPath}' directory.");
+                    }
+
+                    await WriteFileAsync(action, intermediateFilePath, token);
+
+                    Logger?.LogDebug("Start moving intermediate file to destination.");
+                    File.Move(intermediateFilePath, targetPath);
+                    Logger?.LogDebug("End moving intermediate file to destination.");
+                }
+                finally
+                {
+                    // Attempt to delete the intermediate file if it exists.
+                    try
+                    {
+                        Logger?.LogDebug("Check if intermediate file exists.");
+                        if (File.Exists(intermediateFilePath))
+                        {
+                            Logger?.LogDebug("Start removing intermediate file.");
+                            File.Delete(intermediateFilePath);
+                            Logger?.LogDebug("End removing intermediate file.");
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
             }
             else
             {
@@ -59,7 +101,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
         private void LogAndValidateOptions(string fileName)
         {
             Logger?.LogProviderOption(nameof(Options.DirectoryPath), Options.DirectoryPath);
-            Logger?.LogProviderOption(nameof(Options.UseIntermediateFile), Options.UseIntermediateFile);
+            Logger?.LogProviderOption(nameof(Options.IntermediateDirectoryPath), Options.IntermediateDirectoryPath);
             Logger?.LogDebug($"File name: {fileName}");
 
             ValidateOptions();

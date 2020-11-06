@@ -12,6 +12,6 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
         [Required]
         public string DirectoryPath { get; set; }
 
-        public bool UseIntermediateFile { get; set; }
+        public string IntermediateDirectoryPath { get; set; }
     }
 }
