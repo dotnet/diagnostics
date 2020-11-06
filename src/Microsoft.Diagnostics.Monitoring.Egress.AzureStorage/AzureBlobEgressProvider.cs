@@ -51,11 +51,11 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             }
             catch (AggregateException ex) when (ex.InnerException is RequestFailedException innerException)
             {
-                throw new InvalidOperationException(innerException.Message);
+                throw new InvalidOperationException(innerException.Message, ex.InnerException);
             }
             catch (RequestFailedException ex)
             {
-                throw new InvalidOperationException(ex.Message);
+                throw new InvalidOperationException(ex.Message, ex.InnerException);
             }
         }
 
@@ -99,11 +99,11 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
             }
             catch (AggregateException ex) when (ex.InnerException is RequestFailedException innerException)
             {
-                throw new InvalidOperationException(innerException.Message);
+                throw new InvalidOperationException(innerException.Message, ex.InnerException);
             }
             catch (RequestFailedException ex)
             {
-                throw new InvalidOperationException(ex.Message);
+                throw new InvalidOperationException(ex.Message, ex.InnerException);
             }
         }
 
