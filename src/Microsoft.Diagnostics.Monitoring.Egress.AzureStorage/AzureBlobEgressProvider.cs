@@ -109,13 +109,11 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
 
         private void LogAndValidateOptions(AzureBlobEgressStreamOptions streamOptions, string fileName)
         {
-            Logger?.LogDebug("Provider options:");
             Logger?.LogProviderOption(nameof(Options.AccountKey), Options.AccountKey, redact: true);
             Logger?.LogProviderOption(nameof(Options.AccountUri), GetAccountUri(out _));
             Logger?.LogProviderOption(nameof(Options.BlobPrefix), Options.BlobPrefix);
             Logger?.LogProviderOption(nameof(Options.ContainerName), Options.ContainerName);
             Logger?.LogProviderOption(nameof(Options.SharedAccessSignature), Options.SharedAccessSignature, redact: true);
-            Logger?.LogDebug("Stream options:");
             Logger?.LogStreamOption(nameof(streamOptions.ContentEncoding), streamOptions.ContentEncoding);
             Logger?.LogStreamOption(nameof(streamOptions.ContentType), streamOptions.ContentType);
             Logger?.LogStreamOption(nameof(streamOptions.Metadata), "[" + string.Join(", ", streamOptions.Metadata.Keys) + "]");
