@@ -31,7 +31,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.Diagnostics.Monitoring.Egress.AzureStorage\Microsoft.Diagnostics.Monitoring.Egress.AzureStorage.csproj" />
-    <ProjectReference Include="..\..\Microsoft.Diagnostics.Monitoring.Egress\Microsoft.Diagnostics.Monitoring.Egress.csproj" />
     <ProjectReference Include="..\..\Microsoft.Diagnostics.Monitoring.RestServer\Microsoft.Diagnostics.Monitoring.RestServer.csproj" />
     <ProjectReference Include="..\..\Microsoft.Diagnostics.Monitoring\Microsoft.Diagnostics.Monitoring.csproj" />
   </ItemGroup>
