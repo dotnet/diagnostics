@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             try
             {
                 // Either processName or processId has to be specified.
-                if (name != null)
+                if (!string.IsNullOrEmpty(name))
                 {
                     if (processId != 0)
                     {
@@ -56,6 +56,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                         return -1;
                     }
                 }
+
                 if (processId < 0)
                 {
                     Console.Error.WriteLine("Process ID should not be negative.");
@@ -75,8 +76,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 };
 
                 // collect a *short* trace with stack samples
-                // the hidden duration flag can increase the time of this trace in case 10ms
-                // is too short in a given environment
+                // the hidden '--duration' flag can increase the time of this trace in case 10ms
+                // is too short in a given environment, e.g., resource constrained systems
                 // N.B. - This trace INCLUDES rundown.  For sufficiently large applications, it may take non-trivial time to collect
                 //        the symbol data in rundown.
                 using (EventPipeSession session = client.StartEventPipeSession(providers))
@@ -114,6 +115,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                         string template = "Thread (";
                         string threadFrame = stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false);
                         int threadId = int.Parse(threadFrame.Substring(template.Length, threadFrame.Length - (template.Length + 1)));
+
                         if (samplesForThread.TryGetValue(threadId, out var samples))
                         {
                             samples.Add(sample);
@@ -124,6 +126,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                         }
                     });
 
+                    // For every thread recorded in our trace, print the first stack
                     foreach (var (threadId, samples) in samplesForThread)
                     {
 #if DEBUG
@@ -144,9 +147,6 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     File.Delete(tempNetTraceFilename);
                 if (File.Exists(tempEtlxFilename))
                     File.Delete(tempEtlxFilename);
-
-                if (console.GetTerminal() != null)
-                    Console.CursorVisible = true;
             }
 
             return 0;
@@ -159,11 +159,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false).StartsWith("Thread ("))
             {
                 Console.WriteLine($"  {stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false)}"
-                    .Replace("UNMANAGED_CODE_TIME", "[Native Frames]")
-                    .Replace("int32", "int")
-                    .Replace("unsigned int32", "uint")
-                    .Replace("int64", "long")
-                    .Replace("unsigned int64", "ulong"));
+                    .Replace("UNMANAGED_CODE_TIME", "[Native Frames]"));
                 stackIndex = stackSource.GetCallerIndex(stackIndex);
             }
             Console.WriteLine();
