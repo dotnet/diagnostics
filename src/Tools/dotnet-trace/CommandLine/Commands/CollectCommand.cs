@@ -41,6 +41,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <returns></returns>
         private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name)
         {
+            int ret = 0;
             try
             {
                 Debug.Assert(output != null);
@@ -141,6 +142,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         {
                             ProcessLauncher.Launcher.ChildProc.Kill();
                         }
+                        await ReversedDiagnosticsClientBuilder.Server.DisposeAsync();
                         return ErrorCodes.SessionCreationError;
                     }
                     process = ProcessLauncher.Launcher.ChildProc;
@@ -253,12 +255,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     if (format != TraceFileFormat.NetTrace)
                         TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
+                    ret = 0;
                 }
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
-                return ErrorCodes.TracingError;
+                ret = ErrorCodes.TracingError;
             }
             finally
             {
@@ -270,9 +273,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 {
                     ProcessLauncher.Launcher.ChildProc.Kill();
                 }
-            }
 
-            return await Task.FromResult(0);
+                if (ReversedDiagnosticsClientBuilder.Server != null)
+                {
+                    await ReversedDiagnosticsClientBuilder.Server.DisposeAsync();
+                }
+            }
+            return await Task.FromResult(ret);
         }
 
         private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, string> enabledBy)

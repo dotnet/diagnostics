@@ -96,7 +96,7 @@ namespace Microsoft.Internal.Common.Utils
             return true;
         }
 
-        public void Cleanup()
+        public async void Cleanup()
         {
             if (_childProc != null && !_childProc.HasExited)
             {
@@ -107,6 +107,11 @@ namespace Microsoft.Internal.Common.Utils
                 // if process exited while we were trying to kill it, it can throw IOE 
                 catch (InvalidOperationException) { }
             }
+
+            if (ReversedDiagnosticsClientBuilder.Server != null)
+            {
+                await ReversedDiagnosticsClientBuilder.Server.DisposeAsync();
+            }
         }
     }
 
@@ -116,6 +121,8 @@ namespace Microsoft.Internal.Common.Utils
     internal class ReversedDiagnosticsClientBuilder
     {
         private static string GetTransportName(string toolName) => $"{toolName}-{Process.GetCurrentProcess().Id}-{DateTime.Now:yyyyMMdd_HHmmss}.socket";
+
+        public static ReversedDiagnosticsServer Server = null;
 
         // <summary>
         // Starts the child process and returns the diagnostics client once the child proc connects to the reversed diagnostics pipe.
@@ -129,8 +136,8 @@ namespace Microsoft.Internal.Common.Utils
             }
             // Create and start the reversed server            
             string diagnosticTransportName = GetTransportName(toolName);
-            ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(diagnosticTransportName);
-            server.Start();
+            Server = new ReversedDiagnosticsServer(diagnosticTransportName);
+            Server.Start();
 
             // Start the child proc
             if (!childProcLauncher.Start(diagnosticTransportName))
@@ -139,12 +146,12 @@ namespace Microsoft.Internal.Common.Utils
             }
 
             // Wait for attach
-            IpcEndpointInfo endpointInfo = server.Accept(TimeSpan.FromSeconds(timeoutInSec));
+            IpcEndpointInfo endpointInfo = Server.Accept(TimeSpan.FromSeconds(timeoutInSec));
 
             // If for some reason a different process attached to us, wait until the expected process attaches.
             while (endpointInfo.ProcessId != childProcLauncher.ChildProc.Id)
             {
-               endpointInfo = server.Accept(TimeSpan.FromSeconds(timeoutInSec)); 
+               endpointInfo = Server.Accept(TimeSpan.FromSeconds(timeoutInSec));
             }
             return new DiagnosticsClient(endpointInfo.Endpoint);
         }
