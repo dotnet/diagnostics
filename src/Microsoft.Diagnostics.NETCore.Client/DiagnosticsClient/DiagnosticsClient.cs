@@ -137,7 +137,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     uint hr = BitConverter.ToUInt32(response.Payload, 0);
                     if (hr == (uint)DiagnosticsIpcError.UnknownCommand) 
                     {
-                      throw new InvalidOperationException("Unsupported profiler attach");
+                      throw new InvalidOperationException("The target runtime does not support profiler attach.");
                     }
                     throw new ServerErrorException($"Profiler attach failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerResponseId.OK:
