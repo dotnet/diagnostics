@@ -134,7 +134,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
                 case DiagnosticsServerResponseId.Error:
-                    var hr = BitConverter.ToInt32(response.Payload, 0);
+                    uint hr = BitConverter.ToUInt32(response.Payload, 0);
+                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand) {
+                      throw new InvalidOperationException("Unsupported profiler attach");
+                    }
                     throw new ServerErrorException($"Profiler attach failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerResponseId.OK:
                     return;
