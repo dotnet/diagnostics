@@ -69,7 +69,7 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
                     await WriteFileAsync(action, intermediateFilePath, token);
 
                     Logger?.LogDebug("Start moving intermediate file to destination.");
-                    WrapException(() => { File.Move(intermediateFilePath, targetPath); return true; });
+                    WrapException(() => File.Move(intermediateFilePath, targetPath));
                     Logger?.LogDebug("End moving intermediate file to destination.");
                 }
                 finally
@@ -123,6 +123,11 @@ namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
 
             await fileStream.FlushAsync(token);
             Logger?.LogDebug("End writing to file.");
+        }
+
+        private static void WrapException(Action action)
+        {
+            WrapException(() => { action(); return true; });
         }
 
         private static T WrapException<T>(Func<T> func)
