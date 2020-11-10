@@ -110,7 +110,7 @@ dotnet tool install --global dotnet-counters
     NOTE: This works for apps running .NET 5.0 or later only.
 
      ```console
-    > dotnet-counters monitor --counters System.Runtime[assembly-count] -- my-aspnet-server.exe
+    > dotnet-counters monitor --counters System.Runtime[assembly-count] -- my-aspnet-server.exe arg1 arg2
 
     Press p to pause, r to resume, q to quit.
         Status: Running
