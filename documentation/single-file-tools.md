@@ -4,9 +4,9 @@ All of our diagnostic tools have been distributed so far as [global tools](https
 
 ## Requirements to Run the Tools
 
-- The tools distributed in a single file format are framework dependent applications. As such, they require a 3.1+ .NET Core runtime to be available. This means one of the following:
+- The tools distributed in a single file format are *_framework dependent_* applications. They require a 3.1 or newer .NET Core runtime to be available. This means one of the following:
   - Installing the runtime globally in a well-known location using one of the different installer technologies documented in the [official .NET download page](https://dotnet.microsoft.com/download).
-  - Downloading the binary archives from the [official .NET download page](https://dotnet.microsoft.com/download) and extracting them to a directory. Afterwards, please set `DOTNET_ROOT` to the path of the extraction.
+  - Downloading the binary archives from the [official .NET download page](https://dotnet.microsoft.com/download), extracting them to a directory, and setting the `DOTNET_ROOT` environment variable to the path of extraction.
   - Using the [dotnet-install scripts](https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-install-script) and setting `DOTNET_ROOT` to the installation directory. This mechanism is not recommended for development or production environments, but it's ideal for environments like CI machines.
   - The workload is being run in a container with the runtime available. This could be either because the workload is running on one of the [official .NET runtime containers](https://hub.docker.com/_/microsoft-dotnet-runtime) or on a custom-built image that installs it at build time.
 - These tools are bundles that will inflate on the target machine and will extract files to disk as necessary. The extraction folder is by default within the `TEMP` directory. In case `TEMP` is not available in the target environment or there's a desire to control such directory for reasons such as clean up, set `DOTNET_BUNDLE_EXTRACT_BASE_DIR` to a path that can be used in lieu of `TEMP`.
@@ -62,6 +62,9 @@ $header = [System.Net.Http.Headers.ContentDispositionHeaderValue]::Parse($resp.H
 [System.IO.File]::WriteAllBytes($header.FileName, $resp.content)
 ```
 
+4. *`powershell`*
+```powershell
+Invoke-WebRequest -Uri "https://aka.ms/dotnet-dump/win-x86" -Outfile "dotnet-dump.exe"
 ### Past Releases and Checksum Validation
 
 Each release in the [releases section](https://github.com/dotnet/diagnostics/releases) of the repository contains a table of stable links for our tools starting release `v5.0.152202`. Additionally, there's a CSV available as an attachment containing all the stable links and SHA512 checksums in case the downloaded files need to be validated.
