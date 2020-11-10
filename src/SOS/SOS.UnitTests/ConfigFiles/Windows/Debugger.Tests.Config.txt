@@ -117,8 +117,15 @@
               <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
               <FrameworkVersion>$(AspNetCoreVersion21)</FrameworkVersion>
-              <!-- Do at least one test hosted on .NET Core. -->
-              <SOSHostRuntime>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeVersion21)</SOSHostRuntime>
+            </Option>
+          </Options>
+          <Options>
+            <!-- Test using the .NET Core and the destkop CLR framework to host the managed SOS bits -->
+            <Option>
+              <SetHostRuntime>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeVersion21)</SetHostRuntime>
+            </Option>
+            <Option>
+              <SetHostRuntime>-netfx</SetHostRuntime>
             </Option>
           </Options>
         </Option>
