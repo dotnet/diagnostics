@@ -22,11 +22,12 @@ https://aka.ms/<TOOL NAME>/<TARGET PLATFORM RUNTIME IDENTIFIER>
 ```
 
 The tools we support are:
+
 - `dotnet-counters`
 - `dotnet-dump`
 - `dotnet-gcdump`
 - `dotnet-sos`
-- `dotnet-trace` 
+- `dotnet-trace`
   
 The supported [runtime identifiers](https://docs.microsoft.com/en-us/dotnet/core/rid-catalog) are:
 
@@ -41,21 +42,24 @@ The supported [runtime identifiers](https://docs.microsoft.com/en-us/dotnet/core
 - `linux-x64`
 - `linux-musl-x64`
 
-For example, the latest release of `dotnet-trace` for Windows x64 will be available at https://aka.ms/dotnet-trace/win-x64.
+For example, the latest release of `dotnet-trace` for Windows x64 will be available at <https://aka.ms/dotnet-trace/win-x64>.
 
 To download these tools you can either use a browser or use a command line utility like `wget` or `curl`. It's important to note that the file name is returned in the `content-disposition` header of the request. If the utility you use to download the tools respects the header, the file will be saved with the name of the tool downloaded; otherwise you might need to rename the tool. A few examples are:
 
 1. *`curl` (available on Windows after 1706, macOS, and several distributions of Linux)*
+
 ```sh
 curl -JLO https://aka.ms/dotnet-dump/win-x64
 ```
 
 2. *`wget`*
+
 ```sh
 wget --content-disposition https://aka.ms/dotnet-dump/linux-x64
 ```
 
 3. *`pwsh` (PowerShell core)*
+
 ```powershell
 $resp = Invoke-WebRequest -Uri "https://aka.ms/dotnet-dump/win-x86"
 $header = [System.Net.Http.Headers.ContentDispositionHeaderValue]::Parse($resp.Headers.'content-disposition')
@@ -63,8 +67,11 @@ $header = [System.Net.Http.Headers.ContentDispositionHeaderValue]::Parse($resp.H
 ```
 
 4. *`powershell`*
+
 ```powershell
 Invoke-WebRequest -Uri "https://aka.ms/dotnet-dump/win-x86" -Outfile "dotnet-dump.exe"
+```
+
 ### Past Releases and Checksum Validation
 
 Each release in the [releases section](https://github.com/dotnet/diagnostics/releases) of the repository contains a table of stable links for our tools starting release `v5.0.152202`. Additionally, there's a CSV available as an attachment containing all the stable links and SHA512 checksums in case the downloaded files need to be validated.
