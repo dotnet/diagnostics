@@ -156,22 +156,12 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     };
                 };
 
-                if (string.IsNullOrEmpty(egressProvider))
-                {
-                    return new OutputStreamResult(
-                        ConvertFastSerializeAction(action),
-                        ContentTypes.ApplicationOctectStream,
-                        fileName);
-                }
-                else
-                {
-                    return new EgressStreamResult(
-                        ConvertFastSerializeAction(action),
-                        egressProvider,
-                        fileName,
-                        processInfo.EndpointInfo,
-                        ContentTypes.ApplicationOctectStream);
-                }
+                return Result(
+                    egressProvider,
+                    ConvertFastSerializeAction(action),
+                    fileName,
+                    ContentTypes.ApplicationOctectStream,
+                    processInfo.EndpointInfo);
             });
         }
 
@@ -288,23 +278,13 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     await pipeline.RunAsync(token);
                 };
 
-                if (!string.IsNullOrEmpty(egressProvider))
-                {
-                    return new EgressStreamResult(
-                        action,
-                        egressProvider,
-                        fileName,
-                        processInfo.EndpointInfo,
-                        contentType);
-                }
-                else
-                {
-                    string downloadName = format == LogFormat.EventStream ? null : fileName;
-                    return new OutputStreamResult(
-                        action,
-                        contentType,
-                        downloadName);
-                }
+                return Result(
+                    egressProvider,
+                    action,
+                    fileName,
+                    contentType,
+                    processInfo.EndpointInfo,
+                    format != LogFormat.EventStream);
             });
         }
 
@@ -338,22 +318,12 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 await pipeProcessor.RunAsync(token);
             };
 
-            if (string.IsNullOrEmpty(egressProvider))
-            {
-                return new OutputStreamResult(
-                    action,
-                    ContentTypes.ApplicationOctectStream,
-                    fileName);
-            }
-            else
-            {
-                return new EgressStreamResult(
-                    action,
-                    egressProvider,
-                    fileName,
-                    processInfo.EndpointInfo,
-                    ContentTypes.ApplicationOctectStream);
-            }
+            return Result(
+                egressProvider,
+                action,
+                fileName,
+                ContentTypes.ApplicationOctectStream,
+                processInfo.EndpointInfo);
         }
 
         private static TimeSpan ConvertSecondsToTimeSpan(int durationSeconds)
@@ -392,6 +362,32 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 return LogFormat.Json;
             }
             return LogFormat.None;
+        }
+
+        private static ActionResult Result(
+            string providerName,
+            Func<Stream, CancellationToken, Task> action,
+            string fileName,
+            string contentType,
+            IEndpointInfo endpointInfo,
+            bool asAttachment = true)
+        {
+            if (string.IsNullOrEmpty(providerName))
+            {
+                return new OutputStreamResult(
+                    action,
+                    contentType,
+                    asAttachment ? fileName : null);
+            }
+            else
+            {
+                return new EgressStreamResult(
+                    action,
+                    providerName,
+                    fileName,
+                    endpointInfo,
+                    contentType);
+            }
         }
 
         private static Func<Stream, CancellationToken, Task> ConvertFastSerializeAction(Func<CancellationToken, Task<IFastSerializable>> action)
