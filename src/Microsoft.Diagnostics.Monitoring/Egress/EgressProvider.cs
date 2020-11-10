@@ -11,6 +11,21 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.Egress
 {
+    /* 
+     * == Egress Provider Design ==
+     * - Each type of egress is implemented as an EgressProvider. The following are the built-in providers:
+     *   - AzureBlobEgressProvider: Allows egressing stream data to a blob in Azure blob storage.
+     *   - FileSystemEgressProvider: Allows egressing stream data to the file system.
+     * - When constructing an egress provider, the options of the provider must be passed via the constructor.
+     *   These options are typically use for describing to where stream data is to be egressed.
+     * - When invoking an egress provider, an action for acquiring the stream data, a file name, and stream options
+     *   are required. The acquisition action can either provide the stream or allow the provider to provision the
+     *   stream, which is passed into the action. The stream options represent additional data about the storage
+     *   of the stream.
+     * - When an egress provider finishes egressing stream data, it will return a value that identifies the location
+     *   of where the stream data was egressed.
+     */
+
     /// <summary>
     /// Base class for all egress implementations.
     /// </summary>

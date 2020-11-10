@@ -399,6 +399,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 // FastSerialization requests the length of the stream before serializing to the stream.
                 // If the stream is a response stream, requesting the length or setting the position is
                 // not supported. Create an intermediate buffer if testing the stream fails.
+                // This can use a huge amount of memory if the IFastSerializable is very large.
+                // CONSIDER: Update FastSerialization to not get the length or attempt to reset the position.
                 bool useIntermediateStream = false;
                 try
                 {

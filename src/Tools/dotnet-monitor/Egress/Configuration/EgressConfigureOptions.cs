@@ -11,6 +11,24 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
+    /* 
+     * == Egress Configuration Design ==
+     * - Each type of egress is called an egress type. The following are the defined egress types:
+     *   - AzureBlobStorage: Allows egressing stream data to a blob in Azure blob storage.
+     *   - FileSystem: Allows egressing stream data to the file system.
+     * - An egress type in combination with its well defined set of options is called a egress provider.
+     *   Each egress provider is named in the egress configuration in order to identify individual providers.
+     * - All egress configuration information is found in the root Egress configuration section. This section
+     *   has two immediate subsections:
+     *   - Providers: a mapping of egress provider names to egress provider options + the egress type.
+     *     - Each provider must have a 'type' field, which must have a value that is one of the egress types.
+     *       This field informs the egress configuration the type of egress provider that should be constructed
+     *       with the remaining options.
+     *     - If a provider's options fail validation, the failure is reported and the provider will not be
+     *       available to be used as a means of egress.
+     *   - Properties: a mapping of named values, typically for storing secrets (account keys, SAS, etc) by name.
+     */
+
     /// <summary>
     /// Binds egress configuration information to an <see cref="EgressOptions"/> instance.
     /// </summary>
