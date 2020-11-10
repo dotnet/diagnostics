@@ -685,7 +685,7 @@ HRESULT InitializeHosting()
     {
         return S_OK;
     }
-    HRESULT hr;
+    HRESULT hr = S_OK;
     if (!g_useDesktopClrHost)
     {
         hr = InitializeNetCoreHost();
