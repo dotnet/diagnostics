@@ -49,9 +49,9 @@
 #if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
 extern HRESULT InitializeDesktopClrHost();
 extern void UninitializeDesktopClrHost();
-bool g_useDesktopClrHost = true;
 #endif
 
+bool g_useDesktopClrHost = false;
 bool g_dotnetDumpHost = false;
 static bool g_hostingInitialized = false;
 bool g_symbolStoreInitialized = false;
@@ -550,32 +550,15 @@ BOOL IsHostingInitialized()
  * Initializes the host coreclr runtime and gets the managed entry 
  * points delegates.
 \**********************************************************************/
-HRESULT InitializeHosting()
+static HRESULT InitializeNetCoreHost()
 {
-    if (g_hostingInitialized)
-    {
-        return S_OK;
-    }
-    HRESULT Status;
-#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
-    if (g_useDesktopClrHost)
-    {
-        Status = InitializeDesktopClrHost();
-        if (SUCCEEDED(Status))
-        {
-            OnUnloadTask::Register(UninitializeDesktopClrHost);
-            g_hostingInitialized = true;
-            return Status;
-        }
-    }
-#endif
     coreclr_initialize_ptr initializeCoreCLR = nullptr;
     coreclr_create_delegate_ptr createDelegate = nullptr;
     std::string hostRuntimeDirectory;
     std::string sosModuleDirectory;
     std::string coreClrPath;
 
-    Status = GetHostRuntime(coreClrPath, hostRuntimeDirectory);
+    HRESULT Status = GetHostRuntime(coreClrPath, hostRuntimeDirectory);
     if (FAILED(Status))
     {
         ExtDbgOut("Error: Failed to get host runtime directory\n");
@@ -690,8 +673,39 @@ HRESULT InitializeHosting()
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, MetadataHelperClassName, "GetMetadataLocator", (void **)&g_SOSNetCoreCallbacks.GetMetadataLocatorDelegate));
     IfFailRet(createDelegate(hostHandle, domainId, SOSManagedDllName, MetadataHelperClassName, "GetICorDebugMetadataLocator", (void **)&g_SOSNetCoreCallbacks.GetICorDebugMetadataLocatorDelegate));
 
-    g_hostingInitialized = true;
     return Status;
+}
+
+/**********************************************************************\
+ * Initializes the host runtime.
+\**********************************************************************/
+HRESULT InitializeHosting()
+{
+    if (g_hostingInitialized)
+    {
+        return S_OK;
+    }
+    HRESULT hr;
+    if (!g_useDesktopClrHost)
+    {
+        hr = InitializeNetCoreHost();
+        if (SUCCEEDED(hr))
+        {
+            g_hostingInitialized = true;
+            return hr;
+        }
+    }
+#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
+    hr = InitializeDesktopClrHost();
+    if (SUCCEEDED(hr))
+    {
+        OnUnloadTask::Register(UninitializeDesktopClrHost);
+        g_useDesktopClrHost = true;
+        g_hostingInitialized = true;
+        return hr;
+    }
+#endif
+    return hr;
 }
 
 //
