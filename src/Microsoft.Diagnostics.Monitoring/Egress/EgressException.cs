@@ -6,6 +6,9 @@ using System;
 
 namespace Microsoft.Diagnostics.Monitoring.Egress
 {
+    /// <summary>
+    /// Exception that egress providers can throw when an operational error occurs (e.g. failed to write the stream data).
+    /// </summary>
     internal class EgressException : MonitoringException
     {
         public EgressException(string message) : base(message) { }

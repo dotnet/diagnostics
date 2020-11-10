@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
 {
+    /// <summary>
+    /// Egress provider for egressing stream data to the file system.
+    /// </summary>
     internal class FileSystemEgressProvider :
         EgressProvider<FileSystemEgressProviderOptions, FileSystemEgressStreamOptions>
     {

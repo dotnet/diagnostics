@@ -13,6 +13,9 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
+    /// <summary>
+    /// Egress service implementation required by the REST server.
+    /// </summary>
     internal class EgressService : IEgressService
     {
         private readonly IOptionsMonitor<EgressOptions> _egressOptions;

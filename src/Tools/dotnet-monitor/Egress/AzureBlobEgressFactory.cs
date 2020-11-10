@@ -15,6 +15,9 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
+    /// <summary>
+    /// Creates <see cref="ConfiguredEgressProvider"/> for Azure blob storage egress.
+    /// </summary>
     internal class AzureBlobEgressFactory : EgressFactory
     {
         private readonly ILoggerFactory _loggerFactory;
@@ -33,19 +36,23 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         {
             var options = providerSection.Get<ConfigurationOptions>();
 
+            // If account key was not provided but the name was provided,
+            // lookup the account key property value from EgressOptions.Properties
             if (string.IsNullOrEmpty(options.AccountKey) &&
                 !string.IsNullOrEmpty(options.AccountKeyName))
             {
-                if (egressProperties.TryGetValue(options.AccountKeyName, out string key))
+                if (TryGetPropertyValue(providerName, egressProperties, options.AccountKeyName, out string key))
                 {
                     options.AccountKey = key;
                 }
             }
 
+            // If shared access signature (SAS) was not provided but the name was provided,
+            // lookup the SAS property value from EgressOptions.Properties
             if (string.IsNullOrEmpty(options.SharedAccessSignature) &&
                 !string.IsNullOrEmpty(options.SharedAccessSignatureName))
             {
-                if (egressProperties.TryGetValue(options.SharedAccessSignatureName, out string signature))
+                if (TryGetPropertyValue(providerName, egressProperties, options.SharedAccessSignatureName, out string signature))
                 {
                     options.SharedAccessSignature = signature;
                 }
@@ -58,6 +65,16 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             }
 
             provider = new Provider(options, _loggerFactory);
+            return true;
+        }
+
+        private bool TryGetPropertyValue(string providerName, IDictionary<string, string> egressProperties, string propertyName, out string value)
+        {
+            if (!egressProperties.TryGetValue(propertyName, out value))
+            {
+                Logger.LogWarning("Provider '{0}': Unable to find '{1}' key in egress properties.", providerName, propertyName);
+                return false;
+            }
             return true;
         }
 
@@ -103,10 +120,19 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             }
         }
 
+        /// <summary>
+        /// Egress provider options for Azure blob storage with additional options.
+        /// </summary>
         private class ConfigurationOptions : AzureBlobEgressProviderOptions
         {
+            /// <summary>
+            /// The name of the account key used to look up the value from the <see cref="EgressOptions.Properties"/> map.
+            /// </summary>
             public string AccountKeyName { get; set; }
 
+            /// <summary>
+            /// The name of the shared access signature (SAS) used to look up the value from the <see cref="EgressOptions.Properties"/> map.
+            /// </summary>
             public string SharedAccessSignatureName { get; set; }
         }
     }

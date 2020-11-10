@@ -4,6 +4,9 @@
 
 namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
 {
+    /// <summary>
+    /// Egress stream options for file system egress.
+    /// </summary>
     internal class FileSystemEgressStreamOptions
     {
     }

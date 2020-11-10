@@ -9,6 +9,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
+    /// <summary>
+    /// Helper class for validating egress options.
+    /// </summary>
     internal class EgressProviderValidation
     {
         private readonly ILogger _logger;
@@ -20,6 +23,14 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             _providerName = providerName;
         }
 
+        /// <summary>
+        /// Validates that the egress options pass the self-described validation.
+        /// </summary>
+        /// <param name="value">The instance of the options object.</param>
+        /// <returns>True if the options object is valid; otherwise, false.</returns>
+        /// <remarks>
+        /// Validation errors are logged as warnings.
+        /// </remarks>
         public bool TryValidate(object value)
         {
             ValidationContext validationContext = new ValidationContext(value);

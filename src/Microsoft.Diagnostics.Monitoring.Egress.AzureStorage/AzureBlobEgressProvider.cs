@@ -15,7 +15,14 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
 {
-    internal class AzureBlobEgressProvider : EgressProvider<AzureBlobEgressProviderOptions, AzureBlobEgressStreamOptions>
+    /// <summary>
+    /// Egress provider for egressing stream data to an Azure blob storage account.
+    /// </summary>
+    /// <remarks>
+    /// Blobs created through this provider will overwrite existing blobs if they have the same blob name.
+    /// </remarks>
+    internal class AzureBlobEgressProvider :
+        EgressProvider<AzureBlobEgressProviderOptions, AzureBlobEgressStreamOptions>
     {
         public AzureBlobEgressProvider(AzureBlobEgressProviderOptions options, ILogger logger = null)
             : base(options, logger)

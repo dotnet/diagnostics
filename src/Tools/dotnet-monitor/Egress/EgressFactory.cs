@@ -8,6 +8,9 @@ using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
+    /// <summary>
+    /// Base class for creating configured egress providers.
+    /// </summary>
     internal abstract class EgressFactory
     {
         public EgressFactory(ILogger logger)
@@ -15,6 +18,15 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             Logger = logger;
         }
 
+        /// <summary>
+        /// Attempts to create a <see cref="ConfiguredEgressProvider"/> from the provided <paramref name="providerSection"/>
+        /// and <paramref name="egressProperties"/>.
+        /// </summary>
+        /// <param name="providerName">The name of the egress provider.</param>
+        /// <param name="providerSection">The configuration section containing the provider options.</param>
+        /// <param name="egressProperties">The mapping of egress properties.</param>
+        /// <param name="provider">The created <see cref="ConfiguredEgressProvider"/>.</param>
+        /// <returns>True if the provider was created; otherwise, false.</returns>
         public abstract bool TryCreate(
             string providerName,
             IConfigurationSection providerSection,

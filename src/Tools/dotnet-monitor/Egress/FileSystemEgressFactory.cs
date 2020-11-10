@@ -15,6 +15,9 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
+    /// <summary>
+    /// Creates <see cref="ConfiguredEgressProvider"/> for file system egress.
+    /// </summary>
     internal class FileSystemEgressFactory : EgressFactory
     {
         private ILoggerFactory _loggerFactory;
