@@ -29,7 +29,7 @@ namespace SOS
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SOSInitializeDelegate(
-            [In, MarshalAs(UnmanagedType.Struct)] ref SOSNetCoreCallbacks callbacks,
+            [In, MarshalAs(UnmanagedType.Struct)] ref SymbolReader.SOSNetCoreCallbacks callbacks,
             int callbacksSize,
             [In, MarshalAs(UnmanagedType.LPStr)] string tempDirectory,
             [In, MarshalAs(UnmanagedType.LPStr)] string runtimeModulePath,
@@ -38,137 +38,7 @@ namespace SOS
             [In, MarshalAs(UnmanagedType.LPStr)] string dbiFilePath,
             bool symbolStoreEnabled);
 
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate UIntPtr GetExpressionDelegate(
-            [In, MarshalAs(UnmanagedType.LPStr)] string expression);
-
         private const string SOSInitialize = "SOSInitializeByHost";
-
-        #region SOS.NETCore function delegates
-
-        private delegate bool InitializeSymbolStoreDelegate(
-            bool logging,
-            bool msdl,
-            bool symweb,
-            string tempDirectory,
-            string symbolServerPath,
-            string authToken,
-            int timeoutInMintues,
-            string symbolCachePath,
-            string symbolDirectoryPath,
-            string windowsSymbolPath);
-
-        private delegate void DisplaySymbolStoreDelegate(
-            SymbolReader.WriteLine writeLine);
-
-        private delegate void DisableSymbolStoreDelegate();
-
-        private delegate void LoadNativeSymbolsDelegate(
-            SymbolReader.SymbolFileCallback callback,
-            IntPtr parameter,
-            SymbolReader.RuntimeConfiguration config,
-            string moduleFilePath,
-            ulong address,
-            int size,
-            SymbolReader.ReadMemoryDelegate readMemory);
-
-        private delegate void LoadNativeSymbolsFromIndexDelegate(
-            SymbolReader.SymbolFileCallback callback,
-            IntPtr parameter,
-            SymbolReader.RuntimeConfiguration config,
-            string moduleFilePath,
-            bool specialKeys,
-            int moduleIndexSize,
-            IntPtr moduleIndex);
-
-        private delegate IntPtr LoadSymbolsForModuleDelegate(
-            string assemblyPath,
-            bool isFileLayout,
-            ulong loadedPeAddress,
-            int loadedPeSize,
-            ulong inMemoryPdbAddress,
-            int inMemoryPdbSize,
-            SymbolReader.ReadMemoryDelegate readMemory);
-
-        private delegate void DisposeDelegate(IntPtr symbolReaderHandle);
-
-        private delegate bool ResolveSequencePointDelegate(
-            IntPtr symbolReaderHandle,
-            string filePath,
-            int lineNumber,
-            out int methodToken,
-            out int ilOffset);
-
-        private delegate bool GetLineByILOffsetDelegate(
-            IntPtr symbolReaderHandle,
-            int methodToken,
-            long ilOffset,
-            out int lineNumber,
-            out IntPtr fileName);
-
-        private delegate bool GetLocalVariableNameDelegate(
-            IntPtr symbolReaderHandle,
-            int methodToken,
-            int localIndex,
-            out IntPtr localVarName);
-
-        private delegate int GetMetadataLocatorDelegate(
-            [MarshalAs(UnmanagedType.LPWStr)] string imagePath,
-            uint imageTimestamp,
-            uint imageSize,
-            [MarshalAs(UnmanagedType.LPArray, SizeConst = 16)] byte[] mvid,
-            uint mdRva,
-            uint flags,
-            uint bufferSize,
-            IntPtr buffer,
-            IntPtr dataSize);
-
-        private delegate int GetICorDebugMetadataLocatorDelegate(
-            [MarshalAs(UnmanagedType.LPWStr)] string imagePath,
-            uint imageTimestamp,
-            uint imageSize,
-            uint pathBufferSize,
-            IntPtr pPathBufferSize,
-            IntPtr pPathBuffer);
-
-        #endregion
-
-        /// <summary>
-        /// Pass to SOSInitializeByHost
-        /// </summary>
-        [StructLayout(LayoutKind.Sequential)]
-        struct SOSNetCoreCallbacks
-        {
-            public InitializeSymbolStoreDelegate InitializeSymbolStoreDelegate;
-            public DisplaySymbolStoreDelegate DisplaySymbolStoreDelegate;
-            public DisableSymbolStoreDelegate DisableSymbolStoreDelegate;
-            public LoadNativeSymbolsDelegate LoadNativeSymbolsDelegate;
-            public LoadNativeSymbolsFromIndexDelegate LoadNativeSymbolsFromIndexDelegate;
-            public LoadSymbolsForModuleDelegate LoadSymbolsForModuleDelegate;
-            public DisposeDelegate DisposeDelegate;
-            public ResolveSequencePointDelegate ResolveSequencePointDelegate;
-            public GetLineByILOffsetDelegate GetLineByILOffsetDelegate;
-            public GetLocalVariableNameDelegate GetLocalVariableNameDelegate;
-            public GetMetadataLocatorDelegate GetMetadataLocatorDelegate;
-            public GetExpressionDelegate GetExpressionDelegate;
-            public GetICorDebugMetadataLocatorDelegate GetICorDebugMetadataLocatorDelegate;
-        }
-
-        static SOSNetCoreCallbacks s_callbacks = new SOSNetCoreCallbacks {
-            InitializeSymbolStoreDelegate = SymbolReader.InitializeSymbolStore,
-            DisplaySymbolStoreDelegate = SymbolReader.DisplaySymbolStore,
-            DisableSymbolStoreDelegate = SymbolReader.DisableSymbolStore,
-            LoadNativeSymbolsDelegate = SymbolReader.LoadNativeSymbols,
-            LoadNativeSymbolsFromIndexDelegate = SymbolReader.LoadNativeSymbolsFromIndex,
-            LoadSymbolsForModuleDelegate = SymbolReader.LoadSymbolsForModule,
-            DisposeDelegate = SymbolReader.Dispose,
-            ResolveSequencePointDelegate = SymbolReader.ResolveSequencePoint,
-            GetLineByILOffsetDelegate = SymbolReader.GetLineByILOffset,
-            GetLocalVariableNameDelegate = SymbolReader.GetLocalVariableName,
-            GetMetadataLocatorDelegate = MetadataHelper.GetMetadataLocator,
-            GetExpressionDelegate = SOSHost.GetExpression,
-            GetICorDebugMetadataLocatorDelegate = MetadataHelper.GetICorDebugMetadataLocator
-        };
 
         const string DesktopRuntimeModuleName = "clr";
 
@@ -285,8 +155,8 @@ namespace SOS
                 }
 
                 int result = initializeFunc(
-                    ref s_callbacks,
-                    Marshal.SizeOf<SOSNetCoreCallbacks>(),
+                    ref SymbolReader.SymbolCallbacks,
+                    Marshal.SizeOf<SymbolReader.SOSNetCoreCallbacks>(),
                     tempDirectory,
                     AnalyzeContext.RuntimeModuleDirectory,
                     isDesktop,

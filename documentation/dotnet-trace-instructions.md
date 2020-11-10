@@ -52,7 +52,43 @@ If you want to disable runtime events to reduce the overhead (and trace size) ev
 ```cmd
 dotnet-trace collect --process-id <PID> --providers System.Runtime:0:1:EventCounterIntervalSec=1,Microsoft-Windows-DotNETRuntime:0:1,Microsoft-DotNETCore-SampleProfiler:0:1
 ```
- 
+
+## Using dotnet-trace to launch a child process and trace it from startup.
+
+Sometimes it may be useful to collect a trace of a process from its startup. For apps running .NET 5.0 or later, it is possible to do this by using dotnet-trace.
+
+This will launch `hello.exe` with `arg1` and `arg2` as its command line arguments and collect a trace from its runtime startup:
+
+```console
+dotnet-trace collect -- hello.exe arg1 arg2
+```
+
+The preceding command generates output similar to the following:
+
+```console
+No profile or providers specified, defaulting to trace profile 'cpu-sampling'
+
+Provider Name                           Keywords            Level               Enabled By
+Microsoft-DotNETCore-SampleProfiler     0x0000F00000000000  Informational(4)    --profile
+Microsoft-Windows-DotNETRuntime         0x00000014C14FCCBD  Informational(4)    --profile
+
+Process        : E:\temp\gcperfsim\bin\Debug\net5.0\gcperfsim.exe
+Output File    : E:\temp\gcperfsim\trace.nettrace
+
+
+[00:00:00:05]   Recording trace 122.244  (KB)
+Press <Enter> or <Ctrl+C> to exit...
+```
+
+You can stop collecting the trace by pressing `<Enter>` or `<Ctrl + C>` key. Doing this will also exit `hello.exe`.
+
+### NOTE
+* Launching `hello.exe` via dotnet-trace will make its input/output to be redirected and you won't be able to interact with its stdin/stdout.
+
+* Exiting the tool via CTRL+C or SIGTERM will safely end both the tool and the child process.
+
+* If the child process exits before the tool, the tool will exit as well and the trace should be safely viewable.
+
 
 ## Viewing the trace captured from dotnet-trace
 
@@ -219,3 +255,6 @@ Options:
 
   -f, --format
     The format of the output trace file.  This defaults to "nettrace" on Windows and "speedscope" on other OSes.
+
+  -- <command> (for target applications running .NET 5.0 or later only)
+    The command to run to launch a child process and trace from startup.

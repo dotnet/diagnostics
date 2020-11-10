@@ -21,15 +21,11 @@
   <LogDir>$(RootBinDir)/TestResults/$(TargetConfiguration)/sos.unittests_$(Timestamp)</LogDir>
   <DumpDir>$(RootBinDir)/tmp/$(TargetConfiguration)\dumps</DumpDir>
   
-  <TestLatestOnly>false</TestLatestOnly>
-  <TestLatestOnly Condition="'$(PrivateBuildTesting)' == 'true'">true</TestLatestOnly>
-  <TestLatestOnly Condition="'$(InternalReleaseTesting)' == 'true'">true</TestLatestOnly>
-
   <TestWebApp3>true</TestWebApp3>
   <TestWebApp3 Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp3>
 
   <TestRuntime21>true</TestRuntime21>
-  <TestRuntime21 Condition="'$(TestLatestOnly)' == 'true'">false</TestRuntime21>
+  <TestRuntime21 Condition="'$(RuntimeVersion21)' == ''">false</TestRuntime21>
   <TestRuntime21 Condition="'$(TargetArchitecture)' == 'arm'">false</TestRuntime21>
   <TestRuntime21 Condition="'$(TargetArchitecture)' == 'arm64'">false</TestRuntime21>
 
@@ -53,17 +49,22 @@
     <!--
         Default (prebuilt)
       -->
-    <Option>
+    <Option Condition="'$(RuntimeVersionLatest)' != ''">
       <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
     </Option>
-    <Option Condition="'$(TestLatestOnly)' != 'true'">
+    <Option Condition="'$(RuntimeVersion50)' != ''">
+      <BuildProjectFramework>net5.0</BuildProjectFramework>
+      <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
+    </Option>
+    <Option Condition="'$(RuntimeVersion31)' != ''">
       <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
     </Option>
     <Option Condition="'$(TestRuntime21)' == 'true'">
       <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
+      <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
     </Option>
     <!--
         SOS.StackAndOtherTests (cli because tested with embedded and portable PDBs)
@@ -73,11 +74,16 @@
       <DebuggeeBuildRoot>$(RootBinDir)/Debuggees</DebuggeeBuildRoot>
       <TestName>SOS.StackAndOtherTests</TestName>
       <Options>
-        <Option>
+        <Option Condition="'$(RuntimeVersionLatest)' != ''">
           <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
-        <Option Condition="'$(TestLatestOnly)' != 'true'">
+        <Option Condition="'$(RuntimeVersion50)' != ''">
+          <BuildProjectFramework>net5.0</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
+        </Option>
+        <Option Condition="'$(RuntimeVersion31)' != ''">
           <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
         </Option>
@@ -93,12 +99,17 @@
     <Option Condition="'$(TestWebApp3)' == 'true'">
       <TestName>SOS.WebApp3</TestName>
       <Options>
-        <Option>
+        <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
           <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
           <FrameworkVersion>$(AspNetCoreVersionLatest)</FrameworkVersion>
         </Option>
-        <Option Condition="'$(TestLatestOnly)' != 'true'">
+        <Option Condition="'$(AspNetCoreVersion50)' != ''">
+          <BuildProjectFramework>net5.0</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
+          <FrameworkVersion>$(AspNetCoreVersion50)</FrameworkVersion>
+        </Option>
+        <Option Condition="'$(AspNetCoreVersion31)' != ''">
           <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
           <FrameworkVersion>$(AspNetCoreVersion31)</FrameworkVersion>
@@ -109,7 +120,6 @@
 
   <FrameworkVersion Condition="'$(FrameworkVersion)' == ''">$(RuntimeFrameworkVersion)</FrameworkVersion>
   <RuntimeSymbolsPath>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
-  <SOSHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SOSHostRuntime>
   <LLDBHelperScript>$(ScriptRootDir)/lldbhelper.py</LLDBHelperScript>
   <HostExe>$(DotNetRoot)/dotnet</HostExe>
   <HostArgs>--fx-version $(FrameworkVersion)</HostArgs>

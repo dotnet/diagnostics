@@ -95,6 +95,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 return 0;
             }
 
+            int ret = 0;
             try
             {
                 InitializeCounterList(counters, counter_list);
@@ -104,11 +105,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _renderer = new ConsoleWriter();
                 if (!BuildDiagnosticsClient())
                 {
-                    return 0;
+                    ret = 0;
                 }
-                int ret = await Start();
+                ret = await Start();
                 ProcessLauncher.Launcher.Cleanup();
-                return ret;
             }
             catch (OperationCanceledException)
             {
@@ -119,13 +119,19 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 catch (Exception) {} // Swallow all exceptions for now.
                 
                 console.Out.WriteLine($"Complete");
-                return 1;
+                ret = 1;
             }
+            finally
+            {
+                ProcessLauncher.Launcher.Cleanup();
+            }
+            return ret;
         }
 
 
         public async Task<int> Collect(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name)
         {
+            int ret = 1;
             if (!ValidateAndSetProcessId(processId, name))
             {
                 return 0;
@@ -145,6 +151,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                 if (!BuildDiagnosticsClient())
                 {
+                    ProcessLauncher.Launcher.Cleanup();
                     return 0;
                 }
 
@@ -172,15 +179,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     _console.Error.WriteLine($"The output format {format} is not a valid output format.");
                     return 0;
                 }
-
-                int ret = await Start();
-                ProcessLauncher.Launcher.Cleanup();
-                return ret;
+                ret = await Start();
             }
             catch (OperationCanceledException)
             {
             }
-            return 1;
+            finally
+            {
+                ProcessLauncher.Launcher.Cleanup();
+            }
+            return ret;
         }
 
         private void InitializeCounterList(string counters, List<string> counterList)
