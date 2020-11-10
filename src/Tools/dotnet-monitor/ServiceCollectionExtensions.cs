@@ -22,10 +22,6 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             // for each provider entry.
             services.AddSingleton<IConfigureOptions<EgressOptions>, EgressConfigureOptions>();
 
-            // Make egress factories available
-            services.AddSingleton<AzureBlobEgressFactory>();
-            services.AddSingleton<FileSystemEgressFactory>();
-
             // Register IEgressService implementation that provides egressing
             // of artifacts for the REST server.
             services.AddSingleton<IEgressService, EgressService>();

@@ -22,17 +22,15 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             = new Dictionary<string, EgressFactory>(StringComparer.OrdinalIgnoreCase);
 
         public EgressConfigureOptions(
-            ILogger<EgressConfigureOptions> logger,
-            IConfiguration configuration,
-            AzureBlobEgressFactory azureBlobEgressFactory,
-            FileSystemEgressFactory fileSystemEgressFactory)
+            ILoggerFactory loggerFactory,
+            IConfiguration configuration)
         {
             _configuration = configuration;
-            _logger = logger;
+            _logger = loggerFactory.CreateLogger<EgressConfigureOptions>();
 
             // Register egress providers
-            _factories.Add("AzureBlobStorage", azureBlobEgressFactory);
-            _factories.Add("FileSystem", fileSystemEgressFactory);
+            _factories.Add("AzureBlobStorage", new AzureBlobEgressFactory(loggerFactory));
+            _factories.Add("FileSystem", new FileSystemEgressFactory(loggerFactory));
         }
 
         public void Configure(EgressOptions options)
