@@ -8,6 +8,7 @@ All of our diagnostic tools have been distributed so far as [global tools](https
   - The runtime was installed globally in a well-known location using one of the different installer technologies documented in the [official .NET download page](https://dotnet.microsoft.com/download).
   - Downloading the binary archives from the [official .NET download page](https://dotnet.microsoft.com/download) and extracting them to a directory. Afterwards, please set `DOTNET_ROOT` to the path of the extraction.
   - Using the [dotnet-install scripts](https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-install-script) and setting `DOTNET_ROOT` to the installation directory. This mechanism is not recommended for development or production environments, but it's ideal for environments like CI machines.
+  - The workload is being run in a container with the runtime available. This could be either because you are running a workload on our [official .NET runtime containers](https://hub.docker.com/_/microsoft-dotnet-runtime) or you built a custom image that installs it at build time.
 - These tools are bundles that will inflate on the target machine and will extract files to disk as necessary. The extraction folder is by default within the `TEMP` directory. In case `TEMP` is not available in the target environment or you want to control such directory for reasons such as clean up, please set `DOTNET_BUNDLE_EXTRACT_BASE_DIR` to a path that can be used in lieu of `TEMP`.
 
 ## Obtaining the Tools
