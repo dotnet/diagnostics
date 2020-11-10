@@ -98,8 +98,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 case DiagnosticsServerResponseId.Error:
                     uint hr = BitConverter.ToUInt32(response.Payload, 0);
-                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand) {
-                        throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
+                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
+                    {
+                        throw new UnsupportedCommandException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
                     }
                     throw new ServerErrorException($"Writing dump failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerResponseId.OK:
@@ -135,9 +136,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 case DiagnosticsServerResponseId.Error:
                     uint hr = BitConverter.ToUInt32(response.Payload, 0);
-                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand) 
+                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
                     {
-                      throw new InvalidOperationException("The target runtime does not support profiler attach.");
+                      throw new UnsupportedCommandException("The target runtime does not support profiler attach");
                     }
                     throw new ServerErrorException($"Profiler attach failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerResponseId.OK:
