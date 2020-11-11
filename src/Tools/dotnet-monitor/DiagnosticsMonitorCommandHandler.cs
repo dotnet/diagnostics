@@ -11,7 +11,9 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,7 +22,26 @@ namespace Microsoft.Diagnostics.Tools.Monitor
     internal sealed class DiagnosticsMonitorCommandHandler
     {
         private const string ConfigPrefix = "DotnetMonitor_";
-        private const string ConfigPath = "/etc/dotnet-monitor";
+        private const string SettingsFileName = "settings.json";
+        private const string ProductFolderName = "dotnet-monitor";
+
+        // Location where shared dotnet-monitor configuration is stored.
+        // Windows: "%ProgramData%\dotnet-monitor
+        // Other: /etc/dotnet-monitor
+        private static readonly string SharedConfigDirectoryPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), ProductFolderName) :
+            Path.Combine("/etc", ProductFolderName);
+
+        private static readonly string SharedSettingsPath = Path.Combine(SharedConfigDirectoryPath, SettingsFileName);
+
+        // Location where user's dotnet-monitor configuration is stored.
+        // Windows: "%USERPROFILE%\.dotnet-monitor"
+        // Other: "%XDG_CONFIG_HOME%/dotnet-monitor" OR "%HOME%/.config/dotnet-monitor"
+        private static readonly string UserConfigDirectoryPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "." + ProductFolderName) :
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ProductFolderName);
+
+        private static readonly string UserSettingsPath = Path.Combine(UserConfigDirectoryPath, SettingsFileName);
 
         public async Task<int> Start(CancellationToken token, IConsole console, string[] urls, string[] metricUrls, bool metrics, string diagnosticPort)
         {
@@ -40,15 +61,17 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             IWebHostBuilder builder = WebHost.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((IConfigurationBuilder builder) =>
                 {
+                    //Note these are in precedence order.
                     ConfigureEndpointInfoSource(builder, diagnosticPort);
                     if (metrics)
                     {
-                        //Note these are in precedence order.
                         ConfigureMetricsEndpoint(builder, metricUrls);
                     }
 
-                    builder.AddKeyPerFile(ConfigPath, optional: true);
+                    builder.AddJsonFile(UserSettingsPath, optional: true, reloadOnChange: true);
+                    builder.AddJsonFile(SharedSettingsPath, optional: true, reloadOnChange: true);
 
+                    builder.AddKeyPerFile(SharedConfigDirectoryPath, optional: true);
                     builder.AddEnvironmentVariables(ConfigPrefix);
                 })
                 .ConfigureServices((WebHostBuilderContext context, IServiceCollection services) =>
@@ -58,6 +81,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                     services.AddSingleton<IEndpointInfoSource, FilteredEndpointInfoSource>();
                     services.AddHostedService<FilteredEndpointInfoSourceHostedService>();
                     services.AddSingleton<IDiagnosticServices, DiagnosticServices>();
+                    services.ConfigureEgress(context.Configuration);
                     if (metrics)
                     {
                         services.Configure<MetricsOptions>(context.Configuration.GetSection(MetricsOptions.ConfigurationKey));

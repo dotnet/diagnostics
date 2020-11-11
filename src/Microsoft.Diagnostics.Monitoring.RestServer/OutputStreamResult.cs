@@ -2,12 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,28 +19,31 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 
         public OutputStreamResult(Func<Stream, CancellationToken, Task> action, string contentType, string fileDownloadName = null)
         {
-            _action = action;
             _contentType = contentType;
             _fileDownloadName = fileDownloadName;
+            _action = action;
         }
 
-        public override async Task ExecuteResultAsync(ActionContext context)
+        public override Task ExecuteResultAsync(ActionContext context)
         {
-            if (_fileDownloadName != null)
+            return context.InvokeAsync(async (token) =>
             {
-                ContentDispositionHeaderValue contentDispositionHeaderValue = new ContentDispositionHeaderValue("attachment");
-                contentDispositionHeaderValue.FileName = _fileDownloadName;
-                context.HttpContext.Response.Headers["Content-Disposition"] = contentDispositionHeaderValue.ToString();
-            }
-            context.HttpContext.Response.Headers["Content-Type"] = _contentType;
+                if (_fileDownloadName != null)
+                {
+                    ContentDispositionHeaderValue contentDispositionHeaderValue = new ContentDispositionHeaderValue("attachment");
+                    contentDispositionHeaderValue.FileName = _fileDownloadName;
+                    context.HttpContext.Response.Headers["Content-Disposition"] = contentDispositionHeaderValue.ToString();
+                }
+                context.HttpContext.Response.Headers["Content-Type"] = _contentType;
 
 #if !NETSTANDARD2_0
-            context.HttpContext.Features.Get<AspNetCore.Http.Features.IHttpResponseBodyFeature>()?.DisableBuffering();
+                context.HttpContext.Features.Get<AspNetCore.Http.Features.IHttpResponseBodyFeature>()?.DisableBuffering();
 #else
-            context.HttpContext.Features.Get<AspNetCore.Http.Features.IHttpBufferingFeature>()?.DisableResponseBuffering();
+                context.HttpContext.Features.Get<AspNetCore.Http.Features.IHttpBufferingFeature>()?.DisableResponseBuffering();
 #endif
 
-            await _action(context.HttpContext.Response.Body, context.HttpContext.RequestAborted);
+                await _action(context.HttpContext.Response.Body, token);
+            });
         }
     }
 }

@@ -6,9 +6,10 @@ using System;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
-    internal class PipelineException : MonitoringException
+    internal class MonitoringException : Exception
     {
-        public PipelineException(string message) : base(message) { }
-        public PipelineException(string message, Exception inner) : base(message, inner) { }
+        public MonitoringException(string message) : base(message) { }
+
+        public MonitoringException(string message, Exception innerException) : base(message, innerException) { }
     }
 }

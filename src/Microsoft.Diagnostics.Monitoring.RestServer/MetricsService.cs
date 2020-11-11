@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Monitoring.EventPipe;
-using Microsoft.Diagnostics.Monitoring.RestServer.Controllers;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -45,7 +44,10 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
                         //TODO In multi-process scenarios, how do we decide which process to choose?
                         //One possibility is to enable metrics after a request to begin polling for metrics
                         IProcessInfo pi = await _services.GetProcessAsync(filter: null, stoppingToken);
-                        _counterPipeline = new EventCounterPipeline(pi.Client, new EventPipeCounterPipelineSettings
+
+                        var client = new DiagnosticsClient(pi.EndpointInfo.Endpoint);
+
+                        _counterPipeline = new EventCounterPipeline(client, new EventPipeCounterPipelineSettings
                         {
                             CounterGroups = Array.Empty<EventPipeCounterGroup>(),
                             Duration = Timeout.InfiniteTimeSpan,
