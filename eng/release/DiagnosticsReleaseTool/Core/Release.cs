@@ -25,12 +25,32 @@ namespace ReleaseTool.Core
             List<ILayoutWorker> layoutWorkers, List<IReleaseVerifier> verifiers,
             IPublisher publisher, IManifestGenerator manifestGenerator, string manifestSavePath)
         {
+            if (string.IsNullOrEmpty(_productBuildPath))
+            {
+                throw new ArgumentException("Product build path can't be empty or null.");
+            }
+
+            if (layoutWorkers is null)
+            {
+                throw new ArgumentException($"{nameof(layoutWorkers)} can't be null.");
+            }
+
+            if (publisher is null)
+            {
+                throw new ArgumentException($"{nameof(publisher)} can't be null.");
+            }
+
+            if (manifestGenerator is null)
+            {
+                throw new ArgumentException($"{nameof(manifestGenerator)} can't be null.");
+            }
+
             _productBuildPath = productBuildPath;
             _layoutWorkers = layoutWorkers;
             _verifiers = verifiers;
             _publisher = publisher;
             _manifestGenerator = manifestGenerator;
-            _manifestSavePath = manifestSavePath;
+            _manifestSavePath = manifestSavePath ?? Path.Join(Path.GetTempPath(), Path.GetRandomFileName(), "releaseManifest");
             _filesToRelease = new List<FileReleaseData>();
             _logger = null;
             // TODO: Validate drop to publish exists.
