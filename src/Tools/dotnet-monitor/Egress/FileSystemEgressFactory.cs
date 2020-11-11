@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Monitoring;
-using Microsoft.Diagnostics.Monitoring.Egress.FileSystem;
 using Microsoft.Diagnostics.Monitoring.RestServer;
+using Microsoft.Diagnostics.Tools.Monitor.Egress.FileSystem;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
@@ -13,7 +13,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostics.Tools.Monitor
+namespace Microsoft.Diagnostics.Tools.Monitor.Egress
 {
     /// <summary>
     /// Creates <see cref="ConfiguredEgressProvider"/> for file system egress.

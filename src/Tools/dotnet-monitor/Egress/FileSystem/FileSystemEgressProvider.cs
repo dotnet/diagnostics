@@ -9,7 +9,7 @@ using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
+namespace Microsoft.Diagnostics.Tools.Monitor.Egress.FileSystem
 {
     /// <summary>
     /// Egress provider for egressing stream data to the file system.

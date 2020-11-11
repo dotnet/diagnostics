@@ -21,6 +21,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Storage.Blobs" Version="$(AzureStorageBlobsVersion)" />
     <PackageReference Include="Microsoft.Extensions.Configuration.KeyPerFile" Version="$(MicrosoftExtensionsConfigurationKeyPerFileVersion)" />
     <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
   </ItemGroup>
@@ -30,7 +31,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Microsoft.Diagnostics.Monitoring.Egress.AzureStorage\Microsoft.Diagnostics.Monitoring.Egress.AzureStorage.csproj" />
     <ProjectReference Include="..\..\Microsoft.Diagnostics.Monitoring.RestServer\Microsoft.Diagnostics.Monitoring.RestServer.csproj" />
     <ProjectReference Include="..\..\Microsoft.Diagnostics.Monitoring\Microsoft.Diagnostics.Monitoring.csproj" />
   </ItemGroup>

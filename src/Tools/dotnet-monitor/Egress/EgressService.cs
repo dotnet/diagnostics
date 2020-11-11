@@ -3,15 +3,15 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Monitoring;
-using Microsoft.Diagnostics.Monitoring.Egress;
 using Microsoft.Diagnostics.Monitoring.RestServer;
+using Microsoft.Diagnostics.Tools.Monitor.Egress.Configuration;
 using Microsoft.Extensions.Options;
 using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostics.Tools.Monitor
+namespace Microsoft.Diagnostics.Tools.Monitor.Egress
 {
     /// <summary>
     /// Egress service implementation required by the REST server.

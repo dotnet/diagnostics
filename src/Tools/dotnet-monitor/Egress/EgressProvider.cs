@@ -9,7 +9,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostics.Monitoring.Egress
+namespace Microsoft.Diagnostics.Tools.Monitor.Egress
 {
     /* 
      * == Egress Provider Design ==

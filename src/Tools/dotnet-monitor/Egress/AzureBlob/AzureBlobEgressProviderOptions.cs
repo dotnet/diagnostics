@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
-namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
+namespace Microsoft.Diagnostics.Tools.Monitor.Egress.AzureStorage
 {
     /// <summary>
     /// Egress provider options for Azure blob storage.

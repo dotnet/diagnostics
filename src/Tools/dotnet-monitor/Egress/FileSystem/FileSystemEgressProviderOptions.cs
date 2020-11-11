@@ -4,7 +4,7 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace Microsoft.Diagnostics.Monitoring.Egress.FileSystem
+namespace Microsoft.Diagnostics.Tools.Monitor.Egress.FileSystem
 {
     /// <summary>
     /// Egress provider options for file system egress.

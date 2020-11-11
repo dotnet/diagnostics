@@ -13,7 +13,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
+namespace Microsoft.Diagnostics.Tools.Monitor.Egress.AzureStorage
 {
     /// <summary>
     /// Egress provider for egressing stream data to an Azure blob storage account.

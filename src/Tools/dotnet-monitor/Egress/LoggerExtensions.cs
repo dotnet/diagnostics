@@ -6,9 +6,9 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Globalization;
 
-namespace Microsoft.Diagnostics.Monitoring.Egress
+namespace Microsoft.Diagnostics.Tools.Monitor.Egress
 {
-    internal static class EgressOptionsLogging
+    internal static class LoggerExtensions
     {
         private const string ProviderOptionLogFormat = "Provider option: {0} = {1}";
         private const string StreamOptionLogFormat = "Stream option: {0} = {1}";

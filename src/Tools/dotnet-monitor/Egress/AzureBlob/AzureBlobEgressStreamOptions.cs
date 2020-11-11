@@ -5,7 +5,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Microsoft.Diagnostics.Monitoring.Egress.AzureStorage
+namespace Microsoft.Diagnostics.Tools.Monitor.Egress.AzureStorage
 {
     /// <summary>
     /// Egress stream options for Azure blob storage.

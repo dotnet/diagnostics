@@ -2,9 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.Monitoring;
 using System;
 
-namespace Microsoft.Diagnostics.Monitoring.Egress
+namespace Microsoft.Diagnostics.Tools.Monitor.Egress
 {
     /// <summary>
     /// Exception that egress providers can throw when an operational error occurs (e.g. failed to write the stream data).
