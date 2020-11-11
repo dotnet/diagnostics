@@ -113,25 +113,38 @@ function Post-GithubRelease($manifest, [string]$releaseBody, [string]$checksumCs
 
     $extraParameters = @()
 
-    if ($DraftRelease)
+    if ($DraftRelease -eq $true)
     {
         $extraParameters += '-d'
     }
 
-    Set-Content -Path "release_notes.md" -Value $releaseBody
-    Set-Content -Path "checksums.csv" -Value $checksumCsvBody
+    $releaseNotes = "release_notes.md"
+    $csvManifest = "checksums.csv"
 
+    Set-Content -Path $releaseNotes -Value $releaseBody
+    Set-Content -Path $csvManifest -Value $checksumCsvBody
+
+    if (-Not (Test-Path $releaseNotes)) {
+        Write-Error "Unable to find release notes"
+    }
+
+    if (-Not (Test-Path $csvManifest)) {
+        Write-Error "Unable to find release notes"
+    }
+
+    $releaseNotes = $(Get-ChildItem $releaseNotes).FullName
+    $csvManifest = $(Get-ChildItem $csvManifest).FullName
     & $ghTool release create $TagName `
+        "`"$csvManifest#File Links And Checksums CSV`"" `
         --repo "`"$GhOrganization/$GhRepository`"" `
         --title "`"Diagnostics Release - $TagName`"" `
-        --notes-file "`"release_notes.md`"" `
+        --notes-file "`"$releaseNotes`"" `
         --target $manifest.Commit `
-        "checksums.csv#File Links And Checksums CSV" `
         ($extraParameters -join ' ')
 
     $exitCode = $LASTEXITCODE
-    if ($exitCode  -ne 0) {
-        Write-Error "Something failed in greating the release."
+    if ($exitCode -ne 0) {
+        Write-Error "Something failed in creating the release."
         exit 1
     }
 }
