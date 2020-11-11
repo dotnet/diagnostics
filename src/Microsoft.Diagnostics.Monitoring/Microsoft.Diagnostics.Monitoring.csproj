@@ -25,7 +25,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="dotnet-monitor" />
-    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.Egress.AzureStorage" />
     <!-- This is temporary until IEndpointInfoSourceInternal becomes public-->
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.RestServer" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe" />
