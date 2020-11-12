@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 var dumpPath = "./myDump.dmp";
                 using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
-                runner.Start(3000);
+                runner.Start(timeoutInMSPipeCreation: 3000);
                 DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && Environment.Version.ToString().StartsWith("3"))
@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             var triageDumpPath = "./myDump-triage.dmp";
             var fullDumpPath = "./myDump-full.dmp";
             using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
-            runner.Start(3000);
+            runner.Start(timeoutInMSPipeCreation: 3000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
 
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
