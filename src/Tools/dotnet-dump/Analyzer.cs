@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
@@ -103,6 +104,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                  ex is DirectoryNotFoundException || 
                  ex is UnauthorizedAccessException || 
                  ex is PlatformNotSupportedException || 
+                 ex is UnsupportedCommandException ||
                  ex is InvalidDataException ||
                  ex is InvalidOperationException ||
                  ex is NotSupportedException)
