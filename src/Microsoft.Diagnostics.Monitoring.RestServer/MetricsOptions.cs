@@ -53,12 +53,14 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 
         public int MetricCount { get; set; }
 
+        public bool IncludeDefaultProviders { get; set; } = true;
+
         public List<MetricProvider> Providers { get; set; } = new List<MetricProvider>(0);
     }
 
     public class MetricProvider
     {
-        public string Provider { get; set; }
-        public List<string> Counters { get; set; } = new List<string>(0);
+        public string ProviderName { get; set; }
+        public List<string> CounterNames { get; set; } = new List<string>(0);
     }
 }

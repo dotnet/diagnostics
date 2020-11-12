@@ -57,19 +57,20 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
                     if (options.Providers.Count > 0)
                     {
                         //In the dotnet-monitor case, custom metrics are additive to the default counters.
-                        var eventPipeCounterGroups = new List<EventPipeCounterGroup>
+                        var eventPipeCounterGroups = new List<EventPipeCounterGroup>();
+                        if (options.IncludeDefaultProviders)
                         {
-                            new EventPipeCounterGroup { ProviderName = MonitoringSourceConfiguration.SystemRuntimeEventSourceName },
-                            new EventPipeCounterGroup { ProviderName = MonitoringSourceConfiguration.MicrosoftAspNetCoreHostingEventSourceName },
-                            new EventPipeCounterGroup { ProviderName = MonitoringSourceConfiguration.GrpcAspNetCoreServer }
-                        };
+                            eventPipeCounterGroups.Add(new EventPipeCounterGroup { ProviderName = MonitoringSourceConfiguration.SystemRuntimeEventSourceName });
+                            eventPipeCounterGroups.Add(new EventPipeCounterGroup { ProviderName = MonitoringSourceConfiguration.MicrosoftAspNetCoreHostingEventSourceName });
+                            eventPipeCounterGroups.Add(new EventPipeCounterGroup { ProviderName = MonitoringSourceConfiguration.GrpcAspNetCoreServer });
+                        }
 
                         foreach (MetricProvider customProvider in options.Providers)
                         {
-                            var customCounterGroup = new EventPipeCounterGroup { ProviderName = customProvider.Provider };
-                            if (customProvider.Counters.Count > 0)
+                            var customCounterGroup = new EventPipeCounterGroup { ProviderName = customProvider.ProviderName };
+                            if (customProvider.CounterNames.Count > 0)
                             {
-                                customCounterGroup.CounterNames = customProvider.Counters.ToArray();
+                                customCounterGroup.CounterNames = customProvider.CounterNames.ToArray();
                             }
                             eventPipeCounterGroups.Add(customCounterGroup);
                         }
@@ -86,14 +87,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
                     using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, optionsTokenSource.Token);
                     await _counterPipeline.RunAsync(linkedTokenSource.Token);
                 }
-                catch (Exception e)
+                catch (Exception e) when (e is not OperationCanceledException || !stoppingToken.IsCancellationRequested)
                 {
-                    if ((e is OperationCanceledException) &&
-                       stoppingToken.IsCancellationRequested)
-                    {
-                        //We're cancelling due to shutdown, rethrow
-                        throw;
-                    }
                     //Most likely we failed to resolve the pid or metric configuration change. Attempt to do this again.
                     if (_counterPipeline != null)
                     {
