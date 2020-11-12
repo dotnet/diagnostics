@@ -19,8 +19,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private Process testProcess;
         private ProcessStartInfo startInfo;
         private ITestOutputHelper outputHelper;
-
-        private CancellationTokenRegistration ctsRegistration;
         private CancellationTokenSource cts;
 
         public TestRunner(string testExePath, ITestOutputHelper _outputHelper = null,
@@ -55,7 +53,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 testProcess?.Dispose();
             }
 
-            ctsRegistration.Unregister();
             cts.Dispose();
         }
 
@@ -68,7 +65,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public StreamReader StandardOutput => testProcess.StandardOutput;
         public StreamReader StandardError => testProcess.StandardError;
 
-        public void Start(int timeoutInMSPipeCreation=15000, int testProcessTimeout=30_000)
+        public void Start(int timeoutInMSPipeCreation=15_000, int testProcessTimeout=30_000)
         {
             if (outputHelper != null)
                 outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName + " " + startInfo.Arguments);
@@ -88,7 +85,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             cts = new CancellationTokenSource(testProcessTimeout);
-            ctsRegistration = cts.Token.Register(() => testProcess.Kill());
+            cts.Token.Register(() => testProcess.Kill());
 
             if (outputHelper != null)
             {
