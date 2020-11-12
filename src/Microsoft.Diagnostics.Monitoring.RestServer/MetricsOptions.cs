@@ -5,6 +5,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer
 {
@@ -51,5 +52,13 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         public int UpdateIntervalSeconds { get; set; }
 
         public int MetricCount { get; set; }
+
+        public List<MetricProvider> Providers { get; set; } = new List<MetricProvider>(0);
+    }
+
+    public class MetricProvider
+    {
+        public string Provider { get; set; }
+        public List<string> Counters { get; set; } = new List<string>(0);
     }
 }

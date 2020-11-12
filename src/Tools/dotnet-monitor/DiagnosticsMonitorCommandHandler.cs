@@ -84,7 +84,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                     services.ConfigureEgress(context.Configuration);
                     if (metrics)
                     {
-                        services.Configure<MetricsOptions>(context.Configuration.GetSection(MetricsOptions.ConfigurationKey));
+                        services.ConfigureMetrics(context.Configuration);
                     }
                 })
                 .UseUrls(urls)
