@@ -119,7 +119,7 @@ namespace sos
             if (temp == NULL)
                 sos::Throw<HeapCorruption>("Object %s has an invalid method table.", DMLListNearObj(mAddress));
 
-            mMT = temp & ~3;
+            mMT = temp & ~METHODTABLE_PTR_LOW_BITMASK;
         }
 
         return mMT;
@@ -135,7 +135,7 @@ namespace sos
             sos::Throw<DataRead>("Failed to request object data for %s.", DMLListNearObj(mAddress));
 
         if (mMT == NULL)
-            mMT = TO_TADDR(objData.MethodTable) & ~3;
+            mMT = TO_TADDR(objData.MethodTable) & ~METHODTABLE_PTR_LOW_BITMASK;
 
         return TO_TADDR(objData.ElementTypeHandle);
     }
