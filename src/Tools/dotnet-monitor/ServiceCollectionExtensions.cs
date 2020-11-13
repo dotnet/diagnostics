@@ -13,6 +13,11 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 {
     internal static class ServiceCollectionExtensions
     {
+        public static IServiceCollection ConfigureMetrics(this IServiceCollection services, IConfiguration configuration)
+        {
+            return services.Configure<MetricsOptions>(configuration.GetSection(MetricsOptions.ConfigurationKey));
+        }
+
         public static IServiceCollection ConfigureEgress(this IServiceCollection services, IConfiguration configuration)
         {
             // Register change token for EgressOptions binding
