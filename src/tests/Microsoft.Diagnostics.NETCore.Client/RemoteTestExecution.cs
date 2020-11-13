@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
             {
                 runner.AddReversedServer(reversedServerTransportName);
             }
-            runner.Start();
+            runner.Start(testProcessTimeout: 60_000);
 
             Task readingTask = ReadAllOutput(runner.StandardOutput, runner.StandardError, outputHelper);
 
