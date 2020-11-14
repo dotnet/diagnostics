@@ -19,7 +19,7 @@
     <MicrosoftAspNetCoreApp50Version>
     </MicrosoftAspNetCoreApp50Version>
     <!-- Latest shared runtime version updated by darc -->
-    <MicrosoftNETCoreAppVersion>5.0.0-rtm.20529.3</MicrosoftNETCoreAppVersion>
+    <MicrosoftNETCoreAppVersion>5.0.0-rtm.20563.5</MicrosoftNETCoreAppVersion>
     <MicrosoftNETCoreAppRuntimewinx64Version>5.0.0</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
     <MicrosoftAspNetCoreAppRefInternalVersion>5.0.0-rc.2.20475.17</MicrosoftAspNetCoreAppRefInternalVersion>
