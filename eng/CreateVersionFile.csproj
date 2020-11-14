@@ -75,7 +75,7 @@
     <PropertyGroup>
       <NativeVersionLines>
 <![CDATA[
-static char sccsid[] __attribute__((used)) = "@(#)Version $(InformationalVersion)$(BuiltByString)";
+char sccsid[] __attribute__((used)) = "@(#)Version $(InformationalVersion)$(BuiltByString)";
  ]]>
       </NativeVersionLines>
     </PropertyGroup>
