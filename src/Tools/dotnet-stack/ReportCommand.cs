@@ -86,6 +86,14 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     Task copyTask = session.EventStream.CopyToAsync(fs);
                     await Task.Delay(duration);
                     session.Stop();
+
+                    // check if rundown is taking more than 5 seconds and add comment to report
+                    Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+                    Task completedTask = await Task.WhenAny(copyTask, timeoutTask);
+                    if (completedTask == timeoutTask)
+                    {
+                        Console.WriteLine("# Sufficiently large applications can cause this command to take non-trivial amounts of time");
+                    }
                     await copyTask;
                 }
 
