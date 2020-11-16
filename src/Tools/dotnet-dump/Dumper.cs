@@ -116,6 +116,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                  ex is DirectoryNotFoundException || 
                  ex is UnauthorizedAccessException || 
                  ex is PlatformNotSupportedException || 
+                 ex is UnsupportedCommandException ||
                  ex is InvalidDataException ||
                  ex is InvalidOperationException ||
                  ex is NotSupportedException ||
