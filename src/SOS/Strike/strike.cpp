@@ -161,6 +161,10 @@ WCHAR g_mdName[mdNameLen];
 HMODULE g_hInstance = NULL;
 #endif // !FEATURE_PAL
 
+#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
+extern bool g_useDesktopClrHost;
+#endif
+
 #ifdef _MSC_VER
 #pragma warning(disable:4244)   // conversion from 'unsigned int' to 'unsigned short', possible loss of data
 #pragma warning(disable:4189)   // local variable is initialized but not referenced
@@ -540,7 +544,7 @@ DECLARE_API (EEStack)
         DacpThreadData Thread;
         if ((Status = Thread.Request(g_sos, CurThread)) != S_OK)
         {
-            ExtOut("Failed to request Thread at %p\n", CurThread);
+            ExtOut("Failed to request Thread at %p\n", SOS_PTR(CurThread));
             return Status;
         }
 
@@ -1183,7 +1187,7 @@ DECLARE_API(DumpClass)
 
     WCHAR fileName[MAX_LONGPATH];
     FileNameForModule(TO_TADDR(mtdata.Module), fileName);
-    ExtOut("mdToken:         %p\n", mtdata.cl);
+    ExtOut("mdToken:         %p\n", SOS_PTR(mtdata.cl));
     ExtOut("File:            %S\n", fileName);
 
     CLRDATA_ADDRESS ParentEEClass = NULL;
@@ -2769,7 +2773,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
                 NameForMT_s(taMT, g_mdName, mdNameLen);
                 ExtOut("%S, ", g_mdName);
                 if (IsDMLEnabled())
-                    DMLOut("Use <exec cmd=\"!PrintException /d %p\">!PrintException %p</exec> to see more.\n", taInnerExc, taInnerExc);
+                    DMLOut("Use <exec cmd=\"!PrintException /d %p\">!PrintException %p</exec> to see more.\n", SOS_PTR(taInnerExc), SOS_PTR(taInnerExc));
                 else
                     ExtOut("Use !PrintException %p to see more.\n", SOS_PTR(taInnerExc));
             }
@@ -3374,7 +3378,7 @@ DECLARE_API(DumpCCW)
                     NameForMT_s(TO_TADDR(pArray[i].methodTable), g_mdName, mdNameLen);
                 }
 
-                DMLOut("%p %s %S\n", pArray[i].interfacePtr, DMLMethodTable(pArray[i].methodTable), g_mdName);
+                DMLOut("%p %s %S\n", SOS_PTR(pArray[i].interfacePtr), DMLMethodTable(pArray[i].methodTable), g_mdName);
             }
         }
     }
@@ -5795,10 +5799,10 @@ DECLARE_API(SyncBlk)
             ExtOut("%5d ", nb);
             if (!syncBlockData.bFree || nb != nbAsked)
             {
-                ExtOut("%p  ", syncBlockData.SyncBlockPointer);
+                ExtOut("%p  ", SOS_PTR(syncBlockData.SyncBlockPointer));
                 ExtOut("%11d ", syncBlockData.MonitorHeld);
                 ExtOut("%9d ", syncBlockData.Recursion);
-                ExtOut("%p ", syncBlockData.HoldingThread);
+                ExtOut("%p ", SOS_PTR(syncBlockData.HoldingThread));
 
                 if (syncBlockData.HoldingThread == ~0ul)
                 {
@@ -5809,7 +5813,7 @@ DECLARE_API(SyncBlk)
                     DacpThreadData Thread;
                     if ((Status = Thread.Request(g_sos, syncBlockData.HoldingThread)) != S_OK)
                     {
-                        ExtOut("Failed to request Thread at %p\n", syncBlockData.HoldingThread);
+                        ExtOut("Failed to request Thread at %p\n", SOS_PTR(syncBlockData.HoldingThread));
                         return Status;
                     }
 
@@ -6643,7 +6647,7 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
         table.WriteColumn(3, Pointer(CurThread));
         table.WriteColumn(4, ThreadState(Thread.state));
         table.WriteColumn(5,  Thread.preemptiveGCDisabled == 1 ? "Cooperative" : "Preemptive");
-        table.WriteColumnFormat(6, "%p:%p", Thread.allocContextPtr, Thread.allocContextLimit);
+        table.WriteColumnFormat(6, "%p:%p", SOS_PTR(Thread.allocContextPtr), SOS_PTR(Thread.allocContextLimit));
 
         if (Thread.domain)
         {
@@ -7227,9 +7231,9 @@ void IssueDebuggerBPCommand ( CLRDATA_ADDRESS addr )
         }
 
 #ifndef FEATURE_PAL
-        sprintf_s(buffer, _countof(buffer), "bp %p", (void*) (size_t) addr);
+        sprintf_s(buffer, _countof(buffer), "bp %p", SOS_PTR(addr));
 #else
-        sprintf_s(buffer, _countof(buffer), "breakpoint set --address 0x%p", (void*) (size_t) addr);
+        sprintf_s(buffer, _countof(buffer), "breakpoint set --address 0x%p", SOS_PTR(addr));
 #endif
         ExtOut("Setting breakpoint: %s [%S]\n", buffer, wszNameBuffer);
         g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
@@ -7403,9 +7407,9 @@ public:
             ULONG64 modulePtr = (ULONG64)pCur->pModule;
 
             if(pCur->szModuleName[0] != L'\0')
-                ExtOut("%d - %ws!%ws+%d, 0x%p, 0x%08x\n", iBreakpointIndex, pCur->szModuleName, pCur->szFunctionName, pCur->ilOffset, modulePtr, pCur->methodToken);
+                ExtOut("%d - %ws!%ws+%d, 0x%p, 0x%08x\n", iBreakpointIndex, pCur->szModuleName, pCur->szFunctionName, pCur->ilOffset, SOS_PTR(modulePtr), pCur->methodToken);
             else
-                ExtOut("%d - %ws:%d, 0x%p, 0x%08x\n",  iBreakpointIndex, pCur->szFilename, pCur->lineNumber, modulePtr, pCur->methodToken);
+                ExtOut("%d - %ws:%d, 0x%p, 0x%08x\n",  iBreakpointIndex, pCur->szFilename, pCur->lineNumber, SOS_PTR(modulePtr), pCur->methodToken);
             iBreakpointIndex++;
             pCur = pCur->pNext;
         }
@@ -7444,7 +7448,7 @@ public:
         {
             if (breakPointToClear == iBreakpointIndex)
             {
-                ExtOut("%d - %ws, %ws, %p\n", iBreakpointIndex, pCur->szModuleName, pCur->szFunctionName, pCur->pModule);
+                ExtOut("%d - %ws, %ws, %p\n", iBreakpointIndex, pCur->szModuleName, pCur->szFunctionName, SOS_PTR(pCur->pModule));
                 ExtOut("Cleared\n");
                 Delete(pCur);
                 break;
@@ -7989,9 +7993,9 @@ public:
             {
                 CHAR buffer[100];
 #ifndef FEATURE_PAL
-                sprintf_s(buffer, _countof(buffer), "bp /1 %p", (void*) (size_t) (startAddr+catcherNativeOffset));
+                sprintf_s(buffer, _countof(buffer), "bp /1 %p", SOS_PTR(startAddr+catcherNativeOffset));
 #else
-                sprintf_s(buffer, _countof(buffer), "breakpoint set --one-shot --address 0x%p", (void*) (size_t) (startAddr+catcherNativeOffset));
+                sprintf_s(buffer, _countof(buffer), "breakpoint set --one-shot --address 0x%p", SOS_PTR(startAddr+catcherNativeOffset));
 #endif
                 g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
             }
@@ -8420,7 +8424,7 @@ DECLARE_API(bpmd)
             {
                 // BPs via file name will enumerate through modules so there will be legitimate failures.
                 // for module/type name we already found a match so this shouldn't fail (this is the original behavior).
-                ExtOut("Error getting MethodDescs for module %p\n", moduleList[iModule]);
+                ExtOut("Error getting MethodDescs for module %p\n", SOS_PTR(moduleList[iModule]));
                 return Status;
             }
 
@@ -8494,7 +8498,7 @@ DECLARE_API(bpmd)
             // Dynamic methods don't have JIT notifications. This is something we must
             // fix in the next release. Until then, you have a cumbersome user experience.
             ExtOut("This DynamicMethodDesc is not yet JITTED. Placing memory breakpoint at %p\n",
-                MethodDescData.AddressOfNativeCodeSlot);
+                SOS_PTR(MethodDescData.AddressOfNativeCodeSlot));
 
             sprintf_s(buffer, _countof(buffer),
 #ifdef _TARGET_WIN64_
@@ -8504,8 +8508,8 @@ DECLARE_API(bpmd)
 #endif // _TARGET_WIN64_
 
                 " /1 %p \"bp poi(%p); g\"",
-                (void*) (size_t) MethodDescData.AddressOfNativeCodeSlot,
-                (void*) (size_t) MethodDescData.AddressOfNativeCodeSlot);
+                SOS_PTR(MethodDescData.AddressOfNativeCodeSlot),
+                SOS_PTR(MethodDescData.AddressOfNativeCodeSlot));
 
             Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
             if (FAILED(Status))
@@ -8514,7 +8518,7 @@ DECLARE_API(bpmd)
                 ExtOut("Attempted to run: %s\n", buffer);
             }
 #else
-            ExtErr("This DynamicMethodDesc is not yet JITTED %p\n", MethodDescData.AddressOfNativeCodeSlot);
+            ExtErr("This DynamicMethodDesc is not yet JITTED %p\n", SOS_PTR(MethodDescData.AddressOfNativeCodeSlot));
 #endif // FEATURE_PAL
         }
         else
@@ -8560,305 +8564,603 @@ DECLARE_API(ThreadPool)
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
-    DacpThreadpoolData threadpool;
+    BOOL doHCDump = FALSE, doWorkItemDump = FALSE, dml = FALSE;
 
-    if ((Status = threadpool.Request(g_sos)) == S_OK)
+    CMDOption option[] =
+    {   // name, vptr, type, hasValue
+        {"-ti", &doHCDump, COBOOL, FALSE},
+        {"-wi", &doWorkItemDump, COBOOL, FALSE},
+        {"/d", &dml, COBOOL, FALSE},
+    };
+
+    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
     {
-        BOOL doHCDump = FALSE, doWorkItemDump = FALSE, dml = FALSE;
+        return E_FAIL;
+    }
 
-        CMDOption option[] =
-        {   // name, vptr, type, hasValue
-            {"-ti", &doHCDump, COBOOL, FALSE},
-            {"-wi", &doWorkItemDump, COBOOL, FALSE},
-            {"/d", &dml, COBOOL, FALSE},
-        };
+    EnableDMLHolder dmlHolder(dml);
 
-        if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    DacpThreadpoolData threadpool;
+    if ((Status = threadpool.Request(g_sos)) != S_OK)
+    {
+        ExtOut("    %s\n", "Failed to request ThreadpoolMgr information");
+        return FAILED(Status) ? Status : E_FAIL;
+    }
+
+    DWORD_PTR corelibModule;
+    {
+        int numModule;
+        ArrayHolder<DWORD_PTR> moduleList = ModuleFromName(const_cast<LPSTR>("System.Private.CoreLib.dll"), &numModule);
+        if (moduleList == NULL || numModule != 1)
         {
+            ExtOut("    %s\n", "Failed to find System.Private.CoreLib.dll");
+            return E_FAIL;
+        }
+        corelibModule = moduleList[0];
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Check whether the portable thread pool is being used and fill in the thread pool data
+
+    DacpObjectData vPortableTpHcLogArray;
+    int portableTpHcLogEntry_tickCountOffset = 0;
+    int portableTpHcLogEntry_stateOrTransitionOffset = 0;
+    int portableTpHcLogEntry_newControlSettingOffset = 0;
+    int portableTpHcLogEntry_lastHistoryCountOffset = 0;
+    int portableTpHcLogEntry_lastHistoryMeanOffset = 0;
+    do // while (false)
+    {
+        UINT64 ui64Value = 0;
+
+        // Determine if the portable thread pool is enabled
+        if (FAILED(
+                GetNonSharedStaticFieldValueFromName(
+                    &ui64Value,
+                    corelibModule,
+                    "System.Threading.ThreadPool",
+                    W("UsePortableThreadPool"),
+                    ELEMENT_TYPE_BOOLEAN)) ||
+            ui64Value == 0)
+        {
+            // The type was not loaded yet, or the static field was not found, etc. For now assume that the portable thread pool
+            // is not being used.
+            break;
+        }
+
+        // Get the thread pool instance
+        if (FAILED(
+                GetNonSharedStaticFieldValueFromName(
+                    &ui64Value,
+                    corelibModule,
+                    "System.Threading.PortableThreadPool",
+                    W("ThreadPoolInstance"),
+                    ELEMENT_TYPE_CLASS)) ||
+            ui64Value == 0)
+        {
+            // The type was not loaded yet, or the static field was not found, etc. For now assume that the portable thread pool
+            // is not being used.
+            break;
+        }
+        CLRDATA_ADDRESS cdaTpInstance = TO_CDADDR(ui64Value);
+
+        // Get the thread pool method table
+        CLRDATA_ADDRESS cdaTpMethodTable;
+        {
+            TADDR tpMethodTableAddr = NULL;
+            if (FAILED(GetMTOfObject(TO_TADDR(cdaTpInstance), &tpMethodTableAddr)))
+            {
+                break;
+            }
+            cdaTpMethodTable = TO_CDADDR(tpMethodTableAddr);
+        }
+
+        DWORD_PTR ptrValue = 0;
+        INT32 i32Value = 0;
+        INT16 i16Value = 0;
+        int offset = 0;
+
+        // Populate fields of the thread pool with simple types
+        {
+            offset = GetObjFieldOffset(cdaTpInstance, cdaTpMethodTable, W("_cpuUtilization"));
+            if (offset <= 0 || FAILED(MOVE(i32Value, cdaTpInstance + offset)))
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool._cpuUtilization");
+                break;
+            }
+            threadpool.cpuUtilization = i32Value;
+
+            offset = GetObjFieldOffset(cdaTpInstance, cdaTpMethodTable, W("_minThreads"));
+            if (offset <= 0 || FAILED(MOVE(i16Value, cdaTpInstance + offset)))
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool._minThreads");
+                break;
+            }
+            threadpool.MinLimitTotalWorkerThreads = i16Value;
+
+            offset = GetObjFieldOffset(cdaTpInstance, cdaTpMethodTable, W("_maxThreads"));
+            if (offset <= 0 || FAILED(MOVE(i16Value, cdaTpInstance + offset)))
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool._maxThreads");
+                break;
+            }
+            threadpool.MaxLimitTotalWorkerThreads = i16Value;
+        }
+
+        // Populate thread counts
+        {
+            DacpFieldDescData vSeparatedField;
+            offset = GetObjFieldOffset(cdaTpInstance, cdaTpMethodTable, W("_separated"), TRUE, &vSeparatedField);
+            if (offset <= 0)
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool._separated");
+                break;
+            }
+            int accumulatedOffset = offset;
+
+            DacpFieldDescData vCountsField;
+            offset = GetValueFieldOffset(vSeparatedField.MTOfType, W("counts"), &vCountsField);
+            if (offset < 0)
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool._separated.counts");
+                break;
+            }
+            accumulatedOffset += offset;
+
+            offset = GetValueFieldOffset(vCountsField.MTOfType, W("_data"));
+            if (offset < 0 || FAILED(MOVE(ui64Value, cdaTpInstance + accumulatedOffset + offset)))
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool._separated.counts._data");
+                break;
+            }
+            UINT64 data = ui64Value;
+
+            const UINT8 NumProcessingWorkShift = 0;
+            const UINT8 NumExistingThreadsShift = 16;
+
+            INT16 numProcessingWork = (INT16)(data >> NumProcessingWorkShift);
+            INT16 numExistingThreads = (INT16)(data >> NumExistingThreadsShift);
+
+            threadpool.NumIdleWorkerThreads = numExistingThreads - numProcessingWork;
+            threadpool.NumWorkingWorkerThreads = numProcessingWork;
+            threadpool.NumRetiredWorkerThreads = 0;
+        }
+
+        // Populate hill climbing log info
+        {
+            threadpool.HillClimbingLog = 0; // this indicates that the portable thread pool's hill climbing data should be used
+            threadpool.HillClimbingLogFirstIndex = 0;
+            threadpool.HillClimbingLogSize = 0;
+
+            // Get the hill climbing instance
+            if (FAILED(
+                    GetNonSharedStaticFieldValueFromName(
+                        &ui64Value,
+                        corelibModule,
+                        "System.Threading.PortableThreadPool+HillClimbing",
+                        W("ThreadPoolHillClimber"),
+                        ELEMENT_TYPE_CLASS)) ||
+                ui64Value == 0)
+            {
+                // The type was not loaded yet, or the static field was not found, etc. For now assume that the hill climber has
+                // not been used yet.
+                break;
+            }
+            CLRDATA_ADDRESS cdaTpHcInstance = TO_CDADDR(ui64Value);
+
+            // Get the thread pool method table
+            CLRDATA_ADDRESS cdaTpHcMethodTable;
+            {
+                TADDR tpHcMethodTableAddr = NULL;
+                if (FAILED(GetMTOfObject(TO_TADDR(cdaTpHcInstance), &tpHcMethodTableAddr)))
+                {
+                    ExtOut("    %s\n", "Failed to get method table for PortableThreadPool.HillClimbing");
+                    break;
+                }
+                cdaTpHcMethodTable = TO_CDADDR(tpHcMethodTableAddr);
+            }
+
+            offset = GetObjFieldOffset(cdaTpHcInstance, cdaTpHcMethodTable, W("_logStart"));
+            if (offset <= 0 || FAILED(MOVE(i32Value, cdaTpHcInstance + offset)))
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool.HillClimbing._logStart");
+                break;
+            }
+            int logStart = i32Value;
+
+            offset = GetObjFieldOffset(cdaTpHcInstance, cdaTpHcMethodTable, W("_logSize"));
+            if (offset <= 0 || FAILED(MOVE(i32Value, cdaTpHcInstance + offset)))
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool.HillClimbing._logSize");
+                break;
+            }
+            int logSize = i32Value;
+
+            offset = GetObjFieldOffset(cdaTpHcInstance, cdaTpHcMethodTable, W("_log"));
+            if (offset <= 0 || FAILED(MOVE(ptrValue, cdaTpHcInstance + offset)) || ptrValue == 0)
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool.HillClimbing._log");
+                break;
+            }
+            CLRDATA_ADDRESS cdaTpHcLog = TO_CDADDR(ptrValue);
+
+            // Validate the log array
+            if (!sos::IsObject(cdaTpHcLog, false) ||
+                vPortableTpHcLogArray.Request(g_sos, cdaTpHcLog) != S_OK ||
+                vPortableTpHcLogArray.ObjectType != OBJ_ARRAY ||
+                vPortableTpHcLogArray.ArrayDataPtr == 0 ||
+                vPortableTpHcLogArray.dwComponentSize != sizeof(HillClimbingLogEntry) ||
+                vPortableTpHcLogArray.ElementTypeHandle == 0)
+            {
+                ExtOut("    %s\n", "Failed to validate PortableThreadPool.HillClimbing._log");
+                break;
+            }
+
+            // Get the log entry field offsets
+            portableTpHcLogEntry_tickCountOffset =
+                GetValueFieldOffset(vPortableTpHcLogArray.ElementTypeHandle, W("tickCount"));
+            portableTpHcLogEntry_stateOrTransitionOffset =
+                GetValueFieldOffset(vPortableTpHcLogArray.ElementTypeHandle, W("stateOrTransition"));
+            portableTpHcLogEntry_newControlSettingOffset =
+                GetValueFieldOffset(vPortableTpHcLogArray.ElementTypeHandle, W("newControlSetting"));
+            portableTpHcLogEntry_lastHistoryCountOffset =
+                GetValueFieldOffset(vPortableTpHcLogArray.ElementTypeHandle, W("lastHistoryCount"));
+            portableTpHcLogEntry_lastHistoryMeanOffset =
+                GetValueFieldOffset(vPortableTpHcLogArray.ElementTypeHandle, W("lastHistoryMean"));
+            if (portableTpHcLogEntry_tickCountOffset < 0 ||
+                portableTpHcLogEntry_stateOrTransitionOffset < 0 ||
+                portableTpHcLogEntry_newControlSettingOffset < 0 ||
+                portableTpHcLogEntry_lastHistoryCountOffset < 0 ||
+                portableTpHcLogEntry_lastHistoryMeanOffset < 0)
+            {
+                ExtOut("    %s\n", "Failed to get a field offset in PortableThreadPool.HillClimbing.LogEntry");
+                break;
+            }
+
+            ExtOut("logStart: %d\n", logStart);
+            ExtOut("logSize: %d\n", logSize);
+            threadpool.HillClimbingLogFirstIndex = logStart;
+            threadpool.HillClimbingLogSize = logSize;
+        }
+    } while (false);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        ExtOut ("CPU utilization: %d %s\n", threadpool.cpuUtilization, "%%");
+    ExtOut ("Worker Thread:");
+    ExtOut (" Total: %d", threadpool.NumWorkingWorkerThreads + threadpool.NumIdleWorkerThreads + threadpool.NumRetiredWorkerThreads);
+    ExtOut (" Running: %d", threadpool.NumWorkingWorkerThreads);
+    ExtOut (" Idle: %d", threadpool.NumIdleWorkerThreads);
+    ExtOut (" MaxLimit: %d", threadpool.MaxLimitTotalWorkerThreads);
+    ExtOut (" MinLimit: %d", threadpool.MinLimitTotalWorkerThreads);
+    ExtOut ("\n");
+
+    int numWorkRequests = 0;
+    CLRDATA_ADDRESS workRequestPtr = threadpool.FirstUnmanagedWorkRequest;
+    DacpWorkRequestData workRequestData;
+    while (workRequestPtr)
+    {
+        if ((Status = workRequestData.Request(g_sos,workRequestPtr))!=S_OK)
+        {
+            ExtOut("    Failed to examine a WorkRequest\n");
+            return Status;
+        }
+        numWorkRequests++;
+        workRequestPtr = workRequestData.NextWorkRequest;
+    }
+
+    ExtOut ("Work Request in Queue: %d\n", numWorkRequests);
+    workRequestPtr = threadpool.FirstUnmanagedWorkRequest;
+    while (workRequestPtr)
+    {
+        if ((Status = workRequestData.Request(g_sos,workRequestPtr))!=S_OK)
+        {
+            ExtOut("    Failed to examine a WorkRequest\n");
             return Status;
         }
 
-        EnableDMLHolder dmlHolder(dml);
+        if (workRequestData.Function == threadpool.AsyncTimerCallbackCompletionFPtr)
+            ExtOut ("    AsyncTimerCallbackCompletion TimerInfo@%p\n", SOS_PTR(workRequestData.Context));
+        else
+            ExtOut ("    Unknown Function: %p  Context: %p\n", SOS_PTR(workRequestData.Function),
+                SOS_PTR(workRequestData.Context));
 
-        ExtOut ("CPU utilization: %d %s\n", threadpool.cpuUtilization, "%%");
-        ExtOut ("Worker Thread:");
-        ExtOut (" Total: %d", threadpool.NumWorkingWorkerThreads + threadpool.NumIdleWorkerThreads + threadpool.NumRetiredWorkerThreads);
-        ExtOut (" Running: %d", threadpool.NumWorkingWorkerThreads);
-        ExtOut (" Idle: %d", threadpool.NumIdleWorkerThreads);
-        ExtOut (" MaxLimit: %d", threadpool.MaxLimitTotalWorkerThreads);
-        ExtOut (" MinLimit: %d", threadpool.MinLimitTotalWorkerThreads);
-        ExtOut ("\n");
+        workRequestPtr = workRequestData.NextWorkRequest;
+    }
 
-        int numWorkRequests = 0;
-        CLRDATA_ADDRESS workRequestPtr = threadpool.FirstUnmanagedWorkRequest;
-        DacpWorkRequestData workRequestData;
-        while (workRequestPtr)
+    if (doWorkItemDump && g_snapshot.Build())
+    {
+        // Display a message if the heap isn't verified.
+        sos::GCHeap gcheap;
+        if (!gcheap.AreGCStructuresValid())
         {
-            if ((Status = workRequestData.Request(g_sos,workRequestPtr))!=S_OK)
-            {
-                ExtOut("    Failed to examine a WorkRequest\n");
-                return Status;
-            }
-            numWorkRequests++;
-            workRequestPtr = workRequestData.NextWorkRequest;
+            DisplayInvalidStructuresMessage();
         }
 
-        ExtOut ("Work Request in Queue: %d\n", numWorkRequests);
-        workRequestPtr = threadpool.FirstUnmanagedWorkRequest;
-        while (workRequestPtr)
+        mdTypeDef threadPoolWorkQueueMd, threadPoolWorkStealingQueueMd;
+        GetInfoFromName(corelibModule, "System.Threading.ThreadPoolWorkQueue", &threadPoolWorkQueueMd);
+        GetInfoFromName(corelibModule, "System.Threading.ThreadPoolWorkQueue+WorkStealingQueue", &threadPoolWorkStealingQueueMd);
+
+        // Walk every heap item looking for the global queue and local queues.
+        ExtOut("\nQueued work items:\n%" POINTERSIZE "s %" POINTERSIZE "s %s\n", "Queue", "Address", "Work Item");
+        HeapStat stats;
+        for (sos::ObjectIterator itr = gcheap.WalkHeap(); !IsInterrupt() && itr != NULL; ++itr)
         {
-            if ((Status = workRequestData.Request(g_sos,workRequestPtr))!=S_OK)
+            DacpMethodTableData mtdata;
+            if (mtdata.Request(g_sos, TO_TADDR(itr->GetMT())) != S_OK ||
+                mtdata.Module != corelibModule)
             {
-                ExtOut("    Failed to examine a WorkRequest\n");
-                return Status;
+                continue;
             }
 
-            if (workRequestData.Function == threadpool.AsyncTimerCallbackCompletionFPtr)
-                ExtOut ("    AsyncTimerCallbackCompletion TimerInfo@%p\n", SOS_PTR(workRequestData.Context));
-            else
-                ExtOut ("    Unknown Function: %p  Context: %p\n", SOS_PTR(workRequestData.Function),
-                    SOS_PTR(workRequestData.Context));
-
-            workRequestPtr = workRequestData.NextWorkRequest;
-        }
-
-        if (doWorkItemDump && g_snapshot.Build())
-        {
-            // Display a message if the heap isn't verified.
-            sos::GCHeap gcheap;
-            if (!gcheap.AreGCStructuresValid())
+            if (mtdata.cl == threadPoolWorkQueueMd)
             {
-                DisplayInvalidStructuresMessage();
-            }
-
-            int numModule;
-            ArrayHolder<DWORD_PTR> moduleList = ModuleFromName(const_cast<LPSTR>("System.Private.CoreLib.dll"), &numModule);
-            if (moduleList == NULL || numModule != 1)
-            {
-                ExtOut("    Failed to find System.Private.CoreLib.dll\n");
-                return Status;
-            }
-            DWORD_PTR corelibModule = moduleList[0];
-
-            mdTypeDef threadPoolWorkQueueMd, threadPoolWorkStealingQueueMd;
-            GetInfoFromName(corelibModule, "System.Threading.ThreadPoolWorkQueue", &threadPoolWorkQueueMd);
-            GetInfoFromName(corelibModule, "System.Threading.ThreadPoolWorkQueue+WorkStealingQueue", &threadPoolWorkStealingQueueMd);
-
-            // Walk every heap item looking for the global queue and local queues.
-            ExtOut("\nQueued work items:\n%" POINTERSIZE "s %" POINTERSIZE "s %s\n", "Queue", "Address", "Work Item");
-            HeapStat stats;
-            for (sos::ObjectIterator itr = gcheap.WalkHeap(); !IsInterrupt() && itr != NULL; ++itr)
-            {
-                DacpMethodTableData mtdata;
-                if (mtdata.Request(g_sos, TO_TADDR(itr->GetMT())) != S_OK ||
-                    mtdata.Module != corelibModule)
+                // We found a global queue (there should be only one, given one AppDomain).
+                // Get its workItems ConcurrentQueue<IThreadPoolWorkItem>.
+                int offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("workItems"));
+                if (offset > 0)
                 {
-                    continue;
-                }
-
-                if (mtdata.cl == threadPoolWorkQueueMd)
-                {
-                    // We found a global queue (there should be only one, given one AppDomain).
-                    // Get its workItems ConcurrentQueue<IThreadPoolWorkItem>.
-                    int offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("workItems"));
-                    if (offset > 0)
+                    DWORD_PTR workItemsConcurrentQueuePtr;
+                    MOVE(workItemsConcurrentQueuePtr, itr->GetAddress() + offset);
+                    if (sos::IsObject(workItemsConcurrentQueuePtr, false))
                     {
-                        DWORD_PTR workItemsConcurrentQueuePtr;
-                        MOVE(workItemsConcurrentQueuePtr, itr->GetAddress() + offset);
-                        if (sos::IsObject(workItemsConcurrentQueuePtr, false))
+                        // We got the ConcurrentQueue.  Get its head segment.
+                        sos::Object workItemsConcurrentQueue = TO_TADDR(workItemsConcurrentQueuePtr);
+                        offset = GetObjFieldOffset(workItemsConcurrentQueue.GetAddress(), workItemsConcurrentQueue.GetMT(), W("_head"));
+                        if (offset > 0)
                         {
-                            // We got the ConcurrentQueue.  Get its head segment.
-                            sos::Object workItemsConcurrentQueue = TO_TADDR(workItemsConcurrentQueuePtr);
-                            offset = GetObjFieldOffset(workItemsConcurrentQueue.GetAddress(), workItemsConcurrentQueue.GetMT(), W("_head"));
-                            if (offset > 0)
+                            // Now, walk from segment to segment, each of which contains an array of work items.
+                            DWORD_PTR segmentPtr;
+                            MOVE(segmentPtr, workItemsConcurrentQueue.GetAddress() + offset);
+                            while (sos::IsObject(segmentPtr, false))
                             {
-                                // Now, walk from segment to segment, each of which contains an array of work items.
-                                DWORD_PTR segmentPtr;
-                                MOVE(segmentPtr, workItemsConcurrentQueue.GetAddress() + offset);
-                                while (sos::IsObject(segmentPtr, false))
+                                sos::Object segment = TO_TADDR(segmentPtr);
+
+                                // Get the work items array.  It's an array of Slot structs, which starts with the T.
+                                offset = GetObjFieldOffset(segment.GetAddress(), segment.GetMT(), W("_slots"));
+                                if (offset <= 0)
                                 {
-                                    sos::Object segment = TO_TADDR(segmentPtr);
+                                    break;
+                                }
 
-                                    // Get the work items array.  It's an array of Slot structs, which starts with the T.
-                                    offset = GetObjFieldOffset(segment.GetAddress(), segment.GetMT(), W("_slots"));
-                                    if (offset <= 0)
-                                    {
-                                        break;
-                                    }
+                                DWORD_PTR slotsPtr;
+                                MOVE(slotsPtr, segment.GetAddress() + offset);
+                                if (!sos::IsObject(slotsPtr, false))
+                                {
+                                    break;
+                                }
 
-                                    DWORD_PTR slotsPtr;
-                                    MOVE(slotsPtr, segment.GetAddress() + offset);
-                                    if (!sos::IsObject(slotsPtr, false))
+                                // Walk every element in the array, outputting details on non-null work items.
+                                DacpObjectData slotsArray;
+                                if (slotsArray.Request(g_sos, TO_CDADDR(slotsPtr)) == S_OK && slotsArray.ObjectType == OBJ_ARRAY)
+                                {
+                                    for (int i = 0; i < slotsArray.dwNumComponents; i++)
                                     {
-                                        break;
-                                    }
-
-                                    // Walk every element in the array, outputting details on non-null work items.
-                                    DacpObjectData slotsArray;
-                                    if (slotsArray.Request(g_sos, TO_CDADDR(slotsPtr)) == S_OK && slotsArray.ObjectType == OBJ_ARRAY)
-                                    {
-                                        for (int i = 0; i < slotsArray.dwNumComponents; i++)
+                                        CLRDATA_ADDRESS workItemPtr;
+                                        MOVE(workItemPtr, TO_CDADDR(slotsArray.ArrayDataPtr + (i * slotsArray.dwComponentSize))); // the item object reference is at the beginning of the Slot
+                                        if (workItemPtr != NULL && sos::IsObject(workItemPtr, false))
                                         {
-                                            CLRDATA_ADDRESS workItemPtr;
-                                            MOVE(workItemPtr, TO_CDADDR(slotsArray.ArrayDataPtr + (i * slotsArray.dwComponentSize))); // the item object reference is at the beginning of the Slot
-                                            if (workItemPtr != NULL && sos::IsObject(workItemPtr, false))
+                                            sos::Object workItem = TO_TADDR(workItemPtr);
+                                            stats.Add((DWORD_PTR)workItem.GetMT(), (DWORD)workItem.GetSize());
+                                            DMLOut("%" POINTERSIZE "s %s %S", "[Global]", DMLObject(workItem.GetAddress()), workItem.GetTypeName());
+                                            if ((offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("_callback"))) > 0 ||
+                                                (offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("m_action"))) > 0)
                                             {
-                                                sos::Object workItem = TO_TADDR(workItemPtr);
-                                                stats.Add((DWORD_PTR)workItem.GetMT(), (DWORD)workItem.GetSize());
-                                                DMLOut("%" POINTERSIZE "s %s %S", "[Global]", DMLObject(workItem.GetAddress()), workItem.GetTypeName());
-                                                if ((offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("_callback"))) > 0 ||
-                                                    (offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("m_action"))) > 0)
+                                                CLRDATA_ADDRESS delegatePtr;
+                                                MOVE(delegatePtr, workItem.GetAddress() + offset);
+                                                CLRDATA_ADDRESS md;
+                                                if (TryGetMethodDescriptorForDelegate(delegatePtr, &md))
                                                 {
-                                                    CLRDATA_ADDRESS delegatePtr;
-                                                    MOVE(delegatePtr, workItem.GetAddress() + offset);
-                                                    CLRDATA_ADDRESS md;
-                                                    if (TryGetMethodDescriptorForDelegate(delegatePtr, &md))
-                                                    {
-                                                        NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
-                                                        ExtOut(" => %S", g_mdName);
-                                                    }
+                                                    NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
+                                                    ExtOut(" => %S", g_mdName);
                                                 }
-                                                ExtOut("\n");
                                             }
+                                            ExtOut("\n");
                                         }
-                                    }
-
-                                    // Move to the next segment.
-                                    DacpFieldDescData segmentField;
-                                    offset = GetObjFieldOffset(segment.GetAddress(), segment.GetMT(), W("_nextSegment"), TRUE, &segmentField);
-                                    if (offset <= 0)
-                                    {
-                                        break;
-                                    }
-
-                                    MOVE(segmentPtr, segment.GetAddress() + offset);
-                                    if (segmentPtr == NULL)
-                                    {
-                                        break;
                                     }
                                 }
-                            }
-                        }
-                    }
-                }
-                else if (mtdata.cl == threadPoolWorkStealingQueueMd)
-                {
-                    // We found a local queue.  Get its work items array.
-                    int offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("m_array"));
-                    if (offset > 0)
-                    {
-                        // Walk every element in the array, outputting details on non-null work items.
-                        DWORD_PTR workItemArrayPtr;
-                        MOVE(workItemArrayPtr, itr->GetAddress() + offset);
-                        DacpObjectData workItemArray;
-                        if (workItemArray.Request(g_sos, TO_CDADDR(workItemArrayPtr)) == S_OK && workItemArray.ObjectType == OBJ_ARRAY)
-                        {
-                            for (int i = 0; i < workItemArray.dwNumComponents; i++)
-                            {
-                                CLRDATA_ADDRESS workItemPtr;
-                                MOVE(workItemPtr, TO_CDADDR(workItemArray.ArrayDataPtr + (i * workItemArray.dwComponentSize)));
-                                if (workItemPtr != NULL && sos::IsObject(workItemPtr, false))
+
+                                // Move to the next segment.
+                                DacpFieldDescData segmentField;
+                                offset = GetObjFieldOffset(segment.GetAddress(), segment.GetMT(), W("_nextSegment"), TRUE, &segmentField);
+                                if (offset <= 0)
                                 {
-                                    sos::Object workItem = TO_TADDR(workItemPtr);
-                                    stats.Add((DWORD_PTR)workItem.GetMT(), (DWORD)workItem.GetSize());
-                                    DMLOut("%s %s %S", DMLObject(itr->GetAddress()), DMLObject(workItem.GetAddress()), workItem.GetTypeName());
-                                    if ((offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("_callback"))) > 0 ||
-                                        (offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("m_action"))) > 0)
-                                    {
-                                        CLRDATA_ADDRESS delegatePtr;
-                                        MOVE(delegatePtr, workItem.GetAddress() + offset);
-                                        CLRDATA_ADDRESS md;
-                                        if (TryGetMethodDescriptorForDelegate(delegatePtr, &md))
-                                        {
-                                            NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
-                                            ExtOut(" => %S", g_mdName);
-                                        }
-                                    }
-                                    ExtOut("\n");
+                                    break;
+                                }
+
+                                MOVE(segmentPtr, segment.GetAddress() + offset);
+                                if (segmentPtr == NULL)
+                                {
+                                    break;
                                 }
                             }
                         }
                     }
                 }
             }
-
-            // Output a summary.
-            stats.Sort();
-            stats.Print();
-            ExtOut("\n");
+            else if (mtdata.cl == threadPoolWorkStealingQueueMd)
+            {
+                // We found a local queue.  Get its work items array.
+                int offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("m_array"));
+                if (offset > 0)
+                {
+                    // Walk every element in the array, outputting details on non-null work items.
+                    DWORD_PTR workItemArrayPtr;
+                    MOVE(workItemArrayPtr, itr->GetAddress() + offset);
+                    DacpObjectData workItemArray;
+                    if (workItemArray.Request(g_sos, TO_CDADDR(workItemArrayPtr)) == S_OK && workItemArray.ObjectType == OBJ_ARRAY)
+                    {
+                        for (int i = 0; i < workItemArray.dwNumComponents; i++)
+                        {
+                            CLRDATA_ADDRESS workItemPtr;
+                            MOVE(workItemPtr, TO_CDADDR(workItemArray.ArrayDataPtr + (i * workItemArray.dwComponentSize)));
+                            if (workItemPtr != NULL && sos::IsObject(workItemPtr, false))
+                            {
+                                sos::Object workItem = TO_TADDR(workItemPtr);
+                                stats.Add((DWORD_PTR)workItem.GetMT(), (DWORD)workItem.GetSize());
+                                DMLOut("%s %s %S", DMLObject(itr->GetAddress()), DMLObject(workItem.GetAddress()), workItem.GetTypeName());
+                                if ((offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("_callback"))) > 0 ||
+                                    (offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("m_action"))) > 0)
+                                {
+                                    CLRDATA_ADDRESS delegatePtr;
+                                    MOVE(delegatePtr, workItem.GetAddress() + offset);
+                                    CLRDATA_ADDRESS md;
+                                    if (TryGetMethodDescriptorForDelegate(delegatePtr, &md))
+                                    {
+                                        NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
+                                        ExtOut(" => %S", g_mdName);
+                                    }
+                                }
+                                ExtOut("\n");
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        if (doHCDump)
+        // Output a summary.
+        stats.Sort();
+        stats.Print();
+        ExtOut("\n");
+    }
+
+    if (doHCDump)
+    {
+        ExtOut ("--------------------------------------\n");
+        ExtOut ("\nThread Injection History\n");
+        if (threadpool.HillClimbingLogSize > 0)
         {
-            ExtOut ("--------------------------------------\n");
-            ExtOut ("\nThread Injection History\n");
-            if (threadpool.HillClimbingLogSize > 0)
+            static char const * const TransitionNames[] =
             {
-                static char const * const TransitionNames[] =
-                {
-                    "Warmup",
-                    "Initializing",
-                    "RandomMove",
-                    "ClimbingMove",
-                    "ChangePoint",
-                    "Stabilizing",
-                    "Starvation",
-                    "ThreadTimedOut",
-                    "Undefined"
-                };
+                "Warmup",
+                "Initializing",
+                "RandomMove",
+                "ClimbingMove",
+                "ChangePoint",
+                "Stabilizing",
+                "Starvation",
+                "ThreadTimedOut",
+                "Undefined"
+            };
 
-                ExtOut("\n    Time Transition     New #Threads      #Samples   Throughput\n");
-                DacpHillClimbingLogEntry entry;
+            bool usePortableThreadPoolHillClimbingData = threadpool.HillClimbingLog == 0;
+            int logCapacity =
+                usePortableThreadPoolHillClimbingData
+                    ? (int)vPortableTpHcLogArray.dwNumComponents
+                    : HillClimbingLogCapacity;
 
-                // get the most recent entry first, so we can calculate time offsets
+            ExtOut("\n    Time Transition     New #Threads      #Samples   Throughput\n");
+            DacpHillClimbingLogEntry entry;
 
-                int index = (threadpool.HillClimbingLogFirstIndex + threadpool.HillClimbingLogSize-1) % HillClimbingLogCapacity;
-                CLRDATA_ADDRESS entryPtr = threadpool.HillClimbingLog + (index * sizeof(HillClimbingLogEntry));
-                if ((Status = entry.Request(g_sos,entryPtr))!=S_OK)
+            // Get the most recent entry first, so we can calculate time offsets
+            DWORD endTime;
+            int index = (threadpool.HillClimbingLogFirstIndex + threadpool.HillClimbingLogSize - 1) % logCapacity;
+            if (usePortableThreadPoolHillClimbingData)
+            {
+                CLRDATA_ADDRESS entryPtr =
+                    TO_CDADDR(vPortableTpHcLogArray.ArrayDataPtr + index * sizeof(HillClimbingLogEntry));
+                INT32 i32Value = 0;
+
+                if (FAILED(Status = MOVE(i32Value, entryPtr + portableTpHcLogEntry_tickCountOffset)))
                 {
                     ExtOut("    Failed to examine a HillClimbing log entry\n");
                     return Status;
                 }
-                DWORD endTime = entry.TickCount;
 
-                for (int i = 0; i < threadpool.HillClimbingLogSize; i++)
+                endTime = i32Value;
+            }
+            else
+            {
+                CLRDATA_ADDRESS entryPtr = threadpool.HillClimbingLog + (index * sizeof(HillClimbingLogEntry));
+                if ((Status = entry.Request(g_sos, entryPtr)) != S_OK)
                 {
-                    index = (i + threadpool.HillClimbingLogFirstIndex) % HillClimbingLogCapacity;
-                    entryPtr = threadpool.HillClimbingLog + (index * sizeof(HillClimbingLogEntry));
+                    ExtOut("    Failed to examine a HillClimbing log entry\n");
+                    return Status;
+                }
 
-                    if ((Status = entry.Request(g_sos,entryPtr))!=S_OK)
+                endTime = entry.TickCount;
+            }
+
+            for (int i = 0; i < threadpool.HillClimbingLogSize; i++)
+            {
+                index = (i + threadpool.HillClimbingLogFirstIndex) % logCapacity;
+                if (usePortableThreadPoolHillClimbingData)
+                {
+                    CLRDATA_ADDRESS entryPtr =
+                        TO_CDADDR(vPortableTpHcLogArray.ArrayDataPtr + (index * sizeof(HillClimbingLogEntry)));
+                    INT32 i32Value = 0;
+                    float f32Value = 0;
+                    int fieldOffset = 0;
+
+                    if (FAILED(Status = MOVE(i32Value, entryPtr + portableTpHcLogEntry_tickCountOffset)))
                     {
                         ExtOut("    Failed to examine a HillClimbing log entry\n");
                         return Status;
                     }
+                    entry.TickCount = i32Value;
 
-                    ExtOut("%8.2lf %-14s %12d  %12d  %11.2lf\n",
-                        (double)(int)(entry.TickCount - endTime) / 1000.0,
-                        TransitionNames[entry.Transition],
-                        entry.NewControlSetting,
-                        entry.LastHistoryCount,
-                        entry.LastHistoryMean);
+                    if (FAILED(Status = MOVE(i32Value, entryPtr + portableTpHcLogEntry_stateOrTransitionOffset)))
+                    {
+                        ExtOut("    Failed to examine a HillClimbing log entry\n");
+                        return Status;
+                    }
+                    entry.Transition = i32Value;
+
+                    if (FAILED(Status = MOVE(i32Value, entryPtr + portableTpHcLogEntry_newControlSettingOffset)))
+                    {
+                        ExtOut("    Failed to examine a HillClimbing log entry\n");
+                        return Status;
+                    }
+                    entry.NewControlSetting = i32Value;
+
+                    if (FAILED(Status = MOVE(i32Value, entryPtr + portableTpHcLogEntry_lastHistoryCountOffset)))
+                    {
+                        ExtOut("    Failed to examine a HillClimbing log entry\n");
+                        return Status;
+                    }
+                    entry.LastHistoryCount = i32Value;
+
+                    if (FAILED(Status = MOVE(f32Value, entryPtr + portableTpHcLogEntry_lastHistoryMeanOffset)))
+                    {
+                        ExtOut("    Failed to examine a HillClimbing log entry\n");
+                        return Status;
+                    }
+                    entry.LastHistoryMean = f32Value;
                 }
+                else
+                {
+                    CLRDATA_ADDRESS entryPtr = threadpool.HillClimbingLog + (index * sizeof(HillClimbingLogEntry));
+
+                    if ((Status = entry.Request(g_sos, entryPtr)) != S_OK)
+                    {
+                        ExtOut("    Failed to examine a HillClimbing log entry\n");
+                        return Status;
+                    }
+                }
+
+                ExtOut("%8.2lf %-14s %12d  %12d  %11.2lf\n",
+                    (double)(int)(entry.TickCount - endTime) / 1000.0,
+                    TransitionNames[entry.Transition],
+                    entry.NewControlSetting,
+                    entry.LastHistoryCount,
+                    entry.LastHistoryMean);
             }
         }
-
-        ExtOut ("--------------------------------------\n");
-        ExtOut ("Number of Timers: %d\n", threadpool.NumTimers);
-        ExtOut ("--------------------------------------\n");
-
-        ExtOut ("Completion Port Thread:");
-        ExtOut ("Total: %d", threadpool.NumCPThreads);
-        ExtOut (" Free: %d", threadpool.NumFreeCPThreads);
-        ExtOut (" MaxFree: %d", threadpool.MaxFreeCPThreads);
-        ExtOut (" CurrentLimit: %d", threadpool.CurrentLimitTotalCPThreads);
-        ExtOut (" MaxLimit: %d", threadpool.MaxLimitTotalCPThreads);
-        ExtOut (" MinLimit: %d", threadpool.MinLimitTotalCPThreads);
-        ExtOut ("\n");
     }
-    else
-    {
-        ExtOut("Failed to request ThreadpoolMgr information\n");
-    }
+
+    ExtOut ("--------------------------------------\n");
+    ExtOut ("Number of Timers: %d\n", threadpool.NumTimers);
+    ExtOut ("--------------------------------------\n");
+
+    ExtOut ("Completion Port Thread:");
+    ExtOut ("Total: %d", threadpool.NumCPThreads);
+    ExtOut (" Free: %d", threadpool.NumFreeCPThreads);
+    ExtOut (" MaxFree: %d", threadpool.MaxFreeCPThreads);
+    ExtOut (" CurrentLimit: %d", threadpool.CurrentLimitTotalCPThreads);
+    ExtOut (" MaxLimit: %d", threadpool.MaxLimitTotalCPThreads);
+    ExtOut (" MinLimit: %d", threadpool.MinLimitTotalCPThreads);
+    ExtOut ("\n");
+
     return Status;
 }
 
@@ -8935,9 +9237,9 @@ DECLARE_API(FindAppDomain)
         ExtOut("The type is declared in the shared domain and other\n");
         ExtOut("methods of finding the AppDomain failed. Try running\n");
         if (IsDMLEnabled())
-            DMLOut("<exec cmd=\"!gcroot /d %p\">!gcroot %p</exec>, and if you find a root on a\n", p_Object, p_Object);
+            DMLOut("<exec cmd=\"!gcroot /d %p\">!gcroot %p</exec>, and if you find a root on a\n", SOS_PTR(p_Object), SOS_PTR(p_Object));
         else
-            ExtOut(SOSPrefix "gcroot %p, and if you find a root on a\n", p_Object);
+            ExtOut(SOSPrefix "gcroot %p, and if you find a root on a\n", SOS_PTR(p_Object));
         ExtOut("stack, check the AppDomain of that stack with " SOSThreads ".\n");
         ExtOut("Note that the Thread could have transitioned between\n");
         ExtOut("multiple AppDomains.\n");
@@ -10024,7 +10326,7 @@ HRESULT GetIntermediateLangMap(BOOL bIL, const DacpCodeHeaderData& codeHeaderDat
             {
                 // TODO: These information should be interleaved with the disassembly
                 // Decoded IL can be obtained through refactoring DumpIL code.
-                ExtOut("%08x %p %p\n", map[i].ilOffset, map[i].startAddress, map[i].endAddress);
+                ExtOut("%08x %p %p\n", map[i].ilOffset, SOS_PTR(map[i].startAddress), SOS_PTR(map[i].endAddress));
             }
         }
     }
@@ -10526,6 +10828,10 @@ DECLARE_API(DumpGCData)
 #endif //GC_CONFIG_DRIVEN
 }
 
+#ifdef FEATURE_PAL
+extern char sccsid[];
+#endif
+
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -10541,42 +10847,38 @@ DECLARE_API(EEVersion)
     ArrayHolder<char> fileVersionBuffer = new char[fileVersionBufferSize];
     VS_FIXEDFILEINFO version;
 
-    BOOL ret = GetEEVersion(&version, fileVersionBuffer.GetPtr(), fileVersionBufferSize);
-    if (ret)
+    if (GetEEVersion(&version, fileVersionBuffer.GetPtr(), fileVersionBufferSize))
     {
-        if (version.dwFileVersionMS != (DWORD)-1)
-        {
-            ExtOut("%u.%u.%u.%u",
-                HIWORD(version.dwFileVersionMS),
-                LOWORD(version.dwFileVersionMS),
-                HIWORD(version.dwFileVersionLS),
-                LOWORD(version.dwFileVersionLS));
+        ExtOut("%u.%u.%u.%u",
+            HIWORD(version.dwFileVersionMS),
+            LOWORD(version.dwFileVersionMS),
+            HIWORD(version.dwFileVersionLS),
+            LOWORD(version.dwFileVersionLS));
 
-            if (IsRuntimeVersion(version, 3)) {
-                ExtOut(" (3.x runtime)");
-            }
+        if (IsRuntimeVersion(version, 3)) {
+            ExtOut(" (3.x runtime)");
+        }
 
 #ifndef FEATURE_PAL
-            if (IsWindowsTarget())
+        if (IsWindowsTarget())
+        {
+            if (version.dwFileFlags & VS_FF_DEBUG) {
+                ExtOut(" checked or debug build");
+            }
+            else
             {
-                if (version.dwFileFlags & VS_FF_DEBUG) {
-                    ExtOut(" checked or debug build");
-                }
+                BOOL fRet = IsRetailBuild((size_t)g_pRuntime->GetModuleAddress());
+                if (fRet)
+                    ExtOut(" retail");
                 else
-                {
-                    BOOL fRet = IsRetailBuild((size_t)g_pRuntime->GetModuleAddress());
-                    if (fRet)
-                        ExtOut(" retail");
-                    else
-                        ExtOut(" free");
-                }
+                    ExtOut(" free");
             }
+        }
 #endif
-            ExtOut("\n");
+        ExtOut("\n");
 
-            if (fileVersionBuffer[0] != '\0') {
-                ExtOut("%s\n", fileVersionBuffer.GetPtr());
-            }
+        if (fileVersionBuffer[0] != '\0') {
+            ExtOut("%s\n", fileVersionBuffer.GetPtr());
         }
     }
 
@@ -10591,27 +10893,26 @@ DECLARE_API(EEVersion)
         ExtOut("In plan phase of garbage collection\n");
     }
 
-#ifndef FEATURE_PAL
     // Print SOS version
+#ifdef FEATURE_PAL
+    ExtOut("SOS Version: %s\n", sccsid);
+#else
     VS_FIXEDFILEINFO sosVersion;
-    if (IsWindowsTarget() && GetSOSVersion(&sosVersion))
+    if (GetSOSVersion(&sosVersion))
     {
-        if (sosVersion.dwFileVersionMS != (DWORD)-1)
-        {
-            ExtOut("SOS Version: %u.%u.%u.%u",
-                HIWORD(sosVersion.dwFileVersionMS),
-                LOWORD(sosVersion.dwFileVersionMS),
-                HIWORD(sosVersion.dwFileVersionLS),
-                LOWORD(sosVersion.dwFileVersionLS));
+        ExtOut("SOS Version: %u.%u.%u.%u",
+            HIWORD(sosVersion.dwFileVersionMS),
+            LOWORD(sosVersion.dwFileVersionMS),
+            HIWORD(sosVersion.dwFileVersionLS),
+            LOWORD(sosVersion.dwFileVersionLS));
 
-            if (sosVersion.dwFileFlags & VS_FF_DEBUG) {
-                ExtOut(" debug build");
-            }
-            else {
-                ExtOut(" retail build");
-            }
-            ExtOut("\n");
+        if (sosVersion.dwFileFlags & VS_FF_DEBUG) {
+            ExtOut(" debug build");
         }
+        else {
+            ExtOut(" retail build");
+        }
+        ExtOut("\n");
     }
 #endif // FEATURE_PAL
     return Status;
@@ -10633,7 +10934,7 @@ DECLARE_API(SOSStatus)
     CMDOption option[] =
     {   // name, vptr, type, hasValue
 #ifndef FEATURE_PAL
-        {"-desktop", &bDesktop, COBOOL, FALSE},
+        {"-netfx", &bDesktop, COBOOL, FALSE},
         {"-netcore", &bNetCore, COBOOL, FALSE},
 #endif
         {"-reset", &bReset, COBOOL, FALSE},
@@ -10658,7 +10959,7 @@ DECLARE_API(SOSStatus)
         }
         else
         {
-            ExtErr("The '-desktop' and '-netcore' options are only supported on Windows targets\n");
+            ExtErr("The '-netfx' and '-netcore' options are only supported on Windows targets\n");
             return E_FAIL;
         }
     }
@@ -10682,6 +10983,12 @@ DECLARE_API(SOSStatus)
     if (g_tmpPath != nullptr) {
         ExtOut("Temp path: %s\n", g_tmpPath);
     }
+#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
+    if (g_useDesktopClrHost) {
+        ExtOut("Using the desktop .NET Framework to host the managed SOS code\n");
+    }
+    else 
+#endif
     if (g_hostRuntimeDirectory != nullptr) {
         ExtOut("Host runtime path: %s\n", g_hostRuntimeDirectory);
     }
@@ -13748,9 +14055,9 @@ public:
                 if (SUCCEEDED(frameDataResult) && FrameData.frameAddr)
                     sp = FrameData.frameAddr;
 
-                while ((numNativeFrames > 0) && (currentNativeFrame->StackOffset <= sp))
+                while ((numNativeFrames > 0) && (currentNativeFrame->StackOffset <= CDA_TO_UL64(sp)))
                 {
-                    if (currentNativeFrame->StackOffset != sp)
+                    if (currentNativeFrame->StackOffset != CDA_TO_UL64(sp))
                     {
                         PrintNativeStackFrame(out, currentNativeFrame, bSuppressLines);
                     }
@@ -14032,7 +14339,7 @@ public:
 
             if ((Status = Thread.Request(g_sos, CurThread)) != S_OK)
             {
-                ExtErr("Failed to request thread at %p\n", CurThread);
+                ExtErr("Failed to request thread at %p\n", SOS_PTR(CurThread));
                 return;
             }
             if (Thread.osThreadId != 0)
@@ -14852,7 +15159,7 @@ static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp,
 
     if (Flags & SOS_STACKTRACE_SHOWADDRESSES)
     {
-        _snwprintf_s(wszNameBuffer, MAX_LONGPATH, MAX_LONGPATH, W("%p %p "), (void*)(size_t) Esp, (void*)(size_t) IPAddr); // _TRUNCATE
+        _snwprintf_s(wszNameBuffer, MAX_LONGPATH, MAX_LONGPATH, W("%p %p "), SOS_PTR(Esp), SOS_PTR(IPAddr)); // _TRUNCATE
         DOAPPEND(wszNameBuffer);
     }
 
@@ -15368,7 +15675,7 @@ BOOL FormatFromRemoteString(DWORD_PTR strObjPointer, __out_ecount(cchString) PWS
         WCHAR wszLineBuffer[mdNameLen + 8 + sizeof(size_t)*2];
 
         // Note that we don't add a newline because we have this embedded in wszLineBuffer
-        swprintf_s(wszLineBuffer, _countof(wszLineBuffer), W("    %p %p %s"), (void*)(size_t)-1, (void*)(size_t)-1, pwszPointer);
+        swprintf_s(wszLineBuffer, _countof(wszLineBuffer), W("    %p %p %s"), SOS_PTR(-1), SOS_PTR(-1), pwszPointer);
         Length += (UINT)_wcslen(wszLineBuffer);
 
         if (wszBuffer)
@@ -15716,7 +16023,7 @@ DECLARE_API(VerifyStackTrace)
         for (size_t j=0; j < contextLength; j++)
         {
             CROSS_PLATFORM_CONTEXT *pCtx = (CROSS_PLATFORM_CONTEXT*)(pContexts + j*g_targetMachine->GetContextSize());
-            ExtOut("%p %p %p\n", GetBP(*pCtx), GetSP(*pCtx), GetIP(*pCtx));
+            ExtOut("%p %p %p\n", SOS_PTR(GetBP(*pCtx)), SOS_PTR(GetSP(*pCtx)), SOS_PTR(GetIP(*pCtx)));
         }
 
         delete [] pContexts;
@@ -16132,7 +16439,7 @@ DECLARE_API(VerifyGMT)
         ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
         if (SUCCEEDED(hr)) {
-            ExtOut("%08x %p\n", osThreadId, managedThread);
+            ExtOut("%08x %p\n", osThreadId, SOS_PTR(managedThread));
         }
         else {
             ExtErr("_EFN_GetManagedThread FAILED %08x\n", hr);
@@ -16186,32 +16493,71 @@ DECLARE_API(SetHostRuntime)
 {
     INIT_API_EXT();
 
+    BOOL bDesktop = FALSE;
+    BOOL bNetCore = FALSE;
+    CMDOption option[] =
+    {   // name, vptr, type, hasValue
+#ifndef FEATURE_PAL
+        {"-netfx", &bDesktop, COBOOL, FALSE},
+        {"-netcore", &bNetCore, COBOOL, FALSE},
+#endif
+    };
     StringHolder hostRuntimeDirectory;
     CMDValue arg[] =
     {
         {&hostRuntimeDirectory.data, COSTRING},
     };
     size_t narg;
-    if (!GetCMDOption(args, nullptr, 0, arg, _countof(arg), &narg))
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &narg))
     {
         return E_FAIL;
     }
+#ifndef FEATURE_PAL
+    if (narg > 0 || bNetCore || bDesktop)
+#else
     if (narg > 0)
+#endif
     {
         if (IsHostingInitialized())
         {
-            ExtErr("Runtime hosting already initialized %s\n", g_hostRuntimeDirectory);
+            ExtErr("Runtime hosting already initialized %s\n", g_hostRuntimeDirectory != nullptr ? g_hostRuntimeDirectory : "");
             return E_FAIL;
         }
+    }
+#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
+    if (bNetCore)
+    {
+        g_useDesktopClrHost = false;
+    }
+    else if (bDesktop)
+    {
+        g_useDesktopClrHost = true;
+    }
+#endif
+    if (narg > 0)
+    {
         if (g_hostRuntimeDirectory != nullptr)
         {
             free((void*)g_hostRuntimeDirectory);
         }
         g_hostRuntimeDirectory = _strdup(hostRuntimeDirectory.data);
+#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
+        g_useDesktopClrHost = false;
+#endif
     }
-    if (g_hostRuntimeDirectory != nullptr)
+#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
+    if (g_useDesktopClrHost)
     {
-        ExtOut("Host runtime path: %s\n", g_hostRuntimeDirectory);
+        ExtOut("Using the desktop .NET Framework to host the managed SOS code\n");
+    }
+    else 
+#endif
+    {
+        ExtOut("Using the .NET Core runtime to host the managed SOS code\n");
+        if (g_hostRuntimeDirectory != nullptr) 
+        {
+            ExtOut("Host runtime path: %s\n", g_hostRuntimeDirectory);
+        }
     }
     return S_OK;
 }

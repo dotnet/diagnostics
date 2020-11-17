@@ -8,6 +8,7 @@ using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Help;
 using System.CommandLine.Invocation;
+using System.CommandLine.IO;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.Linq;
@@ -44,7 +45,7 @@ namespace Microsoft.Diagnostics.Repl
                        .UseParseDirective()
                        .UseSuggestDirective()
                        .UseParseErrorReporting()
-                       .UseExceptionHandler();
+                       .UseExceptionHandler(OnException);
 
             if (assemblies != null) {
                 BuildCommands(rootBuilder, assemblies);
@@ -54,6 +55,21 @@ namespace Microsoft.Diagnostics.Repl
             }
             _rootCommand = rootBuilder.Command;
             _parser = rootBuilder.Build();
+        }
+
+        private void OnException(Exception ex, InvocationContext context)
+        {
+            if (ex is NullReferenceException || 
+                ex is ArgumentException || 
+                ex is ArgumentNullException || 
+                ex is ArgumentOutOfRangeException || 
+                ex is NotImplementedException) {
+                context.Console.Error.WriteLine(ex.ToString());
+            }
+            else {
+                context.Console.Error.WriteLine(ex.Message);
+            }
+            Trace.TraceError(ex.ToString());
         }
 
         /// <summary>

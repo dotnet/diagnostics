@@ -167,7 +167,7 @@ DataTarget::ReadVirtual(
     HRESULT hr = g_ExtData->ReadVirtual(address, (PVOID)buffer, request, (PULONG)done);
     if (FAILED(hr)) 
     {
-        ExtDbgOut("DataTarget::ReadVirtual FAILED %08x address %p size %08x\n", hr, address, request);
+        ExtDbgOut("DataTarget::ReadVirtual FAILED %08x address %08llx size %08x\n", hr, address, request);
     }
     return hr;
 }

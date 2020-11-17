@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.NETCore.Client.UnitTests;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -116,7 +117,7 @@ namespace DotnetMonitor.UnitTests
             {
                 await newEndpointInfoTask;
 
-                execution1.Start();
+                execution1.SendSignal();
 
                 endpointInfos = await GetEndpointInfoAsync(source);
 

@@ -2,15 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.Monitoring;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.Monitoring;
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Extensions.Options;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
@@ -20,24 +20,24 @@ namespace Microsoft.Diagnostics.Tools.Monitor
     /// </summary>
     internal class FilteredEndpointInfoSource : IEndpointInfoSourceInternal, IAsyncDisposable
     {
-        private readonly DiagnosticPortConfiguration _configuration;
+        private readonly DiagnosticPortOptions _portOptions;
         private readonly int? _processIdToFilterOut;
         private readonly Guid? _runtimeInstanceCookieToFilterOut;
         private readonly IEndpointInfoSourceInternal _source;
 
-        public FilteredEndpointInfoSource(IOptions<DiagnosticPortConfiguration> configuration)
+        public FilteredEndpointInfoSource(IOptions<DiagnosticPortOptions> portOptions)
         {
-            _configuration = configuration.Value;
-            switch (_configuration.ConnectionMode)
+            _portOptions = portOptions.Value;
+            switch (_portOptions.ConnectionMode)
             {
                 case DiagnosticPortConnectionMode.Connect:
                     _source = new ClientEndpointInfoSource();
                     break;
                 case DiagnosticPortConnectionMode.Listen:
-                    _source = new ServerEndpointInfoSource(_configuration.EndpointName);
+                    _source = new ServerEndpointInfoSource(_portOptions.EndpointName);
                     break;
                 default:
-                    throw new InvalidOperationException($"Unhandled connection mode: {_configuration.ConnectionMode}");
+                    throw new InvalidOperationException($"Unhandled connection mode: {_portOptions.ConnectionMode}");
             }
 
             // Filter out the current process based on the connection mode.
@@ -61,7 +61,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
                 // If connecting to runtime instances, filter self out. In listening mode, it's likely
                 // that multiple processes have the same PID in multi-container scenarios.
-                if (DiagnosticPortConnectionMode.Connect == configuration.Value.ConnectionMode)
+                if (DiagnosticPortConnectionMode.Connect == portOptions.Value.ConnectionMode)
                 {
                     _processIdToFilterOut = pid;
                 }
@@ -103,7 +103,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         {
             if (_source is ServerEndpointInfoSource source)
             {
-                source.Start(_configuration.MaxConnections.GetValueOrDefault(ReversedDiagnosticsServer.MaxAllowedConnections));
+                source.Start(_portOptions.MaxConnections.GetValueOrDefault(ReversedDiagnosticsServer.MaxAllowedConnections));
             }
         }
     }

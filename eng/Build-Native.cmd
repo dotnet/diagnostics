@@ -296,12 +296,18 @@ if %__Build% EQU 1 (
     endlocal
 )
 
-REM Copy the native SOS binaries to where these tools expect for testing
+REM Copy the native SOS binaries to where these tools expect for CI & VS testing
 
-set "__dotnet_sos=%__RootBinDir%\bin\dotnet-sos\%__BuildType%\netcoreapp2.1\publish\win-%__BuildArch%"
-set "__dotnet_dump=%__RootBinDir%\bin\dotnet-dump\%__BuildType%\netcoreapp2.1\publish\win-%__BuildArch%"
-xcopy /y /q /i %__BinDir% %__dotnet_sos%
-xcopy /y /q /i %__BinDir% %__dotnet_dump%
+set "__dotnet_sos=%__RootBinDir%\bin\dotnet-sos\%__BuildType%\netcoreapp2.1"
+set "__dotnet_dump=%__RootBinDir%\bin\dotnet-dump\%__BuildType%\netcoreapp2.1"
+mkdir %__dotnet_sos%\win-%__BuildArch%
+mkdir %__dotnet_sos%\publish\win-%__BuildArch%
+mkdir %__dotnet_dump%\win-%__BuildArch%
+mkdir %__dotnet_dump%\publish\win-%__BuildArch%
+xcopy /y /q /i %__BinDir% %__dotnet_sos%\win-%__BuildArch%
+xcopy /y /q /i %__BinDir% %__dotnet_sos%\publish\win-%__BuildArch%
+xcopy /y /q /i %__BinDir% %__dotnet_dump%\win-%__BuildArch%
+xcopy /y /q /i %__BinDir% %__dotnet_dump%\publish\win-%__BuildArch%
 
 REM =========================================================================================
 REM ===

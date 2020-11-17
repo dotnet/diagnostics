@@ -105,13 +105,28 @@ dotnet tool install --global dotnet-counters
     Press p to pause, r to resume, q to quit.
         request                                      100
 
+    4. Launch `my-aspnet-server.exe` with `arg1` and `arg2` as command-line arguments and monitor its GC heap size and working set from startup.
+
+    NOTE: This works for apps running .NET 5.0 or later only.
+
+     ```console
+    > dotnet-counters monitor --counters System.Runtime[assembly-count] -- my-aspnet-server.exe arg1 arg2
+
+    Press p to pause, r to resume, q to quit.
+        Status: Running
+
+    [System.Runtime]
+        GC Heap Size (MB)                                 39
+        Working Set (MB)                                  59
+    ```
 
     ### Syntax:
 
     dotnet-counters monitor [-h||--help]
                             [-p|--process-id <pid>]
                             [--refresh-interval <sec>]
-                            counter_list
+                            [--counters <counters>]
+                            [-- <command>]
     
     Display periodically refreshing values of selected counters
     
@@ -124,10 +139,13 @@ dotnet tool install --global dotnet-counters
     --refresh-interval
         The number of seconds to delay between updating the displayed counters
     
-    counter_list
-        A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the
+    --counters
+        A comma separated list of counters. Counters can be specified provider_name[:counter_name]. If the
         provider_name is used without a qualifying counter_name then all counters will be shown. To discover
         provider and counter names, use the list command.
+
+    -- <command> (for target applications running .NET 5.0 or later only)
+        After the collection configuration parameters, the user can append `--` followed by a command to start a .NET application with at least a 5.0 runtime. `dotnet-counters` will launch a process with the provided command and collect the requested metrics.
 
 *COLLECT*
 
@@ -145,6 +163,13 @@ dotnet tool install --global dotnet-counters
     dotnet-counters collect --process-id 863148 --output mycounter --format csv System.Runtime Microsoft.AspNetCore.Hosting
 ```
 
+3. Launch `my-aspnet-server` and collect the assembly-count counter from its startup.
+
+  NOTE: This works for apps running .NET 5.0 or later only.
+
+```bash
+$ dotnet-counters monitor --counters System.Runtime[assembly-count] -- my-aspnet-server.exe
+```
 
     ### Syntax:
 
@@ -153,8 +178,9 @@ dotnet tool install --global dotnet-counters
                             [-n|--name <name>]
                             [-o|--output <name>]
                             [--format <csv|json>]
-                            [--refreshInterval <sec>]
-                            counter_list
+                            [--refresh-interval <sec>]
+                            [--counters <counters>]
+                            [-- <command>]
     
     Periodically collect selected counter values and export them into a specified file format for post-processing.
     
@@ -176,7 +202,10 @@ dotnet tool install --global dotnet-counters
     --refresh-interval
         The number of seconds to delay between updating the displayed counters
     
-    counter_list
-        A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the
+    --counters
+        A comma separated list of counters. Counters can be specified provider_name[:counter_name]. If the
         provider_name is used without a qualifying counter_name then all counters will be shown. To discover
         provider and counter names, use the list command.
+
+    -- <command> (for target applications running .NET 5.0 or later only)
+        After the collection configuration parameters, the user can append `--` followed by a command to start a .NET application with at least a 5.0 runtime. `dotnet-counters` will launch a process with the provided command and collect the requested metrics.

@@ -15,7 +15,7 @@ namespace EventPipeTracee
 
         private static void TestBody(string loggerCategory)
         {
-            Console.WriteLine("Starting remote test process");
+            Console.Error.WriteLine("Starting remote test process");
 
             ServiceCollection serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging(builder =>
@@ -26,23 +26,28 @@ namespace EventPipeTracee
             using var loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
             var logger = loggerFactory.CreateLogger(loggerCategory);
 
-            Console.WriteLine($"{DateTime.UtcNow} Awaiting start");
+            Console.Error.WriteLine($"{DateTime.UtcNow} Awaiting start");
             if (Console.Read() == -1)
             {
                 throw new InvalidOperationException("Unable to receive start signal");
             }
 
-            Console.WriteLine($"{DateTime.UtcNow} Starting test body");
+            Console.Error.WriteLine($"{DateTime.UtcNow} Starting test body");
             TestBodyCore(logger);
 
-            Console.WriteLine($"{DateTime.UtcNow} Awaiting end");
+            //Signal end of test data
+            Console.WriteLine("1");
+
+            Console.Error.WriteLine($"{DateTime.UtcNow} Awaiting end");
             if (Console.Read() == -1)
             {
                 throw new InvalidOperationException("Unable to receive end signal");
             }
 
+            
 
-            Console.WriteLine($"{DateTime.UtcNow} Ending remote test process");
+
+            Console.Error.WriteLine($"{DateTime.UtcNow} Ending remote test process");
         }
 
         //TODO At some point we may want parameters to choose different test bodies.

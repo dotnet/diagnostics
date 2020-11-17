@@ -19,6 +19,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private Process testProcess;
         private ProcessStartInfo startInfo;
         private ITestOutputHelper outputHelper;
+        private CancellationTokenSource cts;
 
         public TestRunner(string testExePath, ITestOutputHelper _outputHelper = null,
             bool redirectError = false, bool redirectInput = false)
@@ -51,6 +52,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 testProcess?.Dispose();
             }
+
+            cts.Dispose();
         }
 
         public void AddEnvVar(string key, string value)
@@ -62,7 +65,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public StreamReader StandardOutput => testProcess.StandardOutput;
         public StreamReader StandardError => testProcess.StandardError;
 
-        public void Start(int timeoutInMS=15000)
+        public void Start(int timeoutInMSPipeCreation=15_000, int testProcessTimeout=30_000)
         {
             if (outputHelper != null)
                 outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName + " " + startInfo.Arguments);
@@ -80,6 +83,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 outputHelper.WriteLine($"Process " + startInfo.FileName + " came back as exited");
             }
+
+            cts = new CancellationTokenSource(testProcessTimeout);
+            cts.Token.Register(() => testProcess.Kill());
 
             if (outputHelper != null)
             {
@@ -121,12 +127,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
             });
 
-            monitorSocketTask.Wait(TimeSpan.FromMilliseconds(timeoutInMS));
+            monitorSocketTask.Wait(TimeSpan.FromMilliseconds(timeoutInMSPipeCreation));
         }
 
         public void Stop()
         {
-            testProcess.Kill();
+            this.Dispose();
         }
 
         public int Pid {

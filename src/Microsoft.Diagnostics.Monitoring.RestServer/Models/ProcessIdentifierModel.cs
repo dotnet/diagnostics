@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 using System.Runtime.Serialization;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer.Models
@@ -12,12 +16,12 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Models
         [DataMember(Name = "uid")]
         public Guid Uid { get; set; }
 
-        public static ProcessIdentifierModel FromProcessInfo(IProcessInfo processInfo)
+        internal static ProcessIdentifierModel FromProcessInfo(IProcessInfo processInfo)
         {
             return new ProcessIdentifierModel()
             {
-                Pid = processInfo.ProcessId,
-                Uid = processInfo.RuntimeInstanceCookie
+                Pid = processInfo.EndpointInfo.ProcessId,
+                Uid = processInfo.EndpointInfo.RuntimeInstanceCookie
             };
         }
     }

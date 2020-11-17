@@ -94,7 +94,7 @@ namespace Microsoft.Internal.Common.Utils
             return true;
         }
 
-        public void Cleanup()
+        public async void Cleanup()
         {
             if (_childProc != null && !_childProc.HasExited)
             {
@@ -104,6 +104,11 @@ namespace Microsoft.Internal.Common.Utils
                 }
                 // if process exited while we were trying to kill it, it can throw IOE 
                 catch (InvalidOperationException) { }
+            }
+
+            if (ReversedDiagnosticsClientBuilder.Server != null)
+            {
+                await ReversedDiagnosticsClientBuilder.Server.DisposeAsync();
             }
         }
     }

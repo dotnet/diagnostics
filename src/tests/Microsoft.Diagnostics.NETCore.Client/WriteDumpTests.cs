@@ -36,12 +36,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 var dumpPath = "./myDump.dmp";
                 using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
-                runner.Start(3000);
+                runner.Start(timeoutInMSPipeCreation: 3000);
                 DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && Environment.Version.ToString().StartsWith("3"))
                 {
-                    Assert.Throws<PlatformNotSupportedException>(() => client.WriteDump(DumpType.Normal, dumpPath));
+                    Assert.Throws<UnsupportedCommandException>(() => client.WriteDump(DumpType.Normal, dumpPath));
                 }
                 else
                 {
@@ -66,15 +66,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
             var triageDumpPath = "./myDump-triage.dmp";
             var fullDumpPath = "./myDump-full.dmp";
             using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
-            runner.Start(3000);
+            runner.Start(timeoutInMSPipeCreation: 3000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
 
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                Assert.Throws<PlatformNotSupportedException>(() => client.WriteDump(DumpType.Normal, normalDumpPath));
-                Assert.Throws<PlatformNotSupportedException>(() => client.WriteDump(DumpType.WithHeap, heapDumpPath));
-                Assert.Throws<PlatformNotSupportedException>(() => client.WriteDump(DumpType.Triage, triageDumpPath));
-                Assert.Throws<PlatformNotSupportedException>(() => client.WriteDump(DumpType.Full, fullDumpPath));
+                Assert.Throws<UnsupportedCommandException>(() => client.WriteDump(DumpType.Normal, normalDumpPath));
+                Assert.Throws<UnsupportedCommandException>(() => client.WriteDump(DumpType.WithHeap, heapDumpPath));
+                Assert.Throws<UnsupportedCommandException>(() => client.WriteDump(DumpType.Triage, triageDumpPath));
+                Assert.Throws<UnsupportedCommandException>(() => client.WriteDump(DumpType.Full, fullDumpPath));
             }
             else
             {
