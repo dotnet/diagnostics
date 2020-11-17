@@ -366,7 +366,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 alias: "--diagnostic-port",
                 description: @"The path to a diagnostic port to be created.")
             {
-                Argument = new Argument<string>(name: "port", getDefaultValue: () => string.Empty)
+                Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => string.Empty)
             };
     }
 }
