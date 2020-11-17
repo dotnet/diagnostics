@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.IO;
 using System.CommandLine.Binding;
 using System.CommandLine.Rendering;
 using System.Diagnostics.Tracing;
@@ -59,12 +60,12 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
                 if (processId < 0)
                 {
-                    Console.Error.WriteLine("Process ID should not be negative.");
+                    console.Error.WriteLine("Process ID should not be negative.");
                     return -1;
                 }
                 else if (processId == 0)
                 {
-                    Console.Error.WriteLine("--process-id is required");
+                    console.Error.WriteLine("--process-id is required");
                     return -1;
                 }
 
@@ -92,7 +93,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     Task completedTask = await Task.WhenAny(copyTask, timeoutTask);
                     if (completedTask == timeoutTask)
                     {
-                        Console.WriteLine("# Sufficiently large applications can cause this command to take non-trivial amounts of time");
+                        console.Out.WriteLine($"# Sufficiently large applications can cause this command to take non-trivial amounts of time");
                     }
                     await copyTask;
                 }
@@ -138,9 +139,9 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     foreach (var (threadId, samples) in samplesForThread)
                     {
 #if DEBUG
-                        Console.WriteLine($"Found {samples.Count} stacks for thread 0x{threadId:X}");
+                        console.Out.WriteLine($"Found {samples.Count} stacks for thread 0x{threadId:X}");
 #endif
-                        PrintStack(threadId, samples[0], stackSource);
+                        PrintStack(console, threadId, samples[0], stackSource);
                     }
                 }
             }
@@ -160,17 +161,17 @@ namespace Microsoft.Diagnostics.Tools.Stack
             return 0;
         }
 
-        private static void PrintStack(int threadId, StackSourceSample stackSourceSample, StackSource stackSource)
+        private static void PrintStack(IConsole console, int threadId, StackSourceSample stackSourceSample, StackSource stackSource)
         {
-            Console.WriteLine($"Thread (0x{threadId:X}):");
+            console.Out.WriteLine($"Thread (0x{threadId:X}):");
             var stackIndex = stackSourceSample.StackIndex;
             while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false).StartsWith("Thread ("))
             {
-                Console.WriteLine($"  {stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false)}"
+                console.Out.WriteLine($"  {stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false)}"
                     .Replace("UNMANAGED_CODE_TIME", "[Native Frames]"));
                 stackIndex = stackSource.GetCallerIndex(stackIndex);
             }
-            Console.WriteLine();
+            console.Out.WriteLine();
         }
 
         public static Command ReportCommand() =>
