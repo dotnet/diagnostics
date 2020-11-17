@@ -10828,6 +10828,10 @@ DECLARE_API(DumpGCData)
 #endif //GC_CONFIG_DRIVEN
 }
 
+#ifdef FEATURE_PAL
+extern char sccsid[];
+#endif
+
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -10843,42 +10847,38 @@ DECLARE_API(EEVersion)
     ArrayHolder<char> fileVersionBuffer = new char[fileVersionBufferSize];
     VS_FIXEDFILEINFO version;
 
-    BOOL ret = GetEEVersion(&version, fileVersionBuffer.GetPtr(), fileVersionBufferSize);
-    if (ret)
+    if (GetEEVersion(&version, fileVersionBuffer.GetPtr(), fileVersionBufferSize))
     {
-        if (version.dwFileVersionMS != (DWORD)-1)
-        {
-            ExtOut("%u.%u.%u.%u",
-                HIWORD(version.dwFileVersionMS),
-                LOWORD(version.dwFileVersionMS),
-                HIWORD(version.dwFileVersionLS),
-                LOWORD(version.dwFileVersionLS));
+        ExtOut("%u.%u.%u.%u",
+            HIWORD(version.dwFileVersionMS),
+            LOWORD(version.dwFileVersionMS),
+            HIWORD(version.dwFileVersionLS),
+            LOWORD(version.dwFileVersionLS));
 
-            if (IsRuntimeVersion(version, 3)) {
-                ExtOut(" (3.x runtime)");
-            }
+        if (IsRuntimeVersion(version, 3)) {
+            ExtOut(" (3.x runtime)");
+        }
 
 #ifndef FEATURE_PAL
-            if (IsWindowsTarget())
+        if (IsWindowsTarget())
+        {
+            if (version.dwFileFlags & VS_FF_DEBUG) {
+                ExtOut(" checked or debug build");
+            }
+            else
             {
-                if (version.dwFileFlags & VS_FF_DEBUG) {
-                    ExtOut(" checked or debug build");
-                }
+                BOOL fRet = IsRetailBuild((size_t)g_pRuntime->GetModuleAddress());
+                if (fRet)
+                    ExtOut(" retail");
                 else
-                {
-                    BOOL fRet = IsRetailBuild((size_t)g_pRuntime->GetModuleAddress());
-                    if (fRet)
-                        ExtOut(" retail");
-                    else
-                        ExtOut(" free");
-                }
+                    ExtOut(" free");
             }
+        }
 #endif
-            ExtOut("\n");
+        ExtOut("\n");
 
-            if (fileVersionBuffer[0] != '\0') {
-                ExtOut("%s\n", fileVersionBuffer.GetPtr());
-            }
+        if (fileVersionBuffer[0] != '\0') {
+            ExtOut("%s\n", fileVersionBuffer.GetPtr());
         }
     }
 
@@ -10893,27 +10893,26 @@ DECLARE_API(EEVersion)
         ExtOut("In plan phase of garbage collection\n");
     }
 
-#ifndef FEATURE_PAL
     // Print SOS version
+#ifdef FEATURE_PAL
+    ExtOut("SOS Version: %s\n", sccsid);
+#else
     VS_FIXEDFILEINFO sosVersion;
-    if (IsWindowsTarget() && GetSOSVersion(&sosVersion))
+    if (GetSOSVersion(&sosVersion))
     {
-        if (sosVersion.dwFileVersionMS != (DWORD)-1)
-        {
-            ExtOut("SOS Version: %u.%u.%u.%u",
-                HIWORD(sosVersion.dwFileVersionMS),
-                LOWORD(sosVersion.dwFileVersionMS),
-                HIWORD(sosVersion.dwFileVersionLS),
-                LOWORD(sosVersion.dwFileVersionLS));
+        ExtOut("SOS Version: %u.%u.%u.%u",
+            HIWORD(sosVersion.dwFileVersionMS),
+            LOWORD(sosVersion.dwFileVersionMS),
+            HIWORD(sosVersion.dwFileVersionLS),
+            LOWORD(sosVersion.dwFileVersionLS));
 
-            if (sosVersion.dwFileFlags & VS_FF_DEBUG) {
-                ExtOut(" debug build");
-            }
-            else {
-                ExtOut(" retail build");
-            }
-            ExtOut("\n");
+        if (sosVersion.dwFileFlags & VS_FF_DEBUG) {
+            ExtOut(" debug build");
         }
+        else {
+            ExtOut(" retail build");
+        }
+        ExtOut("\n");
     }
 #endif // FEATURE_PAL
     return Status;

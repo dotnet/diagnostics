@@ -375,7 +375,7 @@ namespace SOS
                 if (symbolCachePath == null)
                 {
                     if (msdl || symweb || symbolServerPath != null) {
-                        symbolCachePath = GetDefaultSymbolCache();
+                        symbolCachePath = DefaultSymbolCache;
                     }
                 }
                 // Build the symbol stores using the other parameters
@@ -1311,7 +1311,7 @@ namespace SOS
                             { 
                                 case 1:
                                     msdl = true;
-                                    symbolCachePath = GetDefaultSymbolCache();
+                                    symbolCachePath = DefaultSymbolCache;
                                     break;
                                 case 2:
                                     symbolServerPath = parts[1];
@@ -1329,7 +1329,7 @@ namespace SOS
                             switch (parts.Length)
                             { 
                                 case 1:
-                                    symbolCachePath = GetDefaultSymbolCache();
+                                    symbolCachePath = DefaultSymbolCache;
                                     break;
                                 case 2:
                                     symbolCachePath = parts[1];
@@ -1470,16 +1470,33 @@ namespace SOS
             return false;
         }
 
-        private static string GetDefaultSymbolCache()
+        private static string s_defaultSymbolCache;
+
+        /// <summary>
+        /// The default symbol cache path:
+        /// 
+        /// * On Windows use the dbgeng symbol cache path: %PROGRAMDATA%\dbg\sym
+        /// * dotnet-dump on Windows sets it to use the VS symbol cache path: %TEMPDIR%\SymbolCache
+        /// * dotnet-dump/lldb on Linux/MacOS uses: $HOME/.dotnet/symbolcache
+        /// </summary>
+        public static string DefaultSymbolCache
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            get
             {
-                return Path.Combine(Path.GetTempPath(), "SymbolCache");
+                if (s_defaultSymbolCache == null)
+                {
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        s_defaultSymbolCache = Path.Combine(Environment.GetEnvironmentVariable("PROGRAMDATA"), "dbg", "sym");
+                    }
+                    else
+                    {
+                        s_defaultSymbolCache = Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".dotnet", "symbolcache");
+                    }
+                }
+                return s_defaultSymbolCache;
             }
-            else
-            {
-                return Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".dotnet", "symbolcache");
-            }
+            set { s_defaultSymbolCache = value; }
         }
 
         /// <summary>

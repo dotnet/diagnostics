@@ -3432,6 +3432,11 @@ BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int file
 
     HRESULT hr = g_ExtSymbols2->GetModuleVersionInformation(g_pRuntime->GetModuleIndex(), 0, "\\", pFileInfo, sizeof(VS_FIXEDFILEINFO), NULL);
 
+    // 0.0.0.0 is not a valid version. This is sometime returned by windbg for Linux core dumps
+    if (SUCCEEDED(hr) && (pFileInfo->dwFileVersionMS == (DWORD)-1 || (pFileInfo->dwFileVersionLS == 0 && pFileInfo->dwFileVersionMS == 0))) {
+        return FALSE;
+    }
+
     // Attempt to get the the FileVersion string that contains version and the "built by" and commit id info
     if (fileVersionBuffer != nullptr)
     {
@@ -3568,6 +3573,9 @@ BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo)
                 UINT uLen = 0;
                 if (VerQueryValue(pVersionInfo, "\\", (LPVOID *) &pTmpFileInfo, &uLen))
                 {
+                    if (pFileInfo->dwFileVersionMS == (DWORD)-1) {
+                        return FALSE;
+                    }
                     *pFileInfo = *pTmpFileInfo; // Copy the info
                     return TRUE;
                 }
