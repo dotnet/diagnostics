@@ -125,7 +125,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     return 1;
                 }
             }
-            return ret;
         }
 
 

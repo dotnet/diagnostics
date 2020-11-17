@@ -249,11 +249,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 {
                     ProcessLauncher.Launcher.ChildProc.Kill();
                 }
-
-                if (ReversedDiagnosticsClientBuilder.Server != null)
-                {
-                    await ReversedDiagnosticsClientBuilder.Server.DisposeAsync();
-                }
             }
             return await Task.FromResult(ret);
         }

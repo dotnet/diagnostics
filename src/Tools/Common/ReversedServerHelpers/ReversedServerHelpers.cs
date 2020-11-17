@@ -94,7 +94,7 @@ namespace Microsoft.Internal.Common.Utils
             return true;
         }
 
-        public async void Cleanup()
+        public void Cleanup()
         {
             if (_childProc != null && !_childProc.HasExited)
             {
@@ -105,11 +105,6 @@ namespace Microsoft.Internal.Common.Utils
                 // if process exited while we were trying to kill it, it can throw IOE 
                 catch (InvalidOperationException) { }
             }
-
-            if (ReversedDiagnosticsClientBuilder.Server != null)
-            {
-                await ReversedDiagnosticsClientBuilder.Server.DisposeAsync();
-            }
         }
     }
 
@@ -117,36 +112,44 @@ namespace Microsoft.Internal.Common.Utils
     {
         public DiagnosticsClient Client;
         public IpcEndpointInfo EndpointInfo;
-
+        
+        private ReversedDiagnosticsServer _server;
         private readonly string _port;
 
         public DiagnosticsClientHolder(DiagnosticsClient client)
         {
             Client = client;
             _port = null;
+            _server = null;
         }
 
-        public DiagnosticsClientHolder(DiagnosticsClient client, IpcEndpointInfo endpointInfo)
+        public DiagnosticsClientHolder(DiagnosticsClient client, IpcEndpointInfo endpointInfo, ReversedDiagnosticsServer server)
         {
             Client = client;
             EndpointInfo = endpointInfo;
             _port = null;
+            _server = server;
         }
 
-        public DiagnosticsClientHolder(DiagnosticsClient client, IpcEndpointInfo endpointInfo, string port)
+        public DiagnosticsClientHolder(DiagnosticsClient client, IpcEndpointInfo endpointInfo, string port, ReversedDiagnosticsServer server)
         {
             Client = client;
             EndpointInfo = endpointInfo;
             _port = port;
+            _server = server;
         }
 
-        public void Dispose()
+        public async void Dispose()
         {
             if (!string.IsNullOrEmpty(_port) && File.Exists(_port))
             {
                 File.Delete(_port);
             }
             ProcessLauncher.Launcher.Cleanup();
+            if (_server != null)
+            {
+                await _server.DisposeAsync();
+            }
         }
     }
 
@@ -197,7 +200,7 @@ namespace Microsoft.Internal.Common.Utils
                     Console.Error.WriteLine("Unable to start tracing session - the target app failed to connect to the diagnostics port. This may happen if the target application is running .NET Core 3.1 or older versions. Attaching at startup is only available from .NET 5.0 or later.");
                     throw;
                 }
-                return new DiagnosticsClientHolder(new DiagnosticsClient(endpointInfo.Endpoint), endpointInfo);
+                return new DiagnosticsClientHolder(new DiagnosticsClient(endpointInfo.Endpoint), endpointInfo, server);
             }
             else if (!string.IsNullOrEmpty(portName))
             {
@@ -208,7 +211,7 @@ namespace Microsoft.Internal.Common.Utils
                 Console.WriteLine($"Start an application with the following environment variable: DOTNET_DiagnosticPorts={fullPort}");
 
                 IpcEndpointInfo endpointInfo = await server.AcceptAsync(ct);
-                return new DiagnosticsClientHolder(new DiagnosticsClient(endpointInfo.Endpoint), endpointInfo, fullPort);
+                return new DiagnosticsClientHolder(new DiagnosticsClient(endpointInfo.Endpoint), endpointInfo, fullPort, server);
             }
             else
             {
