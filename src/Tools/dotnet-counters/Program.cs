@@ -124,7 +124,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 alias: "--diagnostic-port",
                 description: "The path to diagnostic port")
             {
-                Argument = new Argument<string>(name: "port", getDefaultValue: () => "")
+                Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => "")
             };
 
         private static readonly string[] s_SupportedRuntimeVersions = new[] { "3.0", "3.1", "5.0" };

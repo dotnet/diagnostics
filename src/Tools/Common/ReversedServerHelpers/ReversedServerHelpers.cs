@@ -3,14 +3,12 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing.Parsers.Clr;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.Internal.Common.Utils
 {
@@ -82,7 +80,7 @@ namespace Microsoft.Internal.Common.Utils
             _childProc.StartInfo.RedirectStandardOutput = true;
             _childProc.StartInfo.RedirectStandardError = true;
             _childProc.StartInfo.RedirectStandardInput = true;
-            _childProc.StartInfo.Environment.Add("DOTNET_DiagnosticPorts", $"{diagnosticTransportName},suspend");
+            _childProc.StartInfo.Environment.Add("DOTNET_DiagnosticPorts", $"{diagnosticTransportName}");
             try
             {
                 _childProc.Start();
@@ -110,43 +108,107 @@ namespace Microsoft.Internal.Common.Utils
         }
     }
 
+    internal class DiagnosticsClientHolder : IDisposable
+    {
+        public DiagnosticsClient Client;
+        public IpcEndpointInfo EndpointInfo;
+
+        private readonly string _port;
+
+        public DiagnosticsClientHolder(DiagnosticsClient client)
+        {
+            Client = client;
+            _port = null;
+        }
+
+        public DiagnosticsClientHolder(DiagnosticsClient client, IpcEndpointInfo endpointInfo)
+        {
+            Client = client;
+            EndpointInfo = endpointInfo;
+            _port = null;
+        }
+
+        public DiagnosticsClientHolder(DiagnosticsClient client, IpcEndpointInfo endpointInfo, string port)
+        {
+            Client = client;
+            EndpointInfo = endpointInfo;
+            _port = port;
+        }
+
+        public void Dispose()
+        {
+            if (!string.IsNullOrEmpty(_port) && File.Exists(_port))
+            {
+                File.Delete(_port);
+            }
+            ProcessLauncher.Launcher.Cleanup();
+        }
+    }
+
     // <summary>
     // This class acts a helper class for building a DiagnosticsClient instance
     // </summary>
-    internal class ReversedDiagnosticsClientBuilder
+    internal class DiagnosticsClientBuilder
     {
-        private static string GetTransportName(string toolName) => $"{toolName}-{Process.GetCurrentProcess().Id}-{DateTime.Now:yyyyMMdd_HHmmss}.socket";
+        private string _toolName;
+        private int _timeoutInSec;
 
-        // <summary>
-        // Starts the child process and returns the diagnostics client once the child proc connects to the reversed diagnostics pipe.
-        // The callee needs to resume the diagnostics client at appropriate time.
-        // </summary>
-        public static DiagnosticsClient Build(ProcessLauncher childProcLauncher, string toolName, int timeoutInSec)
+        private string GetTransportName(string toolName) => $"{toolName}-{Process.GetCurrentProcess().Id}-{DateTime.Now:yyyyMMdd_HHmmss}.socket";
+
+        public DiagnosticsClientBuilder(string toolName, int timeoutInSec)
         {
-            if (!childProcLauncher.HasChildProc)
-            {
-                throw new InvalidOperationException("Must have a valid child process to launch.");
-            }
-            // Create and start the reversed server            
-            string diagnosticTransportName = GetTransportName(toolName);
-            ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(diagnosticTransportName);
-            server.Start();
+            _toolName = toolName;
+            _timeoutInSec = timeoutInSec;
+        }
 
-            // Start the child proc
-            if (!childProcLauncher.Start(diagnosticTransportName))
+        public async Task<DiagnosticsClientHolder> Build(CancellationToken ct, int processId, string portName)
+        {
+            if (ProcessLauncher.Launcher.HasChildProc)
             {
-                throw new InvalidOperationException("Failed to start dotnet-counters.");
+                // Create and start the reversed server            
+                string diagnosticTransportName = GetTransportName(_toolName);
+                ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(diagnosticTransportName);
+                server.Start();
+
+                // Start the child proc
+                if (!ProcessLauncher.Launcher.Start(diagnosticTransportName))
+                {
+                    throw new InvalidOperationException($"Failed to start {ProcessLauncher.Launcher.ChildProc.ProcessName}.");
+                }
+                IpcEndpointInfo endpointInfo;
+                try
+                {
+                    // Wait for attach
+                    endpointInfo = server.Accept(TimeSpan.FromSeconds(_timeoutInSec));
+
+                    // If for some reason a different process attached to us, wait until the expected process attaches.
+                    while (endpointInfo.ProcessId != ProcessLauncher.Launcher.ChildProc.Id)
+                    {
+                        endpointInfo = server.Accept(TimeSpan.FromSeconds(_timeoutInSec));
+                    }
+                }
+                catch (TimeoutException)
+                {
+                    Console.Error.WriteLine("Unable to start tracing session - the target app failed to connect to the diagnostics port. This may happen if the target application is running .NET Core 3.1 or older versions. Attaching at startup is only available from .NET 5.0 or later.");
+                    throw;
+                }
+                return new DiagnosticsClientHolder(new DiagnosticsClient(endpointInfo.Endpoint), endpointInfo);
             }
-
-            // Wait for attach
-            IpcEndpointInfo endpointInfo = server.Accept(TimeSpan.FromSeconds(timeoutInSec));
-
-            // If for some reason a different process attached to us, wait until the expected process attaches.
-            while (endpointInfo.ProcessId != childProcLauncher.ChildProc.Id)
+            else if (!string.IsNullOrEmpty(portName))
             {
-               endpointInfo = server.Accept(TimeSpan.FromSeconds(timeoutInSec)); 
+                ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(portName);
+                server.Start();
+                string fullPort = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? portName : Path.GetFullPath(portName);
+                Console.WriteLine($"Waiting for connection on {fullPort}");
+                Console.WriteLine($"Start an application with the following environment variable: DOTNET_DiagnosticPorts={fullPort}");
+
+                IpcEndpointInfo endpointInfo = await server.AcceptAsync(ct);
+                return new DiagnosticsClientHolder(new DiagnosticsClient(endpointInfo.Endpoint), endpointInfo, fullPort);
             }
-            return new DiagnosticsClient(endpointInfo.Endpoint);
+            else
+            {
+                return new DiagnosticsClientHolder(new DiagnosticsClient(processId));
+            }
         }
     }
 }

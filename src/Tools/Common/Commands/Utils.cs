@@ -42,7 +42,7 @@ namespace Microsoft.Internal.Common.Utils
         }
 
         /// <summary>
-        /// A helper method for validating --process-id, --name, --port options for collect and monitor commands.
+        /// A helper method for validating --process-id, --name, --diagnostic-port options for collect and monitor commands.
         /// Only one of these options can be specified, so it checks for duplicate options specified and if there is 
         /// such duplication, it prints the appropriate error message.
         /// </summary>
@@ -53,9 +53,9 @@ namespace Microsoft.Internal.Common.Utils
         public static bool ValidateArguments(int processId, string name, string port, out int resolvedProcessId)
         {
             resolvedProcessId = -1;
-            if (processId != 0 && name != null && port.Length != 0)
+            if (processId != 0 && name != null && !string.IsNullOrEmpty(port))
             {
-                Console.WriteLine("Can only one of specify --name, --process-id, --port option.");
+                Console.WriteLine("Only one of the --name, --process-id, or --diagnostic-port options may be specified.");
                 return false;
             }
             else if (processId != 0 && name != null)
@@ -63,18 +63,18 @@ namespace Microsoft.Internal.Common.Utils
                 Console.WriteLine("Can only one of specify --name or --process-id.");
                 return false;
             }
-            else if (processId != 0 && port.Length != 0)
+            else if (processId != 0 && !string.IsNullOrEmpty(port))
             {
-                Console.WriteLine("Can only one of specify --process-id or --port.");
+                Console.WriteLine("Can only one of specify --process-id or --diagnostic-port.");
                 return false;
             }
-            else if (name != null && port.Length != 0)
+            else if (name != null && !string.IsNullOrEmpty(port))
             {
-                Console.WriteLine("Can only one of specify --name or --port.");
+                Console.WriteLine("Can only one of specify --name or --diagnostic-port.");
                 return false;
             }
-            // If we got this far it means only one of name/port/processId was specified
-            else if (port.Length != 0)
+            // If we got this far it means only one of --name/--diagnostic-port/--process-id was specified
+            else if (!string.IsNullOrEmpty(port))
             {
                 return true;
             }

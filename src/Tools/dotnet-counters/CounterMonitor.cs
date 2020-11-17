@@ -31,6 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private CounterFilter filter;
         private string _output;
         private bool pauseCmdSet;
+        private bool shouldResumeRuntime;
         private DiagnosticsClient _diagnosticsClient;
         private EventPipeSession _session;
 
@@ -89,107 +90,104 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _renderer.Stop();
         }
 
-        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string name, string port)
+        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string name, string diagnosticPort)
         {
-            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArguments(processId, name, port, out _processId))
+            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArguments(processId, name, diagnosticPort, out _processId))
             {
                 return 0;
             }
 
-            try
-            {
-                InitializeCounterList(counters, counter_list);
-                _ct = ct;
-                _console = console;
-                _interval = refreshInterval;
-                _renderer = new ConsoleWriter();
-                if (!BuildDiagnosticsClient(port))
-                {
-                    CleanupPort(port);
-                    return 0;
-                }
-                int ret = await Start();
-                ProcessLauncher.Launcher.Cleanup();
-                CleanupPort(port);
-                return ret;
-            }
-            catch (OperationCanceledException)
+            DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
+            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort))
             {
                 try
                 {
-                    _session.Stop();
+                    InitializeCounterList(counters, counter_list);
+                    _ct = ct;
+                    _console = console;
+                    _interval = refreshInterval;
+                    _renderer = new ConsoleWriter();
+                    _diagnosticsClient = holder.Client;
+                    shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort);
+                    int ret = await Start();
+                    ProcessLauncher.Launcher.Cleanup();
+                    return ret;
                 }
-                catch (Exception) {} // Swallow all exceptions for now.
-                
-                console.Out.WriteLine($"Complete");
-                CleanupPort(port);
-                return 1;
+                catch (OperationCanceledException)
+                {
+                    try
+                    {
+                        _session.Stop();
+                    }
+                    catch (Exception) { } // Swallow all exceptions for now.
+
+                    console.Out.WriteLine($"Complete");
+                    return 1;
+                }
             }
         }
 
 
-        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name, string port)
+        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name, string diagnosticPort)
         {
-            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArguments(processId, name, port, out _processId))
+            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArguments(processId, name, diagnosticPort, out _processId))
             {
                 return 0;
             }
-
-            try
+            DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
+            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort))
             {
-                InitializeCounterList(counters, counter_list);
-                _ct = ct;
-                _console = console;
-                _interval = refreshInterval;
-                _output = output;
-                if (_output.Length == 0)
+                try
                 {
-                    _console.Error.WriteLine("Output cannot be an empty string");
-                    return 0;
+                    InitializeCounterList(counters, counter_list);
+                    _ct = ct;
+                    _console = console;
+                    _interval = refreshInterval;
+                    _output = output;
+                    _diagnosticsClient = holder.Client;
+                    if (_output.Length == 0)
+                    {
+                        _console.Error.WriteLine("Output cannot be an empty string");
+                        return 0;
+                    }
+                    if (format == CountersExportFormat.csv)
+                    {
+                        _renderer = new CSVExporter(output);
+                    }
+                    else if (format == CountersExportFormat.json)
+                    {
+                        // Try getting the process name.
+                        string processName = "";
+                        try
+                        {
+                            if (ProcessLauncher.Launcher.HasChildProc)
+                            {
+                                _processId = ProcessLauncher.Launcher.ChildProc.Id;
+                            }
+                            processName = Process.GetProcessById(_processId).ProcessName;
+                        }
+                        catch (Exception) { }
+                        _renderer = new JSONExporter(output, processName);
+                    }
+                    else
+                    {
+                        _console.Error.WriteLine($"The output format {format} is not a valid output format.");
+                        return 0;
+                    }
+                    shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort);
+                    int ret = await Start();
+                    return ret;
                 }
-
-                if (!BuildDiagnosticsClient(port))
+                catch (OperationCanceledException)
                 {
-                    CleanupPort(port);
-                    return 0;
-                }
-
-                if (format == CountersExportFormat.csv)
-                {
-                    _renderer = new CSVExporter(output);
-                }
-                else if (format == CountersExportFormat.json)
-                {
-                    // Try getting the process name.
-                    string processName = "";
                     try
                     {
-                        if (ProcessLauncher.Launcher.HasChildProc)
-                        {
-                            _processId = ProcessLauncher.Launcher.ChildProc.Id;
-                        }
-                        processName = Process.GetProcessById(_processId).ProcessName;
+                        _session.Stop();
                     }
-                    catch (Exception) { }
-                    _renderer = new JSONExporter(output, processName);
+                    catch (Exception) { } // session.Stop() can throw if target application already stopped before we send the stop command.
+                    return 1;
                 }
-                else
-                {
-                    _console.Error.WriteLine($"The output format {format} is not a valid output format.");
-                    CleanupPort(port);
-                    return 0;
-                }
-
-                int ret = await Start();
-                ProcessLauncher.Launcher.Cleanup();
-                CleanupPort(port);
-                return ret;
             }
-            catch (OperationCanceledException)
-            {
-                CleanupPort(port);
-            }
-            return 1;
         }
 
         private void InitializeCounterList(string counters, List<string> counterList)
@@ -254,108 +252,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     counter_list.Add(counter);
                 }
             }
-        }
-
-        private void CleanupPort(string port)
-        {
-            if (File.Exists(port))
-            {
-                File.Delete(port);
-            }
-        }
-        
-        private bool ValidateArguments(int processId, string name, string port)
-        {
-            if (!ProcessLauncher.Launcher.HasChildProc)
-            {
-                if (processId != 0 && name != null && port.Length != 0)
-                {
-                    Console.WriteLine("Can only one of specify --name, --process-id, --port option.");
-                    return false;
-                }
-                else if (processId != 0 && name != null)
-                {
-                    Console.WriteLine("Can only one of specify --name or --process-id.");
-                    return false;
-                }
-                else if (processId != 0 && port.Length != 0)
-                {
-                    Console.WriteLine("Can only one of specify --process-id or --port.");
-                    return false;
-                }
-                else if (name != null && port.Length != 0)
-                {
-                    Console.WriteLine("Can only one of specify --name or --port.");
-                    return false;
-                }
-                // If we got here it means only one of name/port/processId was specified
-                else if (port.Length != 0)
-                {
-                    return true;
-                }
-                // Resolve name option
-                else if (name != null)
-                {
-                    processId = CommandUtils.FindProcessIdWithName(name);
-                    if (processId < 0)
-                    {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-        private bool BuildDiagnosticsClient(string port)
-        {
-            if (ProcessLauncher.Launcher.HasChildProc)
-            {
-                try
-                {
-                    _diagnosticsClient = ReversedDiagnosticsClientBuilder.Build(ProcessLauncher.Launcher, "dotnet-counters", 10);
-                }
-                catch (TimeoutException)
-                {
-                    Console.Error.WriteLine("Unable to start tracing session - the target app failed to connect to the diagnostics port. This may happen if the target application is running .NET Core 3.1 or older versions. Attaching at startup is only available from .NET 5.0 or later.");
-                    if (!ProcessLauncher.Launcher.ChildProc.HasExited)
-                    {
-                        ProcessLauncher.Launcher.ChildProc.Kill();
-                    }
-                    return false;
-                }
-            }
-            else if (port.Length != 0)
-            {
-                ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(port);
-                server.Start();
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    Console.WriteLine($"Waiting for connection on {port}");
-                    Console.WriteLine($"Start an application with the following environment variable: DOTNET_DiagnosticPorts={port},suspend");
-                }
-                else
-                {
-                    Console.WriteLine($"Waiting for connection on {Path.GetFullPath(port)}");
-                    Console.WriteLine($"Start an application with the following environment variable: DOTNET_DiagnosticPorts={Path.GetFullPath(port)},suspend");
-                }
-
-                ManualResetEvent shouldExit = new ManualResetEvent(false);
-                _ct.Register(() => shouldExit.Set());
-
-                Task acceptTask = Task.Run(() =>
-                {
-                    IpcEndpointInfo endpointInfo = server.Accept(TimeSpan.FromMilliseconds(Int32.MaxValue));
-                    Console.WriteLine($"Connection established");
-                    _diagnosticsClient = new DiagnosticsClient(endpointInfo.Endpoint);
-                    _diagnosticsClient.ResumeRuntime();
-                    shouldExit.Set();
-                });
-                shouldExit.WaitOne();
-            }
-            else
-            {
-                _diagnosticsClient = new DiagnosticsClient(_processId);
-            }
-            return true;
         }
 
         private string BuildProviderString()
@@ -431,7 +327,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 try
                 {
                     _session = _diagnosticsClient.StartEventPipeSession(Trace.Extensions.ToProviders(providerString), false, 10);
-                    if (ProcessLauncher.Launcher.HasChildProc)
+                    if (shouldResumeRuntime)
                     {
                         _diagnosticsClient.ResumeRuntime();
                     }
