@@ -38,6 +38,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="duration">The duration of trace to be taken. </param>
         /// <param name="clrevents">A list of CLR events to be emitted.</param>
         /// <param name="clreventlevel">The verbosity level of CLR events</param>
+        /// <param name="name">The name of process to collect the trace from.</param>
         /// <returns></returns>
         private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name)
         {
@@ -319,25 +320,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler(),
                 // Options
                 CommonOptions.ProcessIdOption(),
-                CircularBufferOption(),
+                CommonOptions.CircularBufferOption(),
                 OutputPathOption(),
-                ProvidersOption(),
+                CommonOptions.ProvidersOption(),
                 ProfileOption(),
                 CommonOptions.FormatOption(),
                 DurationOption(),
                 CLREventsOption(),
                 CLREventLevelOption(),
                 CommonOptions.NameOption()
-            };
-
-        private static uint DefaultCircularBufferSizeInMB() => 256;
-
-        private static Option CircularBufferOption() =>
-            new Option(
-                alias: "--buffersize",
-                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB()} MB.")
-            {
-                Argument = new Argument<uint>(name: "size", getDefaultValue: DefaultCircularBufferSizeInMB)
             };
 
         public static string DefaultTraceName => "trace.nettrace";
@@ -348,14 +339,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 description: $"The output path for the collected trace data. If not specified it defaults to '{DefaultTraceName}'.")
             {
                 Argument = new Argument<FileInfo>(name: "trace-file-path", getDefaultValue: () => new FileInfo(DefaultTraceName))
-            };
-
-        private static Option ProvidersOption() =>
-            new Option(
-                alias: "--providers",
-                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'. These providers are in addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the configuration here takes precedence over the implicit configuration from the profile.")
-            {
-                Argument = new Argument<string>(name: "list-of-comma-separated-providers", getDefaultValue: () => string.Empty) // TODO: Can we specify an actual type?
             };
 
         private static Option ProfileOption() =>
