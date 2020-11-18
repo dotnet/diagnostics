@@ -52,8 +52,9 @@ public class SOS
 
         if (testDump)
         {
-            // Create and test dumps on OSX only if the runtime is 5.0 or greater
-            if (OS.Kind != OSKind.OSX || information.TestConfiguration.RuntimeFrameworkVersionMajor >= 5)
+            // Create and test dumps on OSX only if the runtime is 6.0 or greater
+            // TODO: reenable for 5.0 when the MacOS createdump fixes make it into a service release (https://github.com/dotnet/diagnostics/issues/1749)
+            if (OS.Kind != OSKind.OSX || information.TestConfiguration.RuntimeFrameworkVersionMajor > 5)
             {
                 // Generate a crash dump.
                 if (information.TestConfiguration.DebuggeeDumpOutputRootDir() != null)
