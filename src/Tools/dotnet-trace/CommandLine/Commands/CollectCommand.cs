@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port);
 
         /// <summary>
         /// Collects a diagnostic trace from a currently running process.
@@ -38,8 +38,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="duration">The duration of trace to be taken. </param>
         /// <param name="clrevents">A list of CLR events to be emitted.</param>
         /// <param name="clreventlevel">The verbosity level of CLR events</param>
+        /// <param name="port">Path to the diagnostic port to be created.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort)
         {
             int ret = 0;
             try
@@ -49,28 +50,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (!ProcessLauncher.Launcher.HasChildProc)
                 {
-                    // Either processName or processId has to be specified.
-                    if (name != null)
+                    if (CommandUtils.ValidateArguments(processId, name, diagnosticPort, out int resolvedProcessId))
                     {
-                        if (processId != 0)
-                        {
-                            Console.WriteLine("Can only specify either --name or --process-id option.");
-                            return ErrorCodes.ArgumentError;
-                        }
-                        processId = CommandUtils.FindProcessIdWithName(name);
-                        if (processId < 0)
-                        {
-                            return ErrorCodes.ArgumentError;
-                        }
+                        processId = resolvedProcessId;
                     }
-                    if (processId < 0)
+                    else
                     {
-                        Console.Error.WriteLine("Process ID should not be negative.");
-                        return ErrorCodes.ArgumentError;
-                    }
-                    else if (processId == 0)
-                    {
-                        Console.Error.WriteLine("--process-id is required");
                         return ErrorCodes.ArgumentError;
                     }
                 }
@@ -129,133 +114,124 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 DiagnosticsClient diagnosticsClient;
                 Process process;
-                if (ProcessLauncher.Launcher.HasChildProc)
+                DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-trace", 10);
+                bool shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort);
+
+                using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort))
                 {
-                    try
+                    diagnosticsClient = holder.Client;
+                    if (shouldResumeRuntime)
                     {
-                        diagnosticsClient = ReversedDiagnosticsClientBuilder.Build(ProcessLauncher.Launcher, "dotnet-trace", 10);
+                        process = Process.GetProcessById(holder.EndpointInfo.ProcessId);
                     }
-                    catch (TimeoutException)
+                    else
                     {
-                        Console.Error.WriteLine("Unable to start tracing session - the target app failed to connect to the diagnostics port. This may happen if the target application is running .NET Core 3.1 or older versions. Attaching at startup is only available from .NET 5.0 or later.");
-                        if (!ProcessLauncher.Launcher.ChildProc.HasExited)
+                        process = Process.GetProcessById(processId);
+                    }
+                    var shouldExit = new ManualResetEvent(false);
+                    var shouldStopAfterDuration = duration != default(TimeSpan);
+                    var rundownRequested = false;
+                    System.Timers.Timer durationTimer = null;
+
+                    ct.Register(() => shouldExit.Set());
+
+                    using (VirtualTerminalMode vTermMode = VirtualTerminalMode.TryEnable())
+                    {
+                        EventPipeSession session = null;
+                        try
                         {
-                            ProcessLauncher.Launcher.ChildProc.Kill();
+                            session = diagnosticsClient.StartEventPipeSession(providerCollection, true, (int)buffersize);
+                            if (shouldResumeRuntime)
+                            {
+                                diagnosticsClient.ResumeRuntime();
+                            }
                         }
-                        await ReversedDiagnosticsClientBuilder.Server.DisposeAsync();
-                        return ErrorCodes.SessionCreationError;
-                    }
-                    process = ProcessLauncher.Launcher.ChildProc;
-                }
-                else
-                {
-                    diagnosticsClient = new DiagnosticsClient(processId);
-                    process = Process.GetProcessById(processId);
-                }
-                var shouldExit = new ManualResetEvent(false);
-                var shouldStopAfterDuration = duration != default(TimeSpan);
-                var rundownRequested = false;
-                System.Timers.Timer durationTimer = null;
-
-                ct.Register(() => shouldExit.Set());
-
-                using (VirtualTerminalMode vTermMode = VirtualTerminalMode.TryEnable())
-                {
-                    EventPipeSession session = null;
-                    try
-                    {
-                        session = diagnosticsClient.StartEventPipeSession(providerCollection, true, (int)buffersize);
-                        if (ProcessLauncher.Launcher.HasChildProc)
+                        catch (DiagnosticsClientException e)
                         {
-                            diagnosticsClient.ResumeRuntime();
+                            Console.Error.WriteLine($"Unable to start a tracing session: {e.ToString()}");
                         }
-                    }
-                    catch (DiagnosticsClientException e)
-                    {
-                        Console.Error.WriteLine($"Unable to start a tracing session: {e.ToString()}");
-                    }
 
-                    if (session == null)
-                    {
-                        Console.Error.WriteLine("Unable to create session.");
-                        return ErrorCodes.SessionCreationError;
-                    }
+                        if (session == null)
+                        {
+                            Console.Error.WriteLine("Unable to create session.");
+                            return ErrorCodes.SessionCreationError;
+                        }
 
-                    if (shouldStopAfterDuration)
-                    {
-                        durationTimer = new System.Timers.Timer(duration.TotalMilliseconds);
-                        durationTimer.Elapsed += (s, e) => shouldExit.Set();
-                        durationTimer.AutoReset = false;
-                    }
-
-                    var stopwatch = new Stopwatch();
-                    durationTimer?.Start();
-                    stopwatch.Start();
-
-                    LineRewriter rewriter = null;
-
-                    using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
-                    {
-                        Console.Out.WriteLine($"Process        : {process.MainModule.FileName}");
-                        Console.Out.WriteLine($"Output File    : {fs.Name}");
                         if (shouldStopAfterDuration)
-                            Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
-                        Console.Out.WriteLine("\n\n");
-
-                        var fileInfo = new FileInfo(output.FullName);
-                        Task copyTask = session.EventStream.CopyToAsync(fs).ContinueWith((task) => shouldExit.Set());
-
-                        if (!Console.IsOutputRedirected)
                         {
-                            rewriter = new LineRewriter { LineToClear = Console.CursorTop -1 };
-                            Console.CursorVisible = false;
+                            durationTimer = new System.Timers.Timer(duration.TotalMilliseconds);
+                            durationTimer.Elapsed += (s, e) => shouldExit.Set();
+                            durationTimer.AutoReset = false;
                         }
 
-                        Action printStatus = () =>
+                        var stopwatch = new Stopwatch();
+                        durationTimer?.Start();
+                        stopwatch.Start();
+
+                        LineRewriter rewriter = null;
+
+                        using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                         {
+                            Console.Out.WriteLine($"Process        : {process.MainModule.FileName}");
+                            Console.Out.WriteLine($"Output File    : {fs.Name}");
+                            if (shouldStopAfterDuration)
+                                Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
+                            Console.Out.WriteLine("\n\n");
+
+                            var fileInfo = new FileInfo(output.FullName);
+                            Task copyTask = session.EventStream.CopyToAsync(fs).ContinueWith((task) => shouldExit.Set());
+
                             if (!Console.IsOutputRedirected)
                             {
-                                rewriter?.RewriteConsoleLine();
-                                fileInfo.Refresh();
-                                Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fileInfo.Length)}");
-                                Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
+                                rewriter = new LineRewriter { LineToClear = Console.CursorTop - 1 };
+                                Console.CursorVisible = false;
                             }
 
-                            if (rundownRequested)
-                                Console.Out.WriteLine("Stopping the trace. This may take up to minutes depending on the application being traced.");
-                        };
-
-                        while (!shouldExit.WaitOne(100) &&  !(!Console.IsInputRedirected && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
-                            printStatus();
-
-                        // if the CopyToAsync ended early (target program exited, etc.), the we don't need to stop the session.
-                        if (!copyTask.Wait(0))
-                        {
-                            // Behavior concerning Enter moving text in the terminal buffer when at the bottom of the buffer
-                            // is different between Console/Terminals on Windows and Mac/Linux
-                            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && 
-                                !Console.IsOutputRedirected && 
-                                rewriter != null && 
-                                Math.Abs(Console.CursorTop - Console.BufferHeight) == 1)
+                            Action printStatus = () =>
                             {
-                                rewriter.LineToClear--;
-                            }
-                            durationTimer?.Stop();
-                            rundownRequested = true;
-                            session.Stop();
+                                if (!Console.IsOutputRedirected)
+                                {
+                                    rewriter?.RewriteConsoleLine();
+                                    fileInfo.Refresh();
+                                    Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fileInfo.Length)}");
+                                    Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
+                                }
 
-                            do
-                            {
+                                if (rundownRequested)
+                                    Console.Out.WriteLine("Stopping the trace. This may take up to minutes depending on the application being traced.");
+                            };
+
+                            while (!shouldExit.WaitOne(100) && !(!Console.IsInputRedirected && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
                                 printStatus();
-                            } while (!copyTask.Wait(100));
+
+                            // if the CopyToAsync ended early (target program exited, etc.), the we don't need to stop the session.
+                            if (!copyTask.Wait(0))
+                            {
+                                // Behavior concerning Enter moving text in the terminal buffer when at the bottom of the buffer
+                                // is different between Console/Terminals on Windows and Mac/Linux
+                                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+                                    !Console.IsOutputRedirected &&
+                                    rewriter != null &&
+                                    Math.Abs(Console.CursorTop - Console.BufferHeight) == 1)
+                                {
+                                    rewriter.LineToClear--;
+                                }
+                                durationTimer?.Stop();
+                                rundownRequested = true;
+                                session.Stop();
+
+                                do
+                                {
+                                    printStatus();
+                                } while (!copyTask.Wait(100));
+                            }
                         }
+
+                        Console.Out.WriteLine("\nTrace completed.");
+
+                        if (format != TraceFileFormat.NetTrace)
+                            TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
                     }
-
-                    Console.Out.WriteLine("\nTrace completed.");
-
-                    if (format != TraceFileFormat.NetTrace)
-                        TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
-                    ret = 0;
                 }
             }
             catch (Exception ex)
@@ -272,11 +248,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (ProcessLauncher.Launcher.HasChildProc && !ProcessLauncher.Launcher.ChildProc.HasExited)
                 {
                     ProcessLauncher.Launcher.ChildProc.Kill();
-                }
-
-                if (ReversedDiagnosticsClientBuilder.Server != null)
-                {
-                    await ReversedDiagnosticsClientBuilder.Server.DisposeAsync();
                 }
             }
             return await Task.FromResult(ret);
@@ -327,7 +298,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 DurationOption(),
                 CLREventsOption(),
                 CLREventLevelOption(),
-                CommonOptions.NameOption()
+                CommonOptions.NameOption(),
+                DiagnosticPortOption(),
             };
 
         private static uint DefaultCircularBufferSizeInMB() => 256;
@@ -388,6 +360,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 description: @"Verbosity of CLR events to be emitted.")
             {
                 Argument = new Argument<string>(name: "clreventlevel", getDefaultValue: () => string.Empty)
+            };
+        private static Option DiagnosticPortOption() =>
+            new Option(
+                alias: "--diagnostic-port",
+                description: @"The path to a diagnostic port to be created.")
+            {
+                Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => string.Empty)
             };
     }
 }

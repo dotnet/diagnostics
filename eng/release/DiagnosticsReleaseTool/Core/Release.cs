@@ -25,7 +25,7 @@ namespace ReleaseTool.Core
             List<ILayoutWorker> layoutWorkers, List<IReleaseVerifier> verifiers,
             IPublisher publisher, IManifestGenerator manifestGenerator, string manifestSavePath)
         {
-            if (string.IsNullOrEmpty(_productBuildPath))
+            if (productBuildPath is null)
             {
                 throw new ArgumentException("Product build path can't be empty or null.");
             }
@@ -73,6 +73,7 @@ namespace ReleaseTool.Core
                 // TODO: Implement switch to ignore files that are not used as option.
                 if (unusedFiles != 0)
                 {
+                    _logger.LogError("{unusedFiles} files were not handled for release.", unusedFiles);
                     return unusedFiles;
                 }
 
@@ -81,6 +82,7 @@ namespace ReleaseTool.Core
                 unusedFiles = await PublishFiles(ct);
                 if (unusedFiles != 0)
                 {
+                    _logger.LogError("{unusedFiles} files were not published.", unusedFiles);
                     return unusedFiles;
                 }
 
@@ -161,7 +163,7 @@ namespace ReleaseTool.Core
                 string publishUri = await _publisher.PublishFileAsync(releaseData.FileMap, ct);
                 if (publishUri is null)
                 {
-                    _logger.LogWarning("Failed to publish {sourcePath}");
+                    _logger.LogWarning("Failed to publish {sourcePath}", sourcePath);
                     unpublishedFiles++;
                 }
                 else
@@ -181,11 +183,11 @@ namespace ReleaseTool.Core
 
             using var scope = _logger.BeginScope("Laying out files");
 
-            _logger.LogInformation("Laying out files from {_productBuildPath}", _productBuildPath);
+            _logger.LogInformation("Laying out files from {_productBuildPath}", _productBuildPath.Name);
 
             // TODO: Make this parallel using Task.Run + semaphore to batch process files. Need to make collections concurrent or have single
             //       queue to aggregate results.
-            // TODO: The file enumeration should have the posibility to inject a custom enumerator. Useful in case there's only subsets of files.
+            // TODO: The file enumeration should have the possibility to inject a custom enumerator. Useful in case there's only subsets of files.
             //       For example, shipping only files. 
             foreach (FileInfo file in _productBuildPath.EnumerateFiles("*", SearchOption.AllDirectories))
             {

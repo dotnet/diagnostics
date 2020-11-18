@@ -1,14 +1,14 @@
 {
   "tools": {
-    "dotnet": "5.0.100-rc.2.20479.15",
+    "dotnet": "5.0.100",
     "runtimes": {
       "dotnet/x64": [
         "$(MicrosoftNETCoreApp31Version)",
-        "$(MicrosoftNETCoreAppVersion)"
+        "$(VSRedistCommonNetCoreSharedFrameworkx6450PackageVersion)"
       ],
       "dotnet/x86": [
         "$(MicrosoftNETCoreApp31Version)",
-        "$(MicrosoftNETCoreAppVersion)"
+        "$(VSRedistCommonNetCoreSharedFrameworkx6450PackageVersion)"
       ]
     }
   },

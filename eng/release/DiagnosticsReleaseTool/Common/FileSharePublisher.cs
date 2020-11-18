@@ -40,19 +40,28 @@ namespace ReleaseTool.Core
             int delay = 0;
             bool completed = false;
 
+            try
+            {
+                if (fi.Exists && fi.Attributes.HasFlag(FileAttributes.Directory))
+                {
+                    // Filestream will deal with files, but not directories
+                    Directory.Delete(destinationUri, recursive: true);
+                }
+                fi.Directory.Create();
+            }
+            catch
+            {
+                // Pretty much exvery exception on this path is terminal.
+                // We have mostly permissions or file share names wrong.
+                return null;
+            }
+
             do
             {
                 await Task.Delay(delay, ct);
+
                 try
                 {
-                    if (fi.Exists && fi.Attributes.HasFlag(FileAttributes.Directory))
-                    {
-                        // Filestream will deal with files, but not directories
-                        Directory.Delete(destinationUri, recursive: true);
-                    }
-
-                    fi.Directory.Create();
-
                     using var srcStream = new FileStream(fileMap.LocalSourcePath, FileMode.Open, FileAccess.Read);
                     using var destStream = new FileStream(destinationUri, FileMode.Create, FileAccess.ReadWrite);
                     await srcStream.CopyToAsync(destStream, ct);
@@ -62,7 +71,7 @@ namespace ReleaseTool.Core
 
                     completed = await VerifyFileStreamsMatchAsync(srcStream, destStream, ct);
                 }
-                catch (IOException ex) when (!(ex is PathTooLongException || ex is FileNotFoundException))
+                catch (IOException ex) when (!(ex is PathTooLongException || ex is FileNotFoundException || ex is DirectoryNotFoundException))
                 {
                     /* Retry IO exceptions */
                 }
