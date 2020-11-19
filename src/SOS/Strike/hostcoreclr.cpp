@@ -375,8 +375,7 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
         }
         hostRuntimeDirectory.append(DIRECTORY_SEPARATOR_STR_A);
 
-        // First attempt find the highest LTS version. We want to start with the LTSs
-        // and only use the higher versions if it isn't installed.
+        // Start with the latest released version and then the LTS's.
         if (!FindDotNetVersion(5, 0, hostRuntimeDirectory))
         {
             // Find highest 3.1.x LTS version
