@@ -377,37 +377,33 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
 
         // First attempt find the highest LTS version. We want to start with the LTSs
         // and only use the higher versions if it isn't installed.
-        if (!FindDotNetVersion(3, 1, hostRuntimeDirectory))
+        if (!FindDotNetVersion(5, 0, hostRuntimeDirectory))
         {
-            // Find highest 2.1 LTS version
-            if (!FindDotNetVersion(2, 1, hostRuntimeDirectory))
+            // Find highest 3.1.x LTS version
+            if (!FindDotNetVersion(3, 1, hostRuntimeDirectory))
             {
-                // Find highest 3.0.x version
-                if (!FindDotNetVersion(3, 0, hostRuntimeDirectory))
+                // Find highest 2.1.x LTS version
+                if (!FindDotNetVersion(2, 1, hostRuntimeDirectory))
                 {
-                    // Find highest 2.2.x version
-                    if (!FindDotNetVersion(2, 2, hostRuntimeDirectory))
+                    // Find highest 6.0.x version
+                    if (!FindDotNetVersion(6, 0, hostRuntimeDirectory))
                     {
-                        // Find highest 5.0.x version
-                        if (!FindDotNetVersion(5, 0, hostRuntimeDirectory))
-                        {
-                            HRESULT hr = CheckEEDll();
-                            if (FAILED(hr)) {
-                                return hr;
-                            }
-                            // Don't use the desktop runtime to host
-                            if (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
-                            {
-                                return E_FAIL;
-                            }
-                            // If an installed runtime can not be found, use the target coreclr version
-                            LPCSTR runtimeDirectory = g_pRuntime->GetRuntimeDirectory();
-                            if (runtimeDirectory == nullptr)
-                            {
-                                return E_FAIL;
-                            }
-                            hostRuntimeDirectory = runtimeDirectory;
+                        HRESULT hr = CheckEEDll();
+                        if (FAILED(hr)) {
+                            return hr;
                         }
+                        // Don't use the desktop runtime to host
+                        if (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
+                        {
+                            return E_FAIL;
+                        }
+                        // If an installed runtime can not be found, use the target coreclr version
+                        LPCSTR runtimeDirectory = g_pRuntime->GetRuntimeDirectory();
+                        if (runtimeDirectory == nullptr)
+                        {
+                            return E_FAIL;
+                        }
+                        hostRuntimeDirectory = runtimeDirectory;
                     }
                 }
             }
