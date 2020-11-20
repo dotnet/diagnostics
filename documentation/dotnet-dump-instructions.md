@@ -1,6 +1,10 @@
 Dump collection and analysis utility (dotnet-dump)
 ==================================================
 
+NOTE: This documentation page may contain information on some features that are still work-in-progress. For most up-to-date documentation on released version of `dotnet-dump`, please refer to [its official documentation](https://docs.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-dump) page.
+
+## Intro
+
 The dotnet-dump CLI global tool is way to collect and analyze the managed data structures in Windows and Linux dumps all without any native debugger involved. This makes creating a managed dump easier, and on some platforms like Alpine Linux or Linux ARM32/ARM64 (where a fully working lldb isn't available) it makes creating a managed dump possible. The dotnet-dump tool will allow you to run SOS commands to analyze crashes and the GC, but it isn't a native debugger so things like displaying the native stack frames aren't supported.
 
 Here's a table showing how dotnet-dump fits into your dump debugging options:
