@@ -28,4 +28,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         public ServerErrorException(string msg): base(msg) {}
     }
+
+    // When the runtime doesn't support the command
+    public class UnsupportedCommandException : ServerErrorException
+    {
+        public UnsupportedCommandException(string msg): base(msg) {}
+    }
 }

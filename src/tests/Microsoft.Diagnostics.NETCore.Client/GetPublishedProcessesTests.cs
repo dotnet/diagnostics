@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public void PublishedProcessTest1()
         {
             using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
-            runner.Start(3000);
+            runner.Start(timeoutInMSPipeCreation: 3000);
             // On Windows, runner.Start will not wait for named pipe creation since for other tests, NamedPipeClientStream will
             // just wait until the named pipe is created.
             // For these tests, we need to sleep an arbitrary time before pipe is created.
@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public async Task WaitForConnectionTest()
         {
             using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
-            runner.Start(3000);
+            runner.Start(timeoutInMSPipeCreation: 3000);
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 Thread.Sleep(5000);

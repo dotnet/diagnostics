@@ -2,13 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 {
@@ -18,15 +16,15 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
     {
         private readonly ILogger<MetricsController> _logger;
         private readonly MetricsStoreService _metricsStore;
-        private readonly PrometheusConfiguration _prometheusConfiguration;
+        private readonly MetricsOptions _metricsOptions;
 
         public MetricsController(ILogger<MetricsController> logger,
-            MetricsStoreService metricsStore,
-            IOptions<PrometheusConfiguration> prometheusConfiguration)
+            IServiceProvider serviceProvider,
+            IOptions<MetricsOptions> metricsOptions)
         {
             _logger = logger;
-            _metricsStore = metricsStore;
-            _prometheusConfiguration = prometheusConfiguration.Value;
+            _metricsStore = serviceProvider.GetService<MetricsStoreService>();
+            _metricsOptions = metricsOptions.Value;
         }
 
         [HttpGet("metrics")]
@@ -34,7 +32,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         {
             return this.InvokeService(() =>
             {
-                if (!_prometheusConfiguration.Enabled)
+                if (!_metricsOptions.Enabled)
                 {
                     throw new InvalidOperationException("Metrics was not enabled");
                 }

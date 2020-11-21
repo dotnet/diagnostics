@@ -4,6 +4,7 @@
          setting is necessary because we are manually importing the Arcade SDK targets
          below in order to get the GenerateChecksums target. -->
     <_SuppressSdkImports>false</_SuppressSdkImports>
+    <PublishingVersion>3</PublishingVersion>
   </PropertyGroup>
 
   <PropertyGroup>

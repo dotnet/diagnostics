@@ -2,13 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Diagnostics.NETCore.Client;
+using System;
+using System.ComponentModel.DataAnnotations;
+using System.Net;
+using System.Threading.Tasks;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -51,25 +50,33 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             }
             catch (ArgumentException e)
             {
-                return controller.BadRequest(FromException(e));
+                return controller.Problem(e);
             }
             catch (DiagnosticsClientException e)
             {
-                return controller.BadRequest(FromException(e));
+                return controller.Problem(e);
             }
             catch (InvalidOperationException e)
             {
-                return controller.BadRequest(FromException(e));
+                return controller.Problem(e);
+            }
+            catch (OperationCanceledException e)
+            {
+                return controller.Problem(e);
+            }
+            catch (MonitoringException e)
+            {
+                return controller.Problem(e);
+            }
+            catch (ValidationException e)
+            {
+                return controller.Problem(e);
             }
         }
 
-        private static ProblemDetails FromException(Exception e)
+        public static ObjectResult Problem(this ControllerBase controller, Exception ex)
         {
-            return new ProblemDetails
-            {
-                Detail = e.Message,
-                Status = (int)HttpStatusCode.BadRequest
-            };
+            return controller.BadRequest(ex.ToProblemDetails((int)HttpStatusCode.BadRequest));
         }
     }
 }

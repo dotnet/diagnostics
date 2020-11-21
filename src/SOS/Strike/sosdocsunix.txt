@@ -1911,17 +1911,17 @@ SetHostRuntime <runtime-directory>
 
 This command sets the path to the .NET Core runtime to use to host the managed 
 code that runs as part of SOS in the debugger (lldb). The runtime needs
-to be at least version 2.0.0 or greater. If there are spaces in directory, it
+to be at least version 2.1.0 or greater. If there are spaces in directory, it
 needs to be single-quoted (').
 
 Normally, SOS attempts to find an installed .NET Core runtime to run its
 managed code automatically but this command is available if it fails. The
 default is to use the same runtime (libcoreclr) being debugged. Use this
 command if the default runtime being debugged isn't working enough to run
-the SOS code or if the version is less than 2.0.0.
+the SOS code or if the version is less than 2.1.0.
 
 If you received the following error message when running a SOS command, use
-this command to set the path to 2.0.0 or greater .NET Core runtime.
+this command to set the path to 2.1.0 or greater .NET Core runtime.
 
     (lldb) clrstack
     Error: Fail to initialize CoreCLR 80004005

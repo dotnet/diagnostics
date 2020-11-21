@@ -15,12 +15,13 @@
 
      $(MicrosoftDotnetSdkInternalVersion) - .NET SDK to use for testing
 
-     $(MicrosoftNETCoreAppVersion)               - latest dotnet runtime package version (the version to install)
+     $(VSRedistCommonNetCoreSharedFrameworkx6460Version)               - latest dotnet runtime package version (the version to install)
      $(MicrosoftNETCoreAppRuntimewinx64Version)  - latest dotnet runtime stable version (the version that actually is installed)
 
      $(MicrosoftAspNetCoreAppRefInternalVersion) - latest dotnet aspnetcore package version (the version to install)
      $(MicrosoftAspNetCoreAppRefVersion)         - latest dotnet aspnetcore stable version (the version that actually is installed)
 
+     $(MicrosoftNETCoreApp50Version) $(MicrosoftAspNetCoreApp50Version)  - 5.0 version
      $(MicrosoftNETCoreApp31Version) $(MicrosoftAspNetCoreApp31Version)  - 3.1 version
      $(MicrosoftNETCoreApp21Version) $(MicrosoftAspNetCoreApp21Version)  - 2.1 version
 
@@ -75,14 +76,15 @@
   </Choose>
 
   <ItemGroup Condition="!$(InternalReleaseTesting) and !$(PrivateBuildTesting)">
-    <TestVersions Include="Latest" RuntimeVersion="$(MicrosoftNETCoreAppVersion)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
+    <TestVersions Include="Latest" RuntimeVersion="$(VSRedistCommonNetCoreSharedFrameworkx6460Version)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
+    <TestVersions Include="50" RuntimeVersion="$(MicrosoftNETCoreApp50Version)" AspNetVersion="$(MicrosoftAspNetCoreApp50Version)" />
     <TestVersions Include="31" RuntimeVersion="$(MicrosoftNETCoreApp31Version)" AspNetVersion="$(MicrosoftAspNetCoreApp31Version)" />
     <TestVersions Condition="'$(BuildArch)' != 'arm' and '$(BuildArch)' != 'arm64'" Include="21" RuntimeVersion="$(MicrosoftNETCoreApp21Version)" AspNetVersion="$(MicrosoftAspNetCoreApp21Version)" />
   </ItemGroup>
 
   <!-- Local private build testing -->
   <ItemGroup Condition="$(PrivateBuildTesting)">
-    <TestVersions Include="Latest" RuntimeVersion="$(MicrosoftNETCoreAppVersion)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
+    <TestVersions Include="Latest" RuntimeVersion="$(VSRedistCommonNetCoreSharedFrameworkx6460Version)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
   </ItemGroup>
 
   <!-- Internal service release testing -->
@@ -144,23 +146,41 @@
           Inputs="$(VersionsPropsPath)" 
           Outputs="$(TestConfigFileName)">
 
+    <PropertyGroup Condition="'$(PrivateBuildTesting)' != 'true' AND '$(InternalReleaseTesting)' != 'true'">
+      <RuntimeVersion21>$(MicrosoftNETCoreApp21Version)</RuntimeVersion21>
+      <AspNetCoreVersion21>$(MicrosoftAspNetCoreApp21Version)</AspNetCoreVersion21>
+
+      <RuntimeVersion31>$(MicrosoftNETCoreApp31Version)</RuntimeVersion31>
+      <AspNetCoreVersion31>$(MicrosoftAspNetCoreApp31Version)</AspNetCoreVersion31>
+
+      <RuntimeVersion50>$(MicrosoftNETCoreApp50Version)</RuntimeVersion50>
+      <AspNetCoreVersion50>$(MicrosoftAspNetCoreApp50Version)</AspNetCoreVersion50>
+    </PropertyGroup>
+
     <PropertyGroup>
       <RuntimeVersionLatest>$(MicrosoftNETCoreAppRuntimewinx64Version)</RuntimeVersionLatest>
       <RuntimeVersionLatest Condition="$(InternalReleaseTesting)">$(DotnetRuntimeVersion)</RuntimeVersionLatest>
+      <AspNetCoreVersionLatest>$(MicrosoftAspNetCoreAppRefVersion)</AspNetCoreVersionLatest>
+    </PropertyGroup>
+
+    <PropertyGroup>
       <TestConfigFileLines>
 <![CDATA[
 <Configuration>
   <PrivateBuildTesting>$(PrivateBuildTesting)</PrivateBuildTesting>
   <InternalReleaseTesting>$(InternalReleaseTesting)</InternalReleaseTesting>
 
-  <RuntimeVersion21>$(MicrosoftNETCoreApp21Version)</RuntimeVersion21>
-  <AspNetCoreVersion21>$(MicrosoftAspNetCoreApp21Version)</AspNetCoreVersion21>
+  <RuntimeVersion21>$(RuntimeVersion21)</RuntimeVersion21>
+  <AspNetCoreVersion21>$(AspNetCoreVersion21)</AspNetCoreVersion21>
 
-  <RuntimeVersion31>$(MicrosoftNETCoreApp31Version)</RuntimeVersion31>
-  <AspNetCoreVersion31>$(MicrosoftAspNetCoreApp31Version)</AspNetCoreVersion31>
+  <RuntimeVersion31>$(RuntimeVersion31)</RuntimeVersion31>
+  <AspNetCoreVersion31>$(AspNetCoreVersion31)</AspNetCoreVersion31>
+
+  <RuntimeVersion50>$(RuntimeVersion50)</RuntimeVersion50>
+  <AspNetCoreVersion50>$(AspNetCoreVersion50)</AspNetCoreVersion50>
 
   <RuntimeVersionLatest>$(RuntimeVersionLatest)</RuntimeVersionLatest>
-  <AspNetCoreVersionLatest>$(MicrosoftAspNetCoreAppRefVersion)</AspNetCoreVersionLatest>
+  <AspNetCoreVersionLatest>$(AspNetCoreVersionLatest)</AspNetCoreVersionLatest>
 </Configuration>
 ]]>
       </TestConfigFileLines>

@@ -970,7 +970,7 @@ DWORD GetNumComponents(TADDR obj)
 static MethodTableInfo* GetMethodTableInfo(DWORD_PTR dwAddrMethTable)
 {
     // Remove lower bits in case we are in mark phase
-    dwAddrMethTable = dwAddrMethTable & ~3;
+    dwAddrMethTable = dwAddrMethTable & ~sos::Object::METHODTABLE_PTR_LOW_BITMASK;
     MethodTableInfo* info = g_special_mtCache.Lookup(dwAddrMethTable);
     if (!info->IsInitialized())        // An uninitialized entry
     {
@@ -1214,7 +1214,7 @@ BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEA
             return FALSE;
         }
 
-        dwAddrMethTable = dwAddrMethTable & ~3;
+        dwAddrMethTable = dwAddrMethTable & ~sos::Object::METHODTABLE_PTR_LOW_BITMASK;
         if (dwAddrMethTable == 0)
         {
             // Is this the beginning of an allocation context?
@@ -1338,7 +1338,7 @@ BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEA
             return FALSE;
         }
 
-        dwAddrMethTable = dwAddrMethTable & ~3;
+        dwAddrMethTable = dwAddrMethTable & ~sos::Object::METHODTABLE_PTR_LOW_BITMASK;
         BOOL bContainsPointers;
         BOOL bMTOk = GetSizeEfficient(dwAddrCurrObj, dwAddrMethTable, TRUE, s, bContainsPointers);
         if (verify && bMTOk)
