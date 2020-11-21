@@ -22,6 +22,7 @@
     <ClCompile Include="disasmARM64.cpp" />
     <ClCompile Include="hostcoreclr.cpp" />
     <ClCompile Include="runtime.cpp" />
+    <ClCompile Include="hostdesktop.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="data.h" />

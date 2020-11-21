@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Collections.Generic;
-using System.IO.Compression;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +12,8 @@ using Microsoft.Diagnostics.Monitoring.RestServer.Controllers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Collections.Generic;
+using System.IO.Compression;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
@@ -67,9 +67,9 @@ namespace Microsoft.Diagnostics.Monitoring
                 options.AllowSynchronousIO = true;
             });
 
-            var prometheusConfig = new PrometheusConfiguration();
-            Configuration.Bind(nameof(PrometheusConfiguration), prometheusConfig);
-            if (prometheusConfig.Enabled)
+            var metricsOptions = new MetricsOptions();
+            Configuration.Bind(MetricsOptions.ConfigurationKey, metricsOptions);
+            if (metricsOptions.Enabled)
             {
                 services.AddSingleton<MetricsStoreService>();
                 services.AddHostedService<MetricsService>();

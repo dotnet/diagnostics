@@ -2,14 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
-using Microsoft.Diagnostics.Monitoring.RestServer.Controllers;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.RestServer
 {
@@ -21,50 +22,81 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         private EventCounterPipeline _counterPipeline;
         private readonly IDiagnosticServices _services;
         private readonly MetricsStoreService _store;
-        private readonly PrometheusConfiguration _metricsConfiguration;
+        private IOptionsMonitor<MetricsOptions> _optionsMonitor;
 
         public MetricsService(IDiagnosticServices services,
-            IOptions<PrometheusConfiguration> metricsConfiguration,
+            IOptionsMonitor<MetricsOptions> optionsMonitor,
             MetricsStoreService metricsStore)
         {
             _store = metricsStore;
             _services = services;
-            _metricsConfiguration = metricsConfiguration.Value;
+            _optionsMonitor = optionsMonitor;
         }
         
-        protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            return Task.Run( async () =>
+            while (!stoppingToken.IsCancellationRequested)
             {
-                while (!stoppingToken.IsCancellationRequested)
+                stoppingToken.ThrowIfCancellationRequested();
+
+                try
                 {
-                    stoppingToken.ThrowIfCancellationRequested();
+                    //TODO In multi-process scenarios, how do we decide which process to choose?
+                    //One possibility is to enable metrics after a request to begin polling for metrics
+                    IProcessInfo pi = await _services.GetProcessAsync(filter: null, stoppingToken);
 
-                    try
-                    {
-                        //TODO In multi-process scenarios, how do we decide which process to choose?
-                        //One possibility is to enable metrics after a request to begin polling for metrics
-                        IProcessInfo pi = await _services.GetProcessAsync(filter: null, stoppingToken);
-                        _counterPipeline = new EventCounterPipeline(pi.Client, new EventPipeCounterPipelineSettings
-                        {
-                            CounterGroups = Array.Empty<EventPipeCounterGroup>(),
-                            Duration = Timeout.InfiniteTimeSpan,
-                            RefreshInterval = TimeSpan.FromSeconds(_metricsConfiguration.UpdateIntervalSeconds)
-                        }, metricsLogger: new[] { new MetricsLogger(_store.MetricsStore) });
+                    var client = new DiagnosticsClient(pi.EndpointInfo.Endpoint);
 
-                        await _counterPipeline.RunAsync(stoppingToken);
-                    }
-                    catch (Exception e) when (!(e is OperationCanceledException))
+                    MetricsOptions options = _optionsMonitor.CurrentValue;
+                    using var optionsTokenSource = new CancellationTokenSource();
+
+                    //If metric options change, we need to cancel the existing metrics pipeline and restart with the new settings.
+                    using IDisposable monitorListener = _optionsMonitor.OnChange((_, _) => optionsTokenSource.Cancel());
+
+                    EventPipeCounterGroup[] counterGroups = Array.Empty<EventPipeCounterGroup>();
+                    if (options.Providers.Count > 0)
                     {
-                        //Most likely we failed to resolve the pid. Attempt to do this again.
-                        if (_counterPipeline != null)
+                        //In the dotnet-monitor case, custom metrics are additive to the default counters.
+                        var eventPipeCounterGroups = new List<EventPipeCounterGroup>();
+                        if (options.IncludeDefaultProviders)
                         {
-                            await _counterPipeline.DisposeAsync();
+                            eventPipeCounterGroups.Add(new EventPipeCounterGroup { ProviderName = MonitoringSourceConfiguration.SystemRuntimeEventSourceName });
+                            eventPipeCounterGroups.Add(new EventPipeCounterGroup { ProviderName = MonitoringSourceConfiguration.MicrosoftAspNetCoreHostingEventSourceName });
+                            eventPipeCounterGroups.Add(new EventPipeCounterGroup { ProviderName = MonitoringSourceConfiguration.GrpcAspNetCoreServer });
                         }
-                        await Task.Delay(5000);
+
+                        foreach (MetricProvider customProvider in options.Providers)
+                        {
+                            var customCounterGroup = new EventPipeCounterGroup { ProviderName = customProvider.ProviderName };
+                            if (customProvider.CounterNames.Count > 0)
+                            {
+                                customCounterGroup.CounterNames = customProvider.CounterNames.ToArray();
+                            }
+                            eventPipeCounterGroups.Add(customCounterGroup);
+                        }
+                        counterGroups = eventPipeCounterGroups.ToArray();
                     }
+
+                    _counterPipeline = new EventCounterPipeline(client, new EventPipeCounterPipelineSettings
+                    {
+                        CounterGroups = counterGroups,
+                        Duration = Timeout.InfiniteTimeSpan,
+                        RefreshInterval = TimeSpan.FromSeconds(options.UpdateIntervalSeconds)
+                    }, metricsLogger: new[] { new MetricsLogger(_store.MetricsStore) });
+
+                    using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, optionsTokenSource.Token);
+                    await _counterPipeline.RunAsync(linkedTokenSource.Token);
                 }
-            }, stoppingToken);
+                catch (Exception e) when (e is not OperationCanceledException || !stoppingToken.IsCancellationRequested)
+                {
+                    //Most likely we failed to resolve the pid or metric configuration change. Attempt to do this again.
+                    if (_counterPipeline != null)
+                    {
+                        await _counterPipeline.DisposeAsync();
+                    }
+                    await Task.Delay(5000);
+                }
+            }
         }
 
         public override async void Dispose()

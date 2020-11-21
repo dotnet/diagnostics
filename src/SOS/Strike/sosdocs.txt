@@ -2621,18 +2621,25 @@ investigating lifetime issues of interop-heavy applications.
 \\
 
 COMMAND: sethostruntime.
-!SetHostRuntime <runtime-directory>
+!SetHostRuntime [-netcore] [-netfx] <runtime-directory>
 
-This command sets the path to the .NET Core runtime to use to host the managed
-code that runs as part of SOS in the debugger (cdb/windbg). The runtime needs
-to be at least version 2.0.0 or greater. If there are spaces in directory, it
-needs to be single-quoted (').
+-netcore - switch to hosting on the .NET Core runtime
+-netfx   - switch to hosting on the desktop .NET Framework runtime if loaded.
+
+This command controls the runtime that is used to host the maanged code that
+runs as part of SOS in the debugger (cdb/windbg). The default is the desktop
+.NET Framework. The "-netcore" option allows the installed .NET Core runtime
+be used. The "-netfx" option allows switches back to the .NET Framework runtime. 
+
+If a <runtime-directory> is given, the command assumes it is a path to a .NET 
+Core runtime which needs to be at least version 2.1.0 or greater. If there are 
+spaces in directory, it needs to be single-quoted (').
 
 Normally, SOS attempts to find an installed .NET Core runtime to run its
 managed code automatically but this command is available if it fails. The
 default is to use the same runtime (coreclr.dll) being debugged. Use this
 command if the default runtime being debugged isn't working enough to run
-the SOS code or if the version is less than 2.0.0.
+the SOS code or if the version is less than 2.1.0.
 
 If you received the following error message when running a SOS command, use
 this command to set the path to 2.0.0 or greater .NET Core runtime.
@@ -2668,14 +2675,14 @@ To disable downloading or clear the current SOS symbol settings allowing new sym
 \\
 
 COMMAND: sosstatus.
-!SOSStatus [-desktop] [-netcore] [-reset]
+!SOSStatus [-netfx] [-netcore] [-reset]
 
--desktop - switch to the desktop runtime if loaded.
+-netfx   - switch to the desktop .NET Framework runtime if loaded.
 -netcore - switch to the .NET Core runtime if loaded.
--reset      - reset all the cached internal SOS state.
+-reset   - reset all the cached internal SOS state.
 
-Display internal SOS status, reset the internal cached state, or change between desktop or 
-netcore runtimes when both are loaded in the process or dump.
+Display internal SOS status, reset the internal cached state, or change between the desktop .NET framework
+or .NET Core runtimes when both are loaded in the process or dump.
 
     0:000> !sosstatus
     Target platform: 8664 Context size 04d0

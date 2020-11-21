@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             string testKey = "FOO";
             string testVal = "BAR";
             runner.AddEnvVar(testKey, testVal);
-            runner.Start(3000);
+            runner.Start(timeoutInMSPipeCreation: 3000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
             Dictionary<string,string> env = client.GetProcessEnvironment();
 

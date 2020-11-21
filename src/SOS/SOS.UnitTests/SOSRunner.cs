@@ -578,6 +578,7 @@ public class SOSRunner : IDisposable
 
             // Create the native debugger process running
             ProcessRunner processRunner = new ProcessRunner(debuggerPath, ReplaceVariables(variables, arguments.ToString())).
+                WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot()).
                 WithLog(scriptLogger).
                 WithTimeout(TimeSpan.FromMinutes(10));
 
@@ -751,10 +752,24 @@ public class SOSRunner : IDisposable
 
     public async Task LoadSosExtension()
     {
-        string sosHostRuntime = _config.SOSHostRuntime();
+        string setHostRuntime = _config.SetHostRuntime();
         string sosPath = _config.SOSPath();
         List<string> commands = new List<string>();
 
+        if (!string.IsNullOrEmpty(setHostRuntime))
+        {
+            switch (setHostRuntime)
+            {
+                case "-netfx":
+                case "-netcore":
+                case "-none":
+                case "-clear":
+                    break;
+                default:
+                    setHostRuntime = TestConfiguration.MakeCanonicalPath(setHostRuntime);
+                    break;
+            }
+        }
         switch (Debugger)
         {
             case NativeDebugger.Cdb:
@@ -767,16 +782,16 @@ public class SOSRunner : IDisposable
                 commands.Add($".load {sosPath}");
                 commands.Add(".reload");
                 commands.Add(".chain");
-                if (sosHostRuntime != null)
+                if (!string.IsNullOrEmpty(setHostRuntime))
                 {
-                    commands.Add($"!SetHostRuntime {sosHostRuntime}");
+                    commands.Add($"!SetHostRuntime {setHostRuntime}");
                 }
                 break;
             case NativeDebugger.Lldb:
                 commands.Add($"plugin load {sosPath}");
-                if (sosHostRuntime != null)
+                if (!string.IsNullOrEmpty(setHostRuntime))
                 {
-                    commands.Add($"sos SetHostRuntime {sosHostRuntime}");
+                    commands.Add($"sos SetHostRuntime {setHostRuntime}");
                 }
                 SwitchToExceptionThread();
                 break;
@@ -1127,7 +1142,16 @@ public class SOSRunner : IDisposable
         };
         try
         {
-            defines.Add("MAJOR_RUNTIME_VERSION_" + _config.RuntimeFrameworkVersionMajor.ToString());
+            int major = _config.RuntimeFrameworkVersionMajor;
+            defines.Add("MAJOR_RUNTIME_VERSION_" + major.ToString());
+            if (major >= 3)
+            {
+                defines.Add("MAJOR_RUNTIME_VERSION_GE_3");
+            }
+            if (major >= 5)
+            {
+                defines.Add("MAJOR_RUNTIME_VERSION_GE_5");
+            }
         }
         catch (SkipTestException)
         {
@@ -1391,6 +1415,12 @@ public static class TestConfigurationExtensions
         return TestConfiguration.MakeCanonicalPath(gdbPath);
     }
 
+    public static string DotNetRoot(this TestConfiguration config)
+    {
+        string dotnetRoot = config.GetValue("DotNetRoot");
+        return TestConfiguration.MakeCanonicalPath(dotnetRoot);
+    }
+
     public static string DotNetDumpHost(this TestConfiguration config)
     {
         string dotnetDumpHost = config.GetValue("DotNetDumpHost");
@@ -1408,9 +1438,9 @@ public static class TestConfigurationExtensions
         return TestConfiguration.MakeCanonicalPath(config.GetValue("SOSPath"));
     }
 
-    public static string SOSHostRuntime(this TestConfiguration config)
+    public static string SetHostRuntime(this TestConfiguration config)
     {
-        return TestConfiguration.MakeCanonicalPath(config.GetValue("SOSHostRuntime"));
+        return config.GetValue("SetHostRuntime");
     }
 
     public static string DesktopRuntimePath(this TestConfiguration config)

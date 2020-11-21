@@ -21,17 +21,17 @@ SOSCOMMAND:PrintException
 
 IFDEF:DUMP
 
-IFDEF:MAJOR_RUNTIME_VERSION_5
+IFDEF:MAJOR_RUNTIME_VERSION_GE_5
 VERIFY:Exception object:\s+<HEXVAL>\s+
 VERIFY:Exception type:\s+System\.StackOverflowException\s+
 VERIFY:Message:\s+<none>\s+
 VERIFY:InnerException:\s+<none>\s+
 VERIFY:StackTrace \(generated\):\s+
-ENDIF:MAJOR_RUNTIME_VERSION_5
+ENDIF:MAJOR_RUNTIME_VERSION_GE_5
 
-!IFDEF:MAJOR_RUNTIME_VERSION_5
+!IFDEF:MAJOR_RUNTIME_VERSION_GE_5
 VERIFY:There is no current managed exception on this thread
-ENDIF:MAJOR_RUNTIME_VERSION_5
+ENDIF:MAJOR_RUNTIME_VERSION_GE_5
 
 ENDIF:DUMP
 
@@ -43,22 +43,22 @@ ENDIF:WINDOWS
 
 !IFDEF:WINDOWS
 
-IFDEF:MAJOR_RUNTIME_VERSION_5
+IFDEF:MAJOR_RUNTIME_VERSION_GE_5
 VERIFY:Exception object:\s+<HEXVAL>\s+
 VERIFY:Exception type:\s+System\.StackOverflowException\s+
 VERIFY:Message:\s+<none>\s+
 VERIFY:InnerException:\s+<none>\s+
 VERIFY:StackTrace \(generated\):\s+
-ENDIF:MAJOR_RUNTIME_VERSION_5
+ENDIF:MAJOR_RUNTIME_VERSION_GE_5
 
-!IFDEF:MAJOR_RUNTIME_VERSION_5
+!IFDEF:MAJOR_RUNTIME_VERSION_GE_5
 !IFDEF:OSX
 VERIFY:There is no current managed exception on this thread
 ENDIF:OSX
 IFDEF:OSX
 VERIFY:The current thread is unmanaged
 ENDIF:OSX
-ENDIF:MAJOR_RUNTIME_VERSION_5
+ENDIF:MAJOR_RUNTIME_VERSION_GE_5
 
 ENDIF:WINDOWS
 
