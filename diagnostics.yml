@@ -483,7 +483,7 @@ stages:
         # The variables get imported from group dotnet-diagnostics-sdl-params
         publishingInfraVersion: 3
         enableSourceLinkValidation: true
-        enableSigningValidation: true
+        enableSigningValidation: false
         enableSymbolValidation: false
         enableNugetValidation: true
         symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
