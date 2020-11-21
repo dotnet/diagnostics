@@ -26,6 +26,7 @@
     <MicrosoftDotnetSdkInternalVersion>5.0.100</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
   <PropertyGroup>
+    <MicrosoftDotNetSignCheckVersion>5.0.0-beta.20569.10</MicrosoftDotNetSignCheckVersion>
     <!-- Opt-in/out repo features -->
     <UsingToolXliff>false</UsingToolXliff>
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
