@@ -14,6 +14,6 @@
   },
   "msbuild-sdks": {
     "Microsoft.Build.NoTargets": "2.0.1",
-    "Microsoft.DotNet.Arcade.Sdk": "6.0.0-beta.20561.5"
+    "Microsoft.DotNet.Arcade.Sdk": "6.0.0-beta.20567.7"
   }
 }
