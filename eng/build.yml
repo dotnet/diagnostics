@@ -121,11 +121,11 @@ jobs:
 
     - ${{ if eq(parameters.osGroup, 'Linux') }}:
       - ${{ if eq(parameters.testOnly, 'true') }}:
-        - task: DownloadPipelineArtifact@2
+        - task: DownloadBuildArtifacts@1
           displayName: Download Linux Artifacts
           inputs:
             artifactName: $(_PortableLinuxBuild)
-            targetPath: '$(Build.SourcesDirectory)/artifacts/bin/Linux.$(_BuildArch).$(_BuildConfig)'
+            targetPath: '$(System.ArtifactsDirectory)'
           condition: succeeded()
 
       - script: $(Build.SourcesDirectory)/eng/docker-build.sh 
