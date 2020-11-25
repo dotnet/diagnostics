@@ -6,7 +6,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal enum PipeMode
     {
-        Logs = 1,
         GCDump,
         ProcessInfo,
         Nettrace,
