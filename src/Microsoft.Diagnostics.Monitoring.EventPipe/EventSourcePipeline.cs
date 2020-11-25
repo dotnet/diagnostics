@@ -4,6 +4,7 @@
 
 using Graphs;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -27,7 +28,25 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _processor = new Lazy<DiagnosticsEventPipeProcessor>(CreateProcessor);
         }
 
-        internal abstract DiagnosticsEventPipeProcessor CreateProcessor();
+        internal virtual MonitoringSourceConfiguration CreateConfiguration()
+        {
+            return null;
+        }
+
+        internal virtual DiagnosticsEventPipeProcessor CreateProcessor()
+        {
+            MonitoringSourceConfiguration configuration = CreateConfiguration();
+            if (null == configuration)
+            {
+                throw new ArgumentException(nameof(configuration));
+            }
+
+            return new DiagnosticsEventPipeProcessor(
+                mode: PipeMode.EventSource,
+                configuration: configuration,
+                onEventSourceAvailable: OnEventSourceAvailable,
+                onProcessFinished: OnRunFinished);
+        }
 
         protected override Task OnRun(CancellationToken token)
         {
@@ -60,6 +79,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 using IDisposable registration = token.Register(() => taskCompletionSource.SetCanceled());
                 await Task.WhenAny(stoppingTask, taskCompletionSource.Task).Unwrap();
             }
+        }
+
+        protected virtual void OnEventSourceAvailable(EventPipeEventSource eventSource)
+        {
+        }
+
+        protected virtual Task OnRunFinished(CancellationToken token)
+        {
+            return Task.CompletedTask;
         }
     }
 }

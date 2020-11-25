@@ -11,5 +11,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         GCDump,
         ProcessInfo,
         Nettrace,
+        EventSource
     }
 }

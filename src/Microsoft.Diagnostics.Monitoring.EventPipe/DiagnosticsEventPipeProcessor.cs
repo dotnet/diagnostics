@@ -2,20 +2,18 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Graphs;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Parsers.Clr;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Graphs;
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing;
-using Microsoft.Diagnostics.Tracing.Extensions;
-using Microsoft.Diagnostics.Tracing.Parsers.Clr;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -31,6 +29,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private readonly Func<string, CancellationToken, Task> _processInfoCallback;
         private readonly MonitoringSourceConfiguration _userConfig;
         private readonly Func<Stream, CancellationToken, Task> _onStreamAvailable;
+        private readonly Action<EventPipeEventSource> _onEventSourceAvailable;
+        private readonly Func<CancellationToken, Task> _onProcessFinished;
 
         private readonly object _lock = new object();
 
@@ -47,9 +47,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             int metricIntervalSeconds = 10,                   // PipeMode = Metrics
             CounterFilter metricFilter = null,                // PipeMode = Metrics
             MemoryGraph gcGraph = null,                       // PipeMode = GCDump
-            MonitoringSourceConfiguration configuration = null, // PipeMode = Nettrace
+            MonitoringSourceConfiguration configuration = null, // PipeMode = Nettrace, EventSource
             Func<Stream, CancellationToken, Task> onStreamAvailable = null, // PipeMode = Nettrace
-            Func<string, CancellationToken, Task> processInfoCallback = null     // PipeMode = ProcessInfo
+            Func<string, CancellationToken, Task> processInfoCallback = null,     // PipeMode = ProcessInfo
+            Action<EventPipeEventSource> onEventSourceAvailable = null, // PipeMode = EventSource
+            Func<CancellationToken, Task> onProcessFinished = null // PipeMode = EventSource
             )
         {
             _metricLoggers = metricLoggers ?? Enumerable.Empty<ICountersLogger>();
@@ -63,6 +65,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _onStreamAvailable = onStreamAvailable;
             _processInfoCallback = processInfoCallback;
             _counterFilter = metricFilter;
+
+            _onEventSourceAvailable = onEventSourceAvailable;
+            _onProcessFinished = onProcessFinished;
 
             _sessionStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
@@ -95,7 +100,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     {
                         config = new SampleProfilerConfiguration();
                     }
-                    else if (_mode == PipeMode.Nettrace)
+                    else if (_mode == PipeMode.Nettrace || _mode == PipeMode.EventSource)
                     {
                         config = _userConfig;
                     }
@@ -125,7 +130,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                     source = new EventPipeEventSource(sessionStream);
 
-
+                    if (_mode == PipeMode.EventSource)
+                    {
+                        _onEventSourceAvailable(source);
+                    }
                     if (_mode == PipeMode.Metrics)
                     {
                         // Metrics
@@ -190,6 +198,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 // is waiting for the Completed event to be raised, it will never complete until after EventPipeEventSource
                 // is diposed.
                 await handleEventsTask;
+
+                if (_mode == PipeMode.EventSource)
+                {
+                    await _onProcessFinished(token);
+                }
 
             }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
