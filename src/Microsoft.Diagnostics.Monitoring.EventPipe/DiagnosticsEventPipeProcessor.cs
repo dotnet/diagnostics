@@ -10,7 +10,6 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,16 +20,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private readonly MemoryGraph _gcGraph;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly IEnumerable<ICountersLogger> _metricLoggers;
         private readonly PipeMode _mode;
-        private readonly int _metricIntervalSeconds;
-        private readonly CounterFilter _counterFilter;
         private readonly LogLevel _logsLevel;
         private readonly Func<string, CancellationToken, Task> _processInfoCallback;
         private readonly MonitoringSourceConfiguration _userConfig;
         private readonly Func<Stream, CancellationToken, Task> _onStreamAvailable;
         private readonly Action<EventPipeEventSource> _onEventSourceAvailable;
-        private readonly Func<CancellationToken, Task> _onProcessFinished;
+        private readonly Func<CancellationToken, Task> _onAfterProcess;
+        private readonly Func<CancellationToken, Task> _onBeforeProcess;
 
         private readonly object _lock = new object();
 
@@ -43,31 +40,27 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             PipeMode mode,
             ILoggerFactory loggerFactory = null,              // PipeMode = Logs
             LogLevel logsLevel = LogLevel.Debug,              // PipeMode = Logs
-            IEnumerable<ICountersLogger> metricLoggers = null, // PipeMode = Metrics
-            int metricIntervalSeconds = 10,                   // PipeMode = Metrics
-            CounterFilter metricFilter = null,                // PipeMode = Metrics
             MemoryGraph gcGraph = null,                       // PipeMode = GCDump
             MonitoringSourceConfiguration configuration = null, // PipeMode = Nettrace, EventSource
             Func<Stream, CancellationToken, Task> onStreamAvailable = null, // PipeMode = Nettrace
             Func<string, CancellationToken, Task> processInfoCallback = null,     // PipeMode = ProcessInfo
             Action<EventPipeEventSource> onEventSourceAvailable = null, // PipeMode = EventSource
-            Func<CancellationToken, Task> onProcessFinished = null // PipeMode = EventSource
+            Func<CancellationToken, Task> onAfterProcess = null, // PipeMode = EventSource
+            Func<CancellationToken, Task> onBeforeProcess = null // PipeMode = EventSource
             )
         {
-            _metricLoggers = metricLoggers ?? Enumerable.Empty<ICountersLogger>();
             _mode = mode;
             _loggerFactory = loggerFactory;
             _gcGraph = gcGraph;
-            _metricIntervalSeconds = metricIntervalSeconds;
             _logsLevel = logsLevel;
             _processInfoCallback = processInfoCallback;
             _userConfig = configuration;
             _onStreamAvailable = onStreamAvailable;
             _processInfoCallback = processInfoCallback;
-            _counterFilter = metricFilter;
 
             _onEventSourceAvailable = onEventSourceAvailable;
-            _onProcessFinished = onProcessFinished;
+            _onAfterProcess = onAfterProcess;
+            _onBeforeProcess = onBeforeProcess;
 
             _sessionStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
@@ -87,10 +80,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     if (_mode == PipeMode.Logs)
                     {
                         config = new LoggingSourceConfiguration(_logsLevel);
-                    }
-                    else if (_mode == PipeMode.Metrics)
-                    {
-                        config = new MetricSourceConfiguration(_metricIntervalSeconds, _counterFilter.GetProviders());
                     }
                     else if (_mode == PipeMode.GCDump)
                     {
@@ -134,11 +123,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     {
                         _onEventSourceAvailable(source);
                     }
-                    if (_mode == PipeMode.Metrics)
-                    {
-                        // Metrics
-                        HandleEventCounters(source);
-                    }
                     else if (_mode == PipeMode.Logs)
                     {
                         // Logging
@@ -167,6 +151,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         token.ThrowIfCancellationRequested();
                     }
 
+                    if (_mode == PipeMode.EventSource)
+                    {
+                        await _onBeforeProcess?.Invoke(token);
+                    }
+
                     source.Process();
                     token.ThrowIfCancellationRequested();
                 }
@@ -176,8 +165,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 finally
                 {
-                    ExecuteCounterLoggerAction((metricLogger) => metricLogger.PipelineStopped());
-
                     registration.Dispose();
                     EventPipeEventSource session = null;
                     lock (_lock)
@@ -201,7 +188,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                 if (_mode == PipeMode.EventSource)
                 {
-                    await _onProcessFinished(token);
+                    await _onAfterProcess?.Invoke(token);
                 }
 
             }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
@@ -365,98 +352,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                 lastFormattedMessage = formattedMessage;
             });
-        }
-
-        private void HandleEventCounters(EventPipeEventSource source)
-        {
-            ExecuteCounterLoggerAction((metricLogger) => metricLogger.PipelineStarted());
-
-            source.Dynamic.All += traceEvent =>
-            {
-                try
-                {
-                    // Metrics
-                    if (traceEvent.EventName.Equals("EventCounters"))
-                    {
-                        IDictionary<string, object> payloadVal = (IDictionary<string, object>)(traceEvent.PayloadValue(0));
-                        IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
-
-                        //Make sure we are part of the requested series. If multiple clients request metrics, all of them get the metrics.
-                        string series = payloadFields["Series"].ToString();
-                        if (GetInterval(series) != _metricIntervalSeconds * 1000)
-                        {
-                            return;
-                        }
-
-                        string counterName = payloadFields["Name"].ToString();
-                        if (!_counterFilter.IsIncluded(traceEvent.ProviderName, counterName))
-                        {
-                            return;
-                        }
-
-                        float intervalSec = (float)payloadFields["IntervalSec"];
-                        string displayName = payloadFields["DisplayName"].ToString();
-                        string displayUnits = payloadFields["DisplayUnits"].ToString();
-                        double value = 0;
-                        CounterType counterType = CounterType.Metric;
-
-                        if (payloadFields["CounterType"].Equals("Mean"))
-                        {
-                            value = (double)payloadFields["Mean"];
-                        }
-                        else if (payloadFields["CounterType"].Equals("Sum"))
-                        {
-                            counterType = CounterType.Rate;
-                            value = (double)payloadFields["Increment"];
-                            if (string.IsNullOrEmpty(displayUnits))
-                            {
-                                displayUnits = "count";
-                            }
-                            //TODO Should we make these /sec like the dotnet-counters tool?
-                        }
-
-                        // Note that dimensional data such as pod and namespace are automatically added in prometheus and azure monitor scenarios.
-                        // We no longer added it here.
-                        var counterPayload = new CounterPayload(traceEvent.TimeStamp,
-                            traceEvent.ProviderName,
-                            counterName, displayName,
-                            displayUnits,
-                            value,
-                            counterType,
-                            intervalSec);
-
-                        ExecuteCounterLoggerAction((metricLogger) => metricLogger.Log(counterPayload));
-                    }
-                }
-                catch (Exception)
-                {
-                }
-            };
-        }
-
-        private static int GetInterval(string series)
-        {
-            const string comparison = "Interval=";
-            int interval = 0;
-            if (series.StartsWith(comparison, StringComparison.OrdinalIgnoreCase))
-            {
-                int.TryParse(series.Substring(comparison.Length), out interval);
-            }
-            return interval;
-        }
-
-        private void ExecuteCounterLoggerAction(Action<ICountersLogger> action)
-        {
-            foreach (ICountersLogger metricLogger in _metricLoggers)
-            {
-                try
-                {
-                    action(metricLogger);
-                }
-                catch (ObjectDisposedException)
-                {
-                }
-            }
         }
 
         private async Task HandleGCEvents(EventPipeEventSource source, Func<Task> stopFunc, CancellationToken token)

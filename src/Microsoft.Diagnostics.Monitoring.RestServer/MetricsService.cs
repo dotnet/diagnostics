@@ -82,7 +82,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
                         CounterGroups = counterGroups,
                         Duration = Timeout.InfiniteTimeSpan,
                         RefreshInterval = TimeSpan.FromSeconds(options.UpdateIntervalSeconds)
-                    }, metricsLogger: new[] { new MetricsLogger(_store.MetricsStore) });
+                    }, loggers: new[] { new MetricsLogger(_store.MetricsStore) });
 
                     using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, optionsTokenSource.Token);
                     await _counterPipeline.RunAsync(linkedTokenSource.Token);

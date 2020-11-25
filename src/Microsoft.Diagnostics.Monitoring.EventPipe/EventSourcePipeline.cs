@@ -45,7 +45,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 mode: PipeMode.EventSource,
                 configuration: configuration,
                 onEventSourceAvailable: OnEventSourceAvailable,
-                onProcessFinished: OnRunFinished);
+                onAfterProcess: OnAfterEventProcessing,
+                onBeforeProcess: OnBeforeEventProcessing);
         }
 
         protected override Task OnRun(CancellationToken token)
@@ -85,7 +86,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
         }
 
-        protected virtual Task OnRunFinished(CancellationToken token)
+        protected virtual Task OnBeforeEventProcessing(CancellationToken token)
+        {
+            return Task.CompletedTask;
+        }
+
+        protected virtual Task OnAfterEventProcessing(CancellationToken token)
         {
             return Task.CompletedTask;
         }
