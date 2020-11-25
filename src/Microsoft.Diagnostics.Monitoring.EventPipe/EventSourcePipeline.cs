@@ -2,14 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Graphs;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
-using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -82,8 +77,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        protected virtual void OnEventSourceAvailable(EventPipeEventSource eventSource)
+        protected virtual Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
         {
+            return Task.CompletedTask;
         }
 
         protected virtual Task OnBeforeEventProcessing(CancellationToken token)

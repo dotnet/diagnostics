@@ -8,6 +8,8 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -25,7 +27,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             return new LoggingSourceConfiguration(Settings.LogLevel);
         }
 
-        protected override void OnEventSourceAvailable(EventPipeEventSource eventSource)
+        protected override Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
         {
             string lastFormattedMessage = string.Empty;
 
@@ -161,6 +163,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                 lastFormattedMessage = formattedMessage;
             });
+
+            return Task.CompletedTask;
         }
 
         private class LogActivityItem

@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             return Task.CompletedTask;
         }
 
-        protected override void OnEventSourceAvailable(EventPipeEventSource eventSource)
+        protected override Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
         {
             eventSource.Dynamic.All += traceEvent =>
             {
@@ -118,6 +118,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 {
                 }
             };
+
+            return Task.CompletedTask;
         }
 
         private static int GetInterval(string series)
