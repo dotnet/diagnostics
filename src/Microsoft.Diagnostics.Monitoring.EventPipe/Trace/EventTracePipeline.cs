@@ -4,26 +4,64 @@
 
 using Microsoft.Diagnostics.NETCore.Client;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using DiagnosticsMonitor = Microsoft.Diagnostics.Monitoring.EventPipe.DiagnosticsEventPipeProcessor.DiagnosticsMonitor;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    internal class EventTracePipeline : EventSourcePipeline<EventTracePipelineSettings>
+    internal class EventTracePipeline : Pipeline
     {
-        private readonly Func<Stream, CancellationToken, Task> _streamAvailable;
-        public EventTracePipeline(DiagnosticsClient client, EventTracePipelineSettings settings, Func<Stream, CancellationToken, Task> streamAvailable)
-            : base(client, settings)
+        private readonly Lazy<DiagnosticsMonitor> _monitor;
+        private readonly Func<Stream, CancellationToken, Task> _onStreamAvailable;
+
+        public DiagnosticsClient Client { get; }
+        public EventTracePipelineSettings Settings { get; }
+
+        public EventTracePipeline(DiagnosticsClient client, EventTracePipelineSettings settings, Func<Stream, CancellationToken, Task> onStreamAvailable)
         {
-            _streamAvailable = streamAvailable ?? throw new ArgumentNullException(nameof(streamAvailable));
+            Client = client;
+            Settings = settings;
+            _onStreamAvailable = onStreamAvailable ?? throw new ArgumentNullException(nameof(onStreamAvailable));
+            _monitor = new Lazy<DiagnosticsMonitor>(CreateMonitor);
         }
 
-        internal override DiagnosticsEventPipeProcessor CreateProcessor()
+        protected override async Task OnRun(CancellationToken token)
         {
-            return new DiagnosticsEventPipeProcessor(PipeMode.Nettrace, configuration: Settings.Configuration, onStreamAvailable: _streamAvailable);
+            try
+            {
+                Stream eventStream = await _monitor.Value.ProcessEvents(Client, Settings.Duration, token);
+
+                await _onStreamAvailable(eventStream, token);
+            }
+            catch (InvalidOperationException e)
+            {
+                throw new PipelineException(e.Message, e);
+            }
+        }
+
+        protected override async Task OnCleanup()
+        {
+            if (_monitor.IsValueCreated)
+            {
+                await _monitor.Value.DisposeAsync();
+            }
+            await base.OnCleanup();
+        }
+
+        protected override Task OnStop(CancellationToken token)
+        {
+            if (_monitor.IsValueCreated)
+            {
+                _monitor.Value.StopProcessing();
+            }
+            return Task.CompletedTask;
+        }
+
+        private DiagnosticsMonitor CreateMonitor()
+        {
+            return new DiagnosticsMonitor(Settings.Configuration);
         }
     }
 }

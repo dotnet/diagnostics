@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     partial class DiagnosticsEventPipeProcessor
     {
-        private sealed class DiagnosticsMonitor : IAsyncDisposable
+        internal sealed class DiagnosticsMonitor : IAsyncDisposable
         {
             private readonly MonitoringSourceConfiguration _sourceConfig;
             private readonly TaskCompletionSource<object> _stopProcessingSource;

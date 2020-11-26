@@ -15,7 +15,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private readonly PipeMode _mode;
         private readonly MonitoringSourceConfiguration _userConfig;
-        private readonly Func<Stream, CancellationToken, Task> _onStreamAvailable;
         private readonly Func<EventPipeEventSource, Func<Task>, CancellationToken, Task> _onEventSourceAvailable;
         private readonly Func<CancellationToken, Task> _onAfterProcess;
         private readonly Func<CancellationToken, Task> _onBeforeProcess;
@@ -30,7 +29,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public DiagnosticsEventPipeProcessor(
             PipeMode mode,
             MonitoringSourceConfiguration configuration = null, // PipeMode = Nettrace, EventSource
-            Func<Stream, CancellationToken, Task> onStreamAvailable = null, // PipeMode = Nettrace
             Func<EventPipeEventSource, Func<Task>, CancellationToken, Task> onEventSourceAvailable = null, // PipeMode = EventSource
             Func<CancellationToken, Task> onAfterProcess = null, // PipeMode = EventSource
             Func<CancellationToken, Task> onBeforeProcess = null // PipeMode = EventSource
@@ -38,7 +36,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             _mode = mode;
             _userConfig = configuration;
-            _onStreamAvailable = onStreamAvailable;
 
             _onEventSourceAvailable = onEventSourceAvailable;
             _onAfterProcess = onAfterProcess;
@@ -59,7 +56,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 try
                 {
                     MonitoringSourceConfiguration config = null;
-                    if (_mode == PipeMode.Nettrace || _mode == PipeMode.EventSource)
+                    if (_mode == PipeMode.EventSource)
                     {
                         config = _userConfig;
                     }
@@ -69,23 +66,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     Func<Task> stopFunc = () => Task.Run(() => { monitor.StopProcessing(); });
 
                     Stream sessionStream = await monitor.ProcessEvents(client, duration, token);
-
-                    if (_mode == PipeMode.Nettrace)
-                    {
-                        if (!_sessionStarted.TrySetResult(true))
-                        {
-                            token.ThrowIfCancellationRequested();
-                        }
-
-                        lock (_lock)
-                        {
-                            //Save the stop function for later, so that we can stop a trace later.
-                            _stopFunc = stopFunc;
-                        }
-
-                        await _onStreamAvailable(sessionStream, token);
-                        return;
-                    }
 
                     source = new EventPipeEventSource(sessionStream);
 
