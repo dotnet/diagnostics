@@ -14,15 +14,81 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private readonly Func<string, CancellationToken, Task> _onCommandLine;
 
+        private Task _processInfoTask;
+
         public EventProcessInfoPipeline(DiagnosticsClient client, EventProcessInfoPipelineSettings settings, Func<string, CancellationToken, Task> onCommandLine)
             : base(client, settings)
         {
             _onCommandLine = onCommandLine ?? throw new ArgumentNullException(nameof(onCommandLine));
         }
 
-        internal override DiagnosticsEventPipeProcessor CreateProcessor() =>
-            new DiagnosticsEventPipeProcessor(
-                PipeMode.ProcessInfo,
-                processInfoCallback: _onCommandLine);
+        internal override MonitoringSourceConfiguration CreateConfiguration()
+        {
+            return new SampleProfilerConfiguration();
+        }
+
+        protected override async Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
+        {
+            TaskCompletionSource<object> subscribedTaskSource =
+                new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            using var _ = token.Register(() => subscribedTaskSource.TrySetCanceled(token));
+
+            _processInfoTask = Task.Factory.StartNew(
+                () => GetProcessInfoAsync(eventSource, subscribedTaskSource, stopSessionAsync, token),
+                token,
+                TaskCreationOptions.LongRunning,
+                TaskScheduler.Default).Unwrap();
+
+            await subscribedTaskSource.Task;
+        }
+
+        protected override Task OnAfterEventProcessing(CancellationToken token)
+        {
+            return _processInfoTask;
+        }
+
+        private async Task GetProcessInfoAsync(
+            EventPipeEventSource eventSource,
+            TaskCompletionSource<object> subscribedTaskSource,
+            Func<Task> stopSessionAsync,
+            CancellationToken token)
+        {
+            string commandLine = null;
+            Action<TraceEvent, Action> processInfoHandler = (TraceEvent traceEvent, Action taskComplete) =>
+            {
+                commandLine = (string)traceEvent.PayloadByName("CommandLine");
+                taskComplete();
+            };
+
+            // Completed when the ProcessInfo event of the Microsoft-DotNETCore-EventPipe event provider is handled
+            using var processInfoTaskSource = new EventTaskSource<Action<TraceEvent>>(
+                taskComplete => traceEvent => processInfoHandler(traceEvent, taskComplete),
+                handler => eventSource.Dynamic.AddCallbackForProviderEvent(MonitoringSourceConfiguration.EventPipeProviderName, "ProcessInfo", handler),
+                handler => eventSource.Dynamic.RemoveCallback(handler),
+                token);
+
+            // Completed when any trace event is handled
+            using var anyEventTaskSource = new EventTaskSource<Action<TraceEvent>>(
+                taskComplete => traceEvent => taskComplete(),
+                handler => eventSource.Dynamic.All += handler,
+                handler => eventSource.Dynamic.All -= handler,
+                token);
+
+            if (subscribedTaskSource.TrySetResult(null))
+            {
+                // Wait for any trace event to be processed
+                await anyEventTaskSource.Task;
+
+                // Stop the event pipe session
+                await stopSessionAsync();
+
+                // Wait for the ProcessInfo event to be processed
+                await processInfoTaskSource.Task;
+
+                // Notify of command line information
+                await _onCommandLine(commandLine, token);
+            }
+        }
     }
 }

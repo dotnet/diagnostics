@@ -14,7 +14,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     internal partial class DiagnosticsEventPipeProcessor : IAsyncDisposable
     {
         private readonly PipeMode _mode;
-        private readonly Func<string, CancellationToken, Task> _processInfoCallback;
         private readonly MonitoringSourceConfiguration _userConfig;
         private readonly Func<Stream, CancellationToken, Task> _onStreamAvailable;
         private readonly Func<EventPipeEventSource, Func<Task>, CancellationToken, Task> _onEventSourceAvailable;
@@ -32,17 +31,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             PipeMode mode,
             MonitoringSourceConfiguration configuration = null, // PipeMode = Nettrace, EventSource
             Func<Stream, CancellationToken, Task> onStreamAvailable = null, // PipeMode = Nettrace
-            Func<string, CancellationToken, Task> processInfoCallback = null,     // PipeMode = ProcessInfo
             Func<EventPipeEventSource, Func<Task>, CancellationToken, Task> onEventSourceAvailable = null, // PipeMode = EventSource
             Func<CancellationToken, Task> onAfterProcess = null, // PipeMode = EventSource
             Func<CancellationToken, Task> onBeforeProcess = null // PipeMode = EventSource
             )
         {
             _mode = mode;
-            _processInfoCallback = processInfoCallback;
             _userConfig = configuration;
             _onStreamAvailable = onStreamAvailable;
-            _processInfoCallback = processInfoCallback;
 
             _onEventSourceAvailable = onEventSourceAvailable;
             _onAfterProcess = onAfterProcess;
@@ -63,11 +59,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 try
                 {
                     MonitoringSourceConfiguration config = null;
-                    if (_mode == PipeMode.ProcessInfo)
-                    {
-                        config = new SampleProfilerConfiguration();
-                    }
-                    else if (_mode == PipeMode.Nettrace || _mode == PipeMode.EventSource)
+                    if (_mode == PipeMode.Nettrace || _mode == PipeMode.EventSource)
                     {
                         config = _userConfig;
                     }
@@ -100,11 +92,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     if (_mode == PipeMode.EventSource)
                     {
                         await _onEventSourceAvailable(source, stopFunc, token);
-                    }
-                    else if (_mode == PipeMode.ProcessInfo)
-                    {
-                        // ProcessInfo
-                        handleEventsTask = HandleProcessInfo(source, stopFunc, token);
                     }
 
                     lock(_lock)
@@ -181,42 +168,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 await stopFunc();
             }
-        }
-
-        private async Task HandleProcessInfo(EventPipeEventSource source, Func<Task> stopFunc, CancellationToken token)
-        {
-            string commandLine = null;
-            Action<TraceEvent, Action> processInfoHandler = (TraceEvent traceEvent, Action taskComplete) =>
-            {
-                commandLine = (string)traceEvent.PayloadByName("CommandLine");
-                taskComplete();
-            };
-
-            // Completed when the ProcessInfo event of the Microsoft-DotNETCore-EventPipe event provider is handled
-            using var processInfoTaskSource = new EventTaskSource<Action<TraceEvent>>(
-                taskComplete => traceEvent => processInfoHandler(traceEvent, taskComplete),
-                handler => source.Dynamic.AddCallbackForProviderEvent(MonitoringSourceConfiguration.EventPipeProviderName, "ProcessInfo", handler),
-                handler => source.Dynamic.RemoveCallback(handler),
-                token);
-
-            // Completed when any trace event is handled
-            using var anyEventTaskSource = new EventTaskSource<Action<TraceEvent>>(
-                taskComplete => traceEvent => taskComplete(),
-                handler => source.Dynamic.All += handler,
-                handler => source.Dynamic.All -= handler,
-                token);
-
-            // Wait for any trace event to be processed
-            await anyEventTaskSource.Task;
-
-            // Stop the event pipe session
-            await stopFunc();
-
-            // Wait for the ProcessInfo event to be processed
-            await processInfoTaskSource.Task;
-
-            // Notify of command line information
-            await _processInfoCallback(commandLine, token);
         }
 
         public async ValueTask DisposeAsync()
