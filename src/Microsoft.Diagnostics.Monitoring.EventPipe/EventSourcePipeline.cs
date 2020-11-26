@@ -37,7 +37,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
 
             return new DiagnosticsEventPipeProcessor(
-                mode: PipeMode.EventSource,
                 configuration: configuration,
                 onEventSourceAvailable: OnEventSourceAvailable,
                 onAfterProcess: OnAfterEventProcessing,

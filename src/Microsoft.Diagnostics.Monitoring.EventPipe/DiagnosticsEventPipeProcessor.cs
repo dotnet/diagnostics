@@ -13,8 +13,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal partial class DiagnosticsEventPipeProcessor : IAsyncDisposable
     {
-        private readonly PipeMode _mode;
-        private readonly MonitoringSourceConfiguration _userConfig;
+        private readonly MonitoringSourceConfiguration _configuration;
         private readonly Func<EventPipeEventSource, Func<Task>, CancellationToken, Task> _onEventSourceAvailable;
         private readonly Func<CancellationToken, Task> _onAfterProcess;
         private readonly Func<CancellationToken, Task> _onBeforeProcess;
@@ -27,15 +26,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private bool _disposed;
 
         public DiagnosticsEventPipeProcessor(
-            PipeMode mode,
             MonitoringSourceConfiguration configuration = null, // PipeMode = Nettrace, EventSource
             Func<EventPipeEventSource, Func<Task>, CancellationToken, Task> onEventSourceAvailable = null, // PipeMode = EventSource
             Func<CancellationToken, Task> onAfterProcess = null, // PipeMode = EventSource
             Func<CancellationToken, Task> onBeforeProcess = null // PipeMode = EventSource
             )
         {
-            _mode = mode;
-            _userConfig = configuration;
+            _configuration = configuration;
 
             _onEventSourceAvailable = onEventSourceAvailable;
             _onAfterProcess = onAfterProcess;
@@ -55,13 +52,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 Task handleEventsTask = Task.CompletedTask;
                 try
                 {
-                    MonitoringSourceConfiguration config = null;
-                    if (_mode == PipeMode.EventSource)
-                    {
-                        config = _userConfig;
-                    }
-
-                    monitor = new DiagnosticsMonitor(config);
+                    monitor = new DiagnosticsMonitor(_configuration);
                     // Allows the event handling routines to stop processing before the duration expires.
                     Func<Task> stopFunc = () => Task.Run(() => { monitor.StopProcessing(); });
 
@@ -69,12 +60,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                     source = new EventPipeEventSource(sessionStream);
 
-                    if (_mode == PipeMode.EventSource)
-                    {
-                        await _onEventSourceAvailable(source, stopFunc, token);
-                    }
+                    await _onEventSourceAvailable(source, stopFunc, token);
 
-                    lock(_lock)
+                    lock (_lock)
                     {
                         _eventPipeSession = source;
                         _stopFunc = stopFunc;
@@ -85,10 +73,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         token.ThrowIfCancellationRequested();
                     }
 
-                    if (_mode == PipeMode.EventSource)
-                    {
-                        await _onBeforeProcess?.Invoke(token);
-                    }
+                    await _onBeforeProcess?.Invoke(token);
 
                     source.Process();
                     token.ThrowIfCancellationRequested();
@@ -118,12 +103,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 // The EventPipeEventSource will only raise the Completed event when it is disposed. So if this task
                 // is waiting for the Completed event to be raised, it will never complete until after EventPipeEventSource
                 // is diposed.
-                await handleEventsTask;
-
-                if (_mode == PipeMode.EventSource)
-                {
-                    await _onAfterProcess?.Invoke(token);
-                }
+                await _onAfterProcess?.Invoke(token);
 
             }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
