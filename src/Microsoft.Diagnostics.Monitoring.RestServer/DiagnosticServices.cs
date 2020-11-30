@@ -17,10 +17,6 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 {
     internal sealed class DiagnosticServices : IDiagnosticServices
     {
-        // String returned for a process field when its value could not be retrieved. This is the same
-        // value that is returned by the runtime when it could not determine the value for each of those fields.
-        private const string ProcessFieldUnknownValue = "unknown";
-
         // The value of the operating system field of the ProcessInfo result when the target process is running
         // on a Windows operating system.
         private const string ProcessOperatingSystemWindowsValue = "windows";
@@ -206,12 +202,23 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 
         private sealed class ProcessInfo : IProcessInfo
         {
+            // String returned for a process field when its value could not be retrieved. This is the same
+            // value that is returned by the runtime when it could not determine the value for each of those fields.
+            private const string ProcessFieldUnknownValue = "unknown";
+
             public ProcessInfo(
                 IEndpointInfo endpointInfo,
+                string commandLine,
                 string processName)
             {
                 EndpointInfo = endpointInfo;
-                ProcessName = processName;
+
+                // The GetProcessInfo command will return "unknown" for values for which it does
+                // not know the value, such as operating system and process architecture if the
+                // process is running on one that is not predefined. Mimic the same behavior here
+                // when the extra process information was not provided.
+                CommandLine = commandLine ?? ProcessFieldUnknownValue;
+                ProcessName = processName ?? ProcessFieldUnknownValue;
             }
 
             public static async Task<ProcessInfo> FromEndpointInfoAsync(IEndpointInfo endpointInfo)
@@ -283,18 +290,15 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
                     }
                 }
 
-                // The GetProcessInfo command will return "unknown" for values for which it does
-                // not know the value, such as operating system and process architecture if the
-                // process is running on one that is not predefined. Mimic the same behavior here
-                // when the extra process information was not provided.
                 return new ProcessInfo(
                     endpointInfo,
-                    processName ?? ProcessFieldUnknownValue);
+                    commandLine,
+                    processName);
             }
 
             public IEndpointInfo EndpointInfo { get; }
 
-            public string CommandLine => EndpointInfo.CommandLine ?? ProcessFieldUnknownValue;
+            public string CommandLine { get; }
 
             public string OperatingSystem => EndpointInfo.OperatingSystem ?? ProcessFieldUnknownValue;
 
