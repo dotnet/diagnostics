@@ -23,24 +23,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _processor = new Lazy<DiagnosticsEventPipeProcessor>(CreateProcessor);
         }
 
-        internal virtual MonitoringSourceConfiguration CreateConfiguration()
-        {
-            return null;
-        }
+        protected abstract MonitoringSourceConfiguration CreateConfiguration();
 
-        internal virtual DiagnosticsEventPipeProcessor CreateProcessor()
+        private DiagnosticsEventPipeProcessor CreateProcessor()
         {
-            MonitoringSourceConfiguration configuration = CreateConfiguration();
-            if (null == configuration)
-            {
-                throw new ArgumentException(nameof(configuration));
-            }
-
             return new DiagnosticsEventPipeProcessor(
-                configuration: configuration,
-                onEventSourceAvailable: OnEventSourceAvailable,
-                onAfterProcess: OnAfterEventProcessing,
-                onBeforeProcess: OnBeforeEventProcessing);
+                configuration: CreateConfiguration(),
+                onEventSourceAvailable: OnEventSourceAvailable);
         }
 
         protected override Task OnRun(CancellationToken token)
@@ -77,16 +66,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
 
         protected virtual Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
-        {
-            return Task.CompletedTask;
-        }
-
-        protected virtual Task OnBeforeEventProcessing(CancellationToken token)
-        {
-            return Task.CompletedTask;
-        }
-
-        protected virtual Task OnAfterEventProcessing(CancellationToken token)
         {
             return Task.CompletedTask;
         }

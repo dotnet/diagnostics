@@ -36,27 +36,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        internal override MonitoringSourceConfiguration CreateConfiguration()
+        protected override MonitoringSourceConfiguration CreateConfiguration()
         {
             return new MetricSourceConfiguration(CounterIntervalSeconds, _filter.GetProviders());
         }
 
-        protected override Task OnAfterEventProcessing(CancellationToken token)
-        {
-            ExecuteCounterLoggerAction((metricLogger) => metricLogger.PipelineStopped());
-
-            return Task.CompletedTask;
-        }
-
-        protected override Task OnBeforeEventProcessing(CancellationToken token)
+        protected override async Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
         {
             ExecuteCounterLoggerAction((metricLogger) => metricLogger.PipelineStarted());
 
-            return Task.CompletedTask;
-        }
-
-        protected override Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
-        {
             eventSource.Dynamic.All += traceEvent =>
             {
                 try
@@ -119,7 +107,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
             };
 
-            return Task.CompletedTask;
+            using var sourceCompletedTaskSource = new EventTaskSource<Action>(
+                taskComplete => taskComplete,
+                handler => eventSource.Completed += handler,
+                handler => eventSource.Completed -= handler,
+                token);
+
+            await sourceCompletedTaskSource.Task;
+
+            ExecuteCounterLoggerAction((metricLogger) => metricLogger.PipelineStopped());
         }
 
         private static int GetInterval(string series)

@@ -17,44 +17,17 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private readonly MemoryGraph _gcGraph;
 
-        private Task _graphTask;
-
         public EventGCDumpPipeline(DiagnosticsClient client, EventGCPipelineSettings settings, MemoryGraph gcGraph) : base(client, settings)
         {
             _gcGraph = gcGraph ?? throw new ArgumentNullException(nameof(gcGraph));
         }
 
-        internal override MonitoringSourceConfiguration CreateConfiguration()
+        protected override MonitoringSourceConfiguration CreateConfiguration()
         {
             return new GCDumpSourceConfiguration();
         }
 
         protected override async Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
-        {
-            TaskCompletionSource<object> subscribedTaskSource =
-                new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            using var _ = token.Register(() => subscribedTaskSource.TrySetCanceled(token));
-
-            _graphTask = Task.Factory.StartNew(
-                () => FillGraphAsync(eventSource, subscribedTaskSource, stopSessionAsync, token),
-                token,
-                TaskCreationOptions.LongRunning,
-                TaskScheduler.Default).Unwrap();
-
-            await subscribedTaskSource.Task;
-        }
-
-        protected override Task OnAfterEventProcessing(CancellationToken token)
-        {
-            return _graphTask;
-        }
-
-        private async Task FillGraphAsync(
-            EventPipeEventSource eventSource,
-            TaskCompletionSource<object> subscribedTaskSource,
-            Func<Task> stopSessionAsync,
-            CancellationToken token)
         {
             int gcNum = -1;
 
@@ -103,52 +76,49 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 handler => eventSource.Completed -= handler,
                 token);
 
-            if (subscribedTaskSource.TrySetResult(null))
+            // A task that is completed whenever GC data is received
+            Task gcDataTask = Task.WhenAny(gcStartTaskSource.Task, gcBulkNodeTaskSource.Task);
+            Task gcStopTask = gcStopTaskSource.Task;
+
+            DotNetHeapDumpGraphReader dumper = new DotNetHeapDumpGraphReader(TextWriter.Null)
             {
-                // A task that is completed whenever GC data is received
-                Task gcDataTask = Task.WhenAny(gcStartTaskSource.Task, gcBulkNodeTaskSource.Task);
-                Task gcStopTask = gcStopTaskSource.Task;
+                DotNetHeapInfo = new DotNetHeapInfo()
+            };
+            dumper.SetupCallbacks(_gcGraph, eventSource);
 
-                DotNetHeapDumpGraphReader dumper = new DotNetHeapDumpGraphReader(TextWriter.Null)
-                {
-                    DotNetHeapInfo = new DotNetHeapInfo()
-                };
-                dumper.SetupCallbacks(_gcGraph, eventSource);
+            // The event source will not always provide the GC events when it starts listening. However,
+            // they will be provided when the event source is told to stop processing events. Give the
+            // event source some time to produce the events, but if it doesn't start producing them within
+            // a short amount of time (5 seconds), then stop processing events to allow them to be flushed.
+            Task eventsTimeoutTask = Task.Delay(TimeSpan.FromSeconds(5), token);
+            Task completedTask = await Task.WhenAny(gcDataTask, eventsTimeoutTask);
 
-                // The event source will not always provide the GC events when it starts listening. However,
-                // they will be provided when the event source is told to stop processing events. Give the
-                // event source some time to produce the events, but if it doesn't start producing them within
-                // a short amount of time (5 seconds), then stop processing events to allow them to be flushed.
-                Task eventsTimeoutTask = Task.Delay(TimeSpan.FromSeconds(5), token);
-                Task completedTask = await Task.WhenAny(gcDataTask, eventsTimeoutTask);
+            token.ThrowIfCancellationRequested();
 
-                token.ThrowIfCancellationRequested();
-
-                // If started receiving GC events, wait for the GC Stop event.
-                if (completedTask == gcDataTask)
-                {
-                    await gcStopTask;
-                }
-
-                // Stop receiving events; if haven't received events yet, this will force flushing of events.
-                await stopSessionAsync();
-
-                // Wait for all received events to be processed.
-                await sourceCompletedTaskSource.Task;
-
-                // Check that GC data and stop events were received. This is done by checking that the
-                // associated tasks have ran to completion. If one of them has not reached the completion state, then
-                // fail the GC dump operation.
-                if (gcDataTask.Status != TaskStatus.RanToCompletion ||
-                    gcStopTask.Status != TaskStatus.RanToCompletion)
-                {
-                    throw new InvalidOperationException("Unable to create GC dump due to incomplete GC data.");
-                }
-
-                dumper.ConvertHeapDataToGraph();
-
-                _gcGraph.AllowReading();
+            // If started receiving GC events, wait for the GC Stop event.
+            if (completedTask == gcDataTask)
+            {
+                await gcStopTask;
             }
+
+            // Stop receiving events; if haven't received events yet, this will force flushing of events.
+            await stopSessionAsync();
+
+            // Wait for all received events to be processed.
+            await sourceCompletedTaskSource.Task;
+
+            // Check that GC data and stop events were received. This is done by checking that the
+            // associated tasks have ran to completion. If one of them has not reached the completion state, then
+            // fail the GC dump operation.
+            if (gcDataTask.Status != TaskStatus.RanToCompletion ||
+                gcStopTask.Status != TaskStatus.RanToCompletion)
+            {
+                throw new InvalidOperationException("Unable to create GC dump due to incomplete GC data.");
+            }
+
+            dumper.ConvertHeapDataToGraph();
+
+            _gcGraph.AllowReading();
         }
     }
 }

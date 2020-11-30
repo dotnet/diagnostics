@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _factory = factory ?? throw new ArgumentNullException(nameof(factory));
         }
 
-        internal override MonitoringSourceConfiguration CreateConfiguration()
+        protected override MonitoringSourceConfiguration CreateConfiguration()
         {
             return new LoggingSourceConfiguration(Settings.LogLevel);
         }

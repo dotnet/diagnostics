@@ -15,8 +15,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private readonly MonitoringSourceConfiguration _configuration;
         private readonly Func<EventPipeEventSource, Func<Task>, CancellationToken, Task> _onEventSourceAvailable;
-        private readonly Func<CancellationToken, Task> _onAfterProcess;
-        private readonly Func<CancellationToken, Task> _onBeforeProcess;
 
         private readonly object _lock = new object();
 
@@ -26,17 +24,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private bool _disposed;
 
         public DiagnosticsEventPipeProcessor(
-            MonitoringSourceConfiguration configuration = null, // PipeMode = Nettrace, EventSource
-            Func<EventPipeEventSource, Func<Task>, CancellationToken, Task> onEventSourceAvailable = null, // PipeMode = EventSource
-            Func<CancellationToken, Task> onAfterProcess = null, // PipeMode = EventSource
-            Func<CancellationToken, Task> onBeforeProcess = null // PipeMode = EventSource
+            MonitoringSourceConfiguration configuration,
+            Func<EventPipeEventSource, Func<Task>, CancellationToken, Task> onEventSourceAvailable
             )
         {
-            _configuration = configuration;
-
-            _onEventSourceAvailable = onEventSourceAvailable;
-            _onAfterProcess = onAfterProcess;
-            _onBeforeProcess = onBeforeProcess;
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _onEventSourceAvailable = onEventSourceAvailable ?? throw new ArgumentNullException(nameof(onEventSourceAvailable));
 
             _sessionStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
@@ -60,7 +53,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                     source = new EventPipeEventSource(sessionStream);
 
-                    await _onEventSourceAvailable(source, stopFunc, token);
+                    handleEventsTask = _onEventSourceAvailable(source, stopFunc, token);
 
                     lock (_lock)
                     {
@@ -72,8 +65,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     {
                         token.ThrowIfCancellationRequested();
                     }
-
-                    await _onBeforeProcess?.Invoke(token);
 
                     source.Process();
                     token.ThrowIfCancellationRequested();
@@ -103,7 +94,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 // The EventPipeEventSource will only raise the Completed event when it is disposed. So if this task
                 // is waiting for the Completed event to be raised, it will never complete until after EventPipeEventSource
                 // is diposed.
-                await _onAfterProcess?.Invoke(token);
+                await handleEventsTask;
 
             }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
