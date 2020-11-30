@@ -10,13 +10,13 @@ using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    internal sealed class EventPipeSessionManager : IAsyncDisposable
+    internal sealed class EventPipeStreamProvider : IAsyncDisposable
     {
         private readonly MonitoringSourceConfiguration _sourceConfig;
         private readonly TaskCompletionSource<object> _stopProcessingSource;
         private Task _currentTask;
 
-        public EventPipeSessionManager(MonitoringSourceConfiguration sourceConfig)
+        public EventPipeStreamProvider(MonitoringSourceConfiguration sourceConfig)
         {
             _sourceConfig = sourceConfig;
             _stopProcessingSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);

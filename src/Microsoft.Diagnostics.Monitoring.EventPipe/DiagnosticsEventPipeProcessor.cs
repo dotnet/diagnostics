@@ -41,15 +41,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             await await Task.Factory.StartNew(async () =>
             {
                 EventPipeEventSource source = null;
-                EventPipeSessionManager sessionManager = null;
+                EventPipeStreamProvider streamProvider = null;
                 Task handleEventsTask = Task.CompletedTask;
                 try
                 {
-                    sessionManager = new EventPipeSessionManager(_configuration);
+                    streamProvider = new EventPipeStreamProvider(_configuration);
                     // Allows the event handling routines to stop processing before the duration expires.
-                    Func<Task> stopFunc = () => Task.Run(() => { sessionManager.StopProcessing(); });
+                    Func<Task> stopFunc = () => Task.Run(() => { streamProvider.StopProcessing(); });
 
-                    Stream sessionStream = await sessionManager.ProcessEvents(client, duration, token);
+                    Stream sessionStream = await streamProvider.ProcessEvents(client, duration, token);
 
                     source = new EventPipeEventSource(sessionStream);
 
@@ -76,17 +76,17 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 finally
                 {
                     registration.Dispose();
-                    EventPipeEventSource session = null;
+                    EventPipeEventSource eventSource = null;
                     lock (_lock)
                     {
-                        session = _eventSource;
+                        eventSource = _eventSource;
                         _eventSource = null;
                     }
 
-                    session?.Dispose();
-                    if (sessionManager != null)
+                    eventSource?.Dispose();
+                    if (streamProvider != null)
                     {
-                        await sessionManager.DisposeAsync();
+                        await streamProvider.DisposeAsync();
                     }
                 }
 

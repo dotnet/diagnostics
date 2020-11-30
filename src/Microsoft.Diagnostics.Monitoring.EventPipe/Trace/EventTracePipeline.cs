@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal class EventTracePipeline : Pipeline
     {
-        private readonly Lazy<EventPipeSessionManager> _manager;
+        private readonly Lazy<EventPipeStreamProvider> _provider;
         private readonly Func<Stream, CancellationToken, Task> _onStreamAvailable;
 
         public DiagnosticsClient Client { get; }
@@ -23,14 +23,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             Client = client ?? throw new ArgumentNullException(nameof(client));
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _onStreamAvailable = onStreamAvailable ?? throw new ArgumentNullException(nameof(onStreamAvailable));
-            _manager = new Lazy<EventPipeSessionManager>(CreateManager);
+            _provider = new Lazy<EventPipeStreamProvider>(CreateProvider);
         }
 
         protected override async Task OnRun(CancellationToken token)
         {
             try
             {
-                Stream eventStream = await _manager.Value.ProcessEvents(Client, Settings.Duration, token);
+                Stream eventStream = await _provider.Value.ProcessEvents(Client, Settings.Duration, token);
 
                 await _onStreamAvailable(eventStream, token);
             }
@@ -42,25 +42,25 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override async Task OnCleanup()
         {
-            if (_manager.IsValueCreated)
+            if (_provider.IsValueCreated)
             {
-                await _manager.Value.DisposeAsync();
+                await _provider.Value.DisposeAsync();
             }
             await base.OnCleanup();
         }
 
         protected override Task OnStop(CancellationToken token)
         {
-            if (_manager.IsValueCreated)
+            if (_provider.IsValueCreated)
             {
-                _manager.Value.StopProcessing();
+                _provider.Value.StopProcessing();
             }
             return Task.CompletedTask;
         }
 
-        private EventPipeSessionManager CreateManager()
+        private EventPipeStreamProvider CreateProvider()
         {
-            return new EventPipeSessionManager(Settings.Configuration);
+            return new EventPipeStreamProvider(Settings.Configuration);
         }
     }
 }
