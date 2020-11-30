@@ -90,16 +90,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static Option CounterOption() =>
             new Option(
                 alias: "--counters",
-                description: "List of counter providers.")
+                description: "A comma-separated list of counter providers. Counter providers can be specified provider_name[:counter_name]. If the provider_name is used without a qualifying counter_name then all counters will be shown. To discover provider and counter names, use the list command.")
             {
                 Argument = new Argument<string>(name: "counters", getDefaultValue: () => "System.Runtime")
             };
 
         private static Argument CounterList() =>
-            new Argument<List<string>>(name: "counter_list", getDefaultValue: () => new List<string>() ) 
+            new Argument<List<string>>(name: "counter_list", getDefaultValue: () => new List<string>())
             {
                 Description = @"A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the provider_name is used without a qualifying counter_name then all counters will be shown. To discover provider and counter names, use the list command.",
-                Arity = ArgumentArity.ZeroOrMore
+                IsHidden = true
             };
 
         private static Command ListCommand() =>
