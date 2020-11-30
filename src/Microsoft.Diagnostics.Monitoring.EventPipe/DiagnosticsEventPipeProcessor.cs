@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private readonly object _lock = new object();
 
         private TaskCompletionSource<bool> _sessionStarted;
-        private EventPipeEventSource _eventPipeSession;
+        private EventPipeEventSource _eventSource;
         private Func<Task> _stopFunc;
         private bool _disposed;
 
@@ -41,15 +41,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             await await Task.Factory.StartNew(async () =>
             {
                 EventPipeEventSource source = null;
-                DiagnosticsMonitor monitor = null;
+                EventPipeSessionManager sessionManager = null;
                 Task handleEventsTask = Task.CompletedTask;
                 try
                 {
-                    monitor = new DiagnosticsMonitor(_configuration);
+                    sessionManager = new EventPipeSessionManager(_configuration);
                     // Allows the event handling routines to stop processing before the duration expires.
-                    Func<Task> stopFunc = () => Task.Run(() => { monitor.StopProcessing(); });
+                    Func<Task> stopFunc = () => Task.Run(() => { sessionManager.StopProcessing(); });
 
-                    Stream sessionStream = await monitor.ProcessEvents(client, duration, token);
+                    Stream sessionStream = await sessionManager.ProcessEvents(client, duration, token);
 
                     source = new EventPipeEventSource(sessionStream);
 
@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                     lock (_lock)
                     {
-                        _eventPipeSession = source;
+                        _eventSource = source;
                         _stopFunc = stopFunc;
                     }
                     registration.Dispose();
@@ -79,14 +79,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     EventPipeEventSource session = null;
                     lock (_lock)
                     {
-                        session = _eventPipeSession;
-                        _eventPipeSession = null;
+                        session = _eventSource;
+                        _eventSource = null;
                     }
 
                     session?.Dispose();
-                    if (monitor != null)
+                    if (sessionManager != null)
                     {
-                        await monitor.DisposeAsync();
+                        await sessionManager.DisposeAsync();
                     }
                 }
 
@@ -107,7 +107,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             Func<Task> stopFunc = null;
             lock (_lock)
             {
-                session = _eventPipeSession;
+                session = _eventSource;
                 stopFunc = _stopFunc;
             }
             if (session != null)
@@ -141,7 +141,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
             }
 
-            _eventPipeSession?.Dispose();
+            _eventSource?.Dispose();
         }
     }
 }

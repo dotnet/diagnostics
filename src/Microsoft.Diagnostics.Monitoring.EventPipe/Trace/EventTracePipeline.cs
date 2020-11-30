@@ -7,13 +7,12 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using DiagnosticsMonitor = Microsoft.Diagnostics.Monitoring.EventPipe.DiagnosticsEventPipeProcessor.DiagnosticsMonitor;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal class EventTracePipeline : Pipeline
     {
-        private readonly Lazy<DiagnosticsMonitor> _monitor;
+        private readonly Lazy<EventPipeSessionManager> _manager;
         private readonly Func<Stream, CancellationToken, Task> _onStreamAvailable;
 
         public DiagnosticsClient Client { get; }
@@ -21,17 +20,17 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public EventTracePipeline(DiagnosticsClient client, EventTracePipelineSettings settings, Func<Stream, CancellationToken, Task> onStreamAvailable)
         {
-            Client = client;
-            Settings = settings;
+            Client = client ?? throw new ArgumentNullException(nameof(client));
+            Settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _onStreamAvailable = onStreamAvailable ?? throw new ArgumentNullException(nameof(onStreamAvailable));
-            _monitor = new Lazy<DiagnosticsMonitor>(CreateMonitor);
+            _manager = new Lazy<EventPipeSessionManager>(CreateManager);
         }
 
         protected override async Task OnRun(CancellationToken token)
         {
             try
             {
-                Stream eventStream = await _monitor.Value.ProcessEvents(Client, Settings.Duration, token);
+                Stream eventStream = await _manager.Value.ProcessEvents(Client, Settings.Duration, token);
 
                 await _onStreamAvailable(eventStream, token);
             }
@@ -43,25 +42,25 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override async Task OnCleanup()
         {
-            if (_monitor.IsValueCreated)
+            if (_manager.IsValueCreated)
             {
-                await _monitor.Value.DisposeAsync();
+                await _manager.Value.DisposeAsync();
             }
             await base.OnCleanup();
         }
 
         protected override Task OnStop(CancellationToken token)
         {
-            if (_monitor.IsValueCreated)
+            if (_manager.IsValueCreated)
             {
-                _monitor.Value.StopProcessing();
+                _manager.Value.StopProcessing();
             }
             return Task.CompletedTask;
         }
 
-        private DiagnosticsMonitor CreateMonitor()
+        private EventPipeSessionManager CreateManager()
         {
-            return new DiagnosticsMonitor(Settings.Configuration);
+            return new EventPipeSessionManager(Settings.Configuration);
         }
     }
 }
