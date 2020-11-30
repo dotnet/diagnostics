@@ -61,5 +61,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="DotnetMonitor.UnitTests" />
+    <InternalsVisibleTo Include="DotnetStack.UnitTests" />
   </ItemGroup>
 </Project>
