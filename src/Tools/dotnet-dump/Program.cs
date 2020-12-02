@@ -73,8 +73,7 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
         private static Option TypeOption() =>
             new Option(
                 alias: "--type",
-                description: @"The dump type determines the kinds of information that are collected from the process. There are several types: full - The largest dump containing all memory including the module images. heap - A large and relatively comprehensive dump containing module lists, thread lists, all stacks, exception information, handle information, and all memory except for mapped 
-images. mini - A small dump containing module lists, thread lists, exception information and all stacks. If not specified 'full' is the default.")
+                description: @"The dump type determines the kinds of information that are collected from the process. There are several types: Full - The largest dump containing all memory including the module images. Heap - A large and relatively comprehensive dump containing module lists, thread lists, all stacks, exception information, handle information, and all memory except for mapped images. Mini - A small dump containing module lists, thread lists, exception information and all stacks.")
             {
                 Argument = new Argument<Dumper.DumpTypeOption>(name: "dump_type", getDefaultValue: () => Dumper.DumpTypeOption.Full)
             };
