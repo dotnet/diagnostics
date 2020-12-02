@@ -10895,7 +10895,7 @@ DECLARE_API(EEVersion)
 
     // Print SOS version
 #ifdef FEATURE_PAL
-    ExtOut("SOS Version: %s\n", sccsid);
+    ExtOut("SOS Version: %s\n", sccsid + sizeof("@(#)Version"));
 #else
     VS_FIXEDFILEINFO sosVersion;
     if (GetSOSVersion(&sosVersion))
