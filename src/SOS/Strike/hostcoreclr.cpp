@@ -63,6 +63,15 @@ SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
 HMODULE g_hmoduleSymBinder = nullptr;
 ISymUnmanagedBinder3 *g_pSymBinder = nullptr;
 #endif
+
+static void AddFileToTpaList(const char* directory, const char* filename, std::string & tpaList)
+{
+    tpaList.append(directory);
+    tpaList.append(DIRECTORY_SEPARATOR_STR_A);
+    tpaList.append(filename);
+    tpaList.append(TPALIST_SEPARATOR_STR_A);
+}
+
 //
 // Build the TPA list of assemblies for the runtime hosting api.
 //
@@ -106,11 +115,7 @@ static void AddFilesFromDirectoryToTpaList(const char* directory, std::string& t
                     if (addedAssemblies.find(filenameWithoutExt) == addedAssemblies.end())
                     {
                         addedAssemblies.insert(filenameWithoutExt);
-
-                        tpaList.append(directory);
-                        tpaList.append(DIRECTORY_SEPARATOR_STR_A);
-                        tpaList.append(filename);
-                        tpaList.append(TPALIST_SEPARATOR_STR_A);
+                        AddFileToTpaList(directory, filename.c_str(), tpaList);
                     }
                 }
             } 
@@ -612,7 +617,11 @@ static HRESULT InitializeNetCoreHost()
 
     // Trust The SOS managed and dependent assemblies from the sos directory
     std::string tpaList;
-    AddFilesFromDirectoryToTpaList(sosModuleDirectory.c_str(), tpaList);
+    const char* directory = sosModuleDirectory.c_str();
+    AddFileToTpaList(directory, "System.Reflection.Metadata.dll", tpaList);
+    AddFileToTpaList(directory, "System.Collections.Immutable.dll", tpaList);
+    AddFileToTpaList(directory, "Microsoft.FileFormats.dll", tpaList);
+    AddFileToTpaList(directory, "Microsoft.SymbolStore.dll", tpaList);
 
     // Trust the runtime assemblies
     AddFilesFromDirectoryToTpaList(hostRuntimeDirectory.c_str(), tpaList);

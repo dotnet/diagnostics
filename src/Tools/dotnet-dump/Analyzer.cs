@@ -63,8 +63,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     // Add all the services needed by commands and other services
                     AddServices(target);
 
-                    // Set the default symbol cache to match Visual Studio's
-                    SymbolReader.DefaultSymbolCache = Path.Combine(Path.GetTempPath(), "SymbolCache");
+                    // Set the default symbol cache to match Visual Studio's when running on Windows
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                        SymbolReader.DefaultSymbolCache = Path.Combine(Path.GetTempPath(), "SymbolCache");
+                    }
 
                     // Automatically enable symbol server support
                     SymbolReader.InitializeSymbolStore(
