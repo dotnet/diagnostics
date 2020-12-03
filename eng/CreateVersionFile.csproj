@@ -73,6 +73,7 @@
     </PropertyGroup>
 
     <PropertyGroup>
+      <!-- SOS (strike.cpp) has a dependency on this variable being public and that it begins with the @(#)Version prefix -->
       <NativeVersionLines>
 <![CDATA[
 char sccsid[] __attribute__((used)) = "@(#)Version $(InformationalVersion)$(BuiltByString)";

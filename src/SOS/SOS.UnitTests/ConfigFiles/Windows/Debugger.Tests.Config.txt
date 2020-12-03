@@ -68,6 +68,7 @@
         <Option Condition="'$(RuntimeVersionLatest)' != ''">
           <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
         <Option Condition="'$(RuntimeVersion50)' != ''">
           <BuildProjectFramework>net5.0</BuildProjectFramework>
@@ -76,10 +77,12 @@
         <Option Condition="'$(RuntimeVersion31)' != ''">
           <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
         <Option Condition="'$(RuntimeVersion21)' != ''">
           <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
         <!--
             SOS.StackAndOtherTests (cli because tested with full, embedded and portable PDBs)
@@ -186,6 +189,7 @@
       <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
       <DebugType>full</DebugType>
       <RuntimeSymbolsPath>$(DesktopFrameworkPath)</RuntimeSymbolsPath>
+      <SetHostRuntime>-netfx</SetHostRuntime>
     </Option>
   </Options>
 

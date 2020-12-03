@@ -2,13 +2,8 @@ project(SOS.NETCore)
 
 if(NOT ${CLR_MANAGED_BINARY_DIR} STREQUAL "")
     set(MANAGED_BINDIR ${CLR_MANAGED_BINARY_DIR}/SOS.NETCore/${CLR_BUILD_TYPE}/netstandard2.0/publish)
-
-    install(FILES ${MANAGED_BINDIR}/SOS.NETCore.dll DESTINATION . )
-    install(FILES ${MANAGED_BINDIR}/SOS.NETCore.pdb DESTINATION . )
-    install(FILES ${MANAGED_BINDIR}/Microsoft.FileFormats.dll DESTINATION . )
-    install(FILES ${MANAGED_BINDIR}/Microsoft.SymbolStore.dll DESTINATION . )
-    install(FILES ${MANAGED_BINDIR}/System.Reflection.Metadata.dll DESTINATION . )
-    install(FILES ${MANAGED_BINDIR}/System.Collections.Immutable.dll DESTINATION . )
+    file(GLOB installfiles ${MANAGED_BINDIR}/*.dll ${MANAGED_BINDIR}/*.pdb)
+    install(FILES ${installfiles} DESTINATION . )
 endif()
 
 if(NOT ${NUGET_PACKAGES} STREQUAL "")
