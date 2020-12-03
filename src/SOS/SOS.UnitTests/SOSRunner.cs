@@ -73,7 +73,7 @@ public class SOSRunner : IDisposable
         public ITestOutputHelper OutputHelper { get; set; }
 
         public string TestName
-        { 
+        {
             get { return _testName ?? "SOS." + DebuggeeName; }
             set { _testName = value; }
         }
@@ -116,7 +116,7 @@ public class SOSRunner : IDisposable
     string _lastCommandOutput;
     string _previousCommandCapture;
 
-    private SOSRunner(NativeDebugger debugger, TestConfiguration config, TestRunner.OutputHelper outputHelper, Dictionary<string, string> variables, 
+    private SOSRunner(NativeDebugger debugger, TestConfiguration config, TestRunner.OutputHelper outputHelper, Dictionary<string, string> variables,
         ScriptLogger scriptLogger, ProcessRunner processRunner, DumpType? dumpType)
     {
         Debugger = debugger;
@@ -209,7 +209,7 @@ public class SOSRunner : IDisposable
                 // Setup the logging from the options in the config file
                 outputHelper = TestRunner.ConfigureLogging(config, information.OutputHelper, information.TestName);
 
-                // Restore and build the debuggee. The debuggee name is lower cased because the 
+                // Restore and build the debuggee. The debuggee name is lower cased because the
                 // source directory name has been lowercased by the build system.
                 DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, information.DebuggeeName, outputHelper);
                 Dictionary<string, string> variables = GenerateVariables(information, debuggeeConfig, DebuggerAction.GenerateDump);
@@ -450,8 +450,8 @@ public class SOSRunner : IDisposable
                         arguments.AppendFormat(" -Gsins {0}", debuggeeCommandLine);
 
                         // disable stopping on integer divide-by-zero and integer overflow exceptions
-                        initialCommands.Add("sxd dz");  
-                        initialCommands.Add("sxd iov");  
+                        initialCommands.Add("sxd dz");
+                        initialCommands.Add("sxd iov");
                     }
                     initialCommands.Add(".sympath %DEBUG_ROOT%");
                     initialCommands.Add(".extpath " + Path.GetDirectoryName(config.SOSPath()));
@@ -512,13 +512,13 @@ public class SOSRunner : IDisposable
                         initialCommands.Add(sb.ToString());
                         initialCommands.Add("process launch -s");
 
-                        // .NET Core 1.1 or less don't catch stack overflow and abort so need to catch SIGSEGV 
+                        // .NET Core 1.1 or less don't catch stack overflow and abort so need to catch SIGSEGV
                         if (config.StackOverflowSIGSEGV)
                         {
                             initialCommands.Add("process handle -s true -n true -p true SIGSEGV");
                         }
                         else
-                        { 
+                        {
                             initialCommands.Add("process handle -s false -n false -p true SIGSEGV");
                         }
                         initialCommands.Add("process handle -s false -n false -p true SIGFPE");
@@ -535,7 +535,7 @@ public class SOSRunner : IDisposable
                     arguments.Append(@"--init-eval-command=""set prompt <END_COMMAND_OUTPUT>\n""");
                     arguments.AppendFormat(" --args {0}", debuggeeCommandLine);
 
-                    // .NET Core 1.1 or less don't catch stack overflow and abort so need to catch SIGSEGV 
+                    // .NET Core 1.1 or less don't catch stack overflow and abort so need to catch SIGSEGV
                     if (config.StackOverflowSIGSEGV)
                     {
                         initialCommands.Add("handle SIGSEGV stop print");
@@ -600,7 +600,7 @@ public class SOSRunner : IDisposable
             // Start the native debugger
             processRunner.Start();
 
-            // Set the coredump_filter flags on the gdb process so the coredump it 
+            // Set the coredump_filter flags on the gdb process so the coredump it
             // takes of the target process contains everything the tests need.
             if (debugger == NativeDebugger.Gdb)
             {
@@ -734,6 +734,7 @@ public class SOSRunner : IDisposable
                 }
                 try
                 {
+                    _scriptLogger.WriteLine(_processRunner, "<END_COMMAND_ERROR>", ProcessStream.StandardOut);
                     await RunSosCommand("SOSStatus");
                 }
                 catch (Exception ex)
@@ -1001,7 +1002,7 @@ public class SOSRunner : IDisposable
             case OSKind.Linux:
             case OSKind.OSX:
                 switch (action) {
-                    case DebuggerAction.GenerateDump: 
+                    case DebuggerAction.GenerateDump:
                         return config.GenerateDumpWithLLDB() ? NativeDebugger.Lldb : NativeDebugger.Gdb;
                     case DebuggerAction.LoadDumpWithDotNetDump:
                         return NativeDebugger.DotNetDump;

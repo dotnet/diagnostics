@@ -259,6 +259,20 @@ public class SOS
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
+    //[Fact]
+    public async Task ConcurrentDictionaries(TestConfiguration config)
+    {
+        await RunTest("ConcurrentDictionaries.script", testLive: false, information: new SOSRunner.TestInformation
+        {
+            TestConfiguration = config,
+            DebuggeeName = "DotnetDumpCommands",
+            DebuggeeArguments = "dcd",
+            UsePipeSync = true,
+            DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
+        }); ;
+    }
+
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task LLDBPluginTests(TestConfiguration config)
     {
         if (OS.Kind == OSKind.Windows || config.IsDesktop || config.RuntimeFrameworkVersionMajor == 1 || SOSRunner.IsAlpine())
@@ -287,7 +301,7 @@ public class SOS
             string scriptDir = Path.Combine(repoRootDir, "src", "SOS", "lldbplugin.tests");
             arguments.Append(Path.Combine(scriptDir, "test_libsosplugin.py"));
             arguments.Append(" ");
-            
+
             // Get lldb path
             arguments.AppendFormat("--lldb {0} ", Environment.GetEnvironmentVariable("LLDB_PATH") ?? throw new ArgumentException("LLDB_PATH environment variable not set"));
 
