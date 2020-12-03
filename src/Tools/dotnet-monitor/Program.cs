@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 aliases: new[] { "-u", "--urls" },
                 description: "Bindings for the REST api.")
             {
-                Argument = new Argument<string[]>(name: "urls", getDefaultValue: () => new[] { "http://localhost:52323" })
+                Argument = new Argument<string[]>(name: "urls", getDefaultValue: () => new[] { "https://localhost:52323" })
             };
 
         private static Option MetricUrls() =>
