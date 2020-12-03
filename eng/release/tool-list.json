@@ -35,6 +35,7 @@
       "dotnet-gcdump",
       "dotnet-sos",
       "dotnet-trace",
+      "dotnet-stack",
       "Microsoft.Diagnostics.NETCore.Client"
     ]
   }
