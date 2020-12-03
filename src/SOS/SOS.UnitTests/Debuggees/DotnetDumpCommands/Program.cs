@@ -83,8 +83,8 @@ namespace DotnetDumpCommands
             objDictionary.GetOrAdd(
                 new DumpSampleStruct
                 {
-                    IntValue = 12,
-                    StringValue = "Sample Struct",
+                    IntValue = 1,
+                    StringValue = "Sample Struct1",
                     Date = DateTime.Now
                 },
                 new DumpSampleClass
@@ -93,8 +93,8 @@ namespace DotnetDumpCommands
             objDictionary.GetOrAdd(
                 new DumpSampleStruct
                 {
-                    IntValue = 12,
-                    StringValue = "Sample Struct",
+                    IntValue = 2,
+                    StringValue = "Sample Struct2",
                     Date = DateTime.Now
                 },
                 default(DumpSampleClass));

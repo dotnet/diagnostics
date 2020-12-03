@@ -5,6 +5,7 @@
 # 4) Open the dump, find concurrent dictionaries and compare the output
 
 !IFDEF:CDB
+!IFDEF:LLDB
 IFDEF:NETCORE_OR_DOTNETDUMP
 
 COMMAND: dcd
@@ -16,10 +17,8 @@ VERIFY: Hexadecimal address expected
 COMMAND: dcd 0000000000000001
 VERIFY: is not referencing an object
 
-SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary`2[[
-VERIFY: ^Total 5 objects
-
 # Checks on ConcurrentDictionary<int, string[]>
+SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary`2[[
 IFDEF:DESKTOP
 SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary`2\[\[System.Int32, mscorlib\],\[System.String\[\], mscorlib\]\]<POUT>
 ENDIF:DESKTOP
@@ -71,7 +70,12 @@ VERIFY: Key: dumpvc <HEXVAL> <HEXVAL>\s+Value: dumpobj <HEXVAL>
 SOSCOMMAND: dumpobj <POUT>Value: dumpobj (<HEXVAL>)<POUT>
 VERIFY: Name:\s+DotnetDumpCommands\.Program\+DumpSampleClass
 VERIFY: instance\s+0\s+\<Value1\>
+IFDEF:64BIT
 VERIFY: instance\s+0000000000000000\s+\<Value2\>
+ENDIF:64BIT
+IFDEF:32BIT
+VERIFY: instance\s+00000000\s+\<Value2\>
+ENDIF:32BIT
 
 # Checks on ConcurrentDictionary<int, DumpSampleStruct>
 SOSCOMMAND: dumpheap -stat -type System.Collections.Concurrent.ConcurrentDictionary`2[[
@@ -90,4 +94,5 @@ VERIFY: instance\s+12\s+IntValue
 VERIFY: instance\s+<HEXVAL>\s+StringValue
 VERIFY: instance\s+<HEXVAL>\s+Date
 ENDIF:NETCORE_OR_DOTNETDUMP
+ENDIF:LLDB
 ENDIF:CDB

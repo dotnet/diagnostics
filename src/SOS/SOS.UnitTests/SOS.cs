@@ -259,7 +259,6 @@ public class SOS
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
-    //[Fact]
     public async Task ConcurrentDictionaries(TestConfiguration config)
     {
         await RunTest("ConcurrentDictionaries.script", testLive: false, information: new SOSRunner.TestInformation
