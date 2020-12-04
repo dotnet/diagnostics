@@ -64,10 +64,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 {
                     //Note these are in precedence order.
                     ConfigureEndpointInfoSource(builder, diagnosticPort);
-                    if (metrics)
-                    {
-                        ConfigureMetricsEndpoint(builder, metricUrls);
-                    }
+                    ConfigureMetricsEndpoint(builder, metrics, metricUrls);
 
                     builder.AddJsonFile(UserSettingsPath, optional: true, reloadOnChange: true);
                     builder.AddJsonFile(SharedSettingsPath, optional: true, reloadOnChange: true);
@@ -83,10 +80,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                     services.AddHostedService<FilteredEndpointInfoSourceHostedService>();
                     services.AddSingleton<IDiagnosticServices, DiagnosticServices>();
                     services.ConfigureEgress(context.Configuration);
-                    if (metrics)
-                    {
-                        services.ConfigureMetrics(context.Configuration);
-                    }
+                    services.ConfigureMetrics(context.Configuration);
                     services.AddSingleton<ExperimentalToolLogger>();
                 })
                 .ConfigureLogging(builder =>
@@ -101,12 +95,12 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 });
         }
 
-        private static void ConfigureMetricsEndpoint(IConfigurationBuilder builder, string[] metricEndpoints)
+        private static void ConfigureMetricsEndpoint(IConfigurationBuilder builder, bool enableMetrics, string[] metricEndpoints)
         {
             builder.AddInMemoryCollection(new Dictionary<string, string>
             {
                 {ConfigurationHelper.MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.Endpoints)), string.Join(';', metricEndpoints)},
-                {ConfigurationHelper.MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.Enabled)), true.ToString()},
+                {ConfigurationHelper.MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.Enabled)), enableMetrics.ToString()},
                 {ConfigurationHelper.MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.UpdateIntervalSeconds)), 10.ToString()},
                 {ConfigurationHelper.MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.MetricCount)), 3.ToString()}
             });
