@@ -117,6 +117,39 @@
         </Option>
       </Options>
     </Option>
+    <!--
+        DotnetDumpCommands (runs on every runtime except netcore2.1 on Linux)
+      -->
+    <Option>
+      <Options>
+        <Option>
+          <TestName>DotnetDumpCommands</TestName>
+        </Option>
+      </Options>
+      <Options>
+        <Option Condition="'$(RuntimeVersionLatest)' != ''">
+          <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+        </Option>
+        <Option Condition="'$(RuntimeVersion50)' != ''">
+          <BuildProjectFramework>net5.0</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
+        </Option>
+        <Option Condition="'$(RuntimeVersion31)' != ''">
+          <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+        </Option>
+      </Options>
+      <Options>
+        <Option Condition="'$(OS)' != 'Linux'">
+          <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+        </Option>
+      </Options>
+    </Option>
   </Options>
 
   <FrameworkVersion Condition="'$(FrameworkVersion)' == ''">$(RuntimeFrameworkVersion)</FrameworkVersion>

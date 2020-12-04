@@ -258,7 +258,7 @@ public class SOS
         }); ;
     }
 
-    [SkippableTheory, MemberData(nameof(Configurations))]
+    [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "DotnetDumpCommands")]
     public async Task ConcurrentDictionaries(TestConfiguration config)
     {
         await RunTest("ConcurrentDictionaries.script", testLive: false, information: new SOSRunner.TestInformation
