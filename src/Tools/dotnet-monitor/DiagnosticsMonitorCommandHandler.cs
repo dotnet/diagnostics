@@ -59,11 +59,6 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
         public IHostBuilder CreateHostBuilder(IConsole console, string[] urls, string[] metricUrls, bool metrics, string diagnosticPort)
         {
-            if (metrics)
-            {
-                urls = urls.Concat(metricUrls).ToArray();
-            }
-
             return Host.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((IConfigurationBuilder builder) =>
                 {
@@ -110,10 +105,10 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         {
             builder.AddInMemoryCollection(new Dictionary<string, string>
             {
-                {MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.Endpoints)), string.Join(';', metricEndpoints)},
-                {MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.Enabled)), true.ToString()},
-                {MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.UpdateIntervalSeconds)), 10.ToString()},
-                {MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.MetricCount)), 3.ToString()}
+                {ConfigurationHelper.MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.Endpoints)), string.Join(';', metricEndpoints)},
+                {ConfigurationHelper.MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.Enabled)), true.ToString()},
+                {ConfigurationHelper.MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.UpdateIntervalSeconds)), 10.ToString()},
+                {ConfigurationHelper.MakeKey(MetricsOptions.ConfigurationKey, nameof(MetricsOptions.MetricCount)), 3.ToString()}
             });
         }
 
@@ -122,14 +117,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             DiagnosticPortConnectionMode connectionMode = string.IsNullOrEmpty(diagnosticPort) ? DiagnosticPortConnectionMode.Connect : DiagnosticPortConnectionMode.Listen;
             builder.AddInMemoryCollection(new Dictionary<string, string>
             {
-                {MakeKey(DiagnosticPortOptions.ConfigurationKey, nameof(DiagnosticPortOptions.ConnectionMode)), connectionMode.ToString()},
-                {MakeKey(DiagnosticPortOptions.ConfigurationKey, nameof(DiagnosticPortOptions.EndpointName)), diagnosticPort}
+                {ConfigurationHelper.MakeKey(DiagnosticPortOptions.ConfigurationKey, nameof(DiagnosticPortOptions.ConnectionMode)), connectionMode.ToString()},
+                {ConfigurationHelper.MakeKey(DiagnosticPortOptions.ConfigurationKey, nameof(DiagnosticPortOptions.EndpointName)), diagnosticPort}
             });
-        }
-
-        private static string MakeKey(string parent, string child)
-        {
-            return FormattableString.Invariant($"{parent}:{child}");
         }
     }
 }

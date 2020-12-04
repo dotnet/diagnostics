@@ -25,7 +25,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         {
             _ports = new Lazy<int?[]>(() =>
                 {
-                    string[] endpoints = Endpoints.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                    string[] endpoints = ConfigurationHelper.SplitValue(Endpoints);
                     int?[] ports = new int?[endpoints.Length];
                     for(int i = 0; i < endpoints.Length; i++)
                     {
