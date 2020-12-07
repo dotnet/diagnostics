@@ -47,6 +47,9 @@
     <WriteLinesToFile File="$(PackageOutputPath)\$(PackageId).$(PackageVersion).nupkg.blobgroup"
                       Lines="$(_BlobGroupName)"
                       Overwrite="true" />
+    <WriteLinesToFile File="$(PackageOutputPath)\$(PackageId).$(PackageVersion).nupkg.version"
+                      Lines="$(PackageVersion)"
+                      Overwrite="true" />
   </Target>
 
 </Project>
