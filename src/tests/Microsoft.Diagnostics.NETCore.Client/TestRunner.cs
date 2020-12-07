@@ -67,6 +67,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public void Start(int timeoutInMSPipeCreation=15_000, int testProcessTimeout=30_000)
         {
+            // If test process timeout was specified to be longer than 30 seconds, make the tracee run 5 seconds longer than 
+            // the test process timeout + pipe creation timeout. 
+            if (testProcessTimeout > 30_000)
+            {
+                startInfo.Arguments = (((timeoutInMSPipeCreation + testProcessTimeout) / 1_000) + 5).ToString();
+            }
+
             if (outputHelper != null)
                 outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName + " " + startInfo.Arguments);
 

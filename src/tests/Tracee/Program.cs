@@ -9,10 +9,15 @@ namespace Tracee
 {
     class Program
     {
-        private const int LoopCount = 30;
+        private static int LoopCount = 30;
 
         static void Main(string[] args)
         {
+            if (args.Length > 0)
+            {
+                LoopCount = Int32.Parse(args[1]);
+            }
+
             Console.WriteLine("Sleep in loop for {0} seconds.", LoopCount);
 
             // Runs for max of 30 sec
