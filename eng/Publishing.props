@@ -72,6 +72,7 @@
     <PropertyGroup>
       <_BlobGroupFilePath>%(PackageFile.FullPath).blobgroup</_BlobGroupFilePath>
       <_ChecksumFilePath>%(PackageFile.FullPath).sha512</_ChecksumFilePath>
+      <_VersionFilePath>%(PackageFile.FullPath).version</_VersionFilePath>
     </PropertyGroup>
 
     <Error Condition="Exists('$(_BlobGroupFilePath)') and !Exists('$(_ChecksumFilePath)')"
@@ -99,6 +100,9 @@
         <ManifestArtifactData>@(_PackageArtifactData)</ManifestArtifactData>
       </_BlobItem>
       <_BlobItem Include="$(_ChecksumFilePath)" Condition="Exists('$(_ChecksumFilePath)')">
+        <ManifestArtifactData Condition="'@(_CommonArtifactData)' != ''">@(_CommonArtifactData)</ManifestArtifactData>
+      </_BlobItem>
+      <_BlobItem Include="$(_VersionFilePath)" Condition="Exists('$(_VersionFilePath)')">
         <ManifestArtifactData Condition="'@(_CommonArtifactData)' != ''">@(_CommonArtifactData)</ManifestArtifactData>
       </_BlobItem>
     </ItemGroup>
