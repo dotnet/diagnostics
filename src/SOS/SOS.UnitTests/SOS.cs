@@ -271,6 +271,19 @@ public class SOS
         }); ;
     }
 
+    [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "DotnetDumpCommands")]
+    public async Task DumpGen(TestConfiguration config)
+    {
+        await RunTest("DumpGen.script", testLive: false, information: new SOSRunner.TestInformation
+        {
+            TestConfiguration = config,
+            DebuggeeName = "DotnetDumpCommands",
+            DebuggeeArguments = "dumpgen",
+            UsePipeSync = true,
+            DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
+        }); ;
+    }
+
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task LLDBPluginTests(TestConfiguration config)
     {

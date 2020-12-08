@@ -39,6 +39,10 @@ namespace DotnetDumpCommands
             {
                 _objectsToKeepInMemory.AddRange(CreateConcurrentDictionaries());
             }
+            else if ("dumpgen".Equals(args[1]))
+            {
+                _objectsToKeepInMemory.AddRange(CreateObjectsInDifferentGenerations());
+            }
             else
             {
                 Console.WriteLine($"Action parameter {args[1]} is not valid");
@@ -118,6 +122,28 @@ namespace DotnetDumpCommands
             yield return arrayDictionary;
         }
 
+        private static IEnumerable<object> CreateObjectsInDifferentGenerations()
+        {
+            // This object should go into LOH
+            yield return new DumpSampleClass[50000];
+
+            for (var i = 0; i < 5; i++)
+            {
+                yield return new DumpSampleClass();
+            }
+            GC.Collect();
+
+            for (var i = 0; i < 3; i++)
+            {
+                yield return new DumpSampleClass();
+            }
+            GC.Collect();
+
+            for (var i = 0; i < 10; i++)
+            {
+                yield return new DumpSampleClass();
+            }
+        }
 
         public class DumpSampleClass
         {
