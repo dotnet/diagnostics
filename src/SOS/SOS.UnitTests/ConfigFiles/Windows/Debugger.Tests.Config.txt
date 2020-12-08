@@ -1,7 +1,7 @@
 <!--
   The xunit tests in Debugger.Tests aren't truly unit tests - they depend on other stuff that may
   not be in the same directory. This file configures the tests to find what they need. At the moment
-  this file is generated in a hard coded way to support running from the bin directory on our git 
+  this file is generated in a hard coded way to support running from the bin directory on our git
   based build, but once we understand the different environments the tests will need to run in we
   can figure out the right build and deployment strategy for each. Hopefully this configuration offers
   enough flexibility that the tests themselves don't need to change.
@@ -164,9 +164,6 @@
             </Option>
           </Options>
         </Option>
-        <!--
-            DotnetDumpCommands (runs on every runtime except netcore2.1 on Linux)
-          -->
         <Option>
           <Options>
             <Option>
