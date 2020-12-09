@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
         public IEnumerable<TimerInfo> EnumerateTimers()
         {
             // the implementation is different between .NET Framework/.NET Core 2.*, and .NET Core 3.0+
-            // - the former is relying on a single static TimerQueue.s_queue 
+            // - the former is relying on a single static TimerQueue.s_queue
             // - the latter uses an array of TimerQueue (static TimerQueue.Instances field)
             // each queue refers to TimerQueueTimer linked list via its m_timers or _shortTimers/_longTimers fields
             var timerQueueType = GetMscorlib().GetTypeByName("System.Threading.TimerQueue");
@@ -645,6 +645,53 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
             }
         }
 
+        public IEnumerable<KeyValuePair<string, string>> EnumerateConcurrentDictionary(ulong address)
+        {
+            bool isNetCore = IsNetCore();
+            var tablesFieldName = isNetCore ? "_tables" : "m_tables";
+            var bucketsFieldName = isNetCore ? "_buckets" : "m_buckets";
+            var keyFieldName = isNetCore ? "_key" : "m_key";
+            var valueFieldName = isNetCore ? "_value" : "m_value";
+            var nextFieldName = isNetCore ? "_next" : "m_next";
+
+            var cd = _heap.GetObject(address);
+            if (!cd.IsValid)
+                throw new InvalidOperationException("Adress does not correspond to a ConcurrentDictionary");
+            var tables = cd.ReadObjectField(tablesFieldName);
+            if (!tables.IsValid)
+                throw new InvalidOperationException($"ConcurrentDictionary does not own {tablesFieldName} attribute");
+            var buckets = tables.ReadObjectField(bucketsFieldName);
+            if (!buckets.IsValid)
+                throw new InvalidOperationException($"ConcurrentDictionary tables does not own {bucketsFieldName} attribute");
+            var bucketsArray = buckets.AsArray();
+
+            for (int i = 0; i < bucketsArray.Length; i++)
+            {
+                var node = bucketsArray.GetObjectValue(i);
+                IAddressableTypedEntity keyField = null, valueField = null;
+                if (!node.IsNull && node.IsValid)
+                {
+                    keyField = node.GetFieldFrom(keyFieldName);
+                    valueField = node.GetFieldFrom(valueFieldName);
+
+                    if (keyField == null || valueField == null)
+                    {
+                        throw new InvalidOperationException($"Concurrent dictionary doesn't contain {keyFieldName} and {valueFieldName} attributes. This command may not be compatible with the current runtime");
+                    }
+                }
+                // Node is at the head object of a linked list
+                while (!node.IsNull && node.IsValid)
+                {
+                    var key = DumpPropertyValue(node, keyFieldName);
+                    var value = DumpPropertyValue(node, valueFieldName);
+
+                    yield return new KeyValuePair<string, string>(key, value);
+
+                    node = node.ReadObjectField(nextFieldName);
+                }
+            }
+        }
+
         public IEnumerable<string> EnumerateConcurrentQueue(ulong address)
         {
             return IsNetCore() ? EnumerateConcurrentQueueCore(address) : EnumerateConcurrentQueueFramework(address);
@@ -718,7 +765,7 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
                     var slot = slots.GetStructValue(current);
                     if (itemIsValueType)
                     {
-                        if (HasFieldSimpleValue(slot, itemType, "Item", out var content))
+                        if (TryGetSimpleValue(slot, itemType, "Item", out var content))
                         {
                             yield return content;
                         }
@@ -854,6 +901,42 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
             }
         }
 
+        private static string DumpPropertyValue(ClrObject obj, string propertyName)
+        {
+            const string defaultContent = "?";
+
+            var field = obj.GetFieldFrom(propertyName);
+
+            if (field.Type == null && field is ClrObject objectField && objectField.IsNull)
+            {
+                return "null";
+            }
+            if (field.Type == null)
+            {
+                return defaultContent;
+            }
+            if (field.Type.IsString)
+            {
+                return $"\"{new ClrObject(field.Address, field.Type).AsString()}\"";
+            }
+            else if (field.Type.IsArray)
+            {
+                return $"dumparray {field.Address:x16}";
+            }
+            else if (field.Type.IsObjectReference)
+            {
+                return $"dumpobj {field.Address:x16}";
+            }
+            else if (IsSimpleType(field.Type.Name) && TryGetSimpleValue(obj, field.Type, propertyName, out var simpleValuecontent))
+            {
+                return simpleValuecontent;
+            }
+            else if (field.Type.IsValueType)
+            {
+                return $"dumpvc {field.Type.MethodTable:x16} {field.Address:x16}";
+            }
+            return defaultContent;
+        }
         private static bool HasSimpleValue(ClrArray items, int index, ClrValueType item, out string content)
         {
             content = null;
@@ -916,7 +999,7 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
             return true;
         }
 
-        private static bool HasFieldSimpleValue(ClrValueType item, ClrType type, string fieldName, out string content)
+        private static bool TryGetSimpleValue(IAddressableTypedEntity item, ClrType type, string fieldName, out string content)
         {
             content = null;
             var typeName = type.Name;
