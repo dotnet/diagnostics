@@ -731,7 +731,7 @@ struct Payload
 
 Command Code: `0x0401`
 
-If the target .NET application has been configured with `DOTNET_DiagnosticPorts` and `DOTNET_DefaultDiagnosticPortSuspend` has not been set to `1` (`0` is the default value), then the runtime will pause during `EEStartupHelper` in `ceemain.cpp` and wait for an event to be set.  (See [Diagnostic Ports](#diagnostic-ports) for more details)
+If the target .NET application has been configured Diagnostic Ports configured to suspend with `DOTNET_DiagnosticPorts` or `DOTNET_DefaultDiagnosticPortSuspend` has been set to `1` (`0` is the default value), then the runtime will pause during `EEStartupHelper` in `ceemain.cpp` and wait for an event to be set.  (See [Diagnostic Ports](#diagnostic-ports) for more details)
 
 The `ResumeRuntime` command sets the necessary event to resume runtime startup.  If the .NET application _has not_ been configured to with Diagnostics Monitor Address or the runtime has _already_ been resumed, this command is a no-op.
 
