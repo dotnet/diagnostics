@@ -8,7 +8,7 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
 {
-    [Command(Name = "dumpconcurrentqueue", Help = "Display queued ThreadPool work items.")]
+    [Command(Name = "dumpconcurrentqueue", Help = "Display concurrent queue content.")]
     [CommandAlias(Name = "dcq")]
     public class DumpConcurrentQueueCommand : ExtensionCommandBase
     {
