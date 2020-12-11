@@ -36,5 +36,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 return false;
             }
         }
+
+        public static bool IsInKubernetes => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST"));
     }
 }

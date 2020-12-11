@@ -38,6 +38,7 @@
     <!-- Other libs -->
     <AzureStorageBlobsVersion>12.6.0</AzureStorageBlobsVersion>
     <MicrosoftAspNetCoreVersion>2.1.7</MicrosoftAspNetCoreVersion>
+    <MicrosoftAspNetCoreAuthenticationNegotiateVersion>3.1.10</MicrosoftAspNetCoreAuthenticationNegotiateVersion>
     <MicrosoftAspNetCoreHttpsPolicyVersion>2.1.1</MicrosoftAspNetCoreHttpsPolicyVersion>
     <MicrosoftAspNetCoreMvcVersion>2.1.3</MicrosoftAspNetCoreMvcVersion>
     <MicrosoftAspNetCoreResponseCompressionVersion>2.1.1</MicrosoftAspNetCoreResponseCompressionVersion>
@@ -49,7 +50,7 @@
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.64</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftExtensionsConfigurationJsonVersion>2.1.1</MicrosoftExtensionsConfigurationJsonVersion>
-    <MicrosoftExtensionsConfigurationKeyPerFileVersion>2.1.1</MicrosoftExtensionsConfigurationKeyPerFileVersion>
+    <MicrosoftExtensionsConfigurationKeyPerFileVersion>5.0.2</MicrosoftExtensionsConfigurationKeyPerFileVersion>
     <MicrosoftExtensionsDependencyInjectionVersion>2.1.1</MicrosoftExtensionsDependencyInjectionVersion>
     <MicrosoftExtensionsHostingAbstractionsVersion>2.1.1</MicrosoftExtensionsHostingAbstractionsVersion>
     <MicrosoftExtensionsLoggingVersion>2.1.1</MicrosoftExtensionsLoggingVersion>

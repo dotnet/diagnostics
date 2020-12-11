@@ -4,6 +4,7 @@
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -13,8 +14,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.IO.Compression;
+using System.Linq;
 
 namespace Microsoft.Diagnostics.Tools.Monitor
 {
@@ -81,9 +84,29 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         public void Configure(
             IApplicationBuilder app,
             IWebHostEnvironment env,
-            ExperimentalToolLogger logger)
+            ExperimentalToolLogger logger,
+            IAuthOptions options)
         {
             logger.LogExperimentMessage();
+            if (options.KeyAuthenticationMode == KeyAuthenticationMode.NoAuth)
+            {
+                logger.LogNoAuthMessage();
+            }
+            else
+            {
+                //Auth is enabled and we are binding on http. Make sure we log a warning.
+
+                string hostingUrl = Configuration.GetValue<string>(WebHostDefaults.ServerUrlsKey);
+                string[] urls = ConfigurationHelper.SplitValue(hostingUrl);
+                foreach(BindingAddress address in urls.Select(BindingAddress.Parse))
+                {
+                    if (string.Equals(Uri.UriSchemeHttp, address.Scheme, StringComparison.OrdinalIgnoreCase))
+                    {
+                        logger.LogInsecureAuthMessage();
+                        break;
+                    }
+                }
+            }
 
             if (env.IsDevelopment())
             {
@@ -93,6 +116,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             {
                 app.UseHsts();
             }
+
+            app.UseAuthentication();
+            app.UseAuthorization();
 
             CorsConfiguration corsConfiguration = new CorsConfiguration();
             Configuration.Bind(nameof(CorsConfiguration), corsConfiguration);
