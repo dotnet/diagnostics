@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using FastSerialization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
@@ -26,6 +27,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
     [Route("")] // Root
     [ApiController]
     [HostRestriction]
+    [Authorize(Policy = AuthConstants.PolicyName)]
     public class DiagController : ControllerBase
     {
         private const string ArtifactType_Dump = "dump";

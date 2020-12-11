@@ -25,14 +25,22 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
     class Program
     {
+        private static Command GenerateApiKeyCommand() =>
+            new Command(
+                name: "generatekey",
+                description: "Generate api key and hash for authentication")
+            {
+                CommandHandler.Create<CancellationToken, IConsole>(new GenerateApiKeyCommandHandler().GenerateApiKey)
+            };
+
         private static Command CollectCommand() =>
               new Command(
                   name: "collect",
                   description: "Monitor logs and metrics in a .NET application send the results to a chosen destination.")
               {
                 // Handler
-                CommandHandler.Create<CancellationToken, IConsole, string[], string[], bool, string>(new DiagnosticsMonitorCommandHandler().Start),
-                Urls(), MetricUrls(), ProvideMetrics(), DiagnosticPort()
+                CommandHandler.Create<CancellationToken, IConsole, string[], string[], bool, string, bool>(new DiagnosticsMonitorCommandHandler().Start),
+                Urls(), MetricUrls(), ProvideMetrics(), DiagnosticPort(), NoAuth()
               };
 
         private static Option Urls() =>
@@ -50,13 +58,13 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             {
                 Argument = new Argument<string[]>(name: "metricUrls", getDefaultValue: () => new[] { GetDefaultMetricsEndpoint() })
             };
-    
+
         private static Option ProvideMetrics() =>
             new Option(
                 aliases: new[] { "-m", "--metrics" },
                 description: "Enable publishing of metrics")
             {
-                Argument = new Argument<bool>(name: "metrics", getDefaultValue: () => true )
+                Argument = new Argument<bool>(name: "metrics", getDefaultValue: () => true)
             };
 
         private static Option DiagnosticPort() =>
@@ -65,6 +73,15 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 description: "The fully qualified path and filename of the diagnostic port to which runtime instances can connect.")
             {
                 Argument = new Argument<string>(name: "diagnosticPort")
+            };
+
+        private static Option NoAuth() =>
+            new Option(
+                alias: "--no-auth",
+                description: "Turn off authentication."
+                )
+            {
+                Argument = new Argument<bool>(name: "noAuth", getDefaultValue: () => false)
             };
 
         private static string GetDefaultMetricsEndpoint()
@@ -82,6 +99,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         {
             var parser = new CommandLineBuilder()
                 .AddCommand(CollectCommand())
+                .AddCommand(GenerateApiKeyCommand())
                 .UseDefaults()
                 .Build();
             return parser.InvokeAsync(args);

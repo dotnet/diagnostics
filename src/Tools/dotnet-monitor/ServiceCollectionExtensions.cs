@@ -15,7 +15,17 @@ namespace Microsoft.Diagnostics.Tools.Monitor
     {
         public static IServiceCollection ConfigureMetrics(this IServiceCollection services, IConfiguration configuration)
         {
-            return services.Configure<MetricsOptions>(configuration.GetSection(MetricsOptions.ConfigurationKey));
+            return ConfigureOptions<MetricsOptions>(services, configuration, MetricsOptions.ConfigurationKey);
+        }
+
+        public static IServiceCollection ConfigureApiKeyConfiguration(this IServiceCollection services, IConfiguration configuration)
+        {
+            return ConfigureOptions<ApiAuthenticationOptions>(services, configuration, ApiAuthenticationOptions.ConfigurationKey);
+        }
+
+        private static IServiceCollection ConfigureOptions<T>(IServiceCollection services, IConfiguration configuration, string key) where T : class
+        {
+            return services.Configure<T>(configuration.GetSection(key));
         }
 
         public static IServiceCollection ConfigureEgress(this IServiceCollection services, IConfiguration configuration)

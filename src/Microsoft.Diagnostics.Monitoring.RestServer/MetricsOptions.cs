@@ -55,6 +55,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 
         public bool IncludeDefaultProviders { get; set; } = true;
 
+        public bool AllowInsecureChannelForCustomMetrics { get; set; } = false;
+
         public List<MetricProvider> Providers { get; set; } = new List<MetricProvider>(0);
     }
 

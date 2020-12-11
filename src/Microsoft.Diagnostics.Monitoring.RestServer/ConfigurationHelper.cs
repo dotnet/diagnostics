@@ -11,6 +11,10 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 {
     internal static class ConfigurationHelper
     {
+        private const char ValueSeparator = ';';
+        private static readonly char[] ValueSeparatorArray = new char[] { ValueSeparator };
+        private static readonly string ValueSeparatorString = ValueSeparator.ToString();
+
         public static string MakeKey(string parent, string child)
         {
             return FormattableString.Invariant($"{parent}:{child}");
@@ -18,7 +22,12 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 
         public static string[] SplitValue(string value)
         {
-            return value.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+            return value.Split(ValueSeparatorArray, StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        public static string JoinValue(string[] values)
+        {
+            return string.Join(ValueSeparatorString, values);
         }
     }
 }

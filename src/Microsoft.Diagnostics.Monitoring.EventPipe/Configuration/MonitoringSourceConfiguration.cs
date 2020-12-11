@@ -18,6 +18,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public const string SampleProfilerProviderName = "Microsoft-DotNETCore-SampleProfiler";
         public const string EventPipeProviderName = "Microsoft-DotNETCore-EventPipe";
 
+        public static IEnumerable<string> DefaultMetricProviders => new[] { SystemRuntimeEventSourceName, MicrosoftAspNetCoreHostingEventSourceName, GrpcAspNetCoreServer };
+
         public abstract IList<EventPipeProvider> GetProviders();
 
         public virtual bool RequestRundown => true;
