@@ -10,7 +10,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostics.DebugServices
+namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     #nullable enable
 

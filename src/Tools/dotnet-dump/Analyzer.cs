@@ -4,6 +4,7 @@
 
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.SymbolStore;

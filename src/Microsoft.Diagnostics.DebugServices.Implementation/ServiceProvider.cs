@@ -5,7 +5,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Microsoft.Diagnostics.DebugServices
+namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     public class ServiceProvider : IServiceProvider
     {
