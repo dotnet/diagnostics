@@ -79,6 +79,8 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
         public static Task<int> Main(string[] args)
         {
+            // FUTURE: This log message should be removed when dotnet-monitor is no longer an experimental tool
+            Console.WriteLine("WARNING: dotnet-monitor is experimental and is not intended for production environments yet.");
             var parser = new CommandLineBuilder()
                             .AddCommand(CollectCommand())
                             .UseDefaults()
