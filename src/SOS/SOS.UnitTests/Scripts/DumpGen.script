@@ -22,10 +22,10 @@ VERIFY: Hexadecimal address expected for -mt option
 
 COMMAND: dumpgen gen0
 VERIFY: ^\s+MT\s+Count\s+TotalSize\s+Class Name
-VERIFY:^<HEXVAL>\s+10\s+400\s+DotnetDumpCommands\.Program\+DumpSampleClass
+VERIFY:^<HEXVAL>\s+10\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass
 
 COMMAND: dumpgen gen0 -type DotnetDumpCommands
-VERIFY: ^<HEXVAL>\s+10\s+400\s+DotnetDumpCommands\.Program\+DumpSampleClass
+VERIFY: ^<HEXVAL>\s+10\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass
 VERIFY: Total 10 objects
 
 COMMAND: dumpgen gen0 -mt <POUT>^(<HEXVAL>)<POUT>
@@ -40,10 +40,10 @@ COMMAND: dumpgen gen0 -type NoMatchingType
 VERIFY: Total 0 objects
 
 COMMAND: dumpgen gen1
-VERIFY: ^<HEXVAL>\s+3\s+120+\s+DotnetDumpCommands\.Program\+DumpSampleClass
+VERIFY: ^<HEXVAL>\s+3\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass
 
 COMMAND: dumpgen gen2
-VERIFY: ^<HEXVAL>\s+5\s+200+\s+DotnetDumpCommands\.Program\+DumpSampleClass
+VERIFY: ^<HEXVAL>\s+5\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass
 
 COMMAND: dumpgen loh
 VERIFY: ^<HEXVAL>\s+1\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass\[\]
