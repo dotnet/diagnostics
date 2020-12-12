@@ -3,14 +3,12 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Repl;
 using System;
-using System.CommandLine;
 using System.Diagnostics;
 
-namespace Microsoft.Diagnostics.Tools.Dump
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "logging", Help = "Enable/disable internal logging")]
+    [Command(Name = "logging", Help = "Enable/disable internal logging", Platform = CommandPlatform.Global)]
     public class LoggingCommand : CommandBase
     {
         [Option(Name = "enable", Help = "Enable internal logging.")]
@@ -25,7 +23,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
             if (Enable) {
                 if (Trace.Listeners[ListenerName] == null) {
-                    Trace.Listeners.Add(new LoggingListener(Console));
+                    Trace.Listeners.Add(new LoggingListener());
+                    Trace.AutoFlush = true;
                 }
             }
             else if (Disable) {
@@ -36,22 +35,19 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         class LoggingListener : TraceListener
         {
-            private readonly IConsoleService _console;
-
-            internal LoggingListener(IConsoleService console)
+            internal LoggingListener()
                 : base(ListenerName)
             {
-                _console = console;
             }
 
             public override void Write(string message)
             {
-                _console.Write(message);
+                System.Console.Write(message);
             }
 
             public override void WriteLine(string message)
             {
-                _console.Write(message + Environment.NewLine);
+                System.Console.WriteLine(message);
             }
         }
     }

@@ -3,18 +3,14 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Repl;
-using System.CommandLine;
 using System.Linq;
 
-namespace Microsoft.Diagnostics.Tools.Dump
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "modules", Help = "Displays the native modules in the process.")]
-    [CommandAlias(Name = "lm")]
+    [Command(Name = "modules", Aliases = new string[] { "lm" }, Help = "Displays the native modules in the process.")]
     public class ModulesCommand : CommandBase
     {
-        [Option(Name = "--verbose", Help = "Displays more details.")]
-        [OptionAlias(Name = "-v")]
+        [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]
         public bool Verbose { get; set; }
 
         public IModuleService ModuleService { get; set; }

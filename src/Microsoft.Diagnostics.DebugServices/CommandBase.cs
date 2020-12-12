@@ -2,13 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
 using System;
-using System.CommandLine;
-using System.CommandLine.Invocation;
-using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostics.Repl
+namespace Microsoft.Diagnostics.DebugServices
 {
     /// <summary>
     /// The common command context
@@ -16,20 +12,9 @@ namespace Microsoft.Diagnostics.Repl
     public abstract class CommandBase
     {
         /// <summary>
-        /// Parser invocation context. Contains the ParseResult, CommandResult, etc. Is null when 
-        /// InvokeAdditionalHelp is called.
-        /// </summary>
-        public InvocationContext InvocationContext { get; set; }
-
-        /// <summary>
         /// Console service
         /// </summary>
         public IConsoleService Console { get; set; }
-
-        /// <summary>
-        /// The AliasExpansion value from the CommandAttribute or null if none.
-        /// </summary>
-        public string AliasExpansion { get; set; }
 
         /// <summary>
         /// Execute the command
@@ -63,6 +48,16 @@ namespace Microsoft.Diagnostics.Repl
         protected void WriteLine(string format, params object[] args)
         {
             Console.Write(string.Format(format, args) + Environment.NewLine);
+        }
+
+        /// <summary>
+        /// Display formatted warning text
+        /// </summary>
+        /// <param name="format">format string</param>
+        /// <param name="args">arguments</param>
+        protected void WriteLineWarning(string format, params object[] args)
+        {
+            Console.WriteWarning(string.Format(format, args) + Environment.NewLine);
         }
 
         /// <summary>

@@ -2,15 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Diagnostics.Repl;
 
-namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "timerinfo", Help = "Display running timers details.")]
-    [CommandAlias(Name = "ti")]
+    [Command(Name = "timerinfo", Aliases = new string[] { "ti" }, Help = "Display running timers details.")]
     public class TimersCommand : ExtensionCommandBase
     {
         public override void Invoke()

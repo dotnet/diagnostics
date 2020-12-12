@@ -2,14 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Repl;
+using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using System;
 
-namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "dumpconcurrentdictionary", Help = "Display concurrent dictionary content.")]
-    [CommandAlias(Name = "dcd")]
+    [Command(Name = "dumpconcurrentdictionary", Aliases = new string[] { "dcd" }, Help = "Display concurrent dictionary content.")]
     public class DumpConcurrentDictionaryCommand : ExtensionCommandBase
     {
         [Argument(Help = "The address of a ConcurrentDictionary object.")]

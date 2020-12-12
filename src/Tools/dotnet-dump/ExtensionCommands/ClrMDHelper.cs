@@ -2,23 +2,22 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.DebugServices.Implementation;
 
-namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
     public class ClrMDHelper
     {
         private readonly ClrRuntime _clr;
         private readonly ClrHeap _heap;
 
-        public ClrMDHelper(ServiceProvider provider)
+        public ClrMDHelper(ClrRuntime clr)
         {
-            _clr = provider.GetService<ClrRuntime>();
+            _clr = clr ?? throw new DiagnosticsException("No CLR runtime set");
             _heap = _clr.Heap;
         }
 

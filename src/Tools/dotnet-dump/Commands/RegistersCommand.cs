@@ -3,13 +3,11 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Repl;
 using System;
 
-namespace Microsoft.Diagnostics.Tools.Dump
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "registers", Help = "Displays the thread's registers.")]
-    [CommandAlias(Name = "r")]
+    [Command(Name = "registers", Aliases = new string[] { "r" }, Help = "Displays the thread's registers.")]
     public class RegistersCommand : CommandBase
     {
         public IThreadService ThreadService { get; set; }

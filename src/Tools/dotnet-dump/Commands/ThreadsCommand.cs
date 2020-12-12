@@ -3,30 +3,26 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Repl;
 
-namespace Microsoft.Diagnostics.Tools.Dump
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "setthread", Help = "Sets or displays the current thread for the SOS commands.")]
-    [CommandAlias(Name = "threads")]
-    public class SetThreadCommand : CommandBase
+    [Command(Name = "threads", Aliases = new string[] { "setthread" }, Help = "Displays threads or sets the current thread.")]
+    public class ThreadsCommand : CommandBase
     {
         [Argument(Help = "The thread index or id to set, otherwise displays the list of threads.")]
         public uint? Thread { get; set; } = null;
 
-        [Option(Name = "--tid", Help = "<thread> is an OS thread id.")]
-        [OptionAlias(Name = "-t")]
+        [Option(Name = "--tid", Aliases = new string[] { "-t" }, Help = "<thread> is an OS thread id.")]
         public bool ThreadId { get; set; }
 
-        [Option(Name = "--verbose", Help = "Displays more details.")]
-        [OptionAlias(Name = "-v")]
+        [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]
         public bool Verbose { get; set; }
 
         public IThreadService ThreadService { get; set; }
 
         public override void Invoke()
         {
-           if (Thread.HasValue)
+            if (Thread.HasValue)
             {
                 IThread thread;
                 if (ThreadId)

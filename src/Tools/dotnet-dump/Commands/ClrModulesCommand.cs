@@ -3,11 +3,10 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
-using System.CommandLine;
+using System;
 
-namespace Microsoft.Diagnostics.Tools.Dump
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "clrmodules", Help = "Lists the managed modules in the process.")]
     public class ClrModulesCommand : CommandBase
@@ -16,8 +15,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         public IModuleService ModuleService { get; set; }
 
-        [Option(Name = "--verbose", Help = "Displays detailed information about the modules.")]
-        [OptionAlias(Name = "-v")]
+        [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays detailed information about the modules.")]
         public bool Verbose { get; set; }
 
         public override void Invoke()
@@ -26,7 +24,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
             {
                 throw new DiagnosticsException("No CLR runtime set");
             }
-
             foreach (ClrModule module in Runtime.EnumerateModules())
             {
                 if (Verbose)
