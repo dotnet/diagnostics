@@ -1269,7 +1269,7 @@ namespace SOS
         /// </summary>
         /// <param name="key">index of the file to retrieve</param>
         /// <returns>stream or null</returns>
-        internal static SymbolStoreFile GetSymbolStoreFile(SymbolStoreKey key)
+        public static SymbolStoreFile GetSymbolStoreFile(SymbolStoreKey key)
         {
             try
             {

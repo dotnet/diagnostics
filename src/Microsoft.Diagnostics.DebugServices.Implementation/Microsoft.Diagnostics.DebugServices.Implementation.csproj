@@ -21,6 +21,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\SOS\SOS.NETCore\SOS.NETCore.csproj" />
   </ItemGroup>
 </Project>

@@ -48,9 +48,11 @@ namespace SOS.Hosting
  
         internal readonly ITarget Target;
         internal readonly IConsoleService ConsoleService;
+        internal readonly IMemoryService MemoryService;
         private readonly IThreadService _threadService;
-        private readonly MemoryService _memoryService;
+ 
         private readonly IntPtr _interface;
+        private readonly ulong _ignoreAddressBitsMask;
         private readonly ReadVirtualCache _versionCache;
         private IntPtr _sosLibrary = IntPtr.Zero;
 
@@ -78,9 +80,10 @@ namespace SOS.Hosting
             DataReader = target.Services.GetService<IDataReader>();
             ConsoleService = target.Services.GetService<IConsoleService>();
             AnalyzeContext = target.Services.GetService<AnalyzeContext>();
-            _memoryService = target.Services.GetService<MemoryService>();
+            MemoryService = target.Services.GetService<IMemoryService>();
             _threadService = target.Services.GetService<IThreadService>();
-            _versionCache = new ReadVirtualCache(_memoryService);
+            _ignoreAddressBitsMask = MemoryService.SignExtensionMask();
+            _versionCache = new ReadVirtualCache(MemoryService);
 
             string rid = InstallHelper.GetRid();
             SOSPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
@@ -347,7 +350,8 @@ namespace SOS.Hosting
             uint bytesRequested,
             uint* pbytesRead)
         {
-            if (_memoryService.ReadMemory(address, buffer, unchecked((int)bytesRequested), out int bytesRead))
+            address &= _ignoreAddressBitsMask;
+            if (MemoryService.ReadMemory(address, buffer, unchecked((int)bytesRequested), out int bytesRead))
             {
                 Write(pbytesRead, (uint)bytesRead);
                 return HResult.S_OK;
@@ -992,7 +996,7 @@ namespace SOS.Hosting
 
             // SOS expects the DEBUG_VALUE field to be set based on the 
             // processor architecture instead of the register size.
-            switch (DataReader.PointerSize)
+            switch (MemoryService.PointerSize)
             {
                 case 8:
                     value = new DEBUG_VALUE {
@@ -1122,13 +1126,13 @@ namespace SOS.Hosting
     {
         private const int CACHE_SIZE = 4096;
 
-        private readonly MemoryService _memoryService;
+        private readonly IMemoryService _memoryService;
         private readonly byte[] _cache = new byte[CACHE_SIZE];
         private ulong _startCache;
         private bool _cacheValid;
         private int _cacheSize;
 
-        internal ReadVirtualCache(MemoryService memoryService)
+        internal ReadVirtualCache(IMemoryService memoryService)
         {
             _memoryService = memoryService;
             Clear();

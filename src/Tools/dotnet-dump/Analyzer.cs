@@ -147,9 +147,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
             var threadService = new ThreadService(target.DataReader);
             _serviceProvider.AddService<IThreadService>(threadService);
 
-            var memoryService = new MemoryService(target.DataReader);
-            _serviceProvider.AddService(memoryService);
-
             _serviceProvider.AddServiceFactory<ClrRuntime>(() => CreateRuntime(target));
 
             // ClrMD helper for extended commands
@@ -230,7 +227,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         {
                             unsafe
                             {
-                                var memoryService = _serviceProvider.GetService<MemoryService>();
+                                var memoryService = _serviceProvider.GetService<IMemoryService>();
                                 SymbolReader.ReadMemoryDelegate readMemory = (ulong address, byte* buffer, int count) => {
                                     return memoryService.ReadMemory(address, new Span<byte>(buffer, count), out int bytesRead) ? bytesRead : 0;
                                 };
