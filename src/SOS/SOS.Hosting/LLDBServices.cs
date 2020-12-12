@@ -93,17 +93,12 @@ namespace SOS.Hosting
         string GetCoreClrDirectory(
             IntPtr self)
         {
-            if (_soshost.AnalyzeContext.RuntimeModuleDirectory == null)
+            IRuntime currentRuntime = _soshost.Target.Services.GetService<IRuntimeService>()?.CurrentRuntime;
+            if (currentRuntime != null)
             {
-                foreach (ModuleInfo module in _soshost.DataReader.EnumerateModules())
-                {
-                    if (SOSHost.IsCoreClrRuntimeModule(module))
-                    {
-                        _soshost.AnalyzeContext.RuntimeModuleDirectory = Path.GetDirectoryName(module.FileName) + Path.DirectorySeparatorChar;
-                    }
-                }
+                return Path.GetDirectoryName(currentRuntime.RuntimeModule.FileName);
             }
-            return _soshost.AnalyzeContext.RuntimeModuleDirectory;
+            return null;
         }
 
         int VirtualUnwind(
@@ -163,20 +158,18 @@ namespace SOS.Hosting
             bool runtimeOnly,
             ModuleLoadCallback callback)
         {
-            foreach (ModuleInfo module in _soshost.DataReader.EnumerateModules())
+            IEnumerable<IModule> modules;
+            if (runtimeOnly)
             {
-                if (runtimeOnly)
-                {
-                    if (SOSHost.IsCoreClrRuntimeModule(module))
-                    {
-                        callback(IntPtr.Zero, module.FileName, module.ImageBase, (uint)module.IndexFileSize);
-                        break;
-                    }
-                }
-                else
-                {
-                    callback(IntPtr.Zero, module.FileName, module.ImageBase, (uint)module.IndexFileSize);
-                }
+                modules = _soshost.ModuleService.GetModuleFromModuleName(_soshost.Target.GetPlatformModuleName("coreclr"));
+            }
+            else
+            {
+                modules = _soshost.ModuleService.EnumerateModules();
+            }
+            foreach (IModule module in modules)
+            {
+                callback(IntPtr.Zero, module.FileName, module.ImageBase, (uint)module.ImageSize);
             }
             return HResult.S_OK;
         }
@@ -197,14 +190,11 @@ namespace SOS.Hosting
         {
             try
             {
-                ModuleInfo module = _soshost.DataReader.EnumerateModules().ElementAt((int)index);
-                if (module == null) {
-                    return HResult.E_FAIL;
-                }
+                IModule module = _soshost.ModuleService.GetModuleFromIndex((int)index);
                 SOSHost.Write(moduleBase, module.ImageBase);
-                SOSHost.Write(moduleSize, (uint)module.IndexFileSize);
+                SOSHost.Write(moduleSize, module.ImageSize);
             }
-            catch (ArgumentOutOfRangeException)
+            catch (DiagnosticsException)
             {
                 return HResult.E_FAIL;
             }

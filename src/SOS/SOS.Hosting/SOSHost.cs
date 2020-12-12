@@ -41,19 +41,15 @@ namespace SOS.Hosting
 
         private const string SOSInitialize = "SOSInitializeByHost";
 
-        const string DesktopRuntimeModuleName = "clr";
-
-        internal readonly IDataReader DataReader;
-        internal readonly AnalyzeContext AnalyzeContext;
+        internal readonly AnalyzeContext AnalyzeContext = null;
  
         internal readonly ITarget Target;
         internal readonly IConsoleService ConsoleService;
+        internal readonly IModuleService ModuleService;
+        internal readonly IThreadService ThreadService;
         internal readonly IMemoryService MemoryService;
-        private readonly IThreadService _threadService;
- 
-        private readonly IntPtr _interface;
         private readonly ulong _ignoreAddressBitsMask;
-        private readonly ReadVirtualCache _versionCache;
+        private readonly IntPtr _interface;
         private IntPtr _sosLibrary = IntPtr.Zero;
 
         /// <summary>
@@ -77,16 +73,16 @@ namespace SOS.Hosting
         public SOSHost(ITarget target)
         {
             Target = target;
-            DataReader = target.Services.GetService<IDataReader>();
             ConsoleService = target.Services.GetService<IConsoleService>();
-            AnalyzeContext = target.Services.GetService<AnalyzeContext>();
+            ModuleService = target.Services.GetService<IModuleService>();
+            ThreadService = target.Services.GetService<IThreadService>();
             MemoryService = target.Services.GetService<IMemoryService>();
             _threadService = target.Services.GetService<IThreadService>();
             _ignoreAddressBitsMask = MemoryService.SignExtensionMask();
-            _versionCache = new ReadVirtualCache(MemoryService);
 
             string rid = InstallHelper.GetRid();
             SOSPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 var debugClient = new DebugClient(this);
@@ -398,7 +394,7 @@ namespace SOS.Hosting
             out uint loaded,
             out uint unloaded)
         {
-            loaded = (uint)DataReader.EnumerateModules().Count();
+            loaded = (uint)ModuleService.EnumerateModules().Count();
             unloaded = 0;
             return HResult.S_OK;
         }
@@ -411,14 +407,9 @@ namespace SOS.Hosting
             baseAddress = 0;
             try
             {
-                ModuleInfo module = DataReader.EnumerateModules().ElementAt((int)index);
-                if (module == null)
-                {
-                    return HResult.E_FAIL;
-                }
-                baseAddress = module.ImageBase;
+                baseAddress = ModuleService.GetModuleFromIndex((int)index).ImageBase;
             }
-            catch (ArgumentOutOfRangeException)
+            catch (DiagnosticsException)
             {
                 return HResult.E_FAIL;
             }
@@ -432,20 +423,23 @@ namespace SOS.Hosting
             uint* index,
             ulong* baseAddress)
         {
-            Debug.Assert(startIndex == 0);
             Write(index);
             Write(baseAddress);
 
-            uint i = 0;
-            foreach (ModuleInfo module in DataReader.EnumerateModules())
+            if (startIndex != 0)
             {
-                if (IsModuleEqual(module, name))
-                {
-                    Write(index, i);
-                    Write(baseAddress, module.ImageBase);
-                    return HResult.S_OK;
-                }
-                i++;
+                return HResult.E_INVALIDARG;
+            }
+            if (Target.OperatingSystem == OSPlatform.Windows)
+            {
+                name = Path.GetFileNameWithoutExtension(name) + ".dll";
+            }
+            IModule module = ModuleService.GetModuleFromModuleName(name).FirstOrDefault();
+            if (module != null)
+            {
+                Write(index, (uint)module.ModuleIndex);
+                Write(baseAddress, module.ImageBase);
+                return HResult.S_OK;
             }
             return HResult.E_FAIL;
         }
@@ -457,6 +451,9 @@ namespace SOS.Hosting
             uint* index,
             ulong* baseAddress)
         {
+            Write(index);
+            Write(baseAddress);
+
             if (startIndex != 0)
             {
                 return HResult.E_INVALIDARG;
@@ -466,17 +463,12 @@ namespace SOS.Hosting
             // necessary on linux anyway.
             if (Target.OperatingSystem == OSPlatform.Windows)
             {
-                // Find the module that contains the offset.
-                uint i = 0;
-                foreach (ModuleInfo module in DataReader.EnumerateModules())
+                IModule module = ModuleService.GetModuleFromAddress(offset);
+                if (module != null)
                 {
-                    if (offset >= module.ImageBase && offset < (module.ImageBase + (ulong)module.IndexFileSize))
-                    {
-                        Write(index, i);
-                        Write(baseAddress, module.ImageBase);
-                        return HResult.S_OK;
-                    }
-                    i++;
+                    Write(index, (uint)module.ModuleIndex);
+                    Write(baseAddress, module.ImageBase);
+                    return HResult.S_OK;
                 }
             }
             return HResult.E_FAIL;
@@ -499,23 +491,30 @@ namespace SOS.Hosting
             Write(imageNameSize);
             Write(moduleNameSize);
             Write(loadedImageNameSize);
-
-            uint i = 0;
-            foreach (ModuleInfo module in DataReader.EnumerateModules())
-            {
-                if ((index != uint.MaxValue && i == index) || (index == uint.MaxValue && baseAddress == module.ImageBase))
+ 
+            IModule module;
+            try 
+            { 
+                if (index != uint.MaxValue) 
                 {
-                    imageNameBuffer?.Append(module.FileName);
-                    Write(imageNameSize, (uint)module.FileName.Length + 1);
-
-                    string moduleName = GetModuleName(module);
-                    moduleNameBuffer?.Append(moduleName);
-                    Write(moduleNameSize, (uint)moduleName.Length + 1);
-                    return HResult.S_OK;
+                    module = ModuleService.GetModuleFromIndex(unchecked((int)index));
                 }
-                i++;
+                else
+                {
+                    module = ModuleService.GetModuleFromBaseAddress(baseAddress);
+                }
             }
-            return HResult.E_FAIL;
+            catch (DiagnosticsException)
+            {
+                return HResult.E_FAIL;
+            }
+            imageNameBuffer?.Append(module.FileName);
+            Write(imageNameSize, (uint)module.FileName.Length + 1);
+
+            string moduleName = GetFileName(module.FileName);
+            moduleNameBuffer?.Append(moduleName);
+            Write(moduleNameSize, (uint)moduleName.Length + 1);
+            return HResult.S_OK;
         }
 
         internal unsafe int GetModuleParameters(
@@ -529,14 +528,14 @@ namespace SOS.Hosting
             {
                 return HResult.E_INVALIDARG;
             }
-            foreach (ModuleInfo module in DataReader.EnumerateModules())
+            foreach (IModule module in ModuleService.EnumerateModules())
             {
                 for (int i = 0; i < count; i++)
                 {
                     if (bases[i] == module.ImageBase)
                     {
                         moduleParams[i].Base = module.ImageBase;
-                        moduleParams[i].Size = (uint)module.IndexFileSize;
+                        moduleParams[i].Size = (uint)module.ImageSize;
                         moduleParams[i].TimeDateStamp = (uint)module.IndexTimeStamp;
                         moduleParams[i].Checksum = 0;
                         moduleParams[i].Flags = DEBUG_MODULE.LOADED;
@@ -545,7 +544,7 @@ namespace SOS.Hosting
                         uint imageNameSize = (uint)module.FileName.Length + 1;
                         moduleParams[i].ImageNameSize = imageNameSize;
 
-                        string moduleName = GetModuleName(module);
+                        string moduleName = GetFileName(module.FileName);
                         uint moduleNameSize = (uint)moduleName.Length + 1;
                         moduleParams[i].ModuleNameSize = moduleNameSize;
 
@@ -567,147 +566,71 @@ namespace SOS.Hosting
             uint bufferSize,
             uint* verInfoSize)
         {
-            Debug.Assert(buffer != null);
-            Debug.Assert(verInfoSize == null);
-
-            uint i = 0;
-            foreach (ModuleInfo module in DataReader.EnumerateModules())
+            if (item == null || buffer == null || bufferSize == 0)
             {
-                if ((index != uint.MaxValue && i == index) || (index == uint.MaxValue && baseAddress == module.ImageBase))
-                {
-                    if (item == "\\")
-                    {
-                        uint versionSize = (uint)Marshal.SizeOf(typeof(VS_FIXEDFILEINFO));
-                        Write(verInfoSize, versionSize);
-                        if (bufferSize < versionSize)
-                        {
-                            return HResult.E_INVALIDARG;
-                        }
-                        VS_FIXEDFILEINFO* fileInfo = (VS_FIXEDFILEINFO*)buffer;
-                        fileInfo->dwSignature = 0;
-                        fileInfo->dwStrucVersion = 0;
-                        fileInfo->dwFileFlagsMask = 0;
-                        fileInfo->dwFileFlags = 0;
-
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                        {
-                            VersionInfo versionInfo = module.Version;
-                            fileInfo->dwFileVersionMS = (uint)versionInfo.Minor | (uint)versionInfo.Major << 16;
-                            fileInfo->dwFileVersionLS = (uint)versionInfo.Patch | (uint)versionInfo.Revision << 16;
-                            return HResult.S_OK;
-                        }
-                        else
-                        {
-                            if (SearchVersionString(module, out string versionString))
-                            {
-                                int spaceIndex = versionString.IndexOf(' ');
-                                if (spaceIndex > 0)
-                                {
-                                    if (versionString[spaceIndex - 1] == '.')
-                                    {
-                                        spaceIndex--;
-                                    }
-                                    string versionToParse = versionString.Substring(0, spaceIndex);
-                                    try
-                                    {
-                                        Version versionInfo = Version.Parse(versionToParse);
-                                        fileInfo->dwFileVersionMS = (uint)versionInfo.Minor | (uint)versionInfo.Major << 16;
-                                        fileInfo->dwFileVersionLS = (uint)versionInfo.Revision | (uint)versionInfo.Build << 16;
-                                        return HResult.S_OK;
-                                    }
-                                    catch (ArgumentException ex)
-                                    {
-                                        Trace.TraceError($"GetModuleVersion FAILURE: '{versionToParse}' '{versionString}' {ex.ToString()}");
-                                    }
-                                }
-                            }
-                            break;
-                        }
-                    }
-                    else if (item == "\\StringFileInfo\\040904B0\\FileVersion")
-                    {
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                        {
-                            return HResult.E_INVALIDARG;
-                        }
-                        else
-                        {
-                            if (SearchVersionString(module, out string versionString))
-                            {
-                                byte[] source = Encoding.ASCII.GetBytes(versionString + '\0');
-                                Marshal.Copy(source, 0, new IntPtr(buffer), Math.Min(source.Length, (int)bufferSize));
-                                return HResult.S_OK;
-                            }
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        return HResult.E_INVALIDARG;
-                    }
-                }
-                i++;
+                return HResult.E_INVALIDARG;
             }
-
-            return HResult.E_FAIL;
-        }
-
-        private static readonly byte[] s_versionString = Encoding.ASCII.GetBytes("@(#)Version ");
-        private static readonly int s_versionLength = s_versionString.Length;
-
-        private bool SearchVersionString(ModuleInfo moduleInfo, out string fileVersion)
-        {
-            byte[] buffer = new byte[s_versionString.Length];
-            ulong address = moduleInfo.ImageBase;
-            int size = moduleInfo.IndexFileSize;
-
-            _versionCache.Clear();
-
-            while (size > 0) {
-                bool result = _versionCache.Read(address, buffer, s_versionString.Length, out int cbBytesRead);
-                if (result && cbBytesRead >= s_versionLength)
+            IModule module;
+            try 
+            { 
+                if (index != uint.MaxValue) 
                 {
-                    if (s_versionString.SequenceEqual(buffer))
-                    {
-                        address += (ulong)s_versionLength;
-                        size -= s_versionLength;
-
-                        var sb = new StringBuilder();
-                        byte[] ch = new byte[1];
-                        while (true)
-                        {
-                            // Now read the version string a char/byte at a time
-                            result = _versionCache.Read(address, ch, ch.Length, out cbBytesRead);
-
-                            // Return not found if there are any failures or problems while reading the version string.
-                            if (!result || cbBytesRead < ch.Length || size <= 0) {
-                                break;
-                            }
-
-                            // Found the end of the string
-                            if (ch[0] == '\0') {
-                                fileVersion = sb.ToString();
-                                return true;
-                            }
-                            sb.Append(Encoding.ASCII.GetChars(ch));
-                            address++;
-                            size--;
-                        }
-                        // Return not found if overflowed the fileVersionBuffer (not finding a null).
-                        break;
-                    }
-                    address++;
-                    size--;
+                    module = ModuleService.GetModuleFromIndex(unchecked((int)index));
                 }
                 else
                 {
-                    address += (ulong)s_versionLength;
-                    size -= s_versionLength;
+                    module = ModuleService.GetModuleFromBaseAddress(baseAddress);
                 }
             }
+            catch (DiagnosticsException)
+            {
+                return HResult.E_FAIL;
+            }
+            if (item == "\\")
+            {
+                int versionSize = Marshal.SizeOf(typeof(VS_FIXEDFILEINFO));
+                Write(verInfoSize, (uint)versionSize);
+                if (bufferSize < versionSize)
+                {
+                    return HResult.E_INVALIDARG;
+                }
+                if (!module.Version.HasValue)
+                {
+                    return HResult.E_FAIL;
+                }
+                VS_FIXEDFILEINFO* fileInfo = (VS_FIXEDFILEINFO*)buffer;
+                fileInfo->dwSignature = 0;
+                fileInfo->dwStrucVersion = 0;
+                fileInfo->dwFileFlagsMask = 0;
+                fileInfo->dwFileFlags = 0;
 
-            fileVersion = null;
-            return false;
+                VersionInfo versionInfo = module.Version.Value;
+                fileInfo->dwFileVersionMS = (uint)versionInfo.Minor | (uint)versionInfo.Major << 16;
+                fileInfo->dwFileVersionLS = (uint)versionInfo.Patch | (uint)versionInfo.Revision << 16;
+            }
+            else if (item == "\\StringFileInfo\\040904B0\\FileVersion")
+            {
+                *buffer = 0;
+                string versionString = module.VersionString;
+                if (versionString == null)
+                {
+                    return HResult.E_FAIL;
+                }
+                try
+                {
+                    byte[] source = Encoding.ASCII.GetBytes(versionString + '\0');
+                    Marshal.Copy(source, 0, new IntPtr(buffer), Math.Min(source.Length, (int)bufferSize));
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    return HResult.E_INVALIDARG;
+                }
+            }
+            else
+            {
+                return HResult.E_INVALIDARG;
+            }
+            return HResult.S_OK;
         }
 
         internal unsafe int GetLineByOffset(
@@ -1048,48 +971,6 @@ namespace SOS.Hosting
 
         #endregion
 
-        internal static bool IsCoreClrRuntimeModule(ModuleInfo module)
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return IsModuleEqual(module, "coreclr") || IsModuleEqual(module, "libcoreclr");
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                return IsModuleEqual(module, "libcoreclr.so");
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                return IsModuleEqual(module, "libcoreclr.dylib");
-            }
-            return false;
-        }
-
-        internal static bool IsDesktopRuntimeModule(ModuleInfo module)
-        {
-            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && IsModuleEqual(module, DesktopRuntimeModuleName);
-        }
-
-        internal static bool IsModuleEqual(ModuleInfo module, string moduleName)
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                return StringComparer.OrdinalIgnoreCase.Equals(GetModuleName(module), moduleName);
-            }
-            else {
-                return string.Equals(GetModuleName(module), moduleName);
-            }
-        }
-
-        internal static string GetModuleName(ModuleInfo module)
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                return Path.GetFileNameWithoutExtension(module.FileName);
-            }
-            else {
-                return Path.GetFileName(module.FileName);
-            }
-        }
-
         /// <summary>
         /// Helper function to get pinvoke entries into native modules
         /// </summary>
@@ -1107,6 +988,8 @@ namespace SOS.Hosting
             return (T)Marshal.GetDelegateForFunctionPointer(functionAddress, typeof(T));
         }
 
+        private string GetFileName(string fileName) => Target.OperatingSystem == OSPlatform.Windows ? Path.GetFileNameWithoutExtension(fileName) : Path.GetFileName(fileName);
+
         internal unsafe static void Write(uint* pointer, uint value = 0)
         {
             if (pointer != null) {
@@ -1119,60 +1002,6 @@ namespace SOS.Hosting
             if (pointer != null) {
                 *pointer = value;
             }
-        }
-    }
-
-    class ReadVirtualCache
-    {
-        private const int CACHE_SIZE = 4096;
-
-        private readonly IMemoryService _memoryService;
-        private readonly byte[] _cache = new byte[CACHE_SIZE];
-        private ulong _startCache;
-        private bool _cacheValid;
-        private int _cacheSize;
-
-        internal ReadVirtualCache(IMemoryService memoryService)
-        {
-            _memoryService = memoryService;
-            Clear();
-        }
-
-        internal bool Read(ulong address, byte[] buffer, int bufferSize, out int bytesRead)
-        {
-            bytesRead = 0;
-
-            if (bufferSize == 0) {
-                return true;
-            }
-
-            if (bufferSize > CACHE_SIZE) 
-            {
-                // Don't even try with the cache
-                return _memoryService.ReadMemory(address, buffer, bufferSize, out bytesRead);
-            }
-
-            if (!_cacheValid || (address < _startCache) || (address > (_startCache + (ulong)(_cacheSize - bufferSize))))
-            {
-                _cacheValid = false;
-                _startCache = address;
-                if (!_memoryService.ReadMemory(_startCache, _cache, _cache.Length, out int cbBytesRead)) {
-                    return false;
-                }
-                _cacheSize = cbBytesRead;
-                _cacheValid = true;
-            }
-
-            int size = Math.Min(bufferSize, _cacheSize);
-            Array.Copy(_cache, (int)(address - _startCache), buffer, 0, size);
-            bytesRead = size;
-            return true;
-        }
-
-        internal void Clear() 
-        { 
-            _cacheValid = false;
-            _cacheSize = CACHE_SIZE;
         }
     }
 }

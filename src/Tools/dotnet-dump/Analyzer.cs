@@ -129,18 +129,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private void AddServices(DataTarget target)
         {
             _serviceProvider.AddService(target);
-            _serviceProvider.AddService(target.DataReader);
             _serviceProvider.AddServiceFactory<IHelpBuilder>(_commandProcessor.CreateHelpBuilder);
 
-            if (!(target.DataReader is IThreadReader threadReader))
-            {
-                throw new InvalidOperationException("IThreadReader not implemented");
-            }
-
-            // Create common analyze context for commands
-            var analyzeContext = new AnalyzeContext() {
-                CurrentThreadId = threadReader.EnumerateOSThreadIds().FirstOrDefault()
-            };
+            var analyzeContext = new AnalyzeContext();
             _serviceProvider.AddService(analyzeContext);
 
             // Add the thread, memory, SOSHost and ClrRuntime services

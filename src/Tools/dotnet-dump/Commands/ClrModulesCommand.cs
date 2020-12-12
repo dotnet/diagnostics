@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
     {
         public ClrRuntime Runtime { get; set; }
 
-        public DataTarget DataTarget { get; set; }
+        public IModuleService ModuleService { get; set; }
 
         [Option(Name = "--verbose", Help = "Displays detailed information about the modules.")]
         [OptionAlias(Name = "-v")]
@@ -26,6 +26,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             {
                 throw new DiagnosticsException("No CLR runtime set");
             }
+
             foreach (ClrModule module in Runtime.EnumerateModules())
             {
                 if (Verbose)
@@ -41,9 +42,15 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     WriteLine("    MetadataAddress: {0:X16}", module.MetadataAddress);
                     WriteLine("    MetadataSize:    {0:X16}", module.MetadataLength);
                     WriteLine("    PdbInfo:         {0}", module.Pdb?.ToString() ?? "<none>");
-
-                    DataTarget.DataReader.GetVersionInfo(module.ImageBase, out VersionInfo version);
-                    WriteLine("    Version:         {0}", version);
+                    VersionInfo? version = null;
+                    try
+                    {
+                        version = ModuleService.GetModuleFromBaseAddress(module.ImageBase).Version;
+                    }
+                    catch (DiagnosticsException)
+                    {
+                    }
+                    WriteLine("    Version:         {0}", version?.ToString() ?? "<none>");
                 }
                 else
                 {
