@@ -5,35 +5,37 @@
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.SymbolStore;
 using Microsoft.SymbolStore.KeyGenerators;
-using SOS;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
-    #nullable enable
+#nullable enable
 
     /// <summary>
-    /// A symbol locator that search binaries based on files loaded in the live Linux target.
+    /// A ClrMD symbol locator that search binaries based on files loaded in the live Linux target.
     /// </summary>
-    public class BinaryLocator : IBinaryLocator
+    internal class BinaryLocator : IBinaryLocator
     {
-        public BinaryLocator()
+        private readonly ISymbolService _symbolService;
+
+        public BinaryLocator(ITarget target)
         {
+            _symbolService = target.Services.GetService<ISymbolService>();
         }
 
         public string? FindBinary(string fileName, int buildTimeStamp, int imageSize, bool checkProperties)
         {
             Trace.TraceInformation($"FindBinary: {fileName} buildTimeStamp {buildTimeStamp:X8} imageSize {imageSize:X8}");
 
-            if (SymbolReader.IsSymbolStoreEnabled())
+            if (_symbolService.IsSymbolStoreEnabled)
             {
                 SymbolStoreKey? key = PEFileKeyGenerator.GetKey(fileName, (uint)buildTimeStamp, (uint)imageSize);
                 if (key != null)
                 {
                     // Now download the module from the symbol server, cache or from a directory
-                    return SymbolReader.GetSymbolFile(key);
+                    return _symbolService.DownloadFile(key);
                 }
                 else
                 {

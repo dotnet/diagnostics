@@ -26,6 +26,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private readonly ServiceProvider _serviceProvider;
         private readonly ConsoleProvider _consoleProvider;
         private readonly CommandProcessor _commandProcessor;
+        private readonly SymbolService _symbolService;
         private Target _target;
         private bool _isDesktop;
         private string _dacFilePath;
@@ -44,6 +45,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _serviceProvider = new ServiceProvider();
             _consoleProvider = new ConsoleProvider();
             _commandProcessor = new CommandProcessor(_serviceProvider, _consoleProvider, new Assembly[] { typeof(Analyzer).Assembly });
+            _symbolService = new SymbolService(this);
 
             _serviceProvider.AddService<IHost>(this);
             _serviceProvider.AddService<IConsoleService>(_consoleProvider);
@@ -69,6 +71,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     sosHost.InitializeSOSHost(SymbolReader.TempDirectory, _isDesktop, _dacFilePath, dbiFilePath: null);
                     return sosHost;
                 });
+
+                // Set the default symbol cache to match Visual Studio's when running on Windows
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                    _symbolService.DefaultSymbolCache = Path.Combine(Path.GetTempPath(), "SymbolCache");
+                }
+                // Automatically enable symbol server support
+                _symbolService.AddSymbolServer(msdl: true, symweb: false, symbolServerPath: null, authToken: null, timeoutInMinutes: 0);
+                _symbolService.AddCachePath(_symbolService.DefaultSymbolCache);
 
                 // Run the commands from the dotnet-dump command line
                 if (command != null)
