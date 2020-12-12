@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [Command(Name = "setclrpath", Help = "Set the path to load coreclr DAC/DBI files.")]
     public class SetClrPath: CommandBase
     {
-        public AnalyzeContext AnalyzeContext { get; set; }
+        public IRuntimeService RuntimeService { get; set; }
 
         [Argument(Name = "clrpath", Help = "Runtime directory path.")]
         public string Argument { get; set; }
@@ -20,12 +20,12 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
             if (Argument == null)
             {
-                WriteLine("Load path for DAC/DBI: '{0}'", AnalyzeContext.RuntimeModuleDirectory ?? "<none>");
+                WriteLine("Load path for DAC/DBI: '{0}'", RuntimeService.RuntimeModuleDirectory ?? "<none>");
             }
             else
             {
-                AnalyzeContext.RuntimeModuleDirectory = Argument;
-                WriteLine("Set load path for DAC/DBI to '{0}'", AnalyzeContext.RuntimeModuleDirectory);
+                RuntimeService.RuntimeModuleDirectory = Argument;
+                WriteLine("Set load path for DAC/DBI to '{0}'", RuntimeService.RuntimeModuleDirectory);
             }
         }
     }

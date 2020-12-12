@@ -41,8 +41,6 @@ namespace SOS.Hosting
 
         private const string SOSInitialize = "SOSInitializeByHost";
 
-        internal readonly AnalyzeContext AnalyzeContext = null;
- 
         internal readonly ITarget Target;
         internal readonly IConsoleService ConsoleService;
         internal readonly IModuleService ModuleService;
@@ -97,11 +95,7 @@ namespace SOS.Hosting
         /// <summary>
         /// Loads and initializes the SOS module.
         /// </summary>
-        /// <param name="tempDirectory">Temporary directory created to download DAC module</param>
-        /// <param name="isDesktop">if true, desktop runtime, else .NET Core runtime</param>
-        /// <param name="dacFilePath">The path to DAC that CLRMD loaded or downloaded or null</param>
-        /// <param name="dbiFilePath">The path to DBI (for future use) or null</param>
-        public void InitializeSOSHost(string tempDirectory, bool isDesktop, string dacFilePath, string dbiFilePath)
+        public void InitializeSOSHost()
         {
             if (_sosLibrary == IntPtr.Zero)
             {
@@ -146,26 +140,28 @@ namespace SOS.Hosting
                 }
             
                 // SOS depends on that the temp directory ends with "/".
+                string tempDirectory = Target.GetTempDirectory();
                 if (!string.IsNullOrEmpty(tempDirectory) && tempDirectory[tempDirectory.Length - 1] != Path.DirectorySeparatorChar)
                 {
                     tempDirectory += Path.DirectorySeparatorChar;
                 }
 
+                var runtimeService = Target.Services.GetService<IRuntimeService>();
                 int result = initializeFunc(
                     ref SymbolReader.SymbolCallbacks,
                     Marshal.SizeOf<SymbolReader.SOSNetCoreCallbacks>(),
                     tempDirectory,
-                    AnalyzeContext.RuntimeModuleDirectory,
-                    isDesktop,
-                    dacFilePath,
-                    dbiFilePath,
+                    runtimeService.RuntimeModuleDirectory,
+                    false,
+                    null,
+                    null,
                     SymbolReader.IsSymbolStoreEnabled());
 
                 if (result != 0)
                 {
                     throw new InvalidOperationException($"SOS initialization FAILED 0x{result:X8}");
                 }
-                Trace.TraceInformation("SOS initialized: tempDirectory '{0}' dacFilePath '{1}' sosPath '{2}'", tempDirectory, dacFilePath, sosPath);
+                Trace.TraceInformation("SOS initialized: tempDirectory '{0}' sosPath '{1}'", tempDirectory, sosPath);
             }
         }
 
@@ -226,7 +222,7 @@ namespace SOS.Hosting
         internal int GetInterrupt(
             IntPtr self)
         {
-            return AnalyzeContext.CancellationToken.IsCancellationRequested ? HResult.S_OK : HResult.E_FAIL;
+            return ConsoleService.CancellationToken.IsCancellationRequested ? HResult.S_OK : HResult.E_FAIL;
         }
 
         internal int OutputVaList(

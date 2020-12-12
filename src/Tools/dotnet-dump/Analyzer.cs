@@ -2,18 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostic.Tools.Dump.ExtensionCommands;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
 using SOS.Hosting;
 using System;
-using System.Collections.Generic;
-using System.CommandLine.Help;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -28,8 +23,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private readonly CommandProcessor _commandProcessor;
         private readonly SymbolService _symbolService;
         private Target _target;
-        private bool _isDesktop;
-        private string _dacFilePath;
 
         /// <summary>
         /// Enable the assembly resolver to get the right SOS.NETCore version (the one
@@ -58,7 +51,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
             try
             {
                 using DataTarget dataTarget = DataTarget.LoadDump(dump_path.FullName);
-                AddServices(dataTarget);
 
                 OSPlatform targetPlatform = dataTarget.DataReader.TargetPlatform;
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
@@ -68,7 +60,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
                 _target.ServiceProvider.AddServiceFactory<SOSHost>(() => {
                     var sosHost = new SOSHost(_target);
-                    sosHost.InitializeSOSHost(SymbolReader.TempDirectory, _isDesktop, _dacFilePath, dbiFilePath: null);
+                    sosHost.InitializeSOSHost();
                     return sosHost;
                 });
 
@@ -99,9 +91,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     _consoleProvider.WriteLine("Type 'quit' or 'exit' to exit the session.");
 
                     // Start interactive command line processing
-                    var analyzeContext = _serviceProvider.GetService<AnalyzeContext>();
                     await _consoleProvider.Start(async (string commandLine, CancellationToken cancellation) => {
-                        analyzeContext.CancellationToken = cancellation;
                         await _commandProcessor.Parse(commandLine);
                     });
                 }
@@ -123,6 +113,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             return 0;
         }
 
+<<<<<<< HEAD
         /// <summary>
         /// Add all the services needed by commands
         /// </summary>
@@ -303,6 +294,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
             return dacFilePath;
         }
 
+=======
+>>>>>>> b2e27436... Add IRuntimeService/IRuntime interfaces and implementations.
         #region IHost
 
         public event IHost.ShutdownEventHandler OnShutdownEvent;

@@ -2,11 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Repl;
-using Microsoft.Diagnostics.Runtime;
 using System.CommandLine;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -18,30 +17,38 @@ namespace Microsoft.Diagnostics.Tools.Dump
         [OptionAlias(Name = "-v")]
         public bool Verbose { get; set; }
 
-        public DataTarget DataTarget { get; set; }
+        public IModuleService ModuleService { get; set; }
 
         public override void Invoke()
         {
-            foreach (ModuleInfo module in DataTarget.EnumerateModules())
+            ulong totalSize = 0;
+            foreach (IModule module in ModuleService.EnumerateModules())
             {
+                totalSize += module.ImageSize;
                 if (Verbose)
                 {
                     WriteLine("{0}", module.FileName);
-                    WriteLine("    Address:   {0:X16}", module.ImageBase);
-                    WriteLine("    IsManaged: {0}", module.IsManaged);
-                    WriteLine("    FileSize:  {0:X8}", module.IndexFileSize);
-                    WriteLine("    TimeStamp: {0:X8}", module.IndexTimeStamp);
-                    WriteLine("    Version:   {0}", module.Version);
-                    WriteLine("    PdbInfo:   {0}", module.Pdb?.ToString() ?? "<none>");
-                    if (module.BuildId != null) {
-                        WriteLine("    BuildId:   {0}", string.Concat(module.BuildId.Select((b) => b.ToString("x2"))));
+                    WriteLine("    Address:      {0:X16}", module.ImageBase);
+                    WriteLine("    ImageSize:    {0:X8}", module.ImageSize);
+                    WriteLine("    IsPEImage:    {0}", module.IsPEImage);
+                    WriteLine("    IsManaged:    {0}", module.IsManaged);
+                    WriteLine("    IsFileLayout: {0}", module.IsFileLayout?.ToString() ?? "<unknown>");
+                    WriteLine("    FileSize:     {0:X8}", module.IndexFileSize);
+                    WriteLine("    TimeStamp:    {0:X8}", module.IndexTimeStamp);
+                    WriteLine("    Version:      {0}", module.Version?.ToString() ?? "<none>");
+                    string versionString = module.VersionString;
+                    if (!string.IsNullOrEmpty(versionString)) {
+                        WriteLine("                  {0}", versionString);
                     }
+                    WriteLine("    PdbInfo:      {0}", module.PdbInfo?.ToString() ?? "<none>");
+                    WriteLine("    BuildId:      {0}", !module.BuildId.IsDefaultOrEmpty ? string.Concat(module.BuildId.Select((b) => b.ToString("x2"))) : "<none>");
                 }
                 else
                 {
-                    WriteLine("{0:X16} {1:X8} {2}", module.ImageBase, module.IndexFileSize, module.FileName);
+                    WriteLine("{0:X16} {1:X8} {2}", module.ImageBase, module.ImageSize, module.FileName);
                 }
             }
+            WriteLine("Total image size: {0}", totalSize);
         }
     }
 }
