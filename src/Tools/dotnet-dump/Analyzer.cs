@@ -2,17 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostic.Tools.Dump.ExtensionCommands;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
-using SOS;
+using SOS.Hosting;
 using System;
 using System.Collections.Generic;
-using System.CommandLine;
+using System.CommandLine.Help;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -20,17 +18,15 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostic.Tools.Dump.ExtensionCommands;
-using Microsoft.Diagnostics.Runtime.DataReaders.Implementation;
-using System.CommandLine.Help;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
-    public class Analyzer
+    public class Analyzer : IHost
     {
         private readonly ServiceProvider _serviceProvider;
         private readonly ConsoleProvider _consoleProvider;
         private readonly CommandProcessor _commandProcessor;
+        private Target _target;
         private bool _isDesktop;
         private string _dacFilePath;
 
@@ -48,6 +44,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _serviceProvider = new ServiceProvider();
             _consoleProvider = new ConsoleProvider();
             _commandProcessor = new CommandProcessor(_serviceProvider, _consoleProvider, new Assembly[] { typeof(Analyzer).Assembly });
+
+            _serviceProvider.AddService<IHost>(this);
+            _serviceProvider.AddService<IConsoleService>(_consoleProvider);
         }
 
         public async Task<int> Analyze(FileInfo dump_path, string[] command)
@@ -55,46 +54,39 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _consoleProvider.WriteLine($"Loading core dump: {dump_path} ...");
 
             try
-            { 
-                using (DataTarget target = DataTarget.LoadDump(dump_path.FullName))
+            {
+                using DataTarget dataTarget = DataTarget.LoadDump(dump_path.FullName);
+                AddServices(dataTarget);
+
+                OSPlatform targetPlatform = dataTarget.DataReader.TargetPlatform;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+                    targetPlatform = OSPlatform.OSX;
+                }
+                _target = new TargetFromDataReader(dataTarget.DataReader, targetPlatform, this, dump_path.FullName);
+
+                _target.ServiceProvider.AddServiceFactory<SOSHost>(() => {
+                    var sosHost = new SOSHost(_target);
+                    sosHost.InitializeSOSHost(SymbolReader.TempDirectory, _isDesktop, _dacFilePath, dbiFilePath: null);
+                    return sosHost;
+                });
+
+                // Run the commands from the dotnet-dump command line
+                if (command != null)
                 {
+                    foreach (string cmd in command)
+                    {
+                        await _commandProcessor.Parse(cmd);
+
+                        if (_consoleProvider.Shutdown)
+                            break;
+                    }
+                }
+
+                if (!_consoleProvider.Shutdown)
+                {
+                    // Start interactive command line processing
                     _consoleProvider.WriteLine("Ready to process analysis commands. Type 'help' to list available commands or 'help [command]' to get detailed help on a command.");
                     _consoleProvider.WriteLine("Type 'quit' or 'exit' to exit the session.");
-
-                    // Add all the services needed by commands and other services
-                    AddServices(target);
-
-                    // Set the default symbol cache to match Visual Studio's when running on Windows
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                        SymbolReader.DefaultSymbolCache = Path.Combine(Path.GetTempPath(), "SymbolCache");
-                    }
-
-                    // Automatically enable symbol server support
-                    SymbolReader.InitializeSymbolStore(
-                        logging: false, 
-                        msdl: true,
-                        symweb: false,
-                        tempDirectory: null,
-                        symbolServerPath: null,
-                        authToken: null,
-                        timeoutInMinutes: 0,
-                        symbolCachePath: null,
-                        symbolDirectoryPath: null,
-                        windowsSymbolPath: null);
-
-                    target.BinaryLocator = new BinaryLocator();
-
-                    // Run the commands from the dotnet-dump command line
-                    if (command != null)
-                    {
-                        foreach (string cmd in command)
-                        {
-                            await _commandProcessor.Parse(cmd);
-
-                            if (_consoleProvider.Shutdown)
-                                break;
-                        }
-                    }
 
                     // Start interactive command line processing
                     var analyzeContext = _serviceProvider.GetService<AnalyzeContext>();
@@ -104,13 +96,12 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     });
                 }
             }
-            catch (Exception ex) when 
+            catch (Exception ex) when
                 (ex is ClrDiagnosticsException ||
-                 ex is FileNotFoundException || 
-                 ex is DirectoryNotFoundException || 
-                 ex is UnauthorizedAccessException || 
-                 ex is PlatformNotSupportedException || 
-                 ex is UnsupportedCommandException ||
+                 ex is FileNotFoundException ||
+                 ex is DirectoryNotFoundException ||
+                 ex is UnauthorizedAccessException ||
+                 ex is PlatformNotSupportedException ||
                  ex is InvalidDataException ||
                  ex is InvalidOperationException ||
                  ex is NotSupportedException)
@@ -129,9 +120,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
             _serviceProvider.AddService(target);
             _serviceProvider.AddService(target.DataReader);
-            _serviceProvider.AddService<IConsoleService>(_consoleProvider);
-            _serviceProvider.AddService(_commandProcessor);
-            _serviceProvider.AddServiceFactory(typeof(IHelpBuilder), _commandProcessor.CreateHelpBuilder);
+            _serviceProvider.AddServiceFactory<IHelpBuilder>(_commandProcessor.CreateHelpBuilder);
 
             if (!(target.DataReader is IThreadReader threadReader))
             {
@@ -151,16 +140,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
             var memoryService = new MemoryService(target.DataReader);
             _serviceProvider.AddService(memoryService);
 
-            _serviceProvider.AddServiceFactory(typeof(ClrRuntime), () => CreateRuntime(target));
-
-            _serviceProvider.AddServiceFactory(typeof(SOSHost), () => {
-                var sosHost = new SOSHost(_serviceProvider);
-                sosHost.InitializeSOSHost(SymbolReader.TempDirectory, _isDesktop, _dacFilePath, dbiFilePath: null);
-                return sosHost;
-            });
+            _serviceProvider.AddServiceFactory<ClrRuntime>(() => CreateRuntime(target));
 
             // ClrMD helper for extended commands
-            _serviceProvider.AddServiceFactory(typeof(ClrMDHelper), () =>
+            _serviceProvider.AddServiceFactory<ClrMDHelper>(() =>
                 new ClrMDHelper(_serviceProvider)
             );
         }
@@ -324,5 +307,19 @@ namespace Microsoft.Diagnostics.Tools.Dump
             }
             return dacFilePath;
         }
+
+        #region IHost
+
+        public event IHost.ShutdownEventHandler OnShutdownEvent;
+
+        HostType IHost.HostType => HostType.DotnetDump;
+
+        IServiceProvider IHost.Services => _serviceProvider;
+
+        ITarget IHost.CurrentTarget => _target;
+
+        void IHost.SetCurrentTarget(int targetid) => throw new NotImplementedException();
+
+        #endregion
     }
 }

@@ -14,8 +14,9 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using Architecture = System.Runtime.InteropServices.Architecture;
 
-namespace SOS
+namespace SOS.Hosting
 {
     /// <summary>
     /// Helper code to hosting SOS under ClrMD
@@ -44,11 +45,11 @@ namespace SOS
 
         internal readonly IDataReader DataReader;
         internal readonly AnalyzeContext AnalyzeContext;
-
+ 
+        internal readonly ITarget Target;
+        internal readonly IConsoleService ConsoleService;
         private readonly IThreadService _threadService;
         private readonly MemoryService _memoryService;
-        private readonly IConsoleService _console;
-        private readonly COMCallableIUnknown _ccw;  
         private readonly IntPtr _interface;
         private readonly ReadVirtualCache _versionCache;
         private IntPtr _sosLibrary = IntPtr.Zero;
@@ -70,14 +71,15 @@ namespace SOS
         /// <summary>
         /// Create an instance of the hosting class
         /// </summary>
-        /// <param name="serviceProvider">Service provider</param>
-        public SOSHost(IServiceProvider serviceProvider)
+        /// <param name="target">target instance</param>
+        public SOSHost(ITarget target)
         {
-            DataReader = serviceProvider.GetService<IDataReader>();
-            _console = serviceProvider.GetService<IConsoleService>();
-            AnalyzeContext = serviceProvider.GetService<AnalyzeContext>();
-            _memoryService = serviceProvider.GetService<MemoryService>();
-            _threadService = serviceProvider.GetService<IThreadService>();
+            Target = target;
+            DataReader = target.Services.GetService<IDataReader>();
+            ConsoleService = target.Services.GetService<IConsoleService>();
+            AnalyzeContext = target.Services.GetService<AnalyzeContext>();
+            _memoryService = target.Services.GetService<MemoryService>();
+            _threadService = target.Services.GetService<IThreadService>();
             _versionCache = new ReadVirtualCache(_memoryService);
 
             string rid = InstallHelper.GetRid();
@@ -85,13 +87,11 @@ namespace SOS
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 var debugClient = new DebugClient(this);
-                _ccw = debugClient;
                 _interface = debugClient.IDebugClient;
             }
             else
             {
                 var lldbServices = new LLDBServices(this);
-                _ccw = lldbServices;
                 _interface = lldbServices.ILLDBServices;
             }
         }
@@ -123,7 +123,7 @@ namespace SOS
                 string sosPath = Path.Combine(SOSPath, sos);
                 try
                 {
-                    _sosLibrary = DataTarget.PlatformFunctions.LoadLibrary(sosPath);
+                    _sosLibrary = Microsoft.Diagnostics.Runtime.DataTarget.PlatformFunctions.LoadLibrary(sosPath);
                 }
                 catch (DllNotFoundException ex)
                 {
@@ -141,13 +141,12 @@ namespace SOS
                 {
                     throw new FileNotFoundException($"SOS module {sosPath} not found");
                 }
-                IntPtr initializeAddress = DataTarget.PlatformFunctions.GetLibraryExport(_sosLibrary, SOSInitialize);
-                if (initializeAddress == IntPtr.Zero)
+                var initializeFunc = GetDelegateFunction<SOSInitializeDelegate>(_sosLibrary, SOSInitialize);
+                if (initializeFunc == null)
                 {
                     throw new EntryPointNotFoundException($"Can not find SOS module initialization function: {SOSInitialize}");
                 }
-                var initializeFunc = (SOSInitializeDelegate)Marshal.GetDelegateForFunctionPointer(initializeAddress, typeof(SOSInitializeDelegate));
-
+            
                 // SOS depends on that the temp directory ends with "/".
                 if (!string.IsNullOrEmpty(tempDirectory) && tempDirectory[tempDirectory.Length - 1] != Path.DirectorySeparatorChar)
                 {
@@ -199,15 +198,13 @@ namespace SOS
         {
             Debug.Assert(_sosLibrary != null);
 
-            IntPtr commandAddress = DataTarget.PlatformFunctions.GetLibraryExport(_sosLibrary, command);
-            if (commandAddress == IntPtr.Zero)
+            var commandFunc = GetDelegateFunction<SOSCommandDelegate>(_sosLibrary, command);
+            if (commandFunc == null)
             {
                 throw new EntryPointNotFoundException($"Can not find SOS command: {command}");
             }
-            var commandFunc = (SOSCommandDelegate)Marshal.GetDelegateForFunctionPointer(commandAddress, typeof(SOSCommandDelegate));
-
             int result = commandFunc(_interface, arguments ?? "");
-            if (result != 0)
+            if (result != HResult.S_OK)
             {
                 Trace.TraceError($"SOS command FAILED 0x{result:X8}");
             }
@@ -243,7 +240,7 @@ namespace SOS
             try
             {
                 // The text has already been formated by sos
-                _console.Write(format);
+                ConsoleService.Write(format);
             }
             catch (OperationCanceledException)
             {
@@ -282,18 +279,18 @@ namespace SOS
             IntPtr self,
             IMAGE_FILE_MACHINE* type)
         {
-            switch (DataReader.Architecture)
+            switch (Target.Architecture)
             {
-                case Microsoft.Diagnostics.Runtime.Architecture.Amd64:
+                case Architecture.X64:
                     *type = IMAGE_FILE_MACHINE.AMD64;
                     break;
-                case Microsoft.Diagnostics.Runtime.Architecture.X86:
+                case Architecture.X86:
                     *type = IMAGE_FILE_MACHINE.I386;
                     break;
-                case Microsoft.Diagnostics.Runtime.Architecture.Arm:
+                case Architecture.Arm:
                     *type = IMAGE_FILE_MACHINE.THUMB2;
                     break;
-                case Microsoft.Diagnostics.Runtime.Architecture.Arm64:
+                case Architecture.Arm64:
                     *type = IMAGE_FILE_MACHINE.ARM64;
                     break;
                 default:
@@ -456,12 +453,14 @@ namespace SOS
             uint* index,
             ulong* baseAddress)
         {
-            Debug.Assert(startIndex == 0);
-
+            if (startIndex != 0)
+            {
+                return HResult.E_INVALIDARG;
+            }
             // This causes way too many problems on Linux because of various
             // bugs in the CLRMD ELF dump reader module enumeration and isn't
             // necessary on linux anyway.
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (Target.OperatingSystem == OSPlatform.Windows)
             {
                 // Find the module that contains the offset.
                 uint i = 0;
@@ -522,9 +521,10 @@ namespace SOS
             uint start,
             DEBUG_MODULE_PARAMETERS* moduleParams)
         {
-            Debug.Assert(bases != null);
-            Debug.Assert(start == 0);
-
+            if (start != 0 || bases == null)
+            {
+                return HResult.E_INVALIDARG;
+            }
             foreach (ModuleInfo module in DataReader.EnumerateModules())
             {
                 for (int i = 0; i < count; i++)
@@ -769,10 +769,10 @@ namespace SOS
             {
                 return HResult.E_FAIL;
             }
-            return GetThreadContextById(self, AnalyzeContext.CurrentThreadId.Value, 0, contextSize, context);
+            return GetThreadContextBySystemId(self, AnalyzeContext.CurrentThreadId.Value, 0, contextSize, context);
         }
 
-        internal int GetThreadContextById(
+        internal int GetThreadContextBySystemId(
             IntPtr self,
             uint threadId,
             uint contextFlags,
@@ -825,11 +825,15 @@ namespace SOS
             return HResult.S_OK;
         }
 
-        internal int GetCurrentProcessId(
+        internal int GetCurrentProcessSystemId(
             IntPtr self,
             out uint id)
         {
-            id = (uint)DataReader.ProcessId;
+            if (!Target.ProcessId.HasValue) {
+                id = 0;
+                return HResult.E_FAIL;
+            }
+            id = Target.ProcessId.Value;
             return HResult.S_OK;
         }
 
@@ -1038,6 +1042,8 @@ namespace SOS
             return HResult.E_FAIL;
         }
 
+        #endregion
+
         internal static bool IsCoreClrRuntimeModule(ModuleInfo module)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -1080,6 +1086,23 @@ namespace SOS
             }
         }
 
+        /// <summary>
+        /// Helper function to get pinvoke entries into native modules
+        /// </summary>
+        /// <typeparam name="T">function delegate</typeparam>
+        /// <param name="library">module name</param>
+        /// <param name="functionName">name of function</param>
+        /// <returns>delegate instance or null</returns>
+        public static T GetDelegateFunction<T>(IntPtr library, string functionName)
+            where T : Delegate
+        {
+            IntPtr functionAddress = Microsoft.Diagnostics.Runtime.DataTarget.PlatformFunctions.GetLibraryExport(library, functionName);
+            if (functionAddress == IntPtr.Zero) {
+                return default;
+            }
+            return (T)Marshal.GetDelegateForFunctionPointer(functionAddress, typeof(T));
+        }
+
         internal unsafe static void Write(uint* pointer, uint value = 0)
         {
             if (pointer != null) {
@@ -1093,8 +1116,6 @@ namespace SOS
                 *pointer = value;
             }
         }
-
-        #endregion
     }
 
     class ReadVirtualCache

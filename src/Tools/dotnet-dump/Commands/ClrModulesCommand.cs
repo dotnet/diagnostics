@@ -2,10 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
 using System.CommandLine;
-using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -22,6 +22,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         public override void Invoke()
         {
+            if (Runtime == null)
+            {
+                throw new DiagnosticsException("No CLR runtime set");
+            }
             foreach (ClrModule module in Runtime.EnumerateModules())
             {
                 if (Verbose)

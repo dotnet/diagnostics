@@ -2,32 +2,33 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
-using System.Globalization;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace SOS
+namespace SOS.Hosting
 {
-    internal unsafe class LLDBServices : COMCallableIUnknown
+    internal sealed unsafe class LLDBServices : COMCallableIUnknown
     {
         private static readonly Guid IID_ILLDBServices = new Guid("2E6C569A-9E14-4DA4-9DFC-CDB73A532566");
         private static readonly Guid IID_ILLDBServices2 = new Guid("012F32F0-33BA-4E8E-BC01-037D382D8A5E");
 
         public IntPtr ILLDBServices { get; }
 
-        readonly SOSHost _soshost;
+        private readonly SOSHost _soshost;
 
         /// <summary>
         /// Create an instance of the service wrapper SOS uses.
         /// </summary>
         /// <param name="soshost">SOS host instance</param>
-        public LLDBServices(SOSHost soshost)
+        internal LLDBServices(SOSHost soshost)
         {
             _soshost = soshost;
 
@@ -63,12 +64,12 @@ namespace SOS
             builder.AddMethod(new GetSourceFileLineOffsetsDelegate(soshost.GetSourceFileLineOffsets));
             builder.AddMethod(new FindSourceFileDelegate(soshost.FindSourceFile));
 
-            builder.AddMethod(new GetCurrentProcessIdDelegate(soshost.GetCurrentProcessId));
+            builder.AddMethod(new GetCurrentProcessSystemIdDelegate(soshost.GetCurrentProcessSystemId));
             builder.AddMethod(new GetCurrentThreadIdDelegate(soshost.GetCurrentThreadId));
             builder.AddMethod(new SetCurrentThreadIdDelegate(soshost.SetCurrentThreadId));
             builder.AddMethod(new GetCurrentThreadSystemIdDelegate(soshost.GetCurrentThreadSystemId));
             builder.AddMethod(new GetThreadIdBySystemIdDelegate(soshost.GetThreadIdBySystemId));
-            builder.AddMethod(new GetThreadContextByIdDelegate(soshost.GetThreadContextById));
+            builder.AddMethod(new GetThreadContextBySystemIdDelegate(soshost.GetThreadContextBySystemId));
 
             builder.AddMethod(new GetValueByNameDelegate(GetValueByName));
             builder.AddMethod(new GetInstructionOffsetDelegate(soshost.GetInstructionOffset));
@@ -168,13 +169,13 @@ namespace SOS
                 {
                     if (SOSHost.IsCoreClrRuntimeModule(module))
                     {
-                        callback(IntPtr.Zero, module.FileName, module.ImageBase, module.IndexFileSize);
+                        callback(IntPtr.Zero, module.FileName, module.ImageBase, (uint)module.IndexFileSize);
                         break;
                     }
                 }
                 else
                 {
-                    callback(IntPtr.Zero, module.FileName, module.ImageBase, module.IndexFileSize);
+                    callback(IntPtr.Zero, module.FileName, module.ImageBase, (uint)module.IndexFileSize);
                 }
             }
             return HResult.S_OK;
@@ -415,7 +416,7 @@ namespace SOS
             uint* foundSize);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int GetCurrentProcessIdDelegate(
+        private delegate int GetCurrentProcessSystemIdDelegate(
             IntPtr self,
             out uint id);
 
@@ -441,7 +442,7 @@ namespace SOS
             [Out] out uint id);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int GetThreadContextByIdDelegate(
+        private delegate int GetThreadContextBySystemIdDelegate(
             IntPtr self,
             uint threadId,
             uint contextFlags,
@@ -476,11 +477,11 @@ namespace SOS
         /// <summary>
         /// The LoadNativeSymbolsDelegate2 callback
         /// </summary>
-        public delegate void ModuleLoadCallback(
+        private delegate void ModuleLoadCallback(
             IntPtr parameter,
             [In, MarshalAs(UnmanagedType.LPStr)] string moduleFilePath,
             [In] ulong moduleAddress,
-            [In] int moduleSize);
+            [In] uint moduleSize);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int LoadNativeSymbolsDelegate2(
@@ -504,12 +505,12 @@ namespace SOS
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleVersionInformationDelegate(
             IntPtr self,
-            [In] uint Index,
-            [In] ulong Base,
-            [In][MarshalAs(UnmanagedType.LPStr)] string Item,
-            [Out] byte* Buffer,
-            [In] uint BufferSize,
-            [Out] uint* VerInfoSize);
+            [In] uint moduleIndex,
+            [In] ulong moduleBase,
+            [In][MarshalAs(UnmanagedType.LPStr)] string item,
+            [Out] byte* buffer,
+            [In] uint bufferSize,
+            [Out] uint* verInfoSize);
 
         #endregion
     }

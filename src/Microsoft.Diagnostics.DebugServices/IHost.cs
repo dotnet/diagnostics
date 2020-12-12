@@ -1,0 +1,56 @@
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
+
+namespace Microsoft.Diagnostics.DebugServices
+{
+    /// <summary>
+    /// The type of the debugger or host. Must match IHost::HostType.
+    /// </summary>
+    public enum HostType
+    {
+        DotnetDump,
+        Lldb,
+        DbgEng,
+        Vs
+    };
+
+    /// <summary>
+    /// Host interface
+    /// </summary>
+    public interface IHost
+    {
+        /// <summary>
+        /// Host shutdown event handler
+        /// </summary>
+        public delegate void ShutdownEventHandler(object sender, EventArgs e);
+
+        /// <summary>
+        /// Invoked on hosting debugger or dotnet-dump shutdown
+        /// </summary>
+        event ShutdownEventHandler OnShutdownEvent;
+
+        /// <summary>
+        /// Returns the hosting debugger type
+        /// </summary>
+        HostType HostType { get; }
+
+        /// <summary>
+        /// Global service provider
+        /// </summary>
+        IServiceProvider Services { get; }
+
+        /// <summary>
+        /// Current target instances or null
+        /// </summary>
+        ITarget CurrentTarget { get; }
+
+        /// <summary>
+        /// Sets the current target.
+        /// </summary>
+        /// <param name="targetid">target id</param>
+        void SetCurrentTarget(int targetid);
+    }
+}
