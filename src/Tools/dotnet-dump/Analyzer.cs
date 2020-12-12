@@ -135,9 +135,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _serviceProvider.AddService(analyzeContext);
 
             // Add the thread, memory, SOSHost and ClrRuntime services
-            var threadService = new ThreadService(target.DataReader);
-            _serviceProvider.AddService<IThreadService>(threadService);
-
             _serviceProvider.AddServiceFactory<ClrRuntime>(() => CreateRuntime(target));
 
             // ClrMD helper for extended commands

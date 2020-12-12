@@ -12,37 +12,49 @@ namespace Microsoft.Diagnostics.Tools.Dump
     public class SetThreadCommand : CommandBase
     {
         [Argument(Help = "The thread index or id to set, otherwise displays the list of threads.")]
-        public int? Thread { get; set; } = null;
+        public uint? Thread { get; set; } = null;
 
         [Option(Name = "--tid", Help = "<thread> is an OS thread id.")]
         [OptionAlias(Name = "-t")]
         public bool ThreadId { get; set; }
 
-        public AnalyzeContext AnalyzeContext { get; set; }
+        [Option(Name = "--verbose", Help = "Displays more details.")]
+        [OptionAlias(Name = "-v")]
+        public bool Verbose { get; set; }
 
         public IThreadService ThreadService { get; set; }
 
         public override void Invoke()
         {
-            if (Thread.HasValue)
+           if (Thread.HasValue)
             {
-                ThreadInfo threadInfo;
+                IThread thread;
                 if (ThreadId)
                 {
-                    threadInfo = ThreadService.GetThreadInfoFromId((uint)Thread.Value);
+                    thread = ThreadService.GetThreadInfoFromId(Thread.Value);
                 }
                 else
                 {
-                    threadInfo = ThreadService.GetThreadInfoFromIndex(Thread.Value);
+                    thread = ThreadService.GetThreadInfoFromIndex(unchecked((int)Thread.Value));
                 }
-                AnalyzeContext.CurrentThreadId = threadInfo.ThreadId;
+                ThreadService.CurrentThreadId = thread.ThreadId;
             }
             else
             {
-                uint currentThreadId = AnalyzeContext.CurrentThreadId.GetValueOrDefault(uint.MaxValue);
-                foreach (ThreadInfo thread in ThreadService.EnumerateThreads())
+                uint currentThreadId = ThreadService.CurrentThreadId.GetValueOrDefault(uint.MaxValue);
+                foreach (IThread thread in ThreadService.EnumerateThreads())
                 {
                     WriteLine("{0}{1} 0x{2:X4} ({2})", thread.ThreadId == currentThreadId ? "*" : " ", thread.ThreadIndex, thread.ThreadId);
+                    if (Verbose)
+                    {
+                        thread.GetRegisterValue(ThreadService.InstructionPointerIndex, out ulong ip);
+                        thread.GetRegisterValue(ThreadService.StackPointerIndex, out ulong sp);
+                        thread.GetRegisterValue(ThreadService.FramePointerIndex, out ulong fp);
+                        WriteLine("    IP  0x{0:X16}", ip);
+                        WriteLine("    SP  0x{0:X16}", sp);
+                        WriteLine("    FP  0x{0:X16}", fp);
+                        WriteLine("    TEB 0x{0:X16}", thread.GetThreadTeb());
+                    }
                 }
             }
         }
