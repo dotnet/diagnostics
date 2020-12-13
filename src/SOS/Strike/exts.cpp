@@ -98,7 +98,7 @@ ExtQuery(ILLDBServices* services)
     SOS_ExtQueryFailGo(g_ExtData2, IDebugDataSpaces2);
     SOS_ExtQueryFailGo(g_ExtAdvanced, IDebugAdvanced);
 #endif // FEATURE_PAL
-    return S_OK;
+    return Status;
 
  Fail:
     if (Status == E_OUTOFMEMORY)
@@ -175,6 +175,7 @@ ExtRelease(void)
     EXT_RELEASE(g_ExtServices2);
     g_ExtServices = NULL;
 #endif // FEATURE_PAL
+    ReleaseTarget();
 }
 
 #ifndef FEATURE_PAL
@@ -201,6 +202,7 @@ void CleanupEventCallbacks()
 {
     if(g_pCallbacksClient != NULL)
     {
+        g_pCallbacksClient->SetEventCallbacks(NULL);
         g_pCallbacksClient->Release();
         g_pCallbacksClient = NULL;
     }
@@ -231,13 +233,12 @@ DebugExtensionInitialize(PULONG Version, PULONG Flags)
     }
     g_Initialized = true;
 
-    if ((Hr = DebugCreate(__uuidof(IDebugClient),
-                          (void **)&DebugClient)) != S_OK)
+    if ((Hr = DebugCreate(__uuidof(IDebugClient), (void **)&DebugClient)) != S_OK)
     {
         return Hr;
     }
-    if ((Hr = DebugClient->QueryInterface(__uuidof(IDebugControl),
-                                              (void **)&DebugControl)) != S_OK)
+
+    if ((Hr = DebugClient->QueryInterface(__uuidof(IDebugControl), (void **)&DebugControl)) != S_OK)
     {
         return Hr;
     }
@@ -306,6 +307,7 @@ DebugExtensionUninitialize(void)
 {
     // Execute all registered cleanup tasks
     OnUnloadTask::Run();
+    g_Initialized = false;
 }
 
 BOOL WINAPI 
@@ -319,14 +321,6 @@ DllMain(HANDLE hInstance, DWORD dwReason, LPVOID lpReserved)
 }
 
 #else // FEATURE_PAL
-
-__attribute__((destructor)) 
-void
-Uninitialize(void)
-{
-    // Execute all registered cleanup tasks
-    OnUnloadTask::Run();
-}
 
 HRESULT
 DebugClient::QueryInterface(

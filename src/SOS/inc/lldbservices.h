@@ -8,11 +8,9 @@
 //
 //----------------------------------------------------------------------------
 
-#ifndef __LLDBSERVICES_H__
-#define __LLDBSERVICES_H__
+#pragma once
 
 #include <stdarg.h>
-#include <palrt.h>
 #include <unknwn.h>
 
 #ifdef __cplusplus
@@ -247,24 +245,24 @@ public:
 
     // Returns the coreclr module directory found by lldb plugin 
     // in the target process.
-    virtual PCSTR GetCoreClrDirectory() = 0;
+    virtual PCSTR STDMETHODCALLTYPE GetCoreClrDirectory() = 0;
 
     // Evaluates a lldb expression into a value.
-    virtual DWORD_PTR GetExpression(
+    virtual ULONG64 STDMETHODCALLTYPE GetExpression(
         /* [in] */ PCSTR exp) = 0;
 
     // Unwind one native stack frame given a thread and register context
-    virtual HRESULT VirtualUnwind(
+    virtual HRESULT STDMETHODCALLTYPE VirtualUnwind(
         /* [in] */ DWORD threadID,
         /* [in] */ ULONG32 contextSize,
         /* [in, out, size_is(contextSize)] */ PBYTE context) = 0;
 
     // Set an exception throw callback
-    virtual HRESULT SetExceptionCallback(
+    virtual HRESULT STDMETHODCALLTYPE SetExceptionCallback(
         /* [in] */ PFN_EXCEPTION_CALLBACK callback) = 0;
 
     // Clear the exception throw callback
-    virtual HRESULT ClearExceptionCallback() = 0;
+    virtual HRESULT STDMETHODCALLTYPE ClearExceptionCallback() = 0;
 
     //------------------------------------------------
     // IDebugControl2
@@ -273,29 +271,29 @@ public:
     // Checks for a user interrupt, such a Ctrl-C
     // or stop button.
     // This method is reentrant.
-    virtual HRESULT GetInterrupt(
+    virtual HRESULT STDMETHODCALLTYPE GetInterrupt(
         void) = 0;
 
-    virtual HRESULT OutputVaList(
+    virtual HRESULT STDMETHODCALLTYPE OutputVaList(
         ULONG mask,
         PCSTR format,
         va_list args) = 0;
 
     // Returns information about the debuggee such
     // as user vs. kernel, dump vs. live, etc.
-    virtual HRESULT GetDebuggeeType(
+    virtual HRESULT STDMETHODCALLTYPE GetDebuggeeType(
         PULONG debugClass,
         PULONG qualifier) = 0;
 
     // Returns the page size for the currently executing
     // processor context.  The page size may vary between
     // processor types.
-    virtual HRESULT GetPageSize(
+    virtual HRESULT STDMETHODCALLTYPE GetPageSize(
         PULONG size) = 0;
 
     // Returns the type of processor used in the
     // current processor context.
-    virtual HRESULT GetExecutingProcessorType(
+    virtual HRESULT STDMETHODCALLTYPE GetExecutingProcessorType(
         PULONG type) = 0;
 
     // Executes the given command string.
@@ -306,7 +304,7 @@ public:
     // execute an internal wait will be done
     // so Execute can take an arbitrary amount
     // of time.
-    virtual HRESULT Execute(
+    virtual HRESULT STDMETHODCALLTYPE Execute(
         ULONG outputControl,
         PCSTR command,
         ULONG flags) = 0;
@@ -315,7 +313,7 @@ public:
     // EventType is one of the event callback mask bits.
     // ExtraInformation contains additional event-specific
     // information.  Not all events have additional information.
-    virtual HRESULT GetLastEventInformation(
+    virtual HRESULT STDMETHODCALLTYPE GetLastEventInformation(
         PULONG type,
         PULONG processId,
         PULONG threadId,
@@ -326,7 +324,7 @@ public:
         ULONG descriptionSize,
         PULONG descriptionUsed) = 0;
 
-    virtual HRESULT Disassemble(
+    virtual HRESULT STDMETHODCALLTYPE Disassemble(
         ULONG64 offset,
         ULONG flags,
         PSTR buffer,
@@ -344,7 +342,7 @@ public:
     // byte size of FrameContexts.  FrameContextsEntrySize
     // gives the byte size of each entry in
     // FrameContexts.
-    virtual HRESULT GetContextStackTrace(
+    virtual HRESULT STDMETHODCALLTYPE GetContextStackTrace(
         PVOID startContext,
         ULONG startContextSize,
         PDEBUG_STACK_FRAME frames,
@@ -358,13 +356,13 @@ public:
     // IDebugDataSpaces
     //------------------------------------------------
 
-    virtual HRESULT ReadVirtual(
+    virtual HRESULT STDMETHODCALLTYPE ReadVirtual(
         ULONG64 offset,
         PVOID buffer,
         ULONG bufferSize,
         PULONG bytesRead) = 0;
 
-    virtual HRESULT WriteVirtual(
+    virtual HRESULT STDMETHODCALLTYPE WriteVirtual(
         ULONG64 offset,
         PVOID buffer,
         ULONG bufferSize,
@@ -377,10 +375,10 @@ public:
     // Controls the symbol options used during
     // symbol operations.
     // Uses the same flags as dbghelps SymSetOptions.
-    virtual HRESULT GetSymbolOptions(
+    virtual HRESULT STDMETHODCALLTYPE GetSymbolOptions(
         PULONG options) = 0;
 
-    virtual HRESULT GetNameByOffset(
+    virtual HRESULT STDMETHODCALLTYPE GetNameByOffset(
         ULONG64 offset,
         PSTR nameBuffer,
         ULONG nameBufferSize,
@@ -398,17 +396,17 @@ public:
     // where an attempt is made to call unloaded code.
     // These modules are indexed after the loaded
     // modules.
-    virtual HRESULT GetNumberModules(
+    virtual HRESULT STDMETHODCALLTYPE GetNumberModules(
         PULONG loaded,
         PULONG unloaded) = 0;
 
-    virtual HRESULT GetModuleByIndex(
+    virtual HRESULT STDMETHODCALLTYPE GetModuleByIndex(
         ULONG index,
         PULONG64 base) = 0;
 
     // The module name may not be unique.
     // This method returns the first match.
-    virtual HRESULT GetModuleByModuleName(
+    virtual HRESULT STDMETHODCALLTYPE GetModuleByModuleName(
         PCSTR name,
         ULONG startIndex,
         PULONG index,
@@ -419,7 +417,7 @@ public:
     // not be unique when including unloaded
     // drivers.  This method returns the
     // first match.
-    virtual HRESULT GetModuleByOffset(
+    virtual HRESULT STDMETHODCALLTYPE GetModuleByOffset(
         ULONG64 offset,
         ULONG startIndex,
         PULONG index,
@@ -427,7 +425,7 @@ public:
 
     // If Index is DEBUG_ANY_ID the base address
     // is used to look up the module instead.
-    virtual HRESULT GetModuleNames(
+    virtual HRESULT STDMETHODCALLTYPE GetModuleNames(
         ULONG index,
         ULONG64 base,
         PSTR imageNameBuffer,
@@ -440,7 +438,7 @@ public:
         ULONG loadedImageNameBufferSize,
         PULONG loadedImageNameSize) = 0;
 
-    HRESULT virtual GetLineByOffset(
+    HRESULT virtual STDMETHODCALLTYPE GetLineByOffset(
         ULONG64 offset,
         PULONG line,
         PSTR fileBuffer,
@@ -448,7 +446,7 @@ public:
         PULONG fileSize,
         PULONG64 displacement) = 0;
      
-    HRESULT virtual GetSourceFileLineOffsets(
+    HRESULT virtual STDMETHODCALLTYPE GetSourceFileLineOffsets(
         PCSTR file,
         PULONG64 buffer,
         ULONG bufferLines,
@@ -465,7 +463,7 @@ public:
     // matches along the source path.
     // The returned element can be 1, indicating
     // the file was found directly and not on the path.
-    HRESULT virtual FindSourceFile(
+    HRESULT virtual STDMETHODCALLTYPE FindSourceFile(
         ULONG startElement,
         PCSTR file,
         ULONG flags,
@@ -478,7 +476,7 @@ public:
     // IDebugSystemObjects
     //------------------------------------------------
 
-    virtual HRESULT GetCurrentProcessId(
+    virtual HRESULT STDMETHODCALLTYPE GetCurrentProcessSystemId(
         PULONG id) = 0;
 
     // Controls implicit thread used by the
@@ -492,29 +490,29 @@ public:
     // IDs for threads are small integer IDs
     // maintained by the engine.  They are not
     // related to system thread IDs.
-    virtual HRESULT GetCurrentThreadId(
+    virtual HRESULT STDMETHODCALLTYPE GetCurrentThreadId(
         PULONG id) = 0;
 
-    virtual HRESULT SetCurrentThreadId(
+    virtual HRESULT STDMETHODCALLTYPE SetCurrentThreadId(
         ULONG id) = 0;
 
     // Returns the system unique ID for the current thread.
     // Not currently supported when kernel debugging.
-    virtual HRESULT GetCurrentThreadSystemId(
+    virtual HRESULT STDMETHODCALLTYPE GetCurrentThreadSystemId(
         PULONG sysId) = 0;
 
     // Looks up a debugger thread ID for the given
     // system thread ID.
     // Currently when kernel debugging this will fail
     // if the thread is not executing on a processor.
-    virtual HRESULT GetThreadIdBySystemId(
+    virtual HRESULT STDMETHODCALLTYPE GetThreadIdBySystemId(
         ULONG sysId,
         PULONG id) = 0;
 
     // This is a special sos/lldb function used to implement the ICLRDataTarget interface and
     // not actually part of dbgeng's IDebugSystemObjects interface.
-    virtual HRESULT GetThreadContextById(
-        /* [in] */ ULONG32 threadID,
+    virtual HRESULT STDMETHODCALLTYPE GetThreadContextBySystemId(
+        /* [in] */ ULONG32 sysId,
         /* [in] */ ULONG32 contextFlags,
         /* [in] */ ULONG32 contextSize,
         /* [out, size_is(contextSize)] */ PBYTE context) = 0;
@@ -525,7 +523,7 @@ public:
 
     // This is the combination of dbgeng's GetIndexByName and GetValue and not
     // actually part of the dbgeng's IDebugRegister interface.
-    virtual HRESULT GetValueByName(
+    virtual HRESULT STDMETHODCALLTYPE GetValueByName(
         PCSTR name,
         PDWORD_PTR value) = 0;
 
@@ -536,13 +534,13 @@ public:
     // are intended to be directly compatible with
     // calls which take this information, such as
     // stack walking.
-    virtual HRESULT GetInstructionOffset(
+    virtual HRESULT STDMETHODCALLTYPE GetInstructionOffset(
         PULONG64 offset) = 0;
 
-    virtual HRESULT GetStackOffset(
+    virtual HRESULT STDMETHODCALLTYPE GetStackOffset(
         PULONG64 offset) = 0;
 
-    virtual HRESULT GetFrameOffset(
+    virtual HRESULT STDMETHODCALLTYPE GetFrameOffset(
         PULONG64 offset) = 0;
 };
 
@@ -556,20 +554,22 @@ public:
     // ILLDBServices2
     //----------------------------------------------------------------------------
 
-    virtual HRESULT LoadNativeSymbols(
+    virtual HRESULT STDMETHODCALLTYPE LoadNativeSymbols(
         bool runtimeOnly,
         PFN_MODULE_LOAD_CALLBACK callback) = 0;
 
-    virtual HRESULT AddModuleSymbol(
+    virtual HRESULT STDMETHODCALLTYPE AddModuleSymbol(
         void* param, 
         const char* symbolFilePath) = 0;
 
-    virtual HRESULT GetModuleInfo(
+    virtual HRESULT STDMETHODCALLTYPE GetModuleInfo(
         ULONG index,
-        PULONG64 base,
-        PULONG64 size) = 0;
+        PULONG64 moduleBase,
+        PULONG64 moduleSize,
+        PULONG timestamp,
+        PULONG checksum) = 0;
 
-    virtual HRESULT GetModuleVersionInformation(
+    virtual HRESULT STDMETHODCALLTYPE GetModuleVersionInformation(
         ULONG index,
         ULONG64 base,
         PCSTR item,
@@ -577,12 +577,10 @@ public:
         ULONG bufferSize,
         PULONG versionInfoSize) = 0;
 
-    virtual HRESULT SetRuntimeLoadedCallback(
+    virtual HRESULT STDMETHODCALLTYPE SetRuntimeLoadedCallback(
         PFN_RUNTIME_LOADED_CALLBACK callback) = 0;
 };
 
 #ifdef __cplusplus
 };
 #endif
-
-#endif // #ifndef __LLDBSERVICES_H__

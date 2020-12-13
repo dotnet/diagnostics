@@ -2,11 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-// ==++==
-//
-
-//
-// ==--==
 #ifndef __util_h__
 #define __util_h__
 
@@ -38,8 +33,11 @@ inline void RestoreSOToleranceState() {}
 #include "cordebug.h"
 #include "static_assert.h"
 #include <string>
+#include <releaseholder.h>
+#include <hostimpl.h>
+#include <targetimpl.h>
+#include <runtimeimpl.h>
 #include "hostcoreclr.h"
-#include "holder.h"
 
 typedef LPCSTR  LPCUTF8;
 typedef LPSTR   LPUTF8;
@@ -1754,7 +1752,6 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize);
 void DecodeDynamicIL(BYTE *data, ULONG Size, DacpObjectData& tokenArray);
 ULONG DisplayILOperation(const UINT indentCount, BYTE* pBuffer, ULONG position, std::function<void(DWORD)>& func);
 
-BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes);
 bool IsRuntimeVersion(DWORD major);
 bool IsRuntimeVersion(VS_FIXEDFILEINFO& fileInfo, DWORD major);
 bool IsRuntimeVersionAtLeast(DWORD major);

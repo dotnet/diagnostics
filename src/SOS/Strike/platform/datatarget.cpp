@@ -228,7 +228,7 @@ DataTarget::GetThreadContext(
     {
         return E_UNEXPECTED;
     }
-    hr = g_ExtServices->GetThreadContextById(threadID, contextFlags, contextSize, context);
+    hr = g_ExtServices->GetThreadContextBySystemId(threadID, contextFlags, contextSize, context);
 #else
     if (g_ExtSystem == NULL || g_ExtAdvanced == NULL)
     {

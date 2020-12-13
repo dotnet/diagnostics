@@ -11,7 +11,8 @@
 #include <tchar.h>
 #include <strsafe.h>
 #include <string>
-#include <holder.h>
+#include <palclr.h>
+#include <releaseholder.h>
 #include <arrayholder.h>
 
 #define CLR_VERSION     L"v4.0.30319"

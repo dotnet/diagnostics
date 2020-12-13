@@ -206,17 +206,17 @@ namespace SOS.Hosting
 
         #region Reverse PInvoke Implementations
 
-        internal static UIntPtr GetExpression(
+        internal static ulong GetExpression(
             string expression)
         {
             if (expression != null)
             {
                 if (ulong.TryParse(expression.Replace("0x", ""), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ulong result))
                 {
-                    return new UIntPtr(result);
+                    return result;
                 }
             }
-            return UIntPtr.Zero;
+            return 0;
         }
 
         internal int GetInterrupt(

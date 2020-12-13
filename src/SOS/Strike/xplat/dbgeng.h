@@ -339,10 +339,10 @@ public:
     //----------------------------------------------------------------------------
 
     HRESULT 
-    GetCurrentProcessId(
+    GetCurrentProcessSystemId(
         PULONG id)
     {
-        return m_lldbservices->GetCurrentProcessId(id);
+        return m_lldbservices->GetCurrentProcessSystemId(id);
     }
 
     HRESULT 

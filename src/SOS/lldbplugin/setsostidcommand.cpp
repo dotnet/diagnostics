@@ -21,6 +21,8 @@ public:
         char** arguments,
         lldb::SBCommandReturnObject &result)
     {
+        result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
+
         if (arguments == nullptr || arguments[0] == nullptr)
         {
             if (g_currentThreadSystemId == (ULONG)-1 || g_currentThreadIndex == (ULONG)-1)

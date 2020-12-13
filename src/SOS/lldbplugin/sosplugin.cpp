@@ -8,9 +8,11 @@ namespace lldb {
     bool PluginInitialize (lldb::SBDebugger debugger);
 }
 
-bool
-lldb::PluginInitialize (lldb::SBDebugger debugger)
+LLDBServices* g_services = nullptr;
+
+bool lldb::PluginInitialize(lldb::SBDebugger debugger)
 {
+    g_services = new LLDBServices(debugger);
     sosCommandInitialize(debugger);
     setsostidCommandInitialize(debugger);
     return true;

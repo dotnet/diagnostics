@@ -130,7 +130,8 @@ message(STATUS "LLDB_H: ${LLDB_H}")
 
 add_compile_options(-Wno-delete-non-virtual-dtor)
 
-include_directories(inc)
+include_directories(${ROOT_DIR}/src/SOS/inc)
+
 include_directories("${LLDB_H}")
 
 set(SOURCES

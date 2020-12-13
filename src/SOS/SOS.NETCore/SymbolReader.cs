@@ -247,7 +247,7 @@ namespace SOS
             out IntPtr localVarName);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        public delegate UIntPtr GetExpressionDelegate(
+        public delegate ulong GetExpressionDelegate(
             [In, MarshalAs(UnmanagedType.LPStr)] string expression);
 
         public delegate int GetMetadataLocatorDelegate(
@@ -684,17 +684,17 @@ namespace SOS
         /// </summary>
         /// <param name="expression">hex number</param>
         /// <returns>value</returns>
-        public static UIntPtr GetExpression(
+        public static ulong GetExpression(
             string expression)
         {
             if (expression != null)
             {
                 if (ulong.TryParse(expression.Replace("0x", ""), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ulong result))
                 {
-                    return new UIntPtr(result);
+                    return result;
                 }
             }
-            return UIntPtr.Zero;
+            return 0;
         }
 
         /// <summary>
