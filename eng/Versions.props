@@ -43,7 +43,7 @@
     <MicrosoftAspNetCoreResponseCompressionVersion>2.1.1</MicrosoftAspNetCoreResponseCompressionVersion>
     <MicrosoftBclHashCodeVersion>1.1.0</MicrosoftBclHashCodeVersion>
     <MicrosoftBclAsyncInterfacesVersion>1.1.0</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>2.0.156101</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>2.0.161401</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiagnosticsRuntimeUtilitiesVersion>2.0.156101</MicrosoftDiagnosticsRuntimeUtilitiesVersion>
     <ParallelStacksRuntimeVersion>2.0.1</ParallelStacksRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>

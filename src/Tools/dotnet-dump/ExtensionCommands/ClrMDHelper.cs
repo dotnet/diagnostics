@@ -692,6 +692,65 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
             }
         }
 
+        public IEnumerable<ClrObject> EnumerateObjectsInGeneration(GCGeneration generation)
+        {
+            foreach (var segment in _heap.Segments)
+            {
+                if (!TryGetSegmentMemoryRange(segment, generation, out var start, out var end))
+                    continue;
+
+                var currentObjectAddress = start;
+                ClrObject currentObject;
+                do
+                {
+                    currentObject = _heap.GetObject(currentObjectAddress);
+                    if (currentObject.Type != null)
+                        yield return currentObject;
+
+                    currentObjectAddress = segment.GetNextObjectAddress(currentObject);
+                } while (currentObjectAddress > 0 && currentObjectAddress < end);
+            }
+        }
+
+        private bool TryGetSegmentMemoryRange(ClrSegment segment, GCGeneration generation, out ulong start, out ulong end)
+        {
+            start = 0;
+            end = 0;
+            switch (generation)
+            {
+                case GCGeneration.Generation0:
+                    if (segment.IsEphemeralSegment)
+                    {
+                        start = segment.Generation0.Start;
+                        end = segment.Generation0.End;
+                    }
+                    return start != end;
+                case GCGeneration.Generation1:
+                    if (segment.IsEphemeralSegment)
+                    {
+                        start = segment.Generation1.Start;
+                        end = segment.Generation1.End;
+                    }
+                    return start != end;
+                case GCGeneration.Generation2:
+                    if (!segment.IsLargeObjectSegment)
+                    {
+                        start = segment.Generation2.Start;
+                        end = segment.Generation2.End;
+                    }
+                    return start != end;
+                case GCGeneration.LargeObjectHeap:
+                    if (segment.IsLargeObjectSegment)
+                    {
+                        start = segment.Start;
+                        end = segment.End;
+                    }
+                    return start != end;
+                default:
+                    return false;
+            }
+        }
+
         public IEnumerable<string> EnumerateConcurrentQueue(ulong address)
         {
             return IsNetCore() ? EnumerateConcurrentQueueCore(address) : EnumerateConcurrentQueueFramework(address);
@@ -1061,7 +1120,6 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
             return true;
         }
 
-
         public ClrModule GetMscorlib()
         {
             var bclModule = _clr.BaseClassLibrary;
@@ -1075,6 +1133,11 @@ namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
                 throw new InvalidOperationException("Impossible to find core library");
 
             return (coreLib.Name.ToLower().Contains("corelib"));
+        }
+
+        public bool Is64Bits()
+        {
+            return _clr.DataTarget.DataReader.PointerSize == 8;
         }
     }
 }
