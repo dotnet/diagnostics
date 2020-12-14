@@ -7,8 +7,8 @@
 #include <lldb/API/LLDB.h>
 #include "mstypes.h"
 #define DEFINE_EXCEPTION_RECORD
-#include <lldbservices.h>
-#include <dbgtargetcontext.h>
+#include "lldbservices.h"
+#include "dbgtargetcontext.h"
 #include "services.h"
 
 typedef HRESULT (*CommandFunc)(ILLDBServices* services, const char* args);

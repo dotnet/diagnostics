@@ -15,7 +15,7 @@
 #include <psapi.h>
 #include <clrinternal.h>
 #include <metahost.h>
-#include <debugshim.h>
+#include "debugshim.h"
 #include "runtimeimpl.h"
 #include "datatarget.h"
 #include "cordebugdatatarget.h"

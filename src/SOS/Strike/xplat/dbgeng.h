@@ -13,8 +13,8 @@
 
 #include <unknwn.h>
 #include <rpc.h>
-#include <lldbservices.h>
-#include <arrayholder.h>
+#include "lldbservices.h"
+#include "arrayholder.h"
 
 #ifdef __cplusplus
 extern "C" {

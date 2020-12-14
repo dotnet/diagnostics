@@ -38,7 +38,7 @@
 #include <dlfcn.h>
 #endif // !FEATURE_PAL
 
-#include <coreclrhost.h>
+#include "coreclrhost.h"
 #include <set>
 #include <string>
 

@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <runtime.h>
-#include <runtimeinfo.h>
+#include "runtime.h"
+#include "runtimeinfo.h"
 
 #ifdef FEATURE_PAL
 

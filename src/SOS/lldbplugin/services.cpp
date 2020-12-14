@@ -4,11 +4,11 @@
 
 #include <cstdarg>
 #include <cstdlib>
-#include "sosplugin.h"
 #include <string.h>
 #include <string>
 #include <dlfcn.h>
-#include <arrayholder.h>
+#include "sosplugin.h"
+#include "arrayholder.h"
 
 #define CONVERT_FROM_SIGN_EXTENDED(offset) ((ULONG_PTR)(offset))
 

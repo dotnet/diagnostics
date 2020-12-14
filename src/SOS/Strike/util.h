@@ -33,10 +33,10 @@ inline void RestoreSOToleranceState() {}
 #include "cordebug.h"
 #include "static_assert.h"
 #include <string>
-#include <releaseholder.h>
-#include <hostimpl.h>
-#include <targetimpl.h>
-#include <runtimeimpl.h>
+#include "releaseholder.h"
+#include "hostimpl.h"
+#include "targetimpl.h"
+#include "runtimeimpl.h"
 #include "hostcoreclr.h"
 
 typedef LPCSTR  LPCUTF8;
@@ -1664,7 +1664,7 @@ SafeReadMemory (TO_TADDR(src), &(dst), sizeof(dst), NULL)
 
 extern "C" PDEBUG_DATA_SPACES g_ExtData;
 
-#include <arrayholder.h>
+#include "arrayholder.h"
 
 // This class acts a smart pointer which calls the Release method on any object
 // you place in it when the ToRelease class falls out of scope.  You may use it

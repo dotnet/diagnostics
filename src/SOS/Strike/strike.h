@@ -71,7 +71,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <host.h>
+#include "host.h"
 
 #ifndef PAL_STDCPP_COMPAT
 #include <malloc.h>

@@ -5,7 +5,7 @@
 #include "strike.h"
 #include "util.h"
 #include "targetimpl.h"
-#include <host.h>
+#include "host.h"
 #include <string>
 
 Target* Target::s_target = nullptr;
