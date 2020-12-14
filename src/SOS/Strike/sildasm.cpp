@@ -358,7 +358,7 @@ ULONG GetILSize(DWORD_PTR ilAddr)
     // workaround: read enough bytes at ilAddr to presumably get the entire header.
     // Could be error prone.
 
-    static BYTE headerArray[1024];
+    alignas(COR_ILMETHOD) static BYTE headerArray[1024];
     HRESULT Status = g_ExtData->ReadVirtual(TO_CDADDR(ilAddr), headerArray, sizeof(headerArray), NULL);    
     if (SUCCEEDED(Status))
     {            
