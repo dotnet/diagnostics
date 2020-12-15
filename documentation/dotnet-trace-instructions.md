@@ -166,6 +166,27 @@ Microsoft-Windows-DotNETRuntime         | [The Runtime Provider](https://docs.mi
 Microsoft-Windows-DotNETRuntimeRundown  | [The Rundown Provider](https://docs.microsoft.com/en-us/dotnet/framework/performance/clr-etw-providers#the-rundown-provider)<br>[CLR Rundown Keywords](https://docs.microsoft.com/en-us/dotnet/framework/performance/clr-etw-keywords-and-levels#rundown)
 Microsoft-DotNETCore-SampleProfiler     | Enable the sample profiler
 
+## Example Providers 
+
+See the help text below for the encoding of Providers.
+
+Examples of valid specifications:
+```
+Microsoft-Windows-DotNETRuntime:0xFFF:5
+
+Microsoft-Diagnostics-DiagnosticSource:0x00000003:5:FilterAndPayloadSpecs="Microsoft.EntityFrameworkCore/Microsoft.EntityFrameworkCore.Database.Command.CommandExecuting@Activity2Start:Command.CommandText;\r\nMicrosoft.EntityFrameworkCore/Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted@Activity2Stop:"
+```
+
+If the provider you are using makes use of filter strings, make sure you
+are properly encoding the key-value arguments.  Values that contain
+`;` or `=` characters need to be surrounded by double quotes `"`.
+Depending on your shell environment, you may need to escape the `"`
+characters and/or surround the entire argument in quotes, e.g.,
+```bash
+$ dotnet trace collect -p 1234 --providers 'Microsoft-Diagnostics-DiagnosticSource:0x00000003:5:FilterAndPayloadSpecs=\"Microsoft.EntityFrameworkCore/Microsoft.EntityFrameworkCore.Database.Command.CommandExecuting@Activity2Start:Command.CommandText;\r\nMicrosoft.EntityFrameworkCore/Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted@Activity2Stop:\"'
+```
+
+
 ## *dotnet-trace* help
 
 ```cmd
@@ -204,7 +225,7 @@ Options:
     A provider consists of the name and optionally the keywords, verbosity level, and custom key/value pairs.
 
     The string is written 'Provider[,Provider]'
-        Provider format: KnownProviderName[:Keywords[:Level][:KeyValueArgs]]
+        Provider format: KnownProviderName[:[Keywords][:[Level][:[KeyValueArgs]]]]
             KnownProviderName       - The provider's name
             Keywords                - 8 character hex number bit mask
             Level                   - A number in the range [0, 5]
