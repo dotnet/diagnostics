@@ -2,17 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostic.Tools.Dump.ExtensionCommands;
-using Microsoft.Diagnostics.Repl;
+using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
-using System;
 using System.Collections.Generic;
 using System.CommandLine;
 
-namespace Microsoft.Diagnostics.Tools.Dump.ExtensionCommands
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "dumpgen", Help = "Displays heap content for the specified generation.")]
-    [CommandAlias(Name = "dg")]
+    [Command(Name = "dumpgen", Aliases = new string[] { "dcd" }, Help = "Displays heap content for the specified generation.")]
     public class DumpGenCommand : ExtensionCommandBase
     {
         private const string statsHeader32bits = "      MT    Count    TotalSize Class Name";
