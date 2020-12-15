@@ -2,22 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using Microsoft.Diagnostics.Repl;
+using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
+using System;
 
-namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "dumpconcurrentqueue", Help = "Display concurrent queue content.")]
-    [CommandAlias(Name = "dcq")]
+    [Command(Name = "dumpconcurrentqueue", Aliases = new string[] { "dcq" }, Help = "Display concurrent queue content.")]
     public class DumpConcurrentQueueCommand : ExtensionCommandBase
     {
         [Argument(Help = "The address of a ConcurrentQueue object.")]
-
         public string Address { get; set; }
 
         public ClrRuntime Runtime { get; set; }
-
 
         public override void Invoke()
         {

@@ -2,22 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.DebugServices;
 using System;
-using Microsoft.Diagnostics.Repl;
 
-namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "taskstate", Help = "Display a Task state in a human readable format.")]
-    [CommandAlias(Name = "tks")]
+    [Command(Name = "taskstate", Aliases = new string[] { "tks" }, Help = "Display a Task state in a human readable format.")]
     public class TaskStateCommand : ExtensionCommandBase
     {
         [Argument(Help = "The Task instance address.")]
         public string Address { get; set; }
 
-        [Option(Name = "--value", Help = "<value> is the value of a Task m_stateFlags field.")]
-        [OptionAlias(Name = "-v")]
+        [Option(Name = "--value", Aliases = new string[] { "-v" }, Help = "<value> is the value of a Task m_stateFlags field.")]
         public ulong? Value { get; set; }
-
 
         public override void Invoke()
         {

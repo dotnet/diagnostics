@@ -55,14 +55,17 @@ CONTINUE
 
 SOSCOMMAND:SetSymbolServer -ms
 !IFDEF:DOTNETDUMP
+IFDEF:WINDOWS
 SOSCOMMAND:SetHostRuntime
+ENDIF:WINDOWS
+!IFDEF:WINDOWS
+COMMAND:sethostruntime
+ENDIF:WINDOWS
 ENDIF:DOTNETDUMP
 
+SOSCOMMAND:SOSStatus
+
 # Verify that ClrStack with no options works
-SOSCOMMAND:SetSymbolServer -ms
-!IFDEF:DOTNETDUMP
-SOSCOMMAND:SetHostRuntime
-ENDIF:DOTNETDUMP
 SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+

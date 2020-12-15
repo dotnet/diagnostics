@@ -4,7 +4,7 @@
 
 using Microsoft.Diagnostics.Runtime;
 
-namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
     public class DumpGenStats
     {

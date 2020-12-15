@@ -8,7 +8,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace SOS
+namespace SOS.Hosting
 {
     internal unsafe class DebugControl
     {

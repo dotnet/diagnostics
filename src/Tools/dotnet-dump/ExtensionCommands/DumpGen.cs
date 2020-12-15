@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Microsoft.Diagnostic.Tools.Dump.ExtensionCommands
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
 
     public class DumpGen

@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace Microsoft.Diagnostics.DebugServices
+namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     public sealed class MemoryCache
     {

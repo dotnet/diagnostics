@@ -2,26 +2,28 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Repl;
+using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
-using System.CommandLine;
-using System.Threading.Tasks;
+using System;
 
-namespace Microsoft.Diagnostics.Tools.Dump
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "clrmodules", Help = "Lists the managed modules in the process.")]
     public class ClrModulesCommand : CommandBase
     {
         public ClrRuntime Runtime { get; set; }
 
-        public DataTarget DataTarget { get; set; }
+        public IModuleService ModuleService { get; set; }
 
-        [Option(Name = "--verbose", Help = "Displays detailed information about the modules.")]
-        [OptionAlias(Name = "-v")]
+        [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays detailed information about the modules.")]
         public bool Verbose { get; set; }
 
         public override void Invoke()
         {
+            if (Runtime == null)
+            {
+                throw new DiagnosticsException("No CLR runtime set");
+            }
             foreach (ClrModule module in Runtime.EnumerateModules())
             {
                 if (Verbose)
@@ -37,9 +39,15 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     WriteLine("    MetadataAddress: {0:X16}", module.MetadataAddress);
                     WriteLine("    MetadataSize:    {0:X16}", module.MetadataLength);
                     WriteLine("    PdbInfo:         {0}", module.Pdb?.ToString() ?? "<none>");
-
-                    DataTarget.DataReader.GetVersionInfo(module.ImageBase, out VersionInfo version);
-                    WriteLine("    Version:         {0}", version);
+                    VersionInfo? version = null;
+                    try
+                    {
+                        version = ModuleService.GetModuleFromBaseAddress(module.ImageBase).Version;
+                    }
+                    catch (DiagnosticsException)
+                    {
+                    }
+                    WriteLine("    Version:         {0}", version?.ToString() ?? "<none>");
                 }
                 else
                 {

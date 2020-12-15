@@ -7,7 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 
-namespace SOS
+namespace SOS.Hosting
 {
     /// <summary>
     /// Used to enable app-local assembly unification.

@@ -3,43 +3,27 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Repl;
 using System;
 
-namespace Microsoft.Diagnostics.Tools.Dump
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "registers", Help = "Displays the thread's registers.")]
-    [CommandAlias(Name = "r")]
+    [Command(Name = "registers", Aliases = new string[] { "r" }, Help = "Displays the thread's registers.")]
     public class RegistersCommand : CommandBase
     {
-        [Argument(Help = "The thread index to display, otherwise use the current thread.")]
-        public int? ThreadIndex { get; set; } = null;
-
-        public AnalyzeContext AnalyzeContext { get; set; }
-
         public IThreadService ThreadService { get; set; }
+
+        public IThread CurrentThread { get; set; }
 
         public override void Invoke()
         {
-            uint threadId;
-            if (ThreadIndex.HasValue)
+            IThread thread = CurrentThread;
+            if (thread == null)
             {
-                threadId = ThreadService.GetThreadInfoFromIndex(ThreadIndex.Value).ThreadId;
-            }
-            else
-            {
-                if (AnalyzeContext.CurrentThreadId.HasValue)
-                {
-                    threadId = AnalyzeContext.CurrentThreadId.Value;
-                }
-                else
-                {
-                    throw new InvalidOperationException($"No current thread");
-                }
+                throw new InvalidOperationException($"No current thread");
             }
             foreach (RegisterInfo register in ThreadService.Registers)
             {
-                if (ThreadService.GetRegisterValue(threadId, register.RegisterIndex, out ulong value))
+                if (thread.GetRegisterValue(register.RegisterIndex, out ulong value))
                 {
                     switch (register.RegisterSize)
                     {
