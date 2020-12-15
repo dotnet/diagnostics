@@ -1,8 +1,6 @@
 # Diagnostic Tools Extensibility
 
-This document is a work in progress.
-
-This document describes a possible design to allow first and third party users to add their own commands and services to the dotnet-dump and SOS on the debuggers supported. External companies like Criteo and a few internal groups have asked for way to extend dotnet-dump and SOS. The goal is to write the same code for a command once and run it under the all the supported debuggers and dotnet-dump.
+This document describes a mechanism to allow first and third party users to add custom commands and services to `dotnet-dump` and `SOS` on the supported debuggers. Such extensibility has been a frequent ask from companies like Criteo and some teams at Microsoft. The goal is to write the code for a command once and have it run under all the supported debuggers, including dotnet-dump.
 
 Internally, the ability to host commands like the future "gcheapdiff" under dotnet-dump, lldb and cdb/windbg will be invaluable. The implementation of new commands in C# is faster/more productive for each future command our team needs to add. Other people on .NET team and in the community are more likely to contribute improvements into our tools (similar to what Stephen did with DumpAsync). Unlike the plugin situation, if they contribute directly to our repo then the improvements will automatically flow to all customers and provide broader value.
 
@@ -57,20 +55,11 @@ This effort is part of the "untified extensiblity" where various teams are comin
 
 ## Road Map
 
-1. Separate the debug services interfaces from the implementation into a new assembly called Microsoft.Diagnostics.DebugServices.Implementation. The existing Microsoft.Diagnostics.DebugServices will only contain the public interfaces and data structures.
-2. Add the IHost and ITarget interfaces and the implementations which includes a “target” OS platform that allows various pieces of dotnet-dump and SOS to work better with Linux dumps on Windows. Issue [#1001](https://github.com/dotnet/diagnostics/issues/1001).
-3. Add IModuleService interface/ModuleService implementation. 
-4. Add the ICommandService and related data structures. This completely hides/abstracts the underlying System.CommandLine usage for the commands. Along with the ITarget changes, this allows services (like IMemoryService, IThreadService, etc.)  to be per-target which is necessary for multi-target commands like a future “gcheapdiff” command.
-5. Add the native target/runtime hosting/wrapper support. These changes are to the native SOS code to use target/runtime interfaces (a new ITarget/existing IRuntime) that the host layer provides. This cleans up most of the global state in the native SOS code allowing dotnet-dump to handle multi-target commands, switching between targets (dumps) and switching between runtimes in the process. 
-6. Create lldb host/target allowing extensions commands to run under lldb.
-7. Create dbgeng/windbg host/target allowing extension commands to run under windbg.
-8. Remove/switch the native SOS hosting code that enumerates runtimes, etc. to the managed versions.  This is things like the native implementation of ITarget, IRuntime, commands like setclrpath, sosstatus, setsymbolpath, etc.  This eliminates the native/managed duplication but SOS will require managed code to be always started/hosted even under lldb or windbg.
-9. Create a VS host/target package allowing SOS and the extension commands to be run from VS using the Concord API.
-10. Add Linux, MacOS and Windows live snapshot targets. ClrMD already has support for them; just need to implement the target factory.
-
-Schedule:
-- #1 to #8 will take about 1 - 2 weeks to integrate the existing ["extensions"](https://nam06.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgithub.com%2Fmikem8361%2Fdiagnostics%2Ftree%2Fextensions&data=02%7C01%7Cmikem%40microsoft.com%7Ceb038f0bf2c6427ed9b908d833d04e7c%7C72f988bf86f141af91ab2d7cd011db47%7C1%7C0%7C637316317046053155&sdata=8KiErrK4qWtIMGQLYZtkv07%2FTMftXQzpSsQ69Chlz8E%3D&reserved=0) branch into master.
-- #9 3 weeks for Visual Studio support.
+1. Add the native target/runtime hosting/wrapper support. These changes are to the native SOS code to use target/runtime interfaces (a new ITarget/existing IRuntime) that the host layer provides. This cleans up most of the global state in the native SOS code allowing dotnet-dump to handle multi-target commands, switching between targets (dumps) and switching between runtimes in the process. 
+2. Create lldb host/target allowing extensions commands to run under lldb.
+3. Create dbgeng/windbg host/target allowing extension commands to run under windbg.
+4. Create a VS host/target package allowing SOS and the extension commands to be run from VS using the Concord API.
+5. Add Linux, MacOS and Windows live snapshot targets. ClrMD already has support for them; just need to implement the target factory.
 
 ## Design
 
