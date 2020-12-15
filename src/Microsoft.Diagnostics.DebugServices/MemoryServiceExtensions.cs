@@ -69,7 +69,7 @@ namespace Microsoft.Diagnostics.DebugServices
             {
                 if (bytesRead == sizeof(uint))
                 {
-                    value = BitConverter.ToUInt32(buffer.ToArray(), 0);
+                    value = MemoryMarshal.Read<uint>(buffer);
                     return true;
                 }
             }
@@ -93,10 +93,10 @@ namespace Microsoft.Diagnostics.DebugServices
                 switch (pointerSize)
                 {
                     case 4:
-                        value = BitConverter.ToUInt32(buffer.ToArray(), 0);
+                        value = MemoryMarshal.Read<uint>(buffer);
                         return true;
                     case 8:
-                        value = BitConverter.ToUInt64(buffer.ToArray(), 0);
+                        value = MemoryMarshal.Read<ulong>(buffer);
                         return true;
                 }
             }

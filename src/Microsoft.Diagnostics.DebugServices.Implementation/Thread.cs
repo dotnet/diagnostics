@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -38,27 +39,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 try
                 {
-                    byte[] threadContext = GetThreadContext();
-                    unsafe
+                    Span<byte> threadContext = new Span<byte>(GetThreadContext(), info.RegisterOffset, info.RegisterSize);
+                    switch (info.RegisterSize)
                     {
-                        fixed (byte* ptr = threadContext)
-                        {
-                            switch (info.RegisterSize)
-                            {
-                                case 1:
-                                    value = *((byte*)(ptr + info.RegisterOffset));
-                                    return true;
-                                case 2:
-                                    value = *((ushort*)(ptr + info.RegisterOffset));
-                                    return true;
-                                case 4:
-                                    value = *((uint*)(ptr + info.RegisterOffset));
-                                    return true;
-                                case 8:
-                                    value = *((ulong*)(ptr + info.RegisterOffset));
-                                    return true;
-                            }
-                        }
+                        case 1:
+                            value = MemoryMarshal.Read<byte>(threadContext);
+                            return true;
+                        case 2:
+                            value = MemoryMarshal.Read<ushort>(threadContext);
+                            return true;
+                        case 4:
+                            value = MemoryMarshal.Read<uint>(threadContext);
+                            return true;
+                        case 8:
+                            value = MemoryMarshal.Read<ulong>(threadContext);
+                            return true;
                     }
                 }
                 catch (DiagnosticsException)
