@@ -4,6 +4,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,25 +16,36 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
     internal class EgressStreamResult : ActionResult
     {
         private readonly Func<IEgressService, CancellationToken, Task<EgressResult>> _egress;
+        private readonly KeyValueLogScope _scope;
 
-        public EgressStreamResult(Func<CancellationToken, Task<Stream>> action, string endpointName, string artifactName, IEndpointInfo source, string contentType)
+        public EgressStreamResult(Func<CancellationToken, Task<Stream>> action, string endpointName, string artifactName, IEndpointInfo source, string contentType, KeyValueLogScope scope)
         {
             _egress = (service, token) => service.EgressAsync(endpointName, action, artifactName, contentType, source, token);
+            _scope = scope;
         }
 
-        public EgressStreamResult(Func<Stream, CancellationToken, Task> action, string endpointName, string artifactName, IEndpointInfo source, string contentType)
+        public EgressStreamResult(Func<Stream, CancellationToken, Task> action, string endpointName, string artifactName, IEndpointInfo source, string contentType, KeyValueLogScope scope)
         {
             _egress = (service, token) => service.EgressAsync(endpointName, action, artifactName, contentType, source, token);
+            _scope = scope;
         }
 
-        public override Task ExecuteResultAsync(ActionContext context)
+        public override async Task ExecuteResultAsync(ActionContext context)
         {
-            return context.InvokeAsync(async (token) =>
+            ILogger<EgressStreamResult> logger = context.HttpContext.RequestServices
+                .GetRequiredService<ILoggerFactory>()
+                .CreateLogger<EgressStreamResult>();
+
+            using var _ = logger.BeginScope(_scope);
+
+            await context.InvokeAsync(async (token) =>
             {
                 IEgressService egressService = context.HttpContext.RequestServices
                     .GetRequiredService<IEgressService>();
 
                 EgressResult egressResult = await _egress(egressService, token);
+
+                logger.LogInformation("Egressed to {0}", egressResult.Value);
 
                 // The remaining code is creating a JSON object with a single property and scalar value
                 // that indiates where the stream data was egressed. Because the name of the artifact is
@@ -45,7 +57,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 
                 ActionResult jsonResult = new JsonResult(data);
                 await jsonResult.ExecuteResultAsync(context);
-            });
+            }, logger);
         }
     }
 }

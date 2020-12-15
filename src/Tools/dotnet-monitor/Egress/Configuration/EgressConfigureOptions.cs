@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -64,7 +65,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.Configuration
             {
                 string providerName = providerSection.Key;
 
-                using var providerNameScope = _logger.BeginScope(new Dictionary<string, string>() { { "ProviderName", providerName } });
+                KeyValueLogScope providerNameScope = new KeyValueLogScope();
+                providerNameScope.Values.Add("EgressProviderName", providerName);
+                using var providerNameRegistration = _logger.BeginScope(providerNameScope);
 
                 CommonEgressProviderOptions commonOptions = new CommonEgressProviderOptions();
                 providerSection.Bind(commonOptions);
@@ -76,7 +79,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.Configuration
                 }
 
                 string providerType = commonOptions.Type;
-                using var providerTypeScope = _logger.BeginScope(new Dictionary<string, string>() { { "ProviderType", providerType } });
+                KeyValueLogScope providerTypeScope = new KeyValueLogScope();
+                providerTypeScope.Values.Add("EgressProviderType", providerType);
+                using var providerTypeRegistration = _logger.BeginScope(providerTypeScope);
 
                 if (!_factories.TryGetValue(providerType, out EgressFactory factory))
                 {
@@ -92,7 +97,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.Configuration
 
                 options.Providers.Add(providerName, provider);
 
-                _logger.LogInformation("Added egress provider '{0}'.", providerName);
+                _logger.LogDebug("Added egress provider '{0}'.", providerName);
             }
             _logger.LogDebug("End loading egress providers.");
         }
