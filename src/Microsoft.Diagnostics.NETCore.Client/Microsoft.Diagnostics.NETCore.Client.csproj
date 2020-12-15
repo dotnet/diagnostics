@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFrameworks>netstandard2.0;netcoreapp2.1</TargetFrameworks>
+    <RootNamespace>Microsoft.Diagnostics.NETCore.Client</RootNamespace>
+    <Description>.NET Core Diagnostics Client Library</Description>
+    <VersionPrefix>0.2.0</VersionPrefix>
+    <IsPackable>true</IsPackable>
+    <PackageTags>Diagnostic</PackageTags>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <IsShipping>true</IsShipping>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MicrosoftBclAsyncInterfacesVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="dotnet-monitor" />
+    <InternalsVisibleTo Include="DotnetMonitor.UnitTests" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring" />
+    <!-- Temporary until Diagnostic Apis are finalized-->
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.RestServer" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.NETCore.Client.UnitTests" />
+    <InternalsVisibleTo Include="dotnet-counters" />
+    <InternalsVisibleTo Include="dotnet-trace" />
+  </ItemGroup>
+</Project>

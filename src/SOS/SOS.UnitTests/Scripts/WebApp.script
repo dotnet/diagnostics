@@ -11,7 +11,12 @@ LOADSOS
 SOSCOMMAND:SetSymbolServer -ms
 
 !IFDEF:DOTNETDUMP
+IFDEF:WINDOWS
 SOSCOMMAND:SetHostRuntime
+ENDIF:WINDOWS
+!IFDEF:WINDOWS
+COMMAND:sethostruntime
+ENDIF:WINDOWS
 ENDIF:DOTNETDUMP
 
 IFDEF:DOTNETDUMP
@@ -22,7 +27,7 @@ VERIFY:\s*<HEXVAL>\s+<HEXVAL>.*
 COMMAND:threads
 VERIFY:\s*<DECVAL>\s+0x<HEXVAL>\s+\(<DECVAL>\)\s+
 COMMAND:registers
-VERIFY:\s*([r|e]ip|pc) = <HEXVAL>\s+
+VERIFY:\s*([r|e]ip|pc) = 0x<HEXVAL>\s+
 ENDIF:DOTNETDUMP
 
 # Verify that ClrStack with no options works
@@ -55,7 +60,7 @@ ENDIF:ARM
 IFDEF:ARM64
 VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
 ENDIF:ARM64
-VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
+VERIFY:\s+([r|e]sp|sp|lr)=<HEXVAL>\s+([r|e]bp|lr|sp)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
 IFDEF:X64
 VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
 ENDIF:X64
@@ -71,7 +76,7 @@ ENDIF:ARM
 IFDEF:ARM64
 VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
 ENDIF:ARM64
-VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
+VERIFY:\s+([r|e]sp|sp|lr)=<HEXVAL>\s+([r|e]bp|lr|sp)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
 IFDEF:X64
 VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
 ENDIF:X64
@@ -106,10 +111,6 @@ VERIFY:\s+Hosted Runtime:\s+no\s+
 VERIFY:\s+ID\s+OSID\s+ThreadOBJ\s+State.*\s+
 VERIFY:\s+<DECVAL>\s+<DECVAL>\s+<HEXVAL>\s+<HEXVAL>.*\s+
 
-# dumpheap, dumpasync may not work on Windows and Alpine dotnet-dump
-# Issue: https://github.com/dotnet/diagnostics/issues/503
-!IFDEF:DOTNETDUMP
-
 SOSCOMMAND:DumpHeap -stat
 VERIFY:\s*Statistics:\s+
 VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
@@ -130,34 +131,3 @@ VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
 VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
 
 SOSCOMMAND:DumpAsync -mt <PREVOUT> -fields
-
-ENDIF:DOTNETDUMP
-
-# This duplication allows these commands to run on lldb/xplat
-# Issue: https://github.com/dotnet/diagnostics/issues/503
-!IFDEF:ALPINE
-!IFDEF:WINDOWS
-
-SOSCOMMAND:DumpHeap -stat
-VERIFY:\s*Statistics:\s+
-VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
-VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
-VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
-!VERIFY:.*UNKNOWN.*
-
-SOSCOMMAND:DumpAsync
-VERIFY:\s*Statistics:\s+
-VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
-VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
-VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
-
-SOSCOMMAND:DumpAsync -mt <POUT>\s+MT\s+Count\s+TotalSize\s+Class Name\s+(<HEXVAL>)\s+<DECVAL>\s+<DECVAL>\s+.*<POUT>
-VERIFY:\s*Statistics:\s+
-VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
-VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
-VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
-
-SOSCOMMAND:DumpAsync -mt <PREVOUT> -fields
-
-ENDIF:WINDOWS
-ENDIF:ALPINE

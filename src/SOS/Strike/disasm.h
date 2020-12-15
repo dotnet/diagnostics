@@ -90,8 +90,6 @@ void DumpStackWorker (DumpStackFlag &DSFlag);
 
 void UnassemblyUnmanaged (DWORD_PTR IP, BOOL bSuppressLines);
 
-HRESULT CheckEEDll ();
-
 BOOL GetCalleeSite (DWORD_PTR IP, DWORD_PTR &IPCallee);
 
 void DisasmAndClean (DWORD_PTR &IP, __out_ecount_opt(length) char *line, ULONG length);
@@ -127,7 +125,6 @@ eTargetType GetFinalTarget(DWORD_PTR callee, DWORD_PTR* finalMDorIP);
 #ifndef THUMB_CODE
 #define THUMB_CODE 1
 #endif
-#define STACKWALK_CONTROLPC_ADJUST_OFFSET 2
 
 #ifdef SOS_TARGET_X86
 
@@ -142,6 +139,9 @@ public:
 
     ULONG GetPlatform()             const { return IMAGE_FILE_MACHINE_I386; }
     ULONG GetContextSize()          const { return sizeof(X86_CONTEXT); }
+    ULONG GetFullContextFlags()     const { return 0x0001000BL; }
+    void SetContextFlags(BYTE* context, ULONG32 contextFlags)   { ((X86_CONTEXT*)context)->ContextFlags = contextFlags; };
+
     virtual void Unassembly(
                 TADDR IPBegin, 
                 TADDR IPEnd, 
@@ -179,6 +179,8 @@ public:
 
     virtual void DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const;
 
+    int StackWalkIPAdjustOffset() const { return 1; }
+
 private:
     X86Machine()  {}
     ~X86Machine() {}
@@ -208,6 +210,9 @@ public:
 
     ULONG GetPlatform()             const { return IMAGE_FILE_MACHINE_ARMNT; }
     ULONG GetContextSize()          const { return sizeof(ARM_CONTEXT); }
+    ULONG GetFullContextFlags()     const { return 0x00200007L; }
+    void SetContextFlags(BYTE* context, ULONG32 contextFlags)   { ((ARM_CONTEXT*)context)->ContextFlags = contextFlags; };
+
     virtual void Unassembly(
                 TADDR IPBegin, 
                 TADDR IPEnd, 
@@ -246,6 +251,8 @@ public:
 
     virtual void DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const;
 
+    int StackWalkIPAdjustOffset() const { return 2; }
+
 private:
     ARMMachine()  {}
     ~ARMMachine() {}
@@ -275,6 +282,8 @@ public:
 
     ULONG GetPlatform()             const { return IMAGE_FILE_MACHINE_AMD64; }
     ULONG GetContextSize()          const { return sizeof(AMD64_CONTEXT); }
+    ULONG GetFullContextFlags()     const { return 0x0010000BL; }
+    void SetContextFlags(BYTE* context, ULONG32 contextFlags)   { ((AMD64_CONTEXT*)context)->ContextFlags = contextFlags; };
 
     virtual void Unassembly(
                 TADDR IPBegin, 
@@ -315,6 +324,8 @@ public:
 
     virtual void DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const;
 
+    int StackWalkIPAdjustOffset() const { return 1; }
+
 private:
     AMD64Machine()  {}
     ~AMD64Machine() {}
@@ -343,6 +354,9 @@ public:
 
     ULONG GetPlatform()             const { return IMAGE_FILE_MACHINE_ARM64; }
     ULONG GetContextSize()          const { return sizeof(ARM64_CONTEXT); }
+    ULONG GetFullContextFlags()     const { return 0x00400007L; }
+    void SetContextFlags(BYTE* context, ULONG32 contextFlags)   { ((ARM64_CONTEXT*)context)->ContextFlags = contextFlags; };
+
     virtual void Unassembly(
                 TADDR IPBegin, 
                 TADDR IPEnd, 
@@ -379,6 +393,8 @@ public:
     { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = _countof(s_GCRegs);}
 
     virtual void DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const;
+
+    int StackWalkIPAdjustOffset() const { return 4; }
 
 private:
     ARM64Machine()  {}

@@ -12,6 +12,7 @@ using Microsoft.SymbolStore.SymbolStores;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
@@ -19,6 +20,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace SOS
 {
@@ -47,6 +49,17 @@ namespace SOS
             public int size;
             public IntPtr locals;
             public int localsSize;
+        }
+
+        /// <summary>
+        /// Matches the IRuntime::RuntimeConfiguration in runtime.h
+        /// </summary>
+        public enum RuntimeConfiguration
+        {
+            WindowsDesktop  = 0,
+            WindowsCore     = 1,
+            UnixCore        = 2,
+            OSXCore         = 3
         }
 
         private sealed class OpenedReader : IDisposable
@@ -83,6 +96,8 @@ namespace SOS
             public TargetStream(ulong address, int size, ReadMemoryDelegate readMemory)
                 : base()
             {
+                Debug.Assert(address != 0);
+                Debug.Assert(size != 0);
                 _address = address;
                 _readMemory = readMemory;
                 Length = size;
@@ -140,6 +155,9 @@ namespace SOS
         const string MsdlSymbolServer = "http://msdl.microsoft.com/download/symbols/";
         const string SymwebSymbolServer = "http://symweb.corp.microsoft.com/";
 
+        [DllImport("sos.dll")]
+        private static extern int InitializeBySymbolReader([In, MarshalAs(UnmanagedType.Struct)] ref SOSNetCoreCallbacks callbacks, int callbacksSize);
+
         /// <summary>
         /// Read memory callback
         /// </summary>
@@ -159,6 +177,137 @@ namespace SOS
         /// <param name="symbolFileName">symbol file name and path</param>
         public delegate void SymbolFileCallback(IntPtr parameter, [MarshalAs(UnmanagedType.LPStr)] string moduleFileName, [MarshalAs(UnmanagedType.LPStr)] string symbolFileName);
 
+        #region SOS.NETCore function delegates
+
+        public delegate bool InitializeSymbolStoreDelegate(
+            bool logging,
+            bool msdl,
+            bool symweb,
+            string tempDirectory,
+            string symbolServerPath,
+            string authToken,
+            int timeoutInMintues,
+            string symbolCachePath,
+            string symbolDirectoryPath,
+            string windowsSymbolPath);
+
+        public delegate void DisplaySymbolStoreDelegate(
+            SymbolReader.WriteLine writeLine);
+
+        public delegate void DisableSymbolStoreDelegate();
+
+        public delegate void LoadNativeSymbolsDelegate(
+            SymbolReader.SymbolFileCallback callback,
+            IntPtr parameter,
+            SymbolReader.RuntimeConfiguration config,
+            string moduleFilePath,
+            ulong address,
+            int size,
+            SymbolReader.ReadMemoryDelegate readMemory);
+
+        public delegate void LoadNativeSymbolsFromIndexDelegate(
+            SymbolReader.SymbolFileCallback callback,
+            IntPtr parameter,
+            SymbolReader.RuntimeConfiguration config,
+            string moduleFilePath,
+            bool specialKeys,
+            int moduleIndexSize,
+            IntPtr moduleIndex);
+
+        public delegate IntPtr LoadSymbolsForModuleDelegate(
+            string assemblyPath,
+            bool isFileLayout,
+            ulong loadedPeAddress,
+            int loadedPeSize,
+            ulong inMemoryPdbAddress,
+            int inMemoryPdbSize,
+            SymbolReader.ReadMemoryDelegate readMemory);
+
+        public delegate void DisposeDelegate(
+            IntPtr symbolReaderHandle);
+
+        public delegate bool ResolveSequencePointDelegate(
+            IntPtr symbolReaderHandle,
+            string filePath,
+            int lineNumber,
+            out int methodToken,
+            out int ilOffset);
+
+        public delegate bool GetLineByILOffsetDelegate(
+            IntPtr symbolReaderHandle,
+            int methodToken,
+            long ilOffset,
+            out int lineNumber,
+            out IntPtr fileName);
+
+        public delegate bool GetLocalVariableNameDelegate(
+            IntPtr symbolReaderHandle,
+            int methodToken,
+            int localIndex,
+            out IntPtr localVarName);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        public delegate UIntPtr GetExpressionDelegate(
+            [In, MarshalAs(UnmanagedType.LPStr)] string expression);
+
+        public delegate int GetMetadataLocatorDelegate(
+            [MarshalAs(UnmanagedType.LPWStr)] string imagePath,
+            uint imageTimestamp,
+            uint imageSize,
+            [MarshalAs(UnmanagedType.LPArray, SizeConst = 16)] byte[] mvid,
+            uint mdRva,
+            uint flags,
+            uint bufferSize,
+            IntPtr buffer,
+            IntPtr dataSize);
+
+        public delegate int GetICorDebugMetadataLocatorDelegate(
+            [MarshalAs(UnmanagedType.LPWStr)] string imagePath,
+            uint imageTimestamp,
+            uint imageSize,
+            uint pathBufferSize,
+            IntPtr pPathBufferSize,
+            IntPtr pPathBuffer);
+
+        #endregion
+
+        /// <summary>
+        /// Symbol service callback table
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
+        public struct SOSNetCoreCallbacks
+        {
+            public InitializeSymbolStoreDelegate InitializeSymbolStoreDelegate;
+            public DisplaySymbolStoreDelegate DisplaySymbolStoreDelegate;
+            public DisableSymbolStoreDelegate DisableSymbolStoreDelegate;
+            public LoadNativeSymbolsDelegate LoadNativeSymbolsDelegate;
+            public LoadNativeSymbolsFromIndexDelegate LoadNativeSymbolsFromIndexDelegate;
+            public LoadSymbolsForModuleDelegate LoadSymbolsForModuleDelegate;
+            public DisposeDelegate DisposeDelegate;
+            public ResolveSequencePointDelegate ResolveSequencePointDelegate;
+            public GetLineByILOffsetDelegate GetLineByILOffsetDelegate;
+            public GetLocalVariableNameDelegate GetLocalVariableNameDelegate;
+            public GetMetadataLocatorDelegate GetMetadataLocatorDelegate;
+            public GetExpressionDelegate GetExpressionDelegate;
+            public GetICorDebugMetadataLocatorDelegate GetICorDebugMetadataLocatorDelegate;
+        }
+
+        public static SOSNetCoreCallbacks SymbolCallbacks = new SOSNetCoreCallbacks {
+            InitializeSymbolStoreDelegate = SymbolReader.InitializeSymbolStore,
+            DisplaySymbolStoreDelegate = SymbolReader.DisplaySymbolStore,
+            DisableSymbolStoreDelegate = SymbolReader.DisableSymbolStore,
+            LoadNativeSymbolsDelegate = SymbolReader.LoadNativeSymbols,
+            LoadNativeSymbolsFromIndexDelegate = SymbolReader.LoadNativeSymbolsFromIndex,
+            LoadSymbolsForModuleDelegate = SymbolReader.LoadSymbolsForModule,
+            DisposeDelegate = SymbolReader.Dispose,
+            ResolveSequencePointDelegate = SymbolReader.ResolveSequencePoint,
+            GetLineByILOffsetDelegate = SymbolReader.GetLineByILOffset,
+            GetLocalVariableNameDelegate = SymbolReader.GetLocalVariableName,
+            GetMetadataLocatorDelegate = MetadataHelper.GetMetadataLocator,
+            GetExpressionDelegate = SymbolReader.GetExpression,
+            GetICorDebugMetadataLocatorDelegate = MetadataHelper.GetICorDebugMetadataLocator
+        };
+
         /// <summary>
         /// Temporary directory for dac/symbols
         /// </summary>
@@ -168,19 +317,40 @@ namespace SOS
         static SymbolStore s_symbolStore = null;
 
         /// <summary>
+        /// Entry point from the desktop hosting code.
+        /// </summary>
+        /// <param name="argument">SOS module path</param>
+        /// <returns>0 success, !0 failure</returns>
+        public static int InitializeSymbolReader(string argument)
+        {
+            return InitializeBySymbolReader(ref SymbolCallbacks, Marshal.SizeOf<SymbolReader.SOSNetCoreCallbacks>());
+        }
+
+        /// <summary>
         /// Initializes symbol loading. Adds the symbol server and/or the cache path (if not null) to the list of
         /// symbol servers. This API can be called more than once to add more servers to search.
         /// </summary>
         /// <param name="logging">if true, enable logging diagnostics to console</param>
-        /// <param name="msdl">if true, use the public microsoft server</param>
+        /// <param name="msdl">if true, use the public Microsoft server</param>
         /// <param name="symweb">if true, use symweb internal server and protocol (file.ptr)</param>
         /// <param name="tempDirectory">temp directory unique to this instance of SOS</param>
         /// <param name="symbolServerPath">symbol server url (optional)</param>
+        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional)</param>
         /// <param name="symbolCachePath">symbol cache directory path (optional)</param>
         /// <param name="symbolDirectoryPath">symbol directory path to search (optional)</param>
         /// <param name="windowsSymbolPath">windows symbol path (optional)</param>
         /// <returns>if false, failure</returns>
-        public static bool InitializeSymbolStore(bool logging, bool msdl, bool symweb, string tempDirectory, string symbolServerPath, string symbolCachePath, string symbolDirectoryPath, string windowsSymbolPath)
+        public static bool InitializeSymbolStore(
+            bool logging,
+            bool msdl,
+            bool symweb,
+            string tempDirectory,
+            string symbolServerPath,
+            string authToken,
+            int timeoutInMinutes,
+            string symbolCachePath,
+            string symbolDirectoryPath,
+            string windowsSymbolPath)
         {
             if (logging) {
                 // Uses the standard console to do the logging instead of sending it to the hosting debugger console
@@ -205,11 +375,11 @@ namespace SOS
                 if (symbolCachePath == null)
                 {
                     if (msdl || symweb || symbolServerPath != null) {
-                        symbolCachePath = GetDefaultSymbolCache();
+                        symbolCachePath = DefaultSymbolCache;
                     }
                 }
                 // Build the symbol stores using the other parameters
-                if (!GetServerSymbolStore(ref store, msdl, symweb, symbolServerPath, symbolCachePath, symbolDirectoryPath)) {
+                if (!GetServerSymbolStore(ref store, msdl, symweb, symbolServerPath, authToken, timeoutInMinutes, symbolCachePath, symbolDirectoryPath)) {
                     return false;
                 }
             }
@@ -226,18 +396,7 @@ namespace SOS
             SymbolStore symbolStore = s_symbolStore;
             while (symbolStore != null)
             {
-                if (symbolStore is CacheSymbolStore cache) {
-                    writeLine($"Cache: {cache.CacheDirectory}");
-                }
-                else if (symbolStore is HttpSymbolStore http) {
-                    writeLine($"Server: {http.Uri}");
-                }
-                else if (symbolStore is DirectorySymbolStore directory) {
-                    writeLine($"Directory: {directory.Directory}");
-                }
-                else {
-                    writeLine("Unknown symbol store");
-                }
+                writeLine(symbolStore.ToString());
                 symbolStore = symbolStore.BackingStore;
             }
         }
@@ -251,52 +410,37 @@ namespace SOS
         }
 
         /// <summary>
-        /// Load native symbols and modules (i.e. dac, dbi).
+        /// Load native symbols and modules (i.e. DAC, DBI).
         /// </summary>
         /// <param name="callback">called back for each symbol file loaded</param>
         /// <param name="parameter">callback parameter</param>
+        /// <param name="config">Target configuration: Windows, Linux or OSX</param>
         /// <param name="moduleFilePath">module path</param>
         /// <param name="address">module base address</param>
         /// <param name="size">module size</param>
         /// <param name="readMemory">read memory callback delegate</param>
-        public static void LoadNativeSymbols(SymbolFileCallback callback, IntPtr parameter, string moduleFilePath, ulong address, int size, ReadMemoryDelegate readMemory)
+        public static void LoadNativeSymbols(
+            SymbolFileCallback callback,
+            IntPtr parameter,
+            RuntimeConfiguration config,
+            string moduleFilePath,
+            ulong address,
+            int size,
+            ReadMemoryDelegate readMemory)
         {
             if (IsSymbolStoreEnabled())
             {
-                Stream stream = new TargetStream(address, size, readMemory);
-                KeyTypeFlags flags = KeyTypeFlags.SymbolKey | KeyTypeFlags.ClrKeys;
-                KeyGenerator generator = null;
-
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                KeyGenerator generator = GetKeyGenerator(config, moduleFilePath, address, size, readMemory);
+                if (generator != null)
                 {
-                    var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
-                    generator = new ELFFileKeyGenerator(s_tracer, elfFile, moduleFilePath);
-                }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                {
-                    var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
-                    generator = new MachOFileKeyGenerator(s_tracer, machOFile, moduleFilePath);
-                }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    var peFile = new PEFile(new StreamAddressSpace(stream), true);
-                    generator = new PEFileKeyGenerator(s_tracer, peFile, moduleFilePath);
-                }
-                else {
-                    return;
-                }
-
-                try
-                {
-                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(flags);
-                    foreach (SymbolStoreKey key in keys)
+                    try
                     {
-                        string moduleFileName = Path.GetFileName(key.FullPathName);
-                        s_tracer.Verbose("{0} {1}", key.FullPathName, key.Index);
-
-                        // Don't download the sos binaries that come with the runtime
-                        if (moduleFileName != "SOS.NETCore.dll" && !moduleFileName.StartsWith("libsos."))
+                        IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.SymbolKey | KeyTypeFlags.DacDbiKeys);
+                        foreach (SymbolStoreKey key in keys)
                         {
+                            string moduleFileName = Path.GetFileName(key.FullPathName);
+                            s_tracer.Verbose("{0} {1}", key.FullPathName, key.Index);
+
                             string downloadFilePath = GetSymbolFile(key);
                             if (downloadFilePath != null)
                             {
@@ -305,12 +449,121 @@ namespace SOS
                             }
                         }
                     }
-                }
-                catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException)
-                {
-                    s_tracer.Error("{0}/{1:X16}: {2}", moduleFilePath, address, ex.Message);
+                    catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException || ex is TaskCanceledException)
+                    {
+                        s_tracer.Error("{0} address {1:X16}: {2}", moduleFilePath, address, ex.Message);
+                    }
                 }
             }
+        }
+
+        /// <summary>
+        /// Load native modules (i.e. DAC, DBI) from the runtime build id.
+        /// </summary>
+        /// <param name="callback">called back for each symbol file loaded</param>
+        /// <param name="parameter">callback parameter</param>
+        /// <param name="config">Target configuration: Windows, Linux or OSX</param>
+        /// <param name="moduleFilePath">module path</param>
+        /// <param name="specialKeys">if true, returns the DBI/DAC keys, otherwise the identity key</param>
+        /// <param name="moduleIndexSize">build id size</param>
+        /// <param name="moduleIndex">pointer to build id</param>
+        public static void LoadNativeSymbolsFromIndex(
+            SymbolFileCallback callback,
+            IntPtr parameter,
+            RuntimeConfiguration config,
+            string moduleFilePath,
+            bool specialKeys,
+            int moduleIndexSize,
+            IntPtr moduleIndex)
+        {
+            try
+            {
+                KeyTypeFlags flags = specialKeys ? KeyTypeFlags.DacDbiKeys : KeyTypeFlags.IdentityKey;
+                byte[] id = new byte[moduleIndexSize];
+                Marshal.Copy(moduleIndex, id, 0, moduleIndexSize);
+
+                IEnumerable<SymbolStoreKey> keys = null;
+                switch (config)
+                {
+                    case RuntimeConfiguration.UnixCore:
+                        keys = ELFFileKeyGenerator.GetKeys(flags, moduleFilePath, id, symbolFile: false, symbolFileName: null);
+                        break;
+
+                    case RuntimeConfiguration.OSXCore:
+                        keys = MachOFileKeyGenerator.GetKeys(flags, moduleFilePath, id, symbolFile: false, symbolFileName: null);
+                        break;
+
+                    case RuntimeConfiguration.WindowsCore:
+                    case RuntimeConfiguration.WindowsDesktop:
+                        uint timeStamp = BitConverter.ToUInt32(id, 0);
+                        uint fileSize = BitConverter.ToUInt32(id, 4);
+                        SymbolStoreKey key = PEFileKeyGenerator.GetKey(moduleFilePath, timeStamp, fileSize);
+                        keys = new SymbolStoreKey[] { key };
+                        break;
+
+                    default:
+                        s_tracer.Error("Unsupported platform {0}", config);
+                        return;
+                }
+                foreach (SymbolStoreKey key in keys)
+                {
+                    string moduleFileName = Path.GetFileName(key.FullPathName);
+                    s_tracer.Verbose("{0} {1}", key.FullPathName, key.Index);
+
+                    string downloadFilePath = GetSymbolFile(key);
+                    if (downloadFilePath != null)
+                    {
+                        s_tracer.Information("{0}: {1}", moduleFileName, downloadFilePath);
+                        callback(parameter, moduleFileName, downloadFilePath);
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException || ex is TaskCanceledException)
+            {
+                s_tracer.Error("{0} - {1}", ex.Message, moduleFilePath);
+            }
+        }
+
+        /// <summary>
+        /// Creates a key generator for the runtime module pointed to by the address/size.
+        /// </summary>
+        /// <param name="config">Target configuration: Windows, Linux or OSX</param>
+        /// <param name="moduleFilePath">module path</param>
+        /// <param name="address">module base address</param>
+        /// <param name="size">module size</param>
+        /// <param name="readMemory">read memory callback delegate</param>
+        /// <returns>KeyGenerator or null if error</returns>
+        public static KeyGenerator GetKeyGenerator(
+            RuntimeConfiguration config,
+            string moduleFilePath,
+            ulong address,
+            int size,
+            ReadMemoryDelegate readMemory)
+        {
+            Stream stream = new TargetStream(address, size, readMemory);
+            KeyGenerator generator = null;
+
+            switch (config)
+            {
+                case RuntimeConfiguration.UnixCore:
+                    var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
+                    generator = new ELFFileKeyGenerator(s_tracer, elfFile, moduleFilePath);
+                    break;
+                case RuntimeConfiguration.OSXCore:
+                    var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
+                    generator = new MachOFileKeyGenerator(s_tracer, machOFile, moduleFilePath);
+                    break;
+                case RuntimeConfiguration.WindowsCore:
+                case RuntimeConfiguration.WindowsDesktop:
+                    var peFile = new PEFile(new StreamAddressSpace(stream), true);
+                    generator = new PEFileKeyGenerator(s_tracer, peFile, moduleFilePath);
+                    break;
+                default:
+                    s_tracer.Error("Unsupported platform {0}", config);
+                    break;
+            }
+
+            return generator;
         }
 
         /// <summary>
@@ -427,6 +680,24 @@ namespace SOS
         }
 
         /// <summary>
+        /// Get expression helper for native SOS.
+        /// </summary>
+        /// <param name="expression">hex number</param>
+        /// <returns>value</returns>
+        public static UIntPtr GetExpression(
+            string expression)
+        {
+            if (expression != null)
+            {
+                if (ulong.TryParse(expression.Replace("0x", ""), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ulong result))
+                {
+                    return new UIntPtr(result);
+                }
+            }
+            return UIntPtr.Zero;
+        }
+
+        /// <summary>
         /// Returns method token and IL offset for given source line number.
         /// </summary>
         /// <param name="symbolReaderHandle">symbol reader handle returned by LoadSymbolsForModule</param>
@@ -525,25 +796,21 @@ namespace SOS
                 MethodDebugInformation methodDebugInfo = reader.GetMethodDebugInformation(methodDebugHandle);
                 SequencePointCollection sequencePoints = methodDebugInfo.GetSequencePoints();
 
-                SequencePoint nearestPoint = sequencePoints.GetEnumerator().Current;
+                SequencePoint? nearestPoint = null;
                 foreach (SequencePoint point in sequencePoints)
                 {
-                    if (point.Offset < ilOffset)
-                    {
+                    if (point.Offset > ilOffset)
+                        break;
+
+                    if (point.StartLine != 0 && !point.IsHidden)
                         nearestPoint = point;
-                    }
-                    else
-                    {
-                        if (point.Offset == ilOffset)
-                            nearestPoint = point;
+                }
 
-                        if (nearestPoint.StartLine == 0 || nearestPoint.StartLine == SequencePoint.HiddenLine)
-                            return false;
-
-                        lineNumber = nearestPoint.StartLine;
-                        fileName = reader.GetString(reader.GetDocument(nearestPoint.Document).Name);
-                        return true;
-                    }
+                if (nearestPoint.HasValue)
+                {
+                    lineNumber = nearestPoint.Value.StartLine;
+                    fileName = reader.GetString(reader.GetDocument(nearestPoint.Value.Document).Name);
+                    return true;
                 }
             }
             catch
@@ -1002,7 +1269,7 @@ namespace SOS
         /// </summary>
         /// <param name="key">index of the file to retrieve</param>
         /// <returns>stream or null</returns>
-        internal static SymbolStoreFile GetSymbolStoreFile(SymbolStoreKey key)
+        public static SymbolStoreFile GetSymbolStoreFile(SymbolStoreKey key)
         {
             try
             {
@@ -1044,7 +1311,7 @@ namespace SOS
                             { 
                                 case 1:
                                     msdl = true;
-                                    symbolCachePath = GetDefaultSymbolCache();
+                                    symbolCachePath = DefaultSymbolCache;
                                     break;
                                 case 2:
                                     symbolServerPath = parts[1];
@@ -1062,7 +1329,7 @@ namespace SOS
                             switch (parts.Length)
                             { 
                                 case 1:
-                                    symbolCachePath = GetDefaultSymbolCache();
+                                    symbolCachePath = DefaultSymbolCache;
                                     break;
                                 case 2:
                                     symbolCachePath = parts[1];
@@ -1086,7 +1353,7 @@ namespace SOS
                     }
 
                     // Add the symbol stores to the chain
-                    if (!GetServerSymbolStore(ref store, msdl, false, symbolServerPath, symbolCachePath, symbolDirectoryPath))
+                    if (!GetServerSymbolStore(ref store, msdl, false, symbolServerPath, null, timeoutInMinutes: 0, symbolCachePath, symbolDirectoryPath))
                     {
                         return false;
                     }
@@ -1096,7 +1363,7 @@ namespace SOS
             return true;
         }
 
-        private static bool GetServerSymbolStore(ref SymbolStore store, bool msdl, bool symweb, string symbolServerPath, string symbolCachePath, string symbolDirectoryPath)
+        private static bool GetServerSymbolStore(ref SymbolStore store, bool msdl, bool symweb, string symbolServerPath, string authToken, int timeoutInMinutes, string symbolCachePath, string symbolDirectoryPath)
         {
             bool internalServer = false;
 
@@ -1117,43 +1384,47 @@ namespace SOS
             {
                 // Use the internal symbol store for symweb
                 internalServer = symbolServerPath.Contains("symweb");
-
-                // Make sure the server Uri ends with "/"
-                symbolServerPath = symbolServerPath.TrimEnd('/') + '/';
             }
 
             if (symbolServerPath != null)
             {
                 // Validate symbol server path
-                if (!Uri.TryCreate(symbolServerPath, UriKind.Absolute, out Uri uri) || uri.IsFile)
+                if (!Uri.TryCreate(symbolServerPath.TrimEnd('/') + '/', UriKind.Absolute, out Uri uri))
                 {
                     return false;
                 }
 
-                if (!IsDuplicateSymbolStore<HttpSymbolStore >(store, (httpSymbolStore) => uri.Equals(httpSymbolStore.Uri)))
+                // Add a cache symbol store if file or UNC path
+                if (uri.IsFile || uri.IsUnc)
                 {
-                    // Create symbol server store
-                    if (internalServer)
+                    AddCachePath(ref store, symbolServerPath);
+                }
+                else
+                {
+                    if (!IsDuplicateSymbolStore<HttpSymbolStore>(store, (httpSymbolStore) => uri.Equals(httpSymbolStore.Uri)))
                     {
-                        store = new SymwebHttpSymbolStore(s_tracer, store, uri);
-                    }
-                    else
-                    {
-                        store = new HttpSymbolStore(s_tracer, store, uri);
+                        // Create http symbol server store
+                        HttpSymbolStore httpSymbolStore;
+                        if (internalServer)
+                        {
+                            httpSymbolStore = new SymwebHttpSymbolStore(s_tracer, store, uri);
+                        }
+                        else
+                        {
+                            httpSymbolStore = new HttpSymbolStore(s_tracer, store, uri, personalAccessToken: authToken);
+                        }
+                        if (timeoutInMinutes != 0)
+                        {
+                            httpSymbolStore.Timeout = TimeSpan.FromMinutes(timeoutInMinutes);
+                        }
+                        store = httpSymbolStore;
                     }
                 }
             }
 
             if (symbolCachePath != null)
             {
-                symbolCachePath = Path.GetFullPath(symbolCachePath);
-
-                // Check only the first symbol store for duplication. The same cache directory can be
-                // added more than once but just not more than once in a row.
-                if (!(store is CacheSymbolStore cacheSymbolStore && IsPathEqual(symbolCachePath, cacheSymbolStore.CacheDirectory)))
-                {
-                    store = new CacheSymbolStore(s_tracer, store, symbolCachePath);
-                }
+                AddCachePath(ref store, symbolCachePath);
             }
 
             if (symbolDirectoryPath != null)
@@ -1167,6 +1438,18 @@ namespace SOS
             }
 
             return true;
+        }
+
+        private static void AddCachePath(ref SymbolStore store, string symbolCachePath)
+        {
+            symbolCachePath = Path.GetFullPath(symbolCachePath);
+
+            // Check only the first symbol store for duplication. The same cache directory can be
+            // added more than once but just not more than once in a row.
+            if (!(store is CacheSymbolStore cacheSymbolStore && IsPathEqual(symbolCachePath, cacheSymbolStore.CacheDirectory)))
+            {
+                store = new CacheSymbolStore(s_tracer, store, symbolCachePath);
+            }
         }
 
         private static bool IsDuplicateSymbolStore<T>(SymbolStore symbolStore, Func<T, bool> match) 
@@ -1187,16 +1470,33 @@ namespace SOS
             return false;
         }
 
-        private static string GetDefaultSymbolCache()
+        private static string s_defaultSymbolCache;
+
+        /// <summary>
+        /// The default symbol cache path:
+        /// 
+        /// * On Windows use the dbgeng symbol cache path: %PROGRAMDATA%\dbg\sym
+        /// * dotnet-dump on Windows sets it to use the VS symbol cache path: %TEMPDIR%\SymbolCache
+        /// * dotnet-dump/lldb on Linux/MacOS uses: $HOME/.dotnet/symbolcache
+        /// </summary>
+        public static string DefaultSymbolCache
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            get
             {
-                return Path.Combine(Path.GetTempPath(), "SymbolCache");
+                if (s_defaultSymbolCache == null)
+                {
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        s_defaultSymbolCache = Path.Combine(Environment.GetEnvironmentVariable("PROGRAMDATA"), "dbg", "sym");
+                    }
+                    else
+                    {
+                        s_defaultSymbolCache = Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".dotnet", "symbolcache");
+                    }
+                }
+                return s_defaultSymbolCache;
             }
-            else
-            {
-                return Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".dotnet", "symbolcache");
-            }
+            set { s_defaultSymbolCache = value; }
         }
 
         /// <summary>

@@ -11,10 +11,14 @@ if(WIN32)
   add_compile_options(/Zl) # omit default library name in .OBJ
 
   add_subdirectory(runcommand)
+  if(NOT CLR_CMAKE_TARGET_ARCH_ARM64)
+    add_subdirectory(SOS.UnitTests/Debuggees/DesktopClrHost)
+  endif()
 endif(WIN32)
 
 add_definitions(-D_SECURE_SCL=0)
 
+add_subdirectory(dbgutil)
 add_subdirectory(SOS.NETCore)
 add_subdirectory(Strike)
 
@@ -29,4 +33,3 @@ if(CLR_CMAKE_PLATFORM_UNIX)
 endif(CLR_CMAKE_PLATFORM_UNIX)
 
 add_subdirectory(debugshim)
-add_subdirectory(dbgutil)

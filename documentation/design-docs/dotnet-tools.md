@@ -1,4 +1,4 @@
-﻿# Dotnet Diagnostic Tools CLI Design
+# Dotnet Diagnostic Tools CLI Design
 
 ## User workflows
 
@@ -148,7 +148,9 @@ OPTIONS
 COMMANDS
 
     list      Display a list of counter names and descriptions
+    ps        Display a list of dotnet processes that can be monitored
     monitor   Display periodically refreshing values of selected counters
+    collect   Periodically collect selected counter values and export them into a specified file format for post-processing.
 
 LIST
 
@@ -228,6 +230,55 @@ MONITOR
         provider and counter names, use the list command.
 
 
+COLLECT
+
+
+    Examples:
+
+    1. Collect the runtime performance counters at a refresh interval of 10 seconds and export it as a JSON file named "test.json".
+```
+    dotnet run collect --process-id 863148 --refresh-interval 10 --output test --format json
+```
+
+    2. Collect the runtime performance counters as well as the ASP.NET hosting performance counters at the default refresh interval (1 second) and export it as a CSV file named "mycounter.csv". 
+```
+    dotnet run collect --process-id 863148 --output mycounter --format csv System.Runtime Microsoft.AspNetCore.Hosting
+```
+
+
+    Syntax:
+
+```
+    dotnet-counters collect [-h||--help]
+                            [-p|--process-id <pid>]
+                            [-o|--output <name>]
+                            [--format <csv|json>]
+                            [--refreshInterval <sec>]
+                            counter_list
+    
+    Periodically collect selected counter values and export them into a specified file format for post-processing.
+    
+    -h, --help
+        Show command line help
+    
+    -p,--process-id
+        The ID of the process that will be monitored
+
+    -o, --output
+        The name of the output file
+
+    --format
+        The format to be exported. Currently available: csv, json
+
+    --refresh-interval
+        The number of seconds to delay between updating the displayed counters
+    
+    counter_list
+        A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the
+        provider_name is used without a qualifying counter_name then all counters will be shown. To discover
+        provider and counter names, use the list command.
+
+```
 
 
 ### dotnet-trace
@@ -247,7 +298,7 @@ OPTIONS
 COMMANDS
 
     collect         Collects a diagnostic trace from a currently running process
-    list-processes  Lists dotnet processes that can be attached to.
+    ps              Lists dotnet processes that can be attached to.
     list-profiles   Lists pre-built tracing profiles with a description of what providers and filters are in each profile.
     convert         Converts traces to alternate formats for use with alternate trace analysis tools
 
@@ -290,7 +341,7 @@ COLLECT
             Provider format: KnownProviderName[:Keywords[:Level][:KeyValueArgs]]
                 KnownProviderName       - The provider's name
                 Keywords                - 8 character hex number bit mask
-                Level                   - A number in the range [0, 5]
+                Level                   - A number in the range [0, 5], or their corresponding text values (refer to https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.tracing.eventlevel?view=netframework-4.8).
                 KeyValueArgs            - A semicolon separated list of key=value
             KeyValueArgs format: '[key1=value1][;key2=value2]'
 
@@ -302,11 +353,21 @@ COLLECT
 
 
     Examples:
+      
+      To perform a default `cpu-tracing` profiling:
+
       > dotnet trace collect --process-id 1902
       No profile or providers specified, defaulting to trace profile 'cpu-sampling'
       Recording trace 38MB
 
       's' - stop tracing
+
+
+      To collect just the GC keyword events from the .NET runtime at informational level:
+
+      > dotnet trace collect --process-id 1902 --providers Microsoft-Windows-DotNETRuntime:0x1:Informational
+
+
 
 CONVERT
 
@@ -335,6 +396,81 @@ CONVERT
       Writing:       ./trace.speedscope.json
       Conversion complete
 
+### dotnet-stack
+
+SYNOPSIS
+
+    dotnet-stack [options] [command] [<args>]
+
+OPTIONS
+
+    --version
+        Display the version of the dotnet-trace utility.
+
+    -h, --help
+        Show command line help
+
+COMMANDS
+
+    report         Displays stack traces for the target process
+
+REPORT
+
+    dotnet-stack report -p|--process-id <pid>
+                        -n|--name <process-name>
+                        [-h|--help]
+
+    Prints the managed stack from every thread in the target process
+
+    -h, --help
+        Show command line help
+
+    Examples:
+      > dotnet-stack report -p 1234
+      Thread (0x151c):
+          [Native Frames]
+          System.Private.CoreLib!System.Threading.ManualResetEventSlim.Wait(int, System.Threading.CancellationToken)
+          System.Private.CoreLib!System.Threading.Tasks.Task.SpinThenBlockingWait(int, System.Threading.CancellationToken)
+          System.Private.CoreLib!System.Threading.Tasks.Task.InternalWaitCore(int, System.Threading.CancellationToken)
+          System.Private.CoreLib!System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(System.Threading.Tasks.Task)
+          System.Private.CoreLib!System.Runtime.CompilerServices.TaskAwaiter.GetResult()
+          Microsoft.Extensions.Hosting.Abstractions!Microsoft.Extensions.Hosting.HostingAbstractionsHostExtensions.Run(Microsoft.Extensions.Hosting.IHost)
+          testtesttest!testtesttest.Program.Main(System.String[])
+
+      Thread (0x152b):
+          [Native Frames]
+          System.IO.FileSystem.Watcher!System.IO.FileSystemWatcher.RunningInstance.StaticWatcherRunLoopManager.WatchForFileSystemEventsThreadStart(System.Threading.ManualResetEventSlim, Microsoft.Win32.SafeHandles.SafeEventStreamHandle)
+          System.IO.FileSystem.Watcher!System.IO.FileSystemWatcher.RunningInstance.StaticWatcherRunLoopManager.<>c.<ScheduleEventStream>(System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart_Context(System.Object)
+          System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(System.Threading.ExecutionContext, System.Threading.ContextCallback, System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(System.Object)
+
+      Thread (0x153a):
+          [Native Frames]
+          System.Private.CoreLib!System.Threading.SemaphoreSlim.WaitUntilCountOrTimeout(int, uint, System.Threading.CancellationToken)
+          System.Private.CoreLib!System.Threading.SemaphoreSlim.Wait(int, System.Threading.CancellationToken)
+          System.Collections.Concurrent!System.Collections.Concurrent.BlockingCollection<Microsoft.Extensions.Logging.Console.LogMessageEntry>.TryTakeWithNoTimeValidation(int, System.Threading.CancellationToken, System.Threading.CancellationTokenSource)
+          System.Collections.Concurrent!System.Collections.Concurrent.BlockingCollection<Microsoft.Extensions.Logging.Console.LogMessageEntry>.GetConsumingEnumerable().MoveNext()
+          Microsoft.Extensions.Logging.Console!Microsoft.Extensions.Logging.Console.ConsoleLoggerProcessor.ProcessLogQueue()
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart_Context(System.Object)
+          System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(System.Threading.ExecutionContext, System.Threading.ContextCallback, System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart()
+
+      Thread (0x4125):
+          [Native Frames]
+          System.Private.CoreLib!System.Threading.Thread.Sleep(System.TimeSpan)
+          Microsoft.AspNetCore.Server.Kestrel.Core!Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Heartbeat.TimerLoop()
+          Microsoft.AspNetCore.Server.Kestrel.Core!Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Heartbeat.ctor(System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart_Context(System.Object)
+          System.Private.CoreLib!System.Threading.ExecutionContext.RunInternal(System.Threading.ExecutionContext, System.Threading.ContextCallback, System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(System.Object)
+
+      Thread (0x5hf3):
+          [Native Frames]
+          System.Net.Sockets!System.Net.Sockets.SocketAsyncEngine.EventLoop()
+          System.Net.Sockets!System.Net.Sockets.SocketAsyncEngine.ctor( System.Object)
+          System.Private.CoreLib!System.Threading.ThreadHelper.ThreadStart(System.Object)
+
 ### dotnet-dump
 
 SYNOPSIS
@@ -355,6 +491,7 @@ COMMANDS
 
     collect   Capture dumps from a process
     analyze   Starts an interactive shell with debugging commands to explore a dump
+    ps        Display a list of dotnet processes to create dump from
 
 COLLECT
 
@@ -550,6 +687,100 @@ UNINSTALL
       Reverting .lldbinit - LLDB will no longer load SOS at startup
       Uninstalling SOS from ~/.dotnet/sos
       Complete
+
+### dotnet-gcdump
+
+SYNOPSIS
+
+    dotnet-gcdump [--version]
+                  [-h, --help]
+                  <command> [<args>]
+
+OPTIONS
+
+    --version
+        Display the version of the dotnet-gcdump utility.
+
+    -h, --help
+        Show command line help
+
+COMMANDS
+
+    collect   Capture dumps from a process
+    report    Generate report into stdout from a previously generated gcdump or from a running process.
+
+COLLECT
+
+    dotnet-gcdump collect -p|--process-id <pid> [-h|--help] [-o|--output <output_dump_path>] [-v|--verbose]
+
+    Capture GC dumps from a dotnet process
+
+    Usage:
+      dotnet-gcdump collect [options]
+
+    Options:
+      -p, --process-id
+          The process to collect a gc dump from.
+
+      -h, --help
+          Show command line help
+
+      -o, --output
+          The path where collected gcdumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump' where YYYYMMDD is Year/Month/Day
+          and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.
+      
+      -v, --verbose
+          Turns on logging for gcdump
+
+Examples:
+
+    $ dotnet gcdump collect --process-id 1902
+    Writing gcdump to file ./20190226_135837_1902.gcdump
+    Wrote 12576 bytes to file
+    Complete
+
+REPORT
+
+    dotnet-gcdump report <gcdump_filename>
+    
+    Generate report into stdout from a previously generated gcdump or from a running process.
+    
+    Usage:
+      dotnet-gcdump report [options] [<gcdump_filename>]
+
+    Arguments:
+      <gcdump_filename>  The file to read gcdump from.
+  
+    Options:
+      -p, --process-id   The process id to collect the trace.
+      -t, --report-type  The type of report to generate. Available options: heapstat (default)
+
+Examples:
+
+    $ dotnet gcdump report 20200207_094403_19847.gcdump
+      4,786,378  GC Heap bytes
+         63,201  GC Heap objects
+
+    Object Bytes     Count  Type
+         131,096         1  System.Byte[] (Bytes > 100K)  [System.Private.CoreLib.dll]
+          57,756         1  System.String (Bytes > 10K)  [System.Private.CoreLib.dll]
+          31,128         1  System.Int32[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+          28,605         5  System.Byte[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+          22,432         9  System.Object[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+    ...
+
+    $ dotnet gcdump report -p 1752 | head -9
+      1,302,804  GC Heap bytes
+         16,211  GC Heap objects
+         27,858  Total references
+
+    Object Bytes     Count  Type
+          31,128         1  System.Int32[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+          24,468         1  System.String (Bytes > 10K)  [System.Private.CoreLib.dll]
+          12,800         3  System.Object[] (Bytes > 10K)  [System.Private.CoreLib.dll]
+           7,904         1  Entry<System.String,System.Drawing.Color>[] (Bytes > 1K)  [System.Private.CoreLib.dll]
+           7,074         4  System.String (Bytes > 1K)  [System.Private.CoreLib.dll]
+    ...
 
 ## Future suggestions
 
@@ -1107,7 +1338,7 @@ d
     -g
     Run as a native debugger in a managed process (no interop).
     -h
-    Write dump if process has a hung window (does not respond to window messages for at least 5 seconds).
+    Write dump if process has an unresponsive window (does not respond to window messages for at least 5 seconds).
     -i
     Install ProcDump as the AeDebug postmortem debugger. Only -ma, -mp, -d and -r are supported as additional options.
     -l

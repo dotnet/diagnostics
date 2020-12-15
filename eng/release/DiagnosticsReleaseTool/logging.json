@@ -1,0 +1,15 @@
+{
+    "Logging": {
+      "LogLevel": {
+        "Default": "Information",
+        "System": "None",
+        "Microsoft": "None"
+      },
+      "Console":
+      {
+        "IncludeScopes": "true",
+        "TimestampFormat": "[HH:mm:ss] ",
+        "LogToStandardErrorThreshold": "Warning",
+      }
+    }
+  }

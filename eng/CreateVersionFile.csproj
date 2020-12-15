@@ -1,7 +1,7 @@
 <!-- All Rights Reserved. Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
 
   <Target Name="GenerateVersionFiles" DependsOnTargets="GenerateVersionHeader;GenerateVersionSourceFile" />
@@ -73,9 +73,10 @@
     </PropertyGroup>
 
     <PropertyGroup>
+      <!-- SOS (strike.cpp) has a dependency on this variable being public and that it begins with the @(#)Version prefix -->
       <NativeVersionLines>
 <![CDATA[
-static char sccsid[] __attribute__((used)) = "@(#)Version $(InformationalVersion)$(BuiltByString)";
+char sccsid[] __attribute__((used)) = "@(#)Version $(InformationalVersion)$(BuiltByString)";
  ]]>
       </NativeVersionLines>
     </PropertyGroup>

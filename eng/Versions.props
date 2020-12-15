@@ -1,49 +1,69 @@
-﻿<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
 <Project>
   <PropertyGroup>
     <RepositoryUrl>https://github.com/dotnet/diagnostics</RepositoryUrl>
     <PreReleaseVersionLabel>preview</PreReleaseVersionLabel>
-    <VersionPrefix>3.0.0</VersionPrefix>
+    <VersionPrefix>5.0.0</VersionPrefix>
     <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
     <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
   </PropertyGroup>
-
   <PropertyGroup>
-    <!-- Opt-out repo features -->
+    <!-- Latest symstore version updated by darc -->
+    <MicrosoftSymbolStoreVersion>1.0.161401</MicrosoftSymbolStoreVersion>
+    <!-- Runtime versions to test -->
+    <MicrosoftNETCoreApp21Version>2.1.23</MicrosoftNETCoreApp21Version>
+    <MicrosoftAspNetCoreApp21Version>$(MicrosoftNETCoreApp21Version)</MicrosoftAspNetCoreApp21Version>
+    <MicrosoftNETCoreApp31Version>3.1.10</MicrosoftNETCoreApp31Version>
+    <MicrosoftAspNetCoreApp31Version>$(MicrosoftNETCoreApp31Version)</MicrosoftAspNetCoreApp31Version>
+    <MicrosoftNETCoreApp50Version>5.0.0</MicrosoftNETCoreApp50Version>
+    <MicrosoftAspNetCoreApp50Version>$(MicrosoftNETCoreApp50Version)</MicrosoftAspNetCoreApp50Version>
+    <!-- Latest shared runtime version updated by darc -->
+    <VSRedistCommonNetCoreSharedFrameworkx6460Version>6.0.0-alpha.1.20612.4</VSRedistCommonNetCoreSharedFrameworkx6460Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>6.0.0-alpha.1.20612.4</MicrosoftNETCoreAppRuntimewinx64Version>
+    <!-- Latest shared aspnetcore version updated by darc -->
+    <MicrosoftAspNetCoreAppRefInternalVersion>6.0.0-alpha.1.20614.3</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefVersion>6.0.0-alpha.1.20614.3</MicrosoftAspNetCoreAppRefVersion>
+    <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
+    <MicrosoftDotnetSdkInternalVersion>5.0.100</MicrosoftDotnetSdkInternalVersion>
+  </PropertyGroup>
+  <PropertyGroup>
+    <!-- Opt-in/out repo features -->
     <UsingToolXliff>false</UsingToolXliff>
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
-    <UsingToolSymbolUploader>true</UsingToolSymbolUploader>
-
     <!-- Build tools -->
     <MicrosoftNetCompilersVersion>3.0.0</MicrosoftNetCompilersVersion>
-
     <!-- CoreFX -->
-    <SystemReflectionMetadataVersion>1.6.0</SystemReflectionMetadataVersion>
-    <SystemCollectionsImmutableVersion>1.5.0</SystemCollectionsImmutableVersion>
+    <SystemReflectionMetadataVersion>1.8.1</SystemReflectionMetadataVersion>
+    <SystemCollectionsImmutableVersion>1.7.1</SystemCollectionsImmutableVersion>
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
-
     <!-- Other libs -->
-    <MicrosoftSymbolStoreVersion>1.0.50103</MicrosoftSymbolStoreVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>1.1.46104</MicrosoftDiagnosticsRuntimeVersion>
+    <AzureStorageBlobsVersion>12.6.0</AzureStorageBlobsVersion>
+    <MicrosoftAspNetCoreVersion>2.1.7</MicrosoftAspNetCoreVersion>
+    <MicrosoftAspNetCoreHttpsPolicyVersion>2.1.1</MicrosoftAspNetCoreHttpsPolicyVersion>
+    <MicrosoftAspNetCoreMvcVersion>2.1.3</MicrosoftAspNetCoreMvcVersion>
+    <MicrosoftAspNetCoreResponseCompressionVersion>2.1.1</MicrosoftAspNetCoreResponseCompressionVersion>
+    <MicrosoftBclHashCodeVersion>1.1.0</MicrosoftBclHashCodeVersion>
+    <MicrosoftBclAsyncInterfacesVersion>1.1.0</MicrosoftBclAsyncInterfacesVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>2.0.161401</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeUtilitiesVersion>2.0.156101</MicrosoftDiagnosticsRuntimeUtilitiesVersion>
+    <ParallelStacksRuntimeVersion>2.0.1</ParallelStacksRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
-    <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.44</MicrosoftDiagnosticsTracingTraceEventVersion>
-    <SystemCommandLineExperimentalVersion>0.2.0-alpha.19254.1</SystemCommandLineExperimentalVersion>
-    <SystemCommandLineRenderingVersion>0.2.0-alpha.19254.1</SystemCommandLineRenderingVersion>
-
+    <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.57</MicrosoftDiagnosticsTracingTraceEventVersion>
+    <MicrosoftExtensionsConfigurationJsonVersion>2.1.1</MicrosoftExtensionsConfigurationJsonVersion>
+    <MicrosoftExtensionsConfigurationKeyPerFileVersion>2.1.1</MicrosoftExtensionsConfigurationKeyPerFileVersion>
+    <MicrosoftExtensionsDependencyInjectionVersion>2.1.1</MicrosoftExtensionsDependencyInjectionVersion>
+    <MicrosoftExtensionsHostingAbstractionsVersion>2.1.1</MicrosoftExtensionsHostingAbstractionsVersion>
+    <MicrosoftExtensionsLoggingVersion>2.1.1</MicrosoftExtensionsLoggingVersion>
+    <MicrosoftExtensionsLoggingConsoleVersion>2.1.1</MicrosoftExtensionsLoggingConsoleVersion>
+    <!-- We use a newer version of LoggingEventSource due to a bug in an older version-->
+    <MicrosoftExtensionsLoggingEventSourceVersion>3.1.4</MicrosoftExtensionsLoggingEventSourceVersion>
+    <SystemCommandLineVersion>2.0.0-beta1.20468.1</SystemCommandLineVersion>
+    <SystemCommandLineRenderingVersion>2.0.0-beta1.20074.1</SystemCommandLineRenderingVersion>
+    <SystemMemoryVersion>4.5.4</SystemMemoryVersion>
+    <SystemTextJsonVersion>4.7.1</SystemTextJsonVersion>
+    <SystemThreadingChannelsVersion>4.7.0</SystemThreadingChannelsVersion>
     <XUnitVersion>2.4.1</XUnitVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-
+    <MicrosoftDotNetRemoteExecutorVersion>6.0.0-beta.20610.4</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
-
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <RestoreSources>
-      $(RestoreSources);
-      https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json;
-      https://dotnet.myget.org/F/dotnet-core/api/v3/index.json;
-      https://dotnet.myget.org/F/dotnet-buildtools/api/v3/index.json;
-      https://dotnet.myget.org/F/system-commandline/api/v3/index.json
-    </RestoreSources>
   </PropertyGroup>
 </Project>

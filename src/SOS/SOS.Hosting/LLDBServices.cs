@@ -2,32 +2,33 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
-using System.Globalization;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace SOS
+namespace SOS.Hosting
 {
-    internal unsafe class LLDBServices : COMCallableIUnknown
+    internal sealed unsafe class LLDBServices : COMCallableIUnknown
     {
         private static readonly Guid IID_ILLDBServices = new Guid("2E6C569A-9E14-4DA4-9DFC-CDB73A532566");
         private static readonly Guid IID_ILLDBServices2 = new Guid("012F32F0-33BA-4E8E-BC01-037D382D8A5E");
 
         public IntPtr ILLDBServices { get; }
 
-        readonly SOSHost _soshost;
+        private readonly SOSHost _soshost;
 
         /// <summary>
         /// Create an instance of the service wrapper SOS uses.
         /// </summary>
         /// <param name="soshost">SOS host instance</param>
-        public LLDBServices(SOSHost soshost)
+        internal LLDBServices(SOSHost soshost)
         {
             _soshost = soshost;
 
@@ -63,12 +64,12 @@ namespace SOS
             builder.AddMethod(new GetSourceFileLineOffsetsDelegate(soshost.GetSourceFileLineOffsets));
             builder.AddMethod(new FindSourceFileDelegate(soshost.FindSourceFile));
 
-            builder.AddMethod(new GetCurrentProcessIdDelegate(soshost.GetCurrentProcessId));
+            builder.AddMethod(new GetCurrentProcessSystemIdDelegate(soshost.GetCurrentProcessSystemId));
             builder.AddMethod(new GetCurrentThreadIdDelegate(soshost.GetCurrentThreadId));
             builder.AddMethod(new SetCurrentThreadIdDelegate(soshost.SetCurrentThreadId));
             builder.AddMethod(new GetCurrentThreadSystemIdDelegate(soshost.GetCurrentThreadSystemId));
             builder.AddMethod(new GetThreadIdBySystemIdDelegate(soshost.GetThreadIdBySystemId));
-            builder.AddMethod(new GetThreadContextByIdDelegate(GetThreadContextById));
+            builder.AddMethod(new GetThreadContextBySystemIdDelegate(soshost.GetThreadContextBySystemId));
 
             builder.AddMethod(new GetValueByNameDelegate(GetValueByName));
             builder.AddMethod(new GetInstructionOffsetDelegate(soshost.GetInstructionOffset));
@@ -92,11 +93,10 @@ namespace SOS
         string GetCoreClrDirectory(
             IntPtr self)
         {
-            foreach (ModuleInfo module in _soshost.DataReader.EnumerateModules())
+            IRuntime currentRuntime = _soshost.Target.Services.GetService<IRuntimeService>()?.CurrentRuntime;
+            if (currentRuntime != null)
             {
-                if (SOSHost.IsRuntimeModule(module)) {
-                    return Path.GetDirectoryName(module.FileName) + Path.DirectorySeparatorChar;
-                }
+                return Path.GetDirectoryName(currentRuntime.RuntimeModule.FileName);
             }
             return null;
         }
@@ -107,20 +107,20 @@ namespace SOS
             uint contextSize,
             byte[] context)
         {
-            return E_NOTIMPL;
+            return HResult.E_NOTIMPL;
         }
 
         int SetExceptionCallback(
             IntPtr self,
             PFN_EXCEPTION_CALLBACK callback)
         {
-            return S_OK;
+            return HResult.S_OK;
         }
 
         int ClearExceptionCallback(
             IntPtr self)
         {
-            return S_OK;
+            return HResult.S_OK;
         }
 
         int GetContextStackTrace(
@@ -136,20 +136,7 @@ namespace SOS
         {
             // Don't fail, but always return 0 native frames so "clrstack -f" still prints the managed frames
             SOSHost.Write(framesFilled);
-            return S_OK;
-        }
-
-        int GetThreadContextById(
-            IntPtr self,
-            uint threadId,
-            uint contextFlags,
-            uint contextSize,
-            IntPtr context)
-        {
-            if (_soshost.DataReader.GetThreadContext(threadId, contextFlags, contextSize, context)) {
-                return S_OK;
-            }
-            return E_FAIL;
+            return HResult.S_OK;
         }
 
         int GetValueByName(
@@ -171,22 +158,20 @@ namespace SOS
             bool runtimeOnly,
             ModuleLoadCallback callback)
         {
-            foreach (ModuleInfo module in _soshost.DataReader.EnumerateModules())
+            IEnumerable<IModule> modules;
+            if (runtimeOnly)
             {
-                if (runtimeOnly)
-                {
-                    if (SOSHost.IsRuntimeModule(module))
-                    {
-                        callback(IntPtr.Zero, module.FileName, module.ImageBase, unchecked((int)module.FileSize));
-                        break;
-                    }
-                }
-                else
-                {
-                    callback(IntPtr.Zero, module.FileName, module.ImageBase, unchecked((int)module.FileSize));
-                }
+                modules = _soshost.ModuleService.GetModuleFromModuleName(_soshost.Target.GetPlatformModuleName("coreclr"));
             }
-            return S_OK;
+            else
+            {
+                modules = _soshost.ModuleService.EnumerateModules();
+            }
+            foreach (IModule module in modules)
+            {
+                callback(IntPtr.Zero, module.FileName, module.ImageBase, (uint)module.ImageSize);
+            }
+            return HResult.S_OK;
         }
 
         int AddModuleSymbol(
@@ -194,7 +179,7 @@ namespace SOS
             IntPtr parameter,
             string symbolFilename)
         {
-            return S_OK;
+            return HResult.S_OK;
         }
 
         unsafe int GetModuleInfo(
@@ -205,88 +190,85 @@ namespace SOS
         {
             try
             {
-                ModuleInfo module = _soshost.DataReader.EnumerateModules().ElementAt((int)index);
-                if (module == null) {
-                    return E_FAIL;
-                }
+                IModule module = _soshost.ModuleService.GetModuleFromIndex((int)index);
                 SOSHost.Write(moduleBase, module.ImageBase);
-                SOSHost.Write(moduleSize, module.FileSize);
+                SOSHost.Write(moduleSize, module.ImageSize);
             }
-            catch (ArgumentOutOfRangeException)
+            catch (DiagnosticsException)
             {
-                return E_FAIL;
+                return HResult.E_FAIL;
             }
-            return S_OK;
+            return HResult.S_OK;
         }
 
         #endregion
 
         #region ILLDBServices delegates
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         [return: MarshalAs(UnmanagedType.LPStr)]
         private delegate string GetCoreClrDirectoryDelegate(
             IntPtr self);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate UIntPtr GetExpressionDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string text);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int VirtualUnwindDelegate(
             IntPtr self,
             uint threadId,
             uint contextSize,
             byte[] context);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int PFN_EXCEPTION_CALLBACK(LLDBServices services);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetExceptionCallbackDelegate(
             IntPtr self,
             PFN_EXCEPTION_CALLBACK callback);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ClearExceptionCallbackDelegate(
             IntPtr self);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetInterruptDelegate(
             IntPtr self);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int OutputVaListDelegate(
             IntPtr self,
             DEBUG_OUTPUT mask,
             [In, MarshalAs(UnmanagedType.LPStr)] string format,
             IntPtr va_list);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetDebuggeeTypeDelegate(
             IntPtr self,
             [Out] DEBUG_CLASS* Class,
             [Out] DEBUG_CLASS_QUALIFIER* Qualifier);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetPageSizeDelegate(
             IntPtr self,
             [Out] uint* size);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetExecutingProcessorTypeDelegate(
             IntPtr self,
             [Out] IMAGE_FILE_MACHINE* type);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ExecuteDelegate(
             IntPtr self,
             DEBUG_OUTCTL outputControl,
             [In, MarshalAs(UnmanagedType.LPStr)] string command,
             DEBUG_EXECUTE flags);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetLastEventInformationDelegate(
             IntPtr self,
             [Out] DEBUG_EVENT* type,
@@ -299,7 +281,7 @@ namespace SOS
             [In] uint descriptionSize,
             [Out] uint* descriptionUsed);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int DisassembleDelegate(
             IntPtr self,
             [In] ulong offset,
@@ -309,7 +291,7 @@ namespace SOS
             [Out] uint* disassemblySize,
             [Out] ulong* endOffset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetContextStackTraceDelegate(
             IntPtr self,
             IntPtr startContext,
@@ -321,7 +303,7 @@ namespace SOS
             uint frameContextsEntrySize,
             uint* pframesFilled);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ReadVirtualDelegate(
             IntPtr self,
             [In] ulong address,
@@ -329,7 +311,7 @@ namespace SOS
             [In] uint bufferSize,
             [Out] uint* bytesRead);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int WriteVirtualDelegate(
             IntPtr self,
             [In] ulong address,
@@ -337,12 +319,12 @@ namespace SOS
             [In] uint bufferSize,
             [Out] uint* bytesWritten);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolOptionsDelegate(
             IntPtr self,
             out SYMOPT options);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetNameByOffsetDelegate(
             IntPtr self,
             [In] ulong offset,
@@ -351,19 +333,19 @@ namespace SOS
             [Out] uint* nameSize,
             [Out] ulong* displacement);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetNumberModulesDelegate(
             IntPtr self,
             out uint loaded,
             out uint unloaded);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleByIndexDelegate(
             IntPtr self,
             uint index,
             out ulong baseAddress);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleByModuleNameDelegate(
             IntPtr self,
             [In, MarshalAs(UnmanagedType.LPStr)] string name,
@@ -371,7 +353,7 @@ namespace SOS
             uint* index,
             ulong* baseAddress);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleByOffsetDelegate(
             IntPtr self,
             ulong offset,
@@ -379,7 +361,7 @@ namespace SOS
             uint* index,
             ulong* baseAddress);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleNamesDelegate(
             IntPtr self,
             uint index,
@@ -394,7 +376,7 @@ namespace SOS
             uint loadedImageNameBufferSize,
             uint* loadedImageNameSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetLineByOffsetDelegate(
             IntPtr self,
             ulong offset,
@@ -404,7 +386,7 @@ namespace SOS
             uint* fileSize,
             ulong* displacement);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourceFileLineOffsetsDelegate(
             IntPtr self,
             [In, MarshalAs(UnmanagedType.LPStr)] string file,
@@ -412,7 +394,7 @@ namespace SOS
             uint bufferLines,
             uint* fileLines);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int FindSourceFileDelegate(
             IntPtr self,
             uint startElement,
@@ -423,57 +405,57 @@ namespace SOS
             uint bufferSize,
             uint* foundSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate int GetCurrentProcessIdDelegate(
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int GetCurrentProcessSystemIdDelegate(
             IntPtr self,
             out uint id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCurrentThreadIdDelegate(
             IntPtr self,
             [Out] out uint id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetCurrentThreadIdDelegate(
             IntPtr self,
             [In] uint id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCurrentThreadSystemIdDelegate(
             IntPtr self,
             [Out] out uint sysId);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetThreadIdBySystemIdDelegate(
             IntPtr self,
             [In] uint sysId,
             [Out] out uint id);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate int GetThreadContextByIdDelegate(
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int GetThreadContextBySystemIdDelegate(
             IntPtr self,
             uint threadId,
             uint contextFlags,
             uint contextSize,
             IntPtr context);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetValueByNameDelegate(
             IntPtr self,
             [In, MarshalAs(UnmanagedType.LPStr)] string name,
             out UIntPtr value);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetInstructionOffsetDelegate(
             IntPtr self,
             [Out] out ulong offset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetStackOffsetDelegate(
             IntPtr self,
             [Out] out ulong offset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetFrameOffsetDelegate(
             IntPtr self,
             [Out] out ulong offset);
@@ -485,40 +467,40 @@ namespace SOS
         /// <summary>
         /// The LoadNativeSymbolsDelegate2 callback
         /// </summary>
-        public delegate void ModuleLoadCallback(
+        private delegate void ModuleLoadCallback(
             IntPtr parameter,
             [In, MarshalAs(UnmanagedType.LPStr)] string moduleFilePath,
             [In] ulong moduleAddress,
-            [In] int moduleSize);
+            [In] uint moduleSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int LoadNativeSymbolsDelegate2(
             IntPtr self,
             [In] bool runtimeOnly,
             [In] ModuleLoadCallback callback);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int AddModuleSymbolDelegate(
             IntPtr self,
             [In] IntPtr parameter,
             [In, MarshalAs(UnmanagedType.LPStr)] string symbolFilename);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private unsafe delegate int GetModuleInfoDelegate(
             IntPtr self,
             [In] uint index,
             [Out] ulong *moduleBase,
             [Out] ulong *moduleSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleVersionInformationDelegate(
             IntPtr self,
-            [In] uint Index,
-            [In] ulong Base,
-            [In][MarshalAs(UnmanagedType.LPStr)] string Item,
-            [Out] byte* Buffer,
-            [In] uint BufferSize,
-            [Out] uint* VerInfoSize);
+            [In] uint moduleIndex,
+            [In] ulong moduleBase,
+            [In][MarshalAs(UnmanagedType.LPStr)] string item,
+            [Out] byte* buffer,
+            [In] uint bufferSize,
+            [Out] uint* verInfoSize);
 
         #endregion
     }

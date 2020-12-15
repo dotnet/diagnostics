@@ -7,7 +7,7 @@ using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Runtime.InteropServices;
 
-namespace SOS
+namespace SOS.Hosting
 {
     internal unsafe class DebugAdvanced
     {
@@ -21,13 +21,13 @@ namespace SOS
 
         #region IDebugAdvanced Delegates
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetThreadContextDelegate(
             [In] IntPtr self,
             [In] IntPtr context,
             [In] uint contextSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetThreadContextDelegate(
             [In] IntPtr self,
             [In] IntPtr context,

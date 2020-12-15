@@ -12,8 +12,9 @@
 
 #define IMAGE_FILE_MACHINE_AMD64             0x8664  // AMD64 (K8)
 
-DataTarget::DataTarget(void) :
-    m_ref(0)
+DataTarget::DataTarget(ULONG64 baseAddress) :
+    m_ref(0),
+    m_baseAddress(baseAddress)
 {
 }
 
@@ -31,6 +32,12 @@ DataTarget::QueryInterface(
         AddRef();
         return S_OK;
     }
+    else if (InterfaceId == IID_ICLRDataTarget2)
+    {
+        *Interface = (ICLRDataTarget2*)this;
+        AddRef();
+        return S_OK;
+    }
     else if (InterfaceId == IID_ICorDebugDataTarget4)
     {
         *Interface = (ICorDebugDataTarget4*)this;
@@ -40,6 +47,12 @@ DataTarget::QueryInterface(
     else if (InterfaceId == IID_ICLRMetadataLocator)
     {
         *Interface = (ICLRMetadataLocator*)this;
+        AddRef();
+        return S_OK;
+    }
+    else if (InterfaceId == IID_ICLRRuntimeLocator)
+    {
+        *Interface = (ICLRRuntimeLocator*)this;
         AddRef();
         return S_OK;
     }
@@ -87,7 +100,7 @@ HRESULT STDMETHODCALLTYPE
 DataTarget::GetPointerSize(
     /* [out] */ ULONG32 *size)
 {
-#if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
+#if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64) || defined(SOS_TARGET_MIPS64)
     *size = 8;
 #elif defined(SOS_TARGET_ARM) || defined(SOS_TARGET_X86)
     *size = 4;
@@ -154,7 +167,7 @@ DataTarget::ReadVirtual(
     HRESULT hr = g_ExtData->ReadVirtual(address, (PVOID)buffer, request, (PULONG)done);
     if (FAILED(hr)) 
     {
-        ExtDbgOut("DataTarget::ReadVirtual FAILED %08x address %p size %08x\n", hr, address, request);
+        ExtDbgOut("DataTarget::ReadVirtual FAILED %08x address %08llx size %08x\n", hr, address, request);
     }
     return hr;
 }
@@ -209,12 +222,13 @@ DataTarget::GetThreadContext(
     /* [in] */ ULONG32 contextSize,
     /* [out, size_is(contextSize)] */ PBYTE context)
 {
+    HRESULT hr;
 #ifdef FEATURE_PAL
     if (g_ExtServices == NULL)
     {
         return E_UNEXPECTED;
     }
-    return g_ExtServices->GetThreadContextById(threadID, contextFlags, contextSize, context);
+    hr = g_ExtServices->GetThreadContextById(threadID, contextFlags, contextSize, context);
 #else
     if (g_ExtSystem == NULL || g_ExtAdvanced == NULL)
     {
@@ -222,7 +236,6 @@ DataTarget::GetThreadContext(
     }
     ULONG ulThreadIDOrig;
     ULONG ulThreadIDRequested;
-    HRESULT hr;
 
     hr = g_ExtSystem->GetCurrentThreadId(&ulThreadIDOrig);
     if (FAILED(hr))
@@ -244,7 +257,7 @@ DataTarget::GetThreadContext(
 
     // Prepare context structure
     ZeroMemory(context, contextSize);
-    ((CONTEXT*) context)->ContextFlags = contextFlags;
+    g_targetMachine->SetContextFlags(context, contextFlags);
 
     // Ok, do it!
     hr = g_ExtAdvanced->GetThreadContext((LPVOID) context, contextSize);
@@ -252,9 +265,12 @@ DataTarget::GetThreadContext(
     // This is cleanup; failure here doesn't mean GetThreadContext should fail
     // (that's determined by hr).
     g_ExtSystem->SetCurrentThreadId(ulThreadIDOrig);
+#endif
+
+    // GetThreadContext clears ContextFlags or sets them incorrectly and DBI needs it set to know what registers to copy
+    g_targetMachine->SetContextFlags(context, contextFlags);
 
     return hr;
-#endif
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -275,6 +291,52 @@ DataTarget::Request(
     /* [size_is][out] */ BYTE *outBuffer)
 {
     return E_NOTIMPL;
+}
+
+// ICLRDataTarget2
+
+HRESULT STDMETHODCALLTYPE 
+DataTarget::AllocVirtual(
+    /* [in] */ CLRDATA_ADDRESS addr,
+    /* [in] */ ULONG32 size,
+    /* [in] */ ULONG32 typeFlags,
+    /* [in] */ ULONG32 protectFlags,
+    /* [out] */ CLRDATA_ADDRESS* virt)
+{
+#ifdef FEATURE_PAL
+    return E_NOTIMPL;
+#else
+    ULONG64 hProcess;
+    HRESULT hr = g_ExtSystem->GetCurrentProcessHandle(&hProcess);
+    if (FAILED(hr)) {
+        return hr;
+    }
+    LPVOID allocation = ::VirtualAllocEx((HANDLE)hProcess, (LPVOID)addr, size, typeFlags, protectFlags);
+    if (allocation == NULL) {
+        return HRESULT_FROM_WIN32(::GetLastError());
+    }
+    *virt = (CLRDATA_ADDRESS)allocation;
+    return S_OK;
+#endif
+}
+        
+HRESULT STDMETHODCALLTYPE 
+DataTarget::FreeVirtual(
+    /* [in] */ CLRDATA_ADDRESS addr,
+    /* [in] */ ULONG32 size,
+    /* [in] */ ULONG32 typeFlags)
+{
+#ifdef FEATURE_PAL
+    return E_NOTIMPL;
+#else
+    ULONG64 hProcess;
+    HRESULT hr = g_ExtSystem->GetCurrentProcessHandle(&hProcess);
+    if (FAILED(hr)) {
+        return hr;
+    }
+    ::VirtualFreeEx((HANDLE)hProcess, (LPVOID)addr, size, typeFlags);
+    return S_OK;
+#endif
 }
 
 // ICorDebugDataTarget4
@@ -314,4 +376,13 @@ DataTarget::GetMetadata(
     return ::GetMetadataLocator(imagePath, imageTimestamp, imageSize, mvid, mdRva, flags, bufferSize, buffer, dataSize);
 }
 
+// ICLRRuntimeLocator
+
+HRESULT STDMETHODCALLTYPE 
+DataTarget::GetRuntimeBase(
+    /* [out] */ CLRDATA_ADDRESS* baseAddress)
+{
+    *baseAddress = m_baseAddress;
+    return S_OK;
+}
 

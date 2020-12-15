@@ -1,13 +1,28 @@
-<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.props"/>
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <IsPackable>true</IsPackable>
-    <PackAsTool>true</PackAsTool>
-    <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;win-arm;osx-x64</PackAsToolShimRuntimeIdentifiers>
-    <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
+    <IsShipping>true</IsShipping>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
+
+  <Choose>
+    <When Condition="'$(BundleTools)' == 'true'">
+      <PropertyGroup>
+        <SelfContained>false</SelfContained>
+        <PublishDir>$(BundledToolsPath)$(Configuration)\$(RuntimeIdentifier)\</PublishDir>
+        <PublishSingleFile>true</PublishSingleFile>
+        <PublishTrimmed>$(SelfContained)</PublishTrimmed>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <IsPackable>true</IsPackable>
+        <PackAsTool>true</PackAsTool>
+        <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;win-arm;osx-x64</PackAsToolShimRuntimeIdentifiers>
+        <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
 </Project>

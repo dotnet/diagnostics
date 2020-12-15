@@ -1509,7 +1509,7 @@ OBJECTREF* GcInfoDecoder::GetRegisterSlot(
     }
 
     ppReg = &pRD->pCurrentContextPointers->R4;
-	
+
     return (OBJECTREF*)*(ppReg + regNum-4);
 
 }
@@ -1621,7 +1621,7 @@ OBJECTREF* GcInfoDecoder::GetRegisterSlot(
     }
 
     ppReg = &pRD->pCurrentContextPointers->X19;
-	
+
     return (OBJECTREF*)*(ppReg + regNum-19);
 }
 

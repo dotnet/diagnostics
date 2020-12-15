@@ -10,6 +10,8 @@ EXPORTS
     ClrStack
     clrstack=ClrStack
     CLRStack=ClrStack
+    DumpALC
+    dumpalc=DumpALC
     DumpArray
     da=DumpArray
     dumparray=DumpArray
@@ -128,6 +130,8 @@ EXPORTS
     sethostruntime=SetHostRuntime
     SetSymbolServer
     setsymbolserver=SetSymbolServer
+    SetClrPath
+    setclrpath=SetClrPath
     SOSFlush
     sosflush=SOSFlush
     StopOnException
@@ -203,7 +207,7 @@ EXPORTS
     gchandleleaks=GCHandleLeaks
     Gchandleleaks=GCHandleLeaks
     GCHandleleaks=GCHandleLeaks
-    HandleCLRN
+    SOSHandleCLRN
     MinidumpMode
     minidumpmode=MinidumpMode
     Minidumpmode=MinidumpMode
@@ -238,3 +242,4 @@ EXPORTS
 #endif
 
     SOSInitializeByHost
+    InitializeBySymbolReader

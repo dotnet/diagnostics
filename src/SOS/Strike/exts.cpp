@@ -14,14 +14,10 @@
 
 #define VER_PRODUCTVERSION_W        (0x0100)
 
-extern void SOSShutdown();
-
 //
 // globals
 //
 WINDBG_EXTENSION_APIS   ExtensionApis;
-
-OnUnloadTask *OnUnloadTask::s_pUnloadTaskList = NULL;
 
 //
 // Valid for the lifetime of the debug session.
@@ -40,6 +36,8 @@ ILLDBServices2*       g_ExtServices2;
 bool                  g_palInitialized = false;
 
 #endif // FEATURE_PAL
+
+OnUnloadTask *OnUnloadTask::s_pUnloadTaskList = NULL;
 
 IMachine* g_targetMachine = NULL;
 BOOL      g_bDacBroken = FALSE;
@@ -64,6 +62,7 @@ PDEBUG_SYSTEM_OBJECTS g_ExtSystem;
 extern "C" HRESULT
 ExtQuery(PDEBUG_CLIENT client)
 {
+    HRESULT Status;
     g_ExtClient = client;
 #else
 extern "C" HRESULT
@@ -79,12 +78,16 @@ ExtQuery(ILLDBServices* services)
         g_palInitialized = true;
     }
     g_ExtServices = services;
-    services->QueryInterface(__uuidof(ILLDBServices2), (void**)&g_ExtServices2);
 
+    HRESULT Status = services->QueryInterface(__uuidof(ILLDBServices2), (void**)&g_ExtServices2);
+    if (FAILED(Status)) 
+    {
+        g_ExtServices = NULL;
+        return Status;
+    }
     DebugClient* client = new DebugClient(services, g_ExtServices2);
     g_DebugClient = client;
 #endif
-    HRESULT Status;
     SOS_ExtQueryFailGo(g_ExtControl, IDebugControl2);
     SOS_ExtQueryFailGo(g_ExtData, IDebugDataSpaces);
     SOS_ExtQueryFailGo(g_ExtRegisters, IDebugRegisters);
@@ -265,7 +268,6 @@ DebugExtensionInitialize(PULONG Version, PULONG Flags)
     ExtRelease();
     
     OnUnloadTask::Register(CleanupEventCallbacks);
-    OnUnloadTask::Register(SOSShutdown);
     g_pCallbacksClient = DebugClient;
     EventCallbacks* pCallbacksObj = new EventCallbacks(DebugClient);
     IDebugEventCallbacks* pCallbacks = NULL;
@@ -295,7 +297,6 @@ void
 CALLBACK
 DebugExtensionNotify(ULONG Notify, ULONG64 /*Argument*/)
 {
-    return;
 }
 
 extern "C"
@@ -303,12 +304,12 @@ void
 CALLBACK
 DebugExtensionUninitialize(void)
 {
-    // execute all registered cleanup tasks
+    // Execute all registered cleanup tasks
     OnUnloadTask::Run();
-    return;
 }
 
-BOOL WINAPI DllMain(HANDLE hInstance, DWORD dwReason, LPVOID lpReserved)
+BOOL WINAPI 
+DllMain(HANDLE hInstance, DWORD dwReason, LPVOID lpReserved)
 {
     if (dwReason == DLL_PROCESS_ATTACH)
     {
@@ -318,6 +319,14 @@ BOOL WINAPI DllMain(HANDLE hInstance, DWORD dwReason, LPVOID lpReserved)
 }
 
 #else // FEATURE_PAL
+
+__attribute__((destructor)) 
+void
+Uninitialize(void)
+{
+    // Execute all registered cleanup tasks
+    OnUnloadTask::Run();
+}
 
 HRESULT
 DebugClient::QueryInterface(
@@ -358,10 +367,6 @@ DebugClient::Release()
     LONG ref = InterlockedDecrement(&m_ref);
     if (ref == 0)
     {
-        m_lldbservices->Release();
-        if (m_lldbservices2 != nullptr) {
-            m_lldbservices2->Release();
-        }
         delete this;
     }
     return ref;

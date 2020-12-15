@@ -8,7 +8,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace SOS
+namespace SOS.Hosting
 {
     internal unsafe class DebugSymbols
     {
@@ -30,9 +30,9 @@ namespace SOS
         private static void AddDebugSymbols(VTableBuilder builder, SOSHost soshost)
         {
             builder.AddMethod(new GetSymbolOptionsDelegate(soshost.GetSymbolOptions));
-            builder.AddMethod(new AddSymbolOptionsDelegate((self, options) => DebugClient.S_OK));
-            builder.AddMethod(new RemoveSymbolOptionsDelegate((self, options) => DebugClient.S_OK));
-            builder.AddMethod(new SetSymbolOptionsDelegate((self, options) => DebugClient.S_OK));
+            builder.AddMethod(new AddSymbolOptionsDelegate((self, options) => HResult.S_OK));
+            builder.AddMethod(new RemoveSymbolOptionsDelegate((self, options) => HResult.S_OK));
+            builder.AddMethod(new SetSymbolOptionsDelegate((self, options) => HResult.S_OK));
             builder.AddMethod(new GetNameByOffsetDelegate(soshost.GetNameByOffset));
             builder.AddMethod(new GetOffsetByNameDelegate((self, symbol, offset) => DebugClient.NotImplemented));
             builder.AddMethod(new GetNearNameByOffsetDelegate((self, offset, delta, nameBuffer, nameBufferSize, nameSize, displacement) => DebugClient.NotImplemented));
@@ -166,27 +166,27 @@ namespace SOS
 
         #region IDebugSymbols Delegates
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolOptionsDelegate(
             IntPtr self,
             [Out] out SYMOPT Options);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int AddSymbolOptionsDelegate(
             IntPtr self,
             [In] SYMOPT Options);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int RemoveSymbolOptionsDelegate(
             IntPtr self,
             [In] SYMOPT Options);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetSymbolOptionsDelegate(
             IntPtr self,
             [In] SYMOPT Options);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private unsafe delegate int GetNameByOffsetDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -195,13 +195,13 @@ namespace SOS
             [Out] uint* NameSize,
             [Out] ulong* Displacement);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetOffsetByNameDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Symbol,
             [Out] ulong* Offset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetNearNameByOffsetDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -211,7 +211,7 @@ namespace SOS
             [Out] uint* NameSize,
             [Out] ulong* Displacement);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetLineByOffsetDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -221,26 +221,26 @@ namespace SOS
             [Out] uint* FileSize,
             [Out] ulong* Displacement);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetOffsetByLineDelegate(
             IntPtr self,
             [In] uint Line,
             [In][MarshalAs(UnmanagedType.LPStr)] string File,
             [Out] ulong* Offset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetNumberModulesDelegate(
             IntPtr self,
             [Out] out uint Loaded,
             [Out] out uint Unloaded);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleByIndexDelegate(
             IntPtr self,
             [In] uint Index,
             [Out] out ulong Base);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleByModuleNameDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Name,
@@ -248,7 +248,7 @@ namespace SOS
             [Out] uint* Index,
             [Out] ulong* Base);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleByOffsetDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -256,7 +256,7 @@ namespace SOS
             [Out] uint* Index,
             [Out] ulong* Base);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleNamesDelegate(
             IntPtr self,
             [In] uint Index,
@@ -271,7 +271,7 @@ namespace SOS
             [In] uint LoadedImageNameBufferSize,
             [Out] uint* LoadedImageNameSize); 
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleParametersDelegate(
             IntPtr self,
             [In] uint Count,
@@ -279,13 +279,13 @@ namespace SOS
             [In] uint Start,
             [Out] DEBUG_MODULE_PARAMETERS* Params);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolModuleDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Symbol,
             [Out] ulong* Base);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetTypeNameDelegate(
             IntPtr self,
             [In] ulong Module,
@@ -294,21 +294,21 @@ namespace SOS
             [In] int NameBufferSize,
             [Out] uint* NameSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetTypeIdDelegate(
             IntPtr self,
             [In] ulong Module,
             [In][MarshalAs(UnmanagedType.LPStr)] string Name,
             [Out] uint* TypeId);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetTypeSizeDelegate(
             IntPtr self,
             [In] ulong Module,
             [In] uint TypeId,
             [Out] uint* Size);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetFieldOffsetDelegate(
             IntPtr self,
             [In] ulong Module,
@@ -316,21 +316,21 @@ namespace SOS
             [In][MarshalAs(UnmanagedType.LPStr)] string Field,
             [Out] uint* Offset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolTypeIdDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Symbol,
             [Out] uint* TypeId,
             [Out] ulong* Module);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetOffsetTypeIdDelegate(
             IntPtr self,
             [In] ulong Offset,
             [Out] uint* TypeId,
             [Out] ulong* Module);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ReadTypedDataVirtualDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -340,7 +340,7 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* BytesRead);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int WriteTypedDataVirtualDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -350,7 +350,7 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* BytesWritten);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int OutputTypedDataVirtualDelegate(
             IntPtr self,
             [In] DEBUG_OUTCTL OutputControl,
@@ -359,7 +359,7 @@ namespace SOS
             [In] uint TypeId,
             [In] DEBUG_TYPEOPTS Flags);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ReadTypedDataPhysicalDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -369,7 +369,7 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* BytesRead);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int WriteTypedDataPhysicalDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -379,7 +379,7 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* BytesWritten);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int OutputTypedDataPhysicalDelegate(
             IntPtr self,
             [In] DEBUG_OUTCTL OutputControl,
@@ -388,7 +388,7 @@ namespace SOS
             [In] uint TypeId,
             [In] DEBUG_TYPEOPTS Flags);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetScopeDelegate(
             IntPtr self,
             [Out] ulong* InstructionOffset,
@@ -396,7 +396,7 @@ namespace SOS
             [In] IntPtr ScopeContext,
             [In] uint ScopeContextSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetScopeDelegate(
             IntPtr self,
             [In] ulong InstructionOffset,
@@ -404,29 +404,29 @@ namespace SOS
             [In] IntPtr ScopeContext,
             [In] uint ScopeContextSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ResetScopeDelegate(
             IntPtr self);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetScopeSymbolGroupDelegate(
             IntPtr self,
             [In] DEBUG_SCOPE_GROUP Flags,
             [In][MarshalAs(UnmanagedType.Interface)] IDebugSymbolGroup Update,
             [Out][MarshalAs(UnmanagedType.Interface)] IntPtr Symbols);            // out IDebugSymbolGroup
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int CreateSymbolGroupDelegate(
             IntPtr self,
             [Out][MarshalAs(UnmanagedType.Interface)] IntPtr Group);              // out IDebugSymbolGroup
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int StartSymbolMatchDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Pattern,
             [Out] ulong* Handle); 
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetNextSymbolMatchDelegate(
             IntPtr self,
             [In] ulong Handle,
@@ -435,58 +435,58 @@ namespace SOS
             [Out] uint* MatchSize,
             [Out] ulong* Offset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int EndSymbolMatchDelegate(
             IntPtr self,
             [In] ulong Handle);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ReloadDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Module);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolPathDelegate(
             IntPtr self,
             [Out][MarshalAs(UnmanagedType.LPStr)] StringBuilder Buffer,
             [In] int BufferSize,
             [Out] uint* PathSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetSymbolPathDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Path);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int AppendSymbolPathDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Addition);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetImagePathDelegate(
             IntPtr self,
             [Out][MarshalAs(UnmanagedType.LPStr)] StringBuilder Buffer,
             [In] int BufferSize,
             [Out] uint* PathSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetImagePathDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Path);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int AppendImagePathDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Addition);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourcePathDelegate(
             IntPtr self,
             [Out][MarshalAs(UnmanagedType.LPStr)] StringBuilder Buffer,
             [In] int BufferSize,
             [Out] uint* PathSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourcePathElementDelegate(
             IntPtr self,
             [In] uint Index,
@@ -494,17 +494,17 @@ namespace SOS
             [In] int BufferSize,
             [Out] uint* ElementSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetSourcePathDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Path);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int AppendSourcePathDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Addition);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int FindSourceFileDelegate(
             IntPtr self,
             [In] uint StartElement,
@@ -515,7 +515,7 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* FoundSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourceFileLineOffsetsDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string File,
@@ -527,7 +527,7 @@ namespace SOS
 
         #region IDebugSymbols2 Delegates
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleVersionInformationDelegate(
             IntPtr self,
             [In] uint Index,
@@ -537,7 +537,7 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* VerInfoSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleNameStringDelegate(
             IntPtr self,
             [In] DEBUG_MODNAME Which,
@@ -547,7 +547,7 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* NameSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetConstantNameDelegate(
             IntPtr self,
             [In] ulong Module,
@@ -557,7 +557,7 @@ namespace SOS
             [In] int BufferSize,
             [Out] uint* NameSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetFieldNameDelegate(
             IntPtr self,
             [In] ulong Module,
@@ -567,22 +567,22 @@ namespace SOS
             [In] int BufferSize,
             [Out] uint* NameSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetTypeOptionsDelegate(
             IntPtr self,
             [Out] DEBUG_TYPEOPTS* Options);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int AddTypeOptionsDelegate(
             IntPtr self,
             [In] DEBUG_TYPEOPTS Options);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int RemoveTypeOptionsDelegate(
             IntPtr self,
             [In] DEBUG_TYPEOPTS Options);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetTypeOptionsDelegate(
             IntPtr self,
             [In] DEBUG_TYPEOPTS Options);
@@ -591,7 +591,7 @@ namespace SOS
 
         #region IDebugSymbols3 Delegates
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetNameByOffsetWideDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -600,13 +600,13 @@ namespace SOS
             [Out] uint* NameSize,
             [Out] ulong* Displacement);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetOffsetByNameWideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string Symbol,
             [Out] ulong* Offset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetNearNameByOffsetWideDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -616,7 +616,7 @@ namespace SOS
             [Out] uint* NameSize, 
             [Out] ulong* Displacement);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetLineByOffsetWideDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -626,14 +626,14 @@ namespace SOS
             [Out] uint* FileSize,
             [Out] ulong* Displacement);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetOffsetByLineWideDelegate(
             IntPtr self,
             [In] uint Line,
             [In][MarshalAs(UnmanagedType.LPWStr)] string File,
             [Out] ulong* Offset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleByModuleNameWideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string Name,
@@ -641,13 +641,13 @@ namespace SOS
             [Out] uint* Index,
             [Out] ulong* Base);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolModuleWideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string Symbol,
             [Out] ulong* Base);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetTypeNameWideDelegate(
             IntPtr self,
             [In] ulong Module,
@@ -656,14 +656,14 @@ namespace SOS
             [In] int NameBufferSize,
             [Out] uint* NameSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetTypeIdWideDelegate(
             IntPtr self,
             [In] ulong Module,
             [In][MarshalAs(UnmanagedType.LPWStr)] string Name,
             [Out] uint* TypeId);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetFieldOffsetWideDelegate(
             IntPtr self,
             [In] ulong Module,
@@ -671,32 +671,32 @@ namespace SOS
             [In][MarshalAs(UnmanagedType.LPWStr)] string Field,
             [Out] uint* Offset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolTypeIdWideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string Symbol,
             [Out] uint* TypeId,
             [Out] ulong* Module);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetScopeSymbolGroup2Delegate(
             IntPtr self,
             [In] DEBUG_SCOPE_GROUP Flags,
             [In][MarshalAs(UnmanagedType.Interface)] IDebugSymbolGroup2 Update,
             [Out][MarshalAs(UnmanagedType.Interface)] IntPtr Symbols);            // out IDebugSymbolGroup2
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int CreateSymbolGroup2Delegate(
             IntPtr self,
             [Out][MarshalAs(UnmanagedType.Interface)] IntPtr Group);              // out IDebugSymbolGroup2
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int StartSymbolMatchWideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string Pattern,
             [Out] ulong* Handle);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetNextSymbolMatchWideDelegate(
             IntPtr self,
             [In] ulong Handle,
@@ -705,53 +705,53 @@ namespace SOS
             [Out] uint* MatchSize,
             [Out] ulong* Offset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ReloadWideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string Module);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolPathWideDelegate(
             IntPtr self,
             [Out][MarshalAs(UnmanagedType.LPWStr)] StringBuilder Buffer,
             [In] int BufferSize,
             [Out] uint* PathSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetSymbolPathWideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string Path);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int AppendSymbolPathWideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string Addition);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetImagePathWideDelegate(
             IntPtr self,
             [Out][MarshalAs(UnmanagedType.LPWStr)] StringBuilder Buffer,
             [In] int BufferSize,
             [Out] uint* PathSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetImagePathWideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string Path);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int AppendImagePathWideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string Addition);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourcePathWideDelegate(
             IntPtr self,
             [Out][MarshalAs(UnmanagedType.LPWStr)] StringBuilder Buffer,
             [In] int BufferSize,
             [Out] uint* PathSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourcePathElementWideDelegate(
             IntPtr self,
             [In] uint Index,
@@ -759,17 +759,17 @@ namespace SOS
             [In] int BufferSize,
             [Out] uint* ElementSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetSourcePathWideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string Path);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int AppendSourcePathWideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string Addition);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int FindSourceFileWideDelegate(
             IntPtr self,
             [In] uint StartElement,
@@ -780,7 +780,7 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* FoundSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourceFileLineOffsetsWideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string File,
@@ -788,7 +788,7 @@ namespace SOS
             [In] int BufferLines,
             [Out] uint* FileLines);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleVersionInformationWideDelegate(
             IntPtr self,
             [In] uint Index,
@@ -798,7 +798,7 @@ namespace SOS
             [In] int BufferSize,
             [Out] uint* VerInfoSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleNameStringWideDelegate(
             IntPtr self,
             [In] DEBUG_MODNAME Which,
@@ -808,7 +808,7 @@ namespace SOS
             [In] int BufferSize,
             [Out] uint* NameSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetConstantNameWideDelegate(
             IntPtr self,
             [In] ulong Module,
@@ -818,7 +818,7 @@ namespace SOS
             [In] int BufferSize,
             [Out] uint* NameSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetFieldNameWideDelegate(
             IntPtr self,
             [In] ulong Module,
@@ -828,14 +828,14 @@ namespace SOS
             [In] int BufferSize,
             [Out] uint* NameSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int IsManagedModuleDelegate(
             IntPtr self,
             [In] uint Index,
             [In] ulong Base
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleByModuleName2Delegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Name,
@@ -845,7 +845,7 @@ namespace SOS
             [Out] ulong* Base
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleByModuleName2WideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string Name,
@@ -855,7 +855,7 @@ namespace SOS
             [Out] ulong* Base
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleByOffset2Delegate(
             IntPtr self,
             [In] ulong Offset,
@@ -865,7 +865,7 @@ namespace SOS
             [Out] ulong* Base
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int AddSyntheticModuleDelegate(
             IntPtr self,
             [In] ulong Base,
@@ -875,7 +875,7 @@ namespace SOS
             [In] DEBUG_ADDSYNTHMOD Flags
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int AddSyntheticModuleWideDelegate(
             IntPtr self,
             [In] ulong Base,
@@ -885,37 +885,37 @@ namespace SOS
             [In] DEBUG_ADDSYNTHMOD Flags
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int RemoveSyntheticModuleDelegate(
             IntPtr self,
             [In] ulong Base
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCurrentScopeFrameIndexDelegate(
             IntPtr self,
             [Out] uint* Index
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetScopeFrameByIndexDelegate(
             IntPtr self,
             [In] uint Index
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetScopeFromJitDebugInfoDelegate(
             IntPtr self,
             [In] uint OutputControl,
             [In] ulong InfoOffset
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetScopeFromStoredEventDelegate(
             IntPtr self
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int OutputSymbolByOffsetDelegate(
             IntPtr self,
             [In] uint OutputControl,
@@ -923,7 +923,7 @@ namespace SOS
             [In] ulong Offset
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetFunctionEntryByOffsetDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -933,7 +933,7 @@ namespace SOS
             [Out] uint* BufferNeeded
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetFieldTypeAndOffsetDelegate(
             IntPtr self,
             [In] ulong Module,
@@ -943,7 +943,7 @@ namespace SOS
             [Out] uint* Offset
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetFieldTypeAndOffsetWideDelegate(
             IntPtr self,
             [In] ulong Module,
@@ -953,7 +953,7 @@ namespace SOS
             [Out] uint* Offset
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int AddSyntheticSymbolDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -963,7 +963,7 @@ namespace SOS
             [Out] DEBUG_MODULE_AND_ID* Id
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int AddSyntheticSymbolWideDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -973,13 +973,13 @@ namespace SOS
             [Out] DEBUG_MODULE_AND_ID* Id
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int RemoveSyntheticSymbolDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_MODULE_AND_ID Id
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolEntriesByOffsetDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -990,7 +990,7 @@ namespace SOS
             [Out] uint* Entries
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolEntriesByNameDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Symbol,
@@ -1000,7 +1000,7 @@ namespace SOS
             [Out] uint* Entries
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolEntriesByNameWideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string Symbol,
@@ -1010,7 +1010,7 @@ namespace SOS
             [Out] uint* Entries
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolEntryByTokenDelegate(
             IntPtr self,
             [In] ulong ModuleBase,
@@ -1018,14 +1018,14 @@ namespace SOS
             [Out] DEBUG_MODULE_AND_ID* Id
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolEntryInformationDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_MODULE_AND_ID Id,
             [Out] DEBUG_SYMBOL_ENTRY* Info
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolEntryStringDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_MODULE_AND_ID Id,
@@ -1035,7 +1035,7 @@ namespace SOS
             [Out] uint* StringSize
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolEntryStringWideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_MODULE_AND_ID Id,
@@ -1045,7 +1045,7 @@ namespace SOS
             [Out] uint* StringSize
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolEntryOffsetRegionsDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_MODULE_AND_ID Id,
@@ -1055,7 +1055,7 @@ namespace SOS
             [Out] uint* RegionsAvail
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolEntryBySymbolEntryDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_MODULE_AND_ID FromId,
@@ -1063,7 +1063,7 @@ namespace SOS
             [Out] DEBUG_MODULE_AND_ID* ToId
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourceEntriesByOffsetDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -1073,7 +1073,7 @@ namespace SOS
             [Out] uint* EntriesAvail
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourceEntriesByLineDelegate(
             IntPtr self,
             [In] uint Line,
@@ -1084,7 +1084,7 @@ namespace SOS
             [Out] uint* EntriesAvail
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourceEntriesByLineWideDelegate(
             IntPtr self,
             [In] uint Line,
@@ -1095,7 +1095,7 @@ namespace SOS
             [Out] uint* EntriesAvail
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourceEntryStringDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_SYMBOL_SOURCE_ENTRY Entry,
@@ -1105,7 +1105,7 @@ namespace SOS
             [Out] uint* StringSize
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourceEntryStringWideDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_SYMBOL_SOURCE_ENTRY Entry,
@@ -1115,7 +1115,7 @@ namespace SOS
             [Out] uint* StringSize
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourceEntryOffsetRegionsDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_SYMBOL_SOURCE_ENTRY Entry,
@@ -1125,7 +1125,7 @@ namespace SOS
             [Out] uint* RegionsAvail
         );
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourceEntryBySourceEntryDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_SYMBOL_SOURCE_ENTRY FromEntry,

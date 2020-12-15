@@ -1,5 +1,5 @@
 # Divide By Zero debugging scenario
-# 1) load the executable
+# 1) Load the executable
 # 2) Run the executable and wait for it to crash
 # 3) Take a dump of the executable.
 # 4) Open the dump and compare the output
@@ -10,7 +10,6 @@ LOADSOS
 
 # Verifying that PrintException gives us the right exception in the format above.
 SOSCOMMAND:PrintException
-
 VERIFY:Exception object:\s+<HEXVAL>\s+
 VERIFY:Exception type:\s+System\.DivideByZeroException\s+
 VERIFY:Message:\s+(<Invalid Object>|Attempted to divide by zero\.)\s+
@@ -23,6 +22,22 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Dd]iv[Zz]ero.*!C\.F2(\(.*\))?\+0x<HEXVAL>\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Dd]iv[Zz]ero.*!C\.Main(\(.*\))?\+0x<HEXVAL>\s+
 VERIFY:(StackTraceString: <none>\s+)?\s+
 VERIFY:HResult:\s+80020012\s+
+
+SOSCOMMAND:PrintException -lines
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.DivideByZeroException\s+
+VERIFY:Message:\s+(<Invalid Object>|Attempted to divide by zero\.)\s+
+VERIFY:InnerException:\s+<none>\s+
+VERIFY:StackTrace \(generated\):\s+
+VERIFY:\s+SP\s+IP\s+\s+Function\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Dd]iv[Zz]ero.*!C\.DivideByZero(\(.*\))?\+0x<HEXVAL>\s+
+VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?DivZero[\\|/]DivZero\.cs @ 12\s*\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Dd]iv[Zz]ero.*!C\.F3(\(.*\))?\+0x<HEXVAL>\s+
+VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?DivZero[\\|/]DivZero\.cs @ 21\s*\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Dd]iv[Zz]ero.*!C\.F2(\(.*\))?\+0x<HEXVAL>\s+
+VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?DivZero[\\|/]DivZero\.cs @ 33\s*\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Dd]iv[Zz]ero.*!C\.Main(\(.*\))?\+0x<HEXVAL>\s+
+VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?DivZero[\\|/]DivZero\.cs @ (54|53)\s*\]\s*
 
 # Verify that Threads (clrthreads) works
 IFDEF:DOTNETDUMP
@@ -47,4 +62,4 @@ VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+(\*\*\* WARNING: Unable to verify checksum for DivZero.exe\s*)?C\.DivideByZero(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ 12\s*\]\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+C\.F3(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ 21\s*\]\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+C\.F2(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ 33\s*\]\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+C\.Main(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ 54\s*\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+C\.Main(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ (54|53)\s*\]\s+

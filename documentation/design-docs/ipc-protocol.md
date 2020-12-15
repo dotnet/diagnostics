@@ -326,7 +326,8 @@ enum class CommandSet : uint8_t
     // reserved = 0x00,
     Dump        = 0x01,
     EventPipe   = 0x02,
-    Profiler    = 0x03
+    Profiler    = 0x03,
+    Process     = 0x04,
     // future
 
     Server = 0xFF,
@@ -365,12 +366,22 @@ See: [Dump Commands](#Dump-Commands)
 ```c++
 enum class ProfilerCommandId : uint8_t
 {
-    // reserver     = 0x00,
+    // reserved     = 0x00,
     AttachProfiler  = 0x01,
     // future
 }
 ``` 
 See: [Profiler Commands](#Profiler-Commands)
+
+```c++
+enum class ProcessCommandId : uint8_t
+{
+    ProcessInfo   = 0x00,
+    ResumeRuntime = 0x01,
+    // future
+}
+```
+See: [Process Commands](#Process-Commands)
 
 Commands may use the generic `{ magic="DOTNET_IPC_V1"; size=20; command_set=0xFF (Server); command_id=0x00 (OK); reserved = 0x0000; }` to indicate success rather than having a command specific success `command_id`.
 
@@ -378,7 +389,7 @@ For example, the Command to start a stream session with EventPipe would be `0x02
 
 ## EventPipe Commands
 
-```c
+```c++
 enum class EventPipeCommandId : uint8_t
 {
     // reserved = 0x00,
@@ -578,7 +589,7 @@ Header: `{ Magic; Size; 0x0101; 0x0000 }`
   * WithHeap = 2,
   * Triage = 3,
   * Full = 4
-* `uint diagnostics`: The providers to turn on for the streaming session
+* `uint diagnostics`: If set to 1, log to console the dump generation diagnostics
   * `0` or `1` for on or off
 
 #### Returns (as an IPC Message Payload):
@@ -662,7 +673,121 @@ Payload
 }
 ```
 
-### Errors
+## Process Commands
+
+> Available since .NET 5.0
+
+### `ProcessInfo`
+
+Command Code: `0x0400`
+
+The `ProcessInfo` command queries the runtime for some basic information about the process.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0400; 0x0000 }`
+
+There is no payload.
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; size; 0xFF00; 0x0000; }`
+
+Payload:
+* `int64 processId`: the process id in the process's PID-space
+* `GUID runtimeCookie`: a 128-bit GUID that should be unique across PID-spaces
+* `string commandLine`: the command line that invoked the process
+  * Windows: will be the same as the output of `GetCommandLineW`
+  * Non-Windows: will be the fully qualified path of the executable in `argv[0]` followed by all arguments as the appear in `argv` separated by spaces, i.e., `/full/path/to/argv[0] argv[1] argv[2] ...`
+* `string OS`: the operating system that the process is running on
+  * macOS => `"macOS"`
+  * Windows => `"Windows"`
+  * Linux => `"Linux"`
+  * other => `"Unknown"`
+* `string arch`: the architecture of the process
+  * 32-bit => `"x86"`
+  * 64-bit => `"x64"`
+  * ARM32 => `"arm32"`
+  * ARM64 => `"arm64"`
+  * Other => `"Unknown"`
+
+##### Details:
+
+Returns:
+```c++
+struct Payload
+{
+    uint64_t ProcessId;
+    LPCWSTR CommandLine;
+    LPCWSTR OS;
+    LPCWSTR Arch;
+    GUID RuntimeCookie;
+}
+```
+
+### `ResumeRuntime`
+
+Command Code: `0x0401`
+
+If the target .NET application has been configured Diagnostic Ports configured to suspend with `DOTNET_DiagnosticPorts` or `DOTNET_DefaultDiagnosticPortSuspend` has been set to `1` (`0` is the default value), then the runtime will pause during `EEStartupHelper` in `ceemain.cpp` and wait for an event to be set.  (See [Diagnostic Ports](#diagnostic-ports) for more details)
+
+The `ResumeRuntime` command sets the necessary event to resume runtime startup.  If the .NET application _has not_ been configured to with Diagnostics Monitor Address or the runtime has _already_ been resumed, this command is a no-op.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0401; 0x0000 }`
+
+There is no payload.
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; size; 0xFF00; 0x0000; }`
+
+There is no payload.
+
+### `ProcessEnvironment`
+
+Command Code: `0x0402`
+
+The `ProcessEnvironment` command queries the runtime for its environment block.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0402; 0x0000 }`
+
+There is no payload.
+
+#### Returns (as an IPC Message Payload + continuation):
+
+Header: `{ Magic; size; 0xFF00; 0x0000; }`
+
+Payload:
+* `uint32_t nIncomingBytes`: the number of bytes to expect in the continuation stream
+* `uint16_t future`: unused
+
+Continuation:
+* `Array<Array<WCHAR>> environmentBlock`: The environment block written as a length prefixed array of length prefixed arrays of `WCHAR`.
+
+Note: it is valid for `nIncomingBytes` to be `4` and the continuation to simply contain the value `0`.
+
+##### Details:
+
+Returns:
+```c++
+struct Payload
+{
+    uint32_t nIncomingBytes;
+    uint16_t future;
+}
+```
+
+## Errors
 
 In the event an error occurs in the handling of an Ipc Message, the Diagnostic Server will attempt to send an Ipc Message encoding the error and subsequently close the connection.  The connection will be closed **regardless** of the success of sending the error message.  The Client is expected to be resilient in the event of a connection being abruptly closed.
 
@@ -744,35 +869,117 @@ For example, if the Diagnostic Server finds incorrectly encoded data while parsi
   </tr>
 </table>
 
------
-### Current Implementation (OLD)
+# Diagnostic Ports
 
-Single-purpose IPC protocol used exclusively for EventPipe functionality.  "Packets" in the current implementation are simply the `nettrace` payloads and command/control is handled via `uint32` enum values sent one way with hard coded responses expected.
+> Available since .NET 5.0
 
-```c++
-enum class DiagnosticMessageType : uint32_t
-{
-    // EventPipe
-    StartEventPipeTracing = 1024, // To file
-    StopEventPipeTracing,
-    CollectEventPipeTracing, // To IPC
-};
+A Diagnostic Port is a mechanism for communicating the Diagnostics IPC Protocol to a .NET application from out of process.  There are two flavors of Diagnostic Port: `connect` and `listen`.  A `listen` Port is when the runtime creates an IPC transport and listens for incoming connections.  The default Diagnostic Port is an example of a `listen` Port.  You cannot currently configure additional `listen` Ports.  A `connect` Port is when the runtime attempts to connect to an IPC transport owned by another process.  Upon connection to a `connect` Port, the runtime will send an [Advertise](#advertise-protocol) message signalling that it is ready to accept Diagnostics IPC Protocol commands.  Each command consumes a connection, and the runtime will reconnect to the `connect` Port to wait for more commands.
 
-struct MessageHeader
-{
-    DiagnosticMessageType RequestType;
-    uint32_t Pid;
-};
+.NET applications can configure Diagnostic Ports with the following environment variables:
+
+ * `DOTNET_DiagnosticPorts=<port address>[,tag[...]][;<port address>[,tag[...]][...]]`
+
+where:
+
+* `<port address>` is a NamedPipe name without `\\.\pipe\` on Windows, and the full path to a Unix domain socket on other platforms
+* `tag ::= <SUSPEND_MODE> | <PORT_TYPE>`
+* `<SUSPEND_MODE> ::= suspend | nosuspend` (default value is suspend)`
+* `<PORT_TYPE> ::= connect` (future types such as additional listen ports could be added to this list)
+
+Example usage:
+
+```shell
+$ export DOTNET_DiagnosticPorts=$DOTNET_DiagnosticPorts;~/mydiagport.sock,nosuspend;
 ```
 
-```
-runtime <- client : MessageHeader { CollectEventPipeTracing }
-    error? -> 0 then session close
-runtime -> client : session ID 
-runtime -> client : event stream
+Any diagnostic ports specified in this configuration will be created in addition to the default port (`dotnet-diagnostic-<pid>-<epoch>`). The suspend mode of the default port is set via the new environment variable `DOTNET_DefaultDotnetPortSuspend` which defaults to `0` for `nosuspend`.
 
-...
+Each port configuration specifies whether it is a `suspend` or `nosuspend` port. Ports specifying `suspend` in their configuration will cause the runtime to pause early on in the startup path before most runtime subsystems have started. This allows any agent to receive a connection and properly setup before the application startup continues. Since multiple ports can individually request suspension, the `resume` command needs to be sent by each suspended port connection before the runtime resumes execution.
 
-runtime <- client : stop command
-runtime -> client : session id and stops
+If a config specifies multiple tag values from a tag type, for example  `"<path>,nosuspend,suspend,suspend,"`, only the first one is respected.
+
+The port address value is **required** for a port configuration. If a configuration doesn't specify an address and only specifies tags, then the first tag will be treated as the path. For example, the configuration `DOTNET_DiagnosticPorts=nosuspend,connect` would cause a port with the name `nosuspend` to be created, in the default `suspend` mode.
+
+The runtime will make a best effort attempt to generate a port from a port configuration. A bad port configuration won't cause an error state, but could lead to consumed resources. For example it could cause the runtime to continuously poll for a connect port that will never exist.
+
+When a Diagnostic Port is configured, the runtime will attempt to connect to the provided address in a retry loop while also listening on the traditional server. The retry loop has an initial timeout of 10ms with a falloff factor of 1.25x and a max timeout of 500 ms.  A successful connection will result in an infinite timeout.  The runtime is resilient to the remote end of the Diagnostic Port failing, e.g., closing, not `Accepting`, etc.
+
+## Advertise Protocol
+
+Upon successful connection, the runtime will send a fixed-size, 34 byte buffer containing the following information:
+
+ * `char[8] magic`: (8 bytes) `"ADVR_V1\0"` (ASCII chars + null byte)
+ * `GUID runtimeCookie`: (16 bytes) CLR Instance Cookie (little-endian)
+ * `uint64_t processId`: (8 bytes) PID (little-endian)
+ * `uint16_t future`: (2 bytes) unused for future-proofing
+
+With the following layout:
+
+<table>
+  <tr>
+    <th>1</th>
+    <th>2</th>
+    <th>3</th>
+    <th>4</th>
+    <th>5</th>
+    <th>6</th>
+    <th>7</th>
+    <th>8</th>
+    <th>9</th>
+    <th>10</th>
+    <th>11</th>
+    <th>12</th>
+    <th>13</th>
+    <th>14</th>
+    <th>15</th>
+    <th>16</th>
+    <th>17</th>
+    <th>18</th>
+    <th>19</th>
+    <th>20</th>
+    <th>21</th>
+    <th>22</th>
+    <th>23</th>
+    <th>24</th>
+    <th>25</th>
+    <th>26</th>
+    <th>27</th>
+    <th>28</th>
+    <th>29</th>
+    <th>30</th>
+    <th>31</th>
+    <th>32</th>
+    <th>33</th>
+    <th>34</th>
+  </tr>
+  <tr>
+    <td colspan="8">magic</td>
+    <td colspan="16">runtimeCookie</td>
+    <td colspan="8">processId</td>
+    <td colspan="2">future</td>
+  </tr>
+  <tr>
+    <td colspan="8">"ADVR_V1\0"</td>
+    <td colspan="16">123e4567-e89b-12d3-a456-426614174000</td>
+    <td colspan="8">12345</td>
+    <td colspan="2">0x0000</td>
+  </tr>
+</table>
+
+This is a one-way transmission with no expectation of an ACK.  The tool owning the Diagnostic Port is expected to consume this message and then hold on to the now active connection until it chooses to send a Diagnostics IPC command.
+
+## Dataflow
+
+Due to the potential for an *optional continuation* in the Diagnostics IPC Protocol, each successful connection between the runtime and a Diagnostic Port is only usable **once**.  As a result, a .NET process will attempt to _reconnect_ to the diagnostic port immediately after every command that is sent across an active connection.
+
+A typical dataflow has 2 actors, the Target application, `T` and the Diagnostics Monitor Application, `M`, and communicates like so:
 ```
+T ->   : Target attempts to connect to M, which may not exist yet
+// M comes into existence
+T -> M : [ Advertise ] - Target sends advertise message to Monitor
+// 0 or more time passes
+T <- M : [ Diagnostics IPC Protocol ] - Monitor sends a Diagnostics IPC Protocol command
+T -> M : [ Advertise ] - Target reconnects to Monitor with a _new_ connection and re-sends the advertise message
+```
+
+It is important to emphasize that a connection **_should not_** be reused for multiple Diagnostic IPC Protocol commands.

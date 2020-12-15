@@ -4,9 +4,7 @@
 
 
  /* File created by MIDL compiler version 8.01.0622 */
-/* at Mon Jan 18 19:14:07 2038
- */
-/* Compiler settings for C:/git/diagnostics/src/inc/sospriv.idl:
+/* Compiler settings for sospriv.idl:
     Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 8.01.0622 
     protocol : dce , ms_ext, c_ext, robust
     error checks: allocation ref bounds_check enum stub_data 
@@ -120,6 +118,27 @@ typedef interface ISOSDacInterface6 ISOSDacInterface6;
 typedef interface ISOSDacInterface7 ISOSDacInterface7;
 
 #endif  /* __ISOSDacInterface7_FWD_DEFINED__ */
+
+
+#ifndef __ISOSDacInterface8_FWD_DEFINED__
+#define __ISOSDacInterface8_FWD_DEFINED__
+typedef interface ISOSDacInterface8 ISOSDacInterface8;
+
+#endif  /* __ISOSDacInterface8_FWD_DEFINED__ */
+
+
+#ifndef __ISOSDacInterface9_FWD_DEFINED__
+#define __ISOSDacInterface9_FWD_DEFINED__
+typedef interface ISOSDacInterface9 ISOSDacInterface9;
+
+#endif  /* __ISOSDacInterface9_FWD_DEFINED__ */
+
+
+#ifndef __ISOSDacInterface10_FWD_DEFINED__
+#define __ISOSDacInterface10_FWD_DEFINED__
+typedef interface ISOSDacInterface10 ISOSDacInterface10;
+
+#endif  /* __ISOSDacInterface10_FWD_DEFINED__ */
 
 
 /* header files for imported files */
@@ -2499,6 +2518,385 @@ EXTERN_C const IID IID_ISOSDacInterface7;
 
 
 #endif  /* __ISOSDacInterface7_INTERFACE_DEFINED__ */
+
+
+#ifndef __ISOSDacInterface8_INTERFACE_DEFINED__
+#define __ISOSDacInterface8_INTERFACE_DEFINED__
+
+/* interface ISOSDacInterface8 */
+/* [uuid][local][object] */ 
+
+
+EXTERN_C const IID IID_ISOSDacInterface8;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    
+    MIDL_INTERFACE("c12f35a9-e55c-4520-a894-b3dc5165dfce")
+    ISOSDacInterface8 : public IUnknown
+    {
+    public:
+        virtual HRESULT STDMETHODCALLTYPE GetNumberGenerations( 
+            unsigned int *pGenerations) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetGenerationTable( 
+            unsigned int cGenerations,
+            struct DacpGenerationData *pGenerationData,
+            unsigned int *pNeeded) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetFinalizationFillPointers( 
+            unsigned int cFillPointers,
+            CLRDATA_ADDRESS *pFinalizationFillPointers,
+            unsigned int *pNeeded) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetGenerationTableSvr( 
+            CLRDATA_ADDRESS heapAddr,
+            unsigned int cGenerations,
+            struct DacpGenerationData *pGenerationData,
+            unsigned int *pNeeded) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetFinalizationFillPointersSvr( 
+            CLRDATA_ADDRESS heapAddr,
+            unsigned int cFillPointers,
+            CLRDATA_ADDRESS *pFinalizationFillPointers,
+            unsigned int *pNeeded) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetAssemblyLoadContext( 
+            CLRDATA_ADDRESS methodTable,
+            CLRDATA_ADDRESS *assemblyLoadContext) = 0;
+        
+    };
+    
+    
+#else   /* C style interface */
+
+    typedef struct ISOSDacInterface8Vtbl
+    {
+        BEGIN_INTERFACE
+        
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            ISOSDacInterface8 * This,
+            /* [in] */ REFIID riid,
+            /* [annotation][iid_is][out] */ 
+            _COM_Outptr_  void **ppvObject);
+        
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            ISOSDacInterface8 * This);
+        
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            ISOSDacInterface8 * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetNumberGenerations )( 
+            ISOSDacInterface8 * This,
+            unsigned int *pGenerations);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetGenerationTable )( 
+            ISOSDacInterface8 * This,
+            unsigned int cGenerations,
+            struct DacpGenerationData *pGenerationData,
+            unsigned int *pNeeded);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetFinalizationFillPointers )( 
+            ISOSDacInterface8 * This,
+            unsigned int cFillPointers,
+            CLRDATA_ADDRESS *pFinalizationFillPointers,
+            unsigned int *pNeeded);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetGenerationTableSvr )( 
+            ISOSDacInterface8 * This,
+            CLRDATA_ADDRESS heapAddr,
+            unsigned int cGenerations,
+            struct DacpGenerationData *pGenerationData,
+            unsigned int *pNeeded);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetFinalizationFillPointersSvr )( 
+            ISOSDacInterface8 * This,
+            CLRDATA_ADDRESS heapAddr,
+            unsigned int cFillPointers,
+            CLRDATA_ADDRESS *pFinalizationFillPointers,
+            unsigned int *pNeeded);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetAssemblyLoadContext )( 
+            ISOSDacInterface8 * This,
+            CLRDATA_ADDRESS methodTable,
+            CLRDATA_ADDRESS *assemblyLoadContext);
+        
+        END_INTERFACE
+    } ISOSDacInterface8Vtbl;
+
+    interface ISOSDacInterface8
+    {
+        CONST_VTBL struct ISOSDacInterface8Vtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define ISOSDacInterface8_QueryInterface(This,riid,ppvObject)   \
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) ) 
+
+#define ISOSDacInterface8_AddRef(This)  \
+    ( (This)->lpVtbl -> AddRef(This) ) 
+
+#define ISOSDacInterface8_Release(This) \
+    ( (This)->lpVtbl -> Release(This) ) 
+
+
+#define ISOSDacInterface8_GetNumberGenerations(This,pGenerations)   \
+    ( (This)->lpVtbl -> GetNumberGenerations(This,pGenerations) ) 
+
+#define ISOSDacInterface8_GetGenerationTable(This,cGenerations,pGenerationData,pNeeded) \
+    ( (This)->lpVtbl -> GetGenerationTable(This,cGenerations,pGenerationData,pNeeded) ) 
+
+#define ISOSDacInterface8_GetFinalizationFillPointers(This,cFillPointers,pFinalizationFillPointers,pNeeded) \
+    ( (This)->lpVtbl -> GetFinalizationFillPointers(This,cFillPointers,pFinalizationFillPointers,pNeeded) ) 
+
+#define ISOSDacInterface8_GetGenerationTableSvr(This,heapAddr,cGenerations,pGenerationData,pNeeded) \
+    ( (This)->lpVtbl -> GetGenerationTableSvr(This,heapAddr,cGenerations,pGenerationData,pNeeded) ) 
+
+#define ISOSDacInterface8_GetFinalizationFillPointersSvr(This,heapAddr,cFillPointers,pFinalizationFillPointers,pNeeded) \
+    ( (This)->lpVtbl -> GetFinalizationFillPointersSvr(This,heapAddr,cFillPointers,pFinalizationFillPointers,pNeeded) ) 
+
+#define ISOSDacInterface8_GetAssemblyLoadContext(This,methodTable,assemblyLoadContext)  \
+    ( (This)->lpVtbl -> GetAssemblyLoadContext(This,methodTable,assemblyLoadContext) ) 
+
+#endif /* COBJMACROS */
+
+
+#endif  /* C style interface */
+
+
+
+
+#endif  /* __ISOSDacInterface8_INTERFACE_DEFINED__ */
+
+
+/* interface __MIDL_itf_sospriv_0000_0012 */
+/* [local] */ 
+
+#define SOS_BREAKING_CHANGE_VERSION 2
+
+
+extern RPC_IF_HANDLE __MIDL_itf_sospriv_0000_0012_v0_0_c_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_sospriv_0000_0012_v0_0_s_ifspec;
+
+#ifndef __ISOSDacInterface9_INTERFACE_DEFINED__
+#define __ISOSDacInterface9_INTERFACE_DEFINED__
+
+/* interface ISOSDacInterface9 */
+/* [uuid][local][object] */ 
+
+
+EXTERN_C const IID IID_ISOSDacInterface9;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    
+    MIDL_INTERFACE("4eca42d8-7e7b-4c8a-a116-7bfbf6929267")
+    ISOSDacInterface9 : public IUnknown
+    {
+    public:
+        virtual HRESULT STDMETHODCALLTYPE GetBreakingChangeVersion( 
+            int *pVersion) = 0;
+        
+    };
+    
+    
+#else   /* C style interface */
+
+    typedef struct ISOSDacInterface9Vtbl
+    {
+        BEGIN_INTERFACE
+        
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            ISOSDacInterface9 * This,
+            /* [in] */ REFIID riid,
+            /* [annotation][iid_is][out] */ 
+            _COM_Outptr_  void **ppvObject);
+        
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            ISOSDacInterface9 * This);
+        
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            ISOSDacInterface9 * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetBreakingChangeVersion )( 
+            ISOSDacInterface9 * This,
+            int *pVersion);
+        
+        END_INTERFACE
+    } ISOSDacInterface9Vtbl;
+
+    interface ISOSDacInterface9
+    {
+        CONST_VTBL struct ISOSDacInterface9Vtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define ISOSDacInterface9_QueryInterface(This,riid,ppvObject)   \
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) ) 
+
+#define ISOSDacInterface9_AddRef(This)  \
+    ( (This)->lpVtbl -> AddRef(This) ) 
+
+#define ISOSDacInterface9_Release(This) \
+    ( (This)->lpVtbl -> Release(This) ) 
+
+
+#define ISOSDacInterface9_GetBreakingChangeVersion(This,pVersion)   \
+    ( (This)->lpVtbl -> GetBreakingChangeVersion(This,pVersion) ) 
+
+#endif /* COBJMACROS */
+
+
+#endif  /* C style interface */
+
+
+
+
+#endif  /* __ISOSDacInterface9_INTERFACE_DEFINED__ */
+
+
+#ifndef __ISOSDacInterface10_INTERFACE_DEFINED__
+#define __ISOSDacInterface10_INTERFACE_DEFINED__
+
+/* interface ISOSDacInterface10 */
+/* [uuid][local][object] */ 
+
+
+EXTERN_C const IID IID_ISOSDacInterface10;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    
+    MIDL_INTERFACE("90B8FCC3-7251-4B0A-AE3D-5C13A67EC9AA")
+    ISOSDacInterface10 : public IUnknown
+    {
+    public:
+        virtual HRESULT STDMETHODCALLTYPE GetObjectComWrappersData( 
+            CLRDATA_ADDRESS objAddr,
+            CLRDATA_ADDRESS *rcw,
+            unsigned int count,
+            CLRDATA_ADDRESS *mowList,
+            unsigned int *pNeeded) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE IsComWrappersCCW( 
+            CLRDATA_ADDRESS ccw,
+            BOOL *isComWrappersCCW) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetComWrappersCCWData( 
+            CLRDATA_ADDRESS ccw,
+            CLRDATA_ADDRESS *managedObject,
+            int *refCount) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE IsComWrappersRCW( 
+            CLRDATA_ADDRESS rcw,
+            BOOL *isComWrappersRCW) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetComWrappersRCWData( 
+            CLRDATA_ADDRESS rcw,
+            CLRDATA_ADDRESS *identity) = 0;
+        
+    };
+    
+    
+#else   /* C style interface */
+
+    typedef struct ISOSDacInterface10Vtbl
+    {
+        BEGIN_INTERFACE
+        
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            ISOSDacInterface10 * This,
+            /* [in] */ REFIID riid,
+            /* [annotation][iid_is][out] */ 
+            _COM_Outptr_  void **ppvObject);
+        
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            ISOSDacInterface10 * This);
+        
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            ISOSDacInterface10 * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetObjectComWrappersData )( 
+            ISOSDacInterface10 * This,
+            CLRDATA_ADDRESS objAddr,
+            CLRDATA_ADDRESS *rcw,
+            unsigned int count,
+            CLRDATA_ADDRESS *mowList,
+            unsigned int *pNeeded);
+        
+        HRESULT ( STDMETHODCALLTYPE *IsComWrappersCCW )( 
+            ISOSDacInterface10 * This,
+            CLRDATA_ADDRESS ccw,
+            BOOL *isComWrappersCCW);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetComWrappersCCWData )( 
+            ISOSDacInterface10 * This,
+            CLRDATA_ADDRESS ccw,
+            CLRDATA_ADDRESS *managedObject,
+            int *refCount);
+        
+        HRESULT ( STDMETHODCALLTYPE *IsComWrappersRCW )( 
+            ISOSDacInterface10 * This,
+            CLRDATA_ADDRESS rcw,
+            BOOL *isComWrappersRCW);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetComWrappersRCWData )( 
+            ISOSDacInterface10 * This,
+            CLRDATA_ADDRESS rcw,
+            CLRDATA_ADDRESS *identity);
+        
+        END_INTERFACE
+    } ISOSDacInterface10Vtbl;
+
+    interface ISOSDacInterface10
+    {
+        CONST_VTBL struct ISOSDacInterface10Vtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define ISOSDacInterface10_QueryInterface(This,riid,ppvObject)  \
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) ) 
+
+#define ISOSDacInterface10_AddRef(This) \
+    ( (This)->lpVtbl -> AddRef(This) ) 
+
+#define ISOSDacInterface10_Release(This)    \
+    ( (This)->lpVtbl -> Release(This) ) 
+
+
+#define ISOSDacInterface10_GetObjectComWrappersData(This,objAddr,rcw,count,mowList,pNeeded) \
+    ( (This)->lpVtbl -> GetObjectComWrappersData(This,objAddr,rcw,count,mowList,pNeeded) ) 
+
+#define ISOSDacInterface10_IsComWrappersCCW(This,ccw,isComWrappersCCW)  \
+    ( (This)->lpVtbl -> IsComWrappersCCW(This,ccw,isComWrappersCCW) ) 
+
+#define ISOSDacInterface10_GetComWrappersCCWData(This,ccw,managedObject,refCount)   \
+    ( (This)->lpVtbl -> GetComWrappersCCWData(This,ccw,managedObject,refCount) ) 
+
+#define ISOSDacInterface10_IsComWrappersRCW(This,rcw,isComWrappersRCW)  \
+    ( (This)->lpVtbl -> IsComWrappersRCW(This,rcw,isComWrappersRCW) ) 
+
+#define ISOSDacInterface10_GetComWrappersRCWData(This,rcw,identity) \
+    ( (This)->lpVtbl -> GetComWrappersRCWData(This,rcw,identity) ) 
+
+#endif /* COBJMACROS */
+
+
+#endif  /* C style interface */
+
+
+
+
+#endif  /* __ISOSDacInterface10_INTERFACE_DEFINED__ */
 
 
 /* Additional Prototypes for ALL interfaces */

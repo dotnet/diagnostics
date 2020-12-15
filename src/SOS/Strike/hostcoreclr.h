@@ -16,10 +16,22 @@ typedef void (*WriteLineDelegate)(const char*);
 typedef  int (*ReadMemoryDelegate)(ULONG64, uint8_t*, int);
 typedef void (*SymbolFileCallbackDelegate)(void*, const char* moduleFileName, const char* symbolFilePath);
 
-typedef  BOOL (*InitializeSymbolStoreDelegate)(BOOL, BOOL, BOOL, const char*, const char*, const char*, const char*, const char*);
+typedef  BOOL (*InitializeSymbolStoreDelegate)(
+    BOOL logging,
+    BOOL msdl,
+    BOOL symweb,
+    const char* tempDirectory,
+    const char* symbolServerPath,
+    const char* authToken,
+    int timeoutInMinutes,
+    const char* symbolCacehPath,
+    const char* symbolDirectoryPath,
+    const char* windowsSymbolPath);
+
 typedef  void (*DisplaySymbolStoreDelegate)(WriteLineDelegate);
 typedef  void (*DisableSymbolStoreDelegate)();
-typedef  void (*LoadNativeSymbolsDelegate)(SymbolFileCallbackDelegate, void*, const char*, ULONG64, int, ReadMemoryDelegate);
+typedef  void (*LoadNativeSymbolsDelegate)(SymbolFileCallbackDelegate, void*, int, const char*, ULONG64, int, ReadMemoryDelegate);
+typedef  void (*LoadNativeSymbolsFromIndexDelegate)(SymbolFileCallbackDelegate, void*, int, const char*, BOOL, int, const unsigned char* moduleIndex);
 typedef  PVOID (*LoadSymbolsForModuleDelegate)(const char*, BOOL, ULONG64, int, ULONG64, int, ReadMemoryDelegate);
 typedef  void (*DisposeDelegate)(PVOID);
 typedef  BOOL (*ResolveSequencePointDelegate)(PVOID, const char*, unsigned int, unsigned int*, unsigned int*);
@@ -39,12 +51,22 @@ typedef  BOOL (*GetMetadataLocatorDelegate)(
     unsigned int* pMetadataSize
 );
 
+typedef  BOOL (*GetICorDebugMetadataLocatorDelegate)(
+    LPCWSTR imagePath,
+    unsigned int imageTimestamp,
+    unsigned int imageSize,
+    ULONG32 cchPathBuffer,
+    ULONG32* pcchPathBuffer,
+    WCHAR* pwszPathBuffer
+);
+
 struct SOSNetCoreCallbacks
 {
     InitializeSymbolStoreDelegate InitializeSymbolStoreDelegate;
     DisplaySymbolStoreDelegate DisplaySymbolStoreDelegate;
     DisableSymbolStoreDelegate DisableSymbolStoreDelegate;
     LoadNativeSymbolsDelegate LoadNativeSymbolsDelegate;
+    LoadNativeSymbolsFromIndexDelegate LoadNativeSymbolsFromIndexDelegate;
     LoadSymbolsForModuleDelegate LoadSymbolsForModuleDelegate;
     DisposeDelegate DisposeDelegate;
     ResolveSequencePointDelegate ResolveSequencePointDelegate;
@@ -52,6 +74,7 @@ struct SOSNetCoreCallbacks
     GetLocalVariableNameDelegate GetLocalVariableNameDelegate;
     GetMetadataLocatorDelegate GetMetadataLocatorDelegate;
     GetExpressionDelegate GetExpressionDelegate;
+    GetICorDebugMetadataLocatorDelegate GetICorDebugMetadataLocatorDelegate;
 };
 
 static const char *SOSManagedDllName = "SOS.NETCore";
@@ -60,20 +83,34 @@ static const char *MetadataHelperClassName = "SOS.MetadataHelper";
 
 extern HMODULE g_hInstance;
 extern LPCSTR g_hostRuntimeDirectory;
-extern LPCSTR g_dacFilePath;
-extern LPCSTR g_dbiFilePath;
 extern LPCSTR g_tmpPath;
 extern SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
 
-extern HRESULT GetCoreClrDirectory(LPWSTR modulePath, int modulePathSize);
-extern HRESULT GetCoreClrDirectory(std::string& coreClrDirectory);
-extern LPCSTR GetDacFilePath();
-extern LPCSTR GetDbiFilePath();
+#ifdef FEATURE_PAL
+extern bool GetAbsolutePath(const char* path, std::string& absolutePath);
+extern HRESULT LoadNativeSymbols(bool runtimeOnly = false);
+#endif
+
+extern LPCSTR GetTempDirectory();
+extern void CleanupTempDirectory();
 extern BOOL IsHostingInitialized();
 extern HRESULT InitializeHosting();
-extern HRESULT InitializeSymbolStore(BOOL logging, BOOL msdl, BOOL symweb, const char* symbolServer, const char* cacheDirectory, const char* searchDirectory, const char* windowsSymbolPath);
-extern void InitializeSymbolStore();
-extern HRESULT LoadNativeSymbols(bool runtimeOnly = false);
+
+extern HRESULT InitializeSymbolStore(
+    BOOL logging, 
+    BOOL msdl,
+    BOOL symweb,
+    const char* symbolServer,
+    const char* authToken,
+    int timeoutInMinutes,
+    const char* cacheDirectory,
+    const char* searchDirectory,
+    const char* windowsSymbolPath);
+
+#ifndef FEATURE_PAL
+extern void InitializeSymbolStoreFromSymPath();
+#endif
+
 extern void DisplaySymbolStore();
 extern void DisableSymbolStore();
 
@@ -87,6 +124,14 @@ extern HRESULT GetMetadataLocator(
     ULONG32 bufferSize,
     BYTE* buffer,
     ULONG32* dataSize);
+
+extern HRESULT GetICorDebugMetadataLocator(
+    LPCWSTR imagePath,
+    ULONG32 imageTimestamp,
+    ULONG32 imageSize,
+    ULONG32 cchPathBuffer,
+    ULONG32* pcchPathBuffer,
+    WCHAR wszPathBuffer[]);
 
 class SymbolReader
 {
@@ -131,14 +176,15 @@ public:
     HRESULT LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataModule* pModule);
     HRESULT GetLineByILOffset(___in mdMethodDef MethodToken, ___in ULONG64 IlOffset, ___out ULONG *pLinenum, __out_ecount(cchFileName) WCHAR* pwszFileName, ___in ULONG cchFileName);
     HRESULT GetNamedLocalVariable(___in ICorDebugFrame * pFrame, ___in ULONG localIndex, __out_ecount(paramNameLen) WCHAR* paramName, ___in ULONG paramNameLen, ___out ICorDebugValue** ppValue);
-    HRESULT ResolveSequencePoint(__in_z WCHAR* pFilename, ___in ULONG32 lineNumber, ___out mdMethodDef* ___out pToken, ___out ULONG32* pIlOffset);
+    HRESULT ResolveSequencePoint(__in_z WCHAR* pFilename, ___in ULONG32 lineNumber, ___out mdMethodDef* pToken, ___out ULONG32* pIlOffset);
 };
 
 HRESULT
 GetLineByOffset(
-        ___in ULONG64 IP,
-        ___out ULONG *pLinenum,
-        __out_ecount(cchFileName) WCHAR* pwszFileName,
-        ___in ULONG cchFileName);
+    ___in ULONG64 nativeOffset,
+    ___out ULONG* pLinenum,
+    __out_ecount(cchFileName) WCHAR* pwszFileName,
+    ___in ULONG cchFileName,
+    ___in BOOL bAdjustOffsetForLineNumber = FALSE);
 
 #endif // __hostcoreclr_h__

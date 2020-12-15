@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information.
 //*****************************************************************************
 // dbgutil.cpp
-// 
+//
 
 //
 //*****************************************************************************
@@ -16,6 +16,8 @@
 #include "corerror.h"
 #include <assert.h>
 #include <stdio.h>
+
+#ifdef HOST_WINDOWS
 
 // Returns the RVA of the resource section for the module specified by the given data target and module base.
 // Returns failure if the module doesn't have a resource section.
@@ -142,7 +144,7 @@ HRESULT GetResourceRvaFromResourceSectionRva(ICorDebugDataTarget* pDataTarget,
     // Each entry it points to is another resource directory that indexes all the same type
     // resources by name. And each entry in that table points to another resource directory that indexes
     // all the same type/name resources by language. Entries in the final table give the RVA of the actual
-    // resource. 
+    // resource.
     // Note all RVAs in this section are relative to the beginning of the resource section,
     // not the beginning of the image.
 
@@ -196,7 +198,7 @@ HRESULT GetResourceRvaFromResourceSectionRvaByName(ICorDebugDataTarget* pDataTar
     // Each entry it points to is another resource directory that indexes all the same type
     // resources by name. And each entry in that table points to another resource directory that indexes
     // all the same type/name resources by language. Entries in the final table give the RVA of the actual
-    // resource. 
+    // resource.
     // Note all RVAs in this section are relative to the beginning of the resource section,
     // not the beginning of the image.
     hr = GetNextLevelResourceEntryRVA(pDataTarget, type, moduleBaseAddress, resourceSectionRva, &nameTableRva);
@@ -229,7 +231,7 @@ HRESULT GetResourceRvaFromResourceSectionRvaByName(ICorDebugDataTarget* pDataTar
 }
 
 // Traverses down one level in the PE resource tree structure
-// 
+//
 // Arguments:
 //   pDataTarget - the data target for inspecting this process
 //   id - the id of the next node in the resource tree you want
@@ -295,7 +297,7 @@ HRESULT GetNextLevelResourceEntryRVA(ICorDebugDataTarget* pDataTarget,
 }
 
 // Traverses down one level in the PE resource tree structure
-// 
+//
 // Arguments:
 //   pDataTarget - the data target for inspecting this process
 //   name - the name of the next node in the resource tree you want
@@ -390,6 +392,8 @@ HRESULT GetNextLevelResourceEntryRVAByName(ICorDebugDataTarget* pDataTarget,
 
     return hr;
 }
+
+#endif // HOST_WINDOWS
 
 // A small wrapper that reads from the data target and throws on error
 HRESULT ReadFromDataTarget(ICorDebugDataTarget* pDataTarget,

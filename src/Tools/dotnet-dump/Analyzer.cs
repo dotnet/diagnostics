@@ -3,17 +3,13 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.Diagnostics.ExtensionCommands;
 using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
-using SOS;
+using SOS.Hosting;
 using System;
-using System.Collections.Generic;
-using System.CommandLine;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -21,12 +17,13 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
-    public class Analyzer
+    public class Analyzer : IHost
     {
         private readonly ServiceProvider _serviceProvider;
         private readonly ConsoleProvider _consoleProvider;
         private readonly CommandProcessor _commandProcessor;
-        private string _dacFilePath;
+        private readonly SymbolService _symbolService;
+        private Target _target;
 
         /// <summary>
         /// Enable the assembly resolver to get the right SOS.NETCore version (the one
@@ -41,174 +38,138 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
             _serviceProvider = new ServiceProvider();
             _consoleProvider = new ConsoleProvider();
-            Type type = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? typeof(SOSCommandForWindows) : typeof(SOSCommand);
-            _commandProcessor = new CommandProcessor(_serviceProvider, _consoleProvider, new Assembly[] { typeof(Analyzer).Assembly }, new Type[] { type });
+            _commandProcessor = new CommandProcessor();
+            _symbolService = new SymbolService(this);
+     
+            _serviceProvider.AddService<IHost>(this);
+            _serviceProvider.AddService<IConsoleService>(_consoleProvider);
+            _serviceProvider.AddService<ICommandService>(_commandProcessor);
+            _serviceProvider.AddService<ISymbolService>(_symbolService);
+
+            _commandProcessor.AddCommands(new Assembly[] { typeof(Analyzer).Assembly });
+            _commandProcessor.AddCommands(typeof(HelpCommand), (services) => new HelpCommand(_commandProcessor, services));
+            _commandProcessor.AddCommands(typeof(ExitCommand), (services) => new ExitCommand(_consoleProvider.Stop));
         }
 
-        public async Task<int> Analyze(FileInfo dump_path, string[] command)
+        public Task<int> Analyze(FileInfo dump_path, string[] command)
         {
             _consoleProvider.WriteLine($"Loading core dump: {dump_path} ...");
 
             try
-            { 
-                DataTarget target = null;
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
-                    target = DataTarget.LoadCoreDump(dump_path.FullName);
-                }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                    target = DataTarget.LoadCrashDump(dump_path.FullName, CrashDumpReader.ClrMD);
-                }
-                else {
-                    throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
-                }
+            {
+                using DataTarget dataTarget = DataTarget.LoadDump(dump_path.FullName);
 
-                using (target)
+                OSPlatform targetPlatform = dataTarget.DataReader.TargetPlatform;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+                    targetPlatform = OSPlatform.OSX;
+                }
+                _target = new TargetFromDataReader(dataTarget.DataReader, targetPlatform, this, dump_path.FullName);
+
+                _target.ServiceProvider.AddServiceFactory<SOSHost>(() => {
+                    var sosHost = new SOSHost(_target);
+                    sosHost.InitializeSOSHost();
+                    return sosHost;
+                });
+
+                // Set the default symbol cache to match Visual Studio's when running on Windows
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                    _symbolService.DefaultSymbolCache = Path.Combine(Path.GetTempPath(), "SymbolCache");
+                }
+                // Automatically enable symbol server support
+                _symbolService.AddSymbolServer(msdl: true, symweb: false, symbolServerPath: null, authToken: null, timeoutInMinutes: 0);
+                _symbolService.AddCachePath(_symbolService.DefaultSymbolCache);
+
+                // Run the commands from the dotnet-dump command line
+                if (command != null)
                 {
+                    foreach (string cmd in command)
+                    {
+                        Parse(cmd);
+
+                        if (_consoleProvider.Shutdown) {
+                            break;
+                        }
+                    }
+                }
+                if (!_consoleProvider.Shutdown)
+                {
+                    // Start interactive command line processing
                     _consoleProvider.WriteLine("Ready to process analysis commands. Type 'help' to list available commands or 'help [command]' to get detailed help on a command.");
                     _consoleProvider.WriteLine("Type 'quit' or 'exit' to exit the session.");
 
-                    // Add all the services needed by commands and other services
-                    AddServices(target);
-
-                    // Automatically enable symbol server support
-                    SymbolReader.InitializeSymbolStore(logging: false, msdl: true, symweb: false, tempDirectory: null, symbolServerPath: null, symbolCachePath: null, symbolDirectoryPath: null, windowsSymbolPath: null);
-
-                    // Run the commands from the dotnet-dump command line
-                    if (command != null)
-                    {
-                        foreach (string cmd in command) {
-                            await _commandProcessor.Parse(cmd);
-                        }
-                    }
-
-                    // Start interactive command line processing
-                    var analyzeContext = _serviceProvider.GetService<AnalyzeContext>();
-                    await _consoleProvider.Start(async (string commandLine, CancellationToken cancellation) => {
-                        analyzeContext.CancellationToken = cancellation;
-                        await _commandProcessor.Parse(commandLine);
+                    _consoleProvider.Start((string commandLine, CancellationToken cancellation) => {
+                        Parse(commandLine);
                     });
                 }
             }
-            catch (Exception ex) when 
+            catch (Exception ex) when
                 (ex is ClrDiagnosticsException ||
-                 ex is FileNotFoundException || 
-                 ex is DirectoryNotFoundException || 
-                 ex is UnauthorizedAccessException || 
-                 ex is PlatformNotSupportedException || 
+                 ex is FileNotFoundException ||
+                 ex is DirectoryNotFoundException ||
+                 ex is UnauthorizedAccessException ||
+                 ex is PlatformNotSupportedException ||
                  ex is InvalidDataException ||
                  ex is InvalidOperationException ||
                  ex is NotSupportedException)
             {
                 _consoleProvider.WriteLine(OutputType.Error, $"{ex.Message}");
-                return 1;
+                return Task.FromResult(1);
             }
-
-            return 0;
+            finally
+            {
+                if (_target != null)
+                {
+                    _target.Close();
+                    _target = null;
+                }
+                // Send shutdown event on exit
+                OnShutdownEvent?.Invoke(this, new EventArgs());
+            }
+            return Task.FromResult(0);
         }
 
-        /// <summary>
-        /// Add all the services needed by commands
-        /// </summary>
-        private void AddServices(DataTarget target)
+        private void Parse(string commandLine)
         {
-            _serviceProvider.AddService(target);
-            _serviceProvider.AddService<IConsoleService>(_consoleProvider);
-            _serviceProvider.AddService(_commandProcessor);
-            _serviceProvider.AddServiceFactory(typeof(IHelpBuilder), _commandProcessor.CreateHelpBuilder);
-
-            // Create common analyze context for commands
-            var analyzeContext = new AnalyzeContext() {
-                CurrentThreadId = unchecked((int)target.DataReader.EnumerateAllThreads().FirstOrDefault())
-            };
-            _serviceProvider.AddService(analyzeContext);
-
-            // Add the register, SOSHost and ClrRuntime services
-            var registerService = new RegisterService(target);
-            _serviceProvider.AddService(registerService);
-
-            _serviceProvider.AddServiceFactory(typeof(ClrRuntime), () => CreateRuntime(target));
-
-            _serviceProvider.AddServiceFactory(typeof(SOSHost), () => {
-                var sosHost = new SOSHost(_serviceProvider);
-                sosHost.InitializeSOSHost(SymbolReader.TempDirectory, _dacFilePath, dbiFilePath: null);
-                return sosHost;
-            });
-        }
-
-        /// <summary>
-        /// ClrRuntime service factory
-        /// </summary>
-        private ClrRuntime CreateRuntime(DataTarget target)
-        {
-            ClrRuntime runtime;
-            if (target.ClrVersions.Count != 1) {
-                throw new InvalidOperationException("More or less than 1 CLR version is present");
-            }
-            ClrInfo clrInfo = target.ClrVersions[0];
-            string dacFilePath = GetDacFile(clrInfo);
-            try
+            // If there is no target, then provide just the global services
+            ServiceProvider services = _serviceProvider;
+            if (_target != null)
             {
-                runtime = clrInfo.CreateRuntime(dacFilePath);
-            }
-            catch (DllNotFoundException ex)
-            {
-                // This is a workaround for the Microsoft SDK docker images. Can fail when clrmd uses libdl.so 
-                // to create a symlink to and load the DAC module.
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                {
-                    throw new DllNotFoundException("Problem initializing CLRMD. Try installing libc6-dev (apt-get install libc6-dev) to work around this problem.", ex);
-                }
-                else
-                {
-                    throw;
-                }
-            }
-            return runtime;
-        }
+                // Create a per command invocation service provider. These services may change between each command invocation.
+                services = new ServiceProvider(_target.Services);
 
-        private string GetDacFile(ClrInfo clrInfo)
-        {
-            if (_dacFilePath == null)
-            {
-                string dac = clrInfo.LocalMatchingDac;
-                if (dac != null && File.Exists(dac))
-                {
-                    _dacFilePath = dac;
-                }
-                else if (SymbolReader.IsSymbolStoreEnabled())
-                {
-                    string dacFileName = Path.GetFileName(dac ?? clrInfo.DacInfo.FileName);
-                    if (dacFileName != null)
-                    {
-                        SymbolStoreKey key = null;
-
-                        if (clrInfo.ModuleInfo.BuildId != null)
-                        {
-                            IEnumerable<SymbolStoreKey> keys = ELFFileKeyGenerator.GetKeys(
-                                KeyTypeFlags.ClrKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId, symbolFile: false, symbolFileName: null);
-
-                            key = keys.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
-                        }
-                        else
-                        {
-                            // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
-                            key = PEFileKeyGenerator.GetKey(dacFileName, clrInfo.ModuleInfo.TimeStamp, clrInfo.ModuleInfo.FileSize);
-                        }
-
-                        if (key != null)
-                        {
-                            // Now download the DAC module from the symbol server
-                            _dacFilePath = SymbolReader.GetSymbolFile(key);
-                        }
+                // Add the current thread if any
+                services.AddServiceFactory<IThread>(() => {
+                    IThreadService threadService = _target.Services.GetService<IThreadService>();
+                    if (threadService != null && threadService.CurrentThreadId.HasValue) {
+                        return threadService.GetThreadInfoFromId(threadService.CurrentThreadId.Value);
                     }
-                }
+                    return null;
+                });
 
-                if (_dacFilePath == null)
+                // Add the current runtime and related services
+                var runtimeService = _target.Services.GetService<IRuntimeService>();
+                if (runtimeService != null)
                 {
-                    throw new FileNotFoundException("Could not find matching DAC for this runtime: {0}", clrInfo.ModuleInfo.FileName);
+                    services.AddServiceFactory<IRuntime>(() => runtimeService.CurrentRuntime);
+                    services.AddServiceFactory<ClrRuntime>(() => services.GetService<IRuntime>()?.Services.GetService<ClrRuntime>());
+                    services.AddServiceFactory<ClrMDHelper>(() => new ClrMDHelper(services.GetService<ClrRuntime>()));
                 }
             }
-            return _dacFilePath;
+            _commandProcessor.Execute(commandLine, services);
         }
+
+        #region IHost
+
+        public event IHost.ShutdownEventHandler OnShutdownEvent;
+
+        HostType IHost.HostType => HostType.DotnetDump;
+
+        IServiceProvider IHost.Services => _serviceProvider;
+
+        ITarget IHost.CurrentTarget => _target;
+
+        void IHost.SetCurrentTarget(int targetid) => throw new NotImplementedException();
+
+        #endregion
     }
 }

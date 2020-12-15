@@ -1,7 +1,7 @@
 <!--
   The xunit tests in Debugger.Tests aren't truly unit tests - they depend on other stuff that may
   not be in the same directory. This file configures the tests to find what they need. At the moment
-  this file is generated in a hardcoded way to support running from the bin directory on our git 
+  this file is generated in a hard coded way to support running from the bin directory on our git
   based build, but once we understand the different environments the tests will need to run in we
   can figure out the right build and deployment strategy for each. Hopefully this configuration offers
   enough flexibility that the tests themselves don't need to change.
@@ -9,22 +9,46 @@
 
 <Configuration>
   <RepoRootDir>..\..\..\..\..</RepoRootDir>
+  <DotNetRoot Condition="'$(TargetArchitecture)' != 'x86'">$(RepoRootDir)\.dotnet-test</DotNetRoot>
+  <DotNetRoot Condition="'$(TargetArchitecture)' == 'x86'">$(RepoRootDir)\.dotnet-test\x86</DotNetRoot>
+
   <Import ConfigFile="Debugger.Tests.Common.txt" />
-  <Import ConfigFile="$(RepoRootDir)\.dotnet\Debugger.Tests.Versions.txt" />
+  <Import ConfigFile="$(DotNetRoot)\Debugger.Tests.Versions.txt" />
 
   <ScriptRootDir>$(RepoRootDir)\src\SOS\SOS.UnitTests\Scripts</ScriptRootDir>
   <RootBinDir>$(RepoRootDir)\artifacts</RootBinDir>
   <InstallDir>$(RootBinDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
   <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\sos.unittests_$(Timestamp)</LogDir>
   <DumpDir>$(RootBinDir)\tmp\$(TargetConfiguration)\dumps</DumpDir>
-  <CDBPath>$(RootBinDir)\bin\SOS.UnitTests\$(TargetConfiguration)\netcoreapp2.0\publish\runtimes\win-$(TargetArchitecture)\native\cdb.exe</CDBPath>
+  <CDBPath>$(RootBinDir)\bin\SOS.UnitTests\$(TargetConfiguration)\netcoreapp3.1\publish\runtimes\win-$(TargetArchitecture)\native\cdb.exe</CDBPath>
   <CDBHelperExtension>$(InstallDir)\runcommand.dll</CDBHelperExtension>
-  <HostRuntimeDir>$(RepoRootDir)\.dotnet\shared\Microsoft.NETCore.App\$(RuntimeVersion21)</HostRuntimeDir>
+
+  <TestWebApp>true</TestWebApp>
+  <TestWebApp Condition="'$(PrivateBuildTesting)' == 'true'">false</TestWebApp>
+  <TestWebApp Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp>
+
+  <TestWebApp3>true</TestWebApp3>
+  <TestWebApp3 Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp3>
+
+  <TestDesktop>true</TestDesktop>
+  <TestDesktop Condition="'$(PrivateBuildTesting)' == 'true'">false</TestDesktop>
+  <TestDesktop Condition="'$(InternalReleaseTesting)' == 'true'">false</TestDesktop>
+  <TestDesktop Condition="'$(TargetArchitecture)' == 'arm64'">false</TestDesktop>
+
+  <!-- Build the debuggee for this framework version but run it on latest -->
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net5.0</BuildProjectFrameworkLatest>
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">net5.0</BuildProjectFrameworkLatest>
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.1</BuildProjectFrameworkLatest>
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '2.1')">netcoreapp2.1</BuildProjectFrameworkLatest>
+
+  <DesktopFrameworkPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</DesktopFrameworkPath>
+  <DesktopFrameworkPath Condition="$(TargetArchitecture) != x64">$(WinDir)\Microsoft.Net\Framework\v4.0.30319\</DesktopFrameworkPath>
+  <DesktopFramework>net462</DesktopFramework>
 
   <DebuggeeSourceRoot>$(RepoRootDir)\src\SOS\SOS.UnitTests\Debuggees</DebuggeeSourceRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
-  <CliPath>$(RepoRootDir)\.dotnet\dotnet.exe</CliPath>
+  <CliPath>$(DotNetRoot)\dotnet.exe</CliPath>
 
   <NuGetPackageFeeds>
       myget.org dotnet-core=https://dotnet.myget.org/F/dotnet-core/api/v3/index.json;
@@ -41,29 +65,24 @@
         <!--
             Default (prebuilt)
           -->
-        <Option>
-          <!-- The debuggee built for 3.0 but run it on latest -->
-          <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
+        <Option Condition="'$(RuntimeVersionLatest)' != ''">
+          <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
-        <Option>
-          <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
+        <Option Condition="'$(RuntimeVersion50)' != ''">
+          <BuildProjectFramework>net5.0</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
         </Option>
-        <Option Condition="'$(DailyTest)' != 'true'">
-          <!-- The debuggee built for 2.1 but run it on 2.2 -->
-          <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion22)</RuntimeFrameworkVersion>
+        <Option Condition="'$(RuntimeVersion31)' != ''">
+          <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
-        <Option Condition="'$(DailyTest)' != 'true'">
+        <Option Condition="'$(RuntimeVersion21)' != ''">
           <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
-        </Option>
-        <Option Condition="'$(DailyTest)' != 'true'">
-          <BuildProjectFramework>netcoreapp1.1</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion11)</RuntimeFrameworkVersion>
-          <!-- SOS needs at least 2.0 to run. The default without this is to use the runtime being debuggged to host SOS.NETCore -->
-          <SOSHostRuntime>$(HostRuntimeDir)</SOSHostRuntime>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
         <!--
             SOS.StackAndOtherTests (cli because tested with full, embedded and portable PDBs)
@@ -73,93 +92,141 @@
           <DebuggeeBuildRoot>$(RootBinDir)\Debuggees</DebuggeeBuildRoot>
           <TestName>SOS.StackAndOtherTests</TestName>
           <Options>
-            <Option>
-              <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-              <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
-              <RuntimeFrameworkVersion>$(RuntimeVersion30)</RuntimeFrameworkVersion>
-            </Option>
-            <Option>
-              <!-- Build the debuggee for 3.0 but run it on latest -->
-              <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-              <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion30)</BuildProjectMicrosoftNetCoreAppVersion>
+            <Option Condition="'$(RuntimeVersionLatest)' != ''">
+              <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
             </Option>
-            <Option Condition="'$(DailyTest)' != 'true'">
+            <Option Condition="'$(RuntimeVersion50)' != ''">
+              <BuildProjectFramework>net5.0</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
+            </Option>
+            <Option Condition="'$(RuntimeVersion31)' != ''">
+              <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
+            </Option>
+            <Option Condition="'$(RuntimeVersion21)' != ''">
               <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-              <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion21)</BuildProjectMicrosoftNetCoreAppVersion>
               <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
-            </Option>
-            <Option Condition="'$(DailyTest)' != 'true'">
-              <!-- The debuggee built for 2.1 but run it on 2.2 -->
-              <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-              <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion21)</BuildProjectMicrosoftNetCoreAppVersion>
-              <RuntimeFrameworkVersion>$(RuntimeVersion22)</RuntimeFrameworkVersion>
-            </Option>
-            <Option Condition="'$(DailyTest)' != 'true'">
-              <BuildProjectFramework>netcoreapp1.1</BuildProjectFramework>
-              <BuildProjectMicrosoftNetCoreAppVersion>$(RuntimeVersion11)</BuildProjectMicrosoftNetCoreAppVersion>
-              <RuntimeFrameworkVersion>$(RuntimeVersion11)</RuntimeFrameworkVersion>
-              <!-- SOS needs at least 2.0 to run. The default without this is to use the runtime being debuggged to host SOS.NETCore -->
-              <SOSHostRuntime>$(HostRuntimeDir)</SOSHostRuntime>
             </Option>
           </Options>
         </Option>
         <!--
             SOS.WebApp (runs only on Windows 2.x aspnetcore)
           -->
-        <Option>
-          <TestName>SOS.WebApp</TestName>
+        <Option Condition="'$(TestWebApp)' == 'true'">
           <Options>
-            <Option Condition="'$(DailyTest)' != 'true'">
-              <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersion22)</RuntimeFrameworkVersion>
-            </Option>
-            <Option Condition="'$(DailyTest)' != 'true'">
+            <Option Condition="'$(AspNetCoreVersion21)' != ''">
+              <TestName>SOS.WebApp</TestName>
               <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
+              <FrameworkVersion>$(AspNetCoreVersion21)</FrameworkVersion>
+            </Option>
+          </Options>
+          <Options>
+            <!-- Test using the .NET Core and the destkop CLR framework to host the managed SOS bits -->
+            <Option>
+              <SetHostRuntime>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeVersion21)</SetHostRuntime>
+            </Option>
+            <Option>
+              <SetHostRuntime>-netfx</SetHostRuntime>
             </Option>
           </Options>
         </Option>
         <!--
-            SOS.WebApp3 (runs only on 3.0 aspnetcore)
+            SOS.WebApp3 and SOS.DualRuntimes (runs on 3.1 and latest aspnetcore)
           -->
+        <Option Condition="'$(TestWebApp3)' == 'true'">
+          <Options>
+            <Option>
+              <TestName>SOS.WebApp3</TestName>
+            </Option>
+            <Option>
+              <TestName>SOS.DualRuntimes</TestName>
+              <!-- The assembly path, class and function name of the desktop test code to load/run -->
+              <DesktopTestParameters>$(RootBinDir)\bin\SymbolTestDll\$(TargetConfiguration)\$(DesktopFramework)\SymbolTestDll.dll SymbolTestDll.TestClass ThrowException</DesktopTestParameters>
+            </Option>
+          </Options>
+          <Options>
+            <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
+              <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+              <FrameworkVersion>$(AspNetCoreVersionLatest)</FrameworkVersion>
+            </Option>
+            <Option Condition="'$(AspNetCoreVersion50)' != ''">
+              <BuildProjectFramework>net5.0</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
+              <FrameworkVersion>$(AspNetCoreVersion50)</FrameworkVersion>
+            </Option>
+            <Option Condition="'$(AspNetCoreVersion31)' != ''">
+              <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
+              <FrameworkVersion>$(AspNetCoreVersion31)</FrameworkVersion>
+            </Option>
+          </Options>
+        </Option>
         <Option>
-          <TestName>SOS.WebApp3</TestName>
-          <BuildProjectFramework>netcoreapp3.0</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(AspNetCoreVersion30)</RuntimeFrameworkVersion>
+          <Options>
+            <Option>
+              <TestName>DotnetDumpCommands</TestName>
+            </Option>
+          </Options>
+          <Options>
+            <Option Condition="'$(RuntimeVersionLatest)' != ''">
+              <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+              <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+            </Option>
+            <Option Condition="'$(RuntimeVersion50)' != ''">
+              <BuildProjectFramework>net5.0</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
+            </Option>
+            <Option Condition="'$(RuntimeVersion31)' != ''">
+              <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
+              <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+            </Option>
+            <Option Condition="'$(RuntimeVersion21)' != ''">
+              <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
+              <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+            </Option>
+          </Options>
         </Option>
       </Options>
 
-      <HostExe>$(RepoRootDir)\.dotnet\dotnet.exe</HostExe>
-      <HostArgs>--fx-version $(RuntimeFrameworkVersion)</HostArgs>
-      <RuntimeSymbolsPath>$(RepoRootDir)\.dotnet\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
-      <SOSPath>$(InstallDir)\sos.dll</SOSPath>
-      <DotNetDumpPath>$(RootBinDir)/bin/dotnet-dump/$(TargetConfiguration)/netcoreapp2.1/publish/dotnet-dump.dll</DotNetDumpPath>
+      <FrameworkVersion Condition="'$(FrameworkVersion)' == ''">$(RuntimeFrameworkVersion)</FrameworkVersion>
+      <RuntimeSymbolsPath>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
+      <HostExe>$(DotNetRoot)\dotnet.exe</HostExe>
+      <HostArgs>--fx-version $(FrameworkVersion)</HostArgs>
     </Option>
     <!--
         Desktop Runtime (debuggees cli built)
      -->
-    <Option Condition="$(TargetArchitecture) != arm64">
+    <Option Condition="'$(TestDesktop)' == 'true'">
       <Options>
         <Option>
         </Option>
         <Option>
           <TestName>SOS.StackAndOtherTests</TestName>
         </Option>
+        <Option>
+          <TestName>DotnetDumpCommands</TestName>
+        </Option>
       </Options>
       <TestProduct>Desktop</TestProduct>
       <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
       <DebuggeeBuildRoot>$(RootBinDir)\Debuggees</DebuggeeBuildRoot>
-      <BuildProjectFramework>net462</BuildProjectFramework>
+      <BuildProjectFramework>$(DesktopFramework)</BuildProjectFramework>
       <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
       <DebugType>full</DebugType>
-      <FrameworkDirPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</FrameworkDirPath>
-      <FrameworkDirPath Condition="$(TargetArchitecture) != x64">$(WinDir)\Microsoft.Net\Framework\v4.0.30319\</FrameworkDirPath>
-      <RuntimeSymbolsPath>$(FrameworkDirPath)</RuntimeSymbolsPath>
-      <SOSPath>$(FrameworkDirPath)\sos.dll</SOSPath>
+      <RuntimeSymbolsPath>$(DesktopFrameworkPath)</RuntimeSymbolsPath>
+      <SetHostRuntime>-netfx</SetHostRuntime>
     </Option>
   </Options>
 
+  <SOSPath>$(InstallDir)\sos.dll</SOSPath>
+  <DotNetDumpHost>$(DotNetRoot)\dotnet.exe</DotNetDumpHost>
+  <DotNetDumpPath>$(RootBinDir)\bin\dotnet-dump\$(TargetConfiguration)\netcoreapp2.1\publish\dotnet-dump.dll</DotNetDumpPath>
   <DebuggeeDumpOutputRootDir>$(DumpDir)\$(TestProduct)\$(RuntimeFrameworkVersion)\$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>
   <DebuggeeDumpInputRootDir>$(DebuggeeDumpOutputRootDir)</DebuggeeDumpInputRootDir>
 </Configuration>

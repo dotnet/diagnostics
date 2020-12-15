@@ -1,14 +1,14 @@
-<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.props"/>
   <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
-  
+
   <PropertyGroup>
     <IsShipping>true</IsShipping>
     <IsShippingAssembly>false</IsShippingAssembly>
     <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <DebugSymbols>true</DebugSymbols>
+    <BundledToolsPath>$(ArtifactsDir)bundledtools/</BundledToolsPath>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
@@ -26,4 +26,6 @@
   <PropertyGroup Condition="'$(TargetFramework)' != 'net462'">
     <DebugType>portable</DebugType>
   </PropertyGroup>
+
+  <Import Project="$(RepositoryEngineeringDir)Analyzers.props" />
 </Project>

@@ -13,7 +13,7 @@ Lets run the webapi (dotnet run) and before hitting the above URL that will caus
 > dotnet-counters monitor --refresh-interval 1 -p 22884
 > ```
 
-22884 is the process identifier which can be found using dotnet-trace list-processes. The refresh-interval is the number of seconds before refreshes. 
+22884 is the process identifier which can be found using dotnet-trace ps. The refresh-interval is the number of seconds before refreshes.
 
 The output should be similar to the below:
 
@@ -49,7 +49,7 @@ In order to generate profiler traces of a .net core application, we can use the 
 > dotnet-trace collect -p 2266  --providers Microsoft-DotNETCore-SampleProfiler
 > ```
 
-2266 is the process identifier which can be found using dotnet-trace list-processes. Let dotnet-trace run for about 20-30 seconds and then hit enter to exit the collection. The result is a nettrace file located in the same folder. nettrace files are a great way to use existing analysis tools on Windows (such as PerfView) to diagnose performance problems. 
+2266 is the process identifier which can be found using dotnet-trace ps. Let dotnet-trace run for about 20-30 seconds and then hit enter to exit the collection. The result is a nettrace file located in the same folder. nettrace files are a great way to use existing analysis tools on Windows (such as PerfView) to diagnose performance problems.
 
 Alternatively, you can get the perf and LTTng trace data in nettrace format by using the perfcollect tool (please see Installing the tools section). Once installed, run the following command:
 

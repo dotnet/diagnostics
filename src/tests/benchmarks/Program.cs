@@ -3,10 +3,11 @@ using System.Reflection;
 using System.Threading;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
+using BenchmarkDotNet.Jobs;
 
 namespace CounterBenchmarks
 {
-    [CoreJob]
+    [SimpleJob(RuntimeMoniker.HostProcess)]
     [RPlotExporter, RankColumn]
     public class CounterBenchmarks
     {

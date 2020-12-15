@@ -1,10 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
   <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+  
+  <!-- Work around https://github.com/dotnet/sourcelink/issues/572
+  Remove once we build using an SDK that contains https://github.com/dotnet/sdk/pull/10613 -->
+  <PropertyGroup>
+    <TargetFrameworkMonikerAssemblyAttributesPath>$([System.IO.Path]::Combine('$(IntermediateOutputPath)','$(TargetFrameworkMoniker).AssemblyAttributes$(DefaultLanguageSourceExtension)'))</TargetFrameworkMonikerAssemblyAttributesPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedFiles Include="$(GeneratedAssemblyInfoFile)"/>
+  </ItemGroup>
 
-  <!-- Remove this once arcade version is bumped -->
+  <!-- This is an ugly workaround needed to be able to do r2r/single file on packages that reference TraceEvent as the package's props inject a double
+  write to the same relative path. This is related to https://github.com/microsoft/perfview/issues/1002 -->
+  <Target Name="RemoveDupeAssemblies"
+          Condition="'$(PublishSingleFile)' == 'true'"
+          AfterTargets="ComputeResolvedFilesToPublishList"
+          BeforeTargets="CopyFilesToPublishDirectory">
+      
+    <PropertyGroup>
+      <ExcludedTraceEventPath>$([MSBuild]::NormalizeDirectory($(PkgMicrosoft_Diagnostics_Tracing_TraceEvent), 'lib/netstandard1.6'))</ExcludedTraceEventPath>
+    </PropertyGroup>
+    <ItemGroup>
+      <ResolvedFileToPublish Condition="$([MSBuild]::NormalizePath(%(ResolvedFileToPublish.Identity)).StartsWith($(ExcludedTraceEventPath)))"
+                             ExcludeFromSingleFile="true"/>
+    </ItemGroup>
+  </Target>
+
+  <!-- We need this for the binplacing for testing assets.
+  This should be removed at some point as it's brittle (harcodes versions and creates native-managed coupling). -->
   <Target Name="_PublishPackageReferences"
           AfterTargets="PostBuildEvent"
-          Condition="$(IsPublishable) == 'true'"
+          Condition="$(NeedsPublishing) == 'true'"
           DependsOnTargets="$(_BeforePublishNoBuildTargets);$(_CorePublishTargets)" />
+
+  <!-- Creates artifact files related to the package that will be uploaded to blob storage during publish. -->
+  <Target Name="GeneratePackageArtifactFiles"
+          AfterTargets="Pack"
+          Condition="'$(IsPackable)' == 'true' and '$(BlobGroupPrefix)' != ''">
+    <PropertyGroup>
+      <_BlobGroupVersionMajor>$(PackageVersion.Split('.')[0])</_BlobGroupVersionMajor>
+      <_BlobGroupVersionMinor>$(PackageVersion.Split('.')[1])</_BlobGroupVersionMinor>
+      <_BlobGroupName>$(BlobGroupPrefix)$(_BlobGroupVersionMajor).$(_BlobGroupVersionMinor)</_BlobGroupName>
+    </PropertyGroup>
+    <!-- A file that contains the blob group so that publishing can use it in the blob path calculation. -->
+    <WriteLinesToFile File="$(PackageOutputPath)\$(PackageId).$(PackageVersion).nupkg.blobgroup"
+                      Lines="$(_BlobGroupName)"
+                      Overwrite="true" />
+    <WriteLinesToFile File="$(PackageOutputPath)\$(PackageId).$(PackageVersion).nupkg.version"
+                      Lines="$(PackageVersion)"
+                      Overwrite="true" />
+  </Target>
+
 </Project>

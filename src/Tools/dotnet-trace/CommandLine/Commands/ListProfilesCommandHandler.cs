@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Tools.RuntimeClient;
+using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing.Parsers;
 using System;
 using System.Collections.Generic;
@@ -35,39 +35,39 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Command ListProfilesCommand() =>
             new Command(
                 name: "list-profiles",
-                description: "Lists pre-built tracing profiles with a description of what providers and filters are in each profile.",
-                handler: CommandHandler.Create<IConsole>(GetProfiles),
-                isHidden: false);
+                description: "Lists pre-built tracing profiles with a description of what providers and filters are in each profile")
+            {
+                Handler = CommandHandler.Create<IConsole>(GetProfiles),
+            };
 
-        // FIXME: Read from a config file!
         internal static IEnumerable<Profile> DotNETRuntimeProfiles { get; } = new[] {
             new Profile(
                 "cpu-sampling",
-                new Provider[] {
-                    new Provider("Microsoft-DotNETCore-SampleProfiler"),
-                    new Provider("Microsoft-Windows-DotNETRuntime", (ulong)ClrTraceEventParser.Keywords.Default, EventLevel.Informational),
+                new EventPipeProvider[] {
+                    new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational),
+                    new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, (long)ClrTraceEventParser.Keywords.Default)
                 },
                 "Useful for tracking CPU usage and general .NET runtime information. This is the default option if no profile or providers are specified."),
             new Profile(
                 "gc-verbose",
-                new Provider[] {
-                    new Provider(
+                new EventPipeProvider[] {
+                    new EventPipeProvider(
                         name: "Microsoft-Windows-DotNETRuntime",
-                        keywords: (ulong)ClrTraceEventParser.Keywords.GC |
-                                  (ulong)ClrTraceEventParser.Keywords.GCHandle |
-                                  (ulong)ClrTraceEventParser.Keywords.Exception,
-                        eventLevel: EventLevel.Verbose
+                        eventLevel: EventLevel.Verbose,
+                        keywords: (long)ClrTraceEventParser.Keywords.GC |
+                                  (long)ClrTraceEventParser.Keywords.GCHandle |
+                                  (long)ClrTraceEventParser.Keywords.Exception
                     ),
                 },
                 "Tracks GC collections and samples object allocations."),
             new Profile(
                 "gc-collect",
-                new Provider[] {
-                    new Provider(
+                new EventPipeProvider[] {
+                    new EventPipeProvider(
                         name: "Microsoft-Windows-DotNETRuntime",
-                        keywords:   (ulong)ClrTraceEventParser.Keywords.GC |
-                                    (ulong)ClrTraceEventParser.Keywords.Exception,
-                        eventLevel: EventLevel.Informational),
+                        eventLevel: EventLevel.Informational,
+                        keywords:   (long)ClrTraceEventParser.Keywords.GC
+                    )
                 },
                 "Tracks GC collections only at very low overhead."),
         };

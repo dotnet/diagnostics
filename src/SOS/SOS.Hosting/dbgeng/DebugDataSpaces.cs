@@ -7,7 +7,7 @@ using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Runtime.InteropServices;
 
-namespace SOS
+namespace SOS.Hosting
 {
     internal unsafe class DebugDataSpaces
     {
@@ -24,7 +24,7 @@ namespace SOS
 
         private static void AddDebugDataSpaces(VTableBuilder builder, SOSHost soshost)
         {
-            builder.AddMethod(new ReadVirtualDelegate(soshost.ReadVirtualForWindows));
+            builder.AddMethod(new ReadVirtualDelegate(soshost.ReadVirtual));
             builder.AddMethod(new WriteVirtualDelegate(soshost.WriteVirtual));
             builder.AddMethod(new SearchVirtualDelegate((self, offset, length, pattern, patternSize, patternGranularity, matchOffset) => DebugClient.NotImplemented));
             builder.AddMethod(new ReadVirtualUncachedDelegate((self, offset, buffer, bufferSize, bytesRead) => DebugClient.NotImplemented));
@@ -42,7 +42,7 @@ namespace SOS
             builder.AddMethod(new ReadBusDataDelegate((self, busDataType, busNumber, slotNumber, offset, buffer, bufferSize, bytesRead) => DebugClient.NotImplemented));
             builder.AddMethod(new WriteBusDataDelegate((self, busDataType, busNumber, slotNumber, offset, buffer, bufferSize, bytesWritten) => DebugClient.NotImplemented));
             builder.AddMethod(new CheckLowMemoryDelegate((self) => DebugClient.NotImplemented));
-            builder.AddMethod(new ReadDebuggerDataDelegate((self, index, buffer, bufferSize, dataSize) => DebugClient.E_NOTIMPL));
+            builder.AddMethod(new ReadDebuggerDataDelegate((self, index, buffer, bufferSize, dataSize) => HResult.E_NOTIMPL));
             builder.AddMethod(new ReadProcessorSystemDataDelegate((self, processor, index, buffer, bufferSize, dataSize) => DebugClient.NotImplemented));
         }
 
@@ -59,7 +59,7 @@ namespace SOS
 
         #region IDebugDataSpaces Delegates
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private unsafe delegate int ReadVirtualDelegate(
             IntPtr self,
             [In] ulong address,
@@ -67,7 +67,7 @@ namespace SOS
             [In] uint bufferSize,
             [Out] uint* bytesRead);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int WriteVirtualDelegate(
             IntPtr self,
             [In] ulong address,
@@ -75,7 +75,7 @@ namespace SOS
             [In] uint bufferSize,
             [Out] uint* bytesWritten);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SearchVirtualDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -85,7 +85,7 @@ namespace SOS
             [In] uint PatternGranularity,
             [Out] ulong* MatchOffset);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ReadVirtualUncachedDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -93,7 +93,7 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* BytesRead);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int WriteVirtualUncachedDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -101,21 +101,21 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* BytesWritten);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ReadPointersVirtualDelegate(
             IntPtr self,
             [In] uint Count,
             [In] ulong Offset,
             [Out] ulong* Ptrs);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int WritePointersVirtualDelegate(
             IntPtr self,
             [In] uint Count,
             [In] ulong Offset,
             [In] ulong[] Ptrs);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ReadPhysicalDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -123,7 +123,7 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* BytesRead);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int WritePhysicalDelegate(
             IntPtr self,
             [In] ulong Offset,
@@ -131,7 +131,7 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* BytesWritten);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ReadControlDelegate(
             IntPtr self,
             [In] uint Processor,
@@ -140,7 +140,7 @@ namespace SOS
             [In] int BufferSize,
             [Out] uint* BytesRead);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int WriteControlDelegate(
             IntPtr self,
             [In] uint Processor,
@@ -149,7 +149,7 @@ namespace SOS
             [In] int BufferSize,
             [Out] uint* BytesWritten);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ReadIoDelegate(
             IntPtr self,
             [In] INTERFACE_TYPE InterfaceType,
@@ -160,7 +160,7 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* BytesRead);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int WriteIoDelegate(
             IntPtr self,
             [In] INTERFACE_TYPE InterfaceType,
@@ -171,19 +171,19 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* BytesWritten);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ReadMsrDelegate(
             IntPtr self,
             [In] uint Msr,
             [Out] ulong* MsrValue);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int WriteMsrDelegate(
             IntPtr self,
             [In] uint Msr,
             [In] ulong MsrValue);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ReadBusDataDelegate(
             IntPtr self,
             [In] BUS_DATA_TYPE BusDataType,
@@ -194,7 +194,7 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* BytesRead);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int WriteBusDataDelegate(
             IntPtr self,
             [In] BUS_DATA_TYPE BusDataType,
@@ -205,11 +205,11 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* BytesWritten);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int CheckLowMemoryDelegate(
             IntPtr self);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ReadDebuggerDataDelegate(
             IntPtr self,
             [In] uint Index,
@@ -217,7 +217,7 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* DataSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ReadProcessorSystemDataDelegate(
             IntPtr self,
             [In] uint Processor,
@@ -230,13 +230,13 @@ namespace SOS
 
         #region IDebugDataSpaces2 Delegates
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int VirtualToPhysicalDelegate(
             IntPtr self,
             [In] ulong Virtual,
             [Out] ulong* Physical);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetVirtualTranslationPhysicalOffsetsDelegate(
             IntPtr self,
             [In] ulong Virtual,
@@ -244,7 +244,7 @@ namespace SOS
             [In] uint OffsetsSize,
             [Out] uint* Levels);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ReadHandleDataDelegate(
             IntPtr self,
             [In] ulong Handle,
@@ -253,7 +253,7 @@ namespace SOS
             [In] uint BufferSize,
             [Out] uint* DataSize);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int FillVirtualDelegate(
             IntPtr self,
             [In] ulong Start,
@@ -262,7 +262,7 @@ namespace SOS
             [In] uint PatternSize,
             [Out] uint* Filled);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int FillPhysicalDelegate(
             IntPtr self,
             [In] ulong Start,
@@ -271,7 +271,7 @@ namespace SOS
             [In] uint PatternSize,
             [Out] uint* Filled);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int QueryVirtualDelegate(
             IntPtr self,
             [In] ulong Offset,

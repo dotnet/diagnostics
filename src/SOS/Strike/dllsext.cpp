@@ -12,6 +12,8 @@
 #include "util.h"
 #include "platformspecific.h"
 
+#ifndef FEATURE_PAL
+
 typedef struct _PRIVATE_LDR_DATA_TABLE_ENTRY {
     LIST_ENTRY InLoadOrderLinks;
     LIST_ENTRY InMemoryOrderLinks;
@@ -45,15 +47,16 @@ typedef struct _PRIVATE_LDR_DATA_TABLE_ENTRY {
     
 } PRIVATE_LDR_DATA_TABLE_ENTRY, *PRIVATE_PLDR_DATA_TABLE_ENTRY;
 
-
-#ifndef FEATURE_PAL
 static void DllsNameFromPeb(
     ULONG_PTR addrContaining,
     __out_ecount (MAX_LONGPATH) WCHAR *dllName
     )
 {
     ULONG64 ProcessPeb;
-    g_ExtSystem->GetCurrentProcessPeb (&ProcessPeb);
+    if (FAILED(g_ExtSystem->GetCurrentProcessPeb(&ProcessPeb)))
+    {
+        return;
+    }
 
     ULONG64 pLdrEntry;
     ULONG64 PebLdrAddress;
@@ -242,7 +245,6 @@ static void DllsNameFromPeb(
         return;
     }
 }
-#endif
 
 HRESULT
 DllsName(
@@ -268,11 +270,11 @@ DllsName(
         MultiByteToWideChar (CP_ACP,0,name,-1,dllName,MAX_LONGPATH);
     }
     
-#ifndef FEATURE_PAL
     if (_wcsrchr (dllName, '\\') == NULL) {
         DllsNameFromPeb (addrContaining,dllName);
     }
-#endif
 
     return hr;
 }
+
+#endif // FEATURE_PAL

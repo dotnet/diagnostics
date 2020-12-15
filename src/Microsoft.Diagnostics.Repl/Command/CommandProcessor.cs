@@ -2,194 +2,250 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Builder;
+using System.CommandLine.Help;
 using System.CommandLine.Invocation;
+using System.CommandLine.IO;
+using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Repl
 {
-    public class CommandProcessor
+    /// <summary>
+    /// Implements the ICommandService interface using System.CommandLine.
+    /// </summary>
+    public class CommandProcessor : ICommandService
     {
-        private readonly Parser _parser;
-        private readonly Command _rootCommand;
-        private readonly IServiceProvider _serviceProvider;
-        private readonly IConsole _console;
-        private readonly Dictionary<string, Handler> _commandHandlers = new Dictionary<string, Handler>();
+        private Parser _parser;
+        private readonly CommandLineBuilder _rootBuilder;
+        private readonly Dictionary<string, CommandHandler> _commandHandlers = new Dictionary<string, CommandHandler>();
 
         /// <summary>
         /// Create an instance of the command processor;
         /// </summary>
-        /// <param name="serviceProvider">service provider interface</param>
-        /// <param name="console">console instance</param>
-        /// <param name="assemblies">Optional list of assemblies to look for commands</param>
-        /// <param name="types">Optional list of types to look for commands</param>
-        public CommandProcessor(IServiceProvider serviceProvider, IConsole console, IEnumerable<Assembly> assemblies = null, IEnumerable<Type> types = null)
+        public CommandProcessor()
         {
-            Debug.Assert(serviceProvider != null);
-            Debug.Assert(assemblies != null);
-            _serviceProvider = serviceProvider;
-            _console = console;
-
-            var rootBuilder = new CommandLineBuilder(new Command(">"));
-            rootBuilder.UseHelp()
-                       .UseHelpBuilder((bindingContext) => GetService<IHelpBuilder>())
-                       .UseParseDirective()
-                       .UseSuggestDirective()
-                       .UseParseErrorReporting()
-                       .UseExceptionHandler();
-
-            if (assemblies != null) {
-                BuildCommands(rootBuilder, assemblies);
-            }
-            if (types != null) {
-                BuildCommands(rootBuilder, types);
-            }
-            _rootCommand = rootBuilder.Command;
-            _parser = rootBuilder.Build();
+            _rootBuilder = new CommandLineBuilder(new Command(">"));
+            _rootBuilder.UseHelpBuilder((bindingContext) => new LocalHelpBuilder(this, bindingContext.Console, useHelpBuilder: false));
         }
 
         /// <summary>
-        /// Creates a new instance of the command help builder
+        /// Parse and execute the command line.
         /// </summary>
-        public IHelpBuilder CreateHelpBuilder()
-        {
-            return new LocalHelpBuilder(this);
-        }
-
-        /// <summary>
-        /// Parse the command line.
-        /// </summary>
-        /// <param name="commandLine">command line txt</param>
+        /// <param name="commandLine">command line text</param>
+        /// <param name="services">services for the command</param>
         /// <returns>exit code</returns>
-        public Task<int> Parse(string commandLine)
+        public int Execute(string commandLine, IServiceProvider services)
         {
-            ParseResult result = _parser.Parse(commandLine);
-            return _parser.InvokeAsync(result, _console);
-        }
+            Debug.Assert(_parser != null);
 
-        /// <summary>
-        /// Display all the help or a specific command's help.
-        /// </summary>
-        /// <param name="name">command name or null</param>
-        /// <returns>command instance or null if not found</returns>
-        public Command GetCommand(string name)
-        {
-            if (string.IsNullOrEmpty(name)) {
-                return _rootCommand;
-            }
-            else {
-                return _rootCommand.Children.OfType<Command>().FirstOrDefault((cmd) => name == cmd.Name || cmd.Aliases.Any((alias) => name == alias));
-            }
-        }
+            // Parse the command line and invoke the command
+            ParseResult parseResult = _parser.Parse(commandLine);
 
-        private void BuildCommands(CommandLineBuilder rootBuilder, IEnumerable<Assembly> assemblies)
-        {
-            BuildCommands(rootBuilder, assemblies.SelectMany((assembly) => assembly.GetExportedTypes()));
-        }
-
-        private void BuildCommands(CommandLineBuilder rootBuilder, IEnumerable<Type> types)
-        {
-            foreach (Type type in types)
+            var context = new InvocationContext(parseResult, new LocalConsole(services));
+            if (parseResult.Errors.Count > 0)
             {
-                for (Type baseType = type; baseType != null; baseType = baseType.BaseType)
+                context.InvocationResult = new ParseErrorResult();
+            }
+            else
+            {
+                if (parseResult.CommandResult.Command is Command command)
                 {
-                    if (baseType == typeof(CommandBase)) {
-                        break;
+                    if (command.Handler is CommandHandler handler)
+                    {
+                        ITarget target = services.GetService<ITarget>();
+                        if (!handler.IsValidPlatform(target))
+                        { 
+                            context.Console.Error.WriteLine($"Command '{command.Name}' not supported on this target");
+                            return 1;
+                        }
+                        try
+                        {
+                            handler.Invoke(context, services);
+                        }
+                        catch (Exception ex)
+                        {
+                            OnException(ex, context);
+                        }
                     }
-                    BuildCommands(rootBuilder, baseType);
                 }
             }
+
+            context.InvocationResult?.Apply(context);
+            return context.ResultCode;
         }
 
-        private void BuildCommands(CommandLineBuilder rootBuilder, Type type)
+        /// <summary>
+        /// Displays the help for a command
+        /// </summary>
+        /// <param name="commandName">name of the command or alias</param>
+        /// <param name="services">service provider</param>
+        /// <returns>true if success, false if command not found</returns>
+        public bool DisplayHelp(string commandName, IServiceProvider services)
         {
             Command command = null;
-
-            var baseAttributes = (BaseAttribute[])type.GetCustomAttributes(typeof(BaseAttribute), inherit: false);
-            foreach (BaseAttribute baseAttribute in baseAttributes)
+            if (!string.IsNullOrEmpty(commandName)) 
             {
-                if (baseAttribute is CommandAttribute commandAttribute)
+                command = _rootBuilder.Command.Children.OfType<Command>().FirstOrDefault((cmd) => commandName == cmd.Name || cmd.Aliases.Any((alias) => commandName == alias));
+                if (command == null)
                 {
-                    command = new Command(commandAttribute.Name, commandAttribute.Help);
-                    var properties = new List<(PropertyInfo, Option)>();
-                    PropertyInfo argument = null;
-
-                    foreach (PropertyInfo property in type.GetProperties().Where(p => p.CanWrite))
-                    {
-                        var argumentAttribute = (ArgumentAttribute)property.GetCustomAttributes(typeof(ArgumentAttribute), inherit: false).SingleOrDefault();
-                        if (argumentAttribute != null)
-                        {
-                            if (argument != null) {
-                                throw new ArgumentException($"More than one ArgumentAttribute in command class: {type.Name}");
-                            }
-                            IArgumentArity arity = property.PropertyType.IsArray ? ArgumentArity.ZeroOrMore : ArgumentArity.ZeroOrOne;
-
-                            command.Argument = new Argument {
-                                Name = argumentAttribute.Name ?? property.Name.ToLowerInvariant(),
-                                Description = argumentAttribute.Help,
-                                ArgumentType = property.PropertyType,
-                                Arity = arity
-                            };
-                            argument = property;
-                        }
-                        else
-                        {
-                            var optionAttribute = (OptionAttribute)property.GetCustomAttributes(typeof(OptionAttribute), inherit: false).SingleOrDefault();
-                            if (optionAttribute != null)
-                            {
-                                var option = new Option(optionAttribute.Name ?? BuildAlias(property.Name), optionAttribute.Help, new Argument { ArgumentType = property.PropertyType });
-                                command.AddOption(option);
-                                properties.Add((property, option));
-
-                                foreach (var optionAliasAttribute in (OptionAliasAttribute[])property.GetCustomAttributes(typeof(OptionAliasAttribute), inherit: false))
-                                {
-                                    option.AddAlias(optionAliasAttribute.Name);
-                                }
-                            }
-                            else
-                            {
-                                // If not an option, add as just a settable properties
-                                properties.Add((property, null));
-                            }
-                        }
-                    }
-
-                    var handler = new Handler(this, commandAttribute.AliasExpansion, argument, properties, type);
-                    _commandHandlers.Add(command.Name, handler);
-                    command.Handler = handler;
-
-                    rootBuilder.AddCommand(command);
+                    return false;
                 }
-
-                if (baseAttribute is CommandAliasAttribute commandAliasAttribute)
+                if (command.Handler is CommandHandler handler)
                 {
-                    if (command == null) {
-                        throw new ArgumentException($"No previous CommandAttribute for this CommandAliasAttribute: {type.Name}");
+                    ITarget target = services.GetService<ITarget>();
+                    if (!handler.IsValidPlatform(target))
+                    {
+                        return false;
                     }
-                    command.AddAlias(commandAliasAttribute.Name);
                 }
             }
+            else 
+            {
+                ITarget target = services.GetService<ITarget>();
+
+                // Create temporary builder adding only the commands that are valid for the target
+                var builder = new CommandLineBuilder(new Command(">"));
+                foreach (Command cmd in _rootBuilder.Command.Children.OfType<Command>())
+                {
+                    if (cmd.Handler is CommandHandler handler)
+                    {
+                        if (handler.IsValidPlatform(target))
+                        {
+                            builder.AddCommand(cmd);
+                        }
+                    }
+                }
+                command = builder.Command;
+            }
+            Debug.Assert(command != null);
+            IHelpBuilder helpBuilder = new LocalHelpBuilder(this, new LocalConsole(services), useHelpBuilder: true);
+            helpBuilder.Write(command);
+            return true;
         }
 
-        private object GetService(Type serviceType)
+        /// <summary>
+        /// Enumerates all the command's name and help
+        /// </summary>
+        public IEnumerable<(string name, string help, IEnumerable<string> aliases)> Commands => _commandHandlers.Select((keypair) => (keypair.Value.Name, keypair.Value.Help, keypair.Value.Aliases));
+
+        /// <summary>
+        /// Add the commands and aliases attributes found in the type.
+        /// </summary>
+        /// <param name="type">Command type to search</param>
+        /// <param name="factory">function to create command instance</param>
+        public void AddCommands(Type type, Func<IServiceProvider, object> factory)
         {
-            return _serviceProvider.GetService(serviceType);
+            for (Type baseType = type; baseType != null; baseType = baseType.BaseType)
+            {
+                if (baseType == typeof(CommandBase)) {
+                    break;
+                }
+                var commandAttributes = (CommandAttribute[])baseType.GetCustomAttributes(typeof(CommandAttribute), inherit: false);
+                foreach (CommandAttribute commandAttribute in commandAttributes)
+                {
+                    if (factory == null)
+                    {
+                        // Assumes zero parameter constructor
+                        ConstructorInfo constructor = type.GetConstructors().SingleOrDefault((info) => info.GetParameters().Length == 0) ??
+                            throw new ArgumentException($"No eligible constructor found in {type}");
+
+                        factory = (services) => constructor.Invoke(Array.Empty<object>());
+                    }
+                    CreateCommand(baseType, commandAttribute, factory);
+                }
+            }
+
+            // Build parser instance after all the commands and aliases are added
+            BuildParser();
         }
 
-        private T GetService<T>()
+        private void CreateCommand(Type type, CommandAttribute commandAttribute, Func<IServiceProvider, object> factory)
         {
-            T service = (T)_serviceProvider.GetService(typeof(T));
-            Debug.Assert(service != null);
-            return service;
+            var command = new Command(commandAttribute.Name, commandAttribute.Help);
+            var properties = new List<(PropertyInfo, Option)>();
+            var arguments = new List<(PropertyInfo, Argument)>();
+
+            foreach (string alias in commandAttribute.Aliases)
+            {
+                command.AddAlias(alias);
+            }
+
+            foreach (PropertyInfo property in type.GetProperties().Where(p => p.CanWrite))
+            {
+                var argumentAttribute = (ArgumentAttribute)property.GetCustomAttributes(typeof(ArgumentAttribute), inherit: false).SingleOrDefault();
+                if (argumentAttribute != null)
+                {
+                    IArgumentArity arity = property.PropertyType.IsArray ? ArgumentArity.ZeroOrMore : ArgumentArity.ZeroOrOne;
+
+                    var argument = new Argument {
+                        Name = argumentAttribute.Name ?? property.Name.ToLowerInvariant(),
+                        Description = argumentAttribute.Help,
+                        ArgumentType = property.PropertyType,
+                        Arity = arity
+                    };
+                    command.AddArgument(argument);
+                    arguments.Add((property, argument));
+                }
+                else
+                {
+                    var optionAttribute = (OptionAttribute)property.GetCustomAttributes(typeof(OptionAttribute), inherit: false).SingleOrDefault();
+                    if (optionAttribute != null)
+                    {
+                        var option = new Option(optionAttribute.Name ?? BuildOptionAlias(property.Name), optionAttribute.Help) {
+                            Argument = new Argument { ArgumentType = property.PropertyType }
+                        };
+                        command.AddOption(option);
+                        properties.Add((property, option));
+
+                        foreach (string alias in optionAttribute.Aliases)
+                        {
+                            option.AddAlias(alias);
+                        }
+                    }
+                    else
+                    {
+                        // If not an option, add as just a settable properties
+                        properties.Add((property, null));
+                    }
+                }
+            }
+
+            var handler = new CommandHandler(commandAttribute, arguments, properties, type, factory);
+            _commandHandlers.Add(command.Name, handler);
+            command.Handler = handler;
+            _rootBuilder.AddCommand(command);
         }
 
-        private static string BuildAlias(string parameterName)
+        private void BuildParser()
+        {
+            _parser = _rootBuilder.Build();
+        }
+
+        private void OnException(Exception ex, InvocationContext context)
+        {
+            if (ex is NullReferenceException || 
+                ex is ArgumentException || 
+                ex is ArgumentNullException || 
+                ex is ArgumentOutOfRangeException || 
+                ex is NotImplementedException) {
+                context.Console.Error.WriteLine(ex.ToString());
+            }
+            else {
+                context.Console.Error.WriteLine(ex.Message);
+            }
+            Trace.TraceError(ex.ToString());
+        }
+
+        private static string BuildOptionAlias(string parameterName)
         {
             if (string.IsNullOrWhiteSpace(parameterName)) {
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(parameterName));
@@ -197,26 +253,30 @@ namespace Microsoft.Diagnostics.Repl
             return parameterName.Length > 1 ? $"--{parameterName.ToKebabCase()}" : $"-{parameterName.ToLowerInvariant()}";
         }
 
-        class Handler : ICommandHandler
+        /// <summary>
+        /// The normal command handler.
+        /// </summary>
+        class CommandHandler : ICommandHandler
         {
-            private readonly CommandProcessor _commandProcessor;
-            private readonly string _aliasExpansion;
-            private readonly PropertyInfo _argument;
+            private readonly CommandAttribute _commandAttribute;
+            private readonly IEnumerable<(PropertyInfo Property, Argument Argument)> _arguments;
             private readonly IEnumerable<(PropertyInfo Property, Option Option)> _properties;
 
-            private readonly ConstructorInfo _constructor;
+            private readonly Func<IServiceProvider, object> _factory;
             private readonly MethodInfo _methodInfo;
             private readonly MethodInfo _methodInfoHelp;
 
-            public Handler(CommandProcessor commandProcessor, string aliasExpansion, PropertyInfo argument, IEnumerable<(PropertyInfo, Option)> properties, Type type)
+            public CommandHandler(
+                CommandAttribute commandAttribute,
+                IEnumerable<(PropertyInfo, Argument)> arguments, 
+                IEnumerable<(PropertyInfo, Option)> properties, 
+                Type type, 
+                Func<IServiceProvider, object> factory)
             {
-                _commandProcessor = commandProcessor;
-                _aliasExpansion = aliasExpansion;
-                _argument = argument;
+                _commandAttribute = commandAttribute;
+                _arguments = arguments;
                 _properties = properties;
-
-                _constructor = type.GetConstructors().SingleOrDefault((info) => info.GetParameters().Length == 0) ?? 
-                    throw new ArgumentException($"No eligible constructor found in {type}");
+                _factory = factory;
 
                 _methodInfo = type.GetMethods().Where((methodInfo) => methodInfo.GetCustomAttribute<CommandInvokeAttribute>() != null).SingleOrDefault() ??
                     throw new ArgumentException($"No command invoke method found in {type}");
@@ -226,45 +286,86 @@ namespace Microsoft.Diagnostics.Repl
 
             Task<int> ICommandHandler.InvokeAsync(InvocationContext context)
             {
-                try
-                {
-                    Invoke(_methodInfo, context);
-                }
-                catch (Exception ex)
-                {
-                    return Task.FromException<int>(ex);
-                }
-                return Task.FromResult(context.ResultCode);
+                return Task.FromException<int>(new NotImplementedException());
             }
+
+            /// <summary>
+            /// Returns the command name
+            /// </summary>
+            internal string Name => _commandAttribute.Name;
+
+            /// <summary>
+            /// Returns the command's help text
+            /// </summary>
+            internal string Help => _commandAttribute.Help;
+
+            /// <summary>
+            /// Returns the list of the command's aliases.
+            /// </summary>
+            internal IEnumerable<string> Aliases => _commandAttribute.Aliases;
+
+            /// <summary>
+            /// Returns true if the command should be added.
+            /// </summary>
+            internal bool IsValidPlatform(ITarget target)
+            {
+                if ((_commandAttribute.Platform & CommandPlatform.Global) != 0)
+                {
+                    return true;
+                }
+                if (target != null)
+                {
+                    if (target.OperatingSystem == OSPlatform.Windows)
+                    {
+                        return (_commandAttribute.Platform & CommandPlatform.Windows) != 0;
+                    }
+                    if (target.OperatingSystem == OSPlatform.Linux)
+                    {
+                        return (_commandAttribute.Platform & CommandPlatform.Linux) != 0;
+                    }
+                    if (target.OperatingSystem == OSPlatform.OSX)
+                    {
+                        return (_commandAttribute.Platform & CommandPlatform.OSX) != 0;
+                    }
+                }
+                return false;
+            }
+
+            /// <summary>
+            /// Execute the command synchronously.
+            /// </summary>
+            /// <param name="context">invocation context</param>
+            /// <param name="services">service provider</param>
+            internal void Invoke(InvocationContext context, IServiceProvider services) => Invoke(_methodInfo, context, context.Parser, services);
 
             /// <summary>
             /// Executes the command's help invoke function if exists
             /// </summary>
+            /// <param name="parser">parser instance</param>
+            /// <param name="services">service provider</param>
             /// <returns>true help called, false no help function</returns>
-            internal bool InvokeHelp()
+            internal bool InvokeHelp(Parser parser, IServiceProvider services)
             {
-                if (_methodInfoHelp == null)
-                {
+                if (_methodInfoHelp == null) {
                     return false;
                 }
                 // The InvocationContext is null so the options and arguments in the 
-                // command instance created don't get set. The context for the command
+                // command instance created are not set. The context for the command
                 // requesting help (either the help command or some other command using
                 // --help) won't work for the command instance that implements it's own
                 // help (SOS command).
-                Invoke(_methodInfoHelp, context: null);
+                Invoke(_methodInfoHelp, context: null, parser, services);
                 return true;
             }
 
-            private void Invoke(MethodInfo methodInfo, InvocationContext context)
+            private void Invoke(MethodInfo methodInfo, InvocationContext context, Parser parser, IServiceProvider services)
             {
                 try
                 {
-                    // Assumes zero parameter constructor
-                    object instance = _constructor.Invoke(new object[0]);
-                    SetProperties(context, instance);
+                    object instance = _factory(services);
+                    SetProperties(context, parser, services, instance);
 
-                    object[] arguments = BuildArguments(methodInfo, context);
+                    object[] arguments = BuildArguments(methodInfo, services);
                     methodInfo.Invoke(instance, arguments);
                 }
                 catch (TargetInvocationException ex)
@@ -273,98 +374,186 @@ namespace Microsoft.Diagnostics.Repl
                 }
             }
 
-            private void SetProperties(InvocationContext context, object instance)
+            private void SetProperties(InvocationContext context, Parser parser, IServiceProvider services, object instance)
             {
-                IEnumerable<OptionResult> optionResults = context?.ParseResult.CommandResult.Children.OfType<OptionResult>();
+                ParseResult defaultParseResult = null;
 
+                // Parse the default options if any
+                string defaultOptions = _commandAttribute.DefaultOptions;
+                if (defaultOptions != null) {
+                    defaultParseResult = parser.Parse(Name + " " + defaultOptions);
+                }
+
+                // Now initialize the option and service properties from the default and command line options
                 foreach ((PropertyInfo Property, Option Option) property in _properties)
                 {
                     object value = property.Property.GetValue(instance);
 
-                    if (property.Property.Name == nameof(CommandBase.AliasExpansion)) {
-                        value = _aliasExpansion;
-                    }
-                    else 
+                    if (property.Option != null)
                     {
-                        Type propertyType = property.Property.PropertyType;
-                        object service = GetService(propertyType, context);
-                        if (service != null) {
-                            value = service;
-                        }
-                        else if (context != null && property.Option != null)
+                        if (defaultParseResult != null)
                         {
-                            OptionResult optionResult = optionResults.Where((result) => result.Option == property.Option).SingleOrDefault();
+                            OptionResult defaultOptionResult = defaultParseResult.FindResultFor(property.Option);
+                            if (defaultOptionResult != null) {
+                                value = defaultOptionResult.GetValueOrDefault();
+                            }
+                        }
+                        if (context != null)
+                        {
+                            OptionResult optionResult = context.ParseResult.FindResultFor(property.Option);
                             if (optionResult != null) {
                                 value = optionResult.GetValueOrDefault();
                             }
+                        }
+                    }
+                    else
+                    { 
+                        Type propertyType = property.Property.PropertyType;
+                        object service = services.GetService(propertyType);
+                        if (service != null) {
+                            value = service;
                         }
                     }
 
                     property.Property.SetValue(instance, value);
                 }
 
-                if (context != null && _argument != null)
+                // Initialize any argument properties from the default and command line arguments
+                foreach ((PropertyInfo Property, Argument Argument) argument in _arguments)
                 {
-                    object value = null;
-                    ArgumentResult result = context.ParseResult.CommandResult.ArgumentResult;
-                    switch (result)
+                    object value = argument.Property.GetValue(instance);
+
+                    List<string> array = null;
+                    if (argument.Property.PropertyType.IsArray && argument.Property.PropertyType.GetElementType() == typeof(string))
                     {
-                        case SuccessfulArgumentResult successful:
-                            value = successful.Value;
-                            break;
-                        case FailedArgumentResult failed:
-                            throw new InvalidOperationException(failed.ErrorMessage);
+                        array = new List<string>();
+                        if (value is IEnumerable<string> entries) {
+                            array.AddRange(entries);
+                        }
                     }
-                    _argument.SetValue(instance, value);
+
+                    if (defaultParseResult != null)
+                    {
+                        ArgumentResult defaultArgumentResult = defaultParseResult.FindResultFor(argument.Argument);
+                        if (defaultArgumentResult != null)
+                        {
+                            value = defaultArgumentResult.GetValueOrDefault();
+                            if (array != null && value is IEnumerable<string> entries) {
+                                array.AddRange(entries);
+                            }
+                        }
+                    }
+                    if (context != null)
+                    {
+                        ArgumentResult argumentResult = context.ParseResult.FindResultFor(argument.Argument);
+                        if (argumentResult != null) 
+                        {
+                            value = argumentResult.GetValueOrDefault();
+                            if (array != null && value is IEnumerable<string> entries) {
+                                array.AddRange(entries);
+                            }
+                        }
+                    }
+
+                    argument.Property.SetValue(instance, array != null ? array.ToArray() : value);
                 }
             }
 
-            private object[] BuildArguments(MethodBase methodBase, InvocationContext context)
+            private object[] BuildArguments(MethodBase methodBase, IServiceProvider services)
             {
                 ParameterInfo[] parameters = methodBase.GetParameters();
                 object[] arguments = new object[parameters.Length];
-                for (int i = 0; i < parameters.Length; i++) {
+                for (int i = 0; i < parameters.Length; i++)
+                {
                     Type parameterType = parameters[i].ParameterType;
+
                     // The parameter will passed as null to allow for "optional" services. The invoked 
                     // method needs to check for possible null parameters.
-                    arguments[i] = GetService(parameterType, context);
+                    arguments[i] = services.GetService(parameterType);
                 }
                 return arguments;
             }
-
-            private object GetService(Type type, InvocationContext context)
-            {
-                object service;
-                if (type == typeof(InvocationContext)) {
-                    service = context;
-                }
-                else {
-                    service = _commandProcessor.GetService(type);
-                }
-                return service;
-            }
         }
 
+        /// <summary>
+        /// Local help builder that allows commands to provide more detailed help 
+        /// text via the "InvokeHelp" function.
+        /// </summary>
         class LocalHelpBuilder : IHelpBuilder
         {
             private readonly CommandProcessor _commandProcessor;
+            private readonly IConsole _console;
+            private readonly bool _useHelpBuilder;
 
-            public LocalHelpBuilder(CommandProcessor commandProcessor)
+            public LocalHelpBuilder(CommandProcessor commandProcessor, IConsole console, bool useHelpBuilder)
             {
                 _commandProcessor = commandProcessor;
+                _console = console;
+                _useHelpBuilder = useHelpBuilder;
             }
 
             void IHelpBuilder.Write(ICommand command)
             {
-                if (_commandProcessor._commandHandlers.TryGetValue(command.Name, out Handler handler))
+                bool useHelpBuilder = _useHelpBuilder;
+                if (_commandProcessor._commandHandlers.TryGetValue(command.Name, out CommandHandler handler))
                 {
-                    if (handler.InvokeHelp()) {
+                    if (handler.InvokeHelp(_commandProcessor._parser, LocalConsole.ToServices(_console))) {
                         return;
                     }
+                    useHelpBuilder = true;
                 }
-                var helpBuilder = new HelpBuilder(_commandProcessor._console, maxWidth: Console.WindowWidth);
-                helpBuilder.Write(command);
+                if (useHelpBuilder)
+                {
+                    var helpBuilder = new HelpBuilder(_console, maxWidth: Console.WindowWidth);
+                    helpBuilder.Write(command);
+                }
             }
+        }
+
+        /// <summary>
+        /// This class does two things: wraps the IConsoleService and provides the IConsole interface and 
+        /// pipes through the System.CommandLine parsing allowing per command invocation data (service 
+        /// provider and raw command line) to be passed through.
+        /// </summary>
+        class LocalConsole : IConsole
+        {
+            public static IServiceProvider ToServices(IConsole console) => ((LocalConsole)console).Services;
+
+            public readonly IServiceProvider Services;
+
+            private readonly IConsoleService _console;
+
+            public LocalConsole(IServiceProvider services)
+            {
+                Services = services;
+                _console = services.GetService<IConsoleService>();
+                Debug.Assert(_console != null);
+                Out = new StandardStreamWriter((text) => _console.Write(text));
+                Error = new StandardStreamWriter((text) => _console.WriteError(text));
+            }
+
+            #region IConsole
+
+            public IStandardStreamWriter Out { get; }
+
+            bool IStandardOut.IsOutputRedirected { get { return false; } }
+
+            public IStandardStreamWriter Error { get; }
+
+            bool IStandardError.IsErrorRedirected { get { return false; } }
+
+            bool IStandardIn.IsInputRedirected { get { return false; } }
+
+            class StandardStreamWriter : IStandardStreamWriter
+            {
+                readonly Action<string> _write;
+
+                public StandardStreamWriter(Action<string> write) => _write = write;
+
+                void IStandardStreamWriter.Write(string value) => _write(value);
+            }
+
+            #endregion
         }
     }
 }

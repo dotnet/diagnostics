@@ -2,9 +2,65 @@
 # Tests the various SOS commands with the SymbolTestApp debuggee
 #
 
+LOADSOS
+
+# Verify that bpmd works
+IFDEF:LIVE
+!IFDEF:MAJOR_RUNTIME_VERSION_1
+
+IFDEF:DESKTOP
+SOSCOMMAND:bpmd SymbolTestApp.exe SymbolTestApp.Program.Main
+ENDIF:DESKTOP
+!IFDEF:DESKTOP
+SOSCOMMAND:bpmd SymbolTestApp.dll SymbolTestApp.Program.Main
+ENDIF:DESKTOP
+
 CONTINUE
 
+# Unloads desktop sos and reloads new SOS
+IFDEF:DESKTOP
 LOADSOS
+ENDIF:DESKTOP
+
+SOSCOMMAND:ClrStack
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 16\]\s*
+
+SOSCOMMAND:bpmd SymbolTestApp.cs:29
+IFDEF:DESKTOP
+SOSCOMMAND:bpmd SymbolTestApp.exe SymbolTestApp.Program.Foo4
+ENDIF:DESKTOP
+!IFDEF:DESKTOP
+SOSCOMMAND:bpmd SymbolTestApp.dll SymbolTestApp.Program.Foo4
+ENDIF:DESKTOP
+
+IFDEF:PROJECTK
+CONTINUE
+SOSCOMMAND:ClrStack
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 16\]\s*
+ENDIF:PROJECTK
+
+CONTINUE
+SOSCOMMAND:ClrStack
+IFDEF:DESKTOP
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
+ENDIF:DESKTOP
+!IFDEF:DESKTOP
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 28\]\s*
+ENDIF:DESKTOP
+
+CONTINUE
+SOSCOMMAND:ClrStack
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 34\]\s*
+
+ENDIF:MAJOR_RUNTIME_VERSION_1
+ENDIF:LIVE
+
+CONTINUE
+
+SOSCOMMAND:SetSymbolServer -ms
+!IFDEF:DOTNETDUMP
+SOSCOMMAND:SetHostRuntime
+ENDIF:DOTNETDUMP
 
 IFDEF:DOTNETDUMP
 COMMAND:clrmodules
@@ -14,7 +70,7 @@ VERIFY:\s*<HEXVAL>\s+<HEXVAL>.*
 COMMAND:threads
 VERIFY:\s*<DECVAL>\s+0x<HEXVAL>\s+\(<DECVAL>\)\s+
 COMMAND:registers
-VERIFY:\s*([r|e]ip|pc) = <HEXVAL>\s+
+VERIFY:\s*([r|e]ip|pc) = 0x<HEXVAL>\s+
 ENDIF:DOTNETDUMP
 
 # Issue: https://github.com/dotnet/diagnostics/issues/503
@@ -39,11 +95,9 @@ SOSCOMMAND:DumpAssembly <POUT>\s*Assembly:\s+(<HEXVAL>)\s+\[.*<POUT>
 VERIFY:\s*Parent Domain:\s+<HEXVAL>\s+
 VERIFY:\s*Name:\s+.*(System\.Private\.CoreLib(\.ni)?\.dll|mscorlib.dll)\s+
 
-SOSCOMMAND:DumpModule <POUT>\s+Module Name\s+(<HEXVAL>)\s+.*<POUT>
-!IFDEF:DESKTOP
+SOSCOMMAND:DumpModule <POUT>\s+Module\s+(<HEXVAL>)\s+.*<POUT>
 VERIFY:\s*PEFile:\s+<HEXVAL>\s+
 VERIFY:\s*ModuleId:\s+<HEXVAL>\s+
-ENDIF:DESKTOP
 VERIFY:\s*LoaderHeap:\s+<HEXVAL>\s+
 VERIFY:\s*TypeDefToMethodTableMap:\s+<HEXVAL>\s+
 

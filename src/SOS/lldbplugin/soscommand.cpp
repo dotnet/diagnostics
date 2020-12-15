@@ -129,12 +129,13 @@ bool
 sosCommandInitialize(lldb::SBDebugger debugger)
 {
     lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
-    interpreter.AddCommand("sos", new sosCommand(nullptr), "Various coreclr debugging commands. See 'soshelp' for more details. sos <command-name> <args>");
+    interpreter.AddCommand("sos", new sosCommand(nullptr), "Various .NET Core debugging commands. See 'soshelp' for more details. sos <command-name> <args>");
     interpreter.AddCommand("bpmd", new sosCommand("bpmd"), "Creates a breakpoint at the specified managed method in the specified module.");
     interpreter.AddCommand("clrstack", new sosCommand("ClrStack"), "Provides a stack trace of managed code only.");
     interpreter.AddCommand("clrthreads", new sosCommand("Threads"), "List the managed threads running.");
     interpreter.AddCommand("clru", new sosCommand("u"), "Displays an annotated disassembly of a managed method.");
     interpreter.AddCommand("dbgout", new sosCommand("dbgout"), "Enable/disable (-off) internal SOS logging.");
+    interpreter.AddCommand("dumpalc", new sosCommand("DumpALC"), "Displays details about a collectible AssemblyLoadContext to which the specified object is loaded.");
     interpreter.AddCommand("dumparray", new sosCommand("DumpArray"), "Displays details about a managed array.");
     interpreter.AddCommand("dumpasync", new sosCommand("DumpAsync"), "Displays info about async state machines on the garbage-collected heap.");
     interpreter.AddCommand("dumpassembly", new sosCommand("DumpAssembly"), "Displays details about an assembly.");
@@ -168,9 +169,13 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     interpreter.AddCommand("histobjfind", new sosCommand("HistObjFind"), "Displays all the log entries that reference an object at the specified address.");
     interpreter.AddCommand("histroot", new sosCommand("HistRoot"), "Displays information related to both promotions and relocations of the specified root.");
     interpreter.AddCommand("sethostruntime", new sosCommand("SetHostRuntime"), "Sets or displays the .NET Core runtime directory to use to run managed code in SOS.");
+    interpreter.AddCommand("setclrpath", new sosCommand("SetClrPath"), "Set the path to load the runtime DAC/DBI files.");
     interpreter.AddCommand("setsymbolserver", new sosCommand("SetSymbolServer"), "Enables the symbol server support ");
     interpreter.AddCommand("sympath", new sosCommand("SetSymbolServer", "-sympath"), "Add server, cache and directory paths in the Windows symbol path format.");
     interpreter.AddCommand("soshelp", new sosCommand("Help"), "Displays all available commands when no parameter is specified, or displays detailed help information about the specified command. soshelp <command>");
     interpreter.AddCommand("sosstatus", new sosCommand("SOSStatus"), "Displays the global SOS status.");
+    interpreter.AddCommand("sosflush", new sosCommand("SOSFlush"), "Flushes the DAC caches.");
+    interpreter.AddCommand("threadpool", new sosCommand("ThreadPool"), "Displays info about the runtime thread pool.");
+    interpreter.AddCommand("verifyheap", new sosCommand("VerifyHeap"), "Checks the GC heap for signs of corruption.");
     return true;
 }

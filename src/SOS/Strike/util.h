@@ -3,9 +3,9 @@
 // See the LICENSE file in the project root for more information.
 
 // ==++==
-// 
- 
-// 
+//
+
+//
 // ==--==
 #ifndef __util_h__
 #define __util_h__
@@ -39,6 +39,7 @@ inline void RestoreSOToleranceState() {}
 #include "static_assert.h"
 #include <string>
 #include "hostcoreclr.h"
+#include "holder.h"
 
 typedef LPCSTR  LPCUTF8;
 typedef LPSTR   LPUTF8;
@@ -47,7 +48,7 @@ typedef LPSTR   LPUTF8;
 #define NOTHROW
 #else
 #define NOTHROW (std::nothrow)
-#endif 
+#endif
 
 DECLARE_HANDLE(OBJECTHANDLE);
 
@@ -71,10 +72,6 @@ DECLARE_HANDLE(OBJECTHANDLE);
 #define TARGET_POINTER_SIZE POINTERSIZE_BYTES
 #endif // TARGET_POINTER_SIZE
 
-#if defined(_MSC_VER)
-#pragma warning(disable:4510 4512 4610)
-#endif
-
 #ifndef _ASSERTE
 #ifdef _DEBUG
 #define _ASSERTE(expr)         \
@@ -97,9 +94,7 @@ DECLARE_HANDLE(OBJECTHANDLE);
 #elif defined(_ARM_)
 #define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.arm.dll"
 #elif defined(_ARM64_)
-// Use diasymreader until the package has an arm64 version - issue #7360
-//#define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.arm64.dll"
-#define NATIVE_SYMBOL_READER_DLL "diasymreader.dll"
+#define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.arm64.dll"
 #endif
 
 // PREFIX macros - Begin
@@ -122,7 +117,7 @@ DECLARE_HANDLE(OBJECTHANDLE);
 #endif
 
 
-#if defined(_PREFAST_) || defined(_PREFIX_) 
+#if defined(_PREFAST_) || defined(_PREFIX_)
 #define COMPILER_ASSUME_MSG(_condition, _message) if (!(_condition)) __UNREACHABLE();
 #else
 
@@ -189,7 +184,7 @@ typedef struct tagLockEntry
     tagLockEntry *pPrev;    // prev entry
     DWORD dwULockID;
     DWORD dwLLockID;        // owning lock
-    WORD wReaderLevel;      // reader nesting level    
+    WORD wReaderLevel;      // reader nesting level
 } LockEntry;
 
 #define MAX_CLASSNAME_LENGTH    1024
@@ -201,9 +196,6 @@ extern IXCLRDataProcess *g_clrData;
 extern ISOSDacInterface *g_sos;
 
 #include "dacprivate.h"
-
-interface ICorDebugProcess;
-extern ICorDebugProcess * g_pCorDebugProcess;
 
 // This class is templated for easy modification.  We may need to update the CachedString
 // or related classes to use WCHAR instead of char in the future.
@@ -277,7 +269,7 @@ public:
     {
         return mIndex == -2;
     }
-    
+
     // allocate a string of the specified size.  this will Clear() any
     // previously allocated string.  call IsOOM() to check for failure.
     void Allocate(int size);
@@ -307,12 +299,217 @@ private:
     // -1 - mPtr points to a pointer we have new'ed
     // -2 - We hit an oom trying to allocate either mCount or mPtr
     int mIndex;
-    
+
     // contains the size of current string
     int mSize;
 
 private:
     static StaticData<char, 4, 1024> cache;
+};
+
+class GCHeapDetails
+{
+private:
+    void GetGenerationTableSize(CLRDATA_ADDRESS svrHeapAddr, unsigned int *count)
+    {
+        HRESULT hr = S_OK;
+        bool success = false;
+        ReleaseHolder<ISOSDacInterface8> sos8;
+        if (!SUCCEEDED(hr = g_sos->QueryInterface(__uuidof(ISOSDacInterface8), &sos8))
+            || !SUCCEEDED(hr = sos8->GetNumberGenerations(count)))
+        {
+            // The runtime will either have the original 4 generations or implement ISOSDacInterface8
+            // if the call succeeded, count is already populated.
+            *count = DAC_NUMBERGENERATIONS;
+        }
+    }
+
+    // Fill the target array with either the details from heap or if this is a newer runtime that supports
+    // the pinned object heap (or potentially future GC generations), get that data too. This abstraction is
+    // necessary because the original GC heap APIs are hardcoded to 4 generations.
+    void FillGenerationTable(CLRDATA_ADDRESS svrHeapAddr, const DacpGcHeapDetails &heap, unsigned int count, DacpGenerationData *data)
+    {
+        HRESULT hr = S_OK;
+        bool success = false;
+        unsigned int generationCount;
+        ReleaseHolder<ISOSDacInterface8> sos8;
+        if (SUCCEEDED(hr = g_sos->QueryInterface(__uuidof(ISOSDacInterface8), &sos8)))
+        {
+            if (svrHeapAddr == NULL)
+            {
+                if (SUCCEEDED(hr = sos8->GetGenerationTable(count, data, &generationCount))
+                    && hr != S_FALSE)
+                {
+                    success = true;
+                    // Nothing else to do, data is already populated
+                }
+            }
+            else
+            {
+                if (SUCCEEDED(hr = sos8->GetGenerationTableSvr(svrHeapAddr, count, data, &generationCount))
+                    && hr != S_FALSE)
+                {
+                    success = true;
+                    // Nothing else to do, data is already populated
+                }
+            }
+
+            _ASSERTE(generationCount == count || !success);
+        }
+
+        if (!success)
+        {
+            // This would mean that there are additional, unaccounted for, generations
+            _ASSERTE(hr != S_FALSE);
+
+            // We couldn't get any data from the newer APIs, so fall back to the original data
+            memcpy(data, &(heap.generation_table), sizeof(DacpGenerationData) * DAC_NUMBERGENERATIONS);
+        }
+    }
+
+    // Fill the target array with either the details from heap or if this is a newer runtime that supports
+    // the pinned object heap (or potentially future GC generations), get that data too. This abstraction is
+    // necessary because the original GC heap APIs are hardcoded to 4 generations.
+    void FillFinalizationPointers(CLRDATA_ADDRESS svrHeapAddr, const DacpGcHeapDetails &heap, unsigned int count, CLRDATA_ADDRESS *data)
+    {
+        HRESULT hr = S_OK;
+        bool success = false;
+        unsigned int fillPointersCount;
+        ReleaseHolder<ISOSDacInterface8> sos8;
+        if (SUCCEEDED(hr = g_sos->QueryInterface(__uuidof(ISOSDacInterface8), &sos8)))
+        {
+            if (svrHeapAddr == NULL)
+            {
+                if (SUCCEEDED(hr = sos8->GetFinalizationFillPointers(count, data, &fillPointersCount))
+                    && hr != S_FALSE)
+                {
+                    success = true;
+                    // Nothing else to do, data is already populated
+                }
+            }
+            else
+            {
+                if (SUCCEEDED(hr = sos8->GetFinalizationFillPointersSvr(svrHeapAddr, count, data, &fillPointersCount))
+                    && hr != S_FALSE)
+                {
+                    success = true;
+                    // Nothing else to do, data is already populated
+                }
+            }
+
+            _ASSERTE(fillPointersCount == count);
+        }
+
+        if (!success)
+        {
+            // This would mean that there are additional, unaccounted for, generations
+            _ASSERTE(hr != S_FALSE);
+
+            // We couldn't get any data from the newer APIs, so fall back to the original data
+            memcpy(data, &(heap.finalization_fill_pointers), sizeof(CLRDATA_ADDRESS) * (DAC_NUMBERGENERATIONS + 2));
+        }
+    }
+
+public:
+    GCHeapDetails()
+    {
+        generation_table = NULL;
+        finalization_fill_pointers = NULL;
+    }
+
+    GCHeapDetails(const DacpGcHeapDetails  &dacGCDetails, CLRDATA_ADDRESS svrHeapAddr = NULL)
+    {
+        generation_table = NULL;
+        finalization_fill_pointers = NULL;
+
+        Set(dacGCDetails, svrHeapAddr);
+    }
+
+    ~GCHeapDetails()
+    {
+        if (generation_table != NULL)
+        {
+            delete[] generation_table;
+            generation_table = NULL;
+        }
+
+        if (finalization_fill_pointers != NULL)
+        {
+            delete[] finalization_fill_pointers;
+            finalization_fill_pointers = NULL;
+        }
+    }
+
+    // Due to the raw pointers, we are not a POD and have to be careful about lifetime
+    GCHeapDetails(const GCHeapDetails& other) = delete;
+    GCHeapDetails(GCHeapDetails&& other) = delete;
+    GCHeapDetails& operator=(const GCHeapDetails& other) = delete;
+    GCHeapDetails& operator=(GCHeapDetails&& other) = delete;
+
+    void Set(const DacpGcHeapDetails dacGCDetails, CLRDATA_ADDRESS svrHeapAddr = NULL)
+    {
+        original_heap_details = dacGCDetails;
+
+        GetGenerationTableSize(svrHeapAddr, &num_generations);
+        // Either we're pre POH and have 4, or post and have 5. If there's a different
+        // number it's either a bug or we need to update SOS.
+        _ASSERTE(num_generations == 4 || num_generations == 5);
+        has_poh = num_generations > 4;
+
+        if (generation_table != NULL)
+        {
+            delete[] generation_table;
+        }
+        generation_table = new DacpGenerationData[num_generations];
+        FillGenerationTable(svrHeapAddr, dacGCDetails, num_generations, generation_table);
+
+        if (finalization_fill_pointers != NULL)
+        {
+            delete[] finalization_fill_pointers;
+        }
+
+        unsigned int num_fill_pointers = num_generations + 2;
+        finalization_fill_pointers = new CLRDATA_ADDRESS[num_fill_pointers];
+        FillFinalizationPointers(svrHeapAddr, dacGCDetails, num_fill_pointers, finalization_fill_pointers);
+
+        heapAddr = svrHeapAddr;
+        alloc_allocated = dacGCDetails.alloc_allocated;
+        mark_array = dacGCDetails.mark_array;
+        current_c_gc_state = dacGCDetails.current_c_gc_state;
+        next_sweep_obj = dacGCDetails.next_sweep_obj;
+        saved_sweep_ephemeral_seg = dacGCDetails.saved_sweep_ephemeral_seg;
+        saved_sweep_ephemeral_start = dacGCDetails.saved_sweep_ephemeral_start;
+        background_saved_lowest_address = dacGCDetails.background_saved_lowest_address;
+        background_saved_highest_address = dacGCDetails.background_saved_highest_address;
+        ephemeral_heap_segment = dacGCDetails.ephemeral_heap_segment;
+        lowest_address = dacGCDetails.lowest_address;
+        highest_address = dacGCDetails.highest_address;
+        card_table = dacGCDetails.card_table;
+    }
+
+    DacpGcHeapDetails original_heap_details;
+    bool has_poh;
+    CLRDATA_ADDRESS heapAddr; // Only filled in in server mode, otherwise NULL
+    CLRDATA_ADDRESS alloc_allocated;
+
+    CLRDATA_ADDRESS mark_array;
+    CLRDATA_ADDRESS current_c_gc_state;
+    CLRDATA_ADDRESS next_sweep_obj;
+    CLRDATA_ADDRESS saved_sweep_ephemeral_seg;
+    CLRDATA_ADDRESS saved_sweep_ephemeral_start;
+    CLRDATA_ADDRESS background_saved_lowest_address;
+    CLRDATA_ADDRESS background_saved_highest_address;
+
+    // There are num_generations entries in generation_table and num_generations + 3 entries
+    // in finalization_fill_pointers
+    unsigned int num_generations;
+    DacpGenerationData *generation_table;
+    CLRDATA_ADDRESS ephemeral_heap_segment;
+    CLRDATA_ADDRESS *finalization_fill_pointers;
+    CLRDATA_ADDRESS lowest_address;
+    CLRDATA_ADDRESS highest_address;
+    CLRDATA_ADDRESS card_table;
+
 };
 
 // Things in this namespace should not be directly accessed/called outside of
@@ -324,22 +521,22 @@ namespace Output
     extern unsigned int g_DMLEnable;
     extern bool g_bDbgOutput;
     extern bool g_bDMLExposed;
-    
+
     inline bool IsOutputSuppressed()
     { return g_bSuppressOutput > 0; }
-    
+
     inline void ResetIndent()
     { g_Indent = 0; }
-    
+
     inline void SetDebugOutputEnabled(bool enabled)
     { g_bDbgOutput = enabled; }
-    
+
     inline bool IsDebugOutputEnabled()
     { return g_bDbgOutput; }
 
     inline void SetDMLExposed(bool exposed)
     { g_bDMLExposed = exposed; }
-    
+
     inline bool IsDMLExposed()
     { return g_bDMLExposed; }
 
@@ -365,6 +562,8 @@ namespace Output
         DML_ManagedVar,
         DML_Async,
         DML_IL,
+        DML_ComWrapperRCW,
+        DML_ComWrapperCCW
     };
 
     /**********************************************************************\
@@ -381,7 +580,7 @@ namespace Output
     *                                                                      *
     \**********************************************************************/
     CachedString BuildVCValue(CLRDATA_ADDRESS mt, CLRDATA_ADDRESS addr, FormatType type, bool fill = true);
-    
+
 
     /**********************************************************************\
     * This function builds a DML string for an object.  If DML is enabled, *
@@ -470,6 +669,8 @@ inline void ExtOutIndent()  { WhitespaceOut(Output::g_Indent << 2); }
 #define DMLManagedVar(expansionName,frame,simpleName) Output::BuildManagedVarValue(expansionName, frame, simpleName, Output::DML_ManagedVar).GetPtr()
 #define DMLAsync(addr) Output::BuildHexValue(addr, Output::DML_Async).GetPtr()
 #define DMLIL(addr) Output::BuildHexValue(addr, Output::DML_IL).GetPtr()
+#define DMLComWrapperRCW(addr) Output::BuildHexValue(addr, Output::DML_ComWrapperRCW).GetPtr()
+#define DMLComWrapperCCW(addr) Output::BuildHexValue(addr, Output::DML_ComWrapperCCW).GetPtr()
 
 bool IsDMLEnabled();
 
@@ -493,7 +694,7 @@ public:
         : mStr(0), mSize(0), mLength(0)
     {
         const size_t size = 64;
-        
+
         mStr = new T[size];
         mSize = size;
         mStr[0] = 0;
@@ -557,7 +758,7 @@ public:
     {
         return mStr;
     }
-    
+
     const T *c_str() const
     {
         return mStr;
@@ -575,11 +776,11 @@ private:
         const size_t size = len1 + len2 + 1 + ((len1 + len2) >> 1);
         mStr = new T[size];
         mSize = size;
-        
+
         CopyFrom(str1, len1);
         CopyFrom(str2, len2);
     }
-    
+
     void Clear()
     {
         mLength = 0;
@@ -625,7 +826,7 @@ private:
         {
             newStr[0] = 0;
         }
-        
+
         mStr = newStr;
         mSize = size;
     }
@@ -714,7 +915,7 @@ namespace Output
             {
                 const int len = GetDMLWidth(mDml);
                 char *buffer = (char*)alloca(len);
-            
+
                 BuildDML(buffer, len, (CLRDATA_ADDRESS)mValue, mFormat, mDml);
                 DMLOut(buffer);
             }
@@ -763,7 +964,7 @@ namespace Output
             {
                 const int len = GetDMLColWidth(mDml, width);
                 char *buffer = (char*)alloca(len);
-            
+
                 BuildDMLCol(buffer, len, (CLRDATA_ADDRESS)mValue, mFormat, mDml, leftAlign, width);
                 DMLOut(buffer);
             }
@@ -801,7 +1002,7 @@ namespace Output
                 }
             }
         }
-    
+
         /* Converts this object into a Wide char string.  This allows you to write the following code:
          *    WString foo = L"bar " + ObjectPtr(obj);
          * Where ObjectPtr is a subclass/typedef of this Format class.
@@ -810,15 +1011,15 @@ namespace Output
         {
             String str = *this;
             const char *cstr = (const char *)str;
-        
+
             int len = MultiByteToWideChar(CP_ACP, 0, cstr, -1, NULL, 0);
             WCHAR *buffer = (WCHAR *)alloca(len*sizeof(WCHAR));
-        
+
             MultiByteToWideChar(CP_ACP, 0, cstr, -1, buffer, len);
-        
+
             return WString(buffer);
         }
-    
+
         /* Converts this object into a String object.  This allows you to write the following code:
          *    String foo = "bar " + ObjectPtr(obj);
          * Where ObjectPtr is a subclass/typedef of this Format class.
@@ -829,7 +1030,7 @@ namespace Output
             {
                 const int len = GetDMLColWidth(mDml, 0);
                 char *buffer = (char*)alloca(len);
-            
+
                 BuildDMLCol(buffer, len, (CLRDATA_ADDRESS)mValue, mFormat, mDml, false, 0);
                 return buffer;
             }
@@ -854,7 +1055,7 @@ namespace Output
                     sprintf_s(buffer, _countof(buffer), format, (__int32)mValue);
                     ConvertToLower(buffer, _countof(buffer));
                 }
-                
+
                 return buffer;
             }
         }
@@ -899,38 +1100,38 @@ namespace Output
         {
             BuildDMLCol(result, len, value, format, dmlType, true, 0);
         }
-    
+
         static int GetDMLWidth(Output::FormatType dmlType)
         {
             return GetDMLColWidth(dmlType, 0);
         }
-    
+
         static void BuildDMLCol(__out_ecount(len) char *result, int len, CLRDATA_ADDRESS value, Formats::Format format, Output::FormatType dmlType, bool leftAlign, int width)
         {
             char hex[64];
             int count = GetHex(value, hex, _countof(hex), format != Formats::Hex);
             int i = 0;
-    
+
             if (!leftAlign)
             {
                 for (; i < width - count; ++i)
                     result[i] = ' ';
-        
+
                 result[i] = 0;
             }
-    
+
             int written = sprintf_s(result+i, len - i, DMLFormats[dmlType], hex, hex);
-    
+
             SOS_Assert(written != -1);
             if (written != -1)
             {
                 for (i = i + written; i < width; ++i)
                     result[i] = ' ';
-        
+
                 result[i] = 0;
             }
         }
-    
+
         static int GetDMLColWidth(Output::FormatType dmlType, int width)
         {
             return 1 + 4*sizeof(int*) + (int)strlen(DMLFormats[dmlType]) + width;
@@ -974,7 +1175,7 @@ namespace Output
                 precision = width;
 
             const char *format = align == AlignLeft ? "%-*.*s" : "%*.*s";
-        
+
             if (IsDMLEnabled())
                 DMLOut(format, width, precision, mValue);
             else
@@ -1000,7 +1201,7 @@ namespace Output
             : mValue(rhs.mValue)
         {
         }
-    
+
         void Output() const
         {
             if (IsDMLEnabled())
@@ -1152,7 +1353,7 @@ public:
      */
     void ReInit(int numColumns, int defaultColumnWidth, Alignment alignmentDefault = AlignLeft, int indent = 0, int padding = 1);
 
-    /* Sets the amount of whitespace to prefix at the start of the row (in characters). 
+    /* Sets the amount of whitespace to prefix at the start of the row (in characters).
      */
     void SetIndent(int indent)
     {
@@ -1189,7 +1390,7 @@ public:
      */
     void SetColAlignment(int col, Alignment align);
 
-    
+
     /* The WriteRow family of functions allows you to write an entire row of the table at once.
      * The common use case for the TableOutput class is to individually output each column after
      * calculating what the value should contain.  However, this would be tedious if you already
@@ -1223,7 +1424,7 @@ public:
         WriteColumn(3, t3);
     }
 
-    
+
     template <class T0, class T1, class T2, class T3, class T4>
     void WriteRow(T0 t0, T1 t1, T2 t2, T3 t3, T4 t4)
     {
@@ -1233,7 +1434,7 @@ public:
         WriteColumn(3, t3);
         WriteColumn(4, t4);
     }
-    
+
     template <class T0, class T1, class T2, class T3, class T4, class T5>
     void WriteRow(T0 t0, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5)
     {
@@ -1288,7 +1489,7 @@ public:
 
         if (col == 0)
             OutputIndent();
-        
+
         bool lastCol = col == mColumns - 1;
 
         if (!lastCol)
@@ -1303,7 +1504,7 @@ public:
         else
             mCurrCol = col+1;
     }
-    
+
     template <class T>
     void WriteColumn(int col, T t)
     {
@@ -1329,7 +1530,7 @@ public:
     {
         WriteColumn(col, Output::Format<const WCHAR *>(str));
     }
-    
+
     inline void WriteColumn(int col, __in_z char *str)
     {
         WriteColumn(col, Output::Format<const char *>(str));
@@ -1344,7 +1545,7 @@ public:
         SOS_Assert(strstr(fmt, "%S") == NULL);
 
         char result[128];
-        
+
         va_list list;
         va_start(list, fmt);
         vsprintf_s(result, _countof(result), fmt, list);
@@ -1352,11 +1553,11 @@ public:
 
         WriteColumn(col, result);
     }
-    
+
     void WriteColumnFormat(int col, const WCHAR *fmt, ...)
     {
         WCHAR result[128];
-        
+
         va_list list;
         va_start(list, fmt);
         vswprintf_s(result, _countof(result), fmt, list);
@@ -1390,26 +1591,30 @@ private:
     Alignment *mAlignments;
 };
 
+#ifndef FEATURE_PAL
+HRESULT GetClrModuleImages(__in IXCLRDataModule* module, __in CLRDataModuleExtentType desiredType, __out PULONG64 pBase, __out PULONG64 pSize);
+#endif
 HRESULT GetMethodDefinitionsFromName(DWORD_PTR ModulePtr, IXCLRDataModule* mod, const char* name, IXCLRDataMethodDefinition **ppMethodDefinitions, int numMethods, int *numMethodsNeeded);
 HRESULT GetMethodDescsFromName(DWORD_PTR ModulePtr, IXCLRDataModule* mod, const char* name, DWORD_PTR **pOut, int *numMethodDescs);
 
-HRESULT FileNameForModule (DacpModuleData *pModule, __out_ecount (MAX_LONGPATH) WCHAR *fileName);
+HRESULT FileNameForModule (const DacpModuleData * const pModule, __out_ecount (MAX_LONGPATH) WCHAR *fileName);
 HRESULT FileNameForModule (DWORD_PTR pModuleAddr, __out_ecount (MAX_LONGPATH) WCHAR *fileName);
 void IP2MethodDesc (DWORD_PTR IP, DWORD_PTR &methodDesc, JITTypes &jitType,
                     DWORD_PTR &gcinfoAddr);
 const char *ElementTypeName (unsigned type);
 void DisplayFields (CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodTableFieldData *pMTFD,
                     DWORD_PTR dwStartAddr = 0, BOOL bFirst=TRUE, BOOL bValueClass=FALSE);
+HRESULT GetNonSharedStaticFieldValueFromName(UINT64* pValue, DWORD_PTR moduleAddr, const char *typeName, __in_z LPCWSTR wszFieldName, CorElementType fieldType);
 int GetObjFieldOffset(CLRDATA_ADDRESS cdaObj, __in_z LPCWSTR wszFieldName, BOOL bFirst=TRUE);
 int GetObjFieldOffset(CLRDATA_ADDRESS cdaObj, CLRDATA_ADDRESS cdaMT, __in_z LPCWSTR wszFieldName, BOOL bFirst=TRUE, DacpFieldDescData* pDacpFieldDescData=NULL);
-int GetValueFieldOffset(CLRDATA_ADDRESS cdaMT, __in_z LPCWSTR wszFieldName, DacpFieldDescData* pDacpFieldDescData);
+int GetValueFieldOffset(CLRDATA_ADDRESS cdaMT, __in_z LPCWSTR wszFieldName, DacpFieldDescData* pDacpFieldDescData=NULL);
 
 BOOL IsValidToken(DWORD_PTR ModuleAddr, mdTypeDef mb);
-void NameForToken_s(DacpModuleData *pModule, mdTypeDef mb, __out_ecount (capacity_mdName) WCHAR *mdName, size_t capacity_mdName, 
+void NameForToken_s(DacpModuleData *pModule, mdTypeDef mb, __out_ecount (capacity_mdName) WCHAR *mdName, size_t capacity_mdName,
                   bool bClassName=true);
-void NameForToken_s(DWORD_PTR ModuleAddr, mdTypeDef mb, __out_ecount (capacity_mdName) WCHAR *mdName, size_t capacity_mdName, 
+void NameForToken_s(DWORD_PTR ModuleAddr, mdTypeDef mb, __out_ecount (capacity_mdName) WCHAR *mdName, size_t capacity_mdName,
                   bool bClassName=true);
-HRESULT NameForToken_s(mdTypeDef mb, IMetaDataImport *pImport, __out_ecount (capacity_mdName) WCHAR *mdName,  size_t capacity_mdName, 
+HRESULT NameForToken_s(mdTypeDef mb, IMetaDataImport *pImport, __out_ecount (capacity_mdName) WCHAR *mdName,  size_t capacity_mdName,
                      bool bClassName);
 
 void vmmap();
@@ -1440,16 +1645,18 @@ int bitidx(SCALAR bitflag)
     return -1;
 }
 
+#ifndef FEATURE_PAL
 HRESULT
 DllsName(
     ULONG_PTR addrContaining,
     __out_ecount (MAX_LONGPATH) WCHAR *dllName
     );
+#endif
 
 inline
 BOOL IsElementValueType (CorElementType cet)
 {
-    return (cet >= ELEMENT_TYPE_BOOLEAN && cet <= ELEMENT_TYPE_R8) 
+    return (cet >= ELEMENT_TYPE_BOOLEAN && cet <= ELEMENT_TYPE_R8)
         || cet == ELEMENT_TYPE_VALUETYPE || cet == ELEMENT_TYPE_I || cet == ELEMENT_TYPE_U;
 }
 
@@ -1477,11 +1684,11 @@ public:
     ToRelease()
         : m_ptr(NULL)
     {}
-    
+
     ToRelease(T* ptr)
         : m_ptr(ptr)
     {}
-    
+
     ~ToRelease()
     {
         Release();
@@ -1520,7 +1727,7 @@ public:
         m_ptr = NULL;
         return pT;
     }
-    
+
     void Release()
     {
         if (m_ptr != NULL)
@@ -1531,17 +1738,8 @@ public:
     }
 
 private:
-    T* m_ptr;    
+    T* m_ptr;
 };
-
-struct ModuleInfo
-{
-    ULONG64 baseAddr;
-    ULONG64 size;
-    ULONG index;
-    BOOL hasPdb;
-};
-extern ModuleInfo g_moduleInfo[];
 
 BOOL InitializeHeapData();
 BOOL IsServerBuild ();
@@ -1556,19 +1754,19 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize);
 void DecodeDynamicIL(BYTE *data, ULONG Size, DacpObjectData& tokenArray);
 ULONG DisplayILOperation(const UINT indentCount, BYTE* pBuffer, ULONG position, std::function<void(DWORD)>& func);
 
-HRESULT GetRuntimeModuleInfo(PULONG moduleIndex, PULONG64 moduleBase);
-EEFLAVOR GetEEFlavor ();
-HRESULT InitCorDebugInterface();
-VOID UninitCorDebugInterface();
 BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes);
 bool IsRuntimeVersion(DWORD major);
 bool IsRuntimeVersion(VS_FIXEDFILEINFO& fileInfo, DWORD major);
+bool IsRuntimeVersionAtLeast(DWORD major);
+bool IsRuntimeVersionAtLeast(VS_FIXEDFILEINFO& fileInfo, DWORD major);
+bool CheckBreakingRuntimeChange(int* pVersion = nullptr);
 #ifndef FEATURE_PAL
 BOOL IsRetailBuild (size_t base);
 BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo);
 #endif
 
 BOOL IsDumpFile ();
+const WCHAR GetTargetDirectorySeparatorW();
 
 // IsMiniDumpFile will return true if 1) we are in
 // a small format minidump, and g_InMinidumpSafeMode is true.
@@ -1578,7 +1776,7 @@ BOOL IsMiniDumpFile();
 void ReportOOM();
 
 BOOL SafeReadMemory (TADDR offset, PVOID lpBuffer, ULONG cb, PULONG lpcbBytesRead);
-#if !defined(_TARGET_WIN64_) && !defined(_ARM64_)
+#if !defined(_TARGET_WIN64_) && !defined(_ARM64_) && !defined(_MIPS64_)
 // on 64-bit platforms TADDR and CLRDATA_ADDRESS are identical
 inline BOOL SafeReadMemory (CLRDATA_ADDRESS offset, PVOID lpBuffer, ULONG cb, PULONG lpcbBytesRead)
 { return SafeReadMemory(TO_TADDR(offset), lpBuffer, cb, lpcbBytesRead); }
@@ -1591,6 +1789,7 @@ WCHAR *CreateMethodTableName(TADDR mt, TADDR cmt = NULL);
 
 void isRetAddr(DWORD_PTR retAddr, DWORD_PTR* whereCalled);
 DWORD_PTR GetValueFromExpression (___in __in_z const char *const str);
+void LoadRuntimeSymbols();
 
 enum ModuleHeapType
 {
@@ -1618,11 +1817,11 @@ struct GenUsageStat
 
 struct HeapUsageStat
 {
-    GenUsageStat  genUsage[4]; // gen0, 1, 2, LOH
+    GenUsageStat  genUsage[5]; // gen0, 1, 2, LOH, POH
 };
 
 extern DacpUsefulGlobalsData g_special_usefulGlobals;
-BOOL GCHeapUsageStats(const DacpGcHeapDetails& heap, BOOL bIncUnreachable, HeapUsageStat *hpUsage);
+BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsageStat *hpUsage);
 
 class HeapStat
 {
@@ -1720,8 +1919,8 @@ public:
 
     void Clear ();
 private:
-    int CompareData(DWORD_PTR n1, DWORD_PTR n2);    
-    void ReverseLeftMost (Node *root);    
+    int CompareData(DWORD_PTR n1, DWORD_PTR n2);
+    void ReverseLeftMost (Node *root);
 };
 
 extern MethodTableCache g_special_mtCache;
@@ -1733,7 +1932,7 @@ struct DumpArrayFlags
     BOOL bDetail;
     LPSTR strObject;
     BOOL bNoFieldsForElement;
-    
+
     DumpArrayFlags ()
         : startIndex(0), Length((DWORD_PTR)-1), bDetail(FALSE), strObject (0), bNoFieldsForElement(FALSE)
     {}
@@ -1763,7 +1962,7 @@ struct DumpArrayFlags
 
 HRESULT GetMTOfObject(TADDR obj, TADDR *mt);
 
-struct needed_alloc_context 
+struct needed_alloc_context
 {
     BYTE*   alloc_ptr;   // starting point for next allocation
     BYTE*   alloc_limit; // ending point for allocation region/quantum
@@ -1784,16 +1983,16 @@ struct AllocInfo
         GetAllocContextPtrs(this);
     }
     ~AllocInfo()
-    { 
-        if (array != NULL) 
-            delete[] array; 
+    {
+        if (array != NULL)
+            delete[] array;
     }
 };
 
 struct GCHandleStatistics
 {
     HeapStat hs;
-    
+
     DWORD strongHandleCount;
     DWORD pinnedHandleCount;
     DWORD asyncPinnedHandleCount;
@@ -1821,7 +2020,7 @@ struct SegmentLookup
     DacpHeapSegmentData *m_segments;
     int m_iSegmentsSize;
     int m_iSegmentCount;
-        
+
     SegmentLookup();
     ~SegmentLookup();
 
@@ -1834,11 +2033,11 @@ class GCHeapSnapshot
 {
 private:
     BOOL m_isBuilt;
-    DacpGcHeapDetails *m_heapDetails;
+    GCHeapDetails *m_heapDetails;
     DacpGcHeapData m_gcheap;
     SegmentLookup m_segments;
 
-    BOOL AddSegments(DacpGcHeapDetails& details);
+    BOOL AddSegments(const GCHeapDetails& details);
 public:
     GCHeapSnapshot();
 
@@ -1847,16 +2046,16 @@ public:
     BOOL IsBuilt() { return m_isBuilt; }
 
     DacpGcHeapData *GetHeapData() { return &m_gcheap; }
-    
-    int GetHeapCount() { return m_gcheap.HeapCount; }    
-    
-    DacpGcHeapDetails *GetHeap(CLRDATA_ADDRESS objectPointer);
+
+    int GetHeapCount() { return m_gcheap.HeapCount; }
+
+    GCHeapDetails *GetHeap(CLRDATA_ADDRESS objectPointer);
     int GetGeneration(CLRDATA_ADDRESS objectPointer);
 
-    
+
 };
 extern GCHeapSnapshot g_snapshot;
-    
+
 BOOL IsSameModuleName (const char *str1, const char *str2);
 BOOL IsModule (DWORD_PTR moduleAddr);
 BOOL IsMethodDesc (DWORD_PTR value);
@@ -1890,7 +2089,7 @@ HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataMo
 void GetInfoFromName(DWORD_PTR ModuleAddr, const char* name, mdTypeDef* retMdTypeDef=NULL);
 void GetInfoFromModule (DWORD_PTR ModuleAddr, ULONG token, DWORD_PTR *ret=NULL);
 
-    
+
 typedef void (*VISITGCHEAPFUNC)(DWORD_PTR objAddr,size_t Size,DWORD_PTR methodTable,LPVOID token);
 BOOL GCHeapsTraverse(VISITGCHEAPFUNC pFunc, LPVOID token, BOOL verify=true);
 
@@ -1926,13 +2125,13 @@ void GatherOneHeapFinalization(DacpGcHeapDetails& heapDetails, HeapStat *stat, B
 
 CLRDATA_ADDRESS GetAppDomainForMT(CLRDATA_ADDRESS mtPtr);
 CLRDATA_ADDRESS GetAppDomain(CLRDATA_ADDRESS objPtr);
-void GCHeapInfo(const DacpGcHeapDetails &heap, DWORD_PTR &total_size);
-BOOL GCObjInHeap(TADDR taddrObj, const DacpGcHeapDetails &heap, 
+void GCHeapInfo(const GCHeapDetails &heap, DWORD_PTR &total_size);
+BOOL GCObjInHeap(TADDR taddrObj, const GCHeapDetails &heap,
     TADDR_SEGINFO& trngSeg, int& gen, TADDR_RANGE& allocCtx, BOOL &bLarge);
 
-BOOL VerifyObject(const DacpGcHeapDetails &heap, const DacpHeapSegmentData &seg, DWORD_PTR objAddr, DWORD_PTR MTAddr, size_t objSize, 
+BOOL VerifyObject(const GCHeapDetails &heap, const DacpHeapSegmentData &seg, DWORD_PTR objAddr, DWORD_PTR MTAddr, size_t objSize,
     BOOL bVerifyMember);
-BOOL VerifyObject(const DacpGcHeapDetails &heap, DWORD_PTR objAddr, DWORD_PTR MTAddr, size_t objSize, 
+BOOL VerifyObject(const GCHeapDetails &heap, DWORD_PTR objAddr, DWORD_PTR MTAddr, size_t objSize,
     BOOL bVerifyMember);
 
 BOOL IsMTForFreeObj(DWORD_PTR pMT);
@@ -1976,7 +2175,7 @@ size_t NextOSPageAddress (size_t addr);
 
 // This version of objectsize reduces the lookup of methodtables in the DAC.
 // It uses g_special_mtCache for it's work.
-BOOL GetSizeEfficient(DWORD_PTR dwAddrCurrObj, 
+BOOL GetSizeEfficient(DWORD_PTR dwAddrCurrObj,
     DWORD_PTR dwAddrMethTable, BOOL bLarge, size_t& s, BOOL& bContainsPointers);
 
 BOOL GetCollectibleDataEfficient(DWORD_PTR dwAddrMethTable, BOOL& bCollectible, TADDR& loaderAllocatorObjectHandle);
@@ -1989,7 +2188,7 @@ void CharArrayContent(TADDR pos, ULONG num, bool widechar);
 void StringObjectContent (size_t obj, BOOL fLiteral=FALSE, const int length=-1);  // length=-1: dump everything in the string object.
 
 UINT FindAllPinnedAndStrong (DWORD_PTR handlearray[],UINT arraySize);
-void PrintNotReachableInRange(TADDR rngStart, TADDR rngEnd, BOOL bExcludeReadyForFinalization, 
+void PrintNotReachableInRange(TADDR rngStart, TADDR rngEnd, BOOL bExcludeReadyForFinalization,
     HeapStat* stat, BOOL bShort);
 
 const char *EHTypeName(EHClauseType et);
@@ -2027,7 +2226,7 @@ extern IMetaDataImport* MDImportForModule (DWORD_PTR pModule);
 // 520 bytes, so use accordinly.
 //
 //*****************************************************************************
-template <DWORD SIZE, DWORD INCREMENT> 
+template <DWORD SIZE, DWORD INCREMENT>
 class CQuickBytesBase
 {
 public:
@@ -2056,7 +2255,7 @@ public:
         }
         else
         {
-            if (pbBuff) 
+            if (pbBuff)
                 delete[] (BYTE*)pbBuff;
             pbBuff = new BYTE[iItems];
             cbTotal = pbBuff ? iItems : 0;
@@ -2086,7 +2285,7 @@ public:
         pbBuffNew = new BYTE[iItems + INCREMENT];
         if (!pbBuffNew)
             return E_OUTOFMEMORY;
-        if (pbBuff) 
+        if (pbBuff)
         {
             memcpy(pbBuffNew, pbBuff, cbTotal);
             delete[] (BYTE*)pbBuff;
@@ -2100,7 +2299,7 @@ public:
         iSize = iItems;
         pbBuff = pbBuffNew;
         return NOERROR;
-        
+
     }
 
     operator PVOID()
@@ -2140,12 +2339,12 @@ public:
     }
 };
 
-template <DWORD CQUICKBYTES_BASE_SPECIFY_SIZE> 
+template <DWORD CQUICKBYTES_BASE_SPECIFY_SIZE>
 class CQuickBytesNoDtorSpecifySize : public CQuickBytesBase<CQUICKBYTES_BASE_SPECIFY_SIZE, CQUICKBYTES_INCREMENTAL_SIZE>
 {
 };
 
-template <DWORD CQUICKBYTES_BASE_SPECIFY_SIZE> 
+template <DWORD CQUICKBYTES_BASE_SPECIFY_SIZE>
 class CQuickBytesSpecifySize : public CQuickBytesNoDtorSpecifySize<CQUICKBYTES_BASE_SPECIFY_SIZE>
 {
 public:
@@ -2159,7 +2358,7 @@ public:
 
 
 #define STRING_SIZE 10
-class CQuickString : public CQuickBytesBase<STRING_SIZE, STRING_SIZE> 
+class CQuickString : public CQuickBytesBase<STRING_SIZE, STRING_SIZE>
 {
 public:
     CQuickString() { }
@@ -2168,7 +2367,7 @@ public:
     {
         Destroy();
     }
-    
+
     void *Alloc(SIZE_T iItems)
     {
         return CQuickBytesBase<STRING_SIZE, STRING_SIZE>::Alloc(iItems*sizeof(WCHAR));
@@ -2224,7 +2423,7 @@ int  _ui64toa_s( unsigned __int64 inValue, char* outBuffer, size_t inDestBufferS
 
 struct MemRange
 {
-    MemRange (ULONG64 s = NULL, size_t l = 0, MemRange * n = NULL) 
+    MemRange (ULONG64 s = NULL, size_t l = 0, MemRange * n = NULL)
         : start(s), len (l), next (n)
         {}
 
@@ -2232,7 +2431,7 @@ struct MemRange
     {
         return addr >= start && addr < start + len;
     }
-        
+
     ULONG64 start;
     size_t len;
     MemRange * next;
@@ -2250,7 +2449,7 @@ private:
     {
         list = new MemRange (s, l, list);
     }
-    
+
 public:
     StressLogMem () : list (NULL)
         {}
@@ -2271,7 +2470,7 @@ public:
     HRESULT __stdcall QueryInterface(REFIID riid, VOID** ppInterface);
     ULONG __stdcall AddRef();
     ULONG __stdcall Release();
-    
+
     // IDiaReadExeAtOffsetCallback implementation
     HRESULT __stdcall ReadExecutableAt(DWORDLONG fileOffset, DWORD cbData, DWORD* pcbData, BYTE data[]);
 
@@ -2292,7 +2491,7 @@ public:
     HRESULT __stdcall QueryInterface(REFIID riid, VOID** ppInterface);
     ULONG __stdcall AddRef();
     ULONG __stdcall Release();
-    
+
     // IDiaReadExeAtOffsetCallback implementation
     HRESULT __stdcall ReadExecutableAtRVA(DWORD relativeVirtualAddress, DWORD cbData, DWORD* pcbData, BYTE data[]);
 
@@ -2528,7 +2727,7 @@ typedef DECLSPEC_ALIGN(8) struct {
 #define ARM64_MAX_BREAKPOINTS     8
 #define ARM64_MAX_WATCHPOINTS     2
 typedef struct {
-    
+
     DWORD ContextFlags;
     DWORD Cpsr;       // NZVF + DAIF + CurrentEL + SPSel
     union {
@@ -2600,7 +2799,7 @@ typedef struct _CROSS_PLATFORM_CONTEXT {
 
 
 WString BuildRegisterOutput(const SOSStackRefData &ref, bool printObj = true);
-WString MethodNameFromIP(CLRDATA_ADDRESS methodDesc, BOOL bSuppressLines = FALSE, BOOL bAssemblyName = FALSE, BOOL bDisplacement = FALSE);
+WString MethodNameFromIP(CLRDATA_ADDRESS methodDesc, BOOL bSuppressLines = FALSE, BOOL bAssemblyName = FALSE, BOOL bDisplacement = FALSE, BOOL bAdjustIPForLineNumber = FALSE);
 HRESULT GetGCRefs(ULONG osID, SOSStackRefData **ppRefs, unsigned int *pRefCnt, SOSStackRefError **ppErrors, unsigned int *pErrCount);
 WString GetFrameFromAddress(TADDR frameAddr, IXCLRDataStackWalk *pStackwalk = NULL, BOOL bAssemblyName = FALSE);
 
@@ -2646,7 +2845,7 @@ public:
 
         // If MoveToPage succeeds, we MUST be on the right page.
         _ASSERTE(addr >= mCurrPageStart);
-        
+
         // However, the amount of data requested may fall off of the page.  In that case,
         // fall back to MisalignedRead.
         TADDR offset = addr - mCurrPageStart;
@@ -2669,7 +2868,7 @@ public:
         {
             if (size <= mCurrPageSize)
                 return;
-            
+
             // Total bytes to read, don't overflow buffer.
             unsigned int total = size + mCurrPageSize;
             if (total + mCurrPageSize > mPageSize)
@@ -2691,7 +2890,7 @@ public:
             MoveToPage(start, size);
         }
     }
-    
+
     void ClearStats()
     {
 #ifdef _DEBUG
@@ -2700,7 +2899,7 @@ public:
         mMisaligned = 0;
 #endif
     }
-    
+
     void PrintStats(const char *func)
     {
 #ifdef _DEBUG
@@ -2718,8 +2917,8 @@ private:
      */
     bool MoveToPage(TADDR addr, unsigned int size = 0x18);
 
-    /* Attempts to read from the target process if the data is possibly hanging off
-     * the end of a page.
+    /* Attempts to read from the target process if the data possibly crosses the
+     * boundaries of the page.
      */
     template<class T>
     inline bool MisalignedRead(TADDR addr, T *t)
@@ -2738,7 +2937,7 @@ private:
     TADDR mCurrPageStart;
     ULONG mPageSize, mCurrPageSize;
     BYTE *mPage;
-    
+
     int mMisses, mReads, mMisaligned;
 };
 
@@ -2765,10 +2964,10 @@ private:
     size_t m_objVisited; // for UI updates
     bool m_verify;
     LinearReadCache mCache;
-    
+
     std::unordered_map<TADDR, std::list<TADDR>> mDependentHandleMap;
-    
-public:           
+
+public:
     HeapTraverser(bool verify);
     ~HeapTraverser();
 
@@ -2777,11 +2976,11 @@ public:
     BOOL Initialize();
     BOOL CreateReport (FILE *fp, int format);
 
-private:    
+private:
     // First all types are added to a tree
     void insert(size_t mTable);
-    size_t getID(size_t mTable);    
-    
+    size_t getID(size_t mTable);
+
     // Functions for writing to the output file.
     void PrintType(size_t ID,LPCWSTR name);
 
@@ -2793,13 +2992,13 @@ private:
     void PrintRootHead();
     void PrintRoot(LPCWSTR kind,size_t Value);
     void PrintRootTail();
-    
+
     void PrintSection(int Type,BOOL bOpening);
 
     // Root and object member helper functions
     void FindGCRootOnStacks();
     void PrintRefs(size_t obj, size_t methodTable, size_t size);
-    
+
     // Callback functions used during traversals
     static void GatherTypes(DWORD_PTR objAddr,size_t Size,DWORD_PTR methodTable, LPVOID token);
     static void PrintHeap(DWORD_PTR objAddr,size_t Size,DWORD_PTR methodTable, LPVOID token);
@@ -2825,15 +3024,15 @@ private:
         bool Collectible;
         size_t BaseSize;
         size_t ComponentSize;
-        
+
         const WCHAR *GetTypeName()
         {
             if (!TypeName)
                 TypeName = CreateMethodTableName(MethodTable);
-            
+
             if (!TypeName)
                 return W("<error>");
-            
+
             return TypeName;
         }
 
@@ -2863,13 +3062,13 @@ private:
         bool FilledRefs;
         bool FromDependentHandle;
         RootNode *GCRefs;
-        
-        
+
+
         const WCHAR *GetTypeName()
         {
             if (!MTInfo)
                 return W("<unknown>");
-                
+
             return MTInfo->GetTypeName();
         }
 
@@ -2895,11 +3094,11 @@ private:
             FromDependentHandle = false;
             GCRefs = 0;
         }
-        
+
         void Remove(RootNode *&list)
         {
             RootNode *curr_next = Next;
-            
+
             // We've already considered this object, remove it.
             if (Prev == NULL)
             {
@@ -2966,7 +3165,7 @@ private:
     RootNode *FilterRoots(RootNode *&list);
     RootNode *FindPathToTarget(TADDR root);
     RootNode *GetGCRefs(RootNode *path, RootNode *node);
-    
+
     void InitDependentHandleMap();
 
     //Reporting:
@@ -2991,20 +3190,20 @@ private:
     void DeleteNode(RootNode *node);
 
 private:
-    
+
     bool mAll,  // Print all roots or just unique roots?
          mSize; // Print rooting information or total size info?
 
     std::list<RootNode*> mCleanupList;  // A list of RootNode's we've newed up.  This is only used to delete all of them later.
     std::list<RootNode*> mRootNewList;  // A list of unused RootNodes that are free to use instead of having to "new" up more.
-    
+
     std::unordered_map<TADDR, MTInfo*> mMTs;     // The MethodTable cache which maps from MT -> MethodTable data (size, gcdesc, string typename)
     std::unordered_map<TADDR, RootNode*> mTargets;   // The objects that we are searching for.
     std::unordered_set<TADDR> mConsidered;       // A hashtable of objects we've already visited.
     std::unordered_map<TADDR, size_t> mSizes;   // A mapping from object address to total size of data the object roots.
-    
+
     std::unordered_map<TADDR, std::list<TADDR>> mDependentHandleMap;
-    
+
     LinearReadCache mCache;     // A linear cache which stops us from having to read from the target process more than 1-2 times per object.
 };
 
@@ -3065,11 +3264,6 @@ struct Flags
 
 private:
     UnderlyingType m_val;
-};
-
-struct ImageInfo
-{
-    ULONG64 modBase;
 };
 
 // Helper class used in ClrStackFromPublicInterface() to keep track of explicit EE Frames

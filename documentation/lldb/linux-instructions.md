@@ -193,7 +193,7 @@ To launch lldb:
 
 #### RHEL 7.5 ####
 
-[TBD]
+See [LLDB](https://access.redhat.com/documentation/en-us/red_hat_developer_tools/2018.2/html/using_clang_and_llvm_toolset/chap-lldb) on RedHat's web site.
 
 #### SLES ####
 

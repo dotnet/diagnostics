@@ -28,7 +28,7 @@ class CLRDebuggingImpl : public ICLRDebugging
 {
 
 public:
-    CLRDebuggingImpl(GUID skuId) : m_cRef(0), m_skuId(skuId)
+    CLRDebuggingImpl(GUID skuId, bool isWindowsTarget) : m_cRef(0), m_skuId(skuId), m_isWindowsTarget(isWindowsTarget)
     {
     }
 
@@ -48,16 +48,16 @@ public:
     
     STDMETHOD(CanUnloadNow(HMODULE hModule));
 
-	//IUnknown methods:
-	STDMETHOD(QueryInterface(
+    //IUnknown methods:
+    STDMETHOD(QueryInterface(
                 REFIID riid,
                 void **ppvObject));
 
-	// Standard AddRef implementation
-	STDMETHOD_(ULONG, AddRef());
+    // Standard AddRef implementation
+    STDMETHOD_(ULONG, AddRef());
 
-	// Standard Release implementation.
-	STDMETHOD_(ULONG, Release());
+    // Standard Release implementation.
+    STDMETHOD_(ULONG, Release());
 
 
 
@@ -82,8 +82,9 @@ private:
                                     DWORD targetImageFileMachine,
                                     VS_FIXEDFILEINFO * pVersion);
 
-	volatile LONG m_cRef;
+    volatile LONG m_cRef;
     GUID m_skuId;
+    bool m_isWindowsTarget;
 
 };  // class CLRDebuggingImpl
 

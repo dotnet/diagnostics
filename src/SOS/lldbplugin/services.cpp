@@ -259,13 +259,12 @@ ExceptionBreakpointCallback(
 
     // Send the normal and error output to stdout/stderr since we
     // don't have a return object from the command interpreter.
-    lldb::SBCommandReturnObject result;
-    result.SetImmediateOutputFile(stdout);
-    result.SetImmediateErrorFile(stderr);
+    lldb::SBCommandReturnObject returnObject;
+    returnObject.SetImmediateOutputFile(stdout);
+    returnObject.SetImmediateErrorFile(stderr);
 
-    // Save the process and thread to be used by the current process/thread 
-    // helper functions.
-    LLDBServices* client = new LLDBServices(debugger, result, &process, &thread);
+    // Save the process and thread to be used by the current process/thread helper functions.
+    LLDBServices* client = new LLDBServices(debugger, returnObject, &process, &thread);
     return ((PFN_EXCEPTION_CALLBACK)baton)(client) == S_OK;
 }
 
@@ -1163,7 +1162,7 @@ LLDBServices::GetModuleNames(
         int size = fileSpec.GetPath(imageNameBuffer, imageNameBufferSize);
         if (imageNameSize)
         {
-            *imageNameSize = size;
+            *imageNameSize = size + 1; // include null
         }
     }
     if (moduleNameBuffer)
@@ -1176,7 +1175,7 @@ LLDBServices::GetModuleNames(
         stpncpy(moduleNameBuffer, fileName, moduleNameBufferSize);
         if (moduleNameSize)
         {
-            *moduleNameSize = strlen(fileName);
+            *moduleNameSize = strlen(fileName) + 1;
         }
     }
     if (loadedImageNameBuffer)
@@ -1184,7 +1183,7 @@ LLDBServices::GetModuleNames(
         int size = fileSpec.GetPath(loadedImageNameBuffer, loadedImageNameBufferSize);
         if (loadedImageNameSize)
         {
-            *loadedImageNameSize = size;
+            *loadedImageNameSize = size + 1; // include null
         }
     }
     return S_OK;
@@ -1349,8 +1348,10 @@ LLDBServices::GetModuleSize(
             size += section.GetByteSize();
         }
     }
-
-    return size;
+    // For core dumps lldb doesn't return the section sizes when it 
+    // doesn't have access to the actual module file, but SOS (like 
+    // the SymbolReader code) still needs a non-zero module size.
+    return size != 0 ? size : LONG_MAX;
 }
 
 //----------------------------------------------------------------------------
@@ -1981,6 +1982,69 @@ LLDBServices::GetModuleVersionInformation(
     return S_OK;
 }
 
+lldb::SBBreakpoint g_runtimeLoadedBp;
+
+bool 
+RuntimeLoadedBreakpointCallback(
+    void *baton, 
+    lldb::SBProcess &process,
+    lldb::SBThread &thread, 
+    lldb::SBBreakpointLocation &location)
+{
+    lldb::SBDebugger debugger = process.GetTarget().GetDebugger();
+
+    // Send the normal and error output to stdout/stderr since we
+    // don't have a return object from the command interpreter.
+    lldb::SBCommandReturnObject returnObject;
+    returnObject.SetImmediateOutputFile(stdout);
+    returnObject.SetImmediateErrorFile(stderr);
+
+    // Save the process and thread to be used by the current process/thread helper functions.
+    LLDBServices* client = new LLDBServices(debugger, returnObject, &process, &thread);
+    bool result = ((PFN_RUNTIME_LOADED_CALLBACK)baton)(client) == S_OK;
+
+    // Clear the breakpoint
+    if (g_runtimeLoadedBp.IsValid())
+    {
+        process.GetTarget().BreakpointDelete(g_runtimeLoadedBp.GetID());
+        g_runtimeLoadedBp = lldb::SBBreakpoint();
+    }
+
+    // Continue the process
+    if (result)
+    {
+        lldb::SBError error = process.Continue();
+        result = error.Success();
+    }
+    return result;
+}
+
+HRESULT 
+LLDBServices::SetRuntimeLoadedCallback(
+    PFN_RUNTIME_LOADED_CALLBACK callback)
+{
+    if (!g_runtimeLoadedBp.IsValid())
+    {
+        lldb::SBTarget target = m_debugger.GetSelectedTarget();
+        if (!target.IsValid())
+        {
+            return E_FAIL;
+        }
+        // By the time the host calls coreclr_execute_assembly, the coreclr DAC table should be initialized so DAC can be loaded.
+        lldb::SBBreakpoint runtimeLoadedBp = target.BreakpointCreateByName("coreclr_execute_assembly", MAKEDLLNAME_A("coreclr"));
+        if (!runtimeLoadedBp.IsValid())
+        {
+            return E_FAIL;
+        }
+#ifdef FLAGS_ANONYMOUS_ENUM
+        runtimeLoadedBp.AddName("DoNotDeleteOrDisable");
+#endif
+        runtimeLoadedBp.SetCallback(RuntimeLoadedBreakpointCallback, (void *)callback);
+        g_runtimeLoadedBp = runtimeLoadedBp;
+    }
+    return S_OK;
+}
+
 //----------------------------------------------------------------------------
 // Helper functions
 //----------------------------------------------------------------------------
@@ -2104,8 +2168,8 @@ static const char* g_versionString = "@(#)Version ";
 
 bool 
 LLDBServices::SearchVersionString(
-    ULONG64 address, 
-    ULONG64 size, 
+    uint64_t address, 
+    int32_t size,
     char* versionBuffer,
     int versionBufferSize)
 {
@@ -2170,10 +2234,15 @@ LLDBServices::ReadVirtualCache(ULONG64 address, PVOID buffer, ULONG bufferSize, 
 
     if (!m_cacheValid || (address < m_startCache) || (address > (m_startCache + m_cacheSize - bufferSize)))
     {
+        ULONG cbBytesRead = 0;
+
         m_cacheValid = false;
         m_startCache = address;
 
-        ULONG cbBytesRead = 0;
+        // Avoid an int overflow
+        if (m_startCache + CACHE_SIZE < m_startCache)
+            m_startCache = (ULONG64)(-CACHE_SIZE);
+
         HRESULT hr = ReadVirtual(m_startCache, m_cache, CACHE_SIZE, &cbBytesRead);
         if (hr != S_OK)
         {
@@ -2184,11 +2253,21 @@ LLDBServices::ReadVirtualCache(ULONG64 address, PVOID buffer, ULONG bufferSize, 
         m_cacheValid = true;
     }
 
-    memcpy(buffer, (LPVOID)((ULONG64)m_cache + (address - m_startCache)), bufferSize);
-
-    if (pcbBytesRead != NULL)
+    // If the address is within the cache, copy the cached memory to the input buffer
+    LONG_PTR cacheOffset = address - m_startCache;
+    if (cacheOffset >= 0 && cacheOffset < CACHE_SIZE)
     {
-        *pcbBytesRead = bufferSize;
+        int size = std::min(bufferSize, m_cacheSize);
+        memcpy(buffer, (LPVOID)(m_cache + cacheOffset), size);
+
+        if (pcbBytesRead != NULL)
+        {
+            *pcbBytesRead = size;
+        }
+    }
+    else
+    {
+        return false;
     }
 
     return true;

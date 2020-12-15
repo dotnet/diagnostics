@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         public string Level { get; }
         public Dictionary<string, CounterProfile> Counters { get; }
 
-        public CounterProvider(string name, string description, string keywords, string level, IEnumerable<CounterProfile> counters)
+        public CounterProvider(string name, string description, string keywords, string level, IEnumerable<CounterProfile> counters, string version)
         {
             Name = name;
             Description = description;
@@ -25,15 +25,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
             Counters = new Dictionary<string, CounterProfile>();
             foreach (CounterProfile counter in counters)
             {
-                Counters.Add(counter.Name, counter);
+                if (counter.SupportedVersions.Contains(version))
+                {
+                    Counters.Add(counter.Name, counter);
+                }
             }
-        }
-
-        public string TryGetDisplayName(string counterName)
-        {
-            if (Counters.ContainsKey(counterName))
-                return Counters[counterName].DisplayName;
-            return null;
         }
 
         public string ToProviderString(int interval)
@@ -47,13 +43,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
         }
 
         public IReadOnlyList<CounterProfile> GetAllCounters() => Counters.Values.ToList();
-
     }
 
     public class CounterProfile
     {
         public string Name { get; set; }
-        public string DisplayName { get; set; }
         public string Description { get; set; }
+        public string[] SupportedVersions { get; set; }
     }
 }

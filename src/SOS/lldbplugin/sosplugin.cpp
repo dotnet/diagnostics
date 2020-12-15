@@ -12,7 +12,6 @@ bool
 lldb::PluginInitialize (lldb::SBDebugger debugger)
 {
     sosCommandInitialize(debugger);
-    setclrpathCommandInitialize(debugger);
     setsostidCommandInitialize(debugger);
     return true;
 }

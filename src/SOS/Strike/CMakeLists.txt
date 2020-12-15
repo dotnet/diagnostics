@@ -41,6 +41,11 @@ elseif(CLR_CMAKE_PLATFORM_ARCH_ARM64)
   add_definitions(-D_TARGET_WIN64_=1)
   add_definitions(-DDBG_TARGET_64BIT)
   add_definitions(-DDBG_TARGET_WIN64=1)
+elseif(CLR_CMAKE_PLATFORM_ARCH_MIPS64)
+  add_definitions(-DSOS_TARGET_MIPS64=1)
+  add_definitions(-D_TARGET_WIN64_=1)
+  add_definitions(-DDBG_TARGET_64BIT)
+  add_definitions(-DDBG_TARGET_WIN64=1)
 endif()
 
 add_definitions(-DSTRIKE)  
@@ -69,6 +74,7 @@ if(WIN32)
     gcroot.cpp
     hostcoreclr.cpp
     metadata.cpp
+    runtime.cpp
     sigparser.cpp
     sildasm.cpp
     sos.cpp
@@ -105,6 +111,17 @@ if(WIN32)
     psapi.lib
     ntdll.lib
   )
+
+  if(NOT CLR_CMAKE_PLATFORM_ARCH_ARM64)
+    list(APPEND 
+      SOS_LIBRARY 
+        mscoree.lib)
+
+    list(APPEND 
+      SOS_SOURCES 
+        hostdesktop.cpp)
+  endif(NOT CLR_CMAKE_PLATFORM_ARCH_ARM64)
+
 else(WIN32)
   add_definitions(-DFEATURE_ENABLE_HARDWARE_EXCEPTIONS)
   add_definitions(-DPAL_STDCPP_COMPAT=1)
@@ -125,6 +142,7 @@ else(WIN32)
     gcroot.cpp
     hostcoreclr.cpp
     metadata.cpp
+    runtime.cpp
     sigparser.cpp
     sildasm.cpp
     stressLogDump.cpp
@@ -168,13 +186,6 @@ else(WIN32)
 endif(WIN32)
 
 if(CLR_CMAKE_PLATFORM_ARCH_AMD64)
-# if(CLR_CMAKE_PLATFORM_LINUX)
-    #list(APPEND 
-    #  SOS_LIBRARY 
-    #  createdump_lib
-    #)
-    #add_definitions(-DCREATE_DUMP_SUPPORTED)
-# endif(CLR_CMAKE_PLATFORM_LINUX)
   set(SOS_SOURCES_ARCH
     disasmX86.cpp
   )

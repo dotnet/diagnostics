@@ -15,7 +15,7 @@ Let's run the webapi (dotnet run) and before navigating to the above URL (specif
 > dotnet-counters monitor --refresh-interval 1 -p 4807
 > ```
 
-4807 is the process identifier which can be found using dotnet-trace list-processes. The refresh-interval is the number of seconds before refreshes. 
+4807 is the process identifier which can be found using dotnet-trace ps. The refresh-interval is the number of seconds before refreshes.
 
 The output should be similar to the below:
 
@@ -151,7 +151,7 @@ else
 We can now build the tool (dotnet build) and run it against our application. Once built, restart the test webapi, get the process id from dotnet-trace and run triggerdump:
 
 > ```bash
-> dotnet-trace list-processes
+> dotnet-trace ps
 > ...
 > 80926 webapi     /home/marioh/webapi/bin/Debug/netcoreapp3.0/webapi
 > sudo dotnet triggerdump.dll 80926 500

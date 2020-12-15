@@ -6,41 +6,47 @@ CONTINUE
 
 LOADSOS
 
+# Issue: https://github.com/dotnet/diagnostics/issues/1567
+!IFDEF:ALPINE
 # Test eeversion command
 SOSCOMMAND:EEVersion
 VERIFY:\s+<DECVAL>.<DECVAL>.<DECVAL>.<DECVAL>.*
+ENDIF:ALPINE
 
 # 1) Verifying that ClrStack with no options works
 SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>.*\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 8\s*\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>.*\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ (8|17)\s*\]\s+
 IFDEF:64BIT
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 13\s*\]\s+
 ENDIF:64BIT
 
-# 2) Verifying that ClrStack with managed/native mixed works
-IFDEF:PROJECTK
 SOSCOMMAND:SetSymbolServer -ms -loadsymbols
 !IFDEF:DOTNETDUMP
+IFDEF:WINDOWS
 SOSCOMMAND:SetHostRuntime
+ENDIF:WINDOWS
+!IFDEF:WINDOWS
+COMMAND:sethostruntime
+ENDIF:WINDOWS
 ENDIF:DOTNETDUMP
+
+# 2) Verifying that ClrStack with managed/native mixed works
 SOSCOMMAND:ClrStack -f
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+(?i:NestedExceptionTest.*)!NestedExceptionTest\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 8\s*\]\s+
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+(?i:NestedExceptionTest.*)!NestedExceptionTest\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ (8|17)\s*\]\s+
 IFDEF:64BIT
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+(?i:NestedExceptionTest.*)!NestedExceptionTest\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 13\s*\]\s+
 ENDIF:64BIT
 SOSCOMMAND:SetSymbolServer -disable
-ENDIF:PROJECTK
 
 # 3) Verifying that ClrStack all option works (locals/params)
-IFDEF:PROJECTK
 SOSCOMMAND:ClrStack -a
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 8\s*\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ (8|17)\s*\]\s+
 VERIFY:\s+PARAMETERS:\s+
 VERIFY:\s+args \(0x<HEXVAL>\) = 0x<HEXVAL>\s+
 VERIFY:\s+LOCALS:\s+
@@ -52,22 +58,20 @@ VERIFY:\s+args \(0x<HEXVAL>\) = 0x<HEXVAL>\s+
 VERIFY:\s+LOCALS:\s+
 VERIFY:\s+0x<HEXVAL> = 0x<HEXVAL>\s+
 ENDIF:64BIT
-ENDIF:PROJECTK
 
 # 4) Verifying that ClrStack displays registers
-IFDEF:PROJECTK
 SOSCOMMAND:ClrStack -r
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 8\s*\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ (8|17)\s*\]\s+
 IFDEF:ARM
 VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
 ENDIF:ARM
 IFDEF:ARM64
 VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
 ENDIF:ARM64
-VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
+VERIFY:\s+([r|e]sp|sp|lr)=<HEXVAL>\s+([r|e]bp|lr|sp)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
 IFDEF:X64
 VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
 ENDIF:X64
@@ -83,7 +87,7 @@ ENDIF:ARM
 IFDEF:ARM64
 VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
 ENDIF:ARM64
-VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
+VERIFY:\s+([r|e]sp|sp|lr)=<HEXVAL>\s+([r|e]bp|lr|sp)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
 IFDEF:X64
 VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
 ENDIF:X64
@@ -91,13 +95,14 @@ IFDEF:X86
 VERIFY:\s+eax=<HEXVAL>\s+ebx=<HEXVAL>\s+ecx=<HEXVAL>\s+
 ENDIF:X86
 ENDIF:64BIT
-ENDIF:PROJECTK
+
+# There seems no way to get -i to work on desktop under cdb. It does work under dotnet-dump because of the module mapping.
+IFDEF:NETCORE_OR_DOTNETDUMP
 
 # Issue: https://github.com/dotnet/diagnostics/issues/504
 !IFDEF:ALPINE
 
 # 5) Verifying that ClrStack with the ICorDebug options works
-IFDEF:PROJECTK
 SOSCOMMAND:ClrStack -i
 VERIFY:.*\s+Dumping managed stack and managed variables using ICorDebug.\s+
 VERIFY:.*\s+Child\s+SP\s+IP\s+Call Site\s+
@@ -105,10 +110,8 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[NativeStackFrame\]\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void NestedExceptionTest\.Program\.Main\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void NestedExceptionTest\.Program\.Main\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+Stack walk complete.\s+
-ENDIF:PROJECTK
 
 # 6) Verifying that ClrStack with the ICorDebug options and all option (locals/params) works
-IFDEF:PROJECTK
 SOSCOMMAND:ClrStack -i -a
 VERIFY:.*\s+Dumping managed stack and managed variables using ICorDebug.\s+
 VERIFY:.*\s+Child\s+SP\s+IP\s+Call Site\s+
@@ -120,29 +123,25 @@ VERIFY:\s+LOCALS:\s+
 VERIFY:\s+\+ System.FormatException ex @ 0x<HEXVAL>\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void NestedExceptionTest\.Program\.Main\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+Stack walk complete.\s+
-ENDIF:PROJECTK
 
 ENDIF:ALPINE
+ENDIF:NETCORE_OR_DOTNETDUMP
 
 # 7) Verify DumpStackObjects works
-IFDEF:PROJECTK
 SOSCOMMAND:DumpStackObjects
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+([R|E])*SP/REG\s+Object\s+Name\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.FormatException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.InvalidOperationException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
-ENDIF:PROJECTK
 
 # 8) Verify DumpStackObjects -verify works
-IFDEF:PROJECTK
 SOSCOMMAND:DumpStackObjects -verify
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+([R|E])*SP/REG\s+Object\s+Name\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.FormatException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.InvalidOperationException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
-ENDIF:PROJECTK
 
 !IFDEF:DOTNETDUMP
 !IFDEF:ARM

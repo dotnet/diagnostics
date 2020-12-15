@@ -2,13 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-class DataTarget : public ICLRDataTarget, ICorDebugDataTarget4, ICLRMetadataLocator
+class DataTarget : public ICLRDataTarget2, ICorDebugDataTarget4, ICLRMetadataLocator, ICLRRuntimeLocator
 {
 private:
     LONG m_ref;                         // Reference count.
+    ULONG64 m_baseAddress;              // Runtime base address
 
 public:
-    DataTarget(void);
+    DataTarget(ULONG64 baseAddress);
     virtual ~DataTarget() {}
     
     // IUnknown.
@@ -81,6 +82,20 @@ public:
         /* [in] */ ULONG32 outBufferSize,
         /* [size_is][out] */ BYTE *outBuffer);
 
+    // ICLRDataTarget2
+
+    virtual HRESULT STDMETHODCALLTYPE AllocVirtual( 
+            /* [in] */ CLRDATA_ADDRESS addr,
+            /* [in] */ ULONG32 size,
+            /* [in] */ ULONG32 typeFlags,
+            /* [in] */ ULONG32 protectFlags,
+            /* [out] */ CLRDATA_ADDRESS *virt);
+        
+    virtual HRESULT STDMETHODCALLTYPE FreeVirtual( 
+            /* [in] */ CLRDATA_ADDRESS addr,
+            /* [in] */ ULONG32 size,
+            /* [in] */ ULONG32 typeFlags);
+
     // ICorDebugDataTarget4
 
     virtual HRESULT STDMETHODCALLTYPE VirtualUnwind(
@@ -101,4 +116,9 @@ public:
         /* [out, size_is(bufferSize), length_is(*dataSize)] */
         BYTE* buffer,
         /* [out] */ ULONG32* dataSize);
+
+    // ICLRRuntimeLocator
+
+    virtual HRESULT STDMETHODCALLTYPE GetRuntimeBase(
+        /* [out] */ CLRDATA_ADDRESS* baseAddress);
 };
