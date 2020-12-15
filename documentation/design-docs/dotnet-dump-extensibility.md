@@ -2,9 +2,9 @@
 
 This document describes a mechanism to allow first and third party users to add custom commands and services to `dotnet-dump` and `SOS` on the supported debuggers. Such extensibility has been a frequent ask from companies like Criteo and some teams at Microsoft. The goal is to write the code for a command once and have it run under all the supported debuggers, including dotnet-dump.
 
-Internally, the ability to host commands like the future "gcheapdiff" under dotnet-dump, lldb and cdb/windbg will be invaluable. The implementation of new commands in C# is faster/more productive for each future command our team needs to add. Other people on .NET team and in the community are more likely to contribute improvements into our tools (similar to what Stephen did with DumpAsync). Unlike the plugin situation, if they contribute directly to our repo then the improvements will automatically flow to all customers and provide broader value.
+Internally, the ability to host commands like the future `gcheapdiff` under dotnet-dump, lldb and cdb/windbg will be invaluable for the productivity of developers in the ecosystem. Implementing new commands and features in C# is far easier and more productive for the interested parties. Other people on .NET team and in the community are more likely to contribute improvements to our tools, similar to what Stephen did with `dumpasync`. Unlike the plugin situation, if they contribute directly to our repo then the improvements will automatically flow to all customers and provide broader value.
 
-This effort is part of the "untified extensiblity" where various teams are coming together to define a common debugger abstraction across all of the debuggers and debugger like hosts (dotnet-dump). Azure Watson could use this infrastructure to write a !analyze like commands and other analysis tools using a very subset of the DAC (as a service) to do some unhandled exception and stack trace triage.
+This effort is part of the "unified extensiblity" models - where various teams are coming together to define a common abstraction across all debuggers and debugger like hosts (dotnet-dump). Services such as Azure Watson could use this infrastructure to write a commands akin to `!analyze` and other analysis tools using a subset of the DAC - provided as a service - to do some unhandled exception and stack trace triage.
 
 ## Goals
 
@@ -22,7 +22,7 @@ This effort is part of the "untified extensiblity" where various teams are comin
  
 ## Customer Value
 
-- Improve our CSS engineer experience by providing commands in Visual Studio that keep them from needed to switch to windbg. 
+- Improve our CSS engineer experience by providing commands in Visual Studio that keep them from needing to switch to windbg. 
     - Commands that CSS devs would find useful in Visual Studio that can't be done in VS any other way:
         - !GCHandles - Provides statistics about GCHandles in the process.
         - !ThreadPool - This command lists basic information about the ThreadPool, including the number of work requests in the queue, number of completion port threads, and number of timers.
@@ -30,8 +30,8 @@ This effort is part of the "untified extensiblity" where various teams are comin
         - rest of list TBD.
         
 - Enables support for Azure Geneva diagnostics which is using the Native AOT corert based runtime. This infrastructure will allow the necessary set of SOS commands to be written and executed across the support platforms (Windows windbg and Linux lldb).
-   
-- Improve our internal .NET team productivity and inner loop development by providing these commands and the native SOS command under Visual Studio. See issue [#1397](https://github.com/dotnet/diagnostics/issues/1397).
+
+- Improve our internal .NET team productivity and inner loop development by providing these managed commands and the classical native SOS commands under debuggers like Visual Studio. See issue [#1397](https://github.com/dotnet/diagnostics/issues/1397).  
       
 - This plan would allow these ClrMD based commands to run across all our debuggers (dotnet-dump, windbg, lldb and Visual Studio):
     - Criteo's 5 or so extension commands:
@@ -118,7 +118,7 @@ The threading model is single-threaded mainly because native debuggers like dbge
 
 ## Hosts
 
-The host is the debugger or program the command and the infrastructure runs. The goal is to allow the same code for a command to run under different programs like the dotnet-dump REPL, the lldb and Windows debuggers. Under Visual Studio the host will be a VS extension package. 
+The host is the debugger or program the command and the infrastructure runs on. The goal is to allow the same code for a command to run under different programs like the dotnet-dump REPL, lldb and Windows debuggers. Under Visual Studio the host will be a VS extension package. 
 
 #### IHost
 

@@ -186,13 +186,17 @@ namespace SOS.Hosting
             IntPtr self,
             uint index,
             ulong *moduleBase,
-            ulong *moduleSize)
+            ulong *moduleSize,
+            uint* timestamp,
+            uint* checksum)
         {
             try
             {
                 IModule module = _soshost.ModuleService.GetModuleFromIndex((int)index);
                 SOSHost.Write(moduleBase, module.ImageBase);
                 SOSHost.Write(moduleSize, module.ImageSize);
+                SOSHost.Write(timestamp, (uint)module.IndexTimeStamp);
+                SOSHost.Write(checksum, 0);
             }
             catch (DiagnosticsException)
             {
@@ -211,7 +215,7 @@ namespace SOS.Hosting
             IntPtr self);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate UIntPtr GetExpressionDelegate(
+        private delegate ulong GetExpressionDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string text);
 
@@ -489,8 +493,10 @@ namespace SOS.Hosting
         private unsafe delegate int GetModuleInfoDelegate(
             IntPtr self,
             [In] uint index,
-            [Out] ulong *moduleBase,
-            [Out] ulong *moduleSize);
+            [Out] ulong* moduleBase,
+            [Out] ulong* moduleSize,
+            [Out] uint* timestamp,
+            [Out] uint* checksum);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleVersionInformationDelegate(

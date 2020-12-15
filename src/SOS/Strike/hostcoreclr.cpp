@@ -52,11 +52,9 @@ extern void UninitializeDesktopClrHost();
 #endif
 
 bool g_useDesktopClrHost = false;
-bool g_dotnetDumpHost = false;
 static bool g_hostingInitialized = false;
 bool g_symbolStoreInitialized = false;
 LPCSTR g_hostRuntimeDirectory = nullptr;
-LPCSTR g_tmpPath = nullptr;
 SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
 
 #ifndef FEATURE_PAL
@@ -126,6 +124,27 @@ static void AddFilesFromDirectoryToTpaList(const char* directory, std::string& t
     }
 }
 
+/// <summary>
+/// Helper function to get the absolute path from a relative one
+/// </summary>
+/// <param name="path">relative path</param>
+/// <param name="absolutePath">absolute path output</param>
+/// <returns>true success, false invalid path</returns>
+bool GetAbsolutePath(const char* path, std::string& absolutePath)
+{
+    ArrayHolder<char> fullPath = new char[MAX_LONGPATH];
+#ifdef FEATURE_PAL
+    if (realpath(path, fullPath) != nullptr && fullPath[0] != '\0')
+#else
+    if (GetFullPathNameA(path, MAX_LONGPATH, fullPath, nullptr) != 0)
+#endif
+    {
+        absolutePath.assign(fullPath);
+        return true;
+    }
+    return false;
+}
+
 #ifdef FEATURE_PAL
 
 #if defined(__linux__)
@@ -133,23 +152,6 @@ static void AddFilesFromDirectoryToTpaList(const char* directory, std::string& t
 #elif !defined(__APPLE__)
 #define symlinkEntrypointExecutable "/proc/curproc/exe"
 #endif
-
-static bool GetAbsolutePath(const char* path, std::string& absolutePath)
-{
-    bool result = false;
-
-    char realPath[PATH_MAX];
-    if (realpath(path, realPath) != nullptr && realPath[0] != '\0')
-    {
-        absolutePath.assign(realPath);
-        // realpath should return canonicalized path without the trailing slash
-        assert(absolutePath.back() != '/');
-
-        result = true;
-    }
-
-    return result;
-}
 
 static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutable)
 {
@@ -392,7 +394,7 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
                     // Find highest 6.0.x version
                     if (!FindDotNetVersion(6, 0, hostRuntimeDirectory))
                     {
-                        HRESULT hr = CheckEEDll();
+                        HRESULT hr = GetTarget()->GetRuntime(&g_pRuntime);
                         if (FAILED(hr)) {
                             return hr;
                         }
@@ -421,66 +423,6 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
     coreClrPath.append(DIRECTORY_SEPARATOR_STR_A);
     coreClrPath.append(GetRuntimeDllName(IRuntime::Core));
     return S_OK;
-}
-
-/**********************************************************************\
- * Returns the unique temporary directory for this instance of SOS
-\**********************************************************************/
-LPCSTR GetTempDirectory()
-{
-    if (g_tmpPath == nullptr)
-    {
-        char tmpPath[MAX_LONGPATH];
-        if (::GetTempPathA(MAX_LONGPATH, tmpPath) == 0)
-        {
-            strcpy_s(tmpPath, MAX_LONGPATH, ".");
-            strcat_s(tmpPath, MAX_LONGPATH, DIRECTORY_SEPARATOR_STR_A);
-        }
-        char pidstr[128];
-        sprintf_s(pidstr, _countof(pidstr), "sos%d", GetCurrentProcessId());
-        strcat_s(tmpPath, MAX_LONGPATH, pidstr);
-        strcat_s(tmpPath, MAX_LONGPATH, DIRECTORY_SEPARATOR_STR_A);
-
-        CreateDirectoryA(tmpPath, NULL);
-        g_tmpPath = _strdup(tmpPath);
-        OnUnloadTask::Register(CleanupTempDirectory);
-    }
-    return g_tmpPath;
-}
-
-/**********************************************************************\
- * Clean up the temporary directory files and DAC symlink.
-\**********************************************************************/
-void CleanupTempDirectory()
-{
-    LPCSTR tmpPath = (LPCSTR)InterlockedExchangePointer((PVOID *)&g_tmpPath, nullptr);
-    if (tmpPath != nullptr)
-    {
-        std::string directory(tmpPath);
-        directory.append("*");
-
-        WIN32_FIND_DATAA data;
-        HANDLE findHandle = FindFirstFileA(directory.c_str(), &data);
-
-        if (findHandle != INVALID_HANDLE_VALUE) 
-        {
-            do
-            {
-                if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
-                {
-                    std::string file(tmpPath);
-                    file.append(data.cFileName);
-                    DeleteFileA(file.c_str());
-                }
-            } 
-            while (0 != FindNextFileA(findHandle, &data));
-
-            FindClose(findHandle);
-        }
-
-        RemoveDirectoryA(tmpPath);
-        free((void*)tmpPath);
-    }
 }
 
 #ifndef FEATURE_PAL
@@ -518,15 +460,6 @@ extern "C" HRESULT SOSInitializeByHost(
     {
         return E_INVALIDARG;
     }
-    if (tempDirectory != nullptr)
-    {
-        g_tmpPath = _strdup(tempDirectory);
-    }
-    if (runtimeModulePath != nullptr)
-    {
-        g_runtimeModulePath = _strdup(runtimeModulePath);
-    }
-    Runtime::SetDacDbiPath(isDesktop, dacFilePath, dbiFilePath);
 #ifndef FEATURE_PAL
     // When SOS is hosted on dotnet-dump, the ExtensionApis are not set so 
     // the expression evaluation function needs to be supplied.
@@ -534,7 +467,6 @@ extern "C" HRESULT SOSInitializeByHost(
 #endif
     g_symbolStoreInitialized = symbolStoreEnabled;
     g_hostingInitialized = true;
-    g_dotnetDumpHost = true;
     return S_OK;
 }
 
@@ -748,7 +680,7 @@ HRESULT InitializeSymbolStore(
         logging,
         msdl,
         symweb,
-        GetTempDirectory(),
+        GetTarget()->GetTempDirectory(),
         symbolServer,
         authToken,
         timeoutInMinutes,
@@ -801,7 +733,7 @@ void InitializeSymbolStoreFromSymPath()
                         false,                  // logging
                         false,                  // msdl
                         false,                  // symweb
-                        GetTempDirectory(),     // tempDirectory
+                        GetTarget()->GetTempDirectory(),     // tempDirectory
                         nullptr,                // symbolServerPath
                         nullptr,                // authToken
                         0,                      // timeoutInMinutes

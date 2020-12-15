@@ -25,8 +25,6 @@
 #include <mscoree.h>
 #include <tchar.h>
 #include "debugshim.h"
-#include "datatarget.h"
-#include "runtime.h"
 #include "gcinfo.h"
 
 #ifndef STRESS_LOG
@@ -40,7 +38,7 @@
 #include <dlfcn.h>
 #endif // !FEATURE_PAL
 
-#include <coreclrhost.h>
+#include "coreclrhost.h"
 #include <set>
 #include <string>
 
@@ -161,11 +159,6 @@ DWORD_PTR GetValueFromExpression(___in __in_z const char *const instr)
 void ReportOOM()
 {
     ExtOut("SOS Error: Out of memory\n");
-}
-
-HRESULT CheckEEDll()
-{
-    return Runtime::CreateInstance();
 }
 
 BOOL IsDumpFile()
@@ -3416,49 +3409,13 @@ size_t FunctionType (size_t EIP)
 }
 
 //
-// Gets version info for the CLR in the debuggee process.
-//
-BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes)
-{
-    _ASSERTE(pFileInfo != nullptr);
-    _ASSERTE(g_ExtSymbols2 != nullptr);
-    _ASSERTE(g_pRuntime != nullptr);
-
-#ifdef FEATURE_PAL
-    // Load the symbols for runtime. On Linux we are looking for the "sccsid" 
-    // global so "libcoreclr.so/.dylib" symbols need to be loaded.
-    LoadNativeSymbols(true);
-#endif
-
-    HRESULT hr = g_ExtSymbols2->GetModuleVersionInformation(g_pRuntime->GetModuleIndex(), 0, "\\", pFileInfo, sizeof(VS_FIXEDFILEINFO), NULL);
-
-    // 0.0.0.0 is not a valid version. This is sometime returned by windbg for Linux core dumps
-    if (SUCCEEDED(hr) && (pFileInfo->dwFileVersionMS == (DWORD)-1 || (pFileInfo->dwFileVersionLS == 0 && pFileInfo->dwFileVersionMS == 0))) {
-        return FALSE;
-    }
-
-    // Attempt to get the the FileVersion string that contains version and the "built by" and commit id info
-    if (fileVersionBuffer != nullptr)
-    {
-        if (fileVersionBufferSizeInBytes > 0) {
-            fileVersionBuffer[0] = '\0';
-        }
-        // We can assume the English/CP_UNICODE lang/code page for the runtime modules
-        g_ExtSymbols2->GetModuleVersionInformation(
-            g_pRuntime->GetModuleIndex(), 0, "\\StringFileInfo\\040904B0\\FileVersion", fileVersionBuffer, fileVersionBufferSizeInBytes, NULL);
-    }
-
-    return SUCCEEDED(hr);
-}
-
-//
 // Return true if major runtime version (logical product version like 2.1, 
 // 3.0 or 5.x). Currently only major versions of 3 or 5 are supported.
 //
 bool IsRuntimeVersion(DWORD major)
 {
     VS_FIXEDFILEINFO fileInfo;
-    if (GetEEVersion(&fileInfo, nullptr, 0))
+    if (SUCCEEDED(g_pRuntime->GetEEVersion(&fileInfo, nullptr, 0)))
     {
         return IsRuntimeVersion(fileInfo, major);
     }
@@ -3483,7 +3440,7 @@ bool IsRuntimeVersion(VS_FIXEDFILEINFO& fileInfo, DWORD major)
 bool IsRuntimeVersionAtLeast(DWORD major)
 {
     VS_FIXEDFILEINFO fileInfo;
-    if (GetEEVersion(&fileInfo, nullptr, 0))
+    if (SUCCEEDED(g_pRuntime->GetEEVersion(&fileInfo, nullptr, 0)))
     {
         return IsRuntimeVersionAtLeast(fileInfo, major);
     }
@@ -5051,6 +5008,7 @@ ConvertNativeToIlOffset(
 
     if ((Status = GetClrMethodInstance(nativeOffset, &pMethodInst)) != S_OK)
     {
+        ExtDbgOut("ConvertNativeToIlOffset(%p): GetClrMethodInstance FAILED %08x\n", nativeOffset, Status);
         return Status;
     }
 
@@ -5068,6 +5026,7 @@ ConvertNativeToIlOffset(
 
     if ((Status = pMethodInst->GetILOffsetsByAddress(nativeOffset, 1, NULL, methodOffs)) != S_OK)
     {
+        ExtDbgOut("ConvertNativeToIlOffset(%p): GetILOffsetsByAddress FAILED %08x\n", nativeOffset, Status);
         *methodOffs = 0;
     }
     else
@@ -5116,8 +5075,11 @@ GetLineByOffset(
     IfFailRet(ConvertNativeToIlOffset(nativeOffset, bAdjustOffsetForLineNumber, &pModule, &methodToken, &methodOffs));
 
     ToRelease<IMetaDataImport> pMDImport(NULL);
-    pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport);
-
+    Status = pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport);
+    if (FAILED(Status))
+    {
+        ExtDbgOut("GetLineByOffset(%p): QueryInterface(IID_IMetaDataImport) FAILED %08x\n", nativeOffset, Status);
+    }
     SymbolReader symbolReader;
     IfFailRet(symbolReader.LoadSymbols(pMDImport, pModule));
 
@@ -5814,6 +5776,7 @@ void FlushMetadataRegions()
     {
         const_cast<MemoryRegion&>(region).Dispose();
     }
+    g_metadataRegions.clear();
     g_metadataRegionsPopulated = false;
 }
 

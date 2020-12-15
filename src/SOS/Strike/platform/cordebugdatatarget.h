@@ -150,7 +150,7 @@ public:
         {
             return E_UNEXPECTED;
         }
-        hr = g_ExtServices->GetThreadContextById(dwThreadOSID, contextFlags, contextSize, context);
+        hr = g_ExtServices->GetThreadContextBySystemId(dwThreadOSID, contextFlags, contextSize, context);
 #else
         ULONG ulThreadIDOrig;
         ULONG ulThreadIDRequested;

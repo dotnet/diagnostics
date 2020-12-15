@@ -31,8 +31,9 @@ public:
                char** arguments,
                lldb::SBCommandReturnObject &result)
     {
-        LLDBServices* services = new LLDBServices(debugger, result);
-        LoadSos(services);
+        result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
+
+        LoadSos();
 
         if (g_sosHandle != nullptr)
         {
@@ -65,52 +66,53 @@ public:
                     }
                 }
                 const char* sosArgs = str.c_str();
-                HRESULT hr = commandFunc(services, sosArgs);
+                HRESULT hr = commandFunc(g_services, sosArgs);
                 if (hr != S_OK)
                 {
-                    services->Output(DEBUG_OUTPUT_ERROR, "%s %s failed\n", sosCommand, sosArgs);
+                    result.SetStatus(lldb::eReturnStatusFailed);
+                    g_services->Output(DEBUG_OUTPUT_ERROR, "%s %s failed\n", sosCommand, sosArgs);
                 }
             }
             else
             {
-                services->Output(DEBUG_OUTPUT_ERROR, "SOS command '%s' not found %s\n", sosCommand, dlerror());
+                result.SetStatus(lldb::eReturnStatusFailed);
+                g_services->Output(DEBUG_OUTPUT_ERROR, "SOS command '%s' not found %s\n", sosCommand, dlerror());
             }
         }
 
-        services->Release();
         return result.Succeeded();
     }
 
     void
-    LoadSos(LLDBServices *services)
+    LoadSos()
     {
         if (g_sosHandle == nullptr)
         {
             if (g_usePluginDirectory)
             {
-                const char *loadDirectory = services->GetPluginModuleDirectory();
+                const char *loadDirectory = g_services->GetPluginModuleDirectory();
                 if (loadDirectory != nullptr)
                 {
-                    g_sosHandle = LoadModule(services, loadDirectory, MAKEDLLNAME_A("sos"));
+                    g_sosHandle = LoadModule(loadDirectory, MAKEDLLNAME_A("sos"));
                 }
             }
             else
             {
-                const char *loadDirectory = services->GetCoreClrDirectory();
+                const char *loadDirectory = g_services->GetCoreClrDirectory();
                 if (loadDirectory != nullptr)
                 {
                     // Load the DAC module first explicitly because SOS and DBI
                     // have implicit references to the DAC's PAL.
-                    LoadModule(services, loadDirectory, MAKEDLLNAME_A("mscordaccore"));
+                    LoadModule(loadDirectory, MAKEDLLNAME_A("mscordaccore"));
 
-                    g_sosHandle = LoadModule(services, loadDirectory, MAKEDLLNAME_A("sos"));
+                    g_sosHandle = LoadModule(loadDirectory, MAKEDLLNAME_A("sos"));
                 }
             }
         }
     }
 
     void *
-    LoadModule(LLDBServices *services, const char *loadDirectory, const char *moduleName)
+    LoadModule(const char *loadDirectory, const char *moduleName)
     {
         std::string modulePath(loadDirectory);
         modulePath.append(moduleName);
@@ -118,7 +120,7 @@ public:
         void *moduleHandle = dlopen(modulePath.c_str(), RTLD_NOW);
         if (moduleHandle == nullptr)
         {
-            services->Output(DEBUG_OUTPUT_ERROR, "Could not load '%s' - %s\n", modulePath.c_str(), dlerror());
+            g_services->Output(DEBUG_OUTPUT_ERROR, "Could not load '%s' - %s\n", modulePath.c_str(), dlerror());
         }
 
         return moduleHandle;
@@ -174,6 +176,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     interpreter.AddCommand("sympath", new sosCommand("SetSymbolServer", "-sympath"), "Add server, cache and directory paths in the Windows symbol path format.");
     interpreter.AddCommand("soshelp", new sosCommand("Help"), "Displays all available commands when no parameter is specified, or displays detailed help information about the specified command. soshelp <command>");
     interpreter.AddCommand("sosstatus", new sosCommand("SOSStatus"), "Displays the global SOS status.");
+    interpreter.AddCommand("runtimes", new sosCommand("runtimes"), "List the runtimes in the target or change the default runtime.");
     interpreter.AddCommand("sosflush", new sosCommand("SOSFlush"), "Flushes the DAC caches.");
     interpreter.AddCommand("threadpool", new sosCommand("ThreadPool"), "Displays info about the runtime thread pool.");
     interpreter.AddCommand("verifyheap", new sosCommand("VerifyHeap"), "Checks the GC heap for signs of corruption.");

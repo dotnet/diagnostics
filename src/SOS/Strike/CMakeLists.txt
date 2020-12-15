@@ -50,8 +50,10 @@ endif()
 
 add_definitions(-DSTRIKE)  
 
+include_directories(${ROOT_DIR}/src/SOS/inc)
 include_directories(${ROOT_DIR}/src/SOS/gcdump)
 include_directories(${ROOT_DIR}/src/SOS/debugshim)
+include_directories(platform)
 
 if(WIN32)
   include_directories(inc)
@@ -64,7 +66,6 @@ if(WIN32)
 
   set(SOS_SOURCES
     disasm.cpp
-    datatarget.cpp
     dllsext.cpp
     eeheap.cpp
     EventCallbacks.cpp
@@ -74,7 +75,6 @@ if(WIN32)
     gcroot.cpp
     hostcoreclr.cpp
     metadata.cpp
-    runtime.cpp
     sigparser.cpp
     sildasm.cpp
     sos.cpp
@@ -84,6 +84,10 @@ if(WIN32)
     vm.cpp
     WatchCmd.cpp
     Native.rc
+    platform/datatarget.cpp
+    platform/hostimpl.cpp
+    platform/targetimpl.cpp
+    platform/runtimeimpl.cpp
   )
   
   add_definitions(-DFX_VER_INTERNALNAME_STR=SOS.dll)
@@ -129,26 +133,27 @@ else(WIN32)
   add_compile_options(-Wno-format)
 
   include_directories(BEFORE xplat)
-  include_directories(BEFORE ../lldbplugin/inc)
 
   add_compile_options(-fPIC)
 
   set(SOS_SOURCES
     disasm.cpp
-    datatarget.cpp
     eeheap.cpp
     exts.cpp
     gchist.cpp
     gcroot.cpp
     hostcoreclr.cpp
     metadata.cpp
-    runtime.cpp
     sigparser.cpp
     sildasm.cpp
     stressLogDump.cpp
     strike.cpp
     sos.cpp
     util.cpp
+    platform/datatarget.cpp
+    platform/hostimpl.cpp
+    platform/targetimpl.cpp
+    platform/runtimeimpl.cpp
   )
 
   set(DEF_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/sos_unixexports.src)

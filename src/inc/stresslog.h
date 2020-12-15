@@ -32,7 +32,8 @@
 #include "log.h"
 
 #if defined(STRESS_LOG) && !defined(FEATURE_NO_STRESSLOG)
-#include "holder.h"
+#include "releaseholder.h"
+#include "volatile.h"
 #include "staticcontract.h"
 #include "mscoree.h"
 #include "clrinternal.h"
@@ -401,19 +402,6 @@ typedef USHORT
 // private: // static variables
     static StressLog theLog;    // We only have one log, and this is it
 };
-
-typedef Holder<CRITSEC_COOKIE, StressLog::Enter, StressLog::Leave, NULL, CompareDefault<CRITSEC_COOKIE>> StressLogLockHolder;
-
-#if defined(DACCESS_COMPILE)
-inline BOOL StressLog::LogOn(unsigned facility, unsigned level)
-{
-    STATIC_CONTRACT_LEAF;
-    STATIC_CONTRACT_SUPPORTS_DAC;
-
-    // StressLog isn't dacized, and besides we don't want to log to it in DAC builds.
-    return FALSE;
-}
-#endif
 
 /*************************************************************************************/
 /* private classes */

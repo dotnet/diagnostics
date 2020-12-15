@@ -83,7 +83,6 @@ static const char *MetadataHelperClassName = "SOS.MetadataHelper";
 
 extern HMODULE g_hInstance;
 extern LPCSTR g_hostRuntimeDirectory;
-extern LPCSTR g_tmpPath;
 extern SOSNetCoreCallbacks g_SOSNetCoreCallbacks;
 
 #ifdef FEATURE_PAL
@@ -91,8 +90,7 @@ extern bool GetAbsolutePath(const char* path, std::string& absolutePath);
 extern HRESULT LoadNativeSymbols(bool runtimeOnly = false);
 #endif
 
-extern LPCSTR GetTempDirectory();
-extern void CleanupTempDirectory();
+extern bool GetAbsolutePath(const char* path, std::string& absolutePath);
 extern BOOL IsHostingInitialized();
 extern HRESULT InitializeHosting();
 

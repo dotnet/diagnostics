@@ -11,9 +11,6 @@
     <ClInclude Include="mstypes.h" />
     <ClInclude Include="services.h" />
     <ClInclude Include="sosplugin.h" />
-    <ClInclude Include="inc\lldbservices.h">
-      <Filter>inc</Filter>
-    </ClInclude>
     <ClInclude Include="swift-4.0\lldb\lldb-defines.h">
       <Filter>swift-4.0\lldb</Filter>
     </ClInclude>
@@ -310,9 +307,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="inc">
-      <UniqueIdentifier>{32c8e536-f88f-4485-a168-9f9e9fab5822}</UniqueIdentifier>
-    </Filter>
     <Filter Include="swift-4.0">
       <UniqueIdentifier>{218787e9-5d31-4db1-bc35-232897746e27}</UniqueIdentifier>
     </Filter>
@@ -325,5 +319,8 @@
     <Filter Include="swift-4.0\lldb\Utility">
       <UniqueIdentifier>{ffdcee4c-ef55-4963-9791-6f0784ba4151}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
   </ItemGroup>
 </Project>

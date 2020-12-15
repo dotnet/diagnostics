@@ -4,26 +4,29 @@
 
 #include "EventCallbacks.h"
 
-EventCallbacks::EventCallbacks(IDebugClient* pDebugClient) : m_refCount(1), m_pDebugClient(pDebugClient)
+EventCallbacks::EventCallbacks(IDebugClient* pDebugClient) : 
+    m_refCount(1),
+    m_pDebugClient(pDebugClient)
 {
+    m_pDebugClient->AddRef();
 }
 
 EventCallbacks::~EventCallbacks()
 {
-    if(m_pDebugClient != NULL)
+    if (m_pDebugClient != NULL)
         m_pDebugClient->Release();
 }
 
-    // IUnknown implementation
+// IUnknown implementation
 HRESULT __stdcall EventCallbacks::QueryInterface(REFIID riid, VOID** ppInterface)
 {
-    if(riid == __uuidof(IDebugEventCallbacks))
+    if (riid == __uuidof(IDebugEventCallbacks))
     {
         *ppInterface = static_cast<IDebugEventCallbacks*>(this);
         AddRef();
         return S_OK;
     }
-    else if(riid == __uuidof(IUnknown))
+    else if (riid == __uuidof(IUnknown))
     {
         *ppInterface = static_cast<IUnknown*>(this);
         AddRef();
@@ -37,13 +40,13 @@ HRESULT __stdcall EventCallbacks::QueryInterface(REFIID riid, VOID** ppInterface
 
 ULONG __stdcall EventCallbacks::AddRef()
 {
-    return InterlockedIncrement((volatile LONG *) &m_refCount);
+    return InterlockedIncrement((volatile LONG*)&m_refCount);
 }
 
 ULONG __stdcall EventCallbacks::Release()
 {
-    ULONG count = InterlockedDecrement((volatile LONG *) &m_refCount);
-    if(count == 0)
+    ULONG count = InterlockedDecrement((volatile LONG*)&m_refCount);
+    if (count == 0)
     {
         delete this;
     }
@@ -105,8 +108,7 @@ HRESULT __stdcall EventCallbacks::Exception(PEXCEPTION_RECORD64 Exception, ULONG
 
 HRESULT __stdcall EventCallbacks::ExitProcess(ULONG ExitCode)
 {
-    Runtime::CleanupRuntimes();
-    CleanupTempDirectory();
+    Target::CleanupTarget();
     return DEBUG_STATUS_NO_CHANGE;
 }
 

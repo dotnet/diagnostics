@@ -75,8 +75,10 @@ IFDEF:TRIAGE_DUMP
 SOSCOMMAND:setclrpath %DESKTOP_RUNTIME_PATH%
 ENDIF:TRIAGE_DUMP
 
-SOSCOMMAND:SOSStatus -netfx
-VERIFY:\s*Switched to desktop CLR runtime successfully\s+
+SOSCOMMAND:runtimes -netfx
+VERIFY:\s*Switched to desktop .NET Framework runtime successfully\s+
+
+SOSCOMMAND:runtimes
 
 # Currently not on a desktop CLR thread so using the -all option to dump it.
 SOSCOMMAND:ClrStack -all

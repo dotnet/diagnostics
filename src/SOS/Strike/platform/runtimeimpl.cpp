@@ -15,8 +15,8 @@
 #include <psapi.h>
 #include <clrinternal.h>
 #include <metahost.h>
-#include <debugshim.h>
-#include "runtime.h"
+#include "debugshim.h"
+#include "runtimeimpl.h"
 #include "datatarget.h"
 #include "cordebugdatatarget.h"
 #include "cordebuglibraryprovider.h"
@@ -27,20 +27,6 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #endif // !FEATURE_PAL
-
-
-Runtime* Runtime::s_netcore = nullptr;
-#ifndef FEATURE_PAL
-Runtime* Runtime::s_desktop = nullptr;
-#endif
-
-// Used to initialize the runtime instance with values from the host when under dotnet-dump
-IRuntime::RuntimeConfiguration Runtime::s_configuration = IRuntime::Core;
-LPCSTR Runtime::s_dacFilePath = nullptr;
-LPCSTR Runtime::s_dbiFilePath = nullptr;
-
-// The runtime module path set by the "setclrpath" command
-LPCSTR g_runtimeModulePath = nullptr;
 
 // Current runtime instance
 IRuntime* g_pRuntime = nullptr;
@@ -103,7 +89,7 @@ static HRESULT GetSingleFileInfo(PULONG pModuleIndex, PULONG64 pModuleAddress, R
 /**********************************************************************\
  * Creates a desktop or .NET Core instance of the runtime class
 \**********************************************************************/
-HRESULT Runtime::CreateInstance(RuntimeConfiguration configuration, Runtime **ppRuntime)
+HRESULT Runtime::CreateInstance(ITarget* target, RuntimeConfiguration configuration, Runtime **ppRuntime)
 {
     PCSTR runtimeModuleName = ::GetRuntimeModuleName(configuration);
     ULONG moduleIndex = 0;
@@ -131,7 +117,7 @@ HRESULT Runtime::CreateInstance(RuntimeConfiguration configuration, Runtime **pp
         if (SUCCEEDED(hr))
         {
 #ifdef FEATURE_PAL
-            hr = g_ExtServices2->GetModuleInfo(moduleIndex, nullptr, &moduleSize);
+            hr = g_ExtServices2->GetModuleInfo(moduleIndex, nullptr, &moduleSize, nullptr, nullptr);
 #else
             _ASSERTE(moduleAddress != 0);
             DEBUG_MODULE_PARAMETERS params;
@@ -148,8 +134,7 @@ HRESULT Runtime::CreateInstance(RuntimeConfiguration configuration, Runtime **pp
         {
             if (moduleSize > 0) 
             {
-                *ppRuntime = new Runtime(configuration, moduleIndex, moduleAddress, moduleSize, runtimeInfo);
-                OnUnloadTask::Register(CleanupRuntimes);
+                *ppRuntime = new Runtime(target, configuration, moduleIndex, moduleAddress, moduleSize, runtimeInfo);
             }
             else 
             {
@@ -162,72 +147,33 @@ HRESULT Runtime::CreateInstance(RuntimeConfiguration configuration, Runtime **pp
 }
 
 /**********************************************************************\
- * Creates an instance of the runtime class. First it attempts to create
- * the .NET Core instance and if that fails, it will try to create the
- * desktop CLR instance.  If both runtimes exists in the process or dump
- * this runtime only creates the .NET Core version and leaves creating
- * the desktop instance on demand in SwitchRuntime.
+ * Constructor
 \**********************************************************************/
-HRESULT Runtime::CreateInstance()
+Runtime::Runtime(ITarget* target, RuntimeConfiguration configuration, ULONG index, ULONG64 address, ULONG64 size, RuntimeInfo* runtimeInfo) :
+    m_ref(1),
+    m_target(target),
+    m_configuration(configuration),
+    m_index(index),
+    m_address(address),
+    m_size(size),
+    m_name(nullptr),
+    m_runtimeInfo(runtimeInfo),
+    m_runtimeDirectory(nullptr),
+    m_dacFilePath(nullptr),
+    m_dbiFilePath(nullptr),
+    m_clrDataProcess(nullptr),
+    m_pCorDebugProcess(nullptr)
 {
-    HRESULT hr = S_OK;
-    if (g_pRuntime == nullptr)
-    {
-        hr = CreateInstance(IRuntime::Core, &s_netcore);
-#ifdef FEATURE_PAL
-        g_pRuntime = s_netcore;
-#else
-        if (FAILED(hr))
-        {
-            hr = CreateInstance(IRuntime::UnixCore, &s_netcore);
-        }
-        if (FAILED(hr))
-        {
-            hr = CreateInstance(IRuntime::WindowsDesktop, &s_desktop);
-        }
-        g_pRuntime = s_netcore != nullptr ? s_netcore : s_desktop;
-#endif
-    }
-    return hr;
-}
+    _ASSERTE(index != -1);
+    _ASSERTE(address != 0);
+    _ASSERTE(size != 0);
 
-/**********************************************************************\
- * Switches between the .NET Core and desktop runtimes (if both 
- * loaded). Creates the desktop CLR runtime instance on demand.
-\**********************************************************************/
-#ifndef FEATURE_PAL
-bool Runtime::SwitchRuntime(bool desktop)
-{
-    if (desktop) {
-        CreateInstance(IRuntime::WindowsDesktop, &s_desktop);
-    }
-    IRuntime* runtime = desktop ? s_desktop : s_netcore;
-    if (runtime == nullptr) {
-        return false;
-    }
-    g_pRuntime = runtime;
-    return true;
-}
-#endif
-
-/**********************************************************************\
- * Cleans up the runtime instances
-\**********************************************************************/
-void Runtime::CleanupRuntimes()
-{
-    if (s_netcore != nullptr)
+    ArrayHolder<char> szModuleName = new char[MAX_LONGPATH + 1];
+    HRESULT hr = g_ExtSymbols->GetModuleNames(index, 0, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
+    if (SUCCEEDED(hr))
     {
-        delete s_netcore;
-        s_netcore = nullptr;
+        m_name = szModuleName.Detach();
     }
-#ifndef FEATURE_PAL
-    if (s_desktop != nullptr)
-    {
-        delete s_desktop;
-        s_desktop = nullptr;
-    }
-#endif
-    g_pRuntime = nullptr;
 }
 
 /**********************************************************************\
@@ -235,6 +181,11 @@ void Runtime::CleanupRuntimes()
 \**********************************************************************/
 Runtime::~Runtime()
 {
+    if (m_name != nullptr)
+    {
+        delete [] m_name;
+        m_name = nullptr;
+    }
     if (m_runtimeDirectory != nullptr)
     {
         free((void*)m_runtimeDirectory);
@@ -264,61 +215,6 @@ Runtime::~Runtime()
 }
 
 /**********************************************************************\
- * Flushes DAC caches
-\**********************************************************************/
-void Runtime::Flush()
-{
-    if (s_netcore != nullptr && s_netcore->m_clrDataProcess != nullptr)
-    {
-        s_netcore->m_clrDataProcess->Flush();
-    }
-#ifndef FEATURE_PAL
-    if (s_desktop != nullptr && s_desktop->m_clrDataProcess != nullptr)
-    {
-        s_desktop->m_clrDataProcess->Flush();
-    }
-#endif
-}
-
-/**********************************************************************\
- * Returns the runtime directory of the target
-\**********************************************************************/
-LPCSTR Runtime::GetRuntimeDirectory()
-{
-    if (m_runtimeDirectory == nullptr)
-    {
-        if (g_runtimeModulePath != nullptr)
-        {
-            m_runtimeDirectory = _strdup(g_runtimeModulePath);
-        }
-        else 
-        {
-            ArrayHolder<char> szModuleName = new char[MAX_LONGPATH + 1];
-            HRESULT hr = g_ExtSymbols->GetModuleNames(m_index, 0, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
-            if (FAILED(hr))
-            {
-                ExtErr("Error: Failed to get runtime module name\n");
-                return nullptr;
-            }
-            if (GetFileAttributesA(szModuleName) == INVALID_FILE_ATTRIBUTES)
-            {
-                hr = HRESULT_FROM_WIN32(GetLastError());
-                ExtDbgOut("Error: Runtime module %s doesn't exist %08x\n", szModuleName.GetPtr(), hr);
-                return nullptr;
-            }
-            // Parse off the file name
-            char* lastSlash = strrchr(szModuleName, GetTargetDirectorySeparatorW());
-            if (lastSlash != nullptr)
-            {
-                *lastSlash = '\0';
-            }
-            m_runtimeDirectory = _strdup(szModuleName.GetPtr());
-        }
-    }
-    return m_runtimeDirectory;
-}
-
-/**********************************************************************\
  * Returns the DAC module path to the rest of SOS.
 \**********************************************************************/
 LPCSTR Runtime::GetDacFilePath()
@@ -343,7 +239,7 @@ LPCSTR Runtime::GetDacFilePath()
                 // doesn't get loaded by the DAC causing a LTTng-UST exception.
                 //
                 // Issue #https://github.com/dotnet/coreclr/issues/20205
-                LPCSTR tmpPath = GetTempDirectory();
+                LPCSTR tmpPath = m_target->GetTempDirectory();
                 if (tmpPath != nullptr) 
                 {
                     std::string dacSymLink(tmpPath);
@@ -411,6 +307,92 @@ LPCSTR Runtime::GetDbiFilePath()
         }
     }
     return m_dbiFilePath;
+}
+
+/**********************************************************************\
+ * Flushes DAC caches
+\**********************************************************************/
+void Runtime::Flush()
+{
+    if (m_clrDataProcess != nullptr)
+    {
+        m_clrDataProcess->Flush();
+    }
+}
+
+//----------------------------------------------------------------------------
+// IUnknown
+//----------------------------------------------------------------------------
+
+HRESULT Runtime::QueryInterface(
+    REFIID InterfaceId,
+    PVOID* Interface
+    )
+{
+    if (InterfaceId == __uuidof(IUnknown) ||
+        InterfaceId == __uuidof(IRuntime))
+    {
+        *Interface = (IRuntime*)this;
+        AddRef();
+        return S_OK;
+    }
+    else
+    {
+        *Interface = NULL;
+        return E_NOINTERFACE;
+    }
+}
+
+ULONG Runtime::AddRef()
+{
+    LONG ref = InterlockedIncrement(&m_ref);    
+    return ref;
+}
+
+ULONG Runtime::Release()
+{
+    LONG ref = InterlockedDecrement(&m_ref);
+    if (ref == 0)
+    {
+        delete this;
+    }
+    return ref;
+}
+
+//----------------------------------------------------------------------------
+// IRuntime
+//----------------------------------------------------------------------------
+
+/**********************************************************************\
+ * Returns the runtime directory of the target
+\**********************************************************************/
+LPCSTR Runtime::GetRuntimeDirectory()
+{
+    if (m_runtimeDirectory == nullptr)
+    {
+        LPCSTR runtimeDirectory = m_target->GetRuntimeDirectory();
+        if (runtimeDirectory != nullptr)
+        {
+            m_runtimeDirectory = _strdup(runtimeDirectory);
+        }
+        else 
+        {
+            if (GetFileAttributesA(m_name) == INVALID_FILE_ATTRIBUTES)
+            {
+                ExtDbgOut("Error: Runtime module %s doesn't exist %08x\n", m_name, HRESULT_FROM_WIN32(GetLastError()));
+                return nullptr;
+            }
+            // Parse off the file name
+            char* runtimeDirectory = _strdup(m_name);
+            char* lastSlash = strrchr(runtimeDirectory, GetTargetDirectorySeparatorW());
+            if (lastSlash != nullptr)
+            {
+                *lastSlash = '\0';
+            }
+            m_runtimeDirectory = runtimeDirectory;
+        }
+    }
+    return m_runtimeDirectory;
 }
 
 /**********************************************************************\
@@ -550,26 +532,62 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
 }
 
 /**********************************************************************\
+ * Gets the runtime version
+\**********************************************************************/
+HRESULT Runtime::GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes)
+{
+    _ASSERTE(pFileInfo);
+    _ASSERTE(g_ExtSymbols2 != nullptr);
+
+#ifdef FEATURE_PAL
+    // Load the symbols for runtime. On Linux we are looking for the "sccsid" 
+    // global so "libcoreclr.so/.dylib" symbols need to be loaded.
+    LoadNativeSymbols(true);
+#endif
+
+    HRESULT hr = g_ExtSymbols2->GetModuleVersionInformation(
+        m_index, 0, "\\", pFileInfo, sizeof(VS_FIXEDFILEINFO), NULL);
+
+    // 0.0.0.0 is not a valid version. This is sometime returned by windbg for Linux core dumps
+    if (SUCCEEDED(hr) && (pFileInfo->dwFileVersionMS == (DWORD)-1 || (pFileInfo->dwFileVersionLS == 0 && pFileInfo->dwFileVersionMS == 0))) {
+        return E_FAIL;
+    }
+
+    // Attempt to get the FileVersion string that contains version and the "built by" and commit id info
+    if (fileVersionBuffer != nullptr)
+    {
+        if (fileVersionBufferSizeInBytes > 0) {
+            fileVersionBuffer[0] = '\0';
+        }
+        // We can assume the English/CP_UNICODE lang/code page for the runtime modules
+        g_ExtSymbols2->GetModuleVersionInformation(
+            m_index, 0, "\\StringFileInfo\\040904B0\\FileVersion", fileVersionBuffer, fileVersionBufferSizeInBytes, NULL);
+    }
+
+    return hr;
+}
+
+/**********************************************************************\
  * Displays the runtime internal status
 \**********************************************************************/
 void Runtime::DisplayStatus()
 {
-    ExtOut("%s runtime at %08llx size %08llx\n", GetRuntimeConfigurationName(GetRuntimeConfiguration()), m_address, m_size);
+    char current = g_pRuntime == this ? '*' : ' ';
+    ExtOut("%c%s runtime at %08llx size %08llx\n", current, GetRuntimeConfigurationName(GetRuntimeConfiguration()), m_address, m_size);
     if (m_runtimeInfo != nullptr) {
-        ArrayHolder<char> szModuleName = new char[MAX_LONGPATH + 1];
-        HRESULT hr = g_ExtSymbols->GetModuleNames(m_index, 0, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
-        if (SUCCEEDED(hr)) {
-            ExtOut("Single-file module path: %s\n", szModuleName.GetPtr());
-        }
+        ExtOut("    Single-file module path: %s\n", m_name);
+    }
+    else {
+        ExtOut("    Runtime module path: %s\n", m_name);
     }
     if (m_runtimeDirectory != nullptr) {
-        ExtOut("Runtime directory: %s\n", m_runtimeDirectory);
+        ExtOut("    Runtime directory: %s\n", m_runtimeDirectory);
     }
     if (m_dacFilePath != nullptr) {
-        ExtOut("DAC file path: %s\n", m_dacFilePath);
+        ExtOut("    DAC file path: %s\n", m_dacFilePath);
     }
     if (m_dbiFilePath != nullptr) {
-        ExtOut("DBI file path: %s\n", m_dbiFilePath);
+        ExtOut("    DBI file path: %s\n", m_dbiFilePath);
     }
 }
 
