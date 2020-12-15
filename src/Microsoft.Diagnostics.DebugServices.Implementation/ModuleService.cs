@@ -68,8 +68,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         IEnumerable<IModule> IModuleService.EnumerateModules()
         {
-            GetModules();
-            return _sortedByBaseAddress;
+            return GetSortedModules();
         }
 
         /// <summary>
@@ -111,16 +110,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>module or null</returns>
         IModule IModuleService.GetModuleFromAddress(ulong address)
         {
-            GetModules();
-
             Debug.Assert((address & ~MemoryService.SignExtensionMask()) == 0);
-            int min = 0, max = _sortedByBaseAddress.Length - 1;
+            IModule[] modules = GetSortedModules();
+            int min = 0, max = modules.Length - 1;
 
             // Check if there is a module that contains the address range
             while (min <= max)
             {
                 int mid = (min + max) / 2;
-                IModule module = _sortedByBaseAddress[mid];
+                IModule module = modules[mid];
 
                 ulong start = module.ImageBase;
                 Debug.Assert((start & ~MemoryService.SignExtensionMask()) == 0);
@@ -162,16 +160,28 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         #endregion
 
         /// <summary>
-        /// Get/create the modules dictionary and sorted array.
+        /// Get/create the modules dictionary.
         /// </summary>
         private Dictionary<ulong, IModule> GetModules()
         {
             if (_modules == null)
             {
                 _modules = GetModulesInner();
-                _sortedByBaseAddress = _modules.OrderBy((pair) => pair.Key).Select((pair) => pair.Value).ToArray();
             }
             return _modules;
+        }
+
+        /// <summary>
+        /// Create the sorted array of modules.
+        /// </summary>
+        /// <returns></returns>
+        private IModule[] GetSortedModules()
+        {
+            if (_sortedByBaseAddress == null)
+            {
+                _sortedByBaseAddress = GetModules().OrderBy((pair) => pair.Key).Select((pair) => pair.Value).ToArray();
+            }
+            return _sortedByBaseAddress;
         }
 
         /// <summary>
@@ -210,7 +220,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Returns the PE file's PDB info from the debug directory
+        /// Returns information about the PE file.
         /// </summary>
         /// <param name="isVirtual">the memory layout of the module</param>
         /// <param name="address">module base address</param>
@@ -280,33 +290,32 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             if (!string.IsNullOrEmpty(downloadFilePath))
             {
-                Trace.TraceInformation("GetPEReader: downloading {0}", downloadFilePath);
-                Stream stream = null;
+                Trace.TraceInformation("GetPEReader: downloaded {0}", downloadFilePath);
+                Stream stream;
                 try
                 {
                     stream = File.OpenRead(downloadFilePath);
                 }
                 catch (Exception ex) when (ex is DirectoryNotFoundException || ex is FileNotFoundException || ex is UnauthorizedAccessException || ex is IOException)
                 {
-                    Trace.TraceError($"GetPEReader: exception {ex.Message}");
+                    Trace.TraceError($"GetPEReader: OpenRead exception {ex.Message}");
+                    return null;
                 }
-                if (stream != null)
+                try
                 {
-                    try
+                    reader = new PEReader(stream);
+                    if (reader.PEHeaders == null || reader.PEHeaders.PEHeader == null)
                     {
-                        reader = new PEReader(stream);
-                        if (reader.PEHeaders == null || reader.PEHeaders.PEHeader == null)
-                        {
-                            reader = null;
-                        }
+                        return null;
                     }
-                    catch (Exception ex) when (ex is BadImageFormatException || ex is IOException)
-                    {
-                        Trace.TraceError($"GetPEReader: exception {ex.Message}");
-                        reader = null;
-                    }
+                }
+                catch (Exception ex) when (ex is BadImageFormatException || ex is IOException)
+                {
+                    Trace.TraceError($"GetPEReader: PEReader exception {ex.Message}");
+                    return null;
                 }
             }
+
             return reader;
         }
 

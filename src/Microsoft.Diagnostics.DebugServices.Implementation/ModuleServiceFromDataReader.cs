@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Runtime;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -104,13 +105,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             foreach (ModuleInfo moduleInfo in _dataReader.EnumerateModules().OrderBy((info) => info.ImageBase))
             {
                 var module = new ModuleFromDataReader(this, moduleIndex, moduleInfo);
-                if (!modules.TryGetValue(moduleInfo.ImageBase, out IModule dup))
+                try
                 {
                     modules.Add(moduleInfo.ImageBase, module);
                 }
-                else
+                catch (ArgumentException)
                 {
-                    Trace.TraceError($"GetModules(): duplicate module base '{module}' dup '{dup}'");
+                    Trace.TraceError($"GetModules(): duplicate module base '{module}' dup '{modules[moduleInfo.ImageBase]}'");
                 }
                 moduleIndex++;
             }
