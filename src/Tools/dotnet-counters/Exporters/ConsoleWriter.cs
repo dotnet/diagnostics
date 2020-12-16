@@ -152,7 +152,16 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         public void Stop()
         {
-            // Nothing to do here.
+            if (initialized)
+            {
+                var row = providers.Values.SelectMany(c => c.Counters.Values).Select(c => c.Row).DefaultIfEmpty(-1).Max();
+
+                if (row > -1)
+                {
+                    Console.SetCursorPosition(0, row);
+                    Console.WriteLine();
+                }
+            }
         }
     }
 }
