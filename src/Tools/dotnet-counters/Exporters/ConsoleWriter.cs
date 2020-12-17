@@ -46,6 +46,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private bool paused = false;
         private bool initialized = false;
 
+        private int maxRow = -1;
+
         public void Initialize()
         {
             AssignRowsAndInitializeDisplay();
@@ -82,6 +84,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     counter.Row = row++;
                 }
             }
+
+            maxRow = row;
         }
 
         public void ToggleStatus(bool pauseCmdSet)
@@ -154,7 +158,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         {
             if (initialized)
             {
-                var row = providers.Values.SelectMany(c => c.Counters.Values).Select(c => c.Row).DefaultIfEmpty(-1).Max();
+                var row = maxRow;
 
                 if (row > -1)
                 {
