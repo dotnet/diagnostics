@@ -37,6 +37,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             public int Row { get; set; } // Assigned row for this counter. May change during operation.
         }
 
+        private readonly object _lock = new object();
         private readonly Dictionary<string, ObservedProvider> providers = new Dictionary<string, ObservedProvider>(); // Tracks observed providers and counters.
         private const int Indent = 4; // Counter name indent size.
         private int maxNameLength = 40; // Allow room for 40 character counter names by default.
@@ -85,7 +86,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 }
             }
 
-            maxRow = row;
+            maxRow = Math.Max(maxRow, row);
         }
 
         public void ToggleStatus(bool pauseCmdSet)
@@ -101,69 +102,75 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         public void CounterPayloadReceived(string providerName, ICounterPayload payload, bool pauseCmdSet)
         {
-            if (!initialized)
+            lock (_lock)
             {
-                initialized = true;
-                AssignRowsAndInitializeDisplay();
+                if (!initialized)
+                {
+                    initialized = true;
+                    AssignRowsAndInitializeDisplay();
+                }
+
+                if (pauseCmdSet)
+                {
+                    return;
+                }
+
+                string name = payload.GetName();
+
+                bool redraw = false;
+                if (!providers.TryGetValue(providerName, out ObservedProvider provider))
+                {
+                    providers[providerName] = provider = new ObservedProvider(providerName);
+                    redraw = true;
+                }
+
+                if (!provider.Counters.TryGetValue(name, out ObservedCounter counter))
+                {
+                    string displayName = payload.GetDisplay();
+                    provider.Counters[name] = counter = new ObservedCounter(displayName);
+                    maxNameLength = Math.Max(maxNameLength, displayName.Length);
+                    redraw = true;
+                }
+
+                const string DecimalPlaces = "###";
+                string payloadVal = payload.GetValue().ToString("#,0." + DecimalPlaces, CultureInfo.CurrentCulture);
+                int decimalIndex = payloadVal.IndexOf(CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator, StringComparison.CurrentCulture);
+                if (decimalIndex == -1)
+                {
+                    decimalIndex = payloadVal.Length;
+                }
+
+                if (decimalIndex > maxPreDecimalDigits)
+                {
+                    maxPreDecimalDigits = decimalIndex;
+                    redraw = true;
+                }
+
+                if (redraw)
+                {
+                    AssignRowsAndInitializeDisplay();
+                }
+
+                Console.SetCursorPosition(Indent + maxNameLength + 1, counter.Row);
+                int prefixSpaces = maxPreDecimalDigits - decimalIndex;
+                int postfixSpaces = DecimalPlaces.Length - (payloadVal.Length - decimalIndex - 1);
+                Console.Write($"{new string(' ', prefixSpaces)}{payloadVal}{new string(' ', postfixSpaces)}");
             }
-
-            if (pauseCmdSet)
-            {
-                return;
-            }
-
-            string name = payload.GetName();
-
-            bool redraw = false;
-            if (!providers.TryGetValue(providerName, out ObservedProvider provider))
-            {
-                providers[providerName] = provider = new ObservedProvider(providerName);
-                redraw = true;
-            }
-
-            if (!provider.Counters.TryGetValue(name, out ObservedCounter counter))
-            {
-                string displayName = payload.GetDisplay();
-                provider.Counters[name] = counter = new ObservedCounter(displayName);
-                maxNameLength = Math.Max(maxNameLength, displayName.Length);
-                redraw = true;
-            }
-
-            const string DecimalPlaces = "###";
-            string payloadVal = payload.GetValue().ToString("#,0." + DecimalPlaces, CultureInfo.CurrentCulture);
-            int decimalIndex = payloadVal.IndexOf(CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator, StringComparison.CurrentCulture);
-            if (decimalIndex == -1)
-            {
-                decimalIndex = payloadVal.Length;
-            }
-
-            if (decimalIndex > maxPreDecimalDigits)
-            {
-                maxPreDecimalDigits = decimalIndex;
-                redraw = true;
-            }
-
-            if (redraw)
-            {
-                AssignRowsAndInitializeDisplay();
-            }
-
-            Console.SetCursorPosition(Indent + maxNameLength + 1, counter.Row);
-            int prefixSpaces = maxPreDecimalDigits - decimalIndex;
-            int postfixSpaces = DecimalPlaces.Length - (payloadVal.Length - decimalIndex - 1);
-            Console.Write($"{new string(' ', prefixSpaces)}{payloadVal}{new string(' ', postfixSpaces)}");
         }
 
         public void Stop()
         {
-            if (initialized)
+            lock (_lock)
             {
-                var row = maxRow;
-
-                if (row > -1)
+                if (initialized)
                 {
-                    Console.SetCursorPosition(0, row);
-                    Console.WriteLine();
+                    var row = maxRow;
+
+                    if (row > -1)
+                    {
+                        Console.SetCursorPosition(0, row);
+                        Console.WriteLine();
+                    }
                 }
             }
         }
