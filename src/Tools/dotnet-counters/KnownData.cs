@@ -99,6 +99,55 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 },
                 runtimeVersion
             );
+            yield return new CounterProvider(
+                "System.Net.NameResolution",
+                "A set of performance counters for DNS lookups",
+                "0x0",
+                "4",
+                new[] {
+                    new CounterProfile{ Name="dns-lookups-requested", Description="The number of DNS lookups requested since the process started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="dns-lookups-duration", Description="Average DNS Lookup Duration", SupportedVersions=new[] { net50 } },
+                },
+                runtimeVersion
+            );
+            yield return new CounterProvider(
+                "System.Net.Security",
+                "A set of performance counters for TLS",
+                "0x0",
+                "4",
+                new[] {
+                    new CounterProfile{ Name="tls-handshake-rate", Description="The number of TLS handshakes completed per update interval", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="total-tls-handshakes", Description="The total number of TLS handshakes completed since the process started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="current-tls-handshakes", Description="The current number of TLS handshakes that have started but not yet completed", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="failed-tls-handshakes", Description="The total number of TLS handshakes failed since the process started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="all-tls-sessions-open", Description="The number of active all TLS sessions", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls10-sessions-open", Description="The number of active TLS 1.0 sessions", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls11-sessions-open", Description="The number of active TLS 1.1 sessions", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls12-sessions-open", Description="The number of active TLS 1.2 sessions", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls13-sessions-open", Description="The number of active TLS 1.3 sessions", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="all-tls-handshake-duration", Description="The average duration of all TLS handshakes", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls10-handshake-duration", Description="The average duration of TLS 1.0 handshakes", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls11-handshake-duration", Description="The average duration of TLS 1.1 handshakes", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls12-handshake-duration", Description="The average duration of TLS 1.2 handshakes", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls13-handshake-duration", Description="The average duration of TLS 1.3 handshakes", SupportedVersions=new[] { net50 } },
+                },
+                runtimeVersion
+            );
+            yield return new CounterProvider(
+                "System.Net.Sockets",
+                "A set of performance counters for System.Net.Sockets",
+                "0x0",
+                "4",
+                new[] {
+                    new CounterProfile{ Name="outgoing-connections-established", Description="The total number of outgoing connections established since the process started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="incoming-connections-established", Description="The total number of incoming connections established since the process started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="bytes-received", Description="The total number of bytes received since the process started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="bytes-sent", Description="The total number of bytes sent since the process started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="datagrams-received", Description="The total number of datagrams received since the process started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="datagrams-sent", Description="The total number of datagrams sent since the process started", SupportedVersions=new[] { net50 } },
+                },
+                runtimeVersion
+            );
         }
 
         public static IReadOnlyList<CounterProvider> GetAllProviders(string version)
