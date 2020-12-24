@@ -260,7 +260,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             if (_counterList.Count == 0)
             {
                 CounterProvider defaultProvider = null;
-                _console.Out.WriteLine($"counter_list is unspecified. Monitoring all counters by default.");
+                _console.Out.WriteLine($"--counters is unspecified. Monitoring System.Runtime counters by default.");
 
                 // Enable the default profile if nothing is specified
                 if (!KnownData.TryGetProvider("System.Runtime", out defaultProvider))
