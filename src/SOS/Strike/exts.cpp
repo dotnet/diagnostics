@@ -148,7 +148,7 @@ ArchQuery(void)
     if (targetMachine == NULL)
     {
         g_targetMachine = NULL;
-        ExtErr("SOS does not support the current target architecture 0x%08x\n", targetArchitecture);
+        ExtErr("The SOS that is loaded does not support the current target architecture '0x%04x'. A 32 bit target may require a 64 bit debugger or vice versa.\n", targetArchitecture);
         return E_FAIL;
     }
 
