@@ -81,9 +81,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         public void Configure(
             IApplicationBuilder app,
             IWebHostEnvironment env,
-            ILogger<Startup> logger)
+            ExperimentalToolLogger logger)
         {
-            Program.LogExperimentalWarning(logger);
+            logger.LogExperimentMessage();
 
             if (env.IsDevelopment())
             {

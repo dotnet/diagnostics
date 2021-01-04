@@ -4,7 +4,6 @@
 
 using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Tools.Common;
 using System;
 using System.CommandLine;
@@ -26,9 +25,6 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
     class Program
     {
-        // FUTURE: This log message should be removed when dotnet-monitor is no longer an experimental tool
-        private const string ExperimentMessage = "WARNING: dotnet-monitor is experimental and is not intended for production environments yet.";
-
         private static Command CollectCommand() =>
               new Command(
                   name: "collect",
@@ -84,18 +80,11 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
         public static Task<int> Main(string[] args)
         {
-            // Write directly to console so that message is always written regardless of logging level.
-            Console.WriteLine(ExperimentMessage);
             var parser = new CommandLineBuilder()
-                            .AddCommand(CollectCommand())
-                            .UseDefaults()
-                            .Build();
+                .AddCommand(CollectCommand())
+                .UseDefaults()
+                .Build();
             return parser.InvokeAsync(args);
-        }
-
-        public static void LogExperimentalWarning(ILogger logger)
-        {
-            logger.Log(LogLevel.Warning, ExperimentMessage);
         }
     }
 }

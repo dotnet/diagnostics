@@ -88,6 +88,12 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                     {
                         services.ConfigureMetrics(context.Configuration);
                     }
+                    services.AddSingleton<ExperimentalToolLogger>();
+                })
+                .ConfigureLogging(builder =>
+                {
+                    // Always allow the experimental tool message to be logged
+                    ExperimentalToolLogger.AddLogFilter(builder);
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
