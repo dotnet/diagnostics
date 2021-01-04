@@ -38,13 +38,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         private static readonly MediaTypeHeaderValue EventStreamHeader = new MediaTypeHeaderValue(ContentTypes.TextEventStream);
 
         private readonly ILogger<DiagController> _logger;
-        private readonly ILoggerFactory _loggerFactory;
         private readonly IDiagnosticServices _diagnosticServices;
 
-        public DiagController(ILoggerFactory loggerFactory, IServiceProvider serviceProvider)
+        public DiagController(ILogger<DiagController> logger, IServiceProvider serviceProvider)
         {
-            _logger = loggerFactory.CreateLogger<DiagController>();
-            _loggerFactory = loggerFactory;
+            _logger = logger;
             _diagnosticServices = serviceProvider.GetRequiredService<IDiagnosticServices>();
         }
 
