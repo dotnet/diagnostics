@@ -47,7 +47,7 @@
     <MicrosoftDiagnosticsRuntimeUtilitiesVersion>2.0.156101</MicrosoftDiagnosticsRuntimeUtilitiesVersion>
     <ParallelStacksRuntimeVersion>2.0.1</ParallelStacksRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
-    <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.57</MicrosoftDiagnosticsTracingTraceEventVersion>
+    <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.64</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftExtensionsConfigurationJsonVersion>2.1.1</MicrosoftExtensionsConfigurationJsonVersion>
     <MicrosoftExtensionsConfigurationKeyPerFileVersion>2.1.1</MicrosoftExtensionsConfigurationKeyPerFileVersion>
     <MicrosoftExtensionsDependencyInjectionVersion>2.1.1</MicrosoftExtensionsDependencyInjectionVersion>
