@@ -4,7 +4,7 @@
     <TargetFramework Condition="'$(BundleTools)' != 'true'">netcoreapp2.1</TargetFramework>
     <RootNamespace>Microsoft.Diagnostics.Tools.Stack</RootNamespace>
     <ToolCommandName>dotnet-stack</ToolCommandName>
-    <Description>.NET Core Stack printing tool</Description>
+    <Description>.NET Stack Printing Tool</Description>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
