@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Globalization;
+
 namespace Microsoft.Diagnostics.Monitoring.RestServer
 {
     internal static class KeyValueLogScopeExtensions
@@ -13,8 +15,12 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 
         public static void AddEndpointInfo(this KeyValueLogScope scope, IEndpointInfo endpointInfo)
         {
-            scope.Values.Add("TargetProcessId", endpointInfo.ProcessId);
-            scope.Values.Add("TargetRuntimeInstanceCookie", endpointInfo.RuntimeInstanceCookie);
+            scope.Values.Add(
+                ArtifactMetadataNames.ArtifactSource.ProcessId,
+                endpointInfo.ProcessId.ToString(CultureInfo.InvariantCulture));
+            scope.Values.Add(
+                ArtifactMetadataNames.ArtifactSource.RuntimeInstanceCookie,
+                endpointInfo.RuntimeInstanceCookie.ToString("N"));
         }
     }
 }
