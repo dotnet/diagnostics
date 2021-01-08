@@ -124,15 +124,19 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress
             private static void FillBlobMetadata(IDictionary<string, string> metadata, IEndpointInfo source)
             {
                 // Activity metadata
-                metadata.Add(
-                    ActivityMetadataNames.ParentId,
-                    Activity.Current.GetParentId());
-                metadata.Add(
-                    ActivityMetadataNames.SpanId,
-                    Activity.Current.GetSpanId());
-                metadata.Add(
-                    ActivityMetadataNames.TraceId,
-                    Activity.Current.GetTraceId());
+                Activity activity = Activity.Current;
+                if (null != activity)
+                {
+                    metadata.Add(
+                        ActivityMetadataNames.ParentId,
+                        activity.GetParentId());
+                    metadata.Add(
+                        ActivityMetadataNames.SpanId,
+                        activity.GetSpanId());
+                    metadata.Add(
+                        ActivityMetadataNames.TraceId,
+                        activity.GetTraceId());
+                }
 
                 // Artifact metadata
                 metadata.Add(
