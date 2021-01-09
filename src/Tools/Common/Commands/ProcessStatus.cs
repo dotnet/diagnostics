@@ -50,7 +50,7 @@ namespace Microsoft.Internal.Common.Commands
                     }
                     catch (Exception ex)
                     {
-                        if (ex is InvalidOperationException || ex is System.ComponentModel.Win32Exception || ex is NullReferenceException)
+                        if (ex is System.ComponentModel.Win32Exception || ex is NullReferenceException)
                         {
                             sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
                         }
