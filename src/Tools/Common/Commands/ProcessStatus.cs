@@ -7,6 +7,7 @@ using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.CommandLine.IO;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Process = System.Diagnostics.Process;
@@ -48,13 +49,16 @@ namespace Microsoft.Internal.Common.Commands
                     {
                         sb.Append($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}\n");
                     }
-                    catch (InvalidOperationException)
+                    catch (Exception ex)
                     {
-                        sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
-                    }
-                    catch (NullReferenceException)
-                    {
-                        sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
+                        if (ex is System.ComponentModel.Win32Exception || ex is NullReferenceException)
+                        {
+                            sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
+                        }
+                        else
+                        {
+                            Debug.WriteLine($"[PrintProcessStatus] {ex.ToString()}");
+                        }
                     }
                 }
                 console.Out.WriteLine(sb.ToString());
