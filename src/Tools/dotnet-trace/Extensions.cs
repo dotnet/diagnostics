@@ -46,7 +46,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
             { "perftrack", 0x20000000 },
             { "stack", 0x40000000 },
             { "threadtransfer", 0x80000000 },
-            { "debugger", 0x100000000 }
+            { "debugger", 0x100000000 },
+            { "monitoring", 0x200000000 },
+            { "codesymbols", 0x400000000 },
+            { "eventsource", 0x800000000 },
+            { "compilation", 0x1000000000 },
+            { "compilationdiagnostic", 0x2000000000 },
+            { "methoddiagnostic", 0x4000000000 },
+            { "typediagnostic", 0x8000000000 },
         };
 
         public static List<EventPipeProvider> ToProviders(string providers)
