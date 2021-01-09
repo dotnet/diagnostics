@@ -48,13 +48,12 @@ namespace Microsoft.Internal.Common.Commands
                     {
                         sb.Append($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}\n");
                     }
-                    catch (InvalidOperationException)
+                    catch (Exception ex)
                     {
-                        sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
-                    }
-                    catch (NullReferenceException)
-                    {
-                        sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
+                        if (ex is InvalidOperationException || ex is System.ComponentModel.Win32Exception || ex is NullReferenceException)
+                        {
+                            sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
+                        }
                     }
                 }
                 console.Out.WriteLine(sb.ToString());
