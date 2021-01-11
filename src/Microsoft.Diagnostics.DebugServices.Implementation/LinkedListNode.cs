@@ -9,7 +9,12 @@ using System.Collections.Generic;
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
-    /// Simple linked list implementation. It assumes the nodes in the list inherit this class.
+    /// Simple linked list implementation. It assumes the nodes in the list inherit this 
+    /// class. The standard C# LinkedList/LinkedListNode doesn't allow it to be inherited
+    /// in the (i.e. ServiceEvent) nodes making it inefficient (because LinkedListNode 
+    /// contains the data node), difficult to remove/maintain the list because LinkedListNode
+    /// doesn't have a remove function and LinkedList doesn't allow the nodes to be removed 
+    /// during enumeration.
     /// </summary>
     public class LinkedListNode
     {
