@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.AzureStorage
                 Logger?.LogDebug("End uploading to storage with headers and metadata.");
 
                 string blobUriString = GetBlobUri(blobClient);
-                Logger?.LogInformation("Uploaded stream to {0}", blobUriString);
+                Logger?.LogDebug("Uploaded stream to {0}", blobUriString);
                 return blobUriString;
             }
             catch (AggregateException ex) when (ex.InnerException is RequestFailedException innerException)
@@ -101,7 +101,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.AzureStorage
                 Logger?.LogDebug("End writing metadata.");
 
                 string blobUriString = GetBlobUri(blobClient);
-                Logger?.LogInformation("Uploaded stream to {0}", blobUriString);
+                Logger?.LogDebug("Uploaded stream to {0}", blobUriString);
                 return blobUriString;
             }
             catch (AggregateException ex) when (ex.InnerException is RequestFailedException innerException)

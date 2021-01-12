@@ -3,7 +3,10 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http.Headers;
 using System.Threading;
@@ -16,17 +19,25 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         private readonly Func<Stream, CancellationToken, Task> _action;
         private readonly string _contentType;
         private readonly string _fileDownloadName;
+        private readonly KeyValueLogScope _scope;
 
-        public OutputStreamResult(Func<Stream, CancellationToken, Task> action, string contentType, string fileDownloadName = null)
+        public OutputStreamResult(Func<Stream, CancellationToken, Task> action, string contentType, string fileDownloadName, KeyValueLogScope scope)
         {
             _contentType = contentType;
             _fileDownloadName = fileDownloadName;
             _action = action;
+            _scope = scope;
         }
 
-        public override Task ExecuteResultAsync(ActionContext context)
+        public override async Task ExecuteResultAsync(ActionContext context)
         {
-            return context.InvokeAsync(async (token) =>
+            ILogger<OutputStreamResult> logger = context.HttpContext.RequestServices
+                .GetRequiredService<ILoggerFactory>()
+                .CreateLogger<OutputStreamResult>();
+
+            using var _ = logger.BeginScope(_scope);
+
+            await context.InvokeAsync(async (token) =>
             {
                 if (_fileDownloadName != null)
                 {
@@ -43,7 +54,9 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 #endif
 
                 await _action(context.HttpContext.Response.Body, token);
-            });
+
+                logger.LogInformation("Written to HTTP stream.");
+            }, logger);
         }
     }
 }

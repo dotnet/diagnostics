@@ -9,6 +9,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -94,9 +96,9 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress
                 IEndpointInfo source,
                 CancellationToken token)
             {
-                // TODO: Add metadata based on source
                 var streamOptions = new AzureBlobEgressStreamOptions();
                 streamOptions.ContentType = contentType;
+                FillBlobMetadata(streamOptions.Metadata, source);
 
                 string blobUri = await _provider.EgressAsync(action, fileName, streamOptions, token);
 
@@ -110,13 +112,39 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress
                 IEndpointInfo source,
                 CancellationToken token)
             {
-                // TODO: Add metadata based on source
                 var streamOptions = new AzureBlobEgressStreamOptions();
                 streamOptions.ContentType = contentType;
+                FillBlobMetadata(streamOptions.Metadata, source);
 
                 string blobUri = await _provider.EgressAsync(action, fileName, streamOptions, token);
 
                 return new EgressResult("uri", blobUri);
+            }
+
+            private static void FillBlobMetadata(IDictionary<string, string> metadata, IEndpointInfo source)
+            {
+                // Activity metadata
+                Activity activity = Activity.Current;
+                if (null != activity)
+                {
+                    metadata.Add(
+                        ActivityMetadataNames.ParentId,
+                        activity.GetParentId());
+                    metadata.Add(
+                        ActivityMetadataNames.SpanId,
+                        activity.GetSpanId());
+                    metadata.Add(
+                        ActivityMetadataNames.TraceId,
+                        activity.GetTraceId());
+                }
+
+                // Artifact metadata
+                metadata.Add(
+                    ArtifactMetadataNames.ArtifactSource.ProcessId,
+                    source.ProcessId.ToString(CultureInfo.InvariantCulture));
+                metadata.Add(
+                    ArtifactMetadataNames.ArtifactSource.RuntimeInstanceCookie,
+                    source.RuntimeInstanceCookie.ToString("N"));
             }
         }
 

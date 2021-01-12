@@ -14,6 +14,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
     [ApiController]
     public class MetricsController : ControllerBase
     {
+        private const string ArtifactType_Metrics = "metrics";
+
         private readonly ILogger<MetricsController> _logger;
         private readonly MetricsStoreService _metricsStore;
         private readonly MetricsOptions _metricsOptions;
@@ -37,11 +39,17 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     throw new InvalidOperationException("Metrics was not enabled");
                 }
 
+                KeyValueLogScope scope = new KeyValueLogScope();
+                scope.AddArtifactType(ArtifactType_Metrics);
+
                 return new OutputStreamResult(async (outputStream, token) =>
-                {
-                    await _metricsStore.MetricsStore.SnapshotMetrics(outputStream, token);
-                }, "text/plain; version=0.0.4");
-            });
+                    {
+                        await _metricsStore.MetricsStore.SnapshotMetrics(outputStream, token);
+                    },
+                    "text/plain; version=0.0.4",
+                    null,
+                    scope);
+            }, _logger);
         }
     }
 }

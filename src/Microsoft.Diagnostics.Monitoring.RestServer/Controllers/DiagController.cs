@@ -28,6 +28,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
     [HostRestriction]
     public class DiagController : ControllerBase
     {
+        private const string ArtifactType_Dump = "dump";
+        private const string ArtifactType_GCDump = "gcdump";
+        private const string ArtifactType_Logs = "logs";
+        private const string ArtifactType_Trace = "trace";
+
         private const TraceProfile DefaultTraceProfiles = TraceProfile.Cpu | TraceProfile.Http | TraceProfile.Metrics;
         private static readonly MediaTypeHeaderValue NdJsonHeader = new MediaTypeHeaderValue(ContentTypes.ApplicationNdJson);
         private static readonly MediaTypeHeaderValue EventStreamHeader = new MediaTypeHeaderValue(ContentTypes.TextEventStream);
@@ -52,33 +57,24 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     processesIdentifiers.Add(ProcessIdentifierModel.FromProcessInfo(p));
                 }
                 return new ActionResult<IEnumerable<ProcessIdentifierModel>>(processesIdentifiers);
-            });
+            }, _logger);
         }
 
         [HttpGet("processes/{processFilter}")]
         public Task<ActionResult<ProcessModel>> GetProcess(
             ProcessFilter processFilter)
         {
-            return this.InvokeService<ProcessModel>(async () =>
-            {
-                IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(
-                    processFilter,
-                    HttpContext.RequestAborted);
-
-                return ProcessModel.FromProcessInfo(processInfo);
-            });
+            return InvokeForProcess<ProcessModel>(
+                processInfo => ProcessModel.FromProcessInfo(processInfo),
+                processFilter);
         }
 
         [HttpGet("processes/{processFilter}/env")]
         public Task<ActionResult<Dictionary<string, string>>> GetProcessEnvironment(
             ProcessFilter processFilter)
         {
-            return this.InvokeService<Dictionary<string, string>>(async () =>
+            return InvokeForProcess<Dictionary<string, string>>(processInfo =>
             {
-                IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(
-                    processFilter,
-                    HttpContext.RequestAborted);
-
                 var client = new DiagnosticsClient(processInfo.EndpointInfo.Endpoint);
 
                 try
@@ -89,7 +85,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 {
                     throw new InvalidOperationException("Unable to get process environment.");
                 }
-            });
+            },
+            processFilter);
         }
 
         [HttpGet("dump/{processFilter?}")]
@@ -98,10 +95,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             [FromQuery] DumpType type = DumpType.WithHeap,
             [FromQuery] string egressProvider = null)
         {
-            return this.InvokeService(async () =>
+            return InvokeForProcess(async processInfo =>
             {
-                IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(processFilter, HttpContext.RequestAborted);
-
                 string dumpFileName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
                     FormattableString.Invariant($"dump_{GetFileNameTimeStampUtcNow()}.dmp") :
                     FormattableString.Invariant($"core_{GetFileNameTimeStampUtcNow()}");
@@ -116,14 +111,19 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 }
                 else
                 {
+                    KeyValueLogScope scope = new KeyValueLogScope();
+                    scope.AddArtifactType(ArtifactType_Dump);
+                    scope.AddEndpointInfo(processInfo.EndpointInfo);
+
                     return new EgressStreamResult(
                         token => _diagnosticServices.GetDump(processInfo, type, token),
                         egressProvider,
                         dumpFileName,
                         processInfo.EndpointInfo,
-                        ContentTypes.ApplicationOctectStream);
+                        ContentTypes.ApplicationOctectStream,
+                        scope);
                 }
-            });
+            }, processFilter, ArtifactType_Dump);
         }
 
         [HttpGet("gcdump/{processFilter?}")]
@@ -131,10 +131,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             ProcessFilter? processFilter,
             [FromQuery] string egressProvider = null)
         {
-            return this.InvokeService(async () =>
+            return InvokeForProcess(processInfo =>
             {
-                IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(processFilter, HttpContext.RequestAborted);
-
                 string fileName = FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.EndpointInfo.ProcessId}.gcdump");
 
                 Func<CancellationToken, Task<IFastSerializable>> action = async (token) => {
@@ -157,12 +155,13 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 };
 
                 return Result(
+                    ArtifactType_GCDump,
                     egressProvider,
                     ConvertFastSerializeAction(action),
                     fileName,
                     ContentTypes.ApplicationOctectStream,
                     processInfo.EndpointInfo);
-            });
+            }, processFilter, ArtifactType_GCDump);
         }
 
         [HttpGet("trace/{processFilter?}")]
@@ -173,10 +172,10 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             [FromQuery][Range(1, int.MaxValue)] int metricsIntervalSeconds = 1,
             [FromQuery] string egressProvider = null)
         {
-            TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
-
-            return this.InvokeService(async () =>
+            return InvokeForProcess(processInfo =>
             {
+                TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
+
                 var configurations = new List<MonitoringSourceConfiguration>();
                 if (profile.HasFlag(TraceProfile.Cpu))
                 {
@@ -197,8 +196,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
                 var aggregateConfiguration = new AggregateSourceConfiguration(configurations.ToArray());
 
-                return await StartTrace(processFilter, aggregateConfiguration, duration, egressProvider);
-            });
+                return StartTrace(processInfo, aggregateConfiguration, duration, egressProvider);
+            }, processFilter, ArtifactType_Trace);
         }
 
         [HttpPost("trace/{processFilter?}")]
@@ -208,10 +207,10 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             [FromQuery][Range(-1, int.MaxValue)] int durationSeconds = 30,
             [FromQuery] string egressProvider = null)
         {
-            TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
-
-            return this.InvokeService(async () =>
+            return InvokeForProcess(processInfo =>
             {
+                TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
+
                 var providers = new List<EventPipeProvider>();
 
                 foreach (EventPipeProviderModel providerModel in configuration.Providers)
@@ -234,8 +233,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     requestRundown: configuration.RequestRundown,
                     bufferSizeInMB: configuration.BufferSizeInMB);
 
-                return await StartTrace(processFilter, traceConfiguration, duration, egressProvider);
-            });
+                return StartTrace(processInfo, traceConfiguration, duration, egressProvider);
+            }, processFilter, ArtifactType_Trace);
         }
 
         [HttpGet("logs/{processFilter?}")]
@@ -246,10 +245,9 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             [FromQuery] LogLevel level = LogLevel.Debug,
             [FromQuery] string egressProvider = null)
         {
-            TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
-            return this.InvokeService(async () =>
+            return InvokeForProcess(processInfo =>
             {
-                IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(processFilter, HttpContext.RequestAborted);
+                TimeSpan duration = ConvertSecondsToTimeSpan(durationSeconds);
 
                 LogFormat format = ComputeLogFormat(Request.GetTypedHeaders().Accept);
                 if (format == LogFormat.None)
@@ -279,23 +277,22 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 };
 
                 return Result(
+                    ArtifactType_Logs,
                     egressProvider,
                     action,
                     fileName,
                     contentType,
                     processInfo.EndpointInfo,
                     format != LogFormat.EventStream);
-            });
+            }, processFilter, ArtifactType_Logs);
         }
 
-        private async Task<ActionResult> StartTrace(
-            ProcessFilter? processFilter,
+        private ActionResult StartTrace(
+            IProcessInfo processInfo,
             MonitoringSourceConfiguration configuration,
             TimeSpan duration,
             string egressProvider)
         {
-            IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(processFilter, HttpContext.RequestAborted);
-
             string fileName = FormattableString.Invariant($"{GetFileNameTimeStampUtcNow()}_{processInfo.EndpointInfo.ProcessId}.nettrace");
 
             Func<Stream, CancellationToken, Task> action = async (outputStream, token) =>
@@ -319,6 +316,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             };
 
             return Result(
+                ArtifactType_Trace,
                 egressProvider,
                 action,
                 fileName,
@@ -364,7 +362,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             return LogFormat.None;
         }
 
-        private static ActionResult Result(
+        private ActionResult Result(
+            string artifactType,
             string providerName,
             Func<Stream, CancellationToken, Task> action,
             string fileName,
@@ -372,12 +371,17 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
             IEndpointInfo endpointInfo,
             bool asAttachment = true)
         {
+            KeyValueLogScope scope = new KeyValueLogScope();
+            scope.AddArtifactType(artifactType);
+            scope.AddEndpointInfo(endpointInfo);
+
             if (string.IsNullOrEmpty(providerName))
             {
                 return new OutputStreamResult(
                     action,
                     contentType,
-                    asAttachment ? fileName : null);
+                    asAttachment ? fileName : null,
+                    scope);
             }
             else
             {
@@ -386,7 +390,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     providerName,
                     fileName,
                     endpointInfo,
-                    contentType);
+                    contentType,
+                    scope);
             }
         }
 
@@ -428,6 +433,57 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     serializer.Close();
                 }
             };
+        }
+
+        private Task<ActionResult> InvokeForProcess(Func<IProcessInfo, ActionResult> func, ProcessFilter? filter, string artifactType = null)
+        {
+            Func<IProcessInfo, Task<ActionResult>> asyncFunc =
+                processInfo => Task.FromResult(func(processInfo));
+
+            return InvokeForProcess(asyncFunc, filter, artifactType);
+        }
+
+        private async Task<ActionResult> InvokeForProcess(Func<IProcessInfo, Task<ActionResult>> func, ProcessFilter? filter, string artifactType)
+        {
+            ActionResult<object> result = await InvokeForProcess<object>(async processInfo => await func(processInfo), filter, artifactType);
+
+            return result.Result;
+        }
+
+        private Task<ActionResult<T>> InvokeForProcess<T>(Func<IProcessInfo, ActionResult<T>> func, ProcessFilter? filter, string artifactType = null)
+        {
+            return InvokeForProcess(processInfo => Task.FromResult(func(processInfo)), filter, artifactType);
+        }
+
+        private async Task<ActionResult<T>> InvokeForProcess<T>(Func<IProcessInfo, Task<ActionResult<T>>> func, ProcessFilter? filter, string artifactType = null)
+        {
+            IDisposable artifactTypeRegistration = null;
+            if (!string.IsNullOrEmpty(artifactType))
+            {
+                KeyValueLogScope artifactTypeScope = new KeyValueLogScope();
+                artifactTypeScope.AddArtifactType(artifactType);
+                artifactTypeRegistration = _logger.BeginScope(artifactTypeScope);
+            }
+
+            try
+            {
+                return await this.InvokeService(async () =>
+                {
+                    IProcessInfo processInfo = await _diagnosticServices.GetProcessAsync(filter, HttpContext.RequestAborted);
+
+                    KeyValueLogScope processInfoScope = new KeyValueLogScope();
+                    processInfoScope.AddEndpointInfo(processInfo.EndpointInfo);
+                    using var _ = _logger.BeginScope(processInfoScope);
+
+                    _logger.LogDebug("Resolved target process.");
+
+                    return await func(processInfo);
+                }, _logger);
+            }
+            finally
+            {
+                artifactTypeRegistration?.Dispose();
+            }
         }
     }
 }

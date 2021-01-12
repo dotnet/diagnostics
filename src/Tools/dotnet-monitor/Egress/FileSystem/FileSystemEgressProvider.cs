@@ -98,7 +98,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.FileSystem
                 await WriteFileAsync(action, targetPath, token);
             }
 
-            Logger?.LogInformation("Saved stream to '{0}.", targetPath);
+            Logger?.LogDebug("Saved stream to '{0}.", targetPath);
             return targetPath;
         }
 

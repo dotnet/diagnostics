@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Monitoring;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Tools.Common;
 using System;
 using System.CommandLine;
@@ -79,12 +80,10 @@ namespace Microsoft.Diagnostics.Tools.Monitor
 
         public static Task<int> Main(string[] args)
         {
-            // FUTURE: This log message should be removed when dotnet-monitor is no longer an experimental tool
-            Console.WriteLine("WARNING: dotnet-monitor is experimental and is not intended for production environments yet.");
             var parser = new CommandLineBuilder()
-                            .AddCommand(CollectCommand())
-                            .UseDefaults()
-                            .Build();
+                .AddCommand(CollectCommand())
+                .UseDefaults()
+                .Build();
             return parser.InvokeAsync(args);
         }
     }

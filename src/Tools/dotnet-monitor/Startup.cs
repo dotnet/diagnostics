@@ -12,10 +12,11 @@ using Microsoft.Diagnostics.Monitoring.RestServer.Controllers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.IO.Compression;
 
-namespace Microsoft.Diagnostics.Monitoring
+namespace Microsoft.Diagnostics.Tools.Monitor
 {
     internal class Startup
     {
@@ -77,8 +78,13 @@ namespace Microsoft.Diagnostics.Monitoring
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(
+            IApplicationBuilder app,
+            IWebHostEnvironment env,
+            ExperimentalToolLogger logger)
         {
+            logger.LogExperimentMessage();
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();

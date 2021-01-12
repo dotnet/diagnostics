@@ -8,6 +8,8 @@ using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Diagnostics.Monitoring.RestServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -46,19 +48,19 @@ namespace Microsoft.Diagnostics.Tools.Monitor
         public async Task<int> Start(CancellationToken token, IConsole console, string[] urls, string[] metricUrls, bool metrics, string diagnosticPort)
         {
             //CONSIDER The console logger uses the standard AddConsole, and therefore disregards IConsole.
-            using IWebHost host = CreateWebHostBuilder(console, urls, metricUrls, metrics, diagnosticPort).Build();
+            using IHost host = CreateHostBuilder(console, urls, metricUrls, metrics, diagnosticPort).Build();
             await host.RunAsync(token);
             return 0;
         }
 
-        public IWebHostBuilder CreateWebHostBuilder(IConsole console, string[] urls, string[] metricUrls, bool metrics, string diagnosticPort)
+        public IHostBuilder CreateHostBuilder(IConsole console, string[] urls, string[] metricUrls, bool metrics, string diagnosticPort)
         {
             if (metrics)
             {
                 urls = urls.Concat(metricUrls).ToArray();
             }
 
-            IWebHostBuilder builder = WebHost.CreateDefaultBuilder()
+            return Host.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((IConfigurationBuilder builder) =>
                 {
                     //Note these are in precedence order.
@@ -74,7 +76,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                     builder.AddKeyPerFile(SharedConfigDirectoryPath, optional: true);
                     builder.AddEnvironmentVariables(ConfigPrefix);
                 })
-                .ConfigureServices((WebHostBuilderContext context, IServiceCollection services) =>
+                .ConfigureServices((HostBuilderContext context, IServiceCollection services) =>
                 {
                     //TODO Many of these service additions should be done through extension methods
                     services.Configure<DiagnosticPortOptions>(context.Configuration.GetSection(DiagnosticPortOptions.ConfigurationKey));
@@ -86,11 +88,18 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                     {
                         services.ConfigureMetrics(context.Configuration);
                     }
+                    services.AddSingleton<ExperimentalToolLogger>();
                 })
-                .UseUrls(urls)
-                .UseStartup<Startup>();
-
-            return builder;
+                .ConfigureLogging(builder =>
+                {
+                    // Always allow the experimental tool message to be logged
+                    ExperimentalToolLogger.AddLogFilter(builder);
+                })
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.UseUrls(urls);
+                    webBuilder.UseStartup<Startup>();
+                });
         }
 
         private static void ConfigureMetricsEndpoint(IConfigurationBuilder builder, string[] metricEndpoints)
