@@ -90,8 +90,88 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseUrls(urls);
-                    webBuilder.UseStartup<Startup>();
+                    webBuilder.ConfigureKestrel((context, options) =>
+                    {
+                        //Note our priorities for hosting urls don't match the default behavior.
+                        //Default Kestrel behavior priority
+                        //1) ConfigureKestrel settings
+                        //2) Command line arguments (--urls)
+                        //3) Environment variables (ASPNETCORE_URLS, then DOTNETCORE_URLS)
+
+                        //Our precedence
+                        //1) Environment variables (ASPNETCORE_URLS, DotnetMonitor_Metrics__Endpoints)
+                        //2) Command line arguments (these have defaults) --urls, --metricUrls
+                        //3) ConfigureKestrel is used for fine control of the server, but honors the first two configurations.
+
+                        string hostingUrl = context.Configuration.GetValue<string>(WebHostDefaults.ServerUrlsKey);
+                        if (!string.IsNullOrEmpty(hostingUrl))
+                        {
+                            urls = ConfigurationHelper.SplitValue(hostingUrl);
+                        }
+
+                        var metricsOptions = new MetricsOptions();
+                        context.Configuration.Bind(MetricsOptions.ConfigurationKey, metricsOptions);
+
+                        if (metricsOptions.Enabled)
+                        {
+                            string metricUrlFromConfig = metricsOptions.Endpoints;
+                            if (!string.IsNullOrEmpty(metricUrlFromConfig))
+                            {
+                                metricUrls = ConfigurationHelper.SplitValue(metricUrlFromConfig);
+                            }
+
+                            urls = urls.Concat(metricUrls).ToArray();
+                        }
+
+                        bool boundListeningPort = false;
+
+                        //Workaround for lack of default certificate. See https://github.com/dotnet/aspnetcore/issues/28120
+                        options.Configure(context.Configuration.GetSection("Kestrel")).Load();
+
+                        //By default, we bind to https for sensitive data (such as dumps and traces) and bind http for
+                        //non-sensitive data such as metrics. We may be missing a certificate for https binding. We want to continue with the
+                        //http binding in that scenario.
+                        foreach (BindingAddress url in urls.Select(BindingAddress.Parse))
+                        {
+                            Action<ListenOptions> configureListenOptions = (listenOptions) =>
+                            {
+                                if (url.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    listenOptions.UseHttps();
+                                }
+                            };
+
+                            try
+                            {
+                                if (url.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    options.ListenLocalhost(url.Port, configureListenOptions);
+                                }
+                                else if (IPAddress.TryParse(url.Host, out IPAddress ipAddress))
+                                {
+                                    options.Listen(ipAddress, url.Port, configureListenOptions);
+                                }
+                                else
+                                {
+                                    options.ListenAnyIP(url.Port, configureListenOptions);
+                                }
+                                boundListeningPort = true;
+                            }
+                            catch (InvalidOperationException e)
+                            {
+                                //This binding failure is typically due to missing default certificate
+                                console.Error.WriteLine($"Unable to bind to {url}. Dotnet-monitor functionality will be limited.");
+                                console.Error.WriteLine(e.Message);
+                            }
+                        }
+
+                        //If we end up not binding any ports, Kestrel defaults to port 5000. Make sure we don't attempt this.
+                        if (!boundListeningPort)
+                        {
+                            throw new InvalidOperationException("Unable to bind any urls.");
+                        }
+                    })
+                    .UseStartup<Startup>();
                 });
         }
 
