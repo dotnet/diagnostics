@@ -106,7 +106,11 @@ namespace Microsoft.Diagnostics.Tools.Monitor
                         string hostingUrl = context.Configuration.GetValue<string>(WebHostDefaults.ServerUrlsKey);
                         if (!string.IsNullOrEmpty(hostingUrl))
                         {
-                            urls = ConfigurationHelper.SplitValue(hostingUrl);
+                            //HACK Until our image removes the ASPNETCORE_URLS config
+                            if (BindingAddress.Parse(hostingUrl)?.Port != 80)
+                            {
+                                urls = ConfigurationHelper.SplitValue(hostingUrl);
+                            }
                         }
 
                         var metricsOptions = new MetricsOptions();
