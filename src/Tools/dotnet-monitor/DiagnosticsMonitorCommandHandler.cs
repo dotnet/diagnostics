@@ -61,6 +61,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor
             }
 
             return Host.CreateDefaultBuilder()
+                .UseContentRoot(AppContext.BaseDirectory) // Use the application root instead of the current directory
                 .ConfigureAppConfiguration((IConfigurationBuilder builder) =>
                 {
                     //Note these are in precedence order.
