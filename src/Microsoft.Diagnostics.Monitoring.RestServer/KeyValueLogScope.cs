@@ -9,12 +9,15 @@ using System.Text;
 namespace Microsoft.Diagnostics.Monitoring.RestServer
 {
     // Logger implementations have different ways of serializing log scopes. This class helps those loggers
-    // serialize the scope information in the best way possible for each of the implementations. For example,
-    // the console logger will only call ToString on the scope data, thus the data needs to be formatted appropriately
-    // in the ToString method. Another example, the event log logger will check if the scope data impelements
-    // IEnumerable<KeyValuePair<string, object>> and then formats each value from the enumeration; it will fallback
-    // calling the ToString method otherwise.
-    internal class KeyValueLogScope : IEnumerable<KeyValuePair<string, object>>
+    // serialize the scope information in the best way possible for each of the implementations.
+    //
+    // Handled examples:
+    // - Simple Console Logger: only calls ToString, thus the data needs to be formatted in the ToString method.
+    // - JSON Console Logger: checks for IReadOnlyCollection<KeyValuePair<string, object>> and formats each value
+    //   in the enumeration; otherwise falls back to ToString.
+    // - Event Log Logger: checks for IEnumerable<KeyValuePair<string, object>> and formats each value
+    //   in the enumeration; otherwise falls back to ToString.
+    internal class KeyValueLogScope : IReadOnlyCollection<KeyValuePair<string, object>>
     {
         public IDictionary<string, object> Values =
             new Dictionary<string, object>();
@@ -28,6 +31,8 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
         {
             return ((IEnumerable)Values).GetEnumerator();
         }
+
+        int IReadOnlyCollection<KeyValuePair<string, object>>.Count => Values.Count;
 
         public override string ToString()
         {
