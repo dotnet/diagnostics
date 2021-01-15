@@ -10,7 +10,7 @@
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IncludeSymbols>true</IncludeSymbols>
-    <IsShippingAssembly>true</IsShippingAssembly>
+    <IsShippingAssembly>false</IsShippingAssembly>
   </PropertyGroup>
   
   <ItemGroup>
