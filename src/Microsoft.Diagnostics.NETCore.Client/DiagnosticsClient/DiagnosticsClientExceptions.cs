@@ -34,4 +34,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         public UnsupportedCommandException(string msg): base(msg) {}
     }
+
+    // When the runtime already has loaded profiler
+    public class ProfilerAlreadyActiveException : ServerErrorException
+    {
+        public ProfilerAlreadyActiveException(string msg): base(msg) {}
+    }
 }
