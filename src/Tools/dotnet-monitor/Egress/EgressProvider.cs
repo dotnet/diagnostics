@@ -70,7 +70,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress
 
                 int copyBufferSize = Options.CopyBufferSize.GetValueOrDefault(0x100000);
 
-                Logger?.LogDebug("Copying action stream to egress stream with buffer size {0}", copyBufferSize);
+                Logger?.EgressCopyActionStreamToEgressStream(copyBufferSize);
 
                 await sourceStream.CopyToAsync(
                     targetStream,

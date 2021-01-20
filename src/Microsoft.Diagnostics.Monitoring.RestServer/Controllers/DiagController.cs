@@ -56,6 +56,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 {
                     processesIdentifiers.Add(ProcessIdentifierModel.FromProcessInfo(p));
                 }
+                _logger.WrittenToHttpStream();
                 return new ActionResult<IEnumerable<ProcessIdentifierModel>>(processesIdentifiers);
             }, _logger);
         }
@@ -64,9 +65,15 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
         public Task<ActionResult<ProcessModel>> GetProcess(
             ProcessFilter processFilter)
         {
-            return InvokeForProcess<ProcessModel>(
-                processInfo => ProcessModel.FromProcessInfo(processInfo),
-                processFilter);
+            return InvokeForProcess<ProcessModel>(processInfo =>
+            {
+                ProcessModel processModel = ProcessModel.FromProcessInfo(processInfo);
+
+                _logger.WrittenToHttpStream();
+
+                return processModel;
+            },
+            processFilter);
         }
 
         [HttpGet("processes/{processFilter}/env")]
@@ -79,7 +86,11 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
                 try
                 {
-                    return client.GetProcessEnvironment();
+                    Dictionary<string, string> environment = client.GetProcessEnvironment();
+
+                    _logger.WrittenToHttpStream();
+
+                    return environment;
                 }
                 catch (ServerErrorException)
                 {
@@ -105,6 +116,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                 {
                     Stream dumpStream = await _diagnosticServices.GetDump(processInfo, type, HttpContext.RequestAborted);
 
+                    _logger.WrittenToHttpStream();
                     //Compression is done automatically by the response
                     //Chunking is done because the result has no content-length
                     return File(dumpStream, ContentTypes.ApplicationOctectStream, dumpFileName);
@@ -475,7 +487,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
                     processInfoScope.AddEndpointInfo(processInfo.EndpointInfo);
                     using var _ = _logger.BeginScope(processInfoScope);
 
-                    _logger.LogDebug("Resolved target process.");
+                    _logger.ResolvedTargetProcess();
 
                     return await func(processInfo);
                 }, _logger);

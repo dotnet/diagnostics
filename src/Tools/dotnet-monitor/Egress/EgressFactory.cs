@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress
 
         protected bool TryValidateOptions(object value, string providerName)
         {
-            Logger.LogDebug("Provider '{0}': Validating options.", providerName);
+            Logger.EgressProviderValidatingOptions(providerName);
             EgressProviderValidation validation = new EgressProviderValidation(providerName, Logger);
             return validation.TryValidate(value);
         }

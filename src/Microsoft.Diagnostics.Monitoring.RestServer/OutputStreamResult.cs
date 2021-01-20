@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 
                 await _action(context.HttpContext.Response.Body, token);
 
-                logger.LogInformation("Written to HTTP stream.");
+                logger.WrittenToHttpStream();
             }, logger);
         }
     }
