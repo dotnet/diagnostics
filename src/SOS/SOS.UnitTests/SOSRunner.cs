@@ -693,6 +693,14 @@ public class SOSRunner : IDisposable
                             throw new Exception($"SOS command FAILED: {input}");
                         }
                     }
+                    else if (line.StartsWith("EXTCOMMAND:"))
+                    {
+                        string input = line.Substring("EXTCOMMAND:".Length).TrimStart();
+                        if (!await RunSosCommand(input, extensionCommand: true))
+                        {
+                            throw new Exception($"Extension command FAILED: {input}");
+                        }
+                    }
                     else if (line.StartsWith("COMMAND:"))
                     {
                         string input = line.Substring("COMMAND:".Length).TrimStart();
@@ -792,7 +800,7 @@ public class SOSRunner : IDisposable
                 commands.Add($"plugin load {sosPath}");
                 if (!string.IsNullOrEmpty(setHostRuntime))
                 {
-                    commands.Add($"sos SetHostRuntime {setHostRuntime}");
+                    commands.Add($"sethostruntime {setHostRuntime}");
                 }
                 SwitchToExceptionThread();
                 break;
@@ -854,15 +862,25 @@ public class SOSRunner : IDisposable
         }
     }
 
-    public async Task<bool> RunSosCommand(string command)
+    public async Task<bool> RunSosCommand(string command, bool extensionCommand = false)
     {
         switch (Debugger)
         {
             case NativeDebugger.Cdb:
-                command = "!" + command;
+                if (extensionCommand)
+                {
+                    command = "!ext " + command;
+                }
+                else
+                {
+                    command = "!" + command;
+                }
                 break;
             case NativeDebugger.Lldb:
-                command = "sos " + command;
+                if (!extensionCommand)
+                {
+                    command = "sos " + command;
+                }
                 break;
             case NativeDebugger.DotNetDump:
                 int index = command.IndexOf(' ');

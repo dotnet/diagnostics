@@ -21,12 +21,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             private static readonly VersionInfo EmptyVersionInfo = new VersionInfo(0, 0, 0, 0);
             private readonly ModuleServiceFromDataReader _moduleService;
             private readonly ModuleInfo _moduleInfo;
+            private readonly ulong _imageSize;
             private string _versionString;
 
-            public ModuleFromDataReader(ModuleServiceFromDataReader moduleService, int moduleIndex, ModuleInfo moduleInfo)
+            public ModuleFromDataReader(ModuleServiceFromDataReader moduleService, int moduleIndex, ModuleInfo moduleInfo, ulong imageSize)
             {
                 _moduleService = moduleService;
                 _moduleInfo = moduleInfo;
+                _imageSize = imageSize;
                 ModuleIndex = moduleIndex;
             }
 
@@ -38,7 +40,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override ulong ImageBase => _moduleInfo.ImageBase;
 
-            public override ulong ImageSize => (uint)_moduleInfo.IndexFileSize;
+            public override ulong ImageSize => _imageSize;
 
             public override int IndexFileSize => _moduleInfo.IndexFileSize;
 
@@ -102,9 +104,26 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             var modules = new Dictionary<ulong, IModule>();
             int moduleIndex = 0;
 
-            foreach (ModuleInfo moduleInfo in _dataReader.EnumerateModules().OrderBy((info) => info.ImageBase))
+            ModuleInfo[] moduleInfos = _dataReader.EnumerateModules().OrderBy((info) => info.ImageBase).ToArray();
+            for (int i = 0; i < moduleInfos.Length; i++)
             {
-                var module = new ModuleFromDataReader(this, moduleIndex, moduleInfo);
+                ModuleInfo moduleInfo = moduleInfos[i];
+                ulong imageSize = (uint)moduleInfo.IndexFileSize;
+                if ((i + 1) < moduleInfos.Length)
+                {
+                    ModuleInfo moduleInfoNext = moduleInfos[i + 1];
+                    ulong start = moduleInfo.ImageBase;
+                    ulong end = moduleInfo.ImageBase + imageSize;
+                    ulong startNext = moduleInfoNext.ImageBase;
+
+                    if (end > startNext)
+                    {
+                        Trace.TraceWarning($"Module {moduleInfo.FileName} {start:X16} - {end:X16} ({imageSize:X8})");
+                        Trace.TraceWarning($"  overlaps with {moduleInfoNext.FileName} {startNext:X16}");
+                        imageSize = startNext - start;
+                    }
+                }
+                var module = new ModuleFromDataReader(this, moduleIndex, moduleInfo, imageSize);
                 try
                 {
                     modules.Add(moduleInfo.ImageBase, module);

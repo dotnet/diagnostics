@@ -29,10 +29,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _memoryService = memoryService;
             _moduleService = target.Services.GetService<IModuleService>();
             _memoryCache = new MemoryCache(ReadMemoryFromModule);
-
-            target.OnFlushEvent += (object sender, EventArgs e) => {
-                _memoryCache.FlushCache();
-            };
+            target.OnFlushEvent.Register(_memoryCache.FlushCache);
         }
 
         #region IMemoryService

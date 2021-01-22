@@ -4,11 +4,10 @@
 
 #pragma once
 
-#include "host.h"
 #include "target.h"
-#include "hostcoreclr.h"
+#include "runtimeimpl.h"
 
-class Runtime;
+extern bool IsWindowsTarget();
 
 //----------------------------------------------------------------------------
 // Local implementation of ITarget when the host doesn't provide it
@@ -107,8 +106,3 @@ public:
     void STDMETHODCALLTYPE Close();
 };
 
-IHost* GetHost();
-
-ITarget* GetTarget();
-
-void ReleaseTarget();

@@ -217,7 +217,7 @@ EXPORTS
     procinfo=ProcInfo
     SOSStatus
     sosstatus=SOSStatus
-
+    logging
     runtimes
     VerifyStackTrace
     WatsonBuckets
@@ -243,5 +243,7 @@ EXPORTS
     tracetocode=TraceToCode
 #endif
 
+    ext
     SOSInitializeByHost
-    InitializeBySymbolReader
+    SOSUninitializeByHost
+    InitializeHostServices

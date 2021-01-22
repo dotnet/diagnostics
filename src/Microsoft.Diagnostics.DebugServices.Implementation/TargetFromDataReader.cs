@@ -34,9 +34,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             OperatingSystem = targetOS;
             IsDump = true;
-            OnFlushEvent += (object sender, EventArgs e) => {
-                dataReader.FlushCachedData();
-            };
+            OnFlushEvent.Register(dataReader.FlushCachedData);
 
             Architecture = dataReader.Architecture switch
             {

@@ -9,7 +9,7 @@
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IncludeSymbols>true</IncludeSymbols>
-    <IsShippingAssembly>true</IsShippingAssembly>
+    <IsShippingAssembly>false</IsShippingAssembly>
   </PropertyGroup>
   
   <ItemGroup>
@@ -21,6 +21,5 @@
   
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\SOS\SOS.NETCore\SOS.NETCore.csproj" />
   </ItemGroup>
 </Project>

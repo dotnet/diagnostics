@@ -54,11 +54,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             Debug.Assert(target != null);
             Target = target;
 
-            target.OnFlushEvent += (object sender, EventArgs e) => {
+            target.OnFlushEvent.Register(() => {
                 _versionCache?.Clear();
+                if (_modules != null)
+                {
+                    foreach (IModule module in _modules.Values)
+                    {
+                        if (module is IDisposable disposable)
+                        {
+                            disposable.Dispose();
+                        }
+                    }
+                }
                 _modules = null;
                 _sortedByBaseAddress = null;
-            };
+            });
         }
 
         #region IModuleService

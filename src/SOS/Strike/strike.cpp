@@ -8341,7 +8341,7 @@ DECLARE_API(bpmd)
         }
 
         // Get modules that may need a breakpoint bound
-        if ((Status = GetTarget()->GetRuntime(&g_pRuntime)) == S_OK)
+        if ((Status = GetRuntime(&g_pRuntime)) == S_OK)
         {
             if ((Status = LoadClrDebugDll()) != S_OK)
             {
@@ -10927,34 +10927,37 @@ DECLARE_API(EEVersion)
 \**********************************************************************/
 DECLARE_API(SOSStatus)
 {
-    INIT_API_EXT();
+    INIT_API_NOEE();
 
-    BOOL bReset = FALSE;
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"-reset", &bReset, COBOOL, FALSE},
-    };
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    IHostServices* hostServices = GetHostServices();
+    if (hostServices != nullptr)
     {
-        return Status;
+        std::string command("sosstatus ");
+        command.append(args);
+        Status = hostServices->DispatchCommand(command.c_str());
     }
-    if (bReset)
+    else
     {
-        Target::CleanupTarget();
-        ExtOut("SOS state reset\n");
-        return S_OK;
+        BOOL bReset = FALSE;
+        CMDOption option[] =
+        {   // name, vptr, type, hasValue
+            {"-reset", &bReset, COBOOL, FALSE},
+            {"--reset", &bReset, COBOOL, FALSE},
+            {"-r", &bReset, COBOOL, FALSE},
+        };
+        if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+        {
+            return Status;
+        }
+        if (bReset)
+        {
+            ReleaseTarget();
+            ExtOut("SOS state reset\n");
+            return S_OK;
+        }
+        Target::DisplayStatus();
+        DisplaySymbolStore();
     }
-    Target::DisplayStatus();
-#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
-    if (g_useDesktopClrHost) {
-        ExtOut("Using the desktop .NET Framework to host the managed SOS code\n");
-    }
-    else 
-#endif
-    if (g_hostRuntimeDirectory != nullptr) {
-        ExtOut("Host runtime path: %s\n", g_hostRuntimeDirectory);
-    }
-    DisplaySymbolStore();
     return Status;
 }
 
@@ -14845,7 +14848,11 @@ DECLARE_API( VMMap )
 DECLARE_API(SOSFlush)
 {
     INIT_API_EXT();
-    GetTarget()->Flush();
+    ITarget* target = GetTarget();
+    if (target != nullptr)
+    {
+        target->Flush();
+    }
     return Status;
 }
 
@@ -16138,7 +16145,7 @@ HRESULT SetNGENCompilerFlags(DWORD flags)
     HRESULT hr;
 
     // if CLR is already loaded, try to change the flags now
-    hr = GetTarget()->GetRuntime(&g_pRuntime);
+    hr = GetRuntime(&g_pRuntime);
     if (SUCCEEDED(hr))
     {
         ToRelease<ICorDebugProcess2> proc2;
@@ -16210,6 +16217,54 @@ HRESULT SetNGENCompilerFlags(DWORD flags)
 
     return hr;
 }
+
+#ifndef FEATURE_PAL
+
+HRESULT LoadModuleEvent(IDebugClient* client, PCSTR moduleName)
+{
+    HRESULT handleEventStatus = DEBUG_STATUS_NO_CHANGE;
+
+    if (moduleName != NULL)
+    {
+        bool isRuntimeModule = false;
+
+        for (int runtime = 0; runtime < IRuntime::ConfigurationEnd; ++runtime)
+        {
+            if (_stricmp(moduleName, GetRuntimeModuleName((IRuntime::RuntimeConfiguration)runtime)) == 0)
+            {
+                isRuntimeModule = true;
+                break;
+            }
+        }
+
+        if (isRuntimeModule)
+        {
+            Extensions::GetInstance()->FlushTarget();
+            if (g_breakOnRuntimeModuleLoad)
+            {
+                g_breakOnRuntimeModuleLoad = false;
+                HandleRuntimeLoadedNotification(client);
+            }
+            // if we don't want the JIT to optimize, we should also disable optimized NGEN images
+            if (!g_fAllowJitOptimization)
+            {
+                ExtQuery(client);
+
+                // If we aren't successful SetNGENCompilerFlags will print relevant error messages
+                // and then we need to stop the debugger so the user can intervene if desired
+                if (FAILED(SetNGENCompilerFlags(CORDEBUG_JIT_DISABLE_OPTIMIZATION)))
+                {
+                    handleEventStatus = DEBUG_STATUS_BREAK;
+                }
+                ExtRelease();
+            }
+        }
+    }
+
+    return handleEventStatus;
+}
+
+#endif // FEATURE_PAL
 
 DECLARE_API(StopOnCatch)
 {
@@ -16437,8 +16492,6 @@ _EFN_GetManagedThread(
     return E_INVALIDARG;
 }
 
-#endif // FEATURE_PAL
-
 //
 // Sets the .NET Core runtime path to use to run the managed code within SOS/native debugger.
 //
@@ -16446,14 +16499,18 @@ DECLARE_API(SetHostRuntime)
 {
     INIT_API_EXT();
 
-    BOOL bDesktop = FALSE;
+    BOOL bNetFx = FALSE;
     BOOL bNetCore = FALSE;
+    BOOL bNone = FALSE;
+    BOOL bClear = FALSE;
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
-        {"-netfx", &bDesktop, COBOOL, FALSE},
+        {"-netfx", &bNetFx, COBOOL, FALSE},
+        {"-f", &bNetFx, COBOOL, FALSE},
         {"-netcore", &bNetCore, COBOOL, FALSE},
-#endif
+        {"-c", &bNetCore, COBOOL, FALSE},
+        {"-none", &bNone, COBOOL, FALSE},
+        {"-clear", &bClear, COBOOL, FALSE},
     };
     StringHolder hostRuntimeDirectory;
     CMDValue arg[] =
@@ -16465,55 +16522,64 @@ DECLARE_API(SetHostRuntime)
     {
         return E_FAIL;
     }
-#ifndef FEATURE_PAL
-    if (narg > 0 || bNetCore || bDesktop)
-#else
-    if (narg > 0)
-#endif
+    if (narg > 0 || bNetCore || bNetFx || bNone)
     {
         if (IsHostingInitialized())
         {
-            ExtErr("Runtime hosting already initialized %s\n", g_hostRuntimeDirectory != nullptr ? g_hostRuntimeDirectory : "");
+            ExtErr("Runtime hosting already initialized\n");
+            goto exit;
+        }
+    }
+    if (bClear) 
+    {
+        SetHostRuntimeDirectory(nullptr);
+    }
+    else if (bNone) 
+    {
+        SetHostRuntimeFlavor(HostRuntimeFlavor::None);
+    }
+    else if (bNetCore) 
+    {
+        SetHostRuntimeFlavor(HostRuntimeFlavor::NetCore);
+    }
+    else if (bNetFx)
+    {
+        SetHostRuntimeFlavor(HostRuntimeFlavor::NetFx);
+    }
+    if (narg > 0) 
+    {
+        if (!SetHostRuntimeDirectory(hostRuntimeDirectory.data)) 
+        {
+            ExtErr("Invalid host runtime path %s\n", hostRuntimeDirectory.data);
             return E_FAIL;
         }
     }
-#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
-    if (bNetCore)
+exit:
+    const char* flavor = "<unknown>";
+    switch (GetHostRuntimeFlavor())
     {
-        g_useDesktopClrHost = false;
+        case HostRuntimeFlavor::None:
+            flavor = "no";
+            break;
+        case HostRuntimeFlavor::NetCore:
+            flavor = ".NET Core";
+            break;
+        case HostRuntimeFlavor::NetFx:
+            flavor = "desktop .NET Framework";
+            break;
+        default:
+            break;
     }
-    else if (bDesktop)
+    ExtOut("Using %s runtime to host the managed SOS code\n", flavor);
+    const char* directory = GetHostRuntimeDirectory();
+    if (directory != nullptr)
     {
-        g_useDesktopClrHost = true;
-    }
-#endif
-    if (narg > 0)
-    {
-        if (g_hostRuntimeDirectory != nullptr)
-        {
-            free((void*)g_hostRuntimeDirectory);
-        }
-        g_hostRuntimeDirectory = _strdup(hostRuntimeDirectory.data);
-#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
-        g_useDesktopClrHost = false;
-#endif
-    }
-#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
-    if (g_useDesktopClrHost)
-    {
-        ExtOut("Using the desktop .NET Framework to host the managed SOS code\n");
-    }
-    else 
-#endif
-    {
-        ExtOut("Using the .NET Core runtime to host the managed SOS code\n");
-        if (g_hostRuntimeDirectory != nullptr) 
-        {
-            ExtOut("Host runtime path: %s\n", g_hostRuntimeDirectory);
-        }
+        ExtOut("Host runtime path: %s\n", directory);
     }
     return S_OK;
 }
+
+#endif // FEATURE_PAL
 
 //
 // Sets the symbol server path.
@@ -16531,7 +16597,6 @@ DECLARE_API(SetSymbolServer)
     BOOL loadNative = FALSE;
     BOOL msdl = FALSE;
     BOOL symweb = FALSE;
-    BOOL logging = FALSE;
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-disable", &disable, COBOOL, FALSE},
@@ -16540,7 +16605,6 @@ DECLARE_API(SetSymbolServer)
         {"-pat", &authToken.data, COSTRING, TRUE},
         {"-timeout", &timeoutInMinutes, COSIZE_T, TRUE},
         {"-ms", &msdl, COBOOL, FALSE},
-        {"-log", &logging, COBOOL, FALSE},
 #ifdef FEATURE_PAL
         {"-loadsymbols", &loadNative, COBOOL, FALSE},
         {"-sympath", &windowsSymbolPath.data, COSTRING, TRUE},
@@ -16575,9 +16639,9 @@ DECLARE_API(SetSymbolServer)
         DisableSymbolStore();
     }
 
-    if (logging || msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr || searchDirectory.data != nullptr || windowsSymbolPath.data != nullptr)
+    if (msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr || searchDirectory.data != nullptr || windowsSymbolPath.data != nullptr)
     {
-        Status = InitializeSymbolStore(logging, msdl, symweb, symbolServer.data, authToken.data, (int)timeoutInMinutes, symbolCache.data, searchDirectory.data, windowsSymbolPath.data);
+        Status = InitializeSymbolStore(msdl, symweb, symbolServer.data, authToken.data, (int)timeoutInMinutes, symbolCache.data, searchDirectory.data, windowsSymbolPath.data);
         if (FAILED(Status))
         {
             return Status;
@@ -16606,10 +16670,6 @@ DECLARE_API(SetSymbolServer)
         {
             ExtOut("Added Windows symbol path: %s\n", windowsSymbolPath.data);
         }
-        if (logging)
-        {
-            ExtOut("Symbol download logging enabled\n");
-        }
     }
 #ifdef FEATURE_PAL
     else if (loadNative)
@@ -16624,37 +16684,51 @@ DECLARE_API(SetSymbolServer)
 
     return Status;
 }
-
+ 
 //
 // Sets the runtime module path
 //
 DECLARE_API(SetClrPath)
 {
-    INIT_API_EXT();
+    INIT_API_NOEE();
 
-    StringHolder runtimeModulePath;
-    CMDValue arg[] =
+    IHostServices* hostServices = GetHostServices();
+    if (hostServices != nullptr)
     {
-        {&runtimeModulePath.data, COSTRING},
-    };
-    size_t narg;
-    if (!GetCMDOption(args, nullptr, 0, arg, _countof(arg), &narg))
-    {
-        return E_FAIL;
+        std::string command("setclrpath ");
+        command.append(args);
+        Status = hostServices->DispatchCommand(command.c_str());
     }
-    if (narg > 0)
+    else
     {
-        if (!Target::SetRuntimeDirectory(runtimeModulePath.data))
+        StringHolder runtimeModulePath;
+        CMDValue arg[] =
         {
-            ExtErr("Invalid runtime path %s\n", runtimeModulePath.data);
+            {&runtimeModulePath.data, COSTRING},
+        };
+        size_t narg;
+        if (!GetCMDOption(args, nullptr, 0, arg, _countof(arg), &narg))
+        {
             return E_FAIL;
         }
+        if (narg > 0)
+        {
+            if (!Target::SetRuntimeDirectory(runtimeModulePath.data))
+            {
+                ExtErr("Invalid runtime path %s\n", runtimeModulePath.data);
+                return E_FAIL;
+            }
+        }
+        ITarget* target = GetTarget();
+        if (target != nullptr)
+        {
+            const char* runtimeDirectory = target->GetRuntimeDirectory();
+            if (runtimeDirectory != nullptr) {
+                ExtOut("Runtime module path: %s\n", runtimeDirectory);
+            }
+        }
     }
-    const char* runtimeDirectory = GetTarget()->GetRuntimeDirectory();
-    if (runtimeDirectory != nullptr) {
-        ExtOut("Runtime module path: %s\n", runtimeDirectory);
-    }
-    return S_OK;
+    return Status;
 }
 
 //
@@ -16662,43 +16736,95 @@ DECLARE_API(SetClrPath)
 //
 DECLARE_API(runtimes)
 {
-    INIT_API_EXT();
+    INIT_API_NOEE();
 
-    BOOL bNetFx = FALSE;
-    BOOL bNetCore = FALSE;
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"-netfx", &bNetFx, COBOOL, FALSE},
-        {"-netcore", &bNetCore, COBOOL, FALSE},
-    };
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    IHostServices* hostServices = GetHostServices();
+    if (hostServices != nullptr)
     {
-        return Status;
-    }
-    if (bNetCore || bNetFx)
-    {
-#ifndef FEATURE_PAL
-        if (IsWindowsTarget())
-        {
-            PCSTR name = bNetFx ? "desktop .NET Framework" : ".NET Core";
-            if (!Target::SwitchRuntime(bNetFx))
-            {
-                ExtErr("The %s runtime is not loaded\n", name);
-                return E_FAIL;
-            }
-            ExtOut("Switched to %s runtime successfully\n", name);
-        }
-        else
-#endif
-        {
-            ExtErr("The '-netfx' and '-netcore' options are only supported on Windows targets\n");
-            return E_FAIL;
-        }
+        std::string command("runtimes ");
+        command.append(args);
+        Status = hostServices->DispatchCommand(command.c_str());
     }
     else
     {
-        Target::DisplayStatus();
+        BOOL bNetFx = FALSE;
+        BOOL bNetCore = FALSE;
+        CMDOption option[] =
+        {   // name, vptr, type, hasValue
+            {"-netfx", &bNetFx, COBOOL, FALSE},
+            {"-netcore", &bNetCore, COBOOL, FALSE},
+        };
+        if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+        {
+            return Status;
+        }
+        if (bNetCore || bNetFx)
+        {
+#ifndef FEATURE_PAL
+            if (IsWindowsTarget())
+            {
+                PCSTR name = bNetFx ? "desktop .NET Framework" : ".NET Core";
+                if (!Target::SwitchRuntime(bNetFx))
+                {
+                    ExtErr("The %s runtime is not loaded\n", name);
+                    return E_FAIL;
+                }
+                ExtOut("Switched to %s runtime successfully\n", name);
+            }
+            else
+#endif
+            {
+                ExtErr("The '-netfx' and '-netcore' options are only supported on Windows targets\n");
+                return E_FAIL;
+            }
+        }
+        else
+        {
+            Target::DisplayStatus();
+        }
     }
+    return Status;
+}
+
+//
+// Enables and disables managed extension logging
+//
+DECLARE_API(logging)
+{
+    INIT_API_NOEE();
+
+    IHostServices* hostServices = GetHostServices();
+    if (hostServices != nullptr)
+    {
+        std::string command("logging ");
+        command.append(args);
+        Status = hostServices->DispatchCommand(command.c_str());
+    }
+    else 
+    {
+        ExtErr("Command not loaded\n");
+    }
+
+    return Status;
+}
+
+//
+// Executes managed extension commands
+//
+DECLARE_API(ext)
+{
+    INIT_API_NOEE();
+
+    IHostServices* hostServices = GetHostServices();
+    if (hostServices != nullptr)
+    {
+        Status = hostServices->DispatchCommand(args);
+    }
+    else 
+    {
+        ExtErr("Command not loaded\n");
+    }
+
     return Status;
 }
 
@@ -16823,6 +16949,15 @@ DECLARE_API(Help)
 
     if (nArg == 1)
     {
+        IHostServices* hostServices = GetHostServices();
+        if (hostServices != nullptr)
+        {
+            if (hostServices->DisplayHelp(commandName.data) == S_OK)
+            {
+                return S_OK;
+            }
+        }
+
         // Convert commandName to lower-case
         LPSTR curChar = commandName.data;
         while (*curChar != '\0')
@@ -16844,6 +16979,12 @@ DECLARE_API(Help)
     else
     {
         PrintHelp ("contents");
+        IHostServices* hostServices = GetHostServices();
+        if (hostServices != nullptr)
+        {
+            ExtOut("\n");
+            hostServices->DisplayHelp(nullptr);
+        }
     }
 
     return S_OK;

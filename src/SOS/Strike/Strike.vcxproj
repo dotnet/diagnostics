@@ -84,7 +84,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\inc;..\..\inc;..\..\pal\prebuilt\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)src\SOS\Strike\platform;$(SolutionDir)src\SOS\inc;$(SolutionDir)src\inc;$(SolutionDir)src\pal\prebuilt\inc;$(SolutionDir)src\SOS\extensions;$(SolutionDir)src\SOS\gcdump;$(SolutionDir)src\SOS\debugshim;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /d2Zi+ /Zm200 /ZH:SHA_256 /source-charset:utf-8 /homeparams</AdditionalOptions>
       <AssemblerListingLocation>Debug/</AssemblerListingLocation>
       <BufferSecurityCheck>true</BufferSecurityCheck>
@@ -381,15 +381,14 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="dbgengservices.cpp" />
     <ClCompile Include="disasm.cpp" />
     <ClCompile Include="dllsext.cpp" />
     <ClCompile Include="eeheap.cpp" />
-    <ClCompile Include="EventCallbacks.cpp" />
     <ClCompile Include="ExpressionNode.cpp" />
     <ClCompile Include="exts.cpp" />
     <ClCompile Include="gchist.cpp" />
     <ClCompile Include="gcroot.cpp" />
-    <ClCompile Include="hostdesktop.cpp" />
     <ClCompile Include="metadata.cpp" />
     <ClCompile Include="platform\datatarget.cpp" />
     <ClCompile Include="platform\hostimpl.cpp" />
@@ -399,10 +398,11 @@
     <ClCompile Include="sos.cpp" />
     <ClCompile Include="stressLogDump.cpp" />
     <ClCompile Include="strike.cpp" />
+    <ClCompile Include="symbols.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="vm.cpp" />
     <ClCompile Include="WatchCmd.cpp" />
-    <ClCompile Include="hostcoreclr.cpp" />
+    <None Include="sos.def" />
     <None Include="sos_unixexports.src" />
     <ResourceCompile Include="Native.rc" />
     <ClCompile Include="disasmX86.cpp" />
@@ -410,11 +410,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="data.h" />
+    <ClInclude Include="dbgengservices.h" />
     <ClInclude Include="disasm.h" />
-    <ClInclude Include="EventCallbacks.h" />
     <ClInclude Include="ExpressionNode.h" />
     <ClInclude Include="exts.h" />
-    <ClInclude Include="hostcoreclr.h" />
     <ClInclude Include="ntinfo.h" />
     <ClInclude Include="platformspecific.h" />
     <ClInclude Include="platform\cordebugdatatarget.h" />
@@ -427,6 +426,7 @@
     <ClInclude Include="sos_md.h" />
     <ClInclude Include="sos_stacktrace.h" />
     <ClInclude Include="strike.h" />
+    <ClInclude Include="symbols.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="UtilCode.h" />
     <ClInclude Include="WatchCmd.h" />

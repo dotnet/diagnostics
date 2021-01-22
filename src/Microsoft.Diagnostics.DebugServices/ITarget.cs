@@ -14,14 +14,9 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface ITarget
     {
         /// <summary>
-        /// Flush event handler delegate. The sender is the target instance.
-        /// </summary>
-        public delegate void FlushEventHandler(object sender, EventArgs e);
-
-        /// <summary>
         /// Invoked when this target is flushed (via the Flush() call).
         /// </summary>
-        event FlushEventHandler OnFlushEvent;
+        IServiceEvent OnFlushEvent { get; }
 
         /// <summary>
         /// Returns the host interface instance
@@ -68,6 +63,12 @@ namespace Microsoft.Diagnostics.DebugServices
         /// Flushes any cached state in the target.
         /// </summary>
         void Flush();
+
+        /// <summary>
+        /// Registers an object to be disposed when ITarget.Close() is called.
+        /// </summary>
+        /// <param name="disposable">object to be disposed on Close()</param>
+        void DisposeOnClose(IDisposable disposable);
 
         /// <summary>
         /// Releases the target and the target's resources.

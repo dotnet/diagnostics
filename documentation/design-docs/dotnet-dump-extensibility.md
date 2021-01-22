@@ -55,11 +55,8 @@ This effort is part of the "unified extensiblity" models - where various teams a
 
 ## Road Map
 
-1. Add the native target/runtime hosting/wrapper support. These changes are to the native SOS code to use target/runtime interfaces (a new ITarget/existing IRuntime) that the host layer provides. This cleans up most of the global state in the native SOS code allowing dotnet-dump to handle multi-target commands, switching between targets (dumps) and switching between runtimes in the process. 
-2. Create lldb host/target allowing extensions commands to run under lldb.
-3. Create dbgeng/windbg host/target allowing extension commands to run under windbg.
-4. Create a VS host/target package allowing SOS and the extension commands to be run from VS using the Concord API.
-5. Add Linux, MacOS and Windows live snapshot targets. ClrMD already has support for them; just need to implement the target factory.
+1. Create a VS host/target package allowing SOS and the extension commands to be run from VS using the Concord API.
+2. Add Linux, MacOS and Windows live snapshot targets. ClrMD already has support for them; just need to implement the target factory.
 
 ## Design
 
@@ -131,6 +128,10 @@ See [IHost.cs](../../src/Microsoft.Diagnostics.DebugServices/IHost.cs) and [host
 A data target represents the dump, process snapshot or live target session. It provides information and services for the target like architecture, native process, thread, and module services. For commands like gcheapdiff, the ability to open and access a second dump or process snapshot is necessary.
 
 Because of the various hosting requirements, ClrMD's IDataReader and DataTarget should not be exposed directly and instead use one of the following interfaces and services. This allows this infrastructure provide extra functionality to ClrMD commands like the address space module mapping. 
+
+Targets are only created when there is a valid process. This means the ITarget instance in the managed infrastructure and in the native SOS code can be null. On lldb, the current target state is checked and updated if needed before each command executed or callback to the native SOS or the managed infrastructure is made.
+
+The target interface provides a "Flush" callback used to clear any cached state in the per-target services when the native debuggers continue/stop. It is up to each service to register for the OnFlush target event and clear any cached state. On dbgeng an event callback (ChangeEngineState) is used that fires when the debugger stops to invoke the OnFlush event.  On lldb, the stop id provided by the lldb API is used. It is checked each time a command is executed or a callback invoked. Any time it changes, the target's OnFlush event is invoked.
 
 The "gcdump" target is a possible target that allows gcdump specific services and commands to be executed in a REPL. None of the SOS commands or ClrMD services will work but it will be easy to provide services and commands specific to the gcdump format. This may require some kind of command filtering by the target or the target provides the command service.
 

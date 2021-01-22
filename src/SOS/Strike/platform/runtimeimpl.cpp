@@ -592,21 +592,18 @@ void Runtime::DisplayStatus()
 }
 
 extern bool g_symbolStoreInitialized;
-extern HRESULT InitializeSymbolStore();
-extern int ReadMemoryForSymbols(ULONG64 address, uint8_t* buffer, int cb);
 
 /**********************************************************************\
  * Attempt to download the runtime modules (runtime, DAC and DBI)
 \**********************************************************************/
 void Runtime::LoadRuntimeModules()
 {
-    HRESULT hr = InitializeSymbolStore();
+    HRESULT hr = InitializeSymbolService();
     if (SUCCEEDED(hr) && g_symbolStoreInitialized)
     {
         if (m_runtimeInfo != nullptr)
         {
-            _ASSERTE(g_SOSNetCoreCallbacks.LoadNativeSymbolsFromIndexDelegate != nullptr);
-            g_SOSNetCoreCallbacks.LoadNativeSymbolsFromIndexDelegate(
+            GetSymbolService()->LoadNativeSymbolsFromIndex(
                 SymbolFileCallback,
                 this,
                 GetRuntimeConfiguration(),
@@ -617,20 +614,13 @@ void Runtime::LoadRuntimeModules()
         }
         else
         {
-            ArrayHolder<char> moduleFilePath = new char[MAX_LONGPATH + 1];
-            hr = g_ExtSymbols->GetModuleNames(m_index, 0, moduleFilePath, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
-            if (SUCCEEDED(hr))
-            {
-                _ASSERTE(g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate != nullptr);
-                g_SOSNetCoreCallbacks.LoadNativeSymbolsDelegate(
-                    SymbolFileCallback,
-                    this,
-                    GetRuntimeConfiguration(),
-                    moduleFilePath,
-                    m_address,
-                    (int)m_size,
-                    ReadMemoryForSymbols);
-            }
+            GetSymbolService()->LoadNativeSymbols(
+                SymbolFileCallback,
+                this,
+                GetRuntimeConfiguration(),
+                m_name,
+                m_address,
+                (int)m_size);
         }
     }
 }

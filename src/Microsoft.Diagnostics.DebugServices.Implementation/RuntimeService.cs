@@ -21,6 +21,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     public class RuntimeService : IRuntimeService, IDataReader
     {
         private readonly ITarget _target;
+        private readonly IDisposable _onFlushEvent;
         private DataTarget _dataTarget;
         private string _runtimeModuleDirectory;
         private List<Runtime> _runtimes;
@@ -32,35 +33,23 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public RuntimeService(ITarget target)
         {
             _target = target;
-            target.OnFlushEvent += (object sender, EventArgs e) => {
-                if (_runtimes != null)
+            _onFlushEvent = target.OnFlushEvent.Register(() => {
+                if (_runtimes != null && _runtimes.Count == 0)
                 {
-                    if (_runtimes.Count > 0)
-                    {
-                        foreach (Runtime runtime in _runtimes)
-                        {
-                            runtime.Flush();
-                        }
-                    }
-                    else
-                    {
-                        // If there are no runtimes, try find them again when the target stops
-                        _runtimes = null;
-                        _dataTarget?.Dispose();
-                        _dataTarget = null;
-                    }
+                    // If there are no runtimes, try find them again when the target stops
+                    _runtimes = null;
+                    _dataTarget?.Dispose();
+                    _dataTarget = null;
                 }
-            };
-        }
-
-        /// <summary>
-        /// Releases runtime services's resources.
-        /// </summary>
-        public void Close()
-        {
-            // BUGBUG - call this on target close
-            _dataTarget?.Dispose();
-            _dataTarget = null;
+            });
+            // Can't make RuntimeService IDisposable directly because _dataTarget.Dispose() disposes the IDataReader 
+            // passed which is this RuntimeService instance which would call _dataTarget.Dispose again and causing a 
+            // stack overflow.
+            target.DisposeOnClose(new UnregisterCallback(() => {
+                _dataTarget?.Dispose();
+                _dataTarget = null;
+                _onFlushEvent.Dispose();
+            }));
         }
 
         #region IRuntimeService

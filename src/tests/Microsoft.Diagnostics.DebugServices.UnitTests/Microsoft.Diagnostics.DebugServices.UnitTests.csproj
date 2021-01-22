@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net5.0</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices.Implementation\Microsoft.Diagnostics.DebugServices.Implementation.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -23,14 +23,9 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface IHost
     {
         /// <summary>
-        /// Host shutdown event handler
-        /// </summary>
-        public delegate void ShutdownEventHandler(object sender, EventArgs e);
-
-        /// <summary>
         /// Invoked on hosting debugger or dotnet-dump shutdown
         /// </summary>
-        event ShutdownEventHandler OnShutdownEvent;
+        IServiceEvent OnShutdownEvent { get; }
 
         /// <summary>
         /// Returns the hosting debugger type

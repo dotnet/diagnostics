@@ -17,13 +17,21 @@ ULONG g_currentThreadSystemId = (ULONG)-1;
 char *g_coreclrDirectory = nullptr;
 char *g_pluginModuleDirectory = nullptr;
 
-LLDBServices::LLDBServices(lldb::SBDebugger debugger, lldb::SBProcess *process, lldb::SBThread *thread) : 
+LLDBServices::LLDBServices(lldb::SBDebugger debugger) : 
     m_ref(1),
     m_debugger(debugger),
-    m_currentProcess(process),
-    m_currentThread(thread)
+    m_interpreter(debugger.GetCommandInterpreter()),
+    m_currentProcess(nullptr),
+    m_currentThread(nullptr),
+    m_currentStopId(0)
 {
     ClearCache();
+
+    lldb::SBProcess process = GetCurrentProcess();
+    if (process.IsValid())
+    {
+        m_currentStopId = process.GetStopID();
+    }
 }
 
 LLDBServices::~LLDBServices()
@@ -50,6 +58,12 @@ LLDBServices::QueryInterface(
     else if (InterfaceId == __uuidof(ILLDBServices2))
     {
         *Interface = static_cast<ILLDBServices2*>(this);
+        AddRef();
+        return S_OK;
+    }
+    else if (InterfaceId == __uuidof(IDebuggerServices))
+    {
+        *Interface = static_cast<IDebuggerServices*>(this);
         AddRef();
         return S_OK;
     }
@@ -254,11 +268,16 @@ ExceptionBreakpointCallback(
     lldb::SBThread &thread, 
     lldb::SBBreakpointLocation &location)
 {
-    lldb::SBDebugger debugger = process.GetTarget().GetDebugger();
+    lldb::SBProcess* savedProcess = g_services->SetCurrentProcess(&process);
+    lldb::SBThread* savedThread = g_services->SetCurrentThread(&thread);
+    g_services->FlushCheck();
 
-    // Save the process and thread to be used by the current process/thread helper functions.
-    LLDBServices* client = new LLDBServices(debugger, &process, &thread);
-    return ((PFN_EXCEPTION_CALLBACK)baton)(client) == S_OK;
+    bool result = ((PFN_EXCEPTION_CALLBACK)baton)(g_services) == S_OK;
+
+    g_services->SetCurrentProcess(savedProcess);
+    g_services->SetCurrentThread(savedThread);
+
+    return result;
 }
 
 lldb::SBBreakpoint g_exceptionbp;
@@ -330,33 +349,7 @@ LLDBServices::Output(
 {
     va_list args;
     va_start (args, format);
-
-    HRESULT result = S_OK;
-    char str[1024];
-
-    // Try and format our string into a fixed buffer first and see if it fits
-    size_t length = ::vsnprintf(str, sizeof(str), format, args);
-    if (length < sizeof(str))
-    {
-        OutputString(mask, str);
-    }
-    else
-    {
-        // Our stack buffer wasn't big enough to contain the entire formatted
-        // string, so lets let vasprintf create the string for us!
-        char *str_ptr = nullptr;
-        length = ::vasprintf(&str_ptr, format, args);
-        if (str_ptr)
-        {
-            OutputString(mask, str_ptr);
-            ::free (str_ptr);
-        }
-        else
-        {
-            result = E_FAIL;
-        }
-    }
-
+    HRESULT result = InternalOutputVaList(mask, format, args);
     va_end (args);
     return result;
 }
@@ -460,11 +453,8 @@ LLDBServices::Execute(
     PCSTR command,
     ULONG flags)
 {
-    lldb::SBCommandInterpreter interpreter = m_debugger.GetCommandInterpreter();
-
     lldb::SBCommandReturnObject result;
-    lldb::ReturnStatus status = interpreter.HandleCommand(command, result);
-
+    lldb::ReturnStatus status = m_interpreter.HandleCommand(command, result);
     return status <= lldb::eReturnStatusSuccessContinuingResult ? S_OK : E_FAIL;
 }
 
@@ -664,23 +654,6 @@ exit:
         *endOffset = offset + size;
     }
     return hr;
-}
-
-void
-LLDBServices::OutputString(
-    ULONG mask,
-    PCSTR str)
-{
-    FILE* file;
-    if (mask == DEBUG_OUTPUT_ERROR)
-    {
-        file = m_debugger.GetErrorFileHandle();
-    }
-    else 
-    {
-        file = m_debugger.GetOutputFileHandle();
-    }
-    fputs(str, file);
 }
 
 //----------------------------------------------------------------------------
@@ -1996,11 +1969,14 @@ RuntimeLoadedBreakpointCallback(
     lldb::SBThread &thread, 
     lldb::SBBreakpointLocation &location)
 {
-    lldb::SBDebugger debugger = process.GetTarget().GetDebugger();
+    lldb::SBProcess* savedProcess = g_services->SetCurrentProcess(&process);
+    lldb::SBThread* savedThread = g_services->SetCurrentThread(&thread);
+    g_services->FlushCheck();
 
-    // Save the process and thread to be used by the current process/thread helper functions.
-    LLDBServices* client = new LLDBServices(debugger, &process, &thread);
-    bool result = ((PFN_RUNTIME_LOADED_CALLBACK)baton)(client) == S_OK;
+    bool result = ((PFN_RUNTIME_LOADED_CALLBACK)baton)(g_services) == S_OK;
+
+    g_services->SetCurrentProcess(savedProcess);
+    g_services->SetCurrentThread(savedThread);
 
     // Clear the breakpoint
     if (g_runtimeLoadedBp.IsValid())
@@ -2044,6 +2020,223 @@ LLDBServices::SetRuntimeLoadedCallback(
     return S_OK;
 }
 
+//----------------------------------------------------------------------------
+// IDebuggerServices
+//----------------------------------------------------------------------------
+
+HRESULT LLDBServices::GetOperatingSystem(
+    IDebuggerServices::OperatingSystem* operatingSystem)
+{
+    if (operatingSystem == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+#if defined(__APPLE__)
+    *operatingSystem = IDebuggerServices::OperatingSystem::OSX;
+#elif defined(__linux__)
+    *operatingSystem = IDebuggerServices::OperatingSystem::Linux;
+#else
+    *operatingSystem = IDebuggerServices::OperatingSystem::Unknown;
+#endif
+    return S_OK;
+}
+
+class ExtensionCommand : public lldb::SBCommandPluginInterface
+{
+    const char *m_commandName;
+
+public:
+    ExtensionCommand(const char* commandName)
+    {
+        m_commandName = strdup(commandName);
+    }
+
+    ~ExtensionCommand()
+    {
+        g_services->Output(DEBUG_OUTPUT_ERROR, "~ExtensionCommand %s\n", m_commandName);
+    }
+
+    virtual bool
+    DoExecute (lldb::SBDebugger debugger,
+               char** arguments,
+               lldb::SBCommandReturnObject &result)
+    {
+        IHostServices* hostservices = GetHostServices();
+        if (hostservices == nullptr)
+        {
+            result.SetStatus(lldb::eReturnStatusFailed);
+            return false;
+        }
+        std::string commandLine;
+        commandLine.append(m_commandName);
+        commandLine.append(" ");
+        if (arguments != nullptr)
+        {
+            for (const char* arg = *arguments; arg; arg = *(++arguments))
+            {
+                commandLine.append(arg);
+                commandLine.append(" ");
+            }
+        }
+        g_services->FlushCheck();
+        HRESULT hr = hostservices->DispatchCommand(commandLine.c_str());
+        if (hr != S_OK)
+        {
+            result.SetStatus(lldb::eReturnStatusFailed);
+            return false;
+        }
+        result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
+        return result.Succeeded();
+    }
+};
+
+HRESULT 
+LLDBServices::AddCommand(
+    PCSTR commandName,
+    PCSTR help,
+    PCSTR aliases[],
+    int numberOfAliases)
+{
+    if (commandName == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+    // Check if it is a lldb command or alias
+    if (m_interpreter.CommandExists(commandName) || m_interpreter.AliasExists(commandName))
+    { 
+        return E_PENDING;
+    }
+    // Check if it one of our user commands (the above functions don't see user commands)
+    if (m_commands.find(commandName) != m_commands.end())
+    { 
+        return E_PENDING;
+    }
+    ExtensionCommand* extensionCommand = new ExtensionCommand(commandName);
+    lldb::SBCommand command = AddCommand(commandName, extensionCommand, help);
+    if (!command.IsValid())
+    {
+        return E_INVALIDARG;
+    }
+    if (aliases != nullptr)
+    {
+        for (int i = 0; i < numberOfAliases; i++)
+        {
+            if (!m_interpreter.CommandExists(aliases[i]) && !m_interpreter.AliasExists(aliases[i]))
+            {
+                lldb::SBCommand alias = AddCommand(aliases[i], extensionCommand, help);
+                if (!alias.IsValid())
+                {
+                    return E_INVALIDARG;
+                }
+            }
+        }
+    }
+    return S_OK;
+}
+
+void
+LLDBServices::OutputString(
+    ULONG mask,
+    PCSTR str)
+{
+    FILE* file;
+    if (mask == DEBUG_OUTPUT_ERROR)
+    {
+        file = m_debugger.GetErrorFileHandle();
+    }
+    else 
+    {
+        file = m_debugger.GetOutputFileHandle();
+    }
+    fputs(str, file);
+}
+
+HRESULT 
+LLDBServices::GetNumberThreads(
+    PULONG number)
+{
+    if (number == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+    lldb::SBProcess process = GetCurrentProcess();
+    if (!process.IsValid())
+    {
+        *number = 0;
+        return E_UNEXPECTED;
+    }
+    *number = process.GetNumThreads();
+    return S_OK;
+}
+
+HRESULT 
+LLDBServices::GetThreadIdsByIndex(
+    ULONG start,
+    ULONG count,
+    PULONG ids,
+    PULONG sysIds)
+{
+    lldb::SBProcess process = GetCurrentProcess();
+    if (!process.IsValid())
+    {
+        return E_UNEXPECTED;
+    }
+    uint32_t number = process.GetNumThreads();
+    if (start >= number || start + count > number)
+    {
+        return E_INVALIDARG;
+    }
+    for (int index = start; index < start + count; index++)
+    {
+        lldb::SBThread thread = process.GetThreadAtIndex(index);
+        if (!thread.IsValid())
+        {
+            return E_UNEXPECTED;
+        }
+        if (ids != nullptr)
+        {
+            ids[index] = thread.GetIndexID();
+        }
+        if (sysIds != nullptr)
+        {
+            sysIds[index] = thread.GetThreadID();
+        }
+    }
+    return S_OK;
+}
+
+HRESULT 
+LLDBServices::SetCurrentThreadSystemId(
+    ULONG sysId)
+{
+    lldb::SBProcess process = GetCurrentProcess();
+    if (!process.IsValid())
+    {
+        return E_UNEXPECTED;
+    }
+    if (!process.SetSelectedThreadByID(sysId))
+    {
+        return E_FAIL;
+    }
+    return S_OK;
+}
+
+HRESULT 
+LLDBServices::GetThreadTeb(
+    ULONG sysId,
+    PULONG64 pteb)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT LLDBServices::GetSymbolPath(
+    PSTR buffer,
+    ULONG bufferSize,
+    PULONG pathSize)
+{
+    return E_NOTIMPL;
+}
+ 
 //----------------------------------------------------------------------------
 // Helper functions
 //----------------------------------------------------------------------------
@@ -2270,4 +2463,76 @@ LLDBServices::ReadVirtualCache(ULONG64 address, PVOID buffer, ULONG bufferSize, 
     }
 
     return true;
+}
+
+void
+LLDBServices::FlushCheck()
+{
+    // The infrastructure expects a target to only be created if there is a valid process.
+    lldb::SBProcess process = GetCurrentProcess();
+    if (process.IsValid())
+    {
+        // Has the process changed since the last commmand?
+        Extensions::GetInstance()->UpdateTarget(process.GetProcessID());
+
+        // Has the target "moved" (been continued) since the last command? Flush the target.
+        uint32_t stopId = process.GetStopID();
+        if (stopId != m_currentStopId)
+        {
+            m_currentStopId = stopId;
+            Extensions::GetInstance()->FlushTarget();
+        }
+    }
+    else 
+    {
+        Extensions::GetInstance()->UpdateTarget(0);
+    }
+}
+
+lldb::SBCommand
+LLDBServices::AddCommand(
+    const char* name,
+    lldb::SBCommandPluginInterface* impl,
+    const char* help)
+{
+    lldb::SBCommand command = m_interpreter.AddCommand(name, impl, help);
+    if (command.IsValid())
+    {
+        m_commands.insert(name);
+    }
+    return command;
+}
+
+HRESULT 
+LLDBServices::InternalOutputVaList(
+    ULONG mask,
+    PCSTR format,
+    va_list args)
+{
+    HRESULT result = S_OK;
+    char str[1024];
+
+    // Try and format our string into a fixed buffer first and see if it fits
+    size_t length = ::vsnprintf(str, sizeof(str), format, args);
+    if (length < sizeof(str))
+    {
+        OutputString(mask, str);
+    }
+    else
+    {
+        // Our stack buffer wasn't big enough to contain the entire formatted
+        // string, so lets let vasprintf create the string for us!
+        char *str_ptr = nullptr;
+        length = ::vasprintf(&str_ptr, format, args);
+        if (str_ptr)
+        {
+            OutputString(mask, str_ptr);
+            ::free (str_ptr);
+        }
+        else
+        {
+            result = E_FAIL;
+        }
+    }
+    return result;
 }

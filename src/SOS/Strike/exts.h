@@ -72,6 +72,9 @@ typedef struct _TADDR_SEGINFO
 
 #include "util.h"
 
+#ifndef FEATURE_PAL
+#include "dbgengservices.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -114,6 +117,76 @@ private:
     OnUnloadTask* pNext;
 
     static OnUnloadTask *s_pUnloadTaskList;
+};
+
+//-----------------------------------------------------------------------------------------
+// Extension helper class
+//-----------------------------------------------------------------------------------------
+class SOSExtensions : public Extensions
+{
+    SOSExtensions(IDebuggerServices* debuggerServices, IHost* host) :
+        Extensions(debuggerServices)
+    {
+        m_pHost = host;
+        OnUnloadTask::Register(SOSExtensions::Uninitialize);
+    }
+
+#ifndef FEATURE_PAL
+    ~SOSExtensions()
+    {
+        if (m_pDebuggerServices != nullptr)
+        {
+            ((DbgEngServices*)m_pDebuggerServices)->Uninitialize();
+        }
+    }
+#endif
+
+public:
+
+#ifdef FEATURE_PAL
+    static HRESULT Initialize()
+    {
+        if (s_extensions == nullptr)
+        {
+            s_extensions = new SOSExtensions(nullptr, nullptr);
+        }
+        return S_OK;
+    }
+#else
+    static HRESULT Initialize(IDebugClient* client)
+    {
+        if (s_extensions == nullptr)
+        {
+            DbgEngServices* debuggerServices = new DbgEngServices(client);
+            HRESULT hr = debuggerServices->Initialize();
+            if (FAILED(hr)) {
+                return hr;
+            }
+            s_extensions = new SOSExtensions(debuggerServices, nullptr);
+        }
+        return S_OK;
+    }
+#endif
+
+    static HRESULT Initialize(IHost* host)
+    {
+        if (s_extensions == nullptr) 
+        {
+            s_extensions = new SOSExtensions(nullptr, host);
+        }
+        return S_OK;
+    }
+
+    static void Uninitialize()
+    {
+        if (s_extensions != nullptr)
+        {
+            delete s_extensions;
+            s_extensions = nullptr;
+        }
+    }
+
+    IHost* GetHost();
 };
 
 #ifndef MINIDUMP
@@ -253,7 +326,7 @@ inline void DACMessage(HRESULT Status)
     if ((Status = ArchQuery()) != S_OK) return Status;
 
 #define INIT_API_EE()                                           \
-    if ((Status = GetTarget()->GetRuntime(&g_pRuntime)) != S_OK)\
+    if ((Status = GetRuntime(&g_pRuntime)) != S_OK)             \
     {                                                           \
         EENotLoadedMessage(Status);                             \
         return Status;                                          \

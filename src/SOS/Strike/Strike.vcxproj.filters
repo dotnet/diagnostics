@@ -4,7 +4,6 @@
     <ClCompile Include="disasm.cpp" />
     <ClCompile Include="dllsext.cpp" />
     <ClCompile Include="eeheap.cpp" />
-    <ClCompile Include="EventCallbacks.cpp" />
     <ClCompile Include="ExpressionNode.cpp" />
     <ClCompile Include="exts.cpp" />
     <ClCompile Include="gchist.cpp" />
@@ -19,7 +18,8 @@
     <ClCompile Include="WatchCmd.cpp" />
     <ClCompile Include="disasmX86.cpp" />
     <ClCompile Include="disasmARM64.cpp" />
-    <ClCompile Include="hostcoreclr.cpp" />
+    <ClCompile Include="symbols.cpp" />
+    <ClCompile Include="dbgengservices.cpp" />
     <ClCompile Include="platform\datatarget.cpp">
       <Filter>platform</Filter>
     </ClCompile>
@@ -32,12 +32,10 @@
     <ClCompile Include="platform\targetimpl.cpp">
       <Filter>platform</Filter>
     </ClCompile>
-    <ClCompile Include="hostdesktop.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="data.h" />
     <ClInclude Include="disasm.h" />
-    <ClInclude Include="EventCallbacks.h" />
     <ClInclude Include="ExpressionNode.h" />
     <ClInclude Include="exts.h" />
     <ClInclude Include="ntinfo.h" />
@@ -58,7 +56,8 @@
     <ClInclude Include="xplat\wdbgexts.h">
       <Filter>xplat</Filter>
     </ClInclude>
-    <ClInclude Include="hostcoreclr.h" />
+    <ClInclude Include="symbols.h" />
+    <ClInclude Include="dbgengservices.h" />
     <ClInclude Include="platform\cordebugdatatarget.h">
       <Filter>platform</Filter>
     </ClInclude>
@@ -83,6 +82,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="sos_unixexports.src" />
+    <None Include="sos.def" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="xplat">

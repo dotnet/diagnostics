@@ -4685,12 +4685,25 @@ void ExtErr(PCSTR Format, ...)
     va_end(Args);
 }
 
+/// <summary>
+/// Internal trace output for extensions library
+/// </summary>
+void TraceError(PCSTR format, ...)
+{
+    if (Output::g_bDbgOutput)
+    {
+        va_list args;
+        va_start(args, format);
+        OutputVaList(DEBUG_OUTPUT_ERROR, format, args);
+        va_end(args);
+    }
+}
+
 void ExtDbgOut(PCSTR Format, ...)
 {
     if (Output::g_bDbgOutput)
     {
         va_list Args;
-
         va_start(Args, Format);
         ExtOutIndent();
         OutputVaList(DEBUG_OUTPUT_NORMAL, Format, Args);

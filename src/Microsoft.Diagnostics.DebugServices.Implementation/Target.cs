@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -18,6 +19,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     {
         private static int _targetIdFactory;
         private readonly string _dumpPath;
+        private readonly List<IDisposable> _disposables;
         private string _tempDirectory;
 
         public readonly ServiceProvider ServiceProvider;
@@ -27,6 +29,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             Trace.TraceInformation($"Creating target #{Id}");
             Host = host;
             _dumpPath = dumpPath;
+            _disposables = new List<IDisposable>();
+
+            OnFlushEvent = new ServiceEvent();
 
             // Initialize the per-target services
             ServiceProvider = new ServiceProvider(host.Services);
@@ -46,7 +51,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Invoked when this target is flushed (via the Flush() call).
         /// </summary>
-        public event ITarget.FlushEventHandler OnFlushEvent;
+        public IServiceEvent OnFlushEvent { get; }
 
         /// <summary>
         /// The target id
@@ -101,7 +106,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public void Flush()
         {
             Trace.TraceInformation($"Flushing target #{Id}");
-            OnFlushEvent?.Invoke(this, EventArgs.Empty);
+            OnFlushEvent.Fire();
+        }
+
+        /// <summary>
+        /// Registers an object to be disposed when ITarget.Close() is called.
+        /// </summary>
+        /// <param name="disposable">object to be disposed on Close()</param>
+        public void DisposeOnClose(IDisposable disposable)
+        {
+            _disposables.Add(disposable);
         }
 
         /// <summary>
@@ -111,6 +125,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             Trace.TraceInformation($"Closing target #{Id}");
             Flush();
+
+            foreach (var disposable in _disposables)
+            {
+                disposable.Dispose();
+            }
+            _disposables.Clear();
+
             CleanupTempDirectory();
         }
 

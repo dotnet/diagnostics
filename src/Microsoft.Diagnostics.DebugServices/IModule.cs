@@ -5,7 +5,6 @@
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Immutable;
-using System.Reflection.PortableExecutable;
 
 namespace Microsoft.Diagnostics.DebugServices
 {

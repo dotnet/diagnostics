@@ -31,9 +31,10 @@ namespace Microsoft.Diagnostics.Repl
         /// <summary>
         /// Create an instance of the command processor;
         /// </summary>
-        public CommandProcessor()
+        /// <param name="commandPrompt">command prompted used in help message</param>
+        public CommandProcessor(string commandPrompt = null)
         {
-            _rootBuilder = new CommandLineBuilder(new Command(">"));
+            _rootBuilder = new CommandLineBuilder(new Command(commandPrompt ?? ">"));
             _rootBuilder.UseHelpBuilder((bindingContext) => new LocalHelpBuilder(this, bindingContext.Console, useHelpBuilder: false));
         }
 
@@ -64,7 +65,14 @@ namespace Microsoft.Diagnostics.Repl
                         ITarget target = services.GetService<ITarget>();
                         if (!handler.IsValidPlatform(target))
                         { 
-                            context.Console.Error.WriteLine($"Command '{command.Name}' not supported on this target");
+                            if (target != null)
+                            {
+                                context.Console.Error.WriteLine($"Command '{command.Name}' not supported on this target");
+                            }
+                            else
+                            {
+                                context.Console.Error.WriteLine($"Command '{command.Name}' needs a target");
+                            }
                             return 1;
                         }
                         try
@@ -113,7 +121,7 @@ namespace Microsoft.Diagnostics.Repl
                 ITarget target = services.GetService<ITarget>();
 
                 // Create temporary builder adding only the commands that are valid for the target
-                var builder = new CommandLineBuilder(new Command(">"));
+                var builder = new CommandLineBuilder(new Command(_rootBuilder.Command.Name));
                 foreach (Command cmd in _rootBuilder.Command.Children.OfType<Command>())
                 {
                     if (cmd.Handler is CommandHandler handler)

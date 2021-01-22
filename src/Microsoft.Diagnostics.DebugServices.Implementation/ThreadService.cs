@@ -28,10 +28,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             Target = target;
 
-            target.OnFlushEvent += (object sender, EventArgs e) => {
+            target.OnFlushEvent.Register(() => {
                 _threads?.Clear();
                 _threads = null;
-            };
+            });
 
             Type contextType;
             switch (target.Architecture)

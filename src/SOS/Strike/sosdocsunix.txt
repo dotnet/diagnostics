@@ -1903,11 +1903,14 @@ cleanup the previous resources.
 
     (lldb) histclear
     Completed successfully.
-
 \\
 
 COMMAND: sethostruntime.
-SetHostRuntime <runtime-directory>
+SetHostRuntime [-c][-netcore] [-none] [-clear] <runtime-directory>
+
+-c, -netcore - switch to hosting on the .NET Core runtime
+-none        - disable hosting managed code (for testing).
+-clear       - clear the .NET Core host runtime path.
 
 This command sets the path to the .NET Core runtime to use to host the managed 
 code that runs as part of SOS in the debugger (lldb). The runtime needs

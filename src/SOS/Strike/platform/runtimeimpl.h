@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "extensions.h"
 #include "runtime.h"
 #include "runtimeinfo.h"
 
@@ -103,11 +104,6 @@ inline const char* GetDacModuleName()
 inline const char* GetDacDllName()
 {
     return (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop) ? DESKTOP_DAC_DLL_NAME_A : NETCORE_DAC_DLL_NAME_A;
-}
-
-inline bool IsWindowsTarget()
-{
-    return GetTarget()->GetOperatingSystem() == ITarget::OperatingSystem::Windows;
 }
 
 /**********************************************************************\

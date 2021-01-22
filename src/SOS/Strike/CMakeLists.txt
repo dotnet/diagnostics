@@ -51,14 +51,12 @@ endif()
 add_definitions(-DSTRIKE)  
 
 include_directories(${ROOT_DIR}/src/SOS/inc)
+include_directories(${ROOT_DIR}/src/SOS/extensions)
 include_directories(${ROOT_DIR}/src/SOS/gcdump)
 include_directories(${ROOT_DIR}/src/SOS/debugshim)
 include_directories(platform)
 
 if(WIN32)
-  include_directories(inc)
-  include_directories("$ENV{VSInstallDir}/DIA SDK/include")
-
   add_definitions(-DUSE_STL)
 
   #use static crt
@@ -68,12 +66,12 @@ if(WIN32)
     disasm.cpp
     dllsext.cpp
     eeheap.cpp
-    EventCallbacks.cpp
     ExpressionNode.cpp
+    dbgengservices.cpp
     exts.cpp
     gchist.cpp
     gcroot.cpp
-    hostcoreclr.cpp
+    symbols.cpp
     metadata.cpp
     sigparser.cpp
     sildasm.cpp
@@ -97,6 +95,7 @@ if(WIN32)
   list(APPEND SOS_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/sos.def)
 
   set(SOS_LIBRARY
+    extensions
     corguids
     debugshim
     dbgutil
@@ -120,10 +119,6 @@ if(WIN32)
     list(APPEND 
       SOS_LIBRARY 
         mscoree.lib)
-
-    list(APPEND 
-      SOS_SOURCES 
-        hostdesktop.cpp)
   endif(NOT CLR_CMAKE_PLATFORM_ARCH_ARM64)
 
 else(WIN32)
@@ -142,7 +137,7 @@ else(WIN32)
     exts.cpp
     gchist.cpp
     gcroot.cpp
-    hostcoreclr.cpp
+    symbols.cpp
     metadata.cpp
     sigparser.cpp
     sildasm.cpp
@@ -179,6 +174,7 @@ else(WIN32)
   endif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
 
   set(SOS_LIBRARY
+    extensions
     corguids
     debugshim
     dbgutil

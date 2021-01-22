@@ -5,13 +5,17 @@
 using Microsoft.FileFormats;
 using Microsoft.SymbolStore;
 using Microsoft.SymbolStore.KeyGenerators;
+using Microsoft.SymbolStore.SymbolStores;
 using SOS;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection.PortableExecutable;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -20,22 +24,31 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class SymbolService : ISymbolService
     {
+        /// <summary>
+        /// Symbol server URLs
+        /// </summary>
+        const string MsdlSymbolServer = "http://msdl.microsoft.com/download/symbols/";
+        const string SymwebSymbolServer = "http://symweb.corp.microsoft.com/";
+
         private readonly IHost _host;
+        private string _defaultSymbolCache;
+        private Microsoft.SymbolStore.SymbolStores.SymbolStore _symbolStore = null;
 
         public SymbolService(IHost host)
         {
             _host = host;
+            OnChangeEvent = new ServiceEvent();
         }
 
         /// <summary>
         /// Invoked when anything changes in the symbol service (adding servers, caches, or directories, clearing store, etc.)
         /// </summary>
-        public event ISymbolService.ChangeEventHandler OnChangeEvent;
+        public IServiceEvent OnChangeEvent { get; }
 
         /// <summary>
         /// Returns true if symbol download has been enabled.
         /// </summary>
-        public bool IsSymbolStoreEnabled => SymbolReader.IsSymbolStoreEnabled();
+        public bool IsSymbolStoreEnabled => _symbolStore != null;
 
         /// <summary>
         /// The default symbol cache path:
@@ -46,8 +59,30 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public string DefaultSymbolCache
         {
-            get { return SymbolReader.DefaultSymbolCache; }
-            set { SymbolReader.DefaultSymbolCache = value; }
+            get
+            {
+                if (_defaultSymbolCache == null)
+                {
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        _defaultSymbolCache = _host.HostType switch
+                        {
+                            HostType.DbgEng => Path.Combine(Environment.GetEnvironmentVariable("PROGRAMDATA"), "dbg", "sym"),
+                            HostType.DotnetDump => Path.Combine(Path.GetTempPath(), "SymbolCache"),
+                            _ => throw new NotSupportedException($"Host type not supported {_host.HostType}"),
+                        };
+                    }
+                    else
+                    {
+                        _defaultSymbolCache = Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".dotnet", "symbolcache");
+                    }
+                }
+                return _defaultSymbolCache;
+            }
+            set 
+            {
+                _defaultSymbolCache = value;
+            }
         }
 
         /// <summary>
@@ -57,18 +92,86 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>if false, error parsing symbol path</returns>
         public bool ParseSymbolPath(string symbolPath)
         {
-            OnChangeEvent?.Invoke(this, new EventArgs());
-            return SymbolReader.InitializeSymbolStore(
-                logging: false,
-                msdl: false,
-                symweb: false, 
-                tempDirectory: null,
-                symbolServerPath: null,
-                authToken: null,
-                timeoutInMinutes: 0,
-                symbolCachePath: null,
-                symbolDirectoryPath: null,
-                symbolPath);
+            string[] paths = symbolPath.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (string path in paths.Reverse())
+            {
+                string[] parts = path.Split(new char[] { '*' }, StringSplitOptions.RemoveEmptyEntries);
+
+                // UNC or directory paths are ignored (paths not prefixed with srv* or cache*).
+                if (parts.Length > 0)
+                {
+                    string symbolServerPath = null;
+                    string symbolCachePath = null;
+                    string symbolDirectoryPath = null;
+                    bool msdl = false;
+
+                    switch (parts[0].ToLowerInvariant())
+                    {
+                        case "srv":
+                            switch (parts.Length)
+                            { 
+                                case 1:
+                                    msdl = true;
+                                    symbolCachePath = DefaultSymbolCache;
+                                    break;
+                                case 2:
+                                    symbolServerPath = parts[1];
+                                    break;
+                                case 3:
+                                    symbolCachePath = parts[1];
+                                    symbolServerPath = parts[2];
+                                    break;
+                                default:
+                                    return false;
+                            }
+                            break;
+
+                        case "cache":
+                            switch (parts.Length)
+                            { 
+                                case 1:
+                                    symbolCachePath = DefaultSymbolCache;
+                                    break;
+                                case 2:
+                                    symbolCachePath = parts[1];
+                                    break;
+                                default:
+                                    return false;
+                            }
+                            break;
+
+                        default:
+                            // Directory path search
+                            switch (parts.Length)
+                            {
+                                case 1:
+                                    symbolDirectoryPath = parts[0];
+                                    break;
+                                default:
+                                    return false;
+                            }
+                            break;
+                    }
+                    if (msdl || symbolServerPath != null)
+                    {
+                        if (!AddSymbolServer(msdl, symweb: false, symbolServerPath, authToken: null, timeoutInMinutes: 0))
+                        {
+                            return false;
+                        }
+                    }
+                    if (symbolCachePath != null)
+                    {
+                        AddCachePath(symbolCachePath);
+                    }
+                    if (symbolDirectoryPath != null)
+                    {
+                        AddDirectoryPath(symbolDirectoryPath);
+                    }
+                }
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -87,17 +190,68 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             string authToken,
             int timeoutInMinutes)
         {
-            return SymbolReader.InitializeSymbolStore(
-                logging: false,
-                msdl,
-                symweb, 
-                tempDirectory: null,
-                symbolServerPath,
-                authToken,
-                timeoutInMinutes,
-                symbolCachePath: null,
-                symbolDirectoryPath: null,
-                windowsSymbolPath: null);
+            bool internalServer = false;
+
+            // Add symbol server URL if exists
+            if (symbolServerPath == null)
+            {
+                if (msdl)
+                {
+                    symbolServerPath = MsdlSymbolServer;
+                }
+                else if (symweb)
+                {
+                    symbolServerPath = SymwebSymbolServer;
+                    internalServer = true;
+                }
+            }
+            else
+            {
+                // Use the internal symbol store for symweb
+                internalServer = symbolServerPath.Contains("symweb");
+            }
+
+            // Return error if symbol server path is null and msdl and symweb are false.
+            if (symbolServerPath == null)
+            {
+                return false;
+            }
+
+            // Validate symbol server path
+            if (!Uri.TryCreate(symbolServerPath.TrimEnd('/') + '/', UriKind.Absolute, out Uri uri))
+            {
+                return false;
+            }
+
+            // Add a cache symbol store if file or UNC path
+            if (uri.IsFile || uri.IsUnc)
+            {
+                AddCachePath(symbolServerPath);
+            }
+            else
+            {
+                Microsoft.SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
+                if (!IsDuplicateSymbolStore<HttpSymbolStore>(store, (httpSymbolStore) => uri.Equals(httpSymbolStore.Uri)))
+                {
+                    // Create http symbol server store
+                    HttpSymbolStore httpSymbolStore;
+                    if (internalServer)
+                    {
+                        httpSymbolStore = new SymwebHttpSymbolStore(Tracer.Instance, store, uri);
+                    }
+                    else
+                    {
+                        httpSymbolStore = new HttpSymbolStore(Tracer.Instance, store, uri, personalAccessToken: authToken);
+                    }
+                    if (timeoutInMinutes != 0)
+                    {
+                        httpSymbolStore.Timeout = TimeSpan.FromMinutes(timeoutInMinutes);
+                    }
+                    SetSymbolStore(httpSymbolStore);
+                }
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -108,17 +262,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (symbolCachePath == null) throw new ArgumentNullException(nameof(symbolCachePath));
 
-            SymbolReader.InitializeSymbolStore(
-                logging: false,
-                msdl: false,
-                symweb: false, 
-                tempDirectory: null,
-                symbolServerPath: null,
-                authToken: null,
-                timeoutInMinutes: 0,
-                symbolCachePath,
-                symbolDirectoryPath: null,
-                windowsSymbolPath: null);
+            Microsoft.SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
+            symbolCachePath = Path.GetFullPath(symbolCachePath);
+
+            // Check only the first symbol store for duplication. The same cache directory can be
+            // added more than once but just not more than once in a row.
+            if (!(store is CacheSymbolStore cacheSymbolStore && IsPathEqual(symbolCachePath, cacheSymbolStore.CacheDirectory)))
+            {
+                SetSymbolStore(new CacheSymbolStore(Tracer.Instance, store, symbolCachePath));
+            }
         }
 
         /// <summary>
@@ -129,17 +281,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (symbolDirectoryPath == null) throw new ArgumentNullException(nameof(symbolDirectoryPath));
 
-            SymbolReader.InitializeSymbolStore(
-                logging: false,
-                msdl: false,
-                symweb: false, 
-                tempDirectory: null,
-                symbolServerPath: null,
-                authToken: null,
-                timeoutInMinutes: 0,
-                symbolCachePath: null,
-                symbolDirectoryPath,
-                windowsSymbolPath: null);
+            Microsoft.SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
+            symbolDirectoryPath = Path.GetFullPath(symbolDirectoryPath);
+
+            if (!IsDuplicateSymbolStore<DirectorySymbolStore>(store, (directorySymbolStore) => IsPathEqual(symbolDirectoryPath, directorySymbolStore.Directory)))
+            {
+                SetSymbolStore(new DirectorySymbolStore(Tracer.Instance, store, symbolDirectoryPath));
+            }
         }
 
         /// <summary>
@@ -147,7 +295,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public void DisableSymbolStore()
         {
-            SymbolReader.DisableSymbolStore();
+            SetSymbolStore(null);
         }
 
         /// <summary>
@@ -157,7 +305,39 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>path to the downloaded file either in the cache or in the temp directory or null if error</returns>
         public string DownloadFile(SymbolStoreKey key)
         {
-            return SymbolReader.GetSymbolFile(key);
+            string downloadFilePath = null;
+
+            if (IsSymbolStoreEnabled)
+            {
+                using SymbolStoreFile file = GetSymbolStoreFile(key);
+                if (file != null)
+                {
+                    try
+                    {
+                        downloadFilePath = file.FileName;
+
+                        // Make sure the stream is at the beginning of the module
+                        file.Stream.Position = 0;
+
+                        // If the downloaded doesn't already exists on disk in the cache, then write it to a temporary location.
+                        if (!File.Exists(downloadFilePath))
+                        {
+                            downloadFilePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + "-" + Path.GetFileName(key.FullPathName));
+                            using (Stream destinationStream = File.OpenWrite(downloadFilePath))
+                            {
+                                file.Stream.CopyTo(destinationStream);
+                            }
+                            Trace.WriteLine($"Downloaded symbol file {key.FullPathName}");
+                        }
+                    }
+                    catch (Exception ex) when (ex is UnauthorizedAccessException || ex is DirectoryNotFoundException)
+                    {
+                        Trace.TraceError("{0}: {1}", file.FileName, ex.Message);
+                        downloadFilePath = null;
+                    }
+                }
+            }
+            return downloadFilePath;
         }
 
         /// <summary>
@@ -169,7 +349,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (IsSymbolStoreEnabled)
             {
-                return SymbolReader.GetSymbolStoreFile(key);
+                try
+                {
+                    return _symbolStore.GetFile(key, CancellationToken.None).GetAwaiter().GetResult();
+                }
+                catch (Exception ex) when (ex is UnauthorizedAccessException || ex is BadImageFormatException || ex is IOException)
+                {
+                    Trace.TraceError("Exception: {0}", ex.ToString());
+                }
             }
             return null;
         }
@@ -222,7 +409,59 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
+            Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore = _symbolStore;
+            while (symbolStore != null)
+            {
+                sb.AppendLine(symbolStore.ToString());
+                symbolStore = symbolStore.BackingStore;
+            }
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Sets a new store store head.
+        /// </summary>
+        /// <param name="store">symbol store (server, cache, directory, etc.)</param>
+        private void SetSymbolStore(Microsoft.SymbolStore.SymbolStores.SymbolStore store)
+        {
+            if (store != _symbolStore)
+            {
+                OnChangeEvent.Fire();
+                _symbolStore = store;
+            }
+        }
+
+        private bool IsDuplicateSymbolStore<T>(Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore, Func<T, bool> match) 
+            where T : Microsoft.SymbolStore.SymbolStores.SymbolStore
+        {
+            while (symbolStore != null)
+            {
+                if (symbolStore is T store)
+                {
+                    // TODO: replace this by adding an Equal override to the symbol stores
+                    if (match(store))
+                    {
+                        return true;
+                    }
+                }
+                symbolStore = symbolStore.BackingStore;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Compares two file paths using OS specific casing.
+        /// </summary>
+        private static bool IsPathEqual(string path1, string path2)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) 
+            {
+                return StringComparer.OrdinalIgnoreCase.Equals(path1, path2);
+            }
+            else 
+            {
+                return string.Equals(path1, path2);
+            }
         }
 
         /// <summary>
