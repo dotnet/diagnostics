@@ -128,7 +128,7 @@ namespace SOS.Hosting
                 {
                     throw new EntryPointNotFoundException($"Can not find SOS module initialization function: {SOSInitialize}");
                 }
-                Target.Host.OnShutdownEvent.Register(OnShutdownEvent);
+                Target.DisposeOnClose(Target.Host.OnShutdownEvent.Register(OnShutdownEvent));
                 int result = initializeFunc(_hostWrapper.IHost);
                 if (result != 0)
                 {

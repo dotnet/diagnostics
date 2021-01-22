@@ -18,7 +18,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     public abstract class ThreadService : IThreadService
     {
         protected readonly ITarget Target;
-        private readonly IDisposable _onFlushEvent;
         private readonly int _contextSize;
         private readonly uint _contextFlags;
         private readonly Dictionary<string, RegisterInfo> _lookupByName;
@@ -29,7 +28,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             Target = target;
 
-            _onFlushEvent = target.OnFlushEvent.Register(() => {
+            target.OnFlushEvent.Register(() => {
                 _threads?.Clear();
                 _threads = null;
             });

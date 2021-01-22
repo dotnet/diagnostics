@@ -11,42 +11,23 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class ServiceEvent : IServiceEvent
     {
-        private class EventNode : LinkedListNode
+        private class EventNode : LinkedListNode, IDisposable
         {
-            private readonly WeakReference<Action> _callback;
+            private readonly Action _callback;
 
             internal EventNode(Action callback)
             {
-                _callback = new WeakReference<Action>(callback);
+                _callback = callback;
             }
 
             internal void Fire()
             {
-                if (_callback.TryGetTarget(out Action target))
-                {
-                    target();
-                }
-                else
-                {
-                    Remove();
-                }
-            }
-        }
-
-        private class Unregister : IDisposable
-        {
-            private readonly EventNode _eventNode;
-            private readonly Action _callback;
-
-            internal Unregister(EventNode eventNode, Action callback)
-            {
-                _eventNode = eventNode;
-                _callback = callback;
+                _callback();
             }
 
             void IDisposable.Dispose()
             {
-                _eventNode.Remove();
+                Remove();
             }
         }
 
@@ -61,7 +42,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // Insert at the end of the list
             var node = new EventNode(callback);
             _events.InsertBefore(node);
-            return new Unregister(node, callback);
+            return node;
         }
 
         public void Fire()

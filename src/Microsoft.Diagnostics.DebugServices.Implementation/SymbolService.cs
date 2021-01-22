@@ -153,9 +153,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             }
                             break;
                     }
-                    if (!AddSymbolServer(msdl, symweb: false, symbolServerPath, authToken: null, timeoutInMinutes: 0))
+                    if (msdl || symbolServerPath != null)
                     {
-                        return false;
+                        if (!AddSymbolServer(msdl, symweb: false, symbolServerPath, authToken: null, timeoutInMinutes: 0))
+                        {
+                            return false;
+                        }
                     }
                     if (symbolCachePath != null)
                     {
@@ -208,40 +211,43 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 internalServer = symbolServerPath.Contains("symweb");
             }
 
-            if (symbolServerPath != null)
+            // Return error if symbol server path is null and msdl and symweb are false.
+            if (symbolServerPath == null)
             {
-                // Validate symbol server path
-                if (!Uri.TryCreate(symbolServerPath.TrimEnd('/') + '/', UriKind.Absolute, out Uri uri))
-                {
-                    return false;
-                }
+                return false;
+            }
 
-                // Add a cache symbol store if file or UNC path
-                if (uri.IsFile || uri.IsUnc)
+            // Validate symbol server path
+            if (!Uri.TryCreate(symbolServerPath.TrimEnd('/') + '/', UriKind.Absolute, out Uri uri))
+            {
+                return false;
+            }
+
+            // Add a cache symbol store if file or UNC path
+            if (uri.IsFile || uri.IsUnc)
+            {
+                AddCachePath(symbolServerPath);
+            }
+            else
+            {
+                Microsoft.SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
+                if (!IsDuplicateSymbolStore<HttpSymbolStore>(store, (httpSymbolStore) => uri.Equals(httpSymbolStore.Uri)))
                 {
-                    AddCachePath(symbolServerPath);
-                }
-                else
-                {
-                    Microsoft.SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
-                    if (!IsDuplicateSymbolStore<HttpSymbolStore>(store, (httpSymbolStore) => uri.Equals(httpSymbolStore.Uri)))
+                    // Create http symbol server store
+                    HttpSymbolStore httpSymbolStore;
+                    if (internalServer)
                     {
-                        // Create http symbol server store
-                        HttpSymbolStore httpSymbolStore;
-                        if (internalServer)
-                        {
-                            httpSymbolStore = new SymwebHttpSymbolStore(Tracer.Instance, store, uri);
-                        }
-                        else
-                        {
-                            httpSymbolStore = new HttpSymbolStore(Tracer.Instance, store, uri, personalAccessToken: authToken);
-                        }
-                        if (timeoutInMinutes != 0)
-                        {
-                            httpSymbolStore.Timeout = TimeSpan.FromMinutes(timeoutInMinutes);
-                        }
-                        SetSymbolStore(httpSymbolStore);
+                        httpSymbolStore = new SymwebHttpSymbolStore(Tracer.Instance, store, uri);
                     }
+                    else
+                    {
+                        httpSymbolStore = new HttpSymbolStore(Tracer.Instance, store, uri, personalAccessToken: authToken);
+                    }
+                    if (timeoutInMinutes != 0)
+                    {
+                        httpSymbolStore.Timeout = TimeSpan.FromMinutes(timeoutInMinutes);
+                    }
+                    SetSymbolStore(httpSymbolStore);
                 }
             }
 

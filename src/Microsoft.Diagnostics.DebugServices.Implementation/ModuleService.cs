@@ -40,7 +40,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         const uint VmProtWrite = 0x02;
 
         protected readonly ITarget Target;
-        private readonly IDisposable _onFlushEvent;
         private IMemoryService _memoryService;
         private ISymbolService _symbolService;
         private ReadVirtualCache _versionCache;
@@ -55,8 +54,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             Debug.Assert(target != null);
             Target = target;
 
-            _onFlushEvent = target.OnFlushEvent.Register(() => {
+            target.OnFlushEvent.Register(() => {
                 _versionCache?.Clear();
+                if (_modules != null)
+                {
+                    foreach (IModule module in _modules.Values)
+                    {
+                        if (module is IDisposable disposable)
+                        {
+                            disposable.Dispose();
+                        }
+                    }
+                }
                 _modules = null;
                 _sortedByBaseAddress = null;
             });

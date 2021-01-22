@@ -45,6 +45,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         /// <typeparam name="T">data node type</typeparam>
         /// <returns>T</returns>
+        /// <exception cref="InvalidCastException">thrown if T mismatches the actual type that inherits this class</exception>
         public T Cast<T>()
             where T : LinkedListNode
         {

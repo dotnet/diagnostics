@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// Module base implementation
     /// </summary>
-    public abstract class Module : IModule
+    public abstract class Module : IModule, IDisposable
     {
         [Flags]
         public enum Flags : byte
@@ -47,6 +47,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 return ModuleService.GetPEReader(this);
             });
         }
+
+        public void Dispose() => _onChangeEvent?.Dispose();
 
         #region IModule
 

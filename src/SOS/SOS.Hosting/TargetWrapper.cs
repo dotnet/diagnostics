@@ -48,6 +48,16 @@ namespace SOS.Hosting
             AddRef();
         }
 
+        public void Destroy()
+        {
+            foreach (RuntimeWrapper wrapper in _wrappers.Values)
+            {
+                wrapper.Dispose();
+                wrapper.Release();
+            }
+            _wrappers.Clear();
+        }
+
         private OperatingSystem GetOperatingSystem(
             IntPtr self)
         {
@@ -109,11 +119,6 @@ namespace SOS.Hosting
         private void Close(
             IntPtr self)
         {
-            foreach (RuntimeWrapper wrapper in _wrappers.Values)
-            {
-                wrapper.Release();
-            }
-            _wrappers.Clear();
             _target.Close();
         }
 

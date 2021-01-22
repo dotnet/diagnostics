@@ -65,6 +65,12 @@ namespace Microsoft.Diagnostics.DebugServices
         void Flush();
 
         /// <summary>
+        /// Registers an object to be disposed when ITarget.Close() is called.
+        /// </summary>
+        /// <param name="disposable">object to be disposed on Close()</param>
+        void DisposeOnClose(IDisposable disposable);
+
+        /// <summary>
         /// Releases the target and the target's resources.
         /// </summary>
         void Close();

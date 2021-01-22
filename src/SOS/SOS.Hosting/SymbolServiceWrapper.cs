@@ -124,16 +124,17 @@ namespace SOS.Hosting
             string symbolCachePath,
             string symbolDirectoryPath)
         {
-            // Add the default symbol cache if no cache specified and adding server
-            if (symbolCachePath == null)
+            if (msdl || symweb || symbolServerPath != null)
             {
-                if (msdl || symweb || symbolServerPath != null) {
+                // Add the default symbol cache if no cache specified and adding server
+                if (symbolCachePath == null)
+                {
                     symbolCachePath = _symbolService.DefaultSymbolCache;
                 }
-            }
-            if (!_symbolService.AddSymbolServer(msdl, symweb, symbolServerPath, authToken, timeoutInMinutes))
-            {
-                return false;
+                if (!_symbolService.AddSymbolServer(msdl, symweb, symbolServerPath, authToken, timeoutInMinutes))
+                {
+                    return false;
+                }
             }
             if (symbolCachePath != null)
             {

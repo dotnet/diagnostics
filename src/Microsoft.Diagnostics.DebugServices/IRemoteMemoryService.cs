@@ -19,16 +19,16 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="typeFlags">Type of memory allocation. See the MEM_* constants.</param>
         /// <param name="protectFlags">memory protection flags for the pages to be allocated. See the PAGE_* constants.</param>
         /// <param name="remoteAddress"></param>
-        /// <returns>true if any bytes were read at all, false if the read failed (and no bytes were read)</returns>
+        /// <returns>true if the allocation succeeded, false otherwise</returns>
         bool AllocateMemory(ulong address, uint size, uint typeFlags, uint protectFlags, out ulong remoteAddress);
 
         /// <summary>
-        /// Write memory into target process for supported targets. Similar to VirtualFreeEx on Windows.
+        /// Free memory the target process for supported targets. Similar to VirtualFreeEx on Windows.
         /// </summary>
-        /// <param name="address">The address of memory to write</param>
+        /// <param name="address">The address of memory to free</param>
         /// <param name="size">size of memory region in bytes</param>
-        /// <param name="typeFlags"></param>
-        /// <returns>true if any bytes where written, false if write failed</returns>
+        /// <param name="typeFlags">Type of memory allocation. See the MEM_* constants.</param>
+        /// <returns>true if the requested memory range was properly freed, false otherwise</returns>
         bool FreeMemory(ulong address, uint size, uint typeFlags);
     }
 }

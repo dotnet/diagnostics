@@ -23,7 +23,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly ITarget _target;
         private readonly IRuntimeService _runtimeService;
         private readonly ClrInfo _clrInfo;
-        private IDisposable _onChangeEvent;
         private IMemoryService _memoryService;
         private ISymbolService _symbolService;
         private MetadataMappingMemoryService _metadataMappingMemoryService;
@@ -54,34 +53,30 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             ServiceProvider.AddService<ClrInfo>(clrInfo);
             ServiceProvider.AddServiceFactoryWithNoCaching<ClrRuntime>(() => CreateRuntime());
 
+            target.OnFlushEvent.Register(() => {
+                _clrRuntime?.DacLibrary.DacPrivateInterface.Flush();
+                _metadataMappingMemoryService?.Flush();
+            });
+
             // This is a special memory service that maps the managed assemblies' metadata into
             // the address space. The lldb debugger returns zero's (instead of failing the memory
             // read) for missing pages in core dumps that older (less than 5.0) createdumps generate
             // so it needs this special metadata mapping memory service. dotnet-dump needs this logic
             // for clrstack -i (uses ICorDebug data targets).
-            if (_target.IsDump && 
-               (_target.OperatingSystem != OSPlatform.Windows) &&
-               (_target.Host.HostType == HostType.Lldb || 
-                _target.Host.HostType == HostType.DotnetDump)) 
+            if (target.IsDump && 
+               (target.OperatingSystem != OSPlatform.Windows) &&
+               (target.Host.HostType == HostType.Lldb || 
+                target.Host.HostType == HostType.DotnetDump)) 
             {
                 ServiceProvider.AddServiceFactoryWithNoCaching<IMemoryService>(() => {
                     if (_metadataMappingMemoryService == null)
                     {
                         _metadataMappingMemoryService = new MetadataMappingMemoryService(this, MemoryService, SymbolService);
-                        _onChangeEvent = SymbolService.OnChangeEvent.Register(_metadataMappingMemoryService.Flush);
+                        target.DisposeOnClose(SymbolService.OnChangeEvent.Register(_metadataMappingMemoryService.Flush));
                     }
                     return _metadataMappingMemoryService;
                 });
             }
-        }
-
-        /// <summary>
-        /// Flush the runtime instance
-        /// </summary>
-        public void Flush()
-        {
-            _clrRuntime?.DacLibrary.DacPrivateInterface.Flush();
-            _metadataMappingMemoryService?.Flush();
         }
 
         #region IRuntime

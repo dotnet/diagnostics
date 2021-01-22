@@ -12,12 +12,10 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface IServiceEvent
     {
         /// <summary>
-        /// Register for the event callback. The return value needs to be referenced
-        /// because a weak reference is used for the callback delegate. Puts the new
-        /// callback at the end of the list.
+        /// Register for the event callback. Puts the new callback at the end of the list.
         /// </summary>
         /// <param name="callback">callback delegate</param>
-        /// <returns>Used to unregister the event by disposing</returns>
+        /// <returns>An opaque IDisposable that will unregister the callback when disposed</returns>
         IDisposable Register(Action callback);
 
         /// <summary>

@@ -122,6 +122,7 @@ namespace SOS.Hosting
 
         public void Dispose()
         {
+            _onFlushEvent.Dispose();
             Dispose(true);
             GC.SuppressFinalize(this);
         }

@@ -78,7 +78,12 @@ namespace SOS.Hosting
 
         public void DestroyTarget()
         {
-            _targetWrapper = null;
+            if (_targetWrapper != null)
+            {
+                _targetWrapper.Destroy();
+                _targetWrapper.Release();
+                _targetWrapper = null;
+            }
         }
 
         #region IHost

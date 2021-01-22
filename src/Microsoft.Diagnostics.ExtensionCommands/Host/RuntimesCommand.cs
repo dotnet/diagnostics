@@ -20,6 +20,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
+            if (NetFx && NetCore)
+            {
+                throw new DiagnosticsException("Cannot specify both -netfx and -netcore options");
+            }
             if (NetFx || NetCore)
             {
                 string name = NetFx ? "desktop .NET Framework" : ".NET Core";
