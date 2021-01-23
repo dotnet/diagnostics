@@ -43,15 +43,9 @@ This effort is part of the "unified extensiblity" models - where various teams a
 
 - List of issues that will be addressed by this work or has inspired it:
     - [#1397](https://github.com/dotnet/diagnostics/issues/1397) and [#40182](https://github.com/dotnet/runtime/issues/40182) "SOS Plugin for Visual Studio". Create a VS package that allows the above extension commands to be run and various native SOS commands.
-    - [#1016](https://github.com/dotnet/diagnostics/issues/1016) This work address this issue with the internal native SOS cleanup of the target OS platform.
-    - [#1001](https://github.com/dotnet/diagnostics/issues/1001) "SOS Hosting layer needs concept of Target". Fixes commands like `eeversion` and module name comparing when the native SOS is hosted under dotnet-dump and VS.
     - [#565](https://github.com/dotnet/diagnostics/issues/565) "Using SOS programmatically". This plan will help enable the work described in this issue.
     - [#1031](https://github.com/dotnet/diagnostics/issues/1031) "Ability to load extensions in dotnet-dump analyze". This refers to loading "sosex" and "mex" in dotnet-dump. This plan would make it easier to do this but does not actually include it.
-    - [#562](https://github.com/dotnet/diagnostics/issues/562) "Some CLRMD APIs used in commands under dotnet-dump may fail". This fixes the ClrMD based commands that need type and method info from the modules with missing metadata. 
-    - [#479](https://github.com/dotnet/diagnostics/issues/479) "SOS: flush the global state that contains per-process info". This plan moves all of this global state into ITarget/IRuntime which are provided by the host (i.e. dotnet-dump, VS, etc.)
     - [#194](https://github.com/dotnet/diagnostics/issues/194) "Implement `gcheapdiff` dotnet-dump analyze command". We haven't had a lot of feedback on whether this purposed command is useful. This issue did inspired the "multi-target" part of this plan i.e. the ability to load/analyze two dumps in dotnet-dump at the same time.
-    - [#186](https://github.com/dotnet/diagnostics/issues/186) "dotnet dump extensibility". This is the parent issue that inspired this plan.
-    - [#174](https://github.com/dotnet/diagnostics/issues/174) "List all managed dlls in lldb". This work will allow the `clrmodules` command to work on lldb, windbg and dotnet-dump.
 
 ## Road Map
 

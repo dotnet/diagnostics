@@ -5,7 +5,9 @@ These instructions will lead you through installing or building the best version
 
 SOS needs at least lldb 3.9 or greater. Some distros only have older versions available by default so there are directions and scripts to build lldb 3.9 for that platform. These instructions assume that you have dotnet cli and its prerequisites installed.
 
-The libsosplugin.so built for lldb 3.9 does work with lldb 4.0, 5.0 and 6.0 but most of the testing has been on lldb 3.9.
+The libsosplugin.so built for lldb 3.9 does work with lldb 4.0 and greater but most of the testing has been on lldb 3.9. 
+
+lldb 10.0 or greater is recommended if available for the distro version. For arm32, it is recommended to debug on Ubuntu 18.04 if possible with lldb 10.0 which is the only version of lldb found that works with SOS on arm32.
 
 #### Ubuntu 14.04 ####
 
@@ -75,11 +77,26 @@ To launch lldb:
 
     lldb-3.9
 
-#### Alpine 3.6 ####
+10.0 is the only version of lldb found that works with SOS for arm32 on Ubuntu 18.04.
+
+#### Ubuntu 20.04 ####
+
+To install the lldb packages:
+
+    sudo get-get update
+    sudo apt-get install lldb
+
+This installs lldb version 10.0.0.
+
+#### Alpine 3.9 ####
 
 Currently there is no lldb that works on Alpine.
 
 Issue https://github.com/dotnet/diagnostics/issues/73
+
+#### Alpine 3.12 ####
+
+lldb 10.0 is available for this Apline version.
 
 #### CentOS 6 ####
 
