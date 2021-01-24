@@ -94,7 +94,7 @@ HRESULT InitializeSymbolService()
         }
 #endif
         OnUnloadTask::Register([]() {
-            g_symbolStoreInitialized = false;
+            DisableSymbolStore();
         });
     }
     return S_OK;

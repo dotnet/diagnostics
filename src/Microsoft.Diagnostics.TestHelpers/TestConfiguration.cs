@@ -366,13 +366,13 @@ namespace Microsoft.Diagnostics.TestHelpers
         const string DebugTypeKey = "DebugType";
         const string DebuggeeBuildRootKey = "DebuggeeBuildRoot";
         
-        internal static readonly string BaseDir = Path.GetFullPath(".");
+        public static string BaseDir { get; set; } = Path.GetFullPath(".");
+
         private static readonly Regex versionRegex = new Regex(@"^(\d+\.\d+\.\d+)(-.*)?", RegexOptions.Compiled);
         
         private ReadOnlyDictionary<string, string> _settings;
         private readonly string _configStringView;
         private readonly string _truncatedRuntimeFrameworkVersion;
-
 
         public TestConfiguration()
         {
@@ -408,9 +408,13 @@ namespace Microsoft.Diagnostics.TestHelpers
         private string GetStringViewWithVersion(string version)
         {
             var sb = new StringBuilder();
-            sb.Append(TestProduct);
-            sb.Append(".");
-            sb.Append(DebuggeeBuildProcess);
+            sb.Append(TestProduct ?? "");
+            string debuggeeBuildProcess = DebuggeeBuildProcess;
+            if (!string.IsNullOrEmpty(debuggeeBuildProcess))
+            {
+                sb.Append(".");
+                sb.Append(debuggeeBuildProcess);
+            }
             if (!string.IsNullOrEmpty(version))
             {
                 sb.Append(".");
@@ -467,7 +471,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </summary>
         public string TargetArchitecture
         {
-            get { return GetValue("TargetArchitecture").ToLowerInvariant(); }
+            get { return GetValue("TargetArchitecture")?.ToLowerInvariant(); }
         }
 
         /// <summary>
@@ -483,7 +487,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </summary>
         public string TestProduct
         {
-            get { return GetValue("TestProduct").ToLowerInvariant(); }
+            get { return GetValue("TestProduct")?.ToLowerInvariant(); }
         }
 
         /// <summary>

@@ -102,7 +102,7 @@ namespace SOS.Hosting
                 {
                     _sosLibrary = Microsoft.Diagnostics.Runtime.DataTarget.PlatformFunctions.LoadLibrary(sosPath);
                 }
-                catch (DllNotFoundException ex)
+                catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException)
                 {
                     // This is a workaround for the Microsoft SDK docker images. Can fail when LoadLibrary uses libdl.so to load the SOS module.
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
@@ -114,10 +114,7 @@ namespace SOS.Hosting
                         throw new DllNotFoundException($"Problem loading SOS module from {sosPath}", ex);
                     }
                 }
-                if (_sosLibrary == IntPtr.Zero)
-                {
-                    throw new FileNotFoundException($"SOS module {sosPath} not found");
-                }
+                Debug.Assert(_sosLibrary != IntPtr.Zero);
                 var initializeFunc = SOSHost.GetDelegateFunction<SOSInitializeDelegate>(_sosLibrary, SOSInitialize);
                 if (initializeFunc == null)
                 {

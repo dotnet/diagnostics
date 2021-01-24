@@ -2,19 +2,18 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.ExtensionCommands;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.Diagnostics.ExtensionCommands;
 using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using SOS.Hosting;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace SOS.Extensions
 {
@@ -80,6 +79,7 @@ namespace SOS.Extensions
             }
             catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException)
             {
+                Trace.TraceError($"LoadLibrary({extensionPath}) FAILED {ex}");
             }
             if (extensionLibrary == default)
             {
@@ -90,6 +90,7 @@ namespace SOS.Extensions
             {
                 return HResult.E_FAIL;
             }
+            Debug.Assert(Instance == null);
             Instance = new HostServices();
             return initialializeCallback(Instance.IHostServices);
         }
@@ -362,6 +363,9 @@ namespace SOS.Extensions
 
             // Release the host services wrapper
             Release();
+
+            // Clear HostService instance
+            Instance = null;
         }
 
         #endregion

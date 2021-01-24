@@ -20,7 +20,6 @@
   <InstallDir>$(RootBinDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
   <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\sos.unittests_$(Timestamp)</LogDir>
   <DumpDir>$(RootBinDir)\tmp\$(TargetConfiguration)\dumps</DumpDir>
-  <CDBPath>$(RootBinDir)\bin\SOS.UnitTests\$(TargetConfiguration)\netcoreapp3.1\publish\runtimes\win-$(TargetArchitecture)\native\cdb.exe</CDBPath>
   <CDBHelperExtension>$(InstallDir)\runcommand.dll</CDBHelperExtension>
 
   <TestWebApp>true</TestWebApp>

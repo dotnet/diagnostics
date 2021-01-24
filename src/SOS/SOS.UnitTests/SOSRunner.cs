@@ -69,6 +69,8 @@ public class SOSRunner : IDisposable
         private string _testName;
         private bool _testCrashReport = true;
         private DumpGenerator _dumpGenerator = DumpGenerator.CreateDump; 
+        private string _debuggeeDumpOutputRootDir;
+        private string _debuggeeDumpInputRootDir;
 
         public TestConfiguration TestConfiguration { get; set; }
 
@@ -112,6 +114,18 @@ public class SOSRunner : IDisposable
         {
             get { return _testCrashReport && DumpGenerator == DumpGenerator.CreateDump && OS.Kind != OSKind.Windows && TestConfiguration.RuntimeFrameworkVersionMajor >= 6; }
             set { _testCrashReport = value; }
+        }
+
+        public string DebuggeeDumpOutputRootDir
+        {
+            get { return _debuggeeDumpOutputRootDir ?? TestConfiguration.DebuggeeDumpOutputRootDir(); }
+            set { _debuggeeDumpOutputRootDir = value; }
+        }
+
+        public string DebuggeeDumpInputRootDir
+        {
+            get { return _debuggeeDumpInputRootDir ?? TestConfiguration.DebuggeeDumpInputRootDir(); }
+            set { _debuggeeDumpInputRootDir = value; }
         }
 
         public bool IsValid()
@@ -166,7 +180,7 @@ public class SOSRunner : IDisposable
         DumpGenerator dumpGeneration = information.DumpGenerator;
         string dumpName = null;
 
-        Directory.CreateDirectory(config.DebuggeeDumpOutputRootDir());
+        Directory.CreateDirectory(information.DebuggeeDumpOutputRootDir);
 
         if (dumpGeneration == DumpGenerator.NativeDebugger)
         {
@@ -472,7 +486,10 @@ public class SOSRunner : IDisposable
                     {
                         throw new ArgumentException($"CDB helper script path not set or does not exist: {helperExtension}");
                     }
-                    arguments.AppendFormat(@"-c "".load {0}""", helperExtension);
+                    // Clear the default sympath (which puts a sym cache in the debugger binary directory in
+                    // the .nuget cache) and set to just the directory containing the debuggee binaries.
+                    arguments.AppendFormat(@" -y ""{0}""", debuggeeConfig.BinaryDirPath);
+                    arguments.AppendFormat(@" -c "".load {0}""", helperExtension);
 
                     if (action == DebuggerAction.LoadDump)
                     {
@@ -486,7 +503,6 @@ public class SOSRunner : IDisposable
                         initialCommands.Add("sxd dz");
                         initialCommands.Add("sxd iov");
                     }
-                    initialCommands.Add(".sympath %DEBUG_ROOT%");
                     initialCommands.Add(".extpath " + Path.GetDirectoryName(config.SOSPath()));
 
                     // Add the path to runtime so cdb/SOS can find DAC/DBI for triage dumps
@@ -1013,8 +1029,7 @@ public class SOSRunner : IDisposable
 
     public static string GenerateDumpFileName(TestInformation information, string debuggeeName, DebuggerAction action)
     {
-        TestConfiguration config = information.TestConfiguration;
-        string dumpRoot = action == DebuggerAction.GenerateDump ? config.DebuggeeDumpOutputRootDir() : config.DebuggeeDumpInputRootDir();
+        string dumpRoot = action == DebuggerAction.GenerateDump ? information.DebuggeeDumpOutputRootDir : information.DebuggeeDumpInputRootDir;
         if (!string.IsNullOrEmpty(dumpRoot)) {
             var sb = new StringBuilder();
             sb.Append(information.TestName);

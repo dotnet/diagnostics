@@ -14,6 +14,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IThread CurrentThread { get; set; }
 
+        [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]
+        public bool Verbose { get; set; }
+
         public override void Invoke()
         {
             IThread thread = CurrentThread;
@@ -23,6 +26,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             foreach (RegisterInfo register in ThreadService.Registers)
             {
+                if (Verbose)
+                {
+                    WriteLine("{0} Index = {1} Offset = {2} Size = {3}", register.RegisterName, register.RegisterIndex, register.RegisterOffset, register.RegisterSize);
+                }
                 if (thread.TryGetRegisterValue(register.RegisterIndex, out ulong value))
                 {
                     switch (register.RegisterSize)
