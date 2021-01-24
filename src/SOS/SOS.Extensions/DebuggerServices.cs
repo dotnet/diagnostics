@@ -7,6 +7,7 @@ using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -109,6 +110,9 @@ namespace SOS
         {
             imageName = null;
 
+            // GetModuleNames under lldb doesn't support querying just the 
+            // path length (imageNameBufferPtr = null) so use a fix size 
+            // image name buffer.
             byte[] imageNameBuffer = new byte[1024];
             fixed (byte* imageNameBufferPtr = imageNameBuffer)
             {
@@ -244,23 +248,68 @@ namespace SOS
         {
             symbolPath = null;
 
-            // TODO: Get the path length first instead of using a fixed length buffer
-            byte[] buffer = new byte[1024];
-            fixed (byte* bufferPtr = buffer)
+            // Get the path length first
+            HResult hr = VTable.GetSymbolPath(Self, null, 0, out uint pathSize);
+            if (hr >= HResult.S_OK)
             {
-                HResult hr = VTable.GetSymbolPath(Self, bufferPtr, (uint)buffer.Length, out uint pathSize);
-                if (hr >= HResult.S_OK)
+                if (pathSize > 0)
                 {
-                    if (pathSize > 0)
+                    // Now get the symbol path
+                    byte[] buffer = new byte[pathSize];
+                    fixed (byte* bufferPtr = buffer)
                     {
-                        symbolPath = Encoding.ASCII.GetString(bufferPtr, (int)pathSize - 1);
-                    }
-                    else
-                    {
-                        hr = HResult.E_INVALIDARG;
+                        hr = VTable.GetSymbolPath(Self, bufferPtr, (uint)buffer.Length, out pathSize);
+                        if (hr >= HResult.S_OK)
+                        {
+                            symbolPath = Encoding.ASCII.GetString(bufferPtr, (int)pathSize - 1);
+                        }
                     }
                 }
-                return hr;
+                else
+                {
+                    hr = HResult.E_INVALIDARG;
+                }
+            }
+            return hr;
+        }
+
+        public HResult GetSymbolByOffset(int moduleIndex, ulong address, out string symbol, out ulong displacement)
+        {
+            symbol = null;
+
+            // Get the symbol length first
+            HResult hr = VTable.GetSymbolByOffset(Self, moduleIndex, address, null, 0, out uint symbolSize, out displacement);
+            if (hr >= HResult.S_OK)
+            {
+                if (symbolSize > 0)
+                {
+                    // Now get the symbol
+                    byte[] symbolBuffer = new byte[symbolSize];
+                    fixed (byte* symbolBufferPtr = symbolBuffer)
+                    {
+                        hr = VTable.GetSymbolByOffset(Self, moduleIndex, address, symbolBufferPtr, symbolBuffer.Length, out symbolSize, out displacement);
+                        if (hr >= HResult.S_OK)
+                        {
+                            symbol = Encoding.ASCII.GetString(symbolBufferPtr, (int)symbolSize - 1);
+                        }
+                    }
+                }
+                else
+                {
+                    hr = HResult.E_INVALIDARG;
+                }
+            }
+            return hr;
+        }
+
+        public HResult GetOffsetBySymbol(int moduleIndex, string symbol, out ulong address)
+        {
+            if (symbol == null) throw new ArgumentNullException(nameof(symbol));
+
+            byte[] symbolBytes = Encoding.ASCII.GetBytes(symbol + "\0");
+            fixed (byte* symbolPtr = symbolBytes)
+            {
+                return VTable.GetOffsetBySymbol(Self, moduleIndex, symbolPtr, out address);
             }
         }
     }
@@ -288,5 +337,7 @@ namespace SOS
         public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, out ulong, HResult> GetThreadTeb;
         public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, byte*, HResult> VirtualUnwind;
         public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, uint, out uint, HResult> GetSymbolPath;
+        public readonly delegate* unmanaged[Stdcall]<IntPtr, int, ulong, byte*, int, out uint, out ulong, HResult> GetSymbolByOffset;
+        public readonly delegate* unmanaged[Stdcall]<IntPtr, int, byte*, out ulong, HResult> GetOffsetBySymbol;
     }
 }

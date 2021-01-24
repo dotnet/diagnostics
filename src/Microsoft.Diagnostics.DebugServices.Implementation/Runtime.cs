@@ -256,8 +256,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 else if (platform == OSPlatform.Windows)
                 {
-                    // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
-                    key = PEFileKeyGenerator.GetKey(fileName, (uint)RuntimeModule.IndexTimeStamp, (uint)RuntimeModule.IndexFileSize);
+                    if (RuntimeModule.IndexTimeStamp.HasValue && RuntimeModule.IndexFileSize.HasValue)
+                    {
+                        // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
+                        key = PEFileKeyGenerator.GetKey(fileName, RuntimeModule.IndexTimeStamp.Value, RuntimeModule.IndexFileSize.Value);
+                    }
                 }
 
                 if (key != null)
@@ -320,7 +323,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             var sb = new StringBuilder();
             string config = s_runtimeTypeNames[(int)RuntimeType];
-            sb.AppendLine($"#{Id} {config} runtime at {RuntimeModule.ImageBase:X16} size {RuntimeModule.IndexFileSize:X8}");
+            sb.AppendLine($"#{Id} {config} runtime at {RuntimeModule.ImageBase:X16} size {RuntimeModule.ImageSize:X8}");
             sb.AppendLine($"    Runtime module path: {RuntimeModule.FileName}");
             if (_dacFilePath != null) {
                 sb.AppendLine($"    DAC: {_dacFilePath}");

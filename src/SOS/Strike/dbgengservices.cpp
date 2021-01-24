@@ -9,6 +9,8 @@
 #include "dbgengservices.h"
 #include "exts.h"
 
+extern IMachine* GetTargetMachine(ULONG processorType);
+
 DbgEngServices::DbgEngServices(IDebugClient* client) :
     m_ref(1),
     m_client(client),
@@ -16,7 +18,8 @@ DbgEngServices::DbgEngServices(IDebugClient* client) :
     m_data(nullptr),
     m_symbols(nullptr),
     m_system(nullptr),
-    m_advanced(nullptr)
+    m_advanced(nullptr),
+    m_targetMachine(nullptr)
 {
     client->AddRef();
 }
@@ -325,7 +328,7 @@ DbgEngServices::GetThreadContextBySystemId(
     {
         // Prepare context structure
         ZeroMemory(context, contextSize);
-        g_targetMachine->SetContextFlags(context, contextFlags);
+        GetMachine()->SetContextFlags(context, contextFlags);
 
         // Ok, do it!
         hr = m_advanced->GetThreadContext((LPVOID)context, contextSize);
@@ -334,7 +337,7 @@ DbgEngServices::GetThreadContextBySystemId(
         m_system->SetCurrentThreadId(originalThreadId);
 
         // GetThreadContext clears ContextFlags or sets them incorrectly and DBI needs it set to know what registers to copy
-        g_targetMachine->SetContextFlags(context, contextFlags);
+        GetMachine()->SetContextFlags(context, contextFlags);
     }
     return hr;
 }
@@ -400,6 +403,27 @@ DbgEngServices::GetSymbolPath(
 {
     return m_symbols->GetSymbolPath(buffer, bufferSize, pathSize);
 }
+ 
+HRESULT 
+DbgEngServices::GetSymbolByOffset(
+    ULONG moduleIndex,
+    ULONG64 offset,
+    PSTR nameBuffer,
+    ULONG nameBufferSize,
+    PULONG nameSize,
+    PULONG64 displacement)
+{
+    return m_symbols->GetNameByOffset(offset, nameBuffer, nameBufferSize, nameSize, displacement);
+}
+
+HRESULT 
+DbgEngServices::GetOffsetBySymbol(
+    ULONG moduleIndex,
+    PCSTR name,
+    PULONG64 offset)
+{
+    return m_symbols->GetOffsetByName(name, offset);
+}
 
 //----------------------------------------------------------------------------
 // IRemoteMemoryService
@@ -464,6 +488,13 @@ HRESULT DbgEngServices::ChangeEngineState(
     {
         if (((Argument & DEBUG_STATUS_MASK) == DEBUG_STATUS_BREAK) && ((Argument & DEBUG_STATUS_INSIDE_WAIT) == 0))
         {
+            ULONG processId = 0;
+            m_system->GetCurrentProcessSystemId(&processId);
+            m_control->Output(DEBUG_OUTPUT_NORMAL, "ChangeEngineState: processId %d\n", processId);
+
+            // Has the process changed since the last commmand?
+            Extensions::GetInstance()->UpdateTarget(processId);
+
             // Flush the target when the debugger target breaks
             Extensions::GetInstance()->FlushTarget();
         }
@@ -517,6 +548,7 @@ HRESULT DbgEngServices::Exception(
 HRESULT DbgEngServices::ExitProcess(
     ULONG ExitCode)
 {
+    m_targetMachine = nullptr;
     Extensions::GetInstance()->DestroyTarget();
     return DEBUG_STATUS_NO_CHANGE;
 }
@@ -571,6 +603,18 @@ HRESULT DbgEngServices::UnloadModule(
 //----------------------------------------------------------------------------
 // Helper Functions
 //----------------------------------------------------------------------------
+
+IMachine*
+DbgEngServices::GetMachine()
+{
+    if (m_targetMachine == nullptr)
+    {
+        ULONG processorType = 0;
+        m_control->GetExecutingProcessorType(&processorType);
+        m_targetMachine = ::GetTargetMachine(processorType);
+    }
+    return m_targetMachine;
+}
 
 HRESULT
 DbgEngServices::SetCurrentThreadIdFromSystemId(

@@ -18,6 +18,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     {
         class ModuleFromDataReader : Module
         {
+            // This is what clrmd returns for non-PE modules that don't have a timestamp
+            private const uint InvalidTimeStamp = 0;
+
             private static readonly VersionInfo EmptyVersionInfo = new VersionInfo(0, 0, 0, 0);
             private readonly ModuleServiceFromDataReader _moduleService;
             private readonly ModuleInfo _moduleInfo;
@@ -42,9 +45,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override ulong ImageSize => _imageSize;
 
-            public override int IndexFileSize => _moduleInfo.IndexFileSize;
+            public override uint? IndexFileSize => _moduleInfo.IndexTimeStamp == InvalidTimeStamp ? null : (uint)_moduleInfo.IndexFileSize;
 
-            public override int IndexTimeStamp => _moduleInfo.IndexTimeStamp;
+            public override uint? IndexTimeStamp => _moduleInfo.IndexTimeStamp == InvalidTimeStamp ? null : (uint)_moduleInfo.IndexTimeStamp;
 
             public override VersionInfo? Version
             {

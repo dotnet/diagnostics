@@ -232,6 +232,8 @@ namespace SOS.Hosting
                    (ex is DiagnosticsException || 
                     ex is BadInputFormatException || 
                     ex is InvalidVirtualAddressException || 
+                    ex is ArgumentOutOfRangeException ||
+                    ex is IndexOutOfRangeException ||
                     ex is TaskCanceledException)
                 {
                     Trace.TraceError("{0} address {1:X16}: {2}", moduleFilePath, address, ex.Message);

@@ -20,12 +20,12 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// Returns the list of runtimes in the target
         /// </summary>
-        public IEnumerable<IRuntime> Runtimes { get; }
+        IEnumerable<IRuntime> EnumerateRuntimes();
 
         /// <summary>
         /// Returns the current runtime or null if no runtime was found
         /// </summary>
-        public IRuntime CurrentRuntime { get; }
+        IRuntime CurrentRuntime { get; }
 
         /// <summary>
         /// Set the current runtime 

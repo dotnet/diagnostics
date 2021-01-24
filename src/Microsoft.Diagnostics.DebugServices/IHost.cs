@@ -3,6 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
@@ -36,6 +38,11 @@ namespace Microsoft.Diagnostics.DebugServices
         /// Global service provider
         /// </summary>
         IServiceProvider Services { get; }
+
+        /// <summary>
+        /// Enumerates all the targets
+        /// </summary>
+        IEnumerable<ITarget> EnumerateTargets();
 
         /// <summary>
         /// Current target instances or null

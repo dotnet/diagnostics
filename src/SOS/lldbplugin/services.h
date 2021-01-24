@@ -197,6 +197,14 @@ public:
         PULONG nameSize,
         PULONG64 displacement);
 
+    HRESULT STDMETHODCALLTYPE GetNameByOffset(
+        ULONG moduleIndex,
+        ULONG64 offset,
+        PSTR nameBuffer,
+        ULONG nameBufferSize,
+        PULONG nameSize,
+        PULONG64 displacement);
+
     HRESULT STDMETHODCALLTYPE GetNumberModules(
         PULONG loaded,
         PULONG unloaded);
@@ -363,7 +371,20 @@ public:
         PSTR buffer,
         ULONG bufferSize,
         PULONG pathSize);
+
+    HRESULT STDMETHODCALLTYPE GetSymbolByOffset(
+        ULONG moduleIndex,
+        ULONG64 offset,
+        PSTR nameBuffer,
+        ULONG nameBufferSize,
+        PULONG nameSize,
+        PULONG64 displacement);
  
+    HRESULT STDMETHODCALLTYPE GetOffsetBySymbol(
+        ULONG moduleIndex,
+        PCSTR name,
+        PULONG64 offset);
+
     //----------------------------------------------------------------------------
     // LLDBServices (internal)
     //----------------------------------------------------------------------------

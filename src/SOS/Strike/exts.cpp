@@ -57,13 +57,13 @@ PDEBUG_SYSTEM_OBJECTS g_ExtSystem;
 
 // Queries for all debugger interfaces.
 #ifndef FEATURE_PAL    
-extern "C" HRESULT
+HRESULT
 ExtQuery(PDEBUG_CLIENT client)
 {
     HRESULT Status;
     g_ExtClient = client;
 #else
-extern "C" HRESULT
+HRESULT
 ExtQuery(ILLDBServices* services)
 {
     // Initialize the PAL and extension suppport in one place and only once.
@@ -106,28 +106,24 @@ ExtQuery(ILLDBServices* services)
     return Status;
 }
 
-extern "C" HRESULT
-ArchQuery(void)
+IMachine*
+GetTargetMachine(ULONG processorType)
 {
-    ULONG targetArchitecture;
     IMachine* targetMachine = NULL;
-
-    g_ExtControl->GetExecutingProcessorType(&targetArchitecture);
-
 #ifdef SOS_TARGET_AMD64
-    if(targetArchitecture == IMAGE_FILE_MACHINE_AMD64)
+    if (processorType == IMAGE_FILE_MACHINE_AMD64)
     {
         targetMachine = AMD64Machine::GetInstance();
     }
 #endif // SOS_TARGET_AMD64
 #ifdef SOS_TARGET_X86
-    if (targetArchitecture == IMAGE_FILE_MACHINE_I386)
+    if (processorType == IMAGE_FILE_MACHINE_I386)
     {
         targetMachine = X86Machine::GetInstance();
     }
 #endif // SOS_TARGET_X86
 #ifdef SOS_TARGET_ARM
-    switch (targetArchitecture)
+    switch (processorType)
     {
         case IMAGE_FILE_MACHINE_ARM:
         case IMAGE_FILE_MACHINE_THUMB:
@@ -137,20 +133,45 @@ ArchQuery(void)
     }
 #endif // SOS_TARGET_ARM
 #ifdef SOS_TARGET_ARM64
-    if (targetArchitecture == IMAGE_FILE_MACHINE_ARM64)
+    if (processorType == IMAGE_FILE_MACHINE_ARM64)
     {
         targetMachine = ARM64Machine::GetInstance();
     }
 #endif // SOS_TARGET_ARM64
+    return targetMachine;
+}
 
-    if (targetMachine == NULL)
+HRESULT
+ArchQuery(void)
+{
+    ULONG processorType = 0;
+    g_ExtControl->GetExecutingProcessorType(&processorType);
+
+    g_targetMachine = GetTargetMachine(processorType);
+    if (g_targetMachine == NULL)
     {
-        g_targetMachine = NULL;
-        ExtErr("The SOS that is loaded does not support the current target architecture '0x%04x'. A 32 bit target may require a 64 bit debugger or vice versa.\n", targetArchitecture);
+        const char* architecture = "";
+        switch (processorType)
+        {
+            case IMAGE_FILE_MACHINE_AMD64:
+                architecture = "x64";
+                break;
+            case IMAGE_FILE_MACHINE_I386:
+                architecture = "x86";
+                break;
+            case IMAGE_FILE_MACHINE_ARM:
+            case IMAGE_FILE_MACHINE_THUMB:
+            case IMAGE_FILE_MACHINE_ARMNT:
+                architecture = "arm32";
+                break;
+            case IMAGE_FILE_MACHINE_ARM64:
+                architecture = "arm64";
+                break;
+        }
+        ExtErr("SOS does not support the current target architecture '%s' (0x%04x). A 32 bit target may require a 64 bit debugger or vice versa.\n",
+            architecture, processorType);
         return E_FAIL;
     }
-
-    g_targetMachine = targetMachine;
     return S_OK;
 }
 

@@ -149,6 +149,7 @@ bool
 sosCommandInitialize(lldb::SBDebugger debugger)
 {
     g_services->AddCommand("sos", new sosCommand(nullptr), "Various .NET Core debugging commands. See 'soshelp' for more details. sos <command-name> <args>");
+    g_services->AddCommand("ext", new sosCommand("ext"), "Execute extension command. See 'soshelp' for more details. ext <command-name> <args>");
     g_services->AddCommand("bpmd", new sosCommand("bpmd"), "Creates a breakpoint at the specified managed method in the specified module.");
     g_services->AddCommand("clrstack", new sosCommand("ClrStack"), "Provides a stack trace of managed code only.");
     g_services->AddCommand("clrthreads", new sosCommand("Threads"), "List the managed threads running.");

@@ -21,7 +21,7 @@ namespace SOS.Extensions
     /// <summary>
     /// The extension services Wrapper the native hosts are given
     /// </summary>
-    internal sealed unsafe class HostServices : COMCallableIUnknown, IHost
+    public sealed unsafe class HostServices : COMCallableIUnknown, IHost
     {
         private static readonly Guid IID_IHostServices = new Guid("27B2CB8D-BDEE-4CBD-B6EF-75880D76D46F");
 
@@ -55,12 +55,16 @@ namespace SOS.Extensions
         }
 
         /// <summary>
+        /// The host services instance. Only valid after Initialize is called.
+        /// </summary>
+        public static HostServices Instance { get; private set; }
+
+        /// <summary>
         /// This is the main managed entry point that the native hosting code calls. It needs to be a single function
         /// and is restricted to just a string parameter because host APIs (i.e. desktop clr) have this narrow interface.
         /// </summary>
         /// <param name="extensionPath">Path and filename of native extensions to callback</param>
-        /// <param name="callbackName">Name of callback function</param>
-        /// <returns></returns>
+        /// <returns>hresult</returns>
         public static int Initialize(
             [MarshalAs(UnmanagedType.LPStr)] string extensionPath)
         {
@@ -81,8 +85,8 @@ namespace SOS.Extensions
             {
                 return HResult.E_FAIL;
             }
-            var hostServices = new HostServices();
-            return initialializeCallback(hostServices.IHostServices);
+            Instance = new HostServices();
+            return initialializeCallback(Instance.IHostServices);
         }
 
         private HostServices()
@@ -123,6 +127,8 @@ namespace SOS.Extensions
         HostType IHost.HostType => RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? HostType.DbgEng : HostType.Lldb;
 
         IServiceProvider IHost.Services => _serviceProvider;
+
+        IEnumerable<ITarget> IHost.EnumerateTargets() => _target != null ? new ITarget[] { _target } : Array.Empty<ITarget>();
 
         ITarget IHost.CurrentTarget => _target;
 
@@ -188,7 +194,7 @@ namespace SOS.Extensions
                 Trace.TraceError(ex.ToString());
                 return HResult.E_FAIL;
             }
-            if (DebuggerServices.GetSymbolPath(out string symbolPath) == HResult.S_OK)
+            if (DebuggerServices.GetSymbolPath(out string symbolPath) >= HResult.S_OK)
             {
                 if (!_symbolService.ParseSymbolPath(symbolPath))
                 {

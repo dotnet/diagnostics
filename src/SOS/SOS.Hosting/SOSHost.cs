@@ -37,6 +37,10 @@ namespace SOS.Hosting
         private const string SOSInitialize = "SOSInitializeByHost";
         private const string SOSUninitialize = "SOSUninitializeByHost";
 
+        // This is what dbgeng/IDebuggerServices returns for non-PE modules that don't have a timestamp
+        internal const uint InvalidTimeStamp = 0xFFFFFFFE;
+        internal const uint InvalidChecksum = 0xFFFFFFFF;
+
         internal readonly ITarget Target;
         internal readonly IConsoleService ConsoleService;
         internal readonly IModuleService ModuleService;
@@ -499,8 +503,8 @@ namespace SOS.Hosting
                     {
                         moduleParams[i].Base = module.ImageBase;
                         moduleParams[i].Size = (uint)module.ImageSize;
-                        moduleParams[i].TimeDateStamp = (uint)module.IndexTimeStamp;
-                        moduleParams[i].Checksum = 0;
+                        moduleParams[i].TimeDateStamp = module.IndexTimeStamp.GetValueOrDefault(InvalidTimeStamp);
+                        moduleParams[i].Checksum = InvalidChecksum;
                         moduleParams[i].Flags = DEBUG_MODULE.LOADED;
                         moduleParams[i].SymbolType = DEBUG_SYMTYPE.PDB;
 

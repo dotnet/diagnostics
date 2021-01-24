@@ -13,6 +13,8 @@
 
 #define VER_PLATFORM_UNIX 10 
 
+class IMachine;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -27,6 +29,7 @@ private:
     PDEBUG_SYMBOLS2       m_symbols;
     PDEBUG_SYSTEM_OBJECTS m_system;
     PDEBUG_ADVANCED       m_advanced;
+    IMachine*             m_targetMachine;
 
 public:
     DbgEngServices(IDebugClient* client);
@@ -37,6 +40,8 @@ public:
     //----------------------------------------------------------------------------
     // Helper functions
     //----------------------------------------------------------------------------
+
+    IMachine* GetMachine();
 
     HRESULT SetCurrentThreadIdFromSystemId(
         ULONG32 sysId,
@@ -162,6 +167,19 @@ public:
         ULONG bufferSize,
         PULONG pathSize);
  
+    HRESULT STDMETHODCALLTYPE GetSymbolByOffset(
+        ULONG moduleIndex,
+        ULONG64 offset,
+        PSTR nameBuffer,
+        ULONG nameBufferSize,
+        PULONG nameSize,
+        PULONG64 displacement);
+
+    HRESULT STDMETHODCALLTYPE GetOffsetBySymbol(
+        ULONG moduleIndex,
+        PCSTR name,
+        PULONG64 offset);
+
     //----------------------------------------------------------------------------
     // IRemoteMemoryService
     //----------------------------------------------------------------------------

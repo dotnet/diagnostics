@@ -12,6 +12,10 @@
 
 #define CONVERT_FROM_SIGN_EXTENDED(offset) ((ULONG_PTR)(offset))
 
+// Return what dbgeng returns for Linux modules that don't have a timestamp/checksum
+#define InvalidTimeStamp    0xFFFFFFFE;
+#define InvalidChecksum     0xFFFFFFFF;
+
 ULONG g_currentThreadIndex = (ULONG)-1;
 ULONG g_currentThreadSystemId = (ULONG)-1;
 char *g_coreclrDirectory = nullptr;
@@ -827,6 +831,18 @@ LLDBServices::GetNameByOffset(
     PULONG nameSize,
     PULONG64 displacement)
 {
+    return GetNameByOffset(DEBUG_ANY_ID, offset, nameBuffer, nameBufferSize, nameSize, displacement);
+}
+
+HRESULT 
+LLDBServices::GetNameByOffset(
+    ULONG moduleIndex,
+    ULONG64 offset,
+    PSTR nameBuffer,
+    ULONG nameBufferSize,
+    PULONG nameSize,
+    PULONG64 displacement)
+{
     ULONG64 disp = DEBUG_INVALID_OFFSET;
     HRESULT hr = S_OK;
 
@@ -854,17 +870,36 @@ LLDBServices::GetNameByOffset(
         goto exit;
     }
 
-    module = address.GetModule();
-    if (!module.IsValid())
+    // If module index is invalid, add module name to symbol
+    if (moduleIndex == DEBUG_ANY_ID)
     {
-        hr = E_FAIL;
-        goto exit;
-    }
+        module = address.GetModule();
+        if (!module.IsValid())
+        {
+            hr = E_FAIL;
+            goto exit;
+        }
 
-    file = module.GetFileSpec();
-    if (file.IsValid())
+        file = module.GetFileSpec();
+        if (file.IsValid())
+        {
+            str.append(file.GetFilename());
+        }
+    }
+    else 
     {
-        str.append(file.GetFilename());
+        module = target.GetModuleAtIndex(moduleIndex);
+        if (!module.IsValid())
+        {
+            hr = E_INVALIDARG;
+            goto exit;
+        }
+
+        if (module != address.GetModule())
+        {
+            hr = E_INVALIDARG;
+            goto exit;
+        }
     }
 
     symbol = address.GetSymbol();
@@ -1854,11 +1889,11 @@ HRESULT LLDBServices::GetModuleInfo(
     }
     if (pTimestamp)
     {
-        *pTimestamp = 0;
+        *pTimestamp = InvalidTimeStamp;
     }
     if (pChecksum)
     {
-        *pChecksum = 0;
+        *pChecksum = InvalidChecksum;
     }
     return S_OK;
 }
@@ -2229,7 +2264,8 @@ LLDBServices::GetThreadTeb(
     return E_NOTIMPL;
 }
 
-HRESULT LLDBServices::GetSymbolPath(
+HRESULT 
+LLDBServices::GetSymbolPath(
     PSTR buffer,
     ULONG bufferSize,
     PULONG pathSize)
@@ -2237,6 +2273,63 @@ HRESULT LLDBServices::GetSymbolPath(
     return E_NOTIMPL;
 }
  
+HRESULT 
+LLDBServices::GetSymbolByOffset(
+    ULONG moduleIndex,
+    ULONG64 offset,
+    PSTR nameBuffer,
+    ULONG nameBufferSize,
+    PULONG nameSize,
+    PULONG64 displacement)
+{
+    return GetNameByOffset(moduleIndex, offset, nameBuffer, nameBufferSize, nameSize, displacement);
+}
+
+HRESULT 
+LLDBServices::GetOffsetBySymbol(
+    ULONG moduleIndex,
+    PCSTR name,
+    PULONG64 offset)
+{
+    HRESULT hr = S_OK;
+
+    lldb::SBTarget target;
+    lldb::SBModule module;
+    lldb::SBSymbol symbol;
+    lldb::SBAddress startAddress;
+
+    if (offset == nullptr)
+    {
+        hr = E_INVALIDARG;
+        goto exit;
+    }
+
+    target = m_debugger.GetSelectedTarget();
+    if (!target.IsValid())
+    {
+        hr = E_FAIL;
+        goto exit;
+    }
+
+    module = target.GetModuleAtIndex(moduleIndex);
+    if (!module.IsValid())
+    {
+        hr = E_INVALIDARG;
+        goto exit;
+    }
+
+    symbol = module.FindSymbol(name);
+    if (!symbol.IsValid())
+    {
+        hr = E_INVALIDARG;
+        goto exit;
+    }
+    startAddress = symbol.GetStartAddress();
+    *offset = startAddress.GetLoadAddress(target);
+exit:
+    return hr;
+}
+
 //----------------------------------------------------------------------------
 // Helper functions
 //----------------------------------------------------------------------------

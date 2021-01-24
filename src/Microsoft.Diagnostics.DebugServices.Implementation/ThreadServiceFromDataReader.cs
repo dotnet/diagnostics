@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.DataReaders.Implementation;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 
@@ -54,7 +55,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         protected override IEnumerable<IThread> GetThreadsInner()
         {
-            return _threadReader.EnumerateOSThreadIds().Select((uint id, int index) => new Thread(this, index, id)).Cast<IThread>();
+            return _threadReader.EnumerateOSThreadIds().Select((uint id, int index) => new Thread(this, index, id)).ToImmutableArray();
         }
 
         protected override ulong GetThreadTeb(uint threadId)

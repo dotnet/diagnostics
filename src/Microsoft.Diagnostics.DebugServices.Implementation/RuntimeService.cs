@@ -71,7 +71,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Returns the list of runtimes in the target
         /// </summary>
-        public IEnumerable<IRuntime> Runtimes => BuildRuntimes();
+        public IEnumerable<IRuntime> EnumerateRuntimes() => BuildRuntimes();
 
         /// <summary>
         /// Returns the current runtime
@@ -129,8 +129,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         IEnumerable<ModuleInfo> IDataReader.EnumerateModules() => 
             ModuleService.EnumerateModules().Select((module) => CreateModuleInfo(module)).ToList();
 
-        private ModuleInfo CreateModuleInfo(IModule module) => 
-            new ModuleInfo(this, module.ImageBase, module.FileName, isVirtual:true, module.IndexFileSize, module.IndexTimeStamp, new ImmutableArray<byte>());
+        private ModuleInfo CreateModuleInfo(IModule module) =>
+            new ModuleInfo(
+                this,
+                module.ImageBase, 
+                module.FileName,
+                isVirtual:true,
+                unchecked((int)module.IndexFileSize.GetValueOrDefault(0)),
+                unchecked((int)module.IndexTimeStamp.GetValueOrDefault(0)),
+                new ImmutableArray<byte>());
 
         ImmutableArray<byte> IDataReader.GetBuildId(ulong baseAddress)
         {
