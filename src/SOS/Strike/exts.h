@@ -285,7 +285,7 @@ inline void DACMessage(HRESULT Status)
         ExtOut("                on an X86 or an ARM machine; an AMD64 dump file must be\n");
         ExtOut("                debugged on an AMD64 machine.\n");
         ExtOut("\n");
-        ExtOut("You can run the command '!setclrpath <directory>' to control the load of %s.\n", GetDacDllName());
+        ExtOut("You can run the command '!setclrpath <directory>' to control the load path of %s.\n", GetDacDllName());
         ExtOut("\n");
         ExtOut("Or you can also run the debugger command .cordll to control the debugger's\n");
         ExtOut("load of %s. .cordll -ve -u -l will do a verbose reload.\n", GetDacDllName());
