@@ -38,13 +38,13 @@
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
       <Sha>c272436a9e5dd42662d5f7eb5451c0eb0fc805c9</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="6.0.0-preview.2.21076.2">
+    <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="6.0.0-preview.2.21077.2">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>e420a0578c4964f8efbd9a14f9901c30ec686d6e</Sha>
+      <Sha>c0840723b382bcfa67b35839af8572fcd38f1d13</Sha>
     </Dependency>
-    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.6.0" Version="6.0.0-preview.2.21076.2">
+    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.6.0" Version="6.0.0-preview.2.21077.2">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>e420a0578c4964f8efbd9a14f9901c30ec686d6e</Sha>
+      <Sha>c0840723b382bcfa67b35839af8572fcd38f1d13</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>
