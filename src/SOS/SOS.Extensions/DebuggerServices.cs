@@ -250,7 +250,7 @@ namespace SOS
 
             // Get the path length first
             HResult hr = VTable.GetSymbolPath(Self, null, 0, out uint pathSize);
-            if (hr >= HResult.S_OK)
+            if (hr == HResult.S_OK)
             {
                 if (pathSize > 0)
                 {
@@ -259,7 +259,7 @@ namespace SOS
                     fixed (byte* bufferPtr = buffer)
                     {
                         hr = VTable.GetSymbolPath(Self, bufferPtr, (uint)buffer.Length, out pathSize);
-                        if (hr >= HResult.S_OK)
+                        if (hr == HResult.S_OK)
                         {
                             symbolPath = Encoding.ASCII.GetString(bufferPtr, (int)pathSize - 1);
                         }

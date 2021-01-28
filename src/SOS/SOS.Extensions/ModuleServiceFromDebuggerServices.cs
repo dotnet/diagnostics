@@ -113,7 +113,7 @@ namespace SOS.Extensions
 
             #region IExportSymbols/IModuleSymbols
 
-            public bool GetSymbolName(ulong address, out string symbol, out ulong displacement)
+            public bool TryGetSymbolName(ulong address, out string symbol, out ulong displacement)
             {
                 HResult hr = _moduleService._debuggerServices.GetSymbolByOffset(ModuleIndex, address, out symbol, out displacement);
                 if (hr < HResult.S_OK) {
@@ -126,7 +126,7 @@ namespace SOS.Extensions
                 return true;
             }
 
-            public bool GetSymbolAddress(string name, out ulong address)
+            public bool TryGetSymbolAddress(string name, out ulong address)
             {
                 // This is a temporary hack until the dbgeng DebuggerServices implementation doesn't require the module name to be prepended to the symbol
                 if (_moduleService.Target.Host.HostType == HostType.DbgEng) {

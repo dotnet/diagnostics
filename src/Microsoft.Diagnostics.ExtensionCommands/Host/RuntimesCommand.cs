@@ -41,9 +41,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else
             {
+                // Display the current runtime star ("*") only if there is more than one runtime
+                bool displayStar = RuntimeService.EnumerateRuntimes().Count() > 1;
+
                 foreach (IRuntime runtime in RuntimeService.EnumerateRuntimes())
                 {
-                    string current = RuntimeService.EnumerateRuntimes().Count() > 1 ? runtime == RuntimeService.CurrentRuntime ? "*" : " " : "";
+                    string current = displayStar ? (runtime == RuntimeService.CurrentRuntime ? "*" : " ") : "";
                     Write(current);
                     Write(runtime.ToString());
                 }

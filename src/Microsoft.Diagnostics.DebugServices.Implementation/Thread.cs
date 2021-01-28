@@ -32,11 +32,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public uint ThreadId { get; }
 
-        public bool GetRegisterValue(int index, out ulong value)
+        public bool TryGetRegisterValue(int index, out ulong value)
         {
             value = 0;
 
-            if (_threadService.GetRegisterInfo(index, out RegisterInfo info))
+            if (_threadService.TryGetRegisterInfo(index, out RegisterInfo info))
             {
                 try
                 {

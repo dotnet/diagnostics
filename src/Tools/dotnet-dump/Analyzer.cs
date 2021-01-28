@@ -131,7 +131,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 services.AddServiceFactory<IThread>(() => {
                     IThreadService threadService = _target.Services.GetService<IThreadService>();
                     if (threadService != null && threadService.CurrentThreadId.HasValue) {
-                        return threadService.GetThreadInfoFromId(threadService.CurrentThreadId.Value);
+                        return threadService.GetThreadFromId(threadService.CurrentThreadId.Value);
                     }
                     return null;
                 });

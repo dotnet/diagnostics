@@ -676,7 +676,7 @@ namespace SOS.Hosting
             byte[] registerContext;
             try
             {
-                registerContext = ThreadService.GetThreadInfoFromId(threadId).GetThreadContext();
+                registerContext = ThreadService.GetThreadFromId(threadId).GetThreadContext();
             }
             catch (DiagnosticsException)
             {
@@ -748,7 +748,7 @@ namespace SOS.Hosting
         {
             try
             {
-                ThreadService.CurrentThreadId = ThreadService.GetThreadInfoFromIndex(unchecked((int)id)).ThreadId;
+                ThreadService.CurrentThreadId = ThreadService.GetThreadFromIndex(unchecked((int)id)).ThreadId;
             }
             catch (DiagnosticsException)
             {
@@ -809,7 +809,7 @@ namespace SOS.Hosting
             {
                 try
                 {
-                    IThread threadInfo = ThreadService.GetThreadInfoFromId(sysId);
+                    IThread threadInfo = ThreadService.GetThreadFromId(sysId);
                     id = (uint)threadInfo.ThreadIndex;
                     return HResult.S_OK;
                 }
@@ -830,7 +830,7 @@ namespace SOS.Hosting
                 uint threadId = ThreadService.CurrentThreadId.Value;
                 try
                 {
-                    ulong teb = ThreadService.GetThreadInfoFromId(threadId).GetThreadTeb();
+                    ulong teb = ThreadService.GetThreadFromId(threadId).GetThreadTeb();
                     Write(offset, teb);
                     return HResult.S_OK;
                 }
@@ -868,7 +868,7 @@ namespace SOS.Hosting
             string name,
             out uint index)
         {
-            if (!ThreadService.GetRegisterIndexByName(name, out int value)) {
+            if (!ThreadService.TryGetRegisterIndexByName(name, out int value)) {
                 index = 0;
                 return HResult.E_INVALIDARG;
             }
@@ -913,7 +913,7 @@ namespace SOS.Hosting
             string register,
             out ulong value)
         {
-            if (!ThreadService.GetRegisterIndexByName(register, out int index)) {
+            if (!ThreadService.TryGetRegisterIndexByName(register, out int index)) {
                 value = 0;
                 return HResult.E_INVALIDARG;
             }
@@ -926,10 +926,10 @@ namespace SOS.Hosting
         {
             if (ThreadService.CurrentThreadId.HasValue)
             {
-                IThread thread = ThreadService.GetThreadInfoFromId(ThreadService.CurrentThreadId.Value);
+                IThread thread = ThreadService.GetThreadFromId(ThreadService.CurrentThreadId.Value);
                 if (thread != null)
                 {
-                    if (thread.GetRegisterValue(index, out value))
+                    if (thread.TryGetRegisterValue(index, out value))
                     {
                         return HResult.S_OK;
                     }

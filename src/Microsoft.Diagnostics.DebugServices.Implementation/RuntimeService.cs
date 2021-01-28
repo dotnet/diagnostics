@@ -175,7 +175,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             try
             {
-                byte[] registerContext = ThreadService.GetThreadInfoFromId(threadId).GetThreadContext();
+                byte[] registerContext = ThreadService.GetThreadFromId(threadId).GetThreadContext();
                 context = new Span<byte>(registerContext);
                 return true;
             }

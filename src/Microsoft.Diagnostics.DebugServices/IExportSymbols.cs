@@ -17,6 +17,6 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="name">symbol name (without the module name prepended)</param>
         /// <param name="offset">address returned</param>
         /// <returns>true if found</returns>
-        bool GetSymbolAddress(string name, out ulong offset);
+        bool TryGetSymbolAddress(string name, out ulong offset);
     }
 }

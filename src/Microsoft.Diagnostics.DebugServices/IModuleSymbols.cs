@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="symbol">symbol name (without the module name prepended)</param>
         /// <param name="displacement">offset from symbol</param>
         /// <returns>true if found</returns>
-        bool GetSymbolName(ulong address, out string symbol, out ulong displacement);
+        bool TryGetSymbolName(ulong address, out string symbol, out ulong displacement);
 
         /// <summary>
         /// Returns the address of a module symbol if found
@@ -26,6 +26,6 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="name">symbol name (without the module name prepended)</param>
         /// <param name="address">address of symbol</param>
         /// <returns>true if found</returns>
-        bool GetSymbolAddress(string name, out ulong address);
+        bool TryGetSymbolAddress(string name, out ulong address);
     }
 }

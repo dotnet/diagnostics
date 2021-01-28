@@ -27,11 +27,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 IThread thread;
                 if (ThreadId)
                 {
-                    thread = ThreadService.GetThreadInfoFromId(Thread.Value);
+                    thread = ThreadService.GetThreadFromId(Thread.Value);
                 }
                 else
                 {
-                    thread = ThreadService.GetThreadInfoFromIndex(unchecked((int)Thread.Value));
+                    thread = ThreadService.GetThreadFromIndex(unchecked((int)Thread.Value));
                 }
                 ThreadService.CurrentThreadId = thread.ThreadId;
             }
@@ -43,9 +43,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     WriteLine("{0}{1} 0x{2:X4} ({2})", thread.ThreadId == currentThreadId ? "*" : " ", thread.ThreadIndex, thread.ThreadId);
                     if (Verbose)
                     {
-                        thread.GetRegisterValue(ThreadService.InstructionPointerIndex, out ulong ip);
-                        thread.GetRegisterValue(ThreadService.StackPointerIndex, out ulong sp);
-                        thread.GetRegisterValue(ThreadService.FramePointerIndex, out ulong fp);
+                        thread.TryGetRegisterValue(ThreadService.InstructionPointerIndex, out ulong ip);
+                        thread.TryGetRegisterValue(ThreadService.StackPointerIndex, out ulong sp);
+                        thread.TryGetRegisterValue(ThreadService.FramePointerIndex, out ulong fp);
                         WriteLine("    IP  0x{0:X16}", ip);
                         WriteLine("    SP  0x{0:X16}", sp);
                         WriteLine("    FP  0x{0:X16}", fp);

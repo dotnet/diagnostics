@@ -168,7 +168,7 @@ ArchQuery(void)
                 architecture = "arm64";
                 break;
         }
-        ExtErr("SOS does not support the current target architecture '%s' (0x%04x). A 32 bit target may require a 64 bit debugger or vice versa.\n",
+        ExtErr("SOS does not support the current target architecture '%s' (0x%04x). A 32 bit target may require a 32 bit debugger or vice versa. In general, try to use the same bitness for the debugger and target process.\n",
             architecture, processorType);
         return E_FAIL;
     }

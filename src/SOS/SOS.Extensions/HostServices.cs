@@ -172,6 +172,7 @@ namespace SOS.Extensions
             catch (InvalidCastException)
             {
             }
+            HResult hr;
             try
             {
                 var consoleService = new ConsoleServiceFromDebuggerServices(DebuggerServices);
@@ -182,7 +183,7 @@ namespace SOS.Extensions
                 // Add each extension command to the native debugger
                 foreach ((string name, string help, IEnumerable<string> aliases) in _commandProcessor.Commands)
                 {
-                    HResult hr = DebuggerServices.AddCommand(name, help, aliases);
+                    hr = DebuggerServices.AddCommand(name, help, aliases);
                     if (hr != HResult.S_OK)
                     {
                         Trace.TraceWarning($"Cannot add extension command {hr:X8} {name} - {help}");
@@ -194,12 +195,17 @@ namespace SOS.Extensions
                 Trace.TraceError(ex.ToString());
                 return HResult.E_FAIL;
             }
-            if (DebuggerServices.GetSymbolPath(out string symbolPath) >= HResult.S_OK)
+            hr = DebuggerServices.GetSymbolPath(out string symbolPath);
+            if (hr == HResult.S_OK)
             {
                 if (!_symbolService.ParseSymbolPath(symbolPath))
                 {
                     Trace.TraceError("ParseSymbolPath FAILED: {0}", symbolPath);
                 }
+            }
+            else
+            {
+                Trace.TraceError("DebuggerServices.GetSymbolPath FAILED: {0:X8}", hr);
             }
             return HResult.S_OK;
         }
@@ -342,7 +348,7 @@ namespace SOS.Extensions
                 {
                     IThreadService threadService = _target.Services.GetService<IThreadService>();
                     if (threadService != null && threadService.CurrentThreadId.HasValue) {
-                        return threadService.GetThreadInfoFromId(threadService.CurrentThreadId.Value);
+                        return threadService.GetThreadFromId(threadService.CurrentThreadId.Value);
                     }
                     return null;
                 });
