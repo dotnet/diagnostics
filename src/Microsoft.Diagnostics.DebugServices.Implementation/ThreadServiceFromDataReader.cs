@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         protected override IEnumerable<IThread> GetThreadsInner()
         {
-            return _threadReader.EnumerateOSThreadIds().Select((uint id, int index) => new Thread(this, index, id)).ToImmutableArray();
+            return _threadReader.EnumerateOSThreadIds().Select((uint id, int index) => new Thread(this, index, id)).Cast<IThread>();
         }
 
         protected override ulong GetThreadTeb(uint threadId)
