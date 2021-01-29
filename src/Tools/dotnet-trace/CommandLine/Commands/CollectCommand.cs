@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port, bool hideio);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port);
 
         /// <summary>
         /// Collects a diagnostic trace from a currently running process.
@@ -39,38 +39,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="clrevents">A list of CLR events to be emitted.</param>
         /// <param name="clreventlevel">The verbosity level of CLR events</param>
         /// <param name="port">Path to the diagnostic port to be created.</param>
-        /// <param name="hideio">Should IO from a child process be hidden.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool hideio)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort)
         {
             int ret = 0;
             try
             {
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
-
-                bool cancelOnEnter;
-                bool cancelOnCtrlC;
-                bool printStatusOverTime;
-
-                if (ProcessLauncher.Launcher.HasChildProc && !hideio)
-                {
-                    // If not hiding IO, then all IO (including CtrlC) behavior is delegated to the child process
-                    cancelOnCtrlC = false;
-                    cancelOnEnter = false;
-                    printStatusOverTime = false;
-                }
-                else
-                {
-                    cancelOnCtrlC = true;
-                    cancelOnEnter = !Console.IsInputRedirected;
-                    printStatusOverTime = !Console.IsInputRedirected;
-                }
-
-                if (!cancelOnCtrlC)
-                {
-                    ct = CancellationToken.None;
-                }
 
                 if (!ProcessLauncher.Launcher.HasChildProc)
                 {
@@ -141,7 +117,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-trace", 10);
                 bool shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort);
 
-                using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, hideIO: hideio))
+                using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort))
                 {
                     diagnosticsClient = holder.Client;
                     if (shouldResumeRuntime)
@@ -159,7 +135,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     ct.Register(() => shouldExit.Set());
 
-                    using (VirtualTerminalMode vTermMode = printStatusOverTime ? VirtualTerminalMode.TryEnable() : null)
+                    using (VirtualTerminalMode vTermMode = VirtualTerminalMode.TryEnable())
                     {
                         EventPipeSession session = null;
                         try
@@ -205,7 +181,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             var fileInfo = new FileInfo(output.FullName);
                             Task copyTask = session.EventStream.CopyToAsync(fs).ContinueWith((task) => shouldExit.Set());
 
-                            if (printStatusOverTime)
+                            if (!Console.IsOutputRedirected)
                             {
                                 rewriter = new LineRewriter { LineToClear = Console.CursorTop - 1 };
                                 Console.CursorVisible = false;
@@ -213,7 +189,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                             Action printStatus = () =>
                             {
-                                if (printStatusOverTime)
+                                if (!Console.IsOutputRedirected)
                                 {
                                     rewriter?.RewriteConsoleLine();
                                     fileInfo.Refresh();
@@ -225,7 +201,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     Console.Out.WriteLine("Stopping the trace. This may take up to minutes depending on the application being traced.");
                             };
 
-                            while (!shouldExit.WaitOne(100) && !(cancelOnEnter && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
+                            while (!shouldExit.WaitOne(100) && !(!Console.IsInputRedirected && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
                                 printStatus();
 
                             // if the CopyToAsync ended early (target program exited, etc.), the we don't need to stop the session.
@@ -234,7 +210,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 // Behavior concerning Enter moving text in the terminal buffer when at the bottom of the buffer
                                 // is different between Console/Terminals on Windows and Mac/Linux
                                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
-                                    printStatusOverTime &&
+                                    !Console.IsOutputRedirected &&
                                     rewriter != null &&
                                     Math.Abs(Console.CursorTop - Console.BufferHeight) == 1)
                                 {
@@ -251,7 +227,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             }
                         }
 
-                        Console.Out.WriteLine($"\nTrace completed.");
+                        Console.Out.WriteLine("\nTrace completed.");
 
                         if (format != TraceFileFormat.NetTrace)
                             TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
@@ -324,7 +300,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CLREventLevelOption(),
                 CommonOptions.NameOption(),
                 DiagnosticPortOption(),
-                HideIOOption()
             };
 
         private static uint DefaultCircularBufferSizeInMB() => 256;
@@ -399,13 +374,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 description: @"The path to a diagnostic port to be created.")
             {
                 Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => string.Empty)
-            };
-        private static Option HideIOOption() =>
-            new Option(
-                alias: "--redirect-child-output",
-                description: @"When specified, when collecting data from a child process hide the output of the launched process.")
-            {
-                Argument = new Argument<bool>(name: "hideio", getDefaultValue: () => true)
             };
     }
 }
