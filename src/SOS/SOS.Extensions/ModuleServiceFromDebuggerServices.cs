@@ -115,28 +115,15 @@ namespace SOS.Extensions
 
             public bool TryGetSymbolName(ulong address, out string symbol, out ulong displacement)
             {
-                HResult hr = _moduleService._debuggerServices.GetSymbolByOffset(ModuleIndex, address, out symbol, out displacement);
-                if (hr < HResult.S_OK) {
-                    return false;
-                }
-                // This is a temporary hack until the dbgeng DebuggerServices implementation doesn't add the module name to the symbol
-                if (_moduleService.Target.Host.HostType == HostType.DbgEng) {
-                    symbol = symbol.Replace(Path.GetFileNameWithoutExtension(FileName) + "!", "");
-                }
-                return true;
+                return _moduleService._debuggerServices.GetSymbolByOffset(ModuleIndex, address, out symbol, out displacement) == HResult.S_OK;
             }
 
             public bool TryGetSymbolAddress(string name, out ulong address)
             {
-                // This is a temporary hack until the dbgeng DebuggerServices implementation doesn't require the module name to be prepended to the symbol
-                if (_moduleService.Target.Host.HostType == HostType.DbgEng) {
-                    name = Path.GetFileNameWithoutExtension(FileName) + "!" + name;
-                }
                 return _moduleService._debuggerServices.GetOffsetBySymbol(ModuleIndex, name, out address) == HResult.S_OK;
             }
 
             #endregion
-
 
             protected override ModuleService ModuleService => _moduleService;
         }

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
@@ -29,9 +30,12 @@ namespace SOS
 
         private ref readonly IDebuggerServicesVTable VTable => ref Unsafe.AsRef<IDebuggerServicesVTable >(_vtable);
 
-        internal DebuggerServices(IntPtr punk)
+        private readonly HostType _hostType;
+
+        internal DebuggerServices(IntPtr punk, HostType hostType)
             : base(new RefCountedFreeLibrary(IntPtr.Zero), IID_IDebuggerServices, punk)
         {
+            _hostType = hostType;
         }
 
         public HResult GetOperatingSystem(out DebuggerServices.OperatingSystem operatingSystem)
@@ -279,7 +283,7 @@ namespace SOS
 
             // Get the symbol length first
             HResult hr = VTable.GetSymbolByOffset(Self, moduleIndex, address, null, 0, out uint symbolSize, out displacement);
-            if (hr >= HResult.S_OK)
+            if (hr == HResult.S_OK)
             {
                 if (symbolSize > 0)
                 {
@@ -288,9 +292,16 @@ namespace SOS
                     fixed (byte* symbolBufferPtr = symbolBuffer)
                     {
                         hr = VTable.GetSymbolByOffset(Self, moduleIndex, address, symbolBufferPtr, symbolBuffer.Length, out symbolSize, out displacement);
-                        if (hr >= HResult.S_OK)
+                        if (hr == HResult.S_OK)
                         {
                             symbol = Encoding.ASCII.GetString(symbolBufferPtr, (int)symbolSize - 1);
+                            if (_hostType == HostType.DbgEng)
+                            {
+                                int index = symbol.IndexOf('!');
+                                if (index != -1) {
+                                    symbol = symbol.Remove(0, index + 1);
+                                }
+                            }
                         }
                     }
                 }

@@ -422,7 +422,21 @@ DbgEngServices::GetOffsetBySymbol(
     PCSTR name,
     PULONG64 offset)
 {
-    return m_symbols->GetOffsetByName(name, offset);
+    ULONG cch = 0;
+    HRESULT hr = m_symbols->GetModuleNameString(DEBUG_MODNAME_MODULE, moduleIndex, 0, nullptr, 0, &cch);
+    if (FAILED(hr)) {
+        return hr;
+    }
+    ArrayHolder<char> moduleName = new char[cch];
+    hr = m_symbols->GetModuleNameString(DEBUG_MODNAME_MODULE, moduleIndex, 0, moduleName, cch, nullptr);
+    if (FAILED(hr)) {
+        return hr;
+    }
+    std::string symbolName;
+    symbolName.append(moduleName);
+    symbolName.append("!");
+    symbolName.append(name);
+    return m_symbols->GetOffsetByName(symbolName.c_str(), offset);
 }
 
 //----------------------------------------------------------------------------

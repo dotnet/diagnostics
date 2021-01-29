@@ -124,7 +124,7 @@ namespace SOS.Extensions
 
         public IServiceEvent OnShutdownEvent { get; } = new ServiceEvent();
 
-        HostType IHost.HostType => RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? HostType.DbgEng : HostType.Lldb;
+        public HostType HostType => RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? HostType.DbgEng : HostType.Lldb;
 
         IServiceProvider IHost.Services => _serviceProvider;
 
@@ -157,7 +157,7 @@ namespace SOS.Extensions
             // Create the wrapper for the host debugger services
             try
             {
-                DebuggerServices = new DebuggerServices(iunk);
+                DebuggerServices = new DebuggerServices(iunk, HostType);
             }
             catch (InvalidCastException ex)
             {
