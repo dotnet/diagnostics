@@ -83,12 +83,13 @@ namespace Microsoft.Internal.Common.Utils
                 return _childProc;
             }
         }
-        public bool Start(string diagnosticTransportName, CancellationToken ct)
+        public bool Start( string diagnosticTransportName, CancellationToken ct, bool hideIO)
         {
+            bool showChildIO = !hideIO;
             _childProc.StartInfo.UseShellExecute = false;
-            _childProc.StartInfo.RedirectStandardOutput = true;
-            _childProc.StartInfo.RedirectStandardError = true;
-            _childProc.StartInfo.RedirectStandardInput = true;
+            _childProc.StartInfo.RedirectStandardOutput = !showChildIO;
+            _childProc.StartInfo.RedirectStandardError = !showChildIO;
+            _childProc.StartInfo.RedirectStandardInput = !showChildIO;
             _childProc.StartInfo.Environment.Add("DOTNET_DiagnosticPorts", $"{diagnosticTransportName}");
             try
             {
@@ -100,8 +101,11 @@ namespace Microsoft.Internal.Common.Utils
                 Console.WriteLine(e.ToString());
                 return false;
             }
-            _stdOutTask = ReadAndIgnoreAllStreamAsync(_childProc.StandardOutput, ct);
-            _stdErrTask = ReadAndIgnoreAllStreamAsync(_childProc.StandardError, ct);
+            if (!showChildIO)
+            {
+                _stdOutTask = ReadAndIgnoreAllStreamAsync(_childProc.StandardOutput, ct);
+                _stdErrTask = ReadAndIgnoreAllStreamAsync(_childProc.StandardError, ct);
+            }
 
             return true;
         }
@@ -183,7 +187,7 @@ namespace Microsoft.Internal.Common.Utils
             _timeoutInSec = timeoutInSec;
         }
 
-        public async Task<DiagnosticsClientHolder> Build(CancellationToken ct, int processId, string portName)
+        public async Task<DiagnosticsClientHolder> Build(CancellationToken ct, int processId, string portName, bool hideIO)
         {
             if (ProcessLauncher.Launcher.HasChildProc)
             {
@@ -193,7 +197,7 @@ namespace Microsoft.Internal.Common.Utils
                 server.Start();
 
                 // Start the child proc
-                if (!ProcessLauncher.Launcher.Start(diagnosticTransportName, ct))
+                if (!ProcessLauncher.Launcher.Start(diagnosticTransportName, ct, hideIO))
                 {
                     throw new InvalidOperationException($"Failed to start {ProcessLauncher.Launcher.ChildProc.ProcessName}.");
                 }

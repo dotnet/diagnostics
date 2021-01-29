@@ -98,7 +98,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
 
             DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
-            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort))
+            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, hideIO: true))
             {
                 try
                 {
@@ -135,7 +135,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 return 0;
             }
             DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
-            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort))
+            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, hideIO: true))
             {
                 try
                 {
