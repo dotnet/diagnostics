@@ -173,6 +173,9 @@ IFDEF:CDB
 VERIFY:Break instruction exception - code 80000003
 ENDIF:CDB
 
+# DumpStackObjects does work on 6.0 MacOS
+!IFDEF:OSX
+
 SOSCOMMAND:EEHeap -gc
 SOSCOMMAND:DumpStackObjects
 SOSCOMMAND:GCWhere <POUT>\w+\s+(<HEXVAL>)\s+([Gg][Cc]where!\$0_)*GCWhere\s+<POUT>
@@ -182,6 +185,8 @@ VERIFY:<HEXVAL>\s+[02]\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+49\]\s+
+
+ENDIF:OSX
 
 # Continue to the next DebugBreak
 CONTINUE
