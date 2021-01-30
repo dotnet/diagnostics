@@ -62,9 +62,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public abstract ulong ImageSize { get; }
 
-        public abstract int IndexFileSize { get; }
+        public abstract uint? IndexFileSize { get; }
 
-        public abstract int IndexTimeStamp { get; }
+        public abstract uint? IndexTimeStamp { get; }
 
         public bool IsPEImage
         {

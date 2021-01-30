@@ -37,6 +37,10 @@ namespace SOS.Hosting
         private const string SOSInitialize = "SOSInitializeByHost";
         private const string SOSUninitialize = "SOSUninitializeByHost";
 
+        // This is what dbgeng/IDebuggerServices returns for non-PE modules that don't have a timestamp
+        internal const uint InvalidTimeStamp = 0xFFFFFFFE;
+        internal const uint InvalidChecksum = 0xFFFFFFFF;
+
         internal readonly ITarget Target;
         internal readonly IConsoleService ConsoleService;
         internal readonly IModuleService ModuleService;
@@ -499,8 +503,8 @@ namespace SOS.Hosting
                     {
                         moduleParams[i].Base = module.ImageBase;
                         moduleParams[i].Size = (uint)module.ImageSize;
-                        moduleParams[i].TimeDateStamp = (uint)module.IndexTimeStamp;
-                        moduleParams[i].Checksum = 0;
+                        moduleParams[i].TimeDateStamp = module.IndexTimeStamp.GetValueOrDefault(InvalidTimeStamp);
+                        moduleParams[i].Checksum = InvalidChecksum;
                         moduleParams[i].Flags = DEBUG_MODULE.LOADED;
                         moduleParams[i].SymbolType = DEBUG_SYMTYPE.PDB;
 
@@ -672,7 +676,7 @@ namespace SOS.Hosting
             byte[] registerContext;
             try
             {
-                registerContext = ThreadService.GetThreadInfoFromId(threadId).GetThreadContext();
+                registerContext = ThreadService.GetThreadFromId(threadId).GetThreadContext();
             }
             catch (DiagnosticsException)
             {
@@ -744,7 +748,7 @@ namespace SOS.Hosting
         {
             try
             {
-                ThreadService.CurrentThreadId = ThreadService.GetThreadInfoFromIndex(unchecked((int)id)).ThreadId;
+                ThreadService.CurrentThreadId = ThreadService.GetThreadFromIndex(unchecked((int)id)).ThreadId;
             }
             catch (DiagnosticsException)
             {
@@ -805,7 +809,7 @@ namespace SOS.Hosting
             {
                 try
                 {
-                    IThread threadInfo = ThreadService.GetThreadInfoFromId(sysId);
+                    IThread threadInfo = ThreadService.GetThreadFromId(sysId);
                     id = (uint)threadInfo.ThreadIndex;
                     return HResult.S_OK;
                 }
@@ -826,7 +830,7 @@ namespace SOS.Hosting
                 uint threadId = ThreadService.CurrentThreadId.Value;
                 try
                 {
-                    ulong teb = ThreadService.GetThreadInfoFromId(threadId).GetThreadTeb();
+                    ulong teb = ThreadService.GetThreadFromId(threadId).GetThreadTeb();
                     Write(offset, teb);
                     return HResult.S_OK;
                 }
@@ -864,7 +868,7 @@ namespace SOS.Hosting
             string name,
             out uint index)
         {
-            if (!ThreadService.GetRegisterIndexByName(name, out int value)) {
+            if (!ThreadService.TryGetRegisterIndexByName(name, out int value)) {
                 index = 0;
                 return HResult.E_INVALIDARG;
             }
@@ -909,7 +913,7 @@ namespace SOS.Hosting
             string register,
             out ulong value)
         {
-            if (!ThreadService.GetRegisterIndexByName(register, out int index)) {
+            if (!ThreadService.TryGetRegisterIndexByName(register, out int index)) {
                 value = 0;
                 return HResult.E_INVALIDARG;
             }
@@ -922,10 +926,10 @@ namespace SOS.Hosting
         {
             if (ThreadService.CurrentThreadId.HasValue)
             {
-                IThread thread = ThreadService.GetThreadInfoFromId(ThreadService.CurrentThreadId.Value);
+                IThread thread = ThreadService.GetThreadFromId(ThreadService.CurrentThreadId.Value);
                 if (thread != null)
                 {
-                    if (thread.GetRegisterValue(index, out value))
+                    if (thread.TryGetRegisterValue(index, out value))
                     {
                         return HResult.S_OK;
                     }

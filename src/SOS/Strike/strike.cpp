@@ -16818,7 +16818,13 @@ DECLARE_API(ext)
     IHostServices* hostServices = GetHostServices();
     if (hostServices != nullptr)
     {
-        Status = hostServices->DispatchCommand(args);
+        // Just load the managed infrastructure if no command. This is useful in lldb
+        // where the managed extension commands are not added until a command does 
+        // GetHostServices() like soshelp, logging, sosstatus, setsymbolserver and ext.
+        if (args != nullptr && strlen(args) > 0)
+        {
+            Status = hostServices->DispatchCommand(args);
+        }
     }
     else 
     {

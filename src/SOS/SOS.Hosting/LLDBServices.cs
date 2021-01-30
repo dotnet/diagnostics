@@ -195,8 +195,8 @@ namespace SOS.Hosting
                 IModule module = _soshost.ModuleService.GetModuleFromIndex((int)index);
                 SOSHost.Write(moduleBase, module.ImageBase);
                 SOSHost.Write(moduleSize, module.ImageSize);
-                SOSHost.Write(timestamp, (uint)module.IndexTimeStamp);
-                SOSHost.Write(checksum, 0);
+                SOSHost.Write(timestamp, module.IndexTimeStamp.GetValueOrDefault(SOSHost.InvalidTimeStamp));
+                SOSHost.Write(checksum, SOSHost.InvalidChecksum);
             }
             catch (DiagnosticsException)
             {

@@ -14,6 +14,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -130,7 +131,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 services.AddServiceFactory<IThread>(() => {
                     IThreadService threadService = _target.Services.GetService<IThreadService>();
                     if (threadService != null && threadService.CurrentThreadId.HasValue) {
-                        return threadService.GetThreadInfoFromId(threadService.CurrentThreadId.Value);
+                        return threadService.GetThreadFromId(threadService.CurrentThreadId.Value);
                     }
                     return null;
                 });
@@ -154,6 +155,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
         HostType IHost.HostType => HostType.DotnetDump;
 
         IServiceProvider IHost.Services => _serviceProvider;
+
+        IEnumerable<ITarget> IHost.EnumerateTargets() => _target != null ? new ITarget[] { _target } : Array.Empty<ITarget>();
 
         ITarget IHost.CurrentTarget => _target;
 

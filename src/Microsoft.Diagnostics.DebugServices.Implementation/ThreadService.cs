@@ -132,7 +132,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="name">register name</param>
         /// <param name="index">returns register index or -1</param>
         /// <returns>true if name found</returns>
-        public bool GetRegisterIndexByName(string name, out int index)
+        public bool TryGetRegisterIndexByName(string name, out int index)
         {
             if (_lookupByName.TryGetValue(name, out RegisterInfo info))
             {
@@ -149,7 +149,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="index">register index</param>
         /// <param name="info">RegisterInfo</param>
         /// <returns>true if index found</returns>
-        public bool GetRegisterInfo(int index, out RegisterInfo info)
+        public bool TryGetRegisterInfo(int index, out RegisterInfo info)
         {
             return _lookupByIndex.TryGetValue(index, out info);
         }
@@ -174,7 +174,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="threadIndex">index</param>
         /// <returns>thread info</returns>
         /// <exception cref="DiagnosticsException">invalid thread index</exception>
-        public IThread GetThreadInfoFromIndex(int threadIndex)
+        public IThread GetThreadFromIndex(int threadIndex)
         {
             try
             {
@@ -192,7 +192,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="threadId">os id</param>
         /// <returns>thread info</returns>
         /// <exception cref="DiagnosticsException">invalid thread id</exception>
-        public IThread GetThreadInfoFromId(uint threadId)
+        public IThread GetThreadFromId(uint threadId)
         {
             if (!GetThreads().TryGetValue(threadId, out IThread thread)) {
                 throw new DiagnosticsException($"Invalid thread id: {threadId}");

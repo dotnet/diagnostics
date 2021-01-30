@@ -57,7 +57,6 @@ namespace SOS.Extensions
 
         protected override IEnumerable<IThread> GetThreadsInner()
         {
-            var threads = new List<IThread>();
             HResult hr = _debuggerServices.GetNumberThreads(out uint number);
             if (hr == HResult.S_OK)
             {
@@ -68,8 +67,7 @@ namespace SOS.Extensions
                 {
                     for (int i = 0; i < number; i++)
                     {
-                        var thread = new Thread(this, unchecked((int)threadIds[i]), threadSysIds[i]);
-                        threads.Add(thread);
+                        yield return new Thread(this, unchecked((int)threadIds[i]), threadSysIds[i]);
                     }
                 }
                 else
@@ -81,7 +79,6 @@ namespace SOS.Extensions
             {
                 Trace.TraceError("GetNumberThreads() FAILED {0:X8}", hr);
             }
-            return threads;
         }
 
         protected override ulong GetThreadTeb(uint threadId)

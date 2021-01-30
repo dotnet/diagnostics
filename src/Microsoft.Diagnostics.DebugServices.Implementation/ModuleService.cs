@@ -263,10 +263,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     flags |= isVirtual ? Module.Flags.IsLoadedLayout : Module.Flags.IsFileLayout;
                     return peImage;
                 }
+                else
+                {
+                    Trace.TraceError($"GetPEInfo: PE invalid {address:X16} isVirtual {isVirtual}");
+                }
             }
             catch (Exception ex) when (ex is BadImageFormatException || ex is EndOfStreamException || ex is IOException)
             {
-                Trace.TraceError($"GetPEInfo: loaded {address:X16} exception {ex.Message}");
+                Trace.TraceError($"GetPEInfo: loaded {address:X16} isVirtual {isVirtual} exception {ex.Message}");
             }
             return null;
         }
@@ -289,11 +293,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             { 
                 if (SymbolService.IsSymbolStoreEnabled)
                 {
-                    SymbolStoreKey key = PEFileKeyGenerator.GetKey(Path.GetFileName(module.FileName), (uint)module.IndexTimeStamp, (uint)module.IndexFileSize);
-                    if (key != null)
+                    if (module.IndexTimeStamp.HasValue && module.IndexFileSize.HasValue)
                     {
-                        // Now download the module from the symbol server
-                        downloadFilePath = SymbolService.DownloadFile(key);
+                        SymbolStoreKey key = PEFileKeyGenerator.GetKey(Path.GetFileName(module.FileName), module.IndexTimeStamp.Value, module.IndexFileSize.Value);
+                        if (key != null)
+                        {
+                            // Now download the module from the symbol server
+                            downloadFilePath = SymbolService.DownloadFile(key);
+                        }
                     }
                 }
             }

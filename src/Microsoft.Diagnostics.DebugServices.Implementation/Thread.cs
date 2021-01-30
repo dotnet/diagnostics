@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
@@ -31,11 +32,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public uint ThreadId { get; }
 
-        public bool GetRegisterValue(int index, out ulong value)
+        public bool TryGetRegisterValue(int index, out ulong value)
         {
             value = 0;
 
-            if (_threadService.GetRegisterInfo(index, out RegisterInfo info))
+            if (_threadService.TryGetRegisterInfo(index, out RegisterInfo info))
             {
                 try
                 {
@@ -54,10 +55,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         case 8:
                             value = MemoryMarshal.Read<ulong>(threadContext);
                             return true;
+                        default:
+                            Trace.TraceError($"GetRegisterValue: 0x{ThreadId:X4} {info.RegisterName} invalid size {info.RegisterSize}");
+                            break;
                     }
                 }
-                catch (DiagnosticsException)
+                catch (DiagnosticsException ex)
                 {
+                    Trace.TraceError($"GetRegisterValue: 0x{ThreadId:X4} {info.RegisterName} {ex}");
                 }
             }
             return false;

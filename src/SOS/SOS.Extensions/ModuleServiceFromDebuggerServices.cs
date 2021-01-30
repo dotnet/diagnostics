@@ -10,6 +10,7 @@ using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace SOS.Extensions
@@ -19,8 +20,11 @@ namespace SOS.Extensions
     /// </summary>
     internal class ModuleServiceFromDebuggerServices : ModuleService
     {
-        class ModuleFromDebuggerServices : Module
+        class ModuleFromDebuggerServices : Module, IExportSymbols, IModuleSymbols
         {
+            // This is what dbgeng/IDebuggerServices returns for non-PE modules that don't have a timestamp
+            private const uint InvalidTimeStamp = 0xFFFFFFFE;
+
             private readonly ModuleServiceFromDebuggerServices _moduleService;
             private string _versionString;
 
@@ -30,16 +34,19 @@ namespace SOS.Extensions
                 string imageName,
                 ulong imageBase,
                 ulong imageSize,
-                int indexFileSize,
-                int indexTimeStamp)
+                uint indexFileSize,
+                uint indexTimeStamp)
             {
                 _moduleService = moduleService;
                 ModuleIndex = moduleIndex;
                 FileName = imageName;
                 ImageBase = imageBase;
                 ImageSize = imageSize;
-                IndexFileSize = indexFileSize;
-                IndexTimeStamp = indexTimeStamp;
+                IndexFileSize = indexTimeStamp == InvalidTimeStamp ? null : indexFileSize;
+                IndexTimeStamp = indexTimeStamp == InvalidTimeStamp ? null : indexTimeStamp;
+
+                ServiceProvider.AddService<IExportSymbols>(this);
+                ServiceProvider.AddService<IModuleSymbols>(this);
             }
 
             #region IModule
@@ -52,9 +59,9 @@ namespace SOS.Extensions
 
             public override ulong ImageSize { get; }
 
-            public override int IndexFileSize { get; }
+            public override uint? IndexFileSize { get; }
 
-            public override int IndexTimeStamp { get; }
+            public override uint? IndexTimeStamp { get; }
 
             public override VersionInfo? Version
             {
@@ -104,6 +111,20 @@ namespace SOS.Extensions
 
             #endregion
 
+            #region IExportSymbols/IModuleSymbols
+
+            public bool TryGetSymbolName(ulong address, out string symbol, out ulong displacement)
+            {
+                return _moduleService._debuggerServices.GetSymbolByOffset(ModuleIndex, address, out symbol, out displacement) == HResult.S_OK;
+            }
+
+            public bool TryGetSymbolAddress(string name, out ulong address)
+            {
+                return _moduleService._debuggerServices.GetOffsetBySymbol(ModuleIndex, name, out address) == HResult.S_OK;
+            }
+
+            #endregion
+
             protected override ModuleService ModuleService => _moduleService;
         }
 
@@ -132,11 +153,11 @@ namespace SOS.Extensions
                     if (hr == HResult.S_OK)
                     {
                         hr = _debuggerServices.GetModuleName(moduleIndex, out string imageName);
-                        if (hr < 0)
+                        if (hr < HResult.S_OK)
                         {
                             Trace.TraceError("GetModuleName({0}) {1:X16} FAILED {2:X8}", moduleIndex, imageBase, hr);
                         }
-                        var module = new ModuleFromDebuggerServices(this, moduleIndex, imageName, imageBase, imageSize, unchecked((int)imageSize), unchecked((int)timestamp));
+                        var module = new ModuleFromDebuggerServices(this, moduleIndex, imageName, imageBase, imageSize, (uint)imageSize, timestamp);
                         if (!modules.TryGetValue(imageBase, out IModule original))
                         {
                             modules.Add(imageBase, module);

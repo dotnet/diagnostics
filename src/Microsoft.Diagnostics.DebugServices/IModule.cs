@@ -41,12 +41,12 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// Gets the specific file size of the image used to index it on the symbol server.
         /// </summary>
-        int IndexFileSize { get; }
+        uint? IndexFileSize { get; }
 
         /// <summary>
         /// Gets the timestamp of the image used to index it on the symbol server.
         /// </summary>
-        int IndexTimeStamp { get; }
+        uint? IndexTimeStamp { get; }
 
         /// <summary>
         /// Build id on Linux and MacOS, otherwise empty value.

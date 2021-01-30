@@ -130,6 +130,19 @@ public:
         PSTR buffer,
         ULONG bufferSize,
         PULONG pathSize) = 0;
+
+    virtual HRESULT STDMETHODCALLTYPE GetSymbolByOffset(
+        ULONG moduleIndex,
+        ULONG64 offset,
+        PSTR nameBuffer,
+        ULONG nameBufferSize,
+        PULONG nameSize,
+        PULONG64 displacement) = 0;
+
+    virtual HRESULT STDMETHODCALLTYPE GetOffsetBySymbol(
+        ULONG moduleIndex,
+        PCSTR name,
+        PULONG64 offset) = 0;
 };
 
 #ifdef __cplusplus

@@ -27,7 +27,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (NetFx || NetCore)
             {
                 string name = NetFx ? "desktop .NET Framework" : ".NET Core";
-                foreach (IRuntime runtime in RuntimeService.Runtimes)
+                foreach (IRuntime runtime in RuntimeService.EnumerateRuntimes())
                 {
                     if (NetFx && runtime.RuntimeType == RuntimeType.Desktop ||
                         NetCore && runtime.RuntimeType  == RuntimeType.NetCore)
@@ -41,9 +41,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else
             {
-                foreach (IRuntime runtime in RuntimeService.Runtimes)
+                // Display the current runtime star ("*") only if there is more than one runtime
+                bool displayStar = RuntimeService.EnumerateRuntimes().Count() > 1;
+
+                foreach (IRuntime runtime in RuntimeService.EnumerateRuntimes())
                 {
-                    string current = RuntimeService.Runtimes.Count() > 1 ? runtime == RuntimeService.CurrentRuntime ? "*" : " " : "";
+                    string current = displayStar ? (runtime == RuntimeService.CurrentRuntime ? "*" : " ") : "";
                     Write(current);
                     Write(runtime.ToString());
                 }

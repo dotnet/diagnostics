@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="registerIndex">register index</param>
         /// <param name="value">value returned</param>
         /// <returns>true if value found</returns>
-        bool GetRegisterValue(int registerIndex, out ulong value);
+        bool TryGetRegisterValue(int registerIndex, out ulong value);
 
         /// <summary>
         /// Returns the raw context buffer bytes for the specified thread.

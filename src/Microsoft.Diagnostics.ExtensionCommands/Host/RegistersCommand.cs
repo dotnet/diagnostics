@@ -23,7 +23,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             foreach (RegisterInfo register in ThreadService.Registers)
             {
-                if (thread.GetRegisterValue(register.RegisterIndex, out ulong value))
+                if (thread.TryGetRegisterValue(register.RegisterIndex, out ulong value))
                 {
                     switch (register.RegisterSize)
                     {

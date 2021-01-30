@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="name">register name</param>
         /// <param name="registerIndex">returns register index or -1</param>
         /// <returns>true if name found</returns>
-        bool GetRegisterIndexByName(string name, out int registerIndex);
+        bool TryGetRegisterIndexByName(string name, out int registerIndex);
 
         /// <summary>
         /// Returns the register info (name, offset, size, etc).
@@ -46,7 +46,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="registerIndex">register index</param>
         /// <param name="info">RegisterInfo</param>
         /// <returns>true if index found</returns>
-        bool GetRegisterInfo(int registerIndex, out RegisterInfo info);
+        bool TryGetRegisterInfo(int registerIndex, out RegisterInfo info);
 
         /// <summary>
         /// Current OS thread Id
@@ -65,7 +65,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="threadIndex">index</param>
         /// <returns>thread info</returns>
         /// <exception cref="DiagnosticsException">invalid thread index</exception>
-        IThread GetThreadInfoFromIndex(int threadIndex);
+        IThread GetThreadFromIndex(int threadIndex);
 
         /// <summary>
         /// Get the thread info from the OS thread id
@@ -73,6 +73,6 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="threadId">os id</param>
         /// <returns>thread info</returns>
         /// <exception cref="DiagnosticsException">invalid thread id</exception>
-        IThread GetThreadInfoFromId(uint threadId);
+        IThread GetThreadFromId(uint threadId);
     }
 }

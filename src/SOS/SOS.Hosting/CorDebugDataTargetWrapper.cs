@@ -139,7 +139,7 @@ namespace SOS.Hosting
             byte[] registerContext;
             try
             {
-                registerContext = _threadService.GetThreadInfoFromId(threadId).GetThreadContext();
+                registerContext = _threadService.GetThreadFromId(threadId).GetThreadContext();
             }
             catch (DiagnosticsException)
             {
