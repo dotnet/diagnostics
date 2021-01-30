@@ -19,7 +19,8 @@ namespace Microsoft.Internal.Common.Utils
     internal class ProcessLauncher
     {
         private Process _childProc = null;
-
+        private Task _stdOutTask = Task.CompletedTask;
+        private Task _stdErrTask = Task.CompletedTask;
         internal static ProcessLauncher Launcher = new ProcessLauncher();
 
         public void PrepareChildProcess(string[] args)
@@ -59,6 +60,14 @@ namespace Microsoft.Internal.Common.Utils
             return -1;
         }
 
+        private async Task ReadAndIgnoreAllStreamAsync(StreamReader streamToIgnore, CancellationToken cancelToken)
+        {
+            Memory<char> memory = new char[4096];
+            while (await streamToIgnore.ReadAsync(memory, cancelToken) != 0)
+            {
+            }
+        }
+
         public bool HasChildProc
         {
             get
@@ -74,7 +83,7 @@ namespace Microsoft.Internal.Common.Utils
                 return _childProc;
             }
         }
-        public bool Start(string diagnosticTransportName)
+        public bool Start(string diagnosticTransportName, CancellationToken ct)
         {
             _childProc.StartInfo.UseShellExecute = false;
             _childProc.StartInfo.RedirectStandardOutput = true;
@@ -91,6 +100,9 @@ namespace Microsoft.Internal.Common.Utils
                 Console.WriteLine(e.ToString());
                 return false;
             }
+            _stdOutTask = ReadAndIgnoreAllStreamAsync(_childProc.StandardOutput, ct);
+            _stdErrTask = ReadAndIgnoreAllStreamAsync(_childProc.StandardError, ct);
+
             return true;
         }
 
@@ -104,6 +116,8 @@ namespace Microsoft.Internal.Common.Utils
                 }
                 // if process exited while we were trying to kill it, it can throw IOE 
                 catch (InvalidOperationException) { }
+                _stdOutTask.Wait();
+                _stdErrTask.Wait();
             }
         }
     }
@@ -179,7 +193,7 @@ namespace Microsoft.Internal.Common.Utils
                 server.Start();
 
                 // Start the child proc
-                if (!ProcessLauncher.Launcher.Start(diagnosticTransportName))
+                if (!ProcessLauncher.Launcher.Start(diagnosticTransportName, ct))
                 {
                     throw new InvalidOperationException($"Failed to start {ProcessLauncher.Launcher.ChildProc.ProcessName}.");
                 }
