@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress
                     {
                         if (ValidationResult.Success != result)
                         {
-                            _logger.LogWarning("Provider '{0}': {1}", _providerName, result.ErrorMessage);
+                            _logger.EgressProviderOptionsValidationWarning(_providerName, result.ErrorMessage);
                         }
                     }
                 }

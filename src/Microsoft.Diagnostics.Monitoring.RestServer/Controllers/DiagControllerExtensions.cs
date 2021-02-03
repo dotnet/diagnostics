@@ -17,8 +17,6 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 {
     internal static class DiagControllerExtensions
     {
-        private const string ExceptionLogMessage = "Request failed.";
-
         public static ActionResult NotAcceptable(this ControllerBase controller)
         {
             return new StatusCodeResult((int)HttpStatusCode.NotAcceptable);
@@ -94,13 +92,13 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer.Controllers
 
         private static bool LogError(ILogger logger, Exception ex)
         {
-            logger.LogError(ex, ExceptionLogMessage);
+            logger.RequestFailed(ex);
             return true;
         }
 
         private static bool LogInformation(ILogger logger, Exception ex)
         {
-            logger.LogInformation(ex.Message);
+            logger.RequestCanceled();
             return true;
         }
     }

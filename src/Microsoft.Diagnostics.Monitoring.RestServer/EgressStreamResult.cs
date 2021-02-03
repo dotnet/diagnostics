@@ -45,7 +45,7 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 
                 EgressResult egressResult = await _egress(egressService, token);
 
-                logger.LogInformation("Egressed to {0}", egressResult.Value);
+                logger.EgressedArtifact(egressResult.Value);
 
                 // The remaining code is creating a JSON object with a single property and scalar value
                 // that indiates where the stream data was egressed. Because the name of the artifact is

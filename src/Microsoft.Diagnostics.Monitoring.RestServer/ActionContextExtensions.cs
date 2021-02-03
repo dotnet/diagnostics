@@ -16,8 +16,6 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 {
     internal static class ActionContextExtensions
     {
-        private const string ExceptionLogMessage = "Request failed.";
-
         public static Task ProblemAsync(this ActionContext context, Exception ex)
         {
             if (context.HttpContext.Features.Get<IHttpResponseFeature>().HasStarted)
@@ -81,13 +79,13 @@ namespace Microsoft.Diagnostics.Monitoring.RestServer
 
         private static bool LogError(ILogger logger, Exception ex)
         {
-            logger.LogError(ex, ExceptionLogMessage);
+            logger.RequestFailed(ex);
             return true;
         }
 
         private static bool LogInformation(ILogger logger, Exception ex)
         {
-            logger.LogInformation(ex.Message);
+            logger.RequestCanceled();
             return true;
         }
     }

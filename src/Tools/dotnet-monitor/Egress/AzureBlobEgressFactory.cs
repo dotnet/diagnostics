@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress
         {
             if (!egressProperties.TryGetValue(propertyName, out value))
             {
-                Logger.LogWarning("Provider '{0}': Unable to find '{1}' key in egress properties.", providerName, propertyName);
+                Logger.EgressProviderUnableToFindPropertyKey(providerName, propertyName);
                 return false;
             }
             return true;

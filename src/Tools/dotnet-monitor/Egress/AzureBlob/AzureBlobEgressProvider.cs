@@ -43,17 +43,14 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.AzureStorage
 
                 BlobClient blobClient = containerClient.GetBlobClient(GetBlobName(name));
 
-                Logger?.LogDebug("Start invoking stream action.");
+                Logger?.EgressProviderInvokeStreamAction(EgressProviderTypes.AzureBlobStorage);
                 using var stream = await action(token);
-                Logger?.LogDebug("End invoking stream action.");
 
                 // Write blob content, headers, and metadata
-                Logger?.LogDebug("Start uploading to storage with headers and metadata.");
                 await blobClient.UploadAsync(stream, CreateHttpHeaders(streamOptions), streamOptions.Metadata, cancellationToken: token);
-                Logger?.LogDebug("End uploading to storage with headers and metadata.");
 
                 string blobUriString = GetBlobUri(blobClient);
-                Logger?.LogDebug("Uploaded stream to {0}", blobUriString);
+                Logger?.EgressProviderSavedStream(EgressProviderTypes.AzureBlobStorage, blobUriString);
                 return blobUriString;
             }
             catch (AggregateException ex) when (ex.InnerException is RequestFailedException innerException)
@@ -81,27 +78,22 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.AzureStorage
                 BlockBlobClient blobClient = containerClient.GetBlockBlobClient(GetBlobName(name));
 
                 // Write blob content
-                Logger?.LogDebug("Start uploading to storage.");
                 using (Stream blobStream = await blobClient.OpenWriteAsync(overwrite: true, cancellationToken: token))
                 {
+                    Logger?.EgressProviderInvokeStreamAction(EgressProviderTypes.AzureBlobStorage);
                     await action(blobStream, token);
 
                     await blobStream.FlushAsync(token);
                 }
-                Logger?.LogDebug("End uploading to storage.");
 
                 // Write blob headers
-                Logger?.LogDebug("Start writing headers.");
                 await blobClient.SetHttpHeadersAsync(CreateHttpHeaders(streamOptions), cancellationToken: token);
-                Logger?.LogDebug("End writing headers.");
 
                 // Write blob metadata
-                Logger?.LogDebug("Start writing metadata.");
                 await blobClient.SetMetadataAsync(streamOptions.Metadata, cancellationToken: token);
-                Logger?.LogDebug("End writing metadata.");
 
                 string blobUriString = GetBlobUri(blobClient);
-                Logger?.LogDebug("Uploaded stream to {0}", blobUriString);
+                Logger?.EgressProviderSavedStream(EgressProviderTypes.AzureBlobStorage, blobUriString);
                 return blobUriString;
             }
             catch (AggregateException ex) when (ex.InnerException is RequestFailedException innerException)
@@ -116,15 +108,15 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.AzureStorage
 
         private void LogAndValidateOptions(AzureBlobEgressStreamOptions streamOptions, string fileName)
         {
-            Logger?.LogProviderOption(nameof(Options.AccountKey), Options.AccountKey, redact: true);
-            Logger?.LogProviderOption(nameof(Options.AccountUri), GetAccountUri(out _));
-            Logger?.LogProviderOption(nameof(Options.BlobPrefix), Options.BlobPrefix);
-            Logger?.LogProviderOption(nameof(Options.ContainerName), Options.ContainerName);
-            Logger?.LogProviderOption(nameof(Options.SharedAccessSignature), Options.SharedAccessSignature, redact: true);
-            Logger?.LogStreamOption(nameof(streamOptions.ContentEncoding), streamOptions.ContentEncoding);
-            Logger?.LogStreamOption(nameof(streamOptions.ContentType), streamOptions.ContentType);
-            Logger?.LogStreamOption(nameof(streamOptions.Metadata), "[" + string.Join(", ", streamOptions.Metadata.Keys) + "]");
-            Logger?.LogDebug($"File name: {fileName}");
+            Logger?.EgressProviderOptionValue(EgressProviderTypes.AzureBlobStorage, nameof(Options.AccountKey), Options.AccountKey, redact: true);
+            Logger?.EgressProviderOptionValue(EgressProviderTypes.AzureBlobStorage, nameof(Options.AccountUri), GetAccountUri(out _));
+            Logger?.EgressProviderOptionValue(EgressProviderTypes.AzureBlobStorage, nameof(Options.BlobPrefix), Options.BlobPrefix);
+            Logger?.EgressProviderOptionValue(EgressProviderTypes.AzureBlobStorage, nameof(Options.ContainerName), Options.ContainerName);
+            Logger?.EgressProviderOptionValue(EgressProviderTypes.AzureBlobStorage, nameof(Options.SharedAccessSignature), Options.SharedAccessSignature, redact: true);
+            Logger?.EgressStreamOptionValue(EgressProviderTypes.AzureBlobStorage, nameof(streamOptions.ContentEncoding), streamOptions.ContentEncoding);
+            Logger?.EgressStreamOptionValue(EgressProviderTypes.AzureBlobStorage, nameof(streamOptions.ContentType), streamOptions.ContentType);
+            Logger?.EgressStreamOptionValue(EgressProviderTypes.AzureBlobStorage, nameof(streamOptions.Metadata), "[" + string.Join(", ", streamOptions.Metadata.Keys) + "]");
+            Logger?.EgressProviderFileName(EgressProviderTypes.AzureBlobStorage, fileName);
 
             ValidateOptions();
         }
@@ -146,8 +138,6 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.AzureStorage
             BlobServiceClient serviceClient;
             if (!string.IsNullOrWhiteSpace(Options.SharedAccessSignature))
             {
-                Logger?.LogDebug("Using shared access signature.");
-
                 var serviceUriBuilder = new UriBuilder(Options.AccountUri)
                 {
                     Query = Options.SharedAccessSignature
@@ -157,8 +147,6 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.AzureStorage
             }
             else if (!string.IsNullOrEmpty(Options.AccountKey))
             {
-                Logger?.LogDebug("Using account key.");
-
                 // Remove Query in case SAS token was specified
                 Uri accountUri = GetAccountUri(out string accountName);
 
@@ -173,10 +161,8 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.AzureStorage
                 throw CreateException("SharedAccessSignature or AccountKey must be specified.");
             }
 
-            Logger?.LogDebug("Start creating blob container if not exists.");
             BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(Options.ContainerName);
             await containerClient.CreateIfNotExistsAsync(cancellationToken: token);
-            Logger?.LogDebug("End creating blob container if not exists.");
 
             return containerClient;
         }

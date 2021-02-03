@@ -30,30 +30,23 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.FileSystem
         {
             LogAndValidateOptions(name);
 
-            Logger?.LogDebug("Check if target directory exists.");
             if (!Directory.Exists(Options.DirectoryPath))
             {
-                Logger?.LogDebug("Start creating target directory.");
                 WrapException(() => Directory.CreateDirectory(Options.DirectoryPath));
-                Logger?.LogDebug("End creating target directory.");
             }
 
             string targetPath = Path.Combine(Options.DirectoryPath, name);
 
             if (!string.IsNullOrEmpty(Options.IntermediateDirectoryPath))
             {
-                Logger?.LogDebug("Check if intermediate directory exists.");
                 if (!Directory.Exists(Options.IntermediateDirectoryPath))
                 {
-                    Logger?.LogDebug("Start creating intermediate directory.");
                     WrapException(() => Directory.CreateDirectory(Options.IntermediateDirectoryPath));
-                    Logger?.LogDebug("End creating intermediate directory.");
                 }
 
                 string intermediateFilePath = null;
                 try
                 {
-                    Logger?.LogDebug("Generating intermediate file.");
                     int remainingAttempts = 10;
                     bool intermediatePathExists;
                     do
@@ -71,21 +64,16 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.FileSystem
 
                     await WriteFileAsync(action, intermediateFilePath, token);
 
-                    Logger?.LogDebug("Start moving intermediate file to destination.");
                     WrapException(() => File.Move(intermediateFilePath, targetPath));
-                    Logger?.LogDebug("End moving intermediate file to destination.");
                 }
                 finally
                 {
                     // Attempt to delete the intermediate file if it exists.
                     try
                     {
-                        Logger?.LogDebug("Check if intermediate file exists.");
                         if (File.Exists(intermediateFilePath))
                         {
-                            Logger?.LogDebug("Start removing intermediate file.");
                             File.Delete(intermediateFilePath);
-                            Logger?.LogDebug("End removing intermediate file.");
                         }
                     }
                     catch (Exception)
@@ -98,34 +86,28 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.FileSystem
                 await WriteFileAsync(action, targetPath, token);
             }
 
-            Logger?.LogDebug("Saved stream to '{0}.", targetPath);
+            Logger?.EgressProviderSavedStream(EgressProviderTypes.FileSystem, targetPath);
             return targetPath;
         }
 
         private void LogAndValidateOptions(string fileName)
         {
-            Logger?.LogProviderOption(nameof(Options.DirectoryPath), Options.DirectoryPath);
-            Logger?.LogProviderOption(nameof(Options.IntermediateDirectoryPath), Options.IntermediateDirectoryPath);
-            Logger?.LogDebug($"File name: {fileName}");
+            Logger?.EgressProviderOptionValue(EgressProviderTypes.FileSystem, nameof(Options.DirectoryPath), Options.DirectoryPath);
+            Logger?.EgressProviderOptionValue(EgressProviderTypes.FileSystem, nameof(Options.IntermediateDirectoryPath), Options.IntermediateDirectoryPath);
+            Logger?.EgressProviderFileName(EgressProviderTypes.FileSystem, fileName);
 
             ValidateOptions();
         }
 
         private async Task WriteFileAsync(Func<Stream, CancellationToken, Task> action, string filePath, CancellationToken token)
         {
-            Logger?.LogDebug("Opening file stream.");
-
             using Stream fileStream = WrapException(
                 () => new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None));
 
-            Logger?.LogDebug("Start writing to file.");
-
-            Logger?.LogDebug("Start invoking stream action.");
+            Logger?.EgressProviderInvokeStreamAction(EgressProviderTypes.FileSystem);
             await action(fileStream, token);
-            Logger?.LogDebug("End invoking stream action.");
 
             await fileStream.FlushAsync(token);
-            Logger?.LogDebug("End writing to file.");
         }
 
         private static void WrapException(Action action)

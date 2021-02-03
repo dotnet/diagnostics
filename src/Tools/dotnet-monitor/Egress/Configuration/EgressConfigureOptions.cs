@@ -48,8 +48,8 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.Configuration
             _logger = loggerFactory.CreateLogger<EgressConfigureOptions>();
 
             // Register egress providers
-            _factories.Add("AzureBlobStorage", new AzureBlobEgressFactory(loggerFactory));
-            _factories.Add("FileSystem", new FileSystemEgressFactory(loggerFactory));
+            _factories.Add(EgressProviderTypes.AzureBlobStorage, new AzureBlobEgressFactory(loggerFactory));
+            _factories.Add(EgressProviderTypes.FileSystem, new FileSystemEgressFactory(loggerFactory));
         }
 
         public void Configure(EgressOptions options)
@@ -59,7 +59,6 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.Configuration
             IConfigurationSection propertiesSection = egressSection.GetSection(nameof(EgressOptions.Properties));
             propertiesSection.Bind(options.Properties);
 
-            _logger.LogDebug("Start loading egress providers.");
             IConfigurationSection providersSection = egressSection.GetSection(nameof(EgressOptions.Providers));
             foreach (var providerSection in providersSection.GetChildren())
             {
@@ -75,7 +74,7 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.Configuration
                 EgressProviderValidation validation = new EgressProviderValidation(providerName, _logger);
                 if (!validation.TryValidate(commonOptions))
                 {
-                    _logger.LogWarning("Provider '{0}': Skipped: Invalid options.", providerName);
+                    _logger.EgressProviderInvalidOptions(providerName);
                 }
 
                 string providerType = commonOptions.Type;
@@ -85,21 +84,20 @@ namespace Microsoft.Diagnostics.Tools.Monitor.Egress.Configuration
 
                 if (!_factories.TryGetValue(providerType, out EgressFactory factory))
                 {
-                    _logger.LogWarning("Provider '{0}': Skipped: Type '{1}' is not supported.", providerName, providerType);
+                    _logger.EgressProviderInvalidType(providerName, providerType);
                     continue;
                 }
 
                 if (!factory.TryCreate(providerName, providerSection, options.Properties, out ConfiguredEgressProvider provider))
                 {
-                    _logger.LogWarning("Provider '{0}': Skipped: Invalid options.", providerName);
+                    _logger.EgressProviderInvalidOptions(providerName);
                     continue;
                 }
 
                 options.Providers.Add(providerName, provider);
 
-                _logger.LogDebug("Added egress provider '{0}'.", providerName);
+                _logger.EgressProviderAdded(providerName);
             }
-            _logger.LogDebug("End loading egress providers.");
         }
 
         /// <summary>
