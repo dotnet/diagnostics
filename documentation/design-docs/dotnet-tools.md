@@ -311,7 +311,7 @@ COLLECT
                          [--providers <list-of-comma-separated-providers>]
                          [--format <trace-file-format>]
 
-    Collects a diagnostic trace from a currently running process
+    Collects a diagnostic trace from a currently running process or launch a child process and trace it. Append -- to the collect command to instruct the tool to run a command and trace it immediately.
 
     -p, --process-id
         The process to collect the trace from
@@ -351,6 +351,8 @@ COLLECT
     --format
         The format of the output trace file. The default value is nettrace.
 
+    --show-child-io
+        When specified, when collecting data from a child process give all control of io to the launched process.
 
     Examples:
       

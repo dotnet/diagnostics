@@ -21,10 +21,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port, bool hideio);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port, bool showchildio);
 
         /// <summary>
-        /// Collects a diagnostic trace from a currently running process.
+        /// Collects a diagnostic trace from a currently running process or launch a child process and trace it.
+        /// Append -- to the collect command to instruct the tool to run a command and trace it immediately. By default the IO from this process is hidden, but the --show-child-io option may be used to show the child process IO.
         /// </summary>
         /// <param name="ct">The cancellation token</param>
         /// <param name="console"></param>
@@ -39,23 +40,24 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="clrevents">A list of CLR events to be emitted.</param>
         /// <param name="clreventlevel">The verbosity level of CLR events</param>
         /// <param name="port">Path to the diagnostic port to be created.</param>
-        /// <param name="hideio">Should IO from a child process be hidden.</param>
+        /// <param name="showchildio">Should IO from a child process be hidden.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool hideio)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio)
         {
             int ret = 0;
+            bool collectionStopped = false;
+            bool cancelOnEnter = true;
+            bool cancelOnCtrlC = true;
+            bool printStatusOverTime = true;
+
             try
             {
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
 
-                bool cancelOnEnter;
-                bool cancelOnCtrlC;
-                bool printStatusOverTime;
-
-                if (ProcessLauncher.Launcher.HasChildProc && !hideio)
+                if (ProcessLauncher.Launcher.HasChildProc && showchildio)
                 {
-                    // If not hiding IO, then all IO (including CtrlC) behavior is delegated to the child process
+                    // If showing IO, then all IO (including CtrlC) behavior is delegated to the child process
                     cancelOnCtrlC = false;
                     cancelOnEnter = false;
                     printStatusOverTime = false;
@@ -74,7 +76,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (!ProcessLauncher.Launcher.HasChildProc)
                 {
-                    if (CommandUtils.ValidateArguments(processId, name, diagnosticPort, out int resolvedProcessId))
+                    if (showchildio)
+                    {
+                        Console.WriteLine("--show-child-io must not be specified when attaching to a process");
+                        return ErrorCodes.ArgumentError;
+                    }
+                    if (CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out int resolvedProcessId))
                     {
                         processId = resolvedProcessId;
                     }
@@ -82,6 +89,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     {
                         return ErrorCodes.ArgumentError;
                     }
+                }
+                else if (!CommandUtils.ValidateArgumentsForChildProcess(processId, name, diagnosticPort))
+                {
+                    return ErrorCodes.ArgumentError;
                 }
 
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
@@ -141,7 +152,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-trace", 10);
                 bool shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort);
 
-                using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, hideIO: hideio))
+                using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: showchildio, printLaunchCommand: true))
                 {
                     diagnosticsClient = holder.Client;
                     if (shouldResumeRuntime)
@@ -240,6 +251,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 {
                                     rewriter.LineToClear--;
                                 }
+                                collectionStopped = true;
                                 durationTimer?.Stop();
                                 rundownRequested = true;
                                 session.Stop();
@@ -262,16 +274,41 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                 ret = ErrorCodes.TracingError;
+                collectionStopped = true;
             }
             finally
             {
-                if (console.GetTerminal() != null)
-                    Console.CursorVisible = true;
-                
-                // If we launched a child proc that hasn't exited yet, terminate it before we exit.
-                if (ProcessLauncher.Launcher.HasChildProc && !ProcessLauncher.Launcher.ChildProc.HasExited)
+                if (printStatusOverTime)
                 {
-                    ProcessLauncher.Launcher.ChildProc.Kill();
+                    if (console.GetTerminal() != null)
+                        Console.CursorVisible = true;
+                }
+                
+                if (ProcessLauncher.Launcher.HasChildProc)
+                {
+                    if (!collectionStopped && !ct.IsCancellationRequested)
+                    {
+                        // If the process is shutting down by itself print the return code from the process.
+                        if (ProcessLauncher.Launcher.ChildProc.WaitForExit(5000))
+                        {
+                            ret = ProcessLauncher.Launcher.ChildProc.ExitCode;
+                            Console.WriteLine("$Process exited with code {ret}.");
+                        }
+                        else
+                        {
+                            ret = ErrorCodes.TracingError;
+                        }
+                    }
+                    if (ct.IsCancellationRequested)
+                    {
+                        ret = ErrorCodes.TracingError;
+                    }
+
+                    // If we launched a child proc that hasn't exited yet, terminate it before we exit.
+                    if (!ProcessLauncher.Launcher.ChildProc.HasExited)
+                    {
+                        ProcessLauncher.Launcher.ChildProc.Kill();
+                    }
                 }
             }
             return await Task.FromResult(ret);
@@ -308,7 +345,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Command CollectCommand() =>
             new Command(
                 name: "collect",
-                description: "Collects a diagnostic trace from a currently running process") 
+                description: "Collects a diagnostic trace from a currently running process or launch a child process and trace it. Append -- to the collect command to instruct the tool to run a command and trace it immediately. When tracing a child process, the exit code of dotnet-trace shall be that of the traced process unless the trace process encounters an error.") 
             {
                 // Handler
                 HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler(),
@@ -324,7 +361,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CLREventLevelOption(),
                 CommonOptions.NameOption(),
                 DiagnosticPortOption(),
-                HideIOOption()
+                ShowChildIOOption()
             };
 
         private static uint DefaultCircularBufferSizeInMB() => 256;
@@ -400,12 +437,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => string.Empty)
             };
-        private static Option HideIOOption() =>
+        private static Option ShowChildIOOption() =>
             new Option(
-                alias: "--redirect-child-output",
-                description: @"When specified, when collecting data from a child process hide the output of the launched process.")
+                alias: "--show-child-io",
+                description: @"When specified, when collecting data from a child process give all control of io to the launched process.")
             {
-                Argument = new Argument<bool>(name: "hideio", getDefaultValue: () => true)
+                Argument = new Argument<bool>(name: "show-child-io", getDefaultValue: () => false)
             };
     }
 }

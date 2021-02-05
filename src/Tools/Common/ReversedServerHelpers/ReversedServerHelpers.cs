@@ -83,9 +83,8 @@ namespace Microsoft.Internal.Common.Utils
                 return _childProc;
             }
         }
-        public bool Start( string diagnosticTransportName, CancellationToken ct, bool hideIO)
+        public bool Start( string diagnosticTransportName, CancellationToken ct, bool showChildIO, bool printLaunchCommand)
         {
-            bool showChildIO = !hideIO;
             _childProc.StartInfo.UseShellExecute = false;
             _childProc.StartInfo.RedirectStandardOutput = !showChildIO;
             _childProc.StartInfo.RedirectStandardError = !showChildIO;
@@ -93,6 +92,10 @@ namespace Microsoft.Internal.Common.Utils
             _childProc.StartInfo.Environment.Add("DOTNET_DiagnosticPorts", $"{diagnosticTransportName}");
             try
             {
+                if (printLaunchCommand)
+                {
+                    Console.WriteLine($"Launching: {_childProc.StartInfo.FileName} {_childProc.StartInfo.Arguments}");
+                }
                 _childProc.Start();
             }
             catch (Exception e)
@@ -187,7 +190,7 @@ namespace Microsoft.Internal.Common.Utils
             _timeoutInSec = timeoutInSec;
         }
 
-        public async Task<DiagnosticsClientHolder> Build(CancellationToken ct, int processId, string portName, bool hideIO)
+        public async Task<DiagnosticsClientHolder> Build(CancellationToken ct, int processId, string portName, bool showChildIO, bool printLaunchCommand)
         {
             if (ProcessLauncher.Launcher.HasChildProc)
             {
@@ -197,7 +200,7 @@ namespace Microsoft.Internal.Common.Utils
                 server.Start();
 
                 // Start the child proc
-                if (!ProcessLauncher.Launcher.Start(diagnosticTransportName, ct, hideIO))
+                if (!ProcessLauncher.Launcher.Start(diagnosticTransportName, ct, showChildIO, printLaunchCommand))
                 {
                     throw new InvalidOperationException($"Failed to start {ProcessLauncher.Launcher.ChildProc.ProcessName}.");
                 }
