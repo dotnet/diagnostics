@@ -882,59 +882,84 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
     AllocInfo allocInfo;
     allocInfo.Init();
 
-    // 1. Start with small object segments
-    TADDR taddrSeg;
-    DacpHeapSegmentData dacpSeg;
-
-    taddrSeg = (TADDR)heap.generation_table[GetMaxGeneration()].start_segment;
-
-#ifndef FEATURE_PAL
     // this will create the bitmap of rooted objects only if bIncUnreachable is true
     GCRootImpl gcroot;
     std::unordered_set<TADDR> emptyLiveObjs;
-    const std::unordered_set<TADDR> &liveObjs = (bIncUnreachable ? gcroot.GetLiveObjects() : emptyLiveObjs);
+    const std::unordered_set<TADDR>& liveObjs = (bIncUnreachable ? gcroot.GetLiveObjects() : emptyLiveObjs);
 
-    // 1a. enumerate all non-ephemeral segments
-    while (taddrSeg != (TADDR)heap.generation_table[0].start_segment)
+    TADDR taddrSeg;
+    DacpHeapSegmentData dacpSeg;
+
+    if (heap.has_regions)
     {
-        if (IsInterrupt())
-            return FALSE;
+        // 1. Start with small object generations,
+        //    each generation has a list of segments
+        for (UINT n = 0; n <= GetMaxGeneration(); n++)
+        {
+            taddrSeg = (TADDR)heap.generation_table[n].start_segment;
+            while (taddrSeg != NULL)
+            {
+                if (IsInterrupt())
+                    return FALSE;
 
+                if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
+                {
+                    ExtErr("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
+                    return FALSE;
+                }
+                GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.allocated, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
+                taddrSeg = (TADDR)dacpSeg.next;
+            }
+        }
+    }
+    else
+    {
+        // 1. Start with small object segments
+        taddrSeg = (TADDR)heap.generation_table[GetMaxGeneration()].start_segment;
+
+#ifndef FEATURE_PAL
+        // 1a. enumerate all non-ephemeral segments
+        while (taddrSeg != (TADDR)heap.generation_table[0].start_segment)
+        {
+            if (IsInterrupt())
+                return FALSE;
+
+            if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
+            {
+                ExtErr("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
+                return FALSE;
+            }
+            GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.allocated, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[2]);
+            taddrSeg = (TADDR)dacpSeg.next;
+        }
+#endif
+
+        // 1b. now handle the ephemeral segment
         if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
         {
             ExtErr("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
             return FALSE;
         }
-        GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.allocated, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[2]);
-        taddrSeg = (TADDR)dacpSeg.next;
-    }
-#endif
 
-    // 1b. now handle the ephemeral segment
-    if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
-    {
-        ExtErr("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
-        return FALSE;
-    }
-
-    TADDR endGen = TO_TADDR(heap.alloc_allocated);
-    for (UINT n = 0; n <= GetMaxGeneration(); n ++)
-    {
-        TADDR startGen;
-        // gen 2 starts at the beginning of the segment
-        if (n == GetMaxGeneration())
+        TADDR endGen = TO_TADDR(heap.alloc_allocated);
+        for (UINT n = 0; n <= GetMaxGeneration(); n ++)
         {
-            startGen = TO_TADDR(dacpSeg.mem);
-        }
-        else
-        {
-            startGen = TO_TADDR(heap.generation_table[n].allocation_start);
-        }
+            TADDR startGen;
+            // gen 2 starts at the beginning of the segment
+            if (n == GetMaxGeneration())
+            {
+                startGen = TO_TADDR(dacpSeg.mem);
+            }
+            else
+            {
+                startGen = TO_TADDR(heap.generation_table[n].allocation_start);
+            }
 
 #ifndef FEATURE_PAL
-        GCGenUsageStats(startGen, endGen, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
+            GCGenUsageStats(startGen, endGen, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
 #endif
-        endGen = startGen;
+            endGen = startGen;
+        }
     }
 
     // 2. Now process LOH
