@@ -485,10 +485,12 @@ public:
         lowest_address = dacGCDetails.lowest_address;
         highest_address = dacGCDetails.highest_address;
         card_table = dacGCDetails.card_table;
+        has_regions = saved_sweep_ephemeral_seg == 0;
     }
 
     DacpGcHeapDetails original_heap_details;
     bool has_poh;
+    bool has_regions;
     CLRDATA_ADDRESS heapAddr; // Only filled in in server mode, otherwise NULL
     CLRDATA_ADDRESS alloc_allocated;
 

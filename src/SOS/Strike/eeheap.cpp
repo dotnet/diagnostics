@@ -614,44 +614,77 @@ BOOL GCObjInSegment(TADDR taddrObj, const GCHeapDetails &heap,
     TADDR taddrSeg;
     DacpHeapSegmentData dacpSeg;
 
-    taddrSeg = (TADDR)heap.generation_table[GetMaxGeneration()].start_segment;
-    // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
-    while (taddrSeg != (TADDR)heap.generation_table[0].start_segment)
+    if (heap.has_regions)
     {
-        if (IsInterrupt())
-            return FALSE;
+        // in this case, each generation has its own list
+        for (unsigned gen_num = 0; gen_num <= GetMaxGeneration(); gen_num++)
+        {
+            taddrSeg = (TADDR)heap.generation_table[gen_num].start_segment;
+
+            // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
+            while (taddrSeg != NULL)
+            {
+                if (IsInterrupt())
+                    return FALSE;
+                if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
+                {
+                    ExtOut("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
+                    return FALSE;
+                }
+                if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj && taddrObj < TO_TADDR(dacpSeg.allocated))
+                {
+                    rngSeg.segAddr = (TADDR)dacpSeg.segmentAddr;
+                    rngSeg.start = (TADDR)dacpSeg.mem;
+                    rngSeg.end = (TADDR)dacpSeg.allocated;
+                    gen = gen_num;
+                    return TRUE;
+                }
+                taddrSeg = (TADDR)dacpSeg.next;
+            }
+        }
+        return FALSE;
+    }
+    else
+    {
+        taddrSeg = (TADDR)heap.generation_table[GetMaxGeneration()].start_segment;
+        // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
+        while (taddrSeg != (TADDR)heap.generation_table[0].start_segment)
+        {
+            if (IsInterrupt())
+                return FALSE;
+            if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
+            {
+                ExtOut("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
+                return FALSE;
+            }
+            if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj < TO_TADDR(dacpSeg.allocated))
+            {
+                rngSeg.segAddr = (TADDR)dacpSeg.segmentAddr;
+                rngSeg.start   = (TADDR)dacpSeg.mem;
+                rngSeg.end     = (TADDR)dacpSeg.allocated;
+                gen = 2;
+                allocCtx.start = allocCtx.end = 0;
+                return TRUE;
+            }
+            taddrSeg = (TADDR)dacpSeg.next;
+        }
+
+        // the ephemeral segment
         if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
         {
             ExtOut("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
             return FALSE;
         }
-        if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj < TO_TADDR(dacpSeg.allocated))
-        {
-            rngSeg.segAddr = (TADDR)dacpSeg.segmentAddr;
-            rngSeg.start   = (TADDR)dacpSeg.mem;
-            rngSeg.end     = (TADDR)dacpSeg.allocated;
-            gen = 2;
-            allocCtx.start = allocCtx.end = 0;
-            return TRUE;
-        }
-        taddrSeg = (TADDR)dacpSeg.next;
-    }
 
-    // the ephemeral segment
-    if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
-    {
-        ExtOut("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
-        return FALSE;
-    }
-
-    if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj < TO_TADDR(heap.alloc_allocated))
-    {
-        if (GCObjInGeneration(taddrObj, heap, rngSeg, gen, allocCtx))
+        if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj < TO_TADDR(heap.alloc_allocated))
         {
-            rngSeg.segAddr = (TADDR)dacpSeg.segmentAddr;
-            rngSeg.start   = (TADDR)dacpSeg.mem;
-            rngSeg.end     = (TADDR)heap.alloc_allocated;
-            return TRUE;
+            if (GCObjInGeneration(taddrObj, heap, rngSeg, gen, allocCtx))
+            {
+                rngSeg.segAddr = (TADDR)dacpSeg.segmentAddr;
+                rngSeg.start   = (TADDR)dacpSeg.mem;
+                rngSeg.end     = (TADDR)heap.alloc_allocated;
+                return TRUE;
+            }
         }
     }
 
@@ -1619,18 +1652,33 @@ BOOL GCHeapSnapshot::AddSegments(const GCHeapDetails& details)
     int n = 0;
     DacpHeapSegmentData segment;
 
-    // This array of two addresses gives us access to all the segments. The generation segments are linked
-    // to each other, starting with the maxGeneration segment. The second address gives us the large object heap.
-    CLRDATA_ADDRESS AddrSegs[]=
+    // This array of addresses gives us access to all the segments.
+    CLRDATA_ADDRESS AddrSegs[5];
+    if (details.has_regions)
     {
-        details.generation_table[GetMaxGeneration()].start_segment,
-        details.generation_table[GetMaxGeneration() + 1].start_segment, // large object heap
-        NULL
-    };
+        // with regions, each generation has its own list of segments
+        for (unsigned gen = 0; gen <= GetMaxGeneration() + 1; gen++)
+        {
+            AddrSegs[gen] = details.generation_table[gen].start_segment;
+        }
+        if (details.has_poh)
+        {
+            AddrSegs[4] = details.generation_table[GetMaxGeneration() + 2].start_segment; // pinned object heap
+        }
+    }
+    else
+    {
+        // The generation segments are linked to each other, starting with the maxGeneration segment. 
+        // The second address gives us the large object heap, the third the pinned object heap
 
-    if (details.has_poh)
-    {
-        AddrSegs[2] = details.generation_table[GetMaxGeneration() + 2].start_segment; // pinned object heap
+        for (unsigned gen = GetMaxGeneration(); gen <= GetMaxGeneration() + 1; gen++)
+        {
+            AddrSegs[gen] = details.generation_table[gen].start_segment;
+        }
+        if (details.has_poh)
+        {
+            AddrSegs[2] = details.generation_table[GetMaxGeneration() + 2].start_segment; // pinned object heap
+        }
     }
 
     // this loop will get information for all the heap segments in this heap. The outer loop iterates once
@@ -1658,7 +1706,7 @@ BOOL GCHeapSnapshot::AddSegments(const GCHeapDetails& details)
                 ExtOut("Error requesting heap segment %p\n", SOS_PTR(AddrSeg));
                 return FALSE;
             }
-            if (n++ > nMaxHeapSegmentCount) // that would be insane
+            if (n++ > nMaxHeapSegmentCount && !details.has_regions) // that would be insane
             {
                 ExtOut("More than %d heap segments, there must be an error\n", nMaxHeapSegmentCount);
                 return FALSE;
