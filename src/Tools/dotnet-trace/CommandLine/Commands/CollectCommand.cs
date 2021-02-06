@@ -292,7 +292,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         if (ProcessLauncher.Launcher.ChildProc.WaitForExit(5000))
                         {
                             ret = ProcessLauncher.Launcher.ChildProc.ExitCode;
-                            Console.WriteLine("$Process exited with code {ret}.");
+                            Console.WriteLine($"Process exited with code '{ret}'.");
                         }
                         else
                         {

@@ -202,7 +202,7 @@ namespace Microsoft.Internal.Common.Utils
                 // Start the child proc
                 if (!ProcessLauncher.Launcher.Start(diagnosticTransportName, ct, showChildIO, printLaunchCommand))
                 {
-                    throw new InvalidOperationException($"Failed to start {ProcessLauncher.Launcher.ChildProc.ProcessName}.");
+                    throw new InvalidOperationException($"Failed to start '{ProcessLauncher.Launcher.ChildProc.StartInfo.FileName} {ProcessLauncher.Launcher.ChildProc.StartInfo.Arguments}'.");
                 }
                 IpcEndpointInfo endpointInfo;
                 try
