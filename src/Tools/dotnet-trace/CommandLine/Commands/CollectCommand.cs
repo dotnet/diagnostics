@@ -272,6 +272,19 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         if (format != TraceFileFormat.NetTrace)
                             TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
                     }
+
+                    if (!collectionStopped && !ct.IsCancellationRequested)
+                    {
+                        // If the process is shutting down by itself print the return code from the process.
+                        // Capture this before leaving the using, as the Dispose of the DiagnosticsClientHolder
+                        // may terminate the target process causing it to have the wrong error code
+                        if (ProcessLauncher.Launcher.ChildProc.WaitForExit(5000))
+                        {
+                            ret = ProcessLauncher.Launcher.ChildProc.ExitCode;
+                            Console.WriteLine($"Process exited with code '{ret}'.");
+                            collectionStopped = true;
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -290,20 +303,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 
                 if (ProcessLauncher.Launcher.HasChildProc)
                 {
-                    if (!collectionStopped && !ct.IsCancellationRequested)
-                    {
-                        // If the process is shutting down by itself print the return code from the process.
-                        if (ProcessLauncher.Launcher.ChildProc.WaitForExit(5000))
-                        {
-                            ret = ProcessLauncher.Launcher.ChildProc.ExitCode;
-                            Console.WriteLine($"Process exited with code '{ret}'.");
-                        }
-                        else
-                        {
-                            ret = ErrorCodes.TracingError;
-                        }
-                    }
-                    if (ct.IsCancellationRequested)
+                    if (!collectionStopped || ct.IsCancellationRequested)
                     {
                         ret = ErrorCodes.TracingError;
                     }
