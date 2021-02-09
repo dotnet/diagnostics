@@ -54,7 +54,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         [Theory]
-        [InlineData("1000", 1000)]
+        [InlineData("232", 232)]
         [InlineData("0", 0)]
         public void VerifyExitCode(string commandLineArg, int exitCode)
         {

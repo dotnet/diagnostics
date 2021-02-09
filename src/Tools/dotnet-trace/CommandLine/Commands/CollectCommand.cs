@@ -214,7 +214,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             Console.Out.WriteLine("\n\n");
 
                             var fileInfo = new FileInfo(output.FullName);
-                            Task copyTask = session.EventStream.CopyToAsync(fs).ContinueWith((task) => shouldExit.Set());
+                            Task copyTask = session.EventStream.CopyToAsync(fs);
+                            Task shouldExitTask = copyTask.ContinueWith((task) => shouldExit.Set());
 
                             if (printStatusOverTime)
                             {
@@ -261,6 +262,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     printStatus();
                                 } while (!copyTask.Wait(100));
                             }
+                            // At this point the copyTask will have finished, so wait on the shouldExitTask in case it threw
+                            // an exception or had some other interesting behavior
+                            shouldExitTask.Wait();
                         }
 
                         Console.Out.WriteLine($"\nTrace completed.");
