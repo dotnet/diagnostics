@@ -352,7 +352,7 @@ COLLECT
         The format of the output trace file. The default value is nettrace.
 
     --show-child-io
-        When specified, when collecting data from a child process give all control of io to the launched process.
+        Shows the input and output streams of a launched child process in the current console.
 
     Examples:
       

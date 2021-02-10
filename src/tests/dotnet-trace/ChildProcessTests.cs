@@ -35,9 +35,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             using (Process process = Process.Start(startInfo))
             {
-                bool processExitedCleanly = process.WaitForExit(10000);
+                const int processTimeout = 15000;
+                bool processExitedCleanly = process.WaitForExit(processTimeout);
                 if (!processExitedCleanly)
                 {
+                    OutputHelper.WriteLine($"Forced kill of process after {processTimeout}ms");
                     process.Kill();
                 }
 

@@ -87,7 +87,7 @@ Press <Enter> or <Ctrl+C> to exit...
 You can stop collecting the trace by pressing `<Enter>` or `<Ctrl + C>` key. Doing this will also exit `hello.exe`.
 
 ### NOTE
-* Launching `hello.exe` via dotnet-trace will make its input/output to be redirected and you won't be able to interact with its stdin/stdout. Use the --show-child-io switch to interact with its stdin/stdout.
+* Launching `hello.exe` via dotnet-trace will redirect its input/output and you will not be able to interact with it on the console by default. Use the --show-child-io switch to interact with its stdin/stdout.
 
 * Exiting the tool via CTRL+C or SIGTERM will safely end both the tool and the child process.
 

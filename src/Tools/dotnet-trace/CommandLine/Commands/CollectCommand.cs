@@ -444,7 +444,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option ShowChildIOOption() =>
             new Option(
                 alias: "--show-child-io",
-                description: @"When specified, when collecting data from a child process give all control of io to the launched process.")
+                description: @"Shows the input and output streams of a launched child process in the current console.")
             {
                 Argument = new Argument<bool>(name: "show-child-io", getDefaultValue: () => false)
             };
