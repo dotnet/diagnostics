@@ -53,7 +53,7 @@ namespace Microsoft.Internal.Common.Utils
         public static bool ValidateArguments(int processId, string name, string port, out int resolvedProcessId)
         {
             resolvedProcessId = -1;
-            if (processId == 0 && name == null)
+            if (processId == 0 && name == null && string.IsNullOrEmpty(port))
             {
                 Console.WriteLine("Must specify either --process-id, --name, or --diagnostic-port.");
                 return false;
