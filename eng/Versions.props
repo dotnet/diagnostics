@@ -66,5 +66,8 @@
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
     <MicrosoftDotNetRemoteExecutorVersion>6.0.0-beta.21105.5</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
+    <!-- dotnet-monitor references -->
+    <MicrosoftDiagnosticsMonitoringVersion>5.0.0-preview.21109.1</MicrosoftDiagnosticsMonitoringVersion>
+    <MicrosoftDiagnosticsMonitoringEventPipeVersion>5.0.0-preview.21109.1</MicrosoftDiagnosticsMonitoringEventPipeVersion>
   </PropertyGroup>
 </Project>
