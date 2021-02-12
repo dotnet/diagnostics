@@ -6,7 +6,7 @@ using Microsoft.Diagnostics.Monitoring;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace DotnetMonitor.UnitTests
+namespace Microsoft.Diagnostics.Monitoring.UnitTests
 {
     public class CommandLineHelperTests
     {

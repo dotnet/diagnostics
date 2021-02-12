@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <!-- 
     DARCVersionFileName, GenerateDARCVersion, and InjectDARCVersion are used for injecting the value of MicrosoftNETCoreAppRuntimewinx64Version
@@ -60,7 +60,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" />
   </ItemGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="DotnetMonitor.UnitTests" />
     <InternalsVisibleTo Include="DotnetStack.UnitTests" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.UnitTests" />
   </ItemGroup>
 </Project>
