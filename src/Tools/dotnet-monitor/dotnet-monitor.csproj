@@ -31,6 +31,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="$(MicrosoftExtensionsLoggingConsoleVersion)" />
     <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="$(MicrosoftAspNetCoreAuthenticationNegotiateVersion)" />
+    <PackageReference Include="Microsoft.Diagnostics.Monitoring" Version="$(MicrosoftDiagnosticsMonitoringVersion)" />
   </ItemGroup>
 
   <ItemGroup>
@@ -48,7 +49,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.Diagnostics.Monitoring.RestServer\Microsoft.Diagnostics.Monitoring.RestServer.csproj" />
-    <ProjectReference Include="..\..\Microsoft.Diagnostics.Monitoring\Microsoft.Diagnostics.Monitoring.csproj" />
   </ItemGroup>
 
 </Project>
