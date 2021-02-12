@@ -12,7 +12,7 @@ using Microsoft.Diagnostics.NETCore.Client.UnitTests;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace DotnetMonitor.UnitTests
+namespace Microsoft.Diagnostics.Monitoring.UnitTests
 {
     public class EndpointInfoSourceTests
     {

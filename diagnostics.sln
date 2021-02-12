@@ -168,7 +168,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "llvm", "llvm", "{06730767-4
 		src\inc\llvm\ELF.h = src\inc\llvm\ELF.h
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetMonitor.UnitTests", "src\tests\dotnet-monitor\DotnetMonitor.UnitTests.csproj", "{6419BA04-6F1A-4D2F-8DE4-5C359E0364A3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.Monitoring.UnitTests", "src\tests\Microsoft.Diagnostics.Monitoring\Microsoft.Diagnostics.Monitoring.UnitTests.csproj", "{6419BA04-6F1A-4D2F-8DE4-5C359E0364A3}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventPipeTracee", "src\tests\EventPipeTracee\EventPipeTracee.csproj", "{870A7AD0-B808-491E-92F6-433BE990B374}"
 EndProject
