@@ -34,22 +34,4 @@
           Condition="$(NeedsPublishing) == 'true'"
           DependsOnTargets="$(_BeforePublishNoBuildTargets);$(_CorePublishTargets)" />
 
-  <!-- Creates artifact files related to the package that will be uploaded to blob storage during publish. -->
-  <Target Name="GeneratePackageArtifactFiles"
-          AfterTargets="Pack"
-          Condition="'$(IsPackable)' == 'true' and '$(BlobGroupPrefix)' != ''">
-    <PropertyGroup>
-      <_BlobGroupVersionMajor>$(PackageVersion.Split('.')[0])</_BlobGroupVersionMajor>
-      <_BlobGroupVersionMinor>$(PackageVersion.Split('.')[1])</_BlobGroupVersionMinor>
-      <_BlobGroupName>$(BlobGroupPrefix)$(_BlobGroupVersionMajor).$(_BlobGroupVersionMinor)</_BlobGroupName>
-    </PropertyGroup>
-    <!-- A file that contains the blob group so that publishing can use it in the blob path calculation. -->
-    <WriteLinesToFile File="$(PackageOutputPath)\$(PackageId).$(PackageVersion).nupkg.blobgroup"
-                      Lines="$(_BlobGroupName)"
-                      Overwrite="true" />
-    <WriteLinesToFile File="$(PackageOutputPath)\$(PackageId).$(PackageVersion).nupkg.version"
-                      Lines="$(PackageVersion)"
-                      Overwrite="true" />
-  </Target>
-
 </Project>
