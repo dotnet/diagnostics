@@ -163,6 +163,28 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     {
                         process = Process.GetProcessById(processId);
                     }
+                    string processMainModuleFileName = "";
+
+                    // Reading the process MainModule filename can fail if the target process closes
+                    // or isn't fully setup. Retry a few times to attempt to address the issue
+                    for (int attempts = 0; true; attempts++)
+                    {
+                        try
+                        {
+                            processMainModuleFileName = process.MainModule.FileName;
+                            break;
+                        }
+                        catch
+                        {
+                            if (attempts > 10)
+                            {
+                                Console.Error.WriteLine("Unable to examine process.");
+                                return ErrorCodes.SessionCreationError;
+                            }
+                            Thread.Sleep(200);
+                        }
+                    }
+
                     var shouldExit = new ManualResetEvent(false);
                     var shouldStopAfterDuration = duration != default(TimeSpan);
                     var rundownRequested = false;
@@ -207,7 +229,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                         using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                         {
-                            Console.Out.WriteLine($"Process        : {process.MainModule.FileName}");
+                            Console.Out.WriteLine($"Process        : {processMainModuleFileName}");
                             Console.Out.WriteLine($"Output File    : {fs.Name}");
                             if (shouldStopAfterDuration)
                                 Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
