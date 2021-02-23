@@ -1,0 +1,16 @@
+diff --git a/eng/Analyzers.props b/eng/Analyzers.props
+index 438ae20..cd2b97c 100644
+--- a/eng/Analyzers.props
++++ b/eng/Analyzers.props
+@@ -1,9 +1,9 @@
+ <Project>
+-  <PropertyGroup>
++  <PropertyGroup Condition="'$(ArcadeBuildFromSource)' != 'true'">
+     <CodeAnalysisRuleset>$(MSBuildThisFileDirectory)CodeAnalysis.ruleset</CodeAnalysisRuleset>
+     <EnableAnalyzers>true</EnableAnalyzers>
+   </PropertyGroup>
+-  <ItemGroup>
++  <ItemGroup Condition="'$(ArcadeBuildFromSource)' != 'true'">
+     <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.0.0-beta3.final" PrivateAssets="all" />
+   </ItemGroup>
+ </Project>

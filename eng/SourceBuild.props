@@ -1,0 +1,27 @@
+<Project>
+
+  <PropertyGroup>
+    <GitHubRepositoryName>diagnostics</GitHubRepositoryName>
+    <SourceBuildManagedOnly>true</SourceBuildManagedOnly>
+  </PropertyGroup>
+
+  <ItemGroup Condition=" '$(ArcadeBuildFromSource)' == 'true' ">
+    <ProjectToBuild Include="$(RepoRoot)src/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
+  </ItemGroup>
+
+  <Target Name="ApplySourceBuildPatchFiles"
+          Condition="
+            '$(ArcadeBuildFromSource)' == 'true' and
+            '$(ArcadeInnerBuildFromSource)' == 'true'"
+          BeforeTargets="Execute">
+    <ItemGroup>
+      <SourceBuildPatchFile Include="$(RepositoryEngineeringDir)source-build-patches\*.patch" />
+    </ItemGroup>
+
+    <Exec
+      Command="git apply --ignore-whitespace --whitespace=nowarn &quot;%(SourceBuildPatchFile.FullPath)&quot;"
+      WorkingDirectory="$(RepoRoot)"
+      Condition="'@(SourceBuildPatchFile)' != ''" />
+  </Target>
+
+</Project>
