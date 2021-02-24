@@ -8,9 +8,9 @@
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>938b3e8b4edcd96ca0f0cbbae63c87b3f51f7afe</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.SymbolStore" Version="1.0.211502">
+    <Dependency Name="Microsoft.SymbolStore" Version="1.0.212301">
       <Uri>https://github.com/dotnet/symstore</Uri>
-      <Sha>b9b94a08e9d0425d1be5c03c2612a7f9da47605f</Sha>
+      <Sha>6aa1505d8f5a62083c048b65fe9d870da9092c83</Sha>
     </Dependency>
     <Dependency Name="Microsoft.Diagnostics.Runtime" Version="2.0.156101">
       <Uri>https://github.com/Microsoft/clrmd</Uri>
