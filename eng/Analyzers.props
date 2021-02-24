@@ -1,9 +1,9 @@
 <Project>
-  <PropertyGroup Condition="'$(ArcadeBuildFromSource)' != 'true'">
+  <PropertyGroup Condition="'$(DotNetBuildFromSource)' != 'true'">
     <CodeAnalysisRuleset>$(MSBuildThisFileDirectory)CodeAnalysis.ruleset</CodeAnalysisRuleset>
     <EnableAnalyzers>true</EnableAnalyzers>
   </PropertyGroup>
-  <ItemGroup Condition="'$(ArcadeBuildFromSource)' != 'true'">
+  <ItemGroup Condition="'$(DotNetBuildFromSource)' != 'true'">
     <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.0.0-beta3.final" PrivateAssets="all" />
   </ItemGroup>
 </Project>
