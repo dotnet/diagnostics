@@ -1,9 +1,9 @@
 <Project>
-  <PropertyGroup Condition="'$(DotNetBuildFromSource)' != 'true'">
+  <PropertyGroup>
     <CodeAnalysisRuleset>$(MSBuildThisFileDirectory)CodeAnalysis.ruleset</CodeAnalysisRuleset>
     <EnableAnalyzers>true</EnableAnalyzers>
   </PropertyGroup>
-  <ItemGroup Condition="'$(DotNetBuildFromSource)' != 'true'">
+  <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.0.0-beta3.final" PrivateAssets="all" />
   </ItemGroup>
 </Project>
