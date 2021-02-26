@@ -21,7 +21,7 @@ namespace SOS.Extensions
         /// <summary>
         /// Create a target instance from IDataReader
         /// </summary>
-        internal TargetFromDebuggerServices(DebuggerServices debuggerServices, IHost host) 
+        internal TargetFromDebuggerServices(DebuggerServices debuggerServices, IHost host)
             : base(host, dumpPath: null)
         {
             Debug.Assert(debuggerServices != null);
@@ -74,7 +74,19 @@ namespace SOS.Extensions
             // Add the thread, memory, and module services
             ServiceProvider.AddServiceFactory<IModuleService>(() => new ModuleServiceFromDebuggerServices(this, debuggerServices));
             ServiceProvider.AddServiceFactory<IThreadService>(() => new ThreadServiceFromDebuggerServices(this, debuggerServices));
-            ServiceProvider.AddServiceFactory<IMemoryService>(() => new MemoryServiceFromDebuggerServices(this, debuggerServices));
+            ServiceProvider.AddServiceFactory<IMemoryService>(() => {
+                IMemoryService memoryService = new MemoryServiceFromDebuggerServices(this, debuggerServices);
+                Debug.Assert(Host.HostType != HostType.DotnetDump);
+                if (IsDump && Host.HostType == HostType.Lldb)
+                {
+                    // This is a special memory service that maps the managed assemblies' metadata into the address 
+                    // space. The lldb debugger returns zero's (instead of failing the memory read) for missing pages
+                    // in core dumps that older (< 5.0) createdumps generate so it needs this special metadata mapping 
+                    // memory service. dotnet-dump needs this logic for clrstack -i (uses ICorDebug data targets).
+                    memoryService = new MetadataMappingMemoryService(this, memoryService);
+                }
+                return memoryService;
+            });
         }
     }
 }

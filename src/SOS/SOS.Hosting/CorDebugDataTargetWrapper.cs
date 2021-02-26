@@ -31,7 +31,7 @@ namespace SOS.Hosting
             Debug.Assert(target != null);
             Debug.Assert(runtime != null);
             _target = target;
-            _memoryService = runtime.Services.GetService<IMemoryService>() ?? target.Services.GetService<IMemoryService>();
+            _memoryService = target.Services.GetService<IMemoryService>();
             _threadService = target.Services.GetService<IThreadService>();
             _threadUnwindService = target.Services.GetService<IThreadUnwindService>();
             _symbolServiceWrapper = new SymbolServiceWrapper(target.Host);
