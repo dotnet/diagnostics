@@ -134,8 +134,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             else
             {
-                var socket = new UnixDomainSocket();
-                socket.Connect(Path.Combine(IpcRootPath, address), timeout);
+                var socket = new IpcUnixDomainSocketTransport(Path.Combine(IpcRootPath, address));
+                socket.Connect(timeout);
                 return new ExposedSocketNetworkStream(socket, ownsSocket: true);
             }
         }
@@ -156,8 +156,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             else
             {
-                var socket = new UnixDomainSocket();
-                await socket.ConnectAsync(Path.Combine(IpcRootPath, address), token).ConfigureAwait(false);
+                var socket = new IpcUnixDomainSocketTransport(Path.Combine(IpcRootPath, address));
+                await socket.ConnectAsync(token).ConfigureAwait(false);
                 return new ExposedSocketNetworkStream(socket, ownsSocket: true);
             }
         }

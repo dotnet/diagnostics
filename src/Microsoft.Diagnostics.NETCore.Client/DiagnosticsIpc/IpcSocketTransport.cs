@@ -1,25 +1,20 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
-
-using System;
+﻿using System;
 using System.Diagnostics;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostics.NETCore.Client
+namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
 {
-    internal sealed class UnixDomainSocket : Socket
+    internal class IpcSocketTransport : Socket
     {
-        private bool _ownsSocketFile;
-        private string _path;
+        EndPoint _address;
 
-        public UnixDomainSocket() :
-            base(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified)
+        public IpcSocketTransport(EndPoint address, SocketType type, ProtocolType protocol) :
+            base(address.AddressFamily, type, protocol)
         {
+            _address = address;
         }
 
         public async Task<Socket> AcceptAsync(CancellationToken token)
@@ -44,24 +39,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        public void Bind(string path)
+        public virtual void Bind()
         {
-            Bind(CreateUnixDomainSocketEndPoint(path));
-
-            _ownsSocketFile = true;
-            _path = path;
+            Bind(_address);
         }
 
-        public void Connect(string path, TimeSpan timeout)
+        public virtual void Connect(TimeSpan timeout)
         {
-            IAsyncResult result = BeginConnect(CreateUnixDomainSocketEndPoint(path), null, null);
+            IAsyncResult result = BeginConnect(_address, null, null);
 
             if (result.AsyncWaitHandle.WaitOne(timeout))
             {
                 EndConnect(result);
-
-                _ownsSocketFile = false;
-                _path = path;
             }
             else
             {
@@ -70,7 +59,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        public async Task ConnectAsync(string path, CancellationToken token)
+        public async Task ConnectAsync(CancellationToken token)
         {
             using (token.Register(() => Close(0)))
             {
@@ -78,7 +67,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     Func<AsyncCallback, object, IAsyncResult> beginConnect = (callback, state) =>
                     {
-                        return BeginConnect(CreateUnixDomainSocketEndPoint(path), callback, state);
+                        return BeginConnect(_address, callback, state);
                     };
                     await Task.Factory.FromAsync(beginConnect, EndConnect, this).ConfigureAwait(false);
                 }
@@ -93,33 +82,5 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                if (_ownsSocketFile && !string.IsNullOrEmpty(_path) && File.Exists(_path))
-                {
-                    File.Delete(_path);
-                }
-            }
-            base.Dispose(disposing);
-        }
-
-        private static EndPoint CreateUnixDomainSocketEndPoint(string path)
-        {
-#if NETCOREAPP
-            return new UnixDomainSocketEndPoint(path);
-#elif NETSTANDARD2_0
-            // UnixDomainSocketEndPoint is not part of .NET Standard 2.0
-            var type = typeof(Socket).Assembly.GetType("System.Net.Sockets.UnixDomainSocketEndPoint")
-                        ?? Type.GetType("System.Net.Sockets.UnixDomainSocketEndPoint, System.Core");
-            if (type == null)
-            {
-                throw new PlatformNotSupportedException("Current process is not running a compatible .NET runtime.");
-            }
-            var ctor = type.GetConstructor(new[] { typeof(string) });
-            return (EndPoint)ctor.Invoke(new object[] { path });
-#endif
-        }
     }
 }
