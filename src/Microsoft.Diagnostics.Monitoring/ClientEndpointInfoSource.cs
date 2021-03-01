@@ -32,6 +32,11 @@ namespace Microsoft.Diagnostics.Monitoring
                     {
                         return null;
                     }
+                    //Most errors from IpcTransport, such as a stale socket.
+                    catch (ServerNotAvailableException)
+                    {
+                        return null;
+                    }
                 }, token));
             }
 
