@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc;
 using System;
 using System.IO;
 using System.IO.Pipes;
@@ -18,15 +20,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private IIpcServerTransportCallbackInternal _callback;
         private bool _disposed;
 
-        public static IpcServerTransport Create(string transportPath, int maxConnections)
+        public static IpcServerTransport Create(string address, int maxConnections)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (!IpcTcpSocketTransport.TryParseIPAddress(address))
             {
-                return new WindowsPipeServerTransport(transportPath, maxConnections);
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    return new IpcWindowsPipeServerTransport(address, maxConnections);
+                }
+                else
+                {
+                    return new IpcUnixDomainSocketServerTransport(address, maxConnections);
+                }
             }
             else
             {
-                return new UnixDomainSocketServerTransport(transportPath, maxConnections);
+                return new IpcTcpSocketServerTransport (address, maxConnections);
             }
         }
 
@@ -46,18 +55,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public abstract Task<Stream> AcceptAsync(CancellationToken token);
 
-        public static int MaxAllowedConnections
-        {
+        public static int MaxAllowedConnections {
             get
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    return NamedPipeServerStream.MaxAllowedServerInstances;
-                }
-                else
-                {
-                    return (int)SocketOptionName.MaxConnections;
-                }
+                return -1;
             }
         }
 
@@ -80,7 +81,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
     }
 
-    internal sealed class WindowsPipeServerTransport : IpcServerTransport
+    internal sealed class IpcWindowsPipeServerTransport : IpcServerTransport
     {
         private const string PipePrefix = @"\\.\pipe\";
 
@@ -90,9 +91,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private readonly string _pipeName;
         private readonly int _maxInstances;
 
-        public WindowsPipeServerTransport(string pipeName, int maxInstances)
+        public IpcWindowsPipeServerTransport(string pipeName, int maxInstances)
         {
-            _maxInstances = maxInstances;
+            _maxInstances = maxInstances >= 0 ? maxInstances : NamedPipeServerStream.MaxAllowedServerInstances;
             _pipeName = pipeName.StartsWith(PipePrefix) ? pipeName.Substring(PipePrefix.Length) : pipeName;
             CreateNewPipeServer();
         }
@@ -144,20 +145,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
     }
 
-    internal sealed class UnixDomainSocketServerTransport : IpcServerTransport
+    internal abstract class IpcSocketServerTransport : IpcServerTransport
     {
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
         private readonly int _backlog;
-        private readonly string _path;
+        private readonly string _address;
 
-        private IpcUnixDomainSocketTransport _socket;
+        private IpcSocketTransport _socket;
 
-        public UnixDomainSocketServerTransport(string path, int backlog)
+        public IpcSocketServerTransport(string address, int backlog)
         {
             _backlog = backlog;
-            _path = path;
+            _address = address;
 
-            CreateNewSocketServer();
+            _socket = CreateNewSocketServer(_address, _backlog);
         }
 
         protected override void Dispose(bool disposing)
@@ -197,19 +198,48 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // Recreate socket if transport is not disposed.
                 if (!_cancellation.IsCancellationRequested)
                 {
-                    CreateNewSocketServer();
+                    _socket = CreateNewSocketServer(_address, _backlog);
                 }
                 throw;
             }
         }
 
-        private void CreateNewSocketServer()
+        internal abstract IpcSocketTransport CreateNewSocketServer(string address, int backlog);
+    }
+
+    internal sealed class IpcTcpSocketServerTransport : IpcSocketServerTransport
+{
+        public IpcTcpSocketServerTransport(string address, int backlog)
+            : base (address, backlog >= 0 ? backlog : 100)
         {
-            _socket = new IpcUnixDomainSocketTransport(_path);
-            _socket.Bind();
-            _socket.Listen(_backlog);
-            _socket.LingerState.Enabled = false;
+        }
+
+        internal override IpcSocketTransport CreateNewSocketServer(string address, int backlog)
+        {
+            var socket = IpcTcpSocketTransport.Create (address);
+            socket.Bind();
+            socket.Listen(backlog);
+            socket.LingerState.Enabled = false;
             OnCreateNewServer();
+            return socket;
+        }
+    }
+
+    internal sealed class IpcUnixDomainSocketServerTransport : IpcSocketServerTransport
+    {
+        public IpcUnixDomainSocketServerTransport(string path, int backlog)
+            : base (path, backlog >= 0 ? backlog : (int)SocketOptionName.MaxConnections)
+        {
+        }
+
+        internal override IpcSocketTransport CreateNewSocketServer(string address, int backlog)
+        {
+            var socket = IpcUnixDomainSocketTransport.Create(address);
+            socket.Bind();
+            socket.Listen(backlog);
+            socket.LingerState.Enabled = false;
+            OnCreateNewServer();
+            return socket;
         }
     }
 

@@ -27,23 +27,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private readonly CancellationTokenSource _disposalSource = new CancellationTokenSource();
         private readonly HandleableCollection<IpcEndpointInfo> _endpointInfos = new HandleableCollection<IpcEndpointInfo>();
         private readonly ConcurrentDictionary<Guid, HandleableCollection<Stream>> _streamCollections = new ConcurrentDictionary<Guid, HandleableCollection<Stream>>();
-        private readonly string _transportPath;
+        private readonly string _address;
 
         private bool _disposed = false;
         private Task _listenTask;
 
         /// <summary>
         /// Constructs the <see cref="ReversedDiagnosticsServer"/> instance with an endpoint bound
-        /// to the location specified by <paramref name="transportPath"/>.
+        /// to the location specified by <paramref name="address"/>.
         /// </summary>
-        /// <param name="transportPath">
-        /// The path of the server endpoint.
+        /// <param name="address">
+        /// The server endpoint.
         /// On Windows, this can be a full pipe path or the name without the "\\.\pipe\" prefix.
         /// On all other systems, this must be the full file path of the socket.
+        /// When TCP sockets are used, this is a host:port of the listening socket.
         /// </param>
-        public ReversedDiagnosticsServer(string transportPath)
+        public ReversedDiagnosticsServer(string address)
         {
-            _transportPath = transportPath;
+            _address = address;
         }
 
         public async ValueTask DisposeAsync()
@@ -80,7 +81,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Starts listening at the transport path for new connections.
+        /// Starts listening at the address for new connections.
         /// </summary>
         public void Start()
         {
@@ -88,7 +89,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Starts listening at the transport path for new connections.
+        /// Starts listening at the address for new connections.
         /// </summary>
         /// <param name="maxConnections">The maximum number of connections the server will support.</param>
         public void Start(int maxConnections)
@@ -101,6 +102,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             _listenTask = ListenAsync(maxConnections, _disposalSource.Token);
+            if (_listenTask.IsFaulted)
+                _listenTask.Wait(); // Rethrow aggregated exception.
         }
 
         /// <summary>
@@ -164,15 +167,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Listens at the transport path for new connections.
+        /// Listens at the address for new connections.
         /// </summary>
         /// <param name="maxConnections">The maximum number of connections the server will support.</param>
         /// <param name="token">The token to monitor for cancellation requests.</param>
-        /// <returns>A task that completes when the server is no longer listening at the transport path.</returns>
+        /// <returns>A task that completes when the server is no longer listening at the address.</returns>
         private async Task ListenAsync(int maxConnections, CancellationToken token)
         {
             // This disposal shuts down the transport in case an exception is thrown.
-            using var transport = IpcServerTransport.Create(_transportPath, maxConnections);
+            using var transport = IpcServerTransport.Create(_address, maxConnections);
             // Set transport callback for testing purposes.
             transport.SetCallback(TransportCallback);
             // This disposal shuts down the transport in case of cancellation; causes the transport
