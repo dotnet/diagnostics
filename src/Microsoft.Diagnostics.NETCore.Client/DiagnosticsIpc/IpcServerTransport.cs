@@ -227,8 +227,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             if (IpcTcpSocketTransport.NeedsDualMode(socket, hostAddress))
                 socket.DualMode = true;
 
-            socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-
             socket.Bind();
             socket.Listen(backlog);
 
