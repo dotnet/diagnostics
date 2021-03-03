@@ -216,11 +216,26 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal override IpcSocketTransport CreateNewSocketServer(string address, int backlog)
         {
-            var socket = IpcTcpSocketTransport.Create (address);
+            string hostAddress;
+            int hostPort;
+
+            if (!IpcTcpSocketTransport.TryParseIPAddress(address, out hostAddress, out hostPort))
+                throw new ArgumentException(string.Format("Could not parse {0} into host and port arguments", address));
+
+            var socket = IpcTcpSocketTransport.Create (hostAddress, hostPort);
+
+            if (IpcTcpSocketTransport.NeedsDualMode(socket, hostAddress))
+                socket.DualMode = true;
+
+            socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+
             socket.Bind();
             socket.Listen(backlog);
+
             socket.LingerState.Enabled = false;
+
             OnCreateNewServer();
+
             return socket;
         }
     }

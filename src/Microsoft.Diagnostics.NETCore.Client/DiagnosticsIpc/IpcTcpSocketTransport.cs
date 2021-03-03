@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 
@@ -7,9 +8,14 @@ namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
 {
     class IpcTcpSocketTransport : IpcSocketTransport
     {
-        static public IpcTcpSocketTransport Create (string address)
+        public static bool NeedsDualMode (Socket socket, string hostAddress)
         {
-            return new IpcTcpSocketTransport (IpcTcpSocketTransport.ResolveIPAddress (address));
+            return UseAllIPAddresses (hostAddress) && socket.AddressFamily == AddressFamily.InterNetworkV6;
+        }
+
+        public static IpcTcpSocketTransport Create (string hostAddress, int hostPort)
+        {
+            return new IpcTcpSocketTransport (IpcTcpSocketTransport.ResolveIPAddress (hostAddress, hostPort));
         }
 
         public IpcTcpSocketTransport(EndPoint address) :
@@ -17,12 +23,17 @@ namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
         {
         }
 
-        static internal bool TryParseIPAddress(string address)
+        internal static bool UseAllIPAddresses(string hostAddress)
+        {
+            return string.CompareOrdinal(hostAddress, "*") == 0;
+        }
+
+        internal static bool TryParseIPAddress(string address)
         {
             return TryParseIPAddress (address, out _, out _);
         }
 
-        static internal bool TryParseIPAddress(string address, out string hostAddress, out int hostPort)
+        internal static bool TryParseIPAddress(string address, out string hostAddress, out int hostPort)
         {
             hostAddress = "";
             hostPort = -1;
@@ -41,12 +52,15 @@ namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
                     hostPort = int.Parse(addressSegments[1]);
                 }
 
-                if (!IPAddress.TryParse(hostAddress, out _))
+                if (!UseAllIPAddresses(hostAddress))
                 {
-                    if (!Uri.TryCreate(Uri.UriSchemeNetTcp + "://" + hostAddress + ":" + hostPort, UriKind.RelativeOrAbsolute, out _))
+                    if (!IPAddress.TryParse(hostAddress, out _))
                     {
-                        hostAddress = "";
-                        hostPort = -1;
+                        if (!Uri.TryCreate(Uri.UriSchemeNetTcp + "://" + hostAddress + ":" + hostPort, UriKind.RelativeOrAbsolute, out _))
+                        {
+                            hostAddress = "";
+                            hostPort = -1;
+                        }
                     }
                 }
             }
@@ -58,20 +72,26 @@ namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
             return !string.IsNullOrEmpty(hostAddress) && hostPort != -1;
         }
 
-        static internal IPEndPoint ResolveIPAddress(string address)
+        static IPEndPoint ResolveIPAddress(string hostAddress, int hostPort)
         {
-            string hostAddress;
-            int hostPort;
             IPAddress ipAddress = null;
-
-            if (!TryParseIPAddress (address, out hostAddress, out hostPort))
-                throw new ArgumentException (string.Format("Could not parse {0} into host and port arguments", address));
 
             try
             {
-                if (!IPAddress.TryParse(hostAddress, out ipAddress))
+                if (UseAllIPAddresses(hostAddress))
                 {
-                    var host = Dns.GetHostEntry (hostAddress);
+                    if (Socket.OSSupportsIPv6)
+                    {
+                        ipAddress = IPAddress.IPv6Any;
+                    }
+                    else
+                    {
+                        ipAddress = IPAddress.Any;
+                    }
+                }
+                else if (!IPAddress.TryParse(hostAddress, out ipAddress))
+                {
+                    var host = Dns.GetHostEntry(hostAddress);
                     ipAddress = host.AddressList[0];
                 }
             }
@@ -84,6 +104,17 @@ namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
                 throw new ArgumentException(string.Format("Could not resolve {0} into an IP address", hostAddress));
 
             return new IPEndPoint(ipAddress, hostPort);
+        }
+
+        static IPEndPoint ResolveIPAddress(string address)
+        {
+            string hostAddress;
+            int hostPort;
+
+            if (!TryParseIPAddress (address, out hostAddress, out hostPort))
+                throw new ArgumentException (string.Format("Could not parse {0} into host and port arguments", address));
+
+            return ResolveIPAddress (hostAddress, hostPort);
         }
     }
 }
