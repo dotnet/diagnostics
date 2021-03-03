@@ -231,8 +231,19 @@ namespace Microsoft.Internal.Common.Utils
                 Console.WriteLine($"Waiting for connection on {fullPort}");
                 Console.WriteLine($"Start an application with the following environment variable: DOTNET_DiagnosticPorts={fullPort}");
 
-                IpcEndpointInfo endpointInfo = await server.AcceptAsync(ct);
-                return new DiagnosticsClientHolder(new DiagnosticsClient(endpointInfo.Endpoint), endpointInfo, fullPort, server);
+                try
+                {
+                    IpcEndpointInfo endpointInfo = await server.AcceptAsync(ct);
+                    return new DiagnosticsClientHolder(new DiagnosticsClient(endpointInfo.Endpoint), endpointInfo, fullPort, server);
+                }
+                catch (TaskCanceledException)
+                {
+                    if (!ct.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    return null;
+                }
             }
             else
             {
