@@ -1,18 +1,22 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
+namespace Microsoft.Diagnostics.NETCore.Client
 {
     internal class IpcSocketTransport : Socket
     {
         EndPoint _address;
 
-        public IpcSocketTransport(EndPoint address, SocketType type, ProtocolType protocol) :
-            base(address.AddressFamily, type, protocol)
+        public IpcSocketTransport(EndPoint address, SocketType type, ProtocolType protocol)
+            : base(address.AddressFamily, type, protocol)
         {
             _address = address;
         }

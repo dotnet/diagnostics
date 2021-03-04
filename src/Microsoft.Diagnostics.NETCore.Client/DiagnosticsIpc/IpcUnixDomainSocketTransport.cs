@@ -2,14 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -23,21 +19,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return new IpcUnixDomainSocketTransport(address);
         }
 
-        public IpcUnixDomainSocketTransport(string address) :
-            base(CreateUnixDomainSocketEndPoint(address), SocketType.Stream, ProtocolType.Unspecified)
+        public IpcUnixDomainSocketTransport(string address)
+            : base(CreateUnixDomainSocketEndPoint(address), SocketType.Stream, ProtocolType.Unspecified)
         {
             _path = address;
         }
 
         public override void Bind()
         {
-            base.Bind ();
+            base.Bind();
             _ownsSocketFile = true;
         }
 
         public override void Connect(TimeSpan timeout)
         {
-            base.Connect (timeout);
+            base.Connect(timeout);
             _ownsSocketFile = false;
         }
 

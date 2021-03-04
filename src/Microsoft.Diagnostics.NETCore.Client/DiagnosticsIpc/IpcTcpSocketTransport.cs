@@ -1,36 +1,40 @@
-﻿using System;
-using System.Globalization;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 using System.Net;
 using System.Net.Sockets;
 
-
-namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
+namespace Microsoft.Diagnostics.NETCore.Client
 {
     class IpcTcpSocketTransport : IpcSocketTransport
     {
-        public static bool UseDualMode (Socket socket, string hostAddress)
+        public static IpcTcpSocketTransport Create(string hostAddress, int hostPort)
         {
-            return UseAnyIPAddress (hostAddress) && socket.AddressFamily == AddressFamily.InterNetworkV6;
+            return new IpcTcpSocketTransport(hostAddress, hostPort);
         }
 
-        public static IpcTcpSocketTransport Create (string hostAddress, int hostPort)
+        public IpcTcpSocketTransport(string hostAddress, int hostPort)
+            : base(ResolveIPAddress(hostAddress, hostPort), SocketType.Stream, ProtocolType.Tcp)
         {
-            return new IpcTcpSocketTransport (IpcTcpSocketTransport.ResolveIPAddress (hostAddress, hostPort));
+            if (EnableDualMode(this, hostAddress))
+                this.DualMode = true;
         }
 
-        public IpcTcpSocketTransport(EndPoint address) :
-            base(address, SocketType.Stream, ProtocolType.Tcp)
+        internal static bool EnableDualMode(Socket socket, string hostAddress)
         {
+            return UseAnyIPAddressDualMode(hostAddress) && socket.AddressFamily == AddressFamily.InterNetworkV6;
         }
 
-        internal static bool UseAnyIPAddress(string hostAddress)
+        internal static bool UseAnyIPAddressDualMode(string hostAddress)
         {
             return string.CompareOrdinal(hostAddress, "*") == 0;
         }
 
         internal static bool TryParseIPAddress(string address)
         {
-            return TryParseIPAddress (address, out _, out _);
+            return TryParseIPAddress(address, out _, out _);
         }
 
         internal static bool TryParseIPAddress(string address, out string hostAddress, out int hostPort)
@@ -52,7 +56,7 @@ namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
                     hostPort = int.Parse(addressSegments[1]);
                 }
 
-                if (!UseAnyIPAddress(hostAddress))
+                if (!UseAnyIPAddressDualMode(hostAddress))
                 {
                     if (!IPAddress.TryParse(hostAddress, out _))
                     {
@@ -78,7 +82,7 @@ namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
 
             try
             {
-                if (UseAnyIPAddress(hostAddress))
+                if (UseAnyIPAddressDualMode(hostAddress))
                 {
                     if (Socket.OSSupportsIPv6)
                     {
@@ -92,7 +96,8 @@ namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
                 else if (!IPAddress.TryParse(hostAddress, out ipAddress))
                 {
                     var host = Dns.GetHostEntry(hostAddress);
-                    ipAddress = host.AddressList[0];
+                    if (host.AddressList.Length > 0)
+                        ipAddress = host.AddressList[0];
                 }
             }
             catch
@@ -111,10 +116,10 @@ namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
             string hostAddress;
             int hostPort;
 
-            if (!TryParseIPAddress (address, out hostAddress, out hostPort))
-                throw new ArgumentException (string.Format("Could not parse {0} into host and port arguments", address));
+            if (!TryParseIPAddress(address, out hostAddress, out hostPort))
+                throw new ArgumentException(string.Format("Could not parse {0} into host, port", address));
 
-            return ResolveIPAddress (hostAddress, hostPort);
+            return ResolveIPAddress(hostAddress, hostPort);
         }
     }
 }
