@@ -151,9 +151,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Process process;
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-trace", 10);
                 bool shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort);
+                var shouldExit = new ManualResetEvent(false);
+                ct.Register(() => shouldExit.Set());
 
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: showchildio, printLaunchCommand: true))
                 {
+                    // if builder returned null, it means we received ctrl+C while waiting for clients to connect. Exit gracefully.
+                    if (holder == null)
+                    {
+                        return await Task.FromResult(ret);
+                    }
                     diagnosticsClient = holder.Client;
                     if (shouldResumeRuntime)
                     {
@@ -185,12 +192,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         }
                     }
 
-                    var shouldExit = new ManualResetEvent(false);
                     var shouldStopAfterDuration = duration != default(TimeSpan);
                     var rundownRequested = false;
                     System.Timers.Timer durationTimer = null;
 
-                    ct.Register(() => shouldExit.Set());
 
                     using (VirtualTerminalMode vTermMode = printStatusOverTime ? VirtualTerminalMode.TryEnable() : null)
                     {

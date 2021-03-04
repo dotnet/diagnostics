@@ -31,6 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private CounterFilter filter;
         private string _output;
         private bool pauseCmdSet;
+        private ManualResetEvent shouldExit;
         private bool shouldResumeRuntime;
         private DiagnosticsClient _diagnosticsClient;
         private EventPipeSession _session;
@@ -96,10 +97,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 return 0;
             }
+            shouldExit = new ManualResetEvent(false);
+            _ct.Register(() => shouldExit.Set());
 
             DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
             using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
             {
+                if (holder == null)
+                {
+                    return 1;
+                }
                 try
                 {
                     InitializeCounterList(counters, counter_list);
@@ -134,9 +141,18 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 return 0;
             }
+
+            shouldExit = new ManualResetEvent(false);
+            _ct.Register(() => shouldExit.Set());
+
             DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
             using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
             {
+                if (holder == null)
+                {
+                    return 1;
+                }
+
                 try
                 {
                     InitializeCounterList(counters, counter_list);
@@ -321,8 +337,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             _renderer.Initialize();
 
-            ManualResetEvent shouldExit = new ManualResetEvent(false);
-            _ct.Register(() => shouldExit.Set());
             Task monitorTask = new Task(() => {
                 try
                 {
