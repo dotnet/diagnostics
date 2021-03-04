@@ -93,7 +93,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public IpcWindowsPipeServerTransport(string pipeName, int maxInstances)
         {
-            _maxInstances = maxInstances >= 0 ? maxInstances : NamedPipeServerStream.MaxAllowedServerInstances;
+            _maxInstances = maxInstances != MaxAllowedConnections ? maxInstances : NamedPipeServerStream.MaxAllowedServerInstances;
             _pipeName = pipeName.StartsWith(PipePrefix) ? pipeName.Substring(PipePrefix.Length) : pipeName;
             CreateNewPipeServer();
         }
@@ -210,7 +210,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal sealed class IpcTcpSocketServerTransport : IpcSocketServerTransport
 {
         public IpcTcpSocketServerTransport(string address, int backlog)
-            : base (address, backlog >= 0 ? backlog : 100)
+            : base (address, backlog != MaxAllowedConnections ? backlog : 100)
         {
         }
 
@@ -224,7 +224,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             var socket = IpcTcpSocketTransport.Create (hostAddress, hostPort);
 
-            if (IpcTcpSocketTransport.NeedsDualMode(socket, hostAddress))
+            if (IpcTcpSocketTransport.UseDualMode(socket, hostAddress))
                 socket.DualMode = true;
 
             socket.Bind();
@@ -241,7 +241,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal sealed class IpcUnixDomainSocketServerTransport : IpcSocketServerTransport
     {
         public IpcUnixDomainSocketServerTransport(string path, int backlog)
-            : base (path, backlog >= 0 ? backlog : (int)SocketOptionName.MaxConnections)
+            : base (path, backlog != MaxAllowedConnections ? backlog : (int)SocketOptionName.MaxConnections)
         {
         }
 

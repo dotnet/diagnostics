@@ -8,9 +8,9 @@ namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
 {
     class IpcTcpSocketTransport : IpcSocketTransport
     {
-        public static bool NeedsDualMode (Socket socket, string hostAddress)
+        public static bool UseDualMode (Socket socket, string hostAddress)
         {
-            return UseAllIPAddresses (hostAddress) && socket.AddressFamily == AddressFamily.InterNetworkV6;
+            return UseAnyIPAddress (hostAddress) && socket.AddressFamily == AddressFamily.InterNetworkV6;
         }
 
         public static IpcTcpSocketTransport Create (string hostAddress, int hostPort)
@@ -23,7 +23,7 @@ namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
         {
         }
 
-        internal static bool UseAllIPAddresses(string hostAddress)
+        internal static bool UseAnyIPAddress(string hostAddress)
         {
             return string.CompareOrdinal(hostAddress, "*") == 0;
         }
@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
                     hostPort = int.Parse(addressSegments[1]);
                 }
 
-                if (!UseAllIPAddresses(hostAddress))
+                if (!UseAnyIPAddress(hostAddress))
                 {
                     if (!IPAddress.TryParse(hostAddress, out _))
                     {
@@ -78,7 +78,7 @@ namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
 
             try
             {
-                if (UseAllIPAddresses(hostAddress))
+                if (UseAnyIPAddress(hostAddress))
                 {
                     if (Socket.OSSupportsIPv6)
                     {
