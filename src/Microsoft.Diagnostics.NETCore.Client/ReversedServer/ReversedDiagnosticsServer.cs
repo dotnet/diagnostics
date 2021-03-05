@@ -31,6 +31,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private bool _disposed = false;
         private Task _listenTask;
+        private bool _enableTcpIpProtocol = false;
 
         /// <summary>
         /// Constructs the <see cref="ReversedDiagnosticsServer"/> instance with an endpoint bound
@@ -40,11 +41,32 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// The server endpoint.
         /// On Windows, this can be a full pipe path or the name without the "\\.\pipe\" prefix.
         /// On all other systems, this must be the full file path of the socket.
-        /// When TCP sockets are used, this is a host:port of the listening socket.
         /// </param>
         public ReversedDiagnosticsServer(string address)
         {
             _address = address;
+        }
+
+        /// <summary>
+        /// Constructs the <see cref="ReversedDiagnosticsServer"/> instance with an endpoint bound
+        /// to the location specified by <paramref name="address"/>.
+        /// </summary>
+        /// <param name="address">
+        /// The server endpoint.
+        /// On Windows, this can be a full pipe path or the name without the "\\.\pipe\" prefix.
+        /// On all other systems, this must be the full file path of the socket.
+        /// When TcpIp is enabled, this can also be host:port of the listening socket.
+        /// </param>
+        /// <param name="enableTcpIpProtocol">
+        /// Add TcpIp as a supported protocol for ReversedDiagnosticServer. When enabled, address will
+        /// be analyzed and if on format host:port, ReversedDiagnosticServer will try to bind
+        /// a TcpIp listener to host and port.
+        ///
+        /// </param>
+        public ReversedDiagnosticsServer(string address, bool enableTcpIpProtocol)
+        {
+            _address = address;
+            _enableTcpIpProtocol = enableTcpIpProtocol;
         }
 
         public async ValueTask DisposeAsync()
@@ -175,7 +197,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private async Task ListenAsync(int maxConnections, CancellationToken token)
         {
             // This disposal shuts down the transport in case an exception is thrown.
-            using var transport = IpcServerTransport.Create(_address, maxConnections);
+            using var transport = IpcServerTransport.Create(_address, maxConnections, _enableTcpIpProtocol);
             // Set transport callback for testing purposes.
             transport.SetCallback(TransportCallback);
             // This disposal shuts down the transport in case of cancellation; causes the transport

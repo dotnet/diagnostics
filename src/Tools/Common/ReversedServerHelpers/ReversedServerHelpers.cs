@@ -225,7 +225,11 @@ namespace Microsoft.Internal.Common.Utils
             }
             else if (!string.IsNullOrEmpty(portName))
             {
+#if ENABLE_REVERSED_DIAGNOSTIC_SERVER_TCP_IP_SUPPORT
+                ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(portName, true);
+#else
                 ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(portName);
+#endif
                 server.Start();
                 string fullPort = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? portName : Path.GetFullPath(portName);
                 Console.WriteLine($"Waiting for connection on {fullPort}");
