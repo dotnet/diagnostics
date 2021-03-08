@@ -4,6 +4,7 @@
     "runtimes": {
       "dotnet/x64": [
         "$(MicrosoftNETCoreApp31Version)",
+        "$(MicrosoftNETCoreApp50Version)",
         "$(VSRedistCommonNetCoreSharedFrameworkx6460Version)"
       ],
       "dotnet/x86": [
