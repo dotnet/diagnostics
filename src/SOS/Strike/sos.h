@@ -641,6 +641,7 @@ namespace sos
         const GCHeapDetails *mHeaps;
         int mNumHeaps;
         int mCurrHeap;
+        unsigned mCurrRegionGen;
     };
 
     /* Reprensents an entry in the sync block table.

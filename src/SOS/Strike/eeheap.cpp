@@ -443,12 +443,27 @@ size_t AlignLarge(size_t nbytes)
 void GCPrintGenerationInfo(const GCHeapDetails &heap)
 {
     UINT n;
-    for (n = 0; n <= GetMaxGeneration(); n ++)
+    for (n = 0; n <= GetMaxGeneration(); n++)
     {
         if (IsInterrupt())
             return;
-        ExtOut("generation %d starts at 0x%p\n",
-                 n, SOS_PTR(heap.generation_table[n].allocation_start));
+        if (heap.has_regions)
+        {
+            DacpHeapSegmentData segment;
+            DWORD_PTR dwAddrSeg = (DWORD_PTR)heap.generation_table[n].start_segment;
+            if (segment.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
+            {
+                ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
+                return;
+            }
+            ExtOut("generation %d starts at 0x%p\n",
+                n, SOS_PTR(SOS_PTR(segment.mem)));
+        }
+        else
+        {
+            ExtOut("generation %d starts at 0x%p\n",
+                n, SOS_PTR(heap.generation_table[n].allocation_start));
+        }
     }
 
     // We also need to look at the gen0 alloc context.
@@ -471,40 +486,66 @@ void GCPrintSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_size)
     DWORD_PTR dwAddrSeg;
     DacpHeapSegmentData segment;
 
-    dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration()].start_segment;
-    total_size = 0;
-    // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
-    while (dwAddrSeg != (DWORD_PTR)heap.generation_table[0].start_segment)
+    if (heap.has_regions)
     {
-        if (IsInterrupt())
-            return;
+        for (UINT n = 0; n <= GetMaxGeneration(); n++)
+        {
+            ExtOut("generation %d:\n", n);
+            dwAddrSeg = (DWORD_PTR)heap.generation_table[n].start_segment;
+            while (dwAddrSeg != 0)
+            {
+                if (IsInterrupt())
+                    return;
+                if (segment.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
+                {
+                    ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
+                    return;
+                }
+                ExtOut("%p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n", SOS_PTR(dwAddrSeg),
+                    SOS_PTR(segment.mem), SOS_PTR(segment.allocated),
+                    (ULONG_PTR)(segment.allocated - segment.mem),
+                    (ULONG_PTR)(segment.allocated - segment.mem));
+                total_size += (DWORD_PTR)(segment.allocated - segment.mem);
+                dwAddrSeg = (DWORD_PTR)segment.next;
+            }
+        }
+    }
+    else
+    {
+        dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration()].start_segment;
+        total_size = 0;
+        // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
+        while (dwAddrSeg != (DWORD_PTR)heap.generation_table[0].start_segment)
+        {
+            if (IsInterrupt())
+                return;
+            if (segment.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
+            {
+                ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
+                return;
+            }
+            ExtOut("%p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n", SOS_PTR(dwAddrSeg),
+                SOS_PTR(segment.mem), SOS_PTR(segment.allocated),
+                (ULONG_PTR)(segment.allocated - segment.mem),
+                (ULONG_PTR)(segment.allocated - segment.mem));
+            total_size += (DWORD_PTR) (segment.allocated - segment.mem);
+            dwAddrSeg = (DWORD_PTR)segment.next;
+        }
+
         if (segment.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
         {
             ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
             return;
         }
+
+        DWORD_PTR end = (DWORD_PTR)heap.alloc_allocated;
         ExtOut("%p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n", SOS_PTR(dwAddrSeg),
-                 SOS_PTR(segment.mem), SOS_PTR(segment.allocated),
-                 (ULONG_PTR)(segment.allocated - segment.mem),
-                 (ULONG_PTR)(segment.allocated - segment.mem));
-        total_size += (DWORD_PTR) (segment.allocated - segment.mem);
-        dwAddrSeg = (DWORD_PTR)segment.next;
+            SOS_PTR(segment.mem), SOS_PTR(end),
+            (ULONG_PTR)(end - (DWORD_PTR)segment.mem),
+            (ULONG_PTR)(end - (DWORD_PTR)segment.mem));
+
+        total_size += end - (DWORD_PTR)segment.mem;
     }
-
-    if (segment.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
-    {
-        ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
-        return;
-    }
-
-    DWORD_PTR end = (DWORD_PTR)heap.alloc_allocated;
-    ExtOut("%p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n", SOS_PTR(dwAddrSeg),
-             SOS_PTR(segment.mem), SOS_PTR(end),
-             (ULONG_PTR)(end - (DWORD_PTR)segment.mem),
-             (ULONG_PTR)(end - (DWORD_PTR)segment.mem));
-
-    total_size += end - (DWORD_PTR)segment.mem;
-
 }
 
 void GCPrintLargeHeapSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_size)
@@ -581,6 +622,10 @@ void GCHeapInfo(const GCHeapDetails &heap, DWORD_PTR &total_size)
 BOOL GCObjInGeneration(TADDR taddrObj, const GCHeapDetails &heap,
     const TADDR_SEGINFO& /*seg*/, int& gen, TADDR_RANGE& allocCtx)
 {
+    // we will not get here in case of regions as our caller in 
+    // GCObjInSegment already takes care of this
+    assert(!heap.has_regions);
+
     gen = -1;
     for (UINT n = 0; n <= GetMaxGeneration(); n ++)
     {
@@ -1181,148 +1226,281 @@ void GatherOneHeapFinalization(DacpGcHeapDetails& heapDetails, HeapStat *stat, B
 
 BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEAPFUNC pFunc, LPVOID token, BOOL verify)
 {
-    DWORD_PTR begin_youngest;
-    DWORD_PTR end_youngest;
+    DWORD_PTR dwAddrSeg = 0;
+    DWORD_PTR dwAddr = 0;
+    DWORD_PTR dwAddrCurrObj = 0;
+    DWORD_PTR dwAddrPrevObj = 0;
+    size_t s, sPrev = 0;
 
-    begin_youngest = (DWORD_PTR)heap.generation_table[0].allocation_start;
-    DWORD_PTR dwAddr = (DWORD_PTR)heap.ephemeral_heap_segment;
     DacpHeapSegmentData segment;
-
-    end_youngest = (DWORD_PTR)heap.alloc_allocated;
-
-    DWORD_PTR dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration()].start_segment;
-    dwAddr = dwAddrSeg;
-
-    if (segment.Request(g_sos, dwAddr, heap.original_heap_details) != S_OK)
+    if (heap.has_regions)
     {
-        ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddr));
-        return FALSE;
-    }
-
-    // DWORD_PTR dwAddrCurrObj = (DWORD_PTR)heap.generation_table[GetMaxGeneration()].allocation_start;
-    DWORD_PTR dwAddrCurrObj = (DWORD_PTR)segment.mem;
-
-    size_t s, sPrev=0;
-    BOOL bPrevFree=FALSE;
-    BOOL bPinnedDone = FALSE;
-    DWORD_PTR dwAddrMethTable;
-    DWORD_PTR dwAddrPrevObj=0;
-
-    while(1)
-    {
-        if (IsInterrupt())
+        DWORD_PTR end_youngest = (DWORD_PTR)heap.alloc_allocated;
+        BOOL bPrevFree = FALSE;
+        for (UINT n = 0; n <= GetMaxGeneration(); n++)
         {
-            ExtOut("<heap walk interrupted>\n");
-            return FALSE;
-        }
-        DWORD_PTR end_of_segment = (DWORD_PTR)segment.allocated;
-        if (dwAddrSeg == (DWORD_PTR)heap.ephemeral_heap_segment)
-        {
-            end_of_segment = end_youngest;
-            if (dwAddrCurrObj - SIZEOF_OBJHEADER == end_youngest - Align(min_obj_size))
-                break;
-        }
-        if (dwAddrCurrObj >= (DWORD_PTR)end_of_segment)
-        {
-            if (dwAddrCurrObj > (DWORD_PTR)end_of_segment)
+            dwAddrSeg = (DWORD_PTR)heap.generation_table[n].start_segment;
+            while (dwAddrSeg != 0)
             {
-                ExtOut ("curr_object: %p > heap_segment_allocated (seg: %p)\n",
-                         SOS_PTR(dwAddrCurrObj), SOS_PTR(dwAddrSeg));
-                if (dwAddrPrevObj) {
-                    ExtOut ("Last good object: %p\n", SOS_PTR(dwAddrPrevObj));
-                }
-                return FALSE;
-            }
-            dwAddrSeg = (DWORD_PTR)segment.next;
-            if (dwAddrSeg)
-            {
-                dwAddr = dwAddrSeg;
-                if (segment.Request(g_sos, dwAddr, heap.original_heap_details) != S_OK)
+                if (IsInterrupt())
                 {
-                    ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddr));
+                    ExtOut("<heap walk interrupted>\n");
                     return FALSE;
                 }
-                dwAddrCurrObj = (DWORD_PTR)segment.mem;
-                continue;
-            }
-            else
-            {
-                break;  // Done Verifying Heap
+                if (segment.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
+                {
+                    ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
+                    return FALSE;
+                }
+                dwAddrCurrObj = segment.mem;
+                DWORD_PTR end_of_segment = (DWORD_PTR)segment.allocated;
+                if (dwAddrSeg == (DWORD_PTR)heap.ephemeral_heap_segment)
+                {
+                    end_of_segment = end_youngest;
+                }
+
+                while (true)
+                {
+                    if (dwAddrCurrObj - SIZEOF_OBJHEADER == end_youngest - Align(min_obj_size))
+                        break;
+
+                    if (dwAddrCurrObj >= (DWORD_PTR)end_of_segment)
+                    {
+                        if (dwAddrCurrObj > (DWORD_PTR)end_of_segment)
+                        {
+                            ExtOut("curr_object: %p > heap_segment_allocated (seg: %p)\n",
+                                SOS_PTR(dwAddrCurrObj), SOS_PTR(dwAddrSeg));
+                            if (dwAddrPrevObj) 
+                            {
+                                ExtOut("Last good object: %p\n", SOS_PTR(dwAddrPrevObj));
+                            }
+                            return FALSE;
+                        }
+                        // done with this segment
+                        break;
+                    }
+
+                    if (dwAddrSeg == (DWORD_PTR)heap.ephemeral_heap_segment
+                        && dwAddrCurrObj >= end_youngest)
+                    {
+                        if (dwAddrCurrObj > end_youngest)
+                        {
+                            // prev_object length is too long
+                            ExtOut("curr_object: %p > end_youngest: %p\n",
+                                SOS_PTR(dwAddrCurrObj), SOS_PTR(end_youngest));
+                            if (dwAddrPrevObj) 
+                            {
+                                DMLOut("Last good object: %s\n", DMLObject(dwAddrPrevObj));
+                            }
+                            return FALSE;
+                        }
+                        return FALSE;
+                    }
+
+                    DWORD_PTR dwAddrMethTable = 0;
+                    if (FAILED(GetMTOfObject(dwAddrCurrObj, &dwAddrMethTable)))
+                    {
+                        return FALSE;
+                    }
+
+                    dwAddrMethTable = dwAddrMethTable & ~sos::Object::METHODTABLE_PTR_LOW_BITMASK;
+                    if (dwAddrMethTable == 0)
+                    {
+                        // Is this the beginning of an allocation context?
+                        int i;
+                        for (i = 0; i < pallocInfo->num; i++)
+                        {
+                            if (dwAddrCurrObj == (DWORD_PTR)pallocInfo->array[i].alloc_ptr)
+                            {
+                                dwAddrCurrObj =
+                                    (DWORD_PTR)pallocInfo->array[i].alloc_limit + Align(min_obj_size);
+                                break;
+                            }
+                        }
+                        if (i < pallocInfo->num)
+                            continue;
+
+                        // We also need to look at the gen0 alloc context.
+                        if (dwAddrCurrObj == (DWORD_PTR)heap.generation_table[0].allocContextPtr)
+                        {
+                            dwAddrCurrObj = (DWORD_PTR)heap.generation_table[0].allocContextLimit + Align(min_obj_size);
+                            continue;
+                        }
+                    }
+
+                    BOOL bContainsPointers;
+                    size_t s;
+                    BOOL bMTOk = GetSizeEfficient(dwAddrCurrObj, dwAddrMethTable, FALSE, s, bContainsPointers);
+                    if (verify && bMTOk)
+                        bMTOk = VerifyObject(heap, dwAddrCurrObj, dwAddrMethTable, s, TRUE);
+                    if (!bMTOk)
+                    {
+                        DMLOut("curr_object:      %s\n", DMLListNearObj(dwAddrCurrObj));
+                        if (dwAddrPrevObj)
+                            DMLOut("Last good object: %s\n", DMLObject(dwAddrPrevObj));
+
+                        ExtOut("----------------\n");
+                        return FALSE;
+                    }
+
+                    pFunc(dwAddrCurrObj, s, dwAddrMethTable, token);
+
+                    // We believe we did this alignment in ObjectSize above.
+                    assert((s & ALIGNCONST) == 0);
+                    dwAddrPrevObj = dwAddrCurrObj;
+                    sPrev = s;
+                    bPrevFree = IsMTForFreeObj(dwAddrMethTable);
+
+                    dwAddrCurrObj += s;
+                }
+                dwAddrSeg = (DWORD_PTR)segment.next;
             }
         }
+    }
+    else
+    {
+        DWORD_PTR begin_youngest;
+        DWORD_PTR end_youngest;
 
-        if (dwAddrSeg == (DWORD_PTR)heap.ephemeral_heap_segment
-            && dwAddrCurrObj >= end_youngest)
+        begin_youngest = (DWORD_PTR)heap.generation_table[0].allocation_start;
+        dwAddr = (DWORD_PTR)heap.ephemeral_heap_segment;
+
+        end_youngest = (DWORD_PTR)heap.alloc_allocated;
+
+        dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration()].start_segment;
+        dwAddr = dwAddrSeg;
+
+        if (segment.Request(g_sos, dwAddr, heap.original_heap_details) != S_OK)
         {
-            if (dwAddrCurrObj > end_youngest)
+            ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddr));
+            return FALSE;
+        }
+
+        // DWORD_PTR dwAddrCurrObj = (DWORD_PTR)heap.generation_table[GetMaxGeneration()].allocation_start;
+        dwAddrCurrObj = (DWORD_PTR)segment.mem;
+
+        BOOL bPrevFree = FALSE;
+
+        while (1)
+        {
+            if (IsInterrupt())
             {
-                // prev_object length is too long
-                ExtOut("curr_object: %p > end_youngest: %p\n",
-                         SOS_PTR(dwAddrCurrObj), SOS_PTR(end_youngest));
-                if (dwAddrPrevObj) {
-                    DMLOut("Last good object: %s\n", DMLObject(dwAddrPrevObj));
+                ExtOut("<heap walk interrupted>\n");
+                return FALSE;
+            }
+            DWORD_PTR end_of_segment = (DWORD_PTR)segment.allocated;
+            if (dwAddrSeg == (DWORD_PTR)heap.ephemeral_heap_segment)
+            {
+                end_of_segment = end_youngest;
+                if (dwAddrCurrObj - SIZEOF_OBJHEADER == end_youngest - Align(min_obj_size))
+                    break;
+            }
+            if (dwAddrCurrObj >= (DWORD_PTR)end_of_segment)
+            {
+                if (dwAddrCurrObj > (DWORD_PTR)end_of_segment)
+                {
+                    ExtOut ("curr_object: %p > heap_segment_allocated (seg: %p)\n",
+                        SOS_PTR(dwAddrCurrObj), SOS_PTR(dwAddrSeg));
+                    if (dwAddrPrevObj) {
+                        ExtOut ("Last good object: %p\n", SOS_PTR(dwAddrPrevObj));
+                    }
+                    return FALSE;
+                }
+                dwAddrSeg = (DWORD_PTR)segment.next;
+                if (dwAddrSeg)
+                {
+                    dwAddr = dwAddrSeg;
+                    if (segment.Request(g_sos, dwAddr, heap.original_heap_details) != S_OK)
+                    {
+                        ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddr));
+                        return FALSE;
+                    }
+                    dwAddrCurrObj = (DWORD_PTR)segment.mem;
+                    continue;
+                }
+                else
+                {
+                    break;  // Done Verifying Heap
+                }
+            }
+
+            if (dwAddrSeg == (DWORD_PTR)heap.ephemeral_heap_segment
+                && dwAddrCurrObj >= end_youngest)
+            {
+                if (dwAddrCurrObj > end_youngest)
+                {
+                    // prev_object length is too long
+                    ExtOut("curr_object: %p > end_youngest: %p\n",
+                        SOS_PTR(dwAddrCurrObj), SOS_PTR(end_youngest));
+                    if (dwAddrPrevObj) {
+                        DMLOut("Last good object: %s\n", DMLObject(dwAddrPrevObj));
+                    }
+                    return FALSE;
                 }
                 return FALSE;
             }
-            return FALSE;
-        }
 
-        if (FAILED(GetMTOfObject(dwAddrCurrObj, &dwAddrMethTable)))
-        {
-            return FALSE;
-        }
-
-        dwAddrMethTable = dwAddrMethTable & ~sos::Object::METHODTABLE_PTR_LOW_BITMASK;
-        if (dwAddrMethTable == 0)
-        {
-            // Is this the beginning of an allocation context?
-            int i;
-            for (i = 0; i < pallocInfo->num; i ++)
+            DWORD_PTR dwAddrMethTable = 0;
+            if (FAILED(GetMTOfObject(dwAddrCurrObj, &dwAddrMethTable)))
             {
-                if (dwAddrCurrObj == (DWORD_PTR)pallocInfo->array[i].alloc_ptr)
+                return FALSE;
+            }
+
+            dwAddrMethTable = dwAddrMethTable & ~sos::Object::METHODTABLE_PTR_LOW_BITMASK;
+            if (dwAddrMethTable == 0)
+            {
+                // Is this the beginning of an allocation context?
+                int i;
+                for (i = 0; i < pallocInfo->num; i ++)
                 {
-                    dwAddrCurrObj =
-                        (DWORD_PTR)pallocInfo->array[i].alloc_limit + Align(min_obj_size);
-                    break;
+                    if (dwAddrCurrObj == (DWORD_PTR)pallocInfo->array[i].alloc_ptr)
+                    {
+                        dwAddrCurrObj =
+                            (DWORD_PTR)pallocInfo->array[i].alloc_limit + Align(min_obj_size);
+                        break;
+                    }
+                }
+                if (i < pallocInfo->num)
+                    continue;
+
+                // We also need to look at the gen0 alloc context.
+                if (dwAddrCurrObj == (DWORD_PTR) heap.generation_table[0].allocContextPtr)
+                {
+                    dwAddrCurrObj = (DWORD_PTR) heap.generation_table[0].allocContextLimit + Align(min_obj_size);
+                    continue;
                 }
             }
-            if (i < pallocInfo->num)
-                continue;
 
-            // We also need to look at the gen0 alloc context.
-            if (dwAddrCurrObj == (DWORD_PTR) heap.generation_table[0].allocContextPtr)
+            BOOL bContainsPointers;
+            BOOL bMTOk = GetSizeEfficient(dwAddrCurrObj, dwAddrMethTable, FALSE, s, bContainsPointers);
+            if (verify && bMTOk)
+                bMTOk = VerifyObject (heap, dwAddrCurrObj, dwAddrMethTable, s, TRUE);
+            if (!bMTOk)
             {
-                dwAddrCurrObj = (DWORD_PTR) heap.generation_table[0].allocContextLimit + Align(min_obj_size);
-                continue;
+                DMLOut("curr_object:      %s\n", DMLListNearObj(dwAddrCurrObj));
+                if (dwAddrPrevObj)
+                    DMLOut("Last good object: %s\n", DMLObject(dwAddrPrevObj));
+
+                ExtOut ("----------------\n");
+                return FALSE;
             }
+
+            pFunc (dwAddrCurrObj, s, dwAddrMethTable, token);
+
+            // We believe we did this alignment in ObjectSize above.
+            assert((s & ALIGNCONST) == 0);
+            dwAddrPrevObj = dwAddrCurrObj;
+            sPrev = s;
+            bPrevFree = IsMTForFreeObj(dwAddrMethTable);
+
+            dwAddrCurrObj += s;
         }
-
-        BOOL bContainsPointers;
-        BOOL bMTOk = GetSizeEfficient(dwAddrCurrObj, dwAddrMethTable, FALSE, s, bContainsPointers);
-        if (verify && bMTOk)
-             bMTOk = VerifyObject (heap, dwAddrCurrObj, dwAddrMethTable, s, TRUE);
-        if (!bMTOk)
-        {
-            DMLOut("curr_object:      %s\n", DMLListNearObj(dwAddrCurrObj));
-            if (dwAddrPrevObj)
-                DMLOut("Last good object: %s\n", DMLObject(dwAddrPrevObj));
-
-            ExtOut ("----------------\n");
-            return FALSE;
-        }
-
-        pFunc (dwAddrCurrObj, s, dwAddrMethTable, token);
-
-        // We believe we did this alignment in ObjectSize above.
-        assert((s & ALIGNCONST) == 0);
-        dwAddrPrevObj = dwAddrCurrObj;
-        sPrev = s;
-        bPrevFree = IsMTForFreeObj(dwAddrMethTable);
-
-        dwAddrCurrObj += s;
     }
 
     // Now for the large object and pinned object generations:
+
+    BOOL bPinnedDone = FALSE;
+
     dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration()+1].start_segment;
     dwAddr = dwAddrSeg;
 
@@ -1352,7 +1530,7 @@ BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEA
             if (dwAddrCurrObj > (DWORD_PTR)end_of_segment)
             {
                 ExtOut("curr_object: %p > heap_segment_allocated (seg: %p)\n",
-                         SOS_PTR(dwAddrCurrObj), SOS_PTR(dwAddrSeg));
+                            SOS_PTR(dwAddrCurrObj), SOS_PTR(dwAddrSeg));
                 if (dwAddrPrevObj) {
                     ExtOut("Last good object: %p\n", SOS_PTR(dwAddrPrevObj));
                 }
@@ -1391,6 +1569,7 @@ BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEA
             }
         }
 
+        DWORD_PTR dwAddrMethTable = 0;
         if (FAILED(GetMTOfObject(dwAddrCurrObj, &dwAddrMethTable)))
         {
             return FALSE;
