@@ -171,7 +171,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <returns>A task that completes when the server is no longer listening at the transport path.</returns>
         private async Task ListenAsync(int maxConnections, CancellationToken token)
         {
+            // This disposal shuts down the transport in case an exception is thrown.
             using var transport = IpcServerTransport.Create(_transportPath, maxConnections);
+            // This disposal shuts down the transport in case of cancellation; causes the transport
+            // to not recreate the server stream before the AcceptAsync call observes the cancellation.
+            using var _ = token.Register(() => transport.Dispose());
+
             while (!token.IsCancellationRequested)
             {
                 Stream stream = null;
