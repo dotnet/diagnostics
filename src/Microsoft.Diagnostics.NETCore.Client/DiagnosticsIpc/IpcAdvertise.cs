@@ -78,6 +78,28 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return new IpcAdvertise(magic, cookie, pid, future);
         }
 
+        public static async Task SerializeAsync(Stream stream, Guid runtimeInstanceCookie, ulong processId, CancellationToken token)
+        {
+            int index = 0;
+            byte[] buffer = new byte[IpcAdvertiseV1SizeInBytes];
+
+            Array.Copy(Magic_V1, buffer, Magic_V1.Length);
+            index += Magic_V1.Length;
+
+            byte[] cookieBuffer = runtimeInstanceCookie.ToByteArray();
+            Array.Copy(cookieBuffer, 0, buffer, index, cookieBuffer.Length);
+            index += cookieBuffer.Length;
+
+            Array.Copy(BitConverter.GetBytes(processId), 0, buffer, index, sizeof(ulong));
+            index += sizeof(ulong);
+
+            short future = 0;
+            Array.Copy(BitConverter.GetBytes(future), 0, buffer, index, sizeof(short));
+            index += sizeof(short);
+
+            await stream.WriteAsync(buffer, 0, index).ConfigureAwait(false);
+        }
+
         public override string ToString()
         {
             return $"{{ Magic={Magic}; ClrInstanceId={RuntimeInstanceCookie}; ProcessId={ProcessId}; Future={Future} }}";

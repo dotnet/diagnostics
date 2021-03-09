@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="dotnet-monitor" />
+    <InternalsVisibleTo Include="dotnet-dsproxy" />
     <InternalsVisibleTo Include="DotnetMonitor.UnitTests" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring" />
     <!-- Temporary until Diagnostic Apis are finalized-->

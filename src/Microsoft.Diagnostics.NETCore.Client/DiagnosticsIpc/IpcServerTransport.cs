@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private IIpcServerTransportCallbackInternal _callback;
         private bool _disposed;
 
-        public static IpcServerTransport Create(string address, int maxConnections, CancellationToken token, bool enableTcpIpProtocol)
+        public static IpcServerTransport Create(string address, int maxConnections, bool enableTcpIpProtocol)
         {
             if (!enableTcpIpProtocol || !IpcTcpSocketTransport.TryParseIPAddress(address))
             {
