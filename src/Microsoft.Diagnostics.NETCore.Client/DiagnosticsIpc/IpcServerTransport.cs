@@ -14,6 +14,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     internal abstract class IpcServerTransport : IDisposable
     {
+        private IIpcServerTransportCallbackInternal _callback;
         private bool _disposed;
 
         public static IpcServerTransport Create(string transportPath, int maxConnections)
@@ -65,6 +66,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 throw new ObjectDisposedException(this.GetType().Name);
             }
+        }
+
+        internal void SetCallback(IIpcServerTransportCallbackInternal callback)
+        {
+            _callback = callback;
+        }
+
+        protected void OnCreateNewServer()
+        {
+            _callback?.CreatedNewServer();
         }
     }
 
@@ -128,6 +139,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 _maxInstances,
                 PipeTransmissionMode.Byte,
                 PipeOptions.Asynchronous);
+            OnCreateNewServer();
         }
     }
 
@@ -196,6 +208,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _socket.Bind(_path);
             _socket.Listen(_backlog);
             _socket.LingerState.Enabled = false;
+            OnCreateNewServer();
         }
+    }
+
+    internal interface IIpcServerTransportCallbackInternal
+    {
+        void CreatedNewServer();
     }
 }

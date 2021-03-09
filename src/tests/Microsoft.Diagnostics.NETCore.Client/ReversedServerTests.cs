@@ -267,6 +267,55 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await VerifyNoNewEndpointInfos(server, useAsync);
         }
 
+        /// <summary>
+        /// Validates that the <see cref="ReversedDiagnosticsServer"/> does not create a new server
+        /// transport during disposal.
+        /// </summary>
+        [Fact]
+        public async Task ReversedServerNoCreateTransportAfterDispose()
+        {
+            var transportCallback = new IpcServerTransportCallback();
+
+            int transportVersion = 0;
+            TestRunner runner = null;
+            try
+            {
+                await using var server = CreateReversedServer(out string transportName);
+                server.TransportCallback = transportCallback;
+                server.Start();
+
+                // Start client pointing to diagnostics server
+                runner = StartTracee(transportName);
+
+                // Get client connection
+                IpcEndpointInfo info = await AcceptEndpointInfo(server, useAsync: true);
+
+                await VerifyEndpointInfo(runner, info, useAsync: true);
+
+                // There should not be any new endpoint infos
+                await VerifyNoNewEndpointInfos(server, useAsync: true);
+
+                ResumeRuntime(info);
+
+                _outputHelper.WriteLine("Version Before VerifyWaitForConnection: {0}", await transportCallback.GetStableTransportVersion());
+
+                await VerifyWaitForConnection(info, useAsync: true);
+
+                transportVersion = await transportCallback.GetStableTransportVersion();
+                _outputHelper.WriteLine("Version After VerifyWaitForConnection: {0}", transportVersion);
+
+                // Server will be disposed
+            }
+            finally
+            {
+                _outputHelper.WriteLine("Stopping tracee.");
+                runner?.Stop();
+            }
+
+            // Check that the reversed server did not create a new server transport upon disposal.
+            Assert.Equal(transportVersion, await transportCallback.GetStableTransportVersion());
+        }
+
         private ReversedDiagnosticsServer CreateReversedServer(out string transportName)
         {
             transportName = ReversedServerHelper.CreateServerTransportName();
@@ -590,6 +639,85 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         _endpoint.WaitForConnection(timeout);
                     }
                 }
+            }
+        }
+
+        private class IpcServerTransportCallback : IIpcServerTransportCallbackInternal
+        {
+            private static readonly TimeSpan StableTransportSemaphoreTimeout = TimeSpan.FromSeconds(3);
+            private static readonly TimeSpan StableTransportVersionPeriod = TimeSpan.FromSeconds(3);
+            private static readonly TimeSpan StableTransportVersionTimeout = TimeSpan.FromSeconds(30);
+
+            private readonly Timer _transportVersionTimer;
+            private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1);
+
+            private int _transportVersion = 0;
+            private TaskCompletionSource<int> _transportVersionSource;
+
+            public IpcServerTransportCallback()
+            {
+                // Initially set timer to not callback
+                _transportVersionTimer = new Timer(NotifyStableTransportVersion, this, Timeout.Infinite, 0);
+            }
+
+            public void CreatedNewServer()
+            {
+                _semaphore.Wait(StableTransportSemaphoreTimeout);
+                try
+                {
+                    _transportVersion++;
+                    // Restart timer with existing settings
+                    _transportVersionTimer.Change(0, 0);
+                }
+                finally
+                {
+                    _semaphore.Release();
+                }
+            }
+
+            private static void NotifyStableTransportVersion(object state)
+            {
+                ((IpcServerTransportCallback)state).NotifyStableTransportVersion();
+            }
+
+            private void NotifyStableTransportVersion()
+            {
+                _semaphore.Wait(StableTransportSemaphoreTimeout);
+                try
+                {
+                    // Disable timer callback
+                    _transportVersionTimer.Change(Timeout.Infinite, 0);
+                    // Notify and clear the completion source
+                    _transportVersionSource?.TrySetResult(_transportVersion);
+                    _transportVersionSource = null;
+                }
+                finally
+                {
+                    _semaphore.Release();
+                }
+            }
+
+            public async Task<int> GetStableTransportVersion()
+            {
+                await _semaphore.WaitAsync(StableTransportSemaphoreTimeout);
+                try
+                {
+                    _transportVersionSource = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    // Set timer to callback a period of time after last transport update
+                    _transportVersionTimer.Change(StableTransportVersionPeriod, Timeout.InfiniteTimeSpan);
+                }
+                finally
+                {
+                    _semaphore.Release();
+                }
+
+                using var cancellation = new CancellationTokenSource(StableTransportVersionTimeout);
+
+                CancellationToken token = cancellation.Token;
+                using var _ = token.Register(() => _transportVersionSource.TrySetCanceled(token));
+
+                // Wait for the transport version to stabilize for a certain amount of time.
+                return await _transportVersionSource.Task;
             }
         }
     }

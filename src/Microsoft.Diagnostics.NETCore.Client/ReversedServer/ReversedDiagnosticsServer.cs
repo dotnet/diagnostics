@@ -173,6 +173,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             // This disposal shuts down the transport in case an exception is thrown.
             using var transport = IpcServerTransport.Create(_transportPath, maxConnections);
+            // Set transport callback for testing purposes.
+            transport.SetCallback(TransportCallback);
             // This disposal shuts down the transport in case of cancellation; causes the transport
             // to not recreate the server stream before the AcceptAsync call observes the cancellation.
             using var _ = token.Register(() => transport.Dispose());
@@ -345,5 +347,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private bool IsStarted => null != _listenTask;
 
         public static int MaxAllowedConnections = IpcServerTransport.MaxAllowedConnections;
+
+        internal IIpcServerTransportCallbackInternal TransportCallback { get; set; }
     }
 }
