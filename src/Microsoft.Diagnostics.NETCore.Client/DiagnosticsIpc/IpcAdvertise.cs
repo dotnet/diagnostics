@@ -37,6 +37,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             RuntimeInstanceCookie = cookie;
         }
 
+        public static int V1SizeInBytes { get; } = IpcAdvertiseV1SizeInBytes;
+
         public static async Task<IpcAdvertise> ParseAsync(Stream stream, CancellationToken token)
         {
             byte[] buffer = new byte[IpcAdvertiseV1SizeInBytes];

@@ -243,6 +243,8 @@ namespace Microsoft.Internal.Common.Utils
                 _serverStream = serverStream;
                 ProxyTaskCompleted = proxyTaskCompleted;
 
+                _serverClientByteTransfer += (ulong)IpcAdvertise.V1SizeInBytes;
+
                 Interlocked.Increment(ref s_proxyInstanceCount);
             }
 
