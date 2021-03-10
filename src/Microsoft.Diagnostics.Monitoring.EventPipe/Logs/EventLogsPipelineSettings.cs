@@ -12,5 +12,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     internal class EventLogsPipelineSettings : EventSourcePipelineSettings
     {
         public LogLevel LogLevel { get; set; }
+
+        //This setting will set the levels to application default.
+        public bool UseAppFilters { get; set; }
     }
 }
