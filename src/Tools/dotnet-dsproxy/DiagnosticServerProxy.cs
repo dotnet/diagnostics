@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
 
         static bool IsConnectedProxyDead(ClientServerProxyFactory.ConnectedProxy connectedProxy)
         {
-            bool isRunning = connectedProxy.IsRunning;
+            bool isRunning = connectedProxy.IsRunning && !connectedProxy.ProxyTaskCompleted.Task.IsCompleted;
             if (!isRunning)
                 connectedProxy.Dispose();
             return !isRunning;

@@ -42,7 +42,7 @@ namespace Microsoft.Internal.Common.Utils
         IpcEndpointInfo _endpointInfo;
 
         public int RuntimeInstanceConnectTimeout { get; set; } = 30000;
-        public int ClientStreamConnectTimeout { get; set; } = 100;
+        public int ClientStreamConnectTimeout { get; set; } = 5000;
         public int ServerStreamConnectTimeout { get; set; } = 5000;
 
         public ClientServerProxyFactory(string clientAddress, string serverAddress)
@@ -163,7 +163,7 @@ namespace Microsoft.Internal.Common.Utils
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                Debug.WriteLine($"ClientServerProxyFactory::ConnectClientStreamAsync: Connecting new NamedPipe endpoint {_clientAddress}.");
+                Debug.WriteLine($"ClientServerProxyFactory::ConnectClientStreamAsync: Connecting new NamedPipe endpoint \"{_clientAddress}\".");
 
                 var namedPipe = new NamedPipeClientStream(
                     ".",
@@ -255,7 +255,7 @@ namespace Microsoft.Internal.Common.Utils
                 _clientReadServerWriteTask = ClientReadServerWrite(cancelProxyTokenSource.Token);
             }
 
-            public void Stop()
+            public async void Stop()
             {
                 if (_disposed)
                     throw new ObjectDisposedException(nameof(ConnectedProxy));
@@ -270,7 +270,7 @@ namespace Microsoft.Internal.Common.Utils
                 if (_clientReadServerWriteTask != null)
                     runningTasks.Add(_clientReadServerWriteTask);
 
-                Task.WaitAll(runningTasks.ToArray());
+                await Task.WhenAll(runningTasks.ToArray()).ConfigureAwait(false);
 
                 _serverReadClientWriteTask?.Dispose();
                 _clientReadServerWriteTask?.Dispose();
