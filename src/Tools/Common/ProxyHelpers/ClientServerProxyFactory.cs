@@ -73,7 +73,7 @@ namespace Microsoft.Internal.Common.Utils
             }
         }
 
-        public async Task<ConnectedProxy> ConnectProxyAsync(CancellationToken token)
+        public async Task<ConnectedProxy> ConnectProxyAsync(CancellationToken token, TaskCompletionSource proxyTaskCompleted)
         {
             Stream serverStream = null;
             Stream clientStream = null;
@@ -101,7 +101,7 @@ namespace Microsoft.Internal.Common.Utils
 
             // Create new proxy.
             Debug.WriteLine($"ClientServerProxyFactory::ConnectProxyAsync: New proxy instance successfully connected.");
-            return new ConnectedProxy(clientStream, serverStream);
+            return new ConnectedProxy(clientStream, serverStream, proxyTaskCompleted);
         }
 
         async Task<Stream> ConnectServerStreamAsync(CancellationToken token)
@@ -235,10 +235,14 @@ namespace Microsoft.Internal.Common.Utils
 
             static int s_proxyInstanceCount;
 
-            public ConnectedProxy(Stream clientStream, Stream serverStream)
+            public TaskCompletionSource ProxyTaskCompleted { get; }
+
+            public ConnectedProxy(Stream clientStream, Stream serverStream, TaskCompletionSource proxyTaskCompleted)
             {
                 _clientStream = clientStream;
                 _serverStream = serverStream;
+                ProxyTaskCompleted = proxyTaskCompleted;
+
                 Interlocked.Increment(ref s_proxyInstanceCount);
             }
 
@@ -270,6 +274,8 @@ namespace Microsoft.Internal.Common.Utils
 
                 _serverReadClientWriteTask?.Dispose();
                 _clientReadServerWriteTask?.Dispose();
+
+                ProxyTaskCompleted?.TrySetResult();
 
                 _serverReadClientWriteTask = null;
                 _clientReadServerWriteTask = null;
@@ -327,6 +333,8 @@ namespace Microsoft.Internal.Common.Utils
                     // Just make sure task gets complete, nothing more needs to be in response to these exceptions.
                     Debug.WriteLine("ConnectedProxy::ServerReadClientWrite: Failed stream operation. Completing task.");
                 }
+
+                ProxyTaskCompleted?.TrySetResult();
             }
 
             async Task ClientReadServerWrite(CancellationToken token)
@@ -354,6 +362,8 @@ namespace Microsoft.Internal.Common.Utils
                     // Just make sure task gets complete, nothing more needs to be in response to these exceptions.
                     Debug.WriteLine("ConnectedProxy::ClientReadServerWrite: Failed stream operation. Completing task.");
                 }
+
+                ProxyTaskCompleted?.TrySetResult();
             }
         }
     }

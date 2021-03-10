@@ -18,8 +18,17 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
         {
         }
 
+        static bool IsConnectedProxyDead(ClientServerProxyFactory.ConnectedProxy connectedProxy)
+        {
+            bool isRunning = connectedProxy.IsRunning;
+            if (!isRunning)
+                connectedProxy.Dispose();
+            return !isRunning;
+        }
+
         async Task<int> RunProxy(string clientAddress, string serverAddress, CancellationToken token)
         {
+            List<Task> runningTasks = new List<Task>();
             List<ClientServerProxyFactory.ConnectedProxy> runningProxies = new List<ClientServerProxyFactory.ConnectedProxy>();
             var proxyFactory = new ClientServerProxyFactory(clientAddress, serverAddress);
 
@@ -33,21 +42,24 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
 
                     try
                     {
-                        connectedProxyTask = proxyFactory.ConnectProxyAsync(token);
-                        while (await Task.WhenAny(connectedProxyTask, Task.Delay(500)).ConfigureAwait(false) != connectedProxyTask)
+                        connectedProxyTask = proxyFactory.ConnectProxyAsync(token, new TaskCompletionSource());
+
+                        do
                         {
                             // Search list and clean up dead proxy instances before continue waiting on new instances.
-                            foreach (var item in runningProxies.ToList())
-                            {
-                                if (!item.IsRunning)
-                                {
-                                    runningProxies.Remove(item);
-                                    item.Dispose();
-                                }
-                            }
-                        }
+                            runningProxies.RemoveAll(IsConnectedProxyDead);
 
-                        if (connectedProxyTask.IsCompleted && !connectedProxyTask.IsFaulted)
+                            runningTasks.Clear();
+                            foreach (var runningProxy in runningProxies)
+                                runningTasks.Add(runningProxy.ProxyTaskCompleted.Task);
+                            runningTasks.Add(connectedProxyTask);
+                        }
+                        while (await Task.WhenAny(runningTasks.ToArray()).ConfigureAwait(false) != connectedProxyTask);
+
+                        if (connectedProxyTask.IsFaulted)
+                            throw connectedProxyTask.Exception.GetBaseException();
+
+                        if (connectedProxyTask.IsCompleted)
                         {
                             connectedProxy = connectedProxyTask.Result;
                             connectedProxy.Start();
@@ -90,10 +102,9 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
             }
             finally
             {
-                foreach (var item in runningProxies)
-                    item.Dispose();
-
+                runningProxies.RemoveAll(IsConnectedProxyDead);
                 runningProxies.Clear();
+
                 proxyFactory?.Stop();
             }
             return 0;
