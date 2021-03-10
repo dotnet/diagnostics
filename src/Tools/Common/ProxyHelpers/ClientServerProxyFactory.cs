@@ -22,27 +22,35 @@ namespace Microsoft.Internal.Common.Utils
         { }
     }
 
+    internal class ServerStreamConnectTimeoutException : TimeoutException
+    {
+        public ServerStreamConnectTimeoutException(int timeoutMS)
+            : base(string.Format("No new server streams available, waited {0} ms", timeoutMS))
+        { }
+    }
+
     // <summary>
     // This class acts a factory class for building Client<->Server proxy instances.
     // Supports NamedPipes/UnixDomainSocket client and TCP/IP server.
     // </summary>
     internal class ClientServerProxyFactory
     {
-        const int _clientStreamConnectTimeoutMS = 100;
-        const int _serverStreamConnectTimeoutMS = 5000;
-        const int _runtimeInstanceConnectTimeoutMS = 5000;
-
         readonly string _clientAddress;
         readonly string _serverAddress;
 
         ReversedDiagnosticsServer _server;
         IpcEndpointInfo _endpointInfo;
 
+        public int RuntimeInstanceConnectTimeout { get; set; } = 30000;
+        public int ClientStreamConnectTimeout { get; set; } = 100;
+        public int ServerStreamConnectTimeout { get; set; } = 5000;
+
         public ClientServerProxyFactory(string clientAddress, string serverAddress)
         {
             _clientAddress = clientAddress;
             _serverAddress = serverAddress;
-            _server = new ReversedDiagnosticsServer(serverAddress, true);
+
+            _server = new ReversedDiagnosticsServer(_serverAddress, true);
             _endpointInfo = new IpcEndpointInfo();
         }
 
@@ -53,13 +61,24 @@ namespace Microsoft.Internal.Common.Utils
 
         public async void Stop()
         {
-            await _server.DisposeAsync();
+            await _server.DisposeAsync().ConfigureAwait(false);
+        }
+
+        public void ResetServerEndpoint()
+        {
+            if (_endpointInfo.Endpoint != null)
+            {
+                _server.RemoveConnection(_endpointInfo.RuntimeInstanceCookie);
+                _endpointInfo = new IpcEndpointInfo();
+            }
         }
 
         public async Task<ConnectedProxy> ConnectProxyAsync(CancellationToken token)
         {
             Stream serverStream = null;
             Stream clientStream = null;
+
+            Debug.WriteLine($"ClientServerProxyFactory::ConnectProxyAsync: Trying to connect new proxy instance.");
 
             try
             {
@@ -81,12 +100,15 @@ namespace Microsoft.Internal.Common.Utils
             }
 
             // Create new proxy.
+            Debug.WriteLine($"ClientServerProxyFactory::ConnectProxyAsync: New proxy instance successfully connected.");
             return new ConnectedProxy(clientStream, serverStream);
         }
 
         async Task<Stream> ConnectServerStreamAsync(CancellationToken token)
         {
             Stream serverStream;
+
+            Debug.WriteLine($"ClientServerProxyFactory::ConnectServerStreamAsync: Connecting new TCP/IP endpoint.");
 
             if (_endpointInfo.Endpoint == null)
             {
@@ -96,7 +118,7 @@ namespace Microsoft.Internal.Common.Utils
                 try
                 {
                     // If no new runtime instance connects, timeout.
-                    acceptTimeoutTokenSource.CancelAfter(_runtimeInstanceConnectTimeoutMS);
+                    acceptTimeoutTokenSource.CancelAfter(RuntimeInstanceConnectTimeout);
                     _endpointInfo = await _server.AcceptAsync(acceptTokenSource.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
@@ -104,7 +126,7 @@ namespace Microsoft.Internal.Common.Utils
                     if (acceptTimeoutTokenSource.IsCancellationRequested)
                     {
                         Debug.WriteLine("ClientServerProxyFactory::ConnectServerStreamAsync: No runtime instance connected, timing out.");
-                        throw new RuntimeConnectTimeoutException(_runtimeInstanceConnectTimeoutMS);
+                        throw new RuntimeConnectTimeoutException(RuntimeInstanceConnectTimeout);
                     }
 
                     throw;
@@ -118,7 +140,7 @@ namespace Microsoft.Internal.Common.Utils
             {
                 // Get next connected server endpoint. Should timeout if no endpoint appears within timeout.
                 // If that happens we need to remove endpoint since it might indicate a unresponsive runtime instance.
-                connectTimeoutTokenSource.CancelAfter(_serverStreamConnectTimeoutMS);
+                connectTimeoutTokenSource.CancelAfter(ServerStreamConnectTimeout);
                 serverStream = await _endpointInfo.Endpoint.ConnectAsync(connectTokenSource.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
@@ -126,11 +148,7 @@ namespace Microsoft.Internal.Common.Utils
                 if (connectTimeoutTokenSource.IsCancellationRequested)
                 {
                     Debug.WriteLine("ClientServerProxyFactory::ConnectServerStreamAsync: No server stream connected, timing out.");
-
-                    //_server.RemoveConnection(_endpointInfo.RuntimeInstanceCookie);
-                    //_endpointInfo = new IpcEndpointInfo();
-
-                    throw new TimeoutException();
+                    throw new ServerStreamConnectTimeoutException(ServerStreamConnectTimeout);
                 }
 
                 throw;
@@ -145,7 +163,7 @@ namespace Microsoft.Internal.Common.Utils
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                Debug.WriteLine($"ClientServerProxyFactory::ConnectClientStreamAsync: Connecting new NamedPipe client {_clientAddress}.");
+                Debug.WriteLine($"ClientServerProxyFactory::ConnectClientStreamAsync: Connecting new NamedPipe endpoint {_clientAddress}.");
 
                 var namedPipe = new NamedPipeClientStream(
                     ".",
@@ -156,7 +174,7 @@ namespace Microsoft.Internal.Common.Utils
 
                 try
                 {
-                    await namedPipe.ConnectAsync(_clientStreamConnectTimeoutMS, token).ConfigureAwait(false);
+                    await namedPipe.ConnectAsync(ClientStreamConnectTimeout, token).ConfigureAwait(false);
                 }
                 catch (TimeoutException)
                 {
@@ -177,7 +195,7 @@ namespace Microsoft.Internal.Common.Utils
 
                 try
                 {
-                    connectTimeoutTokenSource.CancelAfter(_clientStreamConnectTimeoutMS);
+                    connectTimeoutTokenSource.CancelAfter(ClientStreamConnectTimeout);
                     await unixDomainSocket.ConnectAsync(token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
@@ -212,13 +230,16 @@ namespace Microsoft.Internal.Common.Utils
 
             bool _disposed = false;
 
-            int _proxyInstanceCount;
+            ulong _serverClientByteTransfer;
+            ulong _clientServerByteTransfer;
+
+            static int s_proxyInstanceCount;
 
             public ConnectedProxy(Stream clientStream, Stream serverStream)
             {
                 _clientStream = clientStream;
                 _serverStream = serverStream;
-                Interlocked.Increment(ref _proxyInstanceCount);
+                Interlocked.Increment(ref s_proxyInstanceCount);
             }
 
             public void Start()
@@ -275,7 +296,10 @@ namespace Microsoft.Internal.Common.Utils
 
                     _disposed = true;
 
-                    Interlocked.Decrement(ref _proxyInstanceCount);
+                    Interlocked.Decrement(ref s_proxyInstanceCount);
+
+                    Debug.WriteLine($"Diposed ConnectedProxy stats: Server->Client {_serverClientByteTransfer} bytes, Client->Server {_clientServerByteTransfer} bytes.");
+                    Debug.WriteLine($"Active ConnectedProxy instances: {s_proxyInstanceCount}");
                 }
             }
 
@@ -288,10 +312,11 @@ namespace Microsoft.Internal.Common.Utils
                     {
                         int bytesRead = await _serverStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
 
-                        // Check for end of stream indicating that remove end hungup.
+                        // Check for end of stream indicating that remove end hung-up.
                         if (bytesRead == 0)
                             break;
 
+                        _serverClientByteTransfer += (ulong)bytesRead;
                         await _clientStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
                     }
                 }
@@ -313,10 +338,11 @@ namespace Microsoft.Internal.Common.Utils
                     {
                         int bytesRead = await _clientStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
 
-                        // Check for end of stream indicating that remove end hungup.
+                        // Check for end of stream indicating that remove end hung-up.
                         if (bytesRead == 0)
                             break;
 
+                        _clientServerByteTransfer += (ulong)bytesRead;
                         await _serverStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
 
                     }

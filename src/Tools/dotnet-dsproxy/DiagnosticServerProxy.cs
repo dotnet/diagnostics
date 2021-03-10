@@ -60,15 +60,31 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
                         connectedProxyTask.Dispose();
                         connectedProxyTask = null;
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        // TODO: If we get RuntimeConnectTimeoutException (no runtime connected), should that bring down proxy?
-
                         connectedProxy?.Dispose();
                         connectedProxy = null;
 
                         connectedProxyTask?.Dispose();
                         connectedProxyTask = null;
+
+                        // Timing out on accepting new streams could mean that either the client holds an open connection
+                        // alive (but currently not using it), or we have a dead server endpoint. If there are no running
+                        // proxies we assume a dead server endpoint. Reset current server endpoint and see if we get
+                        // reconnect using different runtime instance.
+                        if (ex is ServerStreamConnectTimeoutException && runningProxies.Count == 0)
+                        {
+                            Console.WriteLine("DiagnosticServerProxy, no server stream available before timeout.");
+                            proxyFactory.ResetServerEndpoint();
+                        }
+
+                        // Timing out on accepting a new runtime connection means there is no runtime alive.
+                        // Shutdown proxy to prevent instances to outlive runtime process.
+                        if (ex is RuntimeConnectTimeoutException)
+                        {
+                            Console.WriteLine("DiagnosticServerProxy, no runtime connected to server before timeout.");
+                            throw;
+                        }
                     }
                 }
             }
@@ -88,6 +104,8 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
             clientAddress = "MyDummyPort";
             serverAddress = "*:9000";
 
+            Console.WriteLine($"Starting DiagnosticServerProxy using, client endpoint={clientAddress}, server endpoint={serverAddress}.");
+
             ManualResetEvent shouldExit = new ManualResetEvent(false);
             token.Register(() => shouldExit.Set());
 
@@ -99,11 +117,13 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ERROR] {ex.ToString()}");
+                    Console.WriteLine("DiagnosticServerProxy shutting down due to error:");
+                    Console.WriteLine(ex.ToString());
                 }
                 finally
                 {
                     shouldExit.Set();
+                    Console.WriteLine("DiagnosticServerProxy stopped.");
                 }
             });
 
