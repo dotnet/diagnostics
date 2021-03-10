@@ -225,7 +225,7 @@ namespace Microsoft.Internal.Common.Utils
             }
             else if (!string.IsNullOrEmpty(portName))
             {
-#if ENABLE_REVERSED_DIAGNOSTIC_SERVER_TCP_IP_SUPPORT
+#if FEATURE_PERFTRACING_PAL_TCP
                 ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(portName, true);
 #else
                 ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(portName);
