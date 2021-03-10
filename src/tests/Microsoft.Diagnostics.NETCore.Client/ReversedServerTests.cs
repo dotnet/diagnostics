@@ -297,12 +297,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 ResumeRuntime(info);
 
-                _outputHelper.WriteLine("Version Before VerifyWaitForConnection: {0}", await transportCallback.GetStableTransportVersion());
-
                 await VerifyWaitForConnection(info, useAsync: true);
 
                 transportVersion = await transportCallback.GetStableTransportVersion();
-                _outputHelper.WriteLine("Version After VerifyWaitForConnection: {0}", transportVersion);
 
                 // Server will be disposed
             }
