@@ -75,7 +75,7 @@ namespace Microsoft.Internal.Common.Utils
             }
         }
 
-        public async Task<ConnectedProxy> ConnectProxyAsync(CancellationToken token, TaskCompletionSource proxyTaskCompleted)
+        public async Task<ConnectedProxy> ConnectProxyAsync(CancellationToken token, TaskCompletionSource<bool> proxyTaskCompleted)
         {
             Stream serverStream = null;
             Stream clientStream = null;
@@ -256,9 +256,9 @@ namespace Microsoft.Internal.Common.Utils
 
         static int s_proxyInstanceCount;
 
-        public TaskCompletionSource ProxyTaskCompleted { get; }
+        public TaskCompletionSource<bool> ProxyTaskCompleted { get; }
 
-        public ConnectedProxy(Stream clientStream, Stream serverStream, TaskCompletionSource proxyTaskCompleted, bool verboseLogging)
+        public ConnectedProxy(Stream clientStream, Stream serverStream, TaskCompletionSource<bool> proxyTaskCompleted, bool verboseLogging)
         {
             _verboseLogging = verboseLogging;
 
@@ -301,7 +301,7 @@ namespace Microsoft.Internal.Common.Utils
             _serverReadClientWriteTask?.Dispose();
             _clientReadServerWriteTask?.Dispose();
 
-            ProxyTaskCompleted?.TrySetResult();
+            ProxyTaskCompleted?.TrySetResult(true);
 
             _serverReadClientWriteTask = null;
             _clientReadServerWriteTask = null;
@@ -363,7 +363,7 @@ namespace Microsoft.Internal.Common.Utils
                     Console.WriteLine("ConnectedProxy::ServerReadClientWrite: Failed stream operation. Completing task.");
             }
 
-            ProxyTaskCompleted?.TrySetResult();
+            ProxyTaskCompleted?.TrySetResult(true);
         }
 
         async Task ClientReadServerWrite(CancellationToken token)
@@ -393,7 +393,7 @@ namespace Microsoft.Internal.Common.Utils
                     Console.WriteLine("ConnectedProxy::ClientReadServerWrite: Failed stream operation. Completing task.");
             }
 
-            ProxyTaskCompleted?.TrySetResult();
+            ProxyTaskCompleted?.TrySetResult(true);
         }
     }
 }

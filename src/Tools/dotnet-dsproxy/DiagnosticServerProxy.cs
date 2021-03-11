@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
 
                     try
                     {
-                        connectedProxyTask = proxyFactory.ConnectProxyAsync(token, new TaskCompletionSource());
+                        connectedProxyTask = proxyFactory.ConnectProxyAsync(token, new TaskCompletionSource<bool>());
 
                         do
                         {
