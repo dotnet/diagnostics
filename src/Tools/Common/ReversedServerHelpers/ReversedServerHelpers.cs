@@ -225,11 +225,7 @@ namespace Microsoft.Internal.Common.Utils
             }
             else if (!string.IsNullOrEmpty(portName))
             {
-#if FEATURE_PERFTRACING_PAL_TCP
-                ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(portName, true);
-#else
                 ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(portName);
-#endif
                 server.Start();
                 string fullPort = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? portName : Path.GetFullPath(portName);
                 Console.WriteLine($"Waiting for connection on {fullPort}");
