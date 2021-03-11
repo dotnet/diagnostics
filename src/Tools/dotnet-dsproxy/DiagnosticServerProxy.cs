@@ -12,13 +12,16 @@ using System.Diagnostics;
 
 namespace Microsoft.Diagnostics.Tools.DSProxy
 {
+    // TODO: Add support for IPC Server <--> TCP Server proxy, RunISTSProxy.
     public class DiagnosticServerProxy
     {
+        bool _verboseLogging;
+
         public DiagnosticServerProxy()
         {
         }
 
-        static bool IsConnectedProxyDead(ClientServerProxyFactory.ConnectedProxy connectedProxy)
+        static bool IsConnectedProxyDead(ConnectedProxy connectedProxy)
         {
             bool isRunning = connectedProxy.IsRunning && !connectedProxy.ProxyTaskCompleted.Task.IsCompleted;
             if (!isRunning)
@@ -26,19 +29,21 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
             return !isRunning;
         }
 
-        async Task<int> RunProxy(string clientAddress, string serverAddress, CancellationToken token)
+        async Task<int> internalRunICTSProxy(CancellationToken token, string ipcClient, string tcpServer, bool autoShutdown)
         {
             List<Task> runningTasks = new List<Task>();
-            List<ClientServerProxyFactory.ConnectedProxy> runningProxies = new List<ClientServerProxyFactory.ConnectedProxy>();
-            var proxyFactory = new ClientServerProxyFactory(clientAddress, serverAddress);
+            List<ConnectedProxy> runningProxies = new List<ConnectedProxy>();
+            var proxyFactory = new ClientServerICTSProxyFactory(ipcClient, tcpServer, _verboseLogging);
+
+            Console.WriteLine($"DiagnosticServerProxy: Starting IPC client <--> TCP server using IPC client endpoint=\"{ipcClient}\" and TCP server endpoint=\"{tcpServer}\".");
 
             try
             {
                 proxyFactory.Start();
                 while (!token.IsCancellationRequested)
                 {
-                    Task< ClientServerProxyFactory.ConnectedProxy> connectedProxyTask = null;
-                    ClientServerProxyFactory.ConnectedProxy connectedProxy = null;
+                    Task<ConnectedProxy> connectedProxyTask = null;
+                    ConnectedProxy connectedProxy = null;
 
                     try
                     {
@@ -56,8 +61,11 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
                         }
                         while (await Task.WhenAny(runningTasks.ToArray()).ConfigureAwait(false) != connectedProxyTask);
 
-                        if (connectedProxyTask.IsFaulted)
-                            throw connectedProxyTask.Exception.GetBaseException();
+                        if (connectedProxyTask.IsFaulted || connectedProxyTask.IsCanceled)
+                        {
+                            //Throw original exception.
+                            connectedProxyTask.GetAwaiter().GetResult();
+                        }
 
                         if (connectedProxyTask.IsCompleted)
                         {
@@ -83,87 +91,74 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
                         // Timing out on accepting new streams could mean that either the client holds an open connection
                         // alive (but currently not using it), or we have a dead server endpoint. If there are no running
                         // proxies we assume a dead server endpoint. Reset current server endpoint and see if we get
-                        // reconnect using different runtime instance.
+                        // reconnect using same or different runtime instance.
                         if (ex is ServerStreamConnectTimeoutException && runningProxies.Count == 0)
                         {
-                            Console.WriteLine("DiagnosticServerProxy, no server stream available before timeout.");
-                            proxyFactory.ResetServerEndpoint();
+                            if (autoShutdown || _verboseLogging)
+                                Console.WriteLine("DiagnosticServerProxy: No server stream available before timeout.");
+
+                            proxyFactory.Reset();
                         }
 
                         // Timing out on accepting a new runtime connection means there is no runtime alive.
-                        // Shutdown proxy to prevent instances to outlive runtime process.
+                        // Shutdown proxy to prevent instances to outlive runtime process (if auto shutdown is enabled).
                         if (ex is RuntimeConnectTimeoutException)
                         {
-                            Console.WriteLine("DiagnosticServerProxy, no runtime connected to server before timeout.");
-                            throw;
+                            if (autoShutdown || _verboseLogging)
+                                Console.WriteLine("DiagnosticServerProxy: No server stream available before timeout.");
+
+                            if (autoShutdown)
+                            {
+                                Console.WriteLine("DiagnosticServerProxy: Starting automatic server shutdown.");
+                                throw;
+                            }
                         }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DiagnosticServerProxy: Shutting down due to error: {ex.Message}");
             }
             finally
             {
                 runningProxies.RemoveAll(IsConnectedProxyDead);
                 runningProxies.Clear();
 
-                proxyFactory?.Stop();
+                await proxyFactory?.Stop();
+
+                Console.WriteLine("DiagnosticServerProxy: Stopped.");
             }
             return 0;
         }
 
-        public async Task<int> Run(CancellationToken token, String clientAddress, String serverAddress)
+        public async Task<int> RunICTSProxy(CancellationToken token, string ipcClient, string tcpServer, bool autoShutdown, bool debug)
         {
-            clientAddress = "MyDummyPort";
-            serverAddress = "*:9000";
-
-            Console.WriteLine($"Starting DiagnosticServerProxy using, client endpoint={clientAddress}, server endpoint={serverAddress}.");
-
-            ManualResetEvent shouldExit = new ManualResetEvent(false);
-            token.Register(() => shouldExit.Set());
-
             CancellationTokenSource cancelProxyTask = new CancellationTokenSource();
-            Task proxyTask = new Task(() => {
-                try
-                {
-                    RunProxy(clientAddress, serverAddress, CancellationTokenSource.CreateLinkedTokenSource(token, cancelProxyTask.Token).Token).Wait();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("DiagnosticServerProxy shutting down due to error:");
-                    Console.WriteLine(ex.ToString());
-                }
-                finally
-                {
-                    shouldExit.Set();
-                    Console.WriteLine("DiagnosticServerProxy stopped.");
-                }
-            });
+            CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelProxyTask.Token);
 
-            proxyTask.Start();
+            _verboseLogging = debug;
 
-            while(!shouldExit.WaitOne(250))
+            var proxyTask = internalRunICTSProxy(linkedCancelToken.Token, ipcClient, tcpServer, autoShutdown);
+
+            while (!linkedCancelToken.IsCancellationRequested)
             {
-                while (true)
+                await Task.WhenAny(proxyTask, Task.Delay(250)).ConfigureAwait(false);
+                if (proxyTask.IsCompleted)
+                    break;
+
+                if (Console.KeyAvailable)
                 {
-                    if (shouldExit.WaitOne(250))
+                    ConsoleKey cmd = Console.ReadKey(true).Key;
+                    if (cmd == ConsoleKey.Q)
                     {
                         cancelProxyTask.Cancel();
-                        proxyTask.Wait();
-                        return 0;
-                    }
-                    if (Console.KeyAvailable)
-                    {
                         break;
                     }
                 }
-                ConsoleKey cmd = Console.ReadKey(true).Key;
-                if (cmd == ConsoleKey.Q || cmd == ConsoleKey.C)
-                {
-                    cancelProxyTask.Cancel();
-                    proxyTask.Wait();
-                    break;
-                }
             }
-            return await Task.FromResult(0);
+
+            return proxyTask.Result;
         }
     }
 }

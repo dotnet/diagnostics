@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace Microsoft.Internal.Common.Utils
 {
@@ -33,10 +32,11 @@ namespace Microsoft.Internal.Common.Utils
     // This class acts a factory class for building Client<->Server proxy instances.
     // Supports NamedPipes/UnixDomainSocket client and TCP/IP server.
     // </summary>
-    internal class ClientServerProxyFactory
+    internal class ClientServerICTSProxyFactory
     {
-        readonly string _clientAddress;
-        readonly string _serverAddress;
+        readonly bool _verboseLogging;
+        readonly string _ipcClient;
+        readonly string _tcpServer;
 
         ReversedDiagnosticsServer _server;
         IpcEndpointInfo _endpointInfo;
@@ -45,12 +45,14 @@ namespace Microsoft.Internal.Common.Utils
         public int ClientStreamConnectTimeout { get; set; } = 5000;
         public int ServerStreamConnectTimeout { get; set; } = 5000;
 
-        public ClientServerProxyFactory(string clientAddress, string serverAddress)
+        public ClientServerICTSProxyFactory(string ipcClient, string tcpServer, bool verboseLogging)
         {
-            _clientAddress = clientAddress;
-            _serverAddress = serverAddress;
+            _verboseLogging = verboseLogging;
 
-            _server = new ReversedDiagnosticsServer(_serverAddress, true);
+            _ipcClient = ipcClient;
+            _tcpServer = tcpServer;
+
+            _server = new ReversedDiagnosticsServer(_tcpServer, true);
             _endpointInfo = new IpcEndpointInfo();
         }
 
@@ -59,12 +61,12 @@ namespace Microsoft.Internal.Common.Utils
             _server.Start();
         }
 
-        public async void Stop()
+        public async Task Stop()
         {
             await _server.DisposeAsync().ConfigureAwait(false);
         }
 
-        public void ResetServerEndpoint()
+        public void Reset()
         {
             if (_endpointInfo.Endpoint != null)
             {
@@ -78,7 +80,8 @@ namespace Microsoft.Internal.Common.Utils
             Stream serverStream = null;
             Stream clientStream = null;
 
-            Debug.WriteLine($"ClientServerProxyFactory::ConnectProxyAsync: Trying to connect new proxy instance.");
+            if (_verboseLogging)
+                Console.WriteLine($"ClientServerICTSProxyFactory::ConnectProxyAsync: Trying to connect new proxy instance.");
 
             try
             {
@@ -90,7 +93,8 @@ namespace Microsoft.Internal.Common.Utils
             }
             catch (Exception)
             {
-                Debug.WriteLine("ClientServerProxyFactory::ConnectProxyAsync: Failed connecting new proxy instance.");
+                if (_verboseLogging)
+                    Console.WriteLine("ClientServerICTSProxyFactory::ConnectProxyAsync: Failed connecting new proxy instance.");
 
                 // Cleanup and rethrow.
                 serverStream?.Dispose();
@@ -100,15 +104,18 @@ namespace Microsoft.Internal.Common.Utils
             }
 
             // Create new proxy.
-            Debug.WriteLine($"ClientServerProxyFactory::ConnectProxyAsync: New proxy instance successfully connected.");
-            return new ConnectedProxy(clientStream, serverStream, proxyTaskCompleted);
+            if (_verboseLogging)
+                Console.WriteLine($"ClientServerICTSProxyFactory::ConnectProxyAsync: New proxy instance successfully connected.");
+
+            return new ConnectedProxy(clientStream, serverStream, proxyTaskCompleted, _verboseLogging);
         }
 
         async Task<Stream> ConnectServerStreamAsync(CancellationToken token)
         {
             Stream serverStream;
 
-            Debug.WriteLine($"ClientServerProxyFactory::ConnectServerStreamAsync: Connecting new TCP/IP endpoint.");
+            if (_verboseLogging)
+                Console.WriteLine($"ClientServerICTSProxyFactory::ConnectServerStreamAsync: Connecting new TCP/IP endpoint.");
 
             if (_endpointInfo.Endpoint == null)
             {
@@ -125,7 +132,9 @@ namespace Microsoft.Internal.Common.Utils
                 {
                     if (acceptTimeoutTokenSource.IsCancellationRequested)
                     {
-                        Debug.WriteLine("ClientServerProxyFactory::ConnectServerStreamAsync: No runtime instance connected, timing out.");
+                        if (_verboseLogging)
+                            Console.WriteLine("ClientServerICTSProxyFactory::ConnectServerStreamAsync: No runtime instance connected, timing out.");
+
                         throw new RuntimeConnectTimeoutException(RuntimeInstanceConnectTimeout);
                     }
 
@@ -147,7 +156,9 @@ namespace Microsoft.Internal.Common.Utils
             {
                 if (connectTimeoutTokenSource.IsCancellationRequested)
                 {
-                    Debug.WriteLine("ClientServerProxyFactory::ConnectServerStreamAsync: No server stream connected, timing out.");
+                    if (_verboseLogging)
+                        Console.WriteLine("ClientServerICTSProxyFactory::ConnectServerStreamAsync: No server stream connected, timing out.");
+
                     throw new ServerStreamConnectTimeoutException(ServerStreamConnectTimeout);
                 }
 
@@ -161,13 +172,18 @@ namespace Microsoft.Internal.Common.Utils
         {
             Stream clientStream;
 
+            if (_verboseLogging)
+                Console.WriteLine($"ClientServerICTSProxyFactory::ConnectClientStreamAsync: Connecting new IPC endpoint \"{_ipcClient}\".");
+
+            // TODO: Retry connect if we detect that server stream is still alive after timeout client connection
+            // This will prevent proxy from disconnecting working runtime connection while waiting for client to respond.
+            // Needs to be responsive to disconnected runtime connections to react on runtime termination.
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                Debug.WriteLine($"ClientServerProxyFactory::ConnectClientStreamAsync: Connecting new NamedPipe endpoint \"{_clientAddress}\".");
-
                 var namedPipe = new NamedPipeClientStream(
                     ".",
-                    _clientAddress,
+                    _ipcClient,
                     PipeDirection.InOut,
                     PipeOptions.Asynchronous,
                     TokenImpersonationLevel.Impersonation);
@@ -178,7 +194,9 @@ namespace Microsoft.Internal.Common.Utils
                 }
                 catch (TimeoutException)
                 {
-                    Debug.WriteLine("ClientServerProxyFactory::ConnectClientStreamAsync: No client stream connected, timing out.");
+                    if (_verboseLogging)
+                        Console.WriteLine("ClientServerICTSProxyFactory::ConnectClientStreamAsync: No client stream connected, timing out.");
+
                     throw;
                 }
 
@@ -186,9 +204,7 @@ namespace Microsoft.Internal.Common.Utils
             }
             else
             {
-                Debug.WriteLine($"ClientServerProxyFactory::ConnectClientStreamAsync: Connecting new UnixDomainSocket client {_clientAddress}.");
-
-                var unixDomainSocket = new IpcUnixDomainSocketTransport(_clientAddress);
+                var unixDomainSocket = new IpcUnixDomainSocketTransport(_ipcClient);
 
                 using var connectTimeoutTokenSource = new CancellationTokenSource();
                 using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
@@ -202,7 +218,9 @@ namespace Microsoft.Internal.Common.Utils
                 {
                     if (connectTimeoutTokenSource.IsCancellationRequested)
                     {
-                        Debug.WriteLine("ClientServerProxyFactory::ConnectClientStreamAsync: No client stream connected, timing out.");
+                        if (_verboseLogging)
+                            Console.WriteLine("ClientServerICTSProxyFactory::ConnectClientStreamAsync: No client stream connected, timing out.");
+
                         throw new TimeoutException();
                     }
 
@@ -217,156 +235,165 @@ namespace Microsoft.Internal.Common.Utils
 
             return clientStream;
         }
+    }
 
-        internal class ConnectedProxy : IDisposable
+    internal class ConnectedProxy : IDisposable
+    {
+        readonly bool _verboseLogging;
+
+        Stream _clientStream = null;
+        Stream _serverStream = null;
+
+        Task _serverReadClientWriteTask = null;
+        Task _clientReadServerWriteTask = null;
+
+        CancellationTokenSource cancelProxyTokenSource = new CancellationTokenSource();
+
+        bool _disposed = false;
+
+        ulong _serverClientByteTransfer;
+        ulong _clientServerByteTransfer;
+
+        static int s_proxyInstanceCount;
+
+        public TaskCompletionSource ProxyTaskCompleted { get; }
+
+        public ConnectedProxy(Stream clientStream, Stream serverStream, TaskCompletionSource proxyTaskCompleted, bool verboseLogging)
         {
-            Stream _clientStream = null;
-            Stream _serverStream = null;
+            _verboseLogging = verboseLogging;
 
-            Task _serverReadClientWriteTask = null;
-            Task _clientReadServerWriteTask = null;
+            _clientStream = clientStream;
+            _serverStream = serverStream;
 
-            CancellationTokenSource cancelProxyTokenSource = new CancellationTokenSource();
+            ProxyTaskCompleted = proxyTaskCompleted;
 
-            bool _disposed = false;
+            _serverClientByteTransfer += (ulong)IpcAdvertise.V1SizeInBytes;
 
-            ulong _serverClientByteTransfer;
-            ulong _clientServerByteTransfer;
+            Interlocked.Increment(ref s_proxyInstanceCount);
+        }
 
-            static int s_proxyInstanceCount;
+        public void Start()
+        {
+            if (_serverReadClientWriteTask != null || _clientReadServerWriteTask != null || _disposed)
+                throw new InvalidOperationException();
 
-            public TaskCompletionSource ProxyTaskCompleted { get; }
+            _serverReadClientWriteTask = ServerReadClientWrite(cancelProxyTokenSource.Token);
+            _clientReadServerWriteTask = ClientReadServerWrite(cancelProxyTokenSource.Token);
+        }
 
-            public ConnectedProxy(Stream clientStream, Stream serverStream, TaskCompletionSource proxyTaskCompleted)
+        public async void Stop()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(ConnectedProxy));
+
+            cancelProxyTokenSource.Cancel();
+
+            List<Task> runningTasks = new List<Task>();
+
+            if (_serverReadClientWriteTask != null)
+                runningTasks.Add(_serverReadClientWriteTask);
+
+            if (_clientReadServerWriteTask != null)
+                runningTasks.Add(_clientReadServerWriteTask);
+
+            await Task.WhenAll(runningTasks.ToArray()).ConfigureAwait(false);
+
+            _serverReadClientWriteTask?.Dispose();
+            _clientReadServerWriteTask?.Dispose();
+
+            ProxyTaskCompleted?.TrySetResult();
+
+            _serverReadClientWriteTask = null;
+            _clientReadServerWriteTask = null;
+        }
+
+        public bool IsRunning {
+            get
             {
-                _clientStream = clientStream;
-                _serverStream = serverStream;
-                ProxyTaskCompleted = proxyTaskCompleted;
+                if (_serverReadClientWriteTask == null || _clientReadServerWriteTask == null || _disposed)
+                    return false;
 
-                _serverClientByteTransfer += (ulong)IpcAdvertise.V1SizeInBytes;
-
-                Interlocked.Increment(ref s_proxyInstanceCount);
+                return !_serverReadClientWriteTask.IsCompleted && !_clientReadServerWriteTask.IsCompleted;
             }
-
-            public void Start()
+        }
+        public void Dispose()
+        {
+            if (!_disposed)
             {
-                if (_serverReadClientWriteTask != null || _clientReadServerWriteTask != null || _disposed)
-                    throw new InvalidOperationException();
+                Stop();
 
-                _serverReadClientWriteTask = ServerReadClientWrite(cancelProxyTokenSource.Token);
-                _clientReadServerWriteTask = ClientReadServerWrite(cancelProxyTokenSource.Token);
-            }
+                _serverStream?.Dispose();
+                _clientStream?.Dispose();
 
-            public async void Stop()
-            {
-                if (_disposed)
-                    throw new ObjectDisposedException(nameof(ConnectedProxy));
+                _disposed = true;
 
-                cancelProxyTokenSource.Cancel();
+                Interlocked.Decrement(ref s_proxyInstanceCount);
 
-                List<Task> runningTasks = new List<Task>();
-
-                if (_serverReadClientWriteTask != null)
-                    runningTasks.Add(_serverReadClientWriteTask);
-
-                if (_clientReadServerWriteTask != null)
-                    runningTasks.Add(_clientReadServerWriteTask);
-
-                await Task.WhenAll(runningTasks.ToArray()).ConfigureAwait(false);
-
-                _serverReadClientWriteTask?.Dispose();
-                _clientReadServerWriteTask?.Dispose();
-
-                ProxyTaskCompleted?.TrySetResult();
-
-                _serverReadClientWriteTask = null;
-                _clientReadServerWriteTask = null;
-            }
-
-            public bool IsRunning
-            {
-                get
+                if (_verboseLogging)
                 {
-                    if (_serverReadClientWriteTask == null || _clientReadServerWriteTask == null || _disposed)
-                        return false;
-
-                    return !_serverReadClientWriteTask.IsCompleted && !_clientReadServerWriteTask.IsCompleted;
+                    Console.WriteLine($"ConnectedProxy: Diposed stats: Server->Client {_serverClientByteTransfer} bytes, Client->Server {_clientServerByteTransfer} bytes.");
+                    Console.WriteLine($"ConnectedProxy: Active instances: {s_proxyInstanceCount}");
                 }
             }
-            public void Dispose()
+        }
+
+        async Task ServerReadClientWrite(CancellationToken token)
+        {
+            try
             {
-                if (!_disposed)
+                byte[] buffer = new byte[1024];
+                while (!token.IsCancellationRequested)
                 {
-                    Stop();
+                    int bytesRead = await _serverStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
 
-                    _serverStream?.Dispose();
-                    _clientStream?.Dispose();
+                    // Check for end of stream indicating that remove end hung-up.
+                    if (bytesRead == 0)
+                        break;
 
-                    _disposed = true;
-
-                    Interlocked.Decrement(ref s_proxyInstanceCount);
-
-                    Debug.WriteLine($"Diposed ConnectedProxy stats: Server->Client {_serverClientByteTransfer} bytes, Client->Server {_clientServerByteTransfer} bytes.");
-                    Debug.WriteLine($"Active ConnectedProxy instances: {s_proxyInstanceCount}");
+                    _serverClientByteTransfer += (ulong)bytesRead;
+                    await _clientStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
                 }
             }
-
-            async Task ServerReadClientWrite(CancellationToken token)
+            catch (Exception)
             {
-                try
-                {
-                    byte[] buffer = new byte[1024];
-                    while (!token.IsCancellationRequested)
-                    {
-                        int bytesRead = await _serverStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
-
-                        // Check for end of stream indicating that remove end hung-up.
-                        if (bytesRead == 0)
-                            break;
-
-                        _serverClientByteTransfer += (ulong)bytesRead;
-                        await _clientStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
-                    }
-                }
-                catch (Exception)
-                {
-                    // Completing task will trigger dispose of instance and cleanup.
-                    // Faliure mainly consists of closed/disposed streams and cancelation requests.
-                    // Just make sure task gets complete, nothing more needs to be in response to these exceptions.
-                    Debug.WriteLine("ConnectedProxy::ServerReadClientWrite: Failed stream operation. Completing task.");
-                }
-
-                ProxyTaskCompleted?.TrySetResult();
+                // Completing task will trigger dispose of instance and cleanup.
+                // Faliure mainly consists of closed/disposed streams and cancelation requests.
+                // Just make sure task gets complete, nothing more needs to be in response to these exceptions.
+                if (_verboseLogging)
+                    Console.WriteLine("ConnectedProxy::ServerReadClientWrite: Failed stream operation. Completing task.");
             }
 
-            async Task ClientReadServerWrite(CancellationToken token)
+            ProxyTaskCompleted?.TrySetResult();
+        }
+
+        async Task ClientReadServerWrite(CancellationToken token)
+        {
+            try
             {
-                try
+                byte[] buffer = new byte[256];
+                while (!token.IsCancellationRequested)
                 {
-                    byte[] buffer = new byte[256];
-                    while (!token.IsCancellationRequested)
-                    {
-                        int bytesRead = await _clientStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
+                    int bytesRead = await _clientStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
 
-                        // Check for end of stream indicating that remove end hung-up.
-                        if (bytesRead == 0)
-                            break;
+                    // Check for end of stream indicating that remove end hung-up.
+                    if (bytesRead == 0)
+                        break;
 
-                        _clientServerByteTransfer += (ulong)bytesRead;
-                        await _serverStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
+                    _clientServerByteTransfer += (ulong)bytesRead;
+                    await _serverStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
 
-                    }
                 }
-                catch (Exception)
-                {
-                    // Completing task will trigger dispose of instance and cleanup.
-                    // Faliure mainly consists of closed/disposed streams and cancelation requests.
-                    // Just make sure task gets complete, nothing more needs to be in response to these exceptions.
-                    Debug.WriteLine("ConnectedProxy::ClientReadServerWrite: Failed stream operation. Completing task.");
-                }
-
-                ProxyTaskCompleted?.TrySetResult();
             }
+            catch (Exception)
+            {
+                // Completing task will trigger dispose of instance and cleanup.
+                // Faliure mainly consists of closed/disposed streams and cancelation requests.
+                // Just make sure task gets complete, nothing more needs to be in response to these exceptions.
+                if (_verboseLogging)
+                    Console.WriteLine("ConnectedProxy::ClientReadServerWrite: Failed stream operation. Completing task.");
+            }
+
+            ProxyTaskCompleted?.TrySetResult();
         }
     }
 }
