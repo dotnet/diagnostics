@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Globalization;
 using System.IO;
 using System.Text;
 
@@ -10,6 +11,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
     class JSONExporter : ICounterRenderer
     {
+        private object _lock = new object();
         private string _output;
         private string _processName;
         private StringBuilder builder;
@@ -35,10 +37,14 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 File.Delete(_output);
             }
 
-            builder = new StringBuilder();
-            builder.Append($"{{ \"TargetProcess\": \"{_processName}\", ");
-            builder.Append($"\"StartTime\": \"{DateTime.Now.ToString()}\", ");
-            builder.Append($"\"Events\": [");
+            lock (_lock)
+            {
+                builder = new StringBuilder();
+                builder
+                    .Append("{ \"TargetProcess\": \"").Append(_processName).Append("\", ")
+                    .Append("\"StartTime\": \"").Append(DateTime.Now.ToString()).Append("\", ")
+                    .Append("\"Events\": [");
+            }
         }
 
         public void EventPipeSourceConnected()
@@ -52,24 +58,32 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         public void CounterPayloadReceived(string providerName, ICounterPayload payload, bool _)
         {
-            if (builder.Length > flushLength)
+            lock (_lock)
             {
-                File.AppendAllText(_output, builder.ToString());
-                builder.Clear();
+                if (builder.Length > flushLength)
+                {
+                    File.AppendAllText(_output, builder.ToString());
+                    builder.Clear();
+                }
+
+                builder
+                    .Append("{ \"timestamp\": \"").Append(DateTime.Now.ToString("u")).Append("\", ")
+                    .Append(" \"provider\": \"").Append(providerName).Append("\", ")
+                    .Append(" \"name\": \"").Append(payload.GetDisplay()).Append("\", ")
+                    .Append(" \"counterType\": \"").Append(payload.GetCounterType()).Append("\", ")
+                    .Append(" \"value\": ").Append(payload.GetValue().ToString(CultureInfo.InvariantCulture)).Append(" },");
             }
-            builder.Append($"{{ \"timestamp\": \"{DateTime.Now.ToString("u")}\", ");
-            builder.Append($" \"provider\": \"{providerName}\", ");
-            builder.Append($" \"name\": \"{payload.GetDisplay()}\", ");
-            builder.Append($" \"counterType\": \"{payload.GetCounterType()}\", ");
-            builder.Append($" \"value\": {payload.GetValue()} }},");
         }
 
         public void Stop()
         {
-            builder.Remove(builder.Length - 1, 1); // Remove the last comma to ensure valid JSON format.
-            builder.Append($"]}}");
-            // Append all the remaining text to the file.
-            File.AppendAllText(_output, builder.ToString());
+            lock (_lock)
+            {
+                builder.Remove(builder.Length - 1, 1); // Remove the last comma to ensure valid JSON format.
+                builder.Append("]}");
+                // Append all the remaining text to the file.
+                File.AppendAllText(_output, builder.ToString());
+            }
             Console.WriteLine("File saved to " + _output);
         }
     }

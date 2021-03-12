@@ -50,10 +50,10 @@ HRESULT ExpressionNode::CreateExpressionNode(__in_z WCHAR* pExpression, Expressi
     *ppExpressionNode = NULL;
 
     HRESULT Status = g_pRuntime->GetCorDebugInterface(&s_pCorDebugProcess);
-    if (FAILED(Status)) 
-    {
+    if (FAILED(Status)) {
         return Status;
     }
+
     Status = CreateExpressionNodeHelper(pExpression,
         pExpression,
         0,
@@ -63,9 +63,9 @@ HRESULT ExpressionNode::CreateExpressionNode(__in_z WCHAR* pExpression, Expressi
         0,
         NULL,
         ppExpressionNode);
-    if(FAILED(Status) && *ppExpressionNode == NULL)
-    {
 
+    if (FAILED(Status) && *ppExpressionNode == NULL)
+    {
         WCHAR pErrorMessage[MAX_ERROR];
         _snwprintf_s(pErrorMessage, MAX_ERROR, _TRUNCATE, L"Error 0x%x while parsing expression", Status);
         *ppExpressionNode = new ExpressionNode(pExpression, pErrorMessage);
@@ -1797,7 +1797,7 @@ HRESULT ExpressionNode::EnumerateFrames(FrameEnumCallback pCallback, VOID* pUser
         CROSS_PLATFORM_CONTEXT context;
         ULONG32 cbContextActual;
         if ((Status=pStackWalk->GetContext(
-            DT_CONTEXT_FULL, 
+            g_targetMachine->GetFullContextFlags(), 
             sizeof(context),
             &cbContextActual,
             (BYTE *)&context))!=S_OK)

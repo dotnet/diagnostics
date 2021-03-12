@@ -180,12 +180,13 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
             if (NuGetPackageCacheDirPath != null)
             {
-                args += " --packages \"" + NuGetPackageCacheDirPath + "\"";
+                args += " --packages \"" + NuGetPackageCacheDirPath.TrimEnd('\\') + "\"";
             }
             if (extraArgs != null)
             {
                 args += extraArgs;
             }
+            output.WriteLine("Launching {0} {1}", DotNetToolPath, args);
             ProcessRunner runner = new ProcessRunner(DotNetToolPath, args).
                       WithWorkingDirectory(DebuggeeSolutionDirPath).
                       WithLog(output).
@@ -226,6 +227,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             AssertDebuggeeProjectFileExists(output);
             AssertDebuggeeAssetsFileExists(output);
 
+            output.WriteLine("Launching {0} {1}", DotNetToolPath, dotnetArgs);
             ProcessRunner runner = new ProcessRunner(DotNetToolPath, dotnetArgs).
                       WithWorkingDirectory(DebuggeeProjectDirPath).
                       WithLog(output).

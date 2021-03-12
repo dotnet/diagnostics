@@ -54,15 +54,19 @@ ENDIF:LIVE
 CONTINUE
 
 SOSCOMMAND:SetSymbolServer -ms
+
 !IFDEF:DOTNETDUMP
+IFDEF:WINDOWS
 SOSCOMMAND:SetHostRuntime
+ENDIF:WINDOWS
+!IFDEF:WINDOWS
+COMMAND:sethostruntime
+ENDIF:WINDOWS
 ENDIF:DOTNETDUMP
 
+SOSCOMMAND:SOSStatus
+
 # Verify that ClrStack with no options works
-SOSCOMMAND:SetSymbolServer -ms
-!IFDEF:DOTNETDUMP
-SOSCOMMAND:SetHostRuntime
-ENDIF:DOTNETDUMP
 SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
@@ -70,11 +74,23 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestApp\.Program\.Foo4\(System\.String
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 24\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
-SOSCOMMAND:SetSymbolServer -disable
 
+SOSCOMMAND:runtimes
+!IFDEF:DESKTOP
+VERIFY:.*\.NET Core .*runtime at.*\s+
+ENDIF:DESKTOP
+IFDEF:DESKTOP
+VERIFY:.*\Desktop .NET Framework.*runtime at.*\s+
+ENDIF:DESKTOP
+
+SOSCOMMAND:SOSStatus
+
+# Issue: https://github.com/dotnet/diagnostics/issues/1567
+!IFDEF:ALPINE
 # Test eeversion command
 SOSCOMMAND:EEVersion
 VERIFY:\s+<DECVAL>.<DECVAL>.<DECVAL>.<DECVAL>.*
+ENDIF:ALPINE
 
 # Verify that ClrStack with managed/native mixed works
 SOSCOMMAND:ClrStack -f
@@ -84,6 +100,7 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo2\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo1\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 24\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
+SOSCOMMAND:SetSymbolServer -disable
 
 # Verify that ClrStack all option works (locals/params)
 SOSCOMMAND:ClrStack -a
@@ -110,7 +127,7 @@ ENDIF:ARM
 IFDEF:ARM64
 VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
 ENDIF:ARM64
-VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
+VERIFY:\s+([r|e]sp|sp|lr)=<HEXVAL>\s+([r|e]bp|lr|sp)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
 IFDEF:X64
 VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
 ENDIF:X64
@@ -125,7 +142,7 @@ ENDIF:ARM
 IFDEF:ARM64
 VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
 ENDIF:ARM64
-VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
+VERIFY:\s+([r|e]sp|sp|lr)=<HEXVAL>\s+([r|e]bp|lr|sp)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
 IFDEF:X64
 VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
 ENDIF:X64

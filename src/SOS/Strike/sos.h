@@ -136,7 +136,7 @@ namespace sos
          *   mt - The address of the MethodTable to test for.
          */
         static bool IsZombie(TADDR mt);
-        
+
         /* Returns the method table for arrays.
          */
         inline static TADDR GetArrayMT()
@@ -164,7 +164,7 @@ namespace sos
         {
             return GetFreeMT() == mt;
         }
-        
+
         /* Returns true if the given method table is that of an Array.
          */
         inline static bool IsArrayMT(TADDR mt)
@@ -178,7 +178,7 @@ namespace sos
         {
             return GetStringMT() == mt;
         }
-        
+
         inline static bool IsValid(TADDR mt)
         {
             DacpMethodTableData data;
@@ -190,7 +190,7 @@ namespace sos
             : mMT(mt), mName(0)
         {
         }
-        
+
         MethodTable(const MethodTable &mt)
             : mMT(mt.mMT), mName(mt.mName)
         {
@@ -198,7 +198,7 @@ namespace sos
             // the copy instead of the original.
             mt.mName = NULL;
         }
-        
+
         const MethodTable &operator=(const MethodTable &mt)
         {
             Clear();
@@ -208,10 +208,10 @@ namespace sos
             mMT = mt.mMT;
             mName = mt.mName;
             mt.mName = NULL;
-            
+
             return *this;
         }
-        
+
         ~MethodTable()
         {
             Clear();
@@ -252,7 +252,7 @@ namespace sos
          *                  true will make IsValid return less false positives.
          */
         static bool IsValid(TADDR address, bool verifyFields=false);
-        
+
         static int GetStringDataOffset()
         {
 #ifndef _TARGET_WIN64_
@@ -261,6 +261,15 @@ namespace sos
             return 0xc;
 #endif
         }
+
+        // GC uses the low bits of the method table ptr in objects to store information
+        // it uses one more bit in the 64-bit implementations for the doubly linked free lists
+        static const size_t METHODTABLE_PTR_LOW_BITMASK =
+#ifdef _TARGET_WIN64_
+            7;
+#else
+            3;
+#endif
 
     public:
         /* Constructor.  Use Object(TADDR, TADDR) instead if you know the method table.
@@ -279,14 +288,14 @@ namespace sos
          *   Exception - if addr is misaligned.
          */
         Object(TADDR addr, TADDR mt);
-        
+
         Object(const Object &rhs);
 
         inline ~Object()
         {
             if (mMTData)
                 delete mMTData;
-                
+
             if (mTypeName)
                 delete mTypeName;
         }
@@ -320,7 +329,7 @@ namespace sos
          *   DataRead - we failed to read the object header.
          */
         ULONG GetHeader() const;
-        
+
         /* Gets the header for the current object, does not throw any exception.
          * Params:
          *   outHeader - filled with the header if this function was successful.
@@ -328,7 +337,7 @@ namespace sos
          *   True if we successfully read the object header, false otherwise.
          */
         bool TryGetHeader(ULONG &outHeader) const;
-        
+
         /* Returns the method table of the object this represents.
          * Throws:
          *   DataRead - If we failed to read the method table from the address.
@@ -338,7 +347,7 @@ namespace sos
          *                    verification here.)
          */
         TADDR GetMT() const;
-        
+
         /* Returns the component method table of the object.  For example, if
          * this object is an array, the method table will be the general array
          * MT.  Calling this function tells you what type of objects can be
@@ -453,19 +462,19 @@ namespace sos
         RefIterator(TADDR obj, LinearReadCache *cache = NULL);
         RefIterator(TADDR obj, CGCDesc *desc, bool arrayOfVC, LinearReadCache *cache = NULL);
         ~RefIterator();
-    
+
         /* Moves to the next reference in the object.
          */
         const RefIterator &operator++();
-        
+
         /* Returns the address of the current reference.
          */
         TADDR operator*() const;
-        
+
         /* Gets the offset into the object where the current reference comes from.
          */
         TADDR GetOffset() const;
-        
+
         /* Returns true if there are more objects in the iteration, false otherwise.
          * Used as:
          *     if (itr)
@@ -480,7 +489,7 @@ namespace sos
         {
             return mLoaderAllocatorObjectHandle == mCurr;
         }
-        
+
     private:
         void Init();
         inline TADDR ReadPointer(TADDR addr) const
@@ -494,22 +503,22 @@ namespace sos
             {
                 MOVE(addr, addr);
             }
-            
+
             return addr;
         }
-        
+
     private:
         LinearReadCache *mCache;
         CGCDesc *mGCDesc;
         bool mArrayOfVC, mDone;
-        
+
         TADDR *mBuffer;
         CGCDescSeries *mCurrSeries;
-        
+
         TADDR mLoaderAllocatorObjectHandle;
 
         int i, mCount;
-        
+
         TADDR mCurr, mStop, mObject;
         size_t mObjSize;
     };
@@ -612,7 +621,7 @@ namespace sos
         void MoveToNextObjectCarefully();
 
     private:
-        ObjectIterator(const DacpGcHeapDetails *heap, int numHeaps, TADDR start, TADDR stop);
+        ObjectIterator(const GCHeapDetails *heap, int numHeaps, TADDR start, TADDR stop);
 
         bool VerifyObjectMembers(__out_ecount(size) char *buffer, size_t size) const;
         void BuildError(__out_ecount(count) char *out, size_t count, const char *format, ...) const;
@@ -625,10 +634,11 @@ namespace sos
     private:
         DacpHeapSegmentData mSegment;
         bool bLarge;
+        bool bPinned;
         Object mCurrObj;
         TADDR mLastObj, mStart, mEnd, mSegmentEnd;
         AllocInfo mAllocInfo;
-        const DacpGcHeapDetails *mHeaps;
+        const GCHeapDetails *mHeaps;
         int mNumHeaps;
         int mCurrHeap;
     };
@@ -649,7 +659,7 @@ namespace sos
          *   DataRead - if we could not read the syncblk entry for the given index.
          */
         explicit SyncBlk(int index);
-        
+
         /* Returns whether or not the current entry is a "Free" SyncBlk table entry
          * or not.  This should be called *before* any other function here.
          */
@@ -736,7 +746,7 @@ namespace sos
         int mCurr, mTotal;
         SyncBlk mSyncBlk;
     };
-    
+
     /* An class which contains information about the GCHeap.
      */
     class GCHeap
@@ -779,7 +789,7 @@ namespace sos
         bool AreGCStructuresValid() const;
 
     private:
-        DacpGcHeapDetails *mHeaps;
+        GCHeapDetails *mHeaps;
         DacpGcHeapData mHeapData;
         int mNumHeaps;
     };
@@ -795,7 +805,7 @@ namespace sos
     {
         return Object::IsValid(TO_TADDR(addr), verifyFields);
     }
-    
-    
+
+
     void BuildTypeWithExtraInfo(TADDR addr, unsigned int size, __inout_ecount(size) WCHAR *buffer);
 }

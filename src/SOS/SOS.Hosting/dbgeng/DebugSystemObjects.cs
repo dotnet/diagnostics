@@ -8,7 +8,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace SOS
+namespace SOS.Hosting
 {
     internal unsafe class DebugSystemObjects
     {
@@ -25,7 +25,7 @@ namespace SOS
             builder.AddMethod(new GetEventProcessDelegate((self, id) => DebugClient.NotImplemented));
             builder.AddMethod(new GetCurrentThreadIdDelegate(soshost.GetCurrentThreadId));
             builder.AddMethod(new SetCurrentThreadIdDelegate(soshost.SetCurrentThreadId));
-            builder.AddMethod(new GetCurrentProcessIdDelegate(soshost.GetCurrentProcessId));
+            builder.AddMethod(new GetCurrentProcessIdDelegate((self, id) => DebugClient.NotImplemented));
             builder.AddMethod(new SetCurrentProcessIdDelegate((self, id) => DebugClient.NotImplemented));
             builder.AddMethod(new GetNumberThreadsDelegate(soshost.GetNumberThreads));
             builder.AddMethod(new GetTotalNumberThreadsDelegate(soshost.GetTotalNumberThreads));
@@ -45,7 +45,7 @@ namespace SOS
             builder.AddMethod(new GetProcessIdByDataOffsetDelegate((self, offset, id) => DebugClient.NotImplemented));
             builder.AddMethod(new GetCurrentProcessPebDelegate((self, offset) => DebugClient.NotImplemented));
             builder.AddMethod(new GetProcessIdByPebDelegate((self, offset, id) => DebugClient.NotImplemented));
-            builder.AddMethod(new GetCurrentProcessSystemIdDelegate((self, sysId) => DebugClient.NotImplemented));
+            builder.AddMethod(new GetCurrentProcessSystemIdDelegate(soshost.GetCurrentProcessSystemId));
             builder.AddMethod(new GetProcessIdBySystemIdDelegate((self, sysId, id) => DebugClient.NotImplemented));
             builder.AddMethod(new GetCurrentProcessHandleDelegate((self, handle) => DebugClient.NotImplemented));
             builder.AddMethod(new GetProcessIdByHandleDelegate((self, handle, id) => DebugClient.NotImplemented));
@@ -77,7 +77,7 @@ namespace SOS
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCurrentProcessIdDelegate(
             IntPtr self,
-            [Out] out uint Id);
+            [Out] uint* Id);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetCurrentProcessIdDelegate(
@@ -191,7 +191,7 @@ namespace SOS
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCurrentProcessSystemIdDelegate(
             IntPtr self,
-            [Out] uint* SysId);
+            [Out] out uint SysId);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetProcessIdBySystemIdDelegate(

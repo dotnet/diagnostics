@@ -39,7 +39,7 @@ namespace DotnetCounters.UnitTests
                 foreach (JSONCounterPayload payload in counterTrace.events)
                 {
                     Assert.Equal("myProvider", payload.provider);
-                    Assert.Equal("Incrementing Counter One / 1 sec", payload.name);
+                    Assert.Equal("Incrementing Counter One (Count / 1 sec)", payload.name);
                     Assert.Equal("Rate", payload.counterType);
                     Assert.Equal(1.0, payload.value);
                 }
@@ -72,36 +72,6 @@ namespace DotnetCounters.UnitTests
                     Assert.Equal("Counter One", payload.name);
                     Assert.Equal("Metric", payload.counterType);
                     Assert.Equal(1.0, payload.value);
-                }
-            }
-        }
-
-        [Fact]
-        public void DifferentDisplayRateTest()
-        {
-            string fileName = "displayRateTest.json";
-            JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
-            exporter.Initialize();
-            for (int i = 0; i < 10; i++)
-            {
-                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(true, "incrementingCounterOne", 1.0, 60, "Incrementing Counter One"), false);
-            }
-            exporter.Stop();
-
-            Assert.True(File.Exists(fileName));
-            using (StreamReader r = new StreamReader(fileName))
-            {
-                string json = r.ReadToEnd();
-                JSONCounterTrace counterTrace = JsonConvert.DeserializeObject<JSONCounterTrace>(json);
-
-                Assert.Equal("myProcess.exe", counterTrace.targetProcess);
-                Assert.Equal(10, counterTrace.events.Length);
-                foreach (JSONCounterPayload payload in counterTrace.events)
-                {
-                    Assert.Equal("myProvider", payload.provider);
-                    Assert.Equal("Incrementing Counter One / 60 sec", payload.name);
-                    Assert.Equal("Rate", payload.counterType);
-                    Assert.Equal(60.0, payload.value);
                 }
             }
         }

@@ -60,7 +60,7 @@
 #if defined(_TARGET_X86_) || defined(_TARGET_ARM_)
     #define USE_UPPER_ADDRESS       0
 
-#elif defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)
+#elif defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     #define UPPER_ADDRESS_MAPPING_FACTOR 2
     #define CLR_UPPER_ADDRESS_MIN   0x64400000000
     #define CODEHEAP_START_ADDRESS  0x64480000000
@@ -86,7 +86,7 @@
 #define ALLOW_SXS_JIT
 #define ALLOW_SXS_JIT_NGEN
 
-//master switch for gc suspension not based on hijacking
+//main switch for gc suspension not based on hijacking
 #define FEATURE_ENABLE_GCPOLL
 
 #if defined(_TARGET_X86_)

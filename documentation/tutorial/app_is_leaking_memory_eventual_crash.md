@@ -13,7 +13,7 @@ Next, lets run the webapi (dotnet run) and before hitting the above URL that wil
 > dotnet-counters monitor --refresh-interval 1 -p 4807
 > ```
 
-4807 is the process identifier which can be found using dotnet-trace list-processes. The refresh-interval is the number of seconds before refreshes. 
+4807 is the process identifier which can be found using dotnet-trace ps. The refresh-interval is the number of seconds before refreshes.
 
 The output should be similar to the below:
 
@@ -45,7 +45,7 @@ Most commonly when analyzing possible memory leaks, we need access to as much of
 > sudo ./dotnet-dump collect -p 4807
 > ```
 
-4807 is the process identifier which can be found using dotnet-trace list-processes. The result is a core dump located in the same folder. Please note that to generate core dumps, dotnet-dump requires sudo.  
+4807 is the process identifier which can be found using dotnet-trace ps. The result is a core dump located in the same folder. Please note that to generate core dumps, dotnet-dump requires sudo.
 
 
 ### Analyzing the core dump
@@ -56,7 +56,7 @@ Now that we have a core dump generated, what options do we have to analyze the c
 
 In both cases, you have to be careful to roughly match the environment up with the production server. For example, if I am running .net core preview 5 on Ubuntu 16.04 the core dump must be analyzed on the same architecture and environment. 
 
-For the LLDB/SOS experience, please see - https://github.com/dotnet/runtime/blob/master/docs/workflow/building/coreclr/debugging-instructions.md.
+For the LLDB/SOS experience, please see - https://github.com/dotnet/runtime/blob/main/docs/workflow/building/coreclr/debugging-instructions.md.
 
 To use the dotnet-dump tool to analyze the dump please run:
 

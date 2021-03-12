@@ -24,16 +24,17 @@ Type "!help <functionname>" for detailed info on that function.
 Object Inspection                  Examining code and stacks
 -----------------------------      -----------------------------
 DumpObj (do)                       Threads (clrthreads)
-DumpArray (da)                     ThreadState
-DumpAsync                          IP2MD
-DumpDelegate                       U
-DumpStackObjects (dso)             DumpStack
-DumpHeap                           EEStack
-DumpVC                             ClrStack
-GCRoot                             GCInfo
-ObjSize                            EHInfo
-FinalizeQueue                      BPMD (bpmd)
-PrintException (pe)                COMState
+DumpALC (dumpalc)                  ThreadState
+DumpArray (da)                     IP2MD
+DumpAsync                          U
+DumpDelegate                       DumpStack
+DumpStackObjects (dso)             EEStack
+DumpHeap                           ClrStack
+DumpVC                             GCInfo
+GCRoot                             EHInfo
+ObjSize                            BPMD (bpmd)
+FinalizeQueue                      COMState
+PrintException (pe)
 TraverseHeap
 
 Examining CLR data structures      Diagnostic Utilities
@@ -48,7 +49,7 @@ DumpMD                             GCHandles
 Token2EE                           GCHandleLeaks
 EEVersion                          FinalizeQueue (fq)
 DumpModule                         FindAppDomain
-ThreadPool                         SaveModule
+ThreadPool (tp)                    SaveModule
 DumpAssembly                       ProcInfo 
 DumpSigElem                        StopOnException (soe)
 DumpRuntimeTypes                   DumpLog
@@ -321,6 +322,42 @@ The arguments in detail:
         5b9a628c  4000001        0         System.Int32   instance        4 x
         5b9a628c  4000002        4         System.Int32   instance        8 y
         5b9a628c  4000003        8         System.Int32   instance       12 z
+
+\\
+
+COMMAND: dumpalc.
+DumpALC
+    <object address>
+
+This command allows you to dump the AssemblyLoadContext into which the type of the
+specified object was loaded.
+
+ Example output:
+        0:000> !dumpalc 000001c2800101a0
+        Name:        Host.HostAssemblyLoadContext
+        MethodTable: 00007ff7c9cb1428
+        EEClass:     00007ff7c9ca4b40
+        Size:        88(0x58) bytes
+        File:        c:\test\host.dll
+        Fields:
+                      MT    Field   Offset                 Type VT     Attr            Value Name
+        00007ff7c9920eb8  4000ea3        8        System.Object  0 instance 000001c28000cff0 _unloadLock
+        0000000000000000  4000ea4       10                       0 instance 0000000000000000 _resolvingUnmanagedDll
+        0000000000000000  4000ea5       18                       0 instance 0000000000000000 _resolving
+        00007ff7c9d36850  4000ea6       20 ...Private.CoreLib]]  0 instance 000001c2800101b8 _unloading
+        00007ff7c9a74748  4000ea7       28        System.String  0 instance 0000000000000000 _name
+        00007ff7c9a427f0  4000ea8       30        System.IntPtr  1 instance 000001C2FA21DD50 _nativeAssemblyLoadContext
+        00007ff7c9a1c7e0  4000ea9       38         System.Int64  1 instance                0 _id
+        00007ff7c9ac57b8  4000eaa       40         System.Int32  1 instance                0 _state
+        00007ff7c9a107b8  4000eab       44       System.Boolean  1 instance                1 _isCollectible
+        00007ff7c9cb4070  4000ea1      b08 ...Private.CoreLib]]  0   static 000001c28000d090 s_allContexts
+        00007ff7c9a1c7e0  4000ea2      970         System.Int64  1   static                1 s_nextId
+        0000000000000000  4000eac      b10 ...yLoadEventHandler  0   static 0000000000000000 AssemblyLoad
+        0000000000000000  4000ead      b18 ...solveEventHandler  0   static 0000000000000000 TypeResolve
+        0000000000000000  4000eae      b20 ...solveEventHandler  0   static 0000000000000000 ResourceResolve
+        0000000000000000  4000eaf      b28 ...solveEventHandler  0   static 0000000000000000 AssemblyResolve
+        0000000000000000  4000eb0      b30                       0   static 0000000000000000 s_asyncLocalCurrent
+        00007ff7c9cb26d0  4000001       48 ...ependencyResolver  0 instance 000001c28000d1c0 _resolver
 
 \\
 
@@ -1836,7 +1873,7 @@ COMMAND: dumpil.
 !DumpIL <Managed DynamicMethod object> | 
         <DynamicMethodDesc pointer> |
         <MethodDesc pointer> |
-        /i <IL pointer>
+        -i <IL pointer>
 
 !DumpIL prints the IL code associated with a managed method. We added this
 function specifically to debug DynamicMethod code which was constructed on
@@ -1850,7 +1887,7 @@ You can use it in four ways:
      IL associated with the dynamic method.
   3) If you have an ordinary MethodDesc, you can see the IL for that as well,
      just pass it as the first argument.
-  4) If you have a pointer directly to the IL, specify /i followed by the
+  4) If you have a pointer directly to the IL, specify -i followed by the
      the IL address.  This is useful for writers of profilers that instrument
      IL.
      
@@ -2584,18 +2621,27 @@ investigating lifetime issues of interop-heavy applications.
 \\
 
 COMMAND: sethostruntime.
-!SetHostRuntime <runtime-directory>
+!SetHostRuntime [-c][-netcore] [-f][-netfx] [-none] [-clear] <runtime-directory>
 
-This command sets the path to the .NET Core runtime to use to host the managed
-code that runs as part of SOS in the debugger (cdb/windbg). The runtime needs
-to be at least version 2.0.0 or greater. If there are spaces in directory, it
-needs to be single-quoted (').
+-c, -netcore - switch to hosting on the .NET Core runtime
+-f, -netfx   - switch to hosting on the desktop .NET Framework runtime if loaded.
+-none        - disable hosting managed code (for testing).
+-clear       - clear the .NET Core host runtime path.
+
+This command controls the runtime that is used to host the maanged code that
+runs as part of SOS in the debugger (cdb/windbg). The default is the desktop
+.NET Framework. The "-netcore" option allows the installed .NET Core runtime
+be used. The "-netfx" option allows switches back to the .NET Framework runtime. 
+
+If a <runtime-directory> is given, the command assumes it is a path to a .NET 
+Core runtime which needs to be at least version 2.1.0 or greater. If there are 
+spaces in directory, it needs to be single-quoted (').
 
 Normally, SOS attempts to find an installed .NET Core runtime to run its
 managed code automatically but this command is available if it fails. The
 default is to use the same runtime (coreclr.dll) being debugged. Use this
 command if the default runtime being debugged isn't working enough to run
-the SOS code or if the version is less than 2.0.0.
+the SOS code or if the version is less than 2.1.0.
 
 If you received the following error message when running a SOS command, use
 this command to set the path to 2.0.0 or greater .NET Core runtime.
@@ -2611,14 +2657,15 @@ You can use the "dotnet --info" in a command shell to find the path of an instal
 \\
 
 COMMAND: setsymbolserver.
-!SetSymbolServer [-ms] [-mi] [-disable] [-log] [-cache <cache-path>] [-directory <search-directory>] [<symbol-server-URL>]
+!SetSymbolServer [-ms] [-mi] [-disable] [-log] [-cache <cache-path>] [-directory <search-directory>] [-timeout <minutes> ] [-pat <token>] [<symbol-server-URL>]
 
 -ms - Use the public Microsoft symbol server.
 -mi - Use the internal symweb symbol server.
 -disable - Disable symbol download support.
 -directory - Directory to search for symbols. Can be more than one.
+-timeout - Specify the symbol server timeout in minutes
+-pat - Access token to the authenticated server.
 -cache - Specific a symbol cache directory. The default is %%TEMP%%\SymbolCache if not specified.
--log - Enable symbol download logging.
 <symbol-server-URL> - Symbol server URL.
 
 This commands enables symbol server support for portable PDBs in SOS. If the .sympath is set, this
@@ -2630,14 +2677,12 @@ To disable downloading or clear the current SOS symbol settings allowing new sym
 \\
 
 COMMAND: sosstatus.
-!SOSStatus [-desktop] [-netcore] [-reset]
+!SOSStatus [-reset]
 
--desktop - switch to the desktop runtime if loaded.
--netcore - switch to the .NET Core runtime if loaded.
--reset      - reset all the cached internal SOS state.
+-reset - reset all the cached internal SOS state.
 
-Display internal SOS status, reset the internal cached state, or change between desktop or 
-netcore runtimes when both are loaded in the process or dump.
+Display internal SOS status, reset the internal cached state, or change between the desktop .NET framework
+or .NET Core runtimes when both are loaded in the process or dump.
 
     0:000> !sosstatus
     Target platform: 8664 Context size 04d0
@@ -2646,7 +2691,7 @@ netcore runtimes when both are loaded in the process or dump.
     DBI file path: C:\Users\mikem\AppData\Local\Temp\SymbolCache\mscordbi.dll/5d0707425c2000/mscordbi.dll
     Cache: C:\Users\mikem\AppData\Local\Temp\SymbolCache
     Server: http://msdl.microsoft.com/download/symbols/
-//
+\\
 
 COMMAND: setclrpath.
 !setclrpath <path-to-runtime>
@@ -2656,4 +2701,19 @@ on another machine or for triage dumps because there are no module paths include
 runtime directory.
 
     0:000> !setclrpath "C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.0"
-//
+\\
+
+COMMAND: runtimes.
+runtimes [-netfx] [-netcore]
+
+-netfx   - switch to the desktop .NET Framework runtime if loaded.
+-netcore - switch to the .NET Core runtime if loaded.
+
+List and select the .NET runtimes in the target process.
+\\
+
+COMMAND: logging.
+logging [enable] [disable]
+
+Enables or disables the internal trace logging.
+\\

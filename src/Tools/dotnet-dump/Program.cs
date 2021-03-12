@@ -4,9 +4,11 @@
 
 using Microsoft.Internal.Common.Commands;
 using Microsoft.Tools.Common;
+using System;
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
+using System.CommandLine.Parsing;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -30,9 +32,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
             new Command( name: "collect", description: "Capture dumps from a process")
             {
                 // Handler
-                CommandHandler.Create<IConsole, int, string, bool, Dumper.DumpTypeOption>(new Dumper().Collect),
+                CommandHandler.Create<IConsole, int, string, bool, Dumper.DumpTypeOption, string>(new Dumper().Collect),
                 // Options
-                ProcessIdOption(), OutputOption(), DiagnosticLoggingOption(), TypeOption()
+                ProcessIdOption(), OutputOption(), DiagnosticLoggingOption(), TypeOption(), ProcessNameOption()
             };
 
         private static Option ProcessIdOption() =>
@@ -41,6 +43,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 description: "The process id to collect a memory dump.")
             {
                 Argument = new Argument<int>(name: "pid")
+            };
+
+        private static Option ProcessNameOption() =>
+            new Option(
+                aliases: new[] { "-n", "--name" },
+                description: "The name of the process to collect a memory dump.")
+            {
+                Argument = new Argument<string>(name: "name")
             };
 
         private static Option OutputOption() =>
@@ -63,10 +73,9 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
         private static Option TypeOption() =>
             new Option(
                 alias: "--type",
-                description: @"The dump type determines the kinds of information that are collected from the process. There are several types: full - The largest dump containing all memory including the module images. heap - A large and relatively comprehensive dump containing module lists, thread lists, all stacks, exception information, handle information, and all memory except for mapped 
-images. mini - A small dump containing module lists, thread lists, exception information and all stacks. If not specified 'full' is the default.")
+                description: @"The dump type determines the kinds of information that are collected from the process. There are several types: Full - The largest dump containing all memory including the module images. Heap - A large and relatively comprehensive dump containing module lists, thread lists, all stacks, exception information, handle information, and all memory except for mapped images. Mini - A small dump containing module lists, thread lists, exception information and all stacks.")
             {
-                Argument = new Argument<Dumper.DumpTypeOption>(name: "dump_type", defaultValue: Dumper.DumpTypeOption.Full)
+                Argument = new Argument<Dumper.DumpTypeOption>(name: "dump_type", getDefaultValue: () => Dumper.DumpTypeOption.Full)
             };
 
         private static Command AnalyzeCommand() =>
@@ -93,7 +102,7 @@ images. mini - A small dump containing module lists, thread lists, exception inf
                 aliases: new[] { "-c", "--command" }, 
                 description: "Run the command on start.") 
             {
-                Argument = new Argument<string[]>(name: "command", defaultValue: System.Array.Empty<string>()) { Arity = ArgumentArity.ZeroOrMore }
+                Argument = new Argument<string[]>(name: "command", getDefaultValue: () => Array.Empty<string>()) { Arity = ArgumentArity.ZeroOrMore }
             };
     }
 }

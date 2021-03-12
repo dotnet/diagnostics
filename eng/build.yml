@@ -50,13 +50,9 @@ jobs:
       ${{ if and(eq(parameters.osGroup, 'FreeBSD'), ne(variables['System.TeamProject'], 'public')) }}:
         name: dnceng-freebsd-internal
 
-      # Public OSX Build Pool
-      ${{ if and(eq(parameters.osGroup, 'MacOS'), ne(variables['System.TeamProject'], 'public')) }}:
-        name: Hosted Mac Internal
-
-      # Official Build OSX Pool
-      ${{ if and(eq(parameters.osGroup, 'MacOS'), eq(variables['System.TeamProject'], 'public')) }}:
-        vmImage: macOS-10.14
+      # Build OSX Pool  (we don't have on-prem OSX BuildPool)
+      ${{ if in(parameters.osGroup, 'MacOS', 'MacOS_cross') }}:
+        vmImage: macOS-10.15
 
       # Official Build Windows Pool
       ${{ if and(eq(parameters.osGroup, 'Windows_NT'), ne(variables['System.TeamProject'], 'public')) }}:
@@ -89,12 +85,11 @@ jobs:
  
     # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-      - group: DotNet-MSRC-Storage
       - _InternalInstallArgs:
           -dotnetruntimeversion '$(DotnetRuntimeVersion)'
           -dotnetruntimedownloadversion '$(DotnetRuntimeDownloadVersion)'
-          -runtimesourcefeed '$(dotnetfeedmsrc-private-feed-url)'
-          -runtimesourcefeedkey '$(dotnetclimsrc-read-sas-token-base64)'
+          -runtimesourcefeed '$(RuntimeFeedUrl)'
+          -runtimesourcefeedkey '$(RuntimeFeedBase64SasToken)'
 
     # Only enable publishing in non-public, non PR scenarios.
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
@@ -148,8 +143,6 @@ jobs:
         condition: succeeded()
 
     - ${{ if eq(parameters.osGroup, 'MacOS') }}:
-      - ${{ if eq(variables['System.TeamProject'], 'public') }}:
-        - script: /bin/bash -c "sudo xcode-select -s /Applications/Xcode_10.3.app/Contents/Developer"
       - script: $(Build.SourcesDirectory)/eng/cibuild.sh
           --configuration $(_BuildConfig) 
           --architecture $(_BuildArch)
@@ -158,7 +151,21 @@ jobs:
           $(_InternalInstallArgs)
         displayName: Build / Test
         condition: succeeded()
- 
+
+    - ${{ if eq(parameters.osGroup, 'MacOS_cross') }}:
+      - script: /bin/bash -c "sudo xcode-select -s /Applications/Xcode_12.2.app/Contents/Developer"
+      - script: $(Build.SourcesDirectory)/eng/build.sh
+          --restore
+          --ci
+          --stripsymbols
+          --configuration $(_BuildConfig)
+          --architecture $(_BuildArch)
+          --prepareMachine
+          /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+          $(_InternalInstallArgs)
+        displayName: Build / Test
+        condition: succeeded()
+
     - ${{ if ne(variables['System.TeamProject'], 'public') }}:
       - task: PublishBuildArtifacts@1
         displayName: Publish Build Artifacts

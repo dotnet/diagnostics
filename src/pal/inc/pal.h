@@ -86,6 +86,8 @@ extern "C" {
 #define _M_ARM 7
 #elif defined(__aarch64__) && !defined(_M_ARM64)
 #define _M_ARM64 1
+#elif defined(__mips64__) && !defined(_M_MIPS64)
+#define _M_MIPS64 1
 #endif
 
 #if defined(_M_IX86) && !defined(_X86_)
@@ -1954,6 +1956,152 @@ typedef struct _KNONVOLATILE_CONTEXT_POINTERS {
 
 } KNONVOLATILE_CONTEXT_POINTERS, *PKNONVOLATILE_CONTEXT_POINTERS;
 
+#elif defined(_MIPS64_)
+
+#define CONTEXT_MIPS64   0x00800000
+
+#define CONTEXT_CONTROL (CONTEXT_MIPS64 | 0x1)
+#define CONTEXT_INTEGER (CONTEXT_MIPS64 | 0x2)
+#define CONTEXT_FLOATING_POINT  (CONTEXT_MIPS64 | 0x4)
+#define CONTEXT_DEBUG_REGISTERS (CONTEXT_MIPS64 | 0x8)
+
+#define CONTEXT_FULL (CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_FLOATING_POINT)
+
+#define CONTEXT_ALL (CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_FLOATING_POINT | CONTEXT_DEBUG_REGISTERS)
+
+#define CONTEXT_EXCEPTION_ACTIVE 0x8000000
+#define CONTEXT_SERVICE_ACTIVE 0x10000000
+#define CONTEXT_EXCEPTION_REQUEST 0x40000000
+#define CONTEXT_EXCEPTION_REPORTING 0x80000000
+
+//
+// This flag is set by the unwinder if it has unwound to a call
+// site, and cleared whenever it unwinds through a trap frame.
+// It is used by language-specific exception handlers to help
+// differentiate exception scopes during dispatching.
+//
+
+#define CONTEXT_UNWOUND_TO_CALL 0x20000000
+
+// begin_ntoshvp
+
+//
+// Specify the number of breakpoints and watchpoints that the OS
+// will track. Architecturally, MIPS64 supports up to 16. In practice,
+// however, almost no one implements more than 4 of each.
+//
+
+#define MIPS64_MAX_BREAKPOINTS     8
+#define MIPS64_MAX_WATCHPOINTS     2
+
+//
+// Context Frame
+//
+//  This frame has a several purposes: 1) it is used as an argument to
+//  NtContinue, 2) it is used to constuct a call frame for APC delivery,
+//  and 3) it is used in the user level thread creation routines.
+//
+//
+// The flags field within this record controls the contents of a CONTEXT
+// record.
+//
+// If the context record is used as an input parameter, then for each
+// portion of the context record controlled by a flag whose value is
+// set, it is assumed that that portion of the context record contains
+// valid context. If the context record is being used to modify a threads
+// context, then only that portion of the threads context is modified.
+//
+// If the context record is used as an output parameter to capture the
+// context of a thread, then only those portions of the thread's context
+// corresponding to set flags will be returned.
+//
+
+typedef struct DECLSPEC_ALIGN(16) _CONTEXT {
+
+    //
+    // Control flags.
+    //
+
+    DWORD ContextFlags;
+
+    //
+    // Integer registers, abi=N64.
+    //
+    DWORD64 R0;
+    DWORD64 At;
+    DWORD64 V0;
+    DWORD64 V1;
+    DWORD64 A0;
+    DWORD64 A1;
+    DWORD64 A2;
+    DWORD64 A3;
+    DWORD64 A4;
+    DWORD64 A5;
+    DWORD64 A6;
+    DWORD64 A7;
+    DWORD64 T0;
+    DWORD64 T1;
+    DWORD64 T2;
+    DWORD64 T3;
+    DWORD64 S0;
+    DWORD64 S1;
+    DWORD64 S2;
+    DWORD64 S3;
+    DWORD64 S4;
+    DWORD64 S5;
+    DWORD64 S6;
+    DWORD64 S7;
+    DWORD64 T8;
+    DWORD64 T9;
+    DWORD64 K0;
+    DWORD64 K1;
+    DWORD64 Gp;
+    DWORD64 Sp;
+    DWORD64 Fp;
+    DWORD64 Ra;
+    DWORD64 Pc;
+
+    //
+    // Floating Point Registers
+    //
+    DWORD64 F[32];
+    DWORD Fcsr;
+
+    DWORD64 Hi;
+    DWORD64 Lo;
+} CONTEXT, *PCONTEXT, *LPCONTEXT;
+
+//
+// Nonvolatile context pointer record.
+//
+
+typedef struct _KNONVOLATILE_CONTEXT_POINTERS {
+
+    PDWORD64 S0;
+    PDWORD64 S1;
+    PDWORD64 S2;
+    PDWORD64 S3;
+    PDWORD64 S4;
+    PDWORD64 S5;
+    PDWORD64 S6;
+    PDWORD64 S7;
+    PDWORD64 Gp;
+    PDWORD64 Fp;
+    PDWORD64 Ra;
+
+    PDWORD64 F24;
+    PDWORD64 F25;
+    PDWORD64 F26;
+    PDWORD64 F27;
+    PDWORD64 F28;
+    PDWORD64 F29;
+    PDWORD64 F30;
+    PDWORD64 F31;
+
+    PDWORD64 Hi;
+    PDWORD64 Lo;
+} KNONVOLATILE_CONTEXT_POINTERS, *PKNONVOLATILE_CONTEXT_POINTERS;
+
 #else
 #error Unknown architecture for defining CONTEXT.
 #endif
@@ -1974,6 +2122,8 @@ GetThreadTimes(
 #define PAL_CS_NATIVE_DATA_SIZE 76
 #elif defined(__APPLE__) && defined(__x86_64__)
 #define PAL_CS_NATIVE_DATA_SIZE 120
+#elif defined(__APPLE__) && defined(__arm64__)
+#define PAL_CS_NATIVE_DATA_SIZE 120
 #elif defined(__FreeBSD__) && defined(_X86_)
 #define PAL_CS_NATIVE_DATA_SIZE 12
 #elif defined(__FreeBSD__) && defined(__x86_64__)
@@ -1992,6 +2142,8 @@ GetThreadTimes(
 #define PAL_CS_NATIVE_DATA_SIZE 56
 #elif defined(__NetBSD__) && defined(__i386__)
 #define PAL_CS_NATIVE_DATA_SIZE 56
+#elif defined(__linux__) && defined(_MIPS64_)
+#define PAL_CS_NATIVE_DATA_SIZE 116
 #else 
 #warning 
 #error  PAL_CS_NATIVE_DATA_SIZE is not defined for this architecture
@@ -3439,7 +3591,6 @@ CreatePipe(
 #define exp           PAL_exp
 #define log           PAL_log
 #define log10         PAL_log10
-#define pow           PAL_pow
 #define acosf         PAL_acosf
 #define acoshf        PAL_acoshf
 #define asinf         PAL_asinf
@@ -3448,7 +3599,6 @@ CreatePipe(
 #define expf          PAL_expf
 #define logf          PAL_logf
 #define log10f        PAL_log10f
-#define powf          PAL_powf
 #define malloc        PAL_malloc
 #define free          PAL_free
 #define mkstemp       PAL_mkstemp
@@ -3495,33 +3645,15 @@ typedef struct {
 
 PALIMPORT div_t div(int numer, int denom);
 
-#if defined(_DEBUG)
+#ifndef __THROW
+#define __THROW
+#endif 
 
-/*++
-Function:
-PAL_memcpy
-
-Overlapping buffer-safe version of memcpy.
-See MSDN doc for memcpy
---*/
-EXTERN_C
-PALIMPORT
-void *PAL_memcpy (void *dest, const void *src, size_t count);
-
-PALIMPORT void * __cdecl memcpy(void *, const void *, size_t);
-
-#define memcpy PAL_memcpy
-#define IS_PAL_memcpy 1
-#define TEST_PAL_DEFERRED(def) IS_##def
-#define IS_REDEFINED_IN_PAL(def) TEST_PAL_DEFERRED(def)
-#else //defined(_DEBUG)
-PALIMPORT void * __cdecl memcpy(void *, const void *, size_t);
-#endif //defined(_DEBUG)
+PALIMPORT void * __cdecl memcpy (void *__restrict __dest, const void *__restrict __src, size_t __n) __THROW;
 PALIMPORT int    __cdecl memcmp(const void *, const void *, size_t);
 PALIMPORT void * __cdecl memset(void *, int, size_t);
 PALIMPORT void * __cdecl memmove(void *, const void *, size_t);
 PALIMPORT void * __cdecl memchr(const void *, int, size_t);
-PALIMPORT long long int __cdecl atoll(const char *);
 PALIMPORT size_t __cdecl strlen(const char *);
 PALIMPORT int __cdecl strcmp(const char*, const char *);
 PALIMPORT int __cdecl strncmp(const char*, const char *, size_t);
@@ -3679,67 +3811,12 @@ unsigned int __cdecl _rotr(unsigned int value, int shift)
 #endif // !__has_builtin(_rotr)
 
 PALIMPORT int __cdecl abs(int);
-#ifndef PAL_STDCPP_COMPAT
-PALIMPORT LONG __cdecl labs(LONG);
-#endif // !PAL_STDCPP_COMPAT
+
 // clang complains if this is declared with __int64
 PALIMPORT long long __cdecl llabs(long long);
 
-PALIMPORT int __cdecl _finite(double);
-PALIMPORT int __cdecl _isnan(double);
-PALIMPORT double __cdecl _copysign(double, double);
-PALIMPORT double __cdecl acos(double);
-PALIMPORT double __cdecl acosh(double);
-PALIMPORT double __cdecl asin(double);
-PALIMPORT double __cdecl asinh(double);
-PALIMPORT double __cdecl atan(double);
-PALIMPORT double __cdecl atanh(double);
-PALIMPORT double __cdecl atan2(double, double);
-PALIMPORT double __cdecl cbrt(double);
-PALIMPORT double __cdecl ceil(double);
-PALIMPORT double __cdecl cos(double);
-PALIMPORT double __cdecl cosh(double);
-PALIMPORT double __cdecl exp(double);
 PALIMPORT double __cdecl fabs(double);
-PALIMPORT double __cdecl floor(double);
-PALIMPORT double __cdecl fmod(double, double); 
-PALIMPORT double __cdecl log(double);
-PALIMPORT double __cdecl log10(double);
-PALIMPORT double __cdecl modf(double, double*);
-PALIMPORT double __cdecl pow(double, double);
-PALIMPORT double __cdecl sin(double);
-PALIMPORT double __cdecl sinh(double);
-PALIMPORT double __cdecl sqrt(double);
-PALIMPORT double __cdecl tan(double);
-PALIMPORT double __cdecl tanh(double);
-
-PALIMPORT int __cdecl _finitef(float);
-PALIMPORT int __cdecl _isnanf(float);
-PALIMPORT float __cdecl _copysignf(float, float);
-PALIMPORT float __cdecl acosf(float);
-PALIMPORT float __cdecl acoshf(float);
-PALIMPORT float __cdecl asinf(float);
-PALIMPORT float __cdecl asinhf(float);
-PALIMPORT float __cdecl atanf(float);
-PALIMPORT float __cdecl atanhf(float);
-PALIMPORT float __cdecl atan2f(float, float);
-PALIMPORT float __cdecl cbrtf(float);
-PALIMPORT float __cdecl ceilf(float);
-PALIMPORT float __cdecl cosf(float);
-PALIMPORT float __cdecl coshf(float);
-PALIMPORT float __cdecl expf(float);
 PALIMPORT float __cdecl fabsf(float);
-PALIMPORT float __cdecl floorf(float);
-PALIMPORT float __cdecl fmodf(float, float); 
-PALIMPORT float __cdecl logf(float);
-PALIMPORT float __cdecl log10f(float);
-PALIMPORT float __cdecl modff(float, float*);
-PALIMPORT float __cdecl powf(float, float);
-PALIMPORT float __cdecl sinf(float);
-PALIMPORT float __cdecl sinhf(float);
-PALIMPORT float __cdecl sqrtf(float);
-PALIMPORT float __cdecl tanf(float);
-PALIMPORT float __cdecl tanhf(float);
 
 #ifndef PAL_STDCPP_COMPAT
 
@@ -3769,9 +3846,6 @@ PALIMPORT void * __cdecl realloc(void *, size_t);
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
 #endif // !PAL_STDCPP_COMPAT
-
-PALIMPORT PAL_NORETURN void __cdecl exit(int);
-int __cdecl atexit(void (__cdecl *function)(void));
 
 PALIMPORT void __cdecl qsort(void *, size_t, size_t, int (__cdecl *)(const void *, const void *));
 PALIMPORT void * __cdecl bsearch(const void *, const void *, size_t, size_t,

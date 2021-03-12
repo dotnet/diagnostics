@@ -64,19 +64,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\ssd\diagnostics\artifacts\obj\Windows_NT.x64.Debug\src\SOS\gcdump\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ArtifactsObjDir)Windows_NT.x64.Debug\src\SOS\gcdump\Debug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">gcdump.dir\Debug\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">gcdump</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">C:\ssd\diagnostics\artifacts\obj\Windows_NT.x64.Debug\src\SOS\gcdump\Checked\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">$(ArtifactsObjDir)Windows_NT.x64.Debug\src\SOS\gcdump\Checked\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">gcdump.dir\Checked\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">gcdump</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\ssd\diagnostics\artifacts\obj\Windows_NT.x64.Debug\src\SOS\gcdump\Release\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ArtifactsObjDir)Windows_NT.x64.Debug\src\SOS\gcdump\Release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">gcdump.dir\Release\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">gcdump</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\ssd\diagnostics\artifacts\obj\Windows_NT.x64.Debug\src\SOS\gcdump\RelWithDebInfo\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ArtifactsObjDir)Windows_NT.x64.Debug\src\SOS\gcdump\RelWithDebInfo\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">gcdump.dir\RelWithDebInfo\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">gcdump</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.lib</TargetExt>

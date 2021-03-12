@@ -15,25 +15,25 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private bool _requestRundown;
         private int _circularBufferMB;
         private long _sessionId;
-        private int _processId;
+        private IpcEndpoint _endpoint;
         private bool disposedValue = false; // To detect redundant calls
 
-        internal EventPipeSession(int processId, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB)
+        internal EventPipeSession(IpcEndpoint endpoint, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB)
         {
-            _processId = processId;
+            _endpoint = endpoint;
             _providers = providers;
             _requestRundown = requestRundown;
             _circularBufferMB = circularBufferMB;
             
             var config = new EventPipeSessionConfiguration(circularBufferMB, EventPipeSerializationFormat.NetTrace, providers, requestRundown);
             var message = new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.CollectTracing2, config.SerializeV2());
-            EventStream = IpcClient.SendMessage(processId, message, out var response);
-            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
+            EventStream = IpcClient.SendMessage(endpoint, message, out var response);
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
-                case DiagnosticsServerCommandId.OK:
+                case DiagnosticsServerResponseId.OK:
                     _sessionId = BitConverter.ToInt64(response.Payload, 0);
                     break;
-                case DiagnosticsServerCommandId.Error:
+                case DiagnosticsServerResponseId.Error:
                     var hr = BitConverter.ToInt32(response.Payload, 0);
                     throw new ServerErrorException($"EventPipe session start failed (HRESULT: 0x{hr:X8})");
                 default:
@@ -51,13 +51,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Debug.Assert(_sessionId > 0);
 
             byte[] payload = BitConverter.GetBytes(_sessionId);
-            var response = IpcClient.SendMessage(_processId, new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.StopTracing, payload));
-
-            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
+            IpcMessage response;
+            try
             {
-                case DiagnosticsServerCommandId.OK:
+                response = IpcClient.SendMessage(_endpoint, new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.StopTracing, payload));
+            }
+            // On non-abrupt exits (i.e. the target process has already exited and pipe is gone, sending Stop command will fail).
+            catch (IOException)
+            {
+                throw new ServerNotAvailableException("Could not send Stop command. The target process may have exited.");
+            }
+
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
+            {
+                case DiagnosticsServerResponseId.OK:
                     return;
-                case DiagnosticsServerCommandId.Error:
+                case DiagnosticsServerResponseId.Error:
                     var hr = BitConverter.ToInt32(response.Payload, 0);
                     throw new ServerErrorException($"EventPipe session stop failed (HRESULT: 0x{hr:X8})");
                 default:

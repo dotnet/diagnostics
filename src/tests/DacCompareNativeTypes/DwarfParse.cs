@@ -4,9 +4,9 @@
 //
 // Sample lines:
 //
-// <1><0x9ad2 GOFF=0x1e17b22><DW_TAG_structure_type> DW_AT_name<"STORAGESIGNATURE"> DW_AT_byte_size<0x00000010> DW_AT_decl_file<0x00000014 /home/stmaclea/git/runtime/src/coreclr/src/md/inc/mdfileformat.h> DW_AT_decl_line<0x0000003f>
-// <1><0x44 GOFF=0x1b51><DW_TAG_structure_type> DW_AT_name<"_GUID"> DW_AT_byte_size<0x00000010> DW_AT_decl_file<0x00000001 /home/stmaclea/git/runtime/src/coreclr/src/pal/inc/pal_mstypes.h> DW_AT_decl_line<0x000002ab>
-// <2><0x4d GOFF=0x1b5a><DW_TAG_member> DW_AT_name<"Data1"> DW_AT_type<<0x00000082 GOFF=0x00001b8f>> DW_AT_decl_file<0x00000001 /home/stmaclea/git/runtime/src/coreclr/src/pal/inc/pal_mstypes.h> DW_AT_decl_line<0x000002ac> DW_AT_data_member_location<0>
+// <1><0x9ad2 GOFF=0x1e17b22><DW_TAG_structure_type> DW_AT_name<"STORAGESIGNATURE"> DW_AT_byte_size<0x00000010> DW_AT_decl_file<0x00000014 /home/stmaclea/git/runtime/src/coreclr/md/inc/mdfileformat.h> DW_AT_decl_line<0x0000003f>
+// <1><0x44 GOFF=0x1b51><DW_TAG_structure_type> DW_AT_name<"_GUID"> DW_AT_byte_size<0x00000010> DW_AT_decl_file<0x00000001 /home/stmaclea/git/runtime/src/coreclr/pal/inc/pal_mstypes.h> DW_AT_decl_line<0x000002ab>
+// <2><0x4d GOFF=0x1b5a><DW_TAG_member> DW_AT_name<"Data1"> DW_AT_type<<0x00000082 GOFF=0x00001b8f>> DW_AT_decl_file<0x00000001 /home/stmaclea/git/runtime/src/coreclr/pal/inc/pal_mstypes.h> DW_AT_decl_line<0x000002ac> DW_AT_data_member_location<0>
 
 using System.Collections.Generic;
 using System.Globalization;
@@ -16,15 +16,15 @@ using static ParserExtensions;
 #nullable enable
 class DwarfParser
 {
-    static Regex typeNameRegEx = new Regex(@"^<(?<nesting>\d+)><.*GOFF=0x(?<goff>[0-9a-fA-F]+)><DW_TAG_((class_type)|(structure_type)|(union_type)|(typedef))>(.*DW_AT_name<\u0022(?<name>.+?)\u0022>)?");
-    // <1><0x9ad2 GOFF=0x1e17b22><DW_TAG_structure_type> DW_AT_name<"STORAGESIGNATURE"> DW_AT_byte_size<0x00000010> DW_AT_decl_file<0x00000014 /home/stmaclea/git/runtime/src/coreclr/src/md/inc/mdfileformat.h> DW_AT_decl_line<0x0000003f>
-    static Regex typeRegEx = new Regex(@"^<(?<nesting>\d+)><.*GOFF=0x(?<goff>[0-9a-fA-F]+)><DW_TAG_((class)|(structure)|(union))_type>(.*DW_AT_name<\u0022(?<name>.+?)\u0022>)?.*?DW_AT_decl_file");
+    static Regex typeNameRegEx = new Regex(@"^<(?<nesting>\d+)><.*GOFF=0x(?<goff>[0-9a-fA-F]+)><DW_TAG_((class_type)|(structure_type)|(union_type)|(typedef))>(.*DW_AT_name<(?<name>[^<>]*(((?'Open'<)[^<>]*)+((?'Close-Open'>)[^<>]*)+)*(?(Open)(?!)))>)?");
+    // <1><0x9ad2 GOFF=0x1e17b22><DW_TAG_structure_type> DW_AT_name<STORAGESIGNATURE> DW_AT_byte_size<0x00000010> DW_AT_decl_file<0x00000014 /home/stmaclea/git/runtime/src/coreclr/md/inc/mdfileformat.h> DW_AT_decl_line<0x0000003f>
+    static Regex typeRegEx = new Regex(@"^<(?<nesting>\d+)><.*GOFF=0x(?<goff>[0-9a-fA-F]+)><DW_TAG_((class)|(structure)|(union))_type>(.*DW_AT_name<(?<name>[^<>]*(((?'Open'<)[^<>]*)+((?'Close-Open'>)[^<>]*)+)*(?(Open)(?!)))>)?.*?DW_AT_decl_file");
 
-    // <2><0x4d GOFF=0x1b5a><DW_TAG_member> DW_AT_name<"Data1"> DW_AT_type<<0x00000082 GOFF=0x00001b8f>> DW_AT_decl_file<0x00000001 /home/stmaclea/git/runtime/src/coreclr/src/pal/inc/pal_mstypes.h> DW_AT_decl_line<0x000002ac> DW_AT_data_member_location<0>
-    static Regex memberRegEx = new Regex(@"^<(?<nesting>\d+)><.*GOFF=0x(?<goff>[0-9a-fA-F]+)><DW_TAG_member>.*.*?DW_AT_data_member_location<(?<offset>\d+)([(][^)]*[)])?>");
+    // <2><0x4d GOFF=0x1b5a><DW_TAG_member> DW_AT_name<Data1> DW_AT_type<<0x00000082 GOFF=0x00001b8f>> DW_AT_decl_file<0x00000001 /home/stmaclea/git/runtime/src/coreclr/pal/inc/pal_mstypes.h> DW_AT_decl_line<0x000002ac> DW_AT_data_member_location<0>
+    static Regex memberRegEx = new Regex(@"^<(?<nesting>\d+)><.*GOFF=0x(?<goff>[0-9a-fA-F]+)><DW_TAG_member>.*.*?DW_AT_data_member_location<(?<offset>\d+) *([(][^)]*[)])?>");
 
-    // DW_AT_name<"Data1">
-    static Regex nameRegEx = new Regex(@"DW_AT_name<\u0022(?<name>.+?)\u0022>");
+    // DW_AT_name<Data1>
+    static Regex nameRegEx = new Regex(@"DW_AT_name<(?<name>[^<>]*(((?'Open'<)[^<>]*)+((?'Close-Open'>)[^<>]*)+)*(?(Open)(?!)))>");
 
     // DW_AT_type<<0x00000082 GOFF=0x00001b8f>>
     static Regex typeRefRegEx = new Regex(@"DW_AT_type<<[^>]*GOFF=0x(?<goff>[0-9a-fA-F]+)>>");

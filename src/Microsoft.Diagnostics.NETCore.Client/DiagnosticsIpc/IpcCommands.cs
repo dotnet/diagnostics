@@ -13,14 +13,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
         Dump           = 0x01,
         EventPipe      = 0x02,
         Profiler       = 0x03,
+        Process        = 0x04,
 
         Server         = 0xFF,
     }
 
-    internal enum DiagnosticsServerCommandId : byte
+    // For .NET 5 Preview 7 and Preview 8, use this with the
+    // DiagnosticsServerCommandSet.Server command set.
+    // For .NET 5 RC and later, use ProcessCommandId.ResumeRuntime with
+    // the DiagnosticsServerCommandSet.Process command set.
+    internal enum DiagnosticServerCommandId : byte
     {
-        OK    = 0x00,
-        Error = 0xFF,
+        // 0x00 used in DiagnosticServerResponseId
+        ResumeRuntime = 0x01,
+        // 0xFF used DiagnosticServerResponseId
+    };
+
+    internal enum DiagnosticsServerResponseId : byte
+    {
+        OK            = 0x00,
+        // future
+        Error         = 0xFF,
     }
 
     internal enum EventPipeCommandId : byte
@@ -38,5 +51,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal enum ProfilerCommandId : byte
     {
         AttachProfiler = 0x01,
+    }
+
+    internal enum ProcessCommandId : byte
+    {
+        GetProcessInfo = 0x00,
+        ResumeRuntime  = 0x01,
+        GetProcessEnvironment = 0x02,
     }
 }

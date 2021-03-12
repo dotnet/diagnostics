@@ -1,7 +1,12 @@
 import lldb
 
 def __lldb_init_module(debugger, internal_dict):    
-    debugger.HandleCommand('command script add -f lldbhelper.runcommand runcommand')
+    try:
+        debugger.HandleCommand('command script add -f lldbhelper.runcommand runcommand')
+    except ImportError:
+        print("Failed to initialize the python lldb module - ImportError")
+        import os
+        os._exit(1)
     print("<END_COMMAND_OUTPUT>")
 
 def runcommand(debugger, command, result, internal_dict):

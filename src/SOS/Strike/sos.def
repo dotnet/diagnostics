@@ -10,6 +10,8 @@ EXPORTS
     ClrStack
     clrstack=ClrStack
     CLRStack=ClrStack
+    DumpALC
+    dumpalc=DumpALC
     DumpArray
     da=DumpArray
     dumparray=DumpArray
@@ -215,6 +217,8 @@ EXPORTS
     procinfo=ProcInfo
     SOSStatus
     sosstatus=SOSStatus
+    logging
+    runtimes
     VerifyStackTrace
     WatsonBuckets
 
@@ -239,4 +243,7 @@ EXPORTS
     tracetocode=TraceToCode
 #endif
 
+    ext
     SOSInitializeByHost
+    SOSUninitializeByHost
+    InitializeHostServices

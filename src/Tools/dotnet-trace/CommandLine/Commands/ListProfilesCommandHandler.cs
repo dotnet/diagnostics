@@ -66,8 +66,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     new EventPipeProvider(
                         name: "Microsoft-Windows-DotNETRuntime",
                         eventLevel: EventLevel.Informational,
-                        keywords:   (long)ClrTraceEventParser.Keywords.GC |
-                                    (long)ClrTraceEventParser.Keywords.Exception
+                        keywords:   (long)ClrTraceEventParser.Keywords.GC
                     )
                 },
                 "Tracks GC collections only at very low overhead."),

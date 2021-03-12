@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,8 +28,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void PublishedProcessTest1()
         {
-            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
-            runner.Start(3000);
+            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
+            runner.Start(timeoutInMSPipeCreation: 3000);
             // On Windows, runner.Start will not wait for named pipe creation since for other tests, NamedPipeClientStream will
             // just wait until the named pipe is created.
             // For these tests, we need to sleep an arbitrary time before pipe is created.
@@ -53,7 +54,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             for (var i = 0; i < 3; i++)
             {
-                runner[i] = new TestRunner(CommonHelper.GetTraceePath(), output);
+                runner[i] = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
                 runner[i].Start();
                 pids[i] = runner[i].Pid;
             }
@@ -75,6 +76,28 @@ namespace Microsoft.Diagnostics.NETCore.Client
             for (var i = 0 ; i < 3; i++)
             {
                 runner[i].Stop();
+            }
+        }
+
+        [Fact]
+        public async Task WaitForConnectionTest()
+        {
+            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
+            runner.Start(timeoutInMSPipeCreation: 3000);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Thread.Sleep(5000);
+            }
+
+            var client = new DiagnosticsClient(runner.Pid);
+            using var timeoutSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(250));
+            try
+            {
+                await client.WaitForConnectionAsync(timeoutSource.Token);
+            }
+            finally
+            {
+                runner.Stop();
             }
         }
     }

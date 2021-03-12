@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
-    <RuntimeFrameworkVersion>2.1.0</RuntimeFrameworkVersion>
+    <TargetFramework Condition="'$(BundleTools)' == 'true'">netcoreapp3.1</TargetFramework>
+    <TargetFramework Condition="'$(BundleTools)' != 'true'">netcoreapp2.1</TargetFramework>
     <ToolCommandName>dotnet-sos</ToolCommandName>
     <RootNamespace>Microsoft.Diagnostics.Tools.SOS</RootNamespace>
     <Description>Diagnostic SOS installer</Description>
@@ -18,8 +18,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.CommandLine.Experimental" Version="$(SystemCommandLineExperimentalVersion)" />
+    <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
   </ItemGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.props" />
+    
+  <ItemGroup>
+      <None Include="$(SOSExtensionsBinaries)">
+        <Visible>false</Visible>
+        <Pack>true</Pack>
+        <PackagePath>$(SOSPackagePathPrefix)/lib</PackagePath>
+        <Link Condition="'$(PublishSingleFile)' == 'true'">lib/%(Filename)%(Extension)</Link>
+        <CopyToOutputDirectory Condition="'$(PublishSingleFile)' == 'true'">PreserveNewest</CopyToOutputDirectory>
+      </None>
+  </ItemGroup>
 </Project>

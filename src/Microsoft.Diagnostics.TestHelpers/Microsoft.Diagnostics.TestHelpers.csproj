@@ -1,9 +1,9 @@
-<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>;1591;1701</NoWarn>
+    <IsTestProject>false</IsTestProject>
     <IsPackable>true</IsPackable>
     <Description>Diagnostic test support</Description>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>

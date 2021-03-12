@@ -69,7 +69,7 @@ BOOL g_Dbg_asserts_enabled;
   output, because those functions do tracing and we need to avoid recursion */
 FILE *output_file = NULL;
 
-/* master switch for debug channel enablement, to be modified by debugger */
+/* main switch for debug channel enablement, to be modified by debugger */
 Volatile<BOOL> dbg_master_switch = TRUE;
 
 

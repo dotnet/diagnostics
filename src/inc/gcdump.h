@@ -14,7 +14,7 @@
 
 // ******************************************************************************
 // WARNING!!!: This header is also used by the runtime repo.
-// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/inc/gcdump.h
+// See: https://github.com/dotnet/runtime/blob/main/src/coreclr/inc/gcdump.h
 // ******************************************************************************
 
 /*****************************************************************************/
@@ -82,8 +82,8 @@ public:
 
 
 public:
-	typedef void (*printfFtn)(const char* fmt, ...);
-	printfFtn gcPrintf;	
+    typedef void (*printfFtn)(const char* fmt, ...);
+    printfFtn gcPrintf;	
     UINT32              gcInfoVersion;
     //-------------------------------------------------------------------------
 protected:

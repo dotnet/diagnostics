@@ -2,39 +2,40 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
-using System.Globalization;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace SOS
+namespace SOS.Hosting
 {
-    internal unsafe class LLDBServices : COMCallableIUnknown
+    internal sealed unsafe class LLDBServices : COMCallableIUnknown
     {
         private static readonly Guid IID_ILLDBServices = new Guid("2E6C569A-9E14-4DA4-9DFC-CDB73A532566");
         private static readonly Guid IID_ILLDBServices2 = new Guid("012F32F0-33BA-4E8E-BC01-037D382D8A5E");
 
         public IntPtr ILLDBServices { get; }
 
-        readonly SOSHost _soshost;
+        private readonly SOSHost _soshost;
 
         /// <summary>
         /// Create an instance of the service wrapper SOS uses.
         /// </summary>
         /// <param name="soshost">SOS host instance</param>
-        public LLDBServices(SOSHost soshost)
+        internal LLDBServices(SOSHost soshost)
         {
             _soshost = soshost;
 
             VTableBuilder builder = AddInterface(IID_ILLDBServices, validate: false);
 
             builder.AddMethod(new GetCoreClrDirectoryDelegate(GetCoreClrDirectory));
-            builder.AddMethod(new GetExpressionDelegate((self, expression) => SOSHost.GetExpression(expression)));
+            builder.AddMethod(new GetExpressionDelegate((self, expression) => SymbolServiceWrapper.GetExpressionValue(IntPtr.Zero, expression)));
             builder.AddMethod(new VirtualUnwindDelegate(VirtualUnwind));
             builder.AddMethod(new SetExceptionCallbackDelegate(SetExceptionCallback));
             builder.AddMethod(new ClearExceptionCallbackDelegate(ClearExceptionCallback));
@@ -63,12 +64,12 @@ namespace SOS
             builder.AddMethod(new GetSourceFileLineOffsetsDelegate(soshost.GetSourceFileLineOffsets));
             builder.AddMethod(new FindSourceFileDelegate(soshost.FindSourceFile));
 
-            builder.AddMethod(new GetCurrentProcessIdDelegate(soshost.GetCurrentProcessId));
+            builder.AddMethod(new GetCurrentProcessSystemIdDelegate(soshost.GetCurrentProcessSystemId));
             builder.AddMethod(new GetCurrentThreadIdDelegate(soshost.GetCurrentThreadId));
             builder.AddMethod(new SetCurrentThreadIdDelegate(soshost.SetCurrentThreadId));
             builder.AddMethod(new GetCurrentThreadSystemIdDelegate(soshost.GetCurrentThreadSystemId));
             builder.AddMethod(new GetThreadIdBySystemIdDelegate(soshost.GetThreadIdBySystemId));
-            builder.AddMethod(new GetThreadContextByIdDelegate(GetThreadContextById));
+            builder.AddMethod(new GetThreadContextBySystemIdDelegate(soshost.GetThreadContextBySystemId));
 
             builder.AddMethod(new GetValueByNameDelegate(GetValueByName));
             builder.AddMethod(new GetInstructionOffsetDelegate(soshost.GetInstructionOffset));
@@ -92,17 +93,12 @@ namespace SOS
         string GetCoreClrDirectory(
             IntPtr self)
         {
-            if (_soshost.AnalyzeContext.RuntimeModuleDirectory == null)
+            IRuntime currentRuntime = _soshost.Target.Services.GetService<IRuntimeService>()?.CurrentRuntime;
+            if (currentRuntime != null)
             {
-                foreach (ModuleInfo module in _soshost.DataReader.EnumerateModules())
-                {
-                    if (SOSHost.IsCoreClrRuntimeModule(module))
-                    {
-                        _soshost.AnalyzeContext.RuntimeModuleDirectory = Path.GetDirectoryName(module.FileName) + Path.DirectorySeparatorChar;
-                    }
-                }
+                return Path.GetDirectoryName(currentRuntime.RuntimeModule.FileName);
             }
-            return _soshost.AnalyzeContext.RuntimeModuleDirectory;
+            return null;
         }
 
         int VirtualUnwind(
@@ -111,20 +107,20 @@ namespace SOS
             uint contextSize,
             byte[] context)
         {
-            return E_NOTIMPL;
+            return HResult.E_NOTIMPL;
         }
 
         int SetExceptionCallback(
             IntPtr self,
             PFN_EXCEPTION_CALLBACK callback)
         {
-            return S_OK;
+            return HResult.S_OK;
         }
 
         int ClearExceptionCallback(
             IntPtr self)
         {
-            return S_OK;
+            return HResult.S_OK;
         }
 
         int GetContextStackTrace(
@@ -140,20 +136,7 @@ namespace SOS
         {
             // Don't fail, but always return 0 native frames so "clrstack -f" still prints the managed frames
             SOSHost.Write(framesFilled);
-            return S_OK;
-        }
-
-        int GetThreadContextById(
-            IntPtr self,
-            uint threadId,
-            uint contextFlags,
-            uint contextSize,
-            IntPtr context)
-        {
-            if (_soshost.DataReader.GetThreadContext(threadId, contextFlags, contextSize, context)) {
-                return S_OK;
-            }
-            return E_FAIL;
+            return HResult.S_OK;
         }
 
         int GetValueByName(
@@ -175,22 +158,20 @@ namespace SOS
             bool runtimeOnly,
             ModuleLoadCallback callback)
         {
-            foreach (ModuleInfo module in _soshost.DataReader.EnumerateModules())
+            IEnumerable<IModule> modules;
+            if (runtimeOnly)
             {
-                if (runtimeOnly)
-                {
-                    if (SOSHost.IsCoreClrRuntimeModule(module))
-                    {
-                        callback(IntPtr.Zero, module.FileName, module.ImageBase, unchecked((int)module.FileSize));
-                        break;
-                    }
-                }
-                else
-                {
-                    callback(IntPtr.Zero, module.FileName, module.ImageBase, unchecked((int)module.FileSize));
-                }
+                modules = _soshost.ModuleService.GetModuleFromModuleName(_soshost.Target.GetPlatformModuleName("coreclr"));
             }
-            return S_OK;
+            else
+            {
+                modules = _soshost.ModuleService.EnumerateModules();
+            }
+            foreach (IModule module in modules)
+            {
+                callback(IntPtr.Zero, module.FileName, module.ImageBase, (uint)module.ImageSize);
+            }
+            return HResult.S_OK;
         }
 
         int AddModuleSymbol(
@@ -198,29 +179,30 @@ namespace SOS
             IntPtr parameter,
             string symbolFilename)
         {
-            return S_OK;
+            return HResult.S_OK;
         }
 
         unsafe int GetModuleInfo(
             IntPtr self,
             uint index,
             ulong *moduleBase,
-            ulong *moduleSize)
+            ulong *moduleSize,
+            uint* timestamp,
+            uint* checksum)
         {
             try
             {
-                ModuleInfo module = _soshost.DataReader.EnumerateModules().ElementAt((int)index);
-                if (module == null) {
-                    return E_FAIL;
-                }
+                IModule module = _soshost.ModuleService.GetModuleFromIndex((int)index);
                 SOSHost.Write(moduleBase, module.ImageBase);
-                SOSHost.Write(moduleSize, module.FileSize);
+                SOSHost.Write(moduleSize, module.ImageSize);
+                SOSHost.Write(timestamp, module.IndexTimeStamp.GetValueOrDefault(SOSHost.InvalidTimeStamp));
+                SOSHost.Write(checksum, SOSHost.InvalidChecksum);
             }
-            catch (ArgumentOutOfRangeException)
+            catch (DiagnosticsException)
             {
-                return E_FAIL;
+                return HResult.E_FAIL;
             }
-            return S_OK;
+            return HResult.S_OK;
         }
 
         #endregion
@@ -233,7 +215,7 @@ namespace SOS
             IntPtr self);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate UIntPtr GetExpressionDelegate(
+        private delegate ulong GetExpressionDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string text);
 
@@ -428,7 +410,7 @@ namespace SOS
             uint* foundSize);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int GetCurrentProcessIdDelegate(
+        private delegate int GetCurrentProcessSystemIdDelegate(
             IntPtr self,
             out uint id);
 
@@ -454,7 +436,7 @@ namespace SOS
             [Out] out uint id);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int GetThreadContextByIdDelegate(
+        private delegate int GetThreadContextBySystemIdDelegate(
             IntPtr self,
             uint threadId,
             uint contextFlags,
@@ -489,11 +471,11 @@ namespace SOS
         /// <summary>
         /// The LoadNativeSymbolsDelegate2 callback
         /// </summary>
-        public delegate void ModuleLoadCallback(
+        private delegate void ModuleLoadCallback(
             IntPtr parameter,
             [In, MarshalAs(UnmanagedType.LPStr)] string moduleFilePath,
             [In] ulong moduleAddress,
-            [In] int moduleSize);
+            [In] uint moduleSize);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int LoadNativeSymbolsDelegate2(
@@ -511,18 +493,20 @@ namespace SOS
         private unsafe delegate int GetModuleInfoDelegate(
             IntPtr self,
             [In] uint index,
-            [Out] ulong *moduleBase,
-            [Out] ulong *moduleSize);
+            [Out] ulong* moduleBase,
+            [Out] ulong* moduleSize,
+            [Out] uint* timestamp,
+            [Out] uint* checksum);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleVersionInformationDelegate(
             IntPtr self,
-            [In] uint Index,
-            [In] ulong Base,
-            [In][MarshalAs(UnmanagedType.LPStr)] string Item,
-            [Out] byte* Buffer,
-            [In] uint BufferSize,
-            [Out] uint* VerInfoSize);
+            [In] uint moduleIndex,
+            [In] ulong moduleBase,
+            [In][MarshalAs(UnmanagedType.LPStr)] string item,
+            [Out] byte* buffer,
+            [In] uint bufferSize,
+            [Out] uint* verInfoSize);
 
         #endregion
     }

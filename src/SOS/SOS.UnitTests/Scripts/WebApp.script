@@ -11,19 +11,30 @@ LOADSOS
 SOSCOMMAND:SetSymbolServer -ms
 
 !IFDEF:DOTNETDUMP
+IFDEF:WINDOWS
 SOSCOMMAND:SetHostRuntime
+ENDIF:WINDOWS
+!IFDEF:WINDOWS
+COMMAND:sethostruntime
+ENDIF:WINDOWS
 ENDIF:DOTNETDUMP
 
-IFDEF:DOTNETDUMP
-COMMAND:clrmodules
+EXTCOMMAND:clrmodules
 VERIFY:\s*<HEXVAL>.*
-COMMAND:modules
+
+EXTCOMMAND:modules -v
 VERIFY:\s*<HEXVAL>\s+<HEXVAL>.*
-COMMAND:threads
+
+EXTCOMMAND:threads -v
 VERIFY:\s*<DECVAL>\s+0x<HEXVAL>\s+\(<DECVAL>\)\s+
-COMMAND:registers
-VERIFY:\s*([r|e]ip|pc) = <HEXVAL>\s+
-ENDIF:DOTNETDUMP
+
+EXTCOMMAND:registers
+VERIFY:\s*([r|e]ip|pc) = 0x<HEXVAL>\s+
+
+EXTCOMMAND:parallelstacks
+
+EXTCOMMAND:timerinfo
+VERIFY:\s*<DECVAL>\s*timers\s*
 
 # Verify that ClrStack with no options works
 SOSCOMMAND:ClrStack
@@ -55,7 +66,7 @@ ENDIF:ARM
 IFDEF:ARM64
 VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
 ENDIF:ARM64
-VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
+VERIFY:\s+([r|e]sp|sp|lr)=<HEXVAL>\s+([r|e]bp|lr|sp)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
 IFDEF:X64
 VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
 ENDIF:X64
@@ -71,7 +82,7 @@ ENDIF:ARM
 IFDEF:ARM64
 VERIFY:\s+x0=<HEXVAL>\s+x1=<HEXVAL>\s+x2=<HEXVAL>\s+
 ENDIF:ARM64
-VERIFY:\s+([r|e]sp|sp)=<HEXVAL>\s+([r|e]bp|lr)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
+VERIFY:\s+([r|e]sp|sp|lr)=<HEXVAL>\s+([r|e]bp|lr|sp)=<HEXVAL>\s+([r|e]ip|pc)=<HEXVAL>\s+
 IFDEF:X64
 VERIFY:\s+rax=<HEXVAL>\s+rbx=<HEXVAL>\s+rcx=<HEXVAL>\s+
 ENDIF:X64

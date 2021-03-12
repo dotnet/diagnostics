@@ -1,5 +1,4 @@
-﻿<!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -14,7 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netstandard2.0\publish\*.pdb" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\netstandard2.0\publish\*.pdb" Pack="true" Visible="false">
       <PackagePath>$(SOSPackagePathPrefix)</PackagePath>
     </None>
 
@@ -71,6 +70,13 @@
     </None>
     <None Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsos.dylib.dwarf" Pack="true" Visible="false">
       <PackagePath>$(SOSPackagePathPrefix)/osx-x64</PackagePath>
+    </None>
+
+    <None Include="$(ArtifactsBinDir)\OSX.arm64.$(Configuration)\libsosplugin.dylib.dwarf" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/osx-arm64</PackagePath>
+    </None>
+    <None Include="$(ArtifactsBinDir)\OSX.arm64.$(Configuration)\libsos.dylib.dwarf" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/osx-arm64</PackagePath>
     </None>
   </ItemGroup>
 

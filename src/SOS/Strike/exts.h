@@ -48,17 +48,9 @@
 #define TO_TADDR(cdaddr) ((TADDR)(cdaddr))
 #define TO_CDADDR(taddr) ((CLRDATA_ADDRESS)(LONG_PTR)(taddr))
 
-// We also need a "correction" macro: there are a number of places in the DAC
-// where instead of using the CLRDATA_ADDRESS sign-extension convention
-// we 0-extend (most notably DacpGcHeapDetails)
-#define NEED_DAC_CLRDATA_ADDRESS_CORRECTION 1
-#if NEED_DAC_CLRDATA_ADDRESS_CORRECTION == 1
-    // the macro below "corrects" a CDADDR to always represent the
-    // sign-extended equivalent ULONG64 value of the original TADDR
-    #define UL64_TO_CDA(ul64) (TO_CDADDR(TO_TADDR(ul64)))
-#else
-    #define UL64_TO_CDA(ul64) (ul64)
-#endif // NEED_DAC_CLRDATA_ADDRESS_CORRECTION 1
+// the macro below "corrects" a CDADDR to always represent the
+// sign-extended equivalent ULONG64 value of the original TADDR
+#define UL64_TO_CDA(ul64) (TO_CDADDR(TO_TADDR(ul64)))
 
 // The macro below removes the sign extension, returning the  
 // equivalent ULONG64 value to the original TADDR. Useful when 
@@ -79,7 +71,10 @@ typedef struct _TADDR_SEGINFO
 } TADDR_SEGINFO;
 
 #include "util.h"
-#include "runtime.h"
+
+#ifndef FEATURE_PAL
+#include "dbgengservices.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -122,6 +117,76 @@ private:
     OnUnloadTask* pNext;
 
     static OnUnloadTask *s_pUnloadTaskList;
+};
+
+//-----------------------------------------------------------------------------------------
+// Extension helper class
+//-----------------------------------------------------------------------------------------
+class SOSExtensions : public Extensions
+{
+    SOSExtensions(IDebuggerServices* debuggerServices, IHost* host) :
+        Extensions(debuggerServices)
+    {
+        m_pHost = host;
+        OnUnloadTask::Register(SOSExtensions::Uninitialize);
+    }
+
+#ifndef FEATURE_PAL
+    ~SOSExtensions()
+    {
+        if (m_pDebuggerServices != nullptr)
+        {
+            ((DbgEngServices*)m_pDebuggerServices)->Uninitialize();
+        }
+    }
+#endif
+
+public:
+
+#ifdef FEATURE_PAL
+    static HRESULT Initialize()
+    {
+        if (s_extensions == nullptr)
+        {
+            s_extensions = new SOSExtensions(nullptr, nullptr);
+        }
+        return S_OK;
+    }
+#else
+    static HRESULT Initialize(IDebugClient* client)
+    {
+        if (s_extensions == nullptr)
+        {
+            DbgEngServices* debuggerServices = new DbgEngServices(client);
+            HRESULT hr = debuggerServices->Initialize();
+            if (FAILED(hr)) {
+                return hr;
+            }
+            s_extensions = new SOSExtensions(debuggerServices, nullptr);
+        }
+        return S_OK;
+    }
+#endif
+
+    static HRESULT Initialize(IHost* host)
+    {
+        if (s_extensions == nullptr) 
+        {
+            s_extensions = new SOSExtensions(nullptr, host);
+        }
+        return S_OK;
+    }
+
+    static void Uninitialize()
+    {
+        if (s_extensions != nullptr)
+        {
+            delete s_extensions;
+            s_extensions = nullptr;
+        }
+    }
+
+    IHost* GetHost();
 };
 
 #ifndef MINIDUMP
@@ -202,42 +267,48 @@ inline void EENotLoadedMessage(HRESULT Status)
     ExtOut("Failed to find runtime module (%s or %s or %s), 0x%08x\n", GetRuntimeDllName(IRuntime::Core), GetRuntimeDllName(IRuntime::WindowsDesktop), GetRuntimeDllName(IRuntime::UnixCore), Status);
 #endif
     ExtOut("Extension commands need it in order to have something to do.\n");
+    ExtOut("For more information see https://go.microsoft.com/fwlink/?linkid=2135652\n");
 }
 
 inline void DACMessage(HRESULT Status)
 {
     ExtOut("Failed to load data access module, 0x%08x\n", Status);
-#ifndef FEATURE_PAL
-    ExtOut("Verify that 1) you have a recent build of the debugger (10.0.18317.1001 or newer)\n");
-    ExtOut("            2) the file %s that matches your version of %s is\n", GetDacDllName(), GetRuntimeDllName());
-    ExtOut("                in the version directory or on the symbol path\n");
-    ExtOut("            3) or, if you are debugging a dump file, verify that the file \n");
-    ExtOut("                %s_<arch>_<arch>_<version>.dll is on your symbol path.\n", GetDacModuleName());
-    ExtOut("            4) you are debugging on supported cross platform architecture as \n");
-    ExtOut("                the dump file. For example, an ARM dump file must be debugged\n");
-    ExtOut("                on an X86 or an ARM machine; an AMD64 dump file must be\n");
-    ExtOut("                debugged on an AMD64 machine.\n");
-    ExtOut("\n");
-    ExtOut("You can also run the debugger command .cordll to control the debugger's\n");
-    ExtOut("load of %s.dll. .cordll -ve -u -l will do a verbose reload.\n", GetDacDllName());
-    ExtOut("If that succeeds, the SOS command should work on retry.\n");
-    ExtOut("\n");
-    ExtOut("If you are debugging a minidump, you need to make sure that your executable\n");
-    ExtOut("path is pointing to %s as well.\n", GetRuntimeDllName());
-#else // FEATURE_PAL
-    if (Status == CORDBG_E_MISSING_DEBUGGER_EXPORTS)
+    if (GetHost()->GetHostType() == IHost::HostType::DbgEng)
     {
-        ExtOut("You can run the debugger command 'setclrpath' to control the load of %s.\n", GetDacDllName());
+        ExtOut("Verify that 1) you have a recent build of the debugger (10.0.18317.1001 or newer)\n");
+        ExtOut("            2) the file %s that matches your version of %s is\n", GetDacDllName(), GetRuntimeDllName());
+        ExtOut("                in the version directory or on the symbol path\n");
+        ExtOut("            3) or, if you are debugging a dump file, verify that the file\n");
+        ExtOut("                %s_<arch>_<arch>_<version>.dll is on your symbol path.\n", GetDacModuleName());
+        ExtOut("            4) you are debugging on a platform and architecture that supports this\n");
+        ExtOut("                the dump file. For example, an ARM dump file must be debugged\n");
+        ExtOut("                on an X86 or an ARM machine; an AMD64 dump file must be\n");
+        ExtOut("                debugged on an AMD64 machine.\n");
+        ExtOut("\n");
+        ExtOut("You can run the command '!setclrpath <directory>' to control the load path of %s.\n", GetDacDllName());
+        ExtOut("\n");
+        ExtOut("Or you can also run the debugger command .cordll to control the debugger's\n");
+        ExtOut("load of %s. .cordll -ve -u -l will do a verbose reload.\n", GetDacDllName());
         ExtOut("If that succeeds, the SOS command should work on retry.\n");
+        ExtOut("\n");
+        ExtOut("If you are debugging a minidump, you need to make sure that your executable\n");
+        ExtOut("path is pointing to %s as well.\n", GetRuntimeDllName());
     }
     else
     {
-        ExtOut("Can not load or initialize %s. The target runtime may not be initialized.\n", GetDacDllName());
+        if (Status == CORDBG_E_MISSING_DEBUGGER_EXPORTS)
+        {
+            ExtOut("You can run the debugger command 'setclrpath <directory>' to control the load of %s.\n", GetDacDllName());
+            ExtOut("If that succeeds, the SOS command should work on retry.\n");
+        }
+        else
+        {
+            ExtOut("Can not load or initialize %s. The target runtime may not be initialized.\n", GetDacDllName());
+        }
     }
-#endif // FEATURE_PAL
+    ExtOut("\n");
+    ExtOut("For more information see https://go.microsoft.com/fwlink/?linkid=2135652\n");
 }
-
-HRESULT CheckEEDll();
 
 // The minimum initialization for a command
 #define INIT_API_EXT()                                          \
@@ -255,7 +326,7 @@ HRESULT CheckEEDll();
     if ((Status = ArchQuery()) != S_OK) return Status;
 
 #define INIT_API_EE()                                           \
-    if ((Status = CheckEEDll()) != S_OK)           \
+    if ((Status = GetRuntime(&g_pRuntime)) != S_OK)             \
     {                                                           \
         EENotLoadedMessage(Status);                             \
         return Status;                                          \
@@ -335,8 +406,15 @@ class IMachine
 public:
     // Returns the IMAGE_FILE_MACHINE_*** constant corresponding to the target machine
     virtual ULONG GetPlatform() const = 0;
+
     // Returns the size of the CONTEXT for the target machine
     virtual ULONG GetContextSize() const = 0;
+
+    // Returns the architecture's DT_CONTEXT_FULL flags 
+    virtual ULONG GetFullContextFlags() const = 0;
+
+    // Sets the context flags in the context
+    virtual void SetContextFlags(BYTE* context, ULONG32 contextFlags) = 0;
 
     // Disassembles a managed method specified by the IPBegin-IPEnd range
     virtual void Unassembly(
@@ -409,6 +487,7 @@ extern IMachine* g_targetMachine;
 inline BOOL IsDbgTargetX86()    { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_I386; }
 inline BOOL IsDbgTargetAmd64()  { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_AMD64; }
 inline BOOL IsDbgTargetArm()    { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARMNT; }
+inline BOOL IsDbgTargetArm64()  { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARM64; }
 inline BOOL IsDbgTargetWin64()  { return IsDbgTargetAmd64(); }
 
 /* Returns the instruction pointer for the given CONTEXT.  We need this and its family of
@@ -433,7 +512,6 @@ inline CLRDATA_ADDRESS GetBP(const CROSS_PLATFORM_CONTEXT& context)
 {
     return TO_CDADDR(g_targetMachine->GetBP(context));
 }
-
 
 //-----------------------------------------------------------------------------------------
 //

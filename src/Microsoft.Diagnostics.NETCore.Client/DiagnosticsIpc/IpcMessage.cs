@@ -11,6 +11,18 @@ using System.Runtime.InteropServices;
 namespace Microsoft.Diagnostics.NETCore.Client
 {
     /// <summary>
+    /// Errors (HRESULT) returned for DiagnosticsServerCommandId.Error responses.
+    /// </summary>
+    internal enum DiagnosticsIpcError : uint
+    {
+        ProfilerAlreadyActive = 0x8013136A,
+        BadEncoding           = 0x80131384,
+        UnknownCommand        = 0x80131385,
+        UnknownMagic          = 0x80131386,
+        UnknownError          = 0x80131387
+    }
+
+    /// <summary>
     /// Different diagnostic message types that are handled by the runtime.
     /// </summary>
     internal enum DiagnosticsMessageType : uint
@@ -61,9 +73,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public IpcMessage()
         { }
 
-        public IpcMessage(IpcHeader header, byte[] payload)
+        public IpcMessage(IpcHeader header, byte[] payload = null)
         {
-            Payload = payload;
+            Payload = payload ?? Array.Empty<byte>();
             Header = header;
         }
 
@@ -79,7 +91,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         { 
             byte[] serializedData = null;
             // Verify things will fit in the size capacity
-            Header.Size = checked((UInt16)(IpcHeader.HeaderSizeInBytes + Payload.Length)); ;
+            Header.Size = checked((UInt16)(IpcHeader.HeaderSizeInBytes + Payload.Length));
             byte[] headerBytes = Header.Serialize();
 
             using (var stream = new MemoryStream())

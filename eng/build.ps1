@@ -1,40 +1,28 @@
 [CmdletBinding(PositionalBinding=$false)]
 Param(
-  [string][Alias('c')] $configuration = "Debug",
-  [string] $architecture = "<auto>",
-  [string][Alias('v')] $verbosity = "minimal",
-  [switch][Alias('t')] $test,
-  [switch] $ci,
-  [switch] $skipmanaged,
-  [switch] $skipnative,
-  [string] $privatebuildpath = "",
-  [switch] $cleanupprivatebuild,
-  [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimeversion = 'default',
-  [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimedownloadversion= 'default',
-  [string] $runtimesourcefeed = '',
-  [string] $runtimesourcefeedkey = '',
-  [Parameter(ValueFromRemainingArguments=$true)][String[]] $remainingargs
+    [ValidateSet("x86","x64","arm","arm64")][string][Alias('a', "platform")]$architecture = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant(),
+    [ValidateSet("Debug","Release")][string][Alias('c')] $configuration = "Debug",
+    [string][Alias('v')] $verbosity = "minimal",
+    [switch][Alias('t')] $test,
+    [switch] $ci,
+    [switch] $skipmanaged,
+    [switch] $skipnative,
+    [switch] $bundletools,
+    [string] $privatebuildpath = "",
+    [switch] $cleanupprivatebuild,
+    [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimeversion = 'default',
+    [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimedownloadversion= 'default',
+    [string] $runtimesourcefeed = '',
+    [string] $runtimesourcefeedkey = '',
+    [Parameter(ValueFromRemainingArguments=$true)][String[]] $remainingargs
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-function Get-Architecture([string]$arch) {
-    switch ($arch.ToLower()) {
-        { $_ -eq "<auto>" } { return Get-Architecture($env:PROCESSOR_ARCHITECTURE) }
-        { ($_ -eq "amd64") -or ($_ -eq "x64") } { return "x64" }
-        { $_ -eq "x86" } { return "x86" }
-        { $_ -eq "arm" } { return "arm" }
-        { $_ -eq "arm64" } { return "arm64" }
-        default { throw "Architecture not supported." }
-    }
-}
-
-$architecture = Get-Architecture($architecture)
-
 $crossbuild = $false
 if (($architecture -eq "arm") -or ($architecture -eq "arm64")) {
-    $processor = Get-Architecture($env:PROCESSOR_ARCHITECTURE)
+    $processor = @([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())
     if ($architecture -ne $processor) {
         $crossbuild = $true
     }
@@ -55,6 +43,14 @@ if ($ci) {
     $remainingargs = "-ci " + $remainingargs
 }
 
+if ($bundletools) {
+    $remainingargs = "/p:BundleTools=true " + $remainingargs
+    $remainingargs = '/bl:"$logdir\BundleTools.binlog" ' + $remainingargs
+    $remainingargs = '-noBl ' + $remainingargs
+    $skipnative = $True
+    $test = $False
+}
+
 # Remove the private build registry keys
 if ($cleanupprivatebuild) {
     Invoke-Expression "& `"$engroot\common\msbuild.ps1`" $engroot\CleanupPrivateBuild.csproj /v:$verbosity /t:CleanupPrivateBuild /p:BuildArch=$architecture /p:TestArchitectures=$architecture"
@@ -63,7 +59,7 @@ if ($cleanupprivatebuild) {
 
 # Install sdk for building, restore and build managed components.
 if (-not $skipmanaged) {
-    Invoke-Expression "& `"$engroot\common\build.ps1`" -build -binaryLog -configuration $configuration -verbosity $verbosity /p:BuildArch=$architecture /p:TestArchitectures=$architecture $remainingargs"
+    Invoke-Expression "& `"$engroot\common\build.ps1`" -build -configuration $configuration -verbosity $verbosity /p:BuildArch=$architecture /p:TestArchitectures=$architecture $remainingargs"
     if ($lastExitCode -ne 0) {
         exit $lastExitCode
     }

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Tools.Common;
+using Microsoft.Internal.Common.Utils;
 using System;
 using System.CommandLine;
 using System.CommandLine.Binding;
@@ -15,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name);
 
         /// <summary>
         /// Collects a gcdump from a currently running process.
@@ -25,8 +26,22 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="processId">The process to collect the gcdump from.</param>
         /// <param name="output">The output path for the collected gcdump.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name)
         {
+            if (name != null)
+            {
+                if (processId != 0)
+                {
+                    Console.WriteLine("Can only specify either --name or --process-id option.");
+                    return -1;
+                }
+                processId = CommandUtils.FindProcessIdWithName(name);
+                if (processId < 0)
+                {
+                    return -1;
+                }
+            }
+
             try
             {
                 if (processId < 0)
@@ -37,12 +52,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 if (processId == 0)
                 {
-                    Console.Out.WriteLine($"-p|--process-id is required");
+                    Console.Out.WriteLine("-p|--process-id is required");
                     return -1;
                 }
                 
                 output = string.IsNullOrEmpty(output)
-                    ? $"{DateTime.Now:yyyyMMdd\\_hhmmss}_{processId}.gcdump"
+                    ? $"{DateTime.Now:yyyyMMdd\\_HHmmss}_{processId}.gcdump"
                     : output;
 
                 FileInfo outputFileInfo = new FileInfo(output);
@@ -80,12 +95,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 }
                 else if (ct.IsCancellationRequested)
                 {
-                    Console.Out.WriteLine($"\tCancelled.");
+                    Console.Out.WriteLine("\tCancelled.");
                     return -1;
                 }
                 else
                 {
-                    Console.Out.WriteLine($"\tFailed to collect gcdump. Try running with '-v' for more information.");
+                    Console.Out.WriteLine("\tFailed to collect gcdump. Try running with '-v' for more information.");
                     return -1;
                 }
             }
@@ -121,15 +136,23 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 // Handler
                 HandlerDescriptor.FromDelegate((CollectDelegate) Collect).GetCommandHandler(),
                 // Options
-                ProcessIdOption(), OutputPathOption(), VerboseOption(), TimeoutOption()
+                ProcessIdOption(), OutputPathOption(), VerboseOption(), TimeoutOption(), NameOption()
             };
 
         private static Option ProcessIdOption() =>
             new Option(
                 aliases: new[] { "-p", "--process-id" },
-                description: "The process id to collect the trace.")
+                description: "The process id to collect the gcdump from.")
             {
-                Argument = new Argument<int>(name: "pid", defaultValue: 0),
+                Argument = new Argument<int>(name: "pid"),
+            };
+
+        private static Option NameOption() =>
+            new Option(
+                aliases: new[] { "-n", "--name" },
+                description: "The name of the process to collect the gcdump from.")
+            {
+                Argument = new Argument<string>(name: "name")
             };
 
         private static Option OutputPathOption() =>
@@ -137,15 +160,15 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 aliases: new[] { "-o", "--output" },
                 description: $@"The path where collected gcdumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump' where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.")
             {
-                Argument = new Argument<string>(name: "gcdump-file-path", defaultValue: "")
+                Argument = new Argument<string>(name: "gcdump-file-path", getDefaultValue: () => string.Empty)
             };
 
         private static Option VerboseOption() =>
             new Option(
                 aliases: new[] { "-v", "--verbose" },
-                description: $"Output the log while collecting the gcdump.") 
+                description: "Output the log while collecting the gcdump.") 
             {
-                Argument = new Argument<bool>(name: "verbose", defaultValue: false)
+                Argument = new Argument<bool>(name: "verbose")
             };
 
         public static int DefaultTimeout = 30;
@@ -154,7 +177,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 aliases: new[] { "-t", "--timeout" },
                 description: $"Give up on collecting the gcdump if it takes longer than this many seconds. The default value is {DefaultTimeout}s.")
             {
-                Argument = new Argument<int>(name: "timeout", defaultValue: DefaultTimeout)
+                Argument = new Argument<int>(name: "timeout", getDefaultValue: () => DefaultTimeout)
             };
     }
 }

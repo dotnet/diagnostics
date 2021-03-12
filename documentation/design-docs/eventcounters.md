@@ -157,7 +157,7 @@ IncrementingPollingCounter monitorContentionCounter = new IncrementingPollingCou
 
 This counter uses the [Monitor.LockContentionCount](https://docs.microsoft.com/en-us/dotnet/api/system.threading.monitor.lockcontentioncount?view=netcore-3.0) API to report the increment of the total lock contention count. The `DisplayRateTimeScale` property is an optional `TimeSpan` which can be set to provide a hint of what time interval this counter is best displayed at. For example, the lock contention count is best displayed as *count per second*, so its `DisplayRateTimeScale` is set to 1 second. This can be adjusted for different types of rate counters.
 
-There are more runtime counter implementation to use as a reference in the [CoreCLR](https://github.com/dotnet/runtime/blob/master/src/coreclr/src/System.Private.CoreLib/src/System/Diagnostics/Eventing/RuntimeEventSource.cs) repo.
+There are more runtime counter implementation to use as a reference in the [CoreCLR](https://github.com/dotnet/runtime/blob/main/src/coreclr/System.Private.CoreLib/src/System/Diagnostics/Eventing/RuntimeEventSource.cs) repo.
 
 ## Concurrency 
 It is important to note that if the delegates passed to the `PollingCounter`/`IncrementingPollingCounter` instances are called by multiple threads at once, the EventCounters API does not guarantee thread safety. It is the author's responsibility to guarantee the thread-safety of the delegates being passed to the counter APIs.
@@ -303,7 +303,7 @@ Consuming EventCounters out-of-proc is also possible. For those that are familia
 
 #### dotnet-counters
 
-dotnet-counters is a cross-platform dotnet CLI tool that can be used to monitor the counter values. To find out how to use `dotnet-counters` to monitor your counters, refer to the [dotnet-counters documentation](https://github.com/dotnet/diagnostics/blob/master/documentation/dotnet-counters-instructions.md).
+dotnet-counters is a cross-platform dotnet CLI tool that can be used to monitor the counter values. To find out how to use `dotnet-counters` to monitor your counters, refer to the [dotnet-counters documentation](https://github.com/dotnet/diagnostics/blob/main/documentation/dotnet-counters-instructions.md).
 
 
 #### ETW/PerfView
@@ -325,11 +325,11 @@ Here is an example of using dotnet-trace to get the same counter data.
 dotnet-trace collect --process-id <pid> --providers Samples-EventCounterDemos-Minimal:0:0:EventCounterIntervalSec=1
 ```
 
-The official dotnet-trace documentation contains a [section](https://github.com/dotnet/diagnostics/blob/master/documentation/dotnet-trace-instructions.md#using-dotnet-trace-to-collect-counter-values-over-time) on how to do this in more detail.
+The official dotnet-trace documentation contains a [section](https://github.com/dotnet/diagnostics/blob/main/documentation/dotnet-trace-instructions.md#using-dotnet-trace-to-collect-counter-values-over-time) on how to do this in more detail.
 
 
 #### TraceEvent
 
-TraceEvent is a managed library that makes it easy to consume ETW and EventPipe events. For more information, refer to the [TraceEvent Library Programmers Guide](https://github.com/Microsoft/perfview/blob/master/documentation/TraceEvent/TraceEventProgrammersGuide.md).
+TraceEvent is a managed library that makes it easy to consume ETW and EventPipe events. For more information, refer to the [TraceEvent Library Programmers Guide](https://github.com/Microsoft/perfview/blob/main/documentation/TraceEvent/TraceEventProgrammersGuide.md).
 
 For some more detailed code samples, you can also try reading [Criteo Labs blog](https://medium.com/criteo-labs/net-core-counters-internals-how-to-integrate-counters-in-your-monitoring-pipeline-5354cd61b42e) on how to do this.

@@ -35,8 +35,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void BasicEventPipeSessionTest()
         {
-            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
-            runner.Start(3000);
+            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
+            runner.Start(timeoutInMSPipeCreation: 15_000, testProcessTimeout: 60_000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
             using (var session = client.StartEventPipeSession(new List<EventPipeProvider>()
             {
@@ -54,8 +54,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void EventPipeSessionStreamTest()
         {
-            TestRunner runner = new TestRunner(CommonHelper.GetTraceePath(), output);
-            runner.Start(3000);
+            TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
+            runner.Start(timeoutInMSPipeCreation: 15_000, testProcessTimeout: 60_000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
             runner.PrintStatus();
             output.WriteLine($"[{DateTime.Now.ToString()}] Trying to start an EventPipe session on process {runner.Pid}");
@@ -80,8 +80,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine("Error encountered while processing events");
-                        Assert.Equal("", e.ToString());
+                        // This exception can happen if the target process exits while EventPipeEventSource is in the middle of reading from the pipe.
+                        output.WriteLine("Error encountered while processing events");
+                        output.WriteLine(e.ToString());
                     }
                     finally
                     {
@@ -110,6 +111,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational)
             }));
+        }
+
+        /// <summary>
+        /// Test for the method overload: public EventPipeSession StartEventPipeSession(EventPipeProvider provider, bool requestRundown=true, int circularBufferMB=256)
+        /// </summary>
+        [Fact]
+        public void StartEventPipeSessionWithSingleProviderTest()
+        {
+            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
+            runner.Start(timeoutInMSPipeCreation: 15_000, testProcessTimeout: 60_000);
+            DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
+            using (var session = client.StartEventPipeSession(new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational)))
+            {
+                Assert.True(session.EventStream != null);
+            }
+            runner.Stop();
         }
     }
 }

@@ -13,8 +13,8 @@
 
 #include <unknwn.h>
 #include <rpc.h>
-#include <lldbservices.h>
-#include <arrayholder.h>
+#include "lldbservices.h"
+#include "arrayholder.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,6 +35,12 @@ public:
     {
         m_lldbservices->AddRef();
         m_lldbservices2->AddRef();
+    }
+
+    ~DebugClient()
+    {
+        m_lldbservices->Release();
+        m_lldbservices2->Release();
     }
 
     //----------------------------------------------------------------------------
@@ -333,10 +339,10 @@ public:
     //----------------------------------------------------------------------------
 
     HRESULT 
-    GetCurrentProcessId(
+    GetCurrentProcessSystemId(
         PULONG id)
     {
-        return m_lldbservices->GetCurrentProcessId(id);
+        return m_lldbservices->GetCurrentProcessSystemId(id);
     }
 
     HRESULT 

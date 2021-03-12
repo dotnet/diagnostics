@@ -32,13 +32,13 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             //
             if (gcdump_filename == null && !processId.HasValue)
             {
-                Console.Error.WriteLine("<gcdump_filename> or -p|process-id is required");
+                Console.Error.WriteLine("<gcdump_filename> or -p|--process-id is required");
                 return Task.FromResult(-1);
             }
             
             if (gcdump_filename != null && processId.HasValue)
             {
-                Console.Error.WriteLine("Specify only one of -f|--file or -p|process-id.");
+                Console.Error.WriteLine("Specify only one of -f|--file or -p|--process-id.");
                 return Task.FromResult(-1);
             }
 
@@ -109,7 +109,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }.ExistingOnly();
         
         private static Option<int> ProcessIdOption() =>
-            new Option<int>(new[] { "-p", "--process-id" }, "The process id to collect the trace.");
+            new Option<int>(new[] { "-p", "--process-id" }, "The process id to collect the gcdump from.");
         
         private static Option<ReportType> ReportTypeOption() =>
             new Option<ReportType>(new[] { "-t", "--report-type" }, "The type of report to generate. Available options: heapstat (default)")

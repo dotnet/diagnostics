@@ -1,5 +1,9 @@
 # Heap Analysis Tool (dotnet-gcdump)
 
+NOTE: This documentation page may contain information on some features that are still work-in-progress. For most up-to-date documentation on released version of `dotnet-gcdump`, please refer to [its official documentation](https://docs.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-gcdump) page.
+
+## Intro
+
 The dotnet-gcdump tool is a cross-platform CLI tool that collects gcdumps of live .NET processes. It is built using the EventPipe technology which is a cross-platform alternative to ETW on Windows. Gcdumps are created by triggering a GC
 in the target process, turning on special events, and regenerating the graph of object roots from the event stream. This allows for gcdumps to be collected while the process is running with minimal overhead. These dumps are useful for
 several scenarios:
@@ -44,7 +48,7 @@ Writing gcdump to 'C:\git\diagnostics\src\Tools\dotnet-gcdump\20191023_042913_24
 
 ## Viewing the gcdump captured from dotnet-gcdump
 
-On Windows, `.gcdump` files can be viewed in PerfView (https://github.com/microsoft/perfview) for analysis or in Visual Studio. There is not currently a way of opening a `.gcdump` on non-Windows platforms.
+On Windows, `.gcdump` files can be viewed in [PerfView](https://github.com/microsoft/perfview) for analysis or in Visual Studio. There is not currently a way of opening a `.gcdump` on non-Windows platforms.
 
 You can collect multiple `.gcdump`s and open them simultaneously in Visual Studio to get a comparison experience.
 
@@ -63,13 +67,14 @@ Prior to .NET Core 3.1-preview2, there was an issue where static and COM types w
 
 ```cmd
 collect:
-  Collects a diagnostic trace from a currently running process
+  Collects a gcdump from a currently running process
 
 Usage:
   dotnet-gcdump collect [options]
 
 Options:
-  -p, --process-id <pid>             The process to collect the trace from
+  -p, --process-id <pid>             The process to collect the gcdump from
+  -n, --name <name>                  The name of the process to collect the gcdump from.
   -o, --output <gcdump-file-path>    The path where collected gcdumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump'
                                      where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path
                                      and file name of the dump.

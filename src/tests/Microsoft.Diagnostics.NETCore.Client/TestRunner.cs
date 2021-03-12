@@ -3,33 +3,57 @@
 // See the LICENSE file in the project root for more information.
 
 
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.TestHelpers;
 using System;
-using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    public class TestRunner
+    public class TestRunner : IDisposable
     {
         private Process testProcess;
         private ProcessStartInfo startInfo;
         private ITestOutputHelper outputHelper;
+        private CancellationTokenSource cts;
 
-        public TestRunner(string testExePath, ITestOutputHelper _outputHelper=null)
+        public TestRunner(string testExePath, ITestOutputHelper _outputHelper = null,
+            bool redirectError = false, bool redirectInput = false)
         {
             startInfo = new ProcessStartInfo(CommonHelper.HostExe, testExePath);
             startInfo.UseShellExecute = false;
             startInfo.RedirectStandardOutput = true;
+            startInfo.RedirectStandardError = redirectError;
+            startInfo.RedirectStandardInput = redirectInput;
             outputHelper = _outputHelper;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            try
+            {
+                // Make a good will attempt to end the tracee process
+                // and its process tree
+                testProcess?.Kill(entireProcessTree: true);
+            }
+            catch {}
+
+            if(disposing)
+            {
+                testProcess?.Dispose();
+            }
+
+            cts.Dispose();
         }
 
         public void AddEnvVar(string key, string value)
@@ -37,14 +61,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
             startInfo.EnvironmentVariables[key] = value;
         }
 
-        public void Start(int timeoutInMS=15000)
+        public StreamWriter StandardInput => testProcess.StandardInput;
+        public StreamReader StandardOutput => testProcess.StandardOutput;
+        public StreamReader StandardError => testProcess.StandardError;
+
+        public void Start(int timeoutInMSPipeCreation=15_000, int testProcessTimeout=30_000)
         {
             if (outputHelper != null)
-                outputHelper.WriteLine("$[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName);
+                outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName + " " + startInfo.Arguments);
 
-            testProcess = Process.Start(startInfo);
+            testProcess = new Process();
+            testProcess.StartInfo = startInfo;
+            testProcess.EnableRaisingEvents = true;
 
-            if (testProcess == null)
+            if (!testProcess.Start())
             {
                 outputHelper.WriteLine($"Could not start process: " + startInfo.FileName);
             }
@@ -54,10 +84,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 outputHelper.WriteLine($"Process " + startInfo.FileName + " came back as exited");
             }
 
+            cts = new CancellationTokenSource(testProcessTimeout);
+            cts.Token.Register(() => testProcess.Kill());
+
             if (outputHelper != null)
             {
-                outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Successfuly started process {testProcess.Id}");
-                outputHelper.WriteLine($"Have total {testProcess.Modules.Count} modules loaded");
+                outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Successfully started process {testProcess.Id}");
+                // Retry getting the module count because we can catch the process during startup and it fails temporarily.
+                for (int retry = 0; retry < 5; retry++)
+                {
+                    try
+                    {
+                        outputHelper.WriteLine($"Have total {testProcess.Modules.Count} modules loaded");
+                        break;
+                    }
+                    catch (Win32Exception)
+                    {
+                    }
+                }
             }
 
             // Block until we see the IPC channel created, or until timeout specified.
@@ -67,7 +111,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
-                        // On Windows, namedpipe connection will block until the named pipe is ready to connect so no need to block here
+                        // On Windows, named pipe connection will block until the named pipe is ready to connect so no need to block here
                         break;
                     }
                     else
@@ -83,12 +127,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
             });
 
-            monitorSocketTask.Wait(TimeSpan.FromMilliseconds(timeoutInMS));
+            monitorSocketTask.Wait(TimeSpan.FromMilliseconds(timeoutInMSPipeCreation));
         }
 
         public void Stop()
         {
-            testProcess.Kill();
+            this.Dispose();
         }
 
         public int Pid {
@@ -104,6 +148,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
             else
             {
                 outputHelper.WriteLine($"Process {testProcess.Id} status: Running");
+            }
+        }
+
+        public async Task WaitForExitAsync(CancellationToken token)
+        {
+            TaskCompletionSource<object> exitedSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            EventHandler exitedHandler = (s, e) => exitedSource.TrySetResult(null);
+
+            testProcess.Exited += exitedHandler;
+            try
+            {
+                if (!testProcess.HasExited)
+                {
+                    using var _ = token.Register(() => exitedSource.TrySetCanceled(token));
+
+                    await exitedSource.Task;
+                }
+            }
+            finally
+            {
+                testProcess.Exited -= exitedHandler;
             }
         }
     }

@@ -43,6 +43,13 @@ elseif(CLR_CMAKE_PLATFORM_ARCH_ARM64)
     add_definitions(-DDBG_TARGET_WIN64=1)
     add_definitions(-DBIT64)
     SET(REQUIRE_LLDBPLUGIN false)
+elseif(CLR_CMAKE_PLATFORM_ARCH_MIPS64)
+    add_definitions(-D_TARGET_MIPS64_=1)
+    add_definitions(-DDBG_TARGET_64BIT=1)
+    add_definitions(-DDBG_TARGET_MIPS64=1)
+    add_definitions(-DDBG_TARGET_WIN64=1)
+    add_definitions(-DBIT64)
+    SET(REQUIRE_LLDBPLUGIN false)
 endif()
 
 if(NOT $ENV{LLVM_HOME} STREQUAL "")
@@ -123,22 +130,29 @@ message(STATUS "LLDB_H: ${LLDB_H}")
 
 add_compile_options(-Wno-delete-non-virtual-dtor)
 
-include_directories(inc)
+include_directories(${ROOT_DIR}/src/SOS/inc)
+include_directories(${ROOT_DIR}/src/SOS/extensions)
 include_directories("${LLDB_H}")
 
 set(SOURCES
     sosplugin.cpp
     soscommand.cpp
-    setclrpathcommand.cpp
+    sethostruntimecommand.cpp
     setsostidcommand.cpp
     services.cpp
 )
 
-add_library_clr(sosplugin SHARED ${SOURCES})
+set(LIBRARIES
+    extensions
+)
 
 if(NOT ${LLDB_LIB} STREQUAL "")
-   target_link_libraries(sosplugin ${LLDB_LIB})
+    list(APPEND LIBRARIES ${LLDB_LIB})
 endif()
+
+add_library_clr(sosplugin SHARED ${SOURCES})
+
+target_link_libraries(sosplugin ${LIBRARIES})
 
 # add the install targets
 install_clr(sosplugin)

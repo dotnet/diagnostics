@@ -8,24 +8,18 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace SOS
+namespace SOS.Hosting
 {
     internal unsafe class DebugClient : COMCallableIUnknown
     {
-        new internal const int S_OK = COMHelper.S_OK;
-        new internal const int E_INVALIDARG = COMHelper.E_INVALIDARG;
-        new internal const int E_FAIL = COMHelper.E_FAIL;
-        new internal const int E_NOTIMPL = COMHelper.E_NOTIMPL;
-        new internal const int E_NOINTERFACE = COMHelper.E_NOINTERFACE;
-
         internal readonly IntPtr IDebugClient;
 
-        readonly DebugAdvanced _debugAdvanced;
-        readonly DebugControl _debugControl;
-        readonly DebugDataSpaces _debugDataSpaces;
-        readonly DebugRegisters _debugRegisters;
-        readonly DebugSymbols _debugSymbols;
-        readonly DebugSystemObjects _debugSystemObjects;
+        private readonly DebugAdvanced _debugAdvanced;
+        private readonly DebugControl _debugControl;
+        private readonly DebugDataSpaces _debugDataSpaces;
+        private readonly DebugRegisters _debugRegisters;
+        private readonly DebugSymbols _debugSymbols;
+        private readonly DebugSystemObjects _debugSystemObjects;
 
         /// <summary>
         /// Create an instance of the service wrapper SOS uses.
@@ -100,7 +94,7 @@ namespace SOS
         {
             get {
                 System.Diagnostics.Debugger.Break();
-                return E_NOTIMPL;
+                return HResult.E_NOTIMPL;
             }
         }
 

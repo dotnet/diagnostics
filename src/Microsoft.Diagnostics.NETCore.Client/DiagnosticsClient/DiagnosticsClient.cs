@@ -4,12 +4,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -18,11 +19,37 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     public sealed class DiagnosticsClient
     {
-        private int _processId;
+        private readonly IpcEndpoint _endpoint;
 
-        public DiagnosticsClient(int processId)
+        public DiagnosticsClient(int processId) :
+            this(new PidIpcEndpoint(processId))
         {
-            _processId = processId;
+        }
+
+        internal DiagnosticsClient(IpcEndpoint endpoint)
+        {
+            _endpoint = endpoint;
+        }
+
+        /// <summary>
+        /// Wait for an available diagnostic endpoint to the runtime instance.
+        /// </summary>
+        /// <param name="timeout">The amount of time to wait before cancelling the wait for the connection.</param>
+        internal void WaitForConnection(TimeSpan timeout)
+        {
+            _endpoint.WaitForConnection(timeout);
+        }
+
+        /// <summary>
+        /// Wait for an available diagnostic endpoint to the runtime instance.
+        /// </summary>
+        /// <param name="token">The token to monitor for cancellation requests.</param>
+        /// <returns>
+        /// A task the completes when a diagnostic endpoint to the runtime instance becomes available.
+        /// </returns>
+        internal Task WaitForConnectionAsync(CancellationToken token)
+        {
+            return _endpoint.WaitForConnectionAsync(token);
         }
 
         /// <summary>
@@ -36,7 +63,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </returns> 
         public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown=true, int circularBufferMB=256)
         {
-            return new EventPipeSession(_processId, providers, requestRundown, circularBufferMB);
+            return new EventPipeSession(_endpoint, providers, requestRundown, circularBufferMB);
+        }
+
+        /// <summary>
+        /// Start tracing the application and return an EventPipeSession object
+        /// </summary>
+        /// <param name="provider">An EventPipeProvider to turn on.</param>
+        /// <param name="requestRundown">If true, request rundown events from the runtime</param>
+        /// <param name="circularBufferMB">The size of the runtime's buffer for collecting events in MB</param>
+        /// <returns>
+        /// An EventPipeSession object representing the EventPipe session that just started.
+        /// </returns> 
+        public EventPipeSession StartEventPipeSession(EventPipeProvider provider, bool requestRundown=true, int circularBufferMB=256)
+        {
+            return new EventPipeSession(_endpoint, new[] { provider }, requestRundown, circularBufferMB);
         }
 
         /// <summary>
@@ -47,22 +88,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="logDumpGeneration">When set to true, display the dump generation debug log to the console.</param>
         public void WriteDump(DumpType dumpType, string dumpPath, bool logDumpGeneration=false)
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
-
             if (string.IsNullOrEmpty(dumpPath))
                 throw new ArgumentNullException($"{nameof(dumpPath)} required");
 
-            var payload = SerializeCoreDump(dumpPath, dumpType, logDumpGeneration);
-            var message = new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
-            var response = IpcClient.SendMessage(_processId, message);
-            var hr = 0;
-            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
+            byte[] payload = SerializeCoreDump(dumpPath, dumpType, logDumpGeneration);
+            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
+            IpcMessage response = IpcClient.SendMessage(_endpoint, message);
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
-                case DiagnosticsServerCommandId.Error:
-                    hr = BitConverter.ToInt32(response.Payload, 0);
+                case DiagnosticsServerResponseId.Error:
+                    uint hr = BitConverter.ToUInt32(response.Payload, 0);
+                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
+                    {
+                        throw new UnsupportedCommandException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
+                    }
                     throw new ServerErrorException($"Writing dump failed (HRESULT: 0x{hr:X8})");
-                case DiagnosticsServerCommandId.OK:
+                case DiagnosticsServerResponseId.OK:
                     return;
                 default:
                     throw new ServerErrorException($"Writing dump failed - server responded with unknown command");
@@ -90,13 +131,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             byte[] serializedConfiguration = SerializeProfilerAttach((uint)attachTimeout.TotalSeconds, profilerGuid, profilerPath, additionalData);
             var message = new IpcMessage(DiagnosticsServerCommandSet.Profiler, (byte)ProfilerCommandId.AttachProfiler, serializedConfiguration);
-            var response = IpcClient.SendMessage(_processId, message);
-            switch ((DiagnosticsServerCommandId)response.Header.CommandId)
+            var response = IpcClient.SendMessage(_endpoint, message);
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
-                case DiagnosticsServerCommandId.Error:
-                    var hr = BitConverter.ToInt32(response.Payload, 0);
+                case DiagnosticsServerResponseId.Error:
+                    uint hr = BitConverter.ToUInt32(response.Payload, 0);
+                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
+                    {
+                      throw new UnsupportedCommandException("The target runtime does not support profiler attach");
+                    }
+                    if (hr == (uint)DiagnosticsIpcError.ProfilerAlreadyActive)
+                    {
+                        throw new ProfilerAlreadyActiveException("The request to attach a profiler was denied because a profiler is already loaded");
+                    }
                     throw new ServerErrorException($"Profiler attach failed (HRESULT: 0x{hr:X8})");
-                case DiagnosticsServerCommandId.OK:
+                case DiagnosticsServerResponseId.OK:
                     return;
                 default:
                     throw new ServerErrorException($"Profiler attach failed - server responded with unknown command");
@@ -107,6 +156,77 @@ namespace Microsoft.Diagnostics.NETCore.Client
             // runtime timeout or respect attachTimeout as one total duration.
         }
 
+        internal void ResumeRuntime()
+        {
+            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.ResumeRuntime);
+            var response = IpcClient.SendMessage(_endpoint, message);
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
+            {
+                case DiagnosticsServerResponseId.Error:
+                    // Try fallback for Preview 7 and Preview 8
+                    ResumeRuntimeFallback();
+                    //var hr = BitConverter.ToInt32(response.Payload, 0);
+                    //throw new ServerErrorException($"Resume runtime failed (HRESULT: 0x{hr:X8})");
+                    return;
+                case DiagnosticsServerResponseId.OK:
+                    return;
+                default:
+                    throw new ServerErrorException($"Resume runtime failed - server responded with unknown command");
+            }
+        }
+
+        // Fallback command for .NET 5 Preview 7 and Preview 8
+        internal void ResumeRuntimeFallback()
+        {
+            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Server, (byte)DiagnosticServerCommandId.ResumeRuntime);
+            var response = IpcClient.SendMessage(_endpoint, message);
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
+            {
+                case DiagnosticsServerResponseId.Error:
+                    var hr = BitConverter.ToInt32(response.Payload, 0);
+                    throw new ServerErrorException($"Resume runtime failed (HRESULT: 0x{hr:X8})");
+                case DiagnosticsServerResponseId.OK:
+                    return;
+                default:
+                    throw new ServerErrorException($"Resume runtime failed - server responded with unknown command");
+            }
+        }
+
+        internal ProcessInfo GetProcessInfo()
+        {
+            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo);
+            var response = IpcClient.SendMessage(_endpoint, message);
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
+            {
+                case DiagnosticsServerResponseId.Error:
+                    var hr = BitConverter.ToInt32(response.Payload, 0);
+                    throw new ServerErrorException($"Get process info failed (HRESULT: 0x{hr:X8})");
+                case DiagnosticsServerResponseId.OK:
+                    return ProcessInfo.Parse(response.Payload);
+                default:
+                    throw new ServerErrorException($"Get process info failed - server responded with unknown command");
+            }
+        }
+
+        public Dictionary<string,string> GetProcessEnvironment()
+        {
+            var message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessEnvironment);
+            Stream continuation = IpcClient.SendMessage(_endpoint, message, out IpcMessage response);
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
+            {
+                case DiagnosticsServerResponseId.Error:
+                    int hr = BitConverter.ToInt32(response.Payload, 0);
+                    throw new ServerErrorException($"Get process environment failed (HRESULT: 0x{hr:X8})");
+                case DiagnosticsServerResponseId.OK:
+                    ProcessEnvironmentHelper helper = ProcessEnvironmentHelper.Parse(response.Payload);
+                    Task<Dictionary<string,string>> envTask = helper.ReadEnvironmentAsync(continuation);
+                    envTask.Wait();
+                    return envTask.Result;
+                default:
+                    throw new ServerErrorException($"Get process environment failed - server responded with unknown command");
+            }
+        }
+
         /// <summary>
         /// Get all the active processes that can be attached to.
         /// </summary>
@@ -115,11 +235,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </returns>
         public static IEnumerable<int> GetPublishedProcesses()
         {
-            return Directory.GetFiles(IpcClient.IpcRootPath)
-                .Select(namedPipe => (new FileInfo(namedPipe)).Name)
-                .Where(input => Regex.IsMatch(input, IpcClient.DiagnosticsPortPattern))
-                .Select(input => int.Parse(Regex.Match(input, IpcClient.DiagnosticsPortPattern).Groups[1].Value, NumberStyles.Integer))
-                .Distinct();
+            static IEnumerable<int> GetAllPublishedProcesses()
+            {
+                foreach (var port in Directory.GetFiles(PidIpcEndpoint.IpcRootPath))
+                {
+                    var fileName = new FileInfo(port).Name;
+                    var match = Regex.Match(fileName, PidIpcEndpoint.DiagnosticsPortPattern);
+                    if (!match.Success) continue;
+                    var group = match.Groups[1].Value;
+                    if (!int.TryParse(group, NumberStyles.Integer, CultureInfo.InvariantCulture, out var processId))
+                        continue;
+
+                    yield return processId;
+                }
+            }
+
+            return GetAllPublishedProcesses().Distinct();
         }
 
         private static byte[] SerializeCoreDump(string dumpName, DumpType dumpType, bool diagnostics)

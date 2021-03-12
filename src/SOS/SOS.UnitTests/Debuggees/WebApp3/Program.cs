@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.IO;
 using System.Net.Http;
+using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 
 namespace WebApp3
@@ -58,8 +61,15 @@ namespace WebApp3
             }
         }
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(webBuilder =>
-                webBuilder.UseStartup<Startup>());
+        public static IHostBuilder CreateHostBuilder(string[] args) => 
+            Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(webBuilder => { 
+                webBuilder.ConfigureKestrel(serverOptions => { 
+                    serverOptions.ConfigureHttpsDefaults(httpsOptions => {
+                        string directory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                        httpsOptions.ServerCertificate = new X509Certificate2(Path.Combine(directory, "testCert.pfx"), "testPassword"); 
+                    }); 
+                }); 
+                webBuilder.UseStartup<Startup>(); 
+            });
     }
 }

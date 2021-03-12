@@ -4,7 +4,7 @@
 
 using Microsoft.Internal.Common.Commands;
 using System.CommandLine.Builder;
-using System.CommandLine.Invocation;
+using System.CommandLine.Parsing;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
@@ -15,7 +15,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         {
             var parser = new CommandLineBuilder()
                 .AddCommand(CollectCommandHandler.CollectCommand())
-                .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that gcdumps can be collected"))
+                .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that gcdumps can be collected from"))
                 .AddCommand(ReportCommandHandler.ReportCommand())
                 .UseDefaults()
                 .Build();

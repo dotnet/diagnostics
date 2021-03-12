@@ -37,7 +37,7 @@ VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?DivZero[\\|/]DivZero\.cs @ 21\s
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Dd]iv[Zz]ero.*!C\.F2(\(.*\))?\+0x<HEXVAL>\s+
 VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?DivZero[\\|/]DivZero\.cs @ 33\s*\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Dd]iv[Zz]ero.*!C\.Main(\(.*\))?\+0x<HEXVAL>\s+
-VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?DivZero[\\|/]DivZero\.cs @ 54\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?DivZero[\\|/]DivZero\.cs @ (54|53)\s*\]\s*
 
 # Verify that Threads (clrthreads) works
 IFDEF:DOTNETDUMP
@@ -62,4 +62,4 @@ VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+(\*\*\* WARNING: Unable to verify checksum for DivZero.exe\s*)?C\.DivideByZero(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ 12\s*\]\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+C\.F3(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ 21\s*\]\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+C\.F2(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ 33\s*\]\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+C\.Main(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ 54\s*\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+C\.Main(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ (54|53)\s*\]\s+

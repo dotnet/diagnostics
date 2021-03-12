@@ -69,14 +69,16 @@
 #error The Volatile type is currently only defined for Visual C++ and GNU C++
 #endif
 
-#if defined(__GNUC__) && !defined(_X86_) && !defined(_AMD64_) && !defined(_ARM_) && !defined(_ARM64_)
-#error The Volatile type is currently only defined for GCC when targeting x86, AMD64, ARM or ARM64 CPUs
+#if defined(__GNUC__) && !defined(_X86_) && !defined(_AMD64_) && !defined(_ARM_) && !defined(_ARM64_) && !defined(_MIPS64_)
+#error The Volatile type is currently only defined for GCC when targeting x86, AMD64, ARM, ARM64 or MIPS64 CPUs
 #endif
 
 #if defined(__GNUC__)
 #if defined(_ARM_) || defined(_ARM64_)
 // This is functionally equivalent to the MemoryBarrier() macro used on ARM on Windows.
 #define VOLATILE_MEMORY_BARRIER() asm volatile ("dmb ish" : : : "memory")
+#elif defined(_MIPS64_)
+#define VOLATILE_MEMORY_BARRIER() asm volatile ("sync" : : : "memory")
 #else
 //
 // For GCC, we prevent reordering by the compiler by inserting the following after a volatile

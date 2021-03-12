@@ -1064,6 +1064,12 @@ struct MSLAYOUT DacpJitCodeHeapInfo : ZeroInit<DacpJitCodeHeapInfo>
     };
 };
 
+struct MSLAYOUT DacpMOWData
+{
+    CLRDATA_ADDRESS managedObjectWrapper;
+    CLRDATA_ADDRESS managedObject;
+};
+
 #include "static_assert.h"
 
 /* DAC datastructures are frozen as of dev11 shipping.  Do NOT add fields, remove fields, or change the fields of

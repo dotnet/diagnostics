@@ -139,6 +139,9 @@ public:
 
     ULONG GetPlatform()             const { return IMAGE_FILE_MACHINE_I386; }
     ULONG GetContextSize()          const { return sizeof(X86_CONTEXT); }
+    ULONG GetFullContextFlags()     const { return 0x0001000BL; }
+    void SetContextFlags(BYTE* context, ULONG32 contextFlags)   { ((X86_CONTEXT*)context)->ContextFlags = contextFlags; };
+
     virtual void Unassembly(
                 TADDR IPBegin, 
                 TADDR IPEnd, 
@@ -207,6 +210,9 @@ public:
 
     ULONG GetPlatform()             const { return IMAGE_FILE_MACHINE_ARMNT; }
     ULONG GetContextSize()          const { return sizeof(ARM_CONTEXT); }
+    ULONG GetFullContextFlags()     const { return 0x00200007L; }
+    void SetContextFlags(BYTE* context, ULONG32 contextFlags)   { ((ARM_CONTEXT*)context)->ContextFlags = contextFlags; };
+
     virtual void Unassembly(
                 TADDR IPBegin, 
                 TADDR IPEnd, 
@@ -276,6 +282,8 @@ public:
 
     ULONG GetPlatform()             const { return IMAGE_FILE_MACHINE_AMD64; }
     ULONG GetContextSize()          const { return sizeof(AMD64_CONTEXT); }
+    ULONG GetFullContextFlags()     const { return 0x0010000BL; }
+    void SetContextFlags(BYTE* context, ULONG32 contextFlags)   { ((AMD64_CONTEXT*)context)->ContextFlags = contextFlags; };
 
     virtual void Unassembly(
                 TADDR IPBegin, 
@@ -346,6 +354,9 @@ public:
 
     ULONG GetPlatform()             const { return IMAGE_FILE_MACHINE_ARM64; }
     ULONG GetContextSize()          const { return sizeof(ARM64_CONTEXT); }
+    ULONG GetFullContextFlags()     const { return 0x00400007L; }
+    void SetContextFlags(BYTE* context, ULONG32 contextFlags)   { ((ARM64_CONTEXT*)context)->ContextFlags = contextFlags; };
+
     virtual void Unassembly(
                 TADDR IPBegin, 
                 TADDR IPEnd, 
