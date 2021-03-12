@@ -35,6 +35,7 @@ namespace Microsoft.Internal.Common.Utils
     internal class ClientServerICTSProxyFactory
     {
         readonly bool _verboseLogging;
+
         readonly string _ipcClient;
         readonly string _tcpServer;
 
@@ -75,7 +76,7 @@ namespace Microsoft.Internal.Common.Utils
             }
         }
 
-        public async Task<ConnectedProxy> ConnectProxyAsync(CancellationToken token, TaskCompletionSource<bool> proxyTaskCompleted)
+        public async Task<ConnectedProxy> ConnectProxyAsync(CancellationToken token)
         {
             Stream serverStream = null;
             Stream clientStream = null;
@@ -107,7 +108,7 @@ namespace Microsoft.Internal.Common.Utils
             if (_verboseLogging)
                 Console.WriteLine($"ClientServerICTSProxyFactory::ConnectProxyAsync: New proxy instance successfully connected.");
 
-            return new ConnectedProxy(clientStream, serverStream, proxyTaskCompleted, _verboseLogging);
+            return new ConnectedProxy(clientStream, serverStream, _verboseLogging);
         }
 
         async Task<Stream> ConnectServerStreamAsync(CancellationToken token)
@@ -170,7 +171,7 @@ namespace Microsoft.Internal.Common.Utils
 
         async Task<Stream> ConnectClientStreamAsync(CancellationToken token)
         {
-            Stream clientStream;
+            Stream clientStream = null;
 
             if (_verboseLogging)
                 Console.WriteLine($"ClientServerICTSProxyFactory::ConnectClientStreamAsync: Connecting new IPC endpoint \"{_ipcClient}\".");
@@ -192,9 +193,11 @@ namespace Microsoft.Internal.Common.Utils
                 {
                     await namedPipe.ConnectAsync(ClientStreamConnectTimeout, token).ConfigureAwait(false);
                 }
-                catch (TimeoutException)
+                catch (Exception ex)
                 {
-                    if (_verboseLogging)
+                    namedPipe?.Dispose();
+
+                    if (ex is TimeoutException && _verboseLogging)
                         Console.WriteLine("ClientServerICTSProxyFactory::ConnectClientStreamAsync: No client stream connected, timing out.");
 
                     throw;
@@ -214,8 +217,10 @@ namespace Microsoft.Internal.Common.Utils
                     connectTimeoutTokenSource.CancelAfter(ClientStreamConnectTimeout);
                     await unixDomainSocket.ConnectAsync(token).ConfigureAwait(false);
                 }
-                catch (OperationCanceledException)
+                catch (Exception)
                 {
+                    unixDomainSocket?.Dispose();
+
                     if (connectTimeoutTokenSource.IsCancellationRequested)
                     {
                         if (_verboseLogging)
@@ -226,12 +231,24 @@ namespace Microsoft.Internal.Common.Utils
 
                     throw;
                 }
+                finally
+                {
+                    connectTokenSource?.Dispose();
+                    connectTimeoutTokenSource?.Dispose();
+                }
 
                 clientStream = new ExposedSocketNetworkStream(unixDomainSocket, ownsSocket: true);
             }
 
-            // ReversedDiagnosticServer consumes advertise message, needs to be replayed back to client.
-            await IpcAdvertise.SerializeAsync(clientStream, _endpointInfo.RuntimeInstanceCookie, (ulong)_endpointInfo.ProcessId, token).ConfigureAwait(false);
+            try
+            {
+                // ReversedDiagnosticServer consumes advertise message, needs to be replayed back to client.
+                await IpcAdvertise.SerializeAsync(clientStream, _endpointInfo.RuntimeInstanceCookie, (ulong)_endpointInfo.ProcessId, token).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                clientStream?.Dispose();
+            }
 
             return clientStream;
         }
@@ -247,7 +264,7 @@ namespace Microsoft.Internal.Common.Utils
         Task _serverReadClientWriteTask = null;
         Task _clientReadServerWriteTask = null;
 
-        CancellationTokenSource cancelProxyTokenSource = new CancellationTokenSource();
+        CancellationTokenSource _cancelProxyTokenSource = null;
 
         bool _disposed = false;
 
@@ -258,14 +275,16 @@ namespace Microsoft.Internal.Common.Utils
 
         public TaskCompletionSource<bool> ProxyTaskCompleted { get; }
 
-        public ConnectedProxy(Stream clientStream, Stream serverStream, TaskCompletionSource<bool> proxyTaskCompleted, bool verboseLogging)
+        public ConnectedProxy(Stream clientStream, Stream serverStream, bool verboseLogging)
         {
             _verboseLogging = verboseLogging;
 
             _clientStream = clientStream;
             _serverStream = serverStream;
 
-            ProxyTaskCompleted = proxyTaskCompleted;
+            _cancelProxyTokenSource = new CancellationTokenSource();
+
+            ProxyTaskCompleted = new TaskCompletionSource<bool>();
 
             _serverClientByteTransfer += (ulong)IpcAdvertise.V1SizeInBytes;
 
@@ -277,8 +296,8 @@ namespace Microsoft.Internal.Common.Utils
             if (_serverReadClientWriteTask != null || _clientReadServerWriteTask != null || _disposed)
                 throw new InvalidOperationException();
 
-            _serverReadClientWriteTask = ServerReadClientWrite(cancelProxyTokenSource.Token);
-            _clientReadServerWriteTask = ClientReadServerWrite(cancelProxyTokenSource.Token);
+            _serverReadClientWriteTask = ServerReadClientWrite(_cancelProxyTokenSource.Token);
+            _clientReadServerWriteTask = ClientReadServerWrite(_cancelProxyTokenSource.Token);
         }
 
         public async void Stop()
@@ -286,7 +305,7 @@ namespace Microsoft.Internal.Common.Utils
             if (_disposed)
                 throw new ObjectDisposedException(nameof(ConnectedProxy));
 
-            cancelProxyTokenSource.Cancel();
+            _cancelProxyTokenSource.Cancel();
 
             List<Task> runningTasks = new List<Task>();
 
@@ -321,6 +340,8 @@ namespace Microsoft.Internal.Common.Utils
             if (!_disposed)
             {
                 Stop();
+
+                _cancelProxyTokenSource.Dispose();
 
                 _serverStream?.Dispose();
                 _clientStream?.Dispose();
@@ -397,7 +418,7 @@ namespace Microsoft.Internal.Common.Utils
         {
             try
             {
-                byte[] buffer = new byte[256];
+                byte[] buffer = new byte[1024];
                 while (!token.IsCancellationRequested)
                 {
 #if DEBUG
