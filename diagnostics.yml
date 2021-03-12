@@ -25,6 +25,7 @@ pr:
   branches:
     include:
     - master
+    - main
     - release/*
   paths:
     exclude:
