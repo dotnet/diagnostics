@@ -547,13 +547,12 @@ void GCPrintLargeHeapSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_all
     }
 }
 
-void GCPrintPinnedHeapSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_size)
+void GCPrintPinnedHeapSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_allocated_size, DWORD_PTR total_committed_size)
 {
     DWORD_PTR dwAddrSeg;
     DacpHeapSegmentData segment;
     dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration() + 2].start_segment;
 
-    // total_size = 0;
     // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
     while (dwAddrSeg != NULL)
     {
@@ -564,11 +563,17 @@ void GCPrintPinnedHeapSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_si
             ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
             return;
         }
-        ExtOut("%p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n", SOS_PTR(dwAddrSeg),
-                 SOS_PTR(segment.mem), SOS_PTR(segment.allocated),
-                 (ULONG_PTR)(segment.allocated - segment.mem),
-                 (ULONG_PTR)(segment.allocated - segment.mem));
-        total_size += (DWORD_PTR) (segment.allocated - segment.mem);
+        ExtOut("%p  %p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE"d)  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n",
+                SOS_PTR(dwAddrSeg),
+                SOS_PTR(segment.mem),
+                SOS_PTR(segment.allocated),
+                SOS_PTR(segment.committed),
+                (ULONG_PTR)(segment.allocated - segment.mem),
+                (ULONG_PTR)(segment.allocated - segment.mem),
+                (ULONG_PTR)(segment.committed - segment.mem),
+                (ULONG_PTR)(segment.committed - segment.mem));
+        total_allocated_size += (DWORD_PTR) (segment.allocated - segment.mem);
+        total_committed_size += (DWORD_PTR) (segment.committed - segment.mem);
         dwAddrSeg = (DWORD_PTR)segment.next;
     }
 }
@@ -588,7 +593,7 @@ void GCHeapInfo(const GCHeapDetails &heap, DWORD_PTR &total_allocated_size, DWOR
     {
         ExtOut("Pinned object heap starts at 0x%p\n",
                       SOS_PTR(heap.generation_table[GetMaxGeneration() + 2].allocation_start));
-        GCPrintPinnedHeapSegmentInfo(heap, total_size);
+        GCPrintPinnedHeapSegmentInfo(heap, total_allocated_size, total_committed_size);
     }
 }
 
