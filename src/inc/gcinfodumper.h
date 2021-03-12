@@ -10,7 +10,7 @@
 
 // ******************************************************************************
 // WARNING!!!: This header is also used by the runtime repo.
-// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/inc/gcinfodumper.h
+// See: https://github.com/dotnet/runtime/blob/main/src/coreclr/inc/gcinfodumper.h
 // ******************************************************************************
 
 //
@@ -118,4 +118,3 @@ private:
 
 
 #endif // !__GCINFODUMPER_H__
-

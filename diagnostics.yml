@@ -24,7 +24,6 @@ pr:
   autoCancel: true
   branches:
     include:
-    - master
     - main
     - release/*
   paths:

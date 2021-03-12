@@ -1,7 +1,7 @@
 Debugging Linux or MacOS Core Dump
 ==================================
 
-These instructions will lead you through getting symbols, loading and debugging a Linux or MacOS core dump. The best way to generate a core dump on Linux (only) is through the [createdump](https://github.com/dotnet/runtime/blob/master/docs/design/coreclr/botr/xplat-minidump-generation.md#configurationpolicy) facility.
+These instructions will lead you through getting symbols, loading and debugging a Linux or MacOS core dump. The best way to generate a core dump on Linux (only) is through the [createdump](https://github.com/dotnet/runtime/blob/main/docs/design/coreclr/botr/xplat-minidump-generation.md#configurationpolicy) facility.
 
 Dumps created with gdb or gcore do not have all the managed state so various SOS or dotnet-dump commands may display "UNKNOWN" for type and function names. This can also happen with Linux system generated core dumps if the `coredump_filter` for the process is not set to at least 0x3f. See [core](http://man7.org/linux/man-pages/man5/core.5.html) for more information.
 
@@ -9,7 +9,7 @@ Dumps created with gdb or gcore do not have all the managed state so various SOS
 
 Because SOS now has symbol download support (both managed PDBs and native symbols via `loadsymbols`) all that lldb requires is the host program and a few other binaries. The host is usually `dotnet` but for self-contained applications it the .NET Core `apphost` renamed to the program/project name. These steps will handle either case and download the host lldb needs to properly diagnose a core dump. There are also cases that the runtime module (i.e. libcoreclr.so) is need by lldb.
 
-First install or update the dotnet CLI symbol tool. This only needs to be done once. See this [link](https://github.com/dotnet/symstore/tree/master/src/dotnet-symbol#install) for more details. We need version 1.0.142101 or greater of dotnet-symbol installed.
+First install or update the dotnet CLI symbol tool. This only needs to be done once. See this [link](https://github.com/dotnet/symstore/tree/main/src/dotnet-symbol#install) for more details. We need version 1.0.142101 or greater of dotnet-symbol installed.
 
     ~$ dotnet tool install -g dotnet-symbol
     You can invoke the tool using the following command: dotnet-symbol

@@ -51,4 +51,4 @@ Frequently Asked Questions
     SOS does not support the current target architecture 'arm32' (0x01c4). A 32 bit target may require a 32 bit debugger or vice versa. In general, try to use the same bitness for the debugger and target process.
     ```
 
-    You may need a different bitness of the Windows (windbg/cdb) debugger or dotnet-dump. If you are running an x64 (64 bit), try an x86 (32 bit) version. The easiest way to get an x86 version of dotnet-dump is installing the "single-file" version [here](https://aka.ms/dotnet-dump/win-x86). For more information on single-file tools see [here](https://github.com/dotnet/diagnostics/blob/master/documentation/single-file-tools.md#single-file-diagnostic-tools).
+    You may need a different bitness of the Windows (windbg/cdb) debugger or dotnet-dump. If you are running an x64 (64 bit), try an x86 (32 bit) version. The easiest way to get an x86 version of dotnet-dump is installing the "single-file" version [here](https://aka.ms/dotnet-dump/win-x86). For more information on single-file tools see [here](https://github.com/dotnet/diagnostics/blob/main/documentation/single-file-tools.md#single-file-diagnostic-tools).

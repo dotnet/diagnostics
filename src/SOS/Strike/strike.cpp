@@ -2389,7 +2389,7 @@ enum StackTraceElementFlags
 };
 
 // This struct needs to match the definition in the runtime.
-// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h
+// See: https://github.com/dotnet/runtime/blob/main/src/coreclr/vm/clrex.h
 struct StackTraceElement
 {
     UINT_PTR        ip;
@@ -2815,7 +2815,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
             if (arrayLen != 0 && hr == S_OK)
             {
                 // This code is accessing the StackTraceInfo class in the runtime.
-                // See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h
+                // See: https://github.com/dotnet/runtime/blob/main/src/coreclr/vm/clrex.h
 #ifdef _TARGET_WIN64_
                 DWORD_PTR dataPtr = taStackTrace + sizeof(DWORD_PTR) + sizeof(DWORD) + sizeof(DWORD);
 #else
@@ -15732,7 +15732,7 @@ HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
         if (arrayLen)
         {
             // This code is accessing the StackTraceInfo class in the runtime.
-            // See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h
+            // See: https://github.com/dotnet/runtime/blob/main/src/coreclr/vm/clrex.h
 #ifdef _TARGET_WIN64_
             DWORD_PTR dataPtr = arrayPtr + sizeof(DWORD_PTR) + sizeof(DWORD) + sizeof(DWORD);
 #else

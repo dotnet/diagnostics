@@ -15,7 +15,7 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 // ******************************************************************************
 // WARNING!!!: This code is also used by the runtime repo.
-// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/inc/gcdecoder.cpp
+// See: https://github.com/dotnet/runtime/blob/main/src/coreclr/inc/gcdecoder.cpp
 // ******************************************************************************
 
 #ifdef _TARGET_X86_

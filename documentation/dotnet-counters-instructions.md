@@ -99,7 +99,7 @@ dotnet tool install --global dotnet-counters
         GC Heap Size (MB)                            811
         Number of Exceptions / sec                     4
 
-    3. Monitoring EventCounter values from user-defined EventSource: (see https://github.com/dotnet/corefx/blob/master/src/System.Diagnostics.Tracing/documentation/EventCounterTutorial.md on how to do this.0)
+    3. Monitoring EventCounter values from user-defined EventSource: (see https://github.com/dotnet/corefx/blob/main/src/System.Diagnostics.Tracing/documentation/EventCounterTutorial.md on how to do this.0)
 
       > dotnet-counters monitor --process-id 1902 Samples-EventCounterDemos-Minimal
 
