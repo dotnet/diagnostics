@@ -184,6 +184,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 Socket socket = await _socket.AcceptAsync(linkedSource.Token).ConfigureAwait(false);
 
+                OnAccept(socket);
+
                 return new ExposedSocketNetworkStream(socket, ownsSocket: true);
             }
             catch (Exception)
@@ -197,6 +199,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
+        internal abstract bool OnAccept(Socket socket);
+
         internal abstract IpcSocketTransport CreateNewSocketServer(string address, int backlog);
     }
 
@@ -205,6 +209,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public IpcTcpSocketServerTransport(string address, int backlog)
             : base (address, backlog != MaxAllowedConnections ? backlog : 100)
         {
+        }
+
+        internal override bool OnAccept(Socket socket)
+        {
+            socket.NoDelay = true;
+            return true;
         }
 
         internal override IpcSocketTransport CreateNewSocketServer(string address, int backlog)
@@ -233,6 +243,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public IpcUnixDomainSocketServerTransport(string path, int backlog)
             : base (path, backlog != MaxAllowedConnections ? backlog : (int)SocketOptionName.MaxConnections)
         {
+        }
+
+        internal override bool OnAccept(Socket socket)
+        {
+            return true;
         }
 
         internal override IpcSocketTransport CreateNewSocketServer(string address, int backlog)

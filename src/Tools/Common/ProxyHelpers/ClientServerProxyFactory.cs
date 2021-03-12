@@ -344,14 +344,41 @@ namespace Microsoft.Internal.Common.Utils
                 byte[] buffer = new byte[1024];
                 while (!token.IsCancellationRequested)
                 {
+#if DEBUG
+                    if (_verboseLogging)
+                        Console.WriteLine("ConnectedProxy::ServerReadClientWrite: Start reading bytes from server.");
+#endif
+
                     int bytesRead = await _serverStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
+
+#if DEBUG
+                    if (_verboseLogging)
+                        Console.WriteLine($"ConnectedProxy::ServerReadClientWrite: Read {bytesRead} bytes from server.");
+#endif
 
                     // Check for end of stream indicating that remove end hung-up.
                     if (bytesRead == 0)
+                    {
+                        if (_verboseLogging)
+                            Console.WriteLine("ConnectedProxy::ServerReadClientWrite: Server hung up.");
+
                         break;
+                    }
 
                     _serverClientByteTransfer += (ulong)bytesRead;
+
+#if DEBUG
+                    if (_verboseLogging)
+                        Console.WriteLine($"ConnectedProxy::ServerReadClientWrite: Start writing {bytesRead} bytes to client.");
+#endif
+
                     await _clientStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
+                    await _clientStream.FlushAsync().ConfigureAwait(false);
+
+#if DEBUG
+                    if (_verboseLogging)
+                        Console.WriteLine($"ConnectedProxy::ServerReadClientWrite: Wrote {bytesRead} bytes to client.");
+#endif
                 }
             }
             catch (Exception)
@@ -373,15 +400,41 @@ namespace Microsoft.Internal.Common.Utils
                 byte[] buffer = new byte[256];
                 while (!token.IsCancellationRequested)
                 {
+#if DEBUG
+                    if (_verboseLogging)
+                        Console.WriteLine("ConnectedProxy::ClientReadServerWrite: Start reading bytes from client.");
+#endif
+
                     int bytesRead = await _clientStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
 
-                    // Check for end of stream indicating that remove end hung-up.
+#if DEBUG
+                    if (_verboseLogging)
+                        Console.WriteLine($"ConnectedProxy::ClientReadServerWrite: Read {bytesRead} bytes from client.");
+#endif
+
+                    // Check for end of stream indicating that remote end hung-up.
                     if (bytesRead == 0)
+                    {
+                        if (_verboseLogging)
+                            Console.WriteLine("ConnectedProxy::ClientReadServerWrite: Client hung up.");
+
                         break;
+                    }
 
                     _clientServerByteTransfer += (ulong)bytesRead;
-                    await _serverStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
 
+#if DEBUG
+                    if (_verboseLogging)
+                        Console.WriteLine($"ConnectedProxy::ClientReadServerWrite: Start writing {bytesRead} bytes to server.");
+#endif
+
+                    await _serverStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
+                    await _serverStream.FlushAsync().ConfigureAwait(false);
+
+#if DEBUG
+                    if (_verboseLogging)
+                        Console.WriteLine($"ConnectedProxy::ClientReadServerWrite: Wrote {bytesRead} bytes to server.");
+#endif
                 }
             }
             catch (Exception)
