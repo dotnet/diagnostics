@@ -14,7 +14,7 @@
 
 // ******************************************************************************
 // WARNING!!!: This header is also used by the runtime repo.
-// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/inc/gcdump.h
+// See: https://github.com/dotnet/runtime/blob/main/src/coreclr/inc/gcdump.h
 // ******************************************************************************
 
 /*****************************************************************************/

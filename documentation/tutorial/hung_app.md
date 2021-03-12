@@ -270,7 +270,7 @@ One of the pain points in our analysis process was around having to eye ball hun
 Before we get started, you need to do the following:
 
 1. Clone the dotnet/diagnostics repo (https://github.com/dotnet/diagnostics)
-2. Make sure all the pre-requisites are in place to build the repo (https://github.com/dotnet/diagnostics/blob/master/README.md)
+2. Make sure all the pre-requisites are in place to build the repo (https://github.com/dotnet/diagnostics/blob/main/README.md)
 3. Add the uniquestacks.cs file to ~/diagnostics/src/Tools/dotnet-dump/Commands folder.
 4. Build the repo using ~/diagnostics/build.sh 
 

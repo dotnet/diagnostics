@@ -25,7 +25,7 @@ namespace Microsoft.Diagnostics.Monitoring
             // Store character literals as it iterates the command line. Escaped
             // characters within double quotes are unescaped for non-Windows systems.
             // Algorithm based on INIT_FormatCommandLine behavior from
-            // https://github.com/dotnet/runtime/blob/master/src/coreclr/src/pal/src/init/pal.cpp
+            // https://github.com/dotnet/runtime/blob/main/src/coreclr/pal/src/init/pal.cpp
             StringBuilder builder = new StringBuilder(commandLineLength);
             do
             {
