@@ -512,7 +512,7 @@ void GCPrintSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_allocated_si
             (ULONG_PTR)(segment.committed - (DWORD_PTR)segment.mem));
 
     total_allocated_size += end - (DWORD_PTR)segment.mem;
-    total_committed_size += segment.committed - segment.mem;
+    total_committed_size += (DWORD_PTR)(segment.committed - segment.mem);
 }
 
 void GCPrintLargeHeapSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_allocated_size, DWORD_PTR &total_committed_size)
