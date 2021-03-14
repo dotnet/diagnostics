@@ -5,6 +5,7 @@
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using System;
+using System.Linq;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -28,7 +29,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 if (Verbose)
                 {
-                    WriteLine("{0}", module.Name);
+                    WriteLine("{0}{1}", module.Name, module.IsDynamic ? "(Dynamic)" : "");
                     WriteLine("    AssemblyName:    {0}", module.AssemblyName);
                     WriteLine("    ImageBase:       {0:X16}", module.ImageBase);
                     WriteLine("    Size:            {0:X8}", module.Size);
@@ -51,7 +52,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
                 else
                 {
-                    WriteLine("{0:X16} {1:X8} {2}", module.ImageBase, module.Size, module.Name);
+                    WriteLine("{0:X16} {1:X8} {2}{3}", module.ImageBase, module.Size, module.Name, module.IsDynamic ? "(Dynamic)" : "");
                 }
             }
         }

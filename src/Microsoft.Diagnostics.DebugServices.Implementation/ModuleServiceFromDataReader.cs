@@ -16,24 +16,30 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class ModuleServiceFromDataReader : ModuleService
     {
-        class ModuleFromDataReader : Module
+        class ModuleFromDataReader : Module, IExportSymbols
         {
             // This is what clrmd returns for non-PE modules that don't have a timestamp
             private const uint InvalidTimeStamp = 0;
 
             private static readonly VersionInfo EmptyVersionInfo = new VersionInfo(0, 0, 0, 0);
             private readonly ModuleServiceFromDataReader _moduleService;
+            private readonly IExportReader _exportReader;
             private readonly ModuleInfo _moduleInfo;
             private readonly ulong _imageSize;
             private string _versionString;
 
-            public ModuleFromDataReader(ModuleServiceFromDataReader moduleService, int moduleIndex, ModuleInfo moduleInfo, ulong imageSize)
+            public ModuleFromDataReader(ModuleServiceFromDataReader moduleService, IExportReader exportReader, int moduleIndex, ModuleInfo moduleInfo, ulong imageSize)
                 : base(moduleService.Target)
             {
                 _moduleService = moduleService;
                 _moduleInfo = moduleInfo;
                 _imageSize = imageSize;
+                _exportReader = exportReader;
                 ModuleIndex = moduleIndex;
+                if (exportReader is not null)
+                {
+                    ServiceProvider.AddService<IExportSymbols>(this);
+                }
             }
 
             #region IModule
@@ -89,6 +95,20 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             #endregion
 
+            #region IExportSymbols
+
+            public bool TryGetSymbolAddress(string name, out ulong address)
+            {
+                if (_exportReader is not null)
+                {
+                    return _exportReader.TryGetSymbolAddress(ImageBase, name, out address);
+                }
+                address = 0;
+                return false;
+            }
+
+            #endregion
+
             protected override ModuleService ModuleService => _moduleService;
         }
 
@@ -108,6 +128,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             var modules = new Dictionary<ulong, IModule>();
             int moduleIndex = 0;
 
+            IExportReader exportReader = _dataReader as IExportReader;
             ModuleInfo[] moduleInfos = _dataReader.EnumerateModules().OrderBy((info) => info.ImageBase).ToArray();
             for (int i = 0; i < moduleInfos.Length; i++)
             {
@@ -127,7 +148,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         imageSize = startNext - start;
                     }
                 }
-                var module = new ModuleFromDataReader(this, moduleIndex, moduleInfo, imageSize);
+                var module = new ModuleFromDataReader(this, exportReader, moduleIndex, moduleInfo, imageSize);
                 try
                 {
                     modules.Add(moduleInfo.ImageBase, module);

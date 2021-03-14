@@ -292,17 +292,22 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             else 
             { 
-                if (SymbolService.IsSymbolStoreEnabled)
+                if (module.IndexTimeStamp.HasValue && module.IndexFileSize.HasValue)
                 {
-                    if (module.IndexTimeStamp.HasValue && module.IndexFileSize.HasValue)
+                    SymbolStoreKey key = PEFileKeyGenerator.GetKey(Path.GetFileName(module.FileName), module.IndexTimeStamp.Value, module.IndexFileSize.Value);
+                    if (key is not null)
                     {
-                        SymbolStoreKey key = PEFileKeyGenerator.GetKey(Path.GetFileName(module.FileName), module.IndexTimeStamp.Value, module.IndexFileSize.Value);
-                        if (key != null)
-                        {
-                            // Now download the module from the symbol server
-                            downloadFilePath = SymbolService.DownloadFile(key);
-                        }
+                        // Now download the module from the symbol server
+                        downloadFilePath = SymbolService.DownloadFile(key);
                     }
+                    else
+                    {
+                        Trace.TraceWarning($"GetPEReader: no index generated for module {module.FileName} ");
+                    }
+                }
+                else
+                {
+                    Trace.TraceWarning($"GetPEReader: module {module.FileName} has no index timestamp/filesize");
                 }
             }
 
@@ -324,6 +329,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     reader = new PEReader(stream);
                     if (reader.PEHeaders == null || reader.PEHeaders.PEHeader == null)
                     {
+                        Trace.TraceError($"GetPEReader: PEReader invalid headers");
                         return null;
                     }
                 }
@@ -354,17 +360,22 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             else 
             { 
-                if (SymbolService.IsSymbolStoreEnabled)
+                if (!module.BuildId.IsDefaultOrEmpty)
                 {
-                    if (!module.BuildId.IsDefaultOrEmpty)
+                    SymbolStoreKey key = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).SingleOrDefault();
+                    if (key is not null)
                     {
-                        var key = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).SingleOrDefault();
-                        if (key != null)
-                        {
-                            // Now download the module from the symbol server
-                            downloadFilePath = SymbolService.DownloadFile(key);
-                        }
+                        // Now download the module from the symbol server
+                        downloadFilePath = SymbolService.DownloadFile(key);
                     }
+                    else
+                    {
+                        Trace.TraceWarning($"GetELFFile: no index generated for module {module.FileName} ");
+                    }
+                }
+                else
+                {
+                    Trace.TraceWarning($"GetELFFile: module {module.FileName} has no build id");
                 }
             }
 
@@ -386,6 +397,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     elfFile = new ELFFile(new StreamAddressSpace(stream), position: 0, isDataSourceVirtualAddressSpace: false);
                     if (!elfFile.IsValid())
                     {
+                        Trace.TraceError($"GetELFFile: not a valid file");
                         return null;
                     }
                 }
@@ -416,17 +428,22 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             else 
             { 
-                if (SymbolService.IsSymbolStoreEnabled)
+                if (!module.BuildId.IsDefaultOrEmpty)
                 {
-                    if (!module.BuildId.IsDefaultOrEmpty)
+                    SymbolStoreKey key = MachOFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).SingleOrDefault();
+                    if (key is not null)
                     {
-                        var key = MachOFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).SingleOrDefault();
-                        if (key != null)
-                        {
-                            // Now download the module from the symbol server
-                            downloadFilePath = SymbolService.DownloadFile(key);
-                        }
+                        // Now download the module from the symbol server
+                        downloadFilePath = SymbolService.DownloadFile(key);
                     }
+                    else
+                    {
+                        Trace.TraceWarning($"GetMachOFile: no index generated for module {module.FileName} ");
+                    }
+                }
+                else
+                {
+                    Trace.TraceWarning($"GetMachOFile: module {module.FileName} has no index timestamp/filesize");
                 }
             }
 
@@ -448,6 +465,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     machoFile = new MachOFile(new StreamAddressSpace(stream), position: 0, dataSourceIsVirtualAddressSpace: false);
                     if (!machoFile.IsValid())
                     {
+                        Trace.TraceError($"GetMachOFile: not a valid file");
                         return null;
                     }
                 }

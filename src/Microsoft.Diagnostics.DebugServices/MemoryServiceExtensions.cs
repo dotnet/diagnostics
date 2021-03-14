@@ -144,7 +144,7 @@ namespace Microsoft.Diagnostics.DebugServices
             public override int Read(byte[] buffer, int offset, int count)
             {
                 if (Position + count > Length) {
-                    throw new ArgumentOutOfRangeException();
+                    return 0;
                 }
                 if (_memoryService.ReadMemory(_address + (ulong)Position, new Span<byte>(buffer, offset, count), out int bytesRead)) {
                     Position += bytesRead;
