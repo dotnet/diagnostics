@@ -231,11 +231,6 @@ namespace Microsoft.Internal.Common.Utils
 
                     throw;
                 }
-                finally
-                {
-                    connectTokenSource?.Dispose();
-                    connectTimeoutTokenSource?.Dispose();
-                }
 
                 clientStream = new ExposedSocketNetworkStream(unixDomainSocket, ownsSocket: true);
             }

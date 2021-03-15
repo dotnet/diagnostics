@@ -134,8 +134,8 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
 
         public async Task<int> RunICTSProxy(CancellationToken token, string ipcClient, string tcpServer, bool autoShutdown, bool debug)
         {
-            CancellationTokenSource cancelProxyTask = new CancellationTokenSource();
-            CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelProxyTask.Token);
+            using CancellationTokenSource cancelProxyTask = new CancellationTokenSource();
+            using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelProxyTask.Token);
 
             _verboseLogging = debug;
 
@@ -157,9 +157,6 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
                     }
                 }
             }
-
-            linkedCancelToken?.Dispose();
-            cancelProxyTask?.Dispose();
 
             return proxyTask.Result;
         }
