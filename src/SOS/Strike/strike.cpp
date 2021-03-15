@@ -2389,7 +2389,7 @@ enum StackTraceElementFlags
 };
 
 // This struct needs to match the definition in the runtime.
-// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h
+// See: https://github.com/dotnet/runtime/blob/main/src/coreclr/vm/clrex.h
 struct StackTraceElement
 {
     UINT_PTR        ip;
@@ -2815,7 +2815,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
             if (arrayLen != 0 && hr == S_OK)
             {
                 // This code is accessing the StackTraceInfo class in the runtime.
-                // See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h
+                // See: https://github.com/dotnet/runtime/blob/main/src/coreclr/vm/clrex.h
 #ifdef _TARGET_WIN64_
                 DWORD_PTR dataPtr = taStackTrace + sizeof(DWORD_PTR) + sizeof(DWORD) + sizeof(DWORD);
 #else
@@ -3691,7 +3691,8 @@ DECLARE_API(EEHeap)
         }
 
         ExtOut("Number of GC Heaps: %d\n", dwNHeaps);
-        DWORD_PTR totalSize = 0;
+        DWORD_PTR totalAllocatedSize = 0;
+        DWORD_PTR totalCommittedSize = 0;
         if (!gcheap.bServerMode)
         {
             DacpGcHeapDetails heapDetails;
@@ -3701,9 +3702,11 @@ DECLARE_API(EEHeap)
                 return Status;
             }
 
-            GCHeapInfo (heapDetails, totalSize);
-            ExtOut("Total Size:              ");
-            PrintHeapSize(totalSize, 0);
+            GCHeapInfo (heapDetails, totalAllocatedSize, totalCommittedSize);
+            ExtOut("Total Allocated Size:              ");
+            PrintHeapSize(totalAllocatedSize, 0);
+            ExtOut("Total Committed Size:              ");
+            PrintHeapSize(totalCommittedSize, 0);
         }
         else
         {
@@ -3732,17 +3735,23 @@ DECLARE_API(EEHeap)
                 }
                 ExtOut("------------------------------\n");
                 ExtOut("Heap %d (%p)\n", n, SOS_PTR(heapAddrs[n]));
-                DWORD_PTR heapSize = 0;
+                DWORD_PTR heapAllocSize = 0;
+                DWORD_PTR heapCommitSize = 0;
                 GCHeapDetails heapDetails(dacHeapDetails, heapAddrs[n]);
-                GCHeapInfo (heapDetails, heapSize);
-                totalSize += heapSize;
-                ExtOut("Heap Size:       " WIN86_8SPACES);
-                PrintHeapSize(heapSize, 0);
+                GCHeapInfo (heapDetails, heapAllocSize, heapCommitSize);
+                totalAllocatedSize += heapAllocSize;
+                totalCommittedSize += heapCommitSize;
+                ExtOut("Allocated Heap Size:       " WIN86_8SPACES);
+                PrintHeapSize(heapAllocSize, 0);
+                ExtOut("Committed Heap Size:       " WIN86_8SPACES);
+                PrintHeapSize(heapCommitSize, 0);
             }
         }
         ExtOut("------------------------------\n");
-        ExtOut("GC Heap Size:    " WIN86_8SPACES);
-        PrintHeapSize(totalSize, 0);
+        ExtOut("GC Allocated Heap Size:    " WIN86_8SPACES);
+        PrintHeapSize(totalAllocatedSize, 0);
+        ExtOut("GC Committed Heap Size:    " WIN86_8SPACES);
+        PrintHeapSize(totalCommittedSize, 0);
     }
     return Status;
 }
@@ -15732,7 +15741,7 @@ HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
         if (arrayLen)
         {
             // This code is accessing the StackTraceInfo class in the runtime.
-            // See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/vm/clrex.h
+            // See: https://github.com/dotnet/runtime/blob/main/src/coreclr/vm/clrex.h
 #ifdef _TARGET_WIN64_
             DWORD_PTR dataPtr = arrayPtr + sizeof(DWORD_PTR) + sizeof(DWORD) + sizeof(DWORD);
 #else

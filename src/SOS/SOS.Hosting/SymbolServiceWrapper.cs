@@ -837,7 +837,7 @@ namespace SOS.Hosting
 
         private void ReadPortableDebugTableEntries(PEReader peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry)
         {
-            // See spec: https://github.com/dotnet/corefx/blob/master/src/System.Reflection.Metadata/specs/PE-COFF.md
+            // See spec: https://github.com/dotnet/runtime/blob/main/docs/design/specs/PE-COFF.md
 
             codeViewEntry = default;
             embeddedPdbEntry = default;

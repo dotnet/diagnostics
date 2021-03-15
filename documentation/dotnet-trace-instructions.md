@@ -156,7 +156,7 @@ Monitoring                      |         200000000 | Events intended for monito
 Codesymbols                     |         400000000 | Events that will dump PDBs of dynamically generated assemblies to the EventPipe stream.
 Default                         |         4C14FCCBD | Recommend default flags (good compromise on verbosity).
 
-[source](https://github.com/Microsoft/perfview/blob/master/src/TraceEvent/Parsers/ClrTraceEventParser.cs#L41)
+[source](https://github.com/Microsoft/perfview/blob/main/src/TraceEvent/Parsers/ClrTraceEventParser.cs#L41)
 
 ## More information on .NET Providers
 

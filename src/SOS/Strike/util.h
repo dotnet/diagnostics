@@ -2125,7 +2125,7 @@ void GatherOneHeapFinalization(DacpGcHeapDetails& heapDetails, HeapStat *stat, B
 
 CLRDATA_ADDRESS GetAppDomainForMT(CLRDATA_ADDRESS mtPtr);
 CLRDATA_ADDRESS GetAppDomain(CLRDATA_ADDRESS objPtr);
-void GCHeapInfo(const GCHeapDetails &heap, DWORD_PTR &total_size);
+void GCHeapInfo(const GCHeapDetails &heap, DWORD_PTR &total_alloc_size, DWORD_PTR &total_committed_size);
 BOOL GCObjInHeap(TADDR taddrObj, const GCHeapDetails &heap,
     TADDR_SEGINFO& trngSeg, int& gen, TADDR_RANGE& allocCtx, BOOL &bLarge);
 

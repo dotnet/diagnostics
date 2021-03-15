@@ -1,6 +1,6 @@
 # .NET Core Diagnostics Vision 
 
-[This document](https://github.com/dotnet/diagnostics/blob/master/documentation/diagnostics-planing.md)
+[This document](https://github.com/dotnet/diagnostics/blob/main/documentation/diagnostics-planing.md)
 describes a high level vision/plan for diagnostics / monitoring for the .NET Core runtime.
 The overarching goal is easy to state.
 
@@ -360,7 +360,7 @@ A high level summary of the work being done is as follows
     Then flesh that out with details on how to do specific investigations, and in particular all the 
     other work items listed here will be included in that documentation.
  2. Add a new DumpASync command to the SOS debugging extension.  Work with Visual Studio Team to have it integrated into their parallel stacks view.  Make sure our existing Async diagnostics works well.
- 3. Create a new 'dotnet-collect' global command that allows the collection of EventPipe data 'by hand'.  (See [dotnet-collect And dotnet-analyze](https://github.com/aspnet/AspLabs/tree/master/src/DotNetDiagnostics) for more.
+ 3. Create a new 'dotnet-collect' global command that allows the collection of EventPipe data 'by hand'.  (See [dotnet-collect And dotnet-analyze](https://github.com/aspnet/AspLabs/tree/main/src/DotNetDiagnostics) for more.
     It should be able to collect traces that can be read with either PerfView or Visual Studio.
  4. Create a new 'dotnet-analyze' global command that allows you to do investigations on crash dumps.  Simple triage of crashes as well as memory investigations should be possible.
  5. Insure that normal Azure and App-Insights default dashboard metrics work with .NET Core (on all platforms).  dotnet-collect will allow the ad-hoc collection of metrics for local monitoring.

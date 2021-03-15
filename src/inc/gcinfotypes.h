@@ -12,7 +12,7 @@
 
 // ******************************************************************************
 // WARNING!!!: This header is also used by the runtime repo.
-// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/inc/gcinfotypes.h
+// See: https://github.com/dotnet/runtime/blob/main/src/coreclr/inc/gcinfotypes.h
 // ******************************************************************************
 
 #define PARTIALLY_INTERRUPTIBLE_GC_SUPPORTED
@@ -815,4 +815,3 @@ PORTABILITY_WARNING("Please specialize these definitions for your platform!")
 #endif
 
 #endif // !__GCINFOTYPES_H__
-
