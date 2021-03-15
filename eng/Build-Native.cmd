@@ -304,10 +304,10 @@ mkdir %__dotnet_sos%\win-%__BuildArch%
 mkdir %__dotnet_sos%\publish\win-%__BuildArch%
 mkdir %__dotnet_dump%\win-%__BuildArch%
 mkdir %__dotnet_dump%\publish\win-%__BuildArch%
-xcopy /y /f /i %__BinDir% %__dotnet_sos%\win-%__BuildArch%
-xcopy /y /f /i %__BinDir% %__dotnet_sos%\publish\win-%__BuildArch%
-xcopy /y /f /i %__BinDir% %__dotnet_dump%\win-%__BuildArch%
-xcopy /y /f /i %__BinDir% %__dotnet_dump%\publish\win-%__BuildArch%
+xcopy /y /q /i %__BinDir% %__dotnet_sos%\win-%__BuildArch%
+xcopy /y /q /i %__BinDir% %__dotnet_sos%\publish\win-%__BuildArch%
+xcopy /y /q /i %__BinDir% %__dotnet_dump%\win-%__BuildArch%
+xcopy /y /q /i %__BinDir% %__dotnet_dump%\publish\win-%__BuildArch%
 
 REM =========================================================================================
 REM ===

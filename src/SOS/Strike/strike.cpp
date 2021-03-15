@@ -8341,7 +8341,7 @@ DECLARE_API(bpmd)
         }
 
         // Get modules that may need a breakpoint bound
-        if ((Status = CheckEEDll()) == S_OK)
+        if ((Status = GetRuntime(&g_pRuntime)) == S_OK)
         {
             if ((Status = LoadClrDebugDll()) != S_OK)
             {
@@ -10828,6 +10828,10 @@ DECLARE_API(DumpGCData)
 #endif //GC_CONFIG_DRIVEN
 }
 
+#ifdef FEATURE_PAL
+extern char sccsid[];
+#endif
+
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -10843,42 +10847,39 @@ DECLARE_API(EEVersion)
     ArrayHolder<char> fileVersionBuffer = new char[fileVersionBufferSize];
     VS_FIXEDFILEINFO version;
 
-    BOOL ret = GetEEVersion(&version, fileVersionBuffer.GetPtr(), fileVersionBufferSize);
-    if (ret)
+    HRESULT hr = g_pRuntime->GetEEVersion(&version, fileVersionBuffer.GetPtr(), fileVersionBufferSize);
+    if (SUCCEEDED(hr))
     {
-        if (version.dwFileVersionMS != (DWORD)-1)
-        {
-            ExtOut("%u.%u.%u.%u",
-                HIWORD(version.dwFileVersionMS),
-                LOWORD(version.dwFileVersionMS),
-                HIWORD(version.dwFileVersionLS),
-                LOWORD(version.dwFileVersionLS));
+        ExtOut("%u.%u.%u.%u",
+            HIWORD(version.dwFileVersionMS),
+            LOWORD(version.dwFileVersionMS),
+            HIWORD(version.dwFileVersionLS),
+            LOWORD(version.dwFileVersionLS));
 
-            if (IsRuntimeVersion(version, 3)) {
-                ExtOut(" (3.x runtime)");
-            }
+        if (IsRuntimeVersion(version, 3)) {
+            ExtOut(" (3.x runtime)");
+        }
 
 #ifndef FEATURE_PAL
-            if (IsWindowsTarget())
+        if (IsWindowsTarget())
+        {
+            if (version.dwFileFlags & VS_FF_DEBUG) {
+                ExtOut(" checked or debug build");
+            }
+            else
             {
-                if (version.dwFileFlags & VS_FF_DEBUG) {
-                    ExtOut(" checked or debug build");
-                }
+                BOOL fRet = IsRetailBuild((size_t)g_pRuntime->GetModuleAddress());
+                if (fRet)
+                    ExtOut(" retail");
                 else
-                {
-                    BOOL fRet = IsRetailBuild((size_t)g_pRuntime->GetModuleAddress());
-                    if (fRet)
-                        ExtOut(" retail");
-                    else
-                        ExtOut(" free");
-                }
+                    ExtOut(" free");
             }
+        }
 #endif
-            ExtOut("\n");
+        ExtOut("\n");
 
-            if (fileVersionBuffer[0] != '\0') {
-                ExtOut("%s\n", fileVersionBuffer.GetPtr());
-            }
+        if (fileVersionBuffer[0] != '\0') {
+            ExtOut("%s\n", fileVersionBuffer.GetPtr());
         }
     }
 
@@ -10893,27 +10894,26 @@ DECLARE_API(EEVersion)
         ExtOut("In plan phase of garbage collection\n");
     }
 
-#ifndef FEATURE_PAL
     // Print SOS version
+#ifdef FEATURE_PAL
+    ExtOut("SOS Version: %s\n", sccsid + sizeof("@(#)Version"));
+#else
     VS_FIXEDFILEINFO sosVersion;
-    if (IsWindowsTarget() && GetSOSVersion(&sosVersion))
+    if (GetSOSVersion(&sosVersion))
     {
-        if (sosVersion.dwFileVersionMS != (DWORD)-1)
-        {
-            ExtOut("SOS Version: %u.%u.%u.%u",
-                HIWORD(sosVersion.dwFileVersionMS),
-                LOWORD(sosVersion.dwFileVersionMS),
-                HIWORD(sosVersion.dwFileVersionLS),
-                LOWORD(sosVersion.dwFileVersionLS));
+        ExtOut("SOS Version: %u.%u.%u.%u",
+            HIWORD(sosVersion.dwFileVersionMS),
+            LOWORD(sosVersion.dwFileVersionMS),
+            HIWORD(sosVersion.dwFileVersionLS),
+            LOWORD(sosVersion.dwFileVersionLS));
 
-            if (sosVersion.dwFileFlags & VS_FF_DEBUG) {
-                ExtOut(" debug build");
-            }
-            else {
-                ExtOut(" retail build");
-            }
-            ExtOut("\n");
+        if (sosVersion.dwFileFlags & VS_FF_DEBUG) {
+            ExtOut(" debug build");
         }
+        else {
+            ExtOut(" retail build");
+        }
+        ExtOut("\n");
     }
 #endif // FEATURE_PAL
     return Status;
@@ -10927,74 +10927,37 @@ DECLARE_API(EEVersion)
 \**********************************************************************/
 DECLARE_API(SOSStatus)
 {
-    INIT_API_EXT();
+    INIT_API_NOEE();
 
-    BOOL bDesktop = FALSE;
-    BOOL bNetCore = FALSE;
-    BOOL bReset = FALSE;
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
-        {"-netfx", &bDesktop, COBOOL, FALSE},
-        {"-netcore", &bNetCore, COBOOL, FALSE},
-#endif
-        {"-reset", &bReset, COBOOL, FALSE},
-    };
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    IHostServices* hostServices = GetHostServices();
+    if (hostServices != nullptr)
     {
-        return Status;
+        std::string command("sosstatus ");
+        command.append(args);
+        Status = hostServices->DispatchCommand(command.c_str());
     }
-#ifndef FEATURE_PAL
-    if (bNetCore || bDesktop)
+    else
     {
-        if (IsWindowsTarget())
+        BOOL bReset = FALSE;
+        CMDOption option[] =
+        {   // name, vptr, type, hasValue
+            {"-reset", &bReset, COBOOL, FALSE},
+            {"--reset", &bReset, COBOOL, FALSE},
+            {"-r", &bReset, COBOOL, FALSE},
+        };
+        if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
         {
-            PCSTR name = bDesktop ? "desktop CLR" : ".NET Core";;
-            if (!Runtime::SwitchRuntime(bDesktop))
-            {
-                ExtErr("The %s runtime is not loaded\n", name);
-                return E_FAIL;
-            }
-            ExtOut("Switched to %s runtime successfully\n", name);
+            return Status;
+        }
+        if (bReset)
+        {
+            ReleaseTarget();
+            ExtOut("SOS state reset\n");
             return S_OK;
         }
-        else
-        {
-            ExtErr("The '-netfx' and '-netcore' options are only supported on Windows targets\n");
-            return E_FAIL;
-        }
+        Target::DisplayStatus();
+        DisplaySymbolStore();
     }
-#endif
-    if (bReset)
-    {
-        Runtime::CleanupRuntimes();
-        CleanupTempDirectory();
-        ExtOut("SOS state reset\n");
-        return S_OK;
-    }
-    if (g_targetMachine != nullptr) {
-        ExtOut("Target platform: %04x Context size %04x\n", g_targetMachine->GetPlatform(), g_targetMachine->GetContextSize());
-    }
-    if (g_runtimeModulePath != nullptr) {
-        ExtOut("Runtime module path: %s\n", g_runtimeModulePath);
-    }
-    if (g_pRuntime != nullptr) {
-        g_pRuntime->DisplayStatus();
-    }
-    if (g_tmpPath != nullptr) {
-        ExtOut("Temp path: %s\n", g_tmpPath);
-    }
-#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
-    if (g_useDesktopClrHost) {
-        ExtOut("Using the desktop .NET Framework to host the managed SOS code\n");
-    }
-    else 
-#endif
-    if (g_hostRuntimeDirectory != nullptr) {
-        ExtOut("Host runtime path: %s\n", g_hostRuntimeDirectory);
-    }
-    DisplaySymbolStore();
-
     return Status;
 }
 
@@ -14885,12 +14848,11 @@ DECLARE_API( VMMap )
 DECLARE_API(SOSFlush)
 {
     INIT_API_EXT();
-
-    Runtime::Flush();
-#ifdef FEATURE_PAL
-    FlushMetadataRegions();
-#endif
-
+    ITarget* target = GetTarget();
+    if (target != nullptr)
+    {
+        target->Flush();
+    }
     return Status;
 }
 
@@ -16143,11 +16105,7 @@ DECLARE_API(SuppressJitOptimization)
 
     if (nArg == 1 && (_stricmp(onOff.data, "On") == 0))
     {
-        // if CLR is already loaded, try to change the flags now
-        if (CheckEEDll() == S_OK)
-        {
-            SetNGENCompilerFlags(CORDEBUG_JIT_DISABLE_OPTIMIZATION);
-        }
+        SetNGENCompilerFlags(CORDEBUG_JIT_DISABLE_OPTIMIZATION);
 
         if (!g_fAllowJitOptimization)
         {
@@ -16162,11 +16120,7 @@ DECLARE_API(SuppressJitOptimization)
     }
     else if(nArg == 1 && (_stricmp(onOff.data, "Off") == 0))
     {
-        // if CLR is already loaded, try to change the flags now
-        if (CheckEEDll() == S_OK)
-        {
-            SetNGENCompilerFlags(CORDEBUG_JIT_DEFAULT);
-        }
+        SetNGENCompilerFlags(CORDEBUG_JIT_DEFAULT);
 
         if (g_fAllowJitOptimization)
             ExtOut("JIT optimization is already permitted\n");
@@ -16190,31 +16144,19 @@ HRESULT SetNGENCompilerFlags(DWORD flags)
 {
     HRESULT hr;
 
-    ToRelease<ICorDebugProcess2> proc2;
-    ICorDebugProcess* pCorDebugProcess;
-    if (FAILED(hr = g_pRuntime->GetCorDebugInterface(&pCorDebugProcess)))
+    // if CLR is already loaded, try to change the flags now
+    hr = GetRuntime(&g_pRuntime);
+    if (SUCCEEDED(hr))
     {
-        ExtOut("SOS: warning, prejitted code optimizations could not be changed. Failed to load ICorDebug HR = 0x%x\n", hr);
-    }
-    else if (FAILED(pCorDebugProcess->QueryInterface(__uuidof(ICorDebugProcess2), (void**) &proc2)))
-    {
-        if (flags != CORDEBUG_JIT_DEFAULT)
+        ToRelease<ICorDebugProcess2> proc2;
+        ICorDebugProcess* pCorDebugProcess;
+        if (FAILED(hr = g_pRuntime->GetCorDebugInterface(&pCorDebugProcess)))
         {
-            ExtOut("SOS: warning, prejitted code optimizations could not be changed. This CLR version doesn't support the functionality\n");
+            ExtOut("SOS: warning, prejitted code optimizations could not be changed. Failed to load ICorDebug HR = 0x%x\n", hr);
         }
-        else
+        else if (FAILED(pCorDebugProcess->QueryInterface(__uuidof(ICorDebugProcess2), (void**)&proc2)))
         {
-            hr = S_OK;
-        }
-    }
-    else if (FAILED(hr = proc2->SetDesiredNGENCompilerFlags(flags)))
-    {
-        // Versions of CLR that don't have SetDesiredNGENCompilerFlags DAC-ized will return E_FAIL.
-        // This was first supported in the clr_triton branch around 4/1/12, Apollo release
-        // It will likely be supported in desktop CLR during Dev12
-        if(hr == E_FAIL)
-        {
-            if(flags != CORDEBUG_JIT_DEFAULT)
+            if (flags != CORDEBUG_JIT_DEFAULT)
             {
                 ExtOut("SOS: warning, prejitted code optimizations could not be changed. This CLR version doesn't support the functionality\n");
             }
@@ -16223,41 +16165,106 @@ HRESULT SetNGENCompilerFlags(DWORD flags)
                 hr = S_OK;
             }
         }
-        else if (hr == CORDBG_E_NGEN_NOT_SUPPORTED)
+        else if (FAILED(hr = proc2->SetDesiredNGENCompilerFlags(flags)))
         {
-            if (flags != CORDEBUG_JIT_DEFAULT)
+            // Versions of CLR that don't have SetDesiredNGENCompilerFlags DAC-ized will return E_FAIL.
+            // This was first supported in the clr_triton branch around 4/1/12, Apollo release
+            // It will likely be supported in desktop CLR during Dev12
+            if (hr == E_FAIL)
             {
-                ExtOut("SOS: warning, prejitted code optimizations could not be changed. This CLR version doesn't support NGEN\n");
+                if (flags != CORDEBUG_JIT_DEFAULT)
+                {
+                    ExtOut("SOS: warning, prejitted code optimizations could not be changed. This CLR version doesn't support the functionality\n");
+                }
+                else
+                {
+                    hr = S_OK;
+                }
+            }
+            else if (hr == CORDBG_E_NGEN_NOT_SUPPORTED)
+            {
+                if (flags != CORDEBUG_JIT_DEFAULT)
+                {
+                    ExtOut("SOS: warning, prejitted code optimizations could not be changed. This CLR version doesn't support NGEN\n");
+                }
+                else
+                {
+                    hr = S_OK;
+                }
+            }
+            else if (hr == CORDBG_E_MUST_BE_IN_CREATE_PROCESS)
+            {
+                DWORD currentFlags = 0;
+                if (FAILED(hr = proc2->GetDesiredNGENCompilerFlags(&currentFlags)))
+                {
+                    ExtOut("SOS: warning, prejitted code optimizations could not be changed. GetDesiredNGENCompilerFlags failed hr=0x%x\n", hr);
+                }
+                else if (currentFlags != flags)
+                {
+                    ExtOut("SOS: warning, prejitted code optimizations could not be changed at this time. This setting is fixed once CLR starts\n");
+                }
+                else
+                {
+                    hr = S_OK;
+                }
             }
             else
             {
-                hr = S_OK;
+                ExtOut("SOS: warning, prejitted code optimizations could not be changed at this time. SetDesiredNGENCompilerFlags hr = 0x%x\n", hr);
             }
-        }
-        else if (hr == CORDBG_E_MUST_BE_IN_CREATE_PROCESS)
-        {
-            DWORD currentFlags = 0;
-            if (FAILED(hr = proc2->GetDesiredNGENCompilerFlags(&currentFlags)))
-            {
-                ExtOut("SOS: warning, prejitted code optimizations could not be changed. GetDesiredNGENCompilerFlags failed hr=0x%x\n", hr);
-            }
-            else if (currentFlags != flags)
-            {
-                ExtOut("SOS: warning, prejitted code optimizations could not be changed at this time. This setting is fixed once CLR starts\n");
-            }
-            else
-            {
-                hr = S_OK;
-            }
-        }
-        else
-        {
-            ExtOut("SOS: warning, prejitted code optimizations could not be changed at this time. SetDesiredNGENCompilerFlags hr = 0x%x\n", hr);
         }
     }
 
     return hr;
 }
+
+#ifndef FEATURE_PAL
+
+HRESULT LoadModuleEvent(IDebugClient* client, PCSTR moduleName)
+{
+    HRESULT handleEventStatus = DEBUG_STATUS_NO_CHANGE;
+
+    if (moduleName != NULL)
+    {
+        bool isRuntimeModule = false;
+
+        for (int runtime = 0; runtime < IRuntime::ConfigurationEnd; ++runtime)
+        {
+            if (_stricmp(moduleName, GetRuntimeModuleName((IRuntime::RuntimeConfiguration)runtime)) == 0)
+            {
+                isRuntimeModule = true;
+                break;
+            }
+        }
+
+        if (isRuntimeModule)
+        {
+            Extensions::GetInstance()->FlushTarget();
+            if (g_breakOnRuntimeModuleLoad)
+            {
+                g_breakOnRuntimeModuleLoad = false;
+                HandleRuntimeLoadedNotification(client);
+            }
+            // if we don't want the JIT to optimize, we should also disable optimized NGEN images
+            if (!g_fAllowJitOptimization)
+            {
+                ExtQuery(client);
+
+                // If we aren't successful SetNGENCompilerFlags will print relevant error messages
+                // and then we need to stop the debugger so the user can intervene if desired
+                if (FAILED(SetNGENCompilerFlags(CORDEBUG_JIT_DISABLE_OPTIMIZATION)))
+                {
+                    handleEventStatus = DEBUG_STATUS_BREAK;
+                }
+                ExtRelease();
+            }
+        }
+    }
+
+    return handleEventStatus;
+}
+
+#endif // FEATURE_PAL
 
 DECLARE_API(StopOnCatch)
 {
@@ -16485,8 +16492,6 @@ _EFN_GetManagedThread(
     return E_INVALIDARG;
 }
 
-#endif // FEATURE_PAL
-
 //
 // Sets the .NET Core runtime path to use to run the managed code within SOS/native debugger.
 //
@@ -16494,14 +16499,18 @@ DECLARE_API(SetHostRuntime)
 {
     INIT_API_EXT();
 
-    BOOL bDesktop = FALSE;
+    BOOL bNetFx = FALSE;
     BOOL bNetCore = FALSE;
+    BOOL bNone = FALSE;
+    BOOL bClear = FALSE;
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-#ifndef FEATURE_PAL
-        {"-netfx", &bDesktop, COBOOL, FALSE},
+        {"-netfx", &bNetFx, COBOOL, FALSE},
+        {"-f", &bNetFx, COBOOL, FALSE},
         {"-netcore", &bNetCore, COBOOL, FALSE},
-#endif
+        {"-c", &bNetCore, COBOOL, FALSE},
+        {"-none", &bNone, COBOOL, FALSE},
+        {"-clear", &bClear, COBOOL, FALSE},
     };
     StringHolder hostRuntimeDirectory;
     CMDValue arg[] =
@@ -16513,55 +16522,64 @@ DECLARE_API(SetHostRuntime)
     {
         return E_FAIL;
     }
-#ifndef FEATURE_PAL
-    if (narg > 0 || bNetCore || bDesktop)
-#else
-    if (narg > 0)
-#endif
+    if (narg > 0 || bNetCore || bNetFx || bNone)
     {
         if (IsHostingInitialized())
         {
-            ExtErr("Runtime hosting already initialized %s\n", g_hostRuntimeDirectory != nullptr ? g_hostRuntimeDirectory : "");
+            ExtErr("Runtime hosting already initialized\n");
+            goto exit;
+        }
+    }
+    if (bClear) 
+    {
+        SetHostRuntimeDirectory(nullptr);
+    }
+    else if (bNone) 
+    {
+        SetHostRuntimeFlavor(HostRuntimeFlavor::None);
+    }
+    else if (bNetCore) 
+    {
+        SetHostRuntimeFlavor(HostRuntimeFlavor::NetCore);
+    }
+    else if (bNetFx)
+    {
+        SetHostRuntimeFlavor(HostRuntimeFlavor::NetFx);
+    }
+    if (narg > 0) 
+    {
+        if (!SetHostRuntimeDirectory(hostRuntimeDirectory.data)) 
+        {
+            ExtErr("Invalid host runtime path %s\n", hostRuntimeDirectory.data);
             return E_FAIL;
         }
     }
-#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
-    if (bNetCore)
+exit:
+    const char* flavor = "<unknown>";
+    switch (GetHostRuntimeFlavor())
     {
-        g_useDesktopClrHost = false;
+        case HostRuntimeFlavor::None:
+            flavor = "no";
+            break;
+        case HostRuntimeFlavor::NetCore:
+            flavor = ".NET Core";
+            break;
+        case HostRuntimeFlavor::NetFx:
+            flavor = "desktop .NET Framework";
+            break;
+        default:
+            break;
     }
-    else if (bDesktop)
+    ExtOut("Using %s runtime to host the managed SOS code\n", flavor);
+    const char* directory = GetHostRuntimeDirectory();
+    if (directory != nullptr)
     {
-        g_useDesktopClrHost = true;
-    }
-#endif
-    if (narg > 0)
-    {
-        if (g_hostRuntimeDirectory != nullptr)
-        {
-            free((void*)g_hostRuntimeDirectory);
-        }
-        g_hostRuntimeDirectory = _strdup(hostRuntimeDirectory.data);
-#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
-        g_useDesktopClrHost = false;
-#endif
-    }
-#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
-    if (g_useDesktopClrHost)
-    {
-        ExtOut("Using the desktop .NET Framework to host the managed SOS code\n");
-    }
-    else 
-#endif
-    {
-        ExtOut("Using the .NET Core runtime to host the managed SOS code\n");
-        if (g_hostRuntimeDirectory != nullptr) 
-        {
-            ExtOut("Host runtime path: %s\n", g_hostRuntimeDirectory);
-        }
+        ExtOut("Host runtime path: %s\n", directory);
     }
     return S_OK;
 }
+
+#endif // FEATURE_PAL
 
 //
 // Sets the symbol server path.
@@ -16579,7 +16597,6 @@ DECLARE_API(SetSymbolServer)
     BOOL loadNative = FALSE;
     BOOL msdl = FALSE;
     BOOL symweb = FALSE;
-    BOOL logging = FALSE;
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-disable", &disable, COBOOL, FALSE},
@@ -16588,7 +16605,6 @@ DECLARE_API(SetSymbolServer)
         {"-pat", &authToken.data, COSTRING, TRUE},
         {"-timeout", &timeoutInMinutes, COSIZE_T, TRUE},
         {"-ms", &msdl, COBOOL, FALSE},
-        {"-log", &logging, COBOOL, FALSE},
 #ifdef FEATURE_PAL
         {"-loadsymbols", &loadNative, COBOOL, FALSE},
         {"-sympath", &windowsSymbolPath.data, COSTRING, TRUE},
@@ -16623,9 +16639,9 @@ DECLARE_API(SetSymbolServer)
         DisableSymbolStore();
     }
 
-    if (logging || msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr || searchDirectory.data != nullptr || windowsSymbolPath.data != nullptr)
+    if (msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr || searchDirectory.data != nullptr || windowsSymbolPath.data != nullptr)
     {
-        Status = InitializeSymbolStore(logging, msdl, symweb, symbolServer.data, authToken.data, (int)timeoutInMinutes, symbolCache.data, searchDirectory.data, windowsSymbolPath.data);
+        Status = InitializeSymbolStore(msdl, symweb, symbolServer.data, authToken.data, (int)timeoutInMinutes, symbolCache.data, searchDirectory.data, windowsSymbolPath.data);
         if (FAILED(Status))
         {
             return Status;
@@ -16654,10 +16670,6 @@ DECLARE_API(SetSymbolServer)
         {
             ExtOut("Added Windows symbol path: %s\n", windowsSymbolPath.data);
         }
-        if (logging)
-        {
-            ExtOut("Symbol download logging enabled\n");
-        }
     }
 #ifdef FEATURE_PAL
     else if (loadNative)
@@ -16672,37 +16684,154 @@ DECLARE_API(SetSymbolServer)
 
     return Status;
 }
-
+ 
 //
 // Sets the runtime module path
 //
 DECLARE_API(SetClrPath)
 {
-    INIT_API_EXT();
+    INIT_API_NOEE();
 
-    StringHolder runtimeModulePath;
-    CMDValue arg[] =
+    IHostServices* hostServices = GetHostServices();
+    if (hostServices != nullptr)
     {
-        {&runtimeModulePath.data, COSTRING},
-    };
-    size_t narg;
-    if (!GetCMDOption(args, nullptr, 0, arg, _countof(arg), &narg))
-    {
-        return E_FAIL;
+        std::string command("setclrpath ");
+        command.append(args);
+        Status = hostServices->DispatchCommand(command.c_str());
     }
-    if (narg > 0)
+    else
     {
-        if (g_runtimeModulePath != nullptr)
+        StringHolder runtimeModulePath;
+        CMDValue arg[] =
         {
-            free((void*)g_runtimeModulePath);
+            {&runtimeModulePath.data, COSTRING},
+        };
+        size_t narg;
+        if (!GetCMDOption(args, nullptr, 0, arg, _countof(arg), &narg))
+        {
+            return E_FAIL;
         }
-        g_runtimeModulePath = _strdup(runtimeModulePath.data);
+        if (narg > 0)
+        {
+            if (!Target::SetRuntimeDirectory(runtimeModulePath.data))
+            {
+                ExtErr("Invalid runtime path %s\n", runtimeModulePath.data);
+                return E_FAIL;
+            }
+        }
+        ITarget* target = GetTarget();
+        if (target != nullptr)
+        {
+            const char* runtimeDirectory = target->GetRuntimeDirectory();
+            if (runtimeDirectory != nullptr) {
+                ExtOut("Runtime module path: %s\n", runtimeDirectory);
+            }
+        }
     }
-    if (g_runtimeModulePath != nullptr)
+    return Status;
+}
+
+//
+// Lists and selects the current runtime
+//
+DECLARE_API(runtimes)
+{
+    INIT_API_NOEE();
+
+    IHostServices* hostServices = GetHostServices();
+    if (hostServices != nullptr)
     {
-        ExtOut("Runtime module path: %s\n", g_runtimeModulePath);
+        std::string command("runtimes ");
+        command.append(args);
+        Status = hostServices->DispatchCommand(command.c_str());
     }
-    return S_OK;
+    else
+    {
+        BOOL bNetFx = FALSE;
+        BOOL bNetCore = FALSE;
+        CMDOption option[] =
+        {   // name, vptr, type, hasValue
+            {"-netfx", &bNetFx, COBOOL, FALSE},
+            {"-netcore", &bNetCore, COBOOL, FALSE},
+        };
+        if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+        {
+            return Status;
+        }
+        if (bNetCore || bNetFx)
+        {
+#ifndef FEATURE_PAL
+            if (IsWindowsTarget())
+            {
+                PCSTR name = bNetFx ? "desktop .NET Framework" : ".NET Core";
+                if (!Target::SwitchRuntime(bNetFx))
+                {
+                    ExtErr("The %s runtime is not loaded\n", name);
+                    return E_FAIL;
+                }
+                ExtOut("Switched to %s runtime successfully\n", name);
+            }
+            else
+#endif
+            {
+                ExtErr("The '-netfx' and '-netcore' options are only supported on Windows targets\n");
+                return E_FAIL;
+            }
+        }
+        else
+        {
+            Target::DisplayStatus();
+        }
+    }
+    return Status;
+}
+
+//
+// Enables and disables managed extension logging
+//
+DECLARE_API(logging)
+{
+    INIT_API_NOEE();
+
+    IHostServices* hostServices = GetHostServices();
+    if (hostServices != nullptr)
+    {
+        std::string command("logging ");
+        command.append(args);
+        Status = hostServices->DispatchCommand(command.c_str());
+    }
+    else 
+    {
+        ExtErr("Command not loaded\n");
+    }
+
+    return Status;
+}
+
+//
+// Executes managed extension commands
+//
+DECLARE_API(ext)
+{
+    INIT_API_NOEE();
+
+    IHostServices* hostServices = GetHostServices();
+    if (hostServices != nullptr)
+    {
+        // Just load the managed infrastructure if no command. This is useful in lldb
+        // where the managed extension commands are not added until a command does 
+        // GetHostServices() like soshelp, logging, sosstatus, setsymbolserver and ext.
+        if (args != nullptr && strlen(args) > 0)
+        {
+            Status = hostServices->DispatchCommand(args);
+        }
+    }
+    else 
+    {
+        ExtErr("Command not loaded\n");
+    }
+
+    return Status;
 }
 
 void PrintHelp (__in_z LPCSTR pszCmdName)
@@ -16826,6 +16955,15 @@ DECLARE_API(Help)
 
     if (nArg == 1)
     {
+        IHostServices* hostServices = GetHostServices();
+        if (hostServices != nullptr)
+        {
+            if (hostServices->DisplayHelp(commandName.data) == S_OK)
+            {
+                return S_OK;
+            }
+        }
+
         // Convert commandName to lower-case
         LPSTR curChar = commandName.data;
         while (*curChar != '\0')
@@ -16847,6 +16985,12 @@ DECLARE_API(Help)
     else
     {
         PrintHelp ("contents");
+        IHostServices* hostServices = GetHostServices();
+        if (hostServices != nullptr)
+        {
+            ExtOut("\n");
+            hostServices->DisplayHelp(nullptr);
+        }
     }
 
     return S_OK;

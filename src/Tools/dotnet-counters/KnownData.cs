@@ -28,24 +28,24 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "0xffffffff", // Keywords
                 "5", // Level 
                 new[] { // Counters
-                    new CounterProfile{ Name="cpu-usage", Description="Percentage of time the process has utilized the CPU (%)", SupportedVersions=new[] { net30, net31, net50 } },
+                    new CounterProfile{ Name="cpu-usage", Description="The percent of process' CPU usage relative to all of the system CPU resources [0-100]", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="working-set", Description="Amount of working set used by the process (MB)", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="gc-heap-size", Description="Total heap size reported by the GC (MB)", SupportedVersions=new[] { net30, net31, net50 } },
-                    new CounterProfile{ Name="gen-0-gc-count", Description="Number of Gen 0 GCs / min", SupportedVersions=new[] { net30, net31, net50 } },
-                    new CounterProfile{ Name="gen-1-gc-count", Description="Number of Gen 1 GCs / min", SupportedVersions=new[] { net30, net31, net50 } },
-                    new CounterProfile{ Name="gen-2-gc-count", Description="Number of Gen 2 GCs / min", SupportedVersions=new[] { net30, net31, net50 } },
+                    new CounterProfile{ Name="gen-0-gc-count", Description="Number of Gen 0 GCs between update intervals", SupportedVersions=new[] { net30, net31, net50 } },
+                    new CounterProfile{ Name="gen-1-gc-count", Description="Number of Gen 1 GCs between update intervals", SupportedVersions=new[] { net30, net31, net50 } },
+                    new CounterProfile{ Name="gen-2-gc-count", Description="Number of Gen 2 GCs between update intervals", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="time-in-gc", Description="% time in GC since the last GC", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="gen-0-size", Description="Gen 0 Heap Size", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="gen-1-size", Description="Gen 1 Heap Size", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="gen-2-size", Description="Gen 2 Heap Size", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="loh-size", Description="LOH Size", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="poh-size", Description="POH (Pinned Object Heap) Size", SupportedVersions=new[] { net50 } },
-                    new CounterProfile{ Name="alloc-rate", Description="Number of bytes allocated in the managed heap per second", SupportedVersions=new[] { net30, net31, net50 } },
+                    new CounterProfile{ Name="alloc-rate", Description="Number of bytes allocated in the managed heap between update intervals", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="gc-fragmentation", Description="GC Heap Fragmentation", SupportedVersions=new[] { net50 } },
                     new CounterProfile{ Name="assembly-count", Description="Number of Assemblies Loaded", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="exception-count", Description="Number of Exceptions / sec", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="threadpool-thread-count", Description="Number of ThreadPool Threads", SupportedVersions=new[] { net30, net31, net50 } },
-                    new CounterProfile{ Name="monitor-lock-contention-count", Description="Number of times there were contention when trying to take the monitor lock per second", SupportedVersions=new[] { net30, net31, net50 } },
+                    new CounterProfile{ Name="monitor-lock-contention-count", Description="Number of times there were contention when trying to take the monitor lock between update intervals", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="threadpool-queue-length", Description="ThreadPool Work Items Queue Length", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="threadpool-completed-items-count", Description="ThreadPool Completed Work Items Count", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="active-timer-count", Description="Number of timers that are currently active", SupportedVersions=new[] { net30, net31, net50 } },
@@ -60,7 +60,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "0x0", // Keywords
                 "4", // Level 
                 new[] { // Counters
-                    new CounterProfile{ Name="requests-per-second", Description="Request rate", SupportedVersions=new[] { net30, net31, net50 } },
+                    new CounterProfile{ Name="requests-per-second", Description="Number of requests between update intervals", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="total-requests", Description="Total number of requests", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="current-requests", Description="Current number of requests", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="failed-requests", Description="Failed number of requests", SupportedVersions=new[] { net30, net31, net50 } },
@@ -73,9 +73,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "0x0", // Keywords
                 "4", // Level
                 new[] {
-                    new CounterProfile{ Name="connections-per-second", Description="Connection Rate", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="connections-per-second", Description="Number of connections between update intervals", SupportedVersions=new[] { net50 } },
                     new CounterProfile{ Name="total-connections", Description="Total Connections", SupportedVersions=new[] { net50 } },
-                    new CounterProfile{ Name="tls-handshakes-per-second", Description="Rate at which TLS Handshakes are made", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls-handshakes-per-second", Description="Number of TLS Handshakes made between update intervals", SupportedVersions=new[] { net50 } },
                     new CounterProfile{ Name="total-tls-handshakes", Description="Total number of TLS handshakes made", SupportedVersions=new[] { net50 } },
                     new CounterProfile{ Name="current-tls-handshakes", Description="Number of currently active TLS handshakes", SupportedVersions=new[] { net50 } },
                     new CounterProfile{ Name="failed-tls-handshakes", Description="Total number of failed TLS handshakes", SupportedVersions=new[] { net50 } },
@@ -91,11 +91,60 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "0x0", // Keywords
                 "4", // Level
                 new[] {
-                    new CounterProfile{ Name="requests-started", Description="Requests Started", SupportedVersions=new[] { net50 } },
-                    new CounterProfile{ Name="requests-started-rate", Description="Requests Started Rate", SupportedVersions=new[] { net50 } },
-                    new CounterProfile{ Name="requests-aborted", Description="Requests Aborted", SupportedVersions=new[] { net50 } },
-                    new CounterProfile{ Name="requests-aborted-rate", Description="Requests Aborted Rate", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="requests-started", Description="Total Requests Started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="requests-started-rate", Description="Number of Requests Started between update intervals", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="requests-aborted", Description="Total Requests Aborted", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="requests-aborted-rate", Description="Number of Requests Aborted between update intervals", SupportedVersions=new[] { net50 } },
                     new CounterProfile{ Name="current-requests", Description="Current Requests", SupportedVersions=new[] { net50 } }
+                },
+                runtimeVersion
+            );
+            yield return new CounterProvider(
+                "System.Net.NameResolution",
+                "A set of performance counters for DNS lookups",
+                "0x0",
+                "4",
+                new[] {
+                    new CounterProfile{ Name="dns-lookups-requested", Description="The number of DNS lookups requested since the process started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="dns-lookups-duration", Description="Average DNS Lookup Duration", SupportedVersions=new[] { net50 } },
+                },
+                runtimeVersion
+            );
+            yield return new CounterProvider(
+                "System.Net.Security",
+                "A set of performance counters for TLS",
+                "0x0",
+                "4",
+                new[] {
+                    new CounterProfile{ Name="tls-handshake-rate", Description="The number of TLS handshakes completed per update interval", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="total-tls-handshakes", Description="The total number of TLS handshakes completed since the process started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="current-tls-handshakes", Description="The current number of TLS handshakes that have started but not yet completed", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="failed-tls-handshakes", Description="The total number of TLS handshakes failed since the process started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="all-tls-sessions-open", Description="The number of active all TLS sessions", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls10-sessions-open", Description="The number of active TLS 1.0 sessions", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls11-sessions-open", Description="The number of active TLS 1.1 sessions", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls12-sessions-open", Description="The number of active TLS 1.2 sessions", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls13-sessions-open", Description="The number of active TLS 1.3 sessions", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="all-tls-handshake-duration", Description="The average duration of all TLS handshakes", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls10-handshake-duration", Description="The average duration of TLS 1.0 handshakes", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls11-handshake-duration", Description="The average duration of TLS 1.1 handshakes", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls12-handshake-duration", Description="The average duration of TLS 1.2 handshakes", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="tls13-handshake-duration", Description="The average duration of TLS 1.3 handshakes", SupportedVersions=new[] { net50 } },
+                },
+                runtimeVersion
+            );
+            yield return new CounterProvider(
+                "System.Net.Sockets",
+                "A set of performance counters for System.Net.Sockets",
+                "0x0",
+                "4",
+                new[] {
+                    new CounterProfile{ Name="outgoing-connections-established", Description="The total number of outgoing connections established since the process started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="incoming-connections-established", Description="The total number of incoming connections established since the process started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="bytes-received", Description="The total number of bytes received since the process started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="bytes-sent", Description="The total number of bytes sent since the process started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="datagrams-received", Description="The total number of datagrams received since the process started", SupportedVersions=new[] { net50 } },
+                    new CounterProfile{ Name="datagrams-sent", Description="The total number of datagrams sent since the process started", SupportedVersions=new[] { net50 } },
                 },
                 runtimeVersion
             );

@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public void BasicEventPipeSessionTest()
         {
             using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
-            runner.Start(timeoutInMSPipeCreation: 3000);
+            runner.Start(timeoutInMSPipeCreation: 15_000, testProcessTimeout: 60_000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
             using (var session = client.StartEventPipeSession(new List<EventPipeProvider>()
             {
@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public void EventPipeSessionStreamTest()
         {
             TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
-            runner.Start(timeoutInMSPipeCreation: 3000);
+            runner.Start(timeoutInMSPipeCreation: 15_000, testProcessTimeout: 60_000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
             runner.PrintStatus();
             output.WriteLine($"[{DateTime.Now.ToString()}] Trying to start an EventPipe session on process {runner.Pid}");
@@ -120,7 +120,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public void StartEventPipeSessionWithSingleProviderTest()
         {
             using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
-            runner.Start(timeoutInMSPipeCreation: 3000);
+            runner.Start(timeoutInMSPipeCreation: 15_000, testProcessTimeout: 60_000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
             using (var session = client.StartEventPipeSession(new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational)))
             {

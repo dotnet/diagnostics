@@ -8,24 +8,22 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest symstore version updated by darc -->
-    <MicrosoftSymbolStoreVersion>1.0.155902</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.215101</MicrosoftSymbolStoreVersion>
     <!-- Runtime versions to test -->
-    <MicrosoftNETCoreApp21Version>2.1.22</MicrosoftNETCoreApp21Version>
+    <MicrosoftNETCoreApp21Version>2.1.23</MicrosoftNETCoreApp21Version>
     <MicrosoftAspNetCoreApp21Version>$(MicrosoftNETCoreApp21Version)</MicrosoftAspNetCoreApp21Version>
-    <MicrosoftNETCoreApp31Version>3.1.8</MicrosoftNETCoreApp31Version>
+    <MicrosoftNETCoreApp31Version>3.1.10</MicrosoftNETCoreApp31Version>
     <MicrosoftAspNetCoreApp31Version>$(MicrosoftNETCoreApp31Version)</MicrosoftAspNetCoreApp31Version>
-    <MicrosoftNETCoreApp50Version>
-    </MicrosoftNETCoreApp50Version>
-    <MicrosoftAspNetCoreApp50Version>
-    </MicrosoftAspNetCoreApp50Version>
+    <MicrosoftNETCoreApp50Version>5.0.0</MicrosoftNETCoreApp50Version>
+    <MicrosoftAspNetCoreApp50Version>$(MicrosoftNETCoreApp50Version)</MicrosoftAspNetCoreApp50Version>
     <!-- Latest shared runtime version updated by darc -->
-    <MicrosoftNETCoreAppVersion>5.0.0-rtm.20529.3</MicrosoftNETCoreAppVersion>
-    <MicrosoftNETCoreAppRuntimewinx64Version>5.0.0</MicrosoftNETCoreAppRuntimewinx64Version>
+    <VSRedistCommonNetCoreSharedFrameworkx6460Version>6.0.0-preview.3.21161.2</VSRedistCommonNetCoreSharedFrameworkx6460Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>6.0.0-preview.3.21161.2</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>5.0.0-rc.2.20475.17</MicrosoftAspNetCoreAppRefInternalVersion>
-    <MicrosoftAspNetCoreAppRefVersion>5.0.0-rc.2.20475.17</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefInternalVersion>6.0.0-preview.3.21159.25</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefVersion>6.0.0-preview.3.21159.25</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftDotnetSdkInternalVersion>5.0.100-rc.2.20480.7</MicrosoftDotnetSdkInternalVersion>
+    <MicrosoftDotnetSdkInternalVersion>6.0.100-preview.1.21103.13</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
@@ -35,37 +33,24 @@
     <MicrosoftNetCompilersVersion>3.0.0</MicrosoftNetCompilersVersion>
     <!-- CoreFX -->
     <SystemReflectionMetadataVersion>1.8.1</SystemReflectionMetadataVersion>
-    <SystemCollectionsImmutableVersion>1.7.1</SystemCollectionsImmutableVersion>
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
     <!-- Other libs -->
-    <AzureStorageBlobsVersion>12.6.0</AzureStorageBlobsVersion>
-    <MicrosoftAspNetCoreVersion>2.1.7</MicrosoftAspNetCoreVersion>
-    <MicrosoftAspNetCoreHttpsPolicyVersion>2.1.1</MicrosoftAspNetCoreHttpsPolicyVersion>
-    <MicrosoftAspNetCoreMvcVersion>2.1.3</MicrosoftAspNetCoreMvcVersion>
-    <MicrosoftAspNetCoreResponseCompressionVersion>2.1.1</MicrosoftAspNetCoreResponseCompressionVersion>
-    <MicrosoftBclHashCodeVersion>1.1.0</MicrosoftBclHashCodeVersion>
     <MicrosoftBclAsyncInterfacesVersion>1.1.0</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>2.0.151902</MicrosoftDiagnosticsRuntimeVersion>
-    <MicrosoftDiagnosticsRuntimeUtilitiesVersion>2.0.151902</MicrosoftDiagnosticsRuntimeUtilitiesVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>2.0.161401</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeUtilitiesVersion>2.0.156101</MicrosoftDiagnosticsRuntimeUtilitiesVersion>
     <ParallelStacksRuntimeVersion>2.0.1</ParallelStacksRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>1.7.0</MicrosoftDiaSymReaderNativePackageVersion>
-    <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.57</MicrosoftDiagnosticsTracingTraceEventVersion>
-    <MicrosoftExtensionsConfigurationJsonVersion>2.1.1</MicrosoftExtensionsConfigurationJsonVersion>
-    <MicrosoftExtensionsConfigurationKeyPerFileVersion>2.1.1</MicrosoftExtensionsConfigurationKeyPerFileVersion>
-    <MicrosoftExtensionsDependencyInjectionVersion>2.1.1</MicrosoftExtensionsDependencyInjectionVersion>
-    <MicrosoftExtensionsHostingAbstractionsVersion>2.1.1</MicrosoftExtensionsHostingAbstractionsVersion>
+    <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.64</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftExtensionsLoggingVersion>2.1.1</MicrosoftExtensionsLoggingVersion>
-    <MicrosoftExtensionsLoggingConsoleVersion>2.1.1</MicrosoftExtensionsLoggingConsoleVersion>
     <!-- We use a newer version of LoggingEventSource due to a bug in an older version-->
     <MicrosoftExtensionsLoggingEventSourceVersion>3.1.4</MicrosoftExtensionsLoggingEventSourceVersion>
     <SystemCommandLineVersion>2.0.0-beta1.20468.1</SystemCommandLineVersion>
     <SystemCommandLineRenderingVersion>2.0.0-beta1.20074.1</SystemCommandLineRenderingVersion>
     <SystemMemoryVersion>4.5.4</SystemMemoryVersion>
     <SystemTextJsonVersion>4.7.1</SystemTextJsonVersion>
-    <SystemThreadingChannelsVersion>4.7.0</SystemThreadingChannelsVersion>
     <XUnitVersion>2.4.1</XUnitVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-    <MicrosoftDotNetRemoteExecutorVersion>6.0.0-beta.20552.5</MicrosoftDotNetRemoteExecutorVersion>
+    <MicrosoftDotNetRemoteExecutorVersion>6.0.0-beta.21152.1</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
   </PropertyGroup>
 </Project>

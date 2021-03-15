@@ -10,7 +10,6 @@
 #include "exts.h"
 #include "disasm.h"
 #ifndef FEATURE_PAL
-#include "EventCallbacks.h"
 
 #define VER_PRODUCTVERSION_W        (0x0100)
 
@@ -26,7 +25,6 @@ WINDBG_EXTENSION_APIS   ExtensionApis;
 PDEBUG_CLIENT         g_ExtClient;    
 PDEBUG_DATA_SPACES2   g_ExtData2;
 PDEBUG_ADVANCED       g_ExtAdvanced;
-PDEBUG_CLIENT         g_pCallbacksClient;
 
 #else
 
@@ -59,16 +57,16 @@ PDEBUG_SYSTEM_OBJECTS g_ExtSystem;
 
 // Queries for all debugger interfaces.
 #ifndef FEATURE_PAL    
-extern "C" HRESULT
+HRESULT
 ExtQuery(PDEBUG_CLIENT client)
 {
     HRESULT Status;
     g_ExtClient = client;
 #else
-extern "C" HRESULT
+HRESULT
 ExtQuery(ILLDBServices* services)
 {
-    // Initialize the PAL in one place and only once.
+    // Initialize the PAL and extension suppport in one place and only once.
     if (!g_palInitialized)
     {
         if (PAL_InitializeDLL() != 0)
@@ -98,7 +96,7 @@ ExtQuery(ILLDBServices* services)
     SOS_ExtQueryFailGo(g_ExtData2, IDebugDataSpaces2);
     SOS_ExtQueryFailGo(g_ExtAdvanced, IDebugAdvanced);
 #endif // FEATURE_PAL
-    return S_OK;
+    return Status;
 
  Fail:
     if (Status == E_OUTOFMEMORY)
@@ -108,28 +106,24 @@ ExtQuery(ILLDBServices* services)
     return Status;
 }
 
-extern "C" HRESULT
-ArchQuery(void)
+IMachine*
+GetTargetMachine(ULONG processorType)
 {
-    ULONG targetArchitecture;
     IMachine* targetMachine = NULL;
-
-    g_ExtControl->GetExecutingProcessorType(&targetArchitecture);
-
 #ifdef SOS_TARGET_AMD64
-    if(targetArchitecture == IMAGE_FILE_MACHINE_AMD64)
+    if (processorType == IMAGE_FILE_MACHINE_AMD64)
     {
         targetMachine = AMD64Machine::GetInstance();
     }
 #endif // SOS_TARGET_AMD64
 #ifdef SOS_TARGET_X86
-    if (targetArchitecture == IMAGE_FILE_MACHINE_I386)
+    if (processorType == IMAGE_FILE_MACHINE_I386)
     {
         targetMachine = X86Machine::GetInstance();
     }
 #endif // SOS_TARGET_X86
 #ifdef SOS_TARGET_ARM
-    switch (targetArchitecture)
+    switch (processorType)
     {
         case IMAGE_FILE_MACHINE_ARM:
         case IMAGE_FILE_MACHINE_THUMB:
@@ -139,20 +133,45 @@ ArchQuery(void)
     }
 #endif // SOS_TARGET_ARM
 #ifdef SOS_TARGET_ARM64
-    if (targetArchitecture == IMAGE_FILE_MACHINE_ARM64)
+    if (processorType == IMAGE_FILE_MACHINE_ARM64)
     {
         targetMachine = ARM64Machine::GetInstance();
     }
 #endif // SOS_TARGET_ARM64
+    return targetMachine;
+}
 
-    if (targetMachine == NULL)
+HRESULT
+ArchQuery(void)
+{
+    ULONG processorType = 0;
+    g_ExtControl->GetExecutingProcessorType(&processorType);
+
+    g_targetMachine = GetTargetMachine(processorType);
+    if (g_targetMachine == NULL)
     {
-        g_targetMachine = NULL;
-        ExtErr("SOS does not support the current target architecture 0x%08x\n", targetArchitecture);
+        const char* architecture = "";
+        switch (processorType)
+        {
+            case IMAGE_FILE_MACHINE_AMD64:
+                architecture = "x64";
+                break;
+            case IMAGE_FILE_MACHINE_I386:
+                architecture = "x86";
+                break;
+            case IMAGE_FILE_MACHINE_ARM:
+            case IMAGE_FILE_MACHINE_THUMB:
+            case IMAGE_FILE_MACHINE_ARMNT:
+                architecture = "arm32";
+                break;
+            case IMAGE_FILE_MACHINE_ARM64:
+                architecture = "arm64";
+                break;
+        }
+        ExtErr("SOS does not support the current target architecture '%s' (0x%04x). A 32 bit target may require a 32 bit debugger or vice versa. In general, try to use the same bitness for the debugger and target process.\n",
+            architecture, processorType);
         return E_FAIL;
     }
-
-    g_targetMachine = targetMachine;
     return S_OK;
 }
 
@@ -169,12 +188,13 @@ ExtRelease(void)
 #ifndef FEATURE_PAL
     EXT_RELEASE(g_ExtData2);
     EXT_RELEASE(g_ExtAdvanced);
-    g_ExtClient = NULL;
+    g_ExtClient = nullptr;
 #else 
     EXT_RELEASE(g_DebugClient);
     EXT_RELEASE(g_ExtServices2);
-    g_ExtServices = NULL;
+    g_ExtServices = nullptr;
 #endif // FEATURE_PAL
+    ReleaseTarget();
 }
 
 #ifndef FEATURE_PAL
@@ -196,16 +216,6 @@ void __cdecl _SOS_invalid_parameter(
     throw "SOS failure";
 }
 
-// Unregisters our windbg event callbacks and releases the client, event callback objects
-void CleanupEventCallbacks()
-{
-    if(g_pCallbacksClient != NULL)
-    {
-        g_pCallbacksClient->Release();
-        g_pCallbacksClient = NULL;
-    }
-}
-
 bool g_Initialized = false;
 
 bool IsInitializedByDbgEng()
@@ -218,9 +228,7 @@ HRESULT
 CALLBACK
 DebugExtensionInitialize(PULONG Version, PULONG Flags)
 {
-    IDebugClient *DebugClient;
-    PDEBUG_CONTROL DebugControl;
-    HRESULT Hr;
+    HRESULT hr;
 
     *Version = DEBUG_EXTENSION_VERSION(2, 0);
     *Flags = 0;
@@ -231,29 +239,35 @@ DebugExtensionInitialize(PULONG Version, PULONG Flags)
     }
     g_Initialized = true;
 
-    if ((Hr = DebugCreate(__uuidof(IDebugClient),
-                          (void **)&DebugClient)) != S_OK)
+    ReleaseHolder<IDebugClient> debugClient;
+    if ((hr = DebugCreate(__uuidof(IDebugClient), (void **)&debugClient)) != S_OK)
     {
-        return Hr;
+        return hr;
     }
-    if ((Hr = DebugClient->QueryInterface(__uuidof(IDebugControl),
-                                              (void **)&DebugControl)) != S_OK)
+
+    if ((hr = SOSExtensions::Initialize(debugClient)) != S_OK)
     {
-        return Hr;
+        return hr;
+    }
+
+    ReleaseHolder<IDebugControl> debugControl;
+    if ((hr = debugClient->QueryInterface(__uuidof(IDebugControl), (void **)&debugControl)) != S_OK)
+    {
+        return hr;
     }
 
     ExtensionApis.nSize = sizeof (ExtensionApis);
-    if ((Hr = DebugControl->GetWindbgExtensionApis64(&ExtensionApis)) != S_OK)
+    if ((hr = debugControl->GetWindbgExtensionApis64(&ExtensionApis)) != S_OK)
     {
-        return Hr;
+        return hr;
     }
     
     // Fixes the "Unable to read dynamic function table entries" error messages by disabling the WinDbg security
     // feature that prevents the loading of unknown out of proc stack walkers.
-    DebugControl->Execute(DEBUG_OUTCTL_IGNORE, ".settings set EngineInitialization.VerifyFunctionTableCallbacks=false", 
+    debugControl->Execute(DEBUG_OUTCTL_IGNORE, ".settings set EngineInitialization.VerifyFunctionTableCallbacks=false", 
         DEBUG_EXECUTE_NOT_LOGGED | DEBUG_EXECUTE_NO_REPEAT);
 
-    ExtQuery(DebugClient);
+    ExtQuery(debugClient);
     if (IsMiniDumpFileNODAC())
     {
         ExtOut (
@@ -267,28 +281,12 @@ DebugExtensionInitialize(PULONG Version, PULONG Flags)
     }
     ExtRelease();
     
-    OnUnloadTask::Register(CleanupEventCallbacks);
-    g_pCallbacksClient = DebugClient;
-    EventCallbacks* pCallbacksObj = new EventCallbacks(DebugClient);
-    IDebugEventCallbacks* pCallbacks = NULL;
-    pCallbacksObj->QueryInterface(__uuidof(IDebugEventCallbacks), (void**)&pCallbacks);
-    pCallbacksObj->Release();
-
-    if(FAILED(Hr = g_pCallbacksClient->SetEventCallbacks(pCallbacks)))
-    {
-        ExtOut ("SOS: Failed to register callback events\n");
-        pCallbacks->Release();
-        return Hr;
-    }
-    pCallbacks->Release();
-
 #ifndef _ARM_
     // Make sure we do not tear down the debugger when a security function fails
     // Since we link statically against CRT this will only affect the SOS module.
     _set_invalid_parameter_handler(_SOS_invalid_parameter);
 #endif
     
-    DebugControl->Release();
     return S_OK;
 }
 
@@ -306,6 +304,8 @@ DebugExtensionUninitialize(void)
 {
     // Execute all registered cleanup tasks
     OnUnloadTask::Run();
+    g_pRuntime = nullptr;
+    g_Initialized = false;
 }
 
 BOOL WINAPI 
@@ -319,14 +319,6 @@ DllMain(HANDLE hInstance, DWORD dwReason, LPVOID lpReserved)
 }
 
 #else // FEATURE_PAL
-
-__attribute__((destructor)) 
-void
-Uninitialize(void)
-{
-    // Execute all registered cleanup tasks
-    OnUnloadTask::Run();
-}
 
 HRESULT
 DebugClient::QueryInterface(
@@ -373,3 +365,27 @@ DebugClient::Release()
 }
 
 #endif // FEATURE_PAL
+
+/// <summary>
+/// Returns the host instance
+/// 
+/// * dotnet-dump - m_pHost has already been set by SOSInitializeByHost by SOS.Hosting
+/// * lldb - m_pHost has already been set by SOSInitializeByHost by libsosplugin which gets it via the InitializeHostServices callback
+/// * dbgeng - SOS.Extensions provides the instance via the InitializeHostServices callback
+/// </summary>
+IHost* SOSExtensions::GetHost()
+{
+    if (m_pHost == nullptr)
+    {
+#ifndef FEATURE_PAL
+        // Initialize the hosting runtime which will call InitializeHostServices and set m_pHost to the host instance
+        InitializeHosting();
+#endif
+        // Otherwise, use the local host instance (hostimpl.*) that creates a local target instance (targetimpl.*)
+        if (m_pHost == nullptr)
+        {
+            m_pHost = Host::GetInstance();
+        }
+    }
+    return m_pHost;
+}

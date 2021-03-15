@@ -18,9 +18,18 @@ Frequently Asked Questions
     Can not load or initialize libmscordaccore.so. The target runtime may not be initialized.
     ClrStack  failed
     ```
+    or
+    ```
+    Failed to load data access module, 0x80131c4f
+    You can run the debugger command 'setclrpath ' to control the load path of libmscordaccore.so.
+    If that succeeds, the SOS command should work on retry.
+    For more information see https://go.microsoft.com/fwlink/?linkid=2135652
+    ```
     First try enabling the symbol downloading with `setsymbolserver -ms`. This is already enabled for `dotnet-dump analyze` and if SOS for lldb was installed with `dotnet-sos install`.
 
     If that doesn't work, try using the `setclrpath <directory>` command with a directory that contains the matching version of the DAC module. This is useful for private runtimes or debug builds that haven't been published to our symbol servers.
+
+    If this is a dump, the problem could also be that the dump is missing some memory required by SOS. Try generating a "full" dump (the default with `dotnet-dump collect` without a `--type` option) or add setting the crash dump generation (createdump) environment variable `COMPlus_DbgMiniDumpType=4`. For more details on crash dump generation see [here](https://docs.microsoft.com/en-us/dotnet/core/diagnostics/dumps#collecting-dumps-on-crash).
 
 * If you receive this error message executing a SOS command:
     ```
@@ -32,3 +41,14 @@ Frequently Asked Questions
     * The process or core dump hasn't loaded the .NET Core runtime yet.
     * The coredump was loaded under lldb without specifying the host (i.e `dotnet`). `target modules list` doesn't display `libcoreclr.so` or `libcoreclr.dylib`. Start lldb with the host as the target program and the core file, for example `lldb --core coredump /usr/share/dotnet/dotnet`. In case you don't have the host available, `dotnet symbol` is will be able to download them.
     * If a coredump was loaded under lldb, a host was specified, and `target modules list` displays the runtime module but you still get that message lldb needs the correct version of libcoreclr.so/dylib next to the coredump. You can use `dotnet-symbol --modules <coredump>` to download the needed binaries.
+
+* If you receive one of these error messages executing a SOS command running on Windows:
+    ```
+    SOS does not support the current target architecture 0x0000014c
+    ```
+   or 
+    ```
+    SOS does not support the current target architecture 'arm32' (0x01c4). A 32 bit target may require a 32 bit debugger or vice versa. In general, try to use the same bitness for the debugger and target process.
+    ```
+
+    You may need a different bitness of the Windows (windbg/cdb) debugger or dotnet-dump. If you are running an x64 (64 bit), try an x86 (32 bit) version. The easiest way to get an x86 version of dotnet-dump is installing the "single-file" version [here](https://aka.ms/dotnet-dump/win-x86). For more information on single-file tools see [here](https://github.com/dotnet/diagnostics/blob/master/documentation/single-file-tools.md#single-file-diagnostic-tools).

@@ -1,7 +1,7 @@
 <!--
   The xunit tests in Debugger.Tests aren't truly unit tests - they depend on other stuff that may
   not be in the same directory. This file configures the tests to find what they need. At the moment
-  this file is generated in a hard coded way to support running from the bin directory on our git 
+  this file is generated in a hard coded way to support running from the bin directory on our git
   based build, but once we understand the different environments the tests will need to run in we
   can figure out the right build and deployment strategy for each. Hopefully this configuration offers
   enough flexibility that the tests themselves don't need to change.
@@ -20,7 +20,7 @@
   <InstallDir>$(RootBinDir)/bin/$(OS).$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
   <LogDir>$(RootBinDir)/TestResults/$(TargetConfiguration)/sos.unittests_$(Timestamp)</LogDir>
   <DumpDir>$(RootBinDir)/tmp/$(TargetConfiguration)\dumps</DumpDir>
-  
+
   <TestWebApp3>true</TestWebApp3>
   <TestWebApp3 Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp3>
 
@@ -28,6 +28,10 @@
   <TestRuntime21 Condition="'$(RuntimeVersion21)' == ''">false</TestRuntime21>
   <TestRuntime21 Condition="'$(TargetArchitecture)' == 'arm'">false</TestRuntime21>
   <TestRuntime21 Condition="'$(TargetArchitecture)' == 'arm64'">false</TestRuntime21>
+
+  <TestDotnetDumpCommandsWithRuntime21>true</TestDotnetDumpCommandsWithRuntime21>
+  <TestDotnetDumpCommandsWithRuntime21 Condition="'$(RuntimeVersion21)' == ''">false</TestDotnetDumpCommandsWithRuntime21>
+  <TestDotnetDumpCommandsWithRuntime21 Condition="'$(OS)' == 'Linux'">false</TestDotnetDumpCommandsWithRuntime21>
 
   <!-- Build the debuggee for this framework version but run it on latest -->
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net5.0</BuildProjectFrameworkLatest>
@@ -52,6 +56,7 @@
     <Option Condition="'$(RuntimeVersionLatest)' != ''">
       <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+      <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
     </Option>
     <Option Condition="'$(RuntimeVersion50)' != ''">
       <BuildProjectFramework>net5.0</BuildProjectFramework>
@@ -60,6 +65,7 @@
     <Option Condition="'$(RuntimeVersion31)' != ''">
       <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
+      <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
     </Option>
     <Option Condition="'$(TestRuntime21)' == 'true'">
       <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
@@ -77,7 +83,6 @@
         <Option Condition="'$(RuntimeVersionLatest)' != ''">
           <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
-          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
         <Option Condition="'$(RuntimeVersion50)' != ''">
           <BuildProjectFramework>net5.0</BuildProjectFramework>
@@ -113,6 +118,37 @@
           <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
           <FrameworkVersion>$(AspNetCoreVersion31)</FrameworkVersion>
+        </Option>
+      </Options>
+    </Option>
+    <!--
+        DotnetDumpCommands (runs on every runtime except netcore2.1 on Linux)
+      -->
+    <Option>
+      <Options>
+        <Option>
+          <TestName>DotnetDumpCommands</TestName>
+        </Option>
+      </Options>
+      <Options>
+        <Option Condition="'$(RuntimeVersionLatest)' != ''">
+          <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+        </Option>
+        <Option Condition="'$(RuntimeVersion50)' != ''">
+          <BuildProjectFramework>net5.0</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
+        </Option>
+        <Option Condition="'$(RuntimeVersion31)' != ''">
+          <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+        </Option>
+        <Option Condition="'$(TestDotnetDumpCommandsWithRuntime21)' == 'true'">
+          <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
       </Options>
     </Option>

@@ -1903,11 +1903,14 @@ cleanup the previous resources.
 
     (lldb) histclear
     Completed successfully.
-
 \\
 
 COMMAND: sethostruntime.
-SetHostRuntime <runtime-directory>
+SetHostRuntime [-c][-netcore] [-none] [-clear] <runtime-directory>
+
+-c, -netcore - switch to hosting on the .NET Core runtime
+-none        - disable hosting managed code (for testing).
+-clear       - clear the .NET Core host runtime path.
 
 This command sets the path to the .NET Core runtime to use to host the managed 
 code that runs as part of SOS in the debugger (lldb). The runtime needs
@@ -1936,15 +1939,15 @@ You can use the "dotnet --info" in a command shell to find the path of an instal
 COMMAND: setsymbolserver.
 COMMAND: loadsymbols.
 COMMAND: sympath.
-SetSymbolServer [-ms] [-disable] [-log]  [-loadsymbols] [-cache <cache-path>] [-directory <search-directory>] [-pat <token>] [-sympath <windows-symbol-path>] [<symbol-server-URL>]
+SetSymbolServer [-ms] [-disable] [-log]  [-loadsymbols] [-cache <cache-path>] [-directory <search-directory>] [-timeout <minutes> ] [-pat <token>] [-sympath <windows-symbol-path>] [<symbol-server-URL>]
 
 -ms - Use the public Microsoft symbol server.
 -disable - Disable symbol download support.
 -directory - Directory to search for symbols. Can be more than one.
+-timeout - Specify the symbol server timeout in minutes
 -pat - Access token to the authenticated server.
 -cache - Specific a symbol cache directory. The default is $HOME/.dotnet/symbolcache if not specified.
 -sympath - Add server, cache and directory paths in the Windows symbol path format.
--log - Enable symbol download logging.
 -loadsymbols - Attempts to download the native .NET Core symbols for the runtime
 <symbol-server-URL> - Symbol server URL.
 
@@ -2005,4 +2008,16 @@ Sets the path to load the runtime DAC/DBI files. This command may be necessary f
 on another machine or for triage dumps.
 
     (lldb) setclrpath /home/user/coreclr/bin/Product/Linux.x64.Debug
+\\
+
+COMMAND: runtimes.
+runtimes
+
+List the .NET runtimes in the target process.
+\\
+
+COMMAND: logging.
+logging [enable] [disable]
+
+Enables or disables the internal trace logging.
 \\

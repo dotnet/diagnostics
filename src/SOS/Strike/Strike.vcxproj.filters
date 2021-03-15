@@ -2,10 +2,8 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="disasm.cpp" />
-    <ClCompile Include="datatarget.cpp" />
     <ClCompile Include="dllsext.cpp" />
     <ClCompile Include="eeheap.cpp" />
-    <ClCompile Include="EventCallbacks.cpp" />
     <ClCompile Include="ExpressionNode.cpp" />
     <ClCompile Include="exts.cpp" />
     <ClCompile Include="gchist.cpp" />
@@ -20,15 +18,24 @@
     <ClCompile Include="WatchCmd.cpp" />
     <ClCompile Include="disasmX86.cpp" />
     <ClCompile Include="disasmARM64.cpp" />
-    <ClCompile Include="hostcoreclr.cpp" />
-    <ClCompile Include="runtime.cpp" />
-    <ClCompile Include="hostdesktop.cpp" />
+    <ClCompile Include="symbols.cpp" />
+    <ClCompile Include="dbgengservices.cpp" />
+    <ClCompile Include="platform\datatarget.cpp">
+      <Filter>platform</Filter>
+    </ClCompile>
+    <ClCompile Include="platform\hostimpl.cpp">
+      <Filter>platform</Filter>
+    </ClCompile>
+    <ClCompile Include="platform\runtimeimpl.cpp">
+      <Filter>platform</Filter>
+    </ClCompile>
+    <ClCompile Include="platform\targetimpl.cpp">
+      <Filter>platform</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="data.h" />
-    <ClInclude Include="datatarget.h" />
     <ClInclude Include="disasm.h" />
-    <ClInclude Include="EventCallbacks.h" />
     <ClInclude Include="ExpressionNode.h" />
     <ClInclude Include="exts.h" />
     <ClInclude Include="ntinfo.h" />
@@ -49,32 +56,40 @@
     <ClInclude Include="xplat\wdbgexts.h">
       <Filter>xplat</Filter>
     </ClInclude>
-    <ClInclude Include="inc\dbgeng.h">
-      <Filter>inc</Filter>
+    <ClInclude Include="symbols.h" />
+    <ClInclude Include="dbgengservices.h" />
+    <ClInclude Include="platform\cordebugdatatarget.h">
+      <Filter>platform</Filter>
     </ClInclude>
-    <ClInclude Include="inc\dbghelp.h">
-      <Filter>inc</Filter>
+    <ClInclude Include="platform\cordebuglibraryprovider.h">
+      <Filter>platform</Filter>
     </ClInclude>
-    <ClInclude Include="inc\wdbgexts.h">
-      <Filter>inc</Filter>
+    <ClInclude Include="platform\datatarget.h">
+      <Filter>platform</Filter>
     </ClInclude>
-    <ClInclude Include="hostcoreclr.h" />
-    <ClInclude Include="runtime.h" />
-    <ClInclude Include="cordebugdatatarget.h" />
-    <ClInclude Include="cordebuglibraryprovider.h" />
+    <ClInclude Include="platform\hostimpl.h">
+      <Filter>platform</Filter>
+    </ClInclude>
+    <ClInclude Include="platform\runtimeimpl.h">
+      <Filter>platform</Filter>
+    </ClInclude>
+    <ClInclude Include="platform\targetimpl.h">
+      <Filter>platform</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Native.rc" />
   </ItemGroup>
   <ItemGroup>
     <None Include="sos_unixexports.src" />
+    <None Include="sos.def" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="xplat">
       <UniqueIdentifier>{b766b3f8-a753-4134-bf7f-50c4f05b59b1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="inc">
-      <UniqueIdentifier>{406edc67-c8c4-4f19-ad39-c799a63f4c2a}</UniqueIdentifier>
+    <Filter Include="platform">
+      <UniqueIdentifier>{8340fe5a-df30-45ca-8a4e-7811ac6ebbd2}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

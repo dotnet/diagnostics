@@ -1,7 +1,7 @@
 <!--
   The xunit tests in Debugger.Tests aren't truly unit tests - they depend on other stuff that may
   not be in the same directory. This file configures the tests to find what they need. At the moment
-  this file is generated in a hard coded way to support running from the bin directory on our git 
+  this file is generated in a hard coded way to support running from the bin directory on our git
   based build, but once we understand the different environments the tests will need to run in we
   can figure out the right build and deployment strategy for each. Hopefully this configuration offers
   enough flexibility that the tests themselves don't need to change.
@@ -68,6 +68,7 @@
         <Option Condition="'$(RuntimeVersionLatest)' != ''">
           <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
         <Option Condition="'$(RuntimeVersion50)' != ''">
           <BuildProjectFramework>net5.0</BuildProjectFramework>
@@ -76,10 +77,12 @@
         <Option Condition="'$(RuntimeVersion31)' != ''">
           <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
         <Option Condition="'$(RuntimeVersion21)' != ''">
           <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
         <!--
             SOS.StackAndOtherTests (cli because tested with full, embedded and portable PDBs)
@@ -161,6 +164,34 @@
             </Option>
           </Options>
         </Option>
+        <Option>
+          <Options>
+            <Option>
+              <TestName>DotnetDumpCommands</TestName>
+            </Option>
+          </Options>
+          <Options>
+            <Option Condition="'$(RuntimeVersionLatest)' != ''">
+              <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+              <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+            </Option>
+            <Option Condition="'$(RuntimeVersion50)' != ''">
+              <BuildProjectFramework>net5.0</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
+            </Option>
+            <Option Condition="'$(RuntimeVersion31)' != ''">
+              <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
+              <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+            </Option>
+            <Option Condition="'$(RuntimeVersion21)' != ''">
+              <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
+              <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+            </Option>
+          </Options>
+        </Option>
       </Options>
 
       <FrameworkVersion Condition="'$(FrameworkVersion)' == ''">$(RuntimeFrameworkVersion)</FrameworkVersion>
@@ -178,6 +209,9 @@
         <Option>
           <TestName>SOS.StackAndOtherTests</TestName>
         </Option>
+        <Option>
+          <TestName>DotnetDumpCommands</TestName>
+        </Option>
       </Options>
       <TestProduct>Desktop</TestProduct>
       <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
@@ -186,6 +220,7 @@
       <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
       <DebugType>full</DebugType>
       <RuntimeSymbolsPath>$(DesktopFrameworkPath)</RuntimeSymbolsPath>
+      <SetHostRuntime>-netfx</SetHostRuntime>
     </Option>
   </Options>
 

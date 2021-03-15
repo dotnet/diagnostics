@@ -6,7 +6,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ToolCommandName>dotnet-counters</ToolCommandName>
     <RootNamespace>Microsoft.Diagnostics.Tools.Counters</RootNamespace>
-    <Description>.NET Core Performance Counter Tool</Description>
+    <Description>.NET Performance Counter Tool</Description>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
   </PropertyGroup>

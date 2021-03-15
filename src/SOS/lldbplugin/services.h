@@ -3,28 +3,30 @@
 // See the LICENSE file in the project root for more information.
 
 #include <cstdarg>
+#include <string>
+#include <set>
 
 #define CACHE_SIZE  4096
 
-class LLDBServices : public ILLDBServices, public ILLDBServices2
+class LLDBServices : public ILLDBServices, public ILLDBServices2, public IDebuggerServices
 {
 private:
     LONG m_ref;
-    lldb::SBDebugger &m_debugger;
-    lldb::SBCommandReturnObject &m_returnObject;
-
+    lldb::SBDebugger m_debugger;
+    lldb::SBCommandInterpreter m_interpreter;
     lldb::SBProcess *m_currentProcess;
     lldb::SBThread *m_currentThread;
+    uint32_t m_currentStopId;
+    std::set<std::string> m_commands;
 
     BYTE m_cache[CACHE_SIZE];
     ULONG64 m_startCache;
     bool m_cacheValid;
     ULONG m_cacheSize;
 
-    void OutputString(ULONG mask, PCSTR str);
     ULONG64 GetModuleBase(lldb::SBTarget& target, lldb::SBModule& module);
     ULONG64 GetModuleSize(lldb::SBModule& module);
-    DWORD_PTR GetExpression(lldb::SBFrame& frame, lldb::SBError& error, PCSTR exp);
+    ULONG64 GetExpression(lldb::SBFrame& frame, lldb::SBError& error, PCSTR exp);
     void GetContextFromFrame(lldb::SBFrame& frame, DT_CONTEXT *dtcontext);
     DWORD_PTR GetRegister(lldb::SBFrame& frame, const char *name);
 
@@ -38,14 +40,26 @@ private:
         m_cacheSize = CACHE_SIZE;
     }
 
+    void LoadNativeSymbols(lldb::SBTarget target, lldb::SBModule module, PFN_MODULE_LOAD_CALLBACK callback);
+
     lldb::SBProcess GetCurrentProcess();
     lldb::SBThread GetCurrentThread();
     lldb::SBFrame GetCurrentFrame();
 
 public:
-    LLDBServices(lldb::SBDebugger &debugger, lldb::SBCommandReturnObject &returnObject, lldb::SBProcess *process = nullptr, lldb::SBThread *thread = nullptr);
+    LLDBServices(lldb::SBDebugger debugger);
     ~LLDBServices();
  
+    lldb::SBProcess* SetCurrentProcess(lldb::SBProcess* process)
+    {
+        return (lldb::SBProcess*)InterlockedExchangePointer(&m_currentProcess, process);
+    }
+
+    lldb::SBThread* SetCurrentThread(lldb::SBThread* thread) 
+    { 
+        return (lldb::SBThread*)InterlockedExchangePointer(&m_currentThread, thread);
+    }
+
     //----------------------------------------------------------------------------
     // IUnknown
     //----------------------------------------------------------------------------
@@ -62,65 +76,65 @@ public:
     // ILLDBServices
     //----------------------------------------------------------------------------
 
-    PCSTR GetCoreClrDirectory();
+    PCSTR STDMETHODCALLTYPE GetCoreClrDirectory();
 
-    DWORD_PTR GetExpression(
+    ULONG64 STDMETHODCALLTYPE GetExpression(
         PCSTR exp);
 
-    HRESULT VirtualUnwind(
-        DWORD threadID,
+    HRESULT STDMETHODCALLTYPE VirtualUnwind(
+        DWORD threadId,
         ULONG32 contextSize,
         PBYTE context);
 
-    HRESULT SetExceptionCallback(
+    HRESULT STDMETHODCALLTYPE SetExceptionCallback(
         PFN_EXCEPTION_CALLBACK callback);
 
-    HRESULT ClearExceptionCallback();
+    HRESULT STDMETHODCALLTYPE ClearExceptionCallback();
 
     //----------------------------------------------------------------------------
     // IDebugControl2
     //----------------------------------------------------------------------------
 
-    HRESULT GetInterrupt();
+    HRESULT STDMETHODCALLTYPE GetInterrupt();
 
-    HRESULT Output(
+    HRESULT STDMETHODCALLTYPE Output(
         ULONG mask,
         PCSTR format,
         ...);
 
-    HRESULT OutputVaList(
+    HRESULT STDMETHODCALLTYPE OutputVaList(
         ULONG mask,
         PCSTR format,
         va_list args);
 
-    HRESULT ControlledOutput(
+    HRESULT STDMETHODCALLTYPE ControlledOutput(
         ULONG outputControl,
         ULONG mask,
         PCSTR format,
         ...);
 
-    HRESULT ControlledOutputVaList(
+    HRESULT STDMETHODCALLTYPE ControlledOutputVaList(
         ULONG outputControl,
         ULONG mask,
         PCSTR format,
         va_list args);
 
-    HRESULT GetDebuggeeType(
+    HRESULT STDMETHODCALLTYPE GetDebuggeeType(
         PULONG debugClass,
         PULONG qualifier);
 
-    HRESULT GetPageSize(
+    HRESULT STDMETHODCALLTYPE GetPageSize(
         PULONG size);
 
-    HRESULT GetExecutingProcessorType(
+    HRESULT STDMETHODCALLTYPE GetExecutingProcessorType(
         PULONG type);
 
-    HRESULT Execute(
+    HRESULT STDMETHODCALLTYPE Execute(
         ULONG outputControl,
         PCSTR command,
         ULONG flags);
 
-    HRESULT GetLastEventInformation(
+    HRESULT STDMETHODCALLTYPE GetLastEventInformation(
         PULONG type,
         PULONG processId,
         PULONG threadId,
@@ -131,7 +145,7 @@ public:
         ULONG descriptionSize,
         PULONG descriptionUsed);
 
-    HRESULT Disassemble(
+    HRESULT STDMETHODCALLTYPE Disassemble(
         ULONG64 offset,
         ULONG flags,
         PSTR buffer,
@@ -143,8 +157,7 @@ public:
     // IDebugControl4
     //----------------------------------------------------------------------------
 
-    HRESULT
-    GetContextStackTrace(
+    HRESULT STDMETHODCALLTYPE GetContextStackTrace(
         PVOID startContext,
         ULONG startContextSize,
         PDEBUG_STACK_FRAME frames,
@@ -158,13 +171,13 @@ public:
     // IDebugDataSpaces
     //----------------------------------------------------------------------------
 
-    HRESULT ReadVirtual(
+    HRESULT STDMETHODCALLTYPE ReadVirtual(
         ULONG64 offset,
         PVOID buffer,
         ULONG bufferSize,
         PULONG bytesRead);
 
-    HRESULT WriteVirtual(
+    HRESULT STDMETHODCALLTYPE WriteVirtual(
         ULONG64 offset,
         PVOID buffer,
         ULONG bufferSize,
@@ -174,37 +187,45 @@ public:
     // IDebugSymbols
     //----------------------------------------------------------------------------
 
-    HRESULT GetSymbolOptions(
+    HRESULT STDMETHODCALLTYPE GetSymbolOptions(
         PULONG options);
 
-    HRESULT GetNameByOffset(
+    HRESULT STDMETHODCALLTYPE GetNameByOffset(
         ULONG64 offset,
         PSTR nameBuffer,
         ULONG nameBufferSize,
         PULONG nameSize,
         PULONG64 displacement);
 
-    HRESULT GetNumberModules(
+    HRESULT STDMETHODCALLTYPE GetNameByOffset(
+        ULONG moduleIndex,
+        ULONG64 offset,
+        PSTR nameBuffer,
+        ULONG nameBufferSize,
+        PULONG nameSize,
+        PULONG64 displacement);
+
+    HRESULT STDMETHODCALLTYPE GetNumberModules(
         PULONG loaded,
         PULONG unloaded);
 
-    HRESULT GetModuleByIndex(
+    HRESULT STDMETHODCALLTYPE GetModuleByIndex(
         ULONG index,
         PULONG64 base);
 
-    HRESULT GetModuleByModuleName(
+    HRESULT STDMETHODCALLTYPE GetModuleByModuleName(
         PCSTR name,
         ULONG startIndex,
         PULONG index,
         PULONG64 base);
 
-    HRESULT GetModuleByOffset(
+    HRESULT STDMETHODCALLTYPE GetModuleByOffset(
         ULONG64 offset,
         ULONG startIndex,
         PULONG index,
         PULONG64 base);
 
-    HRESULT GetModuleNames(
+    HRESULT STDMETHODCALLTYPE GetModuleNames(
         ULONG index,
         ULONG64 base,
         PSTR imageNameBuffer,
@@ -217,7 +238,7 @@ public:
         ULONG loadedImageNameBufferSize,
         PULONG loadedImageNameSize);
 
-    HRESULT GetLineByOffset(
+    HRESULT STDMETHODCALLTYPE GetLineByOffset(
         ULONG64 offset,
         PULONG line,
         PSTR fileBuffer,
@@ -225,13 +246,13 @@ public:
         PULONG fileSize,
         PULONG64 displacement);
      
-    HRESULT GetSourceFileLineOffsets(
+    HRESULT STDMETHODCALLTYPE GetSourceFileLineOffsets(
         PCSTR file,
         PULONG64 buffer,
         ULONG bufferLines,
         PULONG fileLines);
 
-    HRESULT FindSourceFile(
+    HRESULT STDMETHODCALLTYPE FindSourceFile(
         ULONG startElement,
         PCSTR file,
         ULONG flags,
@@ -244,24 +265,24 @@ public:
     // IDebugSystemObjects
     //----------------------------------------------------------------------------
 
-    HRESULT GetCurrentProcessId(
-        PULONG id);
-
-    HRESULT GetCurrentThreadId(
-        PULONG id);
-
-    HRESULT SetCurrentThreadId(
-        ULONG id);
-
-    HRESULT GetCurrentThreadSystemId(
+    HRESULT STDMETHODCALLTYPE GetCurrentProcessSystemId(
         PULONG sysId);
 
-    HRESULT GetThreadIdBySystemId(
+    HRESULT STDMETHODCALLTYPE GetCurrentThreadId(
+        PULONG id);
+
+    HRESULT STDMETHODCALLTYPE SetCurrentThreadId(
+        ULONG id);
+
+    HRESULT STDMETHODCALLTYPE GetCurrentThreadSystemId(
+        PULONG sysId);
+
+    HRESULT STDMETHODCALLTYPE GetThreadIdBySystemId(
         ULONG sysId,
         PULONG threadId);
 
-    HRESULT GetThreadContextById(
-        ULONG32 threadID,
+    HRESULT STDMETHODCALLTYPE GetThreadContextBySystemId(
+        ULONG32 sysId,
         ULONG32 contextFlags,
         ULONG32 contextSize,
         PBYTE context);
@@ -270,37 +291,39 @@ public:
     // IDebugRegisters
     //----------------------------------------------------------------------------
 
-    HRESULT GetValueByName(
+    HRESULT STDMETHODCALLTYPE GetValueByName(
         PCSTR name,
         PDWORD_PTR debugValue);
 
-    HRESULT GetInstructionOffset(
+    HRESULT STDMETHODCALLTYPE GetInstructionOffset(
         PULONG64 offset);
 
-    HRESULT GetStackOffset(
+    HRESULT STDMETHODCALLTYPE GetStackOffset(
         PULONG64 offset);
 
-    HRESULT GetFrameOffset(
+    HRESULT STDMETHODCALLTYPE GetFrameOffset(
         PULONG64 offset);
 
     //----------------------------------------------------------------------------
     // ILLDBServices2
     //----------------------------------------------------------------------------
 
-    HRESULT LoadNativeSymbols(
+    HRESULT STDMETHODCALLTYPE LoadNativeSymbols(
         bool runtimeOnly,
         PFN_MODULE_LOAD_CALLBACK callback);
 
-    HRESULT AddModuleSymbol(
+    HRESULT STDMETHODCALLTYPE AddModuleSymbol(
         void* param, 
         const char* symbolFileName);
 
-    HRESULT GetModuleInfo(
+    HRESULT STDMETHODCALLTYPE GetModuleInfo(
         ULONG index,
-        PULONG64 base,
-        PULONG64 size);
+        PULONG64 pBase,
+        PULONG64 pSize,
+        PULONG pTimestamp,
+        PULONG pChecksum);
 
-    HRESULT GetModuleVersionInformation(
+    HRESULT STDMETHODCALLTYPE GetModuleVersionInformation(
         ULONG index,
         ULONG64 base,
         PCSTR item,
@@ -308,17 +331,69 @@ public:
         ULONG bufferSize,
         PULONG versionInfoSize);
 
-    HRESULT SetRuntimeLoadedCallback(
+    HRESULT STDMETHODCALLTYPE SetRuntimeLoadedCallback(
         PFN_RUNTIME_LOADED_CALLBACK callback);
+
+    //----------------------------------------------------------------------------
+    // IDebuggerServices
+    //----------------------------------------------------------------------------
+
+    HRESULT STDMETHODCALLTYPE GetOperatingSystem(
+        IDebuggerServices::OperatingSystem* operatingSystem);
+
+    HRESULT STDMETHODCALLTYPE AddCommand(
+        PCSTR command,
+        PCSTR help,
+        PCSTR aliases[],
+        int numberOfAliases);
+
+    void STDMETHODCALLTYPE OutputString(
+        ULONG mask,
+        PCSTR str);
+
+    HRESULT STDMETHODCALLTYPE GetNumberThreads(
+        PULONG number);
+
+    HRESULT STDMETHODCALLTYPE GetThreadIdsByIndex(
+        ULONG start,
+        ULONG count,
+        PULONG ids,
+        PULONG sysIds);
+
+    HRESULT STDMETHODCALLTYPE SetCurrentThreadSystemId(
+        ULONG sysId);
+
+    HRESULT STDMETHODCALLTYPE GetThreadTeb(
+        ULONG sysId,
+        PULONG64 pteb);
+
+    HRESULT STDMETHODCALLTYPE GetSymbolPath(
+        PSTR buffer,
+        ULONG bufferSize,
+        PULONG pathSize);
+
+    HRESULT STDMETHODCALLTYPE GetSymbolByOffset(
+        ULONG moduleIndex,
+        ULONG64 offset,
+        PSTR nameBuffer,
+        ULONG nameBufferSize,
+        PULONG nameSize,
+        PULONG64 displacement);
+ 
+    HRESULT STDMETHODCALLTYPE GetOffsetBySymbol(
+        ULONG moduleIndex,
+        PCSTR name,
+        PULONG64 offset);
 
     //----------------------------------------------------------------------------
     // LLDBServices (internal)
     //----------------------------------------------------------------------------
 
-    void LoadNativeSymbols(
-        lldb::SBTarget target,
-        lldb::SBModule module,
-        PFN_MODULE_LOAD_CALLBACK callback);
-
     PCSTR GetPluginModuleDirectory();
+
+    void FlushCheck();
+
+    lldb::SBCommand AddCommand(const char *name, lldb::SBCommandPluginInterface *impl, const char *help);
+
+    HRESULT InternalOutputVaList(ULONG mask, PCSTR format, va_list args);
 };

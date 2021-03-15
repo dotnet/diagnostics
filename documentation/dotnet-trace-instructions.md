@@ -1,5 +1,9 @@
 # Trace for performance analysis utility (dotnet-trace)
 
+NOTE: This documentation page may contain information on some features that are still work-in-progress. For most up-to-date documentation on released version of `dotnet-trace`, please refer to [its official documentation](https://docs.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-trace) page.
+
+## Intro
+
 The dotnet-trace tool is a cross-platform CLI global tool that enables the collection of .NET Core traces of a running process without any native profiler involved. It is built around the EventPipe technology of the .NET Core runtime as a cross-platform alternative to ETW on Windows and LTTng on Linux, which only work on a single platform. With EventPipe/dotnet-trace, we are trying to deliver the same experience on Windows, Linux, or macOS. dotnet-trace can be used on any .NET Core applications using versions .NET Core 3.0 Preview 5 or later.
 
 ## Installing dotnet-trace
@@ -83,7 +87,7 @@ Press <Enter> or <Ctrl+C> to exit...
 You can stop collecting the trace by pressing `<Enter>` or `<Ctrl + C>` key. Doing this will also exit `hello.exe`.
 
 ### NOTE
-* Launching `hello.exe` via dotnet-trace will make its input/output to be redirected and you won't be able to interact with its stdin/stdout.
+* Launching `hello.exe` via dotnet-trace will redirect its input/output and you will not be able to interact with it on the console by default. Use the --show-child-io switch to interact with its stdin/stdout.
 
 * Exiting the tool via CTRL+C or SIGTERM will safely end both the tool and the child process.
 
@@ -162,6 +166,27 @@ Microsoft-Windows-DotNETRuntime         | [The Runtime Provider](https://docs.mi
 Microsoft-Windows-DotNETRuntimeRundown  | [The Rundown Provider](https://docs.microsoft.com/en-us/dotnet/framework/performance/clr-etw-providers#the-rundown-provider)<br>[CLR Rundown Keywords](https://docs.microsoft.com/en-us/dotnet/framework/performance/clr-etw-keywords-and-levels#rundown)
 Microsoft-DotNETCore-SampleProfiler     | Enable the sample profiler
 
+## Example Providers 
+
+See the help text below for the encoding of Providers.
+
+Examples of valid specifications:
+```
+Microsoft-Windows-DotNETRuntime:0xFFF:5
+
+Microsoft-Diagnostics-DiagnosticSource:0x00000003:5:FilterAndPayloadSpecs="Microsoft.EntityFrameworkCore/Microsoft.EntityFrameworkCore.Database.Command.CommandExecuting@Activity2Start:Command.CommandText;\r\nMicrosoft.EntityFrameworkCore/Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted@Activity2Stop:"
+```
+
+If the provider you are using makes use of filter strings, make sure you
+are properly encoding the key-value arguments.  Values that contain
+`;` or `=` characters need to be surrounded by double quotes `"`.
+Depending on your shell environment, you may need to escape the `"`
+characters and/or surround the entire argument in quotes, e.g.,
+```bash
+$ dotnet trace collect -p 1234 --providers 'Microsoft-Diagnostics-DiagnosticSource:0x00000003:5:FilterAndPayloadSpecs=\"Microsoft.EntityFrameworkCore/Microsoft.EntityFrameworkCore.Database.Command.CommandExecuting@Activity2Start:Command.CommandText;\r\nMicrosoft.EntityFrameworkCore/Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted@Activity2Stop:\"'
+```
+
+
 ## *dotnet-trace* help
 
 ```cmd
@@ -200,7 +225,7 @@ Options:
     A provider consists of the name and optionally the keywords, verbosity level, and custom key/value pairs.
 
     The string is written 'Provider[,Provider]'
-        Provider format: KnownProviderName[:Keywords[:Level][:KeyValueArgs]]
+        Provider format: KnownProviderName[:[Keywords][:[Level][:[KeyValueArgs]]]]
             KnownProviderName       - The provider's name
             Keywords                - 8 character hex number bit mask
             Level                   - A number in the range [0, 5]
