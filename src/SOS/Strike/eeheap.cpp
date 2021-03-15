@@ -501,11 +501,15 @@ void GCPrintSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_allocated_si
                     ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
                     return;
                 }
-                ExtOut("%p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n", SOS_PTR(dwAddrSeg),
-                    SOS_PTR(segment.mem), SOS_PTR(segment.allocated),
+                ExtOut("%p  %p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE"d)  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n",
+                    SOS_PTR(dwAddrSeg),
+                    SOS_PTR(segment.mem), SOS_PTR(segment.allocated), SOS_PTR(segment.committed),
                     (ULONG_PTR)(segment.allocated - segment.mem),
-                    (ULONG_PTR)(segment.allocated - segment.mem));
-                total_size += (DWORD_PTR)(segment.allocated - segment.mem);
+                    (ULONG_PTR)(segment.allocated - segment.mem),
+                    (ULONG_PTR)(segment.committed - segment.mem),
+                    (ULONG_PTR)(segment.committed - segment.mem));
+                total_allocated_size += (DWORD_PTR)(segment.allocated - segment.mem);
+                total_committed_size += (DWORD_PTR)(segment.committed - segment.mem);
                 dwAddrSeg = (DWORD_PTR)segment.next;
             }
         }
@@ -513,7 +517,8 @@ void GCPrintSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_allocated_si
     else
     {
         dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration()].start_segment;
-        total_size = 0;
+        total_allocated_size = 0;
+        total_committed_size = 0;
         // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
         while (dwAddrSeg != (DWORD_PTR)heap.generation_table[0].start_segment)
         {
@@ -524,57 +529,35 @@ void GCPrintSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_allocated_si
                 ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
                 return;
             }
-            ExtOut("%p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n", SOS_PTR(dwAddrSeg),
-                SOS_PTR(segment.mem), SOS_PTR(segment.allocated),
-                (ULONG_PTR)(segment.allocated - segment.mem),
-                (ULONG_PTR)(segment.allocated - segment.mem));
-            total_size += (DWORD_PTR) (segment.allocated - segment.mem);
+            ExtOut("%p  %p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE"d)  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n",
+                    SOS_PTR(dwAddrSeg),
+                    SOS_PTR(segment.mem), SOS_PTR(segment.allocated), SOS_PTR(segment.committed),
+                    (ULONG_PTR)(segment.allocated - segment.mem),
+                    (ULONG_PTR)(segment.allocated - segment.mem),
+                    (ULONG_PTR)(segment.committed - segment.mem),
+                    (ULONG_PTR)(segment.committed - segment.mem));
+            total_allocated_size += (DWORD_PTR) (segment.allocated - segment.mem);
+            total_committed_size += (DWORD_PTR) (segment.committed - segment.mem);
             dwAddrSeg = (DWORD_PTR)segment.next;
         }
-    dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration()].start_segment;
-    total_allocated_size = 0;
-    total_committed_size = 0;
-    // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
-    while (dwAddrSeg != (DWORD_PTR)heap.generation_table[0].start_segment)
-    {
-        if (IsInterrupt())
-            return;
+
         if (segment.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
         {
             ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
             return;
         }
+
+        DWORD_PTR end = (DWORD_PTR)heap.alloc_allocated;
         ExtOut("%p  %p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE"d)  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n",
                 SOS_PTR(dwAddrSeg),
-                SOS_PTR(segment.mem), SOS_PTR(segment.allocated), SOS_PTR(segment.committed),
-                (ULONG_PTR)(segment.allocated - segment.mem),
-                (ULONG_PTR)(segment.allocated - segment.mem),
-                (ULONG_PTR)(segment.committed - segment.mem),
-                (ULONG_PTR)(segment.committed - segment.mem));
-        total_allocated_size += (DWORD_PTR) (segment.allocated - segment.mem);
-        total_committed_size += (DWORD_PTR) (segment.committed - segment.mem);
-        dwAddrSeg = (DWORD_PTR)segment.next;
-    }
+                SOS_PTR(segment.mem), SOS_PTR(end), SOS_PTR(segment.committed),
+                (ULONG_PTR)(end - (DWORD_PTR)segment.mem),
+                (ULONG_PTR)(end - (DWORD_PTR)segment.mem),
+                (ULONG_PTR)(segment.committed - (DWORD_PTR)segment.mem),
+                (ULONG_PTR)(segment.committed - (DWORD_PTR)segment.mem));
 
-        if (segment.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
-        {
-            ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
-            return;
-        }
-
-    DWORD_PTR end = (DWORD_PTR)heap.alloc_allocated;
-    ExtOut("%p  %p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE"d)  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n",
-            SOS_PTR(dwAddrSeg),
-            SOS_PTR(segment.mem), SOS_PTR(end), SOS_PTR(segment.committed),
-            (ULONG_PTR)(end - (DWORD_PTR)segment.mem),
-            (ULONG_PTR)(end - (DWORD_PTR)segment.mem),
-            (ULONG_PTR)(segment.committed - (DWORD_PTR)segment.mem),
-            (ULONG_PTR)(segment.committed - (DWORD_PTR)segment.mem));
-
-    total_allocated_size += end - (DWORD_PTR)segment.mem;
-    total_committed_size += (DWORD_PTR)(segment.committed - segment.mem);
-}
-        total_size += end - (DWORD_PTR)segment.mem;
+        total_allocated_size += end - (DWORD_PTR)segment.mem;
+        total_committed_size += (DWORD_PTR)(segment.committed - segment.mem);
     }
 }
 

@@ -133,7 +133,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             new ModuleInfo(
                 this,
                 module.ImageBase, 
-                module.FileName,
+                module.FileName.ToLower(),
                 isVirtual:true,
                 unchecked((int)module.IndexFileSize.GetValueOrDefault(0)),
                 unchecked((int)module.IndexTimeStamp.GetValueOrDefault(0)),
