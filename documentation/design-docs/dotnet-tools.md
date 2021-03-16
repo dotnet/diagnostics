@@ -784,6 +784,95 @@ Examples:
            7,074         4  System.String (Bytes > 1K)  [System.Private.CoreLib.dll]
     ...
 
+### dotnet-extractor
+
+SYNOPSIS
+
+    dotnet-extractor [options] [command]
+
+OPTIONS
+
+    --version
+        Display the version of the dotnet-extractor utility.
+
+    -h, --help
+        Show command line help
+
+COMMANDS
+
+    convert        Get the line number from the token value in the stacktrace.
+
+CONVERT
+
+    dotnet-extractor convert [-i|--input <input_exception_log_path>]
+                             [-a|--assembly <path1:path2:...>]
+                             [-p|--pdb <path1:path2:...>]
+                             [-o|--output <output_result_path>]
+                             [-h|--help]
+
+    Get the line number from the token value in the stacktrace.
+
+    Usage:
+      dotnet-extractor convert [options]
+
+    Options:
+    -i, --input
+        Path to the exception log file (File extension: xxxxx.log)
+
+    -a, --asembly
+        Multiple paths with assembly directories separated by colon(':')
+
+    -p, --pdb
+        Path to the pdb directory (Can be omitted if it is the same as the assembly directory path)
+
+    -o, --output
+        Path to the output file (Default: Output to console. If omitted, the xxxxx.out file is created in the same location as the log file)
+
+    -h, --help
+        Show command line help
+
+    Interactive shell:
+    [input_string]
+        Input the exception log string directly (--input option is not used)
+
+    Examples:
+
+    1. If you enter the exception log string directly
+      $ dotnet-extractor convert
+      Enter the exception log string:
+      System.NullReferenceException: Object reference not set to an instance of an object.
+         at LineNumber.App.CallA() in LineNumber.dll: token 0x6000001+0x5
+         at LineNumber.App.CallB() in LineNumber.dll: token 0x6000002+0x1
+
+      Extraction result:
+       at LineNumber.App.CallA() in U:\LineNumber\LineNumber\LineNumber_App.cs:line 14
+       at LineNumber.App.CallB() in U:\LineNumber\LineNumber\LineNumber_App.cs:line 29
+
+    2. If both assembly and pdb are in the current directory
+	  $ dotnet extractor convert --input /tmp/Exception.log
+      Extraction result:
+       at LineNumber.App.CallA() in U:\LineNumber\LineNumber\LineNumber_App.cs:line 14
+       at LineNumber.App.CallB() in U:\LineNumber\LineNumber\LineNumber_App.cs:line 29
+
+      Output: /tmp/Exception.out
+
+	3. If both assembly and pdb are in the same directory specified
+      $ dotnet extractor convert --input /tmp/Exception.log --assembly /opt/usr/globalapps/
+      Extraction result:
+       at LineNumber.App.CallA() in U:\LineNumber\LineNumber\LineNumber_App.cs:line 14
+       at LineNumber.App.CallB() in U:\LineNumber\LineNumber\LineNumber_App.cs:line 29
+
+      Output: /tmp/Exception.out
+
+    4. If assembly and pdb are separated in each directory
+      $ dotnet-extractor convert --input /tmp/Exception.log --assembly /opt/usr/globalapps/:/usr/share/dotnet/ --pdb /opt/share/pdb/ --output /tmp/Result.out
+      Extraction result:
+       at LineNumber.App.CallA() in U:\LineNumber\LineNumber\LineNumber_App.cs:line 14
+       at LineNumber.App.CallB() in U:\LineNumber\LineNumber\LineNumber_App.cs:line 29
+
+      Output: /tmp/Result.out
+
+
 ## Future suggestions
 
 Work described in here captures potential future directions these tools could take given time and customer interest. Some of these might come relatively soon, others feel quite speculative or duplicative with existing technology. Regardless, understanding potential future options helps to ensure that we don't unknowingly paint ourselves into a corner or build an incoherent offering.

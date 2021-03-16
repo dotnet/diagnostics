@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework Condition="'$(BundleTools)' == 'true'">netcoreapp3.1</TargetFramework>
+    <TargetFramework Condition="'$(BundleTools)' != 'true'">netcoreapp2.1</TargetFramework>
+    <RootNamespace>Microsoft.Diagnostics.Tools.Extractor</RootNamespace>
+    <ToolCommandName>dotnet-extractor</ToolCommandName>
+    <Description>.NET Line Number Extractor Tool</Description>
+    <PackageTags>Diagnostic</PackageTags>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.DiaSymReader" Version="1.4.0-beta2-20217-02" />
+    <PackageReference Include="Microsoft.DiaSymReader.Converter.Xml" Version="1.1.0-beta2-20216-01" />
+    <PackageReference Include="Microsoft.DiaSymReader.PortablePdb" Version="1.6.0-beta2-21126-02"/>
+    <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
+    <PackageReference Include="System.CommandLine.Rendering" Version="$(SystemCommandLineRenderingVersion)" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" GeneratePathProperty="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Common\CommandExtensions.cs" Link="CommandExtensions.cs" />
+    <Compile Include="..\Common\Commands\Utils.cs" Link="Utils.cs" />
+  </ItemGroup>
+
+</Project>
