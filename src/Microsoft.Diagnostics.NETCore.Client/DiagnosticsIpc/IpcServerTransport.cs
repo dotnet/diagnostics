@@ -226,14 +226,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentException(string.Format("Could not parse {0} into host, port", address));
 
             var socket = IpcTcpSocketTransport.Create(hostAddress, hostPort);
-
             socket.Bind();
             socket.Listen(backlog);
-
             socket.LingerState.Enabled = false;
-
             OnCreateNewServer();
-
             return socket;
         }
     }
