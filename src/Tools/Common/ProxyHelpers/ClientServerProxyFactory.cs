@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
 using System;
 using System.IO;
 using System.IO.Pipes;
@@ -11,6 +10,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
+using System.Diagnostics;
+using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Internal.Common.Utils
 {
@@ -166,6 +167,9 @@ namespace Microsoft.Internal.Common.Utils
                 throw;
             }
 
+            if (serverStream != null && _verboseLogging)
+                Console.WriteLine($"ClientServerICTSProxyFactory::ConnectServerStreamAsync: Successfully connected server stream, runtime id={_endpointInfo.RuntimeInstanceCookie}, runtime pid={_endpointInfo.ProcessId}.");
+
             return serverStream;
         }
 
@@ -237,13 +241,16 @@ namespace Microsoft.Internal.Common.Utils
 
             try
             {
-                // ReversedDiagnosticServer consumes advertise message, needs to be replayed back to client.
-                await IpcAdvertise.SerializeAsync(clientStream, _endpointInfo.RuntimeInstanceCookie, (ulong)_endpointInfo.ProcessId, token).ConfigureAwait(false);
+                // ReversedDiagnosticServer consumes advertise message, needs to be replayed back to client. Use proxy process ID as representation.
+                await IpcAdvertise.SerializeAsync(clientStream, _endpointInfo.RuntimeInstanceCookie, (ulong)Process.GetCurrentProcess().Id, token).ConfigureAwait(false);
             }
             catch (Exception)
             {
                 clientStream?.Dispose();
             }
+
+            if (clientStream != null && _verboseLogging)
+                Console.WriteLine($"ClientServerICTSProxyFactory::ConnectClientStreamAsync: Successfully connected client stream.");
 
             return clientStream;
         }
