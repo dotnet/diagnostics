@@ -45,5 +45,32 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
 
             return proxyTask.Result;
         }
+
+        public async Task<int> RunIpcServerTcpServerProxy(CancellationToken token, string ipcServer, string tcpServer, bool autoShutdown, bool debug)
+        {
+            using CancellationTokenSource cancelProxyTask = new CancellationTokenSource();
+            using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelProxyTask.Token);
+
+            var proxyTask = DiagnosticServerProxyFactory.runIpcServerTcpServerProxy(linkedCancelToken.Token, ipcServer, tcpServer, autoShutdown, debug);
+
+            while (!linkedCancelToken.IsCancellationRequested)
+            {
+                await Task.WhenAny(proxyTask, Task.Delay(250)).ConfigureAwait(false);
+                if (proxyTask.IsCompleted)
+                    break;
+
+                if (Console.KeyAvailable)
+                {
+                    ConsoleKey cmd = Console.ReadKey(true).Key;
+                    if (cmd == ConsoleKey.Q)
+                    {
+                        cancelProxyTask.Cancel();
+                        break;
+                    }
+                }
+            }
+
+            return proxyTask.Result;
+        }
     }
 }

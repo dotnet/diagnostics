@@ -40,6 +40,15 @@ namespace Microsoft.Internal.Common.Utils
             return await runProxy(token, new IpcClientTcpServerProxy(ipcClient, tcpServer, debug), autoShutdown, debug).ConfigureAwait(false);
         }
 
+        public static async Task<int> runIpcServerTcpServerProxy(CancellationToken token, string ipcServer, string tcpServer, bool autoShutdown, bool debug)
+        {
+            if (string.IsNullOrEmpty(ipcServer))
+                ipcServer = IpcServerTcpServerProxy.GetDefaultIpcServerPath();
+
+            Console.WriteLine($"DiagnosticServerProxy: Starting IPC server <--> TCP server proxy using IPC server endpoint=\"{ipcServer}\" and TCP server endpoint=\"{tcpServer}\".");
+            return await runProxy(token, new IpcServerTcpServerProxy(ipcServer, tcpServer, debug), autoShutdown, debug).ConfigureAwait(false);
+        }
+
         async static Task<int> runProxy(CancellationToken token, DiagnosticServerProxy proxy, bool autoShutdown, bool debug)
         {
             List<Task> runningTasks = new List<Task>();
@@ -185,50 +194,50 @@ namespace Microsoft.Internal.Common.Utils
     {
         protected readonly bool _verboseLogging;
 
-        readonly string _tcpServer;
+        readonly string _tcpServerAddress;
 
-        ReversedDiagnosticsServer _server;
-        IpcEndpointInfo _endpointInfo;
+        ReversedDiagnosticsServer _tcpServer;
+        IpcEndpointInfo _tcpServerEndpointInfo;
 
         public int RuntimeInstanceConnectTimeout { get; set; } = 60000;
         public int TcpServerConnectTimeout { get; set; } = 5000;
 
         public Guid RuntimeInstanceId
         {
-            get { return _endpointInfo.RuntimeInstanceCookie; }
+            get { return _tcpServerEndpointInfo.RuntimeInstanceCookie; }
         }
 
         public int RuntimeProcessId
         {
-            get { return _endpointInfo.ProcessId; }
+            get { return _tcpServerEndpointInfo.ProcessId; }
         }
 
         protected TcpServerProxy(string tcpServer, bool verboseLogging)
         {
             _verboseLogging = verboseLogging;
 
-            _tcpServer = tcpServer;
+            _tcpServerAddress = tcpServer;
 
-            _server = new ReversedDiagnosticsServer(_tcpServer, true);
-            _endpointInfo = new IpcEndpointInfo();
+            _tcpServer = new ReversedDiagnosticsServer(_tcpServerAddress, true);
+            _tcpServerEndpointInfo = new IpcEndpointInfo();
         }
 
         public override void Start()
         {
-            _server.Start();
+            _tcpServer.Start();
         }
 
         public override async Task Stop()
         {
-            await _server.DisposeAsync().ConfigureAwait(false);
+            await _tcpServer.DisposeAsync().ConfigureAwait(false);
         }
 
         public override void Reset()
         {
-            if (_endpointInfo.Endpoint != null)
+            if (_tcpServerEndpointInfo.Endpoint != null)
             {
-                _server.RemoveConnection(_endpointInfo.RuntimeInstanceCookie);
-                _endpointInfo = new IpcEndpointInfo();
+                _tcpServer.RemoveConnection(_tcpServerEndpointInfo.RuntimeInstanceCookie);
+                _tcpServerEndpointInfo = new IpcEndpointInfo();
             }
         }
 
@@ -237,9 +246,9 @@ namespace Microsoft.Internal.Common.Utils
             Stream tcpServerStream;
 
             if (_verboseLogging)
-                Console.WriteLine($"TcpServerProxy::ConnectTcpStreamAsync: Connecting new tcp endpoint.");
+                Console.WriteLine($"TcpServerProxy::ConnectTcpStreamAsync: Waiting for new tcp connection at endpoint \"{_tcpServerAddress}\".");
 
-            if (_endpointInfo.Endpoint == null)
+            if (_tcpServerEndpointInfo.Endpoint == null)
             {
                 using var acceptTimeoutTokenSource = new CancellationTokenSource();
                 using var acceptTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, acceptTimeoutTokenSource.Token);
@@ -248,7 +257,7 @@ namespace Microsoft.Internal.Common.Utils
                 {
                     // If no new runtime instance connects, timeout.
                     acceptTimeoutTokenSource.CancelAfter(RuntimeInstanceConnectTimeout);
-                    _endpointInfo = await _server.AcceptAsync(acceptTokenSource.Token).ConfigureAwait(false);
+                    _tcpServerEndpointInfo = await _tcpServer.AcceptAsync(acceptTokenSource.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -272,7 +281,7 @@ namespace Microsoft.Internal.Common.Utils
                 // Get next connected tcp server stream. Should timeout if no endpoint appears within timeout.
                 // If that happens we need to remove endpoint since it might indicate a unresponsive runtime instance.
                 connectTimeoutTokenSource.CancelAfter(TcpServerConnectTimeout);
-                tcpServerStream = await _endpointInfo.Endpoint.ConnectAsync(connectTokenSource.Token).ConfigureAwait(false);
+                tcpServerStream = await _tcpServerEndpointInfo.Endpoint.ConnectAsync(connectTokenSource.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -293,33 +302,197 @@ namespace Microsoft.Internal.Common.Utils
             return tcpServerStream;
         }
 
-        protected bool CheckTcpStreamConnection(Stream tcpStream, CancellationToken token)
+        protected bool CheckStreamConnection(Stream stream, CancellationToken token)
         {
-            Debug.Assert(tcpStream is ExposedSocketNetworkStream, "Tcp stream should be an ExposedSocketNetworkStream.");
-
             bool connected = true;
-            var networkStream = tcpStream as ExposedSocketNetworkStream;
 
-            bool blockingState = networkStream.Socket.Blocking;
-            try
+            if (stream is NamedPipeServerStream || stream is NamedPipeClientStream)
             {
-                // Check connection by peek one byte. Will return 0 in case connection is closed.
-                // A closed connection could also raise exception, but then socket connected state should
-                // be set to false.
-                networkStream.Socket.Blocking = false;
-                if (networkStream.Socket.Receive(new byte[1], 0, 1, System.Net.Sockets.SocketFlags.Peek) == 0)
-                    connected = false;
+                PipeStream pipeStream = stream as PipeStream;
+
+                // PeekNamedPipe will return false if the pipe is disconnected/broken.
+                connected = NativeMethods.PeekNamedPipe(
+                    pipeStream.SafePipeHandle,
+                    null,
+                    0,
+                    IntPtr.Zero,
+                    IntPtr.Zero,
+                    IntPtr.Zero);
             }
-            catch (Exception)
+            else if (stream is ExposedSocketNetworkStream networkStream)
             {
-                connected = networkStream.Socket.Connected;
+                bool blockingState = networkStream.Socket.Blocking;
+                try
+                {
+                    // Check connection by peek one byte. Will return 0 in case connection is closed.
+                    // A closed connection could also raise exception, but then socket connected state should
+                    // be set to false.
+                    networkStream.Socket.Blocking = false;
+                    if (networkStream.Socket.Receive(new byte[1], 0, 1, System.Net.Sockets.SocketFlags.Peek) == 0)
+                        connected = false;
+                }
+                catch (Exception)
+                {
+                    connected = networkStream.Socket.Connected;
+                }
+                finally
+                {
+                    networkStream.Socket.Blocking = blockingState;
+                }
             }
-            finally
+            else
             {
-                networkStream.Socket.Blocking = blockingState;
+                connected = false;
             }
 
             return connected;
+        }
+    }
+
+    // <summary>
+    // This class connects IPC Server<-> TCP Server proxy instances.
+    // Supports NamedPipes/UnixDomainSocket server and TCP/IP server.
+    // </summary>
+    internal class IpcServerTcpServerProxy : TcpServerProxy
+    {
+        readonly string _ipcServerPath;
+
+        IpcServerTransport _ipcServer;
+
+        public int IpcServerConnectTimeout { get; set; } = 5000;
+
+        public int IpcServerConnectRetryAttempts { get; set; } = -1;
+
+        public IpcServerTcpServerProxy(string ipcServer, string tcpServer, bool verboseLogging)
+            : base(tcpServer, verboseLogging)
+        {
+            _ipcServerPath = ipcServer;
+            if (string.IsNullOrEmpty(_ipcServerPath))
+                _ipcServerPath = GetDefaultIpcServerPath();
+
+            _ipcServer = IpcServerTransport.Create(_ipcServerPath, IpcServerTransport.MaxAllowedConnections, false);
+        }
+
+        public static string GetDefaultIpcServerPath()
+        {
+            int processId = Process.GetCurrentProcess().Id;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}");
+            }
+            else
+            {
+                TimeSpan diff = Process.GetCurrentProcess().StartTime.ToUniversalTime() - DateTime.UnixEpoch;
+                return Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-{(long)diff.TotalSeconds}-socket");
+            }
+        }
+
+        public override Task Stop()
+        {
+            _ipcServer?.Dispose();
+            return base.Stop();
+        }
+
+        public override async Task<ConnectedProxy> ConnectProxyAsync(CancellationToken token)
+        {
+            Stream tcpServerStream = null;
+            Stream ipcServerStream = null;
+
+            if (_verboseLogging)
+                Console.WriteLine($"IpcServerTcpServerProxy::ConnectProxyAsync: Trying to connect new proxy instance.");
+
+            try
+            {
+                // Connect new server endpoint.
+                tcpServerStream = await ConnectTcpStreamAsync(token).ConfigureAwait(false);
+
+                int retryAttempts = 0;
+                while (!token.IsCancellationRequested && ipcServerStream == null)
+                {
+                    try
+                    {
+                        // Connect new ipc server endpoint.
+                        ipcServerStream = await ConnectIpcStreamAsync(token).ConfigureAwait(false);
+                    }
+                    catch (TimeoutException)
+                    {
+                        retryAttempts++;
+
+                        if (IpcServerConnectRetryAttempts != -1 && retryAttempts > IpcServerConnectRetryAttempts)
+                        {
+                            throw;
+                        }
+
+                        // Check if tcp server stream connection is still available. If so, we can retry ipc server connection
+                        // keeping existing accepted tcp server connection.
+                        if (!CheckStreamConnection(tcpServerStream, token))
+                        {
+                            Console.WriteLine($"IpcServerTcpServerProxy::ConnectProxyAsync: Broken tcp server connection detected, aborting ipc server connection retries.");
+                            throw;
+                        }
+
+                        if (_verboseLogging && IpcServerConnectRetryAttempts != -1)
+                            Console.WriteLine($"IpcServerTcpServerProxy::ConnectProxyAsync: Retrying ipc server connection {retryAttempts} of {IpcServerConnectRetryAttempts} attempts.");
+
+                        ipcServerStream?.Dispose();
+                        ipcServerStream = null;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                if (_verboseLogging)
+                    Console.WriteLine("IpcServerTcpServerProxy::ConnectProxyAsync: Failed connecting new proxy instance.");
+
+                // Cleanup and rethrow.
+                ipcServerStream?.Dispose();
+                tcpServerStream?.Dispose();
+
+                throw;
+            }
+
+            // Create new proxy.
+            if (_verboseLogging)
+                Console.WriteLine($"IpcServerTcpServerProxy::ConnectProxyAsync: New proxy instance successfully connected.");
+
+            return new ConnectedProxy(ipcServerStream, tcpServerStream, _verboseLogging);
+        }
+
+        protected async Task<Stream> ConnectIpcStreamAsync(CancellationToken token)
+        {
+            Stream ipcServerStream = null;
+
+            if (_verboseLogging)
+                Console.WriteLine($"IpcServerTcpServerProxy::ConnectIpcStreamAsync: Waiting for new ipc connection at endpoint \"{_ipcServerPath}\".");
+
+
+            using var connectTimeoutTokenSource = new CancellationTokenSource();
+            using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
+
+            try
+            {
+                connectTimeoutTokenSource.CancelAfter(IpcServerConnectTimeout);
+                ipcServerStream = await _ipcServer.AcceptAsync(connectTokenSource.Token).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                ipcServerStream?.Dispose();
+
+                if (connectTimeoutTokenSource.IsCancellationRequested)
+                {
+                    if (_verboseLogging)
+                        Console.WriteLine("IpcServerTcpServerProxy::ConnectIpcStreamAsync: No ipc stream connected, timing out.");
+
+                    throw new TimeoutException();
+                }
+
+                throw;
+            }
+
+            if (ipcServerStream != null && _verboseLogging)
+                Console.WriteLine($"IpcServerTcpServerProxy::ConnectIpcStreamAsync: Successfully connected ipc stream.");
+
+            return ipcServerStream;
         }
     }
 
@@ -329,7 +502,7 @@ namespace Microsoft.Internal.Common.Utils
     // </summary>
     internal class IpcClientTcpServerProxy : TcpServerProxy
     {
-        readonly string _ipcClient;
+        readonly string _ipcClientPath;
 
         public int IpcClientConnectTimeout { get; set; } = 5000;
 
@@ -338,7 +511,7 @@ namespace Microsoft.Internal.Common.Utils
         public IpcClientTcpServerProxy(string ipcClient, string tcpServer, bool verboseLogging)
             : base(tcpServer, verboseLogging)
         {
-            _ipcClient = ipcClient;
+            _ipcClientPath = ipcClient;
         }
 
         public override async Task<ConnectedProxy> ConnectProxyAsync(CancellationToken token)
@@ -373,8 +546,11 @@ namespace Microsoft.Internal.Common.Utils
 
                         // Check if tcp server stream connection is still available. If so, we can retry client connection
                         // keeping existing accepted tcp server connection.
-                        if (!CheckTcpStreamConnection(tcpServerStream, token))
+                        if (!CheckStreamConnection(tcpServerStream, token))
+                        {
+                            Console.WriteLine($"IpcClientTcpServerProxy::ConnectProxyAsync: Broken tcp server connection detected, aborting ipc client connection retries.");
                             throw;
+                        }
 
                         if (_verboseLogging)
                             Console.WriteLine($"IpcClientTcpServerProxy::ConnectProxyAsync: Retrying client connection {retryAttempts} of {IpcClientConnectRetryAttempts} attempts.");
@@ -400,7 +576,7 @@ namespace Microsoft.Internal.Common.Utils
             if (_verboseLogging)
                 Console.WriteLine($"IpcClientTcpServerProxy::ConnectProxyAsync: New proxy instance successfully connected.");
 
-            return new ConnectedProxy(ipcClientStream, tcpServerStream, _verboseLogging);
+            return new ConnectedProxy(ipcClientStream, tcpServerStream, _verboseLogging, (ulong)IpcAdvertise.V1SizeInBytes);
         }
 
         protected async Task<Stream> ConnectIpcStreamAsync(CancellationToken token)
@@ -408,13 +584,13 @@ namespace Microsoft.Internal.Common.Utils
             Stream ipcClientStream = null;
 
             if (_verboseLogging)
-                Console.WriteLine($"IpcClientTcpServerProxy::ConnectIpcStreamAsync: Connecting new ipc endpoint \"{_ipcClient}\".");
+                Console.WriteLine($"IpcClientTcpServerProxy::ConnectIpcStreamAsync: Connecting new ipc endpoint \"{_ipcClientPath}\".");
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 var namedPipe = new NamedPipeClientStream(
                     ".",
-                    _ipcClient,
+                    _ipcClientPath,
                     PipeDirection.InOut,
                     PipeOptions.Asynchronous,
                     TokenImpersonationLevel.Impersonation);
@@ -437,7 +613,7 @@ namespace Microsoft.Internal.Common.Utils
             }
             else
             {
-                var unixDomainSocket = new IpcUnixDomainSocketTransport(_ipcClient);
+                var unixDomainSocket = new IpcUnixDomainSocketTransport(_ipcClientPath);
 
                 using var connectTimeoutTokenSource = new CancellationTokenSource();
                 using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
@@ -467,7 +643,7 @@ namespace Microsoft.Internal.Common.Utils
 
             try
             {
-                // ReversedDiagnosticServer consumes advertise message, needs to be replayed back to client. Use proxy process ID as representation.
+                // ReversedDiagnosticServer consumes advertise message, needs to be replayed back to ipc client stream. Use proxy process ID as representation.
                 await IpcAdvertise.SerializeAsync(ipcClientStream, RuntimeInstanceId, (ulong)Process.GetCurrentProcess().Id, token).ConfigureAwait(false);
             }
             catch (Exception)
@@ -507,7 +683,7 @@ namespace Microsoft.Internal.Common.Utils
 
         public TaskCompletionSource<bool> ProxyTaskCompleted { get; }
 
-        public ConnectedProxy(Stream frontendStream, Stream backendStream, bool verboseLogging)
+        public ConnectedProxy(Stream frontendStream, Stream backendStream, bool verboseLogging, ulong initBackendToFrontendByteTransfer = 0, ulong initFrontendToBackendByteTransfer = 0)
         {
             _verboseLogging = verboseLogging;
 
@@ -518,7 +694,8 @@ namespace Microsoft.Internal.Common.Utils
 
             ProxyTaskCompleted = new TaskCompletionSource<bool>();
 
-            _backendToFrontendByteTransfer += (ulong)IpcAdvertise.V1SizeInBytes;
+            _backendToFrontendByteTransfer = initBackendToFrontendByteTransfer;
+            _frontendToBackendByteTransfer = initFrontendToBackendByteTransfer;
 
             Interlocked.Increment(ref s_proxyInstanceCount);
         }

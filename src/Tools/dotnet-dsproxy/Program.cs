@@ -15,8 +15,9 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
     internal class Program
     {
         delegate Task<int> DiagnosticServerIpcClientTcpServerProxyDelegate(CancellationToken ct, string ipcClient, string tcpServer, bool autoShutdown, bool debug);
+        delegate Task<int> DiagnosticServerIpcServerTcpServerProxyDelegate(CancellationToken ct, string ipcServer, string tcpServer, bool autoShutdown, bool debug);
 
-        private static Command ClientServerICTSProxyCommand() =>
+        private static Command IpcClientTcpServerProxyCommand() =>
             new Command(
                 name: "client-server",
                 description:    @"Start a .NET application Diagnostic Server proxying local IPC server <--> remote TCP client.
@@ -26,10 +27,23 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
                 // Handler
                 HandlerDescriptor.FromDelegate((DiagnosticServerIpcClientTcpServerProxyDelegate)new DiagnosticServerProxyCommands().RunIpcClientTcpServerProxy).GetCommandHandler(),
                 // Options
-                ClientAddressOption(), ServerAddressOption(), AutoShutdownOption(), DebugOption()
+                IpcClientAddressOption(), TcpServerAddressOption(), AutoShutdownOption(), DebugOption()
             };
 
-        private static Option ClientAddressOption() =>
+        private static Command IpcServerTcpServerProxyCommand() =>
+            new Command(
+                name: "server-server",
+                description:    @"Start a .NET application Diagnostic Server proxying local IPC client <--> remote TCP client.
+                                Proxy is configured using an IPC server (connecting to by diagnostic tools)
+                                and a TCP/IP server (accepting runtime TCP client).")
+            {
+                // Handler
+                HandlerDescriptor.FromDelegate((DiagnosticServerIpcClientTcpServerProxyDelegate)new DiagnosticServerProxyCommands().RunIpcServerTcpServerProxy).GetCommandHandler(),
+                // Options
+                IpcServerAddressOption(), TcpServerAddressOption(), AutoShutdownOption(), DebugOption()
+            };
+
+        private static Option IpcClientAddressOption() =>
             new Option(
                 aliases: new[] { "--ipc-client", "-ipc-client" },
                 description:    @"The diagnostic tool diagnostic server ipc address (--diagnostic-port argument).
@@ -39,7 +53,17 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
                 Argument = new Argument<string>(name: "ipcClient", getDefaultValue: () => "")
             };
 
-        private static Option ServerAddressOption() =>
+        private static Option IpcServerAddressOption() =>
+            new Option(
+                aliases: new[] { "--ipc-server", "-ipc-server" },
+                description:    @"The diagnostic server ipc address to proxy. Proxy accept ipc connections from diagnostic tools
+                                establishing a new proxy channel between runtime and diagnostic tool. If not specified
+                                proxy server will use default ipc diagnostic server path.")
+            {
+                Argument = new Argument<string>(name: "ipcServer", getDefaultValue: () => "")
+            };
+
+        private static Option TcpServerAddressOption() =>
             new Option(
                 aliases: new[] { "--tcp-server", "-tcp-server" },
                 description:    @"The proxy server TCP/IP address using format [host]:[port].
@@ -69,7 +93,8 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
         private static int Main(string[] args)
         {
             var parser = new CommandLineBuilder()
-                .AddCommand(ClientServerICTSProxyCommand())
+                .AddCommand(IpcClientTcpServerProxyCommand())
+                .AddCommand(IpcServerTcpServerProxyCommand())
                 .UseDefaults()
                 .Build();
 
