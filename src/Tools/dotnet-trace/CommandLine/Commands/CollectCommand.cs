@@ -192,9 +192,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         }
                     }
 
-                    if (output.Name.Equals(DefaultTraceName))
+                    if (String.Equals(output.Name, DefaultTraceName, StringComparison.OrdinalIgnoreCase))
                     {
-                        output = new FileInfo($"{processMainModuleFileName}_{DateTime.Now:yyyyMMddHHmmss}.nettrace");
+                        DateTime now = DateTime.Now;
+                        var processMainModuleFileInfo = new FileInfo(processMainModuleFileName);
+                        output = new FileInfo($"{processMainModuleFileInfo.Name}_{now:yyyyMMdd}_{now:HHmmss}.nettrace");
                     }
 
                     var shouldStopAfterDuration = duration != default(TimeSpan);
@@ -415,7 +417,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option OutputPathOption() =>
             new Option(
                 aliases: new[] { "-o", "--output" },
-                description: $"The output path for the collected trace data. If not specified it defaults to '{DefaultTraceName}'.")
+                description: $"The output path for the collected trace data. If not specified it defaults to '<appname>_<yyyyMMdd>_<HHmmss>.nettrace', e.g., 'myapp_20210315_111514.nettrace'.")
             {
                 Argument = new Argument<FileInfo>(name: "trace-file-path", getDefaultValue: () => new FileInfo(DefaultTraceName))
             };
