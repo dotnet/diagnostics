@@ -126,16 +126,19 @@ namespace Microsoft.Internal.Common.Utils
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"DiagnosticServerProxyFactory: Shutting down due to error: {ex.Message}");
+                Console.WriteLine($"DiagnosticServerProxyFactory: Shutting proxy server down due to error: {ex.Message}");
             }
             finally
             {
+                if (token.IsCancellationRequested)
+                    Console.WriteLine("DiagnosticServerProxyFactory: Shutting down proxy server due to cancelation request.");
+
                 runningProxies.RemoveAll(IsConnectedProxyDead);
                 runningProxies.Clear();
 
                 await proxy?.Stop();
 
-                Console.WriteLine("DiagnosticServerProxyFactory: Stopped.");
+                Console.WriteLine("DiagnosticServerProxyFactory: Proxy server stopped.");
             }
             return 0;
         }
