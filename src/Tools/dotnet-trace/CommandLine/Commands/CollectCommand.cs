@@ -192,6 +192,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         }
                     }
 
+                    if (output.Name.Equals(DefaultTraceName))
+                    {
+                        output = new FileInfo($"{processMainModuleFileName}_{DateTime.Now:yyyyMMddHHmmss}.nettrace");
+                    }
+
                     var shouldStopAfterDuration = duration != default(TimeSpan);
                     var rundownRequested = false;
                     System.Timers.Timer durationTimer = null;
@@ -405,7 +410,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Argument = new Argument<uint>(name: "size", getDefaultValue: DefaultCircularBufferSizeInMB)
             };
 
-        public static string DefaultTraceName => "trace.nettrace";
+        public static string DefaultTraceName => "default";
 
         private static Option OutputPathOption() =>
             new Option(
