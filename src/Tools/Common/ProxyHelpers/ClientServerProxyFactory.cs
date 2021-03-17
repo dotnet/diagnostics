@@ -43,9 +43,11 @@ namespace Microsoft.Internal.Common.Utils
         ReversedDiagnosticsServer _server;
         IpcEndpointInfo _endpointInfo;
 
-        public int RuntimeInstanceConnectTimeout { get; set; } = 30000;
+        public int RuntimeInstanceConnectTimeout { get; set; } = 60000;
         public int ClientStreamConnectTimeout { get; set; } = 5000;
         public int ServerStreamConnectTimeout { get; set; } = 5000;
+
+        public int ClientStreamConnectRetryAttempts { get; set; } = 0;
 
         public ClientServerICTSProxyFactory(string ipcClient, string tcpServer, bool verboseLogging)
         {
@@ -88,10 +90,37 @@ namespace Microsoft.Internal.Common.Utils
             try
             {
                 // Connect new server endpoint.
-                serverStream = await ConnectServerStreamAsync(token);
+                serverStream = await ConnectServerStreamAsync(token).ConfigureAwait(false);
 
-                // Connect new client endpoint.
-                clientStream = await ConnectClientStreamAsync(token);
+                int retryAttempts = 0;
+                while (!token.IsCancellationRequested && clientStream == null)
+                {
+                    try
+                    {
+                        // Connect new client endpoint.
+                        clientStream = await ConnectClientStreamAsync(token).ConfigureAwait(false);
+                    }
+                    catch (TimeoutException)
+                    {
+                        retryAttempts++;
+
+                        if (ClientStreamConnectRetryAttempts != -1 && retryAttempts > ClientStreamConnectRetryAttempts)
+                        {
+                            throw;
+                        }
+
+                        // Check if serverStream connection is still available. If so, we can retry client connection
+                        // keeping existing accepted server connection.
+                        if (!CheckServerStreamConnection(serverStream, token))
+                            throw;
+
+                        if (_verboseLogging)
+                            Console.WriteLine($"ClientServerICTSProxyFactory::ConnectProxyAsync: Retrying client connection {retryAttempts} of {ClientStreamConnectRetryAttempts} attempts.");
+
+                        clientStream?.Dispose();
+                        clientStream = null;
+                    }
+                }
             }
             catch (Exception)
             {
@@ -180,10 +209,6 @@ namespace Microsoft.Internal.Common.Utils
             if (_verboseLogging)
                 Console.WriteLine($"ClientServerICTSProxyFactory::ConnectClientStreamAsync: Connecting new IPC endpoint \"{_ipcClient}\".");
 
-            // TODO: Retry connect if we detect that server stream is still alive after timeout client connection
-            // This will prevent proxy from disconnecting working runtime connection while waiting for client to respond.
-            // Needs to be responsive to disconnected runtime connections to react on runtime termination.
-
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 var namedPipe = new NamedPipeClientStream(
@@ -246,13 +271,46 @@ namespace Microsoft.Internal.Common.Utils
             }
             catch (Exception)
             {
+                if (_verboseLogging)
+                    Console.WriteLine("ClientServerICTSProxyFactory::ConnectClientStreamAsync: Failed sendinf advertise message.");
+
                 clientStream?.Dispose();
+                throw;
             }
 
             if (clientStream != null && _verboseLogging)
                 Console.WriteLine($"ClientServerICTSProxyFactory::ConnectClientStreamAsync: Successfully connected client stream.");
 
             return clientStream;
+        }
+
+        bool CheckServerStreamConnection(Stream serverStream, CancellationToken token)
+        {
+            Debug.Assert(serverStream is ExposedSocketNetworkStream, "Server stream should be an ExposedSocketNetworkStream.");
+
+            bool connected = true;
+            var networkStream = serverStream as ExposedSocketNetworkStream;
+
+            bool blockingState = networkStream.Socket.Blocking;
+            try
+            {
+                // Check connection by peek one byte. Will return 0 in case connection is closed.
+                // A closed connection could also raise exception, but then socket connected state should
+                // be set to false.
+                networkStream.Socket.Blocking = false;
+                if (networkStream.Socket.Receive(new byte[1], 0, 1, System.Net.Sockets.SocketFlags.Peek) == 0)
+                    connected = false;
+            }
+            catch (Exception)
+            {
+                connected = networkStream.Socket.Connected;
+            }
+            finally
+            {
+                networkStream.Socket.Blocking = blockingState;
+            }
+
+            return connected;
         }
     }
 
