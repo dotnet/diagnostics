@@ -76,7 +76,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return !string.IsNullOrEmpty(hostAddress) && hostPort != -1;
         }
 
-        static IPEndPoint ResolveIPAddress(string hostAddress, int hostPort)
+        internal static IPEndPoint ResolveIPAddress(string hostAddress, int hostPort)
         {
             IPAddress ipAddress = null;
 
@@ -111,7 +111,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return new IPEndPoint(ipAddress, hostPort);
         }
 
-        static IPEndPoint ResolveIPAddress(string address)
+        internal static IPEndPoint ResolveIPAddress(string address)
         {
             string hostAddress;
             int hostPort;

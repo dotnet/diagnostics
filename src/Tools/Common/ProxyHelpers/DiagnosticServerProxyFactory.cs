@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net;
 using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Internal.Common.Utils
@@ -36,7 +37,7 @@ namespace Microsoft.Internal.Common.Utils
     {
         public static async Task<int> runIpcClientTcpServerProxy(CancellationToken token, string ipcClient, string tcpServer, bool autoShutdown, bool debug)
         {
-            Console.WriteLine($"DiagnosticServerProxy: Starting IPC client <--> TCP server proxy using IPC client endpoint=\"{ipcClient}\" and TCP server endpoint=\"{tcpServer}\".");
+            Console.WriteLine($"Starting IPC client ({ipcClient}) <--> TCP server ({tcpServer}) router.");
             return await runProxy(token, new IpcClientTcpServerProxy(ipcClient, tcpServer, debug), autoShutdown, debug).ConfigureAwait(false);
         }
 
@@ -45,8 +46,22 @@ namespace Microsoft.Internal.Common.Utils
             if (string.IsNullOrEmpty(ipcServer))
                 ipcServer = IpcServerTcpServerProxy.GetDefaultIpcServerPath();
 
-            Console.WriteLine($"DiagnosticServerProxy: Starting IPC server <--> TCP server proxy using IPC server endpoint=\"{ipcServer}\" and TCP server endpoint=\"{tcpServer}\".");
+            Console.WriteLine($"Starting IPC server ({ipcServer}) <--> TCP server ({tcpServer}) router.");
             return await runProxy(token, new IpcServerTcpServerProxy(ipcServer, tcpServer, debug), autoShutdown, debug).ConfigureAwait(false);
+        }
+
+        public static bool isLoopbackOnly(string address)
+        {
+            bool isLooback = false;
+
+            try
+            {
+                var value = IpcTcpSocketTransport.ResolveIPAddress(address);
+                isLooback = IPAddress.IsLoopback(value.Address);
+            }
+            catch { }
+
+            return isLooback;
         }
 
         async static Task<int> runProxy(CancellationToken token, DiagnosticServerProxy proxy, bool autoShutdown, bool debug)
@@ -112,7 +127,7 @@ namespace Microsoft.Internal.Common.Utils
                         if (ex is BackendStreamConnectTimeoutException && runningProxies.Count == 0)
                         {
                             if (autoShutdown || debug)
-                                Console.WriteLine("DiagnosticServerProxyFactory: No backend stream available before timeout.");
+                                Console.WriteLine("No backend stream available before timeout.");
 
                             proxy.Reset();
                         }
@@ -122,11 +137,11 @@ namespace Microsoft.Internal.Common.Utils
                         if (ex is RuntimeConnectTimeoutException)
                         {
                             if (autoShutdown || debug)
-                                Console.WriteLine("DiagnosticServerProxyFactory: No runtime connected before timeout.");
+                                Console.WriteLine("No runtime connected before timeout.");
 
                             if (autoShutdown)
                             {
-                                Console.WriteLine("DiagnosticServerProxyFactory: Starting automatic proxy server shutdown.");
+                                Console.WriteLine("Starting automatic proxy server shutdown.");
                                 throw;
                             }
                         }
@@ -135,19 +150,19 @@ namespace Microsoft.Internal.Common.Utils
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"DiagnosticServerProxyFactory: Shutting proxy server down due to error: {ex.Message}");
+                Console.WriteLine($"Shutting proxy server down due to error: {ex.Message}");
             }
             finally
             {
                 if (token.IsCancellationRequested)
-                    Console.WriteLine("DiagnosticServerProxyFactory: Shutting down proxy server due to cancelation request.");
+                    Console.WriteLine("Shutting down proxy server due to cancelation request.");
 
                 runningProxies.RemoveAll(IsConnectedProxyDead);
                 runningProxies.Clear();
 
                 await proxy?.Stop();
 
-                Console.WriteLine("DiagnosticServerProxyFactory: Proxy server stopped.");
+                Console.WriteLine("Proxy server stopped.");
             }
             return 0;
         }

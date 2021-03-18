@@ -3,12 +3,10 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Internal.Common.Utils;
-using System.Linq;
-using System.Diagnostics;
 
 namespace Microsoft.Diagnostics.Tools.DSProxy
 {
@@ -21,6 +19,8 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
 
         public async Task<int> RunIpcClientTcpServerProxy(CancellationToken token, string ipcClient, string tcpServer, bool autoShutdown, bool debug)
         {
+            checkLoopbackOnly(tcpServer);
+
             using CancellationTokenSource cancelProxyTask = new CancellationTokenSource();
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelProxyTask.Token);
 
@@ -48,6 +48,8 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
 
         public async Task<int> RunIpcServerTcpServerProxy(CancellationToken token, string ipcServer, string tcpServer, bool autoShutdown, bool debug)
         {
+            checkLoopbackOnly(tcpServer);
+
             using CancellationTokenSource cancelProxyTask = new CancellationTokenSource();
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelProxyTask.Token);
 
@@ -71,6 +73,26 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
             }
 
             return proxyTask.Result;
+        }
+
+        static void checkLoopbackOnly(string tcpServer)
+        {
+            if (!DiagnosticServerProxyFactory.isLoopbackOnly(tcpServer))
+            {
+                StringBuilder message = new StringBuilder();
+
+                message.Append("WARNING: Binding tcp server endpoint to anything except loopback interface ");
+                message.Append("(localhost, 127.0.0.1 or [::1]) is NOT recommended. Any connections towards ");
+                message.Append("tcp server endpoint will be unauthenticated and unencrypted. This component ");
+                message.Append("is intented for development use and should only be run in development and ");
+                message.Append("testing environments.");
+                message.AppendLine();
+
+                var currentColor = Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine(message.ToString());
+                Console.ForegroundColor = currentColor;
+            }
         }
     }
 }
