@@ -347,6 +347,24 @@ namespace Microsoft.Internal.Common.Utils
 
             return connected;
         }
+
+        protected async Task CheckStreamConnectionAsync(Stream stream, CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                // Check if tcp stream connection is still available.
+                if (!CheckStreamConnection(stream, token))
+                {
+                    throw new EndOfStreamException();
+                }
+
+                try
+                {
+                    await Task.Delay(TcpServerConnectTimeout, token).ConfigureAwait(false);
+                }
+                catch { }
+            }
+        }
     }
 
     // <summary>
@@ -359,9 +377,7 @@ namespace Microsoft.Internal.Common.Utils
 
         IpcServerTransport _ipcServer;
 
-        public int IpcServerConnectTimeout { get; set; } = 5000;
-
-        public int IpcServerConnectRetryAttempts { get; set; } = -1;
+        public int IpcServerConnectTimeout { get; set; } = Timeout.Infinite;
 
         public IpcServerTcpServerProxy(string ipcServer, string tcpServer, bool verboseLogging)
             : base(tcpServer, verboseLogging)
@@ -403,39 +419,75 @@ namespace Microsoft.Internal.Common.Utils
 
             try
             {
-                // Connect new server endpoint.
-                tcpServerStream = await ConnectTcpStreamAsync(token).ConfigureAwait(false);
+                using CancellationTokenSource cancelConnectProxy = CancellationTokenSource.CreateLinkedTokenSource(token);
 
-                int retryAttempts = 0;
-                while (!token.IsCancellationRequested && ipcServerStream == null)
+                // Connect new tcp server endpoint.
+                using var tcpServerStreamTask = ConnectTcpStreamAsync(cancelConnectProxy.Token);
+
+                // Connect new ipc server endpoint.
+                using var ipcServerStreamTask = ConnectIpcStreamAsync(cancelConnectProxy.Token);
+
+                await Task.WhenAny(ipcServerStreamTask, tcpServerStreamTask).ConfigureAwait(false);
+
+                if (ipcServerStreamTask.IsCompletedSuccessfully && tcpServerStreamTask.IsCompletedSuccessfully)
                 {
+                    ipcServerStream = ipcServerStreamTask.Result;
+                    tcpServerStream = tcpServerStreamTask.Result;
+                }
+                else if (ipcServerStreamTask.IsCompletedSuccessfully)
+                {
+                    ipcServerStream = ipcServerStreamTask.Result;
+                    tcpServerStream = await tcpServerStreamTask.ConfigureAwait(false);
+                }
+                else if (tcpServerStreamTask.IsCompletedSuccessfully)
+                {
+                    tcpServerStream = tcpServerStreamTask.Result;
+
+                    // We have a valid tcp server endpoint and a pending connect ipc stream. Wait for completion
+                    // or disconnect of tcp server endpoint.
+                    using var checkTcpStreamTask = CheckStreamConnectionAsync(tcpServerStream, cancelConnectProxy.Token);
+
+                    // Wait for at least completion of one task.
+                    await Task.WhenAny(ipcServerStreamTask, checkTcpStreamTask).ConfigureAwait(false);
+
+                    // Cancel out any pending tasks not yet completed.
+                    cancelConnectProxy.Cancel();
+
                     try
                     {
-                        // Connect new ipc server endpoint.
-                        ipcServerStream = await ConnectIpcStreamAsync(token).ConfigureAwait(false);
+                        await Task.WhenAll(ipcServerStreamTask, checkTcpStreamTask).ConfigureAwait(false);
                     }
-                    catch (TimeoutException)
+                    catch (Exception)
                     {
-                        retryAttempts++;
+                        // Check if we have an accepted ipc server stream.
+                        if (ipcServerStreamTask.IsCompletedSuccessfully)
+                            ipcServerStreamTask.Result?.Dispose();
 
-                        if (IpcServerConnectRetryAttempts != -1 && retryAttempts > IpcServerConnectRetryAttempts)
+                        if (checkTcpStreamTask.IsFaulted)
                         {
-                            throw;
+                            Console.WriteLine($"IpcServerTcpServerProxy::ConnectProxyAsync: Broken tcp server connection detected, aborting ipc connection.");
+                            checkTcpStreamTask.GetAwaiter().GetResult();
                         }
 
-                        // Check if tcp server stream connection is still available. If so, we can retry ipc server connection
-                        // keeping existing accepted tcp server connection.
-                        if (!CheckStreamConnection(tcpServerStream, token))
-                        {
-                            Console.WriteLine($"IpcServerTcpServerProxy::ConnectProxyAsync: Broken tcp server connection detected, aborting ipc server connection retries.");
-                            throw;
-                        }
+                        throw;
+                    }
 
-                        if (_verboseLogging && IpcServerConnectRetryAttempts != -1)
-                            Console.WriteLine($"IpcServerTcpServerProxy::ConnectProxyAsync: Retrying ipc server connection {retryAttempts} of {IpcServerConnectRetryAttempts} attempts.");
-
-                        ipcServerStream?.Dispose();
-                        ipcServerStream = null;
+                    ipcServerStream = ipcServerStreamTask.Result;
+                }
+                else
+                {
+                    // Error case, cancel out. wait and throw exception.
+                    cancelConnectProxy.Cancel();
+                    try
+                    {
+                        await Task.WhenAll(ipcServerStreamTask, tcpServerStreamTask).ConfigureAwait(false);
+                    }
+                    catch (Exception)
+                    {
+                        // Check if we have an accepted ipc server stream.
+                        if (ipcServerStreamTask.IsCompletedSuccessfully)
+                            ipcServerStreamTask.Result?.Dispose();
+                        throw;
                     }
                 }
             }
