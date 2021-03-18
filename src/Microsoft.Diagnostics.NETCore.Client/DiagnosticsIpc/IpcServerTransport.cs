@@ -112,22 +112,32 @@ namespace Microsoft.Diagnostics.NETCore.Client
             VerifyNotDisposed();
 
             using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _cancellation.Token);
-
-            NamedPipeServerStream connectedStream;
             try
             {
+                // Connect client to named pipe server stream.
                 await _stream.WaitForConnectionAsync(linkedSource.Token).ConfigureAwait(false);
 
-                connectedStream = _stream;
+                // Transfer ownership of connected named pipe.
+                var connectedStream = _stream;
+
+                // Setup new named pipe server stream used in upcomming accept calls.
+                _stream = CreateNewNamedPipeServer(_pipeName, _maxInstances);
+
+                return connectedStream;
             }
-            finally
+            catch (Exception)
             {
-                if (!_cancellation.IsCancellationRequested)
+                // Keep named pipe server stream when getting any kind of cancel request.
+                // Cancel happens when complete transport is about to disposed or caller
+                // cancels out specific accept call, no need to recycle named pipe server stream.
+                // In all other exception scenarios named pipe server stream will be re-created.
+                if (!linkedSource.IsCancellationRequested)
                 {
+                    _stream.Dispose();
                     _stream = CreateNewNamedPipeServer(_pipeName, _maxInstances);
                 }
+                throw;
             }
-            return connectedStream;
         }
 
         private NamedPipeServerStream CreateNewNamedPipeServer(string pipeName, int maxInstances)
@@ -182,16 +192,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _cancellation.Token);
             try
             {
-                Socket socket = await _socket.AcceptAsync(linkedSource.Token).ConfigureAwait(false);
+                // Accept next client socket.
+                var socket = await _socket.AcceptAsync(linkedSource.Token).ConfigureAwait(false);
 
+                // Configure client socket based on transport type.
                 OnAccept(socket);
 
                 return new ExposedSocketNetworkStream(socket, ownsSocket: true);
             }
             catch (Exception)
             {
-                // Recreate socket if transport is not disposed.
-                if (!_cancellation.IsCancellationRequested)
+                // Keep server socket when getting any kind of cancel request.
+                // Cancel happens when complete transport is about to disposed or caller
+                // cancels out specific accept call, no need to recycle server socket.
+                // In all other exception scenarios server socket will be re-created.
+                if (!linkedSource.IsCancellationRequested)
                 {
                     _socket = CreateNewSocketServer(_address, _backlog);
                 }
