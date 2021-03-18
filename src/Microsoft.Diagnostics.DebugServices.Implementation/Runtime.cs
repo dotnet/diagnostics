@@ -216,7 +216,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     else
                     {
-                        Trace.TraceError($"DownloadFile: {fileName}: key not generated - no build id");
+                        Trace.TraceError($"DownloadFile: {fileName}: key not generated - no index timestamp/filesize");
                     }
                 }
                 else
@@ -236,7 +236,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         }
                         else
                         {
-                            Trace.TraceError($"DownloadFile: {fileName}: platform not support - {platform}");
+                            Trace.TraceError($"DownloadFile: {fileName}: platform not supported - {platform}");
                         }
 
                         key = keys?.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == fileName);

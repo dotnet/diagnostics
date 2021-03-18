@@ -102,6 +102,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (module != null)
             {
                 Trace.TraceInformation("ReadMemory: address {0:X16} size {1:X8} found module {2}", address, bytesRequested, module.FileName);
+
+                // Recursion can happen in the extreme case where the PE, ELF or MachO headers (in the module.Services.GetService<>() calls)
+                // used to get the timestamp/filesize or build id are not in the dump.
                 if (!_recursionProtection.Contains(module.ImageBase))
                 {
                     _recursionProtection.Add(module.ImageBase);
@@ -109,7 +112,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         // We found a module that contains the memory requested. Now find or download the PE image.
                         PEReader reader = module.Services.GetService<PEReader>();
-                        if (reader != null)
+                        if (reader is not null)
                         {
                             // Read the memory from the PE image.
                             int rva = (int)(address - module.ImageBase);
@@ -145,43 +148,23 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             }
                         }
 
-                        // Now find or download the ELF image, if one.
-                        ELFFile elfFile = module.Services.GetService<ELFFile>();
-                        if (elfFile != null)
+                        // Find or download the ELF image, if one.
+                        Reader virtualAddressReader = module.Services.GetService<ELFFile>()?.VirtualAddressReader;
+                        if (virtualAddressReader is null)
                         {
-                            // Read the memory from the ELF image.
-                            ulong rva = address - module.ImageBase;
-                            Debug.Assert(rva >= 0);
-                            try
-                            {
-                                Trace.TraceInformation("ReadMemory: rva {0:X16} size {1:X8} in ELF file", rva, bytesRequested);
-                                byte[] data = new byte[bytesRequested];
-                                uint read = elfFile.VirtualAddressReader.Read(rva, data, 0, (uint)bytesRequested);
-                                if (read == 0)
-                                {
-                                    data = null;
-                                }
-                                return data;
-                            }
-                            catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException)
-                            {
-                                Trace.TraceError($"ReadMemory: exception {ex.Message}");
-                                return null;
-                            }
+                            // Find or download the MachO image, if one.
+                            virtualAddressReader = module.Services.GetService<MachOFile>()?.VirtualAddressReader;
                         }
-
-                        // Now find or download the MachO image, if one.
-                        MachOFile machoFile = module.Services.GetService<MachOFile>();
-                        if (machoFile != null)
-                        {
-                            // Read the memory from the MachO image.
+                        if (virtualAddressReader is not null)
+                        { 
+                            // Read the memory from the image.
                             ulong rva = address - module.ImageBase;
                             Debug.Assert(rva >= 0);
                             try
                             {
-                                Trace.TraceInformation("ReadMemory: rva {0:X16} size {1:X8} in MachO file", rva, bytesRequested);
+                                Trace.TraceInformation("ReadMemory: rva {0:X16} size {1:X8} in ELF or MachO file", rva, bytesRequested);
                                 byte[] data = new byte[bytesRequested];
-                                uint read = machoFile.VirtualAddressReader.Read(rva, data, 0, (uint)bytesRequested);
+                                uint read = virtualAddressReader.Read(rva, data, 0, (uint)bytesRequested);
                                 if (read == 0)
                                 {
                                     data = null;
@@ -190,7 +173,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             }
                             catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException)
                             {
-                                Trace.TraceError($"ReadMemory: exception {ex.Message}");
+                                Trace.TraceError($"ReadMemory: ELF or MachO file exception {ex.Message}");
                                 return null;
                             }
                         }
