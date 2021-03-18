@@ -39,12 +39,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 else
                 {
-                    Trace.TraceInformation($"DownloadFile: {fileName}: key not generated");
+                    Trace.TraceInformation($"FindBinary: {fileName}: key not generated");
                 }
             }
             else
             {
-                Trace.TraceInformation($"DownLoadFile: {fileName}: symbol store not enabled");
+                Trace.TraceInformation($"FindBinary: {fileName}: symbol store not enabled");
             }
 
             return null;

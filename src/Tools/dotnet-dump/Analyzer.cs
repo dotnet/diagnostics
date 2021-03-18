@@ -15,6 +15,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -54,7 +55,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 using DataTarget dataTarget = DataTarget.LoadDump(dump_path.FullName);
 
                 OSPlatform targetPlatform = dataTarget.DataReader.TargetPlatform;
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || dataTarget.DataReader.EnumerateModules().Any((module) => Path.GetExtension(module.FileName) == ".dylib")) {
                     targetPlatform = OSPlatform.OSX;
                 }
                 _target = new TargetFromDataReader(dataTarget.DataReader, targetPlatform, this, dump_path.FullName);

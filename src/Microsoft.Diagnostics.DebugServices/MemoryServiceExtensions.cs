@@ -105,41 +105,6 @@ namespace Microsoft.Diagnostics.DebugServices
         }
 
         /// <summary>
-        /// Creates a key generator for the runtime module pointed to by the address/size.
-        /// </summary>
-        /// <param name="memoryService">memory service instance</param>
-        /// <param name="config">Target configuration: Windows, Linux or OSX</param>
-        /// <param name="moduleFilePath">module path</param>
-        /// <param name="address">module base address</param>
-        /// <param name="size">module size</param>
-        /// <returns>KeyGenerator or null if error</returns>
-        public static KeyGenerator GetKeyGenerator(this IMemoryService memoryService, OSPlatform config, string moduleFilePath, ulong address, ulong size)
-        {
-            Stream stream = memoryService.CreateMemoryStream(address, size);
-            KeyGenerator generator = null;
-            if (config == OSPlatform.Linux)
-            {
-                var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
-                generator = new ELFFileKeyGenerator(Tracer.Instance, elfFile, moduleFilePath);
-            }
-            else if (config == OSPlatform.OSX)
-            {
-                var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
-                generator = new MachOFileKeyGenerator(Tracer.Instance, machOFile, moduleFilePath);
-            }
-            else if (config == OSPlatform.Windows)
-            {
-                var peFile = new PEFile(new StreamAddressSpace(stream), true);
-                generator = new PEFileKeyGenerator(Tracer.Instance, peFile, moduleFilePath);
-            }
-            else
-            {
-                Trace.TraceError("GetKeyGenerator: unsupported platform {0}", config);
-            }
-            return generator;
-        }
-
-        /// <summary>
         /// Create a stream for the address range.
         /// </summary>
         /// <param name="memoryService">memory service instance</param>

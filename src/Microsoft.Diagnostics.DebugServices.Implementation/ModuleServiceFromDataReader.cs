@@ -28,6 +28,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             private string _versionString;
 
             public ModuleFromDataReader(ModuleServiceFromDataReader moduleService, int moduleIndex, ModuleInfo moduleInfo, ulong imageSize)
+                : base(moduleService.Target)
             {
                 _moduleService = moduleService;
                 _moduleInfo = moduleInfo;

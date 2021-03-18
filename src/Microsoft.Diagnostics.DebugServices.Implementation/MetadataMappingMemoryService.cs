@@ -9,6 +9,7 @@ using System.Collections.Immutable;
 using System.IO;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -19,31 +20,32 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// that older (less than 5.0) createdumps generate  so it needs this special 
     /// metadata  mapping memory service.
     /// </summary>
-    internal class MetadataMappingMemoryService : IMemoryService
+    public class MetadataMappingMemoryService : IMemoryService
     {
-        private readonly IRuntime _runtime;
+        private readonly ITarget _target;
         private readonly IMemoryService _memoryService;
-        private readonly ISymbolService _symbolService;
         private bool _regionInitialized;
         private ImmutableArray<MetadataRegion> _regions;
+        private IRuntimeService _runtimeService;
+        private ISymbolService _symbolService;
 
         /// <summary>
         /// Memory service constructor
         /// </summary>
-        /// <param name="runtime">runtime instance</param>
+        /// <param name="target">target instance</param>
         /// <param name="memoryService">memory service to wrap</param>
-        /// <param name="symbolService">symbol service</param>
-        internal MetadataMappingMemoryService(IRuntime runtime, IMemoryService memoryService, ISymbolService symbolService)
+        public MetadataMappingMemoryService(ITarget target, IMemoryService memoryService)
         {
-            _runtime = runtime;
+            _target = target;
             _memoryService = memoryService;
-            _symbolService = symbolService;
+            target.OnFlushEvent.Register(Flush);
+            target.DisposeOnClose(SymbolService?.OnChangeEvent.Register(Flush));
         }
 
         /// <summary>
         /// Flush the metadata memory service
         /// </summary>
-        public void Flush()
+        private void Flush()
         {
             _regionInitialized = false;
             _regions.Clear();
@@ -98,17 +100,31 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (!_regionInitialized)
             {
+                // Need to set this before enumerating the runtimes to prevent reentrancy
                 _regionInitialized = true;
 
-                Trace.TraceInformation($"FindRegion: initializing regions for runtime #{_runtime.Id}");
-                ClrRuntime clrruntime = _runtime.Services.GetService<ClrRuntime>();
-                if (clrruntime != null)
+                var runtimes = RuntimeService.EnumerateRuntimes();
+                if (runtimes.Any())
                 {
-                    _regions = clrruntime.EnumerateModules()
-                        .Where((module) => module.MetadataAddress != 0 && module.IsPEFile && !module.IsDynamic)
-                        .Select((module) => new MetadataRegion(this, module))
-                        .ToImmutableArray()
-                        .Sort();
+                    foreach (IRuntime runtime in runtimes)
+                    {
+                        Trace.TraceInformation($"FindRegion: initializing regions for runtime #{runtime.Id}");
+                        ClrRuntime clrRuntime = runtime.Services.GetService<ClrRuntime>();
+                        if (clrRuntime != null)
+                        {
+                            Trace.TraceInformation($"FindRegion: initializing regions for CLR runtime #{runtime.Id}");
+                            _regions = clrRuntime.EnumerateModules()
+                                .Where((module) => module.MetadataAddress != 0 && module.IsPEFile && !module.IsDynamic)
+                                .Select((module) => new MetadataRegion(this, module))
+                                .ToImmutableArray()
+                                .Sort();
+                        }
+                    }
+                }
+                else
+                {
+                    // If there are no runtimes, try again next time around
+                    _regionInitialized = false;
                 }
             }
 
@@ -155,7 +171,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 var peImage = new PEImage(stream, leaveOpen: false, isVirtual);
                 if (peImage.IsValid)
                 {
-                    metadata = _symbolService.GetMetadata(module.Name, (uint)peImage.IndexTimeStamp, (uint)peImage.IndexFileSize);
+                    metadata = SymbolService.GetMetadata(module.Name, (uint)peImage.IndexTimeStamp, (uint)peImage.IndexFileSize);
                 }
                 else
                 {
@@ -168,6 +184,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             return metadata;
         }
+
+        private IRuntimeService RuntimeService => _runtimeService ??= _target.Services.GetService<IRuntimeService>();
+
+        private ISymbolService SymbolService => _symbolService ??= _target.Services.GetService<ISymbolService>();
 
         class MetadataRegion : IComparable<MetadataRegion>
         {
