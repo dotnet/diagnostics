@@ -556,9 +556,7 @@ namespace Microsoft.Internal.Common.Utils
     {
         readonly string _ipcClientPath;
 
-        public int IpcClientConnectTimeout { get; set; } = 5000;
-
-        public int IpcClientConnectRetryAttempts { get; set; } = 0;
+        public int IpcClientConnectTimeout { get; set; } = Timeout.Infinite;
 
         public IpcClientTcpServerProxy(string ipcClient, string tcpServer, bool verboseLogging)
             : base(tcpServer, verboseLogging)
@@ -576,41 +574,44 @@ namespace Microsoft.Internal.Common.Utils
 
             try
             {
+                using CancellationTokenSource cancelConnectProxy = CancellationTokenSource.CreateLinkedTokenSource(token);
+
                 // Connect new server endpoint.
-                tcpServerStream = await ConnectTcpStreamAsync(token).ConfigureAwait(false);
+                tcpServerStream = await ConnectTcpStreamAsync(cancelConnectProxy.Token).ConfigureAwait(false);
 
-                int retryAttempts = 0;
-                while (!token.IsCancellationRequested && ipcClientStream == null)
+                // Connect new client endpoint.
+                using var ipcClientStreamTask = ConnectIpcStreamAsync(cancelConnectProxy.Token);
+
+                // We have a valid tcp server endpoint and a pending connect ipc stream. Wait for completion
+                // or disconnect of tcp server endpoint.
+                using var checkTcpStreamTask = CheckStreamConnectionAsync(tcpServerStream, cancelConnectProxy.Token);
+
+                // Wait for at least completion of one task.
+                await Task.WhenAny(ipcClientStreamTask, checkTcpStreamTask).ConfigureAwait(false);
+
+                // Cancel out any pending tasks not yet completed.
+                cancelConnectProxy.Cancel();
+
+                try
                 {
-                    try
-                    {
-                        // Connect new client endpoint.
-                        ipcClientStream = await ConnectIpcStreamAsync(token).ConfigureAwait(false);
-                    }
-                    catch (TimeoutException)
-                    {
-                        retryAttempts++;
-
-                        if (IpcClientConnectRetryAttempts != -1 && retryAttempts > IpcClientConnectRetryAttempts)
-                        {
-                            throw;
-                        }
-
-                        // Check if tcp server stream connection is still available. If so, we can retry client connection
-                        // keeping existing accepted tcp server connection.
-                        if (!CheckStreamConnection(tcpServerStream, token))
-                        {
-                            Console.WriteLine($"IpcClientTcpServerProxy::ConnectProxyAsync: Broken tcp server connection detected, aborting ipc client connection retries.");
-                            throw;
-                        }
-
-                        if (_verboseLogging)
-                            Console.WriteLine($"IpcClientTcpServerProxy::ConnectProxyAsync: Retrying client connection {retryAttempts} of {IpcClientConnectRetryAttempts} attempts.");
-
-                        ipcClientStream?.Dispose();
-                        ipcClientStream = null;
-                    }
+                    await Task.WhenAll(ipcClientStreamTask, checkTcpStreamTask).ConfigureAwait(false);
                 }
+                catch (Exception)
+                {
+                    // Check if we have an accepted ipc client stream.
+                    if (ipcClientStreamTask.IsCompletedSuccessfully)
+                        ipcClientStreamTask.Result?.Dispose();
+
+                    if (checkTcpStreamTask.IsFaulted)
+                    {
+                        Console.WriteLine($"IpcClientTcpServerProxy::ConnectProxyAsync: Broken tcp server connection detected, aborting ipc connection.");
+                        checkTcpStreamTask.GetAwaiter().GetResult();
+                    }
+
+                    throw;
+                }
+
+                ipcClientStream = ipcClientStreamTask.Result;
             }
             catch (Exception)
             {
