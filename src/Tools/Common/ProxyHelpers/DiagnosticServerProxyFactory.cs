@@ -573,6 +573,8 @@ namespace Microsoft.Internal.Common.Utils
 
         public int IpcClientConnectTimeout { get; set; } = Timeout.Infinite;
 
+        public int IpcClientConnectFailureTimeout { get; set; } = 500;
+
         public IpcClientTcpServerProxy(string ipcClient, string tcpServer, bool verboseLogging)
             : base(tcpServer, verboseLogging)
         {
@@ -681,30 +683,47 @@ namespace Microsoft.Internal.Common.Utils
             }
             else
             {
-                var unixDomainSocket = new IpcUnixDomainSocketTransport(_ipcClientPath);
-
-                using var connectTimeoutTokenSource = new CancellationTokenSource();
-                using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
-
-                try
+                bool retry = false;
+                IpcUnixDomainSocketTransport unixDomainSocket;
+                do
                 {
-                    connectTimeoutTokenSource.CancelAfter(IpcClientConnectTimeout);
-                    await unixDomainSocket.ConnectAsync(token).ConfigureAwait(false);
-                }
-                catch (Exception)
-                {
-                    unixDomainSocket?.Dispose();
+                    unixDomainSocket = new IpcUnixDomainSocketTransport(_ipcClientPath);
 
-                    if (connectTimeoutTokenSource.IsCancellationRequested)
+                    using var connectTimeoutTokenSource = new CancellationTokenSource();
+                    using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
+
+                    try
                     {
-                        if (_verboseLogging)
-                            Console.WriteLine("IpcClientTcpServerProxy::ConnectIpcStreamAsync: No ipc stream connected, timing out.");
-
-                        throw new TimeoutException();
+                        connectTimeoutTokenSource.CancelAfter(IpcClientConnectTimeout);
+                        await unixDomainSocket.ConnectAsync(token).ConfigureAwait(false);
+                        retry = false;
                     }
+                    catch (Exception)
+                    {
+                        unixDomainSocket?.Dispose();
 
-                    throw;
+                        if (connectTimeoutTokenSource.IsCancellationRequested)
+                        {
+                            if (_verboseLogging)
+                                Console.WriteLine("IpcClientTcpServerProxy::ConnectIpcStreamAsync: No ipc stream connected, timing out.");
+
+                            throw new TimeoutException();
+                        }
+
+                        if (_verboseLogging)
+                            Console.WriteLine($"IpcClientTcpServerProxy::ConnectIpcStreamAsync: Failed connecting {_ipcClientPath}, wait {IpcClientConnectFailureTimeout} ms before retrying.");
+
+                        // If we get an error (without hitting timeout above), most likely due to unavailable listener.
+                        // Delay execution to prevent to rapid retry attempts.
+                        await Task.Delay(IpcClientConnectFailureTimeout, token).ConfigureAwait(false);
+
+                        if (IpcClientConnectTimeout != Timeout.Infinite)
+                            throw;
+
+                        retry = true;
+                    }
                 }
+                while (retry);
 
                 ipcClientStream = new ExposedSocketNetworkStream(unixDomainSocket, ownsSocket: true);
             }
