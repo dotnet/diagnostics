@@ -2,11 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.NETCore.Client;
 using System;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.DSProxy
 {
@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
             using CancellationTokenSource cancelProxyTask = new CancellationTokenSource();
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelProxyTask.Token);
 
-            var proxyTask = DiagnosticServerProxyFactory.runIpcClientTcpServerProxy(linkedCancelToken.Token, ipcClient, tcpServer, autoShutdown, debug);
+            var proxyTask = DiagnosticServerProxyRunner.runIpcClientTcpServerProxy(linkedCancelToken.Token, ipcClient, tcpServer, autoShutdown, debug);
 
             while (!linkedCancelToken.IsCancellationRequested)
             {
@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
             using CancellationTokenSource cancelProxyTask = new CancellationTokenSource();
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelProxyTask.Token);
 
-            var proxyTask = DiagnosticServerProxyFactory.runIpcServerTcpServerProxy(linkedCancelToken.Token, ipcServer, tcpServer, autoShutdown, debug);
+            var proxyTask = DiagnosticServerProxyRunner.runIpcServerTcpServerProxy(linkedCancelToken.Token, ipcServer, tcpServer, autoShutdown, debug);
 
             while (!linkedCancelToken.IsCancellationRequested)
             {
@@ -77,7 +77,7 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
 
         static void checkLoopbackOnly(string tcpServer)
         {
-            if (!DiagnosticServerProxyFactory.isLoopbackOnly(tcpServer))
+            if (!DiagnosticServerProxyRunner.isLoopbackOnly(tcpServer))
             {
                 StringBuilder message = new StringBuilder();
 

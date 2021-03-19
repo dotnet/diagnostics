@@ -13,7 +13,6 @@
 
   <ItemGroup>
     <Compile Include="..\Common\CommandExtensions.cs" Link="CommandExtensions.cs" />
-    <Compile Include="..\Common\ProxyHelpers\DiagnosticServerProxyFactory.cs" Link="DiagnosticServerProxyFactory.cs" />
   </ItemGroup>
 
   <ItemGroup>
