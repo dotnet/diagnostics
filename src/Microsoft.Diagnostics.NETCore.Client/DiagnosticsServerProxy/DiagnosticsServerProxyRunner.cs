@@ -11,9 +11,9 @@ using System.Net;
 namespace Microsoft.Diagnostics.NETCore.Client
 {
     // <summary>
-    // Class used to run different flavours of Diagnostic Server proxies.
+    // Class used to run different flavours of Diagnostics Server proxies.
     // </summary>
-    internal class DiagnosticServerProxyRunner
+    internal class DiagnosticsServerProxyRunner
     {
         public static async Task<int> runIpcClientTcpServerProxy(CancellationToken token, string ipcClient, string tcpServer, bool autoShutdown, bool debug)
         {
@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return isLooback;
         }
 
-        async static Task<int> runProxy(CancellationToken token, DiagnosticServerProxy proxy, bool autoShutdown, bool debug)
+        async static Task<int> runProxy(CancellationToken token, DiagnosticsServerProxy proxy, bool autoShutdown, bool debug)
         {
             List<Task> runningTasks = new List<Task>();
             List<ConnectedProxy> runningProxies = new List<ConnectedProxy>();

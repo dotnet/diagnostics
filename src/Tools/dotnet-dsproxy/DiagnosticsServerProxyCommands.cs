@@ -11,9 +11,9 @@ using System.Threading.Tasks;
 namespace Microsoft.Diagnostics.Tools.DSProxy
 {
     // TODO: Add support for IPC Server <--> TCP Server proxy, RunISTSProxy.
-    public class DiagnosticServerProxyCommands
+    public class DiagnosticsServerProxyCommands
     {
-        public DiagnosticServerProxyCommands()
+        public DiagnosticsServerProxyCommands()
         {
         }
 
@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
             using CancellationTokenSource cancelProxyTask = new CancellationTokenSource();
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelProxyTask.Token);
 
-            var proxyTask = DiagnosticServerProxyRunner.runIpcClientTcpServerProxy(linkedCancelToken.Token, ipcClient, tcpServer, autoShutdown, debug);
+            var proxyTask = DiagnosticsServerProxyRunner.runIpcClientTcpServerProxy(linkedCancelToken.Token, ipcClient, tcpServer, autoShutdown, debug);
 
             while (!linkedCancelToken.IsCancellationRequested)
             {
@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
             using CancellationTokenSource cancelProxyTask = new CancellationTokenSource();
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelProxyTask.Token);
 
-            var proxyTask = DiagnosticServerProxyRunner.runIpcServerTcpServerProxy(linkedCancelToken.Token, ipcServer, tcpServer, autoShutdown, debug);
+            var proxyTask = DiagnosticsServerProxyRunner.runIpcServerTcpServerProxy(linkedCancelToken.Token, ipcServer, tcpServer, autoShutdown, debug);
 
             while (!linkedCancelToken.IsCancellationRequested)
             {
@@ -77,7 +77,7 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
 
         static void checkLoopbackOnly(string tcpServer)
         {
-            if (!DiagnosticServerProxyRunner.isLoopbackOnly(tcpServer))
+            if (!DiagnosticsServerProxyRunner.isLoopbackOnly(tcpServer))
             {
                 StringBuilder message = new StringBuilder();
 

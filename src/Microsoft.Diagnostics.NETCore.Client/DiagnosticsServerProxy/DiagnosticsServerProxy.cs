@@ -29,9 +29,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
     }
 
     // <summary>
-    // Base class representing a Diagnostic Server proxy.
+    // Base class representing a Diagnostics Server proxy.
     // </summary>
-    internal class DiagnosticServerProxy
+    internal class DiagnosticsServerProxy
     {
         public virtual void Start()
         {
@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     // <summary>
     // This class represent a TCP/IP server endpoint used when building up proxy instances.
     // </summary>
-    internal class TcpServerProxy : DiagnosticServerProxy
+    internal class TcpServerProxy : DiagnosticsServerProxy
     {
         protected readonly bool _verboseLogging;
 
@@ -597,7 +597,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             try
             {
-                // ReversedDiagnosticServer consumes advertise message, needs to be replayed back to ipc client stream. Use proxy process ID as representation.
+                // ReversedDiagnosticsServer consumes advertise message, needs to be replayed back to ipc client stream. Use proxy process ID as representation.
                 await IpcAdvertise.SerializeAsync(ipcClientStream, RuntimeInstanceId, (ulong)Process.GetCurrentProcess().Id, token).ConfigureAwait(false);
             }
             catch (Exception)
