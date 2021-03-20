@@ -225,9 +225,9 @@ namespace Microsoft.Internal.Common.Utils
             }
             else if (!string.IsNullOrEmpty(portName))
             {
-                ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(portName);
-                server.Start();
                 string fullPort = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? portName : Path.GetFullPath(portName);
+                ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(fullPort);
+                server.Start();
                 Console.WriteLine($"Waiting for connection on {fullPort}");
                 Console.WriteLine($"Start an application with the following environment variable: DOTNET_DiagnosticPorts={fullPort}");
 
