@@ -12,35 +12,35 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Tools.Common;
 
-namespace Microsoft.Diagnostics.Tools.DSProxy
+namespace Microsoft.Diagnostics.Tools.DSRouter
 {
     internal class Program
     {
-        delegate Task<int> DiagnosticsServerIpcClientTcpServerProxyDelegate(CancellationToken ct, string ipcClient, string tcpServer, int runtimeTimeoutS, bool verbose);
-        delegate Task<int> DiagnosticsServerIpcServerTcpServerProxyDelegate(CancellationToken ct, string ipcServer, string tcpServer, int runtimeTimeoutS, bool verbose);
+        delegate Task<int> DiagnosticsServerIpcClientTcpServerRouterDelegate(CancellationToken ct, string ipcClient, string tcpServer, int runtimeTimeoutS, bool verbose);
+        delegate Task<int> DiagnosticsServerIpcServerTcpServerRouterDelegate(CancellationToken ct, string ipcServer, string tcpServer, int runtimeTimeoutS, bool verbose);
 
-        private static Command IpcClientTcpServerProxyCommand() =>
+        private static Command IpcClientTcpServerRouterCommand() =>
             new Command(
                 name: "client-server",
-                description:    "Start a .NET application Diagnostics Server proxying local IPC server <--> remote TCP client. " +
-                                "Proxy is configured using an IPC client (connecting diagnostic tool IPC server) " +
+                description:    "Start a .NET application Diagnostics Server routing local IPC server <--> remote TCP client. " +
+                                "Router is configured using an IPC client (connecting diagnostic tool IPC server) " +
                                 "and a TCP/IP server (accepting runtime TCP client).")
             {
                 // Handler
-                HandlerDescriptor.FromDelegate((DiagnosticsServerIpcClientTcpServerProxyDelegate)new DiagnosticsServerProxyCommands().RunIpcClientTcpServerProxy).GetCommandHandler(),
+                HandlerDescriptor.FromDelegate((DiagnosticsServerIpcClientTcpServerRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcClientTcpServerRouter).GetCommandHandler(),
                 // Options
                 IpcClientAddressOption(), TcpServerAddressOption(), RuntimeTimeoutOption(), VerboseOption()
             };
 
-        private static Command IpcServerTcpServerProxyCommand() =>
+        private static Command IpcServerTcpServerRouterCommand() =>
             new Command(
                 name: "server-server",
-                description:    "Start a .NET application Diagnostics Server proxying local IPC client <--> remote TCP client. " +
-                                "Proxy is configured using an IPC server (connecting to by diagnostic tools) " +
+                description:    "Start a .NET application Diagnostics Server routing local IPC client <--> remote TCP client. " +
+                                "Router is configured using an IPC server (connecting to by diagnostic tools) " +
                                 "and a TCP/IP server (accepting runtime TCP client).")
             {
                 // Handler
-                HandlerDescriptor.FromDelegate((DiagnosticsServerIpcClientTcpServerProxyDelegate)new DiagnosticsServerProxyCommands().RunIpcServerTcpServerProxy).GetCommandHandler(),
+                HandlerDescriptor.FromDelegate((DiagnosticsServerIpcClientTcpServerRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerTcpServerRouter).GetCommandHandler(),
                 // Options
                 IpcServerAddressOption(), TcpServerAddressOption(), RuntimeTimeoutOption(), VerboseOption()
             };
@@ -49,8 +49,8 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
             new Option(
                 aliases: new[] { "--ipc-client", "-ipcc" },
                 description:    "The diagnostic tool diagnostics server ipc address (--diagnostic-port argument). " +
-                                "Proxy connects diagnostic tool ipc server when establishing a " +
-                                "new proxy channel between runtime and diagnostic tool.")
+                                "Router connects diagnostic tool ipc server when establishing a " +
+                                "new route between runtime and diagnostic tool.")
             {
                 Argument = new Argument<string>(name: "ipcClient", getDefaultValue: () => "")
             };
@@ -58,9 +58,9 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
         private static Option IpcServerAddressOption() =>
             new Option(
                 aliases: new[] { "--ipc-server", "-ipcs" },
-                description:    "The diagnostics server ipc address to proxy. Proxy accept ipc connections from diagnostic tools " +
-                                "establishing a new proxy channel between runtime and diagnostic tool. If not specified " +
-                                "proxy server will use default ipc diagnostics server path.")
+                description:    "The diagnostics server ipc address to route. Router accepts ipc connections from diagnostic tools " +
+                                "establishing a new route between runtime and diagnostic tool. If not specified " +
+                                "router will use default ipc diagnostics server path.")
             {
                 Argument = new Argument<string>(name: "ipcServer", getDefaultValue: () => "")
             };
@@ -68,10 +68,10 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
         private static Option TcpServerAddressOption() =>
             new Option(
                 aliases: new[] { "--tcp-server", "-tcps" },
-                description:    "The proxy server TCP/IP address using format [host]:[port]. " +
-                                "Proxy server can bind one (127.0.0.1, [::1], 0.0.0.0, [::], ipv4 address, ipv6 address, hostname) " +
+                description:    "The router TCP/IP address using format [host]:[port]. " +
+                                "Router can bind one (127.0.0.1, [::1], 0.0.0.0, [::], ipv4 address, ipv6 address, hostname) " +
                                 "or all (*) interfaces. Launch runtime using DOTNET_DiagnosticPorts environment variable " +
-                                "connecting proxy TCP server during startup.")
+                                "connecting router TCP server during startup.")
             {
                 Argument = new Argument<string>(name: "tcpServer", getDefaultValue: () => "")
             };
@@ -79,8 +79,8 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
         private static Option RuntimeTimeoutOption() =>
             new Option(
                 aliases: new[] { "--runtime-timeout", "-rt" },
-                description:    "Automatically shutdown proxy server if no runtime connects to it before specified timeout (seconds)." +
-                                "If not specified, proxy server won't trigger an automatic shutdown.")
+                description:    "Automatically shutdown router if no runtime connects to it before specified timeout (seconds)." +
+                                "If not specified, router won't trigger an automatic shutdown.")
             {
                 Argument = new Argument<int>(name: "runtimeTimeout", getDefaultValue: () => Timeout.Infinite)
             };
@@ -99,12 +99,12 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
 
             var currentColor = Console.ForegroundColor;
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("WARNING: dotnet-dsproxy is an experimental development tool not intended for production environments." + Environment.NewLine);
+            Console.WriteLine("WARNING: dotnet-dsrouter is an experimental development tool not intended for production environments." + Environment.NewLine);
             Console.ForegroundColor = currentColor;
 
             var parser = new CommandLineBuilder()
-                .AddCommand(IpcClientTcpServerProxyCommand())
-                .AddCommand(IpcServerTcpServerProxyCommand())
+                .AddCommand(IpcClientTcpServerRouterCommand())
+                .AddCommand(IpcServerTcpServerRouterCommand())
                 .UseDefaults()
                 .Build();
 

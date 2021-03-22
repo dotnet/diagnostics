@@ -8,14 +8,14 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostics.Tools.DSProxy
+namespace Microsoft.Diagnostics.Tools.DSRouter
 {
 
-    class DiagnosticsServerProxyConsoleLogger : DiagnosticsServerProxyLogger
+    class DiagnosticsServerRouterConsoleLogger : DiagnosticsServerRouterLogger
     {
         LogLevel _logLevel;
 
-        public DiagnosticsServerProxyConsoleLogger(bool verbose)
+        public DiagnosticsServerRouterConsoleLogger(bool verbose)
         {
             _logLevel = verbose ? LogLevel.Debug : LogLevel.Info;
         }
@@ -46,25 +46,25 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
 
     }
 
-    public class DiagnosticsServerProxyCommands
+    public class DiagnosticsServerRouterCommands
     {
-        public DiagnosticsServerProxyCommands()
+        public DiagnosticsServerRouterCommands()
         {
         }
 
-        public async Task<int> RunIpcClientTcpServerProxy(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeout, bool verbose)
+        public async Task<int> RunIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeout, bool verbose)
         {
             checkLoopbackOnly(tcpServer);
 
-            using CancellationTokenSource cancelProxyTask = new CancellationTokenSource();
-            using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelProxyTask.Token);
+            using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
+            using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
 
-            var proxyTask = DiagnosticsServerProxyRunner.runIpcClientTcpServerProxy(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, new DiagnosticsServerProxyConsoleLogger(verbose));
+            var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, new DiagnosticsServerRouterConsoleLogger(verbose));
 
             while (!linkedCancelToken.IsCancellationRequested)
             {
-                await Task.WhenAny(proxyTask, Task.Delay(250)).ConfigureAwait(false);
-                if (proxyTask.IsCompleted)
+                await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
+                if (routerTask.IsCompleted)
                     break;
 
                 if (Console.KeyAvailable)
@@ -72,28 +72,28 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
                     ConsoleKey cmd = Console.ReadKey(true).Key;
                     if (cmd == ConsoleKey.Q)
                     {
-                        cancelProxyTask.Cancel();
+                        cancelRouterTask.Cancel();
                         break;
                     }
                 }
             }
 
-            return proxyTask.Result;
+            return routerTask.Result;
         }
 
-        public async Task<int> RunIpcServerTcpServerProxy(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeout, bool verbose)
+        public async Task<int> RunIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeout, bool verbose)
         {
             checkLoopbackOnly(tcpServer);
 
-            using CancellationTokenSource cancelProxyTask = new CancellationTokenSource();
-            using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelProxyTask.Token);
+            using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
+            using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
 
-            var proxyTask = DiagnosticsServerProxyRunner.runIpcServerTcpServerProxy(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, new DiagnosticsServerProxyConsoleLogger(verbose));
+            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, new DiagnosticsServerRouterConsoleLogger(verbose));
 
             while (!linkedCancelToken.IsCancellationRequested)
             {
-                await Task.WhenAny(proxyTask, Task.Delay(250)).ConfigureAwait(false);
-                if (proxyTask.IsCompleted)
+                await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
+                if (routerTask.IsCompleted)
                     break;
 
                 if (Console.KeyAvailable)
@@ -101,18 +101,18 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
                     ConsoleKey cmd = Console.ReadKey(true).Key;
                     if (cmd == ConsoleKey.Q)
                     {
-                        cancelProxyTask.Cancel();
+                        cancelRouterTask.Cancel();
                         break;
                     }
                 }
             }
 
-            return proxyTask.Result;
+            return routerTask.Result;
         }
 
         static void checkLoopbackOnly(string tcpServer)
         {
-            if (!DiagnosticsServerProxyRunner.isLoopbackOnly(tcpServer))
+            if (!DiagnosticsServerRouterRunner.isLoopbackOnly(tcpServer))
             {
                 StringBuilder message = new StringBuilder();
 

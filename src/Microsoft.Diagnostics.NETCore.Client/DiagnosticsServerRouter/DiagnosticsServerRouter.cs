@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         { }
     }
 
-    internal abstract class DiagnosticsServerProxyLogger
+    internal abstract class DiagnosticsServerRouterLogger
     {
         public enum LogLevel
         {
@@ -47,18 +47,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
     }
 
     // <summary>
-    // Base class representing a Diagnostics Server proxy.
+    // Base class representing a Diagnostics Server router.
     // </summary>
-    internal class DiagnosticsServerProxy
+    internal class DiagnosticsServerRouter
     {
-        protected readonly DiagnosticsServerProxyLogger _logger;
+        protected readonly DiagnosticsServerRouterLogger _logger;
 
-        public DiagnosticsServerProxy(DiagnosticsServerProxyLogger logger)
+        public DiagnosticsServerRouter(DiagnosticsServerRouterLogger logger)
         {
             _logger = logger;
         }
 
-        public DiagnosticsServerProxyLogger Logger
+        public DiagnosticsServerRouterLogger Logger
         {
             get { return _logger; }
         }
@@ -78,16 +78,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
             throw new NotImplementedException();
         }
 
-        public virtual Task<ConnectedProxy> ConnectProxyAsync(CancellationToken token)
+        public virtual Task<ConnectedRouter> ConnectRouterAsync(CancellationToken token)
         {
             throw new NotImplementedException();
         }
     }
 
     // <summary>
-    // This class represent a TCP/IP server endpoint used when building up proxy instances.
+    // This class represent a TCP/IP server endpoint used when building up router instances.
     // </summary>
-    internal class TcpServerProxy : DiagnosticsServerProxy
+    internal class TcpServerRouter : DiagnosticsServerRouter
     {
         readonly string _tcpServerAddress;
 
@@ -107,7 +107,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             get { return _tcpServerEndpointInfo.ProcessId; }
         }
 
-        protected TcpServerProxy(string tcpServer, int runtimeTimeoutMS, DiagnosticsServerProxyLogger logger)
+        protected TcpServerRouter(string tcpServer, int runtimeTimeoutMS, DiagnosticsServerRouterLogger logger)
             : base(logger)
         {
             _tcpServerAddress = tcpServer;
@@ -270,10 +270,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
     }
 
     // <summary>
-    // This class connects IPC Server<-> TCP Server proxy instances.
+    // This class connects IPC Server<-> TCP Server router instances.
     // Supports NamedPipes/UnixDomainSocket server and TCP/IP server.
     // </summary>
-    internal class IpcServerTcpServerProxy : TcpServerProxy
+    internal class IpcServerTcpServerRouter : TcpServerRouter
     {
         readonly string _ipcServerPath;
 
@@ -281,7 +281,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public int IpcServerConnectTimeout { get; set; } = Timeout.Infinite;
 
-        public IpcServerTcpServerProxy(string ipcServer, string tcpServer, int runtimeTimeoutMS, DiagnosticsServerProxyLogger logger)
+        public IpcServerTcpServerRouter(string ipcServer, string tcpServer, int runtimeTimeoutMS, DiagnosticsServerRouterLogger logger)
             : base(tcpServer, runtimeTimeoutMS, logger)
         {
             _ipcServerPath = ipcServer;
@@ -317,22 +317,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return base.Stop();
         }
 
-        public override async Task<ConnectedProxy> ConnectProxyAsync(CancellationToken token)
+        public override async Task<ConnectedRouter> ConnectRouterAsync(CancellationToken token)
         {
             Stream tcpServerStream = null;
             Stream ipcServerStream = null;
 
-            Logger.LogDebug($"Trying to connect new proxy instance.");
+            Logger.LogDebug($"Trying to connect new router instance.");
 
             try
             {
-                using CancellationTokenSource cancelConnectProxy = CancellationTokenSource.CreateLinkedTokenSource(token);
+                using CancellationTokenSource cancelConnectRouter = CancellationTokenSource.CreateLinkedTokenSource(token);
 
                 // Connect new tcp server endpoint.
-                using var tcpServerStreamTask = ConnectTcpStreamAsync(cancelConnectProxy.Token);
+                using var tcpServerStreamTask = ConnectTcpStreamAsync(cancelConnectRouter.Token);
 
                 // Connect new ipc server endpoint.
-                using var ipcServerStreamTask = ConnectIpcStreamAsync(cancelConnectProxy.Token);
+                using var ipcServerStreamTask = ConnectIpcStreamAsync(cancelConnectRouter.Token);
 
                 await Task.WhenAny(ipcServerStreamTask, tcpServerStreamTask).ConfigureAwait(false);
 
@@ -352,13 +352,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                     // We have a valid tcp server endpoint and a pending connect ipc stream. Wait for completion
                     // or disconnect of tcp server endpoint.
-                    using var checkTcpStreamTask = CheckStreamConnectionAsync(tcpServerStream, cancelConnectProxy.Token);
+                    using var checkTcpStreamTask = CheckStreamConnectionAsync(tcpServerStream, cancelConnectRouter.Token);
 
                     // Wait for at least completion of one task.
                     await Task.WhenAny(ipcServerStreamTask, checkTcpStreamTask).ConfigureAwait(false);
 
                     // Cancel out any pending tasks not yet completed.
-                    cancelConnectProxy.Cancel();
+                    cancelConnectRouter.Cancel();
 
                     try
                     {
@@ -384,7 +384,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 else
                 {
                     // Error case, cancel out. wait and throw exception.
-                    cancelConnectProxy.Cancel();
+                    cancelConnectRouter.Cancel();
                     try
                     {
                         await Task.WhenAll(ipcServerStreamTask, tcpServerStreamTask).ConfigureAwait(false);
@@ -400,7 +400,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             catch (Exception)
             {
-                Logger.LogDebug("Failed connecting new proxy instance.");
+                Logger.LogDebug("Failed connecting new router instance.");
 
                 // Cleanup and rethrow.
                 ipcServerStream?.Dispose();
@@ -409,10 +409,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw;
             }
 
-            // Create new proxy.
-            Logger.LogDebug("New proxy instance successfully connected.");
+            // Create new router.
+            Logger.LogDebug("New router instance successfully connected.");
 
-            return new ConnectedProxy(ipcServerStream, tcpServerStream, Logger);
+            return new ConnectedRouter(ipcServerStream, tcpServerStream, Logger);
         }
 
         protected async Task<Stream> ConnectIpcStreamAsync(CancellationToken token)
@@ -452,10 +452,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
     }
 
     // <summary>
-    // This class connects IPC Client<-> TCP Server proxy instances.
+    // This class connects IPC Client<-> TCP Server router instances.
     // Supports NamedPipes/UnixDomainSocket client and TCP/IP server.
     // </summary>
-    internal class IpcClientTcpServerProxy : TcpServerProxy
+    internal class IpcClientTcpServerRouter : TcpServerRouter
     {
         readonly string _ipcClientPath;
 
@@ -463,38 +463,38 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public int IpcClientConnectFailureTimeout { get; set; } = 500;
 
-        public IpcClientTcpServerProxy(string ipcClient, string tcpServer, int runtimeTimeoutMS, DiagnosticsServerProxyLogger logger)
+        public IpcClientTcpServerRouter(string ipcClient, string tcpServer, int runtimeTimeoutMS, DiagnosticsServerRouterLogger logger)
             : base(tcpServer, runtimeTimeoutMS, logger)
         {
             _ipcClientPath = ipcClient;
         }
 
-        public override async Task<ConnectedProxy> ConnectProxyAsync(CancellationToken token)
+        public override async Task<ConnectedRouter> ConnectRouterAsync(CancellationToken token)
         {
             Stream tcpServerStream = null;
             Stream ipcClientStream = null;
 
-            Logger.LogDebug("Trying to connect new proxy instance.");
+            Logger.LogDebug("Trying to connect new router instance.");
 
             try
             {
-                using CancellationTokenSource cancelConnectProxy = CancellationTokenSource.CreateLinkedTokenSource(token);
+                using CancellationTokenSource cancelConnectRouter = CancellationTokenSource.CreateLinkedTokenSource(token);
 
                 // Connect new server endpoint.
-                tcpServerStream = await ConnectTcpStreamAsync(cancelConnectProxy.Token).ConfigureAwait(false);
+                tcpServerStream = await ConnectTcpStreamAsync(cancelConnectRouter.Token).ConfigureAwait(false);
 
                 // Connect new client endpoint.
-                using var ipcClientStreamTask = ConnectIpcStreamAsync(cancelConnectProxy.Token);
+                using var ipcClientStreamTask = ConnectIpcStreamAsync(cancelConnectRouter.Token);
 
                 // We have a valid tcp server endpoint and a pending connect ipc stream. Wait for completion
                 // or disconnect of tcp server endpoint.
-                using var checkTcpStreamTask = CheckStreamConnectionAsync(tcpServerStream, cancelConnectProxy.Token);
+                using var checkTcpStreamTask = CheckStreamConnectionAsync(tcpServerStream, cancelConnectRouter.Token);
 
                 // Wait for at least completion of one task.
                 await Task.WhenAny(ipcClientStreamTask, checkTcpStreamTask).ConfigureAwait(false);
 
                 // Cancel out any pending tasks not yet completed.
-                cancelConnectProxy.Cancel();
+                cancelConnectRouter.Cancel();
 
                 try
                 {
@@ -519,7 +519,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             catch (Exception)
             {
-                Logger.LogDebug("Failed connecting new proxy instance.");
+                Logger.LogDebug("Failed connecting new router instance.");
 
                 // Cleanup and rethrow.
                 tcpServerStream?.Dispose();
@@ -528,10 +528,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw;
             }
 
-            // Create new proxy.
-            Logger.LogDebug("New proxy instance successfully connected.");
+            // Create new router.
+            Logger.LogDebug("New router instance successfully connected.");
 
-            return new ConnectedProxy(ipcClientStream, tcpServerStream, Logger, (ulong)IpcAdvertise.V1SizeInBytes);
+            return new ConnectedRouter(ipcClientStream, tcpServerStream, Logger, (ulong)IpcAdvertise.V1SizeInBytes);
         }
 
         protected async Task<Stream> ConnectIpcStreamAsync(CancellationToken token)
@@ -612,7 +612,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             try
             {
-                // ReversedDiagnosticsServer consumes advertise message, needs to be replayed back to ipc client stream. Use proxy process ID as representation.
+                // ReversedDiagnosticsServer consumes advertise message, needs to be replayed back to ipc client stream. Use router process ID as representation.
                 await IpcAdvertise.SerializeAsync(ipcClientStream, RuntimeInstanceId, (ulong)Process.GetCurrentProcess().Id, token).ConfigureAwait(false);
             }
             catch (Exception)
@@ -630,9 +630,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
     }
 
-    internal class ConnectedProxy : IDisposable
+    internal class ConnectedRouter : IDisposable
     {
-        readonly DiagnosticsServerProxyLogger _logger;
+        readonly DiagnosticsServerRouterLogger _logger;
 
         Stream _frontendStream = null;
         Stream _backendStream = null;
@@ -640,32 +640,32 @@ namespace Microsoft.Diagnostics.NETCore.Client
         Task _backendReadFrontendWriteTask = null;
         Task _frontendReadBackendWriteTask = null;
 
-        CancellationTokenSource _cancelProxyTokenSource = null;
+        CancellationTokenSource _cancelRouterTokenSource = null;
 
         bool _disposed = false;
 
         ulong _backendToFrontendByteTransfer;
         ulong _frontendToBackendByteTransfer;
 
-        static int s_proxyInstanceCount;
+        static int s_routerInstanceCount;
 
-        public TaskCompletionSource<bool> ProxyTaskCompleted { get; }
+        public TaskCompletionSource<bool> RouterTaskCompleted { get; }
 
-        public ConnectedProxy(Stream frontendStream, Stream backendStream, DiagnosticsServerProxyLogger logger, ulong initBackendToFrontendByteTransfer = 0, ulong initFrontendToBackendByteTransfer = 0)
+        public ConnectedRouter(Stream frontendStream, Stream backendStream, DiagnosticsServerRouterLogger logger, ulong initBackendToFrontendByteTransfer = 0, ulong initFrontendToBackendByteTransfer = 0)
         {
             _logger = logger;
 
             _frontendStream = frontendStream;
             _backendStream = backendStream;
 
-            _cancelProxyTokenSource = new CancellationTokenSource();
+            _cancelRouterTokenSource = new CancellationTokenSource();
 
-            ProxyTaskCompleted = new TaskCompletionSource<bool>();
+            RouterTaskCompleted = new TaskCompletionSource<bool>();
 
             _backendToFrontendByteTransfer = initBackendToFrontendByteTransfer;
             _frontendToBackendByteTransfer = initFrontendToBackendByteTransfer;
 
-            Interlocked.Increment(ref s_proxyInstanceCount);
+            Interlocked.Increment(ref s_routerInstanceCount);
         }
 
         public void Start()
@@ -673,16 +673,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
             if (_backendReadFrontendWriteTask != null || _frontendReadBackendWriteTask != null || _disposed)
                 throw new InvalidOperationException();
 
-            _backendReadFrontendWriteTask = BackendReadFrontendWrite(_cancelProxyTokenSource.Token);
-            _frontendReadBackendWriteTask = FrontendReadBackendWrite(_cancelProxyTokenSource.Token);
+            _backendReadFrontendWriteTask = BackendReadFrontendWrite(_cancelRouterTokenSource.Token);
+            _frontendReadBackendWriteTask = FrontendReadBackendWrite(_cancelRouterTokenSource.Token);
         }
 
         public async void Stop()
         {
             if (_disposed)
-                throw new ObjectDisposedException(nameof(ConnectedProxy));
+                throw new ObjectDisposedException(nameof(ConnectedRouter));
 
-            _cancelProxyTokenSource.Cancel();
+            _cancelRouterTokenSource.Cancel();
 
             List<Task> runningTasks = new List<Task>();
 
@@ -697,7 +697,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _backendReadFrontendWriteTask?.Dispose();
             _frontendReadBackendWriteTask?.Dispose();
 
-            ProxyTaskCompleted?.TrySetResult(true);
+            RouterTaskCompleted?.TrySetResult(true);
 
             _backendReadFrontendWriteTask = null;
             _frontendReadBackendWriteTask = null;
@@ -718,17 +718,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 Stop();
 
-                _cancelProxyTokenSource.Dispose();
+                _cancelRouterTokenSource.Dispose();
 
                 _backendStream?.Dispose();
                 _frontendStream?.Dispose();
 
                 _disposed = true;
 
-                Interlocked.Decrement(ref s_proxyInstanceCount);
+                Interlocked.Decrement(ref s_routerInstanceCount);
 
                 _logger.LogDebug($"Diposed stats: Backend->Frontend {_backendToFrontendByteTransfer} bytes, Frontend->Backend {_frontendToBackendByteTransfer} bytes.");
-                _logger.LogDebug($"Active instances: {s_proxyInstanceCount}");
+                _logger.LogDebug($"Active instances: {s_routerInstanceCount}");
             }
         }
 
@@ -770,7 +770,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 _logger.LogDebug("Failed stream operation. Completing task.");
             }
 
-            ProxyTaskCompleted?.TrySetResult(true);
+            RouterTaskCompleted?.TrySetResult(true);
         }
 
         async Task FrontendReadBackendWrite(CancellationToken token)
@@ -811,7 +811,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 _logger.LogDebug("Failed stream operation. Completing task.");
             }
 
-            ProxyTaskCompleted?.TrySetResult(true);
+            RouterTaskCompleted?.TrySetResult(true);
         }
     }
 }

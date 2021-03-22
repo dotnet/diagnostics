@@ -4,9 +4,9 @@
     <TargetFramework Condition="'$(BundleTools)' == 'true'">netcoreapp3.1</TargetFramework>
     <TargetFramework Condition="'$(BundleTools)' != 'true'">netcoreapp2.1</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <ToolCommandName>dotnet-dsproxy</ToolCommandName>
-    <RootNamespace>Microsoft.Diagnostics.Tools.DSProxy</RootNamespace>
-    <Description>.NET Performance Diagnostic Server Proxy Tool</Description>
+    <ToolCommandName>dotnet-dsrouter</ToolCommandName>
+    <RootNamespace>Microsoft.Diagnostics.Tools.DSRouter</RootNamespace>
+    <Description>.NET Performance Diagnostic Server Router Tool</Description>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
   </PropertyGroup>
