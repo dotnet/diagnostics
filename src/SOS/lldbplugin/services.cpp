@@ -2578,7 +2578,7 @@ LLDBServices::FlushCheck()
     }
     else 
     {
-        Extensions::GetInstance()->UpdateTarget(0);
+        Extensions::GetInstance()->DestroyTarget();
     }
 }
 
