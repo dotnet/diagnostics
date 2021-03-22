@@ -768,11 +768,11 @@ BOOL GCObjInHeap(TADDR taddrObj, const GCHeapDetails &heap, TADDR_SEGINFO& rngSe
 
 #ifndef FEATURE_PAL
 // this function updates genUsage to reflect statistics from the range defined by [start, end)
-void GCGenUsageStats(TADDR start, TADDR end, const std::unordered_set<TADDR> &liveObjs,
+void GCGenUsageStats(TADDR start, TADDR alloc_end, TADDR commit_end, const std::unordered_set<TADDR> &liveObjs,
     const GCHeapDetails &heap, BOOL bLarge, BOOL bPinned, const AllocInfo *pAllocInfo, GenUsageStat *genUsage)
 {
     // if this is an empty segment or generation return
-    if (start >= end)
+    if (start >= alloc_end)
     {
         return;
     }
@@ -781,10 +781,11 @@ void GCGenUsageStats(TADDR start, TADDR end, const std::unordered_set<TADDR> &li
     _ASSERTE(sos::IsObject(start));
 
     // update the "allocd" field
-    genUsage->allocd += end - start;
+    genUsage->allocd += alloc_end - start;
+    genUsage->committed += commit_end - start;
 
     size_t objSize = 0;
-    for  (TADDR taddrObj = start; taddrObj < end; taddrObj += objSize)
+    for  (TADDR taddrObj = start; taddrObj < alloc_end; taddrObj += objSize)
     {
         TADDR  taddrMT;
 
@@ -824,7 +825,7 @@ void GCGenUsageStats(TADDR start, TADDR end, const std::unordered_set<TADDR> &li
             }
 
             // Are we at the end of gen 0?
-            if (taddrObj == end - Align(min_obj_size))
+            if (taddrObj == alloc_end - Align(min_obj_size))
             {
                 objSize = 0;
                 break;
@@ -891,7 +892,7 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
             ExtErr("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
             return FALSE;
         }
-        GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.allocated, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[2]);
+        GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.allocated, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[2]);
         taddrSeg = (TADDR)dacpSeg.next;
     }
 #endif
@@ -904,6 +905,7 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
     }
 
     TADDR endGen = TO_TADDR(heap.alloc_allocated);
+
     for (UINT n = 0; n <= GetMaxGeneration(); n ++)
     {
         TADDR startGen;
@@ -918,7 +920,7 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
         }
 
 #ifndef FEATURE_PAL
-        GCGenUsageStats(startGen, endGen, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
+        GCGenUsageStats(startGen, endGen, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
 #endif
         endGen = startGen;
     }
@@ -937,7 +939,7 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
         }
 
 #ifndef FEATURE_PAL
-        GCGenUsageStats((TADDR) dacpSeg.mem, (TADDR) dacpSeg.allocated, liveObjs, heap, TRUE, FALSE, NULL, &hpUsage->genUsage[3]);
+        GCGenUsageStats((TADDR) dacpSeg.mem, (TADDR) dacpSeg.allocated, (TADDR) dacpSeg.committed, liveObjs, heap, TRUE, FALSE, NULL, &hpUsage->genUsage[3]);
 #endif
         taddrSeg = (TADDR)dacpSeg.next;
     }
@@ -958,7 +960,7 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
             }
 
 #ifndef FEATURE_PAL
-            GCGenUsageStats((TADDR) dacpSeg.mem, (TADDR) dacpSeg.allocated, liveObjs, heap, FALSE, TRUE, NULL, &hpUsage->genUsage[4]);
+            GCGenUsageStats((TADDR) dacpSeg.mem, (TADDR) dacpSeg.allocated, (TADDR) dacpSeg.committed, liveObjs, heap, FALSE, TRUE, NULL, &hpUsage->genUsage[4]);
 #endif
             taddrSeg = (TADDR)dacpSeg.next;
         }
