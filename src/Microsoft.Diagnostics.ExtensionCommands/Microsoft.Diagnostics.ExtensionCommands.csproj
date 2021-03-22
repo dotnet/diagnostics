@@ -12,13 +12,16 @@
     <IncludeSymbols>true</IncludeSymbols>
     <IsShippingAssembly>false</IsShippingAssembly>
   </PropertyGroup>
-  
+
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
-    <PackageReference Include="ParallelStacks.Runtime" Version="$(ParallelStacksRuntimeVersion)" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="ParallelStacks.Runtime\" />
   </ItemGroup>
 </Project>

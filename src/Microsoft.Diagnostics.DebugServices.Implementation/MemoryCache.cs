@@ -28,6 +28,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             private readonly byte[] _data;
 
             /// <summary>
+            /// Length of cluster data
+            /// </summary>
+            internal int Length => _data.Length;
+
+            /// <summary>
             /// Creates a cluster for some data.
             /// If the buffer is shorter than a page, it build a validity bitmap for it.
             /// </summary>
@@ -163,18 +168,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 // There are 3 things that can happen here:
                 // 1) Normal full size cluster read (== Cluster.Size). The full block memory is cached.
                 // 2) Partial cluster read (< Cluster.Size). The partial memory block is cached and the memory after it is invalid.
-                // 3) Data == null. Read failure. Failure is not cached.
+                // 3) Data == null. Read failure. Failure is cached.
                 byte[] data = _readMemory(baseAddress, Cluster.Size);
-                if (data == null)
-                {
-                    cluster = Cluster.Empty;
-                }
-                else
-                { 
-                    cluster = new Cluster(data);
-                    CacheSize += data.Length;
-                    _map[baseAddress] = cluster;
-                }
+
+                cluster = data == null ? Cluster.Empty : new Cluster(data);
+                CacheSize += cluster.Length;
+                _map[baseAddress] = cluster;
             }
 
             return cluster;

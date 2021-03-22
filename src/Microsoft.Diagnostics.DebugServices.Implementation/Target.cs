@@ -112,10 +112,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Registers an object to be disposed when ITarget.Close() is called.
         /// </summary>
-        /// <param name="disposable">object to be disposed on Close()</param>
+        /// <param name="disposable">object to be disposed on Close() or null</param>
         public void DisposeOnClose(IDisposable disposable)
         {
-            _disposables.Add(disposable);
+            if (disposable != null)
+            {
+                _disposables.Add(disposable);
+            }
         }
 
         /// <summary>

@@ -4,10 +4,13 @@
 
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection.PortableExecutable;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -29,7 +32,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             InitializeProductVersion = 0x40,
         }
 
-        private IDisposable _onChangeEvent;
+        private readonly IDisposable _onChangeEvent;
         private Flags _flags;
         private PdbInfo _pdbInfo;
         private ImmutableArray<byte> _buildId;
@@ -38,17 +41,29 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public readonly ServiceProvider ServiceProvider;
 
-        public Module()
+        public Module(ITarget target)
         {
             ServiceProvider = new ServiceProvider();
             ServiceProvider.AddServiceFactoryWithNoCaching<PEImage>(() => GetPEInfo());
-            ServiceProvider.AddServiceFactory<PEReader>(() => {
-                _onChangeEvent = ModuleService.SymbolService.OnChangeEvent.Register(() => ServiceProvider.RemoveService(typeof(PEReader)));
-                return ModuleService.GetPEReader(this);
-            });
-        }
 
-        public void Dispose() => _onChangeEvent?.Dispose();
+            ServiceProvider.AddServiceFactory<PEReader>(() => ModuleService.GetPEReader(this));
+            if (target.OperatingSystem == OSPlatform.Linux) {
+                ServiceProvider.AddServiceFactory<ELFFile>(() => ModuleService.GetELFFile(this));
+            }
+            if (target.OperatingSystem == OSPlatform.OSX) {
+                ServiceProvider.AddServiceFactory<MachOFile>(() => ModuleService.GetMachOFile(this));
+            }
+            _onChangeEvent = target.Services.GetService<ISymbolService>()?.OnChangeEvent.Register(() => {
+                ServiceProvider.RemoveService(typeof(MachOFile)); 
+                ServiceProvider.RemoveService(typeof(ELFFile));
+                ServiceProvider.RemoveService(typeof(PEReader));
+            });
+         }
+
+        public void Dispose()
+        {
+            _onChangeEvent?.Dispose();
+        }
 
         #region IModule
 

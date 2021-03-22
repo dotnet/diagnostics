@@ -3,11 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.DataReaders.Implementation;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
 using System.Runtime.InteropServices;
 using Architecture = System.Runtime.InteropServices.Architecture;
 
@@ -54,8 +50,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             ServiceProvider.AddServiceFactory<IModuleService>(() => new ModuleServiceFromDataReader(this, _dataReader));
             ServiceProvider.AddServiceFactory<IMemoryService>(() => {
                 IMemoryService memoryService = new MemoryServiceFromDataReader(_dataReader);
-                if (Host.HostType == HostType.DotnetDump && OperatingSystem == OSPlatform.Windows) {
-                    memoryService = new PEImageMappingMemoryService(this, memoryService);
+                if (IsDump && Host.HostType == HostType.DotnetDump)
+                {
+                    memoryService = new ImageMappingMemoryService(this, memoryService);
                 }
                 return memoryService;
             });

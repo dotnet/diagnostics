@@ -41,7 +41,7 @@ namespace SOS.Hosting
             Debug.Assert(runtime != null);
             _target = target;
             _runtimeBaseAddress = runtime.RuntimeModule.ImageBase;
-            _memoryService = runtime.Services.GetService<IMemoryService>() ?? target.Services.GetService<IMemoryService>();
+            _memoryService = target.Services.GetService<IMemoryService>();
             _threadService = target.Services.GetService<IThreadService>();
             _threadUnwindService = target.Services.GetService<IThreadUnwindService>();
             _moduleService = target.Services.GetService<IModuleService>();

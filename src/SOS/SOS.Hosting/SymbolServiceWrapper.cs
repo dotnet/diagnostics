@@ -5,6 +5,8 @@
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
 using Microsoft.FileFormats.PE;
 using Microsoft.SymbolStore;
 using Microsoft.SymbolStore.KeyGenerators;
@@ -191,26 +193,29 @@ namespace SOS.Hosting
         {
             if (_symbolService.IsSymbolStoreEnabled)
             {
-                OSPlatform platform;
-                switch (config)
-                {
-                    case RuntimeConfiguration.UnixCore:
-                        platform = OSPlatform.Linux;
-                        break;
-                    case RuntimeConfiguration.OSXCore:
-                        platform = OSPlatform.OSX;
-                        break;
-                    case RuntimeConfiguration.WindowsCore:
-                    case RuntimeConfiguration.WindowsDesktop:
-                        platform = OSPlatform.Windows;
-                        break;
-                    default:
-                        Trace.TraceError($"Invalid runtime config {config}");
-                        return;
-                }
                 try
                 {
-                    KeyGenerator generator = MemoryService.GetKeyGenerator(platform, moduleFilePath, address, size);
+                    Stream stream = MemoryService.CreateMemoryStream(address, size);
+                    KeyGenerator generator = null;
+                    if (config == RuntimeConfiguration.UnixCore)
+                    {
+                        var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
+                        generator = new ELFFileKeyGenerator(Tracer.Instance, elfFile, moduleFilePath);
+                    }
+                    else if (config == RuntimeConfiguration.OSXCore)
+                    {
+                        var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
+                        generator = new MachOFileKeyGenerator(Tracer.Instance, machOFile, moduleFilePath);
+                    }
+                    else if (config == RuntimeConfiguration.WindowsCore || config ==  RuntimeConfiguration.WindowsDesktop)
+                    {
+                        var peFile = new PEFile(new StreamAddressSpace(stream), true);
+                        generator = new PEFileKeyGenerator(Tracer.Instance, peFile, moduleFilePath);
+                    }
+                    else
+                    {
+                        Trace.TraceError("LoadNativeSymbols: unsupported config {0}", config);
+                    }
                     if (generator != null)
                     {
                         IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.SymbolKey | KeyTypeFlags.DacDbiKeys);

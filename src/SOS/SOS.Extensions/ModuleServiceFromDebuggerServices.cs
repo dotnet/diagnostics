@@ -35,7 +35,8 @@ namespace SOS.Extensions
                 ulong imageBase,
                 ulong imageSize,
                 uint indexFileSize,
-                uint indexTimeStamp)
+                uint indexTimeStamp) 
+                    : base(moduleService.Target)
             {
                 _moduleService = moduleService;
                 ModuleIndex = moduleIndex;

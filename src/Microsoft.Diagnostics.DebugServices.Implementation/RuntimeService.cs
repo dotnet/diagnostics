@@ -285,41 +285,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return _runtimes;
         }
 
-        private IModuleService ModuleService
-        {
-            get
-            {
-                if (_moduleService == null)
-                {
-                    _moduleService = _target.Services.GetService<IModuleService>();
-                }
-                return _moduleService;
-            }
-        }
+        private IModuleService ModuleService => _moduleService ??= _target.Services.GetService<IModuleService>();
 
-        private IMemoryService MemoryService
-        {
-            get
-            {
-                if (_memoryService == null)
-                {
-                    _memoryService = _currentRuntime?.Services.GetService<IMemoryService>() ?? _target.Services.GetService<IMemoryService>();
-                }
-                return _memoryService;
-            }
-        }
+        private IMemoryService MemoryService => _memoryService ??= _target.Services.GetService<IMemoryService>();
 
-        private IThreadService ThreadService
-        {
-            get
-            {
-                if (_threadService == null)
-                {
-                    _threadService = _target.Services.GetService<IThreadService>();
-                }
-                return _threadService;
-            }
-        }
+        private IThreadService ThreadService => _threadService ??= _target.Services.GetService<IThreadService>();
 
         public override string ToString()
         {

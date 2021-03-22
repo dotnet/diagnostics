@@ -287,6 +287,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             if (File.Exists(module.FileName))
             {
+                // TODO - Need to verify the index timestamp/file size matches this local file
                 downloadFilePath = module.FileName;
             }
             else 
@@ -334,6 +335,130 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             return reader;
+        }
+
+        /// <summary>
+        /// Finds or downloads the ELF module and creates a ELFFile instance for it.
+        /// </summary>
+        /// <param name="module">module instance</param>
+        /// <returns>ELFFile instance or null</returns>
+        internal ELFFile GetELFFile(IModule module)
+        {
+            string downloadFilePath = null;
+            ELFFile elfFile = null;
+
+            if (File.Exists(module.FileName))
+            {
+                // TODO - Need to verify the build id matches this local file
+                downloadFilePath = module.FileName;
+            }
+            else 
+            { 
+                if (SymbolService.IsSymbolStoreEnabled)
+                {
+                    if (!module.BuildId.IsDefaultOrEmpty)
+                    {
+                        var key = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).SingleOrDefault();
+                        if (key != null)
+                        {
+                            // Now download the module from the symbol server
+                            downloadFilePath = SymbolService.DownloadFile(key);
+                        }
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(downloadFilePath))
+            {
+                Trace.TraceInformation("GetELFFile: downloaded {0}", downloadFilePath);
+                Stream stream;
+                try
+                {
+                    stream = File.OpenRead(downloadFilePath);
+                }
+                catch (Exception ex) when (ex is DirectoryNotFoundException || ex is FileNotFoundException || ex is UnauthorizedAccessException || ex is IOException)
+                {
+                    Trace.TraceError($"GetELFFile: OpenRead exception {ex.Message}");
+                    return null;
+                }
+                try
+                {
+                    elfFile = new ELFFile(new StreamAddressSpace(stream), position: 0, isDataSourceVirtualAddressSpace: false);
+                    if (!elfFile.IsValid())
+                    {
+                        return null;
+                    }
+                }
+                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
+                {
+                    Trace.TraceError($"GetELFFile: exception {ex.Message}");
+                    return null;
+                }
+            }
+
+            return elfFile;
+        }
+
+        /// <summary>
+        /// Finds or downloads the ELF module and creates a MachOFile instance for it.
+        /// </summary>
+        /// <param name="module">module instance</param>
+        /// <returns>MachO file instance or null</returns>
+        internal MachOFile GetMachOFile(IModule module)
+        {
+            string downloadFilePath = null;
+            MachOFile machoFile = null;
+
+            if (File.Exists(module.FileName))
+            {
+                // TODO - Need to verify the build id matches this local file
+                downloadFilePath = module.FileName;
+            }
+            else 
+            { 
+                if (SymbolService.IsSymbolStoreEnabled)
+                {
+                    if (!module.BuildId.IsDefaultOrEmpty)
+                    {
+                        var key = MachOFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).SingleOrDefault();
+                        if (key != null)
+                        {
+                            // Now download the module from the symbol server
+                            downloadFilePath = SymbolService.DownloadFile(key);
+                        }
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(downloadFilePath))
+            {
+                Trace.TraceInformation("GetMachOFile: downloaded {0}", downloadFilePath);
+                Stream stream;
+                try
+                {
+                    stream = File.OpenRead(downloadFilePath);
+                }
+                catch (Exception ex) when (ex is DirectoryNotFoundException || ex is FileNotFoundException || ex is UnauthorizedAccessException || ex is IOException)
+                {
+                    Trace.TraceError($"GetMachOFile: OpenRead exception {ex.Message}");
+                    return null;
+                }
+                try
+                {
+                    machoFile = new MachOFile(new StreamAddressSpace(stream), position: 0, dataSourceIsVirtualAddressSpace: false);
+                    if (!machoFile.IsValid())
+                    {
+                        return null;
+                    }
+                }
+                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
+                {
+                    Trace.TraceError($"GetMachOFile: exception {ex.Message}");
+                    return null;
+                }
+            }
+
+            return machoFile;
         }
 
         /// <summary>
@@ -514,27 +639,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        protected IMemoryService MemoryService
-        {
-            get
-            {
-                if (_memoryService == null) {
-                    _memoryService = Target.Services.GetService<IMemoryService>();
-                }
-                return _memoryService;
-            }
-        }
+        protected IMemoryService MemoryService => _memoryService ??= Target.Services.GetService<IMemoryService>();
 
-        internal ISymbolService SymbolService
-        {
-            get
-            {
-                if (_symbolService == null) {
-                    _symbolService = Target.Services.GetService<ISymbolService>();
-                }
-                return _symbolService;
-            }
-        }
+        protected ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>(); 
 
         /// <summary>
         /// Search memory helper class
