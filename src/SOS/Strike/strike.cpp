@@ -5607,6 +5607,12 @@ DECLARE_API(GCHeapStat)
                     (int)(100*((float)hpUsage.genUsage[3].unrooted) / (hpUsage.genUsage[3].allocd)), "%%",
                     pohUnrootedUsage, "%%");
             }
+            
+            ExtOut("\nCommitted space:");
+            ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n", 0,
+                hpUsage.genUsage[0].committed, hpUsage.genUsage[1].committed,
+                hpUsage.genUsage[2].committed, hpUsage.genUsage[3].committed,
+                hpUsage.genUsage[4].committed);
         }
     }
     else
