@@ -10,21 +10,56 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.DSProxy
 {
-    // TODO: Add support for IPC Server <--> TCP Server proxy, RunISTSProxy.
+
+    class DiagnosticsServerProxyConsoleLogger : DiagnosticsServerProxyLogger
+    {
+        LogLevel _logLevel;
+
+        public DiagnosticsServerProxyConsoleLogger(bool verbose)
+        {
+            _logLevel = verbose ? LogLevel.Debug : LogLevel.Info;
+        }
+
+        public override void LogError(string msg)
+        {
+            if (_logLevel >= LogLevel.Info)
+                Console.WriteLine("ERROR: " + msg);
+        }
+
+        public override void LogWarning(string msg)
+        {
+            if (_logLevel >= LogLevel.Info)
+                Console.WriteLine("WARNING: " + msg);
+        }
+
+        public override void LogInfo(string msg)
+        {
+            if (_logLevel >= LogLevel.Info)
+                Console.WriteLine(msg);
+        }
+
+        public override void LogDebug(string msg)
+        {
+            if (_logLevel == LogLevel.Debug)
+                Console.WriteLine(msg);
+        }
+
+    }
+
     public class DiagnosticsServerProxyCommands
     {
         public DiagnosticsServerProxyCommands()
         {
         }
 
-        public async Task<int> RunIpcClientTcpServerProxy(CancellationToken token, string ipcClient, string tcpServer, bool autoShutdown, bool debug)
+        public async Task<int> RunIpcClientTcpServerProxy(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeout, bool verbose)
         {
             checkLoopbackOnly(tcpServer);
 
             using CancellationTokenSource cancelProxyTask = new CancellationTokenSource();
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelProxyTask.Token);
 
-            var proxyTask = DiagnosticsServerProxyRunner.runIpcClientTcpServerProxy(linkedCancelToken.Token, ipcClient, tcpServer, autoShutdown, debug);
+            var proxyTask = DiagnosticsServerProxyRunner.runIpcClientTcpServerProxy(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, new DiagnosticsServerProxyConsoleLogger(verbose));
 
             while (!linkedCancelToken.IsCancellationRequested)
             {
@@ -46,14 +81,14 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
             return proxyTask.Result;
         }
 
-        public async Task<int> RunIpcServerTcpServerProxy(CancellationToken token, string ipcServer, string tcpServer, bool autoShutdown, bool debug)
+        public async Task<int> RunIpcServerTcpServerProxy(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeout, bool verbose)
         {
             checkLoopbackOnly(tcpServer);
 
             using CancellationTokenSource cancelProxyTask = new CancellationTokenSource();
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelProxyTask.Token);
 
-            var proxyTask = DiagnosticsServerProxyRunner.runIpcServerTcpServerProxy(linkedCancelToken.Token, ipcServer, tcpServer, autoShutdown, debug);
+            var proxyTask = DiagnosticsServerProxyRunner.runIpcServerTcpServerProxy(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, new DiagnosticsServerProxyConsoleLogger(verbose));
 
             while (!linkedCancelToken.IsCancellationRequested)
             {

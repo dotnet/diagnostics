@@ -16,8 +16,8 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
 {
     internal class Program
     {
-        delegate Task<int> DiagnosticsServerIpcClientTcpServerProxyDelegate(CancellationToken ct, string ipcClient, string tcpServer, bool autoShutdown, bool debug);
-        delegate Task<int> DiagnosticsServerIpcServerTcpServerProxyDelegate(CancellationToken ct, string ipcServer, string tcpServer, bool autoShutdown, bool debug);
+        delegate Task<int> DiagnosticsServerIpcClientTcpServerProxyDelegate(CancellationToken ct, string ipcClient, string tcpServer, int runtimeTimeoutS, bool verbose);
+        delegate Task<int> DiagnosticsServerIpcServerTcpServerProxyDelegate(CancellationToken ct, string ipcServer, string tcpServer, int runtimeTimeoutS, bool verbose);
 
         private static Command IpcClientTcpServerProxyCommand() =>
             new Command(
@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
                 // Handler
                 HandlerDescriptor.FromDelegate((DiagnosticsServerIpcClientTcpServerProxyDelegate)new DiagnosticsServerProxyCommands().RunIpcClientTcpServerProxy).GetCommandHandler(),
                 // Options
-                IpcClientAddressOption(), TcpServerAddressOption(), AutoShutdownOption(), DebugOption()
+                IpcClientAddressOption(), TcpServerAddressOption(), RuntimeTimeoutOption(), VerboseOption()
             };
 
         private static Command IpcServerTcpServerProxyCommand() =>
@@ -42,12 +42,12 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
                 // Handler
                 HandlerDescriptor.FromDelegate((DiagnosticsServerIpcClientTcpServerProxyDelegate)new DiagnosticsServerProxyCommands().RunIpcServerTcpServerProxy).GetCommandHandler(),
                 // Options
-                IpcServerAddressOption(), TcpServerAddressOption(), AutoShutdownOption(), DebugOption()
+                IpcServerAddressOption(), TcpServerAddressOption(), RuntimeTimeoutOption(), VerboseOption()
             };
 
         private static Option IpcClientAddressOption() =>
             new Option(
-                aliases: new[] { "--ipc-client", "-ipc-client" },
+                aliases: new[] { "--ipc-client", "-ipcc" },
                 description:    "The diagnostic tool diagnostics server ipc address (--diagnostic-port argument). " +
                                 "Proxy connects diagnostic tool ipc server when establishing a " +
                                 "new proxy channel between runtime and diagnostic tool.")
@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
 
         private static Option IpcServerAddressOption() =>
             new Option(
-                aliases: new[] { "--ipc-server", "-ipc-server" },
+                aliases: new[] { "--ipc-server", "-ipcs" },
                 description:    "The diagnostics server ipc address to proxy. Proxy accept ipc connections from diagnostic tools " +
                                 "establishing a new proxy channel between runtime and diagnostic tool. If not specified " +
                                 "proxy server will use default ipc diagnostics server path.")
@@ -67,7 +67,7 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
 
         private static Option TcpServerAddressOption() =>
             new Option(
-                aliases: new[] { "--tcp-server", "-tcp-server" },
+                aliases: new[] { "--tcp-server", "-tcps" },
                 description:    "The proxy server TCP/IP address using format [host]:[port]. " +
                                 "Proxy server can bind one (127.0.0.1, [::1], 0.0.0.0, [::], ipv4 address, ipv6 address, hostname) " +
                                 "or all (*) interfaces. Launch runtime using DOTNET_DiagnosticPorts environment variable " +
@@ -76,20 +76,21 @@ namespace Microsoft.Diagnostics.Tools.DSProxy
                 Argument = new Argument<string>(name: "tcpServer", getDefaultValue: () => "")
             };
 
-        private static Option AutoShutdownOption() =>
+        private static Option RuntimeTimeoutOption() =>
             new Option(
-                aliases: new[] { "--auto-shutdown", "-auto-shutdown" },
-                description:    "Automatically shutdown proxy server if no runtime connects to it before timeout.")
+                aliases: new[] { "--runtime-timeout", "-rt" },
+                description:    "Automatically shutdown proxy server if no runtime connects to it before specified timeout (seconds)." +
+                                "If not specified, proxy server won't trigger an automatic shutdown.")
             {
-                Argument = new Argument<bool>(name: "autoShutdown", getDefaultValue: () => true)
+                Argument = new Argument<int>(name: "runtimeTimeout", getDefaultValue: () => Timeout.Infinite)
             };
 
-        private static Option DebugOption() =>
+        private static Option VerboseOption() =>
             new Option(
-                aliases: new[] { "--debug", "-debug" },
+                aliases: new[] { "--verbose", "-v" },
                 description:    "Enable verbose logging.")
             {
-                Argument = new Argument<bool>(name: "debug", getDefaultValue: () => false)
+                Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => false)
             };
 
         private static int Main(string[] args)

@@ -15,19 +15,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
     // </summary>
     internal class DiagnosticsServerProxyRunner
     {
-        public static async Task<int> runIpcClientTcpServerProxy(CancellationToken token, string ipcClient, string tcpServer, bool autoShutdown, bool debug)
+        public static async Task<int> runIpcClientTcpServerProxy(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeoutMS, DiagnosticsServerProxyLogger logger)
         {
-            Console.WriteLine($"Starting IPC client ({ipcClient}) <--> TCP server ({tcpServer}) router.");
-            return await runProxy(token, new IpcClientTcpServerProxy(ipcClient, tcpServer, debug), autoShutdown, debug).ConfigureAwait(false);
+            logger.LogInfo($"Starting IPC client ({ipcClient}) <--> TCP server ({tcpServer}) router.");
+            return await runProxy(token, new IpcClientTcpServerProxy(ipcClient, tcpServer, runtimeTimeoutMS, logger)).ConfigureAwait(false);
         }
 
-        public static async Task<int> runIpcServerTcpServerProxy(CancellationToken token, string ipcServer, string tcpServer, bool autoShutdown, bool debug)
+        public static async Task<int> runIpcServerTcpServerProxy(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeoutMS, DiagnosticsServerProxyLogger logger)
         {
             if (string.IsNullOrEmpty(ipcServer))
                 ipcServer = IpcServerTcpServerProxy.GetDefaultIpcServerPath();
 
-            Console.WriteLine($"Starting IPC server ({ipcServer}) <--> TCP server ({tcpServer}) router.");
-            return await runProxy(token, new IpcServerTcpServerProxy(ipcServer, tcpServer, debug), autoShutdown, debug).ConfigureAwait(false);
+            logger.LogInfo($"Starting IPC server ({ipcServer}) <--> TCP server ({tcpServer}) router.");
+            return await runProxy(token, new IpcServerTcpServerProxy(ipcServer, tcpServer, runtimeTimeoutMS, logger)).ConfigureAwait(false);
         }
 
         public static bool isLoopbackOnly(string address)
@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return isLooback;
         }
 
-        async static Task<int> runProxy(CancellationToken token, DiagnosticsServerProxy proxy, bool autoShutdown, bool debug)
+        async static Task<int> runProxy(CancellationToken token, DiagnosticsServerProxy proxy)
         {
             List<Task> runningTasks = new List<Task>();
             List<ConnectedProxy> runningProxies = new List<ConnectedProxy>();
@@ -106,9 +106,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         // reconnect using same or different runtime instance.
                         if (ex is BackendStreamConnectTimeoutException && runningProxies.Count == 0)
                         {
-                            if (autoShutdown || debug)
-                                Console.WriteLine("No backend stream available before timeout.");
-
+                            proxy.Logger.LogDebug("No backend stream available before timeout.");
                             proxy.Reset();
                         }
 
@@ -116,33 +114,28 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         // Shutdown proxy to prevent instances to outlive runtime process (if auto shutdown is enabled).
                         if (ex is RuntimeConnectTimeoutException)
                         {
-                            if (autoShutdown || debug)
-                                Console.WriteLine("No runtime connected before timeout.");
-
-                            if (autoShutdown)
-                            {
-                                Console.WriteLine("Starting automatic proxy server shutdown.");
-                                throw;
-                            }
+                            proxy.Logger.LogInfo("No runtime connected before timeout.");
+                            proxy.Logger.LogInfo("Starting automatic proxy server shutdown.");
+                            throw;
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Shutting proxy server down due to error: {ex.Message}");
+                proxy.Logger.LogInfo($"Shutting proxy server down due to error: {ex.Message}");
             }
             finally
             {
                 if (token.IsCancellationRequested)
-                    Console.WriteLine("Shutting down proxy server due to cancelation request.");
+                    proxy.Logger.LogInfo("Shutting down proxy server due to cancelation request.");
 
                 runningProxies.RemoveAll(IsConnectedProxyDead);
                 runningProxies.Clear();
 
                 await proxy?.Stop();
 
-                Console.WriteLine("Proxy server stopped.");
+                proxy.Logger.LogInfo("Proxy server stopped.");
             }
             return 0;
         }

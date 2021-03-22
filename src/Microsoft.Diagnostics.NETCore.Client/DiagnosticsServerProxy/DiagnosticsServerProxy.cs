@@ -28,11 +28,41 @@ namespace Microsoft.Diagnostics.NETCore.Client
         { }
     }
 
+    internal abstract class DiagnosticsServerProxyLogger
+    {
+        public enum LogLevel
+        {
+            None,
+            Info,
+            Debug
+        };
+
+        public abstract void LogError(string msg);
+
+        public abstract void LogWarning(string msg);
+
+        public abstract void LogInfo(string msg);
+
+        public abstract void LogDebug(string msg);
+    }
+
     // <summary>
     // Base class representing a Diagnostics Server proxy.
     // </summary>
     internal class DiagnosticsServerProxy
     {
+        protected readonly DiagnosticsServerProxyLogger _logger;
+
+        public DiagnosticsServerProxy(DiagnosticsServerProxyLogger logger)
+        {
+            _logger = logger;
+        }
+
+        public DiagnosticsServerProxyLogger Logger
+        {
+            get { return _logger; }
+        }
+
         public virtual void Start()
         {
             throw new NotImplementedException();
@@ -59,8 +89,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
     // </summary>
     internal class TcpServerProxy : DiagnosticsServerProxy
     {
-        protected readonly bool _verboseLogging;
-
         readonly string _tcpServerAddress;
 
         ReversedDiagnosticsServer _tcpServer;
@@ -79,11 +107,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             get { return _tcpServerEndpointInfo.ProcessId; }
         }
 
-        protected TcpServerProxy(string tcpServer, bool verboseLogging)
+        protected TcpServerProxy(string tcpServer, int runtimeTimeoutMS, DiagnosticsServerProxyLogger logger)
+            : base(logger)
         {
-            _verboseLogging = verboseLogging;
-
             _tcpServerAddress = tcpServer;
+
+            RuntimeInstanceConnectTimeout = runtimeTimeoutMS;
 
             _tcpServer = new ReversedDiagnosticsServer(_tcpServerAddress, true);
             _tcpServerEndpointInfo = new IpcEndpointInfo();
@@ -112,8 +141,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             Stream tcpServerStream;
 
-            if (_verboseLogging)
-                Console.WriteLine($"TcpServerProxy::ConnectTcpStreamAsync: Waiting for new tcp connection at endpoint \"{_tcpServerAddress}\".");
+            Logger.LogDebug($"Waiting for new tcp connection at endpoint \"{_tcpServerAddress}\".");
 
             if (_tcpServerEndpointInfo.Endpoint == null)
             {
@@ -130,8 +158,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     if (acceptTimeoutTokenSource.IsCancellationRequested)
                     {
-                        if (_verboseLogging)
-                            Console.WriteLine("TcpServerProxy::ConnectTcpStreamAsync: No runtime instance connected, timing out.");
+                        Logger.LogDebug("No runtime instance connected, timing out.");
 
                         throw new RuntimeConnectTimeoutException(RuntimeInstanceConnectTimeout);
                     }
@@ -154,8 +181,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (connectTimeoutTokenSource.IsCancellationRequested)
                 {
-                    if (_verboseLogging)
-                        Console.WriteLine("TcpServerProxy::ConnectTcpStreamAsync: No tcp stream connected, timing out.");
+                    Logger.LogDebug("No tcp stream connected, timing out.");
 
                     throw new BackendStreamConnectTimeoutException(TcpServerConnectTimeout);
                 }
@@ -163,8 +189,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw;
             }
 
-            if (tcpServerStream != null && _verboseLogging)
-                Console.WriteLine($"TcpServerProxy::ConnectTcpStreamAsync: Successfully connected tcp stream, runtime id={RuntimeInstanceId}, runtime pid={RuntimeProcessId}.");
+            if (tcpServerStream != null)
+                Logger.LogDebug($"Successfully connected tcp stream, runtime id={RuntimeInstanceId}, runtime pid={RuntimeProcessId}.");
 
             return tcpServerStream;
         }
@@ -255,8 +281,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public int IpcServerConnectTimeout { get; set; } = Timeout.Infinite;
 
-        public IpcServerTcpServerProxy(string ipcServer, string tcpServer, bool verboseLogging)
-            : base(tcpServer, verboseLogging)
+        public IpcServerTcpServerProxy(string ipcServer, string tcpServer, int runtimeTimeoutMS, DiagnosticsServerProxyLogger logger)
+            : base(tcpServer, runtimeTimeoutMS, logger)
         {
             _ipcServerPath = ipcServer;
             if (string.IsNullOrEmpty(_ipcServerPath))
@@ -296,8 +322,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Stream tcpServerStream = null;
             Stream ipcServerStream = null;
 
-            if (_verboseLogging)
-                Console.WriteLine($"IpcServerTcpServerProxy::ConnectProxyAsync: Trying to connect new proxy instance.");
+            Logger.LogDebug($"Trying to connect new proxy instance.");
 
             try
             {
@@ -347,7 +372,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                         if (checkTcpStreamTask.IsFaulted)
                         {
-                            Console.WriteLine($"IpcServerTcpServerProxy::ConnectProxyAsync: Broken tcp server connection detected, aborting ipc connection.");
+                            Logger.LogInfo("Broken tcp server connection detected, aborting ipc connection.");
                             checkTcpStreamTask.GetAwaiter().GetResult();
                         }
 
@@ -375,8 +400,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             catch (Exception)
             {
-                if (_verboseLogging)
-                    Console.WriteLine("IpcServerTcpServerProxy::ConnectProxyAsync: Failed connecting new proxy instance.");
+                Logger.LogDebug("Failed connecting new proxy instance.");
 
                 // Cleanup and rethrow.
                 ipcServerStream?.Dispose();
@@ -386,18 +410,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             // Create new proxy.
-            if (_verboseLogging)
-                Console.WriteLine($"IpcServerTcpServerProxy::ConnectProxyAsync: New proxy instance successfully connected.");
+            Logger.LogDebug("New proxy instance successfully connected.");
 
-            return new ConnectedProxy(ipcServerStream, tcpServerStream, _verboseLogging);
+            return new ConnectedProxy(ipcServerStream, tcpServerStream, Logger);
         }
 
         protected async Task<Stream> ConnectIpcStreamAsync(CancellationToken token)
         {
             Stream ipcServerStream = null;
 
-            if (_verboseLogging)
-                Console.WriteLine($"IpcServerTcpServerProxy::ConnectIpcStreamAsync: Waiting for new ipc connection at endpoint \"{_ipcServerPath}\".");
+            Logger.LogDebug($"Waiting for new ipc connection at endpoint \"{_ipcServerPath}\".");
 
 
             using var connectTimeoutTokenSource = new CancellationTokenSource();
@@ -414,8 +436,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 if (connectTimeoutTokenSource.IsCancellationRequested)
                 {
-                    if (_verboseLogging)
-                        Console.WriteLine("IpcServerTcpServerProxy::ConnectIpcStreamAsync: No ipc stream connected, timing out.");
+                    Logger.LogDebug("No ipc stream connected, timing out.");
 
                     throw new TimeoutException();
                 }
@@ -423,8 +444,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw;
             }
 
-            if (ipcServerStream != null && _verboseLogging)
-                Console.WriteLine($"IpcServerTcpServerProxy::ConnectIpcStreamAsync: Successfully connected ipc stream.");
+            if (ipcServerStream != null)
+                Logger.LogDebug("Successfully connected ipc stream.");
 
             return ipcServerStream;
         }
@@ -442,8 +463,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public int IpcClientConnectFailureTimeout { get; set; } = 500;
 
-        public IpcClientTcpServerProxy(string ipcClient, string tcpServer, bool verboseLogging)
-            : base(tcpServer, verboseLogging)
+        public IpcClientTcpServerProxy(string ipcClient, string tcpServer, int runtimeTimeoutMS, DiagnosticsServerProxyLogger logger)
+            : base(tcpServer, runtimeTimeoutMS, logger)
         {
             _ipcClientPath = ipcClient;
         }
@@ -453,8 +474,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Stream tcpServerStream = null;
             Stream ipcClientStream = null;
 
-            if (_verboseLogging)
-                Console.WriteLine($"IpcClientTcpServerProxy::ConnectProxyAsync: Trying to connect new proxy instance.");
+            Logger.LogDebug("Trying to connect new proxy instance.");
 
             try
             {
@@ -488,7 +508,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                     if (checkTcpStreamTask.IsFaulted)
                     {
-                        Console.WriteLine($"IpcClientTcpServerProxy::ConnectProxyAsync: Broken tcp server connection detected, aborting ipc connection.");
+                        Logger.LogInfo("Broken tcp server connection detected, aborting ipc connection.");
                         checkTcpStreamTask.GetAwaiter().GetResult();
                     }
 
@@ -499,8 +519,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             catch (Exception)
             {
-                if (_verboseLogging)
-                    Console.WriteLine("IpcClientTcpServerProxy::ConnectProxyAsync: Failed connecting new proxy instance.");
+                Logger.LogDebug("Failed connecting new proxy instance.");
 
                 // Cleanup and rethrow.
                 tcpServerStream?.Dispose();
@@ -510,18 +529,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             // Create new proxy.
-            if (_verboseLogging)
-                Console.WriteLine($"IpcClientTcpServerProxy::ConnectProxyAsync: New proxy instance successfully connected.");
+            Logger.LogDebug("New proxy instance successfully connected.");
 
-            return new ConnectedProxy(ipcClientStream, tcpServerStream, _verboseLogging, (ulong)IpcAdvertise.V1SizeInBytes);
+            return new ConnectedProxy(ipcClientStream, tcpServerStream, Logger, (ulong)IpcAdvertise.V1SizeInBytes);
         }
 
         protected async Task<Stream> ConnectIpcStreamAsync(CancellationToken token)
         {
             Stream ipcClientStream = null;
 
-            if (_verboseLogging)
-                Console.WriteLine($"IpcClientTcpServerProxy::ConnectIpcStreamAsync: Connecting new ipc endpoint \"{_ipcClientPath}\".");
+            Logger.LogDebug($"Connecting new ipc endpoint \"{_ipcClientPath}\".");
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -540,8 +557,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     namedPipe?.Dispose();
 
-                    if (ex is TimeoutException && _verboseLogging)
-                        Console.WriteLine("IpcClientTcpServerProxy::ConnectIpcStreamAsync: No ipc stream connected, timing out.");
+                    if (ex is TimeoutException)
+                        Logger.LogDebug("No ipc stream connected, timing out.");
 
                     throw;
                 }
@@ -571,14 +588,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                         if (connectTimeoutTokenSource.IsCancellationRequested)
                         {
-                            if (_verboseLogging)
-                                Console.WriteLine("IpcClientTcpServerProxy::ConnectIpcStreamAsync: No ipc stream connected, timing out.");
+                            Logger.LogDebug("No ipc stream connected, timing out.");
 
                             throw new TimeoutException();
                         }
 
-                        if (_verboseLogging)
-                            Console.WriteLine($"IpcClientTcpServerProxy::ConnectIpcStreamAsync: Failed connecting {_ipcClientPath}, wait {IpcClientConnectFailureTimeout} ms before retrying.");
+                        Logger.LogDebug($"Failed connecting {_ipcClientPath}, wait {IpcClientConnectFailureTimeout} ms before retrying.");
 
                         // If we get an error (without hitting timeout above), most likely due to unavailable listener.
                         // Delay execution to prevent to rapid retry attempts.
@@ -602,15 +617,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             catch (Exception)
             {
-                if (_verboseLogging)
-                    Console.WriteLine("IpcClientTcpServerProxy::ConnectIpcStreamAsync: Failed sending advertise message.");
+                Logger.LogDebug("Failed sending advertise message.");
 
                 ipcClientStream?.Dispose();
                 throw;
             }
 
-            if (ipcClientStream != null && _verboseLogging)
-                Console.WriteLine($"IpcClientTcpServerProxy::ConnectIpcStreamAsync: Successfully connected ipc stream.");
+            if (ipcClientStream != null)
+                Logger.LogDebug("Successfully connected ipc stream.");
 
             return ipcClientStream;
         }
@@ -618,7 +632,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal class ConnectedProxy : IDisposable
     {
-        readonly bool _verboseLogging;
+        readonly DiagnosticsServerProxyLogger _logger;
 
         Stream _frontendStream = null;
         Stream _backendStream = null;
@@ -637,9 +651,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public TaskCompletionSource<bool> ProxyTaskCompleted { get; }
 
-        public ConnectedProxy(Stream frontendStream, Stream backendStream, bool verboseLogging, ulong initBackendToFrontendByteTransfer = 0, ulong initFrontendToBackendByteTransfer = 0)
+        public ConnectedProxy(Stream frontendStream, Stream backendStream, DiagnosticsServerProxyLogger logger, ulong initBackendToFrontendByteTransfer = 0, ulong initFrontendToBackendByteTransfer = 0)
         {
-            _verboseLogging = verboseLogging;
+            _logger = logger;
 
             _frontendStream = frontendStream;
             _backendStream = backendStream;
@@ -713,11 +727,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 Interlocked.Decrement(ref s_proxyInstanceCount);
 
-                if (_verboseLogging)
-                {
-                    Console.WriteLine($"ConnectedProxy: Diposed stats: Backend->Frontend {_backendToFrontendByteTransfer} bytes, Frontend->Backend {_frontendToBackendByteTransfer} bytes.");
-                    Console.WriteLine($"ConnectedProxy: Active instances: {s_proxyInstanceCount}");
-                }
+                _logger.LogDebug($"Diposed stats: Backend->Frontend {_backendToFrontendByteTransfer} bytes, Frontend->Backend {_frontendToBackendByteTransfer} bytes.");
+                _logger.LogDebug($"Active instances: {s_proxyInstanceCount}");
             }
         }
 
@@ -728,41 +739,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 byte[] buffer = new byte[1024];
                 while (!token.IsCancellationRequested)
                 {
-#if DEBUG
-                    if (_verboseLogging)
-                        Console.WriteLine("ConnectedProxy::BackendReadFrontendWrite: Start reading bytes from backend.");
-#endif
+                    _logger.LogDebug("Start reading bytes from backend.");
 
                     int bytesRead = await _backendStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
 
-#if DEBUG
-                    if (_verboseLogging)
-                        Console.WriteLine($"ConnectedProxy::BackendReadFrontendWrite: Read {bytesRead} bytes from backend.");
-#endif
+                    _logger.LogDebug($"Read {bytesRead} bytes from backend.");
 
                     // Check for end of stream indicating that remote end hung-up.
                     if (bytesRead == 0)
                     {
-                        if (_verboseLogging)
-                            Console.WriteLine("ConnectedProxy::BackendReadFrontendWrite: Backend hung up.");
-
+                        _logger.LogDebug("Backend hung up.");
                         break;
                     }
 
                     _backendToFrontendByteTransfer += (ulong)bytesRead;
 
-#if DEBUG
-                    if (_verboseLogging)
-                        Console.WriteLine($"ConnectedProxy::BackendReadFrontendWrite: Start writing {bytesRead} bytes to frontend.");
-#endif
+                    _logger.LogDebug($"Start writing {bytesRead} bytes to frontend.");
 
                     await _frontendStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
                     await _frontendStream.FlushAsync().ConfigureAwait(false);
 
-#if DEBUG
-                    if (_verboseLogging)
-                        Console.WriteLine($"ConnectedProxy::BackendReadFrontendWrite: Wrote {bytesRead} bytes to frontend.");
-#endif
+                    _logger.LogDebug($"Wrote {bytesRead} bytes to frontend.");
                 }
             }
             catch (Exception)
@@ -770,8 +767,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // Completing task will trigger dispose of instance and cleanup.
                 // Faliure mainly consists of closed/disposed streams and cancelation requests.
                 // Just make sure task gets complete, nothing more needs to be in response to these exceptions.
-                if (_verboseLogging)
-                    Console.WriteLine("ConnectedProxy::BackendReadFrontendWrite: Failed stream operation. Completing task.");
+                _logger.LogDebug("Failed stream operation. Completing task.");
             }
 
             ProxyTaskCompleted?.TrySetResult(true);
@@ -784,41 +780,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 byte[] buffer = new byte[1024];
                 while (!token.IsCancellationRequested)
                 {
-#if DEBUG
-                    if (_verboseLogging)
-                        Console.WriteLine("ConnectedProxy::FrontendReadBackendWrite: Start reading bytes from frotend.");
-#endif
+                    _logger.LogDebug("Start reading bytes from frotend.");
 
                     int bytesRead = await _frontendStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
 
-#if DEBUG
-                    if (_verboseLogging)
-                        Console.WriteLine($"ConnectedProxy::FrontendReadBackendWrite: Read {bytesRead} bytes from frontend.");
-#endif
+                    _logger.LogDebug($"Read {bytesRead} bytes from frontend.");
 
                     // Check for end of stream indicating that remote end hung-up.
                     if (bytesRead == 0)
                     {
-                        if (_verboseLogging)
-                            Console.WriteLine("ConnectedProxy::FrontendReadBackendWrite: Frontend hung up.");
-
+                        _logger.LogDebug("Frontend hung up.");
                         break;
                     }
 
                     _frontendToBackendByteTransfer += (ulong)bytesRead;
 
-#if DEBUG
-                    if (_verboseLogging)
-                        Console.WriteLine($"ConnectedProxy::FrontendReadBackendWrite: Start writing {bytesRead} bytes to backend.");
-#endif
+                    _logger.LogDebug($"Start writing {bytesRead} bytes to backend.");
 
                     await _backendStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
                     await _backendStream.FlushAsync().ConfigureAwait(false);
 
-#if DEBUG
-                    if (_verboseLogging)
-                        Console.WriteLine($"ConnectedProxy::FrontendReadBackendWrite: Wrote {bytesRead} bytes to backend.");
-#endif
+                    _logger.LogDebug($"Wrote {bytesRead} bytes to backend.");
                 }
             }
             catch (Exception)
@@ -826,8 +808,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // Completing task will trigger dispose of instance and cleanup.
                 // Faliure mainly consists of closed/disposed streams and cancelation requests.
                 // Just make sure task gets complete, nothing more needs to be in response to these exceptions.
-                if (_verboseLogging)
-                    Console.WriteLine("ConnectedProxy::FrontendReadBackendWrite: Failed stream operation. Completing task.");
+                _logger.LogDebug("Failed stream operation. Completing task.");
             }
 
             ProxyTaskCompleted?.TrySetResult(true);
