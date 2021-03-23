@@ -977,7 +977,7 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
                     ExtErr("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
                     return FALSE;
                 }
-                GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.allocated, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
+                GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.allocated, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
                 taddrSeg = (TADDR)dacpSeg.next;
             }
         }
@@ -994,14 +994,14 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
             if (IsInterrupt())
                 return FALSE;
 
-        if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
-        {
-            ExtErr("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
-            return FALSE;
+            if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
+            {
+                ExtErr("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
+                return FALSE;
+            }
+            GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.allocated, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[2]);
+            taddrSeg = (TADDR)dacpSeg.next;
         }
-        GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.allocated, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[2]);
-        taddrSeg = (TADDR)dacpSeg.next;
-    }
 #endif
 
         // 1b. now handle the ephemeral segment
@@ -1011,23 +1011,23 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
             return FALSE;
         }
 
-    TADDR endGen = TO_TADDR(heap.alloc_allocated);
+        TADDR endGen = TO_TADDR(heap.alloc_allocated);
 
-    for (UINT n = 0; n <= GetMaxGeneration(); n ++)
-    {
-        TADDR startGen;
-        // gen 2 starts at the beginning of the segment
-        if (n == GetMaxGeneration())
+        for (UINT n = 0; n <= GetMaxGeneration(); n++)
         {
-            startGen = TO_TADDR(dacpSeg.mem);
-        }
-        else
-        {
-            startGen = TO_TADDR(heap.generation_table[n].allocation_start);
-        }
+            TADDR startGen;
+            // gen 2 starts at the beginning of the segment
+            if (n == GetMaxGeneration())
+            {
+                startGen = TO_TADDR(dacpSeg.mem);
+            }
+            else
+            {
+                startGen = TO_TADDR(heap.generation_table[n].allocation_start);
+            }
 
 #ifndef FEATURE_PAL
-        GCGenUsageStats(startGen, endGen, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
+            GCGenUsageStats(startGen, endGen, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
 #endif
             endGen = startGen;
         }
