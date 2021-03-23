@@ -100,7 +100,11 @@ HRESULT Extensions::InitializeHostServices(
         return hr;
     }
     ULONG processId = 0;
-    m_pDebuggerServices->GetCurrentProcessSystemId(&processId);
+    if (FAILED(m_pDebuggerServices->GetCurrentProcessSystemId(&processId)))
+    {
+        m_pHostServices->DestroyTarget();
+        return S_OK;
+    }
     return m_pHostServices->UpdateTarget(processId);
 }
 

@@ -5,6 +5,7 @@
 using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 
@@ -118,7 +119,30 @@ namespace Microsoft.Diagnostics.Repl
         {
             ClearLine();
             m_shutdown = true;
+            // Delete the last command (usually q or exit) that caused Stop() to be
+            // called so the history doesn't fill up with exit commands.
+            if (m_selectedHistory > 0) {
+                m_history.RemoveAt(--m_selectedHistory);
+            }
             Console.CancelKeyPress -= new ConsoleCancelEventHandler(OnCtrlBreakKeyPress);
+        }
+
+        /// <summary>
+        /// Returns the current command history for serialization.
+        /// </summary>
+        public IEnumerable<string> GetCommandHistory()
+        {
+            return m_history.Select((sb) => sb.ToString());
+        }
+
+        /// <summary>
+        /// Adds the command history.
+        /// </summary>
+        /// <param name="commandHistory">command history strings to add</param>
+        public void AddCommandHistory(IEnumerable<string> commandHistory)
+        {
+            m_history.AddRange(commandHistory.Select((s) => new StringBuilder(s)));
+            m_selectedHistory = m_history.Count;
         }
 
         /// <summary>

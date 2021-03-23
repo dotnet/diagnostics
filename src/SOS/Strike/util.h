@@ -1813,6 +1813,7 @@ struct GenUsageStat
     size_t allocd;
     size_t freed;
     size_t unrooted;
+    size_t committed;
 };
 
 struct HeapUsageStat

@@ -16,6 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -49,6 +50,28 @@ namespace Microsoft.Diagnostics.Tools.Dump
         public Task<int> Analyze(FileInfo dump_path, string[] command)
         {
             _consoleProvider.WriteLine($"Loading core dump: {dump_path} ...");
+
+            // Attempt to load the persisted command history
+            string dotnetHome;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE"), ".dotnet");
+            }
+            else { 
+                dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".dotnet");
+            }
+            string historyFileName = Path.Combine(dotnetHome, "dotnet-dump.history");
+            try
+            {
+                string[] history = File.ReadAllLines(historyFileName);
+                _consoleProvider.AddCommandHistory(history);
+            }
+            catch (Exception ex) when 
+                (ex is IOException || 
+                 ex is UnauthorizedAccessException || 
+                 ex is NotSupportedException || 
+                 ex is SecurityException)
+            {
+            }
 
             try
             { 
@@ -112,6 +135,18 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 {
                     _target.Close();
                     _target = null;
+                }
+                // Persist the current command history
+                try
+                {
+                    File.WriteAllLines(historyFileName, _consoleProvider.GetCommandHistory());
+                }
+                catch (Exception ex) when 
+                    (ex is IOException || 
+                     ex is UnauthorizedAccessException || 
+                     ex is NotSupportedException || 
+                     ex is SecurityException)
+                {
                 }
                 // Send shutdown event on exit
                 OnShutdownEvent.Fire();
