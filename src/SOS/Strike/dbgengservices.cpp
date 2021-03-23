@@ -503,14 +503,21 @@ HRESULT DbgEngServices::ChangeEngineState(
         if (((Argument & DEBUG_STATUS_MASK) == DEBUG_STATUS_BREAK) && ((Argument & DEBUG_STATUS_INSIDE_WAIT) == 0))
         {
             ULONG processId = 0;
-            m_system->GetCurrentProcessSystemId(&processId);
-            m_control->Output(DEBUG_OUTPUT_NORMAL, "ChangeEngineState: processId %d\n", processId);
+            if (FAILED(m_system->GetCurrentProcessSystemId(&processId)))
+            {
+                m_control->Output(DEBUG_OUTPUT_NORMAL, "ChangeEngineState: DestroyTarget\n");
+                Extensions::GetInstance()->DestroyTarget();
+            }
+            else 
+            {
+                m_control->Output(DEBUG_OUTPUT_NORMAL, "ChangeEngineState: processId %d\n", processId);
 
-            // Has the process changed since the last commmand?
-            Extensions::GetInstance()->UpdateTarget(processId);
+                // Has the process changed since the last commmand?
+                Extensions::GetInstance()->UpdateTarget(processId);
 
-            // Flush the target when the debugger target breaks
-            Extensions::GetInstance()->FlushTarget();
+                // Flush the target when the debugger target breaks
+                Extensions::GetInstance()->FlushTarget();
+            }
         }
     }
     return DEBUG_STATUS_NO_CHANGE;
