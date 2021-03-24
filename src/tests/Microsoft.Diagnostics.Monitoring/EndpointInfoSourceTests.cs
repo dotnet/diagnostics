@@ -138,8 +138,8 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
         }
 
         /// <summary>
-        /// Tests that the server endpoint info source can properly enumerate endpoint infos when a single
-        /// target connects to it and "disconnects" from it.
+        /// Tests that the server endpoint info source can properly enumerate endpoint infos when multiple
+        /// targets connect to it and "disconnect" from it.
         /// </summary>
         [Fact]
         public async Task ServerSourceAddRemoveMultipleConnectionTest()
