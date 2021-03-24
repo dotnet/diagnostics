@@ -1278,7 +1278,7 @@ BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEA
                     ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
                     return FALSE;
                 }
-                dwAddrCurrObj = segment.mem;
+                dwAddrCurrObj = (DWORD_PTR)segment.mem;
                 DWORD_PTR end_of_segment = (DWORD_PTR)segment.allocated;
                 if (dwAddrSeg == (DWORD_PTR)heap.ephemeral_heap_segment)
                 {
