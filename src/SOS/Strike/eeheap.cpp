@@ -1901,14 +1901,15 @@ BOOL GCHeapSnapshot::AddSegments(const GCHeapDetails& details)
         // The generation segments are linked to each other, starting with the maxGeneration segment. 
         // The second address gives us the large object heap, the third the pinned object heap
 
-        for (unsigned gen = GetMaxGeneration(); gen <= GetMaxGeneration() + 1; gen++)
-        {
-            AddrSegs[gen] = details.generation_table[gen].start_segment;
-        }
+        AddrSegs[0] = details.generation_table[GetMaxGeneration()].start_segment;
+        AddrSegs[1] = details.generation_table[GetMaxGeneration() + 1].start_segment;
+        AddrSegs[2] = NULL;
         if (details.has_poh)
         {
             AddrSegs[2] = details.generation_table[GetMaxGeneration() + 2].start_segment; // pinned object heap
         }
+        AddrSegs[3] = NULL;
+        AddrSegs[4] = NULL;
     }
 
     // this loop will get information for all the heap segments in this heap. The outer loop iterates once

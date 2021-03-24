@@ -484,7 +484,7 @@ public:
         lowest_address = dacGCDetails.lowest_address;
         highest_address = dacGCDetails.highest_address;
         card_table = dacGCDetails.card_table;
-        has_regions = saved_sweep_ephemeral_seg == 0;
+        has_regions = saved_sweep_ephemeral_seg == -1;
     }
 
     DacpGcHeapDetails original_heap_details;
