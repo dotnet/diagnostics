@@ -4,9 +4,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.NETCore.Client.UnitTests;
 using Xunit;
@@ -128,6 +128,76 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
                 VerifyConnection(execution1.TestRunner, endpointInfo);
 
                 _outputHelper.WriteLine("Stopping tracee.");
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(1));
+
+            endpointInfos = await GetEndpointInfoAsync(source);
+
+            Assert.Empty(endpointInfos);
+        }
+
+        /// <summary>
+        /// Tests that the server endpoint info source can properly enumerate endpoint infos when a single
+        /// target connects to it and "disconnects" from it.
+        /// </summary>
+        [Fact]
+        public async Task ServerSourceAddRemoveMultipleConnectionTest()
+        {
+            await using var source = CreateServerSource(out string transportName);
+            source.Start();
+
+            var endpointInfos = await GetEndpointInfoAsync(source);
+            Assert.Empty(endpointInfos);
+
+            const int appCount = 5;
+            RemoteTestExecution[] executions = new RemoteTestExecution[appCount];
+
+            try
+            {
+                // Start all app instances
+                for (int i = 0; i < appCount; i++)
+                {
+                    Task newEndpointInfoTask = source.WaitForNewEndpointInfoAsync(DefaultPositiveVerificationTimeout);
+
+                    executions[i] = StartTraceeProcess("LoggerRemoteTest", transportName);
+
+                    await newEndpointInfoTask;
+
+                    executions[i].SendSignal();
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(1));
+
+                endpointInfos = await GetEndpointInfoAsync(source);
+
+                Assert.Equal(appCount, endpointInfos.Count());
+
+                for (int i = 0; i < appCount; i++)
+                {
+                    IEndpointInfo endpointInfo = endpointInfos.FirstOrDefault(info => info.ProcessId == executions[i].TestRunner.Pid);
+                    Assert.NotNull(endpointInfo);
+                    Assert.NotNull(endpointInfo.CommandLine);
+                    Assert.NotNull(endpointInfo.OperatingSystem);
+                    Assert.NotNull(endpointInfo.ProcessArchitecture);
+
+                    VerifyConnection(executions[i].TestRunner, endpointInfo);
+                }
+            }
+            finally
+            {
+                _outputHelper.WriteLine("Stopping tracees.");
+
+                int executionCount = 0;
+                for (int i = 0; i < appCount; i++)
+                {
+                    if (null != executions[i])
+                    {
+                        executionCount++;
+                        await executions[i].DisposeAsync();
+                    }
+                }
+                Assert.Equal(appCount, executionCount);
             }
 
             await Task.Delay(TimeSpan.FromSeconds(1));
