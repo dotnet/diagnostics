@@ -977,7 +977,9 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
                     ExtErr("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
                     return FALSE;
                 }
+#ifndef FEATURE_PAL
                 GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.allocated, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
+#endif
                 taddrSeg = (TADDR)dacpSeg.next;
             }
         }
