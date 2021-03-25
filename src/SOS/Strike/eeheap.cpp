@@ -443,12 +443,27 @@ size_t AlignLarge(size_t nbytes)
 void GCPrintGenerationInfo(const GCHeapDetails &heap)
 {
     UINT n;
-    for (n = 0; n <= GetMaxGeneration(); n ++)
+    for (n = 0; n <= GetMaxGeneration(); n++)
     {
         if (IsInterrupt())
             return;
-        ExtOut("generation %d starts at 0x%p\n",
-                 n, SOS_PTR(heap.generation_table[n].allocation_start));
+        if (heap.has_regions)
+        {
+            DacpHeapSegmentData segment;
+            DWORD_PTR dwAddrSeg = (DWORD_PTR)heap.generation_table[n].start_segment;
+            if (segment.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
+            {
+                ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
+                return;
+            }
+            ExtOut("generation %d starts at 0x%p\n",
+                n, SOS_PTR(SOS_PTR(segment.mem)));
+        }
+        else
+        {
+            ExtOut("generation %d starts at 0x%p\n",
+                n, SOS_PTR(heap.generation_table[n].allocation_start));
+        }
     }
 
     // We also need to look at the gen0 alloc context.
@@ -471,48 +486,79 @@ void GCPrintSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_allocated_si
     DWORD_PTR dwAddrSeg;
     DacpHeapSegmentData segment;
 
-    dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration()].start_segment;
-    total_allocated_size = 0;
-    total_committed_size = 0;
-    // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
-    while (dwAddrSeg != (DWORD_PTR)heap.generation_table[0].start_segment)
+    if (heap.has_regions)
     {
-        if (IsInterrupt())
-            return;
+        for (UINT n = 0; n <= GetMaxGeneration(); n++)
+        {
+            ExtOut("generation %d:\n", n);
+            dwAddrSeg = (DWORD_PTR)heap.generation_table[n].start_segment;
+            while (dwAddrSeg != 0)
+            {
+                if (IsInterrupt())
+                    return;
+                if (segment.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
+                {
+                    ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
+                    return;
+                }
+                ExtOut("%p  %p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE"d)  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n",
+                    SOS_PTR(dwAddrSeg),
+                    SOS_PTR(segment.mem), SOS_PTR(segment.allocated), SOS_PTR(segment.committed),
+                    (ULONG_PTR)(segment.allocated - segment.mem),
+                    (ULONG_PTR)(segment.allocated - segment.mem),
+                    (ULONG_PTR)(segment.committed - segment.mem),
+                    (ULONG_PTR)(segment.committed - segment.mem));
+                total_allocated_size += (DWORD_PTR)(segment.allocated - segment.mem);
+                total_committed_size += (DWORD_PTR)(segment.committed - segment.mem);
+                dwAddrSeg = (DWORD_PTR)segment.next;
+            }
+        }
+    }
+    else
+    {
+        dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration()].start_segment;
+        total_allocated_size = 0;
+        total_committed_size = 0;
+        // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
+        while (dwAddrSeg != (DWORD_PTR)heap.generation_table[0].start_segment)
+        {
+            if (IsInterrupt())
+                return;
+            if (segment.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
+            {
+                ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
+                return;
+            }
+            ExtOut("%p  %p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE"d)  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n",
+                    SOS_PTR(dwAddrSeg),
+                    SOS_PTR(segment.mem), SOS_PTR(segment.allocated), SOS_PTR(segment.committed),
+                    (ULONG_PTR)(segment.allocated - segment.mem),
+                    (ULONG_PTR)(segment.allocated - segment.mem),
+                    (ULONG_PTR)(segment.committed - segment.mem),
+                    (ULONG_PTR)(segment.committed - segment.mem));
+            total_allocated_size += (DWORD_PTR) (segment.allocated - segment.mem);
+            total_committed_size += (DWORD_PTR) (segment.committed - segment.mem);
+            dwAddrSeg = (DWORD_PTR)segment.next;
+        }
+
         if (segment.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
         {
             ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
             return;
         }
+
+        DWORD_PTR end = (DWORD_PTR)heap.alloc_allocated;
         ExtOut("%p  %p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE"d)  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n",
                 SOS_PTR(dwAddrSeg),
-                SOS_PTR(segment.mem), SOS_PTR(segment.allocated), SOS_PTR(segment.committed),
-                (ULONG_PTR)(segment.allocated - segment.mem),
-                (ULONG_PTR)(segment.allocated - segment.mem),
-                (ULONG_PTR)(segment.committed - segment.mem),
-                (ULONG_PTR)(segment.committed - segment.mem));
-        total_allocated_size += (DWORD_PTR) (segment.allocated - segment.mem);
-        total_committed_size += (DWORD_PTR) (segment.committed - segment.mem);
-        dwAddrSeg = (DWORD_PTR)segment.next;
+                SOS_PTR(segment.mem), SOS_PTR(end), SOS_PTR(segment.committed),
+                (ULONG_PTR)(end - (DWORD_PTR)segment.mem),
+                (ULONG_PTR)(end - (DWORD_PTR)segment.mem),
+                (ULONG_PTR)(segment.committed - (DWORD_PTR)segment.mem),
+                (ULONG_PTR)(segment.committed - (DWORD_PTR)segment.mem));
+
+        total_allocated_size += end - (DWORD_PTR)segment.mem;
+        total_committed_size += (DWORD_PTR)(segment.committed - segment.mem);
     }
-
-    if (segment.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
-    {
-        ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
-        return;
-    }
-
-    DWORD_PTR end = (DWORD_PTR)heap.alloc_allocated;
-    ExtOut("%p  %p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE"d)  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n",
-            SOS_PTR(dwAddrSeg),
-            SOS_PTR(segment.mem), SOS_PTR(end), SOS_PTR(segment.committed),
-            (ULONG_PTR)(end - (DWORD_PTR)segment.mem),
-            (ULONG_PTR)(end - (DWORD_PTR)segment.mem),
-            (ULONG_PTR)(segment.committed - (DWORD_PTR)segment.mem),
-            (ULONG_PTR)(segment.committed - (DWORD_PTR)segment.mem));
-
-    total_allocated_size += end - (DWORD_PTR)segment.mem;
-    total_committed_size += (DWORD_PTR)(segment.committed - segment.mem);
 }
 
 void GCPrintLargeHeapSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_allocated_size, DWORD_PTR &total_committed_size)
@@ -600,6 +646,10 @@ void GCHeapInfo(const GCHeapDetails &heap, DWORD_PTR &total_allocated_size, DWOR
 BOOL GCObjInGeneration(TADDR taddrObj, const GCHeapDetails &heap,
     const TADDR_SEGINFO& /*seg*/, int& gen, TADDR_RANGE& allocCtx)
 {
+    // we will not get here in case of regions as our caller in 
+    // GCObjInSegment already takes care of this
+    assert(!heap.has_regions);
+
     gen = -1;
     for (UINT n = 0; n <= GetMaxGeneration(); n ++)
     {
@@ -633,44 +683,77 @@ BOOL GCObjInSegment(TADDR taddrObj, const GCHeapDetails &heap,
     TADDR taddrSeg;
     DacpHeapSegmentData dacpSeg;
 
-    taddrSeg = (TADDR)heap.generation_table[GetMaxGeneration()].start_segment;
-    // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
-    while (taddrSeg != (TADDR)heap.generation_table[0].start_segment)
+    if (heap.has_regions)
     {
-        if (IsInterrupt())
-            return FALSE;
+        // in this case, each generation has its own list
+        for (unsigned gen_num = 0; gen_num <= GetMaxGeneration(); gen_num++)
+        {
+            taddrSeg = (TADDR)heap.generation_table[gen_num].start_segment;
+
+            // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
+            while (taddrSeg != NULL)
+            {
+                if (IsInterrupt())
+                    return FALSE;
+                if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
+                {
+                    ExtOut("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
+                    return FALSE;
+                }
+                if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj && taddrObj < TO_TADDR(dacpSeg.allocated))
+                {
+                    rngSeg.segAddr = (TADDR)dacpSeg.segmentAddr;
+                    rngSeg.start = (TADDR)dacpSeg.mem;
+                    rngSeg.end = (TADDR)dacpSeg.allocated;
+                    gen = gen_num;
+                    return TRUE;
+                }
+                taddrSeg = (TADDR)dacpSeg.next;
+            }
+        }
+        return FALSE;
+    }
+    else
+    {
+        taddrSeg = (TADDR)heap.generation_table[GetMaxGeneration()].start_segment;
+        // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
+        while (taddrSeg != (TADDR)heap.generation_table[0].start_segment)
+        {
+            if (IsInterrupt())
+                return FALSE;
+            if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
+            {
+                ExtOut("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
+                return FALSE;
+            }
+            if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj < TO_TADDR(dacpSeg.allocated))
+            {
+                rngSeg.segAddr = (TADDR)dacpSeg.segmentAddr;
+                rngSeg.start   = (TADDR)dacpSeg.mem;
+                rngSeg.end     = (TADDR)dacpSeg.allocated;
+                gen = 2;
+                allocCtx.start = allocCtx.end = 0;
+                return TRUE;
+            }
+            taddrSeg = (TADDR)dacpSeg.next;
+        }
+
+        // the ephemeral segment
         if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
         {
             ExtOut("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
             return FALSE;
         }
-        if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj < TO_TADDR(dacpSeg.allocated))
-        {
-            rngSeg.segAddr = (TADDR)dacpSeg.segmentAddr;
-            rngSeg.start   = (TADDR)dacpSeg.mem;
-            rngSeg.end     = (TADDR)dacpSeg.allocated;
-            gen = 2;
-            allocCtx.start = allocCtx.end = 0;
-            return TRUE;
-        }
-        taddrSeg = (TADDR)dacpSeg.next;
-    }
 
-    // the ephemeral segment
-    if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
-    {
-        ExtOut("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
-        return FALSE;
-    }
-
-    if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj < TO_TADDR(heap.alloc_allocated))
-    {
-        if (GCObjInGeneration(taddrObj, heap, rngSeg, gen, allocCtx))
+        if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj < TO_TADDR(heap.alloc_allocated))
         {
-            rngSeg.segAddr = (TADDR)dacpSeg.segmentAddr;
-            rngSeg.start   = (TADDR)dacpSeg.mem;
-            rngSeg.end     = (TADDR)heap.alloc_allocated;
-            return TRUE;
+            if (GCObjInGeneration(taddrObj, heap, rngSeg, gen, allocCtx))
+            {
+                rngSeg.segAddr = (TADDR)dacpSeg.segmentAddr;
+                rngSeg.start   = (TADDR)dacpSeg.mem;
+                rngSeg.end     = (TADDR)heap.alloc_allocated;
+                return TRUE;
+            }
         }
     }
 
@@ -869,60 +952,87 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
     AllocInfo allocInfo;
     allocInfo.Init();
 
-    // 1. Start with small object segments
-    TADDR taddrSeg;
-    DacpHeapSegmentData dacpSeg;
-
-    taddrSeg = (TADDR)heap.generation_table[GetMaxGeneration()].start_segment;
-
-#ifndef FEATURE_PAL
     // this will create the bitmap of rooted objects only if bIncUnreachable is true
     GCRootImpl gcroot;
     std::unordered_set<TADDR> emptyLiveObjs;
-    const std::unordered_set<TADDR> &liveObjs = (bIncUnreachable ? gcroot.GetLiveObjects() : emptyLiveObjs);
+    const std::unordered_set<TADDR>& liveObjs = (bIncUnreachable ? gcroot.GetLiveObjects() : emptyLiveObjs);
 
-    // 1a. enumerate all non-ephemeral segments
-    while (taddrSeg != (TADDR)heap.generation_table[0].start_segment)
+    TADDR taddrSeg;
+    DacpHeapSegmentData dacpSeg;
+
+    if (heap.has_regions)
     {
-        if (IsInterrupt())
-            return FALSE;
+        // 1. Start with small object generations,
+        //    each generation has a list of segments
+        for (UINT n = 0; n <= GetMaxGeneration(); n++)
+        {
+            taddrSeg = (TADDR)heap.generation_table[n].start_segment;
+            while (taddrSeg != NULL)
+            {
+                if (IsInterrupt())
+                    return FALSE;
 
+                if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
+                {
+                    ExtErr("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
+                    return FALSE;
+                }
+#ifndef FEATURE_PAL
+                GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.allocated, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
+#endif
+                taddrSeg = (TADDR)dacpSeg.next;
+            }
+        }
+    }
+    else
+    {
+        // 1. Start with small object segments
+        taddrSeg = (TADDR)heap.generation_table[GetMaxGeneration()].start_segment;
+
+#ifndef FEATURE_PAL
+        // 1a. enumerate all non-ephemeral segments
+        while (taddrSeg != (TADDR)heap.generation_table[0].start_segment)
+        {
+            if (IsInterrupt())
+                return FALSE;
+
+            if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
+            {
+                ExtErr("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
+                return FALSE;
+            }
+            GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.allocated, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[2]);
+            taddrSeg = (TADDR)dacpSeg.next;
+        }
+#endif
+
+        // 1b. now handle the ephemeral segment
         if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
         {
             ExtErr("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
             return FALSE;
         }
-        GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.allocated, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[2]);
-        taddrSeg = (TADDR)dacpSeg.next;
-    }
-#endif
 
-    // 1b. now handle the ephemeral segment
-    if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
-    {
-        ExtErr("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
-        return FALSE;
-    }
+        TADDR endGen = TO_TADDR(heap.alloc_allocated);
 
-    TADDR endGen = TO_TADDR(heap.alloc_allocated);
-
-    for (UINT n = 0; n <= GetMaxGeneration(); n ++)
-    {
-        TADDR startGen;
-        // gen 2 starts at the beginning of the segment
-        if (n == GetMaxGeneration())
+        for (UINT n = 0; n <= GetMaxGeneration(); n++)
         {
-            startGen = TO_TADDR(dacpSeg.mem);
-        }
-        else
-        {
-            startGen = TO_TADDR(heap.generation_table[n].allocation_start);
-        }
+            TADDR startGen;
+            // gen 2 starts at the beginning of the segment
+            if (n == GetMaxGeneration())
+            {
+                startGen = TO_TADDR(dacpSeg.mem);
+            }
+            else
+            {
+                startGen = TO_TADDR(heap.generation_table[n].allocation_start);
+            }
 
 #ifndef FEATURE_PAL
-        GCGenUsageStats(startGen, endGen, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
+            GCGenUsageStats(startGen, endGen, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
 #endif
-        endGen = startGen;
+            endGen = startGen;
+        }
     }
 
     // 2. Now process LOH
@@ -1144,148 +1254,281 @@ void GatherOneHeapFinalization(DacpGcHeapDetails& heapDetails, HeapStat *stat, B
 
 BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEAPFUNC pFunc, LPVOID token, BOOL verify)
 {
-    DWORD_PTR begin_youngest;
-    DWORD_PTR end_youngest;
+    DWORD_PTR dwAddrSeg = 0;
+    DWORD_PTR dwAddr = 0;
+    DWORD_PTR dwAddrCurrObj = 0;
+    DWORD_PTR dwAddrPrevObj = 0;
+    size_t s, sPrev = 0;
 
-    begin_youngest = (DWORD_PTR)heap.generation_table[0].allocation_start;
-    DWORD_PTR dwAddr = (DWORD_PTR)heap.ephemeral_heap_segment;
     DacpHeapSegmentData segment;
-
-    end_youngest = (DWORD_PTR)heap.alloc_allocated;
-
-    DWORD_PTR dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration()].start_segment;
-    dwAddr = dwAddrSeg;
-
-    if (segment.Request(g_sos, dwAddr, heap.original_heap_details) != S_OK)
+    if (heap.has_regions)
     {
-        ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddr));
-        return FALSE;
-    }
-
-    // DWORD_PTR dwAddrCurrObj = (DWORD_PTR)heap.generation_table[GetMaxGeneration()].allocation_start;
-    DWORD_PTR dwAddrCurrObj = (DWORD_PTR)segment.mem;
-
-    size_t s, sPrev=0;
-    BOOL bPrevFree=FALSE;
-    BOOL bPinnedDone = FALSE;
-    DWORD_PTR dwAddrMethTable;
-    DWORD_PTR dwAddrPrevObj=0;
-
-    while(1)
-    {
-        if (IsInterrupt())
+        DWORD_PTR end_youngest = (DWORD_PTR)heap.alloc_allocated;
+        BOOL bPrevFree = FALSE;
+        for (UINT n = 0; n <= GetMaxGeneration(); n++)
         {
-            ExtOut("<heap walk interrupted>\n");
-            return FALSE;
-        }
-        DWORD_PTR end_of_segment = (DWORD_PTR)segment.allocated;
-        if (dwAddrSeg == (DWORD_PTR)heap.ephemeral_heap_segment)
-        {
-            end_of_segment = end_youngest;
-            if (dwAddrCurrObj - SIZEOF_OBJHEADER == end_youngest - Align(min_obj_size))
-                break;
-        }
-        if (dwAddrCurrObj >= (DWORD_PTR)end_of_segment)
-        {
-            if (dwAddrCurrObj > (DWORD_PTR)end_of_segment)
+            dwAddrSeg = (DWORD_PTR)heap.generation_table[n].start_segment;
+            while (dwAddrSeg != 0)
             {
-                ExtOut ("curr_object: %p > heap_segment_allocated (seg: %p)\n",
-                         SOS_PTR(dwAddrCurrObj), SOS_PTR(dwAddrSeg));
-                if (dwAddrPrevObj) {
-                    ExtOut ("Last good object: %p\n", SOS_PTR(dwAddrPrevObj));
-                }
-                return FALSE;
-            }
-            dwAddrSeg = (DWORD_PTR)segment.next;
-            if (dwAddrSeg)
-            {
-                dwAddr = dwAddrSeg;
-                if (segment.Request(g_sos, dwAddr, heap.original_heap_details) != S_OK)
+                if (IsInterrupt())
                 {
-                    ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddr));
+                    ExtOut("<heap walk interrupted>\n");
+                    return FALSE;
+                }
+                if (segment.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
+                {
+                    ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
                     return FALSE;
                 }
                 dwAddrCurrObj = (DWORD_PTR)segment.mem;
-                continue;
-            }
-            else
-            {
-                break;  // Done Verifying Heap
+                DWORD_PTR end_of_segment = (DWORD_PTR)segment.allocated;
+                if (dwAddrSeg == (DWORD_PTR)heap.ephemeral_heap_segment)
+                {
+                    end_of_segment = end_youngest;
+                }
+
+                while (true)
+                {
+                    if (dwAddrCurrObj - SIZEOF_OBJHEADER == end_youngest - Align(min_obj_size))
+                        break;
+
+                    if (dwAddrCurrObj >= (DWORD_PTR)end_of_segment)
+                    {
+                        if (dwAddrCurrObj > (DWORD_PTR)end_of_segment)
+                        {
+                            ExtOut("curr_object: %p > heap_segment_allocated (seg: %p)\n",
+                                SOS_PTR(dwAddrCurrObj), SOS_PTR(dwAddrSeg));
+                            if (dwAddrPrevObj) 
+                            {
+                                ExtOut("Last good object: %p\n", SOS_PTR(dwAddrPrevObj));
+                            }
+                            return FALSE;
+                        }
+                        // done with this segment
+                        break;
+                    }
+
+                    if (dwAddrSeg == (DWORD_PTR)heap.ephemeral_heap_segment
+                        && dwAddrCurrObj >= end_youngest)
+                    {
+                        if (dwAddrCurrObj > end_youngest)
+                        {
+                            // prev_object length is too long
+                            ExtOut("curr_object: %p > end_youngest: %p\n",
+                                SOS_PTR(dwAddrCurrObj), SOS_PTR(end_youngest));
+                            if (dwAddrPrevObj) 
+                            {
+                                DMLOut("Last good object: %s\n", DMLObject(dwAddrPrevObj));
+                            }
+                            return FALSE;
+                        }
+                        return FALSE;
+                    }
+
+                    DWORD_PTR dwAddrMethTable = 0;
+                    if (FAILED(GetMTOfObject(dwAddrCurrObj, &dwAddrMethTable)))
+                    {
+                        return FALSE;
+                    }
+
+                    dwAddrMethTable = dwAddrMethTable & ~sos::Object::METHODTABLE_PTR_LOW_BITMASK;
+                    if (dwAddrMethTable == 0)
+                    {
+                        // Is this the beginning of an allocation context?
+                        int i;
+                        for (i = 0; i < pallocInfo->num; i++)
+                        {
+                            if (dwAddrCurrObj == (DWORD_PTR)pallocInfo->array[i].alloc_ptr)
+                            {
+                                dwAddrCurrObj =
+                                    (DWORD_PTR)pallocInfo->array[i].alloc_limit + Align(min_obj_size);
+                                break;
+                            }
+                        }
+                        if (i < pallocInfo->num)
+                            continue;
+
+                        // We also need to look at the gen0 alloc context.
+                        if (dwAddrCurrObj == (DWORD_PTR)heap.generation_table[0].allocContextPtr)
+                        {
+                            dwAddrCurrObj = (DWORD_PTR)heap.generation_table[0].allocContextLimit + Align(min_obj_size);
+                            continue;
+                        }
+                    }
+
+                    BOOL bContainsPointers;
+                    size_t s;
+                    BOOL bMTOk = GetSizeEfficient(dwAddrCurrObj, dwAddrMethTable, FALSE, s, bContainsPointers);
+                    if (verify && bMTOk)
+                        bMTOk = VerifyObject(heap, dwAddrCurrObj, dwAddrMethTable, s, TRUE);
+                    if (!bMTOk)
+                    {
+                        DMLOut("curr_object:      %s\n", DMLListNearObj(dwAddrCurrObj));
+                        if (dwAddrPrevObj)
+                            DMLOut("Last good object: %s\n", DMLObject(dwAddrPrevObj));
+
+                        ExtOut("----------------\n");
+                        return FALSE;
+                    }
+
+                    pFunc(dwAddrCurrObj, s, dwAddrMethTable, token);
+
+                    // We believe we did this alignment in ObjectSize above.
+                    assert((s & ALIGNCONST) == 0);
+                    dwAddrPrevObj = dwAddrCurrObj;
+                    sPrev = s;
+                    bPrevFree = IsMTForFreeObj(dwAddrMethTable);
+
+                    dwAddrCurrObj += s;
+                }
+                dwAddrSeg = (DWORD_PTR)segment.next;
             }
         }
+    }
+    else
+    {
+        DWORD_PTR begin_youngest;
+        DWORD_PTR end_youngest;
 
-        if (dwAddrSeg == (DWORD_PTR)heap.ephemeral_heap_segment
-            && dwAddrCurrObj >= end_youngest)
+        begin_youngest = (DWORD_PTR)heap.generation_table[0].allocation_start;
+        dwAddr = (DWORD_PTR)heap.ephemeral_heap_segment;
+
+        end_youngest = (DWORD_PTR)heap.alloc_allocated;
+
+        dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration()].start_segment;
+        dwAddr = dwAddrSeg;
+
+        if (segment.Request(g_sos, dwAddr, heap.original_heap_details) != S_OK)
         {
-            if (dwAddrCurrObj > end_youngest)
+            ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddr));
+            return FALSE;
+        }
+
+        // DWORD_PTR dwAddrCurrObj = (DWORD_PTR)heap.generation_table[GetMaxGeneration()].allocation_start;
+        dwAddrCurrObj = (DWORD_PTR)segment.mem;
+
+        BOOL bPrevFree = FALSE;
+
+        while (1)
+        {
+            if (IsInterrupt())
             {
-                // prev_object length is too long
-                ExtOut("curr_object: %p > end_youngest: %p\n",
-                         SOS_PTR(dwAddrCurrObj), SOS_PTR(end_youngest));
-                if (dwAddrPrevObj) {
-                    DMLOut("Last good object: %s\n", DMLObject(dwAddrPrevObj));
+                ExtOut("<heap walk interrupted>\n");
+                return FALSE;
+            }
+            DWORD_PTR end_of_segment = (DWORD_PTR)segment.allocated;
+            if (dwAddrSeg == (DWORD_PTR)heap.ephemeral_heap_segment)
+            {
+                end_of_segment = end_youngest;
+                if (dwAddrCurrObj - SIZEOF_OBJHEADER == end_youngest - Align(min_obj_size))
+                    break;
+            }
+            if (dwAddrCurrObj >= (DWORD_PTR)end_of_segment)
+            {
+                if (dwAddrCurrObj > (DWORD_PTR)end_of_segment)
+                {
+                    ExtOut ("curr_object: %p > heap_segment_allocated (seg: %p)\n",
+                        SOS_PTR(dwAddrCurrObj), SOS_PTR(dwAddrSeg));
+                    if (dwAddrPrevObj) {
+                        ExtOut ("Last good object: %p\n", SOS_PTR(dwAddrPrevObj));
+                    }
+                    return FALSE;
+                }
+                dwAddrSeg = (DWORD_PTR)segment.next;
+                if (dwAddrSeg)
+                {
+                    dwAddr = dwAddrSeg;
+                    if (segment.Request(g_sos, dwAddr, heap.original_heap_details) != S_OK)
+                    {
+                        ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddr));
+                        return FALSE;
+                    }
+                    dwAddrCurrObj = (DWORD_PTR)segment.mem;
+                    continue;
+                }
+                else
+                {
+                    break;  // Done Verifying Heap
+                }
+            }
+
+            if (dwAddrSeg == (DWORD_PTR)heap.ephemeral_heap_segment
+                && dwAddrCurrObj >= end_youngest)
+            {
+                if (dwAddrCurrObj > end_youngest)
+                {
+                    // prev_object length is too long
+                    ExtOut("curr_object: %p > end_youngest: %p\n",
+                        SOS_PTR(dwAddrCurrObj), SOS_PTR(end_youngest));
+                    if (dwAddrPrevObj) {
+                        DMLOut("Last good object: %s\n", DMLObject(dwAddrPrevObj));
+                    }
+                    return FALSE;
                 }
                 return FALSE;
             }
-            return FALSE;
-        }
 
-        if (FAILED(GetMTOfObject(dwAddrCurrObj, &dwAddrMethTable)))
-        {
-            return FALSE;
-        }
-
-        dwAddrMethTable = dwAddrMethTable & ~sos::Object::METHODTABLE_PTR_LOW_BITMASK;
-        if (dwAddrMethTable == 0)
-        {
-            // Is this the beginning of an allocation context?
-            int i;
-            for (i = 0; i < pallocInfo->num; i ++)
+            DWORD_PTR dwAddrMethTable = 0;
+            if (FAILED(GetMTOfObject(dwAddrCurrObj, &dwAddrMethTable)))
             {
-                if (dwAddrCurrObj == (DWORD_PTR)pallocInfo->array[i].alloc_ptr)
+                return FALSE;
+            }
+
+            dwAddrMethTable = dwAddrMethTable & ~sos::Object::METHODTABLE_PTR_LOW_BITMASK;
+            if (dwAddrMethTable == 0)
+            {
+                // Is this the beginning of an allocation context?
+                int i;
+                for (i = 0; i < pallocInfo->num; i ++)
                 {
-                    dwAddrCurrObj =
-                        (DWORD_PTR)pallocInfo->array[i].alloc_limit + Align(min_obj_size);
-                    break;
+                    if (dwAddrCurrObj == (DWORD_PTR)pallocInfo->array[i].alloc_ptr)
+                    {
+                        dwAddrCurrObj =
+                            (DWORD_PTR)pallocInfo->array[i].alloc_limit + Align(min_obj_size);
+                        break;
+                    }
+                }
+                if (i < pallocInfo->num)
+                    continue;
+
+                // We also need to look at the gen0 alloc context.
+                if (dwAddrCurrObj == (DWORD_PTR) heap.generation_table[0].allocContextPtr)
+                {
+                    dwAddrCurrObj = (DWORD_PTR) heap.generation_table[0].allocContextLimit + Align(min_obj_size);
+                    continue;
                 }
             }
-            if (i < pallocInfo->num)
-                continue;
 
-            // We also need to look at the gen0 alloc context.
-            if (dwAddrCurrObj == (DWORD_PTR) heap.generation_table[0].allocContextPtr)
+            BOOL bContainsPointers;
+            BOOL bMTOk = GetSizeEfficient(dwAddrCurrObj, dwAddrMethTable, FALSE, s, bContainsPointers);
+            if (verify && bMTOk)
+                bMTOk = VerifyObject (heap, dwAddrCurrObj, dwAddrMethTable, s, TRUE);
+            if (!bMTOk)
             {
-                dwAddrCurrObj = (DWORD_PTR) heap.generation_table[0].allocContextLimit + Align(min_obj_size);
-                continue;
+                DMLOut("curr_object:      %s\n", DMLListNearObj(dwAddrCurrObj));
+                if (dwAddrPrevObj)
+                    DMLOut("Last good object: %s\n", DMLObject(dwAddrPrevObj));
+
+                ExtOut ("----------------\n");
+                return FALSE;
             }
+
+            pFunc (dwAddrCurrObj, s, dwAddrMethTable, token);
+
+            // We believe we did this alignment in ObjectSize above.
+            assert((s & ALIGNCONST) == 0);
+            dwAddrPrevObj = dwAddrCurrObj;
+            sPrev = s;
+            bPrevFree = IsMTForFreeObj(dwAddrMethTable);
+
+            dwAddrCurrObj += s;
         }
-
-        BOOL bContainsPointers;
-        BOOL bMTOk = GetSizeEfficient(dwAddrCurrObj, dwAddrMethTable, FALSE, s, bContainsPointers);
-        if (verify && bMTOk)
-             bMTOk = VerifyObject (heap, dwAddrCurrObj, dwAddrMethTable, s, TRUE);
-        if (!bMTOk)
-        {
-            DMLOut("curr_object:      %s\n", DMLListNearObj(dwAddrCurrObj));
-            if (dwAddrPrevObj)
-                DMLOut("Last good object: %s\n", DMLObject(dwAddrPrevObj));
-
-            ExtOut ("----------------\n");
-            return FALSE;
-        }
-
-        pFunc (dwAddrCurrObj, s, dwAddrMethTable, token);
-
-        // We believe we did this alignment in ObjectSize above.
-        assert((s & ALIGNCONST) == 0);
-        dwAddrPrevObj = dwAddrCurrObj;
-        sPrev = s;
-        bPrevFree = IsMTForFreeObj(dwAddrMethTable);
-
-        dwAddrCurrObj += s;
     }
 
     // Now for the large object and pinned object generations:
+
+    BOOL bPinnedDone = FALSE;
+
     dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration()+1].start_segment;
     dwAddr = dwAddrSeg;
 
@@ -1315,7 +1558,7 @@ BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEA
             if (dwAddrCurrObj > (DWORD_PTR)end_of_segment)
             {
                 ExtOut("curr_object: %p > heap_segment_allocated (seg: %p)\n",
-                         SOS_PTR(dwAddrCurrObj), SOS_PTR(dwAddrSeg));
+                            SOS_PTR(dwAddrCurrObj), SOS_PTR(dwAddrSeg));
                 if (dwAddrPrevObj) {
                     ExtOut("Last good object: %p\n", SOS_PTR(dwAddrPrevObj));
                 }
@@ -1354,6 +1597,7 @@ BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEA
             }
         }
 
+        DWORD_PTR dwAddrMethTable = 0;
         if (FAILED(GetMTOfObject(dwAddrCurrObj, &dwAddrMethTable)))
         {
             return FALSE;
@@ -1640,18 +1884,34 @@ BOOL GCHeapSnapshot::AddSegments(const GCHeapDetails& details)
     int n = 0;
     DacpHeapSegmentData segment;
 
-    // This array of two addresses gives us access to all the segments. The generation segments are linked
-    // to each other, starting with the maxGeneration segment. The second address gives us the large object heap.
-    CLRDATA_ADDRESS AddrSegs[]=
+    // This array of addresses gives us access to all the segments.
+    CLRDATA_ADDRESS AddrSegs[5];
+    if (details.has_regions)
     {
-        details.generation_table[GetMaxGeneration()].start_segment,
-        details.generation_table[GetMaxGeneration() + 1].start_segment, // large object heap
-        NULL
-    };
+        // with regions, each generation has its own list of segments
+        for (unsigned gen = 0; gen <= GetMaxGeneration() + 1; gen++)
+        {
+            AddrSegs[gen] = details.generation_table[gen].start_segment;
+        }
+        if (details.has_poh)
+        {
+            AddrSegs[4] = details.generation_table[GetMaxGeneration() + 2].start_segment; // pinned object heap
+        }
+    }
+    else
+    {
+        // The generation segments are linked to each other, starting with the maxGeneration segment. 
+        // The second address gives us the large object heap, the third the pinned object heap
 
-    if (details.has_poh)
-    {
-        AddrSegs[2] = details.generation_table[GetMaxGeneration() + 2].start_segment; // pinned object heap
+        AddrSegs[0] = details.generation_table[GetMaxGeneration()].start_segment;
+        AddrSegs[1] = details.generation_table[GetMaxGeneration() + 1].start_segment;
+        AddrSegs[2] = NULL;
+        if (details.has_poh)
+        {
+            AddrSegs[2] = details.generation_table[GetMaxGeneration() + 2].start_segment; // pinned object heap
+        }
+        AddrSegs[3] = NULL;
+        AddrSegs[4] = NULL;
     }
 
     // this loop will get information for all the heap segments in this heap. The outer loop iterates once
@@ -1679,7 +1939,7 @@ BOOL GCHeapSnapshot::AddSegments(const GCHeapDetails& details)
                 ExtOut("Error requesting heap segment %p\n", SOS_PTR(AddrSeg));
                 return FALSE;
             }
-            if (n++ > nMaxHeapSegmentCount) // that would be insane
+            if (n++ > nMaxHeapSegmentCount && !details.has_regions) // that would be insane
             {
                 ExtOut("More than %d heap segments, there must be an error\n", nMaxHeapSegmentCount);
                 return FALSE;

@@ -25,6 +25,8 @@ namespace sos
     static bool MemOverlap(T beg1, T end1, // first range
                            T beg2, T end2) // second range
     {
+        if (beg1 >= end1 || beg2 >= end2)       // one of the ranges is empty
+            return false;
         if (beg2 >= beg1 && beg2 <= end1)       // second range starts within first range
             return true;
         else if (end2 >= beg1 && end2 <= end1)  // second range ends within first range
@@ -573,12 +575,21 @@ namespace sos
 
     ObjectIterator::ObjectIterator(const GCHeapDetails *heap, int numHeaps, TADDR start, TADDR stop)
     : bLarge(false), bPinned(false), mCurrObj(0), mLastObj(0), mStart(start), mEnd(stop), mSegmentEnd(0), mHeaps(heap),
-      mNumHeaps(numHeaps), mCurrHeap(0)
+      mNumHeaps(numHeaps), mCurrHeap(0), mCurrRegionGen(0)
     {
         mAllocInfo.Init();
         SOS_Assert(numHeaps > 0);
 
-        TADDR segStart = TO_TADDR(mHeaps[0].generation_table[GetMaxGeneration()].start_segment);
+        TADDR segStart;
+        if (heap->has_regions)
+        {
+            // with regions, we have a null terminated list for each generation
+            segStart = TO_TADDR(mHeaps[0].generation_table[mCurrRegionGen].start_segment);
+        }
+        else
+        {
+            segStart = TO_TADDR(mHeaps[0].generation_table[GetMaxGeneration()].start_segment);
+        }
         if (FAILED(mSegment.Request(g_sos, segStart, mHeaps[0].original_heap_details)))
         {
             sos::Throw<DataRead>("Could not request segment data at %p.", segStart);
@@ -602,7 +613,22 @@ namespace sos
         TADDR next = TO_TADDR(mSegment.next);
         if (next == NULL)
         {
-            if (bPinned || (bLarge && !mHeaps[mCurrHeap].has_poh))
+            if (mHeaps[mCurrHeap].has_regions)
+            {
+                mCurrRegionGen++;
+                if ((mCurrRegionGen > GetMaxGeneration() + 2) ||
+                    (mCurrRegionGen > GetMaxGeneration() + 1 && !mHeaps[mCurrHeap].has_poh))
+                {
+                    mCurrHeap++;
+                    if (mCurrHeap == mNumHeaps)
+                    {
+                        return false;
+                    }
+                    mCurrRegionGen = 0;
+                }
+                next = TO_TADDR(mHeaps[mCurrHeap].generation_table[mCurrRegionGen].start_segment);
+            }
+            else if (bPinned || (bLarge && !mHeaps[mCurrHeap].has_poh))
             {
                 mCurrHeap++;
                 if (mCurrHeap == mNumHeaps)

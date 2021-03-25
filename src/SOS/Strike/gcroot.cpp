@@ -1641,30 +1641,59 @@ BOOL VerifyObject(const GCHeapDetails &heap, const DacpHeapSegmentData &seg, DWO
 
 BOOL FindSegment(const GCHeapDetails &heap, DacpHeapSegmentData &seg, CLRDATA_ADDRESS addr)
 {
-    CLRDATA_ADDRESS dwAddrSeg = heap.generation_table[GetMaxGeneration()].start_segment;
-
-    // Request the inital segment.
-    if (seg.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
+    if (heap.has_regions)
     {
-        ExtOut("Error requesting heap segment %p.\n", SOS_PTR(dwAddrSeg));
-        return FALSE;
+        CLRDATA_ADDRESS dwAddrSeg;
+        for (UINT n = 0; n <= GetMaxGeneration(); n++)
+        {
+            dwAddrSeg = (DWORD_PTR)heap.generation_table[n].start_segment;
+            while (dwAddrSeg != 0)
+            {
+                if (IsInterrupt())
+                    return FALSE;
+                if (seg.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
+                {
+                    ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
+                    return FALSE;
+                }
+                if (addr >= TO_TADDR(seg.mem) &&
+                    addr < (dwAddrSeg == heap.ephemeral_heap_segment ? heap.alloc_allocated : TO_TADDR(seg.allocated)))
+                {
+                    break;
+                }
+                dwAddrSeg = (DWORD_PTR)seg.next;
+            }
+            if (dwAddrSeg != 0)
+                break;
+        }
     }
-
-    // Loop while the object is not in range of the segment.
-    while (addr < TO_TADDR(seg.mem) ||
-           addr >= (dwAddrSeg == heap.ephemeral_heap_segment ? heap.alloc_allocated : TO_TADDR(seg.allocated)))
+    else
     {
-        // get the next segment
-        dwAddrSeg = seg.next;
+        CLRDATA_ADDRESS dwAddrSeg = heap.generation_table[GetMaxGeneration()].start_segment;
 
-        // We reached the last segment without finding the object.
-        if (dwAddrSeg == NULL)
-            return FALSE;
-
+        // Request the inital segment.
         if (seg.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
         {
             ExtOut("Error requesting heap segment %p.\n", SOS_PTR(dwAddrSeg));
             return FALSE;
+        }
+
+        // Loop while the object is not in range of the segment.
+        while (addr < TO_TADDR(seg.mem) ||
+            addr >= (dwAddrSeg == heap.ephemeral_heap_segment ? heap.alloc_allocated : TO_TADDR(seg.allocated)))
+        {
+            // get the next segment
+            dwAddrSeg = seg.next;
+
+            // We reached the last segment without finding the object.
+            if (dwAddrSeg == NULL)
+                return FALSE;
+
+            if (seg.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
+            {
+                ExtOut("Error requesting heap segment %p.\n", SOS_PTR(dwAddrSeg));
+                return FALSE;
+            }
         }
     }
 
