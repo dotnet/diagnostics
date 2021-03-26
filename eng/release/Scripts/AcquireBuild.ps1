@@ -43,7 +43,7 @@ try {
     }
     catch{
         . $PSScriptRoot\..\..\common\tools.ps1
-        $darc = Get-Darc
+        $darc = Get-Darc "1.1.0-beta.20602.1"
     }
 
     & $darc gather-drop `
