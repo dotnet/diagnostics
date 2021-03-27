@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -28,10 +29,16 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 _output.WriteLine("Running Process: " + runner.ReplayCommand);
                 _output.WriteLine("Working Directory: " + runner.WorkingDirectory);
-                IEnumerable<KeyValuePair<string,string>> additionalEnvVars = 
+
+                foreach (string env in Environment.GetEnvironmentVariables().Cast<DictionaryEntry>().Select(de => de.Key + "=" + de.Value))
+                {
+                    _output.WriteLine(env);
+                }
+
+                IEnumerable<KeyValuePair<string,string>> additionalEnvVars =
                     runner.EnvironmentVariables.Where(kv => Environment.GetEnvironmentVariable(kv.Key) != kv.Value);
 
-                if(additionalEnvVars.Any())
+                if (additionalEnvVars.Any())
                 {
                     _output.WriteLine("Additional Environment Variables: " +
                         string.Join(", ", additionalEnvVars.Select(kv => kv.Key + "=" + kv.Value)));
