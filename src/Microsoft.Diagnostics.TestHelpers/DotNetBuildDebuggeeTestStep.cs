@@ -188,8 +188,6 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
             output.WriteLine("Launching {0} {1}", DotNetToolPath, args);
             ProcessRunner runner = new ProcessRunner(DotNetToolPath, args).
-                  WithEnvironmentVariable("COREHOST_TRACE", "1").
-                  WithEnvironmentVariable("DOTNET_CLI_CAPTURE_TIMING", "1").
                   WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
                   WithEnvironmentVariable("DOTNET_ROOT", Path.GetDirectoryName(DotNetToolPath)).
                   WithWorkingDirectory(DebuggeeSolutionDirPath).
