@@ -190,8 +190,12 @@ namespace Microsoft.Diagnostics.TestHelpers
             ProcessRunner runner = new ProcessRunner(DotNetToolPath, args).
                   WithEnvironmentVariable("COREHOST_TRACE", "1").
                   WithEnvironmentVariable("DOTNET_CLI_CAPTURE_TIMING", "1").
+                  // We need to set these to avoid environment pollution from setup scripts. 
+                  // We want to be very intentional about the SDK we use for our test run.
                   WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
                   WithEnvironmentVariable("DOTNET_ROOT", Path.GetDirectoryName(DotNetToolPath)).
+                  WithEnvironmentVariable("MSBuildSDKsPath", null).
+                  WithEnvironmentVariable("MSBuildExtensionsPath", null).
                   WithWorkingDirectory(DebuggeeSolutionDirPath).
                   WithLog(output).
                   WithTimeout(TimeSpan.FromMinutes(10)).                    // restore can be painfully slow
