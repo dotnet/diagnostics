@@ -192,6 +192,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         }
                     }
 
+                    if (String.Equals(output.Name, DefaultTraceName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        DateTime now = DateTime.Now;
+                        var processMainModuleFileInfo = new FileInfo(processMainModuleFileName);
+                        output = new FileInfo($"{processMainModuleFileInfo.Name}_{now:yyyyMMdd}_{now:HHmmss}.nettrace");
+                    }
+
                     var shouldStopAfterDuration = duration != default(TimeSpan);
                     var rundownRequested = false;
                     System.Timers.Timer durationTimer = null;
@@ -405,12 +412,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Argument = new Argument<uint>(name: "size", getDefaultValue: DefaultCircularBufferSizeInMB)
             };
 
-        public static string DefaultTraceName => "trace.nettrace";
+        public static string DefaultTraceName => "default";
 
         private static Option OutputPathOption() =>
             new Option(
                 aliases: new[] { "-o", "--output" },
-                description: $"The output path for the collected trace data. If not specified it defaults to '{DefaultTraceName}'.")
+                description: $"The output path for the collected trace data. If not specified it defaults to '<appname>_<yyyyMMdd>_<HHmmss>.nettrace', e.g., 'myapp_20210315_111514.nettrace'.")
             {
                 Argument = new Argument<FileInfo>(name: "trace-file-path", getDefaultValue: () => new FileInfo(DefaultTraceName))
             };

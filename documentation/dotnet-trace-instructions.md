@@ -30,7 +30,7 @@ You may also use the command `dotnet-trace ps` command to find out what .NET Cor
 - Then, run the following command:
 
 ```cmd
-dotnet-trace collect --process-id <PID> --providers Microsoft-Windows-DotNETRuntime
+dotnet-trace collect --process-id <PID> --providers Microsoft-Windows-DotNETRuntime --output trace.nettrace
 
 Press <Enter> to exit...
 Connecting to process: <Full-Path-To-Process-Being-Profiled>/dotnet.exe
@@ -64,7 +64,7 @@ Sometimes it may be useful to collect a trace of a process from its startup. For
 This will launch `hello.exe` with `arg1` and `arg2` as its command line arguments and collect a trace from its runtime startup:
 
 ```console
-dotnet-trace collect -- hello.exe arg1 arg2
+dotnet-trace collect --output trace.nettrace -- hello.exe arg1 arg2
 ```
 
 The preceding command generates output similar to the following:
@@ -209,7 +209,7 @@ Options:
     The name of the process to collect the trace from.
 
   -o, --output <trace-file-path>
-    The output path for the collected trace data. If not specified it defaults to 'trace.nettrace'
+    The output path for the collected trace data. If not specified it defaults to '<appname>_<yyyyMMdd>_<HHmmss>.nettrace', e.g., 'myapp_20210315_111514.nettrace'.
 
   --profile
       A named pre-defined set of provider configurations that allows common tracing scenarios to be specified
