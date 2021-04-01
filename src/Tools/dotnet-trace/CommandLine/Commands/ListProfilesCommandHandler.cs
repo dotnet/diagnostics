@@ -15,6 +15,18 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal sealed class ListProfilesCommandHandler
     {
+        /// <summary>
+        /// Indicates diagnostics messages from DiagnosticSourceEventSource should be included.
+        /// </summary>
+        /// <remarks>See: https://github.com/dotnet/corefx/blob/master/src/System.Diagnostics.DiagnosticSource/src/System/Diagnostics/DiagnosticSourceEventSource.cs</remarks>
+        private const long DiagnosticSourceKeywords_Messages = 0x1;
+          
+        /// <summary>
+        /// Indicates that all events from all diagnostic sources should be forwarded to the EventSource using the 'Event' event.
+        /// </summary>
+        /// <remarks>See: https://github.com/dotnet/corefx/blob/master/src/System.Diagnostics.DiagnosticSource/src/System/Diagnostics/DiagnosticSourceEventSource.cs</remarks>
+        private const long DiagnosticSourceKeywords_Events = 0x2;
+
         public static async Task<int> GetProfiles(IConsole console)
         {
             try
@@ -70,6 +82,63 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     )
                 },
                 "Tracks GC collections only at very low overhead."),
+            new Profile(
+                "aspnet-requests",
+                new EventPipeProvider[] {
+                    new EventPipeProvider(
+                        name: "System.Threading.Tasks.TplEventSource",
+                        eventLevel: EventLevel.Verbose,
+                        keywords:   (long)TplEtwProviderTraceEventParser.Keywords.Tasktransfer |
+                                    (long)TplEtwProviderTraceEventParser.Keywords.Tasks |
+                                    (long)TplEtwProviderTraceEventParser.Keywords.Taskstops |
+                                    (long)TplEtwProviderTraceEventParser.Keywords.TasksFlowActivityIds |
+                                    (long)TplEtwProviderTraceEventParser.Keywords.Asynccausalityoperation | 
+                                    (long)TplEtwProviderTraceEventParser.Keywords.Asynccausalityrelation
+                    ),
+                    new EventPipeProvider(
+                        name: "Microsoft-Diagnostics-DiagnosticSource",
+                        eventLevel: EventLevel.Verbose,
+                        keywords: DiagnosticSourceKeywords_Messages |
+                                  DiagnosticSourceKeywords_Events,
+                        arguments: new Dictionary<string, string> {
+                            { 
+                                "FilterAndPayloadSpecs",
+                                    "Microsoft.AspNetCore/Microsoft.AspNetCore.Hosting.HttpRequestIn.Start@Activity1Start:-TraceIdentifier;Request.Method;Request.Host;Request.Path;Request.QueryString\r\n" + 
+                                    "Microsoft.AspNetCore/Microsoft.AspNetCore.Hosting.HttpRequestIn.Stop@Activity1Stop:-TraceIdentifier;Response.StatusCode"
+                            }
+                        }
+                    )
+                },
+                "Captures ASP.NET requests"
+            ),
+            new Profile(
+                "database",
+                new EventPipeProvider[] {
+                    new EventPipeProvider(
+                        name: "System.Threading.Tasks.TplEventSource",
+                        eventLevel: EventLevel.Verbose,
+                        keywords:   (long)TplEtwProviderTraceEventParser.Keywords.Tasktransfer |
+                                    (long)TplEtwProviderTraceEventParser.Keywords.Tasks |
+                                    (long)TplEtwProviderTraceEventParser.Keywords.Taskstops |
+                                    (long)TplEtwProviderTraceEventParser.Keywords.TasksFlowActivityIds
+                    ),
+                    new EventPipeProvider(
+                        name: "Microsoft-Diagnostics-DiagnosticSource",
+                        eventLevel: EventLevel.Verbose,
+                        keywords: DiagnosticSourceKeywords_Messages |
+                                  DiagnosticSourceKeywords_Events,
+                        arguments: new Dictionary<string, string> {
+                            {
+                                "FilterAndPayloadSpecs",
+                                    "SqlClientDiagnosticListener/System.Data.SqlClient.WriteCommandBefore@Activity1Start:-Command;Command.CommandText;ConnectionId;Operation;Command.Connection.ServerVersion;Command.CommandTimeout;Command.CommandType;Command.Connection.ConnectionString;Command.Connection.Database;Command.Connection.DataSource;Command.Connection.PacketSize\r\n" + 
+                                    "SqlClientDiagnosticListener/System.Data.SqlClient.WriteCommandAfter@Activity1Stop:\r\n" + 
+                                    "Microsoft.EntityFrameworkCore/Microsoft.EntityFrameworkCore.Database.Command.CommandExecuting@Activity2Start:-Command.CommandText;Command;ConnectionId;IsAsync;Command.Connection.ClientConnectionId;Command.Connection.ServerVersion;Command.CommandTimeout;Command.CommandType;Command.Connection.ConnectionString;Command.Connection.Database;Command.Connection.DataSource;Command.Connection.PacketSize\r\n" + 
+                                    "Microsoft.EntityFrameworkCore/Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted@Activity2Stop:"
+                            }
+                        }
+                    )
+                },
+                "Captures ADO.NET and Entity Framework database commands")
         };
     }
 }
