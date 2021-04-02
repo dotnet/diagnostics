@@ -356,7 +356,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ERROR] {ex.ToString()}");
+                    Debug.WriteLine($"[ERROR] {ex.ToString()}");
                 }
                 finally
                 {
