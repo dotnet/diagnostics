@@ -36,7 +36,7 @@
   <TestDesktop Condition="'$(TargetArchitecture)' == 'arm64'">false</TestDesktop>
 
   <!-- Build the debuggee for this framework version but run it on latest -->
-  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net5.0</BuildProjectFrameworkLatest>
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net6.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">net5.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.1</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '2.1')">netcoreapp2.1</BuildProjectFrameworkLatest>
@@ -51,8 +51,9 @@
   <CliPath>$(DotNetRoot)\dotnet.exe</CliPath>
 
   <NuGetPackageFeeds>
-      myget.org dotnet-core=https://dotnet.myget.org/F/dotnet-core/api/v3/index.json;
-      nuget.org=https://www.nuget.org/api/v2/
+      dotnet6=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet6/nuget/v3/index.json;
+      dotnet-core=https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json;
+      dotnet-public=https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
   </NuGetPackageFeeds>
 
   <Options>

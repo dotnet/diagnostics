@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 
 namespace Microsoft.Diagnostics.TestHelpers
@@ -32,6 +33,11 @@ namespace Microsoft.Diagnostics.TestHelpers
             if (runtimeIdentifier != null)
             {
                 buildProperties.Add("RuntimeIdentifier", runtimeIdentifier);
+            }
+            if (config.PublishSingleFile)
+            {
+                Debug.Assert(runtimeIdentifier != null);
+                buildProperties.Add("PublishSingleFile", "true");
             }
             string debugType = config.DebugType;
             if (debugType == null)
@@ -64,8 +70,8 @@ namespace Microsoft.Diagnostics.TestHelpers
             string debuggeeSolutionDirPath = GetDebuggeeSolutionDirPath(dotNetRootBuildDirPath, debuggeeName);
             string debuggeeProjectDirPath = GetDebuggeeProjectDirPath(debuggeeSolutionDirPath, initialSourceDirPath, debuggeeName);
             string debuggeeBinaryDirPath = GetDebuggeeBinaryDirPath(debuggeeProjectDirPath, framework, runtimeIdentifier);
-            string debuggeeBinaryDllPath = config.IsNETCore ? GetDebuggeeBinaryDllPath(debuggeeBinaryDirPath, debuggeeName) : null;
-            string debuggeeBinaryExePath = config.IsDesktop ? GetDebuggeeBinaryExePath(debuggeeBinaryDirPath, debuggeeName) : null;
+            string debuggeeBinaryDllPath = GetDebuggeeBinaryDllPath(config, debuggeeBinaryDirPath, debuggeeName);
+            string debuggeeBinaryExePath = GetDebuggeeBinaryExePath(config, debuggeeBinaryDirPath, debuggeeName);
             string logPath = GetLogPath(config, framework, runtimeIdentifier, debuggeeName);
             return new CsprojBuildDebuggeeTestStep(dotNetPath,
                                                initialSourceDirPath,

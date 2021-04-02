@@ -151,7 +151,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         protected virtual string GetDebuggeeBinaryDirPath(string debuggeeProjectDirPath, string framework, string runtime)
         {
-            string debuggeeBinaryDirPath = null;
+            string debuggeeBinaryDirPath;
             if (runtime != null)
             {
                 debuggeeBinaryDirPath = Path.Combine(debuggeeProjectDirPath, "bin", "Debug", framework, runtime);
@@ -163,14 +163,14 @@ namespace Microsoft.Diagnostics.TestHelpers
             return debuggeeBinaryDirPath;
         }
 
-        protected static string GetDebuggeeBinaryDllPath(string debuggeeBinaryDirPath, string debuggeeName)
+        protected static string GetDebuggeeBinaryDllPath(TestConfiguration config, string debuggeeBinaryDirPath, string debuggeeName)
         {
-            return Path.Combine(debuggeeBinaryDirPath, debuggeeName + ".dll");
+            return config.IsNETCore ? Path.Combine(debuggeeBinaryDirPath, debuggeeName + (config.PublishSingleFile ? "" : ".dll")) : null;
         }
 
-        protected static string GetDebuggeeBinaryExePath(string debuggeeBinaryDirPath, string debuggeeName)
+        protected static string GetDebuggeeBinaryExePath(TestConfiguration config, string debuggeeBinaryDirPath, string debuggeeName)
         {
-            return Path.Combine(debuggeeBinaryDirPath, debuggeeName + ".exe");
+            return config.IsDesktop ? Path.Combine(debuggeeBinaryDirPath, debuggeeName + ".exe") : null;
         }
 
         protected static string GetLogPath(TestConfiguration config, string framework, string runtime, string debuggeeName)
