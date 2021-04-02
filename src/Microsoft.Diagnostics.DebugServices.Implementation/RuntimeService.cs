@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// ClrMD runtime service implementation
     /// </summary>
-    public class RuntimeService : IRuntimeService, IDataReader
+    public class RuntimeService : IRuntimeService, IDataReader, IExportReader
     {
         private readonly ITarget _target;
         private readonly IDisposable _onFlushEvent;
@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             _target = target;
             _onFlushEvent = target.OnFlushEvent.Register(() => {
-                if (_runtimes != null && _runtimes.Count == 0)
+                if (_runtimes is not null && _runtimes.Count == 0)
                 {
                     // If there are no runtimes, try find them again when the target stops
                     _runtimes = null;
@@ -80,7 +80,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             get
             {
-                if (_currentRuntime == null) {
+                if (_currentRuntime is null) {
                     _currentRuntime = FindRuntime();
                 }
                 return _currentRuntime;
@@ -93,7 +93,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="runtimeId">runtime id</param>
         public void SetCurrentRuntime(int runtimeId)
         {
-            if (_runtimes == null || runtimeId >= _runtimes.Count) {
+            if (_runtimes is null || runtimeId >= _runtimes.Count) {
                 throw new DiagnosticsException($"Invalid runtime id {runtimeId}");
             }
             _currentRuntime = _runtimes[runtimeId];
@@ -231,6 +231,27 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         #endregion
 
+        #region IExportReader
+
+        bool IExportReader.TryGetSymbolAddress(ulong baseAddress, string name, out ulong offset)
+        {
+            try
+            {
+                IExportSymbols exportSymbols = ModuleService.GetModuleFromBaseAddress(baseAddress).Services.GetService<IExportSymbols>();
+                if (exportSymbols is not null)
+                {
+                    return exportSymbols.TryGetSymbolAddress(name, out offset);
+                }
+            }
+            catch (DiagnosticsException)
+            {
+            }
+            offset = 0;
+            return false;
+        }
+
+        #endregion
+
         /// <summary>
         /// Find the runtime
         /// </summary>
@@ -249,7 +270,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             }
             // If no .NET Core runtime, then check for desktop runtime
-            if (runtime == null)
+            if (runtime is null)
             {
                 foreach (Runtime r in runtimes)
                 {
@@ -265,16 +286,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private IEnumerable<Runtime> BuildRuntimes()
         {
-            if (_runtimes == null)
+            if (_runtimes is null)
             {
                 _runtimes = new List<Runtime>();
-                if (_dataTarget == null)
+                if (_dataTarget is null)
                 {
-                    _dataTarget = new DataTarget(new CustomDataTarget(this) {
-                        BinaryLocator = new BinaryLocator(_target)
-                    });
+                    // Don't use the default binary locator or provide one. clrmd uses it to download the DAC, download assemblies
+                    // to get metadata in its data target or for invalid memory region mapping and we already do all of that.
+                    _dataTarget = new DataTarget(new CustomDataTarget(this)) {
+                        BinaryLocator = null
+                    };
                 }
-                if (_dataTarget != null)
+                if (_dataTarget is not null)
                 {
                     for (int i = 0; i < _dataTarget.ClrVersions.Length; i++)
                     {
@@ -294,10 +317,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public override string ToString()
         {
             var sb = new StringBuilder();
-            if (_runtimeModuleDirectory != null) {
+            if (_runtimeModuleDirectory is not null) {
                 sb.AppendLine($"Runtime module path: {_runtimeModuleDirectory}");
             }
-            if (_runtimes != null)
+            if (_runtimes is not null)
             {
                 foreach (IRuntime runtime in _runtimes)
                 {

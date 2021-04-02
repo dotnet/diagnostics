@@ -137,6 +137,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                         data = block.GetReader().ReadBytes(size);
                                         ApplyRelocations(module, reader, rva, data);
                                     }
+                                    else
+                                    {
+                                        Trace.TraceError($"ReadMemory: FAILED rva {rva:X8}");
+                                    }
                                 }
 
                                 return data;
@@ -167,6 +171,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                 uint read = virtualAddressReader.Read(rva, data, 0, (uint)bytesRequested);
                                 if (read == 0)
                                 {
+                                    Trace.TraceError($"ReadMemory: FAILED rva {rva:X8}");
                                     data = null;
                                 }
                                 return data;
@@ -182,6 +187,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         _recursionProtection.Remove(module.ImageBase);
                     }
+                }
+                else
+                {
+                    Trace.TraceError("ReadMemory: recursion");
                 }
             }
             return null;

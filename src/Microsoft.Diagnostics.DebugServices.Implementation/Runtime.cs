@@ -68,11 +68,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public string GetDacFilePath()
         {
-            if (_dacFilePath == null)
+            if (_dacFilePath is null)
             {
                 string dacFileName = GetDacFileName();
                 _dacFilePath = GetLocalDacPath(dacFileName);
-                if (_dacFilePath == null)
+                if (_dacFilePath is null)
                 {
                     _dacFilePath = DownloadFile(dacFileName);
                 }
@@ -82,11 +82,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public string GetDbiFilePath()
         {
-            if (_dbiFilePath == null)
+            if (_dbiFilePath is null)
             {
                 string dbiFileName = GetDbiFileName();
                 _dbiFilePath = GetLocalPath(dbiFileName);
-                if (_dbiFilePath == null)
+                if (_dbiFilePath is null)
                 {
                     _dbiFilePath = DownloadFile(dbiFileName);
                 }
@@ -101,10 +101,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         private ClrRuntime CreateRuntime()
         {
-            if (_clrRuntime == null)
+            if (_clrRuntime is null)
             {
                 string dacFilePath = GetDacFilePath();
-                if (dacFilePath != null)
+                if (dacFilePath is not null)
                 {
                     Trace.TraceInformation($"Creating ClrRuntime #{Id} {dacFilePath}");
                     try
@@ -209,10 +209,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
                 if (platform == OSPlatform.Windows)
                 {
-                    // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
-                    if (RuntimeModule.IndexTimeStamp.HasValue && RuntimeModule.IndexFileSize.HasValue)
+                    // It is the coreclr.dll's id (timestamp/filesize) in the DacInfo used to download the the dac module.
+                    if (_clrInfo.DacInfo.IndexTimeStamp != 0 && _clrInfo.DacInfo.IndexFileSize != 0)
                     {
-                        key = PEFileKeyGenerator.GetKey(fileName, RuntimeModule.IndexTimeStamp.Value, RuntimeModule.IndexFileSize.Value);
+                        key = PEFileKeyGenerator.GetKey(fileName, (uint)_clrInfo.DacInfo.IndexTimeStamp, (uint)_clrInfo.DacInfo.IndexFileSize);
                     }
                     else
                     {
@@ -222,17 +222,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 else
                 {
                     // Use the runtime's build id to download the the dac module.
-                    if (!RuntimeModule.BuildId.IsDefaultOrEmpty)
+                    if (!_clrInfo.DacInfo.ClrBuildId.IsDefaultOrEmpty)
                     {
+                        byte[] buildId = _clrInfo.DacInfo.ClrBuildId.ToArray();
                         IEnumerable<SymbolStoreKey> keys = null;
 
                         if (platform == OSPlatform.Linux)
                         {
-                            keys = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.DacDbiKeys, RuntimeModule.FileName, RuntimeModule.BuildId.ToArray(), symbolFile: false, symbolFileName: null);
+                            keys = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.DacDbiKeys, "libcoreclr.so", buildId, symbolFile: false, symbolFileName: null);
                         }
                         else if (platform == OSPlatform.OSX)
                         {
-                            keys = MachOFileKeyGenerator.GetKeys(KeyTypeFlags.DacDbiKeys, RuntimeModule.FileName, RuntimeModule.BuildId.ToArray(), symbolFile: false, symbolFileName: null);
+                            keys = MachOFileKeyGenerator.GetKeys(KeyTypeFlags.DacDbiKeys, "libcoreclr.dylib", buildId, symbolFile: false, symbolFileName: null);
                         }
                         else
                         {
@@ -247,7 +248,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                 }
 
-                if (key != null)
+                if (key is not null)
                 {
                     // Now download the DAC module from the symbol server
                     filePath = SymbolService.DownloadFile(key);
@@ -284,11 +285,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             var sb = new StringBuilder();
             string config = s_runtimeTypeNames[(int)RuntimeType];
             sb.AppendLine($"#{Id} {config} runtime at {RuntimeModule.ImageBase:X16} size {RuntimeModule.ImageSize:X8}");
-            sb.AppendLine($"    Runtime module path: {RuntimeModule.FileName}");
-            if (_dacFilePath != null) {
+            if (_clrInfo.SingleFileRuntimeInfo.HasValue) {
+                sb.AppendLine($"    Single-file runtime module path: {RuntimeModule.FileName}");
+            }
+            else {
+                sb.AppendLine($"    Runtime module path: {RuntimeModule.FileName}");
+            }
+            if (_dacFilePath is not null) {
                 sb.AppendLine($"    DAC: {_dacFilePath}");
             }
-            if (_dbiFilePath != null) {
+            if (_dbiFilePath is not null) {
                 sb.AppendLine($"    DBI: {_dbiFilePath}");
             }
             return sb.ToString();

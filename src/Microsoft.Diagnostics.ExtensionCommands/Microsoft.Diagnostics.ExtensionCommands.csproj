@@ -20,8 +20,4 @@
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="ParallelStacks.Runtime\" />
-  </ItemGroup>
 </Project>
