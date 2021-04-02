@@ -87,9 +87,9 @@ stages:
         osGroup: Windows_NT
         strategy:
           matrix:
-            #Build_Debug:
-            #  _BuildConfig: Debug
-            #  _BuildArch: x64
+            Build_Debug:
+              _BuildConfig: Debug
+              _BuildArch: x64
             Build_Release:
               _BuildConfig: Release
               _BuildArch: x64
