@@ -7,45 +7,10 @@ using System;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Tools.DSRouter
 {
-
-    class DiagnosticsServerRouterConsoleLogger : DiagnosticsServerRouterLogger
-    {
-        LogLevel _logLevel;
-
-        public DiagnosticsServerRouterConsoleLogger(bool verbose)
-        {
-            _logLevel = verbose ? LogLevel.Debug : LogLevel.Info;
-        }
-
-        public override void LogError(string msg)
-        {
-            if (_logLevel >= LogLevel.Info)
-                Console.WriteLine("ERROR: " + msg);
-        }
-
-        public override void LogWarning(string msg)
-        {
-            if (_logLevel >= LogLevel.Info)
-                Console.WriteLine("WARNING: " + msg);
-        }
-
-        public override void LogInfo(string msg)
-        {
-            if (_logLevel >= LogLevel.Info)
-                Console.WriteLine(msg);
-        }
-
-        public override void LogDebug(string msg)
-        {
-            if (_logLevel == LogLevel.Debug)
-                Console.WriteLine(msg);
-        }
-
-    }
-
     public class DiagnosticsServerRouterCommands
     {
         public DiagnosticsServerRouterCommands()
@@ -59,7 +24,10 @@ namespace Microsoft.Diagnostics.Tools.DSRouter
             using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
 
-            var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, new DiagnosticsServerRouterConsoleLogger(verbose));
+            using var factory = new LoggerFactory();
+            factory.AddConsole(verbose ? LogLevel.Debug : LogLevel.Information, false);
+
+            var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"));
 
             while (!linkedCancelToken.IsCancellationRequested)
             {
@@ -88,7 +56,10 @@ namespace Microsoft.Diagnostics.Tools.DSRouter
             using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
 
-            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, new DiagnosticsServerRouterConsoleLogger(verbose));
+            using var factory = new LoggerFactory();
+            factory.AddConsole(verbose ? LogLevel.Debug : LogLevel.Information, false);
+
+            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"));
 
             while (!linkedCancelToken.IsCancellationRequested)
             {

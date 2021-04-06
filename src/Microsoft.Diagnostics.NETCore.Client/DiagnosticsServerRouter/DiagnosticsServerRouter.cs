@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -28,37 +29,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
         { }
     }
 
-    internal abstract class DiagnosticsServerRouterLogger
-    {
-        public enum LogLevel
-        {
-            None,
-            Info,
-            Debug
-        };
-
-        public abstract void LogError(string msg);
-
-        public abstract void LogWarning(string msg);
-
-        public abstract void LogInfo(string msg);
-
-        public abstract void LogDebug(string msg);
-    }
-
     /// <summary>
     /// Base class representing a Diagnostics Server router.
     /// </summary>
     internal class DiagnosticsServerRouter
     {
-        protected readonly DiagnosticsServerRouterLogger _logger;
+        protected readonly ILogger _logger;
 
-        public DiagnosticsServerRouter(DiagnosticsServerRouterLogger logger)
+        public DiagnosticsServerRouter(ILogger logger)
         {
             _logger = logger;
         }
 
-        public DiagnosticsServerRouterLogger Logger
+        public ILogger Logger
         {
             get { return _logger; }
         }
@@ -107,7 +90,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             get { return _tcpServerEndpointInfo.ProcessId; }
         }
 
-        protected TcpServerRouter(string tcpServer, int runtimeTimeoutMs, DiagnosticsServerRouterLogger logger)
+        protected TcpServerRouter(string tcpServer, int runtimeTimeoutMs, ILogger logger)
             : base(logger)
         {
             _tcpServerAddress = tcpServer;
@@ -281,7 +264,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public int IpcServerConnectTimeout { get; set; } = Timeout.Infinite;
 
-        public IpcServerTcpServerRouter(string ipcServer, string tcpServer, int runtimeTimeoutMs, DiagnosticsServerRouterLogger logger)
+        public IpcServerTcpServerRouter(string ipcServer, string tcpServer, int runtimeTimeoutMs, ILogger logger)
             : base(tcpServer, runtimeTimeoutMs, logger)
         {
             _ipcServerPath = ipcServer;
@@ -372,7 +355,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                         if (checkTcpStreamTask.IsFaulted)
                         {
-                            Logger.LogInfo("Broken tcp server connection detected, aborting ipc connection.");
+                            Logger.LogInformation("Broken tcp server connection detected, aborting ipc connection.");
                             checkTcpStreamTask.GetAwaiter().GetResult();
                         }
 
@@ -463,7 +446,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public int IpcClientConnectFailureTimeout { get; set; } = 500;
 
-        public IpcClientTcpServerRouter(string ipcClient, string tcpServer, int runtimeTimeoutMs, DiagnosticsServerRouterLogger logger)
+        public IpcClientTcpServerRouter(string ipcClient, string tcpServer, int runtimeTimeoutMs, ILogger logger)
             : base(tcpServer, runtimeTimeoutMs, logger)
         {
             _ipcClientPath = ipcClient;
@@ -508,7 +491,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                     if (checkTcpStreamTask.IsFaulted)
                     {
-                        Logger.LogInfo("Broken tcp server connection detected, aborting ipc connection.");
+                        Logger.LogInformation("Broken tcp server connection detected, aborting ipc connection.");
                         checkTcpStreamTask.GetAwaiter().GetResult();
                     }
 
@@ -632,7 +615,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal class ConnectedRouter : IDisposable
     {
-        readonly DiagnosticsServerRouterLogger _logger;
+        readonly ILogger _logger;
 
         Stream _frontendStream = null;
         Stream _backendStream = null;
@@ -651,7 +634,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public TaskCompletionSource<bool> RouterTaskCompleted { get; }
 
-        public ConnectedRouter(Stream frontendStream, Stream backendStream, DiagnosticsServerRouterLogger logger, ulong initBackendToFrontendByteTransfer = 0, ulong initFrontendToBackendByteTransfer = 0)
+        public ConnectedRouter(Stream frontendStream, Stream backendStream, ILogger logger, ulong initBackendToFrontendByteTransfer = 0, ulong initFrontendToBackendByteTransfer = 0)
         {
             _logger = logger;
 

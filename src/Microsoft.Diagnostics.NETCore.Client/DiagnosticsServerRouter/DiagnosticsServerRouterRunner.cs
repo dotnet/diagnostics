@@ -6,6 +6,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 using System.Net;
 
 namespace Microsoft.Diagnostics.NETCore.Client
@@ -15,18 +16,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal class DiagnosticsServerRouterRunner
     {
-        public static async Task<int> runIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeoutMs, DiagnosticsServerRouterLogger logger)
+        public static async Task<int> runIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeoutMs, ILogger logger)
         {
-            logger.LogInfo($"Starting IPC client ({ipcClient}) <--> TCP server ({tcpServer}) router.");
+            logger.LogInformation($"Starting IPC client ({ipcClient}) <--> TCP server ({tcpServer}) router.");
             return await runRouter(token, new IpcClientTcpServerRouter(ipcClient, tcpServer, runtimeTimeoutMs, logger)).ConfigureAwait(false);
         }
 
-        public static async Task<int> runIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeoutMs, DiagnosticsServerRouterLogger logger)
+        public static async Task<int> runIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeoutMs, ILogger logger)
         {
             if (string.IsNullOrEmpty(ipcServer))
                 ipcServer = IpcServerTcpServerRouter.GetDefaultIpcServerPath();
 
-            logger.LogInfo($"Starting IPC server ({ipcServer}) <--> TCP server ({tcpServer}) router.");
+            logger.LogInformation($"Starting IPC server ({ipcServer}) <--> TCP server ({tcpServer}) router.");
             return await runRouter(token, new IpcServerTcpServerRouter(ipcServer, tcpServer, runtimeTimeoutMs, logger)).ConfigureAwait(false);
         }
 
@@ -114,8 +115,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         // Shutdown router to prevent instances to outlive runtime process (if auto shutdown is enabled).
                         if (ex is RuntimeConnectTimeoutException)
                         {
-                            router.Logger.LogInfo("No runtime connected before timeout.");
-                            router.Logger.LogInfo("Starting automatic shutdown.");
+                            router.Logger.LogInformation("No runtime connected before timeout.");
+                            router.Logger.LogInformation("Starting automatic shutdown.");
                             throw;
                         }
                     }
@@ -123,19 +124,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             catch (Exception ex)
             {
-                router.Logger.LogInfo($"Shutting down due to error: {ex.Message}");
+                router.Logger.LogInformation($"Shutting down due to error: {ex.Message}");
             }
             finally
             {
                 if (token.IsCancellationRequested)
-                    router.Logger.LogInfo("Shutting down due to cancelation request.");
+                    router.Logger.LogInformation("Shutting down due to cancelation request.");
 
                 runningRouters.RemoveAll(IsConnectedRouterDead);
                 runningRouters.Clear();
 
                 await router?.Stop();
 
-                router.Logger.LogInfo("Router stopped.");
+                router.Logger.LogInformation("Router stopped.");
             }
             return 0;
         }
