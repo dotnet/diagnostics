@@ -8,21 +8,31 @@ using System.Net.Sockets;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    class IpcTcpSocket : IpcSocket
+    internal sealed class IpcTcpSocketEndPoint
     {
-        internal static IpcTcpSocket Create(string hostAddress, int hostPort)
+        public bool DualMode { get; }
+        public IPEndPoint EndPoint { get; }
+
+        public static bool IsTcpIpEndPoint(string endPoint)
         {
-            return new IpcTcpSocket(hostAddress, hostPort);
+            return TryParseIPAddress(endPoint, out _, out _);
         }
 
-        internal IpcTcpSocket(string hostAddress, int hostPort)
-            : base(ResolveIPAddress(hostAddress, hostPort), SocketType.Stream, ProtocolType.Tcp)
+        public IpcTcpSocketEndPoint(string endPoint)
         {
-            if (string.CompareOrdinal(hostAddress, "*") == 0 && this.AddressFamily == AddressFamily.InterNetworkV6)
-                this.DualMode = true;
+            string hostAddress;
+            int hostPort;
+
+            if (!TryParseIPAddress(endPoint, out hostAddress, out hostPort))
+                throw new ArgumentException(string.Format("Could not parse {0} into host, port", endPoint));
+
+            EndPoint = CreateEndPoint(hostAddress, hostPort);
+            DualMode = string.CompareOrdinal(hostAddress, "*") == 0;
         }
 
-        internal static bool TryParseIPAddress(string address, out string hostAddress, out int hostPort)
+        public static implicit operator EndPoint(IpcTcpSocketEndPoint endPoint) => endPoint.EndPoint;
+
+        private static bool TryParseIPAddress(string address, out string hostAddress, out int hostPort)
         {
             hostAddress = "";
             hostPort = -1;
@@ -61,21 +71,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return !string.IsNullOrEmpty(hostAddress) && hostPort != -1;
         }
 
-        internal static IPEndPoint ResolveIPAddress(string address)
-        {
-            string hostAddress;
-            int hostPort;
-
-            if (!TryParseIPAddress(address, out hostAddress, out hostPort))
-                throw new ArgumentException(string.Format("Could not parse {0} into host, port", address));
-
-            return ResolveIPAddress(hostAddress, hostPort);
-        }
-
-        private static IPEndPoint ResolveIPAddress(string hostAddress, int hostPort)
+        private static IPEndPoint CreateEndPoint(string hostAddress, int hostPort)
         {
             IPAddress ipAddress = null;
-
             try
             {
                 if (string.CompareOrdinal(hostAddress, "*") == 0)

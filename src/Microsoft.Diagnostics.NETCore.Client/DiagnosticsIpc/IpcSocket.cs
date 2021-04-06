@@ -13,12 +13,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     internal class IpcSocket : Socket
     {
-        EndPoint _address;
-
-        public IpcSocket(EndPoint address, SocketType type, ProtocolType protocol)
-            : base(address.AddressFamily, type, protocol)
+        public IpcSocket(SocketType socketType, ProtocolType protocolType)
+            : base(socketType, protocolType)
         {
-            _address = address;
         }
 
         public async Task<Socket> AcceptAsync(CancellationToken token)
@@ -43,14 +40,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        public virtual void Bind()
+        public virtual void Connect(EndPoint remoteEP, TimeSpan timeout)
         {
-            Bind(_address);
-        }
-
-        public virtual void Connect(TimeSpan timeout)
-        {
-            IAsyncResult result = BeginConnect(_address, null, null);
+            IAsyncResult result = BeginConnect(remoteEP, null, null);
 
             if (result.AsyncWaitHandle.WaitOne(timeout))
             {
@@ -63,7 +55,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        public async Task ConnectAsync(CancellationToken token)
+        public async Task ConnectAsync(EndPoint remoteEP, CancellationToken token)
         {
             using (token.Register(() => Close(0)))
             {
@@ -71,7 +63,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     Func<AsyncCallback, object, IAsyncResult> beginConnect = (callback, state) =>
                     {
-                        return BeginConnect(_address, callback, state);
+                        return BeginConnect(remoteEP, callback, state);
                     };
                     await Task.Factory.FromAsync(beginConnect, EndConnect, this).ConfigureAwait(false);
                 }

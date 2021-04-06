@@ -571,7 +571,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 IpcUnixDomainSocket unixDomainSocket;
                 do
                 {
-                    unixDomainSocket = new IpcUnixDomainSocket(_ipcClientPath);
+                    unixDomainSocket = new IpcUnixDomainSocket();
 
                     using var connectTimeoutTokenSource = new CancellationTokenSource();
                     using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
@@ -579,7 +579,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     try
                     {
                         connectTimeoutTokenSource.CancelAfter(IpcClientConnectTimeout);
-                        await unixDomainSocket.ConnectAsync(token).ConfigureAwait(false);
+                        await unixDomainSocket.ConnectAsync(new IpcUnixDomainSocketEndPoint(_ipcClientPath), token).ConfigureAwait(false);
                         retry = false;
                     }
                     catch (Exception)

@@ -36,8 +36,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             try
             {
-                var value = IpcTcpSocket.ResolveIPAddress(address);
-                isLooback = IPAddress.IsLoopback(value.Address);
+                var value = new IpcTcpSocketEndPoint(address);
+                isLooback = IPAddress.IsLoopback(value.EndPoint.Address);
             }
             catch { }
 
