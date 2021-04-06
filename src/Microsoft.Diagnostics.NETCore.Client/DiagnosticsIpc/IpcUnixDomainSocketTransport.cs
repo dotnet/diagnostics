@@ -9,20 +9,20 @@ using System.Net.Sockets;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    internal sealed class IpcUnixDomainSocketTransport : IpcSocketTransport
+    internal sealed class IpcUnixDomainSocket : IpcSocket
     {
         private bool _ownsSocketFile;
         private string _path;
 
-        static public IpcUnixDomainSocketTransport Create(string address)
+        static public IpcUnixDomainSocket Create(string path)
         {
-            return new IpcUnixDomainSocketTransport(address);
+            return new IpcUnixDomainSocket(path);
         }
 
-        public IpcUnixDomainSocketTransport(string address)
-            : base(CreateUnixDomainSocketEndPoint(address), SocketType.Stream, ProtocolType.Unspecified)
+        public IpcUnixDomainSocket(string path)
+            : base(CreateUnixDomainSocketEndPoint(path), SocketType.Stream, ProtocolType.Unspecified)
         {
-            _path = address;
+            _path = path;
         }
 
         public override void Bind()

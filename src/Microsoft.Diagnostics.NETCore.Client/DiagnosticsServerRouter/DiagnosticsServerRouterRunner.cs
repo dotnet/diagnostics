@@ -10,24 +10,24 @@ using System.Net;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    // <summary>
-    // Class used to run different flavours of Diagnostics Server routers.
-    // </summary>
+    /// <summary>
+    /// Class used to run different flavours of Diagnostics Server routers.
+    /// </summary>
     internal class DiagnosticsServerRouterRunner
     {
-        public static async Task<int> runIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeoutMS, DiagnosticsServerRouterLogger logger)
+        public static async Task<int> runIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeoutMs, DiagnosticsServerRouterLogger logger)
         {
             logger.LogInfo($"Starting IPC client ({ipcClient}) <--> TCP server ({tcpServer}) router.");
-            return await runRouter(token, new IpcClientTcpServerRouter(ipcClient, tcpServer, runtimeTimeoutMS, logger)).ConfigureAwait(false);
+            return await runRouter(token, new IpcClientTcpServerRouter(ipcClient, tcpServer, runtimeTimeoutMs, logger)).ConfigureAwait(false);
         }
 
-        public static async Task<int> runIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeoutMS, DiagnosticsServerRouterLogger logger)
+        public static async Task<int> runIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeoutMs, DiagnosticsServerRouterLogger logger)
         {
             if (string.IsNullOrEmpty(ipcServer))
                 ipcServer = IpcServerTcpServerRouter.GetDefaultIpcServerPath();
 
             logger.LogInfo($"Starting IPC server ({ipcServer}) <--> TCP server ({tcpServer}) router.");
-            return await runRouter(token, new IpcServerTcpServerRouter(ipcServer, tcpServer, runtimeTimeoutMS, logger)).ConfigureAwait(false);
+            return await runRouter(token, new IpcServerTcpServerRouter(ipcServer, tcpServer, runtimeTimeoutMs, logger)).ConfigureAwait(false);
         }
 
         public static bool isLoopbackOnly(string address)
@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             try
             {
-                var value = IpcTcpSocketTransport.ResolveIPAddress(address);
+                var value = IpcTcpSocket.ResolveIPAddress(address);
                 isLooback = IPAddress.IsLoopback(value.Address);
             }
             catch { }

@@ -11,11 +11,11 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    internal class IpcSocketTransport : Socket
+    internal class IpcSocket : Socket
     {
         EndPoint _address;
 
-        public IpcSocketTransport(EndPoint address, SocketType type, ProtocolType protocol)
+        public IpcSocket(EndPoint address, SocketType type, ProtocolType protocol)
             : base(address.AddressFamily, type, protocol)
         {
             _address = address;

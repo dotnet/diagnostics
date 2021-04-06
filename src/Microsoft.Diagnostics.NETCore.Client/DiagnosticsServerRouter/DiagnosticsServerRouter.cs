@@ -16,15 +16,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     internal class RuntimeConnectTimeoutException : TimeoutException
     {
-        public RuntimeConnectTimeoutException(int timeoutMS)
-            : base(string.Format("No new runtime endpoints connected, waited {0} ms", timeoutMS))
+        public RuntimeConnectTimeoutException(int TimeoutMs)
+            : base(string.Format("No new runtime endpoints connected, waited {0} ms", TimeoutMs))
         { }
     }
 
     internal class BackendStreamConnectTimeoutException : TimeoutException
     {
-        public BackendStreamConnectTimeoutException(int timeoutMS)
-            : base(string.Format("No new backend streams available, waited {0} ms", timeoutMS))
+        public BackendStreamConnectTimeoutException(int TimeoutMs)
+            : base(string.Format("No new backend streams available, waited {0} ms", TimeoutMs))
         { }
     }
 
@@ -46,9 +46,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public abstract void LogDebug(string msg);
     }
 
-    // <summary>
-    // Base class representing a Diagnostics Server router.
-    // </summary>
+    /// <summary>
+    /// Base class representing a Diagnostics Server router.
+    /// </summary>
     internal class DiagnosticsServerRouter
     {
         protected readonly DiagnosticsServerRouterLogger _logger;
@@ -84,9 +84,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
     }
 
-    // <summary>
-    // This class represent a TCP/IP server endpoint used when building up router instances.
-    // </summary>
+    /// <summary>
+    /// This class represent a TCP/IP server endpoint used when building up router instances.
+    /// </summary>
     internal class TcpServerRouter : DiagnosticsServerRouter
     {
         readonly string _tcpServerAddress;
@@ -94,8 +94,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         ReversedDiagnosticsServer _tcpServer;
         IpcEndpointInfo _tcpServerEndpointInfo;
 
-        public int RuntimeInstanceConnectTimeout { get; set; } = 60000;
-        public int TcpServerConnectTimeout { get; set; } = 5000;
+        public int RuntimeInstanceConnectTimeoutMs { get; set; } = 60000;
+        public int TcpServerConnectTimeoutMs { get; set; } = 5000;
 
         public Guid RuntimeInstanceId
         {
@@ -107,12 +107,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             get { return _tcpServerEndpointInfo.ProcessId; }
         }
 
-        protected TcpServerRouter(string tcpServer, int runtimeTimeoutMS, DiagnosticsServerRouterLogger logger)
+        protected TcpServerRouter(string tcpServer, int runtimeTimeoutMs, DiagnosticsServerRouterLogger logger)
             : base(logger)
         {
             _tcpServerAddress = tcpServer;
 
-            RuntimeInstanceConnectTimeout = runtimeTimeoutMS;
+            RuntimeInstanceConnectTimeoutMs = runtimeTimeoutMs;
 
             _tcpServer = new ReversedDiagnosticsServer(_tcpServerAddress, true);
             _tcpServerEndpointInfo = new IpcEndpointInfo();
@@ -151,7 +151,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 try
                 {
                     // If no new runtime instance connects, timeout.
-                    acceptTimeoutTokenSource.CancelAfter(RuntimeInstanceConnectTimeout);
+                    acceptTimeoutTokenSource.CancelAfter(RuntimeInstanceConnectTimeoutMs);
                     _tcpServerEndpointInfo = await _tcpServer.AcceptAsync(acceptTokenSource.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
@@ -160,7 +160,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     {
                         Logger.LogDebug("No runtime instance connected, timing out.");
 
-                        throw new RuntimeConnectTimeoutException(RuntimeInstanceConnectTimeout);
+                        throw new RuntimeConnectTimeoutException(RuntimeInstanceConnectTimeoutMs);
                     }
 
                     throw;
@@ -174,7 +174,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 // Get next connected tcp server stream. Should timeout if no endpoint appears within timeout.
                 // If that happens we need to remove endpoint since it might indicate a unresponsive runtime instance.
-                connectTimeoutTokenSource.CancelAfter(TcpServerConnectTimeout);
+                connectTimeoutTokenSource.CancelAfter(TcpServerConnectTimeoutMs);
                 tcpServerStream = await _tcpServerEndpointInfo.Endpoint.ConnectAsync(connectTokenSource.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
@@ -183,7 +183,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     Logger.LogDebug("No tcp stream connected, timing out.");
 
-                    throw new BackendStreamConnectTimeoutException(TcpServerConnectTimeout);
+                    throw new BackendStreamConnectTimeoutException(TcpServerConnectTimeoutMs);
                 }
 
                 throw;
@@ -253,7 +253,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 try
                 {
-                    await Task.Delay(TcpServerConnectTimeout, token).ConfigureAwait(false);
+                    await Task.Delay(TcpServerConnectTimeoutMs, token).ConfigureAwait(false);
                 }
                 catch { }
             }
@@ -269,10 +269,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
     }
 
-    // <summary>
-    // This class connects IPC Server<-> TCP Server router instances.
-    // Supports NamedPipes/UnixDomainSocket server and TCP/IP server.
-    // </summary>
+    /// <summary>
+    /// This class connects IPC Server - TCP Server router instances.
+    /// Supports NamedPipes/UnixDomainSocket server and TCP/IP server.
+    /// </summary>
     internal class IpcServerTcpServerRouter : TcpServerRouter
     {
         readonly string _ipcServerPath;
@@ -281,8 +281,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public int IpcServerConnectTimeout { get; set; } = Timeout.Infinite;
 
-        public IpcServerTcpServerRouter(string ipcServer, string tcpServer, int runtimeTimeoutMS, DiagnosticsServerRouterLogger logger)
-            : base(tcpServer, runtimeTimeoutMS, logger)
+        public IpcServerTcpServerRouter(string ipcServer, string tcpServer, int runtimeTimeoutMs, DiagnosticsServerRouterLogger logger)
+            : base(tcpServer, runtimeTimeoutMs, logger)
         {
             _ipcServerPath = ipcServer;
             if (string.IsNullOrEmpty(_ipcServerPath))
@@ -451,10 +451,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
     }
 
-    // <summary>
-    // This class connects IPC Client<-> TCP Server router instances.
-    // Supports NamedPipes/UnixDomainSocket client and TCP/IP server.
-    // </summary>
+    /// <summary>
+    /// This class connects IPC Client - TCP Server router instances.
+    /// Supports NamedPipes/UnixDomainSocket client and TCP/IP server.
+    /// </summary>
     internal class IpcClientTcpServerRouter : TcpServerRouter
     {
         readonly string _ipcClientPath;
@@ -463,8 +463,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public int IpcClientConnectFailureTimeout { get; set; } = 500;
 
-        public IpcClientTcpServerRouter(string ipcClient, string tcpServer, int runtimeTimeoutMS, DiagnosticsServerRouterLogger logger)
-            : base(tcpServer, runtimeTimeoutMS, logger)
+        public IpcClientTcpServerRouter(string ipcClient, string tcpServer, int runtimeTimeoutMs, DiagnosticsServerRouterLogger logger)
+            : base(tcpServer, runtimeTimeoutMs, logger)
         {
             _ipcClientPath = ipcClient;
         }
@@ -568,10 +568,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             else
             {
                 bool retry = false;
-                IpcUnixDomainSocketTransport unixDomainSocket;
+                IpcUnixDomainSocket unixDomainSocket;
                 do
                 {
-                    unixDomainSocket = new IpcUnixDomainSocketTransport(_ipcClientPath);
+                    unixDomainSocket = new IpcUnixDomainSocket(_ipcClientPath);
 
                     using var connectTimeoutTokenSource = new CancellationTokenSource();
                     using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);

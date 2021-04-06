@@ -8,33 +8,18 @@ using System.Net.Sockets;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    class IpcTcpSocketTransport : IpcSocketTransport
+    class IpcTcpSocket : IpcSocket
     {
-        public static IpcTcpSocketTransport Create(string hostAddress, int hostPort)
+        internal static IpcTcpSocket Create(string hostAddress, int hostPort)
         {
-            return new IpcTcpSocketTransport(hostAddress, hostPort);
+            return new IpcTcpSocket(hostAddress, hostPort);
         }
 
-        public IpcTcpSocketTransport(string hostAddress, int hostPort)
+        internal IpcTcpSocket(string hostAddress, int hostPort)
             : base(ResolveIPAddress(hostAddress, hostPort), SocketType.Stream, ProtocolType.Tcp)
         {
-            if (EnableDualMode(this, hostAddress))
+            if (string.CompareOrdinal(hostAddress, "*") == 0 && this.AddressFamily == AddressFamily.InterNetworkV6)
                 this.DualMode = true;
-        }
-
-        internal static bool EnableDualMode(Socket socket, string hostAddress)
-        {
-            return UseAnyIPAddressDualMode(hostAddress) && socket.AddressFamily == AddressFamily.InterNetworkV6;
-        }
-
-        internal static bool UseAnyIPAddressDualMode(string hostAddress)
-        {
-            return string.CompareOrdinal(hostAddress, "*") == 0;
-        }
-
-        internal static bool TryParseIPAddress(string address)
-        {
-            return TryParseIPAddress(address, out _, out _);
         }
 
         internal static bool TryParseIPAddress(string address, out string hostAddress, out int hostPort)
@@ -56,7 +41,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     hostPort = int.Parse(addressSegments[1]);
                 }
 
-                if (!UseAnyIPAddressDualMode(hostAddress))
+                if (string.CompareOrdinal(hostAddress, "*") != 0)
                 {
                     if (!IPAddress.TryParse(hostAddress, out _))
                     {
@@ -76,13 +61,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return !string.IsNullOrEmpty(hostAddress) && hostPort != -1;
         }
 
-        internal static IPEndPoint ResolveIPAddress(string hostAddress, int hostPort)
+        internal static IPEndPoint ResolveIPAddress(string address)
+        {
+            string hostAddress;
+            int hostPort;
+
+            if (!TryParseIPAddress(address, out hostAddress, out hostPort))
+                throw new ArgumentException(string.Format("Could not parse {0} into host, port", address));
+
+            return ResolveIPAddress(hostAddress, hostPort);
+        }
+
+        private static IPEndPoint ResolveIPAddress(string hostAddress, int hostPort)
         {
             IPAddress ipAddress = null;
 
             try
             {
-                if (UseAnyIPAddressDualMode(hostAddress))
+                if (string.CompareOrdinal(hostAddress, "*") == 0)
                 {
                     if (Socket.OSSupportsIPv6)
                     {
@@ -109,17 +105,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentException(string.Format("Could not resolve {0} into an IP address", hostAddress));
 
             return new IPEndPoint(ipAddress, hostPort);
-        }
-
-        internal static IPEndPoint ResolveIPAddress(string address)
-        {
-            string hostAddress;
-            int hostPort;
-
-            if (!TryParseIPAddress(address, out hostAddress, out hostPort))
-                throw new ArgumentException(string.Format("Could not parse {0} into host, port", address));
-
-            return ResolveIPAddress(hostAddress, hostPort);
         }
     }
 }

@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public static IpcServerTransport Create(string address, int maxConnections, bool enableTcpIpProtocol)
         {
-            if (!enableTcpIpProtocol || !IpcTcpSocketTransport.TryParseIPAddress(address))
+            if (!enableTcpIpProtocol || !IpcTcpSocket.TryParseIPAddress(address, out _, out _))
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
@@ -151,17 +151,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal abstract class IpcSocketServerTransport : IpcServerTransport
     {
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
-        private readonly int _backlog;
-        private readonly string _address;
+        private IpcSocket _socket;
 
-        private IpcSocketTransport _socket;
-
-        public IpcSocketServerTransport(string address, int backlog)
+        public IpcSocketServerTransport()
         {
-            _backlog = backlog;
-            _address = address;
-
-            _socket = CreateNewSocketServer(_address, _backlog);
+            _socket = CreateNewSocketServer();
         }
 
         protected override void Dispose(bool disposing)
@@ -208,7 +202,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // In all other exception scenarios server socket will be re-created.
                 if (!linkedSource.IsCancellationRequested)
                 {
-                    _socket = CreateNewSocketServer(_address, _backlog);
+                    _socket = CreateNewSocketServer();
                 }
                 throw;
             }
@@ -216,14 +210,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal abstract bool OnAccept(Socket socket);
 
-        internal abstract IpcSocketTransport CreateNewSocketServer(string address, int backlog);
+        internal abstract IpcSocket CreateNewSocketServer();
     }
 
     internal sealed class IpcTcpSocketServerTransport : IpcSocketServerTransport
-{
+    {
+        private readonly int _backlog;
+        private readonly string _hostAddress;
+        private readonly int _hostPort;
+
         public IpcTcpSocketServerTransport(string address, int backlog)
-            : base (address, backlog != MaxAllowedConnections ? backlog : 100)
         {
+            _backlog = backlog != MaxAllowedConnections ? backlog : 100;
+            if (!IpcTcpSocket.TryParseIPAddress(address, out _hostAddress, out _hostPort))
+                throw new ArgumentException(string.Format("Could not parse {0} into host, port", address));
         }
 
         internal override bool OnAccept(Socket socket)
@@ -232,17 +232,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return true;
         }
 
-        internal override IpcSocketTransport CreateNewSocketServer(string address, int backlog)
+        internal override IpcSocket CreateNewSocketServer()
         {
-            string hostAddress;
-            int hostPort;
-
-            if (!IpcTcpSocketTransport.TryParseIPAddress(address, out hostAddress, out hostPort))
-                throw new ArgumentException(string.Format("Could not parse {0} into host, port", address));
-
-            var socket = IpcTcpSocketTransport.Create(hostAddress, hostPort);
+            var socket = IpcTcpSocket.Create(_hostAddress, _hostPort);
             socket.Bind();
-            socket.Listen(backlog);
+            socket.Listen(_backlog);
             socket.LingerState.Enabled = false;
             OnCreateNewServer();
             return socket;
@@ -251,9 +245,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal sealed class IpcUnixDomainSocketServerTransport : IpcSocketServerTransport
     {
+        private readonly int _backlog;
+        private readonly string _path;
+
         public IpcUnixDomainSocketServerTransport(string path, int backlog)
-            : base (path, backlog != MaxAllowedConnections ? backlog : (int)SocketOptionName.MaxConnections)
         {
+            _backlog = backlog != MaxAllowedConnections ? backlog : (int)SocketOptionName.MaxConnections;
+            _path = path;
         }
 
         internal override bool OnAccept(Socket socket)
@@ -261,11 +259,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return true;
         }
 
-        internal override IpcSocketTransport CreateNewSocketServer(string address, int backlog)
+        internal override IpcSocket CreateNewSocketServer()
         {
-            var socket = IpcUnixDomainSocketTransport.Create(address);
+            var socket = IpcUnixDomainSocket.Create(_path);
             socket.Bind();
-            socket.Listen(backlog);
+            socket.Listen(_backlog);
             socket.LingerState.Enabled = false;
             OnCreateNewServer();
             return socket;
