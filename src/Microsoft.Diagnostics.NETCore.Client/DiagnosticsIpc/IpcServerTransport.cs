@@ -152,11 +152,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal abstract class IpcSocketServerTransport : IpcServerTransport
     {
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
-        private IpcSocket _socket;
+        protected IpcSocket _socket;
 
         public IpcSocketServerTransport()
         {
-            _socket = CreateNewSocketServer();
         }
 
         protected override void Dispose(bool disposing)
@@ -223,6 +222,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             _endPoint = new IpcTcpSocketEndPoint(address);
             _backlog = backlog != MaxAllowedConnections ? backlog : 100;
+            _socket = CreateNewSocketServer();
         }
 
         internal override bool OnAccept(Socket socket)
@@ -234,7 +234,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         internal override IpcSocket CreateNewSocketServer()
         {
             var socket = new IpcSocket(SocketType.Stream, ProtocolType.Tcp);
-            socket.DualMode = _endPoint.DualMode;
+            if (_endPoint.DualMode)
+                socket.DualMode = _endPoint.DualMode;
             socket.Bind(_endPoint);
             socket.Listen(_backlog);
             socket.LingerState.Enabled = false;
@@ -252,6 +253,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             _backlog = backlog != MaxAllowedConnections ? backlog : (int)SocketOptionName.MaxConnections;
             _endPoint = new IpcUnixDomainSocketEndPoint(path);
+            _socket = CreateNewSocketServer();
         }
 
         internal override bool OnAccept(Socket socket)
