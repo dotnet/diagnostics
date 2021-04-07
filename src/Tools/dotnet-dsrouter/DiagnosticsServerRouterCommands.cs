@@ -93,7 +93,7 @@ namespace Microsoft.Diagnostics.Tools.DSRouter
             using var factory = new LoggerFactory();
             factory.AddConsole(verbose ? LogLevel.Debug : LogLevel.Information, false);
 
-            Launcher.SuspendProcess = false;
+            Launcher.SuspendProcess = true;
             Launcher.Verbose = verbose;
             Launcher.CommandToken = token;
 
