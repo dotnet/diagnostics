@@ -89,7 +89,8 @@ namespace Microsoft.Internal.Common.Utils
             _childProc.StartInfo.RedirectStandardOutput = !showChildIO;
             _childProc.StartInfo.RedirectStandardError = !showChildIO;
             _childProc.StartInfo.RedirectStandardInput = !showChildIO;
-            _childProc.StartInfo.Environment.Add("DOTNET_DiagnosticPorts", $"{diagnosticTransportName}");
+            if (!string.IsNullOrEmpty(diagnosticTransportName))
+                _childProc.StartInfo.Environment.Add("DOTNET_DiagnosticPorts", $"{diagnosticTransportName}");
             try
             {
                 if (printLaunchCommand)

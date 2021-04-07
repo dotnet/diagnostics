@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Internal.Common.Utils;
 using System;
 using System.Text;
 using System.Threading;
@@ -11,8 +12,37 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Tools.DSRouter
 {
+    public class DiagnosticsServerRouterLauncher : DiagnosticsServerRouterRunner.Callbacks
+    {
+        public CancellationToken CommandToken { get; set; }
+        public bool SuspendProcess { get; set; }
+        public bool Verbose { get; set; }
+
+        public void OnRouterStarted(string boundTcpServerAddress)
+        {
+            if (ProcessLauncher.Launcher.HasChildProc)
+            {
+                string diagnosticPorts = boundTcpServerAddress + (SuspendProcess ? ",suspend" : ",nosuspend");
+                if (ProcessLauncher.Launcher.ChildProc.StartInfo.Arguments.Contains("${DOTNET_DiagnosticPorts}", StringComparison.OrdinalIgnoreCase))
+                {
+                    ProcessLauncher.Launcher.ChildProc.StartInfo.Arguments = ProcessLauncher.Launcher.ChildProc.StartInfo.Arguments.Replace("${DOTNET_DiagnosticPorts}", diagnosticPorts);
+                    diagnosticPorts = "";
+                }
+
+                ProcessLauncher.Launcher.Start(diagnosticPorts, CommandToken, Verbose, Verbose);
+            }
+        }
+
+        public void OnRouterStopped()
+        {
+            ProcessLauncher.Launcher.Cleanup();
+        }
+    }
+
     public class DiagnosticsServerRouterCommands
     {
+        public static DiagnosticsServerRouterLauncher Launcher { get; } = new DiagnosticsServerRouterLauncher();
+
         public DiagnosticsServerRouterCommands()
         {
         }
@@ -27,7 +57,11 @@ namespace Microsoft.Diagnostics.Tools.DSRouter
             using var factory = new LoggerFactory();
             factory.AddConsole(verbose ? LogLevel.Debug : LogLevel.Information, false);
 
-            var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"));
+            Launcher.SuspendProcess = true;
+            Launcher.Verbose = verbose;
+            Launcher.CommandToken = token;
+
+            var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"), Launcher);
 
             while (!linkedCancelToken.IsCancellationRequested)
             {
@@ -59,7 +93,11 @@ namespace Microsoft.Diagnostics.Tools.DSRouter
             using var factory = new LoggerFactory();
             factory.AddConsole(verbose ? LogLevel.Debug : LogLevel.Information, false);
 
-            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"));
+            Launcher.SuspendProcess = false;
+            Launcher.Verbose = verbose;
+            Launcher.CommandToken = token;
+
+            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"), Launcher);
 
             while (!linkedCancelToken.IsCancellationRequested)
             {

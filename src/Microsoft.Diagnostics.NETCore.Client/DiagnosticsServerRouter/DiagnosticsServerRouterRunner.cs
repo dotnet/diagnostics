@@ -3,11 +3,11 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using System.Net;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -16,14 +16,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal class DiagnosticsServerRouterRunner
     {
-        public static async Task<int> runIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeoutMs, ILogger logger)
+        internal interface Callbacks
         {
-            return await runRouter(token, new IpcClientTcpServerRouter(ipcClient, tcpServer, runtimeTimeoutMs, logger)).ConfigureAwait(false);
+            void OnRouterStarted(string boundTcpServerAddress);
+            void OnRouterStopped();
         }
 
-        public static async Task<int> runIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeoutMs, ILogger logger)
+        public static async Task<int> runIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeoutMs, ILogger logger, Callbacks callbacks)
         {
-            return await runRouter(token, new IpcServerTcpServerRouter(ipcServer, tcpServer, runtimeTimeoutMs, logger)).ConfigureAwait(false);
+            return await runRouter(token, new IpcClientTcpServerRouter(ipcClient, tcpServer, runtimeTimeoutMs, logger), callbacks).ConfigureAwait(false);
+        }
+
+        public static async Task<int> runIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeoutMs, ILogger logger, Callbacks callbacks)
+        {
+            return await runRouter(token, new IpcServerTcpServerRouter(ipcServer, tcpServer, runtimeTimeoutMs, logger), callbacks).ConfigureAwait(false);
         }
 
         public static bool isLoopbackOnly(string address)
@@ -40,7 +46,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return isLooback;
         }
 
-        async static Task<int> runRouter(CancellationToken token, DiagnosticsServerRouter router)
+        async static Task<int> runRouter(CancellationToken token, TcpServerRouter router, Callbacks callbacks)
         {
             List<Task> runningTasks = new List<Task>();
             List<ConnectedRouter> runningRouters = new List<ConnectedRouter>();
@@ -48,6 +54,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             try
             {
                 router.Start();
+                callbacks?.OnRouterStarted(router.TcpServerAddress);
+
                 while (!token.IsCancellationRequested)
                 {
                     Task<ConnectedRouter> connectedRouterTask = null;
@@ -130,6 +138,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 runningRouters.Clear();
 
                 await router?.Stop();
+                callbacks?.OnRouterStopped();
 
                 router.Logger.LogInformation("Router stopped.");
             }

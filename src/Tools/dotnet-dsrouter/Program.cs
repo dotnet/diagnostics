@@ -11,6 +11,7 @@ using System.CommandLine.Parsing;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Tools.Common;
+using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.DSRouter
 {
@@ -109,6 +110,12 @@ namespace Microsoft.Diagnostics.Tools.DSRouter
                 .Build();
 
             ParseResult parseResult = parser.Parse(args);
+
+            if (parseResult.UnparsedTokens.Count > 0)
+            {
+                ProcessLauncher.Launcher.PrepareChildProcess(args);
+            }
+
             return parser.InvokeAsync(args).Result;
         }
     }
