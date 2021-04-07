@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.IO;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Tracing;
@@ -657,7 +658,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 _transportVersionTimer = new Timer(NotifyStableTransportVersion, this, Timeout.Infinite, 0);
             }
 
-            public void CreatedNewServer()
+            public void CreatedNewServer(EndPoint localEp)
             {
                 _semaphore.Wait(StableTransportSemaphoreTimeout);
                 try

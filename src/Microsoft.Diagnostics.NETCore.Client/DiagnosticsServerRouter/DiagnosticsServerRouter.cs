@@ -12,6 +12,7 @@ using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using System.Net;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -72,10 +73,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal class TcpServerRouter : DiagnosticsServerRouter
     {
-        readonly string _tcpServerAddress;
+        protected string _tcpServerAddress;
 
-        ReversedDiagnosticsServer _tcpServer;
-        IpcEndpointInfo _tcpServerEndpointInfo;
+        protected ReversedDiagnosticsServer _tcpServer;
+        protected IpcEndpointInfo _tcpServerEndpointInfo;
 
         public int RuntimeInstanceConnectTimeoutMs { get; set; } = 60000;
         public int TcpServerConnectTimeoutMs { get; set; } = 5000;
@@ -90,10 +91,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
             get { return _tcpServerEndpointInfo.ProcessId; }
         }
 
+        public string TcpServerAddress
+        {
+            get { return _tcpServerAddress; }
+        }
+
         protected TcpServerRouter(string tcpServer, int runtimeTimeoutMs, ILogger logger)
             : base(logger)
         {
             _tcpServerAddress = tcpServer;
+            if (string.IsNullOrEmpty(_tcpServerAddress))
+            {
+                _tcpServerAddress = "127.0.0.1:0";
+            }
+            else
+            {
+                _tcpServerAddress = _tcpServerAddress.Replace("tcp://", "");
+                _tcpServerAddress = _tcpServerAddress.Replace(Uri.UriSchemeNetTcp, "");
+            }
 
             RuntimeInstanceConnectTimeoutMs = runtimeTimeoutMs;
 
@@ -256,7 +271,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// This class connects IPC Server - TCP Server router instances.
     /// Supports NamedPipes/UnixDomainSocket server and TCP/IP server.
     /// </summary>
-    internal class IpcServerTcpServerRouter : TcpServerRouter
+    internal class IpcServerTcpServerRouter : TcpServerRouter, IIpcServerTransportCallbackInternal
     {
         readonly string _ipcServerPath;
 
@@ -272,6 +287,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 _ipcServerPath = GetDefaultIpcServerPath();
 
             _ipcServer = IpcServerTransport.Create(_ipcServerPath, IpcServerTransport.MaxAllowedConnections, false);
+            _tcpServer.TransportCallback = this;
         }
 
         public static string GetDefaultIpcServerPath()
@@ -292,6 +308,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 TimeSpan diff = Process.GetCurrentProcess().StartTime.ToUniversalTime() - unixEpoch;
                 return Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-{(long)diff.TotalSeconds}-socket");
             }
+        }
+
+        public override void Start()
+        {
+            base.Start();
+            _logger.LogInformation($"Starting IPC server ({_ipcServerPath}) <--> TCP server ({_tcpServerAddress}) router.");
         }
 
         public override Task Stop()
@@ -432,13 +454,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             return ipcServerStream;
         }
+
+        public void CreatedNewServer(EndPoint localEP)
+        {
+            if (localEP is IPEndPoint ipEP)
+                _tcpServerAddress = _tcpServerAddress.Replace(":0", string.Format(":{0}", ipEP.Port));
+        }
     }
 
     /// <summary>
     /// This class connects IPC Client - TCP Server router instances.
     /// Supports NamedPipes/UnixDomainSocket client and TCP/IP server.
     /// </summary>
-    internal class IpcClientTcpServerRouter : TcpServerRouter
+    internal class IpcClientTcpServerRouter : TcpServerRouter, IIpcServerTransportCallbackInternal
     {
         readonly string _ipcClientPath;
 
@@ -450,6 +478,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             : base(tcpServer, runtimeTimeoutMs, logger)
         {
             _ipcClientPath = ipcClient;
+            _tcpServer.TransportCallback = this;
+        }
+
+        public override void Start()
+        {
+            base.Start();
+            _logger.LogInformation($"Starting IPC client ({_ipcClientPath}) <--> TCP server ({_tcpServerAddress}) router.");
         }
 
         public override async Task<ConnectedRouter> ConnectRouterAsync(CancellationToken token)
@@ -610,6 +645,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 Logger.LogDebug("Successfully connected ipc stream.");
 
             return ipcClientStream;
+        }
+
+        public void CreatedNewServer(EndPoint localEP)
+        {
+            if (localEP is IPEndPoint ipEP)
+                _tcpServerAddress = _tcpServerAddress.Replace(":0", string.Format(":{0}", ipEP.Port));
         }
     }
 

@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.Tools.DSRouter
 
         static void checkLoopbackOnly(string tcpServer)
         {
-            if (!DiagnosticsServerRouterRunner.isLoopbackOnly(tcpServer))
+            if (!string.IsNullOrEmpty(tcpServer) && !DiagnosticsServerRouterRunner.isLoopbackOnly(tcpServer))
             {
                 StringBuilder message = new StringBuilder();
 

@@ -18,16 +18,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         public static async Task<int> runIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeoutMs, ILogger logger)
         {
-            logger.LogInformation($"Starting IPC client ({ipcClient}) <--> TCP server ({tcpServer}) router.");
             return await runRouter(token, new IpcClientTcpServerRouter(ipcClient, tcpServer, runtimeTimeoutMs, logger)).ConfigureAwait(false);
         }
 
         public static async Task<int> runIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeoutMs, ILogger logger)
         {
-            if (string.IsNullOrEmpty(ipcServer))
-                ipcServer = IpcServerTcpServerRouter.GetDefaultIpcServerPath();
-
-            logger.LogInformation($"Starting IPC server ({ipcServer}) <--> TCP server ({tcpServer}) router.");
             return await runRouter(token, new IpcServerTcpServerRouter(ipcServer, tcpServer, runtimeTimeoutMs, logger)).ConfigureAwait(false);
         }
 
