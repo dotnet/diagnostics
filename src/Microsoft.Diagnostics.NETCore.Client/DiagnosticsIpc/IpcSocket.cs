@@ -18,6 +18,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
         }
 
+        public IpcSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType)
+            : base(addressFamily, socketType, protocolType)
+        {
+        }
+
         public async Task<Socket> AcceptAsync(CancellationToken token)
         {
             using (token.Register(() => Close(0)))
