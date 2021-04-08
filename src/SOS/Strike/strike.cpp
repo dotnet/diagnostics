@@ -15170,17 +15170,24 @@ static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp,
     // If the dbgeng functions fail to get the module/assembly name, use the DAC API
     if (!bModuleNameWorked)
     {
-        if (g_sos->GetPEFileName(dmd.File, MAX_LONGPATH, wszNameBuffer, NULL) == S_OK)
+        wszNameBuffer[0] = W('\0');
+        if (FAILED(g_sos->GetPEFileName(dmd.File, MAX_LONGPATH, wszNameBuffer, NULL)) || wszNameBuffer[0] == W('\0'))
         {
-            if (wszNameBuffer[0] != W('\0'))
+            ToRelease<IXCLRDataModule> pModule;
+            if (SUCCEEDED(g_sos->GetModule(dmd.Address, &pModule)))
             {
-                WCHAR *pJustName = _wcsrchr(wszNameBuffer, GetTargetDirectorySeparatorW());
-                if (pJustName == NULL)
-                    pJustName = wszNameBuffer - 1;
-
-                DOAPPEND(pJustName + 1);
-                bModuleNameWorked = TRUE;
+                ULONG32 nameLen = 0;
+                pModule->GetFileName(MAX_LONGPATH, &nameLen, wszNameBuffer);
             }
+        }
+        if (wszNameBuffer[0] != W('\0'))
+        {
+            WCHAR *pJustName = _wcsrchr(wszNameBuffer, GetTargetDirectorySeparatorW());
+            if (pJustName == NULL)
+                pJustName = wszNameBuffer - 1;
+
+            DOAPPEND(pJustName + 1);
+            bModuleNameWorked = TRUE;
         }
     }
 

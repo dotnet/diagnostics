@@ -483,10 +483,16 @@ public class SOSRunner : IDisposable
                     }
                     arguments.AppendFormat(@"--no-lldbinit -o ""settings set interpreter.prompt-on-quit false"" -o ""command script import {0}"" -o ""version""", lldbHelperScript);
 
+                    string debuggeeTarget = config.HostExe;
+                    if (string.IsNullOrWhiteSpace(debuggeeTarget))
+                    {
+                        debuggeeTarget = debuggeeConfig.BinaryExePath;
+                    }
+
                     // Load the dump or launch the debuggee process
                     if (action == DebuggerAction.LoadDump)
                     {
-                        initialCommands.Add($@"target create --core ""%DUMP_NAME%"" ""{config.HostExe}""");
+                        initialCommands.Add($@"target create --core ""%DUMP_NAME%"" ""{debuggeeTarget}""");
                     }
                     else
                     {
@@ -499,7 +505,10 @@ public class SOSRunner : IDisposable
                                 sb.AppendFormat(@" ""{0}""", arg);
                             }
                         }
-                        sb.AppendFormat(@" ""{0}""", debuggeeConfig.BinaryExePath);
+                        if (!string.IsNullOrWhiteSpace(config.HostExe))
+                        {
+                            sb.AppendFormat(@" ""{0}""", debuggeeConfig.BinaryExePath);
+                        }
                         if (!string.IsNullOrWhiteSpace(information.DebuggeeArguments))
                         {
                             string[] args = ReplaceVariables(variables, information.DebuggeeArguments).Trim().Split(' ');
@@ -508,7 +517,7 @@ public class SOSRunner : IDisposable
                                 sb.AppendFormat(@" ""{0}""", arg);
                             }
                         }
-                        initialCommands.Add($@"target create ""{config.HostExe}""");
+                        initialCommands.Add($@"target create ""{debuggeeTarget}""");
                         initialCommands.Add(sb.ToString());
                         initialCommands.Add("process launch -s");
 
@@ -1215,6 +1224,10 @@ public class SOSRunner : IDisposable
         if (_config.IsNETCore || Debugger == NativeDebugger.DotNetDump)
         {
             defines.Add("NETCORE_OR_DOTNETDUMP");
+        }
+        if (_config.PublishSingleFile)
+        {
+            defines.Add("SINGLE_FILE_APP");
         }
         return defines;
     }

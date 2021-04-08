@@ -1575,38 +1575,44 @@ HRESULT FileNameForModule (DWORD_PTR pModuleAddr, __out_ecount (MAX_LONGPATH) WC
 *                                                                      *
 \**********************************************************************/
 // fileName should be at least MAX_LONGPATH
-HRESULT FileNameForModule (const DacpModuleData * const pModule, __out_ecount (MAX_LONGPATH) WCHAR *fileName)
+HRESULT FileNameForModule(const DacpModuleData* const pModuleData, __out_ecount(MAX_LONGPATH) WCHAR* fileName)
 {
-    fileName[0] = L'\0';
-    
+    fileName[0] = W('\0');
+
     HRESULT hr = S_OK;
-    CLRDATA_ADDRESS dwAddr = pModule->File;
+    CLRDATA_ADDRESS dwAddr = pModuleData->File;
     if (dwAddr == 0)
     {
         // TODO:  We have dynamic module
         return E_NOTIMPL;
     }
-    
+
     CLRDATA_ADDRESS base = 0;
     hr = g_sos->GetPEFileBase(dwAddr, &base);
     if (SUCCEEDED(hr))
     {
         hr = g_sos->GetPEFileName(dwAddr, MAX_LONGPATH, fileName, NULL);
-        if (SUCCEEDED(hr))
-        {
-            if (fileName[0] != W('\0'))
-                return hr; // done
-        }
+        if (SUCCEEDED(hr) && fileName[0] != W('\0'))
+            return hr; // done
+
 #ifndef FEATURE_PAL
         // Try the base *
         if (base)
         {
-            hr = DllsName((ULONG_PTR) base, fileName);
+            hr = DllsName((ULONG_PTR)base, fileName);
+            if (SUCCEEDED(hr) && fileName[0] != W('\0'))
+                return hr; // done
         }
 #endif // !FEATURE_PAL
     }
+
+    ToRelease<IXCLRDataModule> pModule;
+    if (SUCCEEDED(g_sos->GetModule(pModuleData->Address, &pModule)))
+    {
+        ULONG32 nameLen = 0;
+        hr = pModule->GetFileName(MAX_LONGPATH, &nameLen, fileName);
+    }
     
-    // If we got here, either DllsName worked, or we couldn't find a name
     return hr;
 }
 
