@@ -1,5 +1,6 @@
 # dotnet-counters
 
+NOTE: This documentation page may contain information on some features that are still work-in-progress. For most up-to-date documentation on released version of `dotnet-counters`, please refer to [its official documentation](https://docs.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-counters) page.
 
 ## Intro
 
@@ -98,7 +99,7 @@ dotnet tool install --global dotnet-counters
         GC Heap Size (MB)                            811
         Number of Exceptions / sec                     4
 
-    3. Monitoring EventCounter values from user-defined EventSource: (see https://github.com/dotnet/corefx/blob/master/src/System.Diagnostics.Tracing/documentation/EventCounterTutorial.md on how to do this.0)
+    3. Monitoring EventCounter values from user-defined EventSource: (see https://github.com/dotnet/corefx/blob/main/src/System.Diagnostics.Tracing/documentation/EventCounterTutorial.md on how to do this.0)
 
       > dotnet-counters monitor --process-id 1902 Samples-EventCounterDemos-Minimal
 

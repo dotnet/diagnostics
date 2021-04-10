@@ -2621,10 +2621,12 @@ investigating lifetime issues of interop-heavy applications.
 \\
 
 COMMAND: sethostruntime.
-!SetHostRuntime [-netcore] [-netfx] <runtime-directory>
+!SetHostRuntime [-c][-netcore] [-f][-netfx] [-none] [-clear] <runtime-directory>
 
--netcore - switch to hosting on the .NET Core runtime
--netfx   - switch to hosting on the desktop .NET Framework runtime if loaded.
+-c, -netcore - switch to hosting on the .NET Core runtime
+-f, -netfx   - switch to hosting on the desktop .NET Framework runtime if loaded.
+-none        - disable hosting managed code (for testing).
+-clear       - clear the .NET Core host runtime path.
 
 This command controls the runtime that is used to host the maanged code that
 runs as part of SOS in the debugger (cdb/windbg). The default is the desktop
@@ -2655,15 +2657,15 @@ You can use the "dotnet --info" in a command shell to find the path of an instal
 \\
 
 COMMAND: setsymbolserver.
-!SetSymbolServer [-ms] [-mi] [-disable] [-log] [-cache <cache-path>] [-directory <search-directory>] [-pat <token>] [<symbol-server-URL>]
+!SetSymbolServer [-ms] [-mi] [-disable] [-log] [-cache <cache-path>] [-directory <search-directory>] [-timeout <minutes> ] [-pat <token>] [<symbol-server-URL>]
 
 -ms - Use the public Microsoft symbol server.
 -mi - Use the internal symweb symbol server.
 -disable - Disable symbol download support.
 -directory - Directory to search for symbols. Can be more than one.
+-timeout - Specify the symbol server timeout in minutes
 -pat - Access token to the authenticated server.
 -cache - Specific a symbol cache directory. The default is %%TEMP%%\SymbolCache if not specified.
--log - Enable symbol download logging.
 <symbol-server-URL> - Symbol server URL.
 
 This commands enables symbol server support for portable PDBs in SOS. If the .sympath is set, this
@@ -2675,11 +2677,9 @@ To disable downloading or clear the current SOS symbol settings allowing new sym
 \\
 
 COMMAND: sosstatus.
-!SOSStatus [-netfx] [-netcore] [-reset]
+!SOSStatus [-reset]
 
--netfx   - switch to the desktop .NET Framework runtime if loaded.
--netcore - switch to the .NET Core runtime if loaded.
--reset   - reset all the cached internal SOS state.
+-reset - reset all the cached internal SOS state.
 
 Display internal SOS status, reset the internal cached state, or change between the desktop .NET framework
 or .NET Core runtimes when both are loaded in the process or dump.
@@ -2691,7 +2691,7 @@ or .NET Core runtimes when both are loaded in the process or dump.
     DBI file path: C:\Users\mikem\AppData\Local\Temp\SymbolCache\mscordbi.dll/5d0707425c2000/mscordbi.dll
     Cache: C:\Users\mikem\AppData\Local\Temp\SymbolCache
     Server: http://msdl.microsoft.com/download/symbols/
-//
+\\
 
 COMMAND: setclrpath.
 !setclrpath <path-to-runtime>
@@ -2701,4 +2701,19 @@ on another machine or for triage dumps because there are no module paths include
 runtime directory.
 
     0:000> !setclrpath "C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.0"
-//
+\\
+
+COMMAND: runtimes.
+runtimes [-netfx] [-netcore]
+
+-netfx   - switch to the desktop .NET Framework runtime if loaded.
+-netcore - switch to the .NET Core runtime if loaded.
+
+List and select the .NET runtimes in the target process.
+\\
+
+COMMAND: logging.
+logging [enable] [disable]
+
+Enables or disables the internal trace logging.
+\\

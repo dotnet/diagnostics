@@ -12,6 +12,7 @@
 [Aa]rtifacts/
 [Dd]ebug/
 [Rr]elease/
+!eng/[Rr]elease
 [Bb]in/
 [Oo]bj/
 [Pp]ackages/
@@ -20,6 +21,7 @@ x64/
 .dotnet-test/
 .packages/
 .tools/
+.vscode/
 
 # Per-user project properties
 launchSettings.json

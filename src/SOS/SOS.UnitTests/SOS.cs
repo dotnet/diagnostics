@@ -52,8 +52,9 @@ public class SOS
 
         if (testDump)
         {
-            // Create and test dumps on OSX only if the runtime is 5.0 or greater
-            if (OS.Kind != OSKind.OSX || information.TestConfiguration.RuntimeFrameworkVersionMajor >= 5)
+            // Create and test dumps on OSX only if the runtime is 6.0 or greater
+            // TODO: reenable for 5.0 when the MacOS createdump fixes make it into a service release (https://github.com/dotnet/diagnostics/issues/1749)
+            if (OS.Kind != OSKind.OSX || information.TestConfiguration.RuntimeFrameworkVersionMajor > 5)
             {
                 // Generate a crash dump.
                 if (information.TestConfiguration.DebuggeeDumpOutputRootDir() != null)
@@ -213,6 +214,21 @@ public class SOS
                 DebuggeeName = "SymbolTestApp",
                 DebuggeeArguments = "%DEBUG_ROOT%",
             });
+
+            // This tests using regular Windows PDBs with no managed hosting. SOS should fallback 
+            // to using native implementations of the host/target/runtime.
+            if (currentConfig.AllSettings["DebugType"] == "full")
+            {
+                var settings = new Dictionary<string, string>(currentConfig.AllSettings) {
+                    ["SetHostRuntime"] = "-none"
+                };
+                await RunTest("StackAndOtherTests.script", information: new SOSRunner.TestInformation {
+                    TestConfiguration = new TestConfiguration(settings),
+                    TestName = "SOS.StackAndOtherTests",
+                    DebuggeeName = "SymbolTestApp",
+                    DebuggeeArguments = "%DEBUG_ROOT%",
+                });
+            }
         }
     }
 
@@ -257,6 +273,32 @@ public class SOS
         }); ;
     }
 
+    [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "DotnetDumpCommands")]
+    public async Task ConcurrentDictionaries(TestConfiguration config)
+    {
+        await RunTest("ConcurrentDictionaries.script", testLive: false, information: new SOSRunner.TestInformation
+        {
+            TestConfiguration = config,
+            DebuggeeName = "DotnetDumpCommands",
+            DebuggeeArguments = "dcd",
+            UsePipeSync = true,
+            DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
+        }); ;
+    }
+
+    [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "DotnetDumpCommands")]
+    public async Task DumpGen(TestConfiguration config)
+    {
+        await RunTest("DumpGen.script", testLive: false, information: new SOSRunner.TestInformation
+        {
+            TestConfiguration = config,
+            DebuggeeName = "DotnetDumpCommands",
+            DebuggeeArguments = "dumpgen",
+            UsePipeSync = true,
+            DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
+        }); ;
+    }
+
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task LLDBPluginTests(TestConfiguration config)
     {
@@ -286,7 +328,7 @@ public class SOS
             string scriptDir = Path.Combine(repoRootDir, "src", "SOS", "lldbplugin.tests");
             arguments.Append(Path.Combine(scriptDir, "test_libsosplugin.py"));
             arguments.Append(" ");
-            
+
             // Get lldb path
             arguments.AppendFormat("--lldb {0} ", Environment.GetEnvironmentVariable("LLDB_PATH") ?? throw new ArgumentException("LLDB_PATH environment variable not set"));
 

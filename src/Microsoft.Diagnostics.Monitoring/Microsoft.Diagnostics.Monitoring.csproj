@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
     <Description>Monitoring for dotnet</Description>
-    <!-- Tentatively create package so other teams can tenatively consume. -->
+    <!-- Tentatively create package so other teams can tentatively consume. -->
     <IsPackable>true</IsPackable>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
@@ -13,6 +13,8 @@
     <!-- Do not ship this package until ready to be consumed. -->
     <IsShipping>false</IsShipping>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Version information -->
+    <VersionPrefix>5.0.0</VersionPrefix>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,9 +28,9 @@
   <ItemGroup>
     <InternalsVisibleTo Include="dotnet-monitor" />
     <!-- This is temporary until IEndpointInfoSourceInternal becomes public-->
-    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.RestServer" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe" />
-    <InternalsVisibleTo Include="DotnetMonitor.UnitTests" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.RestServer" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.UnitTests" />
   </ItemGroup>
 </Project>

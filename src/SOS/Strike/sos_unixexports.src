@@ -43,15 +43,16 @@ HistObjFind
 HistRoot
 HistStats
 IP2MD
+logging
 Name2EE
 PrintException
 PathTo
 StopOnCatch
-SetHostRuntime
 SetClrPath
 SetSymbolServer
 SOSFlush
 SOSStatus
+runtimes
 SuppressJitOptimization
 SyncBlk
 Threads
@@ -61,4 +62,6 @@ Token2EE
 u
 VerifyHeap
 
+ext
 SOSInitializeByHost
+SOSUninitializeByHost

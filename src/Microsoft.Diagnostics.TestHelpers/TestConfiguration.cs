@@ -630,6 +630,14 @@ namespace Microsoft.Diagnostics.TestHelpers
         }
 
         /// <summary>
+        /// Returns "true" if build/run this cli debuggee as a single-file app
+        /// </summary>
+        public bool PublishSingleFile
+        {
+            get { return string.Equals(GetValue("PublishSingleFile"), "true", StringComparison.InvariantCultureIgnoreCase); }
+        }
+
+        /// <summary>
         /// The version of the Microsoft.NETCore.App package to reference when running the debuggee (i.e. 
         /// using the dotnet cli --fx-version option).
         /// </summary>
@@ -711,7 +719,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </summary>
         public bool LogToConsole
         {
-            get { return bool.TryParse(GetValue("LogToConsole"), out bool b) && b; }
+            get { return string.Equals(GetValue("LogToConsole"), "true", StringComparison.InvariantCultureIgnoreCase); }
         }
 
         /// <summary>

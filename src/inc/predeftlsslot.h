@@ -9,7 +9,7 @@
 
 // ******************************************************************************
 // WARNING!!!: This header is subset of
-// https://github.com/dotnet/runtime/blob/master/src/coreclr/src/inc/predeftlsslot.h
+// https://github.com/dotnet/runtime/blob/main/src/coreclr/inc/predeftlsslot.h
 // that SOS depends on.
 // ******************************************************************************
 

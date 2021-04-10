@@ -22,7 +22,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
     internal class Program
     {
-        delegate Task<int> ExportDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string processName);
+        delegate Task<int> CollectDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string processName, string port);
+        delegate Task<int> MonitorDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string processName, string port);
 
         private static Command MonitorCommand() =>
             new Command(
@@ -30,9 +31,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 description: "Start monitoring a .NET application")
             {
                 // Handler
-                CommandHandler.Create<CancellationToken, List<string>, string, IConsole, int, int, string>(new CounterMonitor().Monitor),
+                HandlerDescriptor.FromDelegate((MonitorDelegate)new CounterMonitor().Monitor).GetCommandHandler(),
                 // Arguments and Options
-                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), NameOption()
+                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), NameOption(), DiagnosticPortOption(),
             };
         
         private static Command CollectCommand() =>
@@ -41,9 +42,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 description: "Monitor counters in a .NET application and export the result into a file")
             {
                 // Handler
-                HandlerDescriptor.FromDelegate((ExportDelegate)new CounterMonitor().Collect).GetCommandHandler(),
+                HandlerDescriptor.FromDelegate((CollectDelegate)new CounterMonitor().Collect).GetCommandHandler(),
                 // Arguments and Options
-                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption(), NameOption()
+                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption(), NameOption(), DiagnosticPortOption()
             };
 
         private static Option NameOption() =>
@@ -89,16 +90,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static Option CounterOption() =>
             new Option(
                 alias: "--counters",
-                description: "List of counter providers.")
+                description: "A comma-separated list of counter providers. Counter providers can be specified provider_name[:counter_name]. If the provider_name is used without a qualifying counter_name then all counters will be shown. To discover provider and counter names, use the list command.")
             {
                 Argument = new Argument<string>(name: "counters", getDefaultValue: () => "System.Runtime")
             };
 
         private static Argument CounterList() =>
-            new Argument<List<string>>(name: "counter_list", getDefaultValue: () => new List<string>() ) 
+            new Argument<List<string>>(name: "counter_list", getDefaultValue: () => new List<string>())
             {
                 Description = @"A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the provider_name is used without a qualifying counter_name then all counters will be shown. To discover provider and counter names, use the list command.",
-                Arity = ArgumentArity.ZeroOrMore
+                IsHidden = true
             };
 
         private static Command ListCommand() =>
@@ -116,6 +117,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 description: "Version of runtime. Supported runtime version: 3.0, 3.1, 5.0") 
             {
                 Argument = new Argument<string>(name: "runtimeVersion", getDefaultValue: () => "3.1")
+            };
+
+        private static Option DiagnosticPortOption() =>
+            new Option(
+                alias: "--diagnostic-port",
+                description: "The path to diagnostic port")
+            {
+                Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => "")
             };
 
         private static readonly string[] s_SupportedRuntimeVersions = new[] { "3.0", "3.1", "5.0" };

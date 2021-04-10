@@ -71,7 +71,10 @@ typedef struct _TADDR_SEGINFO
 } TADDR_SEGINFO;
 
 #include "util.h"
-#include "runtime.h"
+
+#ifndef FEATURE_PAL
+#include "dbgengservices.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,6 +119,76 @@ private:
     static OnUnloadTask *s_pUnloadTaskList;
 };
 
+//-----------------------------------------------------------------------------------------
+// Extension helper class
+//-----------------------------------------------------------------------------------------
+class SOSExtensions : public Extensions
+{
+    SOSExtensions(IDebuggerServices* debuggerServices, IHost* host) :
+        Extensions(debuggerServices)
+    {
+        m_pHost = host;
+        OnUnloadTask::Register(SOSExtensions::Uninitialize);
+    }
+
+#ifndef FEATURE_PAL
+    ~SOSExtensions()
+    {
+        if (m_pDebuggerServices != nullptr)
+        {
+            ((DbgEngServices*)m_pDebuggerServices)->Uninitialize();
+        }
+    }
+#endif
+
+public:
+
+#ifdef FEATURE_PAL
+    static HRESULT Initialize()
+    {
+        if (s_extensions == nullptr)
+        {
+            s_extensions = new SOSExtensions(nullptr, nullptr);
+        }
+        return S_OK;
+    }
+#else
+    static HRESULT Initialize(IDebugClient* client)
+    {
+        if (s_extensions == nullptr)
+        {
+            DbgEngServices* debuggerServices = new DbgEngServices(client);
+            HRESULT hr = debuggerServices->Initialize();
+            if (FAILED(hr)) {
+                return hr;
+            }
+            s_extensions = new SOSExtensions(debuggerServices, nullptr);
+        }
+        return S_OK;
+    }
+#endif
+
+    static HRESULT Initialize(IHost* host)
+    {
+        if (s_extensions == nullptr) 
+        {
+            s_extensions = new SOSExtensions(nullptr, host);
+        }
+        return S_OK;
+    }
+
+    static void Uninitialize()
+    {
+        if (s_extensions != nullptr)
+        {
+            delete s_extensions;
+            s_extensions = nullptr;
+        }
+    }
+
+    IHost* GetHost();
+};
+
 #ifndef MINIDUMP
  
 #define EXIT_API     ExtRelease
@@ -149,8 +222,6 @@ extern ILLDBServices2*       g_ExtServices2;
 #define IsInitializedByDbgEng() false
 
 #endif // FEATURE_PAL
-
-extern bool g_dotnetDumpHost;
 
 HRESULT
 ExtQuery(PDEBUG_CLIENT client);
@@ -202,23 +273,7 @@ inline void EENotLoadedMessage(HRESULT Status)
 inline void DACMessage(HRESULT Status)
 {
     ExtOut("Failed to load data access module, 0x%08x\n", Status);
-#ifdef FEATURE_PAL
-    if (true)
-#else 
-    if (g_dotnetDumpHost)
-#endif
-    {
-        if (Status == CORDBG_E_MISSING_DEBUGGER_EXPORTS)
-        {
-            ExtOut("You can run the debugger command 'setclrpath <directory>' to control the load of %s.\n", GetDacDllName());
-            ExtOut("If that succeeds, the SOS command should work on retry.\n");
-        }
-        else
-        {
-            ExtOut("Can not load or initialize %s. The target runtime may not be initialized.\n", GetDacDllName());
-        }
-    }
-    else
+    if (GetHost()->GetHostType() == IHost::HostType::DbgEng)
     {
         ExtOut("Verify that 1) you have a recent build of the debugger (10.0.18317.1001 or newer)\n");
         ExtOut("            2) the file %s that matches your version of %s is\n", GetDacDllName(), GetRuntimeDllName());
@@ -230,7 +285,7 @@ inline void DACMessage(HRESULT Status)
         ExtOut("                on an X86 or an ARM machine; an AMD64 dump file must be\n");
         ExtOut("                debugged on an AMD64 machine.\n");
         ExtOut("\n");
-        ExtOut("You can run the command '!setclrpath <directory>' to control the load of %s.\n", GetDacDllName());
+        ExtOut("You can run the command '!setclrpath <directory>' to control the load path of %s.\n", GetDacDllName());
         ExtOut("\n");
         ExtOut("Or you can also run the debugger command .cordll to control the debugger's\n");
         ExtOut("load of %s. .cordll -ve -u -l will do a verbose reload.\n", GetDacDllName());
@@ -239,11 +294,21 @@ inline void DACMessage(HRESULT Status)
         ExtOut("If you are debugging a minidump, you need to make sure that your executable\n");
         ExtOut("path is pointing to %s as well.\n", GetRuntimeDllName());
     }
+    else
+    {
+        if (Status == CORDBG_E_MISSING_DEBUGGER_EXPORTS)
+        {
+            ExtOut("You can run the debugger command 'setclrpath <directory>' to control the load of %s.\n", GetDacDllName());
+            ExtOut("If that succeeds, the SOS command should work on retry.\n");
+        }
+        else
+        {
+            ExtOut("Can not load or initialize %s. The target runtime may not be initialized.\n", GetDacDllName());
+        }
+    }
     ExtOut("\n");
     ExtOut("For more information see https://go.microsoft.com/fwlink/?linkid=2135652\n");
 }
-
-HRESULT CheckEEDll();
 
 // The minimum initialization for a command
 #define INIT_API_EXT()                                          \
@@ -261,7 +326,7 @@ HRESULT CheckEEDll();
     if ((Status = ArchQuery()) != S_OK) return Status;
 
 #define INIT_API_EE()                                           \
-    if ((Status = CheckEEDll()) != S_OK)           \
+    if ((Status = GetRuntime(&g_pRuntime)) != S_OK)             \
     {                                                           \
         EENotLoadedMessage(Status);                             \
         return Status;                                          \
@@ -447,7 +512,6 @@ inline CLRDATA_ADDRESS GetBP(const CROSS_PLATFORM_CONTEXT& context)
 {
     return TO_CDADDR(g_targetMachine->GetBP(context));
 }
-
 
 //-----------------------------------------------------------------------------------------
 //

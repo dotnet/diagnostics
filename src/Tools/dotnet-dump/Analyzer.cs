@@ -2,319 +2,202 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.ExtensionCommands;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
-using SOS;
+using SOS.Hosting;
 using System;
-using System.Collections.Generic;
-using System.CommandLine;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostic.Tools.Dump.ExtensionCommands;
-using Microsoft.Diagnostics.Runtime.DataReaders.Implementation;
-using System.CommandLine.Help;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
-    public class Analyzer
+    public class Analyzer : IHost
     {
         private readonly ServiceProvider _serviceProvider;
         private readonly ConsoleProvider _consoleProvider;
         private readonly CommandProcessor _commandProcessor;
-        private bool _isDesktop;
-        private string _dacFilePath;
-
-        /// <summary>
-        /// Enable the assembly resolver to get the right SOS.NETCore version (the one
-        /// in the same directory as this assembly).
-        /// </summary>
-        static Analyzer()
-        {
-            AssemblyResolver.Enable();
-        }
+        private readonly SymbolService _symbolService;
+        private Target _target;
 
         public Analyzer()
         {
             _serviceProvider = new ServiceProvider();
             _consoleProvider = new ConsoleProvider();
-            _commandProcessor = new CommandProcessor(_serviceProvider, _consoleProvider, new Assembly[] { typeof(Analyzer).Assembly });
+            _commandProcessor = new CommandProcessor();
+            _symbolService = new SymbolService(this);
+
+            _serviceProvider.AddService<IHost>(this);
+            _serviceProvider.AddService<IConsoleService>(_consoleProvider);
+            _serviceProvider.AddService<ICommandService>(_commandProcessor);
+            _serviceProvider.AddService<ISymbolService>(_symbolService);
+
+            _commandProcessor.AddCommands(new Assembly[] { typeof(Analyzer).Assembly });
+            _commandProcessor.AddCommands(new Assembly[] { typeof(ClrMDHelper).Assembly });
+            _commandProcessor.AddCommands(new Assembly[] { typeof(SOSHost).Assembly });
+            _commandProcessor.AddCommands(typeof(HelpCommand), (services) => new HelpCommand(_commandProcessor, services));
+            _commandProcessor.AddCommands(typeof(ExitCommand), (services) => new ExitCommand(_consoleProvider.Stop));
         }
 
-        public async Task<int> Analyze(FileInfo dump_path, string[] command)
+        public Task<int> Analyze(FileInfo dump_path, string[] command)
         {
             _consoleProvider.WriteLine($"Loading core dump: {dump_path} ...");
 
+            // Attempt to load the persisted command history
+            string dotnetHome;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE"), ".dotnet");
+            }
+            else { 
+                dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".dotnet");
+            }
+            string historyFileName = Path.Combine(dotnetHome, "dotnet-dump.history");
+            try
+            {
+                string[] history = File.ReadAllLines(historyFileName);
+                _consoleProvider.AddCommandHistory(history);
+            }
+            catch (Exception ex) when 
+                (ex is IOException || 
+                 ex is UnauthorizedAccessException || 
+                 ex is NotSupportedException || 
+                 ex is SecurityException)
+            {
+            }
+
             try
             { 
-                using (DataTarget target = DataTarget.LoadDump(dump_path.FullName))
+                using DataTarget dataTarget = DataTarget.LoadDump(dump_path.FullName);
+
+                OSPlatform targetPlatform = dataTarget.DataReader.TargetPlatform;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || dataTarget.DataReader.EnumerateModules().Any((module) => Path.GetExtension(module.FileName) == ".dylib")) {
+                    targetPlatform = OSPlatform.OSX;
+                }
+                _target = new TargetFromDataReader(dataTarget.DataReader, targetPlatform, this, dump_path.FullName);
+
+                _target.ServiceProvider.AddServiceFactory<SOSHost>(() => {
+                    var sosHost = new SOSHost(_target);
+                    sosHost.InitializeSOSHost();
+                    return sosHost;
+                });
+
+                // Automatically enable symbol server support
+                _symbolService.AddSymbolServer(msdl: true, symweb: false, symbolServerPath: null, authToken: null, timeoutInMinutes: 0);
+                _symbolService.AddCachePath(_symbolService.DefaultSymbolCache);
+
+                // Run the commands from the dotnet-dump command line
+                if (command != null)
                 {
+                    foreach (string cmd in command)
+                    {
+                        Parse(cmd);
+
+                        if (_consoleProvider.Shutdown) {
+                            break;
+                        }
+                    }
+                }
+                if (!_consoleProvider.Shutdown)
+                {
+                    // Start interactive command line processing
                     _consoleProvider.WriteLine("Ready to process analysis commands. Type 'help' to list available commands or 'help [command]' to get detailed help on a command.");
                     _consoleProvider.WriteLine("Type 'quit' or 'exit' to exit the session.");
 
-                    // Add all the services needed by commands and other services
-                    AddServices(target);
-
-                    // Automatically enable symbol server support
-                    SymbolReader.InitializeSymbolStore(
-                        logging: false, 
-                        msdl: true,
-                        symweb: false,
-                        tempDirectory: null,
-                        symbolServerPath: null,
-                        authToken: null,
-                        timeoutInMinutes: 0,
-                        symbolCachePath: null,
-                        symbolDirectoryPath: null,
-                        windowsSymbolPath: null);
-
-                    target.BinaryLocator = new BinaryLocator();
-
-                    // Run the commands from the dotnet-dump command line
-                    if (command != null)
-                    {
-                        foreach (string cmd in command)
-                        {
-                            await _commandProcessor.Parse(cmd);
-
-                            if (_consoleProvider.Shutdown)
-                                break;
-                        }
-                    }
-
-                    // Start interactive command line processing
-                    var analyzeContext = _serviceProvider.GetService<AnalyzeContext>();
-                    await _consoleProvider.Start(async (string commandLine, CancellationToken cancellation) => {
-                        analyzeContext.CancellationToken = cancellation;
-                        await _commandProcessor.Parse(commandLine);
+                    _consoleProvider.Start((string commandLine, CancellationToken cancellation) => {
+                        Parse(commandLine);
                     });
                 }
             }
-            catch (Exception ex) when 
+            catch (Exception ex) when
                 (ex is ClrDiagnosticsException ||
-                 ex is FileNotFoundException || 
-                 ex is DirectoryNotFoundException || 
-                 ex is UnauthorizedAccessException || 
-                 ex is PlatformNotSupportedException || 
+                 ex is FileNotFoundException ||
+                 ex is DirectoryNotFoundException ||
+                 ex is UnauthorizedAccessException ||
+                 ex is PlatformNotSupportedException ||
                  ex is InvalidDataException ||
                  ex is InvalidOperationException ||
                  ex is NotSupportedException)
             {
                 _consoleProvider.WriteLine(OutputType.Error, $"{ex.Message}");
-                return 1;
+                return Task.FromResult(1);
             }
-
-            return 0;
-        }
-
-        /// <summary>
-        /// Add all the services needed by commands
-        /// </summary>
-        private void AddServices(DataTarget target)
-        {
-            _serviceProvider.AddService(target);
-            _serviceProvider.AddService(target.DataReader);
-            _serviceProvider.AddService<IConsoleService>(_consoleProvider);
-            _serviceProvider.AddService(_commandProcessor);
-            _serviceProvider.AddServiceFactory(typeof(IHelpBuilder), _commandProcessor.CreateHelpBuilder);
-
-            if (!(target.DataReader is IThreadReader threadReader))
+            finally
             {
-                throw new InvalidOperationException("IThreadReader not implemented");
-            }
-
-            // Create common analyze context for commands
-            var analyzeContext = new AnalyzeContext() {
-                CurrentThreadId = threadReader.EnumerateOSThreadIds().FirstOrDefault()
-            };
-            _serviceProvider.AddService(analyzeContext);
-
-            // Add the thread, memory, SOSHost and ClrRuntime services
-            var threadService = new ThreadService(target.DataReader);
-            _serviceProvider.AddService<IThreadService>(threadService);
-
-            var memoryService = new MemoryService(target.DataReader);
-            _serviceProvider.AddService(memoryService);
-
-            _serviceProvider.AddServiceFactory(typeof(ClrRuntime), () => CreateRuntime(target));
-
-            _serviceProvider.AddServiceFactory(typeof(SOSHost), () => {
-                var sosHost = new SOSHost(_serviceProvider);
-                sosHost.InitializeSOSHost(SymbolReader.TempDirectory, _isDesktop, _dacFilePath, dbiFilePath: null);
-                return sosHost;
-            });
-
-            // ClrMD helper for extended commands
-            _serviceProvider.AddServiceFactory(typeof(ClrMDHelper), () =>
-                new ClrMDHelper(_serviceProvider)
-            );
-        }
-
-        /// <summary>
-        /// ClrRuntime service factory
-        /// </summary>
-        private ClrRuntime CreateRuntime(DataTarget target)
-        {
-            ClrInfo clrInfo = null;
-
-            // First check if there is a .NET Core runtime loaded
-            foreach (ClrInfo clr in target.ClrVersions)
-            {
-                if (clr.Flavor == ClrFlavor.Core)
+                if (_target != null)
                 {
-                    clrInfo = clr;
-                    break;
+                    _target.Close();
+                    _target = null;
                 }
-            }
-            // If no .NET Core runtime, then check for desktop runtime
-            if (clrInfo == null)
-            {
-                foreach (ClrInfo clr in target.ClrVersions)
+                // Persist the current command history
+                try
                 {
-                    if (clr.Flavor == ClrFlavor.Desktop)
-                    {
-                        clrInfo = clr;
-                        break;
+                    File.WriteAllLines(historyFileName, _consoleProvider.GetCommandHistory());
+                }
+                catch (Exception ex) when 
+                    (ex is IOException || 
+                     ex is UnauthorizedAccessException || 
+                     ex is NotSupportedException || 
+                     ex is SecurityException)
+                {
+                }
+                // Send shutdown event on exit
+                OnShutdownEvent.Fire();
+            }
+            return Task.FromResult(0);
+        }
+
+        private void Parse(string commandLine)
+        {
+            // If there is no target, then provide just the global services
+            ServiceProvider services = _serviceProvider;
+            if (_target != null)
+            {
+                // Create a per command invocation service provider. These services may change between each command invocation.
+                services = new ServiceProvider(_target.Services);
+
+                // Add the current thread if any
+                services.AddServiceFactory<IThread>(() => {
+                    IThreadService threadService = _target.Services.GetService<IThreadService>();
+                    if (threadService != null && threadService.CurrentThreadId.HasValue) {
+                        return threadService.GetThreadFromId(threadService.CurrentThreadId.Value);
                     }
-                }
-            }
-            if (clrInfo == null) {
-                throw new InvalidOperationException("No CLR runtime is present");
-            }
-            ClrRuntime runtime;
-            string dacFilePath = GetDacFile(clrInfo);
-            try
-            {
-                // Ignore the DAC version mismatch that can happen on Linux because the clrmd ELF dump 
-                // reader returns 0.0.0.0 for the runtime module that the DAC is matched against. This
-                // will be fixed in clrmd 2.0 but not 1.1.
-                runtime = clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: clrInfo.ModuleInfo.BuildId != null);
-            }
-            catch (DllNotFoundException ex)
-            {
-                // This is a workaround for the Microsoft SDK docker images. Can fail when clrmd uses libdl.so 
-                // to create a symlink to and load the DAC module.
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    return null;
+                });
+
+                // Add the current runtime and related services
+                var runtimeService = _target.Services.GetService<IRuntimeService>();
+                if (runtimeService != null)
                 {
-                    throw new DllNotFoundException("Problem initializing CLRMD. Try installing libc6-dev (apt-get install libc6-dev) to work around this problem.", ex);
-                }
-                else
-                {
-                    throw;
+                    services.AddServiceFactory<IRuntime>(() => runtimeService.CurrentRuntime);
+                    services.AddServiceFactory<ClrRuntime>(() => services.GetService<IRuntime>()?.Services.GetService<ClrRuntime>());
+                    services.AddServiceFactory<ClrMDHelper>(() => new ClrMDHelper(services.GetService<ClrRuntime>()));
                 }
             }
-            return runtime;
+            _commandProcessor.Execute(commandLine, services);
         }
 
-        private string GetDacFile(ClrInfo clrInfo)
-        {
-            if (_dacFilePath == null)
-            {
-                string dacFileName = GetDacFileName(clrInfo, out OSPlatform platform);
-                _dacFilePath = GetLocalDacPath(clrInfo, dacFileName);
-                if (_dacFilePath == null)
-                {
-                    if (SymbolReader.IsSymbolStoreEnabled())
-                    {
-                        SymbolStoreKey key = null;
+        #region IHost
 
-                        if (platform == OSPlatform.OSX)
-                        {
-                            unsafe
-                            {
-                                var memoryService = _serviceProvider.GetService<MemoryService>();
-                                SymbolReader.ReadMemoryDelegate readMemory = (ulong address, byte* buffer, int count) => {
-                                    return memoryService.ReadMemory(address, new Span<byte>(buffer, count), out int bytesRead) ? bytesRead : 0;
-                                };
-                                KeyGenerator generator = SymbolReader.GetKeyGenerator(
-                                    SymbolReader.RuntimeConfiguration.OSXCore, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.ImageBase, clrInfo.ModuleInfo.IndexFileSize, readMemory);
+        public IServiceEvent OnShutdownEvent { get; } = new ServiceEvent();
 
-                                key = generator.GetKeys(KeyTypeFlags.DacDbiKeys).SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
-                            }
-                        }
-                        else if (platform == OSPlatform.Linux)
-                        {
-                            if (clrInfo.ModuleInfo.BuildId != null)
-                            {
-                                IEnumerable<SymbolStoreKey> keys = ELFFileKeyGenerator.GetKeys(
-                                    KeyTypeFlags.DacDbiKeys, clrInfo.ModuleInfo.FileName, clrInfo.ModuleInfo.BuildId.ToArray(), symbolFile: false, symbolFileName: null);
+        HostType IHost.HostType => HostType.DotnetDump;
 
-                                key = keys.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == dacFileName);
-                            }
-                        }
-                        else if (platform == OSPlatform.Windows)
-                        {
-                            // Use the coreclr.dll's id (timestamp/filesize) to download the the dac module.
-                            key = PEFileKeyGenerator.GetKey(dacFileName, (uint)clrInfo.ModuleInfo.IndexTimeStamp, (uint)clrInfo.ModuleInfo.IndexFileSize);
-                        }
+        IServiceProvider IHost.Services => _serviceProvider;
 
-                        if (key != null)
-                        {
-                            // Now download the DAC module from the symbol server
-                            _dacFilePath = SymbolReader.GetSymbolFile(key);
-                        }
-                    }
+        IEnumerable<ITarget> IHost.EnumerateTargets() => _target != null ? new ITarget[] { _target } : Array.Empty<ITarget>();
 
-                    if (_dacFilePath == null)
-                    {
-                        throw new FileNotFoundException($"Could not find matching DAC for this runtime: {clrInfo.ModuleInfo.FileName}");
-                    }
-                }
-                _isDesktop = clrInfo.Flavor == ClrFlavor.Desktop;
-            }
-            return _dacFilePath;
-        }
+        ITarget IHost.CurrentTarget => _target;
 
-        private static string GetDacFileName(ClrInfo clrInfo, out OSPlatform platform)
-        {
-            Debug.Assert(!string.IsNullOrEmpty(clrInfo.ModuleInfo.FileName));
-            Debug.Assert(!string.IsNullOrEmpty(clrInfo.DacInfo.PlatformSpecificFileName));
+        void IHost.SetCurrentTarget(int targetid) => throw new NotImplementedException();
 
-            platform = OSPlatform.Windows;
-
-            switch (Path.GetFileName(clrInfo.ModuleInfo.FileName))
-            {
-                case "libcoreclr.dylib":
-                    platform = OSPlatform.OSX;
-                    return "libmscordaccore.dylib";
-
-                case "libcoreclr.so":
-                    platform = OSPlatform.Linux;
-
-                    // If this is the Linux runtime module name, but we are running on Windows return the cross-OS DAC name.
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    {
-                        return "mscordaccore.dll";
-                    }
-                    break;
-            }
-            return clrInfo.DacInfo.PlatformSpecificFileName;
-        }
-
-        private string GetLocalDacPath(ClrInfo clrInfo, string dacFileName)
-        {
-            string dacFilePath;
-            var analyzeContext = _serviceProvider.GetService<AnalyzeContext>();
-            if (!string.IsNullOrEmpty(analyzeContext.RuntimeModuleDirectory))
-            {
-                dacFilePath = Path.Combine(analyzeContext.RuntimeModuleDirectory, dacFileName);
-            }
-            else
-            {
-                dacFilePath = Path.Combine(Path.GetDirectoryName(clrInfo.ModuleInfo.FileName), dacFileName);
-            }
-            if (!File.Exists(dacFilePath))
-            {
-                dacFilePath = null;
-            }
-            return dacFilePath;
-        }
+        #endregion
     }
 }

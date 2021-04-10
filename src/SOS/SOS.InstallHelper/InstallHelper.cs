@@ -33,9 +33,14 @@ namespace SOS
         public bool EnableSymbolServer { get; set; } = true;
 
         /// <summary>
-        /// The source path from which SOS is installed. Default is OS/architecture (RID) named directory in the same directory as this assembly.
+        /// The native binaries source path from which SOS is installed. Default is OS/architecture (RID) named directory in the same directory as this assembly.
         /// </summary>
-        public string SOSSourcePath { get; set; }
+        public string SOSNativeSourcePath { get; set; }
+
+        /// <summary>
+        /// The managed binaries source path from which SOS is installed. Default is "lib" under that same directory as this assembly.
+        /// </summary>
+        public string SOSManagedSourcePath { get; set; }
 
         /// <summary>
         /// Console output delegate
@@ -70,7 +75,8 @@ namespace SOS
                 LLDBInitFile = Path.Combine(home, ".lldbinit");
             }
             InstallLocation = Path.GetFullPath(Path.Combine(home, ".dotnet", "sos"));
-            SOSSourcePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
+            SOSNativeSourcePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
+            SOSManagedSourcePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "lib");
         }
 
         /// <summary>
@@ -79,13 +85,16 @@ namespace SOS
         /// <exception cref="SOSInstallerException">various</exception>
         public void Install()
         {
-            WriteLine("Installing SOS to {0} from {1}", InstallLocation, SOSSourcePath);
+            WriteLine("Installing SOS to {0}", InstallLocation);
 
-            if (string.IsNullOrEmpty(SOSSourcePath)) {
+            if (string.IsNullOrEmpty(SOSNativeSourcePath) || string.IsNullOrEmpty(SOSManagedSourcePath)) {
                 throw new SOSInstallerException("SOS source path not valid");
             }
-            if (!Directory.Exists(SOSSourcePath)) {
-                throw new SOSInstallerException($"Operating system or architecture not supported: installing from {SOSSourcePath}");
+            if (!Directory.Exists(SOSNativeSourcePath)) {
+                throw new SOSInstallerException($"Operating system or architecture not supported: installing from {SOSNativeSourcePath}");
+            }
+            if (!Directory.Exists(SOSManagedSourcePath)) {
+                throw new SOSInstallerException($"Invalid SOS source directory {SOSManagedSourcePath}");
             }
             if (string.IsNullOrEmpty(InstallLocation)) {
                 throw new SOSInstallerException($"Installation path {InstallLocation} not valid");
@@ -107,11 +116,22 @@ namespace SOS
                 WriteLine("Creating installation directory...");
                 RetryOperation($"Installation path '{InstallLocation}' not valid", () => Directory.CreateDirectory(InstallLocation));
 
-                // Copy SOS files
-                WriteLine("Copying files...");
-                RetryOperation("Problem installing SOS", () =>
+                // Copy native SOS files
+                WriteLine($"Copying files from {SOSNativeSourcePath}");
+                RetryOperation("Problem installing native SOS binaries", () =>
                 {
-                    foreach (string file in Directory.EnumerateFiles(SOSSourcePath))
+                    foreach (string file in Directory.EnumerateFiles(SOSNativeSourcePath))
+                    {
+                        string destinationFile = Path.Combine(InstallLocation, Path.GetFileName(file));
+                        File.Copy(file, destinationFile, overwrite: true);
+                    }
+                });
+
+                // Copy managed SOS files
+                WriteLine($"Copying files from {SOSManagedSourcePath}");
+                RetryOperation("Problem installing managed SOS binaries", () =>
+                {
+                    foreach (string file in Directory.EnumerateFiles(SOSManagedSourcePath))
                     {
                         string destinationFile = Path.Combine(InstallLocation, Path.GetFileName(file));
                         File.Copy(file, destinationFile, overwrite: true);

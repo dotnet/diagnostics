@@ -15,10 +15,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal enum DiagnosticsIpcError : uint
     {
-        BadEncoding     = 0x80131384,
-        UnknownCommand  = 0x80131385,
-        UnknownMagic    = 0x80131386,
-        UnknownError    = 0x80131387
+        ProfilerAlreadyActive = 0x8013136A,
+        BadEncoding           = 0x80131384,
+        UnknownCommand        = 0x80131385,
+        UnknownMagic          = 0x80131386,
+        UnknownError          = 0x80131387
     }
 
     /// <summary>

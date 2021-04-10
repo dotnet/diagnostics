@@ -25,8 +25,6 @@
 #include <mscoree.h>
 #include <tchar.h>
 #include "debugshim.h"
-#include "datatarget.h"
-#include "runtime.h"
 #include "gcinfo.h"
 
 #ifndef STRESS_LOG
@@ -40,7 +38,7 @@
 #include <dlfcn.h>
 #endif // !FEATURE_PAL
 
-#include <coreclrhost.h>
+#include "coreclrhost.h"
 #include <set>
 #include <string>
 
@@ -161,11 +159,6 @@ DWORD_PTR GetValueFromExpression(___in __in_z const char *const instr)
 void ReportOOM()
 {
     ExtOut("SOS Error: Out of memory\n");
-}
-
-HRESULT CheckEEDll()
-{
-    return Runtime::CreateInstance();
 }
 
 BOOL IsDumpFile()
@@ -1582,38 +1575,44 @@ HRESULT FileNameForModule (DWORD_PTR pModuleAddr, __out_ecount (MAX_LONGPATH) WC
 *                                                                      *
 \**********************************************************************/
 // fileName should be at least MAX_LONGPATH
-HRESULT FileNameForModule (const DacpModuleData * const pModule, __out_ecount (MAX_LONGPATH) WCHAR *fileName)
+HRESULT FileNameForModule(const DacpModuleData* const pModuleData, __out_ecount(MAX_LONGPATH) WCHAR* fileName)
 {
-    fileName[0] = L'\0';
-    
+    fileName[0] = W('\0');
+
     HRESULT hr = S_OK;
-    CLRDATA_ADDRESS dwAddr = pModule->File;
+    CLRDATA_ADDRESS dwAddr = pModuleData->File;
     if (dwAddr == 0)
     {
         // TODO:  We have dynamic module
         return E_NOTIMPL;
     }
-    
+
     CLRDATA_ADDRESS base = 0;
     hr = g_sos->GetPEFileBase(dwAddr, &base);
     if (SUCCEEDED(hr))
     {
         hr = g_sos->GetPEFileName(dwAddr, MAX_LONGPATH, fileName, NULL);
-        if (SUCCEEDED(hr))
-        {
-            if (fileName[0] != W('\0'))
-                return hr; // done
-        }
+        if (SUCCEEDED(hr) && fileName[0] != W('\0'))
+            return hr; // done
+
 #ifndef FEATURE_PAL
         // Try the base *
         if (base)
         {
-            hr = DllsName((ULONG_PTR) base, fileName);
+            hr = DllsName((ULONG_PTR)base, fileName);
+            if (SUCCEEDED(hr) && fileName[0] != W('\0'))
+                return hr; // done
         }
 #endif // !FEATURE_PAL
     }
+
+    ToRelease<IXCLRDataModule> pModule;
+    if (SUCCEEDED(g_sos->GetModule(pModuleData->Address, &pModule)))
+    {
+        ULONG32 nameLen = 0;
+        hr = pModule->GetFileName(MAX_LONGPATH, &nameLen, fileName);
+    }
     
-    // If we got here, either DllsName worked, or we couldn't find a name
     return hr;
 }
 
@@ -3416,44 +3415,13 @@ size_t FunctionType (size_t EIP)
 }
 
 //
-// Gets version info for the CLR in the debuggee process.
-//
-BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes)
-{
-    _ASSERTE(pFileInfo != nullptr);
-    _ASSERTE(g_ExtSymbols2 != nullptr);
-    _ASSERTE(g_pRuntime != nullptr);
-
-#ifdef FEATURE_PAL
-    // Load the symbols for runtime. On Linux we are looking for the "sccsid" 
-    // global so "libcoreclr.so/.dylib" symbols need to be loaded.
-    LoadNativeSymbols(true);
-#endif
-
-    HRESULT hr = g_ExtSymbols2->GetModuleVersionInformation(g_pRuntime->GetModuleIndex(), 0, "\\", pFileInfo, sizeof(VS_FIXEDFILEINFO), NULL);
-
-    // Attempt to get the the FileVersion string that contains version and the "built by" and commit id info
-    if (fileVersionBuffer != nullptr)
-    {
-        if (fileVersionBufferSizeInBytes > 0) {
-            fileVersionBuffer[0] = '\0';
-        }
-        // We can assume the English/CP_UNICODE lang/code page for the runtime modules
-        g_ExtSymbols2->GetModuleVersionInformation(
-            g_pRuntime->GetModuleIndex(), 0, "\\StringFileInfo\\040904B0\\FileVersion", fileVersionBuffer, fileVersionBufferSizeInBytes, NULL);
-    }
-
-    return SUCCEEDED(hr);
-}
-
-//
 // Return true if major runtime version (logical product version like 2.1, 
 // 3.0 or 5.x). Currently only major versions of 3 or 5 are supported.
 //
 bool IsRuntimeVersion(DWORD major)
 {
     VS_FIXEDFILEINFO fileInfo;
-    if (GetEEVersion(&fileInfo, nullptr, 0))
+    if (SUCCEEDED(g_pRuntime->GetEEVersion(&fileInfo, nullptr, 0)))
     {
         return IsRuntimeVersion(fileInfo, major);
     }
@@ -3478,7 +3446,7 @@ bool IsRuntimeVersion(VS_FIXEDFILEINFO& fileInfo, DWORD major)
 bool IsRuntimeVersionAtLeast(DWORD major)
 {
     VS_FIXEDFILEINFO fileInfo;
-    if (GetEEVersion(&fileInfo, nullptr, 0))
+    if (SUCCEEDED(g_pRuntime->GetEEVersion(&fileInfo, nullptr, 0)))
     {
         return IsRuntimeVersionAtLeast(fileInfo, major);
     }
@@ -3568,6 +3536,9 @@ BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo)
                 UINT uLen = 0;
                 if (VerQueryValue(pVersionInfo, "\\", (LPVOID *) &pTmpFileInfo, &uLen))
                 {
+                    if (pFileInfo->dwFileVersionMS == (DWORD)-1) {
+                        return FALSE;
+                    }
                     *pFileInfo = *pTmpFileInfo; // Copy the info
                     return TRUE;
                 }
@@ -4720,12 +4691,25 @@ void ExtErr(PCSTR Format, ...)
     va_end(Args);
 }
 
+/// <summary>
+/// Internal trace output for extensions library
+/// </summary>
+void TraceError(PCSTR format, ...)
+{
+    if (Output::g_bDbgOutput)
+    {
+        va_list args;
+        va_start(args, format);
+        OutputVaList(DEBUG_OUTPUT_ERROR, format, args);
+        va_end(args);
+    }
+}
+
 void ExtDbgOut(PCSTR Format, ...)
 {
     if (Output::g_bDbgOutput)
     {
         va_list Args;
-
         va_start(Args, Format);
         ExtOutIndent();
         OutputVaList(DEBUG_OUTPUT_NORMAL, Format, Args);
@@ -5043,6 +5027,7 @@ ConvertNativeToIlOffset(
 
     if ((Status = GetClrMethodInstance(nativeOffset, &pMethodInst)) != S_OK)
     {
+        ExtDbgOut("ConvertNativeToIlOffset(%p): GetClrMethodInstance FAILED %08x\n", nativeOffset, Status);
         return Status;
     }
 
@@ -5060,6 +5045,7 @@ ConvertNativeToIlOffset(
 
     if ((Status = pMethodInst->GetILOffsetsByAddress(nativeOffset, 1, NULL, methodOffs)) != S_OK)
     {
+        ExtDbgOut("ConvertNativeToIlOffset(%p): GetILOffsetsByAddress FAILED %08x\n", nativeOffset, Status);
         *methodOffs = 0;
     }
     else
@@ -5108,8 +5094,11 @@ GetLineByOffset(
     IfFailRet(ConvertNativeToIlOffset(nativeOffset, bAdjustOffsetForLineNumber, &pModule, &methodToken, &methodOffs));
 
     ToRelease<IMetaDataImport> pMDImport(NULL);
-    pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport);
-
+    Status = pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport);
+    if (FAILED(Status))
+    {
+        ExtDbgOut("GetLineByOffset(%p): QueryInterface(IID_IMetaDataImport) FAILED %08x\n", nativeOffset, Status);
+    }
     SymbolReader symbolReader;
     IfFailRet(symbolReader.LoadSymbols(pMDImport, pModule));
 
@@ -5806,6 +5795,7 @@ void FlushMetadataRegions()
     {
         const_cast<MemoryRegion&>(region).Dispose();
     }
+    g_metadataRegions.clear();
     g_metadataRegionsPopulated = false;
 }
 

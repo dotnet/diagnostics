@@ -5,16 +5,13 @@
 using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Collections.Generic;
-using System.CommandLine;
-using System.CommandLine.IO;
-using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Repl
 {
-    public sealed class ConsoleProvider : IConsole, IConsoleService
+    public sealed class ConsoleProvider : IConsoleService
     {
         private readonly List<StringBuilder> m_history;
 
@@ -65,9 +62,6 @@ namespace Microsoft.Diagnostics.Repl
                 NewOutput(text, errorColor);
             });
 
-            Out = new StandardStreamWriter((text) => WriteOutput(OutputType.Normal, text));
-            Error = new StandardStreamWriter((text) => WriteOutput(OutputType.Error, text));
-
             // Hook ctrl-C and ctrl-break
             Console.CancelKeyPress += new ConsoleCancelEventHandler(OnCtrlBreakKeyPress);
         }
@@ -76,7 +70,7 @@ namespace Microsoft.Diagnostics.Repl
         /// Start input processing and command dispatching
         /// </summary>
         /// <param name="dispatchCommand">Called to dispatch a command on ENTER</param>
-        public async Task Start(Func<string, CancellationToken, Task> dispatchCommand)
+        public void Start(Action<string, CancellationToken> dispatchCommand)
         {
             m_lastCommandLine = null;
             m_interactiveConsole = !Console.IsInputRedirected;
@@ -93,7 +87,7 @@ namespace Microsoft.Diagnostics.Repl
                 if (m_interactiveConsole)
                 {
                     ConsoleKeyInfo keyInfo = Console.ReadKey(true);
-                    await ProcessKeyInfo(keyInfo, dispatchCommand);
+                    ProcessKeyInfo(keyInfo, dispatchCommand);
                 }
                 else
                 {
@@ -102,7 +96,7 @@ namespace Microsoft.Diagnostics.Repl
                     if (string.IsNullOrEmpty(line)) {
                         continue;
                     }
-                    bool result = await Dispatch(line, dispatchCommand);
+                    bool result = Dispatch(line, dispatchCommand);
                     if (!m_shutdown)
                     {
                         if (result) {
@@ -125,7 +119,30 @@ namespace Microsoft.Diagnostics.Repl
         {
             ClearLine();
             m_shutdown = true;
+            // Delete the last command (usually q or exit) that caused Stop() to be
+            // called so the history doesn't fill up with exit commands.
+            if (m_selectedHistory > 0) {
+                m_history.RemoveAt(--m_selectedHistory);
+            }
             Console.CancelKeyPress -= new ConsoleCancelEventHandler(OnCtrlBreakKeyPress);
+        }
+
+        /// <summary>
+        /// Returns the current command history for serialization.
+        /// </summary>
+        public IEnumerable<string> GetCommandHistory()
+        {
+            return m_history.Select((sb) => sb.ToString());
+        }
+
+        /// <summary>
+        /// Adds the command history.
+        /// </summary>
+        /// <param name="commandHistory">command history strings to add</param>
+        public void AddCommandHistory(IEnumerable<string> commandHistory)
+        {
+            m_history.AddRange(commandHistory.Select((s) => new StringBuilder(s)));
+            m_selectedHistory = m_history.Count;
         }
 
         /// <summary>
@@ -310,7 +327,7 @@ namespace Microsoft.Diagnostics.Repl
             m_refreshingLine = false;
         }
 
-        private async Task ProcessKeyInfo(ConsoleKeyInfo keyInfo, Func<string, CancellationToken, Task> dispatchCommand)
+        private void ProcessKeyInfo(ConsoleKeyInfo keyInfo, Action<string, CancellationToken> dispatchCommand)
         {
             int activeLineLen = m_activeLine.Length;
 
@@ -345,7 +362,7 @@ namespace Microsoft.Diagnostics.Repl
                     }
                     m_selectedHistory = m_history.Count;
 
-                    await Dispatch(newCommand, dispatchCommand);
+                    Dispatch(newCommand, dispatchCommand);
 
                     SwitchToHistoryEntry();
                     break;
@@ -427,11 +444,12 @@ namespace Microsoft.Diagnostics.Repl
             }
         }
 
-        private async Task<bool> Dispatch(string newCommand, Func<string, CancellationToken, Task> dispatchCommand)
+        private bool Dispatch(string newCommand, Action<string, CancellationToken> dispatchCommand)
         {
             bool result = true;
             CommandStarting();
             m_interruptExecutingCommand = new CancellationTokenSource();
+            ((IConsoleService)this).CancellationToken = m_interruptExecutingCommand.Token;
             try
             {
                 newCommand = newCommand.Trim();
@@ -441,7 +459,7 @@ namespace Microsoft.Diagnostics.Repl
                 try
                 {
                     WriteLine(OutputType.Normal, "{0}{1}", m_prompt, newCommand);
-                    await dispatchCommand(newCommand, m_interruptExecutingCommand.Token);
+                    dispatchCommand(newCommand, m_interruptExecutingCommand.Token);
                     m_lastCommandLine = newCommand;
                 }
                 catch (OperationCanceledException)
@@ -513,36 +531,15 @@ namespace Microsoft.Diagnostics.Repl
             }
         }
 
-        #region IConsole
-
-        public IStandardStreamWriter Out { get; }
-
-        bool IStandardOut.IsOutputRedirected { get { return false; } }
-
-        public IStandardStreamWriter Error { get; }
-
-        bool IStandardError.IsErrorRedirected { get { return false; } }
-
-        bool IStandardIn.IsInputRedirected { get { return false; } }
-
-        class StandardStreamWriter : IStandardStreamWriter
-        {
-            readonly Action<string> _write;
-
-            public StandardStreamWriter(Action<string> write) => _write = write;
-
-            void IStandardStreamWriter.Write(string value) => _write(value);
-        }
-
-        #endregion
-
         #region IConsoleService
 
         void IConsoleService.Write(string text) => WriteOutput(OutputType.Normal, text);
 
+        void IConsoleService.WriteWarning(string text) => WriteOutput(OutputType.Warning, text);
+
         void IConsoleService.WriteError(string text) => WriteOutput(OutputType.Error, text);
 
-        void IConsoleService.Exit() => Stop();
+        CancellationToken IConsoleService.CancellationToken { get; set; }
 
         #endregion
     }

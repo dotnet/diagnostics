@@ -223,7 +223,7 @@ extern BOOL g_Dbg_asserts_enabled;
   output, because those functions do tracing and we need to avoid recursion */
 extern FILE *output_file;
 
-/* master switch for debug channel enablement, to be modified by debugger */
+/* main switch for debug channel enablement, to be modified by debugger */
 extern Volatile<BOOL> dbg_master_switch ;
 
 
@@ -530,5 +530,3 @@ void PAL_DisplayDialogFormatted(const char *szTitle, const char *szTextFormat, .
 #endif // __cplusplus
 
 #endif /* _PAL_DBGMSG_H_ */
-
-

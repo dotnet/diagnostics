@@ -34,3 +34,4 @@ target_link_libraries(DesktopClrHost ${DESKTOPCLRHOST_LIBRARY})
 
 install(TARGETS DesktopClrHost DESTINATION ${CLR_MANAGED_BINARY_DIR}/WebApp3/${CLR_BUILD_TYPE}/netcoreapp3.1)
 install(TARGETS DesktopClrHost DESTINATION ${CLR_MANAGED_BINARY_DIR}/WebApp3/${CLR_BUILD_TYPE}/net5.0)
+install(TARGETS DesktopClrHost DESTINATION ${CLR_MANAGED_BINARY_DIR}/WebApp3/${CLR_BUILD_TYPE}/net6.0)

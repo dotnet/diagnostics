@@ -4,7 +4,7 @@
     <TargetFramework Condition="'$(BundleTools)' != 'true'">netcoreapp2.1</TargetFramework>
     <RootNamespace>Microsoft.Diagnostics.Tools.GCDump</RootNamespace>
     <ToolCommandName>dotnet-gcdump</ToolCommandName>
-    <Description>.NET Core Performance Trace Tool</Description>
+    <Description>.NET Managed Heap Dump and Analysis Tool</Description>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>

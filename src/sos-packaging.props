@@ -1,62 +1,51 @@
 <!-- 
     Input:
-        SOSPackagePathPrefix - the nupkg package path prefix. The SOS binaries are added to package relative to this.
+        SOSPackagePathPrefix - the nupkg package path prefix. The SOS native binaries are added to package relative to this.
 -->
 <Project>
   <PropertyGroup>
-    <SOSNETCoreBinaries>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netstandard2.0\publish\*.dll</SOSNETCoreBinaries>
+    <SOSExtensionsBinaries>$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\netstandard2.0\publish\*.dll</SOSExtensionsBinaries>
   </PropertyGroup>
 
   <ItemGroup>
-    <SosRequiredBinaries Include="$(SOSNETCoreBinaries)" TargetRid="win-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\sos.dll" TargetRid="win-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\Microsoft.DiaSymReader.Native.amd64.dll" TargetRid="win-x64" />
       
-    <SosRequiredBinaries Include="$(SOSNETCoreBinaries)" TargetRid="win-x86" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\sos.dll" TargetRid="win-x86" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\Microsoft.DiaSymReader.Native.x86.dll" TargetRid="win-x86" />
       
-    <SosRequiredBinaries Include="$(SOSNETCoreBinaries)" TargetRid="win-arm" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm.$(Configuration)\sos.dll" TargetRid="win-arm" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm.$(Configuration)\Microsoft.DiaSymReader.Native.arm.dll" TargetRid="win-arm" />
     
-    <SosRequiredBinaries Include="$(SOSNETCoreBinaries)" TargetRid="win-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\sos.dll" TargetRid="win-arm64" />
     <!-- Commented out until issue https://github.com/dotnet/diagnostics/issues/324 is addressed
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\Microsoft.DiaSymReader.Native.arm64.dll" TargetRid="win-arm64" />
     -->
 
-    <SosRequiredBinaries Include="$(SOSNETCoreBinaries)" TargetRid="linux-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsosplugin.so" TargetRid="linux-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsos.so" TargetRid="linux-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-x64" />
 
-    <SosRequiredBinaries Include="$(SOSNETCoreBinaries)" TargetRid="linux-musl-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux-musl.x64.$(Configuration)\libsosplugin.so" TargetRid="linux-musl-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux-musl.x64.$(Configuration)\libsos.so" TargetRid="linux-musl-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux-musl.x64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-x64" />
 
-    <SosRequiredBinaries Include="$(SOSNETCoreBinaries)" TargetRid="linux-arm" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux.arm.$(Configuration)\libsosplugin.so" TargetRid="linux-arm" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux.arm.$(Configuration)\libsos.so" TargetRid="linux-arm" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux.arm.$(Configuration)\sosdocsunix.txt" TargetRid="linux-arm" />
 
-    <SosRequiredBinaries Include="$(SOSNETCoreBinaries)" TargetRid="linux-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux.arm64.$(Configuration)\libsosplugin.so" TargetRid="linux-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux.arm64.$(Configuration)\libsos.so" TargetRid="linux-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-arm64" />
     
-    <SosRequiredBinaries Include="$(SOSNETCoreBinaries)" TargetRid="linux-musl-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux-musl.arm64.$(Configuration)\libsosplugin.so" TargetRid="linux-musl-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux-musl.arm64.$(Configuration)\libsos.so" TargetRid="linux-musl-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux-musl.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-arm64" />
 
-    <SosRequiredBinaries Include="$(SOSNETCoreBinaries)" TargetRid="osx-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib" TargetRid="osx-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsos.dylib" TargetRid="osx-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\sosdocsunix.txt" TargetRid="osx-x64" />
 
-    <SosRequiredBinaries Include="$(SOSNETCoreBinaries)" TargetRid="osx-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\OSX.arm64.$(Configuration)\libsosplugin.dylib" TargetRid="osx-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\OSX.arm64.$(Configuration)\libsos.dylib" TargetRid="osx-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\OSX.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="osx-arm64" />

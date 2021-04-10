@@ -262,6 +262,15 @@ namespace sos
 #endif
         }
 
+        // GC uses the low bits of the method table ptr in objects to store information
+        // it uses one more bit in the 64-bit implementations for the doubly linked free lists
+        static const size_t METHODTABLE_PTR_LOW_BITMASK =
+#ifdef _TARGET_WIN64_
+            7;
+#else
+            3;
+#endif
+
     public:
         /* Constructor.  Use Object(TADDR, TADDR) instead if you know the method table.
          * Parameters:
@@ -632,6 +641,7 @@ namespace sos
         const GCHeapDetails *mHeaps;
         int mNumHeaps;
         int mCurrHeap;
+        unsigned mCurrRegionGen;
     };
 
     /* Reprensents an entry in the sync block table.

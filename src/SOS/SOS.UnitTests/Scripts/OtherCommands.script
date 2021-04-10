@@ -58,20 +58,18 @@ ENDIF:LIVE
 CONTINUE
 
 SOSCOMMAND:SetSymbolServer -ms
-!IFDEF:DOTNETDUMP
-SOSCOMMAND:SetHostRuntime
-ENDIF:DOTNETDUMP
 
-IFDEF:DOTNETDUMP
-COMMAND:clrmodules
+EXTCOMMAND:clrmodules
 VERIFY:\s*<HEXVAL>.*
-COMMAND:modules
+
+EXTCOMMAND:modules -v
 VERIFY:\s*<HEXVAL>\s+<HEXVAL>.*
-COMMAND:threads
+
+EXTCOMMAND:threads -v
 VERIFY:\s*<DECVAL>\s+0x<HEXVAL>\s+\(<DECVAL>\)\s+
-COMMAND:registers
+
+EXTCOMMAND:registers
 VERIFY:\s*([r|e]ip|pc) = 0x<HEXVAL>\s+
-ENDIF:DOTNETDUMP
 
 # Issue: https://github.com/dotnet/diagnostics/issues/503
 !IFDEF:ALPINE

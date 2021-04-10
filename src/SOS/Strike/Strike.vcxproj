@@ -57,25 +57,25 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\ssd\diagnostics\artifacts\obj\Windows_NT.x64.Debug\src\SOS\Strike\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ArtifactsObjDir)Windows_NT.x64.Debug\src\SOS\Strike\Debug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">sos.dir\Debug\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">sos</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.dll</TargetExt>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</GenerateManifest>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">C:\ssd\diagnostics\artifacts\obj\Windows_NT.x64.Debug\src\SOS\Strike\Checked\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">$(ArtifactsObjDir)Windows_NT.x64.Debug\src\SOS\Strike\Checked\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">sos.dir\Checked\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">sos</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">.dll</TargetExt>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">false</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">false</GenerateManifest>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\ssd\diagnostics\artifacts\obj\Windows_NT.x64.Debug\src\SOS\Strike\Release\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ArtifactsObjDir)Windows_NT.x64.Debug\src\SOS\Strike\Release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">sos.dir\Release\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">sos</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.dll</TargetExt>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</GenerateManifest>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\ssd\diagnostics\artifacts\obj\Windows_NT.x64.Debug\src\SOS\Strike\RelWithDebInfo\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ArtifactsObjDir)Windows_NT.x64.Debug\src\SOS\Strike\RelWithDebInfo\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">sos.dir\RelWithDebInfo\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">sos</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.dll</TargetExt>
@@ -84,7 +84,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)src\SOS\Strike\platform;$(SolutionDir)src\SOS\inc;$(SolutionDir)src\inc;$(SolutionDir)src\pal\prebuilt\inc;$(SolutionDir)src\SOS\extensions;$(SolutionDir)src\SOS\gcdump;$(SolutionDir)src\SOS\debugshim;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /d2Zi+ /Zm200 /ZH:SHA_256 /source-charset:utf-8 /homeparams</AdditionalOptions>
       <AssemblerListingLocation>Debug/</AssemblerListingLocation>
       <BufferSecurityCheck>true</BufferSecurityCheck>
@@ -141,10 +141,10 @@
       <DataExecutionPrevention>true</DataExecutionPrevention>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <ImportLibrary>C:/ssd/diagnostics/artifacts/obj/Windows_NT.x64.Debug/src/SOS/Strike/Debug/sos.lib</ImportLibrary>
+      <ImportLibrary>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/Debug/sos.lib</ImportLibrary>
       <LargeAddressAware>true</LargeAddressAware>
-      <ModuleDefinitionFile>C:/ssd/diagnostics/artifacts/obj/Windows_NT.x64.Debug/src/SOS/Strike/sos.def</ModuleDefinitionFile>
-      <ProgramDataBaseFile>C:/ssd/diagnostics/artifacts/obj/Windows_NT.x64.Debug/src/SOS/Strike/Debug/sos.pdb</ProgramDataBaseFile>
+      <ModuleDefinitionFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/sos.def</ModuleDefinitionFile>
+      <ProgramDataBaseFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/Debug/sos.pdb</ProgramDataBaseFile>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <SubSystem>Console</SubSystem>
       <Version>
@@ -214,11 +214,11 @@
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <ImportLibrary>C:/ssd/diagnostics/artifacts/obj/Windows_NT.x64.Debug/src/SOS/Strike/Checked/sos.lib</ImportLibrary>
+      <ImportLibrary>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/Checked/sos.lib</ImportLibrary>
       <LargeAddressAware>true</LargeAddressAware>
-      <ModuleDefinitionFile>C:/ssd/diagnostics/artifacts/obj/Windows_NT.x64.Debug/src/SOS/Strike/sos.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/sos.def</ModuleDefinitionFile>
       <OptimizeReferences>true</OptimizeReferences>
-      <ProgramDataBaseFile>C:/ssd/diagnostics/artifacts/obj/Windows_NT.x64.Debug/src/SOS/Strike/Checked/sos.pdb</ProgramDataBaseFile>
+      <ProgramDataBaseFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/Checked/sos.pdb</ProgramDataBaseFile>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <SubSystem>Console</SubSystem>
       <Version>
@@ -266,7 +266,7 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;NDEBUG;URTBLDENV_FRIENDLY=Retail;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;FEATURE_CORESYSTEM;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR=\"Release\";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\ssd\diagnostics\artifacts\obj\Windows_NT.x64.Debug\src\SOS\Strike;..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ArtifactsObjDir)Windows_NT.x64.Debug\src\SOS\Strike;..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <MASM>
       <PreprocessorDefinitions>NDEBUG;URTBLDENV_FRIENDLY=Retail;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;WIN32;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;FEATURE_CORESYSTEM;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR="Release";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -289,12 +289,12 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>libucrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <ImportLibrary>C:/ssd/diagnostics/artifacts/obj/Windows_NT.x64.Debug/src/SOS/Strike/Release/sos.lib</ImportLibrary>
+      <ImportLibrary>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/Release/sos.lib</ImportLibrary>
       <LargeAddressAware>true</LargeAddressAware>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <ModuleDefinitionFile>C:/ssd/diagnostics/artifacts/obj/Windows_NT.x64.Debug/src/SOS/Strike/sos.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/sos.def</ModuleDefinitionFile>
       <OptimizeReferences>true</OptimizeReferences>
-      <ProgramDataBaseFile>C:/ssd/diagnostics/artifacts/obj/Windows_NT.x64.Debug/src/SOS/Strike/Release/sos.pdb</ProgramDataBaseFile>
+      <ProgramDataBaseFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/Release/sos.pdb</ProgramDataBaseFile>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <SubSystem>Console</SubSystem>
       <Version>
@@ -365,12 +365,12 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>libucrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <ImportLibrary>C:/ssd/diagnostics/artifacts/obj/Windows_NT.x64.Debug/src/SOS/Strike/RelWithDebInfo/sos.lib</ImportLibrary>
+      <ImportLibrary>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/RelWithDebInfo/sos.lib</ImportLibrary>
       <LargeAddressAware>true</LargeAddressAware>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <ModuleDefinitionFile>sos.def</ModuleDefinitionFile>
       <OptimizeReferences>true</OptimizeReferences>
-      <ProgramDataBaseFile>C:/ssd/diagnostics/artifacts/obj/Windows_NT.x64.Debug/src/SOS/Strike/RelWithDebInfo/sos.pdb</ProgramDataBaseFile>
+      <ProgramDataBaseFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/RelWithDebInfo/sos.pdb</ProgramDataBaseFile>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <SubSystem>Console</SubSystem>
       <Version>
@@ -381,51 +381,52 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="dbgengservices.cpp" />
     <ClCompile Include="disasm.cpp" />
-    <ClCompile Include="datatarget.cpp" />
     <ClCompile Include="dllsext.cpp" />
     <ClCompile Include="eeheap.cpp" />
-    <ClCompile Include="EventCallbacks.cpp" />
     <ClCompile Include="ExpressionNode.cpp" />
     <ClCompile Include="exts.cpp" />
     <ClCompile Include="gchist.cpp" />
     <ClCompile Include="gcroot.cpp" />
-    <ClCompile Include="hostdesktop.cpp" />
     <ClCompile Include="metadata.cpp" />
-    <ClCompile Include="runtime.cpp" />
+    <ClCompile Include="platform\datatarget.cpp" />
+    <ClCompile Include="platform\hostimpl.cpp" />
+    <ClCompile Include="platform\runtimeimpl.cpp" />
+    <ClCompile Include="platform\targetimpl.cpp" />
     <ClCompile Include="sildasm.cpp" />
     <ClCompile Include="sos.cpp" />
     <ClCompile Include="stressLogDump.cpp" />
     <ClCompile Include="strike.cpp" />
+    <ClCompile Include="symbols.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="vm.cpp" />
     <ClCompile Include="WatchCmd.cpp" />
-    <ClCompile Include="hostcoreclr.cpp" />
+    <None Include="sos.def" />
     <None Include="sos_unixexports.src" />
     <ResourceCompile Include="Native.rc" />
     <ClCompile Include="disasmX86.cpp" />
     <ClCompile Include="disasmARM64.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cordebugdatatarget.h" />
-    <ClInclude Include="cordebuglibraryprovider.h" />
     <ClInclude Include="data.h" />
-    <ClInclude Include="datatarget.h" />
+    <ClInclude Include="dbgengservices.h" />
     <ClInclude Include="disasm.h" />
-    <ClInclude Include="EventCallbacks.h" />
     <ClInclude Include="ExpressionNode.h" />
     <ClInclude Include="exts.h" />
-    <ClInclude Include="hostcoreclr.h" />
-    <ClInclude Include="inc\dbgeng.h" />
-    <ClInclude Include="inc\dbghelp.h" />
-    <ClInclude Include="inc\wdbgexts.h" />
     <ClInclude Include="ntinfo.h" />
     <ClInclude Include="platformspecific.h" />
-    <ClInclude Include="runtime.h" />
+    <ClInclude Include="platform\cordebugdatatarget.h" />
+    <ClInclude Include="platform\cordebuglibraryprovider.h" />
+    <ClInclude Include="platform\datatarget.h" />
+    <ClInclude Include="platform\hostimpl.h" />
+    <ClInclude Include="platform\runtimeimpl.h" />
+    <ClInclude Include="platform\targetimpl.h" />
     <ClInclude Include="sos.h" />
     <ClInclude Include="sos_md.h" />
     <ClInclude Include="sos_stacktrace.h" />
     <ClInclude Include="strike.h" />
+    <ClInclude Include="symbols.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="UtilCode.h" />
     <ClInclude Include="WatchCmd.h" />

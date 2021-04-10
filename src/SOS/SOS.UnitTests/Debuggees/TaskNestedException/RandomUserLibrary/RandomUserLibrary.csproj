@@ -2,6 +2,6 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework Condition="'$(BuildProjectFramework)' != ''">$(BuildProjectFramework)</TargetFramework>
-    <TargetFrameworks Condition="'$(BuildProjectFramework)' == ''">netcoreapp2.1;netcoreapp3.1;net5.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(BuildProjectFramework)' == ''">$(BuildTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
 </Project>

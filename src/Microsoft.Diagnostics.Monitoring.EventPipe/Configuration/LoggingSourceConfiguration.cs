@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using Microsoft.Diagnostics.NETCore.Client;
@@ -11,17 +12,30 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     public class LoggingSourceConfiguration : MonitoringSourceConfiguration
     {
-        private readonly LogLevel _level;
+        private const string UseAppFilters = "UseAppFilters";
 
-        public LoggingSourceConfiguration(LogLevel level = LogLevel.Debug)
+        private readonly LogLevel _level;
+        private readonly bool _useAppFilters;
+
+        /// <summary>
+        /// Creates a new logging source configuration.
+        /// </summary>
+        /// <param name="level">The logging level. Log messages at or above the log level will be included.</param>
+        /// <param name="useAppFilters">Use the UseAppFilters filterspec. This supersedes the log level and generates
+        /// log messages with the same levels per category as specified by the application configuration.</param>
+        public LoggingSourceConfiguration(LogLevel level = LogLevel.Debug, bool useAppFilters = false)
         {
             _level = level;
+            _useAppFilters = useAppFilters;
         }
 
         public override IList<EventPipeProvider> GetProviders()
         {
+            string filterSpec = _useAppFilters ? UseAppFilters : FormattableString.Invariant($"*:{_level:G}");
+
             var providers = new List<EventPipeProvider>()
             {
+
                 // Logging
                 new EventPipeProvider(
                     MicrosoftExtensionsLoggingProviderName,
@@ -29,8 +43,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     (long)(LoggingEventSource.Keywords.JsonMessage | LoggingEventSource.Keywords.FormattedMessage),
                     arguments: new Dictionary<string,string>
                         {
-                            // Filter all loggers to the specified level
-                            { "FilterSpecs", $"*:{_level:G}" }
+
+                            { "FilterSpecs", filterSpec }
                         }
                 )
             };

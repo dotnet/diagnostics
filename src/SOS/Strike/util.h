@@ -2,11 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-// ==++==
-//
-
-//
-// ==--==
 #ifndef __util_h__
 #define __util_h__
 
@@ -38,8 +33,12 @@ inline void RestoreSOToleranceState() {}
 #include "cordebug.h"
 #include "static_assert.h"
 #include <string>
-#include "hostcoreclr.h"
-#include "holder.h"
+#include "extensions.h"
+#include "releaseholder.h"
+#include "hostimpl.h"
+#include "targetimpl.h"
+#include "runtimeimpl.h"
+#include "symbols.h"
 
 typedef LPCSTR  LPCUTF8;
 typedef LPSTR   LPUTF8;
@@ -485,10 +484,12 @@ public:
         lowest_address = dacGCDetails.lowest_address;
         highest_address = dacGCDetails.highest_address;
         card_table = dacGCDetails.card_table;
+        has_regions = saved_sweep_ephemeral_seg == -1;
     }
 
     DacpGcHeapDetails original_heap_details;
     bool has_poh;
+    bool has_regions;
     CLRDATA_ADDRESS heapAddr; // Only filled in in server mode, otherwise NULL
     CLRDATA_ADDRESS alloc_allocated;
 
@@ -1666,7 +1667,7 @@ SafeReadMemory (TO_TADDR(src), &(dst), sizeof(dst), NULL)
 
 extern "C" PDEBUG_DATA_SPACES g_ExtData;
 
-#include <arrayholder.h>
+#include "arrayholder.h"
 
 // This class acts a smart pointer which calls the Release method on any object
 // you place in it when the ToRelease class falls out of scope.  You may use it
@@ -1754,7 +1755,6 @@ void DecodeIL(IMetaDataImport *pImport, BYTE *buffer, ULONG bufSize);
 void DecodeDynamicIL(BYTE *data, ULONG Size, DacpObjectData& tokenArray);
 ULONG DisplayILOperation(const UINT indentCount, BYTE* pBuffer, ULONG position, std::function<void(DWORD)>& func);
 
-BOOL GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes);
 bool IsRuntimeVersion(DWORD major);
 bool IsRuntimeVersion(VS_FIXEDFILEINFO& fileInfo, DWORD major);
 bool IsRuntimeVersionAtLeast(DWORD major);
@@ -1813,6 +1813,7 @@ struct GenUsageStat
     size_t allocd;
     size_t freed;
     size_t unrooted;
+    size_t committed;
 };
 
 struct HeapUsageStat
@@ -2125,7 +2126,7 @@ void GatherOneHeapFinalization(DacpGcHeapDetails& heapDetails, HeapStat *stat, B
 
 CLRDATA_ADDRESS GetAppDomainForMT(CLRDATA_ADDRESS mtPtr);
 CLRDATA_ADDRESS GetAppDomain(CLRDATA_ADDRESS objPtr);
-void GCHeapInfo(const GCHeapDetails &heap, DWORD_PTR &total_size);
+void GCHeapInfo(const GCHeapDetails &heap, DWORD_PTR &total_alloc_size, DWORD_PTR &total_committed_size);
 BOOL GCObjInHeap(TADDR taddrObj, const GCHeapDetails &heap,
     TADDR_SEGINFO& trngSeg, int& gen, TADDR_RANGE& allocCtx, BOOL &bLarge);
 
