@@ -17,7 +17,10 @@ private:
     lldb::SBProcess *m_currentProcess;
     lldb::SBThread *m_currentThread;
     uint32_t m_currentStopId;
+    uint32_t m_processId;
     std::set<std::string> m_commands;
+    std::vector<SpecialThreadInfoEntry> m_threadInfos;
+    bool m_threadInfoInitialized;
 
     BYTE m_cache[CACHE_SIZE];
     ULONG64 m_startCache;
@@ -42,6 +45,10 @@ private:
 
     void LoadNativeSymbols(lldb::SBTarget target, lldb::SBModule module, PFN_MODULE_LOAD_CALLBACK callback);
 
+    void InitializeThreadInfo(lldb::SBProcess process);
+    uint32_t GetProcessId(lldb::SBProcess process);
+    uint32_t GetThreadId(lldb::SBThread thread);
+    lldb::SBThread GetThreadBySystemId(ULONG sysId);
     lldb::SBProcess GetCurrentProcess();
     lldb::SBThread GetCurrentThread();
     lldb::SBFrame GetCurrentFrame();
@@ -50,6 +57,10 @@ public:
     LLDBServices(lldb::SBDebugger debugger);
     ~LLDBServices();
  
+    std::vector<SpecialThreadInfoEntry>& ThreadInfos() { return m_threadInfos; }
+
+    void AddThreadInfoEntry(uint32_t tid, uint32_t index);
+
     lldb::SBProcess* SetCurrentProcess(lldb::SBProcess* process)
     {
         return (lldb::SBProcess*)InterlockedExchangePointer(&m_currentProcess, process);
