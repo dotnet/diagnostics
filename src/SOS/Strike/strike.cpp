@@ -5590,9 +5590,9 @@ DECLARE_API(GCHeapStat)
             tempf = ((float)(hpUsage.genUsage[0].freed + hpUsage.genUsage[1].freed + hpUsage.genUsage[2].freed)) /
                 (hpUsage.genUsage[0].allocd + hpUsage.genUsage[1].allocd + hpUsage.genUsage[2].allocd);
             int pohFreeUsage = heapDetails.has_poh ? (int)(100*((float)hpUsage.genUsage[4].freed) / (hpUsage.genUsage[4].allocd)) : 0;
-            ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%%",
-                (int)(100*((float)hpUsage.genUsage[3].freed) / (hpUsage.genUsage[3].allocd)), "%%",
-                pohFreeUsage, "%%");
+            ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%",
+                (int)(100*((float)hpUsage.genUsage[3].freed) / (hpUsage.genUsage[3].allocd)), "%",
+                pohFreeUsage, "%");
 
             if (bIncUnreachable)
             {
@@ -5603,9 +5603,9 @@ DECLARE_API(GCHeapStat)
                 tempf = ((float)(hpUsage.genUsage[0].unrooted+hpUsage.genUsage[1].unrooted+hpUsage.genUsage[2].unrooted)) /
                     (hpUsage.genUsage[0].allocd+hpUsage.genUsage[1].allocd+hpUsage.genUsage[2].allocd);
                 int pohUnrootedUsage = heapDetails.has_poh ? (int)(100*((float)hpUsage.genUsage[4].unrooted) / (hpUsage.genUsage[4].allocd)) : 0;
-                ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%%",
-                    (int)(100*((float)hpUsage.genUsage[3].unrooted) / (hpUsage.genUsage[3].allocd)), "%%",
-                    pohUnrootedUsage, "%%");
+                ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%",
+                    (int)(100*((float)hpUsage.genUsage[3].unrooted) / (hpUsage.genUsage[3].allocd)), "%",
+                    pohUnrootedUsage, "%");
             }
             
             ExtOut("\nCommitted space:");
@@ -5698,9 +5698,9 @@ DECLARE_API(GCHeapStat)
             tempf = ((float)(hpUsage[n].genUsage[0].freed + hpUsage[n].genUsage[1].freed + hpUsage[n].genUsage[2].freed)) /
                 (hpUsage[n].genUsage[0].allocd + hpUsage[n].genUsage[1].allocd + hpUsage[n].genUsage[2].allocd);
             int pohFreeUsage = hasPoh ? (int)(100*((float)hpUsage[n].genUsage[4].freed) / (hpUsage[n].genUsage[4].allocd)) : 0;
-            ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%%",
-                (int)(100*((float)hpUsage[n].genUsage[3].freed) / (hpUsage[n].genUsage[3].allocd)), "%%",
-                pohFreeUsage, "%%");
+            ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%",
+                (int)(100*((float)hpUsage[n].genUsage[3].freed) / (hpUsage[n].genUsage[3].allocd)), "%",
+                pohFreeUsage, "%");
         }
         ExtOut("Total    %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n",
             genUsageStat[0].freed, genUsageStat[1].freed,
@@ -5720,9 +5720,9 @@ DECLARE_API(GCHeapStat)
                 tempf = ((float)(hpUsage[n].genUsage[0].unrooted + hpUsage[n].genUsage[1].unrooted + hpUsage[n].genUsage[2].unrooted)) /
                     (hpUsage[n].genUsage[0].allocd + hpUsage[n].genUsage[1].allocd + hpUsage[n].genUsage[2].allocd);
                 int pohUnrootedUsage = hasPoh ? (int)(100*((float)hpUsage[n].genUsage[4].unrooted) / (hpUsage[n].genUsage[4].allocd)) : 0;
-                ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%%",
-                    (int)(100*((float)hpUsage[n].genUsage[3].unrooted) / (hpUsage[n].genUsage[3].allocd)), "%%",
-                    pohUnrootedUsage, "%%");
+                ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%",
+                    (int)(100*((float)hpUsage[n].genUsage[3].unrooted) / (hpUsage[n].genUsage[3].allocd)), "%",
+                    pohUnrootedUsage, "%");
             }
             ExtOut("Total    %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n",
                 genUsageStat[0].unrooted, genUsageStat[1].unrooted,
@@ -8840,7 +8840,7 @@ DECLARE_API(ThreadPool)
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        ExtOut ("CPU utilization: %d %s\n", threadpool.cpuUtilization, "%%");
+    ExtOut ("CPU utilization: %d %s\n", threadpool.cpuUtilization, "%");
     ExtOut ("Worker Thread:");
     ExtOut (" Total: %d", threadpool.NumWorkingWorkerThreads + threadpool.NumIdleWorkerThreads + threadpool.NumRetiredWorkerThreads);
     ExtOut (" Running: %d", threadpool.NumWorkingWorkerThreads);
