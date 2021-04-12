@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.Tools.Common;
 using Microsoft.Internal.Common.Utils;
 
-namespace Microsoft.Diagnostics.Tools.DSRouter
+namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
     internal class Program
     {

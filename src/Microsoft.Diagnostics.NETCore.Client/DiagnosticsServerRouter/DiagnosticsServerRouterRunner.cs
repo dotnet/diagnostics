@@ -24,12 +24,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public static async Task<int> runIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeoutMs, ILogger logger, Callbacks callbacks)
         {
-            return await runRouter(token, new IpcClientTcpServerRouter(ipcClient, tcpServer, runtimeTimeoutMs, logger), callbacks).ConfigureAwait(false);
+            return await runRouter(token, new IpcClientTcpServerRouterFactory(ipcClient, tcpServer, runtimeTimeoutMs, logger), callbacks).ConfigureAwait(false);
         }
 
         public static async Task<int> runIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeoutMs, ILogger logger, Callbacks callbacks)
         {
-            return await runRouter(token, new IpcServerTcpServerRouter(ipcServer, tcpServer, runtimeTimeoutMs, logger), callbacks).ConfigureAwait(false);
+            return await runRouter(token, new IpcServerTcpServerRouterFactory(ipcServer, tcpServer, runtimeTimeoutMs, logger), callbacks).ConfigureAwait(false);
         }
 
         public static bool isLoopbackOnly(string address)
@@ -46,80 +46,80 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return isLooback;
         }
 
-        async static Task<int> runRouter(CancellationToken token, TcpServerRouter router, Callbacks callbacks)
+        async static Task<int> runRouter(CancellationToken token, TcpServerRouterFactory routerFactory, Callbacks callbacks)
         {
             List<Task> runningTasks = new List<Task>();
-            List<ConnectedRouter> runningRouters = new List<ConnectedRouter>();
+            List<Router> runningRouters = new List<Router>();
 
             try
             {
-                router.Start();
-                callbacks?.OnRouterStarted(router.TcpServerAddress);
+                routerFactory.Start();
+                callbacks?.OnRouterStarted(routerFactory.TcpServerAddress);
 
                 while (!token.IsCancellationRequested)
                 {
-                    Task<ConnectedRouter> connectedRouterTask = null;
-                    ConnectedRouter connectedRouter = null;
+                    Task<Router> routerTask = null;
+                    Router router = null;
 
                     try
                     {
-                        connectedRouterTask = router.ConnectRouterAsync(token);
+                        routerTask = routerFactory.CreateRouterAsync(token);
 
                         do
                         {
                             // Search list and clean up dead router instances before continue waiting on new instances.
-                            runningRouters.RemoveAll(IsConnectedRouterDead);
+                            runningRouters.RemoveAll(IsRouterDead);
 
                             runningTasks.Clear();
                             foreach (var runningRouter in runningRouters)
                                 runningTasks.Add(runningRouter.RouterTaskCompleted.Task);
-                            runningTasks.Add(connectedRouterTask);
+                            runningTasks.Add(routerTask);
                         }
-                        while (await Task.WhenAny(runningTasks.ToArray()).ConfigureAwait(false) != connectedRouterTask);
+                        while (await Task.WhenAny(runningTasks.ToArray()).ConfigureAwait(false) != routerTask);
 
-                        if (connectedRouterTask.IsFaulted || connectedRouterTask.IsCanceled)
+                        if (routerTask.IsFaulted || routerTask.IsCanceled)
                         {
                             //Throw original exception.
-                            connectedRouterTask.GetAwaiter().GetResult();
+                            routerTask.GetAwaiter().GetResult();
                         }
 
-                        if (connectedRouterTask.IsCompleted)
+                        if (routerTask.IsCompleted)
                         {
-                            connectedRouter = connectedRouterTask.Result;
-                            connectedRouter.Start();
+                            router = routerTask.Result;
+                            router.Start();
 
                             // Add to list of running router instances.
-                            runningRouters.Add(connectedRouter);
-                            connectedRouter = null;
+                            runningRouters.Add(router);
+                            router = null;
                         }
 
-                        connectedRouterTask.Dispose();
-                        connectedRouterTask = null;
+                        routerTask.Dispose();
+                        routerTask = null;
                     }
                     catch (Exception ex)
                     {
-                        connectedRouter?.Dispose();
-                        connectedRouter = null;
+                        router?.Dispose();
+                        router = null;
 
-                        connectedRouterTask?.Dispose();
-                        connectedRouterTask = null;
+                        routerTask?.Dispose();
+                        routerTask = null;
 
                         // Timing out on accepting new streams could mean that either the frontend holds an open connection
                         // alive (but currently not using it), or we have a dead backend. If there are no running
                         // routers we assume a dead backend. Reset current backend endpoint and see if we get
                         // reconnect using same or different runtime instance.
-                        if (ex is BackendStreamConnectTimeoutException && runningRouters.Count == 0)
+                        if (ex is BackendStreamTimeoutException && runningRouters.Count == 0)
                         {
-                            router.Logger.LogDebug("No backend stream available before timeout.");
-                            router.Reset();
+                            routerFactory.Logger.LogDebug("No backend stream available before timeout.");
+                            routerFactory.Reset();
                         }
 
                         // Timing out on accepting a new runtime connection means there is no runtime alive.
                         // Shutdown router to prevent instances to outlive runtime process (if auto shutdown is enabled).
-                        if (ex is RuntimeConnectTimeoutException)
+                        if (ex is RuntimeTimeoutException)
                         {
-                            router.Logger.LogInformation("No runtime connected before timeout.");
-                            router.Logger.LogInformation("Starting automatic shutdown.");
+                            routerFactory.Logger.LogInformation("No runtime connected before timeout.");
+                            routerFactory.Logger.LogInformation("Starting automatic shutdown.");
                             throw;
                         }
                     }
@@ -127,29 +127,29 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             catch (Exception ex)
             {
-                router.Logger.LogInformation($"Shutting down due to error: {ex.Message}");
+                routerFactory.Logger.LogInformation($"Shutting down due to error: {ex.Message}");
             }
             finally
             {
                 if (token.IsCancellationRequested)
-                    router.Logger.LogInformation("Shutting down due to cancelation request.");
+                    routerFactory.Logger.LogInformation("Shutting down due to cancelation request.");
 
-                runningRouters.RemoveAll(IsConnectedRouterDead);
+                runningRouters.RemoveAll(IsRouterDead);
                 runningRouters.Clear();
 
-                await router?.Stop();
+                await routerFactory?.Stop();
                 callbacks?.OnRouterStopped();
 
-                router.Logger.LogInformation("Router stopped.");
+                routerFactory.Logger.LogInformation("Router stopped.");
             }
             return 0;
         }
 
-        static bool IsConnectedRouterDead(ConnectedRouter connectedRouter)
+        static bool IsRouterDead(Router router)
         {
-            bool isRunning = connectedRouter.IsRunning && !connectedRouter.RouterTaskCompleted.Task.IsCompleted;
+            bool isRunning = router.IsRunning && !router.RouterTaskCompleted.Task.IsCompleted;
             if (!isRunning)
-                connectedRouter.Dispose();
+                router.Dispose();
             return !isRunning;
         }
     }

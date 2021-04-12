@@ -15,68 +15,117 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public static bool IsTcpIpEndPoint(string endPoint)
         {
-            return TryParseIPAddress(endPoint, out _, out _);
+            bool result = true;
+
+            try
+            {
+                ParseTcpIpEndPoint(endPoint, out _, out _);
+            }
+            catch(Exception)
+            {
+                result = false;
+            }
+
+            return result;
+        }
+
+        public static string NormalizeTcpIpEndPoint(string endPoint)
+        {
+            ParseTcpIpEndPoint(endPoint, out string host, out int port);
+            return string.Format("{0}:{1}", host, port);
         }
 
         public IpcTcpSocketEndPoint(string endPoint)
         {
-            string hostAddress;
-            int hostPort;
-
-            if (!TryParseIPAddress(endPoint, out hostAddress, out hostPort))
-                throw new ArgumentException(string.Format("Could not parse {0} into host, port", endPoint));
-
-            EndPoint = CreateEndPoint(hostAddress, hostPort);
-            DualMode = string.CompareOrdinal(hostAddress, "*") == 0;
+            ParseTcpIpEndPoint(endPoint, out string host, out int port);
+            EndPoint = CreateEndPoint(host, port);
+            DualMode = string.CompareOrdinal(host, "*") == 0;
         }
 
         public static implicit operator EndPoint(IpcTcpSocketEndPoint endPoint) => endPoint.EndPoint;
 
-        private static bool TryParseIPAddress(string address, out string hostAddress, out int hostPort)
+        private static void ParseTcpIpEndPoint(string endPoint, out string host, out int port)
         {
-            hostAddress = "";
-            hostPort = -1;
+            host = "";
+            port = -1;
+
+            bool usesWildcardHost = false;
+            string uriToParse;
+
+            // Host can contain wildcard (*) that is a reserved charachter in URI's.
+            // Replace with dummy localhost representation just for parsing purpose.
+            if (endPoint.StartsWith("*", StringComparison.Ordinal))
+            {
+                usesWildcardHost = true;
+                uriToParse = "localhost" + endPoint.Substring(1);
+            }
+            else if (endPoint.IndexOf("//*", StringComparison.Ordinal) != -1)
+            {
+                usesWildcardHost = true;
+                uriToParse = endPoint.Replace("//*", "//localhost");
+            }
+            else
+            {
+                uriToParse = endPoint;
+            }
 
             try
             {
-                string[] addressSegments = address.Split(':');
-                if (addressSegments.Length > 2)
+                if (Uri.TryCreate(uriToParse, UriKind.RelativeOrAbsolute, out Uri uri))
                 {
-                    hostAddress = string.Join(":", addressSegments, 0, addressSegments.Length - 1);
-                    hostPort = int.Parse(addressSegments[addressSegments.Length - 1]);
+                    if (string.Compare(uri.Scheme, Uri.UriSchemeNetTcp, StringComparison.OrdinalIgnoreCase) != 0 &&
+                        string.Compare(uri.Scheme, "tcp", StringComparison.OrdinalIgnoreCase) != 0)
+                    {
+                        throw new ArgumentException(string.Format("Unsupported Uri schema, \"{0}\"", uri.Scheme));
+                    }
+
+                    host = usesWildcardHost ? "*" : uri.Host;
+                    port = uri.IsDefaultPort ? 0 : uri.Port;
                 }
-                else if (addressSegments.Length == 2)
+            }
+            catch (InvalidOperationException)
+            {
+            }
+
+            if (string.IsNullOrEmpty(host) || port == -1)
+            {
+                string[] segments = endPoint.Split(':');
+                if (segments.Length > 2)
                 {
-                    hostAddress = addressSegments[0];
-                    hostPort = int.Parse(addressSegments[1]);
+                    host = string.Join(":", segments, 0, segments.Length - 1);
+                    port = int.Parse(segments[segments.Length - 1]);
+                }
+                else if (segments.Length == 2)
+                {
+                    host = segments[0];
+                    port = int.Parse(segments[1]);
                 }
 
-                if (string.CompareOrdinal(hostAddress, "*") != 0)
+                if (string.CompareOrdinal(host, "*") != 0)
                 {
-                    if (!IPAddress.TryParse(hostAddress, out _))
+                    if (!IPAddress.TryParse(host, out _))
                     {
-                        if (!Uri.TryCreate(Uri.UriSchemeNetTcp + "://" + hostAddress + ":" + hostPort, UriKind.RelativeOrAbsolute, out _))
+                        if (!Uri.TryCreate(Uri.UriSchemeNetTcp + "://" + host + ":" + port, UriKind.RelativeOrAbsolute, out _))
                         {
-                            hostAddress = "";
-                            hostPort = -1;
+                            host = "";
+                            port = -1;
                         }
                     }
                 }
             }
-            catch (Exception)
-            {
-                ;
-            }
 
-            return !string.IsNullOrEmpty(hostAddress) && hostPort != -1;
+            if (string.IsNullOrEmpty(host) || port == -1)
+            {
+                throw new ArgumentException(string.Format("Could not parse {0} into host, port", endPoint));
+            }
         }
 
-        private static IPEndPoint CreateEndPoint(string hostAddress, int hostPort)
+        private static IPEndPoint CreateEndPoint(string host, int port)
         {
             IPAddress ipAddress = null;
             try
             {
-                if (string.CompareOrdinal(hostAddress, "*") == 0)
+                if (string.CompareOrdinal(host, "*") == 0)
                 {
                     if (Socket.OSSupportsIPv6)
                     {
@@ -87,22 +136,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         ipAddress = IPAddress.Any;
                     }
                 }
-                else if (!IPAddress.TryParse(hostAddress, out ipAddress))
+                else if (!IPAddress.TryParse(host, out ipAddress))
                 {
-                    var host = Dns.GetHostEntry(hostAddress);
-                    if (host.AddressList.Length > 0)
-                        ipAddress = host.AddressList[0];
+                    var hostEntry = Dns.GetHostEntry(host);
+                    if (hostEntry.AddressList.Length > 0)
+                        ipAddress = hostEntry.AddressList[0];
                 }
             }
-            catch
+            catch(Exception)
             {
-                ;
             }
 
             if (ipAddress == null)
-                throw new ArgumentException(string.Format("Could not resolve {0} into an IP address", hostAddress));
+                throw new ArgumentException(string.Format("Could not resolve {0} into an IP address", host));
 
-            return new IPEndPoint(ipAddress, hostPort);
+            return new IPEndPoint(ipAddress, port);
         }
     }
 }

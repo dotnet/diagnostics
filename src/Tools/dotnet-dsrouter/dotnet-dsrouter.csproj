@@ -5,7 +5,7 @@
     <TargetFramework Condition="'$(BundleTools)' != 'true'">netcoreapp2.1</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ToolCommandName>dotnet-dsrouter</ToolCommandName>
-    <RootNamespace>Microsoft.Diagnostics.Tools.DSRouter</RootNamespace>
+    <RootNamespace>Microsoft.Diagnostics.Tools.DiagnosticsServerRouter</RootNamespace>
     <Description>.NET Performance Diagnostic Server Router Tool</Description>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>

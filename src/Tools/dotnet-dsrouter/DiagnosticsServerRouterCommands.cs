@@ -10,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.Diagnostics.Tools.DSRouter
+namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
     public class DiagnosticsServerRouterLauncher : DiagnosticsServerRouterRunner.Callbacks
     {
@@ -69,7 +69,7 @@ namespace Microsoft.Diagnostics.Tools.DSRouter
                 if (routerTask.IsCompleted)
                     break;
 
-                if (Console.KeyAvailable)
+                if (!Console.IsInputRedirected && Console.KeyAvailable)
                 {
                     ConsoleKey cmd = Console.ReadKey(true).Key;
                     if (cmd == ConsoleKey.Q)
@@ -105,7 +105,7 @@ namespace Microsoft.Diagnostics.Tools.DSRouter
                 if (routerTask.IsCompleted)
                     break;
 
-                if (Console.KeyAvailable)
+                if (!Console.IsInputRedirected && Console.KeyAvailable)
                 {
                     ConsoleKey cmd = Console.ReadKey(true).Key;
                     if (cmd == ConsoleKey.Q)
