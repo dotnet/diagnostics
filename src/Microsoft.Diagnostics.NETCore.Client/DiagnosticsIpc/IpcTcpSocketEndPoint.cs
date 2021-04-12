@@ -50,28 +50,26 @@ namespace Microsoft.Diagnostics.NETCore.Client
             port = -1;
 
             bool usesWildcardHost = false;
-            string uriToParse;
+            string uriToParse= "";
 
-            // Host can contain wildcard (*) that is a reserved charachter in URI's.
-            // Replace with dummy localhost representation just for parsing purpose.
-            if (endPoint.StartsWith("*", StringComparison.Ordinal))
+            if (endPoint.Contains("://"))
             {
-                usesWildcardHost = true;
-                uriToParse = "localhost" + endPoint.Substring(1);
-            }
-            else if (endPoint.IndexOf("//*", StringComparison.Ordinal) != -1)
-            {
-                usesWildcardHost = true;
-                uriToParse = endPoint.Replace("//*", "//localhost");
-            }
-            else
-            {
-                uriToParse = endPoint;
+                // Host can contain wildcard (*) that is a reserved charachter in URI's.
+                // Replace with dummy localhost representation just for parsing purpose.
+                if (endPoint.IndexOf("//*", StringComparison.Ordinal) != -1)
+                {
+                    usesWildcardHost = true;
+                    uriToParse = endPoint.Replace("//*", "//localhost");
+                }
+                else
+                {
+                    uriToParse = endPoint;
+                }
             }
 
             try
             {
-                if (Uri.TryCreate(uriToParse, UriKind.RelativeOrAbsolute, out Uri uri))
+                if (!string.IsNullOrEmpty(uriToParse) && Uri.TryCreate(uriToParse, UriKind.RelativeOrAbsolute, out Uri uri))
                 {
                     if (string.Compare(uri.Scheme, Uri.UriSchemeNetTcp, StringComparison.OrdinalIgnoreCase) != 0 &&
                         string.Compare(uri.Scheme, "tcp", StringComparison.OrdinalIgnoreCase) != 0)
