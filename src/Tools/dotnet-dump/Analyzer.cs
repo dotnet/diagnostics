@@ -105,7 +105,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         }
                     }
                 }
-                if (!_consoleProvider.Shutdown)
+                if (!_consoleProvider.Shutdown && !Console.IsOutputRedirected)
                 {
                     // Start interactive command line processing
                     _consoleProvider.WriteLine("Ready to process analysis commands. Type 'help' to list available commands or 'help [command]' to get detailed help on a command.");
